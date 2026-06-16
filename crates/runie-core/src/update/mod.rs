@@ -186,7 +186,7 @@ impl AppState {
     }
 
     fn try_handle_vim_dialog_back_input(&mut self, event: &crate::event::InputEvent) -> bool {
-        if *event != crate::event::InputEvent::Backspace || !self.vim_nav_mode {
+        if *event != crate::event::InputEvent::Backspace || !self.view.vim_nav_mode {
             return false;
         }
         self.handle_vim_dialog_back();
@@ -194,7 +194,7 @@ impl AppState {
     }
 
     fn try_handle_vim_nav_event_input(&mut self, event: &crate::event::InputEvent) -> bool {
-        if !self.vim_nav_mode {
+        if !self.view.vim_nav_mode {
             return false;
         }
         let Some(handled) = self.handle_vim_nav_event(&Event::Input(event.clone())) else {
@@ -215,25 +215,25 @@ impl AppState {
     }
 
     fn handle_vim_dialog_back(&mut self) {
-        if self.vim_nav_mode {
-            self.vim_nav_mode = false;
+        if self.view.vim_nav_mode {
+            self.view.vim_nav_mode = false;
             self.mark_dirty();
             return;
         }
-        if self.vim_nav_pending {
-            self.vim_nav_pending = false;
-            self.vim_nav_mode = true;
+        if self.view.vim_nav_pending {
+            self.view.vim_nav_pending = false;
+            self.view.vim_nav_mode = true;
             self.mark_dirty();
             return;
         }
         if self.agent.turn_active {
             self.agent.turn_active = false;
             self.agent.inflight = 0;
-            self.vim_nav_pending = true;
+            self.view.vim_nav_pending = true;
             self.mark_dirty();
             return;
         }
-        self.vim_nav_mode = true;
+        self.view.vim_nav_mode = true;
         self.view.selected_post = self.current_bottom_post_index();
         self.mark_dirty();
     }
@@ -310,7 +310,7 @@ fn handle_dialog_event(state: &mut AppState, event: DialogEvent) {
 
 fn handle_dialog_back_no_dialog(state: &mut AppState) {
     if state.open_dialog.is_none() && state.config.vim_mode {
-        state.vim_nav_mode = true;
+        state.view.vim_nav_mode = true;
         state.view.selected_post = state.current_bottom_post_index();
         state.mark_dirty();
     }
@@ -408,19 +408,19 @@ fn handle_command_event(state: &mut AppState, event: CommandEvent) {
         }
         CommandEvent::RunLogoutCommand { provider } => run_logout_command(state, provider),
         CommandEvent::RunNameCommand { name } => {
-            crate::commands::handlers::session::run_name(state, name);
+            crate::commands::dsl::handlers::session::run_name(state, name);
         }
         CommandEvent::RunForkCommand { message_index } => {
-            crate::commands::handlers::session::run_fork(state, message_index);
+            crate::commands::dsl::handlers::session::run_fork(state, message_index);
         }
         CommandEvent::RunCompactCommand { keep, focus } => {
-            crate::commands::handlers::session::run_compact(state, keep, focus);
+            crate::commands::dsl::handlers::session::run_compact(state, keep, focus);
         }
         CommandEvent::RunPromptCommand { name } => {
-            crate::commands::handlers::system::run_prompt(state, name);
+            crate::commands::dsl::handlers::system::run_prompt(state, name);
         }
         CommandEvent::RunThinkingCommand { level } => {
-            crate::commands::handlers::model::run_thinking(state, *level);
+            crate::commands::dsl::handlers::model::run_thinking(state, *level);
         }
         CommandEvent::RunPaletteCommand { name, args } => {
             run_palette_command(state, name, args);

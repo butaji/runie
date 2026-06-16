@@ -196,9 +196,14 @@ pub(crate) fn clear_cache() {
 mod tests {
     use super::*;
     use runie_core::ui::elements::Element;
+    use std::sync::Mutex;
+
+    static CACHE_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn element_render_cache_hits_for_same_width_and_content() {
+        let _guard = CACHE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        clear_cache();
         clear_cache();
         let before = cache_len();
         let elem = Element::agent("unique cache test content").at(0.0);
@@ -215,6 +220,7 @@ mod tests {
 
     #[test]
     fn long_feed_renders_in_reasonable_time() {
+        let _guard = CACHE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         clear_cache();
         let elements: Vec<Element> = (0..50)
             .map(|i| {

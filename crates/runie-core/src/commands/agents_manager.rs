@@ -106,6 +106,7 @@ fn open_root(state: &mut AppState) {
 mod tests {
     use super::*;
     use crate::AppState;
+    use crate::tests::ENV_LOCK;
 
     #[test]
     fn set_field_updates_pending_edit() {
@@ -146,6 +147,7 @@ mod tests {
 
     #[test]
     fn save_persists_pending_profile() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let dir = tempfile::tempdir().unwrap();
         std::env::set_var("HOME", dir.path());
         std::fs::create_dir_all(agent_profiles::profiles_dir()).unwrap();

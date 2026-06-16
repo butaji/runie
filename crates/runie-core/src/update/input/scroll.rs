@@ -138,14 +138,14 @@ fn go_to_top(state: &mut AppState) {
     let visible = state.view.last_visible_height.max(3) as usize;
     let max_scroll = state.view.total_lines.saturating_sub(visible);
     state.view.scroll = max_scroll;
-    if state.vim_nav_mode {
+    if state.view.vim_nav_mode {
         state.view.selected_post = Some(0);
     }
 }
 
 fn go_to_bottom(state: &mut AppState) {
     state.view.scroll = 0;
-    if state.vim_nav_mode {
+    if state.view.vim_nav_mode {
         let len = state.view.posts.len();
         state.view.selected_post = len.checked_sub(1);
     }

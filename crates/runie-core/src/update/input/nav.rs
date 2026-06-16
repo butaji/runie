@@ -204,12 +204,12 @@ impl AppState {
 
     pub(crate) fn handle_vim_nav_char(&mut self, c: char) {
         if c == ' ' {
-            self.vim_nav_mode = false;
+            self.view.vim_nav_mode = false;
             self.insert_char(' ');
             return;
         }
         if c == 'i' {
-            self.vim_nav_mode = false;
+            self.view.vim_nav_mode = false;
             self.mark_dirty();
             return;
         }
@@ -222,7 +222,7 @@ impl AppState {
             self.update(evt);
             return;
         }
-        self.vim_nav_mode = false;
+        self.view.vim_nav_mode = false;
         self.insert_char(c);
     }
 
@@ -231,7 +231,7 @@ impl AppState {
         match c {
             'j' => {
                 if self.view.selected_post.unwrap_or(0) >= last {
-                    self.vim_nav_mode = false;
+                    self.view.vim_nav_mode = false;
                     self.mark_dirty();
                     Some(true)
                 } else {
@@ -259,13 +259,13 @@ impl AppState {
             }
             'y' => {
                 self.update(Event::Dialog(DialogEvent::CopySelectedBlock));
-                self.vim_nav_mode = false;
+                self.view.vim_nav_mode = false;
                 self.mark_dirty();
                 Some(true)
             }
             'Y' => {
                 self.update(Event::Dialog(DialogEvent::CopyBlockMetadata));
-                self.vim_nav_mode = false;
+                self.view.vim_nav_mode = false;
                 self.mark_dirty();
                 Some(true)
             }
@@ -317,7 +317,7 @@ impl AppState {
     pub(crate) fn vim_nav_down(&mut self) -> bool {
         let last = self.view.posts.len().saturating_sub(1);
         if self.view.selected_post.unwrap_or(0) >= last {
-            self.vim_nav_mode = false;
+            self.view.vim_nav_mode = false;
             self.mark_dirty();
             false
         } else {

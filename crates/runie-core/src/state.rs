@@ -12,6 +12,13 @@ use crate::session_tree::SessionTree;
 use crate::streaming_buffer::StreamingBuffer;
 use crate::ui::elements::Element;
 
+/// Tracks usage count and last-used timestamp for a command.
+#[derive(Clone, Debug)]
+pub struct CommandUsage {
+    pub count: u32,
+    pub last_used: f64,
+}
+
 #[derive(Clone)]
 pub struct InputState {
     pub input: String,
@@ -32,6 +39,12 @@ pub struct InputState {
     /// Command input history (persistent across sessions).
     pub input_history: Vec<String>,
     pub current_prompt: String,
+    /// Backup of input state before opening file picker:
+    /// (original input, insert position, cursor position, needs brackets for @ references).
+    pub file_picker_backup: Option<(String, usize, usize, bool)>,
+    /// The `:start-end` range suffix to append when inserting a file reference.
+    /// Set when opening the picker from `@path:10-50`.
+    pub file_picker_range_suffix: Option<String>,
 }
 
 impl Default for InputState {
@@ -51,6 +64,8 @@ impl Default for InputState {
             input_scroll: 0,
             input_history: Vec::new(),
             current_prompt: String::new(),
+            file_picker_backup: None,
+            file_picker_range_suffix: None,
         }
     }
 }
@@ -238,6 +253,11 @@ pub struct ViewState {
     /// Last known mouse position from `MouseMove` events. Used by the TUI
     /// to compute `MouseTarget` for hover styling and click routing.
     pub mouse_position: Option<(u16, u16)>,
+    /// Vim-style scrollback navigation active.
+    pub vim_nav_mode: bool,
+    /// When vim_mode Esc was used to abort a turn, the next Esc enters
+    /// nav mode. Cleared once consumed or when a turn is no longer active.
+    pub vim_nav_pending: bool,
 }
 
 impl ViewState {
@@ -286,6 +306,8 @@ impl Default for ViewState {
             selected_post: None,
             posts: Arc::new([]),
             mouse_position: None,
+            vim_nav_mode: false,
+            vim_nav_pending: false,
         }
     }
 }
@@ -340,6 +362,8 @@ pub struct ConfigState {
     pub telemetry: crate::telemetry::Telemetry,
     /// Execution mode: Solo (default) or Team (orchestrator).
     pub execution_mode: crate::orchestrator::ExecutionMode,
+    /// Per-session command usage tracking for palette ranking.
+    pub command_usage: std::collections::HashMap<String, CommandUsage>,
 }
 
 impl Default for ConfigState {
@@ -371,6 +395,7 @@ impl Default for ConfigState {
             recent_models: Vec::new(),
             telemetry: crate::telemetry::Telemetry::new(false),
             execution_mode: crate::orchestrator::ExecutionMode::default(),
+            command_usage: std::collections::HashMap::new(),
         }
     }
 }

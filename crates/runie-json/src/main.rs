@@ -25,7 +25,8 @@
 
 use anyhow::Result;
 use runie_agent::{build_provider_with_warning, run_headless_turn, HeadlessOptions};
-use runie_core::{config_reload, llm_event::LLMEvent, provider::Message};
+use runie_core::message::ChatMessage;
+use runie_core::{config_reload, llm_event::LLMEvent};
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
@@ -109,7 +110,7 @@ fn resolve_provider_and_model(
     (provider_name, model)
 }
 
-fn build_json_messages(req: &JsonRequest) -> Vec<Message> {
+fn build_json_messages(req: &JsonRequest) -> Vec<ChatMessage> {
     let tools_list = req
         .tools
         .as_ref()
@@ -124,15 +125,13 @@ fn build_json_messages(req: &JsonRequest) -> Vec<Message> {
     );
 
     vec![
-        Message::System { content: system },
-        Message::User {
-            content: req.prompt.clone(),
-        },
+        ChatMessage::system(system),
+        ChatMessage::user(req.prompt.clone()),
     ]
 }
 
 async fn run_json_turn(
-    messages: Vec<Message>,
+    messages: Vec<ChatMessage>,
     provider: &runie_provider::DynProvider,
 ) -> Result<runie_agent::HeadlessResult> {
     let options = HeadlessOptions {
@@ -197,15 +196,12 @@ mod tests {
     async fn json_mode_returns_tool_calls() {
         use futures::StreamExt;
         use runie_agent::parser::parse_tool_calls;
+        use runie_core::message::ChatMessage;
         use runie_core::provider::Provider;
         let provider = runie_provider::MockProvider::default();
         let messages = vec![
-            runie_core::provider::Message::System {
-                content: "You are helpful.".into(),
-            },
-            runie_core::provider::Message::User {
-                content: "list files".into(),
-            },
+            ChatMessage::system("You are helpful."),
+            ChatMessage::user("list files"),
         ];
         let mut response_text = String::new();
         let mut stream = provider.generate(messages);

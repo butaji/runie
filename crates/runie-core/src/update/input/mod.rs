@@ -65,7 +65,7 @@ pub fn input_event(state: &mut AppState, event: InputEvent) {
 }
 
 fn handle_history_prev(state: &mut AppState) {
-    if state.vim_nav_mode {
+    if state.view.vim_nav_mode {
         state.vim_nav_up();
         return;
     }
@@ -79,9 +79,9 @@ fn handle_history_prev(state: &mut AppState) {
 }
 
 fn handle_history_next(state: &mut AppState) {
-    if state.vim_nav_mode {
+    if state.view.vim_nav_mode {
         if !state.vim_nav_down() {
-            state.vim_nav_mode = false;
+            state.view.vim_nav_mode = false;
             state.mark_dirty();
         }
         return;
@@ -101,19 +101,19 @@ fn handle_escape(state: &mut AppState) {
     }
     if state.agent.turn_active {
         state.stop_turn();
-        state.vim_nav_pending = true;
+        state.view.vim_nav_pending = true;
         state.mark_dirty();
         return;
     }
-    if state.vim_nav_pending {
-        state.vim_nav_pending = false;
-        state.vim_nav_mode = true;
+    if state.view.vim_nav_pending {
+        state.view.vim_nav_pending = false;
+        state.view.vim_nav_mode = true;
         state.view.selected_post = state.current_bottom_post_index();
         state.mark_dirty();
         return;
     }
-    if !state.vim_nav_mode {
-        state.vim_nav_mode = true;
+    if !state.view.vim_nav_mode {
+        state.view.vim_nav_mode = true;
         state.view.selected_post = state.current_bottom_post_index();
         state.mark_dirty();
     }
@@ -133,8 +133,8 @@ fn handle_mouse_click(state: &mut AppState, row: u16, col: u16, button: &str) {
         match target {
             crate::snapshot::MouseTarget::Input => {
                 // Left-click in input area: focus the prompt, exit vim nav mode.
-                if state.vim_nav_mode {
-                    state.vim_nav_mode = false;
+                if state.view.vim_nav_mode {
+                    state.view.vim_nav_mode = false;
                 }
                 state.mark_dirty();
             }

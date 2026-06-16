@@ -8,7 +8,8 @@
 use crate::parser::{parse_tool_calls, ParsedToolCall};
 use anyhow::Result;
 use futures::StreamExt;
-use runie_core::provider::{Message, Provider};
+use runie_core::message::ChatMessage;
+use runie_core::provider::Provider;
 use runie_core::tool::{ToolContext, ToolOutput};
 
 /// Result of a headless turn.
@@ -34,7 +35,7 @@ pub struct HeadlessOptions {
 ///
 /// The caller must already include the system and user messages in `messages`.
 pub async fn run_headless_turn(
-    messages: Vec<Message>,
+    messages: Vec<ChatMessage>,
     provider: &dyn Provider,
     mut options: HeadlessOptions,
 ) -> Result<HeadlessResult> {
@@ -49,7 +50,7 @@ pub async fn run_headless_turn(
             break;
         }
 
-        messages.push(Message::Assistant { content: response_text.to_string() });
+        messages.push(ChatMessage::assistant(response_text.to_string()));
         execute_headless_tools(&tools, &mut messages, &mut tool_outputs).await?;
     }
 
@@ -58,7 +59,7 @@ pub async fn run_headless_turn(
 
 async fn stream_response_text(
     provider: &dyn Provider,
-    messages: &[Message],
+    messages: &[ChatMessage],
     content: &mut String,
     options: &mut HeadlessOptions,
 ) -> Result<String> {
@@ -86,7 +87,7 @@ async fn stream_response_text(
 
 async fn execute_headless_tools(
     tools: &[ParsedToolCall],
-    messages: &mut Vec<Message>,
+    messages: &mut Vec<ChatMessage>,
     tool_outputs: &mut Vec<ToolOutput>,
 ) -> Result<()> {
     let ctx = ToolContext::default();
@@ -95,9 +96,10 @@ async fn execute_headless_tools(
     for tool_call in tools {
         let output = execute_tool_call(&registry, tool_call, &ctx).await;
         tool_outputs.push(output.clone());
-        messages.push(Message::ToolResult {
-            content: format!("{} result:\n{}", tool_call.name, output.content),
-        });
+        messages.push(ChatMessage::tool_result(format!(
+            "{} result:\n{}",
+            tool_call.name, output.content
+        )));
     }
     Ok(())
 }
@@ -139,12 +141,8 @@ mod tests {
     async fn headless_runner_with_mock_returns_content() {
         let provider = MockProvider::default();
         let messages = vec![
-            Message::System {
-                content: "You are helpful.".into(),
-            },
-            Message::User {
-                content: "hello world".into(),
-            },
+            ChatMessage::system("You are helpful."),
+            ChatMessage::user("hello world"),
         ];
         let options = HeadlessOptions {
             execute_tools: false,
@@ -163,12 +161,8 @@ mod tests {
         ensure_mock_provider();
         let provider = MockProvider::default();
         let messages = vec![
-            Message::System {
-                content: "You are helpful.".into(),
-            },
-            Message::User {
-                content: "list files".into(),
-            },
+            ChatMessage::system("You are helpful."),
+            ChatMessage::user("list files"),
         ];
         let options = HeadlessOptions {
             execute_tools: true,
@@ -190,12 +184,8 @@ mod tests {
         ensure_mock_provider();
         let provider = MockProvider::default();
         let messages = vec![
-            Message::System {
-                content: "You are helpful.".into(),
-            },
-            Message::User {
-                content: "list files".into(),
-            },
+            ChatMessage::system("You are helpful."),
+            ChatMessage::user("list files"),
         ];
         let options = HeadlessOptions {
             execute_tools: true,

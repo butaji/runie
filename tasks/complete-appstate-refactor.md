@@ -1,6 +1,6 @@
 # Complete AppState Refactor
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Core / State
 **Priority**: P1
@@ -25,27 +25,27 @@ home.
 
 ## Acceptance Criteria
 
-- [ ] Every field on `AppState` either belongs to one of the six sub-states
+- [x] Every field on `AppState` either belongs to one of the six sub-states
   or is explicitly documented as a cross-cutting singleton flag.
-- [ ] Duplicated fields are removed and all references updated.
-- [ ] The `Phase 1` comments are deleted.
-- [ ] `AppState` becomes a thin container over the sub-states plus a few
+- [x] Duplicated fields are removed and all references updated.
+- [x] The `Phase 1` comments are deleted.
+- [x] `AppState` becomes a thin container over the sub-states plus a few
   documented singleton flags.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `appstate_fields_have_single_home` — grep confirms no field name
+- [x] `appstate_fields_have_single_home` — grep confirms no field name
   appears in both `AppState` and a sub-state.
-- [ ] `default_appstate_matches_substate_defaults` —
+- [x] `default_appstate_matches_substate_defaults` —
   `AppState::default()` is equivalent to the composition of sub-state
   defaults.
 
 ### Layer 2 — Event Handling
-- [ ] `input_event_updates_only_input_state` — an input event mutates only
+- [x] `input_event_updates_only_input_state` — an input event mutates only
   `state.input`.
-- [ ] `model_config_event_updates_only_config_state` — a model config event
+- [x] `model_config_event_updates_only_config_state` — a model config event
   mutates only `state.config`.
 
 ## Files touched
@@ -57,5 +57,8 @@ home.
 
 ## Notes
 
-This is a large but mechanical refactor. Do not change behavior; only move
-fields and update references.
+Moved `vim_nav_mode`/`vim_nav_pending` to `ViewState`,
+`file_picker_backup`/`file_picker_range_suffix` to `InputState`, and
+`command_usage` to `ConfigState`. Updated all call sites in `update/`,
+`snapshot.rs`, `commands/tests/usage.rs`, and TUI/render tests.
+`cargo test --workspace` passes.

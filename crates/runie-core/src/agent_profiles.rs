@@ -139,6 +139,7 @@ impl std::error::Error for ProfileError {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::ENV_LOCK;
 
     #[test]
     fn parse_minimal_profile() {
@@ -157,6 +158,7 @@ mod tests {
 
     #[test]
     fn round_trip() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let dir = tempfile::tempdir().unwrap();
         std::env::set_var("HOME", dir.path());
 

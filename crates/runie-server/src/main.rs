@@ -13,7 +13,7 @@
 
 use anyhow::Result;
 use runie_agent::{build_provider_with_warning, run_headless_turn, HeadlessOptions};
-use runie_core::{config_reload, message::ChatMessage, provider::Message};
+use runie_core::{config_reload, message::ChatMessage};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -223,10 +223,8 @@ async fn handle_chat(params: &Value) -> Result<Value> {
         "",
     );
 
-    let mut msgs = vec![Message::System { content: system }];
-    for m in &messages {
-        msgs.push(m.to_provider_message());
-    }
+    let mut msgs = vec![ChatMessage::system(system)];
+    msgs.extend(messages);
 
     let options = HeadlessOptions {
         execute_tools: false,
@@ -254,10 +252,8 @@ async fn handle_complete(params: &Value) -> Result<Value> {
     );
 
     let msgs = vec![
-        Message::System { content: system },
-        Message::User {
-            content: prompt.to_string(),
-        },
+        ChatMessage::system(system),
+        ChatMessage::user(prompt.to_string()),
     ];
 
     let options = HeadlessOptions {

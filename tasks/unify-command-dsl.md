@@ -1,6 +1,6 @@
 # Unify Command DSL
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Core / State
 **Priority**: P1
@@ -21,24 +21,24 @@ command.
 
 ## Acceptance Criteria
 
-- [ ] A command is defined in one place: its metadata, argument parsing,
+- [x] A command is defined in one place: its metadata, argument parsing,
   execution logic, and optional form dialog.
-- [ ] The separate `commands/handlers/` directory is merged into the DSL or
+- [x] The separate `commands/handlers/` directory is merged into the DSL or
   deleted.
-- [ ] Common panel/palette item construction is extracted into a small set
+- [x] Common panel/palette item construction is extracted into a small set
   of helpers.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `command_registry_lists_all_commands` — every command is registered
+- [x] `command_registry_lists_all_commands` — every command is registered
   exactly once.
-- [ ] `command_exec_returns_message` — a simple command produces the
+- [x] `command_exec_returns_message` — a simple command produces the
   expected `CommandResult`.
 
 ### Layer 2 — Event Handling
-- [ ] `slash_command_dispatches_to_handler` — typing `/hello` produces the
+- [x] `slash_command_dispatches_to_handler` — typing `/hello` produces the
   correct `CommandEvent` and executes the unified handler.
 
 ## Files touched
@@ -50,5 +50,7 @@ command.
 
 ## Notes
 
-The DSL should remain declarative for simple commands, but the execution
-path should live next to the declaration.
+Deleted the `crates/runie-core/src/commands/handlers/` re-export layer.
+All handler logic now lives exclusively in `commands/dsl/handlers/` and all
+call sites import from `crate::commands::dsl::handlers`. `commands/mod.rs`
+no longer exposes a `handlers` module. `cargo test --workspace` passes.

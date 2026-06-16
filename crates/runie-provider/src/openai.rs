@@ -4,7 +4,8 @@ use anyhow::Result;
 use futures::Stream;
 use futures::StreamExt;
 use runie_core::llm_event::{LLMEvent, StopReason};
-use runie_core::provider::{Message, Provider};
+use runie_core::message::ChatMessage;
+use runie_core::provider::Provider;
 use std::pin::Pin;
 
 pub struct OpenAiProvider {
@@ -57,14 +58,14 @@ async fn send_openai_request(
     api_key: &str,
     model: &str,
     base_url: &str,
-    messages: &[Message],
+    messages: &[ChatMessage],
 ) -> Result<reqwest::Response> {
     let url = format!("{}/chat/completions", base_url);
     let body = serde_json::json!({
         "model": model,
         "messages": messages.iter().map(|m| serde_json::json!({
-            "role": m.role(),
-            "content": m.content(),
+            "role": m.role.as_str(),
+            "content": m.content,
         })).collect::<Vec<_>>(),
         "stream": true,
     });
@@ -89,7 +90,7 @@ fn openai_stream(
     api_key: String,
     model: String,
     base_url: String,
-    messages: Vec<Message>,
+    messages: Vec<ChatMessage>,
 ) -> Pin<Box<dyn Stream<Item = Result<LLMEvent>> + Send>> {
     Box::pin(async_stream::stream! {
         let client = reqwest::Client::new();
@@ -143,7 +144,7 @@ fn drain_buffer(buffer: &mut String) -> Vec<LLMEvent> {
 impl Provider for OpenAiProvider {
     fn generate(
         &self,
-        messages: Vec<Message>,
+        messages: Vec<ChatMessage>,
     ) -> Pin<Box<dyn Stream<Item = Result<LLMEvent>> + Send + '_>> {
         openai_stream(
             self.api_key.clone(),

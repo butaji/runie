@@ -1,4 +1,4 @@
-use crate::commands::handlers::agents::build_edit_panel;
+use crate::commands::dsl::handlers::agents::build_edit_panel;
 use crate::dialog::{ItemAction, PanelItem};
 use crate::event::{DialogEvent, Event};
 

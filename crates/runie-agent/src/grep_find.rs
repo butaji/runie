@@ -1,4 +1,5 @@
-use crate::{parser::parse_tool_calls, Tool};
+use crate::parser::parse_tool_calls;
+use runie_core::tool::{ToolContext, ToolStatus, builtin_registry};
 
 #[test]
 fn parse_grep_tool_json() {
@@ -22,98 +23,104 @@ fn parse_find_tool_json() {
     assert_eq!(tools[0].args["path"], "src");
 }
 
-#[test]
-fn grep_executes_and_finds_matches() {
-    let tool = Tool::Grep {
-        pattern: "fn main".to_string(),
-        path: ".".to_string(),
-        glob: Some("*.rs".to_string()),
-        ignore_case: false,
-        literal: false,
-        context: 0,
-        limit: 100,
-    };
-    let result = tool.execute();
-    assert!(result.is_success());
-    assert!(result.output.content.contains("fn main") || result.output.content.contains("No matches"));
+async fn call_tool(name: &str, args: serde_json::Value) -> runie_core::tool::ToolOutput {
+    let registry = builtin_registry();
+    let tool = registry.get(name).unwrap_or_else(|| panic!("unknown tool: {}", name));
+    tool.call(args, &ToolContext::default())
+        .await
+        .unwrap_or_else(|e| panic!("tool {} failed: {}", name, e))
 }
 
-#[test]
-fn find_executes_and_lists_files() {
-    let tool = Tool::Find {
-        pattern: "*.rs".to_string(),
-        path: ".".to_string(),
-        limit: 100,
-    };
-    let result = tool.execute();
-    assert!(result.is_success());
-    assert!(!result.output.content.is_empty());
+#[tokio::test]
+async fn grep_executes_and_finds_matches() {
+    let output = call_tool(
+        "grep",
+        serde_json::json!({
+            "pattern": "fn main",
+            "path": ".",
+            "glob": "*.rs",
+            "limit": 100,
+        }),
+    )
+    .await;
+    assert_eq!(output.status, ToolStatus::Success);
+    assert!(
+        output.content.contains("fn main") || output.content.contains("No matches")
+    );
 }
 
-#[test]
-fn grep_respects_limit() {
-    let tool = Tool::Grep {
-        pattern: "use ".to_string(),
-        path: ".".to_string(),
-        glob: Some("*.rs".to_string()),
-        ignore_case: false,
-        literal: false,
-        context: 0,
-        limit: 2,
-    };
-    let result = tool.execute();
-    assert!(result.is_success());
-    assert!(result.output.content.contains("use "));
+#[tokio::test]
+async fn find_executes_and_lists_files() {
+    let output = call_tool(
+        "find",
+        serde_json::json!({"pattern": "*.rs", "path": ".", "limit": 100}),
+    )
+    .await;
+    assert_eq!(output.status, ToolStatus::Success);
+    assert!(!output.content.is_empty());
 }
 
-#[test]
-fn find_respects_limit() {
-    let tool = Tool::Find {
-        pattern: "*.rs".to_string(),
-        path: ".".to_string(),
-        limit: 3,
-    };
-    let result = tool.execute();
-    assert!(result.is_success());
-    let lines: Vec<&str> = result
-        .output
+#[tokio::test]
+async fn grep_respects_limit() {
+    let output = call_tool(
+        "grep",
+        serde_json::json!({
+            "pattern": "use ",
+            "path": ".",
+            "glob": "*.rs",
+            "limit": 2,
+        }),
+    )
+    .await;
+    assert_eq!(output.status, ToolStatus::Success);
+    assert!(output.content.contains("use "));
+}
+
+#[tokio::test]
+async fn find_respects_limit() {
+    let output = call_tool(
+        "find",
+        serde_json::json!({"pattern": "*.rs", "path": ".", "limit": 3}),
+    )
+    .await;
+    assert_eq!(output.status, ToolStatus::Success);
+    let lines: Vec<&str> = output
         .content
         .lines()
         .filter(|l| !l.is_empty() && !l.starts_with('['))
         .collect();
-    assert!(
-        lines.len() <= 3,
-        "Expected at most 3 files, got {}",
-        lines.len()
-    );
+    assert!(lines.len() <= 3, "Expected at most 3 files, got {}", lines.len());
 }
 
-#[test]
-fn grep_literal_mode() {
-    let tool = Tool::Grep {
-        pattern: ".".to_string(),
-        path: ".".to_string(),
-        glob: Some("*.toml".to_string()),
-        ignore_case: false,
-        literal: true,
-        context: 0,
-        limit: 10,
-    };
-    let result = tool.execute();
-    assert!(result.is_success());
+#[tokio::test]
+async fn grep_literal_mode() {
+    let output = call_tool(
+        "grep",
+        serde_json::json!({
+            "pattern": ".",
+            "path": ".",
+            "glob": "*.toml",
+            "literal": true,
+            "limit": 10,
+        }),
+    )
+    .await;
+    assert_eq!(output.status, ToolStatus::Success);
 }
 
-#[test]
-fn grep_ignore_case() {
-    let tool = Tool::Grep {
-        pattern: "CARGO".to_string(),
-        path: ".".to_string(),
-        glob: Some("*.toml".to_string()),
-        ignore_case: true,
-        literal: true,
-        context: 0,
-        limit: 10,
-    };
-    let result = tool.execute();
-    assert!(result.is_success());
+#[tokio::test]
+async fn grep_ignore_case() {
+    let output = call_tool(
+        "grep",
+        serde_json::json!({
+            "pattern": "CARGO",
+            "path": ".",
+            "glob": "*.toml",
+            "ignore_case": true,
+            "literal": true,
+            "limit": 10,
+        }),
+    )
+    .await;
+    assert_eq!(output.status, ToolStatus::Success);
 }

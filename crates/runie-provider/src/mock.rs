@@ -1,6 +1,7 @@
 use futures::Stream;
 use runie_core::llm_event::{LLMEvent, StopReason};
-use runie_core::provider::{Message, Provider};
+use runie_core::message::{ChatMessage, Role};
+use runie_core::provider::Provider;
 use std::pin::Pin;
 use std::time::Duration;
 
@@ -84,8 +85,8 @@ fn command_tool_chunks(input: &str) -> Option<Vec<String>> {
     None
 }
 
-fn response_chunks(last: Option<&Message>, user_input: &str) -> Vec<String> {
-    if matches!(last, Some(Message::ToolResult { .. })) {
+fn response_chunks(last: Option<&ChatMessage>, user_input: &str) -> Vec<String> {
+    if matches!(last, Some(m) if m.role == Role::Tool) {
         return vec!["Done. I have the information you requested.".to_string()];
     }
     let input_lower = user_input.to_lowercase();
@@ -104,16 +105,19 @@ fn response_chunks(last: Option<&Message>, user_input: &str) -> Vec<String> {
 impl Provider for MockProvider {
     fn generate(
         &self,
-        messages: Vec<Message>,
+        messages: Vec<ChatMessage>,
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>> {
         let delay_ms = self.random_delay();
         let last = messages.last();
         let user_input = messages
             .iter()
             .rev()
-            .find_map(|m| match m {
-                Message::User { content } => Some(content.clone()),
-                _ => None,
+            .find_map(|m| {
+                if m.role == Role::User {
+                    Some(m.content.clone())
+                } else {
+                    None
+                }
             })
             .unwrap_or_default();
 
@@ -180,14 +184,17 @@ impl MockStreamingProvider {
 impl Provider for MockStreamingProvider {
     fn generate(
         &self,
-        messages: Vec<Message>,
+        messages: Vec<ChatMessage>,
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>> {
         let user_input = messages
             .iter()
             .rev()
-            .find_map(|m| match m {
-                Message::User { content } => Some(content.clone()),
-                _ => None,
+            .find_map(|m| {
+                if m.role == Role::User {
+                    Some(m.content.clone())
+                } else {
+                    None
+                }
             })
             .unwrap_or_else(|| "This is a test response with multiple words.".to_string());
 

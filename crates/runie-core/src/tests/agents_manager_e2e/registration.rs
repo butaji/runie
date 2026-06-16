@@ -1,4 +1,4 @@
-use crate::commands::handlers::agents::handle_agents;
+use crate::commands::dsl::handlers::agents::handle_agents;
 use crate::event::{DialogEvent, Event};
 use crate::model::AppState;
 

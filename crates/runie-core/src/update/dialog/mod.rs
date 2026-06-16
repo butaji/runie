@@ -152,13 +152,13 @@ pub fn insert_at_ref(state: &mut AppState, path: &str) {
 }
 
 fn build_insert_text(state: &mut AppState, path: &str) -> String {
-    let Some((original_input, insert_pos, cursor, _)) = state.file_picker_backup.take() else {
+    let Some((original_input, insert_pos, cursor, _)) = state.input.file_picker_backup.take() else {
         return path.to_string();
     };
     let before = compute_before_text(&original_input, insert_pos, cursor);
     let after = extract_after(&original_input, cursor);
     // Append the range suffix if one was present (e.g. `:10-50`).
-    let suffix = state.file_picker_range_suffix.take().unwrap_or_default();
+    let suffix = state.input.file_picker_range_suffix.take().unwrap_or_default();
     format!("{}{}{}{}", before, path, suffix, after)
 }
 
@@ -235,11 +235,11 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
 
 fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
     if matches!(event, Event::Control(ControlEvent::Abort)) {
-        if let Some((input, _, _, _)) = state.file_picker_backup.take() {
+        if let Some((input, _, _, _)) = state.input.file_picker_backup.take() {
             state.input.input = input;
             state.input.cursor_pos = state.input.input.len();
         }
-        state.file_picker_range_suffix = None;
+        state.input.file_picker_range_suffix = None;
         state.open_dialog = None;
         state.mark_dirty();
         return true;
@@ -472,7 +472,7 @@ pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
     };
 
     // Store the range suffix so `insert_at_ref` can append it after the selected file.
-    state.file_picker_range_suffix = range_suffix;
+    state.input.file_picker_range_suffix = range_suffix;
 
     // Query FFF for file results.
     let query = base_filter.as_deref().unwrap_or("");

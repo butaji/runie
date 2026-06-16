@@ -115,9 +115,14 @@ fn slice_content(content: &str, offset: Option<usize>, limit: Option<usize>) -> 
     }
 
     let selected: String = lines[start..end].join("\n");
-    if end < total_lines {
-        format!("{}\n[{} more lines]", selected, total_lines - end)
+    let header = if offset.is_some() || limit.is_some() {
+        format!("[Lines {}-{} of {}]\n", start + 1, end, total_lines)
     } else {
-        selected
+        String::new()
+    };
+    if end < total_lines {
+        format!("{}{}\n[{} more lines]", header, selected, total_lines - end)
+    } else {
+        format!("{}{}", header, selected)
     }
 }

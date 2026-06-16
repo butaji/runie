@@ -341,7 +341,7 @@ fn feed_focused_hints_show_navigation() {
 fn vim_nav_hints_show_scroll_and_quit() {
     let mut state = fresh_state();
     state.update(Event::Dialog(DialogEvent::DialogBack)); // enter vim nav
-    assert!(state.vim_nav_mode);
+    assert!(state.view.vim_nav_mode);
     let hint = state.hint_text();
     assert!(hint.contains("j/k"), "feed nav hint should show j/k: {hint}");
     assert!(hint.contains("q quit"), "feed nav hint should show q quit: {hint}");

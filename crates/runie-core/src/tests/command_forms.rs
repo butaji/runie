@@ -16,7 +16,7 @@ use crate::model::AppState;
 
 #[test]
 fn spawn_without_args_opens_form() {
-    use crate::commands::handlers::subagent::handle_spawn;
+    use crate::commands::dsl::handlers::subagent::handle_spawn;
     let mut state = AppState::default();
     let result = handle_spawn(&mut state, "");
 
@@ -36,7 +36,7 @@ fn spawn_without_args_opens_form() {
 
 #[test]
 fn spawn_with_whitespace_only_opens_form() {
-    use crate::commands::handlers::subagent::handle_spawn;
+    use crate::commands::dsl::handlers::subagent::handle_spawn;
     let mut state = AppState::default();
     let result = handle_spawn(&mut state, "   \t  ");
     match result {
@@ -47,7 +47,7 @@ fn spawn_with_whitespace_only_opens_form() {
 
 #[test]
 fn spawn_with_args_emits_event() {
-    use crate::commands::handlers::subagent::handle_spawn;
+    use crate::commands::dsl::handlers::subagent::handle_spawn;
     let mut state = AppState::default();
     let result = handle_spawn(&mut state, "list files in /tmp");
     match result {
@@ -60,7 +60,7 @@ fn spawn_with_args_emits_event() {
 
 #[test]
 fn spawn_trims_whitespace_from_args() {
-    use crate::commands::handlers::subagent::handle_spawn;
+    use crate::commands::dsl::handlers::subagent::handle_spawn;
     let mut state = AppState::default();
     let result = handle_spawn(&mut state, "  hello world  ");
     match result {
@@ -73,7 +73,7 @@ fn spawn_trims_whitespace_from_args() {
 
 #[test]
 fn spawn_form_panel_has_prompt_field() {
-    use crate::commands::handlers::subagent::handle_spawn;
+    use crate::commands::dsl::handlers::subagent::handle_spawn;
     let mut state = AppState::default();
     let result = handle_spawn(&mut state, "");
     if let CommandResult::OpenPanelStack(stack) = result {
@@ -146,7 +146,7 @@ fn assert_no_usage(result: &CommandResult, handler_name: &str) {
 
 #[test]
 fn no_form_submit_handler_returns_usage_message() {
-    use crate::commands::handlers::session::io as session_io;
+    use crate::commands::dsl::handlers::session::io as session_io;
 
     let mut state = AppState::default();
 
@@ -161,7 +161,7 @@ fn no_form_submit_handler_returns_usage_message() {
 /// The result should NOT pollute the chat feed with a Usage message.
 #[test]
 fn load_form_submit_empty_does_not_show_usage() {
-    use crate::commands::handlers::session::io as session_io;
+    use crate::commands::dsl::handlers::session::io as session_io;
     let mut state = AppState::default();
     let initial_msg_count = state.session.messages.len();
 
@@ -183,7 +183,7 @@ fn load_form_submit_empty_does_not_show_usage() {
 
 #[test]
 fn delete_form_submit_empty_does_not_show_usage() {
-    use crate::commands::handlers::session::io as session_io;
+    use crate::commands::dsl::handlers::session::io as session_io;
     let mut state = AppState::default();
     let initial_msg_count = state.session.messages.len();
 
@@ -196,7 +196,7 @@ fn delete_form_submit_empty_does_not_show_usage() {
 
 #[test]
 fn import_form_submit_empty_does_not_show_usage() {
-    use crate::commands::handlers::session::io as session_io;
+    use crate::commands::dsl::handlers::session::io as session_io;
     let mut state = AppState::default();
     let initial_msg_count = state.session.messages.len();
 
@@ -209,7 +209,7 @@ fn import_form_submit_empty_does_not_show_usage() {
 
 #[test]
 fn export_form_submit_empty_does_not_show_usage() {
-    use crate::commands::handlers::session::io as session_io;
+    use crate::commands::dsl::handlers::session::io as session_io;
     let mut state = AppState::default();
     let initial_msg_count = state.session.messages.len();
 
@@ -223,7 +223,7 @@ fn export_form_submit_empty_does_not_show_usage() {
 /// Model command with too many slashes also shouldn't show Usage.
 #[test]
 fn model_command_does_not_show_usage() {
-    use crate::commands::handlers::model::handle_model;
+    use crate::commands::dsl::handlers::model::handle_model;
     let mut state = AppState::default();
     // Too many slashes
     let result = handle_model(&mut state, "a/b/c");
@@ -299,7 +299,7 @@ fn no_command_with_required_args_shows_message() {
 
 #[test]
 fn form_command_sets_open_dialog() {
-    use crate::commands::handlers::subagent::handle_spawn;
+    use crate::commands::dsl::handlers::subagent::handle_spawn;
     let mut state = AppState::default();
     let result = handle_spawn(&mut state, "");
 
@@ -317,7 +317,7 @@ fn form_command_sets_open_dialog() {
 
 #[test]
 fn form_panels_have_input_field() {
-    use crate::commands::handlers::subagent::handle_spawn;
+    use crate::commands::dsl::handlers::subagent::handle_spawn;
     let mut state = AppState::default();
     let result = handle_spawn(&mut state, "");
 

@@ -1,6 +1,7 @@
 //! Provider trait and message types
 
 use crate::llm_event::LLMEvent;
+use crate::message::ChatMessage;
 use anyhow::Result;
 use futures::Stream;
 use std::pin::Pin;
@@ -77,6 +78,6 @@ pub trait Provider: Send + Sync {
     /// Generate a streaming response, returning a stream of LLM events.
     fn generate(
         &self,
-        messages: Vec<Message>,
+        messages: Vec<ChatMessage>,
     ) -> Pin<Box<dyn Stream<Item = Result<LLMEvent>> + Send + '_>>;
 }

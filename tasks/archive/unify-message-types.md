@@ -22,26 +22,26 @@ silent data loss and role mismatches.
 
 ## Acceptance Criteria
 
-- [ ] A single canonical `ChatMessage`/`Role` type lives in `runie-core`.
-- [ ] `runie-core::provider` uses the canonical type (or a thin projection)
+- [x] A single canonical `ChatMessage`/`Role` type lives in `runie-core`.
+- [x] `runie-core::provider` uses the canonical type (or a thin projection)
   instead of its own `Message` enum.
-- [ ] `runie-server` uses the canonical type from `runie-core` and deletes
+- [x] `runie-server` uses the canonical type from `runie-core` and deletes
   its private copy.
-- [ ] Serialization for sessions and for LLM APIs remains stable.
-- [ ] `cargo test --workspace` succeeds.
+- [x] Serialization for sessions and for LLM APIs remains stable.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `role_as_str_matches_provider_expectations` — `Role::as_str()` returns
+- [x] `role_as_str_matches_provider_expectations` — `Role::as_str()` returns
   the strings the provider layer needs.
-- [ ] `chat_message_round_trip_json` — canonical message survives
+- [x] `chat_message_round_trip_json` — canonical message survives
   `serde_json` round-trip with all fields.
-- [ ] `server_uses_core_message` — `runie-server` has no private
+- [x] `server_uses_core_message` — `runie-server` has no private
   `ChatMessage` struct.
 
 ### Layer 2 — Event Handling
-- [ ] `agent_response_builds_core_message` — `AgentEvent::Response` produces
+- [x] `agent_response_builds_core_message` — `AgentEvent::Response` produces
   a canonical `ChatMessage`.
 
 ## Files touched
@@ -54,6 +54,9 @@ silent data loss and role mismatches.
 
 ## Notes
 
-The provider layer may need a helper like `fn to_api_messages(&[ChatMessage])`
-to produce the exact shape each provider expects, but the source of truth
-should be the canonical `ChatMessage`.
+`runie_core::provider::Provider::generate` now takes `Vec<ChatMessage>`.
+All provider implementations (mock, openai, DynProvider) and consumers
+(agent turn/headless, planner, json/server/print CLIs) were updated.
+`provider::Message` remains as a conversion target via
+`ChatMessage::to_provider_message()`. Added `ChatMessage` constructors for
+`system`, `user`, `assistant`, `tool_result`, and `tool`.

@@ -1,35 +1,43 @@
 //! Tool inspector pipeline — middleware for tool execution.
 //!
-//! Chains `Inspector` hooks around tool calls: `before_call` runs before the
-//! tool, `after_call` runs after (with the result).
+//! Chains `Inspector` hooks around calls to the canonical [`runie_core::tool::Tool`]
+//! registry: `before_call` runs before the tool, `after_call` runs after (with the
+//! output).
 
 use std::sync::Arc;
 use std::time::Instant;
 
-use crate::tools::{Tool, ToolResult};
-use runie_core::tool::{ToolOutput, ToolStatus};
+use runie_core::tool::{ToolContext, ToolOutput, ToolRegistry, ToolStatus, builtin_registry};
 
 /// A single hook in the inspector pipeline.
 pub trait Inspector: Send + Sync {
     /// Called before the tool executes. Return `Ok(())` to continue,
-    /// or `Err(msg)` to short-circuit with an error result.
-    fn before_call(&self, _tool: &Tool) -> Result<(), String> {
+    /// or `Err(msg)` to short-circuit with a blocked result.
+    fn before_call(
+        &self,
+        _tool_name: &str,
+        _tool_input: &serde_json::Value,
+    ) -> Result<(), String> {
         Ok(())
     }
 
     /// Called after the tool succeeds or fails. Use this to record output, tokens, etc.
-    fn after_call(&self, _tool: &Tool, _result: &ToolResult) {}
+    fn after_call(&self, _tool_name: &str, _output: &ToolOutput) {}
 }
 
-/// Pipeline that runs a sequence of inspectors around a tool call.
+/// Pipeline that runs a sequence of inspectors around a canonical tool call.
 pub struct ToolPipeline {
     inspectors: Vec<Arc<dyn Inspector>>,
+    registry: ToolRegistry,
 }
 
 impl ToolPipeline {
     /// Create a new pipeline from a vec of boxed inspectors.
     pub fn new(inspectors: Vec<Arc<dyn Inspector>>) -> Self {
-        Self { inspectors }
+        Self {
+            inspectors,
+            registry: builtin_registry(),
+        }
     }
 
     /// Add an inspector to the end of the pipeline.
@@ -38,32 +46,52 @@ impl ToolPipeline {
         self
     }
 
-    /// Execute the tool, running `before_call` on all inspectors first and
-    /// `after_call` on all inspectors after. Short-circuits on first error.
-    pub fn call(&self, tool: &Tool) -> ToolResult {
+    /// Execute the named tool with the given input, running `before_call` on all
+    /// inspectors first and `after_call` on all inspectors after. Short-circuits
+    /// on the first blocking inspector.
+    pub async fn call(
+        &self,
+        name: &str,
+        input: serde_json::Value,
+        ctx: &ToolContext,
+    ) -> ToolOutput {
         for insp in &self.inspectors {
-            if let Err(msg) = insp.before_call(tool) {
-                return ToolResult {
-                    tool: tool.clone(),
-                    output: ToolOutput {
-                        tool_name: tool.name().to_string(),
-                        tool_args: tool.to_args(),
-                        content: format!("Inspector blocked: {}", msg),
-                        bytes_transferred: None,
-                        duration: Instant::now().elapsed(),
-                        status: ToolStatus::Blocked,
-                    },
+            if let Err(msg) = insp.before_call(name, &input) {
+                return ToolOutput {
+                    tool_name: name.to_string(),
+                    tool_args: input,
+                    content: format!("Inspector blocked: {}", msg),
+                    bytes_transferred: None,
+                    duration: Instant::now().elapsed(),
+                    status: ToolStatus::Blocked,
                 };
             }
         }
 
-        let result = tool.execute();
+        let output = match self.registry.get(name) {
+            Some(tool) => tool.call(input, ctx).await.unwrap_or_else(|e| ToolOutput {
+                tool_name: name.to_string(),
+                tool_args: serde_json::Value::Null,
+                content: format!("Tool execution failed: {}", e),
+                bytes_transferred: None,
+                duration: Instant::now().elapsed(),
+                status: ToolStatus::Error,
+            }),
+            None => ToolOutput {
+                tool_name: name.to_string(),
+                tool_args: serde_json::Value::Null,
+                content: format!("Error: unknown tool '{}'", name),
+                bytes_transferred: None,
+                duration: Instant::now().elapsed(),
+                status: ToolStatus::Error,
+            },
+        };
 
         for insp in &self.inspectors {
-            insp.after_call(tool, &result);
+            insp.after_call(name, &output);
         }
 
-        result
+        output
     }
 }
 
@@ -75,20 +103,24 @@ pub struct CallCounter {
 }
 
 impl CallCounter {
-    pub fn new() -> Self {
-        Self { counts: std::sync::Mutex::new(std::collections::HashMap::new()) }
-    }
-
     /// Returns the call count for a tool name.
     pub fn count(&self, name: &str) -> u32 {
         *self.counts.lock().unwrap().get(name).unwrap_or(&0)
     }
 }
 
+impl Default for CallCounter {
+    fn default() -> Self {
+        Self {
+            counts: std::sync::Mutex::new(std::collections::HashMap::new()),
+        }
+    }
+}
+
 impl Inspector for CallCounter {
-    fn after_call(&self, tool: &Tool, _result: &ToolResult) {
+    fn after_call(&self, tool_name: &str, _output: &ToolOutput) {
         let mut counts = self.counts.lock().unwrap();
-        *counts.entry(tool.name().to_string()).or_insert(0) += 1;
+        *counts.entry(tool_name.to_string()).or_insert(0) += 1;
     }
 }
 
@@ -98,13 +130,17 @@ pub struct LatencyTracker {
 }
 
 impl LatencyTracker {
-    pub fn new() -> Self {
-        Self { totals: std::sync::Mutex::new(std::collections::HashMap::new()) }
-    }
-
     /// Returns the total elapsed time for a tool name.
     pub fn total(&self, name: &str) -> std::time::Duration {
         *self.totals.lock().unwrap().get(name).unwrap_or(&std::time::Duration::ZERO)
+    }
+}
+
+impl Default for LatencyTracker {
+    fn default() -> Self {
+        Self {
+            totals: std::sync::Mutex::new(std::collections::HashMap::new()),
+        }
     }
 }
 
@@ -116,17 +152,27 @@ pub struct AfterCallSpy {
 }
 
 impl AfterCallSpy {
+    /// Create a new spy.
     pub fn new() -> Self {
-        Self { called: std::sync::Mutex::new(false) }
+        Self {
+            called: std::sync::Mutex::new(false),
+        }
     }
 
+    /// Returns whether `after_call` was invoked.
     pub fn was_called(&self) -> bool {
         *self.called.lock().unwrap()
     }
 }
 
+impl Default for AfterCallSpy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Inspector for AfterCallSpy {
-    fn after_call(&self, _tool: &Tool, _result: &ToolResult) {
+    fn after_call(&self, _tool_name: &str, _output: &ToolOutput) {
         *self.called.lock().unwrap() = true;
     }
 }
@@ -138,79 +184,91 @@ mod tests {
     struct FailInspector;
 
     impl Inspector for FailInspector {
-        fn before_call(&self, _tool: &Tool) -> Result<(), String> {
+        fn before_call(
+            &self,
+            _tool_name: &str,
+            _tool_input: &serde_json::Value,
+        ) -> Result<(), String> {
             Err("blocked by inspector".to_string())
         }
     }
 
-    #[test]
-    fn inspector_before_call_blocks() {
+    #[tokio::test]
+    async fn inspector_before_call_blocks() {
         let pipeline = ToolPipeline::new(vec![Arc::new(FailInspector)]);
-        let tool = Tool::Bash { command: "echo hi".to_string() };
-        let result = pipeline.call(&tool);
-        assert!(!result.is_success());
-        assert!(result.output.content.contains("blocked by inspector"));
+        let output = pipeline
+            .call("bash", serde_json::json!({"command": "echo hi"}), &ToolContext::default())
+            .await;
+        assert_eq!(output.status, ToolStatus::Blocked);
+        assert!(output.content.contains("blocked by inspector"));
     }
 
-    #[test]
-    fn after_call_runs_on_error() {
+    #[tokio::test]
+    async fn after_call_runs_on_error() {
         let spy = Arc::new(AfterCallSpy::new());
         let pipeline = ToolPipeline::new(vec![spy.clone()]);
 
-        let tool = Tool::ReadFile {
-            path: "DOES_NOT_EXIST_xyz".to_string(),
-            offset: None,
-            limit: None,
-        };
-        let result = pipeline.call(&tool);
-        assert!(!result.is_success());
+        let output = pipeline
+            .call(
+                "read_file",
+                serde_json::json!({"path": "DOES_NOT_EXIST_xyz"}),
+                &ToolContext::default(),
+            )
+            .await;
+        assert_eq!(output.status, ToolStatus::Error);
         assert!(spy.was_called(), "after_call should run even on error");
     }
 
-    #[test]
-    fn call_counter_increments() {
-        let counter = Arc::new(CallCounter::new());
+    #[tokio::test]
+    async fn call_counter_increments() {
+        let counter = Arc::new(CallCounter::default());
         let pipeline = ToolPipeline::new(vec![counter.clone()]);
 
-        let tool = Tool::Bash { command: "echo hi".to_string() };
-        pipeline.call(&tool);
-        pipeline.call(&tool);
+        pipeline
+            .call("bash", serde_json::json!({"command": "echo hi"}), &ToolContext::default())
+            .await;
+        pipeline
+            .call("bash", serde_json::json!({"command": "echo hi"}), &ToolContext::default())
+            .await;
 
         assert_eq!(counter.count("bash"), 2);
     }
 
-    #[test]
-    fn empty_pipeline_runs_tool() {
+    #[tokio::test]
+    async fn empty_pipeline_runs_tool() {
         let pipeline = ToolPipeline::new(vec![]);
-        let tool = Tool::Bash { command: "echo hello".to_string() };
-        let result = pipeline.call(&tool);
-        assert!(result.is_success());
-        assert!(result.output.content.contains("hello"));
+        let output = pipeline
+            .call("bash", serde_json::json!({"command": "echo hello"}), &ToolContext::default())
+            .await;
+        assert_eq!(output.status, ToolStatus::Success);
+        assert!(output.content.contains("hello"));
     }
 
-    #[test]
-    fn multiple_inspectors_run_in_order() {
+    #[tokio::test]
+    async fn multiple_inspectors_run_in_order() {
         let spy1 = Arc::new(AfterCallSpy::new());
         let spy2 = Arc::new(AfterCallSpy::new());
         let pipeline = ToolPipeline::new(vec![spy1.clone(), spy2.clone()]);
 
-        let tool = Tool::Bash { command: "echo hi".to_string() };
-        pipeline.call(&tool);
+        pipeline
+            .call("bash", serde_json::json!({"command": "echo hi"}), &ToolContext::default())
+            .await;
 
         assert!(spy1.was_called(), "first inspector after_call should run");
         assert!(spy2.was_called(), "second inspector after_call should run");
     }
 
-    #[test]
-    fn pipeline_push_fluent_api() {
-        let counter = Arc::new(CallCounter::new());
+    #[tokio::test]
+    async fn pipeline_push_fluent_api() {
+        let counter = Arc::new(CallCounter::default());
         let spy = Arc::new(AfterCallSpy::new());
         let pipeline = ToolPipeline::new(vec![])
             .push(counter.clone())
             .push(spy.clone());
 
-        let tool = Tool::Bash { command: "echo hi".to_string() };
-        pipeline.call(&tool);
+        pipeline
+            .call("bash", serde_json::json!({"command": "echo hi"}), &ToolContext::default())
+            .await;
 
         assert_eq!(counter.count("bash"), 1);
         assert!(spy.was_called());

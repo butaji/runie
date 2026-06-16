@@ -206,7 +206,7 @@ fn every_sub_opening_command_is_marked_sub() {
     use crate::commands::CommandRegistry;
 
     let mut reg = CommandRegistry::new();
-    crate::commands::handlers::register_all(&mut reg);
+    crate::commands::dsl::handlers::register_all(&mut reg);
 
     let must_be_sub: &[&str] = &[
         "settings",
@@ -251,7 +251,7 @@ fn sub_command_pushes_current_dialog_to_back_stack() {
     use crate::commands::{CommandFlow, CommandRegistry};
 
     let mut reg = CommandRegistry::new();
-    crate::commands::handlers::register_all(&mut reg);
+    crate::commands::dsl::handlers::register_all(&mut reg);
 
     // Commands that must push to back stack (those with .sub()).
     let must_push: &[&str] = &[

@@ -62,7 +62,7 @@
 	    let mut state = AppState::default();
 	    state.config.vim_mode = true;
 	    state.update(Event::Dialog(DialogEvent::DialogBack));
-	    assert!(state.vim_nav_mode);
+	    assert!(state.view.vim_nav_mode);
 	    state
 	}
 
@@ -249,7 +249,7 @@
 	    let mut s2 = AppState::default();
 	    s2.config.vim_mode = true;
 	    s2.update(Event::Dialog(DialogEvent::DialogBack));
-	    assert!(s2.vim_nav_mode);
+	    assert!(s2.view.vim_nav_mode);
 	    let cell_nav = chevron_cell(&s2).expect("nav chevron cell");
 
 	    let hint_fg = crate::theme::style_hint().fg;

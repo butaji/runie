@@ -2,6 +2,7 @@
 use crate::tests::ensure_mock_provider;
 use crate::{run_agent_turn, turn::build_initial_messages, AgentCommand};
 use runie_core::event::AgentEvent;
+use runie_core::tool::{ToolContext, ToolStatus, builtin_registry};
 use runie_core::Event;
 use runie_provider::DynProvider;
 use std::sync::{Arc, Mutex};
@@ -183,8 +184,8 @@ fn read_only_excludes_write_tools() {
         truncation: crate::truncate::TruncationPolicy::default(),
     };
     let msgs = build_initial_messages(&cmd);
-    let system = match &msgs[0] {
-        runie_core::Message::System { content } => content.clone(),
+    let system = match &msgs[0].role {
+        runie_core::message::Role::System => msgs[0].content.clone(),
         _ => panic!("expected system message"),
     };
     assert!(system.contains("read_file"), "read-only includes read_file");
@@ -216,8 +217,8 @@ fn read_write_includes_all_tools() {
         truncation: crate::truncate::TruncationPolicy::default(),
     };
     let msgs = build_initial_messages(&cmd);
-    let system = match &msgs[0] {
-        runie_core::Message::System { content } => content.clone(),
+    let system = match &msgs[0].role {
+        runie_core::message::Role::System => msgs[0].content.clone(),
         _ => panic!("expected system message"),
     };
     assert!(
@@ -229,4 +230,104 @@ fn read_write_includes_all_tools() {
         "read-write includes edit_file"
     );
     assert!(system.contains("bash"), "read-write includes bash");
+}
+
+#[tokio::test]
+async fn agent_tool_uses_core_trait() {
+    ensure_mock_provider();
+    let provider = mock_provider();
+    let cmd = AgentCommand {
+        content: "list files".to_string(),
+        id: "req.0".to_string(),
+        provider: "mock".to_string(),
+        model: "echo".to_string(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: false,
+        skills_context: String::new(),
+        system_prompt: String::new(),
+        truncation: crate::truncate::TruncationPolicy::default(),
+    };
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let events_clone = events.clone();
+    run_agent_turn(
+        &provider,
+        &cmd,
+        Arc::new(Mutex::new(move |evt| events_clone.lock().unwrap().push(evt))),
+        5,
+    )
+    .await
+    .unwrap();
+
+    let tool_end = events
+        .lock()
+        .unwrap()
+        .iter()
+        .find_map(|e| match e {
+            Event::Agent(AgentEvent::ToolEnd { output, .. }) => Some(output.clone()),
+            _ => None,
+        })
+        .expect("agent turn should emit ToolEnd");
+
+    // The same call through the canonical trait must produce the same result.
+    let registry = builtin_registry();
+    let tool = registry.get("list_dir").expect("list_dir in registry");
+    let direct = tool
+        .call(serde_json::json!({"path": "."}), &ToolContext::default())
+        .await
+        .unwrap();
+
+    assert_eq!(tool_end, direct.content);
+    assert_eq!(direct.status, ToolStatus::Success);
+}
+
+#[tokio::test]
+async fn tool_call_event_matches_output() {
+    ensure_mock_provider();
+    let provider = mock_provider();
+    let cmd = AgentCommand {
+        content: "list files".to_string(),
+        id: "req.0".to_string(),
+        provider: "mock".to_string(),
+        model: "echo".to_string(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: false,
+        skills_context: String::new(),
+        system_prompt: String::new(),
+        truncation: crate::truncate::TruncationPolicy::default(),
+    };
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let events_clone = events.clone();
+    run_agent_turn(
+        &provider,
+        &cmd,
+        Arc::new(Mutex::new(move |evt| events_clone.lock().unwrap().push(evt))),
+        5,
+    )
+    .await
+    .unwrap();
+
+    let tool_ends: Vec<String> = events
+        .lock()
+        .unwrap()
+        .iter()
+        .filter_map(|e| match e {
+            Event::Agent(AgentEvent::ToolEnd { output, .. }) => Some(output.clone()),
+            _ => None,
+        })
+        .collect();
+
+    assert!(!tool_ends.is_empty(), "ToolEnd events should be emitted");
+
+    // Calling the canonical tool directly with the same arguments yields the
+    // same output, confirming the event reflects the actual tool result.
+    let registry = builtin_registry();
+    let tool = registry.get("list_dir").expect("list_dir in registry");
+    let direct = tool
+        .call(serde_json::json!({"path": "."}), &ToolContext::default())
+        .await
+        .unwrap();
+
+    for output in tool_ends {
+        assert_eq!(output, direct.content);
+    }
 }

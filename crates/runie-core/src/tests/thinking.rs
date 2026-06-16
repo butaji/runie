@@ -205,7 +205,7 @@ fn thinking_does_not_create_a_form_panel() {
     // input; thinking levels are a fixed enum.
     use crate::commands::{CommandRegistry, CommandResult};
     let mut reg = CommandRegistry::new();
-    crate::commands::handlers::register_all(&mut reg);
+    crate::commands::dsl::handlers::register_all(&mut reg);
     let cmd = reg.get("thinking").expect("thinking command");
     let mut state = AppState::default();
     state.config.thinking_level = ThinkingLevel::Medium;

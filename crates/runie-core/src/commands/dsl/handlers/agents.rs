@@ -242,6 +242,7 @@ pub fn delete_profile(name: &str) -> Result<(), ProfileError> {
 mod tests {
     use super::*;
     use crate::commands::registry::CommandRegistry;
+    use crate::tests::ENV_LOCK;
 
     fn make_registry() -> CommandRegistry {
         CommandRegistry::new()
@@ -321,6 +322,7 @@ mod tests {
 
     #[test]
     fn build_edit_panel_handles_new_profile() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         std::env::set_var("HOME", "/tmp/_nonexistent_");
         let panel_stack = build_edit_panel("newagent");
         let panel = panel_stack.current().unwrap();
@@ -344,6 +346,7 @@ mod tests {
 
     #[test]
     fn save_profile_writes_toml() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let dir = tempfile::tempdir().unwrap();
         std::env::set_var("HOME", dir.path());
 
@@ -376,6 +379,7 @@ mod tests {
 
     #[test]
     fn delete_nonexistent_profile_is_ok() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let dir = tempfile::tempdir().unwrap();
         std::env::set_var("HOME", dir.path());
         let result = delete_profile("doesnotexist");
@@ -384,6 +388,7 @@ mod tests {
 
     #[test]
     fn round_trip_profile() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let dir = tempfile::tempdir().unwrap();
         std::env::set_var("HOME", dir.path());
 

@@ -180,7 +180,7 @@ fn all_form_commands_are_listed() {
     // wrap their flow in `CommandFlow::Sub`; we unwrap to find the PanelStack.
     use crate::commands::{CommandFlow, CommandRegistry};
     let mut reg = CommandRegistry::new();
-    crate::commands::handlers::register_all(&mut reg);
+    crate::commands::dsl::handlers::register_all(&mut reg);
     let form_commands: Vec<String> = reg
         .list()
         .iter()

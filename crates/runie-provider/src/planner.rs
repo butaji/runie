@@ -8,8 +8,9 @@ use std::collections::HashMap;
 use anyhow::Result;
 use futures::StreamExt;
 use runie_core::llm_event::LLMEvent;
+use runie_core::message::ChatMessage;
 use runie_core::orchestrator::{ModelTrait, OrchestratorContext, OrchestratorPlan};
-use runie_core::provider::{Message, Provider};
+use runie_core::provider::Provider;
 use runie_core::trait_resolver::{ModelProfile, ModelResolver};
 use serde::{Deserialize, Serialize};
 use tokio::time::{timeout, Duration};
@@ -403,8 +404,8 @@ impl<'a, P: Provider> OneShotPlanner<'a, P> {
         let user = build_user_prompt(input);
 
         let mut messages = vec![
-            Message::System { content: system },
-            Message::User { content: user },
+            ChatMessage::system(system),
+            ChatMessage::user(user),
         ];
 
         let mut last_error = String::new();
@@ -496,7 +497,7 @@ impl<'a, P: Provider> OneShotPlanner<'a, P> {
                      Please respond with ONLY the JSON plan object, no explanation.",
                     last_error
                 );
-                messages.push(Message::User { content: correction });
+                messages.push(ChatMessage::user(correction));
             }
         }
 
@@ -597,7 +598,7 @@ mod tests {
     impl Provider for MockTextProvider {
         fn generate(
             &self,
-            _messages: Vec<Message>,
+            _messages: Vec<ChatMessage>,
         ) -> std::pin::Pin<
             Box<dyn futures::Stream<Item = Result<LLMEvent>> + Send + '_>,
         > {
@@ -762,15 +763,9 @@ mod tests {
         }
 
         impl Provider for InspectProvider {
-            fn generate(&self, messages: Vec<Message>) -> std::pin::Pin<Box<dyn futures::Stream<Item=Result<LLMEvent>> + Send + '_>> {
+            fn generate(&self, messages: Vec<ChatMessage>) -> std::pin::Pin<Box<dyn futures::Stream<Item=Result<LLMEvent>> + Send + '_>> {
                 if let Some(last) = messages.last() {
-                    let content = match last {
-                        Message::System { content }
-                        | Message::User { content }
-                        | Message::Assistant { content }
-                        | Message::ToolResult { content } => content.clone(),
-                    };
-                    *self.captured.lock().unwrap() = content;
+                    *self.captured.lock().unwrap() = last.content.clone();
                 }
                 let text = self.responses.lock().unwrap().pop_front().unwrap_or_default();
                 let chunks: Vec<_> = text.chars().map(|c| Ok(LLMEvent::TextDelta(c.to_string()))).collect();

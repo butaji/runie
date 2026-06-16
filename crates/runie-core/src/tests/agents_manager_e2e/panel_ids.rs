@@ -1,4 +1,4 @@
-use crate::commands::handlers::agents::{
+use crate::commands::dsl::handlers::agents::{
     build_delete_panel, build_edit_panel, build_root_panel, build_view_panel,
 };
 

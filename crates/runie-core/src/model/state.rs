@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use crate::state::CommandUsage;
 use crate::ui::elements::Element;
 
 /// A file entry from the FFF indexer for the file picker.
@@ -18,13 +19,6 @@ pub struct FffFileEntry {
 pub enum QueuedMessageKind {
     Steering,
     FollowUp,
-}
-
-/// Tracks usage count and last-used timestamp for a command.
-#[derive(Clone, Debug)]
-pub struct CommandUsage {
-    pub count: u32,
-    pub last_used: f64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -156,18 +150,6 @@ pub struct AppState {
     pub git_info: Option<crate::snapshot::GitInfo>,
     /// Current working directory name (detected at startup)
     pub cwd_name: String,
-    /// True while the user is in vim feed-navigation mode (j/k/g/G etc.).
-    /// Only meaningful when `config.vim_mode` is enabled.
-    pub vim_nav_mode: bool,
-    /// When vim_mode Esc was used to abort a turn, the next Esc enters
-    /// nav mode. Cleared once consumed or when a turn is no longer active.
-    pub vim_nav_pending: bool,
-    /// Backup of input state before opening file picker:
-    /// (original input, insert position, cursor position, needs brackets for @ references).
-    pub file_picker_backup: Option<(String, usize, usize, bool)>,
-    /// The `:start-end` range suffix to append when inserting a file reference.
-    /// Set when opening the picker from `@path:10-50`.
-    pub file_picker_range_suffix: Option<String>,
     /// FFF search results for the current file picker query.
     /// Set when FFF indexer returns results (populated asynchronously).
     pub fff_file_results: Vec<FffFileEntry>,
@@ -175,8 +157,6 @@ pub struct AppState {
     /// Used to detect stale FFF results (result counter != current counter means ignore).
     pub fff_debounce: u32,
     pub pending_agent_edit: Option<crate::agent_profiles::AgentProfile>,
-    /// Per-session command usage tracking for palette ranking.
-    pub command_usage: HashMap<String, CommandUsage>,
 }
 
 impl Default for AppState {
@@ -203,14 +183,9 @@ impl Default for AppState {
             transient_level: None,
             git_info,
             cwd_name,
-            vim_nav_mode: false,
-            vim_nav_pending: false,
-            file_picker_backup: None,
-            file_picker_range_suffix: None,
             fff_file_results: Vec::new(),
             fff_debounce: 0,
             pending_agent_edit: None,
-            command_usage: HashMap::new(),
         }
     }
 }
@@ -322,7 +297,7 @@ impl AppState {
     /// Record that a command was invoked for palette ranking.
     pub fn record_command_usage(&mut self, name: &str) {
         let now = crate::update::now();
-        let entry = self.command_usage.entry(name.to_string()).or_insert_with(|| CommandUsage {
+        let entry = self.config.command_usage.entry(name.to_string()).or_insert_with(|| CommandUsage {
             count: 0,
             last_used: now,
         });
@@ -339,7 +314,7 @@ impl AppState {
             let mut ranked: Vec<_> = all
                 .iter()
                 .map(|cmd| {
-                    let usage = self.command_usage.get(&cmd.name);
+                    let usage = self.config.command_usage.get(&cmd.name);
                     let score = compute_ranking_score(query, cmd, usage);
                     (cmd, score)
                 })
@@ -355,7 +330,7 @@ impl AppState {
             .filter_map(|cmd| {
                 let base = crate::fuzzy::fuzzy_match(query, &cmd.name)
                     .or_else(|| crate::fuzzy::fuzzy_match(query, &cmd.desc))?;
-                let usage = self.command_usage.get(&cmd.name);
+                let usage = self.config.command_usage.get(&cmd.name);
                 let score = compute_ranking_score(query, cmd, usage) + base * 100;
                 Some((cmd, score))
             })

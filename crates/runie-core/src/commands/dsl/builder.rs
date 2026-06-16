@@ -102,7 +102,7 @@ impl CommandDef {
     /// crate::cmd!("login")
     ///     .desc("Login to a provider")
     ///     .sub()
-    ///     .panel(|_state, _args| crate::commands::handlers::agents::build_root_panel())
+    ///     .panel(|_state, _args| crate::commands::dsl::handlers::agents::build_root_panel())
     /// ```
     pub fn sub(mut self) -> Self {
         self.is_sub = true;

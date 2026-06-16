@@ -1,4 +1,4 @@
-use crate::commands::handlers::agents::build_root_panel;
+use crate::commands::dsl::handlers::agents::build_root_panel;
 use crate::dialog::{ItemAction, PanelItem};
 
 fn find_action<F>(stack: &crate::dialog::PanelStack, predicate: F) -> Option<ItemAction>

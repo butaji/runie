@@ -12,7 +12,8 @@ pub use mock::{MockProvider, MockStreamingProvider};
 pub use openai::OpenAiProvider;
 
 use anyhow::Result;
-use runie_core::provider::{Message, Provider, ProviderError};
+use runie_core::message::ChatMessage;
+use runie_core::provider::{Provider, ProviderError};
 use runie_core::provider_registry;
 use std::pin::Pin;
 
@@ -73,7 +74,7 @@ impl std::fmt::Debug for DynProvider {
 impl Provider for DynProvider {
     fn generate(
         &self,
-        messages: Vec<Message>,
+        messages: Vec<ChatMessage>,
     ) -> Pin<
         Box<
             dyn futures::Stream<Item = anyhow::Result<runie_core::llm_event::LLMEvent>>

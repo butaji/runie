@@ -50,7 +50,7 @@ pub(crate) fn enter_vim_nav(state: &mut AppState) {
     state.messages_changed();
     state.ensure_fresh();
     state.update(Event::Dialog(DialogEvent::DialogBack));
-    assert!(state.vim_nav_mode);
+    assert!(state.view.vim_nav_mode);
 }
 
 pub(crate) fn enter_vim_nav_and_select_top(state: &mut AppState) {

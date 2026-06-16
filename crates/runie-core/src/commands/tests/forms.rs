@@ -1,4 +1,4 @@
-use crate::commands::handlers::subagent::handle_spawn;
+use crate::commands::dsl::handlers::subagent::handle_spawn;
 use crate::commands::CommandResult;
 use crate::dialog::PanelItem;
 use crate::model::AppState;

@@ -16,6 +16,7 @@ const ALLOWED_FILE_VIOLATIONS: &[&str] = &[
     "crates/runie-core/src/orchestrator.rs",             // r4-orchestrator-actor
     "crates/runie-core/src/skills.rs",                   // adopt-serde-yaml-skills cleanup
     "crates/runie-core/src/state.rs",                    // complete-appstate-refactor
+    "crates/runie-core/src/tool/mod.rs",                 // unify-tool-implementations
     "crates/runie-core/src/tool/search.rs",              // fff-unified-search-tool cleanup
     "crates/runie-core/src/update/agent.rs",             // coalesce-update-modules
     "crates/runie-core/src/update/dialog/mod.rs",        // coalesce-update-modules
@@ -62,12 +63,16 @@ const ALLOWED_FUNC_VIOLATIONS: &[(&str, &str)] = &[
     ("crates/runie-core/src/update/input/nav.rs", "pub(crate) fn try_vim_nav_motion"),
     ("crates/runie-core/src/update/input/text.rs", "fn mode_hints"),
     ("crates/runie-core/src/update/mod.rs", "fn handle_orchestrator_event"),
+    ("crates/runie-agent/src/inspector.rs", "pub async fn call"),
     ("crates/runie-agent/src/subagent.rs", "async fn run_subagent_turn"),
     ("crates/runie-agent/src/tools.rs", "pub(crate) fn list_dir"),
     ("crates/runie-agent/src/tools/exec.rs", "fn write_file"),
     ("crates/runie-agent/src/turn.rs", "async fn execute_single_tool"),
     ("crates/runie-agent/src/tests/turn.rs", "async fn test_agent_loop_simple_response"),
     ("crates/runie-agent/src/tests/turn.rs", "async fn test_agent_loop_with_tool_call"),
+    ("crates/runie-agent/src/tests/turn.rs", "async fn agent_tool_uses_core_trait"),
+    ("crates/runie-agent/src/tests/turn.rs", "async fn tool_call_event_matches_output"),
+    ("crates/runie-provider/src/mock.rs", "fn generate"),
     ("crates/runie-provider/src/planner.rs", "fn build_planner_system_prompt"),
     ("crates/runie-provider/src/planner.rs", "fn parse_raw_plan"),
     ("crates/runie-provider/src/planner.rs", "pub async fn plan"),

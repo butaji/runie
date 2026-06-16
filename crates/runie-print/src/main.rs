@@ -4,7 +4,8 @@ use anyhow::Result;
 use runie_agent::{build_provider_with_warning, run_headless_turn, HeadlessOptions};
 use runie_core::{
     config_reload,
-    provider::{Message, Provider},
+    message::ChatMessage,
+    provider::Provider,
 };
 
 #[tokio::main]
@@ -43,10 +44,8 @@ async fn run_print_with(prompt: &str, provider: &dyn Provider) -> Result<()> {
     );
 
     let messages = vec![
-        Message::System { content: system },
-        Message::User {
-            content: prompt.to_string(),
-        },
+        ChatMessage::system(system),
+        ChatMessage::user(prompt.to_string()),
     ];
 
     let options = HeadlessOptions {

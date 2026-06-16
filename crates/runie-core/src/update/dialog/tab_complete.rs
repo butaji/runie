@@ -21,7 +21,7 @@ impl AppState {
         // File picker always inserts plain paths, never wrapped in brackets
         let needs_brackets = false;
 
-        self.file_picker_backup =
+        self.input.file_picker_backup =
             Some((self.input.input.clone(), insert_pos, cursor, needs_brackets));
         crate::update::dialog::open_at_file_picker(self, Some(&prefix));
     }

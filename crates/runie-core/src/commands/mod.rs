@@ -26,7 +26,6 @@
 
 pub mod agents_manager;
 pub mod dsl;
-pub mod handlers; // exposed for dispatch.rs to reach session.* and system.*
 mod registry;
 #[cfg(test)]
 mod tests;

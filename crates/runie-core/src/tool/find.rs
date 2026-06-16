@@ -62,7 +62,7 @@ impl Tool for FindTool {
         let result = if tool == "fd" {
             run_fd(pattern, &full_path, limit)
         } else {
-            run_find(pattern, &full_path)
+            run_find(pattern, &full_path, limit)
         };
 
         let content = match result {
@@ -117,7 +117,7 @@ fn run_fd(pattern: &str, path: &std::path::Path, limit: usize) -> Result<String,
     Ok(stdout.trim_end().to_string())
 }
 
-fn run_find(pattern: &str, path: &std::path::Path) -> Result<String, std::io::Error> {
+fn run_find(pattern: &str, path: &std::path::Path, limit: usize) -> Result<String, std::io::Error> {
     let path_str = path.to_str().unwrap_or(".");
 
     let output = if pattern.contains('/') {
@@ -136,5 +136,7 @@ fn run_find(pattern: &str, path: &std::path::Path) -> Result<String, std::io::Er
     if stdout.trim().is_empty() {
         return Ok("No files found matching pattern".to_string());
     }
-    Ok(stdout.trim_end().to_string())
+    let mut lines: Vec<&str> = stdout.lines().collect();
+    lines.truncate(limit);
+    Ok(lines.join("\n"))
 }

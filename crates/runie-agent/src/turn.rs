@@ -9,7 +9,8 @@ use runie_core::harness_skills::{
     SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult, TurnEndCtx, TurnEndResult,
     TurnStartCtx, TurnStartResult,
 };
-use runie_core::provider::{Message, Provider};
+use runie_core::message::{ChatMessage, Role};
+use runie_core::provider::Provider;
 use runie_core::tool::{ToolContext, ToolOutput, ToolStatus};
 use runie_provider::DynProvider;
 use std::sync::{Arc, Mutex};
@@ -74,7 +75,7 @@ fn emit_turn_end(
     emit: &EmitFn,
     id: &str,
     skills: Option<&SkillRegistry>,
-    messages: &[Message],
+    messages: &[ChatMessage],
     tool_call_count: usize,
     has_intermediate_steps: bool,
     turn_start: Instant,
@@ -83,11 +84,8 @@ fn emit_turn_end(
         let assistant_msg = messages
             .iter()
             .rev()
-            .find(|m| matches!(m, Message::Assistant { .. }))
-            .map(|m| match m {
-                Message::Assistant { content } => content.clone(),
-                _ => String::new(),
-            })
+            .find(|m| m.role == Role::Assistant)
+            .map(|m| m.content.clone())
             .unwrap_or_default();
 
         let ctx = TurnEndCtx { assistant_message: assistant_msg, tool_call_count, success: true };
@@ -119,7 +117,7 @@ fn emit_error_and_done(emit: &EmitFn, id: &str, message: String) {
 async fn run_iterations(
     provider: &DynProvider,
     command: &AgentCommand,
-    messages: &mut Vec<Message>,
+    messages: &mut Vec<ChatMessage>,
     emit: EmitFn,
     skills: Option<&SkillRegistry>,
     max_iterations: usize,
@@ -142,7 +140,7 @@ fn emit_now(emit: &EmitFn, event: Event) {
 async fn run_agent_iteration(
     provider: &DynProvider,
     command: &AgentCommand,
-    messages: &mut Vec<Message>,
+    messages: &mut Vec<ChatMessage>,
     emit: EmitFn,
     skills: Option<&SkillRegistry>,
     tool_call_count: &mut usize,
@@ -157,7 +155,7 @@ async fn run_agent_iteration(
         return Ok(false);
     }
 
-    messages.push(Message::Assistant { content: response_text });
+    messages.push(ChatMessage::assistant(response_text));
     execute_tools(&command.id, &tools, emit, messages, skills, tool_call_count).await;
     Ok(true)
 }
@@ -165,7 +163,7 @@ async fn run_agent_iteration(
 async fn stream_response(
     provider: &DynProvider,
     command: &AgentCommand,
-    messages: &[Message],
+    messages: &[ChatMessage],
     emit: EmitFn,
 ) -> Result<String> {
     let mut response_text = String::new();
@@ -194,7 +192,7 @@ async fn stream_response(
     Ok(response_text)
 }
 
-pub(crate) fn build_initial_messages(command: &AgentCommand) -> Vec<Message> {
+pub(crate) fn build_initial_messages(command: &AgentCommand) -> Vec<ChatMessage> {
     let tools_list = if command.read_only {
         "read_file, list_dir, grep, find, search, fetch_docs"
     } else {
@@ -215,8 +213,8 @@ pub(crate) fn build_initial_messages(command: &AgentCommand) -> Vec<Message> {
         system.push_str(&command.skills_context);
     }
     vec![
-        Message::System { content: system },
-        Message::User { content: command.content.clone() },
+        ChatMessage::system(system),
+        ChatMessage::user(command.content.clone()),
     ]
 }
 
@@ -224,7 +222,7 @@ async fn execute_tools(
     cmd_id: &str,
     tools: &[ParsedToolCall],
     emit: EmitFn,
-    messages: &mut Vec<Message>,
+    messages: &mut Vec<ChatMessage>,
     skills: Option<&SkillRegistry>,
     tool_call_count: &mut usize,
 ) {
@@ -240,9 +238,10 @@ async fn execute_tools(
             duration_secs: output.duration.as_secs_f64(),
             output: output.content.clone(),
         }));
-        messages.push(Message::ToolResult {
-            content: format!("{} result:\n{}", tool_call.name, output.content),
-        });
+        messages.push(ChatMessage::tool_result(format!(
+            "{} result:\n{}",
+            tool_call.name, output.content
+        )));
     }
 }
 

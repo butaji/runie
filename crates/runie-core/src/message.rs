@@ -93,6 +93,39 @@ pub struct ChatMessage {
     pub metadata: MessageMetadata,
 }
 
+impl ChatMessage {
+    pub fn system(content: impl Into<String>) -> Self {
+        Self::new(Role::System, content)
+    }
+
+    pub fn user(content: impl Into<String>) -> Self {
+        Self::new(Role::User, content)
+    }
+
+    pub fn assistant(content: impl Into<String>) -> Self {
+        Self::new(Role::Assistant, content)
+    }
+
+    pub fn tool_result(content: impl Into<String>) -> Self {
+        Self::new(Role::Tool, content)
+    }
+
+    pub fn tool(content: impl Into<String>) -> Self {
+        Self::new(Role::Tool, content)
+    }
+
+    fn new(role: Role, content: impl Into<String>) -> Self {
+        Self {
+            role,
+            content: content.into(),
+            timestamp: now(),
+            id: String::new(),
+            provider: String::new(),
+            metadata: MessageMetadata::default(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

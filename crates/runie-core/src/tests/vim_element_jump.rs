@@ -38,7 +38,7 @@ fn state_with_vim_and_messages() -> AppState {
 
 fn enter_nav(state: &mut AppState) {
     state.update(Event::Dialog(DialogEvent::DialogBack));
-    assert!(state.vim_nav_mode);
+    assert!(state.view.vim_nav_mode);
 }
 
 #[test]
@@ -110,7 +110,7 @@ fn j_at_bottom_exits_nav_mode() {
     enter_nav(&mut state);
     assert_eq!(state.view.scroll, 0);
     state.update(Event::Input(InputEvent::Input('j')));
-    assert!(!state.vim_nav_mode, "j at bottom should exit nav mode");
+    assert!(!state.view.vim_nav_mode, "j at bottom should exit nav mode");
 }
 
 #[test]
@@ -169,7 +169,7 @@ fn line_j_k_when_not_in_nav_mode() {
     // scroll by one line each (legacy behavior).
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
-    assert!(!state.vim_nav_mode);
+    assert!(!state.view.vim_nav_mode);
     state.update(Event::Input(InputEvent::Input('j')));
     assert_eq!(state.view.scroll, 1, "line-level j: +1");
     state.update(Event::Input(InputEvent::Input('k')));
@@ -216,7 +216,7 @@ fn arrow_down_at_bottom_exits_nav_mode() {
     enter_nav(&mut state);
     state.update(Event::Input(InputEvent::HistoryNext));
     assert!(
-        !state.vim_nav_mode,
+        !state.view.vim_nav_mode,
         "ArrowDown at bottom should exit nav mode"
     );
 }
@@ -247,7 +247,7 @@ fn arrow_up_at_top_flashes_and_does_not_overshoot() {
 fn arrow_keys_outside_nav_mode_still_navigate_input_history() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
-    assert!(!state.vim_nav_mode);
+    assert!(!state.view.vim_nav_mode);
     let before = state.view.scroll;
     state.update(Event::Input(InputEvent::HistoryPrev));
     assert_eq!(
@@ -275,7 +275,7 @@ where
     }
     loop {
         step(&mut state);
-        if !state.vim_nav_mode {
+        if !state.view.vim_nav_mode {
             // Motion at the boundary exits nav mode; the selection stays
             // on the final post, so record it before re-arming.
             if let Some(sel) = selected_post(&mut state) {
@@ -283,7 +283,7 @@ where
                     visited.push(sel);
                 }
             }
-            state.vim_nav_mode = true;
+            state.view.vim_nav_mode = true;
             break;
         }
         let sel = selected_post(&mut state).expect("should have a selection");

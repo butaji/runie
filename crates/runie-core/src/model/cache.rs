@@ -346,7 +346,7 @@ impl AppState {
     fn fill_snapshot_agent(&self, s: &mut Snapshot) {
         s.turn_active = self.agent.turn_active;
         s.input_flash = self.input.input_flash;
-        s.vim_nav_mode = self.vim_nav_mode;
+        s.vim_nav_mode = self.view.vim_nav_mode;
         s.spinner_frame = self.spinner_frame();
         s.turn_elapsed_secs = self.turn_elapsed_secs();
         s.queue_count = self.agent.message_queue.len() + self.agent.request_queue.len();

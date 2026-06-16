@@ -1619,7 +1619,9 @@
       ],
       "blocks": [
         "unify-tool-result-types"
-      ]
+      ],
+      "completed_in": "current",
+      "notes": "Provider trait now accepts Vec<ChatMessage> across all implementations (mock, openai, DynProvider). Added ChatMessage constructors (system/user/assistant/tool_result/tool). Updated planner, agent turn/headless, json/server/print CLIs, and tests. runie_core::provider::Message remains as a conversion target via ChatMessage::to_provider_message."
     },
     {
       "id": "unify-tool-result-types",
@@ -1648,16 +1650,17 @@
     },
     {
       "id": "complete-appstate-refactor",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P1",
-      "notes": "Phase comments gone; AppState fields already cleanly separated into sub-states (Input/Agent/View/Session/Config/Completion). No Phase N comments found.",
+      "notes": "Moved vim_nav_mode/vim_nav_pending to ViewState, file_picker_backup/range_suffix to InputState, and command_usage to ConfigState. Updated all call sites in update/, snapshot.rs, commands/tests, and TUI/render tests. Workspace builds and tests pass.",
       "file": "tasks/complete-appstate-refactor.md",
       "depends_on": [],
       "blocks": [
         "coalesce-update-modules"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "coalesce-update-modules",
@@ -1675,13 +1678,14 @@
     },
     {
       "id": "unify-command-dsl",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P1",
-      "notes": "Already unified: handlers/ re-exports dsl/handlers/; all logic lives in dsl/handlers/; spec.rs is shared.",
+      "notes": "Removed the thin commands/handlers/ re-export module; all callers now use commands::dsl::handlers directly. Workspace builds and tests pass.",
       "file": "tasks/unify-command-dsl.md",
-      "depends_on": []
+      "depends_on": [],
+      "completed_in": "current"
     },
     {
       "id": "merge-runie-term-into-tui",
@@ -1793,7 +1797,7 @@
     },
     {
       "id": "unify-tool-implementations",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Tools",
       "priority": "P0",
@@ -1801,7 +1805,9 @@
       "blocks": [
         "extract-core-monolith"
       ],
-      "file": "tasks/unify-tool-implementations.md"
+      "file": "tasks/unify-tool-implementations.md",
+      "completed_in": "current",
+      "notes": "Ported runie-agent tool tests to use runie_core::tool::builtin_registry and canonical Tool trait. Fixed core find/read_file behavior for limit/offset formatting. runie-agent tool tests pass."
     },
     {
       "id": "flatten-event-enum",
@@ -2005,6 +2011,78 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/adopt-protocol-crate.md"
+    },
+    {
+      "id": "adopt-tool-runtime-trait",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-tool-runtime-trait.md"
+    },
+    {
+      "id": "adopt-permission-policy-chain",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Security",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-permission-policy-chain.md"
+    },
+    {
+      "id": "adopt-queue-pair-ipc",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-queue-pair-ipc.md"
+    },
+    {
+      "id": "adopt-test-helpers",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Testing",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-test-helpers.md"
+    },
+    {
+      "id": "adopt-dry-run-preview",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-dry-run-preview.md"
+    },
+    {
+      "id": "adopt-domain-dsls",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-domain-dsls.md"
+    },
+    {
+      "id": "adopt-workflow-dsl",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P3",
+      "depends_on": [
+        "adopt-multi-agent-spawning"
+      ],
+      "blocks": [],
+      "file": "tasks/adopt-workflow-dsl.md"
     }
   ]
 }

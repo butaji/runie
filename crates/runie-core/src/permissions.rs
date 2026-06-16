@@ -219,10 +219,11 @@ mod tests {
 
     #[test]
     fn permission_set_evaluates_rules() {
+        // Last-match wins: list the default/catch-all first, then overrides.
         let rules = PermissionSet::new(vec![
+            PermissionRule { tool_pattern: "*".into(), path_pattern: None, action: PermissionAction::Deny },
             PermissionRule { tool_pattern: "read_*".into(), path_pattern: None, action: PermissionAction::Allow },
             PermissionRule { tool_pattern: "bash".into(), path_pattern: None, action: PermissionAction::Ask },
-            PermissionRule { tool_pattern: "*".into(), path_pattern: None, action: PermissionAction::Deny },
         ]);
         assert_eq!(rules.evaluate("read_file", None), PermissionAction::Allow);
         assert_eq!(rules.evaluate("bash", None), PermissionAction::Ask);

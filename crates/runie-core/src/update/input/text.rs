@@ -18,7 +18,7 @@ impl AppState {
         if self.open_dialog.is_some() {
             return crate::update::input::modal_hints();
         }
-        if self.vim_nav_mode {
+        if self.view.vim_nav_mode {
             // Feed is focused in vim nav — show scrollback navigation
             return crate::update::input::vim_nav_hints();
         }
@@ -281,7 +281,7 @@ impl AppState {
             self.tab_complete();
             return;
         }
-        if self.vim_nav_mode {
+        if self.view.vim_nav_mode {
             self.handle_vim_nav_char(c);
             return;
         }
@@ -303,7 +303,7 @@ impl AppState {
                 '@' => {
                     let needs_brackets = false;
                     let cursor = self.input.cursor_pos;
-                    self.file_picker_backup =
+                    self.input.file_picker_backup =
                         Some((self.input.input.clone(), cursor, cursor, needs_brackets));
                     crate::update::dialog::open_at_file_picker_all(self);
                     return;

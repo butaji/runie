@@ -1,5 +1,5 @@
 use crate::agent_profiles::{parse_profile, AgentProfile};
-use crate::commands::handlers::agents::build_view_panel;
+use crate::commands::dsl::handlers::agents::build_view_panel;
 use crate::dialog::{ItemAction, PanelItem};
 
 #[test]

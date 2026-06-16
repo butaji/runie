@@ -1,4 +1,4 @@
-use crate::commands::handlers::session::io as session_io;
+use crate::commands::dsl::handlers::session::io as session_io;
 use crate::commands::{CommandDef, CommandFlow, CommandResult};
 use crate::model::AppState;
 
@@ -50,10 +50,10 @@ fn invoking_command_records_usage() {
     // handle_slash returns None for commands with no message output
     let _ = result;
     assert!(
-        state.command_usage.contains_key("compact"),
+        state.config.command_usage.contains_key("compact"),
         "invoking /compact should record usage"
     );
-    assert_eq!(state.command_usage.get("compact").unwrap().count, 1);
+    assert_eq!(state.config.command_usage.get("compact").unwrap().count, 1);
 }
 
 #[test]
@@ -65,7 +65,7 @@ fn unknown_command_does_not_record_usage() {
         "unknown command should return Some(Message)"
     );
     assert!(
-        state.command_usage.get("does_not_exist_xyz").is_none(),
+        state.config.command_usage.get("does_not_exist_xyz").is_none(),
         "unknown command should not record usage"
     );
 }
@@ -202,7 +202,7 @@ fn export_form_submit_empty_does_not_show_usage() {
 
 #[test]
 fn model_command_does_not_show_usage() {
-    use crate::commands::handlers::model::handle_model;
+    use crate::commands::dsl::handlers::model::handle_model;
     let mut state = AppState::default();
     let result = handle_model(&mut state, "a/b/c");
     assert_no_usage_message("model", &result);

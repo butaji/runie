@@ -1,4 +1,10 @@
 #[cfg(test)]
+use std::sync::Mutex;
+
+#[cfg(test)]
+pub static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+#[cfg(test)]
 mod action_text;
 #[cfg(test)]
 mod streaming_buffer;

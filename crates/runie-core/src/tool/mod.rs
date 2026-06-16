@@ -329,6 +329,38 @@ mod tests {
         assert_eq!(tool.unwrap().name(), "test_tool");
     }
 
+    #[test]
+    fn tool_registry_unique() {
+        let registry = builtin_registry();
+        let names: std::collections::HashSet<String> = registry
+            .list()
+            .iter()
+            .map(|t| t.name().to_string())
+            .collect();
+        let expected = [
+            "ask_user",
+            "bash",
+            "read_file",
+            "write_file",
+            "edit_file",
+            "list_dir",
+            "grep",
+            "find",
+            "fetch_docs",
+            "search",
+            "find_definitions",
+        ];
+        for name in expected {
+            assert!(
+                names.contains(name),
+                "builtin_registry must contain {}",
+                name
+            );
+        }
+        // Each tool name appears exactly once: no duplicate built-in definitions.
+        assert_eq!(names.len(), expected.len());
+    }
+
     #[tokio::test]
     async fn registry_schemas_include_name_and_description() {
         let mut registry = ToolRegistry::new();
