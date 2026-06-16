@@ -70,6 +70,27 @@ impl AppState {
             self.add_system_msg("Switched to selected branch.".into());
         }
     }
+
+    /// Replay a persisted message into the session without side effects.
+    pub(crate) fn replay_message(
+        &mut self,
+        id: String,
+        role: String,
+        content: String,
+        timestamp: f64,
+        provider: String,
+    ) {
+        let role = crate::model::Role::parse(&role).unwrap_or(crate::model::Role::Assistant);
+        self.session.messages.push(crate::model::ChatMessage {
+            role,
+            content,
+            timestamp,
+            id,
+            provider,
+            ..Default::default()
+        });
+        self.messages_changed();
+    }
 }
 
 // ── Message queue (merged from queue.rs) ─────────────────────────────────────

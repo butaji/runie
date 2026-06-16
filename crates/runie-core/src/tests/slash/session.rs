@@ -78,8 +78,9 @@ fn save_trims_whitespace() {
     state.update(Event::submit()); // Submits the form
 
     // Should save with trimmed name
+    let redb_path = crate::session_store::SessionStore::new(store.dir.clone()).path("trimmed");
     assert!(
-        store.path("trimmed").exists(),
+        redb_path.exists(),
         "whitespace should be trimmed"
     );
 

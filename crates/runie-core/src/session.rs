@@ -1,4 +1,9 @@
-//! Session persistence — JSON files in ~/.runie/sessions/
+//! Legacy session persistence — monolithic JSON files in ~/.runie/sessions/
+//!
+//! Deprecated: `/save` and `/load` now use `SessionStore` (redb) with durable
+//! events. `Store::save`/`Store::load` remain for import/export compatibility
+//! and read-only access to existing JSON sessions. Migrate old sessions by
+//! loading them with `/load` and saving with `/save`.
 
 use crate::model::ChatMessage;
 use serde::{Deserialize, Serialize};

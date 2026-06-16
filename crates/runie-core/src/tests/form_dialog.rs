@@ -5,9 +5,7 @@ use crate::event::{InputEvent, ControlEvent, DialogEvent};
 use crate::commands::DialogState;
 use crate::model::AppState;
 use crate::Event;
-use std::sync::Mutex;
-
-static ENV_LOCK: Mutex<()> = Mutex::new(());
+use crate::tests::slash::ENV_LOCK;
 
 fn fresh_state() -> AppState {
     let mut state = AppState::default();
@@ -134,7 +132,8 @@ fn form_submit_executes_command() {
     state.update(Event::submit());
     // Should close dialog and execute save
     assert!(state.open_dialog.is_none(), "dialog should close");
-    assert!(store.path("myses").exists(), "session should be saved");
+    let redb_path = crate::session_store::SessionStore::new(store.dir.clone()).path("myses");
+    assert!(redb_path.exists(), "session should be saved");
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }
 

@@ -1842,15 +1842,17 @@
     },
     {
       "id": "unify-session-persistence",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Sessions",
       "priority": "P0",
+      "completed_in": "current",
       "depends_on": [
         "fix-durable-event-mapping"
       ],
       "blocks": [],
-      "file": "tasks/unify-session-persistence.md"
+      "file": "tasks/unify-session-persistence.md",
+      "notes": "SessionStore/DurableCoreEvent is now the single source of truth. /save persists durable events; /load replays them into AppState. SessionActor replays existing events on startup. Legacy JSON sessions remain read-only/fallback. Added save_replays_events, load_replays_events, and session_actor_replays_to_uactor tests."
     },
     {
       "id": "extract-ui-actor",

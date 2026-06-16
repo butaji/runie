@@ -99,8 +99,11 @@ fn theme_persisted_in_session() {
     exec(&mut state, "/save themed"); // Opens form with pre-filled name
     state.update(Event::submit()); // Submits the form
 
-    let loaded = store.load("themed").unwrap();
-    assert_eq!(loaded.theme_name, "nord");
+    let redb_store = crate::session_store::SessionStore::new(store.dir.clone());
+    let events = redb_store.load_events("themed").unwrap();
+    let mut loaded = crate::model::AppState::default();
+    crate::session_replay::replay_events(&mut loaded, &events);
+    assert_eq!(loaded.config.theme_name, "nord");
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }

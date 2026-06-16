@@ -37,6 +37,19 @@ impl SessionStore {
         Self { dir }
     }
 
+    /// Default store — uses `RUNIE_SESSIONS_DIR` or OS data dir.
+    pub fn default_store() -> Option<Self> {
+        if let Ok(dir) = std::env::var("RUNIE_SESSIONS_DIR") {
+            return Some(Self::new(PathBuf::from(dir)));
+        }
+        dirs::data_dir().map(|d| Self::new(d.join("runie").join("sessions")))
+    }
+
+    /// Store directory.
+    pub fn dir(&self) -> &Path {
+        &self.dir
+    }
+
     /// Path to the redb file for a session.
     pub fn path(&self, session_id: &str) -> PathBuf {
         self.dir.join(format!("{}.redb", session_id))
@@ -284,6 +297,7 @@ mod tests {
             role: role.into(),
             content: content.into(),
             timestamp: ts,
+            provider: String::new(),
         }).unwrap();
     }
 
@@ -311,9 +325,9 @@ mod tests {
         let sid = "test-crash";
 
         let batch = vec![
-            DurableCoreEvent::MessageSent { id: "1".into(), role: "user".into(), content: "First".into(), timestamp: 1.0 },
-            DurableCoreEvent::MessageSent { id: "2".into(), role: "user".into(), content: "Second".into(), timestamp: 2.0 },
-            DurableCoreEvent::MessageSent { id: "3".into(), role: "user".into(), content: "Third".into(), timestamp: 3.0 },
+            DurableCoreEvent::MessageSent { id: "1".into(), role: "user".into(), content: "First".into(), timestamp: 1.0, provider: String::new() },
+            DurableCoreEvent::MessageSent { id: "2".into(), role: "user".into(), content: "Second".into(), timestamp: 2.0, provider: String::new() },
+            DurableCoreEvent::MessageSent { id: "3".into(), role: "user".into(), content: "Third".into(), timestamp: 3.0, provider: String::new() },
         ];
 
         store.append_batch(sid, &batch).unwrap();
@@ -412,10 +426,10 @@ mod tests {
         let store = test_store();
 
         store.append("s1", &DurableCoreEvent::MessageSent {
-            id: "1".into(), role: "user".into(), content: "S1".into(), timestamp: 1.0,
+            id: "1".into(), role: "user".into(), content: "S1".into(), timestamp: 1.0, provider: String::new(),
         }).unwrap();
         store.append("s2", &DurableCoreEvent::MessageSent {
-            id: "2".into(), role: "user".into(), content: "S2".into(), timestamp: 2.0,
+            id: "2".into(), role: "user".into(), content: "S2".into(), timestamp: 2.0, provider: String::new(),
         }).unwrap();
 
         let ev1 = store.load_events("s1").unwrap();

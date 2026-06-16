@@ -1,11 +1,12 @@
-//! Durable event types for JSONL session persistence.
+//! Durable event types for session persistence.
 //!
-//! These events are appended to `data_dir/runie/sessions/<id>.jsonl` and
-//! can be replayed to reconstruct a session.
+//! These events are stored in `SessionStore` (redb) under
+//! `data_dir/runie/sessions/<id>.redb` and can be replayed to reconstruct a
+//! session.
 
 use serde::{Deserialize, Serialize};
 
-/// Events that are persisted to the session JSONL log.
+/// Events that are persisted to the session store.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "event", rename_all = "camelCase")]
 pub enum DurableCoreEvent {
@@ -15,6 +16,8 @@ pub enum DurableCoreEvent {
         role: String,
         content: String,
         timestamp: f64,
+        #[serde(default)]
+        provider: String,
     },
     /// An LLM invoked a tool.
     ToolCalled {
@@ -36,5 +39,17 @@ pub enum DurableCoreEvent {
     /// The session was renamed by the user.
     SessionRenamed {
         name: String,
+    },
+    /// The user switched the active theme.
+    ThemeSwitched {
+        name: String,
+    },
+    /// The user changed the thinking level.
+    ThinkingLevelSet {
+        level: crate::model::ThinkingLevel,
+    },
+    /// The user toggled read-only mode.
+    ReadOnlySet {
+        read_only: bool,
     },
 }

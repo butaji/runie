@@ -60,6 +60,7 @@ pub mod scoped_model;
 pub mod session;
 pub mod session_actor;
 pub mod session_index;
+pub mod session_replay;
 pub mod session_store;
 pub mod session_tree;
 pub mod settings;
