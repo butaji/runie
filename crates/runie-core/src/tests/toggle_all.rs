@@ -199,14 +199,9 @@ fn new_tool_respects_global_collapse_when_true() {
     let mut state = fresh_state();
     state.view.all_collapsed = true;
 
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".to_string(),
-        name: "ls".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.5,
-        output: "a".to_string(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".to_string(),
+     }));
     state.ensure_fresh();
 
     let feed = crate::ui::LazyCache::feed(&state);
@@ -225,14 +220,9 @@ fn new_tool_respects_global_expand_when_false() {
     let mut state = fresh_state();
     state.view.all_collapsed = false;
 
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".to_string(),
-        name: "ls".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.5,
-        output: "a".to_string(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".to_string(),
+     }));
     state.ensure_fresh();
 
     let feed = crate::ui::LazyCache::feed(&state);

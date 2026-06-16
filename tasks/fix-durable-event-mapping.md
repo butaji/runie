@@ -1,6 +1,6 @@
 # Fix Durable Event Mapping
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Sessions
 **Priority**: P0

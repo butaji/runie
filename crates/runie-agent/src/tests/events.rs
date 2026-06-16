@@ -30,12 +30,9 @@ fn test_agent_response_event() {
 
 #[test]
 fn test_agent_tool_start_event() {
-    let evt = Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".to_string(),
-        name: "bash".to_string(),
-    });
+    let evt = Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "bash".to_string(), input: serde_json::Value::Null });
     match evt {
-        Event::Agent(AgentEvent::ToolStart { id, name }) => {
+        Event::Agent(AgentEvent::ToolStart { id, name, input: serde_json::Value::Null }) => {
             assert_eq!(id, "req.0");
             assert_eq!(name, "bash");
         }
@@ -45,12 +42,11 @@ fn test_agent_tool_start_event() {
 
 #[test]
 fn test_agent_tool_end_event() {
-    let evt = Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 1.5,
-        output: "result".to_string(),
-    });
+    let evt = Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 1.5, output: "result".to_string(),
+     });
     match evt {
         Event::Agent(AgentEvent::ToolEnd {
+            id: _,
             duration_secs,
             output,
         }) => {

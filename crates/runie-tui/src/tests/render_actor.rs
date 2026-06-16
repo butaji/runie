@@ -157,14 +157,9 @@ fn ui_actor_snapshot_after_events() {
     }));
 
     // Feed tool call events
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "tool.1".to_string(),
-        name: "bash".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 1.5,
-        output: "done".to_string(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "tool.1".to_string(), name: "bash".to_string(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 1.5, output: "done".to_string(),
+     }));
 
     state.ensure_fresh();
     let snap = state.snapshot();

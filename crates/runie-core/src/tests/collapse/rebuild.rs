@@ -199,14 +199,9 @@ fn assistant_preserved_when_no_tools() {
 fn tool_stores_output() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".to_string(),
-        name: "list_dir".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.5,
-        output: "file1\nfile2".to_string(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_dir".to_string(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1\nfile2".to_string(),
+     }));
 
     let tool = state
         .session

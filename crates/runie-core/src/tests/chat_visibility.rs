@@ -69,11 +69,12 @@ fn verify_agent_response_visible(state: &mut AppState, height: usize) {
 }
 
 fn verify_tool_output_visible(state: &mut AppState, height: usize) {
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into() }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into() , input: serde_json::Value::Null }));
     state.ensure_fresh();
     assert!(latest_is_visible(state, height), "Tool running must be visible");
     let output = (1..=20).map(|i| format!("file{}.txt", i)).collect::<Vec<_>>().join("\n");
-    state.update(Event::Agent(AgentEvent::ToolEnd { duration_secs: 0.5, output }));
+    state.update(Event::Agent(AgentEvent::ToolEnd {
+        id: "".to_string(), duration_secs: 0.5, output }));
     state.ensure_fresh();
     let kinds = visible_kinds(state, height);
     assert!(kinds.contains(&"ToolDone".to_string()), "Tool result must be visible. Got: {:?}", kinds);
@@ -99,9 +100,10 @@ fn large_tool_output_bottom_lines_visible() {
     let mut state = fresh_state();
     let height = 5;
 
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into() }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into() , input: serde_json::Value::Null }));
     let output = (1..=20).map(|i| format!("file{}.txt", i)).collect::<Vec<_>>().join("\n");
-    state.update(Event::Agent(AgentEvent::ToolEnd { duration_secs: 0.5, output }));
+    state.update(Event::Agent(AgentEvent::ToolEnd {
+        id: "".to_string(), duration_secs: 0.5, output }));
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -252,9 +254,9 @@ fn streaming_response_appends_not_replaces() {
 fn tool_end_does_not_duplicate_messages() {
     let mut state = fresh_state();
 
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into() }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into() , input: serde_json::Value::Null }));
     let before_count = state.session.messages.len();
-    state.update(Event::Agent(AgentEvent::ToolEnd { duration_secs: 0.5, output: "a".into() }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into()  }));
     let after_count = state.session.messages.len();
 
     assert_eq!(before_count, after_count, "Tool end should update existing message, not create new one");

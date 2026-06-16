@@ -54,14 +54,9 @@ fn response_after_tool_events() -> Vec<Event> {
             id: "req.0".into(),
             content: "Let me ".into(),
         }),
-        Event::Agent(AgentEvent::ToolStart {
-            id: "req.0".into(),
-            name: "ls".into(),
-        }),
-        Event::Agent(AgentEvent::ToolEnd {
-            duration_secs: 0.5,
-            output: "file.txt".into(),
-        }),
+        Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }),
+        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file.txt".into(),
+         }),
         Event::Agent(AgentEvent::Response {
             id: "req.0".into(),
             content: "check files.".into(),
@@ -142,14 +137,9 @@ fn thought_before_agent_events() -> Vec<Event> {
     vec![
         Event::Agent(AgentEvent::Thinking { id: "req.0".into() }),
         Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
-        Event::Agent(AgentEvent::ToolStart {
-            id: "req.0".into(),
-            name: "ls".into(),
-        }),
-        Event::Agent(AgentEvent::ToolEnd {
-            duration_secs: 0.5,
-            output: "a".into(),
-        }),
+        Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }),
+        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+         }),
         Event::Agent(AgentEvent::Response {
             id: "req.0".into(),
             content: "Result".into(),
@@ -198,14 +188,9 @@ fn turn_complete_last_during_turn_despite_updates() {
     state.agent.streaming = true;
     state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
     state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.5,
-        output: "a".into(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+     }));
     state.update(Event::Agent(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello".into(),
@@ -237,14 +222,9 @@ fn turn_then_user_events() -> Vec<Event> {
     vec![
         Event::Agent(AgentEvent::Thinking { id: "req.0".into() }),
         Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
-        Event::Agent(AgentEvent::ToolStart {
-            id: "req.0".into(),
-            name: "ls".into(),
-        }),
-        Event::Agent(AgentEvent::ToolEnd {
-            duration_secs: 0.5,
-            output: "a".into(),
-        }),
+        Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }),
+        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+         }),
         Event::Agent(AgentEvent::Response {
             id: "req.0".into(),
             content: "T1".into(),

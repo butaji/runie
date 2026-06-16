@@ -290,14 +290,9 @@ fn via_events_appended_assistant_found_anywhere_in_vec() {
         id: "req.0".into(),
         content: "hello ".into(),
     }));
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.5,
-        output: "file1".into(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".into(),
+     }));
     // This next response should append to the SAME assistant message, not create a new one
     state.update(Event::Agent(AgentEvent::Response {
         id: "req.0".into(),

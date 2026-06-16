@@ -97,24 +97,14 @@ fn global_collapse_persists_after_second_thought() {
 fn global_collapse_persists_after_second_tool() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".to_string(),
-        name: "ls".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.5,
-        output: "a".to_string(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".to_string(),
+     }));
     state.update(Event::Control(ControlEvent::ToggleExpand));
     assert!(state.view.all_collapsed);
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.1".to_string(),
-        name: "cat".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.3,
-        output: "b".to_string(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.1".to_string(), name: "cat".to_string(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "b".to_string(),
+     }));
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
     let summaries: Vec<_> = feed
@@ -180,28 +170,18 @@ fn new_tool_respects_global_collapse_flag() {
     let mut state = fresh_state();
     state.agent.streaming = true;
 
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".to_string(),
-        name: "ls".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.5,
-        output: "a".to_string(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".to_string(),
+     }));
 
     // Collapse all
     state.update(Event::Control(ControlEvent::ToggleExpand));
     assert!(state.view.all_collapsed);
 
     // New tool arrives while globally collapsed
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.1".to_string(),
-        name: "cat".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.3,
-        output: "b".to_string(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.1".to_string(), name: "cat".to_string(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "b".to_string(),
+     }));
     state.ensure_fresh();
 
     let feed = LazyCache::feed(&state);
@@ -256,10 +236,7 @@ fn expand_then_collapse_then_expand_same_state() {
 fn running_tool_ignored_by_global_toggle() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".to_string(),
-        name: "list_dir".to_string(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_dir".to_string(), input: serde_json::Value::Null }));
 
     // Toggle while tool is still running
     state.update(Event::Control(ControlEvent::ToggleExpand));

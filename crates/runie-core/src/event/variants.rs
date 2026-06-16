@@ -53,16 +53,16 @@ impl Event {
                     timestamp: crate::model::now(),
                 })
             }
-            Event::Agent(AgentEvent::ToolStart { id, name }) => {
+            Event::Agent(AgentEvent::ToolStart { id, name, input }) => {
                 Some(DurableCoreEvent::ToolCalled {
                     id: id.clone(),
                     name: name.clone(),
-                    input: serde_json::Value::Null,
+                    input: input.clone(),
                 })
             }
-            Event::Agent(AgentEvent::ToolEnd { output, .. }) => {
+            Event::Agent(AgentEvent::ToolEnd { id, output, .. }) => {
                 Some(DurableCoreEvent::ToolResult {
-                    id: String::new(),
+                    id: id.clone(),
                     output: output.clone(),
                     success: true,
                 })
@@ -165,11 +165,11 @@ impl Event {
     pub fn agent_thought_done(id: String) -> Self {
         Event::Agent(AgentEvent::ThoughtDone { id })
     }
-    pub fn agent_tool_start(id: String, name: String) -> Self {
-        Event::Agent(AgentEvent::ToolStart { id, name })
+    pub fn agent_tool_start(id: String, name: String, input: serde_json::Value) -> Self {
+        Event::Agent(AgentEvent::ToolStart { id, name, input })
     }
-    pub fn agent_tool_end(duration_secs: f64, output: String) -> Self {
-        Event::Agent(AgentEvent::ToolEnd { duration_secs, output })
+    pub fn agent_tool_end(id: String, duration_secs: f64, output: String) -> Self {
+        Event::Agent(AgentEvent::ToolEnd { id, duration_secs, output })
     }
     pub fn agent_response(id: String, content: String) -> Self {
         Event::Agent(AgentEvent::Response { id, content })
@@ -264,12 +264,29 @@ mod tests {
 
     #[test]
     fn durable_conversion_tool_call() {
+        let input = serde_json::json!({"command": "ls" });
         let evt = Event::Agent(AgentEvent::ToolStart {
             id: "t1".into(),
             name: "bash".into(),
+            input: input.clone(),
         });
         let durable = evt.to_durable();
-        assert!(matches!(durable, Some(DurableCoreEvent::ToolCalled { .. })));
+        assert!(
+            matches!(durable, Some(DurableCoreEvent::ToolCalled { id, name, input: persisted }) if id == "t1" && name == "bash" && persisted == input)
+        );
+    }
+
+    #[test]
+    fn durable_conversion_tool_result_preserves_id() {
+        let evt = Event::Agent(AgentEvent::ToolEnd {
+            id: "t1".into(),
+            duration_secs: 1.0,
+            output: "done".into(),
+        });
+        let durable = evt.to_durable();
+        assert!(
+            matches!(durable, Some(DurableCoreEvent::ToolResult { id, output, success }) if id == "t1" && output == "done" && success)
+        );
     }
 
     #[test]
@@ -319,7 +336,7 @@ mod tests {
             Event::Agent(AgentEvent::Thinking { .. })
         ));
         assert!(matches!(
-            Event::agent_tool_start("t1".into(), "bash".into()),
+            Event::agent_tool_start("t1".into(), "bash".into(), serde_json::Value::Null),
             Event::Agent(AgentEvent::ToolStart { .. })
         ));
         assert!(matches!(

@@ -51,14 +51,9 @@ fn test_formatted_labels_short_names() {
             Event::Agent(AgentEvent::ThoughtDone {
                 id: "req.0".into(),
             }),
-            Event::Agent(AgentEvent::ToolStart {
-                id: "req.0".into(),
-                name: "list_files".into(),
-            }),
-            Event::Agent(AgentEvent::ToolEnd {
-                duration_secs: 0.3,
-                output: String::new(),
-            }),
+            Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null }),
+            Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: String::new(),
+             }),
             Event::Agent(AgentEvent::TurnComplete {
                 id: "req.0".into(),
                 duration_secs: 5.1,
@@ -91,14 +86,9 @@ fn full_tool_flow_events() -> Vec<Event> {
         Event::Agent(AgentEvent::ThoughtDone {
             id: "req.0".into(),
         }),
-        Event::Agent(AgentEvent::ToolStart {
-            id: "req.0".into(),
-            name: "list_files".into(),
-        }),
-        Event::Agent(AgentEvent::ToolEnd {
-            duration_secs: 0.5,
-            output: String::new(),
-        }),
+        Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null }),
+        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
+         }),
         Event::Agent(AgentEvent::Thinking {
             id: "req.0".into(),
         }),

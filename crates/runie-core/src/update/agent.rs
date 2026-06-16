@@ -14,13 +14,14 @@ pub fn agent_event(state: &mut AppState, event: AgentEvent) {
             state.add_thought(id);
             state.ensure_turn_complete_last();
         }
-        AgentEvent::ToolStart { id, name } => {
+        AgentEvent::ToolStart { id, name, .. } => {
             state.start_tool(id, name);
             state.ensure_turn_complete_last();
         }
         AgentEvent::ToolEnd {
             duration_secs,
             output,
+            ..
         } => {
             state.end_tool(duration_secs, output);
             state.ensure_turn_complete_last();

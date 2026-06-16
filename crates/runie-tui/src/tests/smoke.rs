@@ -60,14 +60,9 @@ fn agent_response_renders() {
 #[test]
 fn tool_done_renders() {
     let mut state = AppState::default();
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".to_string(),
-        name: "list_files".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.5,
-        output: String::new(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_files".to_string(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
+     }));
     let content = draw_state(&mut state);
     assert!(content.contains("✓"), "Should render tool done");
     assert!(content.contains("list_files"), "Should show tool name");

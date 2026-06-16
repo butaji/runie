@@ -12,9 +12,17 @@ pub enum AgentEvent {
     /// Agent finished thinking and is ready to act.
     ThoughtDone { id: String },
     /// Agent started calling a tool.
-    ToolStart { id: String, name: String },
+    ToolStart {
+        id: String,
+        name: String,
+        input: serde_json::Value,
+    },
     /// Agent finished tool execution.
-    ToolEnd { duration_secs: f64, output: String },
+    ToolEnd {
+        id: String,
+        duration_secs: f64,
+        output: String,
+    },
     /// Transient streaming delta — NOT persisted to session.
     ResponseDelta { id: String, content: String },
     /// Complete response — persisted to session as MessageSent.

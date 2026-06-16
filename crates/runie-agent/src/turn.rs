@@ -236,6 +236,7 @@ async fn execute_tools(
         let output = execute_single_tool(cmd_id, tool_call, emit.clone(), skills, &ctx, &registry).await;
 
         emit_now(&emit, Event::Agent(AgentEvent::ToolEnd {
+            id: cmd_id.to_string(),
             duration_secs: output.duration.as_secs_f64(),
             output: output.content.clone(),
         }));
@@ -256,6 +257,7 @@ async fn execute_single_tool(
     emit_now(&emit, Event::Agent(AgentEvent::ToolStart {
         id: cmd_id.to_string(),
         name: tool_call.name.clone(),
+        input: tool_call.args.clone(),
     }));
 
     // Check skill Before hook

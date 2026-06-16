@@ -43,14 +43,9 @@ pub fn simulate_list_files_flow(state: &mut AppState) {
     state.update(Event::Agent(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
     }));
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".to_string(),
-        name: "list_files".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 1.0,
-        output: String::new(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_files".to_string(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 1.0, output: String::new(),
+     }));
     state.update(Event::Agent(AgentEvent::Thinking {
         id: "req.0".to_string(),
     }));
@@ -79,14 +74,9 @@ pub fn simulate_tool_call(state: &mut AppState, i: usize) {
     state.agent.streaming = true;
     state.update(Event::Agent(AgentEvent::Thinking { id: id.clone() }));
     state.update(Event::Agent(AgentEvent::ThoughtDone { id: id.clone() }));
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: id.clone(),
-        name: "list_files".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.5,
-        output: String::new(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: id.clone(), name: "list_files".to_string(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
+     }));
     state.update(Event::Agent(AgentEvent::Thinking { id: id.clone() }));
     state.update(Event::Agent(AgentEvent::ThoughtDone { id: id.clone() }));
     state.update(Event::Agent(AgentEvent::Response {

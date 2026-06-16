@@ -53,15 +53,13 @@ fn verify_thought_visible(state: &mut AppState, height: usize) {
 }
 
 fn verify_tool_output_visible(state: &mut AppState, height: usize) {
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".into(),
-        name: "list_dir".into(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null }));
     let output = (1..=20)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
     state.update(Event::Agent(AgentEvent::ToolEnd {
+        id: "".to_string(),
         duration_secs: 0.5,
         output,
     }));
@@ -197,15 +195,13 @@ fn tool_output_exceeding_viewport_shows_latest_files() {
     let mut state = fresh_state();
     let height = 5;
 
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
     let output = (1..=50)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
     state.update(Event::Agent(AgentEvent::ToolEnd {
+        id: "".to_string(),
         duration_secs: 0.5,
         output,
     }));

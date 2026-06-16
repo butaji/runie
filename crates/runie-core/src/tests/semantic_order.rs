@@ -18,14 +18,9 @@ fn run_tool_turn(state: &mut AppState, response: &str, tool_output: &str) {
         id: "req.0".into(),
         content: response.into(),
     }));
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.5,
-        output: tool_output.into(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: tool_output.into(),
+     }));
     state.update(Event::Agent(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
@@ -106,14 +101,9 @@ fn agent_before_tool_preserved_during_turn() {
         id: "req.0".into(),
         content: "Done!".into(),
     }));
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.5,
-        output: "a".into(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+     }));
     state.ensure_fresh();
     assert!(agent_pos(&state).is_some() && tool_pos(&state).is_some());
 }
@@ -125,14 +115,9 @@ fn no_reorder_when_no_tools() {
 
     state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
     state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.5,
-        output: "a".into(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+     }));
     state.update(Event::Agent(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello".into(),

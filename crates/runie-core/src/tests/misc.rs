@@ -70,14 +70,9 @@ fn test_tool_flow_creates_two_thoughts() {
         &[
             Event::Agent(AgentEvent::Thinking { id: "req.0".into() }),
             Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
-            Event::Agent(AgentEvent::ToolStart {
-                id: "req.0".into(),
-                name: "list_files".into(),
-            }),
-            Event::Agent(AgentEvent::ToolEnd {
-                duration_secs: 0.5,
-                output: String::new(),
-            }),
+            Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null }),
+            Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
+             }),
             Event::Agent(AgentEvent::Thinking { id: "req.0".into() }),
             Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
             Event::Agent(AgentEvent::Response {
@@ -139,14 +134,9 @@ fn test_turn_complete_always_added_when_event_received() {
 #[test]
 fn test_tool_done_event() {
     let mut state = fresh_state();
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".to_string(),
-        name: "list_files".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.3,
-        output: String::new(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_files".to_string(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: String::new(),
+     }));
     assert_eq!(state.session.messages.len(), 1);
     let msg = &state.session.messages[0];
     assert_eq!(msg.role, Role::Tool);
@@ -163,14 +153,9 @@ fn test_turn_complete_shows_even_if_done_arrives_first() {
         &[
             Event::Agent(AgentEvent::Thinking { id: "req.0".into() }),
             Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
-            Event::Agent(AgentEvent::ToolStart {
-                id: "req.0".into(),
-                name: "list_files".into(),
-            }),
-            Event::Agent(AgentEvent::ToolEnd {
-                duration_secs: 0.5,
-                output: String::new(),
-            }),
+            Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null }),
+            Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
+             }),
             Event::Agent(AgentEvent::Response {
                 id: "req.0".into(),
                 content: "Here are files".into(),

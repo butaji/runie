@@ -1818,7 +1818,7 @@
     },
     {
       "id": "fix-durable-event-mapping",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Sessions",
       "priority": "P0",
@@ -1828,7 +1828,8 @@
       "blocks": [
         "unify-session-persistence"
       ],
-      "file": "tasks/fix-durable-event-mapping.md"
+      "file": "tasks/fix-durable-event-mapping.md",
+      "completed_in": "current"
     },
     {
       "id": "unify-session-persistence",

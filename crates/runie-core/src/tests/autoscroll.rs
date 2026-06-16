@@ -141,8 +141,8 @@ fn at_bottom_shows_new_tool() {
     add_messages(&mut state, 20);
     state.view.scroll = 0;
 
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string() }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { duration_secs: 0.5, output: "file1".to_string() }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string() , input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".to_string()  }));
     state.ensure_fresh();
 
     let visible = crate::tests::visible_helper::compute_viewport(&state, 5);

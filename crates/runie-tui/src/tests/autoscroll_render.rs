@@ -27,15 +27,13 @@ fn latest_user_message_visible_after_submit() {
 fn large_tool_output_latest_visible_at_bottom() {
     let mut state = AppState::default();
 
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
     let output = (1..=20)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
     state.update(Event::Agent(AgentEvent::ToolEnd {
+        id: "".to_string(),
         duration_secs: 0.5,
         output,
     }));
@@ -60,15 +58,13 @@ fn final_response_visible_after_full_turn() {
         content: "I'll list files.\nTOOL:list_dir:.".into(),
     }));
     state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".into(),
-        name: "list_dir".into(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null }));
     let output = (1..=15)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
     state.update(Event::Agent(AgentEvent::ToolEnd {
+        id: "".to_string(),
         duration_secs: 0.5,
         output,
     }));

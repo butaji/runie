@@ -38,14 +38,9 @@ fn run_tool(state: &mut AppState, output: &str) {
     dispatch(
         state,
         &[
-            Event::Agent(AgentEvent::ToolStart {
-                id: "req.0".into(),
-                name: "list_dir".into(),
-            }),
-            Event::Agent(AgentEvent::ToolEnd {
-                duration_secs: 0.5,
-                output: output.into(),
-            }),
+            Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null }),
+            Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: output.into(),
+             }),
         ],
     );
 }
@@ -213,10 +208,7 @@ fn e2e_running_tool_always_expanded() {
     let mut state = AppState::default();
     state.agent.streaming = true;
 
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".to_string(),
-        name: "ls".to_string(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null }));
     state.update(Event::Control(ControlEvent::ToggleExpand));
 
     assert!(
@@ -247,14 +239,9 @@ fn e2e_global_toggle_collapses_mixed_thought_and_tool() {
         id: "req.0".to_string(),
     }));
 
-    state.update(Event::Agent(AgentEvent::ToolStart {
-        id: "req.0".to_string(),
-        name: "ls".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd {
-        duration_secs: 0.5,
-        output: "file1".to_string(),
-    }));
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".to_string(),
+     }));
 
     state.update(Event::Control(ControlEvent::ToggleExpand));
     assert!(

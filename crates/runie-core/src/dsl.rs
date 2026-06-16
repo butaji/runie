@@ -49,9 +49,11 @@ impl<'a> AgentTurn<'a> {
         let name = name.into();
         self.state.update(Event::Agent(AgentEvent::ToolStart {
             id: self.id.clone(),
-            name,
+            name: name.clone(),
+            input: serde_json::Value::Null,
         }));
         self.state.update(Event::Agent(AgentEvent::ToolEnd {
+            id: self.id.clone(),
             duration_secs: 0.5,
             output: output.into(),
         }));
@@ -62,6 +64,7 @@ impl<'a> AgentTurn<'a> {
         self.state.update(Event::Agent(AgentEvent::ToolStart {
             id: self.id.clone(),
             name: name.into(),
+            input: serde_json::Value::Null,
         }));
         self
     }

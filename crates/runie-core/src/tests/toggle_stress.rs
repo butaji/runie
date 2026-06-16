@@ -27,14 +27,9 @@ fn first_turn_before_collapse() -> Vec<Event> {
 
 fn first_turn_after_collapse() -> Vec<Event> {
     vec![
-        Event::Agent(AgentEvent::ToolStart {
-            id: "req.0".into(),
-            name: "list_dir".into(),
-        }),
-        Event::Agent(AgentEvent::ToolEnd {
-            duration_secs: 0.5,
-            output: "file1\nfile2".into(),
-        }),
+        Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null }),
+        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1\nfile2".into(),
+         }),
         Event::Agent(AgentEvent::Response {
             id: "req.0".into(),
             content: "Done.".into(),
@@ -59,14 +54,9 @@ fn turn_events(id: &str, content: &str, tool: &str, output: &str) -> Vec<Event> 
             content: format!("TOOL:{}.", tool),
         }),
         Event::Agent(AgentEvent::ThoughtDone { id: id.into() }),
-        Event::Agent(AgentEvent::ToolStart {
-            id: id.into(),
-            name: tool.into(),
-        }),
-        Event::Agent(AgentEvent::ToolEnd {
-            duration_secs: 0.5,
-            output: output.into(),
-        }),
+        Event::Agent(AgentEvent::ToolStart { id: id.into(), name: tool.into(), input: serde_json::Value::Null }),
+        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: output.into(),
+         }),
         Event::Agent(AgentEvent::Done { id: id.into() }),
     ]
 }
@@ -83,14 +73,9 @@ fn multiple_tool_first_half() -> Vec<Event> {
             content: "TOOL:list_dir:.".into(),
         }),
         Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
-        Event::Agent(AgentEvent::ToolStart {
-            id: "req.0".into(),
-            name: "ls".into(),
-        }),
-        Event::Agent(AgentEvent::ToolEnd {
-            duration_secs: 0.5,
-            output: "a".into(),
-        }),
+        Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }),
+        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+         }),
     ]
 }
 
@@ -106,14 +91,9 @@ fn multiple_tool_second_half() -> Vec<Event> {
             content: "TOOL:grep:fn main:.".into(),
         }),
         Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
-        Event::Agent(AgentEvent::ToolStart {
-            id: "req.0".into(),
-            name: "grep".into(),
-        }),
-        Event::Agent(AgentEvent::ToolEnd {
-            duration_secs: 0.3,
-            output: "result".into(),
-        }),
+        Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "grep".into(), input: serde_json::Value::Null }),
+        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "result".into(),
+         }),
         Event::Agent(AgentEvent::Done { id: "req.0".into() }),
     ]
 }
@@ -130,14 +110,9 @@ fn single_thought_events(id: &str, reasoning: &str, output: &str) -> Vec<Event> 
             content: "TOOL:ls.".into(),
         }),
         Event::Agent(AgentEvent::ThoughtDone { id: id.into() }),
-        Event::Agent(AgentEvent::ToolStart {
-            id: id.into(),
-            name: "ls".into(),
-        }),
-        Event::Agent(AgentEvent::ToolEnd {
-            duration_secs: 0.1,
-            output: output.into(),
-        }),
+        Event::Agent(AgentEvent::ToolStart { id: id.into(), name: "ls".into(), input: serde_json::Value::Null }),
+        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.1, output: output.into(),
+         }),
         Event::Agent(AgentEvent::Done { id: id.into() }),
     ]
 }
