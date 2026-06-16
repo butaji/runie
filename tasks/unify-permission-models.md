@@ -1,6 +1,6 @@
 # Unify Permission Models
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Architecture / Security
 **Priority**: P1
@@ -14,16 +14,16 @@ Approval logic is modeled twice: `runie-core/src/permissions.rs` (`PermissionSet
 
 ## Acceptance Criteria
 
-- [ ] A single permission/approval model lives in `runie-core`.
-- [ ] `runie-agent` uses the core model; `policy.rs` is deleted or becomes a thin wrapper.
-- [ ] Existing behavior (allow/ask/deny, sensitive paths, read-only tools) is preserved.
-- [ ] `cargo test --workspace` succeeds.
+- [x] A single permission/approval model lives in `runie-core`.
+- [x] `runie-agent` uses the core model; `policy.rs` is deleted or becomes a thin wrapper.
+- [x] Existing behavior (allow/ask/deny, sensitive paths, read-only tools) is preserved.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `permission_set_evaluates_rules` — wildcard last-match rules work.
-- [ ] `policy_matches_core` — agent behavior matches core permission decisions.
+- [x] `permission_set_evaluates_rules` — wildcard last-match rules work.
+- [x] `policy_matches_core` — agent behavior matches core permission decisions.
 
 ## Files touched
 

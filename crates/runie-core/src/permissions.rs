@@ -4,7 +4,6 @@
 
 use glob::Pattern;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 
 /// Permission action result.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -50,7 +49,7 @@ pub struct PermissionSet { rules: Vec<PermissionRule> }
 
 impl PermissionSet {
     pub fn new(rules: Vec<PermissionRule>) -> Self { Self { rules } }
-    
+
     /// Evaluate tool+path against rules (last-match wins).
     pub fn evaluate(&self, tool: &str, path: Option<&str>) -> PermissionAction {
         let mut result = PermissionAction::Ask;
@@ -59,7 +58,33 @@ impl PermissionSet {
         }
         result
     }
-    
+
+    /// Evaluate with the built-in sensitive-path denylist applied first.
+    pub fn effective_action(&self, tool: &str, path: Option<&str>) -> PermissionAction {
+        if let Some(p) = path {
+            if is_sensitive_path(p) {
+                return PermissionAction::Deny;
+            }
+        }
+        self.evaluate(tool, path)
+    }
+
+    /// Default rules matching the agent's historical behavior:
+    /// read-only tools are allowed, write/edit/bash ask, and sensitive paths
+    /// are denied via `effective_action`.
+    pub fn default_rules() -> Self {
+        Self::new(vec![
+            PermissionRule { tool_pattern: "read_file".into(), path_pattern: None, action: PermissionAction::Allow },
+            PermissionRule { tool_pattern: "list_dir".into(), path_pattern: None, action: PermissionAction::Allow },
+            PermissionRule { tool_pattern: "grep".into(), path_pattern: None, action: PermissionAction::Allow },
+            PermissionRule { tool_pattern: "find".into(), path_pattern: None, action: PermissionAction::Allow },
+            PermissionRule { tool_pattern: "fetch_docs".into(), path_pattern: None, action: PermissionAction::Allow },
+            PermissionRule { tool_pattern: "write_file".into(), path_pattern: None, action: PermissionAction::Ask },
+            PermissionRule { tool_pattern: "edit_file".into(), path_pattern: None, action: PermissionAction::Ask },
+            PermissionRule { tool_pattern: "bash".into(), path_pattern: None, action: PermissionAction::Ask },
+        ])
+    }
+
     pub fn rules(&self) -> &[PermissionRule] { &self.rules }
 }
 
@@ -190,5 +215,39 @@ mod tests {
     fn permission_set_default_is_ask() {
         let rules = PermissionSet::default();
         assert_eq!(rules.evaluate("bash", None), PermissionAction::Ask);
+    }
+
+    #[test]
+    fn permission_set_evaluates_rules() {
+        let rules = PermissionSet::new(vec![
+            PermissionRule { tool_pattern: "read_*".into(), path_pattern: None, action: PermissionAction::Allow },
+            PermissionRule { tool_pattern: "bash".into(), path_pattern: None, action: PermissionAction::Ask },
+            PermissionRule { tool_pattern: "*".into(), path_pattern: None, action: PermissionAction::Deny },
+        ]);
+        assert_eq!(rules.evaluate("read_file", None), PermissionAction::Allow);
+        assert_eq!(rules.evaluate("bash", None), PermissionAction::Ask);
+        assert_eq!(rules.evaluate("unknown", None), PermissionAction::Deny);
+    }
+
+    #[test]
+    fn default_rules_read_only_allowed_write_asks() {
+        let rules = PermissionSet::default_rules();
+        assert_eq!(rules.effective_action("read_file", None), PermissionAction::Allow);
+        assert_eq!(rules.effective_action("list_dir", None), PermissionAction::Allow);
+        assert_eq!(rules.effective_action("grep", None), PermissionAction::Allow);
+        assert_eq!(rules.effective_action("find", None), PermissionAction::Allow);
+        assert_eq!(rules.effective_action("fetch_docs", None), PermissionAction::Allow);
+        assert_eq!(rules.effective_action("write_file", None), PermissionAction::Ask);
+        assert_eq!(rules.effective_action("edit_file", None), PermissionAction::Ask);
+        assert_eq!(rules.effective_action("bash", None), PermissionAction::Ask);
+    }
+
+    #[test]
+    fn effective_action_denies_sensitive_paths() {
+        let rules = PermissionSet::default_rules();
+        assert_eq!(rules.effective_action("read_file", Some("/home/user/.ssh/id_rsa")), PermissionAction::Deny);
+        assert_eq!(rules.effective_action("write_file", Some("/project/.env")), PermissionAction::Deny);
+        // Non-sensitive paths still follow the ruleset.
+        assert_eq!(rules.effective_action("read_file", Some("/project/src/main.rs")), PermissionAction::Allow);
     }
 }

@@ -1871,13 +1871,15 @@
     },
     {
       "id": "unify-permission-models",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Architecture / Security",
       "priority": "P1",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/unify-permission-models.md"
+      "file": "tasks/unify-permission-models.md",
+      "completed_in": "current",
+      "notes": "Consolidated approval logic in runie-core::permissions. Deleted runie-agent/src/policy.rs and its tests. Added PermissionSet::default_rules() and effective_action() to capture read-only allow, write/dangerous ask, and sensitive-path deny. Added policy_matches_core test in runie-agent. Removed unused glob dependency from runie-agent."
     },
     {
       "id": "remove-tui-mouse-target-dupe",
@@ -1933,6 +1935,76 @@
       "blocks": [],
       "file": "tasks/dedupe-small-helpers.md",
       "completed_in": "current"
+    },
+    {
+      "id": "adopt-skills-progressive-disclosure",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P0",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-skills-progressive-disclosure.md"
+    },
+    {
+      "id": "adopt-multi-agent-spawning",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-multi-agent-spawning.md"
+    },
+    {
+      "id": "adopt-hooks-registry",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-hooks-registry.md"
+    },
+    {
+      "id": "adopt-snapshot-testing",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-snapshot-testing.md"
+    },
+    {
+      "id": "adopt-stylize-helpers",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-stylize-helpers.md"
+    },
+    {
+      "id": "adopt-layered-config",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-layered-config.md"
+    },
+    {
+      "id": "adopt-protocol-crate",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-protocol-crate.md"
     }
   ]
 }

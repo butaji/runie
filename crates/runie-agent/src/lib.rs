@@ -7,7 +7,6 @@ pub mod headless;
 pub mod inspector;
 pub mod parser;
 pub mod path_utils;
-pub mod policy;
 pub mod profiles;
 pub mod safety;
 pub mod subagent;
@@ -18,7 +17,6 @@ pub mod turn;
 pub use headless::{run_headless_turn, HeadlessOptions, HeadlessResult};
 pub use parser::{has_tool_calls, parse_tool_calls, ParsedToolCall};
 pub use runie_core::tool::ToolOutput;
-pub use tools::{Tool, ToolResult};
 pub use turn::run_agent_turn;
 
 use runie_provider::DynProvider;

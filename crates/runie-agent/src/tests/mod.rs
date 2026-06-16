@@ -3,7 +3,7 @@
 
 mod events;
 mod parser;
-mod policy;
+mod permissions;
 mod safety;
 mod subagent_test;
 mod tools;
