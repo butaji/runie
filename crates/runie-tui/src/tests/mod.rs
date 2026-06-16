@@ -24,6 +24,8 @@ mod render_actor;
 #[cfg(test)]
 mod semantic_render;
 #[cfg(test)]
+mod terminal_setup;
+#[cfg(test)]
 mod status_timer;
 #[cfg(test)]
 mod sticky_bottom;

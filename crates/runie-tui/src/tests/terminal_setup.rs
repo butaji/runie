@@ -1,4 +1,4 @@
-//! Tests for terminal setup helpers in the binary crate root.
+//! Tests for terminal setup helpers.
 
 #[test]
 fn push_keyboard_enhancement_flags_writes_sequence() {
