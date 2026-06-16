@@ -2086,6 +2086,119 @@
       ],
       "blocks": [],
       "file": "tasks/adopt-workflow-dsl.md"
+    },
+    {
+      "id": "unify-resolve-path",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/unify-resolve-path.md"
+    },
+    {
+      "id": "unify-tool-error-output",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [
+        "unify-resolve-path"
+      ],
+      "blocks": [],
+      "file": "tasks/unify-tool-error-output.md"
+    },
+    {
+      "id": "unify-agent-status-enum",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/unify-agent-status-enum.md"
+    },
+    {
+      "id": "add-agent-lifecycle-from-impls",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "depends_on": [
+        "unify-agent-status-enum"
+      ],
+      "blocks": [],
+      "file": "tasks/add-agent-lifecycle-from-impls.md"
+    },
+    {
+      "id": "remove-unused-plan-param",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/remove-unused-plan-param.md"
+    },
+    {
+      "id": "extract-search-item-builder",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/extract-search-item-builder.md"
+    },
+    {
+      "id": "derive-clone-tool-registry",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/derive-clone-tool-registry.md"
+    },
+    {
+      "id": "export-format-helpers",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P3",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/export-format-helpers.md"
+    },
+    {
+      "id": "split-large-files",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Refactoring",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/split-large-files.md"
+    },
+    {
+      "id": "align-build-rs-lint-thresholds",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Refactoring",
+      "priority": "P0",
+      "depends_on": [
+        "unify-resolve-path",
+        "unify-tool-error-output",
+        "unify-agent-status-enum",
+        "add-agent-lifecycle-from-impls",
+        "remove-unused-plan-param",
+        "extract-search-item-builder",
+        "derive-clone-tool-registry",
+        "split-large-files"
+      ],
+      "blocks": [],
+      "file": "tasks/align-build-rs-lint-thresholds.md"
     }
   ]
 }
