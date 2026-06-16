@@ -34,7 +34,7 @@ pub fn register(registry: &mut CommandRegistry) {
 }
 
 fn handle_help(state: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::OpenPanelStack(PanelStack::new(build_help_panel(state)))
+    CommandResult::OpenPanelStack(Box::new(PanelStack::new(build_help_panel(state))))
 }
 
 fn build_help_panel(state: &AppState) -> Panel {

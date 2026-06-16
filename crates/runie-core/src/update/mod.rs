@@ -151,7 +151,7 @@ impl AppState {
                 self.sidebar.agents.clear();
             }
             OrchestratorEvent::StateChanged { to, .. } => {
-                self.orchestrator_state = to;
+                self.orchestrator_state = *to;
             }
             _ => {}
         }
@@ -364,6 +364,10 @@ fn dispatch_event(state: &mut AppState, event: Event) {
         Event::Thinking { .. } | Event::ThoughtDone { .. } | Event::ToolStart { .. } | Event::ToolEnd { .. } |
         Event::ResponseDelta { .. } | Event::Response { .. } | Event::TurnComplete { .. } | Event::Done { .. } |
         Event::Error { .. } => agent::agent_event(state, event),
+        // Replay
+        Event::MessageReplayed { id, role, content, timestamp, provider } => {
+            state.replay_message(id.clone(), role.clone(), content.clone(), timestamp, provider.clone());
+        }
         // Scroll
         Event::Up | Event::Down => input::scroll_event(state, event),
         // Control
@@ -551,21 +555,8 @@ fn handle_command_event(state: &mut AppState, event: CommandEvent) {
 
 fn run_load_command(state: &mut AppState, name: &str) {
     use crate::commands::CommandResult;
-    let result = crate::session::load(name)
-        .map(|session| {
-            state.session.messages = session.messages;
-            state.config.current_provider = session.provider;
-            state.config.current_model = session.model;
-            state.config.theme_name = session.theme_name;
-            state.config.thinking_level = session.thinking_level;
-            state.config.read_only = session.read_only;
-            state.session.session_display_name = session.display_name.or(Some(session.name));
-            state.session.session_created_at = session.created_at;
-            state.session.session_updated_at = session.updated_at;
-            state.session.session_tree = session.session_tree;
-            state.messages_changed();
-            CommandResult::Message(format!("Session '{}' loaded.", name))
-        })
+    let result = crate::session_replay::load_session(name, state)
+        .map(|_| CommandResult::Message(format!("Session '{}' loaded.", name)))
         .unwrap_or_else(|_| {
             CommandResult::Message(format!(
                 "Session '{}' not found. Use /sessions to list saved sessions.",
@@ -577,20 +568,7 @@ fn run_load_command(state: &mut AppState, name: &str) {
 
 fn run_save_command(state: &mut AppState, name: &str) {
     use crate::commands::CommandResult;
-    let session = Session {
-        name: name.to_string(),
-        display_name: state.session.session_display_name.clone(),
-        created_at: state.session.session_created_at,
-        updated_at: now(),
-        messages: state.session.messages.clone(),
-        provider: state.config.current_provider.clone(),
-        model: state.config.current_model.clone(),
-        theme_name: state.config.theme_name.clone(),
-        thinking_level: state.config.thinking_level,
-        read_only: state.config.read_only,
-        session_tree: state.session.session_tree.clone(),
-    };
-    let result = crate::session::save(name, &session)
+    let result = crate::session_replay::save_session(name, state)
         .map(|_| CommandResult::Message(format!("Session '{}' saved.", name)))
         .unwrap_or_else(|e| {
             CommandResult::Message(format!("Could not save session: {}", e))
@@ -600,7 +578,7 @@ fn run_save_command(state: &mut AppState, name: &str) {
 
 fn run_delete_command(state: &mut AppState, name: &str) {
     use crate::commands::CommandResult;
-    let result = crate::session::delete(name)
+    let result = crate::session_replay::delete_session(name)
         .map(|_| CommandResult::Message(format!("Session '{}' deleted.", name)))
         .unwrap_or_else(|_| {
             CommandResult::Message(format!(

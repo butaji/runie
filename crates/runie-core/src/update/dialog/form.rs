@@ -7,7 +7,6 @@ use crate::Event;
 
 /// What a form panel should do in response to an event.
 #[derive(Debug, Clone)]
-#[allow(clippy::large_enum_variant)]
 pub enum FormAction {
     /// Keep the form open, persist the panel state.
     KeepOpen,

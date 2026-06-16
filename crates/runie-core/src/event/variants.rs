@@ -64,6 +64,15 @@ pub enum Event {
     Done { id: String },
     Error { id: String, message: String },
 
+    // Replay
+    MessageReplayed {
+        id: String,
+        role: String,
+        content: String,
+        timestamp: f64,
+        provider: String,
+    },
+
     // Scroll
     Up,
     Down,
@@ -214,12 +223,12 @@ pub enum Event {
     SetOrchestratorStatus(AgentStatus),
 
     // Orchestrator
-    StateChanged { from: OrchestratorState, to: OrchestratorState },
+    StateChanged { from: Box<OrchestratorState>, to: Box<OrchestratorState> },
     PlanStarted,
     PlanningStarted,
-    PlanGenerated { plan: OrchestratorPlan },
+    PlanGenerated { plan: Box<OrchestratorPlan> },
     PlanningFailed { error: String },
-    SubagentDispatched { task: SubagentTask },
+    SubagentDispatched { task: Box<SubagentTask> },
     SubagentStatusChanged { task_id: String, status: TaskStatus },
     SubagentCompleted { task_id: String, output: String },
     SubagentFailed { task_id: String, error: String },
@@ -241,6 +250,7 @@ impl Event {
                 role: "assistant".into(),
                 content: content.clone(),
                 timestamp: crate::model::now(),
+                provider: String::new(),
             }),
             Event::ToolStart { id, name, input } => Some(DurableCoreEvent::ToolCalled {
                 id: id.clone(),
@@ -403,6 +413,25 @@ impl Event {
     }
     pub fn dialog_back() -> Self {
         Event::DialogBack
+    }
+}
+
+#[cfg(test)]
+mod size_tests {
+    use super::Event;
+
+    /// Pre-optimization size of `Event` before boxing large orchestrator payloads.
+    const EVENT_BASELINE_SIZE: usize = 288;
+
+    #[test]
+    fn event_size_reduced() {
+        let size = std::mem::size_of::<Event>();
+        assert!(
+            size < EVENT_BASELINE_SIZE,
+            "Event size {} should be smaller than baseline {}",
+            size,
+            EVENT_BASELINE_SIZE
+        );
     }
 }
 

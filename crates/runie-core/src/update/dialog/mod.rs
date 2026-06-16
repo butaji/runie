@@ -312,7 +312,7 @@ pub fn process_command_result(state: &mut AppState, result: crate::commands::Com
             if let Some(current) = state.open_dialog.take() {
                 push_dialog_to_back_stack(state, current);
             }
-            state.open_dialog = Some(DialogState::PanelStack(stack));
+            state.open_dialog = Some(DialogState::PanelStack(*stack));
             state.mark_dirty();
         }
         CR::None => {}

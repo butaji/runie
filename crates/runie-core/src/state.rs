@@ -674,7 +674,7 @@ mod orchestrator_sidebar_tests {
     fn plan_generated_populates_subagents() {
         let mut state = crate::model::AppState::default();
         apply_event(&mut state, OrchestratorEvent::PlanStarted);
-        apply_event(&mut state, OrchestratorEvent::PlanGenerated { plan: orchestrator_plan() });
+        apply_event(&mut state, OrchestratorEvent::PlanGenerated { plan: Box::new(orchestrator_plan()) });
         assert_eq!(state.sidebar.agents.len(), 3); // orchestrator + 2 subagents
         assert_eq!(state.sidebar.agents[1].id, "t1");
         assert_eq!(state.sidebar.agents[2].id, "t2");
@@ -686,7 +686,7 @@ mod orchestrator_sidebar_tests {
     fn subagent_status_changed_updates_entry() {
         let mut state = crate::model::AppState::default();
         apply_event(&mut state, OrchestratorEvent::PlanStarted);
-        apply_event(&mut state, OrchestratorEvent::PlanGenerated { plan: orchestrator_plan() });
+        apply_event(&mut state, OrchestratorEvent::PlanGenerated { plan: Box::new(orchestrator_plan()) });
         apply_event(&mut state, OrchestratorEvent::SubagentStatusChanged {
             task_id: "t1".into(),
             status: TaskStatus::Running,
@@ -702,7 +702,7 @@ mod orchestrator_sidebar_tests {
     fn cancelled_hides_sidebar() {
         let mut state = crate::model::AppState::default();
         apply_event(&mut state, OrchestratorEvent::PlanStarted);
-        apply_event(&mut state, OrchestratorEvent::PlanGenerated { plan: orchestrator_plan() });
+        apply_event(&mut state, OrchestratorEvent::PlanGenerated { plan: Box::new(orchestrator_plan()) });
         apply_event(&mut state, OrchestratorEvent::Cancelled);
         assert!(!state.sidebar.visible);
         assert!(state.sidebar.agents.is_empty());
@@ -714,7 +714,7 @@ mod orchestrator_sidebar_tests {
         let events = [
             OrchestratorEvent::PlanStarted,
             OrchestratorEvent::PlanningStarted,
-            OrchestratorEvent::PlanGenerated { plan: plan.clone() },
+            OrchestratorEvent::PlanGenerated { plan: Box::new(plan.clone()) },
             OrchestratorEvent::PlanningFailed { error: "timeout".into() },
             OrchestratorEvent::SubagentStatusChanged {
                 task_id: "t1".into(),

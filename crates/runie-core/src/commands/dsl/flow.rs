@@ -43,7 +43,7 @@ impl CommandFlow {
             Self::Message(msg) => CommandResult::Message((*msg).into()),
             Self::Dynamic(f) => CommandResult::Message(f(state, args)),
             Self::Dialog(d) => CommandResult::OpenDialog(d.clone()),
-            Self::PanelStack(f) => CommandResult::OpenPanelStack(f(state, args)),
+            Self::PanelStack(f) => CommandResult::OpenPanelStack(Box::new(f(state, args))),
             Self::Handler(f) => f(state, args),
             Self::Chain(flows) => Self::exec_chain(flows, state, _cmd_name, args),
             Self::When(predicate, flow) => {
@@ -123,13 +123,12 @@ pub enum DialogType {
 
 /// Command result
 #[derive(Debug, Clone, PartialEq)]
-#[allow(clippy::large_enum_variant)]
 pub enum CommandResult {
     Message(String),
     Warning(String),
     Event(Event),
     OpenDialog(DialogType),
-    OpenPanelStack(PanelStack),
+    OpenPanelStack(Box<PanelStack>),
     None,
 }
 

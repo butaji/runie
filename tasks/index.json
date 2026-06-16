@@ -1926,15 +1926,17 @@
     },
     {
       "id": "box-large-event-variants",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P2",
+      "completed_in": "current",
       "depends_on": [
         "flatten-event-enum"
       ],
       "blocks": [],
-      "file": "tasks/box-large-event-variants.md"
+      "file": "tasks/box-large-event-variants.md",
+      "notes": "Boxed Event orchestrator payloads and CommandResult::OpenPanelStack. Removed large-enum-variant allows. Event size reduced from 288 to 104 bytes. cargo clippy --workspace and cargo test --workspace pass."
     },
     {
       "id": "dedupe-small-helpers",

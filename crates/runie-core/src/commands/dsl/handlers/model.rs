@@ -100,7 +100,7 @@ fn open_thinking_panel(state: &mut AppState) -> CommandResult {
         panel = panel.item(&label, ItemAction::Emit(evt));
     }
 
-    CommandResult::OpenPanelStack(PanelStack::new(panel))
+    CommandResult::OpenPanelStack(Box::new(PanelStack::new(panel)))
 }
 
 fn handle_scoped_models(state: &mut AppState, _: &str) -> CommandResult {

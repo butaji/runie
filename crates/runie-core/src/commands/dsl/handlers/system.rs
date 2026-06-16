@@ -199,7 +199,7 @@ fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
                 name: values.get("name").cloned().unwrap_or_default(),
             })
             .into_stack();
-        return CommandResult::OpenPanelStack(stack);
+        return CommandResult::OpenPanelStack(Box::new(stack));
     }
     match state.skills.iter().find(|s| s.name == name) {
         Some(skill) => {
@@ -282,7 +282,7 @@ fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {
             panel = panel.item(format!("{}  →  {}", combo, name), ItemAction::Close);
         }
     }
-    CommandResult::OpenPanelStack(PanelStack::new(panel))
+    CommandResult::OpenPanelStack(Box::new(PanelStack::new(panel)))
 }
 
 // ── Form-submit handlers ──────────────────────────────────────────────────────

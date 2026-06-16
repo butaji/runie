@@ -368,8 +368,8 @@ fn handle_cancel(actor: &mut OrchestratorActor, bus: &EventBus<OrchestratorEvent
 fn emit_state_change(bus: &EventBus<OrchestratorEvent>, from: &OrchestratorState, to: &OrchestratorState) {
     if from != to {
         bus.publish(OrchestratorEvent::StateChanged {
-            from: from.clone(),
-            to: to.clone(),
+            from: Box::new(from.clone()),
+            to: Box::new(to.clone()),
         });
     }
 }

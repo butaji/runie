@@ -22,7 +22,7 @@ pub fn build_load_form() -> CommandResult {
         &[("Name", "session-name", "name")],
         load_submit,
     );
-    CommandResult::OpenPanelStack(stack)
+    CommandResult::OpenPanelStack(Box::new(stack))
 }
 
 /// Build the /delete form panel.
@@ -33,7 +33,7 @@ pub fn build_delete_form() -> CommandResult {
         &[("Name", "session-name", "name")],
         delete_submit,
     );
-    CommandResult::OpenPanelStack(stack)
+    CommandResult::OpenPanelStack(Box::new(stack))
 }
 
 /// Build the /import form panel.
@@ -44,7 +44,7 @@ pub fn build_import_form() -> CommandResult {
         &[("Path", "session.json", "path")],
         import_submit,
     );
-    CommandResult::OpenPanelStack(stack)
+    CommandResult::OpenPanelStack(Box::new(stack))
 }
 
 /// Build the /export form panel.
@@ -55,7 +55,7 @@ pub fn build_export_form() -> CommandResult {
         &[("Path", "session.json", "path")],
         export_submit,
     );
-    CommandResult::OpenPanelStack(stack)
+    CommandResult::OpenPanelStack(Box::new(stack))
 }
 
 fn build_form_stack(
@@ -287,7 +287,7 @@ pub fn register(registry: &mut CommandRegistry) {
 // ── Command handlers ──────────────────────────────────────────────────────────
 
 fn handle_sessions(_: &mut AppState, _: &str) -> CommandResult {
-    match crate::session::list() {
+    match crate::session_replay::list_sessions() {
         Ok(sessions) if sessions.is_empty() => {
             CommandResult::Message("No saved sessions. Use /save name to create one.".into())
         }
@@ -414,22 +414,8 @@ fn handle_share(_: &mut AppState, _: &str) -> CommandResult {
 
 fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {
     match find_most_recent() {
-        Some(name) => match crate::session::load(&name) {
-            Ok(session) => {
-                state.session.messages = session.messages;
-                state.config.current_provider = session.provider;
-                state.config.current_model = session.model;
-                state.config.theme_name = session.theme_name;
-                state.config.thinking_level = session.thinking_level;
-                state.config.read_only = session.read_only;
-                state.session.session_display_name =
-                    session.display_name.or(Some(session.name));
-                state.session.session_created_at = session.created_at;
-                state.session.session_updated_at = session.updated_at;
-                state.session.session_tree = session.session_tree;
-                state.messages_changed();
-                CommandResult::Message(format!("Loaded '{}'.", name))
-            }
+        Some(name) => match crate::session_replay::load_session(&name, state) {
+            Ok(_) => CommandResult::Message(format!("Loaded '{}'.", name)),
             Err(_) => CommandResult::Message("Could not load session.".into()),
         },
         None => CommandResult::Message("No sessions to resume.".into()),
@@ -437,17 +423,25 @@ fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 fn find_most_recent() -> Option<String> {
-    let store = crate::session::default_store()?;
-    let names = store.list().ok()?;
+    let names = crate::session_replay::list_sessions().ok()?;
+    let store = crate::session_store::SessionStore::default_store()?;
     let mut most_recent = None;
     let mut most_recent_time = 0.0f64;
     for name in names {
-        if let Ok(session) = store.load(&name) {
-            if session.updated_at > most_recent_time {
-                most_recent_time = session.updated_at;
+        if let Ok(meta) = load_session_metadata(&store, &name) {
+            if meta.updated_at > most_recent_time {
+                most_recent_time = meta.updated_at;
                 most_recent = Some(name);
             }
         }
     }
     most_recent
+}
+
+fn load_session_metadata(store: &crate::session_store::SessionStore, name: &str) -> anyhow::Result<crate::session_index::SessionMetadata> {
+    let data_dir = store.dir().parent().unwrap_or(store.dir()).to_path_buf();
+    let index = crate::session_index::SessionIndex::load(&data_dir)?;
+    index.get(name)
+        .cloned()
+        .ok_or_else(|| anyhow::anyhow!("not found"))
 }

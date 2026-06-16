@@ -25,7 +25,7 @@ pub fn register(registry: &mut CommandRegistry) {
 pub fn handle_spawn(_state: &mut AppState, args: &str) -> CommandResult {
     let prompt = args.trim();
     if prompt.is_empty() {
-        return CommandResult::OpenPanelStack(crate::commands::build_spawn_form_panel());
+        return CommandResult::OpenPanelStack(Box::new(crate::commands::build_spawn_form_panel()));
     }
     CommandResult::Event(ControlEvent::SpawnAgent {
         prompt: prompt.to_string(),

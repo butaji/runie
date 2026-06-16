@@ -1,6 +1,6 @@
 # Box Large Event Variants
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Core / State
 **Priority**: P2
@@ -14,15 +14,15 @@ Clippy warns that several enums are at least 288 bytes due to large embedded pay
 
 ## Acceptance Criteria
 
-- [ ] Large enum variant payloads are boxed where ownership allows.
-- [ ] Enum sizes are reduced below clippy's large-variant threshold.
-- [ ] `cargo clippy --workspace` no longer warns on these enums.
-- [ ] `cargo test --workspace` succeeds.
+- [x] Large enum variant payloads are boxed where ownership allows.
+- [x] Enum sizes are reduced below clippy's large-variant threshold.
+- [x] `cargo clippy --workspace` no longer warns on these enums.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `event_size_reduced` — `std::mem::size_of::<Event>()` is smaller than baseline.
+- [x] `event_size_reduced` — `std::mem::size_of::<Event>()` is smaller than baseline (288 → 104 bytes).
 
 ## Files touched
 
@@ -34,4 +34,7 @@ Clippy warns that several enums are at least 288 bytes due to large embedded pay
 
 ## Notes
 
-Measure before and after; do not box variants that are hot in tight loops without profiling.
+- `Event` large orchestrator payloads (`OrchestratorState`, `OrchestratorPlan`, `SubagentTask`) are now boxed.
+- `CommandResult::OpenPanelStack` now holds `Box<PanelStack>`.
+- Removed `#[allow(clippy::large_enum_variant)]` from `ItemAction`, `SettingsRowKind`, `FormAction`, and `CommandResult`.
+- Final `Event` size: 104 bytes (baseline 288 bytes).

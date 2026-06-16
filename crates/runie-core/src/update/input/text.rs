@@ -425,7 +425,7 @@ impl AppState {
                 }
             },
             crate::commands::CommandResult::OpenPanelStack(stack) => {
-                self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
+                self.open_dialog = Some(crate::commands::DialogState::PanelStack(*stack));
                 self.mark_dirty();
             }
             crate::commands::CommandResult::None => {}
