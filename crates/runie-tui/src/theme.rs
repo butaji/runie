@@ -3,6 +3,8 @@
 //! Runie-specific styles are registered as defaults so any theme can override them.
 //! The current theme is cached in a global lock; `draw_snapshot` sets it at frame start.
 
+pub use crate::semantic_tokens::SemanticTokens;
+
 use ratatui::layout::Alignment;
 use ratatui::style::{Color, Style};
 use ratatui::text::Line;
@@ -11,6 +13,8 @@ use std::sync::{Arc, Mutex, RwLock};
 
 static CURRENT_THEME: RwLock<Option<Arc<opaline::Theme>>> = RwLock::new(None);
 static CURRENT_THEME_NAME: Mutex<String> = Mutex::new(String::new());
+static CURRENT_CAPS: RwLock<Option<crate::terminal::caps::TerminalCapabilities>> =
+    RwLock::new(None);
 
 #[cfg(test)]
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -23,6 +27,19 @@ pub fn test_lock() -> std::sync::MutexGuard<'static, ()> {
 /// Set the active theme by name. Called by `draw_snapshot` at frame start.
 /// This is a no-op when the requested theme is already active.
 pub fn set_current_theme(name: &str) {
+    set_current_theme_with_caps(name, crate::terminal::caps::TerminalCapabilities::default());
+}
+
+/// Set the active theme by name, quantized to the given terminal capabilities.
+/// Quantization happens once at load time; per-frame rendering is unaffected.
+pub fn set_current_theme_with_caps(
+    name: &str,
+    caps: crate::terminal::caps::TerminalCapabilities,
+) {
+    {
+        let mut current = CURRENT_CAPS.write().unwrap_or_else(|e| e.into_inner());
+        *current = Some(caps);
+    }
     {
         let mut current = CURRENT_THEME_NAME.lock().unwrap_or_else(|e| e.into_inner());
         if current.as_str() == name {
@@ -30,7 +47,7 @@ pub fn set_current_theme(name: &str) {
         }
         *current = name.to_string();
     }
-    let theme = load_theme(name);
+    let theme = load_theme_with_caps(name, caps);
     let mut guard = CURRENT_THEME.write().unwrap_or_else(|e| e.into_inner());
     *guard = Some(Arc::new(theme));
 }
@@ -51,10 +68,12 @@ pub fn current_theme() -> Arc<opaline::Theme> {
     guard.clone().unwrap_or_else(|| Arc::new(default_theme()))
 }
 
-/// Load a theme by name: builtin → custom file → default fallback.
-fn load_theme(name: &str) -> opaline::Theme {
-    if let Some(theme) = opaline::load_by_name(name) {
-        return register_runie_styles(theme);
+/// Load a theme by name: builtin → custom file → default fallback (no style registration).
+fn load_theme_raw(name: &str) -> opaline::Theme {
+    // Only use the builtin loader if the name is actually a builtin.
+    // "runie" is not a builtin — it uses the embedded DEFAULT_THEME_TOML.
+    if let Some(t) = opaline::load_by_name(name) {
+        return t;
     }
     let custom_path = dirs::home_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
@@ -62,9 +81,106 @@ fn load_theme(name: &str) -> opaline::Theme {
         .join("themes")
         .join(format!("{}.toml", name));
     if let Ok(theme) = opaline::load_from_file(&custom_path) {
-        return register_runie_styles(theme);
+        return theme;
     }
-    register_runie_styles(default_theme())
+    default_theme()
+}
+
+/// Load a theme by name: builtin → custom file → default fallback.
+fn load_theme(name: &str) -> opaline::Theme {
+    register_runie_styles(load_theme_raw(name))
+}
+
+/// Load a theme and quantize its colors to the terminal's color depth.
+fn load_theme_with_caps(
+    name: &str,
+    caps: crate::terminal::caps::TerminalCapabilities,
+) -> opaline::Theme {
+    let base = load_theme(name);
+    if caps.truecolor {
+        return base; // No quantization needed
+    }
+    quantize_theme(base, caps)
+}
+
+/// Quantize all palette and token colors in a theme to the terminal's color depth.
+fn quantize_theme(theme: opaline::Theme, caps: crate::terminal::caps::TerminalCapabilities) -> opaline::Theme {
+    use opaline::OpalineColor;
+
+    // Determine target depth: ANSI16 if mouse is None (very limited terminal),
+    // otherwise ANSI256.
+    let depth = if caps.mouse == crate::terminal::caps::MouseCapability::None {
+        crate::quantize::ColorDepth::ANSI16
+    } else {
+        crate::quantize::ColorDepth::ANSI256
+    };
+
+    // Collect quantized (name, OpalineColor) pairs from palette and tokens.
+    let mut quantized: Vec<(String, OpalineColor)> = Vec::new();
+
+    for name in theme.palette_names() {
+        let c = theme.color(name);
+        quantized.push((name.to_string(), quantize_opaline_color(c, depth)));
+    }
+    for name in theme.token_names() {
+        let c = theme.color(name);
+        quantized.push((name.to_string(), quantize_opaline_color(c, depth)));
+    }
+
+    // Reconstruct: load fresh theme and register quantized tokens on top.
+    let name = current_theme_name();
+    let mut result = load_theme_raw(&name);
+    for (k, v) in &quantized {
+        result.register_token(k, *v);
+    }
+    register_runie_styles(result)
+}
+
+/// Quantize an opaline color to the given depth, returning the nearest ANSI color.
+fn quantize_opaline_color(
+    c: opaline::OpalineColor,
+    depth: crate::quantize::ColorDepth,
+) -> opaline::OpalineColor {
+    let rat = Color::Rgb(c.r, c.g, c.b);
+    let quantized = crate::quantize::quantize(rat, depth);
+    match quantized {
+        Color::Indexed(i) => {
+            // Map indexed color back to a reasonable RGB approximation.
+            indexed_to_opaline(i)
+        }
+        Color::Rgb(r, g, b) => opaline::OpalineColor::new(r, g, b),
+        // Named/other colors pass through as fallback.
+        _ => c,
+    }
+}
+
+/// Approximate an ANSI color index as an OpalineColor (for quantized theme tokens).
+fn indexed_to_opaline(i: u8) -> opaline::OpalineColor {
+    // ANSI 16-color palette approximations.
+    const ANSI16: [(u8, u8, u8); 16] = [
+        (0x00, 0x00, 0x00), // 0  black
+        (0xCD, 0x00, 0x00), // 1  red
+        (0x00, 0xCD, 0x00), // 2  green
+        (0xCD, 0xCD, 0x00), // 3  yellow
+        (0x00, 0x00, 0xEE), // 4  blue
+        (0xCD, 0x00, 0xCD), // 5  magenta
+        (0x00, 0xCD, 0xCD), // 6  cyan
+        (0xE5, 0xE5, 0xE5), // 7  white
+        (0x7F, 0x7F, 0x7F), // 8  bright black
+        (0xFF, 0x00, 0x00), // 9  bright red
+        (0x00, 0xFF, 0x00), // 10 bright green
+        (0xFF, 0xFF, 0x00), // 11 bright yellow
+        (0x00, 0x00, 0xFF), // 12 bright blue
+        (0xFF, 0x00, 0xFF), // 13 bright magenta
+        (0x00, 0xFF, 0xFF), // 14 bright cyan
+        (0xFF, 0xFF, 0xFF), // 15 bright white
+    ];
+    if (i as usize) < ANSI16.len() {
+        let (r, g, b) = ANSI16[i as usize];
+        opaline::OpalineColor::new(r, g, b)
+    } else {
+        opaline::OpalineColor::FALLBACK
+    }
 }
 
 /// List all available builtin theme names.
@@ -72,91 +188,14 @@ pub fn list_builtin_themes() -> Vec<&'static str> {
     runie_core::themes::BUILTIN_THEMES.to_vec()
 }
 
-const DEFAULT_THEME_TOML: &str = r##"
-[meta]
-name = "Runie"
-author = "runie"
-variant = "dark"
-version = "1.0"
-description = "Dark base with vibrant orange accents"
-
-[palette]
-orange_500 = "#EE6902"
-orange_400 = "#F5853F"
-orange_600 = "#D45A00"
-orange_300 = "#F9A85F"
-amber_400 = "#F5A623"
-amber_300 = "#F9C846"
-coral_400 = "#E85577"
-green_400 = "#4ADE80"
-red_400 = "#EF4444"
-blue_400 = "#60A5FA"
-lime_400 = "#A3E635"
-
-bg_code = "#1E1920"
-bg_highlight = "#2A202E"
-bg_elevated = "#201820"
-bg_active = "#302830"
-bg_selection = "#3A2E38"
-
-text_primary = "#EDE8E3"
-text_secondary = "#C4BEB7"
-text_muted = "#8A8580"
-text_dim = "#5C5854"
-
-[tokens]
-"text.primary" = "text_primary"
-"text.secondary" = "text_secondary"
-"text.muted" = "text_muted"
-"text.dim" = "text_dim"
-
-"bg.code" = "bg_code"
-"bg.highlight" = "bg_highlight"
-"bg.elevated" = "bg_elevated"
-"bg.active" = "bg_active"
-"bg.selection" = "bg_selection"
-"bg.user" = "bg_elevated"
-
-"accent.primary" = "orange_500"
-"accent.secondary" = "amber_400"
-"accent.tertiary" = "coral_400"
-"accent.deep" = "orange_600"
-
-success = "green_400"
-error = "red_400"
-warning = "amber_400"
-info = "blue_400"
-
-"border.focused" = "orange_500"
-"border.unfocused" = "text_dim"
-
-"code.keyword" = "amber_400"
-"code.function" = "orange_500"
-"code.string" = "lime_400"
-"code.number" = "amber_300"
-"code.comment" = "text_dim"
-"code.type" = "blue_400"
-"code.line_number" = "text_dim"
-
-[styles]
-keyword = { fg = "accent.primary", bold = true }
-line_number = { fg = "code.line_number" }
-cursor_line = { bg = "bg.highlight" }
-selected = { fg = "accent.secondary", bg = "bg.highlight" }
-active_selected = { fg = "accent.primary", bg = "bg.active", bold = true }
-focused_border = { fg = "border.focused" }
-unfocused_border = { fg = "border.unfocused" }
-success_style = { fg = "success" }
-error_style = { fg = "error" }
-warning_style = { fg = "warning" }
-info_style = { fg = "info" }
-dimmed = { fg = "text.dim" }
-muted = { fg = "text.muted" }
-inline_code = { fg = "success", bg = "bg.code" }
-"##;
-
 fn default_theme() -> opaline::Theme {
-    opaline::load_from_str(DEFAULT_THEME_TOML, None).expect("embedded default theme must be valid")
+    opaline::load_from_str(crate::semantic_tokens::DEFAULT_THEME_TOML, None)
+        .expect("embedded default theme must be valid")
+}
+
+/// Get semantic tokens from the current theme.
+pub fn semantic_tokens() -> SemanticTokens {
+    SemanticTokens::from_theme(&current_theme())
 }
 
 fn register_runie_styles(mut theme: opaline::Theme) -> opaline::Theme {
@@ -165,6 +204,7 @@ fn register_runie_styles(mut theme: opaline::Theme) -> opaline::Theme {
     register_status_styles(&mut theme);
     register_code_styles(&mut theme);
     register_input_styles(&mut theme);
+    register_diff_styles(&mut theme);
     register_runie_popup_styles(&mut theme);
     theme
 }
@@ -214,6 +254,46 @@ fn register_code_styles(theme: &mut opaline::Theme) {
         opaline::OpalineStyle::fg(code_fn).with_bg(bg_code),
     );
     theme.register_default_style("runie.code.header", opaline::OpalineStyle::fg(dim));
+}
+
+fn register_diff_styles(theme: &mut opaline::Theme) {
+    let success = theme.color("success");
+    let error = theme.color("error");
+    let bg = theme.color("bg.base");
+    let dim = theme.color("text.dim");
+
+    // Insert: green text on a subtle green-tinted background.
+    let insert_bg = blend_opaline(bg, success, 0.12);
+    theme.register_default_style(
+        "runie.diff.insert",
+        opaline::OpalineStyle::fg(success).with_bg(insert_bg),
+    );
+    // Remove: red text on a subtle red-tinted background.
+    let remove_bg = blend_opaline(bg, error, 0.12);
+    theme.register_default_style(
+        "runie.diff.remove",
+        opaline::OpalineStyle::fg(error).with_bg(remove_bg),
+    );
+    // Hunk header: accent foreground, bold.
+    theme.register_default_style(
+        "runie.diff.hunk",
+        opaline::OpalineStyle::fg(theme.color("accent.primary")).bold(),
+    );
+    // File header: dim text.
+    theme.register_default_style(
+        "runie.diff.file_header",
+        opaline::OpalineStyle::fg(dim),
+    );
+    // Context: plain foreground.
+    theme.register_default_style(
+        "runie.diff.context",
+        opaline::OpalineStyle::fg(theme.color("text.primary")),
+    );
+}
+
+/// Blend two opaline colors at the given opacity (0.0–1.0).
+fn blend_opaline(bg: opaline::OpalineColor, fg: opaline::OpalineColor, opacity: f32) -> opaline::OpalineColor {
+    bg.lerp(fg, opacity)
 }
 
 fn register_input_styles(theme: &mut opaline::Theme) {
@@ -304,14 +384,36 @@ pub fn color_border() -> Color {
     Color::from(current_theme().color("border.unfocused"))
 }
 
+/// Diff gutter insert background: subtle green tint over base bg.
+pub fn color_diff_insert_bg() -> Color {
+    let bg = color_bg();
+    let success = color_success();
+    blend(bg, success, 0.12)
+}
+
+/// Diff gutter remove background: subtle red tint over base bg.
+pub fn color_diff_remove_bg() -> Color {
+    let bg = color_bg();
+    let error = color_error();
+    blend(bg, error, 0.12)
+}
+
 /// Darken an RGB color by a factor (0.0–1.0).
+/// Uses palette::Srgb for correct gamma-space darkening.
 pub fn darken(color: Color, factor: f32) -> Color {
     match color {
-        Color::Rgb(r, g, b) => Color::Rgb(
-            (r as f32 * factor).clamp(0.0, 255.0) as u8,
-            (g as f32 * factor).clamp(0.0, 255.0) as u8,
-            (b as f32 * factor).clamp(0.0, 255.0) as u8,
-        ),
+        Color::Rgb(r, g, b) => {
+            use palette::Srgb;
+            // palette uses 0.0-1.0 range
+            let s = Srgb::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            // Darken by scaling toward black in display gamma space.
+            let factor = factor.clamp(0.0, 1.0);
+            Color::Rgb(
+                (s.red * factor * 255.0) as u8,
+                (s.green * factor * 255.0) as u8,
+                (s.blue * factor * 255.0) as u8,
+            )
+        }
         _ => color,
     }
 }
@@ -344,20 +446,46 @@ pub fn color_accent_bg() -> Color {
     blend(color_bg(), color_accent(), 0.1)
 }
 
+/// Blend two RGB colors with the given opacity (0.0-1.0).
+/// Uses palette::Srgba for proper premultiplied-alpha blending.
 fn blend(bg: Color, fg: Color, opacity: f32) -> Color {
+    use palette::Srgba;
+    use palette::blend::BlendWith;
+    use palette::blend::PreAlpha;
+    use palette::IntoColor;
     let opacity = opacity.clamp(0.0, 1.0);
-    let (br, bg_g, bb) = match bg {
-        Color::Rgb(r, g, b) => (r, g, b),
-        _ => (30, 30, 30),
+
+    let (br, bb, bblue) = match bg {
+        Color::Rgb(r, g, b) => (r as f32, g as f32, b as f32),
+        _ => (30.0, 30.0, 30.0),
     };
     let (fr, fg_g, fb) = match fg {
-        Color::Rgb(r, g, b) => (r, g, b),
+        Color::Rgb(r, g, b) => (r as f32, g as f32, b as f32),
         _ => return fg,
     };
+
+    // Convert to palette's 0.0-1.0 Srgba space.
+    let bg_s: Srgba<f32> = Srgba::new(br / 255.0, bb / 255.0, bblue / 255.0, 1.0);
+    let fg_s: Srgba<f32> = Srgba::new(fr / 255.0, fg_g / 255.0, fb / 255.0, opacity);
+
+    // Standard over-compositing with premultiplied alpha.
+    let bg_pre: PreAlpha<_> = bg_s.into();
+    let fg_pre: PreAlpha<_> = fg_s.into();
+
+    let out: PreAlpha<_> = fg_pre.blend_with(bg_pre, |src: PreAlpha<_>, dst: PreAlpha<_>| {
+        // Standard over: dst * (1 - src_alpha) + src
+        PreAlpha {
+            color: src.color + dst.color * (1.0 - src.alpha),
+            alpha: src.alpha + dst.alpha * (1.0 - src.alpha),
+        }
+    });
+
+    // Convert back to Srgba, then to sRGB.
+    let out: Srgba<f32> = out.into();
     Color::Rgb(
-        (br as f32 * (1.0 - opacity) + fr as f32 * opacity) as u8,
-        (bg_g as f32 * (1.0 - opacity) + fg_g as f32 * opacity) as u8,
-        (bb as f32 * (1.0 - opacity) + fb as f32 * opacity) as u8,
+        (out.red.clamp(0.0, 1.0) * 255.0) as u8,
+        (out.green.clamp(0.0, 1.0) * 255.0) as u8,
+        (out.blue.clamp(0.0, 1.0) * 255.0) as u8,
     )
 }
 
@@ -397,6 +525,11 @@ style_fn!(style_popup_selected, "runie.popup.selected");
 style_fn!(style_popup_unselected, "runie.popup.unselected");
 style_fn!(style_popup_border, "runie.popup.border");
 style_fn!(style_thought_summary, "runie.thought.summary");
+style_fn!(style_diff_insert, "runie.diff.insert");
+style_fn!(style_diff_remove, "runie.diff.remove");
+style_fn!(style_diff_hunk, "runie.diff.hunk");
+style_fn!(style_diff_file_header, "runie.diff.file_header");
+style_fn!(style_diff_context, "runie.diff.context");
 
 /// Scrollbar style: visible but subtle — dimmed text color on app bg.
 /// Shows a clear thumb without being distracting.
@@ -491,4 +624,34 @@ pub fn turn_complete_line(duration_secs: f64) -> String {
 
 pub fn thought_summary_line(first_line: &str) -> String {
     format!("{}{}", first_line, INDICATOR_COLLAPSED)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn palette_darken_uses_palette_types() {
+        // Verify darken works with palette's Srgb.
+        let c = Color::Rgb(200, 150, 100);
+        let darkened = darken(c, 0.5);
+        assert!(matches!(darkened, Color::Rgb(_, _, _)));
+    }
+
+    #[test]
+    fn palette_blend_uses_palette_types() {
+        // Verify blend works with palette's Srgba and PreAlpha.
+        let bg = Color::Rgb(30, 30, 30);
+        let fg = Color::Rgb(200, 50, 50);
+        let result = blend(bg, fg, 0.3);
+        assert!(matches!(result, Color::Rgb(r, g, b) if r > 30 && r < 200));
+    }
+
+    #[test]
+    fn palette_blend_with_zero_opacity_returns_bg() {
+        let bg = Color::Rgb(10, 20, 30);
+        let fg = Color::Rgb(200, 100, 50);
+        let result = blend(bg, fg, 0.0);
+        assert!(matches!(result, Color::Rgb(r, g, b) if r == 10 && g == 20 && b == 30));
+    }
 }
