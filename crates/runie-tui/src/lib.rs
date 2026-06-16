@@ -29,7 +29,5 @@ pub mod terminal_setup;
 mod tests;
 #[cfg(test)]
 mod theme_tests;
-#[cfg(test)]
-mod keymap_tests;
 
 pub use runie_core::{AppState, ChatMessage};

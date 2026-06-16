@@ -1890,13 +1890,14 @@
     },
     {
       "id": "dedupe-keymap-tests",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P1",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/dedupe-keymap-tests.md"
+      "file": "tasks/dedupe-keymap-tests.md",
+      "completed_in": "current"
     },
     {
       "id": "fix-clippy-warning-rot",

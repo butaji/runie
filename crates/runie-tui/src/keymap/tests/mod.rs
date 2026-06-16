@@ -6,4 +6,5 @@ fn default_bindings() -> std::collections::HashMap<String, String> {
 
 mod basic;
 mod combos;
+mod merge;
 mod special;
