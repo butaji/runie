@@ -24,55 +24,107 @@ We evaluated several coordination patterns:
 
 ## Decision
 
-1. **Two execution modes: Solo and Team.**
-   - **Solo** is the default: one agent turn with the configured model. This is
-     today's behavior.
-   - **Team** is a per-session toggle. The Orchestrator designs a workflow,
-     assigns roles, and executes steps.
+### 1. Two Execution Modes: Solo and Team
 
-2. **User chooses the mode, the machine does the rest.**
-   - A UI toggle selects Solo or Team for the session.
-   - No manual model tagging or role configuration is required.
-   - The Orchestrator aligns with the user via a short Q&A in the Dialog Panel
-     before planning.
+- **Solo** is the default: one agent turn with the configured model.
+- **Team** is toggled via command (`/team`) or settings (config file).
+- The user controls the mode; the machine handles orchestration.
 
-3. **Orchestrator-Harness Protocol (OHP).**
-   - The Orchestrator LLM emits a typed `TeamWorkflow` plan: roles, steps,
-     sequential/parallel groups, and model trait preferences.
-   - The harness validates the plan, resolves traits to concrete models, and
-     executes it.
+### 2. Depth = 1 (Orchestrator + Subagents Only)
 
-4. **Model selection by traits.**
-   - Traits (`fast`, `capable`, `reasoning`, `cheap`, etc.) are derived by
-     relative ranking against connected models.
-   - An optional global model priority list lets users override ranking and
-     drain underutilized providers.
-   - Fallback walks the priority list on rate-limit or quota errors.
+- Depth 0: Orchestrator (coordinator)
+- Depth 1: Subagents (workers spawned by orchestrator)
+- No subagent spawning subagents (prevents infinite loops)
 
-5. **Fully isolated subagents with structured JSON results.**
-   - Each subagent sees only its own role prompt, task prompt, allowed tools,
-     and shared project context.
-   - Subagents output JSON matching a per-step schema. Only extracted fields
-     flow to downstream steps.
-   - This prevents the 72-86% token duplication seen in systems that pass raw
-     conversation history between agents.
+### 3. Bidirectional Sync Communication
 
-6. **Subagent sidebar with per-agent feeds.**
-   - Active subagents appear in the sidebar next to the main feed.
-   - `Ctrl+0` switches to the Orchestrator feed; `Ctrl+1`..`Ctrl+9` switch to
-     agent feeds.
+```
+Orchestrator → Subagent: dispatch task, steer, cancel
+Subagent → Orchestrator: status updates, questions, results
+Orchestrator → User: synthesis, approval requests
+Subagent → User: (routed through orchestrator)
+```
+
+### 4. Config Inheritance Model
+
+| Config | Inheritance |
+|--------|-------------|
+| Provider/API key | Inherit ✓ |
+| **Model** | **NOT inherited** — explicitly specified per subagent |
+| Tools | Filtered (allowed list from orchestrator) ✓ |
+| Working directory | Inherit ✓ |
+| Environment vars | Inherit (redacted secrets) ✓ |
+| Permission mode | Inherit ✓ |
+
+### 5. Model Selection: Explicit + Dynamic
+
+- Subagents get explicit model names (e.g., `claude-sonnet-4-20250514`)
+- `select_model(trait)` tool resolves `ModelTrait` → concrete model dynamically
+- Orchestrator plans with traits, resolves to models at dispatch time
+
+### 6. Subagent Lifecycle
+
+1. Orchestrator dispatches with explicit model (via `select_model`)
+2. Subagent executes with token budget
+3. Subagent signals completion via `done(result)` tool
+4. Orchestrator synthesizes results
+
+### 7. Retry Strategy
+
+```
+Task fails
+    ├── Retry 1 (same model)
+    ├── Retry 2 (same model)
+    ├── Retry 3 (same model)
+    └── Fallback: Try another model with same ModelTrait
+            ├── Success → continue
+            └── All failed → Escalate to user
+```
+
+### 8. Subagent Naming
+
+Format: `{Role}-{3 alphanumeric}` — e.g., `researcher-A1B`, `coder-X2Y`
+
+User can override: `/team "Research X" as researcher-A1B`
+
+### 9. Message Visibility
+
+- All messages/events visible in feed
+- Subagent streams collapsible/expandable
+- User sees everything, can steer any subagent
+
+### 10. Steering and Cancellation
+
+- `/steer <agent> <message>` — redirect subagent mid-task
+- `/cancel <agent>` — cancel and reschedule
+
+### 11. Approval Routing
+
+Subagent approval requests go to **orchestrator**, not directly to user.
+Orchestrator can auto-approve safe tools or escalate to user.
+
+### 12. Orchestrator Tools
+
+| Tool | Description |
+|------|-------------|
+| `list_subagents` | List all active subagents with status |
+| `get_subagent_status` | Get detailed status of specific subagent |
+| `get_subagent_output` | Get partial/final output from subagent |
+| `steer_subagent` | Send message to running subagent |
+| `cancel_subagent` | Cancel a running subagent |
+| `reschedule_task` | Cancel and requeue with modified task |
+
+### 13. Synthesis Options
+
+- **LLM synthesis** (default): Orchestrator uses LLM to combine results
+- **Template-based**: Fixed templates for predictable tasks
+- **Custom prompt**: `/team <task> --synthesize "<prompt>"`
 
 ## Consequences
 
-- **Positive:** Higher-quality results for complex tasks via specialization and
-  parallel research/execution.
-- **Positive:** Token-efficient compared to monolithic prompts or raw-history
-  passing.
-- **Positive:** Users do not need to learn new commands; the mode is a toggle
-  and the rest is conversational.
-- **Trade-off:** Team mode adds latency and cost because it runs multiple
-  subagents and a planning LLM call.
-- **Trade-off:** The Orchestrator LLM can produce invalid plans; the harness
-  must validate and retry.
-- **Trade-off:** Debugging multi-agent workflows is harder than debugging a
-  single turn; full plan logging and per-agent feeds are required.
+- **Positive:** Higher-quality results via model specialization and parallel execution
+- **Positive:** Token-efficient with isolated subagent contexts
+- **Positive:** Clear ownership — orchestrator coordinates, subagents execute
+- **Positive:** Users control mode via `/team` or settings
+- **Trade-off:** Team mode adds latency and cost (multiple subagents + planning)
+- **Trade-off:** Debugging multi-agent workflows requires per-agent feeds and logging

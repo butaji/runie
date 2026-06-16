@@ -10,73 +10,67 @@
 
 ## Description
 
-Create a declarative workflow DSL for defining complex multi-agent orchestration:
+Create a declarative workflow DSL for defining Team mode orchestration:
 
+### Syntax
 ```rust
-// Define a research workflow
-workflow!(ResearchWorkflow, |input| {
-    // Start with a coordinator agent
-    let coordinator = agent!("coordinator")
-        .model("claude-sonnet-4")
-        .system_prompt("You coordinate research teams.");
+// Start team mode for a task
+/workflow "Research Rust async patterns" as researcher, "Write tests" as tester
 
-    // Parallel research agents
-    let research = parallel!([
-        agent!("web-researcher").tool("search"),
-        agent!("code-researcher").tool("grep").tool("read"),
-        agent!("doc-researcher").tool("read"),
-    ]);
+// With explicit synthesis
+/workflow "Research" as researcher
+    --synthesize "Combine findings into a report"
 
-    // Pipeline: coordinator → parallel → aggregator
-    pipeline![
-        coordinator.prompt(input),
-        research.spawn_for_each(|r| r.results),
-        agent!("aggregator")
-            .prompt("Synthesize: {:?}", research.results),
-    ]
-});
-
-// Execute workflow
-let results = workflow.run("Research Rust async patterns").await?;
+// Parallel execution
+/workflow [
+    "Research web" as web-researcher,
+    "Research docs" as doc-researcher,
+]
 ```
+
+### Built-in Synthesis Options
+- **LLM synthesis** (default): Orchestrator uses LLM to combine results
+- **Template**: `/workflow <tasks> --template "Results:\n{tasks}"`
+- **Custom prompt**: `/workflow <tasks> --synthesize "Combine: {results}"`
+
+### Key Design Decisions
+- Depth = 1 (orchestrator + subagents only)
+- Subagent naming: `{Role}-{3 alphanumeric}` (e.g., `researcher-A1B`)
+- Retry: 3 retries → same-trait fallback → user escalation
+- Steering: `/steer <agent> <message>`
+- Cancellation: `/cancel <agent>`
 
 Reference: `~/Code/agents/omegacode/` workflow DSL, `~/Code/agents/crewai/` crews/flows
 
 ## Acceptance Criteria
 
-- [ ] `workflow!` macro for workflow definition.
-- [ ] `agent!` macro for agent instantiation.
-- [ ] `parallel!` for parallel execution.
-- [ ] `pipeline!` for sequential composition.
-- [ ] `spawn_for_each` for fan-out/fan-in patterns.
-- [ ] Workflow execution with progress tracking.
+- [ ] `/workflow` command with task list and optional `as <name>` aliases.
+- [ ] Parallel execution syntax: `[/workflow [...], [...]]`
+- [ ] Synthesis options: `--synthesize`, `--template`
+- [ ] Team mode activation via `/team` or `/workflow`
 - [ ] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `workflow_defines_correctly` — macro generates valid workflow.
-- [ ] `parallel_executes_all` — parallel block runs all agents.
-- [ ] `pipeline_chains_results` — pipeline passes results correctly.
-- [ ] `spawn_for_each_fans_out` — fan-out creates correct number of agents.
+- [ ] `workflow_command_parses` — valid syntax parses correctly.
+- [ ] `parallel_workflow_creates_multiple_agents` — list syntax works.
+- [ ] `synthesis_options_accepted` — both --synthesize and --template work.
 
 ### Layer 2 — Event Handling
-N/A.
+- [ ] `workflow_command_starts_orchestrator` — triggers team mode.
 
 ### Layer 3 — Rendering
-- [ ] `workflow_progress_renders` — progress display shows workflow state.
+N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] Smoke test: simple workflow executes.
+- [ ] Smoke test: `/workflow "echo test" as tester` executes.
 
 ## Files touched
 
-- `crates/runie-workflow/` (new crate)
-  - `src/dsl.rs`
-  - `src/executor.rs`
-  - `src/lib.rs`
-- `crates/runie-macros/src/workflow.rs` (add to existing)
+- `crates/runie-core/src/commands/workflow.rs` (new)
+- `crates/runie-core/src/dsl/` (new module)
 
 ## Notes
 
-High-complexity task. Defer until core multi-agent is stable.
+High-complexity task. Defer until core multi-agent spawning is stable.

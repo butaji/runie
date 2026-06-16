@@ -212,9 +212,31 @@ Solo/Team execution modes based on the design in `docs/adr/0020-team-mode-orches
   (`tasks/r4-subagent-sidebar.md`)
 - **Team mode integration** — end-to-end Q&A → plan → execute → result
   (`tasks/r4-team-mode-integration.md`)
+- **Multi-agent spawning** — AgentRegistry, depth limits, config inheritance,
+  bidirectional sync, retry strategy, steering (`tasks/adopt-multi-agent-spawning.md`)
 - **Grok Build TUI parity** — mouse support, contextual hints, richer status bar,
   command palette ranking, `@file` line ranges, theme quantization, welcome
   screen (`tasks/grok-*.md`)
+
+#### Multi-Agent Design Decisions
+
+| Decision | Choice |
+|----------|--------|
+| Communication model | Bidirectional sync |
+| Nesting depth | 1 (orchestrator + subagents only) |
+| Config inheritance | Provider, tools (filtered), cwd, env (redacted), permissions |
+| Model selection | Explicit per subagent + `select_model(trait)` tool |
+| Done signal | Explicit `done` tool |
+| Token budget | Yes, per subagent |
+| Synthesis | LLM (default) + template + custom prompt |
+| Team mode activation | Command (`/team`) + Settings |
+| Subagent naming | `{Role}-{3 alphanumeric}` |
+| Message visibility | Collapsed/expandable feed |
+| Error handling | 3 retries → same-trait fallback → user escalation |
+| Steering | `/steer <agent> <message>` |
+| Cancellation | `/cancel <agent>` |
+| Approval routing | To orchestrator |
+| Orchestrator tools | list/get_status/get_output/steer/cancel/select_model |
 
 ### Simplification plan (R3)
 
