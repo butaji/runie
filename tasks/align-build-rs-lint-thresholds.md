@@ -1,35 +1,56 @@
-# Align build.rs Lint Thresholds with AGENTS.md
+# Align Build.rs Lint Thresholds (Strict Enforcement)
 
-**Status**: done
-**Milestone**: R3
-**Category**: Configuration
+**Status**: in_progress
+**Milestone**: R4
+**Category**: Architecture / Refactoring
 **Priority**: P0
 
-**Depends on**: (none)
+**Depends on**: (all simplification tasks)
 **Blocks**: (none)
 
 ## Description
 
-`AGENTS.md` mandates 500-line files / 40-line functions / 10 complexity (with a temporary 2000/150/30 relaxation), but `crates/runie-core/build.rs` enforces 1000/120/25. This allows 14 files over 500 lines to pass the build silently.
+**ENFORCEMENT IS NOW ACTIVE.** `crates/runie-core/build.rs` enforces strict lint thresholds with **NO exceptions**.
+
+| Threshold | Value |
+|-----------|-------|
+| File lines | 500 |
+| Function lines | 40 |
+| Complexity | 10 |
+
+## Current Violations (80 total)
+
+### Files over 500 lines (8):
+- `state.rs` (790), `planner.rs` (800), `theme.rs` (657), `harness_skills.rs` (684)
+- `tool/search.rs` (683), `update/mod.rs` (631), `update/agent.rs` (592), `keybindings.rs` (571)
+
+### Functions over limits (72):
+See `cargo build` output for full list.
 
 ## Acceptance Criteria
 
-- [ ] `build.rs` thresholds match the intended targets in `AGENTS.md`.
-- [ ] An explicit, documented allow-list exists for files/functions currently over limit so the build stays green.
-- [ ] Allow-list entries reference follow-up tasks or are marked temporary.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `ALLOWED_FILE_VIOLATIONS` removed from `build.rs` ✓
+- [x] `ALLOWED_FUNC_VIOLATIONS` removed from `build.rs` ✓
+- [x] `is_allowed_func()` and related logic removed ✓
+- [x] Any violation causes `cargo build` to fail ✓
+- [ ] `cargo build --workspace` succeeds with no violations (pending)
 
-## Tests
+## Tasks That Fix Violations
 
-### Layer 1 — State/Logic
-- [ ] `build_rs_parses` — `build.rs` compiles and runs.
-- [ ] `thresholds_match_agents_md` — constants equal the documented targets (or the documented temporary values).
+| Task | Fixes |
+|------|-------|
+| `unify-resolve-path` | Reduces tool file sizes |
+| `unify-tool-error-output` | Consolidates error handling |
+| `unify-agent-status-enum` | Simplifies orchestrator.rs, state.rs |
+| `split-large-files` | Splits all files over 500 lines |
+| `extract-search-item-builder` | Simplifies search.rs |
+| All simplification tasks | Reduce complexity, fix violations |
 
 ## Files touched
 
-- `crates/runie-core/build.rs`
-- `AGENTS.md`
+- `crates/runie-core/build.rs` ✓ (enforcement active)
 
 ## Notes
 
-The allow-list should shrink as `extract-core-monolith.md`, `coalesce-update-modules.md`, and related tasks land.
+Enforcement is active. Fix violations via simplification tasks.
+Build will fail until all 80 violations are resolved.
