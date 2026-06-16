@@ -1,6 +1,6 @@
 //! Tests for command form dialogs.
 
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent, LoginFlowEvent};
+use crate::event::{InputEvent, ControlEvent, DialogEvent};
 
 use crate::commands::DialogState;
 use crate::model::AppState;
@@ -18,20 +18,20 @@ fn fresh_state() -> AppState {
 
 fn type_str(state: &mut AppState, s: &str) {
     for c in s.chars() {
-        state.update(Event::Input(InputEvent::Input(c)));
+        state.update(InputEvent::Input(c));
     }
 }
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
     // Open palette with '/'
-    state.update(Event::Input(InputEvent::Input('/')));
+    state.update(InputEvent::Input('/'));
     // Filter to the command
     for c in cmd.chars() {
-        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+        state.update(DialogEvent::PaletteFilter(c));
     }
     // Select the command
-    state.update(Event::Dialog(DialogEvent::PaletteSelect));
+    state.update(DialogEvent::PaletteSelect);
 }
 
 fn tmp_store() -> crate::session::Store {
@@ -125,11 +125,11 @@ fn form_submit_executes_command() {
         };
     assert!(form_is_form, "panel should be a form");
     // Type a name - these go to input, but should be routed to form
-    state.update(Event::Input(InputEvent::Input('m')));
-    state.update(Event::Input(InputEvent::Input('y')));
-    state.update(Event::Input(InputEvent::Input('s')));
-    state.update(Event::Input(InputEvent::Input('e')));
-    state.update(Event::Input(InputEvent::Input('s')));
+    state.update(InputEvent::Input('m'));
+    state.update(InputEvent::Input('y'));
+    state.update(InputEvent::Input('s'));
+    state.update(InputEvent::Input('e'));
+    state.update(InputEvent::Input('s'));
     // Submit the form
     state.update(Event::submit());
     // Should close dialog and execute save
@@ -156,7 +156,7 @@ fn form_panel_id_maps_to_known_form_command() {
         .insert("name".into(), "should-not-fire".into());
     state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
 
-    state.update(crate::Event::Dialog(DialogEvent::CommandFormSubmit));
+    state.update(crate::event::DialogEvent::CommandFormSubmit);
 
     assert!(state.open_dialog.is_none(), "dialog should close on submit");
     let sys_count = state
@@ -216,13 +216,13 @@ fn invalid_fork_index_shows_error_for_out_of_range() {
         ..Default::default()
     });
     let mut panel = Panel::new("fork", "Fork Session").form_field("Message index", "0", "index");
-    panel.submit_factory = Some(|values| crate::Event::Command(CommandEvent::RunForkCommand {
+    panel.submit_factory = Some(|values| crate::event::CommandEvent::RunForkCommand {
         message_index: values.get("index").cloned().unwrap_or_default(),
-    }));
+    });
     panel.form_values.insert("index".into(), "999".into());
     state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
 
-    state.update(crate::Event::Dialog(DialogEvent::CommandFormSubmit));
+    state.update(crate::event::DialogEvent::CommandFormSubmit);
 
     assert!(state.open_dialog.is_none(), "dialog should close");
     let sys: Vec<_> = state
@@ -250,17 +250,17 @@ fn compact_with_invalid_keep_shows_error() {
     let mut panel = Panel::new("compact", "Compact Context")
         .form_field("Keep tokens", "2000", "keep")
         .form_field("Focus", "f", "focus");
-    panel.submit_factory = Some(|values| crate::Event::Command(CommandEvent::RunCompactCommand {
+    panel.submit_factory = Some(|values| crate::event::CommandEvent::RunCompactCommand {
         keep: values.get("keep").cloned().unwrap_or_default(),
         focus: values.get("focus").cloned().unwrap_or_default(),
-    }));
+    });
     panel
         .form_values
         .insert("keep".into(), "not-a-number".into());
     panel.form_values.insert("focus".into(), "".into());
     state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
 
-    state.update(crate::Event::Dialog(DialogEvent::CommandFormSubmit));
+    state.update(crate::event::DialogEvent::CommandFormSubmit);
 
     let sys: Vec<_> = state
         .session
@@ -289,7 +289,7 @@ fn form_escape_closes_dialog() {
     assert!(state.open_dialog.is_some());
 
     // Press Escape to close
-    state.update(Event::Control(ControlEvent::Abort));
+    state.update(ControlEvent::Abort);
 
     // Dialog should be closed
     assert!(state.open_dialog.is_none(), "dialog should close on escape");
@@ -304,10 +304,10 @@ fn form_navigation_up_down() {
     assert!(state.open_dialog.is_some());
 
     // Navigate down
-    state.update(Event::Dialog(DialogEvent::CommandFormDown));
+    state.update(DialogEvent::CommandFormDown);
 
     // Navigate up
-    state.update(Event::Dialog(DialogEvent::CommandFormUp));
+    state.update(DialogEvent::CommandFormUp);
 }
 
 #[test]
@@ -317,12 +317,12 @@ fn form_backspace_deletes() {
     state.update(Event::submit());
 
     // Type some characters
-    state.update(Event::Input(InputEvent::Input('a')));
-    state.update(Event::Input(InputEvent::Input('b')));
-    state.update(Event::Input(InputEvent::Input('c')));
+    state.update(InputEvent::Input('a'));
+    state.update(InputEvent::Input('b'));
+    state.update(InputEvent::Input('c'));
 
     // Backspace
-    state.update(Event::Input(InputEvent::Backspace));
+    state.update(InputEvent::Backspace);
 
     // Dialog should still be open
     assert!(state.open_dialog.is_some());
@@ -333,14 +333,14 @@ fn form_button_activated_by_enter() {
     use crate::dialog::{ItemAction, Panel};
     let mut panel = Panel::new("test", "Test")
         .form_field("Name", "", "name")
-        .item("_Submit", ItemAction::Emit(crate::Event::LoginFlow(LoginFlowEvent::Save)))
-        .item("_Cancel", ItemAction::Emit(crate::Event::LoginFlow(LoginFlowEvent::Cancel)));
+        .item("_Submit", ItemAction::Emit(crate::event::LoginFlowEvent::Save))
+        .item("_Cancel", ItemAction::Emit(crate::event::LoginFlowEvent::Cancel));
     // Navigate to the first button (index 1, after form field at index 0)
     panel.selected = 1;
     let action = crate::update::dialog::form_panel_action(&mut panel, crate::Event::submit());
     assert!(matches!(
         action,
-        crate::update::dialog::FormAction::Submit(Some(crate::Event::LoginFlow(LoginFlowEvent::Save)))
+        crate::update::dialog::FormAction::Submit(Some(crate::event::LoginFlowEvent::Save))
     ));
 }
 
@@ -349,22 +349,22 @@ fn form_button_activated_by_accelerator() {
     use crate::dialog::{ItemAction, Panel};
     let mut panel = Panel::new("test", "Test")
         .form_field("Name", "", "name")
-        .item("_Submit", ItemAction::Emit(crate::Event::LoginFlow(LoginFlowEvent::Save)))
-        .item("_Cancel", ItemAction::Emit(crate::Event::LoginFlow(LoginFlowEvent::Cancel)));
+        .item("_Submit", ItemAction::Emit(crate::event::LoginFlowEvent::Save))
+        .item("_Cancel", ItemAction::Emit(crate::event::LoginFlowEvent::Cancel));
     // On a form field, typing 'c' should type into the field
     panel.selected = 0;
     let action =
-        crate::update::dialog::form_panel_action(&mut panel, crate::Event::Input(InputEvent::Input('c')));
+        crate::update::dialog::form_panel_action(&mut panel, crate::event::InputEvent::Input('c'));
     assert!(matches!(action, crate::update::dialog::FormAction::KeepOpen));
     assert_eq!(panel.form_values.get("name"), Some(&"c".to_string()));
 
     // On a button, typing 'c' should activate Cancel
     panel.selected = 2;
     let action =
-        crate::update::dialog::form_panel_action(&mut panel, crate::Event::Input(InputEvent::Input('c')));
+        crate::update::dialog::form_panel_action(&mut panel, crate::event::InputEvent::Input('c'));
     assert!(matches!(
         action,
-        crate::update::dialog::FormAction::Submit(Some(crate::Event::LoginFlow(LoginFlowEvent::Cancel)))
+        crate::update::dialog::FormAction::Submit(Some(crate::event::LoginFlowEvent::Cancel))
     ));
 }
 
@@ -373,15 +373,15 @@ fn form_field_submit_still_builds_form_values() {
     use crate::dialog::{ItemAction, Panel};
     let mut panel = Panel::new("save", "Save")
         .form_field("Name", "my-session", "name")
-        .item("_Submit", ItemAction::Emit(crate::Event::LoginFlow(LoginFlowEvent::Save)));
-    panel.submit_factory = Some(|values| crate::Event::Command(CommandEvent::RunSaveCommand {
+        .item("_Submit", ItemAction::Emit(crate::event::LoginFlowEvent::Save));
+    panel.submit_factory = Some(|values| crate::event::CommandEvent::RunSaveCommand {
         name: values.get("name").cloned().unwrap_or_default(),
-    }));
+    });
     // On the form field, Enter should submit the form
     panel.selected = 0;
     let action = crate::update::dialog::form_panel_action(&mut panel, crate::Event::submit());
     assert!(matches!(
         action,
-        crate::update::dialog::FormAction::Submit(Some(crate::Event::Command(CommandEvent::RunSaveCommand { .. })))
+        crate::update::dialog::FormAction::Submit(Some(crate::event::CommandEvent::RunSaveCommand { .. }))
     ));
 }

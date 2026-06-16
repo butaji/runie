@@ -1,10 +1,10 @@
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::event::{AgentEvent, InputEvent};
-use runie_core::{AppState, Event, Snapshot, Element};
+use runie_core::{AppState, Snapshot, Element};
 use crate::ui::draw_snapshot;
 
 fn has_content(elem: &Element, text: &str) -> bool {
-    use runie_core::Element::*;
+    
     match elem {
         Element::AgentMessage { content, .. } => content.contains(text),
         Element::UserMessage { content, .. } => content.contains(text),
@@ -49,9 +49,9 @@ fn snapshot_renders_empty_state() {
 #[test]
 fn snapshot_renders_user_message() {
     let mut state = AppState::default();
-    state.update(Event::Input(InputEvent::Input('H')));
-    state.update(Event::Input(InputEvent::Input('i')));
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Input('H'));
+    state.update(InputEvent::Input('i'));
+    state.update(InputEvent::Submit);
     state.ensure_fresh();
     let snap = state.snapshot();
     let out = render_snapshot(&snap);
@@ -65,13 +65,13 @@ fn snapshot_renders_user_message() {
 fn snapshot_is_immutable_after_creation() {
     let mut state = AppState::default();
     state.input.input = "A".to_string();
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Submit);
     state.ensure_fresh();
     let snap = state.snapshot();
 
     // Mutate state AFTER snapshot
     state.input.input = "B".to_string();
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Submit);
     state.ensure_fresh();
 
     // Snapshot should still show old state
@@ -100,10 +100,10 @@ fn snapshot_spinner_frame_captured() {
 fn snapshot_scrollbar_metrics_match_state() {
     let mut state = AppState::default();
     for i in 0..50 {
-        state.update(Event::Agent(AgentEvent::Response {
+        state.update(AgentEvent::Response {
             id: format!("m{}", i),
             content: format!("line {}", i),
-        }));
+        });
     }
     state.ensure_fresh();
     let snap = state.snapshot();
@@ -117,10 +117,10 @@ fn snapshot_scrollbar_metrics_match_state() {
 #[test]
 fn render_actor_does_not_need_mutable_state() {
     let mut state = AppState::default();
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
-    }));
+    });
     state.ensure_fresh();
     let snap = state.snapshot();
 
@@ -144,22 +144,22 @@ fn ui_actor_snapshot_after_events() {
     let mut state = AppState::default();
 
     // Feed user message event
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Submit);
 
     // Feed agent response events
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "msg.1".to_string(),
         content: "Hello!".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "msg.2".to_string(),
         content: "How can I help?".to_string(),
-    }));
+    });
 
     // Feed tool call events
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "tool.1".to_string(), name: "bash".to_string(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 1.5, output: "done".to_string(),
-     }));
+    state.update(AgentEvent::ToolStart { id: "tool.1".to_string(), name: "bash".to_string(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 1.5, output: "done".to_string(),
+     });
 
     state.ensure_fresh();
     let snap = state.snapshot();

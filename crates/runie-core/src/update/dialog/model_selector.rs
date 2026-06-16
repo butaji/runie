@@ -1,4 +1,3 @@
-use crate::event::ModelConfigEvent;
 
 /// Partition model catalog items into recent models and provider groups.
 #[allow(clippy::type_complexity)]
@@ -21,10 +20,10 @@ pub fn partition_model_items(
             last_header = header.clone();
         }
         if let Some((provider, model)) = name.split_once('/') {
-            let evt = crate::Event::ModelConfig(ModelConfigEvent::SwitchModel {
+            let evt = crate::event::ModelConfigEvent::SwitchModel {
                 provider: provider.to_string(),
                 model: model.to_string(),
-            });
+            };
             current_group.push((name, evt));
         }
     }

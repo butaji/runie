@@ -1,5 +1,4 @@
 use super::{default_bindings, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-use runie_core::event::{ControlEvent, DialogEvent, InputEvent, ModelConfigEvent};
 
 #[test]
 fn ctrl_shift_e_is_unbound() {
@@ -40,7 +39,7 @@ fn ctrl_shift_o_converts_to_copy_last_response() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::Event::Control(ControlEvent::CopyLastResponse))),
+        matches!(result, Some(runie_core::ControlEvent::CopyLastResponse)),
         "Ctrl+Shift+O should map to CopyLastResponse, got {:?}",
         result
     );
@@ -71,7 +70,7 @@ fn shift_ctrl_p_emits_toggle_command_palette() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::Event::Dialog(DialogEvent::ToggleCommandPalette))),
+        matches!(result, Some(runie_core::DialogEvent::ToggleCommandPalette)),
         "Shift+Ctrl+P should map to ToggleCommandPalette, got {:?}",
         result
     );
@@ -83,7 +82,7 @@ fn ctrl_m_emits_cycle_model_next() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::Event::ModelConfig(ModelConfigEvent::CycleModelNext))),
+        matches!(result, Some(runie_core::ModelConfigEvent::CycleModelNext)),
         "Ctrl+M should map to CycleModelNext, got {:?}",
         result
     );
@@ -98,7 +97,7 @@ fn shift_ctrl_m_emits_cycle_model_prev() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::Event::ModelConfig(ModelConfigEvent::CycleModelPrev))),
+        matches!(result, Some(runie_core::ModelConfigEvent::CycleModelPrev)),
         "Shift+Ctrl+M should map to CycleModelPrev, got {:?}",
         result
     );
@@ -110,7 +109,7 @@ fn shift_exclamation_converts_to_input_exclamation() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::Event::Input(InputEvent::Input('!')))),
+        matches!(result, Some(runie_core::InputEvent::Input('!'))),
         "Shift+! should map to Input('!'), got {:?}",
         result
     );
@@ -122,7 +121,7 @@ fn shift_question_converts_to_input_question() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::Event::Input(InputEvent::Input('?')))),
+        matches!(result, Some(runie_core::InputEvent::Input('?'))),
         "Shift+? should map to Input('?'), got {:?}",
         result
     );
@@ -134,7 +133,7 @@ fn shift_parenthesis_open_converts_to_input() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::Event::Input(InputEvent::Input('(')))),
+        matches!(result, Some(runie_core::InputEvent::Input('('))),
         "Shift+( should map to Input('('), got {:?}",
         result
     );
@@ -146,7 +145,7 @@ fn shift_at_converts_to_input_at() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::Event::Input(InputEvent::Input('@')))),
+        matches!(result, Some(runie_core::InputEvent::Input('@'))),
         "Shift+@ should map to Input('@'), got {:?}",
         result
     );
@@ -158,7 +157,7 @@ fn shift_enter_converts_to_newline() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::Event::Input(InputEvent::Newline))),
+        matches!(result, Some(runie_core::InputEvent::Newline)),
         "Shift+Enter should map to Newline, got {:?}",
         result
     );
@@ -170,7 +169,7 @@ fn shift_f3_converts_to_newline_for_tmux_shift_enter() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::Event::Input(InputEvent::Newline))),
+        matches!(result, Some(runie_core::InputEvent::Newline)),
         "Shift+F3 should map to Newline for tmux Shift+Enter, got {:?}",
         result
     );
@@ -182,7 +181,7 @@ fn f3_without_shift_converts_to_newline_for_tmux_compat() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::Event::Input(InputEvent::Newline))),
+        matches!(result, Some(runie_core::InputEvent::Newline)),
         "F3 without shift should map to Newline for tmux compat, got {:?}",
         result
     );

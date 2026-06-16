@@ -109,16 +109,16 @@ impl ItemAction {
 impl Event {
     pub(crate) fn default_label(&self) -> String {
         match self {
-            Event::Control(ControlEvent::Quit) => "Quit".into(),
-            Event::Input(InputEvent::Submit) => "Submit".into(),
-            Event::Command(CommandEvent::RunSaveCommand { .. }) => "Save".into(),
-            Event::Command(CommandEvent::RunLoadCommand { .. }) => "Load".into(),
-            Event::Command(CommandEvent::RunDeleteCommand { .. }) => "Delete".into(),
-            Event::Command(CommandEvent::RunExportCommand { .. }) => "Export".into(),
-            Event::Command(CommandEvent::RunImportCommand { .. }) => "Import".into(),
-            Event::Command(CommandEvent::RunLoginCommand { .. }) => "Login".into(),
-            Event::Command(CommandEvent::RunLogoutCommand { .. }) => "Logout".into(),
-            Event::Command(CommandEvent::RunSkillCommand { .. }) => "Run Skill".into(),
+            ControlEvent::Quit => "Quit".into(),
+            InputEvent::Submit => "Submit".into(),
+            CommandEvent::RunSaveCommand { .. } => "Save".into(),
+            CommandEvent::RunLoadCommand { .. } => "Load".into(),
+            CommandEvent::RunDeleteCommand { .. } => "Delete".into(),
+            CommandEvent::RunExportCommand { .. } => "Export".into(),
+            CommandEvent::RunImportCommand { .. } => "Import".into(),
+            CommandEvent::RunLoginCommand { .. } => "Login".into(),
+            CommandEvent::RunLogoutCommand { .. } => "Logout".into(),
+            CommandEvent::RunSkillCommand { .. } => "Run Skill".into(),
             _ => "Action".into(),
         }
     }

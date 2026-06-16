@@ -31,11 +31,10 @@ pub fn update_panel_stack(state: &mut AppState, event: Event, stack: &mut PanelS
 
 fn handle_panel_close(state: &mut AppState, event: &Event, stack: &mut PanelStack) -> bool {
     match event {
-        Event::ModelConfig(ModelConfigEvent::SettingsClose)
-        | Event::Dialog(DialogEvent::SettingsClose)
-        | Event::Dialog(DialogEvent::PaletteClose)
-        | Event::Dialog(DialogEvent::ModelSelectorClose)
-        | Event::Dialog(DialogEvent::DialogBack) => {
+        ModelConfigEvent::SettingsClose
+        | DialogEvent::PaletteClose
+        | DialogEvent::ModelSelectorClose
+        | DialogEvent::DialogBack => {
             if stack.len() > 1 {
                 stack.pop();
             } else {
@@ -49,26 +48,26 @@ fn handle_panel_close(state: &mut AppState, event: &Event, stack: &mut PanelStac
 
 fn handle_panel_navigation(_state: &mut AppState, event: &Event, stack: &mut PanelStack) -> bool {
     match event {
-        Event::Input(InputEvent::HistoryPrev)
-        | Event::ModelConfig(ModelConfigEvent::SettingsUp)
-        | Event::Dialog(DialogEvent::PaletteUp)
-        | Event::Dialog(DialogEvent::ModelSelectorUp) => {
+        InputEvent::HistoryPrev
+        | ModelConfigEvent::SettingsUp
+        | DialogEvent::PaletteUp
+        | DialogEvent::ModelSelectorUp => {
             stack.select_up();
             return true;
         }
-        Event::Input(InputEvent::HistoryNext)
-        | Event::ModelConfig(ModelConfigEvent::SettingsDown)
-        | Event::Dialog(DialogEvent::PaletteDown)
-        | Event::Dialog(DialogEvent::ModelSelectorDown) => {
+        InputEvent::HistoryNext
+        | ModelConfigEvent::SettingsDown
+        | DialogEvent::PaletteDown
+        | DialogEvent::ModelSelectorDown => {
             stack.select_down();
             return true;
         }
-        Event::Input(InputEvent::CursorLeft)
-        | Event::ModelConfig(ModelConfigEvent::SettingsLeft) => {
+        InputEvent::CursorLeft
+        | ModelConfigEvent::SettingsLeft => {
             stack.pop();
             return true;
         }
-        Event::Input(InputEvent::Input('\t')) => {
+        InputEvent::Input('\t') => {
             stack.select_down();
             return true;
         }
@@ -79,10 +78,10 @@ fn handle_panel_navigation(_state: &mut AppState, event: &Event, stack: &mut Pan
 
 fn handle_panel_activation(state: &mut AppState, event: &Event, stack: &mut PanelStack) -> bool {
     match event {
-        Event::Input(InputEvent::Submit)
-        | Event::ModelConfig(ModelConfigEvent::SettingsSelect)
-        | Event::Dialog(DialogEvent::PaletteSelect)
-        | Event::Dialog(DialogEvent::ModelSelectorSelect) => {
+        InputEvent::Submit
+        | ModelConfigEvent::SettingsSelect
+        | DialogEvent::PaletteSelect
+        | DialogEvent::ModelSelectorSelect => {
             return try_activate_panel(state, stack);
         }
         _ => {}
@@ -92,9 +91,9 @@ fn handle_panel_activation(state: &mut AppState, event: &Event, stack: &mut Pane
 
 fn handle_panel_filter(state: &mut AppState, event: &Event, stack: &mut PanelStack) {
     match event {
-        Event::Dialog(DialogEvent::PaletteFilter(c)) => stack.push_filter(*c),
-        Event::Dialog(DialogEvent::ModelSelectorFilter(c)) => stack.push_filter(*c),
-        Event::Input(InputEvent::Input(c)) => {
+        DialogEvent::PaletteFilter(c) => stack.push_filter(*c),
+        DialogEvent::ModelSelectorFilter(c) => stack.push_filter(*c),
+        InputEvent::Input(c) => {
             let is_file_picker = stack.current().is_some_and(|p| p.id == "at-files");
             stack.push_filter(*c);
             // If this is the file picker, re-query FFF with the new filter.
@@ -103,9 +102,9 @@ fn handle_panel_filter(state: &mut AppState, event: &Event, stack: &mut PanelSta
                 super::rebuild_file_picker(state);
             }
         }
-        Event::Dialog(DialogEvent::PaletteBackspace)
-        | Event::Dialog(DialogEvent::ModelSelectorBackspace)
-        | Event::Input(InputEvent::Backspace) => {
+        DialogEvent::PaletteBackspace
+        | DialogEvent::ModelSelectorBackspace
+        | InputEvent::Backspace => {
             let is_file_picker = stack.current().is_some_and(|p| p.id == "at-files");
             stack.pop_filter();
             if is_file_picker {
@@ -192,11 +191,27 @@ fn handle_panel_action(state: &mut AppState, action: ItemAction, stack: &mut Pan
         }
         ItemAction::Toggle(key) => {
             panel_toggle_item(state, stack, &key);
-            false
+            let keep_open = stack
+                .current()
+                .map(|p| p.keep_open_on_activate)
+                .unwrap_or(false);
+            if !keep_open {
+                state.open_dialog = None;
+                state.mark_dirty();
+            }
+            !keep_open
         }
         ItemAction::Cycle(key) => {
             panel_cycle_item(state, stack, &key);
-            false
+            let keep_open = stack
+                .current()
+                .map(|p| p.keep_open_on_activate)
+                .unwrap_or(false);
+            if !keep_open {
+                state.open_dialog = None;
+                state.mark_dirty();
+            }
+            !keep_open
         }
     }
 }

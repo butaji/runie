@@ -44,6 +44,7 @@ pub fn agent_event(state: &mut AppState, event: AgentEvent) {
             state.add_error(id, message);
             state.ensure_turn_complete_last();
         }
+        _ => {}
     }
 }
 
@@ -432,7 +433,6 @@ impl AppState {
 // ── Model config events (merged from model_config.rs) ─────────────────────────
 
 use crate::event::ModelConfigEvent;
-use crate::Event;
 
 pub fn model_config_event(state: &mut AppState, event: ModelConfigEvent) {
     let invalidate = handle_main_events(state, &event)
@@ -530,7 +530,7 @@ fn handle_settings_events(state: &mut AppState, event: &ModelConfigEvent) -> boo
             true
         }
         ModelConfigEvent::SettingsClose => {
-            crate::update::dialog::update_dialog(state, Event::ModelConfig(event.clone()));
+            crate::update::dialog::update_dialog(state, event.clone());
             true
         }
         ModelConfigEvent::SettingsSelect
@@ -539,7 +539,7 @@ fn handle_settings_events(state: &mut AppState, event: &ModelConfigEvent) -> boo
         | ModelConfigEvent::SettingsLeft
         | ModelConfigEvent::SettingsRight => {
             if state.open_dialog.is_some() {
-                crate::update::dialog::update_dialog(state, Event::ModelConfig(event.clone()));
+                crate::update::dialog::update_dialog(state, event.clone());
             }
             true
         }

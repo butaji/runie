@@ -1,5 +1,4 @@
-use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent, LoginFlowEvent};
+use crate::event::{DialogEvent, LoginFlowEvent};
 use crate::model::AppState;
 
 use super::clean_config;
@@ -8,13 +7,13 @@ use super::clean_config;
 fn providers_add_starts_login_flow() {
     clean_config();
     let mut state = AppState::default();
-    state.update(Event::Dialog(DialogEvent::ProvidersDialog));
+    state.update(DialogEvent::ProvidersDialog);
     assert!(
         state.open_dialog.is_some(),
         "providers dialog should be open"
     );
 
-    state.update(Event::Dialog(DialogEvent::ProvidersAdd));
+    state.update(DialogEvent::ProvidersAdd);
 
     assert!(state.login_flow.is_some(), "login flow should start");
     assert!(
@@ -28,13 +27,13 @@ fn login_flow_cancel_returns_to_providers_dialog() {
     clean_config();
     let mut state = AppState::default();
 
-    state.update(Event::Dialog(DialogEvent::ProvidersDialog));
+    state.update(DialogEvent::ProvidersDialog);
     assert!(state.open_dialog.is_some());
 
-    state.update(Event::Dialog(DialogEvent::ProvidersAdd));
+    state.update(DialogEvent::ProvidersAdd);
     assert!(state.login_flow.is_some());
 
-    state.update(Event::LoginFlow(LoginFlowEvent::Cancel));
+    state.update(LoginFlowEvent::Cancel);
 
     assert!(
         state.login_flow.is_none(),

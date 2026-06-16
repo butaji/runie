@@ -3,21 +3,20 @@
 use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };
-use runie_core::event::{ControlEvent, DialogEvent, InputEvent};
 use runie_core::{keybindings, Event as CoreEvent};
 use std::collections::HashMap;
 
 pub fn convert_event(event: &Event, bindings: &HashMap<String, String>) -> Option<CoreEvent> {
     log_key_event(event);
     match event {
-        Event::Paste(data) => Some(CoreEvent::Input(InputEvent::Paste(data.clone()))),
+        Event::Paste(data) => Some(CoreEvent::Paste(data.clone())),
         Event::Mouse(mouse) => convert_mouse_event(mouse),
-        Event::FocusGained => Some(CoreEvent::Input(InputEvent::FocusGained)),
-        Event::FocusLost => Some(CoreEvent::Input(InputEvent::FocusLost)),
-        Event::Resize(width, height) => Some(CoreEvent::Input(InputEvent::TerminalSize {
+        Event::FocusGained => Some(CoreEvent::FocusGained),
+        Event::FocusLost => Some(CoreEvent::FocusLost),
+        Event::Resize(width, height) => Some(CoreEvent::TerminalSize {
             width: *width,
             height: *height,
-        })),
+        }),
         Event::Key(key) if is_press_or_repeat(key) => convert_key_event(key, bindings),
         _ => None,
     }
@@ -29,13 +28,13 @@ fn is_press_or_repeat(key: &KeyEvent) -> bool {
 
 fn convert_key_event(key: &KeyEvent, bindings: &HashMap<String, String>) -> Option<CoreEvent> {
     if key.modifiers.is_empty() && key.code == KeyCode::Char('\n') {
-        return Some(CoreEvent::Input(InputEvent::Newline));
+        return Some(CoreEvent::Newline);
     }
     if key.modifiers.contains(KeyModifiers::SHIFT) && is_enter_like(key.code) {
-        return Some(CoreEvent::Input(InputEvent::Newline));
+        return Some(CoreEvent::Newline);
     }
     if key.code == KeyCode::F(3) {
-        return Some(CoreEvent::Input(InputEvent::Newline));
+        return Some(CoreEvent::Newline);
     }
     map_key_event(key, bindings)
 }
@@ -137,42 +136,42 @@ fn map_by_modifier(key: &KeyEvent) -> Option<CoreEvent> {
 
 fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
     match code {
-        KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::Input(InputEvent::CursorEnd)),
-        KeyCode::Char('o') | KeyCode::Char('O') => Some(CoreEvent::Control(ControlEvent::ToggleExpand)),
-        KeyCode::Char('j') | KeyCode::Char('J') => Some(CoreEvent::Input(InputEvent::Newline)),
-        KeyCode::Char('a') | KeyCode::Char('A') => Some(CoreEvent::Input(InputEvent::CursorStart)),
-        KeyCode::Char('b') | KeyCode::Char('B') => Some(CoreEvent::Input(InputEvent::CursorLeft)),
-        KeyCode::Char('f') | KeyCode::Char('F') => Some(CoreEvent::Input(InputEvent::CursorRight)),
-        KeyCode::Char('w') | KeyCode::Char('W') => Some(CoreEvent::Input(InputEvent::DeleteWord)),
-        KeyCode::Char('k') | KeyCode::Char('K') => Some(CoreEvent::Input(InputEvent::DeleteToEnd)),
-        KeyCode::Char('u') | KeyCode::Char('U') => Some(CoreEvent::Input(InputEvent::DeleteToStart)),
-        KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::Input(InputEvent::KillChar)),
-        KeyCode::Char('z') | KeyCode::Char('Z') => Some(CoreEvent::Control(ControlEvent::Suspend)),
-        KeyCode::Char('y') | KeyCode::Char('Y') => Some(CoreEvent::Input(InputEvent::Redo)),
-        KeyCode::Char('c') | KeyCode::Char('C') => Some(CoreEvent::Control(ControlEvent::Quit)),
-        KeyCode::Char('q') | KeyCode::Char('Q') => Some(CoreEvent::Control(ControlEvent::Quit)),
-        KeyCode::Char('s') | KeyCode::Char('S') => Some(CoreEvent::Control(ControlEvent::Abort)),
-        KeyCode::Char('l') | KeyCode::Char('L') => Some(CoreEvent::Dialog(DialogEvent::ToggleModelSelector)),
+        KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::CursorEnd),
+        KeyCode::Char('o') | KeyCode::Char('O') => Some(CoreEvent::ToggleExpand),
+        KeyCode::Char('j') | KeyCode::Char('J') => Some(CoreEvent::Newline),
+        KeyCode::Char('a') | KeyCode::Char('A') => Some(CoreEvent::CursorStart),
+        KeyCode::Char('b') | KeyCode::Char('B') => Some(CoreEvent::CursorLeft),
+        KeyCode::Char('f') | KeyCode::Char('F') => Some(CoreEvent::CursorRight),
+        KeyCode::Char('w') | KeyCode::Char('W') => Some(CoreEvent::DeleteWord),
+        KeyCode::Char('k') | KeyCode::Char('K') => Some(CoreEvent::DeleteToEnd),
+        KeyCode::Char('u') | KeyCode::Char('U') => Some(CoreEvent::DeleteToStart),
+        KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::KillChar),
+        KeyCode::Char('z') | KeyCode::Char('Z') => Some(CoreEvent::Suspend),
+        KeyCode::Char('y') | KeyCode::Char('Y') => Some(CoreEvent::Redo),
+        KeyCode::Char('c') | KeyCode::Char('C') => Some(CoreEvent::Quit),
+        KeyCode::Char('q') | KeyCode::Char('Q') => Some(CoreEvent::Quit),
+        KeyCode::Char('s') | KeyCode::Char('S') => Some(CoreEvent::Abort),
+        KeyCode::Char('l') | KeyCode::Char('L') => Some(CoreEvent::ToggleModelSelector),
         _ => None,
     }
 }
 
 fn map_alt_key(code: KeyCode) -> Option<CoreEvent> {
     match code {
-        KeyCode::Enter => Some(CoreEvent::Control(ControlEvent::FollowUp)),
-        KeyCode::Char('b') | KeyCode::Char('B') => Some(CoreEvent::Input(InputEvent::CursorWordLeft)),
-        KeyCode::Char('f') | KeyCode::Char('F') => Some(CoreEvent::Input(InputEvent::CursorWordRight)),
+        KeyCode::Enter => Some(CoreEvent::FollowUp),
+        KeyCode::Char('b') | KeyCode::Char('B') => Some(CoreEvent::CursorWordLeft),
+        KeyCode::Char('f') | KeyCode::Char('F') => Some(CoreEvent::CursorWordRight),
         _ => None,
     }
 }
 
 fn map_shift_key(code: KeyCode) -> Option<CoreEvent> {
     match code {
-        KeyCode::Enter => Some(CoreEvent::Input(InputEvent::Newline)),
+        KeyCode::Enter => Some(CoreEvent::Newline),
         // Shift+F3 is what some terminals send for Shift+Enter (via \e[13;2~ escape sequence)
-        KeyCode::F(3) => Some(CoreEvent::Input(InputEvent::Newline)),
+        KeyCode::F(3) => Some(CoreEvent::Newline),
         // Shift+symbol: pass through as regular input (crossterm already provides the shifted char)
-        KeyCode::Char(c) => Some(CoreEvent::Input(InputEvent::Input(c))),
+        KeyCode::Char(c) => Some(CoreEvent::Input(c)),
         _ => None,
     }
 }
@@ -185,18 +184,18 @@ fn map_plain_key(code: KeyCode) -> Option<CoreEvent> {
         // pop one panel when deeper, close the dialog when at the root
         // (the "main menu" of that bar). To force-close from any depth
         // use `Abort` (Ctrl+\) instead.
-        KeyCode::Esc => Some(CoreEvent::Dialog(DialogEvent::DialogBack)),
-        KeyCode::Char('\t') | KeyCode::Tab | KeyCode::BackTab => Some(CoreEvent::Input(InputEvent::Input('\t'))),
-        KeyCode::Char(c) => Some(CoreEvent::Input(InputEvent::Input(c))),
-        KeyCode::Backspace => Some(CoreEvent::Input(InputEvent::Backspace)),
-        KeyCode::Enter => Some(CoreEvent::Input(InputEvent::Submit)),
-        KeyCode::Up => Some(CoreEvent::Input(InputEvent::HistoryPrev)),
-        KeyCode::Down => Some(CoreEvent::Input(InputEvent::HistoryNext)),
-        KeyCode::Left => Some(CoreEvent::Input(InputEvent::CursorLeft)),
-        KeyCode::Right => Some(CoreEvent::Input(InputEvent::CursorRight)),
-        KeyCode::Home => Some(CoreEvent::Input(InputEvent::CursorStart)),
-        KeyCode::End => Some(CoreEvent::Input(InputEvent::CursorEnd)),
-        KeyCode::Delete => Some(CoreEvent::Input(InputEvent::KillChar)),
+        KeyCode::Esc => Some(CoreEvent::DialogBack),
+        KeyCode::Char('\t') | KeyCode::Tab | KeyCode::BackTab => Some(CoreEvent::Input('\t')),
+        KeyCode::Char(c) => Some(CoreEvent::Input(c)),
+        KeyCode::Backspace => Some(CoreEvent::Backspace),
+        KeyCode::Enter => Some(CoreEvent::Submit),
+        KeyCode::Up => Some(CoreEvent::HistoryPrev),
+        KeyCode::Down => Some(CoreEvent::HistoryNext),
+        KeyCode::Left => Some(CoreEvent::CursorLeft),
+        KeyCode::Right => Some(CoreEvent::CursorRight),
+        KeyCode::Home => Some(CoreEvent::CursorStart),
+        KeyCode::End => Some(CoreEvent::CursorEnd),
+        KeyCode::Delete => Some(CoreEvent::KillChar),
         _ => None,
     }
 }
@@ -204,23 +203,23 @@ fn map_plain_key(code: KeyCode) -> Option<CoreEvent> {
 /// Convert mouse events to CoreEvent.
 fn convert_mouse_event(mouse: &MouseEvent) -> Option<CoreEvent> {
     match mouse.kind {
-        MouseEventKind::ScrollDown => Some(CoreEvent::Scroll(runie_core::event::ScrollEvent::Down)),
-        MouseEventKind::ScrollUp => Some(CoreEvent::Scroll(runie_core::event::ScrollEvent::Up)),
-        MouseEventKind::Down(btn) => Some(CoreEvent::Input(InputEvent::MouseClick {
+        MouseEventKind::ScrollDown => Some(CoreEvent::Down),
+        MouseEventKind::ScrollUp => Some(CoreEvent::Up),
+        MouseEventKind::Down(btn) => Some(CoreEvent::MouseClick {
             row: mouse.row,
             col: mouse.column,
             button: mouse_button_to_string(btn),
-        })),
-        MouseEventKind::Up(btn) => Some(CoreEvent::Input(InputEvent::MouseRelease {
+        }),
+        MouseEventKind::Up(btn) => Some(CoreEvent::MouseRelease {
             row: mouse.row,
             col: mouse.column,
             button: mouse_button_to_string(btn),
-        })),
-        MouseEventKind::Drag(btn) => Some(CoreEvent::Input(InputEvent::MouseDrag {
+        }),
+        MouseEventKind::Drag(btn) => Some(CoreEvent::MouseDrag {
             row: mouse.row,
             col: mouse.column,
             button: mouse_button_to_string(btn),
-        })),
+        }),
         _ => None,
     }
 }

@@ -64,6 +64,7 @@ pub fn input_event(state: &mut AppState, event: InputEvent) {
         InputEvent::MouseRelease { .. } | InputEvent::MouseDrag { .. } => {}
         InputEvent::FocusGained | InputEvent::FocusLost => {}
         InputEvent::TerminalSize { .. } => {}
+        _ => {}
     }
 }
 

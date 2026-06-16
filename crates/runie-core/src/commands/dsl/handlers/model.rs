@@ -2,7 +2,6 @@
 
 use crate::commands::{CommandCategory, CommandRegistry, CommandResult, DialogType};
 use crate::dialog::{ItemAction, Panel, PanelStack};
-use crate::event::CommandEvent;
 use crate::model::AppState;
 
 use super::spec::{CommandKind, CommandSpec};
@@ -97,7 +96,7 @@ fn open_thinking_panel(state: &mut AppState) -> CommandResult {
         } else {
             level.as_str().to_string()
         };
-        let evt = crate::Event::Command(CommandEvent::RunThinkingCommand { level });
+        let evt = crate::event::CommandEvent::RunThinkingCommand { level };
         panel = panel.item(&label, ItemAction::Emit(evt));
     }
 

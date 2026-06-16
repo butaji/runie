@@ -2,20 +2,9 @@
 //!
 //! ## Architecture
 //!
-//! The `Event` enum is split into focused sub-enums to keep match arms small
-//! and error messages readable. See [`event-subenums.md`](../tasks/event-subenums.md).
-//!
-//! Sub-enums (each in its own file):
-//! - [`InputEvent`](input::InputEvent) — keyboard, mouse, clipboard, terminal
-//! - [`AgentEvent`](agent::AgentEvent) — LLM responses, tool calls
-//! - [`ScrollEvent`](scroll::ScrollEvent) — feed scroll navigation
-//! - [`ControlEvent`](control::ControlEvent) — quit, reset, abort, external editor
-//! - [`ModelConfigEvent`](model_config::ModelConfigEvent) — model/provider/theme switching
-//! - [`DialogEvent`](dialog::DialogEvent) — command palette, model selector, path completion
-//! - [`EditEvent`](edit::EditEvent) — edit preview and approval
-//! - [`SystemEvent`](system::SystemEvent) — transient notifications, diagnostics
-//! - [`SessionEvent`](session::SessionEvent) — session tree manipulation
-//! - [`CommandEvent`](command::CommandEvent) — slash command execution
+//! `Event` is a single flat enum with all leaf variants at the top level.
+//! The old sub-enums are preserved as type aliases for backward compatibility,
+//! so `InputEvent::Submit` resolves to `Event::Submit`.
 //!
 //! Durable events for JSONL persistence: [`DurableCoreEvent`](durable::DurableCoreEvent)
 
@@ -56,3 +45,5 @@ mod session;
 mod sidebar;
 mod system;
 mod variants;
+#[cfg(test)]
+mod variants_tests;

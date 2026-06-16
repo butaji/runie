@@ -10,7 +10,6 @@ pub use run::{run_compact, run_fork, run_name};
 
 use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::dialog::PanelStack;
-use crate::event::{CommandEvent, ControlEvent, SessionEvent};
 use crate::model::AppState;
 
 use super::spec::{CommandKind, CommandSpec};
@@ -74,45 +73,45 @@ fn build_form_stack(
 }
 
 fn save_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::Event::Command(CommandEvent::RunSaveCommand {
+    crate::event::CommandEvent::RunSaveCommand {
         name: values.get("name").cloned().unwrap_or_default(),
-    })
+    }
 }
 fn load_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::Event::Command(CommandEvent::RunLoadCommand {
+    crate::event::CommandEvent::RunLoadCommand {
         name: values.get("name").cloned().unwrap_or_default(),
-    })
+    }
 }
 fn delete_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::Event::Command(CommandEvent::RunDeleteCommand {
+    crate::event::CommandEvent::RunDeleteCommand {
         name: values.get("name").cloned().unwrap_or_default(),
-    })
+    }
 }
 fn export_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::Event::Command(CommandEvent::RunExportCommand {
+    crate::event::CommandEvent::RunExportCommand {
         path: values.get("path").cloned().unwrap_or_default(),
-    })
+    }
 }
 fn import_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::Event::Command(CommandEvent::RunImportCommand {
+    crate::event::CommandEvent::RunImportCommand {
         path: values.get("path").cloned().unwrap_or_default(),
-    })
+    }
 }
 fn compact_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::Event::Command(CommandEvent::RunCompactCommand {
+    crate::event::CommandEvent::RunCompactCommand {
         keep: values.get("keep").cloned().unwrap_or_default(),
         focus: values.get("focus").cloned().unwrap_or_default(),
-    })
+    }
 }
 fn fork_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::Event::Command(CommandEvent::RunForkCommand {
+    crate::event::CommandEvent::RunForkCommand {
         message_index: values.get("index").cloned().unwrap_or_default(),
-    })
+    }
 }
 fn name_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::Event::Command(CommandEvent::RunNameCommand {
+    crate::event::CommandEvent::RunNameCommand {
         name: values.get("name").cloned().unwrap_or_default(),
-    })
+    }
 }
 
 static SESSION_COMMANDS: &[CommandSpec] = &[
@@ -406,11 +405,11 @@ fn project_trust_status(_state: &AppState) -> &'static str {
 }
 
 fn handle_tree(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::Event::Session(SessionEvent::ToggleSessionTree))
+    CommandResult::Event(crate::event::SessionEvent::ToggleSessionTree)
 }
 
 fn handle_share(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::Event::Control(ControlEvent::ShareSession))
+    CommandResult::Event(crate::event::ControlEvent::ShareSession)
 }
 
 fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {

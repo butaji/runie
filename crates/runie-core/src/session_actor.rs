@@ -148,12 +148,12 @@ mod tests {
 
         // Directly test filtering: publish events and check store directly
         let events = vec![
-            Event::Agent(AgentEvent::Response { id: "resp.1".into(), content: "hello".into() }),
-            Event::Input(InputEvent::Input('x')),
-            Event::Agent(AgentEvent::ToolStart { id: "tool.1".into(), name: "bash".into(), input: serde_json::Value::Null }),
-            Event::Input(InputEvent::Submit),
-            Event::Agent(AgentEvent::ToolEnd { id: "tool.1".into(), duration_secs: 1.0, output: "done".into() }),
-            Event::Scroll(ScrollEvent::Up),
+            AgentEvent::Response { id: "resp.1".into(), content: "hello".into() },
+            InputEvent::Input('x'),
+            AgentEvent::ToolStart { id: "tool.1".into(), name: "bash".into(), input: serde_json::Value::Null },
+            InputEvent::Submit,
+            AgentEvent::ToolEnd { id: "tool.1".into(), duration_secs: 1.0, output: "done".into() },
+            ScrollEvent::Up,
         ];
 
         // Manually filter and persist (simulating SessionActor logic)

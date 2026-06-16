@@ -6,7 +6,7 @@
 //! state.agent("req.0").think().respond("hi").complete(1.0).done();
 //! ```
 
-use crate::event::{AgentEvent, Event, InputEvent};
+use crate::event::{AgentEvent, InputEvent};
 use crate::model::AppState;
 
 /// Fluent builder for an agent turn sequence.
@@ -24,68 +24,68 @@ impl<'a> AgentTurn<'a> {
     }
 
     pub fn think(self) -> Self {
-        self.state.update(Event::Agent(AgentEvent::Thinking {
+        self.state.update(AgentEvent::Thinking {
             id: self.id.clone(),
-        }));
+        });
         self
     }
 
     pub fn respond(self, content: impl Into<String>) -> Self {
-        self.state.update(Event::Agent(AgentEvent::Response {
+        self.state.update(AgentEvent::Response {
             id: self.id.clone(),
             content: content.into(),
-        }));
+        });
         self
     }
 
     pub fn thought_done(self) -> Self {
-        self.state.update(Event::Agent(AgentEvent::ThoughtDone {
+        self.state.update(AgentEvent::ThoughtDone {
             id: self.id.clone(),
-        }));
+        });
         self
     }
 
     pub fn tool(self, name: impl Into<String>, output: impl Into<String>) -> Self {
         let name = name.into();
-        self.state.update(Event::Agent(AgentEvent::ToolStart {
+        self.state.update(AgentEvent::ToolStart {
             id: self.id.clone(),
             name: name.clone(),
             input: serde_json::Value::Null,
-        }));
-        self.state.update(Event::Agent(AgentEvent::ToolEnd {
+        });
+        self.state.update(AgentEvent::ToolEnd {
             id: self.id.clone(),
             duration_secs: 0.5,
             output: output.into(),
-        }));
+        });
         self
     }
 
     pub fn tool_start(self, name: impl Into<String>) -> Self {
-        self.state.update(Event::Agent(AgentEvent::ToolStart {
+        self.state.update(AgentEvent::ToolStart {
             id: self.id.clone(),
             name: name.into(),
             input: serde_json::Value::Null,
-        }));
+        });
         self
     }
 
     pub fn complete(self, duration_secs: f64) -> Self {
-        self.state.update(Event::Agent(AgentEvent::TurnComplete {
+        self.state.update(AgentEvent::TurnComplete {
             id: self.id.clone(),
             duration_secs,
-        }));
+        });
         self
     }
 
     pub fn done(self) {
-        self.state.update(Event::Agent(AgentEvent::Done { id: self.id }));
+        self.state.update(AgentEvent::Done { id: self.id });
     }
 
     pub fn error(self, message: impl Into<String>) {
-        self.state.update(Event::Agent(AgentEvent::Error {
+        self.state.update(AgentEvent::Error {
             id: self.id,
             message: message.into(),
-        }));
+        });
     }
 }
 
@@ -104,13 +104,13 @@ pub trait AppStateDsl {
 impl AppStateDsl for AppState {
     fn type_text(&mut self, text: &str) -> &mut Self {
         for c in text.chars() {
-            self.update(Event::Input(InputEvent::Input(c)));
+            self.update(InputEvent::Input(c));
         }
         self
     }
 
     fn submit(&mut self) -> &mut Self {
-        self.update(Event::Input(InputEvent::Submit));
+        self.update(InputEvent::Submit);
         self
     }
 

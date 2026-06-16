@@ -5,7 +5,7 @@ use super::helpers::{
     state_with_wrapped_welcome,
 };
 use runie_core::event::InputEvent;
-use runie_core::{AppState, ChatMessage, Event, Role};
+use runie_core::{AppState, ChatMessage, Role};
 
 #[test]
 fn vim_nav_mode_bracket_spans_post_elements() {
@@ -55,7 +55,7 @@ fn vim_nav_mode_bracket_around_long_system_welcome_post() {
     state.view.last_visible_height = 10;
 
     enter_vim_nav(&mut state);
-    state.update(Event::Input(InputEvent::Input('k')));
+    state.update(InputEvent::Input('k'));
     assert_eq!(state.view.selected_post, Some(0));
 
     let buf = draw(&mut state, 60, 20);

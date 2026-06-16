@@ -13,7 +13,7 @@ fn render_chat(state: &mut AppState, width: u16, height: u16) -> String {
 fn latest_user_message_visible_after_submit() {
     let mut state = AppState::default();
     state.input.input = "list files".into();
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Submit);
     state.ensure_fresh();
 
     let out = render_chat(&mut state, 40, 15);
@@ -27,16 +27,16 @@ fn latest_user_message_visible_after_submit() {
 fn large_tool_output_latest_visible_at_bottom() {
     let mut state = AppState::default();
 
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
     let output = (1..=20)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::Agent(AgentEvent::ToolEnd {
+    state.update(AgentEvent::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
-    }));
+    });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -52,31 +52,31 @@ fn final_response_visible_after_full_turn() {
     let mut state = AppState::default();
     state.agent.streaming = true;
 
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null }));
+    });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null });
     let output = (1..=15)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::Agent(AgentEvent::ToolEnd {
+    state.update(AgentEvent::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done!".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 2.0,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -90,7 +90,7 @@ fn latest_message_pushes_older_off_screen() {
 
     for i in 0..15 {
         state.input.input = format!("msg{}", i);
-        state.update(Event::Input(InputEvent::Submit));
+        state.update(InputEvent::Submit);
     }
     state.ensure_fresh();
     state.view.scroll = 0;
@@ -120,7 +120,7 @@ fn scroll_up_shows_older_content() {
     let mut state = AppState::default();
     for i in 0..15 {
         state.input.input = format!("msg{}", i);
-        state.update(Event::Input(InputEvent::Submit));
+        state.update(InputEvent::Submit);
     }
     state.ensure_fresh();
     state.view.scroll = 100; // clamped to max
@@ -141,13 +141,13 @@ fn new_content_auto_shows_when_at_bottom() {
     let mut state = AppState::default();
     for i in 0..10 {
         state.input.input = format!("msg{}", i);
-        state.update(Event::Input(InputEvent::Submit));
+        state.update(InputEvent::Submit);
     }
     state.ensure_fresh();
     state.view.scroll = 0;
 
     state.input.input = "NEWEST".into();
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Submit);
     state.ensure_fresh();
 
     let out = render_chat(&mut state, 40, 15);

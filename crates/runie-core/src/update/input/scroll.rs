@@ -13,6 +13,7 @@ pub fn scroll_event(state: &mut AppState, event: ScrollEvent) {
         ScrollEvent::PageDown => page_down(state),
         ScrollEvent::GoToTop => go_to_top(state),
         ScrollEvent::GoToBottom => go_to_bottom(state),
+        _ => {}
     }
 }
 

@@ -61,7 +61,7 @@
 	fn nav_state() -> AppState {
 	    let mut state = AppState::default();
 	    state.config.vim_mode = true;
-	    state.update(Event::Dialog(DialogEvent::DialogBack));
+	    state.update(DialogEvent::DialogBack);
 	    assert!(state.view.vim_nav_mode);
 	    state
 	}
@@ -85,7 +85,7 @@
 	    let mut terminal = Terminal::new(backend).expect("terminal");
 
 	    terminal.draw(|f| view(f, &mut state)).expect("draw");
-	    state.update(Event::Input(InputEvent::Input('g')));
+	    state.update(InputEvent::Input('g'));
 	    terminal.draw(|f| view(f, &mut state)).expect("draw");
 
 	    let content: String = terminal
@@ -109,8 +109,8 @@
 	    let mut terminal = Terminal::new(backend).expect("terminal");
 
 	    terminal.draw(|f| view(f, &mut state)).expect("draw");
-	    state.update(Event::Input(InputEvent::Input('g')));
-	    state.update(Event::Input(InputEvent::Input(' ')));
+	    state.update(InputEvent::Input('g'));
+	    state.update(InputEvent::Input(' '));
 	    terminal.draw(|f| view(f, &mut state)).expect("draw");
 
 	    let content: String = terminal
@@ -173,12 +173,12 @@
 	    add_messages(&mut state, 4);
 	    state.messages_changed();
 	    state.ensure_fresh();
-	    state.update(Event::Dialog(DialogEvent::DialogBack));
+	    state.update(DialogEvent::DialogBack);
 
 	    let backend = TestBackend::new(80, 24);
 	    let mut terminal = Terminal::new(backend).expect("terminal");
 	    terminal.draw(|f| view(f, &mut state)).expect("draw");
-	    state.update(Event::Input(InputEvent::Input('g')));
+	    state.update(InputEvent::Input('g'));
 	    terminal.draw(|f| view(f, &mut state)).expect("draw");
 
 	    let buf = terminal.backend().buffer();
@@ -212,7 +212,7 @@
 	#[test]
 	fn command_bar_open_renders_input_box_as_disabled() {
 	    let mut state = AppState::default();
-	    state.update(Event::Dialog(DialogEvent::ToggleCommandPalette));
+	    state.update(DialogEvent::ToggleCommandPalette);
 	    assert!(state.open_dialog.is_some(), "palette should be open");
 
 	    let backend = TestBackend::new(80, 24);
@@ -248,7 +248,7 @@
 
 	    let mut s2 = AppState::default();
 	    s2.config.vim_mode = true;
-	    s2.update(Event::Dialog(DialogEvent::DialogBack));
+	    s2.update(DialogEvent::DialogBack);
 	    assert!(s2.view.vim_nav_mode);
 	    let cell_nav = chevron_cell(&s2).expect("nav chevron cell");
 
@@ -263,6 +263,6 @@
 	    );
 
 	    let mut s3 = AppState::default();
-	    s3.update(Event::Dialog(DialogEvent::ToggleCommandPalette));
+	    s3.update(DialogEvent::ToggleCommandPalette);
 	    assert!(s3.open_dialog.is_some(), "palette should be open");
 	}

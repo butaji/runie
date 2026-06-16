@@ -13,7 +13,7 @@ pub fn fresh_state() -> AppState {
 
 pub fn type_str(state: &mut AppState, text: &str) {
     for c in text.chars() {
-        state.update(Event::Input(InputEvent::Input(c)));
+        state.update(InputEvent::Input(c));
     }
 }
 

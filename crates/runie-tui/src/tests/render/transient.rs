@@ -133,19 +133,15 @@ fn streaming_tail_renders_when_turn_active() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     // Add a message so there's content in the feed
-    state.update(runie_core::Event::Agent(
-        runie_core::event::AgentEvent::Response {
-            id: "test.1".into(),
-            content: "Hello world".into(),
-        },
-    ));
+    state.update(runie_core::event::AgentEvent::Response {
+        id: "test.1".into(),
+        content: "Hello world".into(),
+    });
     // Add streaming tail
-    state.update(runie_core::Event::Agent(
-        runie_core::event::AgentEvent::ResponseDelta {
-            id: "test.1".into(),
-            content: " and more".into(),
-        },
-    ));
+    state.update(runie_core::event::AgentEvent::ResponseDelta {
+        id: "test.1".into(),
+        content: " and more".into(),
+    });
     // Set turn_active to show streaming cell
     state.agent.turn_active = true;
 

@@ -658,8 +658,7 @@ mod orchestrator_sidebar_tests {
     }
 
     fn apply_event(state: &mut crate::model::AppState, event: OrchestratorEvent) {
-        use crate::Event;
-        state.update(Event::Orchestrator(event));
+        state.update(event);
     }
 
     #[test]

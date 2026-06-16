@@ -92,6 +92,10 @@ pub use diff::{Diff, DiffHunk, DiffLine};
 pub use edit_preview::EditPreview;
 pub use event::Event;
 pub use event::DialogEvent; // Re-export to avoid circular dependency with dialog module
+pub use event::{
+    AgentEvent, CommandEvent, ControlEvent, EditEvent, InputEvent, LoginFlowEvent,
+    ModelConfigEvent, OrchestratorEvent, ScrollEvent, SessionEvent, SidebarEvent, SystemEvent,
+};
 pub use file_refs::{find_files, is_image_file, read_file_ref, FileRef};
 pub use input_history::{filter_history, load_history, save_history, search_history};
 pub use keybindings::{

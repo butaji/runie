@@ -4,7 +4,7 @@ use git2;
 use crate::commands::{DialogState, DialogType};
 use crate::{FffSearchState, FffFileEntry};
 use crate::dialog::builders::{command_palette, model_selector, scoped_models, session_tree};
-use crate::event::{CommandEvent, ControlEvent, DialogEvent, ModelConfigEvent, SessionEvent};
+use crate::event::{ControlEvent, DialogEvent};
 use crate::model::AppState;
 use crate::model_catalog::model_catalog;
 
@@ -116,7 +116,7 @@ pub mod toggle;
 pub use toggle::dialog_toggle_event;
 
 #[cfg(test)]
-pub use form::{apply_form_action, form_panel_action, FormAction};
+pub use form::{form_panel_action, FormAction};
 
 // ── Form panel free functions (merged from dialog_form) ────────────────────────
 
@@ -135,7 +135,7 @@ pub fn handle_form_dialog(state: &mut AppState, event: DialogEvent) {
         if !panel.is_form() {
             return;
         }
-        form::form_panel_action(panel, Event::Dialog(event))
+        form::form_panel_action(panel, event)
     };
     form::apply_form_action(state, action);
 }
@@ -218,7 +218,7 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
         state.open_dialog = Some(dialog);
         return;
     }
-    let is_dialog_back = matches!(&event, Event::Dialog(crate::event::DialogEvent::DialogBack));
+    let is_dialog_back = matches!(&event, crate::event::DialogEvent::DialogBack);
     let is_palette_activation = is_palette_activation(&dialog, &event);
     if is_palette_activation {
         state.push_dialog_to_back_stack(dialog.clone());
@@ -235,7 +235,7 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
 }
 
 fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
-    if matches!(event, Event::Control(ControlEvent::Abort)) {
+    if matches!(event, ControlEvent::Abort) {
         if let Some((input, _, _, _)) = state.input.file_picker_backup.take() {
             state.input.input = input;
             state.input.cursor_pos = state.input.input.len();
@@ -245,26 +245,7 @@ fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
         state.mark_dirty();
         return true;
     }
-    if matches!(
-        event,
-        Event::ModelConfig(
-            ModelConfigEvent::SwitchTheme { .. }
-                | ModelConfigEvent::SwitchModel { .. }
-                | ModelConfigEvent::CycleModelNext
-                | ModelConfigEvent::CycleModelPrev
-                | ModelConfigEvent::CycleThinkingLevel
-                | ModelConfigEvent::SetThinkingLevel(_)
-                | ModelConfigEvent::ToggleReadOnly
-                | ModelConfigEvent::TrustProject
-                | ModelConfigEvent::UntrustProject
-        )
-    ) {
-        if let Event::ModelConfig(cfg) = event {
-            crate::update::agent::model_config_event(state, cfg.clone());
-        }
-        return true;
-    }
-    if matches!(event, Event::Control(ControlEvent::Quit)) {
+    if matches!(event, ControlEvent::Quit) {
         state.should_quit = true;
         return true;
     }
@@ -273,7 +254,7 @@ fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
 
 fn is_palette_activation(dialog: &DialogState, event: &Event) -> bool {
     use crate::event::{InputEvent, DialogEvent};
-    matches!(event, Event::Input(InputEvent::Submit) | Event::Dialog(DialogEvent::PaletteSelect))
+    matches!(event, InputEvent::Submit | DialogEvent::PaletteSelect)
         && matches!(dialog, DialogState::CommandPalette(_))
 }
 
@@ -348,10 +329,10 @@ pub fn open_command_palette(state: &mut AppState) {
             cmd.category.as_str(),
             &cmd.name,
             &cmd.desc,
-            crate::Event::Command(CommandEvent::RunPaletteCommand {
+            crate::event::CommandEvent::RunPaletteCommand {
                 name: cmd.name.clone(),
                 args: String::new(),
-            }),
+            },
         ));
     }
     for skill in &state.skills {
@@ -360,9 +341,9 @@ pub fn open_command_palette(state: &mut AppState) {
                 "Skill",
                 &skill.name,
                 &skill.description,
-                crate::Event::Command(CommandEvent::RunSkillCommand {
+                crate::event::CommandEvent::RunSkillCommand {
                     name: skill.name.clone(),
-                }),
+                },
             ));
         }
     }
@@ -442,9 +423,9 @@ pub fn open_session_tree_dialog(state: &mut AppState) {
                     node.message.role.as_str(),
                     node.message.content.chars().take(60).collect::<String>()
                 );
-                let evt = crate::Event::Session(SessionEvent::SessionTreeSelect {
+                let evt = crate::event::SessionEvent::SessionTreeSelect {
                     id: node.message.id.clone(),
-                });
+                };
                 (depth, preview, evt)
             })
             .collect(),
@@ -510,7 +491,7 @@ fn build_file_picker_panel(
         let insert_name = file_picker_insert_name(entry);
         panel = panel.item(
             &label,
-            ItemAction::Emit(crate::Event::Dialog(crate::event::DialogEvent::InsertAtRef(insert_name))),
+            ItemAction::Emit(crate::event::DialogEvent::InsertAtRef(insert_name)),
         );
     }
     panel
@@ -574,7 +555,7 @@ fn rebuild_file_picker(state: &mut AppState) {
             let insert_name = file_picker_insert_name(&entry);
             new_panel = new_panel.item(
                 &label,
-                ItemAction::Emit(crate::Event::Dialog(crate::event::DialogEvent::InsertAtRef(insert_name))),
+                ItemAction::Emit(crate::event::DialogEvent::InsertAtRef(insert_name)),
             );
         }
         new_panel

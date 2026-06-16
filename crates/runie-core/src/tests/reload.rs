@@ -1,8 +1,7 @@
 //! Reload tests (Layer 2)
 
-use crate::event::Event;
 
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::ModelConfigEvent;
 use crate::model::AppState;
 
 #[test]
@@ -13,7 +12,7 @@ fn reload_emits_event() {
     let result = cmd.flow.clone().exec(&mut state, &cmd_name, "");
     assert!(matches!(
         result,
-        crate::commands::CommandResult::Event(Event::ModelConfig(ModelConfigEvent::ReloadAll))
+        crate::commands::CommandResult::Event(ModelConfigEvent::ReloadAll)
     ));
 }
 
@@ -21,7 +20,7 @@ fn reload_emits_event() {
 fn reload_updates_keybindings() {
     let mut state = AppState::default();
     let initial_bindings = state.config.keybindings.clone();
-    state.update(Event::ModelConfig(ModelConfigEvent::ReloadAll));
+    state.update(ModelConfigEvent::ReloadAll);
     // After reload, keybindings should be refreshed (same content but new HashMap)
     assert_eq!(state.config.keybindings.len(), initial_bindings.len());
     assert!(state

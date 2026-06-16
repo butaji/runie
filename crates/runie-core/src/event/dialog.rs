@@ -1,2 +1,2 @@
-//! Dialog event variants (command palette, model selector, path completion, etc.).
+//! Re-export the flat `DialogEvent` alias.
 

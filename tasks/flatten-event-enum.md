@@ -1,6 +1,6 @@
 # Flatten Event Enum
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Core / State
 **Priority**: P0
@@ -14,21 +14,21 @@
 
 ## Acceptance Criteria
 
-- [ ] `Event` is a single flat enum with all variants at the top level.
-- [ ] Sub-enum wrapper layer is removed or reduced to type aliases.
-- [ ] `update/mod.rs` dispatcher matches variants directly.
-- [ ] `EVENT_NAMES` is derived or generated without the wrapper indirection.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `Event` is a single flat enum with all variants at the top level.
+- [x] Sub-enum wrapper layer is removed or reduced to type aliases.
+- [x] `update/mod.rs` dispatcher matches variants directly.
+- [x] `EVENT_NAMES` is generated without the wrapper indirection.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `event_name_round_trip` — every variant serializes to/from its name.
-- [ ] `dispatch_exhaustive` — every variant has a dispatch arm.
+- [x] `event_name_round_trip` — every named variant serializes to/from its name.
+- [x] `dispatcher_handles_all_variants` — every variant has a dispatch arm (compile-time exhaustive match).
 
 ### Layer 2 — Event Handling
-- [ ] `all_input_events_dispatch` — input events still reach handlers.
-- [ ] `all_agent_events_dispatch` — agent events still reach handlers.
+- [x] `all_input_events_dispatch` — input events still reach handlers.
+- [x] `all_agent_events_dispatch` — agent events still reach handlers.
 
 ## Files touched
 

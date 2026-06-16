@@ -1,5 +1,5 @@
 use crate::commands::CommandResult;
-use crate::event::{DialogEvent, Event};
+use crate::event::DialogEvent;
 use crate::model::AppState;
 use crate::skills::Skill;
 
@@ -111,7 +111,7 @@ fn palette_shows_user_invocable_skills() {
         skills: vec![rust_skill(true)],
         ..Default::default()
     };
-    state.update(Event::Dialog(DialogEvent::ToggleCommandPalette));
+    state.update(DialogEvent::ToggleCommandPalette);
     let snap = state.snapshot();
     assert!(
         snap.palette_items
@@ -128,7 +128,7 @@ fn palette_select_skill_emits_message() {
         skills: vec![rust_skill(true)],
         ..Default::default()
     };
-    state.update(Event::Dialog(DialogEvent::ToggleCommandPalette));
+    state.update(DialogEvent::ToggleCommandPalette);
     let snap = state.snapshot();
     let skill_pos = snap
         .palette_items
@@ -136,9 +136,9 @@ fn palette_select_skill_emits_message() {
         .position(|(n, _, c)| n == "rust" && c == "Skill")
         .expect("skill should be in palette");
     for _ in 0..skill_pos {
-        state.update(Event::Dialog(DialogEvent::PaletteDown));
+        state.update(DialogEvent::PaletteDown);
     }
-    state.update(Event::Dialog(DialogEvent::PaletteSelect));
+    state.update(DialogEvent::PaletteSelect);
     let last = state
         .session
         .messages

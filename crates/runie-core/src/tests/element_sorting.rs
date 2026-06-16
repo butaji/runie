@@ -2,7 +2,7 @@
 
 use crate::event::Event;
 
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::{InputEvent, AgentEvent};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::LazyCache;
 
@@ -50,22 +50,22 @@ fn _timestamps_are_monotonic(state: &AppState) -> Result<(), String> {
 
 fn response_after_tool_events() -> Vec<Event> {
     vec![
-        Event::Agent(AgentEvent::Response {
+        AgentEvent::Response {
             id: "req.0".into(),
             content: "Let me ".into(),
-        }),
-        Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }),
-        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file.txt".into(),
-         }),
-        Event::Agent(AgentEvent::Response {
+        },
+        AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
+        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file.txt".into(),
+         },
+        AgentEvent::Response {
             id: "req.0".into(),
             content: "check files.".into(),
-        }),
-        Event::Agent(AgentEvent::TurnComplete {
+        },
+        AgentEvent::TurnComplete {
             id: "req.0".into(),
             duration_secs: 2.0,
-        }),
-        Event::Agent(AgentEvent::Done { id: "req.0".into() }),
+        },
+        AgentEvent::Done { id: "req.0".into() },
     ]
 }
 
@@ -100,25 +100,25 @@ fn multiple_response_chunks_preserve_creation_order() {
     let mut state = fresh_state();
     state.agent.streaming = true;
     // First chunk creates assistant
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello ".into(),
-    }));
+    });
     // Second chunk updates same assistant (bumps timestamp)
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "world".into(),
-    }));
+    });
     // Third chunk
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "!".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
 
     let kinds: Vec<_> = element_kinds(&state)
@@ -135,24 +135,24 @@ fn multiple_response_chunks_preserve_creation_order() {
 
 fn thought_before_agent_events() -> Vec<Event> {
     vec![
-        Event::Agent(AgentEvent::Thinking { id: "req.0".into() }),
-        Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
-        Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }),
-        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-         }),
-        Event::Agent(AgentEvent::Response {
+        AgentEvent::Thinking { id: "req.0".into() },
+        AgentEvent::ThoughtDone { id: "req.0".into() },
+        AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
+        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+         },
+        AgentEvent::Response {
             id: "req.0".into(),
             content: "Result".into(),
-        }),
-        Event::Agent(AgentEvent::Response {
+        },
+        AgentEvent::Response {
             id: "req.0".into(),
             content: " done".into(),
-        }),
-        Event::Agent(AgentEvent::TurnComplete {
+        },
+        AgentEvent::TurnComplete {
             id: "req.0".into(),
             duration_secs: 1.0,
-        }),
-        Event::Agent(AgentEvent::Done { id: "req.0".into() }),
+        },
+        AgentEvent::Done { id: "req.0".into() },
     ]
 }
 
@@ -186,24 +186,24 @@ fn thought_appears_before_agent_even_when_agent_updated_later() {
 fn turn_complete_last_during_turn_despite_updates() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-     }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+     });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
-    }));
+    });
     // Even after turn complete, delayed empty response bumps assistant
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "".into(),
-    }));
+    });
     state.ensure_fresh();
 
     let kinds: Vec<_> = element_kinds(&state)
@@ -220,21 +220,21 @@ fn turn_complete_last_during_turn_despite_updates() {
 
 fn turn_then_user_events() -> Vec<Event> {
     vec![
-        Event::Agent(AgentEvent::Thinking { id: "req.0".into() }),
-        Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
-        Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }),
-        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-         }),
-        Event::Agent(AgentEvent::Response {
+        AgentEvent::Thinking { id: "req.0".into() },
+        AgentEvent::ThoughtDone { id: "req.0".into() },
+        AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
+        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+         },
+        AgentEvent::Response {
             id: "req.0".into(),
             content: "T1".into(),
-        }),
-        Event::Agent(AgentEvent::TurnComplete {
+        },
+        AgentEvent::TurnComplete {
             id: "req.0".into(),
             duration_secs: 1.0,
-        }),
-        Event::Agent(AgentEvent::Done { id: "req.0".into() }),
-        Event::Input(InputEvent::Input('H')),
+        },
+        AgentEvent::Done { id: "req.0".into() },
+        InputEvent::Input('H'),
         Event::submit(),
     ]
 }

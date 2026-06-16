@@ -116,6 +116,7 @@ pub fn update(state: &mut AppState, event: EditEvent) {
         }
         EditEvent::ApproveEdit => state.approve_edits(),
         EditEvent::RejectEdit => state.reject_edits(),
+        _ => {}
     }
 }
 

@@ -1,6 +1,5 @@
 //! External editor effect handler.
 
-use runie_core::event::ControlEvent;
 use runie_core::Event as CoreEvent;
 use std::io::{self, Write};
 use tokio::sync::mpsc;
@@ -28,7 +27,7 @@ fn spawn_external_editor_sync(text: String, tx: mpsc::Sender<CoreEvent>) -> io::
         let content = std::fs::read_to_string(&path).unwrap_or_default();
         let rt = tokio::runtime::Handle::try_current();
         if let Ok(handle) = rt {
-            let _ = handle.block_on(tx.send(CoreEvent::Control(ControlEvent::ExternalEditorDone { content })));
+            let _ = handle.block_on(tx.send(CoreEvent::ExternalEditorDone { content }));
         }
     }
 

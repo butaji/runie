@@ -1,7 +1,6 @@
 //! Subagent effect handler.
 
 use runie_core::model::ThinkingLevel;
-use runie_core::event::SystemEvent;
 use runie_core::Event as CoreEvent;
 use tokio::sync::mpsc;
 
@@ -28,7 +27,7 @@ pub fn run(
             5,
         );
         let msg = format_result(&preview, result);
-        let _ = tx.blocking_send(CoreEvent::System(SystemEvent::SystemMessage { content: msg }));
+        let _ = tx.blocking_send(CoreEvent::SystemMessage { content: msg });
     });
 }
 

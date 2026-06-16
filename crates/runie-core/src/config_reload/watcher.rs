@@ -25,9 +25,9 @@ pub fn spawn_config_watcher(event_tx: mpsc::Sender<Event>, config_path: PathBuf)
             let config = Config::load_from(&config_path);
             for change in config.classify_change(&last_config) {
                 match change {
-                    super::types::ConfigChange::Model { provider, model } => { let _ = event_tx.send(Event::ModelConfig(ModelConfigEvent::SwitchModel { provider, model })).await; }
-                    super::types::ConfigChange::Theme { name } => { let _ = event_tx.send(Event::ModelConfig(ModelConfigEvent::SwitchTheme { name })).await; }
-                    super::types::ConfigChange::Keybindings => { let _ = event_tx.send(Event::ModelConfig(ModelConfigEvent::KeybindingsReloaded)).await; }
+                    super::types::ConfigChange::Model { provider, model } => { let _ = event_tx.send(ModelConfigEvent::SwitchModel { provider, model }).await; }
+                    super::types::ConfigChange::Theme { name } => { let _ = event_tx.send(ModelConfigEvent::SwitchTheme { name }).await; }
+                    super::types::ConfigChange::Keybindings => { let _ = event_tx.send(ModelConfigEvent::KeybindingsReloaded).await; }
                 }
             }
             last_config = config;
@@ -48,7 +48,7 @@ mod tests {
         let (tx, mut rx) = mpsc::channel::<Event>(10);
         let handle = spawn_config_watcher(tx, config_path);
         let evt = tokio::time::timeout(Duration::from_secs(5), rx.recv()).await;
-        assert!(evt.is_ok() && matches!(evt.unwrap(), Some(Event::ModelConfig(ModelConfigEvent::SwitchModel { .. }))));
+        assert!(evt.is_ok() && matches!(evt.unwrap(), Some(ModelConfigEvent::SwitchModel { .. })));
         handle.abort();
     }
 

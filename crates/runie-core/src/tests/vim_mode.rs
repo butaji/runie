@@ -1,6 +1,6 @@
 //! Tests for opt-in vim navigation mode.
 
-use crate::event::{Event, InputEvent, ControlEvent, DialogEvent};
+use crate::event::{InputEvent, ControlEvent, DialogEvent};
 use crate::model::{AppState, ChatMessage, Role};
 
 fn fresh_state() -> AppState {
@@ -71,7 +71,7 @@ fn state_with_messages() -> AppState {
 fn vim_mode_off_does_not_intercept_j() {
     let mut state = fresh_state();
     state.config.vim_mode = false;
-    state.update(Event::Input(InputEvent::Input('j')));
+    state.update(InputEvent::Input('j'));
     assert_eq!(state.input.input, "j");
 }
 
@@ -79,7 +79,7 @@ fn vim_mode_off_does_not_intercept_j() {
 fn vim_mode_on_j_scrolls_up() {
     let mut state = state_with_messages();
     let before = state.view.scroll;
-    state.update(Event::Input(InputEvent::Input('j')));
+    state.update(InputEvent::Input('j'));
     assert_eq!(state.input.input, "");
     assert_eq!(state.view.scroll, before + 1);
 }
@@ -88,7 +88,7 @@ fn vim_mode_on_j_scrolls_up() {
 fn vim_mode_on_k_scrolls_down() {
     let mut state = state_with_messages();
     state.view.scroll = 5;
-    state.update(Event::Input(InputEvent::Input('k')));
+    state.update(InputEvent::Input('k'));
     assert_eq!(state.input.input, "");
     assert_eq!(state.view.scroll, 4);
 }
@@ -98,7 +98,7 @@ fn vim_mode_on_g_goes_top() {
     let mut state = state_with_messages();
     state.ensure_fresh();
     state.view.last_visible_height = 10;
-    state.update(Event::Input(InputEvent::Input('g')));
+    state.update(InputEvent::Input('g'));
     assert_eq!(state.input.input, "");
     assert!(state.view.scroll > 0);
 }
@@ -108,7 +108,7 @@ fn vim_mode_on_g_goes_top() {
 fn vim_mode_on_G_goes_bottom() {
     let mut state = state_with_messages();
     state.view.scroll = 42;
-    state.update(Event::Input(InputEvent::Input('G')));
+    state.update(InputEvent::Input('G'));
     assert_eq!(state.input.input, "");
     assert_eq!(state.view.scroll, 0);
 }
@@ -116,7 +116,7 @@ fn vim_mode_on_G_goes_bottom() {
 #[test]
 fn vim_mode_on_slash_opens_palette() {
     let mut state = state_with_vim();
-    state.update(Event::Input(InputEvent::Input('/')));
+    state.update(InputEvent::Input('/'));
     assert_eq!(state.input.input, "");
     assert!(state.open_dialog.is_some(), "palette should open");
 }
@@ -127,7 +127,7 @@ fn vim_mode_y_typed_as_text_in_empty_input() {
     // In an empty input box with vim_mode on, 'y' is typed as a normal
     // character.
     let mut state = state_with_vim();
-    state.update(Event::Input(InputEvent::Input('y')));
+    state.update(InputEvent::Input('y'));
     assert_eq!(state.input.input, "y");
 }
 
@@ -141,15 +141,15 @@ fn vim_mode_on_y_copies_last_response() {
 #[test]
 fn vim_mode_printable_char_starts_input() {
     let mut state = state_with_vim();
-    state.update(Event::Input(InputEvent::Input('a')));
+    state.update(InputEvent::Input('a'));
     assert_eq!(state.input.input, "a");
 }
 
 #[test]
 fn vim_mode_ignored_when_input_not_empty() {
     let mut state = state_with_vim();
-    state.update(Event::Input(InputEvent::Input('a')));
-    state.update(Event::Input(InputEvent::Input('j')));
+    state.update(InputEvent::Input('a'));
+    state.update(InputEvent::Input('j'));
     assert_eq!(state.input.input, "aj");
 }
 
@@ -158,7 +158,7 @@ fn go_to_top_event_sets_scroll() {
     let mut state = state_with_messages();
     state.ensure_fresh();
     state.view.last_visible_height = 10;
-    state.update(Event::Input(InputEvent::GoToTop));
+    state.update(InputEvent::GoToTop);
     assert!(state.view.scroll > 0);
 }
 
@@ -166,7 +166,7 @@ fn go_to_top_event_sets_scroll() {
 fn go_to_bottom_event_clears_scroll() {
     let mut state = state_with_messages();
     state.view.scroll = 42;
-    state.update(Event::Input(InputEvent::GoToBottom));
+    state.update(InputEvent::GoToBottom);
     assert_eq!(state.view.scroll, 0);
 }
 
@@ -174,9 +174,9 @@ fn go_to_bottom_event_clears_scroll() {
 fn toggle_vim_mode_flips_flag() {
     let mut state = fresh_state();
     assert!(state.config.vim_mode, "vim_mode defaults to enabled");
-    state.update(Event::Control(ControlEvent::ToggleVimMode));
+    state.update(ControlEvent::ToggleVimMode);
     assert!(!state.config.vim_mode);
-    state.update(Event::Control(ControlEvent::ToggleVimMode));
+    state.update(ControlEvent::ToggleVimMode);
     assert!(state.config.vim_mode);
 }
 
@@ -201,7 +201,7 @@ fn hint_text_does_not_show_vim_scroll_when_disabled() {
 fn esc_with_vim_mode_on_and_no_turn_enters_nav_mode() {
     let mut state = state_with_vim();
     assert!(!state.view.vim_nav_mode);
-    state.update(Event::Dialog(DialogEvent::DialogBack)); // Esc
+    state.update(DialogEvent::DialogBack); // Esc
     assert!(state.view.vim_nav_mode, "Esc should enter vim nav mode");
 }
 
@@ -209,7 +209,7 @@ fn esc_with_vim_mode_on_and_no_turn_enters_nav_mode() {
 fn esc_with_vim_mode_off_does_not_enter_nav_mode() {
     let mut state = fresh_state();
     state.config.vim_mode = false;
-    state.update(Event::Dialog(DialogEvent::DialogBack));
+    state.update(DialogEvent::DialogBack);
     assert!(
         !state.view.vim_nav_mode,
         "Esc must not enter nav mode when vim_mode is off"
@@ -220,7 +220,7 @@ fn esc_with_vim_mode_off_does_not_enter_nav_mode() {
 fn esc_during_active_turn_stops_first_then_enters_nav() {
     let mut state = state_with_vim();
     state.agent.turn_active = true;
-    state.update(Event::Input(InputEvent::Escape));
+    state.update(InputEvent::Escape);
     // First Esc stops the turn; user is NOT yet in nav mode.
     assert!(!state.agent.turn_active, "first Esc should stop the turn");
     assert!(!state.view.vim_nav_mode, "first Esc should not yet enter nav");
@@ -228,7 +228,7 @@ fn esc_during_active_turn_stops_first_then_enters_nav() {
         state.view.vim_nav_pending,
         "first Esc should arm the nav-on-next-esc"
     );
-    state.update(Event::Input(InputEvent::Escape));
+    state.update(InputEvent::Escape);
     // Second Esc enters nav mode.
     assert!(state.view.vim_nav_mode, "second Esc should enter nav mode");
     assert!(!state.view.vim_nav_pending, "pending should be consumed");
@@ -238,20 +238,20 @@ fn esc_during_active_turn_stops_first_then_enters_nav() {
 fn nav_mode_jk_gg_scroll() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
-    state.update(Event::Dialog(DialogEvent::DialogBack)); // enter nav
+    state.update(DialogEvent::DialogBack); // enter nav
     assert!(state.view.vim_nav_mode);
 
     // j jumps DOWN (newer, toward bottom); k jumps UP (older).
-    state.update(Event::Input(InputEvent::Input('g'))); // jump to top
+    state.update(InputEvent::Input('g')); // jump to top
     let top = state.view.scroll;
     assert!(top > 0);
-    state.update(Event::Input(InputEvent::Input('j'))); // j down: toward bottom
+    state.update(InputEvent::Input('j')); // j down: toward bottom
     let after_j = state.view.scroll;
     assert!(
         after_j < top,
         "j should move toward newer (scroll down): top={top} after_j={after_j}"
     );
-    state.update(Event::Input(InputEvent::Input('k'))); // k up: toward older
+    state.update(InputEvent::Input('k')); // k up: toward older
     let after_k = state.view.scroll;
     assert!(
         after_k > after_j,
@@ -262,8 +262,8 @@ fn nav_mode_jk_gg_scroll() {
 #[test]
 fn space_exits_nav_mode_and_inserts_space() {
     let mut state = state_with_vim();
-    state.update(Event::Dialog(DialogEvent::DialogBack)); // enter nav
-    state.update(Event::Input(InputEvent::Input(' ')));
+    state.update(DialogEvent::DialogBack); // enter nav
+    state.update(InputEvent::Input(' '));
     assert!(!state.view.vim_nav_mode, "Space should exit nav mode");
     assert_eq!(state.input.input, " ", "Space should insert a space");
 }
@@ -271,8 +271,8 @@ fn space_exits_nav_mode_and_inserts_space() {
 #[test]
 fn typing_printable_char_exits_nav_and_inserts() {
     let mut state = state_with_vim();
-    state.update(Event::Dialog(DialogEvent::DialogBack)); // enter nav
-    state.update(Event::Input(InputEvent::Input('a')));
+    state.update(DialogEvent::DialogBack); // enter nav
+    state.update(InputEvent::Input('a'));
     assert!(!state.view.vim_nav_mode, "typing should exit nav mode");
     assert_eq!(state.input.input, "a");
 }
@@ -282,7 +282,7 @@ fn nav_mode_off_esc_is_noop() {
     // Without vim_mode, Esc should not change nav mode.
     let mut state = fresh_state();
     state.config.vim_mode = false;
-    state.update(Event::Dialog(DialogEvent::DialogBack));
+    state.update(DialogEvent::DialogBack);
     assert!(!state.view.vim_nav_mode);
     assert_eq!(state.input.input, "");
 }
@@ -290,7 +290,7 @@ fn nav_mode_off_esc_is_noop() {
 #[test]
 fn hint_text_in_nav_mode_shows_nav_hotkeys() {
     let mut state = state_with_vim();
-    state.update(Event::Dialog(DialogEvent::DialogBack)); // enter nav
+    state.update(DialogEvent::DialogBack); // enter nav
     let hint = state.hint_text();
     assert!(
         hint.contains("j/k"),
@@ -332,8 +332,8 @@ fn hint_text_without_vim_mode_does_not_mention_nav() {
 #[test]
 fn i_in_nav_mode_exits_nav_and_does_not_insert() {
     let mut state = state_with_vim();
-    state.update(Event::Dialog(DialogEvent::DialogBack)); // enter nav
-    state.update(Event::Input(InputEvent::Input('i')));
+    state.update(DialogEvent::DialogBack); // enter nav
+    state.update(InputEvent::Input('i'));
     assert!(!state.view.vim_nav_mode, "i should exit nav mode");
     assert_eq!(
         state.input.input, "",
@@ -344,16 +344,16 @@ fn i_in_nav_mode_exits_nav_and_does_not_insert() {
 #[test]
 fn i_in_nav_mode_then_char_inserts() {
     let mut state = state_with_vim();
-    state.update(Event::Dialog(DialogEvent::DialogBack)); // enter nav
-    state.update(Event::Input(InputEvent::Input('i'))); // exit nav
-    state.update(Event::Input(InputEvent::Input('h'))); // should now insert
+    state.update(DialogEvent::DialogBack); // enter nav
+    state.update(InputEvent::Input('i')); // exit nav
+    state.update(InputEvent::Input('h')); // should now insert
     assert_eq!(state.input.input, "h");
 }
 
 #[test]
 fn hint_text_in_nav_mode_advertises_i_and_space() {
     let mut state = state_with_vim();
-    state.update(Event::Dialog(DialogEvent::DialogBack));
+    state.update(DialogEvent::DialogBack);
     let hint = state.hint_text();
     assert!(
         hint.contains("space/i"),
@@ -367,7 +367,7 @@ fn hint_text_in_nav_mode_advertises_i_and_space() {
 // =========================================================================
 
 fn enter_nav(state: &mut AppState) {
-    state.update(Event::Dialog(DialogEvent::DialogBack));
+    state.update(DialogEvent::DialogBack);
     assert!(state.view.vim_nav_mode);
 }
 
@@ -377,11 +377,11 @@ fn j_at_lowest_element_exits_nav_and_enables_input() {
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
     // First jump to the bottom (G) so we are at the lowest element.
-    state.update(Event::Input(InputEvent::Input('G')));
+    state.update(InputEvent::Input('G'));
     assert_eq!(state.view.scroll, 0);
     assert!(state.view.vim_nav_mode);
     // j at the bottom should exit nav mode (no flash needed — natural end).
-    state.update(Event::Input(InputEvent::Input('j')));
+    state.update(InputEvent::Input('j'));
     assert!(
         !state.view.vim_nav_mode,
         "j at the lowest element should exit nav mode (input becomes the next focus)"
@@ -393,10 +393,10 @@ fn arrow_down_at_lowest_element_exits_nav_and_enables_input() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
-    state.update(Event::Input(InputEvent::Input('G')));
+    state.update(InputEvent::Input('G'));
     assert_eq!(state.view.scroll, 0);
     // ArrowDown at the bottom should also exit nav mode.
-    state.update(Event::Input(InputEvent::HistoryNext));
+    state.update(InputEvent::HistoryNext);
     assert!(
         !state.view.vim_nav_mode,
         "ArrowDown at the lowest element should exit nav mode"
@@ -410,9 +410,9 @@ fn j_below_lowest_element_actually_typed_as_text() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
-    state.update(Event::Input(InputEvent::Input('G')));
-    state.update(Event::Input(InputEvent::Input('j'))); // exit nav (at bottom)
-    state.update(Event::Input(InputEvent::Input('h'))); // now should type
+    state.update(InputEvent::Input('G'));
+    state.update(InputEvent::Input('j')); // exit nav (at bottom)
+    state.update(InputEvent::Input('h')); // now should type
     assert_eq!(state.input.input, "h");
 }
 
@@ -450,7 +450,7 @@ fn y_in_vim_nav_copies_block_and_exits_nav() {
     assert!(selected.is_some(), "a post should be selected in nav mode");
 
     // Press y — should emit CopySelectedBlock and exit vim nav
-    state.update(Event::Input(InputEvent::Input('y')));
+    state.update(InputEvent::Input('y'));
 
     assert!(
         !state.view.vim_nav_mode,
@@ -465,7 +465,7 @@ fn Y_in_vim_nav_copies_metadata_and_exits_nav() {
     assert!(state.view.vim_nav_mode);
 
     // Press Y — should emit CopyBlockMetadata and exit vim nav
-    state.update(Event::Input(InputEvent::Input('Y')));
+    state.update(InputEvent::Input('Y'));
 
     assert!(
         !state.view.vim_nav_mode,
@@ -479,6 +479,6 @@ fn y_on_empty_selection_does_not_crash() {
     state.config.vim_mode = true;
     state.view.vim_nav_mode = true;
     // No post selected — pressing y should not panic
-    state.update(Event::Input(InputEvent::Input('y')));
+    state.update(InputEvent::Input('y'));
     assert!(!state.view.vim_nav_mode, "y should still exit nav mode even with no selection");
 }

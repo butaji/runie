@@ -6,7 +6,7 @@
 
 use crate::event::Event;
 
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::ControlEvent;
 use crate::model::AppState;
 
 /// Set input buffer directly and submit — bypasses the command palette.
@@ -59,7 +59,7 @@ fn spawn_emits_spawn_agent_event() {
         .clone()
         .exec(&mut state, &cmd_name, "find all TODOs");
     match result {
-        crate::commands::CommandResult::Event(Event::Control(ControlEvent::SpawnAgent { prompt })) => {
+        crate::commands::CommandResult::Event(ControlEvent::SpawnAgent { prompt }) => {
             assert_eq!(prompt, "find all TODOs");
         }
         other => panic!("expected SpawnAgent event, got: {:?}", other),

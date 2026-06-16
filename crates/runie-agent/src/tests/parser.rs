@@ -1,4 +1,4 @@
-use crate::parser::{has_tool_calls, parse_tool_calls, ParsedToolCall};
+use crate::parser::{has_tool_calls, parse_tool_calls};
 
 #[test]
 fn test_parse_read_file_tool() {

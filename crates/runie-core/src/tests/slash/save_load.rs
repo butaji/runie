@@ -1,16 +1,16 @@
-use super::{exec, fresh_state, minimal_session, tmp_store, type_str, ENV_LOCK};
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use super::{exec, fresh_state, minimal_session, tmp_store, ENV_LOCK};
+use crate::event::{InputEvent, DialogEvent};
 use crate::event::Event;
 use crate::model::{ChatMessage, Role};
 use crate::session::Session;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
-    state.update(Event::Input(InputEvent::Input('/')));
+    state.update(InputEvent::Input('/'));
     for c in cmd.chars() {
-        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+        state.update(DialogEvent::PaletteFilter(c));
     }
-    state.update(Event::Dialog(DialogEvent::PaletteSelect));
+    state.update(DialogEvent::PaletteSelect);
 }
 
 fn restored_session() -> Session {

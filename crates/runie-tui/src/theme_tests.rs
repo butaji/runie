@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::terminal::caps::{MouseCapability, TerminalCapabilities, TerminalBrand};
+use crate::terminal::caps::{MouseCapability, TerminalCapabilities};
 use crate::theme::{current_theme, set_current_theme, set_current_theme_with_caps, test_lock};
 
 #[test]

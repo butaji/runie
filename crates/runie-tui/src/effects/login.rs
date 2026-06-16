@@ -1,6 +1,5 @@
 //! Login API-key validation effect handler.
 
-use runie_core::event::LoginFlowEvent;
 use runie_core::Event as CoreEvent;
 use tokio::sync::mpsc;
 
@@ -23,20 +22,20 @@ pub fn run(provider: String, key: String, tx: mpsc::Sender<CoreEvent>) {
         match result {
             Ok(models) => {
                 let _ = tx
-                    .send(CoreEvent::LoginFlow(LoginFlowEvent::ModelsFetched {
+                    .send(CoreEvent::ModelsFetched {
                         provider,
                         key,
                         models,
-                    }))
+                    })
                     .await;
             }
             Err(e) => {
                 let _ = tx
-                    .send(CoreEvent::LoginFlow(LoginFlowEvent::ValidationFailed {
+                    .send(CoreEvent::ValidationFailed {
                         provider,
                         key,
                         error: e.to_string(),
-                    }))
+                    })
                     .await;
             }
         }

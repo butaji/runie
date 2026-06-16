@@ -1,5 +1,5 @@
 use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::{InputEvent, ControlEvent, DialogEvent, ScrollEvent, AgentEvent};
 use crate::model::{AppState, Role};
 
 fn fresh_state() -> AppState {
@@ -21,11 +21,11 @@ fn dispatch(state: &mut AppState, events: &[Event]) {
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
-    state.update(Event::Input(InputEvent::Input('/')));
+    state.update(InputEvent::Input('/'));
     for c in cmd.chars() {
-        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+        state.update(DialogEvent::PaletteFilter(c));
     }
-    state.update(Event::Dialog(DialogEvent::PaletteSelect));
+    state.update(DialogEvent::PaletteSelect);
 }
 
 #[test]
@@ -33,7 +33,7 @@ fn test_reset_clears_state() {
     let mut state = fresh_state();
     state.input.input = "test".to_string();
     state.agent.streaming = true;
-    state.update(Event::Control(ControlEvent::Reset));
+    state.update(ControlEvent::Reset);
     assert_eq!(state.input.input, "");
     assert!(!state.agent.streaming);
     assert_eq!(state.session.messages.len(), 0);
@@ -42,14 +42,14 @@ fn test_reset_clears_state() {
 #[test]
 fn test_scroll_up() {
     let mut state = fresh_state();
-    state.update(Event::Scroll(ScrollEvent::Up));
+    state.update(ScrollEvent::Up);
     assert_eq!(state.view.scroll, 1);
 }
 
 #[test]
 fn test_scroll_down() {
     let mut state = fresh_state();
-    state.update(Event::Scroll(ScrollEvent::Down));
+    state.update(ScrollEvent::Down);
     assert_eq!(state.view.scroll, 0); // Down decreases scroll (newer content)
 }
 
@@ -57,7 +57,7 @@ fn test_scroll_down() {
 fn test_scroll_down_saturates() {
     let mut state = fresh_state();
     // Scroll down from default (0) saturates
-    state.update(Event::Scroll(ScrollEvent::Down));
+    state.update(ScrollEvent::Down);
     assert_eq!(state.view.scroll, 0);
 }
 
@@ -68,17 +68,17 @@ fn test_tool_flow_creates_two_thoughts() {
     dispatch(
         &mut state,
         &[
-            Event::Agent(AgentEvent::Thinking { id: "req.0".into() }),
-            Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
-            Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null }),
-            Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
-             }),
-            Event::Agent(AgentEvent::Thinking { id: "req.0".into() }),
-            Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
-            Event::Agent(AgentEvent::Response {
+            AgentEvent::Thinking { id: "req.0".into() },
+            AgentEvent::ThoughtDone { id: "req.0".into() },
+            AgentEvent::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null },
+            AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
+             },
+            AgentEvent::Thinking { id: "req.0".into() },
+            AgentEvent::ThoughtDone { id: "req.0".into() },
+            AgentEvent::Response {
                 id: "req.0".into(),
                 content: "Here are the files".into(),
-            }),
+            },
         ],
     );
     let thought_count = state
@@ -94,10 +94,10 @@ fn test_tool_flow_creates_two_thoughts() {
 fn test_turn_complete_event() {
     let mut state = fresh_state();
     state.agent.intermediate_step_count = 1;
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".to_string(),
         duration_secs: 5.1,
-    }));
+    });
     assert_eq!(state.session.messages.len(), 1);
     let msg = &state.session.messages[0];
     assert_eq!(msg.role, Role::TurnComplete);
@@ -111,16 +111,16 @@ fn test_turn_complete_always_added_when_event_received() {
     dispatch(
         &mut state,
         &[
-            Event::Agent(AgentEvent::Thinking { id: "req.0".into() }),
-            Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
-            Event::Agent(AgentEvent::Response {
+            AgentEvent::Thinking { id: "req.0".into() },
+            AgentEvent::ThoughtDone { id: "req.0".into() },
+            AgentEvent::Response {
                 id: "req.0".into(),
                 content: "Hi".into(),
-            }),
-            Event::Agent(AgentEvent::TurnComplete {
+            },
+            AgentEvent::TurnComplete {
                 id: "req.0".into(),
                 duration_secs: 1.0,
-            }),
+            },
         ],
     );
     let has_turn_complete = state
@@ -134,9 +134,9 @@ fn test_turn_complete_always_added_when_event_received() {
 #[test]
 fn test_tool_done_event() {
     let mut state = fresh_state();
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_files".to_string(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: String::new(),
-     }));
+    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_files".to_string(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: String::new(),
+     });
     assert_eq!(state.session.messages.len(), 1);
     let msg = &state.session.messages[0];
     assert_eq!(msg.role, Role::Tool);
@@ -151,20 +151,20 @@ fn test_turn_complete_shows_even_if_done_arrives_first() {
     dispatch(
         &mut state,
         &[
-            Event::Agent(AgentEvent::Thinking { id: "req.0".into() }),
-            Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
-            Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null }),
-            Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
-             }),
-            Event::Agent(AgentEvent::Response {
+            AgentEvent::Thinking { id: "req.0".into() },
+            AgentEvent::ThoughtDone { id: "req.0".into() },
+            AgentEvent::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null },
+            AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
+             },
+            AgentEvent::Response {
                 id: "req.0".into(),
                 content: "Here are files".into(),
-            }),
-            Event::Agent(AgentEvent::Done { id: "req.0".into() }),
-            Event::Agent(AgentEvent::TurnComplete {
+            },
+            AgentEvent::Done { id: "req.0".into() },
+            AgentEvent::TurnComplete {
                 id: "req.0".into(),
                 duration_secs: 3.2,
-            }),
+            },
         ],
     );
     let has_turn_complete = state
@@ -221,8 +221,8 @@ fn test_save_and_load_session() {
     std::env::set_var("RUNIE_SESSIONS_DIR", &tmp);
 
     let mut state = fresh_state();
-    state.update(Event::Input(InputEvent::Input('h')));
-    state.update(Event::Input(InputEvent::Input('i')));
+    state.update(InputEvent::Input('h'));
+    state.update(InputEvent::Input('i'));
     state.update(Event::submit());
     exec(&mut state, "/save test_session"); // Opens form with pre-filled name
     state.update(Event::submit()); // Submits the form

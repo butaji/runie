@@ -17,9 +17,9 @@
 //!     .category(CommandCategory::Session)
 //!     .form("Save", |f| {
 //!         f.field("Name", "session", "name").on_submit(|values| {
-//!             Event::Command(CommandEvent::RunSaveCommand {
+//!             CommandEvent::RunSaveCommand {
 //!                 name: values.get("name").cloned().unwrap_or_default(),
-//!             })
+//!             }
 //!         })
 //!     });
 //! ```

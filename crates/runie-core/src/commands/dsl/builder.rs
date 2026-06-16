@@ -244,9 +244,9 @@ mod tests {
     }
 
     fn save_submit(values: &std::collections::HashMap<String, String>) -> Event {
-        Event::Command(CommandEvent::RunSaveCommand {
+        CommandEvent::RunSaveCommand {
             name: values.get("name").cloned().unwrap_or_default(),
-        })
+        }
     }
 
     #[test]

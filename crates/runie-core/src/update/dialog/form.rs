@@ -26,39 +26,39 @@ pub enum FormAction {
 pub fn form_panel_action(panel: &mut Panel, event: Event) -> FormAction {
     use FormAction as A;
     match &event {
-        Event::ModelConfig(ModelConfigEvent::SettingsClose)
-        | Event::Dialog(DialogEvent::CommandFormClose)
-        | Event::Dialog(DialogEvent::DialogBack) => A::Back,
-        Event::Dialog(DialogEvent::CommandFormUp)
-        | Event::Input(InputEvent::HistoryPrev)
-        | Event::ModelConfig(ModelConfigEvent::SettingsUp)
-        | Event::Dialog(DialogEvent::PaletteUp)
-        | Event::Dialog(DialogEvent::ModelSelectorUp) => {
+        ModelConfigEvent::SettingsClose
+        | DialogEvent::CommandFormClose
+        | DialogEvent::DialogBack => A::Back,
+        DialogEvent::CommandFormUp
+        | InputEvent::HistoryPrev
+        | ModelConfigEvent::SettingsUp
+        | DialogEvent::PaletteUp
+        | DialogEvent::ModelSelectorUp => {
             let _ = panel.select_up();
             A::KeepOpen
         }
-        Event::Dialog(DialogEvent::CommandFormDown)
-        | Event::Input(InputEvent::HistoryNext)
-        | Event::ModelConfig(ModelConfigEvent::SettingsDown)
-        | Event::Dialog(DialogEvent::PaletteDown)
-        | Event::Dialog(DialogEvent::ModelSelectorDown) => {
+        DialogEvent::CommandFormDown
+        | InputEvent::HistoryNext
+        | ModelConfigEvent::SettingsDown
+        | DialogEvent::PaletteDown
+        | DialogEvent::ModelSelectorDown => {
             let _ = panel.select_down();
             A::KeepOpen
         }
-        Event::Dialog(DialogEvent::CommandFormInput(c)) => {
+        DialogEvent::CommandFormInput(c) => {
             handle_form_input(panel, *c)
         }
-        Event::Input(InputEvent::Input(c)) => {
+        InputEvent::Input(c) => {
             handle_form_input(panel, *c)
         }
-        Event::Dialog(DialogEvent::CommandFormBackspace) | Event::Input(InputEvent::Backspace) => {
+        DialogEvent::CommandFormBackspace | InputEvent::Backspace => {
             form_panel_edit_char(panel, ' ', false);
             A::KeepOpen
         }
-        Event::Dialog(DialogEvent::CommandFormSubmit)
-        | Event::Input(InputEvent::Submit)
-        | Event::ModelConfig(ModelConfigEvent::SettingsSelect)
-        | Event::Dialog(DialogEvent::PaletteSelect) => handle_form_submit(panel),
+        DialogEvent::CommandFormSubmit
+        | InputEvent::Submit
+        | ModelConfigEvent::SettingsSelect
+        | DialogEvent::PaletteSelect => handle_form_submit(panel),
         _ => A::KeepOpen,
     }
 }

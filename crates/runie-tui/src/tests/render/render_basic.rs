@@ -8,9 +8,9 @@ fn test_view_renders_user_message_without_manual_ensure_fresh() {
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
 
-    state.update(Event::Input(InputEvent::Input('H')));
-    state.update(Event::Input(InputEvent::Input('i')));
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Input('H'));
+    state.update(InputEvent::Input('i'));
+    state.update(InputEvent::Submit);
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
@@ -34,16 +34,16 @@ fn test_view_renders_agent_message_without_manual_ensure_fresh() {
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
 
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
-    }));
+    });
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
@@ -62,23 +62,23 @@ fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
 
-    state.update(Event::Input(InputEvent::Input('A')));
-    state.update(Event::Input(InputEvent::Submit));
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(InputEvent::Input('A'));
+    state.update(InputEvent::Submit);
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Response 1".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Done {
+    });
+    state.update(AgentEvent::Done {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Input(InputEvent::Input('B')));
-    state.update(Event::Input(InputEvent::Submit));
+    });
+    state.update(InputEvent::Input('B'));
+    state.update(InputEvent::Submit);
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
@@ -93,8 +93,8 @@ fn test_render_user_message() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     let mut state = AppState::default();
-    state.update(Event::Input(InputEvent::Input('H')));
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Input('H'));
+    state.update(InputEvent::Submit);
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
@@ -107,16 +107,16 @@ fn test_render_agent_response() {
     let mut terminal = Terminal::new(backend).unwrap();
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
-    }));
+    });
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
@@ -128,10 +128,10 @@ fn test_render_thinking_indicator() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
-    state.update(Event::Input(InputEvent::Submit));
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(InputEvent::Submit);
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
+    });
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
@@ -187,13 +187,13 @@ fn test_stress_many_tool_calls() {
     let mut state = AppState::default();
     for i in 0..20 {
         simulate_tool_call(&mut state, i);
-        state.update(Event::Agent(AgentEvent::TurnComplete {
+        state.update(AgentEvent::TurnComplete {
             id: format!("req.{}", i),
             duration_secs: 1.0,
-        }));
-        state.update(Event::Agent(AgentEvent::Done {
+        });
+        state.update(AgentEvent::Done {
             id: format!("req.{}", i),
-        }));
+        });
         if i % 5 == 0 {
             terminal.draw(|f| view(f, &mut state)).expect("draw");
         }

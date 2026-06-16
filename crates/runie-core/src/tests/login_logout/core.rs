@@ -1,23 +1,22 @@
-use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::{InputEvent, DialogEvent};
 use crate::model::AppState;
 
 use super::clean_config;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
-    state.update(Event::Input(InputEvent::Input('/')));
+    state.update(InputEvent::Input('/'));
     for c in cmd.chars() {
-        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+        state.update(DialogEvent::PaletteFilter(c));
     }
-    state.update(Event::Dialog(DialogEvent::PaletteSelect));
+    state.update(DialogEvent::PaletteSelect);
 }
 
 #[test]
 fn providers_command_opens_dialog() {
     clean_config();
     let mut state = AppState::default();
-    state.update(Event::Dialog(DialogEvent::ProvidersDialog));
+    state.update(DialogEvent::ProvidersDialog);
     assert!(
         state.open_dialog.is_some(),
         "/providers must open the dialog"

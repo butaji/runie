@@ -2,16 +2,14 @@
 
 use crate::commands::{CommandCategory, CommandRegistry, CommandResult, DialogType};
 use crate::dialog::{ItemAction, Panel, PanelStack};
-use crate::event::{DialogEvent, EditEvent, ModelConfigEvent, SystemEvent};
 use crate::model::AppState;
 
 use super::spec::{CommandKind, CommandSpec};
-use crate::event::CommandEvent;
 
 fn prompt_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::Event::Command(CommandEvent::RunPromptCommand {
+    crate::event::CommandEvent::RunPromptCommand {
         name: values.get("name").cloned().unwrap_or_default(),
-    })
+    }
 }
 
 static SYSTEM_COMMANDS: &[CommandSpec] = &[
@@ -149,7 +147,7 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
     if text.is_empty() {
         return CommandResult::Message("No assistant response to copy".into());
     }
-    CommandResult::Event(crate::Event::Dialog(DialogEvent::CopyToClipboard(text)))
+    CommandResult::Event(crate::event::DialogEvent::CopyToClipboard(text))
 }
 
 /// Fallback: write `text` to the clipboard file. Used when OSC 52 is not
@@ -174,11 +172,11 @@ fn write_clipboard(text: &str) -> std::io::Result<std::path::PathBuf> {
 fn handle_reload(state: &mut AppState, _: &str) -> CommandResult {
     let config = crate::config::Config::load();
     state.config.keybindings = crate::keybindings::load_keybindings(Some(&config));
-    CommandResult::Event(crate::Event::ModelConfig(ModelConfigEvent::ReloadAll))
+    CommandResult::Event(crate::event::ModelConfigEvent::ReloadAll)
 }
 
 fn handle_diagnostics(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::Event::System(SystemEvent::ShowDiagnostics))
+    CommandResult::Event(crate::event::SystemEvent::ShowDiagnostics)
 }
 
 fn handle_skills(state: &mut AppState, _: &str) -> CommandResult {
@@ -197,9 +195,9 @@ fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
         use crate::dialog::dsl::form;
         let stack = form("skill", "Show Skill")
             .field("Name", "skill-name", "name")
-            .on_submit(|values| crate::Event::Command(CommandEvent::RunSkillCommand {
+            .on_submit(|values| crate::event::CommandEvent::RunSkillCommand {
                 name: values.get("name").cloned().unwrap_or_default(),
-            }))
+            })
             .into_stack();
         return CommandResult::OpenPanelStack(stack);
     }
@@ -242,9 +240,9 @@ fn open_theme_selector(state: &mut AppState) {
     for theme in crate::themes::BUILTIN_THEMES {
         panel = panel.item(
             *theme,
-            ItemAction::Emit(crate::Event::ModelConfig(ModelConfigEvent::SwitchTheme {
+            ItemAction::Emit(crate::event::ModelConfigEvent::SwitchTheme {
                 name: theme.to_string(),
-            })),
+            }),
         );
     }
     state.open_dialog = Some(crate::commands::DialogState::PanelStack(PanelStack::new(
@@ -254,15 +252,15 @@ fn open_theme_selector(state: &mut AppState) {
 }
 
 fn handle_approve(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::Event::Edit(EditEvent::ApproveEdit))
+    CommandResult::Event(crate::event::EditEvent::ApproveEdit)
 }
 
 fn handle_reject(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::Event::Edit(EditEvent::RejectEdit))
+    CommandResult::Event(crate::event::EditEvent::RejectEdit)
 }
 
 fn handle_providers(_: &mut AppState, _args: &str) -> CommandResult {
-    CommandResult::Event(crate::Event::Dialog(DialogEvent::ProvidersDialog))
+    CommandResult::Event(crate::event::DialogEvent::ProvidersDialog)
 }
 
 fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {

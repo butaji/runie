@@ -1,5 +1,5 @@
 use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::AgentEvent;
 use crate::layout::element_line_count;
 use crate::model::{AppState, ChatMessage, Role};
 
@@ -147,16 +147,16 @@ fn submit_then_large_response_stays_at_bottom() {
     state.ensure_fresh();
     assert_eq!(state.view.scroll, 0, "Scroll must be 0 after submit");
     // Agent tool with large output
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
     let output = (1..=20)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::Agent(AgentEvent::ToolEnd {
+    state.update(AgentEvent::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
-    }));
+    });
     state.ensure_fresh();
     // Scroll must still be 0 (at bottom) — user didn't scroll
     assert_eq!(state.view.scroll, 0, "Scroll must stay at 0 after response");
@@ -185,10 +185,10 @@ fn streaming_large_content_scroll_zero_shows_latest() {
 
     // Simulate streaming chunks that build up to >1 page
     for i in 0..10 {
-        state.update(Event::Agent(AgentEvent::Response {
+        state.update(AgentEvent::Response {
             id: "req.0".into(),
             content: format!("line{}\n", i),
-        }));
+        });
     }
     state.ensure_fresh();
 
@@ -198,10 +198,10 @@ fn streaming_large_content_scroll_zero_shows_latest() {
     for i in 0..20 {
         content.push_str(&format!("This is line {} of the response\n", i));
     }
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content,
-    }));
+    });
     state.ensure_fresh();
 
     let region = crate::tests::visible_helper::compute_viewport(&state, 5);

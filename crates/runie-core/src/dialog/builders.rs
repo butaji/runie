@@ -55,10 +55,10 @@ pub fn model_selector(
     if !recent.is_empty() {
         panel = panel.header("Recent");
         for model in recent {
-            let evt = Event::ModelConfig(ModelConfigEvent::SwitchModel {
+            let evt = ModelConfigEvent::SwitchModel {
                 provider: model.split('/').next().unwrap_or("").into(),
                 model: model.clone(),
-            });
+            };
             let label = if model == current {
                 format!("★ {}", model)
             } else {
@@ -160,7 +160,7 @@ pub fn scoped_models(
             last_provider = provider;
         }
         // Emit a toggle event for each model — the state will mutate.
-        let evt = Event::ModelConfig(ModelConfigEvent::ScopedModelToggle { name: name.clone() });
+        let evt = ModelConfigEvent::ScopedModelToggle { name: name.clone() };
         let label = format!("{} {}", if enabled { "[x]" } else { "[ ]" }, name);
         panel = panel.item(label, ItemAction::Emit(evt));
     }
@@ -265,7 +265,7 @@ fn add_session_item(panel: &mut Panel, session: &SessionRow) {
     };
 
     let id = session.id.clone();
-    let evt = Event::Control(ControlEvent::SelectSession { id });
+    let evt = ControlEvent::SelectSession { id };
     panel.items.push(PanelItem::Action {
         label,
         action: ItemAction::Emit(evt),
@@ -316,7 +316,7 @@ mod tests {
     use super::*;
 
     fn dummy_evt() -> Event {
-        Event::Control(ControlEvent::Abort)
+        ControlEvent::Abort
     }
 
     #[test]

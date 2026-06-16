@@ -106,7 +106,7 @@ impl ConfirmationRouter {
     /// Build the event to emit when the user approves this confirmation kind.
     pub fn approval_event(kind: &ConfirmationKind) -> Option<Event> {
         match kind {
-            ConfirmationKind::Diff { .. } => Some(Event::Edit(EditEvent::ApproveEdit)),
+            ConfirmationKind::Diff { .. } => Some(EditEvent::ApproveEdit),
             _ => None,
         }
     }
@@ -114,7 +114,7 @@ impl ConfirmationRouter {
     /// Build the event to emit when the user rejects this confirmation kind.
     pub fn rejection_event(kind: &ConfirmationKind) -> Option<Event> {
         match kind {
-            ConfirmationKind::Diff { .. } => Some(Event::Edit(EditEvent::RejectEdit)),
+            ConfirmationKind::Diff { .. } => Some(EditEvent::RejectEdit),
             _ => None,
         }
     }
@@ -196,8 +196,8 @@ mod tests {
     #[test]
     fn approval_rejection_events() {
         let diff = ConfirmationRouter::for_edit("/a", "a", "b");
-        assert_eq!(ConfirmationRouter::approval_event(&diff), Some(Event::Edit(EditEvent::ApproveEdit)));
-        assert_eq!(ConfirmationRouter::rejection_event(&diff), Some(Event::Edit(EditEvent::RejectEdit)));
+        assert_eq!(ConfirmationRouter::approval_event(&diff), Some(EditEvent::ApproveEdit));
+        assert_eq!(ConfirmationRouter::rejection_event(&diff), Some(EditEvent::RejectEdit));
 
         let write = ConfirmationRouter::for_write("/a", "x");
         assert_eq!(ConfirmationRouter::approval_event(&write), None);

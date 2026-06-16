@@ -1,5 +1,4 @@
-use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, DurableCoreEvent};
+use crate::event::{ControlEvent, SystemEvent, DialogEvent};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::orchestrator::ExecutionMode;
 use crate::update::input::{feed_focused_hints, modal_hints, team_mode_hints};
@@ -83,7 +82,7 @@ fn toggle_expand_collapses_all_thoughts() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "ToggleExpand should set global collapse"
@@ -100,7 +99,7 @@ fn toggle_expand_collapses_all_tools() {
         id: "x1".into(),
         ..Default::default()
     });
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "ToggleExpand should set global collapse"
@@ -124,7 +123,7 @@ fn toggle_expand_affects_all_elements() {
         id: "new".into(),
         ..Default::default()
     });
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "Toggle should collapse ALL thoughts and tools globally"
@@ -141,7 +140,7 @@ fn toggle_expand_noop_when_no_collapsible() {
         id: "u1".into(),
         ..Default::default()
     });
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "Toggle should still flip global flag even with no thoughts/tools"
@@ -159,7 +158,7 @@ fn toggle_expand_rebuilds_cache() {
         ..Default::default()
     });
     state.ensure_fresh();
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     state.ensure_fresh();
     let cache = state.view.elements_cache().to_vec();
     assert!(
@@ -180,8 +179,8 @@ fn toggle_expand_twice_restores() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.update(Event::Control(ControlEvent::ToggleExpand));
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
+    state.update(ControlEvent::ToggleExpand);
     assert!(!state.view.all_collapsed, "Second toggle should expand all");
 }
 
@@ -190,10 +189,10 @@ fn toggle_expand_twice_restores() {
 #[test]
 fn transient_message_sets_content_and_expiry() {
     let mut state = fresh_state();
-    state.update(Event::System(SystemEvent::TransientMessage{
+    state.update(SystemEvent::TransientMessage{
         content: "hello".into(),
         level: crate::event::TransientLevel::Info,
-    }));
+    });
     assert_eq!(state.transient_message, Some("hello".into()));
     assert!(
         state.transient_until.is_some(),
@@ -204,9 +203,9 @@ fn transient_message_sets_content_and_expiry() {
 #[test]
 fn transient_error_sets_content_without_expiry() {
     let mut state = fresh_state();
-    state.update(Event::System(SystemEvent::TransientError{
+    state.update(SystemEvent::TransientError{
         content: "err".into(),
-    }));
+    });
     assert_eq!(state.transient_message, Some("err".into()));
     assert!(
         state.transient_until.is_none(),
@@ -217,10 +216,10 @@ fn transient_error_sets_content_without_expiry() {
 #[test]
 fn clear_transient_unsets_message() {
     let mut state = fresh_state();
-    state.update(Event::System(SystemEvent::TransientError{
+    state.update(SystemEvent::TransientError{
         content: "err".into(),
-    }));
-    state.update(Event::System(SystemEvent::ClearTransient));
+    });
+    state.update(SystemEvent::ClearTransient);
     assert!(state.transient_message.is_none());
     assert!(state.transient_until.is_none());
 }
@@ -228,24 +227,24 @@ fn clear_transient_unsets_message() {
 #[test]
 fn transient_message_overwrites_existing() {
     let mut state = fresh_state();
-    state.update(Event::System(SystemEvent::TransientMessage{
+    state.update(SystemEvent::TransientMessage{
         content: "first".into(),
         level: crate::event::TransientLevel::Info,
-    }));
-    state.update(Event::System(SystemEvent::TransientMessage{
+    });
+    state.update(SystemEvent::TransientMessage{
         content: "second".into(),
         level: crate::event::TransientLevel::Info,
-    }));
+    });
     assert_eq!(state.transient_message, Some("second".into()));
 }
 
 #[test]
 fn transient_message_in_snapshot() {
     let mut state = fresh_state();
-    state.update(Event::System(SystemEvent::TransientMessage{
+    state.update(SystemEvent::TransientMessage{
         content: "snap".into(),
         level: crate::event::TransientLevel::Info,
-    }));
+    });
     state.ensure_fresh();
     let snap = state.snapshot();
     assert_eq!(snap.transient_message, Some("snap".into()));
@@ -258,10 +257,10 @@ fn transient_message_in_snapshot() {
 #[test]
 fn transient_success_has_expiry() {
     let mut state = fresh_state();
-    state.update(Event::System(SystemEvent::TransientMessage{
+    state.update(SystemEvent::TransientMessage{
         content: "ok".into(),
         level: crate::event::TransientLevel::Success,
-    }));
+    });
     assert!(
         state.transient_until.is_some(),
         "Success transient should have expiry"
@@ -275,9 +274,9 @@ fn transient_success_has_expiry() {
 #[test]
 fn transient_error_has_no_expiry() {
     let mut state = fresh_state();
-    state.update(Event::System(SystemEvent::TransientError{
+    state.update(SystemEvent::TransientError{
         content: "err".into(),
-    }));
+    });
     assert!(
         state.transient_until.is_none(),
         "Error transient should NOT have expiry"
@@ -340,7 +339,7 @@ fn feed_focused_hints_show_navigation() {
 #[test]
 fn vim_nav_hints_show_scroll_and_quit() {
     let mut state = fresh_state();
-    state.update(Event::Dialog(DialogEvent::DialogBack)); // enter vim nav
+    state.update(DialogEvent::DialogBack); // enter vim nav
     assert!(state.view.vim_nav_mode);
     let hint = state.hint_text();
     assert!(hint.contains("j/k"), "feed nav hint should show j/k: {hint}");

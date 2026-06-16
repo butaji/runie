@@ -17,10 +17,10 @@ fn render_with_height(state: &mut AppState, height: u16) -> String {
 fn latest_message_visible_at_bottom() {
     let mut state = AppState::default();
     for i in 0..8 {
-        state.update(Event::Agent(AgentEvent::Response {
+        state.update(AgentEvent::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
-        }));
+        });
     }
     state.ensure_fresh();
     state.view.scroll = 0;
@@ -35,24 +35,24 @@ fn latest_message_visible_at_bottom() {
 #[test]
 fn large_thought_clipped_from_top_not_bottom() {
     let mut state = AppState::default();
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "before".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
     let mut thought = "◆ Thought 1.0s\n".to_string();
     for i in 1..=15 {
         thought.push_str(&format!("line{}\n", i));
     }
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: thought,
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "after".into(),
-    }));
+    });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -71,10 +71,10 @@ fn large_thought_clipped_from_top_not_bottom() {
 fn scroll_up_shows_older_content() {
     let mut state = AppState::default();
     for i in 0..20 {
-        state.update(Event::Agent(AgentEvent::Response {
+        state.update(AgentEvent::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
-        }));
+        });
     }
     state.ensure_fresh();
     // 20 messages = 40 lines. With 15-row terminal, chat panel has ~9 inner lines.
@@ -96,10 +96,10 @@ fn scroll_up_shows_older_content() {
 fn scrollbar_visible_when_content_overflows() {
     let mut state = AppState::default();
     for i in 0..20 {
-        state.update(Event::Agent(AgentEvent::Response {
+        state.update(AgentEvent::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
-        }));
+        });
     }
     state.ensure_fresh();
     state.view.scroll = 0;
@@ -114,16 +114,16 @@ fn scrollbar_visible_when_content_overflows() {
 #[test]
 fn tool_output_latest_lines_visible() {
     let mut state = AppState::default();
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
     let output = (1..=10)
         .map(|i| format!("file{}", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::Agent(AgentEvent::ToolEnd {
+    state.update(AgentEvent::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
-    }));
+    });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -139,10 +139,10 @@ fn tool_output_latest_lines_visible() {
 fn new_message_pushes_old_upward() {
     let mut state = AppState::default();
     for i in 0..5 {
-        state.update(Event::Agent(AgentEvent::Response {
+        state.update(AgentEvent::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
-        }));
+        });
     }
     state.ensure_fresh();
     let before = render_with_height(&mut state, 30);
@@ -150,10 +150,10 @@ fn new_message_pushes_old_upward() {
 
     // Add more messages to overflow
     for i in 5..25 {
-        state.update(Event::Agent(AgentEvent::Response {
+        state.update(AgentEvent::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
-        }));
+        });
     }
     state.ensure_fresh();
     let after = render_content(&mut state); // 10-row terminal = small viewport
@@ -167,24 +167,24 @@ fn new_message_pushes_old_upward() {
 #[test]
 fn partial_element_at_top_when_overflow() {
     let mut state = AppState::default();
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "first".into(),
-    }));
+    });
     let mut thought = "◆ Thought 1.0s\n".to_string();
     for i in 1..=20 {
         thought.push_str(&format!("line{}\n", i));
     }
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.1".into() }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.1".into() });
+    state.update(AgentEvent::Response {
         id: "req.1".into(),
         content: thought,
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.1".into() }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::ThoughtDone { id: "req.1".into() });
+    state.update(AgentEvent::Response {
         id: "req.2".into(),
         content: "last".into(),
-    }));
+    });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -197,19 +197,19 @@ fn partial_element_at_top_when_overflow() {
 fn scroll_position_preserved_during_streaming() {
     let mut state = AppState::default();
     for i in 0..15 {
-        state.update(Event::Agent(AgentEvent::Response {
+        state.update(AgentEvent::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
-        }));
+        });
     }
     state.ensure_fresh();
     state.view.scroll = 8; // user scrolled up reading history
 
     // New streaming content arrives
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.99".into(),
         content: "new".into(),
-    }));
+    });
     state.ensure_fresh();
 
     // Scroll should be preserved
@@ -223,17 +223,17 @@ fn scroll_position_preserved_during_streaming() {
 fn at_bottom_auto_scrolls_to_show_new() {
     let mut state = AppState::default();
     for i in 0..15 {
-        state.update(Event::Agent(AgentEvent::Response {
+        state.update(AgentEvent::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
-        }));
+        });
     }
     state.ensure_fresh();
     state.view.scroll = 0; // at bottom
 
     // Submit a new message
     state.input.input = "hello".to_string();
-    state.update(Event::Input(runie_core::event::InputEvent::Submit));
+    state.update(runie_core::event::InputEvent::Submit);
     state.ensure_fresh();
 
     let out = render_content(&mut state);

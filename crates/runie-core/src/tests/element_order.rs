@@ -1,7 +1,6 @@
 use crate::model::{AppState, ChatMessage, Role};
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::AgentEvent;
 use crate::ui::LazyCache;
-use crate::Event;
 
 fn element_kinds(state: &AppState) -> Vec<String> {
     let feed = LazyCache::feed(state);
@@ -286,18 +285,18 @@ fn agent_before_thought_when_agent_newer() {
 fn via_events_appended_assistant_found_anywhere_in_vec() {
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "hello ".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".into(),
-     }));
+    });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".into(),
+     });
     // This next response should append to the SAME assistant message, not create a new one
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "world".into(),
-    }));
+    });
     state.ensure_fresh();
 
     let assistant_count = state

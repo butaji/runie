@@ -2,7 +2,7 @@ use super::find_input_box_bounds;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::event::{DialogEvent, InputEvent};
-use runie_core::{AppState, Event};
+use runie_core::AppState;
 
 fn buffer_content(terminal: &Terminal<TestBackend>) -> String {
     let buf = terminal.backend().buffer();
@@ -49,7 +49,7 @@ fn theme_selector_renders_theme_list() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.input.input = "/theme".to_string();
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Submit);
     assert!(matches!(
         state.open_dialog,
         Some(runie_core::commands::DialogState::PanelStack(_))
@@ -63,9 +63,9 @@ fn theme_selector_renders_theme_list() {
     assert!(content.contains("runie"));
     // The theme picker is fuzzy-searchable. Use the filter to narrow to
     // dracula and verify it becomes visible.
-    state.update(Event::Input(InputEvent::Input('d')));
-    state.update(Event::Input(InputEvent::Input('r')));
-    state.update(Event::Input(InputEvent::Input('a')));
+    state.update(InputEvent::Input('d'));
+    state.update(InputEvent::Input('r'));
+    state.update(InputEvent::Input('a'));
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let content = buffer_content(&terminal);
     assert!(
@@ -79,7 +79,7 @@ fn theme_selector_renders_theme_list() {
 fn command_palette_has_panel_background() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
-    state.update(Event::Dialog(DialogEvent::ToggleCommandPalette));
+    state.update(DialogEvent::ToggleCommandPalette);
     let backend = TestBackend::new(60, 24);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();

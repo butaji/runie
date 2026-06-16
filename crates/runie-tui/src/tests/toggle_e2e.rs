@@ -20,16 +20,16 @@ fn setup_thought_and_tool(state: &mut AppState) {
     dispatch(
         state,
         &[
-            Event::Agent(AgentEvent::Thinking { id: "req.0".into() }),
-            Event::Agent(AgentEvent::Response {
+            AgentEvent::Thinking { id: "req.0".into() },
+            AgentEvent::Response {
                 id: "req.0".into(),
                 content: "I'll list files.\n".into(),
-            }),
-            Event::Agent(AgentEvent::Response {
+            },
+            AgentEvent::Response {
                 id: "req.0".into(),
                 content: "TOOL:list_dir:.".into(),
-            }),
-            Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
+            },
+            AgentEvent::ThoughtDone { id: "req.0".into() },
         ],
     );
 }
@@ -38,9 +38,9 @@ fn run_tool(state: &mut AppState, output: &str) {
     dispatch(
         state,
         &[
-            Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null }),
-            Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: output.into(),
-             }),
+            AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null },
+            AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: output.into(),
+             },
         ],
     );
 }
@@ -68,11 +68,11 @@ fn finish_turn(state: &mut AppState) {
     dispatch(
         state,
         &[
-            Event::Agent(AgentEvent::Response {
+            AgentEvent::Response {
                 id: "req.0".into(),
                 content: "Done.".into(),
-            }),
-            Event::Agent(AgentEvent::Done { id: "req.0".into() }),
+            },
+            AgentEvent::Done { id: "req.0".into() },
         ],
     );
 }
@@ -88,7 +88,7 @@ fn e2e_toggle_collapses_all_thoughts_and_tools() {
         "Should show reasoning before toggle"
     );
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "Toggle should set global collapse"
@@ -103,11 +103,11 @@ fn e2e_toggle_expands_back_on_second_press() {
     let mut state = AppState::default();
     setup_thought_and_tool(&mut state);
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     let collapsed = render_content(&mut state);
     assert_collapsed(&collapsed, "collapsed thought");
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     let expanded = render_content(&mut state);
     assert!(!state.view.all_collapsed, "Second toggle should expand all");
     assert!(
@@ -120,7 +120,7 @@ fn e2e_toggle_expands_back_on_second_press() {
 fn e2e_all_collapsed_stays_collapsed_through_tool_execution() {
     let mut state = AppState::default();
     setup_thought_and_tool(&mut state);
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(state.view.all_collapsed);
 
     run_tool(&mut state, "file1\nfile2");
@@ -139,18 +139,18 @@ fn e2e_all_collapsed_stays_collapsed_through_tool_execution() {
 fn e2e_all_collapsed_stays_collapsed_after_agent_response() {
     let mut state = AppState::default();
     setup_thought_and_tool(&mut state);
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(state.view.all_collapsed);
 
     run_tool(&mut state, "file1");
     dispatch(
         &mut state,
         &[
-            Event::Agent(AgentEvent::Response {
+            AgentEvent::Response {
                 id: "req.0".into(),
                 content: "Done.".into(),
-            }),
-            Event::Agent(AgentEvent::Done { id: "req.0".into() }),
+            },
+            AgentEvent::Done { id: "req.0".into() },
         ],
     );
     let after_done = render_content(&mut state);
@@ -169,30 +169,30 @@ fn e2e_new_thought_respects_global_collapse() {
     let mut state = AppState::default();
     state.agent.streaming = true;
 
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "First.".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
+    });
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(state.view.all_collapsed);
 
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.1".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.1".to_string(),
         content: "Second.".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.1".to_string(),
-    }));
+    });
 
     let after = render_content(&mut state);
     let marker_count = after.matches("Thought").count();
@@ -208,8 +208,8 @@ fn e2e_running_tool_always_expanded() {
     let mut state = AppState::default();
     state.agent.streaming = true;
 
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null }));
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
+    state.update(ControlEvent::ToggleExpand);
 
     assert!(
         state.view.all_collapsed,
@@ -228,22 +228,22 @@ fn e2e_global_toggle_collapses_mixed_thought_and_tool() {
     let mut state = AppState::default();
     state.agent.streaming = true;
 
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
+    });
 
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".to_string(),
-     }));
+    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".to_string(),
+     });
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "Toggle should collapse ALL thoughts and tools globally"
@@ -264,7 +264,7 @@ fn e2e_full_turn_with_global_toggle() {
         "Should show reasoning in thought"
     );
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert_collapsed(&render_content(&mut state), "thought should collapse");
 
     run_tool(&mut state, "file1\nfile2");
@@ -274,7 +274,7 @@ fn e2e_full_turn_with_global_toggle() {
         "Tool should be collapsed with global flag"
     );
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert_expanded(&render_content(&mut state));
 
     finish_turn(&mut state);

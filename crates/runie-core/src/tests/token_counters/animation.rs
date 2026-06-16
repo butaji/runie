@@ -1,8 +1,7 @@
 //! Layer 1 + Layer 2 tests for token counters and animated speed
 
-use crate::event::Event;
 
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::AgentEvent;
 use crate::model::AppState;
 fn fresh_state() -> AppState {
     AppState::default()
@@ -181,9 +180,9 @@ fn turn_start_records_in_speed_window() {
     // Default state has empty window
     assert!(state.agent.speed_window.is_empty());
 
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "r1".to_string(),
-    }));
+    });
 
     // Speed window should have at least 1 event (recording on turn start)
     assert!(!state.agent.speed_window.is_empty());
@@ -193,9 +192,9 @@ fn turn_start_records_in_speed_window() {
 #[test]
 fn speed_window_rolls_to_1k_tokens_across_turns() {
     let mut state = fresh_state();
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "r1".to_string(),
-    }));
+    });
     let initial_len = state.agent.speed_window.len();
     assert!(initial_len >= 1, "Window should have initial event");
     for i in 1..=100 {
@@ -204,14 +203,14 @@ fn speed_window_rolls_to_1k_tokens_across_turns() {
     let after_streaming = state.agent.speed_window.len();
     assert!(after_streaming > initial_len);
     state.agent.current_request_id = Some("r1".to_string());
-    state.update(Event::Agent(AgentEvent::Done {
+    state.update(AgentEvent::Done {
         id: "r1".to_string(),
-    }));
+    });
     assert!(!state.agent.speed_window.is_empty());
     let after_turn1 = state.agent.speed_window.len();
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "r2".to_string(),
-    }));
+    });
     let after_turn2_start = state.agent.speed_window.len();
     assert!(
         after_turn2_start >= after_turn1,

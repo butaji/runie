@@ -1,7 +1,7 @@
 //! Subagent commands.
 
 use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
-use crate::event::{ControlEvent, Event};
+use crate::event::ControlEvent;
 use crate::model::AppState;
 
 use super::spec::{CommandKind, CommandSpec};
@@ -27,7 +27,7 @@ pub fn handle_spawn(_state: &mut AppState, args: &str) -> CommandResult {
     if prompt.is_empty() {
         return CommandResult::OpenPanelStack(crate::commands::build_spawn_form_panel());
     }
-    CommandResult::Event(Event::Control(ControlEvent::SpawnAgent {
+    CommandResult::Event(ControlEvent::SpawnAgent {
         prompt: prompt.to_string(),
-    }))
+    })
 }

@@ -1,5 +1,4 @@
-use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::AgentEvent;
 use crate::model::AppState;
 
 fn fresh_state() -> AppState {
@@ -14,18 +13,18 @@ fn big_output() -> String {
 }
 
 fn run_tool_turn(state: &mut AppState, response: &str, tool_output: &str) {
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: response.into(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: tool_output.into(),
-     }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: tool_output.into(),
+     });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
 }
 
@@ -97,13 +96,13 @@ fn final_agent_visible_when_tool_overflows() {
 fn agent_before_tool_preserved_during_turn() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done!".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-     }));
+    });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+     });
     state.ensure_fresh();
     assert!(agent_pos(&state).is_some() && tool_pos(&state).is_some());
 }
@@ -113,20 +112,20 @@ fn no_reorder_when_no_tools() {
     let mut state = fresh_state();
     state.agent.streaming = true;
 
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-     }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+     });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
     let kinds = agent_turn_complete_kinds(&state);
     assert!(
@@ -142,12 +141,12 @@ fn thought_stays_before_tool_after_reorder() {
     let mut state = fresh_state();
     state.agent.streaming = true;
 
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
     run_tool_turn(&mut state, "Done!", "file1");
 
     let (t, o, a) = (thought_pos(&state), tool_pos(&state), agent_pos(&state));

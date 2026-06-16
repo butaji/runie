@@ -1,5 +1,4 @@
-use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent, LoginFlowEvent};
+use crate::event::{DialogEvent, LoginFlowEvent};
 use crate::login_config::list_configured_providers;
 use crate::model::AppState;
 
@@ -10,20 +9,20 @@ fn login_flow_save_shows_providers_dialog() {
     clean_config();
     let mut state = AppState::default();
 
-    state.update(Event::Dialog(DialogEvent::ProvidersDialog));
+    state.update(DialogEvent::ProvidersDialog);
     assert!(state.open_dialog.is_some());
 
-    state.update(Event::Dialog(DialogEvent::ProvidersAdd));
+    state.update(DialogEvent::ProvidersAdd);
     assert!(state.login_flow.is_some());
 
-    state.update(Event::LoginFlow(LoginFlowEvent::SelectProvider {
+    state.update(LoginFlowEvent::SelectProvider {
         provider: "minimax".into(),
-    }));
-    state.update(Event::LoginFlow(LoginFlowEvent::SubmitKey {
+    });
+    state.update(LoginFlowEvent::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
-    }));
-    state.update(Event::LoginFlow(LoginFlowEvent::Save));
+    });
+    state.update(LoginFlowEvent::Save);
 
     assert!(
         state.open_dialog.is_some(),
@@ -37,16 +36,16 @@ fn login_flow_save_does_not_auto_activate_model() {
     clean_config();
     let mut state = AppState::default();
 
-    state.update(Event::Dialog(DialogEvent::ProvidersDialog));
-    state.update(Event::Dialog(DialogEvent::ProvidersAdd));
-    state.update(Event::LoginFlow(LoginFlowEvent::SelectProvider {
+    state.update(DialogEvent::ProvidersDialog);
+    state.update(DialogEvent::ProvidersAdd);
+    state.update(LoginFlowEvent::SelectProvider {
         provider: "minimax".into(),
-    }));
-    state.update(Event::LoginFlow(LoginFlowEvent::SubmitKey {
+    });
+    state.update(LoginFlowEvent::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
-    }));
-    state.update(Event::LoginFlow(LoginFlowEvent::Save));
+    });
+    state.update(LoginFlowEvent::Save);
 
     assert!(
         state.config.current_provider.is_empty(),
@@ -63,21 +62,21 @@ fn login_flow_save_allows_model_selection() {
     clean_config();
     let mut state = AppState::default();
 
-    state.update(Event::Dialog(DialogEvent::ProvidersDialog));
-    state.update(Event::Dialog(DialogEvent::ProvidersAdd));
-    state.update(Event::LoginFlow(LoginFlowEvent::SelectProvider {
+    state.update(DialogEvent::ProvidersDialog);
+    state.update(DialogEvent::ProvidersAdd);
+    state.update(LoginFlowEvent::SelectProvider {
         provider: "minimax".into(),
-    }));
-    state.update(Event::LoginFlow(LoginFlowEvent::SubmitKey {
+    });
+    state.update(LoginFlowEvent::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
-    }));
-    state.update(Event::LoginFlow(LoginFlowEvent::Save));
+    });
+    state.update(LoginFlowEvent::Save);
 
-    state.update(Event::Dialog(DialogEvent::ProvidersSelectModel {
+    state.update(DialogEvent::ProvidersSelectModel {
         provider: "minimax".into(),
         model: "MiniMax-M3".into(),
-    }));
+    });
 
     assert_eq!(state.config.current_provider, "minimax");
     assert_eq!(state.config.current_model, "MiniMax-M3");
@@ -88,15 +87,15 @@ fn login_flow_save_allows_model_selection_from_multiple() {
     clean_config();
     let mut state = AppState::default();
 
-    state.update(Event::Dialog(DialogEvent::ProvidersDialog));
-    state.update(Event::Dialog(DialogEvent::ProvidersAdd));
-    state.update(Event::LoginFlow(LoginFlowEvent::SelectProvider {
+    state.update(DialogEvent::ProvidersDialog);
+    state.update(DialogEvent::ProvidersAdd);
+    state.update(LoginFlowEvent::SelectProvider {
         provider: "openai".into(),
-    }));
-    state.update(Event::LoginFlow(LoginFlowEvent::SubmitKey {
+    });
+    state.update(LoginFlowEvent::SubmitKey {
         provider: "openai".into(),
         key: "sk-test".into(),
-    }));
+    });
 
     let defaults: Vec<String> = crate::provider_registry::find_provider("openai")
         .map(|m| {
@@ -107,13 +106,13 @@ fn login_flow_save_allows_model_selection_from_multiple() {
         })
         .unwrap_or_default();
 
-    state.update(Event::LoginFlow(LoginFlowEvent::Save));
+    state.update(LoginFlowEvent::Save);
 
     if defaults.len() >= 2 {
-        state.update(Event::Dialog(DialogEvent::ProvidersSelectModel {
+        state.update(DialogEvent::ProvidersSelectModel {
             provider: "openai".into(),
             model: defaults[1].to_string(),
-        }));
+        });
     }
 
     assert_eq!(state.config.current_provider, "openai");
@@ -127,16 +126,16 @@ fn login_flow_save_saves_config() {
     clean_config();
     let mut state = AppState::default();
 
-    state.update(Event::Dialog(DialogEvent::ProvidersDialog));
-    state.update(Event::Dialog(DialogEvent::ProvidersAdd));
-    state.update(Event::LoginFlow(LoginFlowEvent::SelectProvider {
+    state.update(DialogEvent::ProvidersDialog);
+    state.update(DialogEvent::ProvidersAdd);
+    state.update(LoginFlowEvent::SelectProvider {
         provider: "minimax".into(),
-    }));
-    state.update(Event::LoginFlow(LoginFlowEvent::SubmitKey {
+    });
+    state.update(LoginFlowEvent::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
-    }));
-    state.update(Event::LoginFlow(LoginFlowEvent::Save));
+    });
+    state.update(LoginFlowEvent::Save);
 
     let configured = list_configured_providers();
     assert!(

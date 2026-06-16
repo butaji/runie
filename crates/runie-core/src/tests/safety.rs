@@ -1,6 +1,6 @@
 //! Safety command tests — read-only mode and trust system
 use super::slash::exec;
-use crate::event::{Event, InputEvent, ModelConfigEvent, DialogEvent};
+use crate::event::{InputEvent, ModelConfigEvent, DialogEvent};
 use crate::model::AppState;
 
 pub fn fresh_state() -> AppState {
@@ -9,26 +9,26 @@ pub fn fresh_state() -> AppState {
 
 pub fn type_str(state: &mut AppState, text: &str) {
     for c in text.chars() {
-        state.update(Event::Input(InputEvent::Input(c)));
+        state.update(InputEvent::Input(c));
     }
 }
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
-    state.update(Event::Input(InputEvent::Input('/')));
+    state.update(InputEvent::Input('/'));
     for c in cmd.chars() {
-        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+        state.update(DialogEvent::PaletteFilter(c));
     }
-    state.update(Event::Dialog(DialogEvent::PaletteSelect));
+    state.update(DialogEvent::PaletteSelect);
 }
 
 #[test]
 fn toggle_flips_read_only() {
     let mut state = fresh_state();
     assert!(!state.config.read_only, "default is read-write");
-    state.update(Event::ModelConfig(ModelConfigEvent::ToggleReadOnly));
+    state.update(ModelConfigEvent::ToggleReadOnly);
     assert!(state.config.read_only, "toggled to read-only");
-    state.update(Event::ModelConfig(ModelConfigEvent::ToggleReadOnly));
+    state.update(ModelConfigEvent::ToggleReadOnly);
     assert!(!state.config.read_only, "toggled back to read-write");
 }
 

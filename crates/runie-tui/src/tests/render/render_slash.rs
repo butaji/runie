@@ -6,9 +6,9 @@ static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 fn type_str(state: &mut AppState, text: &str) {
     for c in text.chars() {
-        state.update(Event::Input(InputEvent::Input(c)));
+        state.update(InputEvent::Input(c));
     }
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Submit);
 }
 
 fn render_slash(input: &str) -> String {
@@ -168,9 +168,9 @@ fn test_render_model_m3_just_model_name() {
     let mut state = AppState::default();
 
     for c in "/model m3".chars() {
-        state.update(Event::Input(InputEvent::Input(c)));
+        state.update(InputEvent::Input(c));
     }
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Submit);
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
@@ -202,10 +202,10 @@ fn test_render_load_missing_shows_user_friendly_error() {
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
     for c in "/load missing".chars() {
-        state.update(Event::Input(InputEvent::Input(c)));
+        state.update(InputEvent::Input(c));
     }
-    state.update(Event::Input(InputEvent::Submit)); // Opens form with pre-filled name
-    state.update(Event::Dialog(DialogEvent::CommandFormSubmit)); // Submits form, triggers error
+    state.update(InputEvent::Submit); // Opens form with pre-filled name
+    state.update(DialogEvent::CommandFormSubmit); // Submits form, triggers error
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();

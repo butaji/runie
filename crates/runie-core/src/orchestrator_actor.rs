@@ -85,36 +85,8 @@ pub enum OrchestratorCommand {
 
 // ─── Events ─────────────────────────────────────────────────────────────────
 
-/// Events emitted by the OrchestratorActor to the bus.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum OrchestratorEvent {
-    /// State transitioned to a new value.
-    StateChanged { from: OrchestratorState, to: OrchestratorState },
-    /// A new plan has started (Orchestrator is working).
-    PlanStarted,
-    /// Planner is running.
-    PlanningStarted,
-    /// Planner produced a plan.
-    PlanGenerated { plan: OrchestratorPlan },
-    /// Planning failed.
-    PlanningFailed { error: String },
-    /// A subagent task has been dispatched for execution.
-    SubagentDispatched { task: SubagentTask },
-    /// A subagent task changed status.
-    SubagentStatusChanged { task_id: String, status: TaskStatus },
-    /// A subagent task completed.
-    SubagentCompleted { task_id: String, output: String },
-    /// A subagent task failed.
-    SubagentFailed { task_id: String, error: String },
-    /// All subagents are done, synthesis starting.
-    SynthesisStarted,
-    /// Synthesis produced the final response.
-    SynthesisComplete { response: String, elapsed_secs: f64 },
-    /// Orchestrator finished (success or failure).
-    Finished { success: bool },
-    /// Orchestrator was cancelled / reset.
-    Cancelled,
-}
+/// Type alias for the flat `Event` variants emitted by the OrchestratorActor.
+pub type OrchestratorEvent = crate::Event;
 
 // ─── Project context (from planner crate, re-exported) ──────────────────────
 

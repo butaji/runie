@@ -644,7 +644,7 @@ mod tests {
         let bg = Color::Rgb(30, 30, 30);
         let fg = Color::Rgb(200, 50, 50);
         let result = blend(bg, fg, 0.3);
-        assert!(matches!(result, Color::Rgb(r, g, b) if r > 30 && r < 200));
+        assert!(matches!(result, Color::Rgb(r, _g, _b) if r > 30 && r < 200));
     }
 
     #[test]

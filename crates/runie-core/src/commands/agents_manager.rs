@@ -9,16 +9,16 @@ use crate::model::AppState;
 /// Handle agents-manager related events.
 pub fn agents_manager_event(state: &mut AppState, event: Event) {
     match event {
-        Event::Dialog(DialogEvent::OpenAgentsManager) => {
+        DialogEvent::OpenAgentsManager => {
             open_root(state);
         }
-        Event::Dialog(DialogEvent::AgentsManagerSetField { name, field, value }) => {
+        DialogEvent::AgentsManagerSetField { name, field, value } => {
             handle_set_field(state, &name, &field, value);
         }
-        Event::Dialog(DialogEvent::AgentsManagerSave { name }) => {
+        DialogEvent::AgentsManagerSave { name } => {
             handle_save(state, &name);
         }
-        Event::Dialog(DialogEvent::AgentsManagerDelete { name }) => {
+        DialogEvent::AgentsManagerDelete { name } => {
             handle_delete(state, &name);
         }
         _ => {}
@@ -113,11 +113,11 @@ mod tests {
         let mut state = AppState::default();
         agents_manager_event(
             &mut state,
-            Event::Dialog(DialogEvent::AgentsManagerSetField {
+            DialogEvent::AgentsManagerSetField {
                 name: "test".into(),
                 field: "system_prompt".into(),
                 value: "You are helpful.".into(),
-            }),
+            },
         );
         let edit = state.pending_agent_edit.as_ref().expect("pending edit");
         assert_eq!(edit.name, "test");
@@ -140,7 +140,7 @@ mod tests {
         };
         agents_manager_event(
             &mut state,
-            Event::Dialog(DialogEvent::AgentsManagerSave { name: "".into() }),
+            DialogEvent::AgentsManagerSave { name: "".into() },
         );
         assert!(state.transient_level == Some(crate::event::TransientLevel::Error));
     }
@@ -165,9 +165,9 @@ mod tests {
         };
         agents_manager_event(
             &mut state,
-            Event::Dialog(DialogEvent::AgentsManagerSave {
+            DialogEvent::AgentsManagerSave {
                 name: "persist_test".into(),
-            }),
+            },
         );
         assert!(state.pending_agent_edit.is_none());
         let loaded = agent_profiles::load_profile_from_file(

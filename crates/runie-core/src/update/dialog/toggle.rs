@@ -48,10 +48,7 @@ fn handle_welcome_toggle(state: &mut AppState) {
 }
 
 fn handle_agents_manager_event(state: &mut AppState, event: &DialogEvent) {
-    crate::commands::agents_manager::agents_manager_event(
-        state,
-        crate::Event::Dialog(event.clone()),
-    );
+    crate::commands::agents_manager::agents_manager_event(state, event.clone());
 }
 
 fn handle_model_selector_toggle(state: &mut AppState) {

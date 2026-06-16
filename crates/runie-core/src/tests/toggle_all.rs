@@ -1,5 +1,4 @@
-use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::{ControlEvent, AgentEvent};
 use crate::model::{AppState, ChatMessage, Role};
 
 fn fresh_state() -> AppState {
@@ -25,7 +24,7 @@ fn collapse_all_when_some_expanded() {
     });
 
     assert!(!state.view.all_collapsed, "Should start expanded");
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "All expanded => collapse all globally"
@@ -51,7 +50,7 @@ fn expand_all_when_all_collapsed() {
     });
     state.view.all_collapsed = true;
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(
         !state.view.all_collapsed,
         "All collapsed => expand all globally"
@@ -76,7 +75,7 @@ fn running_tools_always_expanded_regardless_of_global_flag() {
         ..Default::default()
     });
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(state.view.all_collapsed, "Global flag should flip");
     // Running tool renders as ToolRunning regardless of global flag
 }
@@ -84,7 +83,7 @@ fn running_tools_always_expanded_regardless_of_global_flag() {
 #[test]
 fn toggle_all_empty_state_flips_flag() {
     let mut state = fresh_state();
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "Toggle on empty state should flip global flag"
@@ -102,13 +101,13 @@ fn toggle_all_twice_restores_expanded() {
         ..Default::default()
     });
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(state.view.all_collapsed, "Toggle 1: collapse all");
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(!state.view.all_collapsed, "Toggle 2: expand all");
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(state.view.all_collapsed, "Toggle 3: collapse all again");
 }
 
@@ -125,13 +124,13 @@ fn toggle_all_with_many_items() {
         });
     }
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "All thoughts should be collapsed globally"
     );
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(
         !state.view.all_collapsed,
         "All thoughts should be expanded globally"
@@ -143,16 +142,16 @@ fn new_thought_respects_global_collapse_when_true() {
     let mut state = fresh_state();
     state.view.all_collapsed = true;
 
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Reasoning".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
+    });
     state.ensure_fresh();
 
     let feed = crate::ui::LazyCache::feed(&state);
@@ -171,16 +170,16 @@ fn new_thought_respects_global_expand_when_false() {
     let mut state = fresh_state();
     state.view.all_collapsed = false;
 
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Reasoning".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
+    });
     state.ensure_fresh();
 
     let feed = crate::ui::LazyCache::feed(&state);
@@ -199,9 +198,9 @@ fn new_tool_respects_global_collapse_when_true() {
     let mut state = fresh_state();
     state.view.all_collapsed = true;
 
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".to_string(),
-     }));
+    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".to_string(),
+     });
     state.ensure_fresh();
 
     let feed = crate::ui::LazyCache::feed(&state);
@@ -220,9 +219,9 @@ fn new_tool_respects_global_expand_when_false() {
     let mut state = fresh_state();
     state.view.all_collapsed = false;
 
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".to_string(),
-     }));
+    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".to_string(),
+     });
     state.ensure_fresh();
 
     let feed = crate::ui::LazyCache::feed(&state);

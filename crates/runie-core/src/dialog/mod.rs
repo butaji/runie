@@ -41,9 +41,9 @@
 //! // Form view (filtering disabled, fields editable)
 //! let _ = form("save", "Save Session")
 //!     .field("Name", "session", "name")
-//!     .on_submit(|values| Event::Command(CommandEvent::RunSaveCommand {
+//!     .on_submit(|values| CommandEvent::RunSaveCommand {
 //!         name: values.get("name").cloned().unwrap_or_default(),
-//!     }))
+//!     })
 //!     .into_stack();
 //!
 //! // Any panel can be switched to form view explicitly, e.g. a loading
@@ -51,7 +51,7 @@
 //! let _ = panel("validating", "Validating...")
 //!     .form()
 //!     .header("Checking API key...")
-//!     .action("_Cancel", ItemAction::Emit(Event::LoginFlow(LoginFlowEvent::Cancel)));
+//!     .action("_Cancel", ItemAction::Emit(LoginFlowEvent::Cancel));
 //! ```
 //!
 pub mod builders;

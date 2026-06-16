@@ -11,7 +11,6 @@
 
 use crate::{run_agent_turn, AgentCommand};
 use runie_core::event::AgentEvent;
-use runie_core::event::Event;
 use runie_core::model::ThinkingLevel;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
@@ -105,12 +104,12 @@ async fn run_subagent_turn(
         Arc::new(Mutex::new(move |evt: runie_core::Event| {
             match evt {
                 // Collect both ResponseDelta (streaming) and Response (complete)
-                Event::Agent(AgentEvent::ResponseDelta { content, .. })
-                | Event::Agent(AgentEvent::Response { content, .. }) => {
+                AgentEvent::ResponseDelta { content, .. }
+                | AgentEvent::Response { content, .. } => {
                     responses_clone.lock().unwrap().push(content)
                 }
-                Event::Agent(AgentEvent::Error { message, .. }) => *error_clone.lock().unwrap() = Some(message),
-                Event::Agent(AgentEvent::Done { .. }) => *done_clone.lock().unwrap() = true,
+                AgentEvent::Error { message, .. } => *error_clone.lock().unwrap() = Some(message),
+                AgentEvent::Done { .. } => *done_clone.lock().unwrap() = true,
                 _ => {}
             }
         })),

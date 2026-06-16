@@ -1,7 +1,7 @@
 #![allow(clippy::needless_borrow)]
 
 use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::AgentEvent;
 use crate::model::{AppState, ChatMessage, Role};
 
 fn fresh_state() -> AppState {
@@ -33,12 +33,12 @@ fn verify_user_submit_visible(state: &mut AppState, height: usize) {
 
 fn verify_thought_visible(state: &mut AppState, height: usize) {
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -53,16 +53,16 @@ fn verify_thought_visible(state: &mut AppState, height: usize) {
 }
 
 fn verify_tool_output_visible(state: &mut AppState, height: usize) {
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null }));
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null });
     let output = (1..=20)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::Agent(AgentEvent::ToolEnd {
+    state.update(AgentEvent::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
-    }));
+    });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -80,10 +80,10 @@ fn verify_tool_output_visible(state: &mut AppState, height: usize) {
 }
 
 fn verify_final_done_visible(state: &mut AppState, height: usize) {
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done!".into(),
-    }));
+    });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -195,16 +195,16 @@ fn tool_output_exceeding_viewport_shows_latest_files() {
     let mut state = fresh_state();
     let height = 5;
 
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
     let output = (1..=50)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::Agent(AgentEvent::ToolEnd {
+    state.update(AgentEvent::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
-    }));
+    });
     state.ensure_fresh();
     state.view.scroll = 0;
 

@@ -5,7 +5,6 @@
 //!
 //! Flow: /providers → Add → Login flow → Save → Providers dialog → Select model
 
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent, LoginFlowEvent};
 
 pub(super) fn clean_config() {
     let dir = std::env::temp_dir().join(format!(
@@ -19,23 +18,23 @@ pub(super) fn clean_config() {
 }
 
 pub(super) fn add_minimax_provider(state: &mut crate::model::AppState) {
-    state.update(crate::event::Event::Dialog(DialogEvent::ProvidersDialog));
-    state.update(crate::event::Event::Dialog(DialogEvent::ProvidersAdd));
-    state.update(crate::event::Event::LoginFlow(LoginFlowEvent::SelectProvider {
+    state.update(crate::event::DialogEvent::ProvidersDialog);
+    state.update(crate::event::DialogEvent::ProvidersAdd);
+    state.update(crate::event::LoginFlowEvent::SelectProvider {
         provider: "minimax".into(),
-    }));
-    state.update(crate::event::Event::LoginFlow(LoginFlowEvent::SubmitKey {
+    });
+    state.update(crate::event::LoginFlowEvent::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
-    }));
-    state.update(crate::event::Event::LoginFlow(LoginFlowEvent::Save));
+    });
+    state.update(crate::event::LoginFlowEvent::Save);
 }
 
 pub(super) fn select_minimax_model(state: &mut crate::model::AppState) {
-    state.update(crate::event::Event::Dialog(crate::event::DialogEvent::ProvidersSelectModel {
+    state.update(crate::event::DialogEvent::ProvidersSelectModel {
         provider: "minimax".into(),
         model: "MiniMax-M3".into(),
-    }));
+    });
 }
 
 pub(super) fn add_provider_and_select_model(
@@ -44,20 +43,20 @@ pub(super) fn add_provider_and_select_model(
     key: &str,
     model: &str,
 ) {
-    state.update(crate::event::Event::Dialog(DialogEvent::ProvidersDialog));
-    state.update(crate::event::Event::Dialog(DialogEvent::ProvidersAdd));
-    state.update(crate::event::Event::LoginFlow(LoginFlowEvent::SelectProvider {
+    state.update(crate::event::DialogEvent::ProvidersDialog);
+    state.update(crate::event::DialogEvent::ProvidersAdd);
+    state.update(crate::event::LoginFlowEvent::SelectProvider {
         provider: provider.into(),
-    }));
-    state.update(crate::event::Event::LoginFlow(LoginFlowEvent::SubmitKey {
+    });
+    state.update(crate::event::LoginFlowEvent::SubmitKey {
         provider: provider.into(),
         key: key.into(),
-    }));
-    state.update(crate::event::Event::LoginFlow(LoginFlowEvent::Save));
-    state.update(crate::event::Event::Dialog(crate::event::DialogEvent::ProvidersSelectModel {
+    });
+    state.update(crate::event::LoginFlowEvent::Save);
+    state.update(crate::event::DialogEvent::ProvidersSelectModel {
         provider: provider.into(),
         model: model.into(),
-    }));
+    });
 }
 
 mod add_provider;

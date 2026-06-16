@@ -1,5 +1,5 @@
 use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::AgentEvent;
 use crate::model::{AppState, Role};
 use crate::ui::LazyCache;
 
@@ -44,17 +44,17 @@ fn feed_has_turn_complete(state: &AppState) -> bool {
 fn single_thought_hides_turn_complete() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 0.5,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(!feed_has_turn_complete(&state));
 }
@@ -63,20 +63,20 @@ fn single_thought_hides_turn_complete() {
 fn tool_plus_thought_shows_turn_complete() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "file1".into(),
-     }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "file1".into(),
+     });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Found it".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(feed_has_turn_complete(&state));
 }
@@ -85,22 +85,22 @@ fn tool_plus_thought_shows_turn_complete() {
 fn tool_only_hides_turn_complete() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "start".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "file1".into(),
-     }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "file1".into(),
+     });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(!feed_has_turn_complete(&state));
 }
@@ -109,19 +109,19 @@ fn tool_only_hides_turn_complete() {
 fn two_thoughts_shows_turn_complete() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Answer".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 2.0,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(feed_has_turn_complete(&state));
 }
@@ -130,23 +130,23 @@ fn two_thoughts_shows_turn_complete() {
 fn two_tools_shows_turn_complete() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.1, output: "a".into(),
-     }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "cat".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.2, output: "b".into(),
-     }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.1, output: "a".into(),
+     });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "cat".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.2, output: "b".into(),
+     });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 3.0,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(feed_has_turn_complete(&state));
 }
@@ -155,20 +155,20 @@ fn two_tools_shows_turn_complete() {
 fn mixed_thought_tool_shows_turn_complete() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-     }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+     });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.5,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(feed_has_turn_complete(&state));
 }
@@ -177,53 +177,53 @@ fn mixed_thought_tool_shows_turn_complete() {
 fn zero_actions_hides_turn_complete() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 0.1,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(!feed_has_turn_complete(&state));
 }
 
 fn first_turn_events() -> Vec<Event> {
     vec![
-        Event::Agent(AgentEvent::Thinking { id: "req.0".into() }),
-        Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
-        Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }),
-        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-         }),
-        Event::Agent(AgentEvent::Response {
+        AgentEvent::Thinking { id: "req.0".into() },
+        AgentEvent::ThoughtDone { id: "req.0".into() },
+        AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
+        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+         },
+        AgentEvent::Response {
             id: "req.0".into(),
             content: "First".into(),
-        }),
-        Event::Agent(AgentEvent::TurnComplete {
+        },
+        AgentEvent::TurnComplete {
             id: "req.0".into(),
             duration_secs: 1.0,
-        }),
-        Event::Agent(AgentEvent::Done { id: "req.0".into() }),
+        },
+        AgentEvent::Done { id: "req.0".into() },
     ]
 }
 
 fn second_turn_events() -> Vec<Event> {
     vec![
-        Event::Agent(AgentEvent::Thinking { id: "req.1".into() }),
-        Event::Agent(AgentEvent::ToolStart { id: "req.1".into(), name: "cat".into(), input: serde_json::Value::Null }),
-        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "b".into(),
-         }),
-        Event::Agent(AgentEvent::Response {
+        AgentEvent::Thinking { id: "req.1".into() },
+        AgentEvent::ToolStart { id: "req.1".into(), name: "cat".into(), input: serde_json::Value::Null },
+        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "b".into(),
+         },
+        AgentEvent::Response {
             id: "req.1".into(),
             content: "Second".into(),
-        }),
-        Event::Agent(AgentEvent::TurnComplete {
+        },
+        AgentEvent::TurnComplete {
             id: "req.1".into(),
             duration_secs: 0.8,
-        }),
-        Event::Agent(AgentEvent::Done { id: "req.1".into() }),
+        },
+        AgentEvent::Done { id: "req.1".into() },
     ]
 }
 
@@ -247,22 +247,22 @@ fn second_turn_independent_action_count() {
 fn three_mixed_actions_shows_turn_complete() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.1, output: "a".into(),
-     }));
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.1, output: "a".into(),
+     });
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 2.0,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(feed_has_turn_complete(&state));
 }
@@ -271,17 +271,17 @@ fn three_mixed_actions_shows_turn_complete() {
 fn turn_complete_still_in_session_when_hidden() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 0.5,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
     let turn_msgs = state
         .session

@@ -382,19 +382,19 @@ mod tests {
 
     #[test]
     fn event_from_name_quit() {
-        assert!(matches!(event_from_name("Quit"), Some(Event::Control(ControlEvent::Quit))));
+        assert!(matches!(event_from_name("Quit"), Some(ControlEvent::Quit)));
     }
 
     #[test]
     fn event_from_name_submit() {
-        assert!(matches!(event_from_name("Submit"), Some(Event::Input(InputEvent::Submit))));
+        assert!(matches!(event_from_name("Submit"), Some(InputEvent::Submit)));
     }
 
     #[test]
     fn event_from_name_input_tab() {
         assert!(matches!(
             event_from_name("Input:\t"),
-            Some(Event::Input(InputEvent::Input('\t')))
+            Some(InputEvent::Input('\t'))
         ));
     }
 
@@ -402,7 +402,7 @@ mod tests {
     fn event_from_name_input_char() {
         assert!(matches!(
             event_from_name("Input:a"),
-            Some(Event::Input(InputEvent::Input('a')))
+            Some(InputEvent::Input('a'))
         ));
     }
 
@@ -423,32 +423,32 @@ mod tests {
 
     #[test]
     fn mouse_events_have_no_name() {
-        use crate::Event;
+        
         assert_eq!(
-            Event::Input(InputEvent::MouseClick {
+            InputEvent::MouseClick {
                 row: 0,
                 col: 0,
                 button: "left".into()
-            }).name(),
+            }.name(),
             None
         );
         assert_eq!(
-            Event::Input(InputEvent::MouseRelease {
+            InputEvent::MouseRelease {
                 row: 0,
                 col: 0,
                 button: "left".into()
-            }).name(),
+            }.name(),
             None
         );
         assert_eq!(
-            Event::Input(InputEvent::MouseDrag {
+            InputEvent::MouseDrag {
                 row: 0,
                 col: 0,
                 button: "left".into()
-            }).name(),
+            }.name(),
             None
         );
-        assert_eq!(Event::Input(InputEvent::MouseMove { row: 0, col: 0 }).name(), None);
+        assert_eq!(InputEvent::MouseMove { row: 0, col: 0 }.name(), None);
     }
 
     #[test]
@@ -494,7 +494,7 @@ mod tests {
 
     #[test]
     fn config_keybindings_override_defaults() {
-        use std::collections::HashMap;
+        
         let mut config = crate::config::Config::default();
         config.keybindings.insert("ctrl+c".to_string(), "Abort".to_string());
 

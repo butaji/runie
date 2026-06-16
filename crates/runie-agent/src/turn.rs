@@ -95,22 +95,22 @@ fn emit_turn_end(
     }
 
     if has_intermediate_steps {
-        emit_now(emit, Event::Agent(AgentEvent::TurnComplete {
+        emit_now(emit, AgentEvent::TurnComplete {
             id: id.to_string(),
             duration_secs: turn_start.elapsed().as_secs_f64(),
-        }));
+        });
     }
-    emit_now(emit, Event::Agent(AgentEvent::Done { id: id.to_string() }));
+    emit_now(emit, AgentEvent::Done { id: id.to_string() });
 }
 
 fn emit_response_and_done(emit: &EmitFn, id: &str, content: String) {
-    emit_now(emit, Event::Agent(AgentEvent::Response { id: id.to_string(), content }));
-    emit_now(emit, Event::Agent(AgentEvent::Done { id: id.to_string() }));
+    emit_now(emit, AgentEvent::Response { id: id.to_string(), content });
+    emit_now(emit, AgentEvent::Done { id: id.to_string() });
 }
 
 fn emit_error_and_done(emit: &EmitFn, id: &str, message: String) {
-    emit_now(emit, Event::Agent(AgentEvent::Error { id: id.to_string(), message }));
-    emit_now(emit, Event::Agent(AgentEvent::Done { id: id.to_string() }));
+    emit_now(emit, AgentEvent::Error { id: id.to_string(), message });
+    emit_now(emit, AgentEvent::Done { id: id.to_string() });
 }
 
 async fn run_iterations(
@@ -144,10 +144,10 @@ async fn run_agent_iteration(
     skills: Option<&SkillRegistry>,
     tool_call_count: &mut usize,
 ) -> Result<bool> {
-    emit_now(&emit, Event::Agent(AgentEvent::Thinking { id: command.id.clone() }));
+    emit_now(&emit, AgentEvent::Thinking { id: command.id.clone() });
 
     let response_text = stream_response(provider, command, messages, emit.clone()).await?;
-    emit_now(&emit, Event::Agent(AgentEvent::ThoughtDone { id: command.id.clone() }));
+    emit_now(&emit, AgentEvent::ThoughtDone { id: command.id.clone() });
 
     let tools = parse_tool_calls(&response_text);
     if tools.is_empty() {
@@ -172,10 +172,10 @@ async fn stream_response(
         match event {
             runie_core::llm_event::LLMEvent::TextDelta(text) => {
                 response_text.push_str(&text);
-                emit_now(&emit, Event::Agent(AgentEvent::ResponseDelta {
+                emit_now(&emit, AgentEvent::ResponseDelta {
                     id: command.id.clone(),
                     content: text,
-                }));
+                });
             }
             runie_core::llm_event::LLMEvent::Finish { .. } => break,
             runie_core::llm_event::LLMEvent::Error(e) => {
@@ -184,10 +184,10 @@ async fn stream_response(
             _ => {}
         }
     }
-    emit_now(&emit, Event::Agent(AgentEvent::Response {
+    emit_now(&emit, AgentEvent::Response {
         id: command.id.clone(),
         content: response_text.clone(),
-    }));
+    });
     Ok(response_text)
 }
 
@@ -232,11 +232,11 @@ async fn execute_tools(
         *tool_call_count += 1;
         let output = execute_single_tool(cmd_id, tool_call, emit.clone(), skills, &ctx, &registry).await;
 
-        emit_now(&emit, Event::Agent(AgentEvent::ToolEnd {
+        emit_now(&emit, AgentEvent::ToolEnd {
             id: cmd_id.to_string(),
             duration_secs: output.duration.as_secs_f64(),
             output: output.content.clone(),
-        }));
+        });
         messages.push(ChatMessage::tool_result(format!(
             "{} result:\n{}",
             tool_call.name, output.content
@@ -252,11 +252,11 @@ async fn execute_single_tool(
     ctx: &ToolContext,
     registry: &runie_core::tool::ToolRegistry,
 ) -> ToolOutput {
-    emit_now(&emit, Event::Agent(AgentEvent::ToolStart {
+    emit_now(&emit, AgentEvent::ToolStart {
         id: cmd_id.to_string(),
         name: tool_call.name.clone(),
         input: tool_call.args.clone(),
-    }));
+    });
 
     // Check skill Before hook
     let skill_override = check_tool_call_before_hook(skills, tool_call);

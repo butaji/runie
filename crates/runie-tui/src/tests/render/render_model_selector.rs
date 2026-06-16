@@ -7,7 +7,7 @@ fn render_selector() -> Vec<String> {
     let mut state = AppState::default();
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
-    state.update(Event::Dialog(DialogEvent::ToggleModelSelector));
+    state.update(DialogEvent::ToggleModelSelector);
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     (0..buf.area().height)
@@ -64,10 +64,10 @@ fn filter_shows_matching_models() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
-    state.update(Event::Dialog(DialogEvent::ToggleModelSelector));
-    state.update(Event::Dialog(DialogEvent::ModelSelectorFilter('g')));
-    state.update(Event::Dialog(DialogEvent::ModelSelectorFilter('p')));
-    state.update(Event::Dialog(DialogEvent::ModelSelectorFilter('t')));
+    state.update(DialogEvent::ToggleModelSelector);
+    state.update(DialogEvent::ModelSelectorFilter('g'));
+    state.update(DialogEvent::ModelSelectorFilter('p'));
+    state.update(DialogEvent::ModelSelectorFilter('t'));
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let lines: Vec<String> = (0..buf.area().height)

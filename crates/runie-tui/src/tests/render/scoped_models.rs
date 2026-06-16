@@ -2,7 +2,7 @@
 
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::{model::ScopedModel, AppState, DialogEvent, Event};
+use runie_core::{model::ScopedModel, AppState, DialogEvent};
 
 fn sm(provider: &str, name: &str, enabled: bool) -> ScopedModel {
     ScopedModel {
@@ -74,7 +74,7 @@ fn hotkeys_visible_when_list_overflows() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.config.scoped_models = make_overflowing_models();
-    state.update(Event::Dialog(DialogEvent::ToggleScopedModelsDialog));
+    state.update(DialogEvent::ToggleScopedModelsDialog);
 
     let buf = render_dialog(&mut state);
     let popup_rect = popup_outer_rect();
@@ -95,7 +95,7 @@ fn hotkeys_pinned_to_bottom_of_popup() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.config.scoped_models = make_overflowing_models();
-    state.update(Event::Dialog(DialogEvent::ToggleScopedModelsDialog));
+    state.update(DialogEvent::ToggleScopedModelsDialog);
 
     let buf = render_dialog(&mut state);
     let bottom_rect = ratatui::layout::Rect {
@@ -117,7 +117,7 @@ fn hotkeys_use_styled_key_indicator() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.config.scoped_models = vec![sm("mock", "echo", true)];
-    state.update(Event::Dialog(DialogEvent::ToggleScopedModelsDialog));
+    state.update(DialogEvent::ToggleScopedModelsDialog);
 
     let buf = render_dialog(&mut state);
     let has_hint = (0..buf.area().height).any(|y| {

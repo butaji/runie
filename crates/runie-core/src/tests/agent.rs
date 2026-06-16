@@ -1,6 +1,5 @@
 use crate::dsl::AppStateDsl;
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
-use crate::event::Event;
+use crate::event::AgentEvent;
 use crate::model::{AppState, Role};
 
 fn fresh_state() -> AppState {
@@ -139,8 +138,8 @@ fn tool_end_updates_timestamp() {
     let mut state = fresh_state();
     state.agent("req.0").tool_start("list_files");
     let t1 = state.session.messages[0].timestamp;
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
-     }));
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
+     });
     let t2 = state.session.messages[0].timestamp;
     assert!(
         t2 >= t1,

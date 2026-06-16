@@ -110,7 +110,7 @@ fn run_init_hooks(state: &mut AppState) {
     if state.config.current_provider.is_empty()
         && !runie_core::provider_registry::is_mock_enabled()
     {
-        state.update(Event::LoginFlow(LoginFlowEvent::Start));
+        state.update(LoginFlowEvent::Start);
     }
 }
 
@@ -189,13 +189,13 @@ async fn render_task(
     }
 }
 
-/// Forward `OrchestratorEvent` into the main `EventBus<Event>` as `Event::Orchestrator`.
+/// Forward `OrchestratorEvent` into the main `EventBus<Event>`.
 async fn forward_orchestrator_events(
     mut orch_sub: runie_core::bus::ReplayReceiver<OrchestratorEvent>,
     main_bus: EventBus<Event>,
 ) {
     while let Ok(evt) = orch_sub.recv().await {
-        let _ = main_bus.publish(Event::Orchestrator(evt));
+        let _ = main_bus.publish(evt);
     }
 }
 
@@ -211,7 +211,7 @@ async fn input_reader(
         if let Some(evt) = keymap::convert_event(&event, &bindings) {
             let is_quit = matches!(
                 &evt,
-                Event::Control(ControlEvent::Quit) | Event::Control(ControlEvent::Reset)
+                ControlEvent::Quit | ControlEvent::Reset
             );
 
             // Send to main loop
@@ -294,9 +294,9 @@ async fn handle_input_event(
     kb_tx: &watch::Sender<HashMap<String, String>>,
     cmd_tx: &mpsc::Sender<AgentCommand>,
 ) -> io::Result<bool> {
-    let was_submit = matches!(evt, Event::Input(InputEvent::Submit));
-    let was_followup = matches!(evt, Event::Control(ControlEvent::FollowUp));
-    let was_reload = matches!(evt, Event::ModelConfig(ModelConfigEvent::ReloadAll));
+    let was_submit = matches!(evt, InputEvent::Submit);
+    let was_followup = matches!(evt, ControlEvent::FollowUp);
+    let was_reload = matches!(evt, ModelConfigEvent::ReloadAll);
     state.update(evt);
     if state.should_quit {
         return Ok(true);
@@ -313,7 +313,7 @@ async fn handle_input_event(
 async fn handle_agent_event(evt: Event, state: &mut AppState, cmd_tx: &mpsc::Sender<AgentCommand>) {
     let was_done = matches!(
         evt,
-        Event::Agent(AgentEvent::Done { .. }) | Event::Agent(AgentEvent::Error { .. })
+        AgentEvent::Done { .. } | AgentEvent::Error { .. }
     );
     state.update(evt);
     if was_done {
@@ -335,10 +335,10 @@ async fn agent_loop(
         let provider = match build_provider_with_warning(&cmd.provider, &cmd.model) {
             Ok(p) => p,
             Err(e) => {
-                let evt = Event::Agent(AgentEvent::Error {
+                let evt = AgentEvent::Error {
                     id: cmd_id,
                     message: format!("Provider error: {}", e),
-                });
+                };
                 let _ = agent_tx.send(evt.clone()).await;
                 bus_clone.publish(evt);
                 continue;
@@ -359,10 +359,10 @@ async fn agent_loop(
         .await;
 
         if let Err(e) = result {
-            let evt = Event::Agent(AgentEvent::Error {
+            let evt = AgentEvent::Error {
                 id: cmd_id,
                 message: format!("Agent error: {}", e),
-            });
+            };
             let _ = agent_tx.send(evt.clone()).await;
             bus.publish(evt);
         }

@@ -2,7 +2,7 @@
 
 use crate::event::Event;
 
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::{InputEvent, AgentEvent};
 use crate::layout::element_line_count;
 use crate::model::AppState;
 use crate::ui::LazyCache;
@@ -24,7 +24,7 @@ fn _feed_lines(state: &AppState) -> usize {
 #[test]
 fn spacer_contributes_one_line() {
     let mut state = fresh_state();
-    state.update(Event::Input(InputEvent::Input('H')));
+    state.update(InputEvent::Input('H'));
     state.update(Event::submit());
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
@@ -46,8 +46,8 @@ fn spacer_contributes_one_line() {
 #[test]
 fn single_user_message_has_spacer_after() {
     let mut state = fresh_state();
-    state.update(Event::Input(InputEvent::Input('H')));
-    state.update(Event::Input(InputEvent::Input('i')));
+    state.update(InputEvent::Input('H'));
+    state.update(InputEvent::Input('i'));
     state.update(Event::submit());
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
@@ -62,14 +62,14 @@ fn single_user_message_has_spacer_after() {
 #[test]
 fn two_messages_have_spacer_between_and_after() {
     let mut state = fresh_state();
-    state.update(Event::Input(InputEvent::Input('A')));
+    state.update(InputEvent::Input('A'));
     state.update(Event::submit());
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "B".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
     // Expected: UserMessage, Spacer, AgentMessage, Spacer
@@ -87,7 +87,7 @@ fn two_messages_have_spacer_between_and_after() {
 #[test]
 fn total_lines_includes_spacers() {
     let mut state = fresh_state();
-    state.update(Event::Input(InputEvent::Input('A')));
+    state.update(InputEvent::Input('A'));
     state.update(Event::submit());
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);

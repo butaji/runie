@@ -2,13 +2,12 @@
 
 use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::dialog::{ItemAction, Panel, PanelStack};
-use crate::event::ControlEvent;
 use crate::model::AppState;
 
 use super::spec::{CommandKind, CommandSpec};
 
 fn quit(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::Event::Control(ControlEvent::Quit))
+    CommandResult::Event(crate::event::ControlEvent::Quit)
 }
 
 static CORE_COMMANDS: &[CommandSpec] = &[

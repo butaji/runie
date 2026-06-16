@@ -2,7 +2,7 @@
 
 use crate::event::Event;
 
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::{InputEvent, AgentEvent};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::snapshot::Snapshot;
 use std::sync::Arc;
@@ -46,18 +46,18 @@ fn test_snapshot_is_send_sync() {
 #[test]
 fn test_event_triggers_snapshot_update() {
     let mut state = AppState::default();
-    state.update(Event::Input(InputEvent::Input('h')));
-    state.update(Event::Input(InputEvent::Input('i')));
+    state.update(InputEvent::Input('h'));
+    state.update(InputEvent::Input('i'));
     state.update(Event::submit());
     state.ensure_fresh();
 
     let snap1 = state.snapshot();
     let count1 = snap1.elements.len();
 
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello back".into(),
-    }));
+    });
     state.ensure_fresh();
 
     let snap2 = state.snapshot();
@@ -140,7 +140,7 @@ fn test_arc_pointer_stability_after_state_mutation() {
     let ptr1 = Arc::as_ptr(&snap1.elements);
 
     // Mutate state but NOT messages (e.g., cursor move)
-    state.update(Event::Input(InputEvent::Input('x')));
+    state.update(InputEvent::Input('x'));
     state.ensure_fresh();
 
     let snap2 = state.snapshot();

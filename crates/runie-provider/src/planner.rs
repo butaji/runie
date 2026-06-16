@@ -582,7 +582,7 @@ pub fn validate_plan(plan: &OrchestratorPlan, resolver: &ModelResolver) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runie_core::orchestrator::{DialogueEntry, ModelTrait};
+    use runie_core::orchestrator::ModelTrait;
     use std::collections::VecDeque;
     use std::sync::Mutex;
     use runie_core::provider::Provider;

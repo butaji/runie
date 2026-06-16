@@ -45,19 +45,19 @@ fn test_formatted_labels_short_names() {
     dispatch(
         &mut state,
         &[
-            Event::Agent(AgentEvent::Thinking {
+            AgentEvent::Thinking {
                 id: "req.0".into(),
-            }),
-            Event::Agent(AgentEvent::ThoughtDone {
+            },
+            AgentEvent::ThoughtDone {
                 id: "req.0".into(),
-            }),
-            Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null }),
-            Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: String::new(),
-             }),
-            Event::Agent(AgentEvent::TurnComplete {
+            },
+            AgentEvent::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null },
+            AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: String::new(),
+             },
+            AgentEvent::TurnComplete {
                 id: "req.0".into(),
                 duration_secs: 5.1,
-            }),
+            },
         ],
     );
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -80,29 +80,29 @@ fn test_formatted_labels_short_names() {
 
 fn full_tool_flow_events() -> Vec<Event> {
     vec![
-        Event::Agent(AgentEvent::Thinking {
+        AgentEvent::Thinking {
             id: "req.0".into(),
-        }),
-        Event::Agent(AgentEvent::ThoughtDone {
+        },
+        AgentEvent::ThoughtDone {
             id: "req.0".into(),
-        }),
-        Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null }),
-        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
-         }),
-        Event::Agent(AgentEvent::Thinking {
+        },
+        AgentEvent::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null },
+        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
+         },
+        AgentEvent::Thinking {
             id: "req.0".into(),
-        }),
-        Event::Agent(AgentEvent::ThoughtDone {
+        },
+        AgentEvent::ThoughtDone {
             id: "req.0".into(),
-        }),
-        Event::Agent(AgentEvent::Response {
+        },
+        AgentEvent::Response {
             id: "req.0".into(),
             content: "Here are the files:".into(),
-        }),
-        Event::Agent(AgentEvent::TurnComplete {
+        },
+        AgentEvent::TurnComplete {
             id: "req.0".into(),
             duration_secs: 5.1,
-        }),
+        },
     ]
 }
 

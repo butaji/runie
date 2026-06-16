@@ -3,7 +3,7 @@
 use crate::agent_profiles::{self, AgentProfile, ProfileError};
 use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::dialog::{ItemAction, Panel, PanelStack};
-use crate::event::{DialogEvent, Event, SystemEvent};
+use crate::event::{DialogEvent, SystemEvent};
 use crate::model::AppState;
 
 use super::spec::{CommandKind, CommandSpec};
@@ -27,7 +27,7 @@ pub fn register(registry: &mut CommandRegistry) {
 
 /// Open the agent manager panel.
 pub fn handle_agents(_state: &mut AppState, _args: &str) -> CommandResult {
-    CommandResult::Event(Event::Dialog(DialogEvent::OpenAgentsManager))
+    CommandResult::Event(DialogEvent::OpenAgentsManager)
 }
 
 /// Build the root panel showing all profiles.
@@ -41,9 +41,9 @@ pub fn build_root_panel() -> PanelStack {
     if profiles.is_empty() {
         panel = panel.item(
             "(no profiles found)",
-            ItemAction::Emit(Event::System(SystemEvent::SystemMessage {
+            ItemAction::Emit(SystemEvent::SystemMessage {
                 content: format!("No profiles in {}", dir.display()),
-            })),
+            }),
         );
     } else {
         for p in &profiles {
@@ -185,20 +185,20 @@ fn join_optional_csv(list: &Option<Vec<String>>) -> String {
 }
 
 fn edit_field_event(name: &str, field: &str, value: &str) -> ItemAction {
-    ItemAction::Emit(Event::Dialog(DialogEvent::AgentsManagerSetField {
+    ItemAction::Emit(DialogEvent::AgentsManagerSetField {
         name: name.to_string(),
         field: field.into(),
         value: value.to_string(),
-    }))
+    })
 }
 
 fn add_edit_actions(panel: Panel, name: &str) -> Panel {
     panel
         .item(
             "─ Save ─",
-            ItemAction::Emit(Event::Dialog(DialogEvent::AgentsManagerSave {
+            ItemAction::Emit(DialogEvent::AgentsManagerSave {
                 name: name.to_string(),
-            })),
+            }),
         )
         .item("Back", ItemAction::Pop)
         .item("Close", ItemAction::Close)
@@ -209,9 +209,9 @@ pub fn build_delete_panel(name: &str) -> PanelStack {
     let panel = Panel::new(format!("agents_delete:{}", name), format!("Delete {}?", name))
         .item(
             format!("Yes, delete {}", name),
-            ItemAction::Emit(Event::Dialog(DialogEvent::AgentsManagerDelete {
+            ItemAction::Emit(DialogEvent::AgentsManagerDelete {
                 name: name.to_string(),
-            })),
+            }),
         )
         .item("No, go back", ItemAction::Pop)
         .item("Close", ItemAction::Close);
@@ -268,7 +268,7 @@ mod tests {
         let mut state = AppState::default();
         let result = handle_agents(&mut state, "");
         match result {
-            CommandResult::Event(Event::Dialog(DialogEvent::OpenAgentsManager)) => {}
+            CommandResult::Event(DialogEvent::OpenAgentsManager) => {}
             other => panic!("expected OpenAgentsManager event, got {:?}", other),
         }
     }

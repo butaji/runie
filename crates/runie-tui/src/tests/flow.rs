@@ -4,9 +4,9 @@ use runie_core::event::{AgentEvent, InputEvent};
 #[test]
 fn test_submit_adds_message_to_queue() {
     let mut state = AppState::default();
-    state.update(Event::Input(InputEvent::Input('H')));
-    state.update(Event::Input(InputEvent::Input('i')));
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Input('H'));
+    state.update(InputEvent::Input('i'));
+    state.update(InputEvent::Submit);
     assert_eq!(state.input.input, "");
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].role, Role::User);
@@ -16,10 +16,10 @@ fn test_submit_adds_message_to_queue() {
 #[test]
 fn test_agent_thinking_sets_streaming() {
     let mut state = AppState::default();
-    state.update(Event::Input(InputEvent::Submit));
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(InputEvent::Submit);
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
+    });
     assert!(state.agent.streaming);
     assert!(state.agent.thinking_started_at.is_some());
 }
@@ -28,16 +28,16 @@ fn test_agent_thinking_sets_streaming() {
 fn test_agent_response_creates_messages() {
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
-    }));
+    });
     assert_eq!(state.session.messages.len(), 2);
     assert_eq!(state.session.messages[0].role, Role::Thought);
     assert_eq!(state.session.messages[1].role, Role::Assistant);
@@ -47,52 +47,52 @@ fn test_agent_response_creates_messages() {
 fn test_agent_done_clears_streaming() {
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Hi".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Done {
+    });
+    state.update(AgentEvent::Done {
         id: "req.0".to_string(),
-    }));
+    });
     assert!(!state.agent.streaming);
 }
 
 #[test]
 fn test_sequential_fifo_a_then_b() {
     let mut state = AppState::default();
-    state.update(Event::Input(InputEvent::Input('A')));
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Input('A'));
+    state.update(InputEvent::Submit);
     state.pop_queue();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Done {
+    });
+    state.update(AgentEvent::Done {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Thinking {
+    });
+    state.update(AgentEvent::Thinking {
         id: "req.1".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.1".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.1".to_string(),
         content: "B".to_string(),
-    }));
+    });
     let thoughts: Vec<_> = state
         .session
         .messages
@@ -122,11 +122,11 @@ fn test_list_files_command_flow() {
     let mut state = AppState::default();
 
     for c in "list files".chars() {
-        state.update(Event::Input(InputEvent::Input(c)));
+        state.update(InputEvent::Input(c));
     }
     assert_eq!(state.input.input, "list files");
 
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Submit);
     assert!(state.input.input.is_empty(), "Input cleared after submit");
 
     let (content, id) = state.peek_queue().expect("queued request");
@@ -141,25 +141,25 @@ fn test_list_files_command_flow() {
 fn test_list_files_message_content() {
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_files".to_string(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 1.0, output: String::new(),
-     }));
-    state.update(Event::Agent(AgentEvent::Thinking {
+    });
+    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_files".to_string(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 1.0, output: String::new(),
+     });
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "\nsrc/main.rs".to_string(),
-    }));
+    });
 
     let assistant = state
         .session

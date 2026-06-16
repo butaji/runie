@@ -5,7 +5,6 @@
 //! existing providers.
 
 use crate::dialog::{ItemAction, Panel, PanelStack};
-use crate::event::DialogEvent;
 use crate::login_config::list_configured_providers;
 
 /// Build the root providers dialog panel.
@@ -32,7 +31,7 @@ pub fn build_providers_dialog(current_provider: &str, current_model: &str) -> Pa
     panel = panel
         .item(
             "+ Add provider",
-            ItemAction::Emit(crate::Event::Dialog(DialogEvent::ProvidersAdd)),
+            ItemAction::Emit(crate::event::DialogEvent::ProvidersAdd),
         )
         .item("Close", ItemAction::Close);
 
@@ -60,16 +59,16 @@ fn add_provider_section(
 
     for model in models {
         let label = model_label(model, is_active, model == current_model);
-        let evt = crate::Event::Dialog(DialogEvent::ProvidersSelectModel {
+        let evt = crate::event::DialogEvent::ProvidersSelectModel {
             provider: provider_name.to_string(),
             model: model.clone(),
-        });
+        };
         panel = panel.item(&label, ItemAction::Emit(evt));
     }
 
-    let disconnect_evt = crate::Event::Dialog(DialogEvent::ProvidersDisconnect {
+    let disconnect_evt = crate::event::DialogEvent::ProvidersDisconnect {
         provider: provider_name.to_string(),
-    });
+    };
     panel
         .item("  ✕ Disconnect", ItemAction::Emit(disconnect_evt))
         .separator()

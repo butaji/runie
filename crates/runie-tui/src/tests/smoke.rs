@@ -3,7 +3,7 @@
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::event::{AgentEvent, ControlEvent, InputEvent};
-use runie_core::{AppState, Event};
+use runie_core::AppState;
 
 pub(crate) fn draw_state(state: &mut AppState) -> String {
     let backend = TestBackend::new(60, 20);
@@ -31,9 +31,9 @@ fn empty_state_renders_input_prompt() {
 #[test]
 fn user_message_renders() {
     let mut state = AppState::default();
-    state.update(Event::Input(InputEvent::Input('H')));
-    state.update(Event::Input(InputEvent::Input('i')));
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Input('H'));
+    state.update(InputEvent::Input('i'));
+    state.update(InputEvent::Submit);
     let content = draw_state(&mut state);
     assert!(content.contains("❯ Hi"), "Should render user prefix");
     assert!(content.contains("Hi"), "Should render message content");
@@ -43,16 +43,16 @@ fn user_message_renders() {
 fn agent_response_renders() {
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
-    }));
+    });
     let content = draw_state(&mut state);
     assert!(content.contains("→ Hello"), "Should render agent prefix");
 }
@@ -60,9 +60,9 @@ fn agent_response_renders() {
 #[test]
 fn tool_done_renders() {
     let mut state = AppState::default();
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_files".to_string(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
-     }));
+    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_files".to_string(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
+     });
     let content = draw_state(&mut state);
     assert!(content.contains("✓"), "Should render tool done");
     assert!(content.contains("list_files"), "Should show tool name");
@@ -71,9 +71,9 @@ fn tool_done_renders() {
 #[test]
 fn reset_clears_messages() {
     let mut state = AppState::default();
-    state.update(Event::Input(InputEvent::Input('T')));
-    state.update(Event::Input(InputEvent::Submit));
-    state.update(Event::Control(ControlEvent::Reset));
+    state.update(InputEvent::Input('T'));
+    state.update(InputEvent::Submit);
+    state.update(ControlEvent::Reset);
     let content = draw_state(&mut state);
     let count = content.matches("❯ ").count();
     assert_eq!(

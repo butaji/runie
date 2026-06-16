@@ -11,10 +11,10 @@ fn render_content(state: &mut AppState) -> String {
 
 fn add_messages(state: &mut AppState, count: usize) {
     for i in 0..count {
-        state.update(Event::Agent(AgentEvent::Response {
+        state.update(AgentEvent::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
-        }));
+        });
     }
     state.ensure_fresh();
 }
@@ -26,7 +26,7 @@ fn latest_message_visible_after_submit() {
     state.view.scroll = 5; // scrolled up
 
     state.input.input = "hello".to_string();
-    state.update(Event::Input(InputEvent::Submit));
+    state.update(InputEvent::Submit);
     state.ensure_fresh();
 
     let out = render_content(&mut state);
@@ -42,10 +42,10 @@ fn latest_agent_response_visible_when_at_bottom() {
     add_messages(&mut state, 30);
     state.view.scroll = 0; // at bottom
 
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.99".to_string(),
         content: "Latest response".to_string(),
-    }));
+    });
     state.ensure_fresh();
 
     let out = render_content(&mut state);
@@ -61,20 +61,20 @@ fn latest_thought_visible_when_at_bottom() {
     add_messages(&mut state, 30);
     state.view.scroll = 0;
 
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "I'll list files.\n".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "TOOL:list_dir:.".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
+    });
     state.ensure_fresh();
 
     let out = render_content(&mut state);
@@ -90,9 +90,9 @@ fn latest_tool_visible_when_at_bottom() {
     add_messages(&mut state, 30);
     state.view.scroll = 0;
 
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_dir".to_string(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1\nfile2\nfile3".to_string(),
-     }));
+    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_dir".to_string(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1\nfile2\nfile3".to_string(),
+     });
     state.ensure_fresh();
 
     let out = render_content(&mut state);
@@ -106,17 +106,17 @@ fn latest_tool_visible_when_at_bottom() {
 fn sticky_bottom_clips_top_not_bottom() {
     let mut state = AppState::default();
     add_messages(&mut state, 5);
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.99".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response { id: "req.99".to_string(), content: "Reasoning line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\nline11\nline12\nline13\nline14\nline15\n".to_string() }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response { id: "req.99".to_string(), content: "Reasoning line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\nline11\nline12\nline13\nline14\nline15\n".to_string() });
+    state.update(AgentEvent::Response {
         id: "req.99".to_string(),
         content: "TOOL:list_dir:.".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.99".to_string(),
-    }));
+    });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -134,10 +134,10 @@ fn user_scrolled_up_does_not_see_new_content() {
     add_messages(&mut state, 30);
     state.view.scroll = 10; // scrolled up
 
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.99".to_string(),
         content: "Hidden response".to_string(),
-    }));
+    });
     state.ensure_fresh();
 
     // When scrolled up, new content may not be visible. Key: scroll position preserved.
@@ -155,7 +155,7 @@ fn scroll_down_to_bottom_shows_latest() {
 
     // Scroll down back to bottom
     for _ in 0..15 {
-        state.update(Event::Scroll(ScrollEvent::Down));
+        state.update(ScrollEvent::Down);
     }
     assert_eq!(state.view.scroll, 0, "ScrollDown should reach bottom");
 
@@ -170,23 +170,23 @@ fn scroll_down_to_bottom_shows_latest() {
 fn mixed_content_latest_visible() {
     let mut state = AppState::default();
     add_messages(&mut state, 20);
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "◆ Thought 1.0s\nReasoning line 1\nReasoning line 2".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1\nfile2".to_string(),
-     }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1\nfile2".to_string(),
+     });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Done!".to_string(),
-    }));
+    });
     state.ensure_fresh();
     state.view.scroll = 0;
 

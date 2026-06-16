@@ -25,7 +25,7 @@ fn test_toggle_expand_changes_rendered_output() {
     );
 
     // Toggle collapse
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
 
     // Render collapsed
     terminal.draw(|f| view(f, &mut state)).expect("draw");
@@ -65,7 +65,7 @@ fn test_toggle_expand_changes_tool_render() {
     );
 
     // Toggle collapse
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
 
     // Render collapsed
     terminal.draw(|f| view(f, &mut state)).expect("draw");

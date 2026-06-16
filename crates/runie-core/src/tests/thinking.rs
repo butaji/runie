@@ -1,5 +1,5 @@
 use crate::model::ThinkingLevel;
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::{ModelConfigEvent, DialogEvent};
 use crate::session::{Session, Store};
 use crate::{AppState, Event};
 
@@ -86,16 +86,16 @@ fn shift_tab_cycles() {
     let mut state = AppState::default();
     assert_eq!(state.config.thinking_level, ThinkingLevel::Off);
 
-    state.update(Event::ModelConfig(ModelConfigEvent::CycleThinkingLevel));
+    state.update(ModelConfigEvent::CycleThinkingLevel);
     assert_eq!(state.config.thinking_level, ThinkingLevel::Low);
 
-    state.update(Event::ModelConfig(ModelConfigEvent::CycleThinkingLevel));
+    state.update(ModelConfigEvent::CycleThinkingLevel);
     assert_eq!(state.config.thinking_level, ThinkingLevel::Medium);
 
-    state.update(Event::ModelConfig(ModelConfigEvent::CycleThinkingLevel));
+    state.update(ModelConfigEvent::CycleThinkingLevel);
     assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 
-    state.update(Event::ModelConfig(ModelConfigEvent::CycleThinkingLevel));
+    state.update(ModelConfigEvent::CycleThinkingLevel);
     assert_eq!(state.config.thinking_level, ThinkingLevel::Off);
 }
 
@@ -104,7 +104,7 @@ fn slash_thinking_sets() {
     let mut state = AppState::default();
     state.input.input.push_str("/thinking high");
     state.update(Event::submit()); // Opens form with pre-filled level
-    state.update(Event::Dialog(DialogEvent::CommandFormSubmit)); // Submits the form
+    state.update(DialogEvent::CommandFormSubmit); // Submits the form
     assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 
     let sys_msgs: Vec<_> = state
@@ -226,6 +226,6 @@ fn thinking_does_not_create_a_form_panel() {
 #[test]
 fn set_thinking_level_event_updates_state() {
     let mut state = AppState::default();
-    state.update(Event::ModelConfig(ModelConfigEvent::SetThinkingLevel(crate::model::ThinkingLevel::High)));
+    state.update(ModelConfigEvent::SetThinkingLevel(crate::model::ThinkingLevel::High));
     assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 }

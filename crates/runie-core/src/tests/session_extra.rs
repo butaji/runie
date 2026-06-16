@@ -8,7 +8,7 @@ fn fresh_state() -> AppState {
 
 fn type_str(state: &mut AppState, text: &str) {
     for c in text.chars() {
-        state.update(Event::Input(InputEvent::Input(c)));
+        state.update(InputEvent::Input(c));
     }
 }
 
@@ -21,11 +21,11 @@ fn exec(state: &mut AppState, text: &str) {
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
-    state.update(Event::Input(InputEvent::Input('/')));
+    state.update(InputEvent::Input('/'));
     for c in cmd.chars() {
-        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+        state.update(DialogEvent::PaletteFilter(c));
     }
-    state.update(Event::Dialog(DialogEvent::PaletteSelect));
+    state.update(DialogEvent::PaletteSelect);
 }
 
 fn imported_session() -> crate::session::Session {
@@ -54,7 +54,7 @@ fn imported_session() -> crate::session::Session {
 fn name_sets_display_name() {
     let mut state = fresh_state();
     exec(&mut state, "/name my-project"); // Opens form with pre-filled name
-    state.update(Event::Dialog(DialogEvent::CommandFormSubmit)); // Submits the form
+    state.update(DialogEvent::CommandFormSubmit); // Submits the form
     assert_eq!(
         state.session.session_display_name,
         Some("my-project".to_string())
@@ -76,7 +76,7 @@ fn name_form_submit_via_submit_event_also_works() {
 fn name_form_submit_via_palette_select_event_works() {
     let mut state = fresh_state();
     exec(&mut state, "/name via-palette"); // Opens form
-    state.update(Event::Dialog(DialogEvent::PaletteSelect)); // Submits the form (panel-stack path)
+    state.update(DialogEvent::PaletteSelect); // Submits the form (panel-stack path)
     assert_eq!(
         state.session.session_display_name,
         Some("via-palette".to_string())
@@ -89,7 +89,7 @@ fn name_shows_current_when_no_args() {
     state.session.session_display_name = Some("existing".to_string());
     palette_select(&mut state, "name");
     // Form shows with current value pre-filled, submit to see behavior
-    state.update(Event::Dialog(DialogEvent::CommandFormSubmit));
+    state.update(DialogEvent::CommandFormSubmit);
     let sys_msgs: Vec<_> = state
         .session
         .messages
@@ -111,7 +111,7 @@ fn name_truncates_long_input() {
     state.input.input.push_str("/name ");
     state.input.input.push_str(&long_name);
     state.update(Event::submit()); // Opens form with pre-filled name
-    state.update(Event::Dialog(DialogEvent::CommandFormSubmit)); // Submits the form
+    state.update(DialogEvent::CommandFormSubmit); // Submits the form
     let name = state.session.session_display_name.as_ref().unwrap();
     assert_eq!(name.chars().count(), 65, "truncated to 64 + ellipsis");
     assert!(name.ends_with('…'), "ends with ellipsis");

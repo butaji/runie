@@ -1,5 +1,5 @@
 use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::{ControlEvent, AgentEvent};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::elements::Element;
 use crate::ui::LazyCache;
@@ -18,22 +18,22 @@ fn dispatch(state: &mut AppState, events: &[Event]) {
 fn global_collapse_persists_after_agent_response() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "I'll list files.".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    });
+    state.update(ControlEvent::ToggleExpand);
     assert!(state.view.all_collapsed);
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Here they are.".to_string(),
-    }));
+    });
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
     let has_summary = feed
@@ -56,12 +56,12 @@ fn global_collapse_persists_after_agent_response() {
 
 fn thought_events(id: &str, content: &str) -> Vec<Event> {
     vec![
-        Event::Agent(AgentEvent::Thinking { id: id.into() }),
-        Event::Agent(AgentEvent::Response {
+        AgentEvent::Thinking { id: id.into() },
+        AgentEvent::Response {
             id: id.into(),
             content: content.into(),
-        }),
-        Event::Agent(AgentEvent::ThoughtDone { id: id.into() }),
+        },
+        AgentEvent::ThoughtDone { id: id.into() },
     ]
 }
 
@@ -70,7 +70,7 @@ fn global_collapse_persists_after_second_thought() {
     let mut state = fresh_state();
     state.agent.streaming = true;
     dispatch(&mut state, &thought_events("req.0", "A"));
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(state.view.all_collapsed);
     dispatch(&mut state, &thought_events("req.1", "B"));
     state.ensure_fresh();
@@ -97,14 +97,14 @@ fn global_collapse_persists_after_second_thought() {
 fn global_collapse_persists_after_second_tool() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".to_string(),
-     }));
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".to_string(),
+     });
+    state.update(ControlEvent::ToggleExpand);
     assert!(state.view.all_collapsed);
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.1".to_string(), name: "cat".to_string(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "b".to_string(),
-     }));
+    state.update(AgentEvent::ToolStart { id: "req.1".to_string(), name: "cat".to_string(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "b".to_string(),
+     });
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
     let summaries: Vec<_> = feed
@@ -129,28 +129,28 @@ fn global_collapse_persists_after_second_tool() {
 fn new_thought_respects_global_collapse_flag() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    }));
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    });
+    state.update(ControlEvent::ToggleExpand);
     assert!(state.view.all_collapsed);
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "req.1".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.1".to_string(),
         content: "B".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone {
+    });
+    state.update(AgentEvent::ThoughtDone {
         id: "req.1".to_string(),
-    }));
+    });
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
     let summaries: Vec<_> = feed
@@ -170,18 +170,18 @@ fn new_tool_respects_global_collapse_flag() {
     let mut state = fresh_state();
     state.agent.streaming = true;
 
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".to_string(),
-     }));
+    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".to_string(),
+     });
 
     // Collapse all
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(state.view.all_collapsed);
 
     // New tool arrives while globally collapsed
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.1".to_string(), name: "cat".to_string(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "b".to_string(),
-     }));
+    state.update(AgentEvent::ToolStart { id: "req.1".to_string(), name: "cat".to_string(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "b".to_string(),
+     });
     state.ensure_fresh();
 
     let feed = LazyCache::feed(&state);
@@ -209,15 +209,15 @@ fn expand_then_collapse_then_expand_same_state() {
     });
 
     // Toggle 1: collapse all
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(state.view.all_collapsed);
 
     // Toggle 2: expand all
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(!state.view.all_collapsed);
 
     // Toggle 3: collapse all again
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(state.view.all_collapsed);
 
     state.ensure_fresh();
@@ -236,10 +236,10 @@ fn expand_then_collapse_then_expand_same_state() {
 fn running_tool_ignored_by_global_toggle() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_dir".to_string(), input: serde_json::Value::Null }));
+    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_dir".to_string(), input: serde_json::Value::Null });
 
     // Toggle while tool is still running
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "Toggle should still flip global flag"
@@ -270,7 +270,7 @@ fn reset_clears_global_collapse() {
     });
     state.view.all_collapsed = true;
 
-    state.update(Event::Control(ControlEvent::Reset));
+    state.update(ControlEvent::Reset);
     assert!(
         !state.view.all_collapsed,
         "Reset should clear global collapse flag"
@@ -295,7 +295,7 @@ fn global_toggle_does_not_affect_user_or_assistant_messages() {
         ..Default::default()
     });
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "Global flag should flip even with no thoughts/tools"
@@ -308,7 +308,7 @@ fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
     add_thought_and_tool(&mut state);
     state.ensure_fresh();
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     assert!(state.view.all_collapsed);
 
     state.session.messages.push(ChatMessage {

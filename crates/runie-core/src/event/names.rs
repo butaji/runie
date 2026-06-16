@@ -1,41 +1,33 @@
-//! Event name mapping — generated from sub-enum `IntoStaticStr` derives.
+//! Event name mapping — flat `Event` constructors for bindable names.
 //!
 //! `EVENT_NAMES` maps each bindable event name to its default constructor.
-//! Names are derived from the sub-enum variant names (via `strum::IntoStaticStr`).
+//! Names match the flat `Event` variant names directly.
 //! Parameterized variants (those with data) are handled separately in `Event::from_name`.
-//!
-//! To add a new bindable event:
-//! 1. Ensure the sub-enum variant has no data (or is explicitly handled in `from_name`)
-//! 2. The name is automatically derived from the variant name via `#[strum(serialize_all = "PascalCase")]`
-//! 3. Add the constructor to the appropriate list below
 
 use super::variants::Event;
-use super::{
-    ControlEvent, DialogEvent, InputEvent, ModelConfigEvent, SystemEvent,
-};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/// Helper to build a zero-arg constructor for a sub-enum variant.
+/// Helper to build a zero-arg constructor for a flat event variant.
 macro_rules! ctor {
-    (Input::$v:ident) => {|| Event::Input(InputEvent::$v)};
-    (Agent::$v:ident) => {|| Event::Agent(AgentEvent::$v)};
-    (Control::$v:ident) => {|| Event::Control(ControlEvent::$v)};
-    (Dialog::$v:ident) => {|| Event::Dialog(DialogEvent::$v)};
-    (Edit::$v:ident) => {|| Event::Edit(EditEvent::$v)};
-    (System::$v:ident) => {|| Event::System(SystemEvent::$v)};
-    (Scroll::$v:ident) => {|| Event::Scroll(ScrollEvent::$v)};
-    (Session::$v:ident) => {|| Event::Session(SessionEvent::$v)};
-    (LoginFlow::$v:ident) => {|| Event::LoginFlow(LoginFlowEvent::$v)};
-    (Command::$v:ident) => {|| Event::Command(CommandEvent::$v)};
-    (ModelConfig::$v:ident) => {|| Event::ModelConfig(ModelConfigEvent::$v)};
+    (Input::$v:ident) => {|| Event::$v};
+    (Agent::$v:ident) => {|| Event::$v};
+    (Scroll::$v:ident) => {|| Event::$v};
+    (Control::$v:ident) => {|| Event::$v};
+    (Dialog::$v:ident) => {|| Event::$v};
+    (Edit::$v:ident) => {|| Event::$v};
+    (System::$v:ident) => {|| Event::$v};
+    (Session::$v:ident) => {|| Event::$v};
+    (LoginFlow::$v:ident) => {|| Event::$v};
+    (Command::$v:ident) => {|| Event::$v};
+    (Sidebar::$v:ident) => {|| Event::$v};
+    (Orchestrator::$v:ident) => {|| Event::$v};
+    (ModelConfig::$v:ident) => {|| Event::$v};
 }
 
 // ── Bindable event table ───────────────────────────────────────────────────────
 
 /// Bindable event names paired with their default zero-arg constructors.
-/// This is generated from the sub-enum variants; see module docs for how to extend.
-#[allow(clippy::type_complexity)]
 pub const EVENT_NAMES: &[(&str, fn() -> Event)] = &[
     // ── Input events (unit variants only) ──────────────────────────────────
     ("Backspace", ctor!(Input::Backspace)),

@@ -2,7 +2,7 @@
 
 use crate::event::Event;
 
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::AgentEvent;
 use crate::model::AppState;
 fn fresh_state() -> AppState {
     AppState::default()
@@ -37,10 +37,10 @@ fn submit_increments_tokens_in() {
 fn agent_response_increments_tokens_out() {
     let mut state = fresh_state();
     state.agent.turn_active = true;
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "r1".to_string(),
         content: "hello".to_string(),
-    }));
+    });
     assert_eq!(
         state.agent.tokens_out, 2,
         "Output 'hello' = 5 chars ≈ 2 tokens"
@@ -52,14 +52,14 @@ fn agent_response_increments_tokens_out() {
 fn multiple_responses_accumulate_tokens_out() {
     let mut state = fresh_state();
     state.agent.turn_active = true;
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "r1".to_string(),
         content: "hello".to_string(),
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "r1".to_string(),
         content: " world".to_string(),
-    }));
+    });
     assert_eq!(
         state.agent.tokens_out, 4,
         "'hello' (2) + ' world' (2) = 4 tokens"
@@ -71,15 +71,15 @@ fn finish_turn_resets_turn_tokens() {
     let mut state = fresh_state();
     state.agent.turn_active = true;
     state.agent.current_request_id = Some("r1".to_string());
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "r1".to_string(),
         content: "hello world".to_string(),
-    }));
+    });
     assert_eq!(state.agent.turn_tokens_out, 3);
 
-    state.update(Event::Agent(AgentEvent::Done {
+    state.update(AgentEvent::Done {
         id: "r1".to_string(),
-    }));
+    });
     assert_eq!(
         state.agent.turn_tokens_out, 0,
         "Turn tokens reset on finish"
@@ -185,9 +185,9 @@ fn speed_clamps_to_zero_after_long_idle() {
 #[test]
 fn turn_start_initializes_speed_tracking() {
     let mut state = fresh_state();
-    state.update(Event::Agent(AgentEvent::Thinking {
+    state.update(AgentEvent::Thinking {
         id: "r1".to_string(),
-    }));
+    });
     assert!(
         state.agent.last_speed_update.is_some(),
         "Speed tracking should init on turn start"
@@ -205,9 +205,9 @@ fn new_turn_resets_speed() {
 
     // Finish turn
     state.agent.current_request_id = Some("r1".to_string());
-    state.update(Event::Agent(AgentEvent::Done {
+    state.update(AgentEvent::Done {
         id: "r1".to_string(),
-    }));
+    });
 
     assert_eq!(state.agent.speed_tps, 0.0, "Speed reset on turn end");
     assert_eq!(state.agent.turn_tokens_out, 0, "Turn tokens reset");

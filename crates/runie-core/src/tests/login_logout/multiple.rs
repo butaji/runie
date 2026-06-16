@@ -1,5 +1,4 @@
-use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::DialogEvent;
 use crate::model::AppState;
 
 use super::{add_provider_and_select_model, clean_config};
@@ -16,10 +15,10 @@ fn disconnect_active_provider_switches_to_another() {
 
     state.dialog_back_stack.clear();
 
-    state.update(Event::Dialog(DialogEvent::ProvidersDialog));
-    state.update(Event::Dialog(DialogEvent::ProvidersDisconnect{
+    state.update(DialogEvent::ProvidersDialog);
+    state.update(DialogEvent::ProvidersDisconnect{
         provider: "openai".into(),
-    }));
+    });
 
     assert_ne!(
         state.config.current_provider, "openai",

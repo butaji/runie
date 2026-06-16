@@ -1,6 +1,5 @@
 //! Typed effect commands dispatched from the main event loop.
 
-use runie_core::event::{ControlEvent, DialogEvent, LoginFlowEvent};
 use runie_core::model::ThinkingLevel;
 use runie_core::{AppState, ChatMessage, Event as CoreEvent, Snapshot};
 use tokio::sync::{mpsc, watch};
@@ -59,28 +58,28 @@ impl EffectCommand {
         caps: &TerminalCapabilities,
     ) -> Option<Self> {
         match evt {
-            CoreEvent::Control(ControlEvent::OpenExternalEditor) => Some(Self::OpenExternalEditor {
+            CoreEvent::OpenExternalEditor => Some(Self::OpenExternalEditor {
                 text: state.input.input.clone(),
             }),
-            CoreEvent::Dialog(DialogEvent::CopyToClipboard(text)) => Some(Self::CopyToClipboard { text: text.clone() }),
-            CoreEvent::Dialog(DialogEvent::CopyLastResponse) => Some(Self::CopyLastResponse {
+            CoreEvent::CopyToClipboard(text) => Some(Self::CopyToClipboard { text: text.clone() }),
+            CoreEvent::CopyLastResponse => Some(Self::CopyLastResponse {
                 messages: state.session.messages.clone(),
             }),
-            CoreEvent::Dialog(DialogEvent::CopySelectedBlock) => {
+            CoreEvent::CopySelectedBlock => {
                 state.copy_selected_post_text().map(|text| Self::CopySelectedBlock { text })
             }
-            CoreEvent::Dialog(DialogEvent::CopyBlockMetadata) => {
+            CoreEvent::CopyBlockMetadata => {
                 state.copy_selected_post_metadata().map(|text| Self::CopyBlockMetadata { text })
             }
-            CoreEvent::Control(ControlEvent::ShareSession) => Some(Self::ShareSession {
+            CoreEvent::ShareSession => Some(Self::ShareSession {
                 messages: state.session.messages.clone(),
                 display_name: state.session.session_display_name.clone(),
             }),
-            CoreEvent::Control(ControlEvent::Suspend) => Some(Self::Suspend {
+            CoreEvent::Suspend => Some(Self::Suspend {
                 terminal_caps: *caps,
             }),
-            CoreEvent::LoginFlow(LoginFlowEvent::SubmitKey { .. }) => login_command(evt),
-            CoreEvent::Control(ControlEvent::SpawnAgent { prompt }) => Some(Self::SpawnAgent {
+            CoreEvent::SubmitKey { .. } => login_command(evt),
+            CoreEvent::SpawnAgent { prompt } => Some(Self::SpawnAgent {
                 prompt: prompt.clone(),
                 provider: state.config.current_provider.clone(),
                 model: state.config.current_model.clone(),
@@ -135,7 +134,7 @@ impl EffectCommand {
 }
 
 fn login_command(evt: &CoreEvent) -> Option<EffectCommand> {
-    if let CoreEvent::LoginFlow(LoginFlowEvent::SubmitKey { provider, key }) = evt {
+    if let CoreEvent::SubmitKey { provider, key } = evt {
         Some(EffectCommand::LoginFlowSubmitKey {
             provider: provider.clone(),
             key: key.clone(),

@@ -16,16 +16,16 @@ use crate::login_flow::{
 #[allow(dead_code)]
 pub fn providers_event(state: &mut crate::model::AppState, event: crate::Event) {
     match event {
-        crate::Event::Dialog(crate::event::DialogEvent::ProvidersDialog) => {
+        crate::event::DialogEvent::ProvidersDialog => {
             open_providers_dialog(state)
         }
-        crate::Event::Dialog(crate::event::DialogEvent::ProvidersSelectModel { provider, model }) => {
+        crate::event::DialogEvent::ProvidersSelectModel { provider, model } => {
             providers_select_model(state, &provider, &model);
         }
-        crate::Event::Dialog(crate::event::DialogEvent::ProvidersDisconnect { provider }) => {
+        crate::event::DialogEvent::ProvidersDisconnect { provider } => {
             providers_disconnect(state, &provider);
         }
-        crate::Event::Dialog(crate::event::DialogEvent::ProvidersAdd) => {
+        crate::event::DialogEvent::ProvidersAdd => {
             // Close the providers dialog and start the login flow.
             // Push current dialog to back stack so Esc returns here.
             if let Some(current) = state.open_dialog.take() {
@@ -112,6 +112,7 @@ pub fn login_flow_event(state: &mut crate::model::AppState, event: LoginFlowEven
         LoginFlowEvent::ToggleModel { model } => login_flow_toggle_model(state, model),
         LoginFlowEvent::Save => login_flow_save(state),
         LoginFlowEvent::Cancel => login_flow_cancel(state),
+        _ => {}
     }
 }
 

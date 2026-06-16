@@ -7,7 +7,7 @@
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::event::ControlEvent;
-use runie_core::{AppState, ChatMessage, Event, Role};
+use runie_core::{AppState, ChatMessage, Role};
 
 fn count_matching_lines(state: &AppState, markers: &[&str]) -> usize {
     let backend = TestBackend::new(40, 12);
@@ -52,7 +52,7 @@ fn ctrl_shift_e_collapses_thought_post_in_feed() {
         "expanded thought post should show content lines, got {before}"
     );
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     state.ensure_fresh();
 
     let after = count_matching_lines(&state, &["line1", "line2", "line3"]);
@@ -90,7 +90,7 @@ fn ctrl_shift_e_collapses_tool_post_in_feed() {
         "expanded tool post should show output lines, got {before}"
     );
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     state.ensure_fresh();
 
     let after = count_matching_lines(&state, &["file1.rs", "file2.rs"]);
@@ -117,12 +117,12 @@ fn ctrl_shift_e_twice_restores_post_lines() {
 
     let original = count_matching_lines(&state, &["alpha", "beta"]);
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     state.ensure_fresh();
     let collapsed = count_matching_lines(&state, &["alpha", "beta"]);
     assert!(collapsed < original, "thought post should collapse");
 
-    state.update(Event::Control(ControlEvent::ToggleExpand));
+    state.update(ControlEvent::ToggleExpand);
     state.ensure_fresh();
     let restored = count_matching_lines(&state, &["alpha", "beta"]);
     assert_eq!(

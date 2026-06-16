@@ -1,7 +1,6 @@
 //! Command Flow Types
 
 use crate::dialog::PanelStack;
-use crate::event::ControlEvent;
 use crate::model::AppState;
 use crate::Event;
 
@@ -164,9 +163,9 @@ impl CommandResult {
 /// Build a form panel for the /spawn command when called without arguments.
 /// Collects the prompt via a single text field.
 fn spawn_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::Event::Control(ControlEvent::SpawnAgent {
+    crate::event::ControlEvent::SpawnAgent {
         prompt: values.get("prompt").cloned().unwrap_or_default(),
-    })
+    }
 }
 
 pub fn build_spawn_form_panel() -> PanelStack {

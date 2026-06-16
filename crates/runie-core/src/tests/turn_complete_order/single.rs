@@ -2,7 +2,7 @@
 
 use crate::event::Event;
 
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::AgentEvent;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::LazyCache;
 fn fresh_state() -> AppState {
@@ -39,24 +39,24 @@ fn element_kinds_no_spacer(state: &AppState) -> Vec<String> {
 fn turn_complete_is_last_after_normal_flow() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".into(),
-     }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".into(),
+     });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 2.0,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
 
     let kinds = element_kinds_no_spacer(&state);
@@ -72,24 +72,24 @@ fn turn_complete_is_last_after_normal_flow() {
 fn turn_complete_is_last_when_response_after_turn_complete() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-     }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+     });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello ".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "world".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
 
     let kinds = element_kinds_no_spacer(&state);
@@ -105,23 +105,23 @@ fn turn_complete_is_last_when_response_after_turn_complete() {
 fn turn_complete_is_last_with_multiple_tools() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "cat".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.1, output: "a".into(),
-     }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.2, output: "b".into(),
-     }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "cat".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.1, output: "a".into(),
+     });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.2, output: "b".into(),
+     });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 3.0,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
 
     let kinds = element_kinds_no_spacer(&state);
@@ -137,16 +137,16 @@ fn turn_complete_is_last_with_multiple_tools() {
 fn turn_complete_is_last_when_tool_end_after_turn_complete() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
-    }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".into(),
-     }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".into(),
+     });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
 
     let kinds = element_kinds_no_spacer(&state);
@@ -162,24 +162,24 @@ fn turn_complete_is_last_when_tool_end_after_turn_complete() {
 fn turn_complete_survives_empty_content_timestamp_bump() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
-    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }));
-    state.update(Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-     }));
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+     });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
-    }));
-    state.update(Event::Agent(AgentEvent::Response {
+    });
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
 
     let kinds = element_kinds_no_spacer(&state);
@@ -193,20 +193,20 @@ fn turn_complete_survives_empty_content_timestamp_bump() {
 
 fn first_turn_with_tool_events() -> Vec<Event> {
     vec![
-        Event::Agent(AgentEvent::Thinking { id: "req.0".into() }),
-        Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }),
-        Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null }),
-        Event::Agent(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-         }),
-        Event::Agent(AgentEvent::Response {
+        AgentEvent::Thinking { id: "req.0".into() },
+        AgentEvent::ThoughtDone { id: "req.0".into() },
+        AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
+        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
+         },
+        AgentEvent::Response {
             id: "req.0".into(),
             content: "First turn".into(),
-        }),
-        Event::Agent(AgentEvent::TurnComplete {
+        },
+        AgentEvent::TurnComplete {
             id: "req.0".into(),
             duration_secs: 1.0,
-        }),
-        Event::Agent(AgentEvent::Done { id: "req.0".into() }),
+        },
+        AgentEvent::Done { id: "req.0".into() },
     ]
 }
 
@@ -245,15 +245,15 @@ fn turn_complete_before_next_turn_user_message() {
 fn turn_complete_timestamp_is_max_after_done() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Agent(AgentEvent::Response {
+    state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    }));
-    state.update(Event::Agent(AgentEvent::TurnComplete {
+    });
+    state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
-    }));
-    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
+    });
+    state.update(AgentEvent::Done { id: "req.0".into() });
 
     let turn_ts = state
         .session

@@ -1,5 +1,5 @@
 use crate::commands::dsl::handlers::agents::handle_agents;
-use crate::event::{DialogEvent, Event};
+use crate::event::DialogEvent;
 use crate::model::AppState;
 
 #[test]
@@ -15,7 +15,7 @@ fn slash_agents_handler_returns_open_event() {
     let mut state = AppState::default();
     let result = handle_agents(&mut state, "");
     match result {
-        crate::commands::CommandResult::Event(Event::Dialog(DialogEvent::OpenAgentsManager)) => {}
+        crate::commands::CommandResult::Event(DialogEvent::OpenAgentsManager) => {}
         other => panic!("expected OpenAgentsManager, got {:?}", other),
     }
 }

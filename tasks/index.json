@@ -1812,16 +1812,18 @@
     },
     {
       "id": "flatten-event-enum",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P0",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [
         "coalesce-update-modules",
         "fix-durable-event-mapping"
       ],
-      "file": "tasks/flatten-event-enum.md"
+      "file": "tasks/flatten-event-enum.md",
+      "notes": "Flattened Event into a single enum with ~188 leaf variants. Sub-enums reduced to type aliases. Dispatcher and EVENT_NAMES updated. All 2060+ workspace tests pass."
     },
     {
       "id": "fix-durable-event-mapping",

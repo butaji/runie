@@ -29,19 +29,47 @@ impl AppState {
     /// Main event dispatcher — merged from update() and dispatch_event().
     pub fn update(&mut self, event: Event) {
         match event {
-            Event::Input(e) => self.handle_input_event(e),
-            Event::Agent(e) => dispatch_event(self, Event::Agent(e)),
-            Event::Scroll(e) => dispatch_event(self, Event::Scroll(e)),
-            Event::Control(e) => dispatch_event(self, Event::Control(e)),
-            Event::ModelConfig(e) => dispatch_event(self, Event::ModelConfig(e)),
-            Event::Dialog(e) => self.handle_dialog_event(e),
-            Event::Edit(e) => dispatch_event(self, Event::Edit(e)),
-            Event::System(e) => dispatch_event(self, Event::System(e)),
-            Event::Session(e) => dispatch_event(self, Event::Session(e)),
-            Event::Command(e) => dispatch_event(self, Event::Command(e)),
-            Event::LoginFlow(e) => dispatch_event(self, Event::LoginFlow(e)),
-            Event::Sidebar(e) => self.handle_sidebar_event(e),
-            Event::Orchestrator(e) => dispatch_event(self, Event::Orchestrator(e)),
+            Event::Show
+            | Event::Hide
+            | Event::FocusOrchestrator
+            | Event::FocusSubagent(_)
+            | Event::UpdateStatus { .. }
+            | Event::SetSubagents(_)
+            | Event::SetOrchestratorStatus(_) => {
+                self.handle_sidebar_event(event);
+                return;
+            }
+            Event::StateChanged { .. }
+            | Event::PlanStarted
+            | Event::PlanningStarted
+            | Event::PlanGenerated { .. }
+            | Event::PlanningFailed { .. }
+            | Event::SubagentDispatched { .. }
+            | Event::SubagentStatusChanged { .. }
+            | Event::SubagentCompleted { .. }
+            | Event::SubagentFailed { .. }
+            | Event::SynthesisStarted
+            | Event::SynthesisComplete { .. }
+            | Event::Finished { .. }
+            | Event::Cancelled => {
+                self.handle_orchestrator_event(event);
+                return;
+            }
+            _ => {}
+        }
+        if self.try_handle_dialog_event_input(&event) {
+            return;
+        }
+        if self.try_handle_vim_dialog_back_input(&event) {
+            return;
+        }
+        if self.try_handle_vim_nav_event_input(&event) {
+            return;
+        }
+        if is_dialog_event(&event) {
+            self.handle_dialog_event(&event);
+        } else {
+            dispatch_event(self, event);
         }
     }
 
@@ -70,6 +98,7 @@ impl AppState {
             crate::event::SidebarEvent::SetOrchestratorStatus(status) => {
                 self.sidebar.set_orchestrator_status(status);
             }
+            _ => {}
         }
         self.mark_dirty();
     }
@@ -129,28 +158,15 @@ impl AppState {
         self.mark_dirty();
     }
 
-    fn handle_input_event(&mut self, event: crate::event::InputEvent) {
-        if self.try_handle_dialog_event_input(&event) {
+    fn handle_dialog_event(&mut self, event: &Event) {
+        if is_login_flow_dialog_event(event) || is_providers_dialog_event(event) {
+            dispatch_event(self, event.clone());
             return;
         }
-        if self.try_handle_vim_dialog_back_input(&event) {
+        if self.try_handle_dialog_event_dialog(event) {
             return;
         }
-        if self.try_handle_vim_nav_event_input(&event) {
-            return;
-        }
-        dispatch_event(self, Event::Input(event));
-    }
-
-    fn handle_dialog_event(&mut self, event: DialogEvent) {
-        if is_login_flow_dialog_event(&event) || is_providers_dialog_event(&event) {
-            dispatch_event(self, Event::Dialog(event));
-            return;
-        }
-        if self.try_handle_dialog_event_dialog(&event) {
-            return;
-        }
-        dispatch_event(self, Event::Dialog(event));
+        dispatch_event(self, event.clone());
     }
 
     fn try_handle_dialog_event_input(&mut self, event: &crate::event::InputEvent) -> bool {
@@ -176,7 +192,7 @@ impl AppState {
             | crate::event::InputEvent::HistoryNext
             | crate::event::InputEvent::CursorLeft
             | crate::event::InputEvent::CursorRight => {
-                dialog::update_dialog(self, Event::Input(event.clone()));
+                dialog::update_dialog(self, event.clone());
                 return true;
             }
             _ => {}
@@ -196,20 +212,20 @@ impl AppState {
         if !self.view.vim_nav_mode {
             return false;
         }
-        let Some(handled) = self.handle_vim_nav_event(&Event::Input(event.clone())) else {
+        let Some(handled) = self.handle_vim_nav_event(event) else {
             return false;
         };
         !handled
     }
 
-    fn try_handle_dialog_event_dialog(&mut self, event: &DialogEvent) -> bool {
+    fn try_handle_dialog_event_dialog(&mut self, event: &Event) -> bool {
         if self.open_dialog.is_none() {
             return false;
         }
         if self.login_flow.is_some() && matches!(event, DialogEvent::ProvidersAdd) {
             return false;
         }
-        dialog::update_dialog(self, Event::Dialog(event.clone()));
+        dialog::update_dialog(self, event.clone());
         true
     }
 
@@ -272,31 +288,134 @@ fn is_providers_dialog_event(event: &DialogEvent) -> bool {
     )
 }
 
+fn is_dialog_event(event: &Event) -> bool {
+    matches!(
+        event,
+        Event::ToggleWelcome
+            | Event::ToggleCommandPalette
+            | Event::ToggleSettingsDialog
+            | Event::ToggleModelSelector
+            | Event::ToggleScopedModelsDialog
+            | Event::ToggleVimMode
+            | Event::AtFilePicker
+            | Event::PaletteFilter(_)
+            | Event::PaletteBackspace
+            | Event::PaletteUp
+            | Event::PaletteDown
+            | Event::PaletteSelect
+            | Event::PaletteClose
+            | Event::ModelSelectorFilter(_)
+            | Event::ModelSelectorBackspace
+            | Event::ModelSelectorUp
+            | Event::ModelSelectorDown
+            | Event::ModelSelectorSelect
+            | Event::ModelSelectorClose
+            | Event::TogglePathCompletion
+            | Event::PathCompletionUp
+            | Event::PathCompletionDown
+            | Event::PathCompletionSelect
+            | Event::PathCompletionClose
+            | Event::CommandFormInput(_)
+            | Event::CommandFormBackspace
+            | Event::CommandFormUp
+            | Event::CommandFormDown
+            | Event::CommandFormSubmit
+            | Event::CommandFormClose
+            | Event::SettingsUp
+            | Event::SettingsDown
+            | Event::SettingsLeft
+            | Event::SettingsRight
+            | Event::SettingsSelect
+            | Event::SettingsClose
+            | Event::SettingsSwitchCategory { .. }
+            | Event::ScopedModelEnableAll
+            | Event::ScopedModelDisableAll
+            | Event::DialogBack
+            | Event::ProvidersDialog
+            | Event::ProvidersSelectModel { .. }
+            | Event::ProvidersDisconnect { .. }
+            | Event::ProvidersAdd
+            | Event::OpenAgentsManager
+            | Event::AgentsManagerSetField { .. }
+            | Event::AgentsManagerSave { .. }
+            | Event::AgentsManagerDelete { .. }
+            | Event::CopyToClipboard(_)
+            | Event::CopySelectedBlock
+            | Event::CopyBlockMetadata
+            | Event::InsertAtRef(_)
+    )
+}
+
 // ── Central dispatcher (formerly in dispatch.rs) ─────────────────────────────────
 
 /// Dispatch an event when no dialog is open and no special early-return
 /// handler has consumed it.
 fn dispatch_event(state: &mut AppState, event: Event) {
     match event {
-        Event::Input(e) => input::input_event(state, e),
-        Event::Agent(e) => agent::agent_event(state, e),
-        Event::Scroll(e) => input::scroll_event(state, e),
-        Event::Control(e) => system::control_event(state, e),
-        Event::ModelConfig(e) => agent::model_config_event(state, e),
-        Event::Dialog(e) => handle_dialog_event(state, e),
-        Event::Edit(e) => tools::update(state, e),
-        Event::Session(e) => handle_session_event(state, e),
-        Event::Command(e) => handle_command_event(state, e),
-        Event::System(e) => handle_system_event(state, e),
-        Event::LoginFlow(e) => login_flow::login_flow_event(state, e),
-        // Sidebar events are handled directly in AppState::update
-        Event::Sidebar(_) => {}
-        // Orchestrator events drive sidebar state
-        Event::Orchestrator(e) => state.handle_orchestrator_event(e),
+        // Input
+        Event::Input(_) | Event::Backspace | Event::Newline | Event::Submit | Event::Escape | Event::CursorLeft |
+        Event::CursorRight | Event::CursorStart | Event::CursorEnd | Event::DeleteWord | Event::DeleteToEnd |
+        Event::DeleteToStart | Event::KillChar | Event::HistoryPrev | Event::HistoryNext | Event::Undo |
+        Event::Redo | Event::CursorWordLeft | Event::CursorWordRight | Event::PageUp | Event::PageDown |
+        Event::GoToTop | Event::GoToBottom | Event::Paste(_) | Event::PasteImage | Event::MouseClick { .. } |
+        Event::MouseRelease { .. } | Event::MouseDrag { .. } | Event::MouseMove { .. } | Event::MouseScrollUp |
+        Event::MouseScrollDown | Event::FocusGained | Event::FocusLost | Event::TerminalSize { .. } => input::input_event(state, event),
+        // Agent
+        Event::Thinking { .. } | Event::ThoughtDone { .. } | Event::ToolStart { .. } | Event::ToolEnd { .. } |
+        Event::ResponseDelta { .. } | Event::Response { .. } | Event::TurnComplete { .. } | Event::Done { .. } |
+        Event::Error { .. } => agent::agent_event(state, event),
+        // Scroll
+        Event::Up | Event::Down => input::scroll_event(state, event),
+        // Control
+        Event::Quit | Event::Reset | Event::Abort | Event::FollowUp | Event::SpawnAgent { .. } |
+        Event::ToggleExpand | Event::Dequeue | Event::OpenExternalEditor | Event::ExternalEditorDone { .. } |
+        Event::ShareSession | Event::Suspend | Event::ToggleVimMode | Event::CopyLastResponse |
+        Event::OpenSessionList | Event::NewSession | Event::ResumeSession | Event::SelectSession { .. } |
+        Event::StarSession { .. } | Event::RenameSession { .. } | Event::DeleteSession { .. } => system::control_event(state, event),
+        // ModelConfig
+        Event::SwitchModel { .. } | Event::SwitchTheme { .. } | Event::CycleModelNext | Event::CycleModelPrev |
+        Event::ToggleScopedModelsDialog | Event::ScopedModelToggle { .. } | Event::ScopedModelEnableAll |
+        Event::ScopedModelDisableAll | Event::ScopedModelToggleProvider { .. } | Event::ToggleSettingsDialog |
+        Event::SettingsUp | Event::SettingsDown | Event::SettingsLeft | Event::SettingsRight |
+        Event::SettingsSelect | Event::SettingsClose | Event::SettingsSwitchCategory { .. } |
+        Event::CycleThinkingLevel | Event::SetThinkingLevel(_) | Event::ToggleReadOnly | Event::TrustProject |
+        Event::UntrustProject | Event::ReloadAll | Event::KeybindingsReloaded => agent::model_config_event(state, event),
+        // Dialog
+        Event::ToggleWelcome | Event::ToggleCommandPalette | Event::PaletteFilter(_) | Event::PaletteBackspace |
+        Event::PaletteUp | Event::PaletteDown | Event::PaletteSelect | Event::PaletteClose |
+        Event::ToggleModelSelector | Event::ModelSelectorFilter(_) | Event::ModelSelectorBackspace |
+        Event::ModelSelectorUp | Event::ModelSelectorDown | Event::ModelSelectorSelect | Event::ModelSelectorClose |
+        Event::TogglePathCompletion | Event::PathCompletionUp | Event::PathCompletionDown |
+        Event::PathCompletionSelect | Event::PathCompletionClose | Event::CommandFormInput(_) |
+        Event::CommandFormBackspace | Event::CommandFormUp | Event::CommandFormDown | Event::CommandFormSubmit |
+        Event::CommandFormClose | Event::DialogBack | Event::ProvidersDialog |
+        Event::ProvidersSelectModel { .. } | Event::ProvidersDisconnect { .. } | Event::ProvidersAdd |
+        Event::OpenAgentsManager | Event::AgentsManagerSetField { .. } | Event::AgentsManagerSave { .. } |
+        Event::AgentsManagerDelete { .. } | Event::CopyToClipboard(_) | Event::CopySelectedBlock |
+        Event::CopyBlockMetadata | Event::AtFilePicker | Event::InsertAtRef(_) => dispatch_dialog_event(state, event),
+        // Edit
+        Event::PendingEdit { .. } | Event::ApproveEdit | Event::RejectEdit => tools::update(state, event),
+        // System
+        Event::SystemMessage { .. } | Event::TransientMessage { .. } | Event::TransientError { .. } |
+        Event::ClearTransient | Event::ShowDiagnostics => handle_system_event(state, event),
+        // Session
+        Event::ForkSession { .. } | Event::CloneSession | Event::ToggleSessionTree | Event::SessionTreeFilterCycle |
+        Event::SessionTreeSelect { .. } => handle_session_event(state, event),
+        // Command
+        Event::RunLoadCommand { .. } | Event::RunSaveCommand { .. } | Event::RunDeleteCommand { .. } |
+        Event::RunImportCommand { .. } | Event::RunExportCommand { .. } | Event::RunSkillCommand { .. } |
+        Event::RunLoginCommand { .. } | Event::RunLogoutCommand { .. } | Event::RunNameCommand { .. } |
+        Event::RunForkCommand { .. } | Event::RunCompactCommand { .. } | Event::RunPromptCommand { .. } |
+        Event::RunThinkingCommand { .. } | Event::RunPaletteCommand { .. } => handle_command_event(state, event),
+        // LoginFlow
+        Event::Start | Event::SelectProvider { .. } | Event::SubmitKey { .. } | Event::ValidationDone { .. } |
+        Event::ValidationFailed { .. } | Event::ModelsFetched { .. } | Event::ToggleModel { .. } | Event::Save |
+        Event::Cancel => login_flow::login_flow_event(state, event),
+        _ => {}
     }
 }
 
-fn handle_dialog_event(state: &mut AppState, event: DialogEvent) {
+fn dispatch_dialog_event(state: &mut AppState, event: DialogEvent) {
     if is_toggle_dialog_event(&event) {
         dialog::dialog_toggle_event(state, event);
     } else if is_form_dialog_event(&event) {
@@ -388,6 +507,7 @@ fn handle_session_event(state: &mut AppState, event: SessionEvent) {
         SessionEvent::SessionTreeSelect { id } => {
             state.session_tree_select(&id);
         }
+        _ => {}
     }
 }
 
@@ -425,6 +545,7 @@ fn handle_command_event(state: &mut AppState, event: CommandEvent) {
         CommandEvent::RunPaletteCommand { name, args } => {
             run_palette_command(state, name, args);
         }
+        _ => {}
     }
 }
 
@@ -627,5 +748,6 @@ fn handle_system_event(state: &mut AppState, event: SystemEvent) {
                 crate::event::TransientLevel::Info,
             );
         }
+        _ => {}
     }
 }
