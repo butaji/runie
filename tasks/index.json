@@ -1880,13 +1880,14 @@
     },
     {
       "id": "remove-tui-mouse-target-dupe",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P1",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/remove-tui-mouse-target-dupe.md"
+      "file": "tasks/remove-tui-mouse-target-dupe.md",
+      "completed_in": "current"
     },
     {
       "id": "dedupe-keymap-tests",

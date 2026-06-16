@@ -1,6 +1,6 @@
 # Remove TUI Mouse Target Duplicate
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: TUI / Rendering
 **Priority**: P1
