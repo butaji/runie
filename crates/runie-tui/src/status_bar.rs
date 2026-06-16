@@ -5,6 +5,7 @@ use ratatui::{
     widgets::Paragraph,
     Frame,
 };
+use runie_core::display_width::width;
 use runie_core::Snapshot;
 
 use crate::theme::{style_status_idle, style_timestamp};
@@ -13,17 +14,12 @@ use crate::ui::{estimate_element_tokens, hstack};
 pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let left_text = format!(" {}", build_left_text(snap));
     let right_text = format!("{} ", build_right_status(snap));
-    let right_width = display_width(&right_text) as u16;
+    let right_width = width(&right_text) as u16;
 
     let h = hstack(area, &[Constraint::Min(0), Constraint::Length(right_width)]);
 
     f.render_widget(Paragraph::new(left_text).style(style_status_idle()), h[0]);
     f.render_widget(Paragraph::new(right_text).style(style_timestamp()), h[1]);
-}
-
-/// Count display columns (char count = width for our single-width glyphs).
-fn display_width(s: &str) -> usize {
-    s.chars().count()
 }
 
 pub(crate) fn build_left_text(snap: &Snapshot) -> String {

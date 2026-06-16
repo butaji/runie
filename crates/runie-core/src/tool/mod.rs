@@ -110,6 +110,16 @@ impl Default for ToolRegistry {
     }
 }
 
+/// Locate an executable on PATH using the `which` command.
+pub fn which_tool(name: &str) -> Option<String> {
+    std::process::Command::new("which")
+        .arg(name)
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+}
+
 // ─── Built-in Tools ───────────────────────────────────────────────────────────
 
 mod ask_user;

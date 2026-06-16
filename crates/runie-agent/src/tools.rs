@@ -1,6 +1,6 @@
 use crate::accumulator::{OutputAccumulator, TruncateStrategy};
 use crate::truncate;
-use runie_core::tool::{ToolOutput, ToolStatus};
+use runie_core::tool::{which_tool, ToolOutput, ToolStatus};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -399,15 +399,6 @@ fn edit_error(name: &str, args: &serde_json::Value, msg: &str, elapsed: std::tim
         duration: elapsed,
         status: ToolStatus::Error,
     }
-}
-
-fn which_tool(name: &str) -> Option<String> {
-    std::process::Command::new("which")
-        .arg(name)
-        .output()
-        .ok()
-        .filter(|o| o.status.success())
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
 }
 
 fn build_grep_args(

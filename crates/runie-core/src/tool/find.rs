@@ -58,7 +58,7 @@ impl Tool for FindTool {
         let full_path = resolve_path(path, &ctx.working_dir);
 
         // Try fd first, fall back to find
-        let tool = if which_tool("fd").is_some() { "fd" } else { "find" };
+        let tool = if super::which_tool("fd").is_some() { "fd" } else { "find" };
         let result = if tool == "fd" {
             run_fd(pattern, &full_path, limit)
         } else {
@@ -94,15 +94,6 @@ fn resolve_path(path: &str, working_dir: &std::path::Path) -> std::path::PathBuf
     } else {
         working_dir.join(p)
     }
-}
-
-fn which_tool(name: &str) -> Option<String> {
-    std::process::Command::new("which")
-        .arg(name)
-        .output()
-        .ok()
-        .filter(|o| o.status.success())
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
 }
 
 fn run_fd(pattern: &str, path: &std::path::Path, limit: usize) -> Result<String, std::io::Error> {

@@ -92,7 +92,7 @@ fn run_grep_impl(
     limit: usize,
     start: Instant,
 ) -> Result<ToolOutput> {
-    let tool = if which_tool("rg").is_some() { "rg" } else { "grep" };
+    let tool = if super::which_tool("rg").is_some() { "rg" } else { "grep" };
     let args = build_grep_args(pattern, path, glob.as_deref(), ignore_case, literal, limit);
 
     let output = match std::process::Command::new(tool).args(&args).output() {
@@ -144,15 +144,6 @@ fn resolve_path(path: &str, working_dir: &std::path::Path) -> std::path::PathBuf
     } else {
         working_dir.join(p)
     }
-}
-
-fn which_tool(name: &str) -> Option<String> {
-    std::process::Command::new("which")
-        .arg(name)
-        .output()
-        .ok()
-        .filter(|o| o.status.success())
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
 }
 
 fn build_grep_args(

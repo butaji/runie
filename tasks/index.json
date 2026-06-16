@@ -1924,13 +1924,14 @@
     },
     {
       "id": "dedupe-small-helpers",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/dedupe-small-helpers.md"
+      "file": "tasks/dedupe-small-helpers.md",
+      "completed_in": "current"
     }
   ]
 }
