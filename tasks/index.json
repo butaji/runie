@@ -1782,13 +1782,14 @@
     },
     {
       "id": "align-build-rs-lint-thresholds",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P0",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/align-build-rs-lint-thresholds.md"
+      "file": "tasks/align-build-rs-lint-thresholds.md",
+      "completed_in": "current"
     },
     {
       "id": "unify-tool-implementations",

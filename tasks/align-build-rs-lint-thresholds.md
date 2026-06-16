@@ -1,6 +1,6 @@
 # Align build.rs Lint Thresholds with AGENTS.md
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Configuration
 **Priority**: P0
