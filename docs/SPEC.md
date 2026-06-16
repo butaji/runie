@@ -2,7 +2,7 @@
 
 Terminal coding agent harness in Rust, inspired by [pi](https://pi.dev).
 
-> **Snapshot: 2026-06-14.** For task history, see `tasks/`.
+> **Snapshot: 2026-06-16.** For task history, see `tasks/`.
 >
 > The project is currently executing an R3 simplification pass: unify duplicated
 > types, flatten the event system, finish the AppState refactor, and consolidate
@@ -52,8 +52,7 @@ See `docs/adr/0020-team-mode-orchestration.md` for the design.
 | `runie-core`     | Events, AppState, sessions, config, commands                |
 | `runie-agent`    | Tool implementations, agent turn, subagent runner, truncation |
 | `runie-provider` | LLM providers, model catalog                                |
-| `runie-tui`      | Ratatui rendering, panels/forms, theme                      |
-| `runie-term`     | CLI entry, task dispatch, smoke harness                     |
+| `runie-tui`      | CLI entry, ratatui rendering, panels/forms, theme, terminal setup |
 | `runie-print`    | Non-interactive print mode (separate binary)                |
 | `runie-json`     | Non-interactive JSON mode                                   |
 | `runie-server`   | RPC / server mode                                           |
@@ -66,7 +65,7 @@ Each actor subscribes to the events it cares about:
 - `InputActor` publishes `InputEvent`s.
 - `AgentActor` publishes `AgentEvent`s (tool calls, streaming deltas, errors).
 - `ConfigActor` publishes `ConfigEvent`s on TOML changes.
-- `SessionActor` writes durable events to JSONL and loads sessions by replay.
+- `SessionActor` writes durable events to `redb` and loads sessions by replay.
 - `UiActor` subscribes to all events and projects them into `AppState`.
 
 `CoreEvent` is split into durable events (persisted to JSONL) and transient
@@ -225,29 +224,30 @@ features:
 
 | Priority | Task | Goal |
 |----------|------|------|
-| P0 | `tasks/unify-config-types.md` | One config TOML schema |
-| P0 | `tasks/unify-message-types.md` | One `ChatMessage`/`Role` type |
-| P0 | `tasks/unify-tool-result-types.md` | One tool-result type |
-| P1 | `tasks/flatten-event-system.md` | Flat `Event` enum, generated name mapping |
+| P0 | `tasks/delete-runie-term-archive.md` | Remove stale `runie-term-archive` crate |
+| P0 | `tasks/unify-tool-implementations.md` | One tool trait/registry, no duplicate tool bodies |
+| P0 | `tasks/flatten-event-enum.md` | Flat `Event` enum instead of nested sub-enums |
+| P0 | `tasks/fix-durable-event-mapping.md` | Persist full tool inputs/outputs and messages |
+| P0 | `tasks/unify-session-persistence.md` | Single redb-based session store |
+| P0 | `tasks/extract-ui-actor.md` | Move `AppState` mutation out of TUI main loop |
+| P0 | `tasks/extract-core-monolith.md` | Move tool/update/dialog/ui logic out of `runie-core` |
 | P1 | `tasks/complete-appstate-refactor.md` | Finish sub-state migration |
-| P1 | `tasks/coalesce-update-modules.md` | Merge 27 update modules by domain |
 | P1 | `tasks/unify-command-dsl.md` | One command definition + execution path |
-| P1 | `tasks/merge-runie-term-into-tui.md` | Single TUI crate |
-| P1 | `tasks/unify-diff-model.md` | Shared diff type |
-| P1 | `tasks/adopt-or-remove-actor-framework.md` | Resolve EventBus/Actor dead code |
 | P1 | `tasks/unify-rendering-pipeline.md` | Core AST + TUI renderer only |
-| P2 | `tasks/unify-markdown-pipeline.md` | Single markdown pass |
+| P1 | `tasks/unify-markdown-pipeline.md` | Single markdown pass |
+| P1 | `tasks/fix-clippy-warning-rot.md` | Remove dead code and clippy warnings |
 | P2 | `tasks/cleanup-state-helpers.md` | Remove duplicated helpers and dead code |
+| P2 | `tasks/box-large-event-variants.md` | Shrink oversized enum discriminants |
 
 Historical design documents have been removed; current decisions are captured in ADRs and tasks.
 
 ### Test coverage
 
-- 1,794 automated tests listed across the workspace; 1,716 pass and 78 are
-  intentionally ignored (e2e / platform-specific)
+- ~2,000 automated tests across the workspace; ~78 intentionally ignored
+  (e2e / platform-specific)
 - 4-layer TDD per `AGENTS.md`: state/logic, event handling, rendering, smoke
-- Build-time lint guardrails are 2000 lines/file, 150 lines/function,
-  complexity 30 (long-term targets remain 500/40/10; see `AGENTS.md`)
+- Build-time lint guardrails are currently 1000 lines/file, 120 lines/function,
+  25 complexity (long-term targets remain 500/40/10; see `AGENTS.md`)
 - Pre-existing failures: none blocking the main suite
 
 ### Out of scope (by design)
@@ -291,7 +291,11 @@ crates/
 │   ├── parser.rs         # Tool call parsing
 │   └── grep_find.rs      # rg/find wrappers
 ├── runie-tui/src/
+│   ├── main.rs           # CLI entry + event loop
+│   ├── lib.rs            # Terminal setup, effects, keymap exports
 │   ├── ui.rs             # draw_snapshot
+│   ├── terminal/         # Capability detection, setup
+│   ├── effects/          # Clipboard, etc.
 │   ├── popups/           # Panel/Form rendering
 │   ├── theme.rs          # Color definitions
 │   └── markdown.rs       # md → styled spans
@@ -300,9 +304,6 @@ crates/
 │   ├── anthropic.rs      # Anthropic
 │   ├── model.rs          # Model catalog
 │   └── config.rs         # Provider config
-├── runie-term/src/
-│   ├── main.rs           # Event loop, task dispatch
-│   └── keymap.rs         # Key → Event mapping
 ├── runie-print/          # Print mode binary
 ├── runie-json/           # JSON mode binary
 └── runie-server/         # RPC mode binary (crate exists, not wired)

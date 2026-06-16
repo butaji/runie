@@ -2,7 +2,7 @@
 # Comprehensive UX Audit — black box testing of all TUI interactions
 set -e
 
-BINARY="/Users/admin/.herdr/worktrees/runie/agent-impl/target/release/runie"
+BINARY="$(pwd)/target/release/runie"
 SESSION="runie_ux_$$"
 LOG="/tmp/runie_ux_$$.log"
 PANIC_LOG="/tmp/runie_ux_panic_$$.log"
@@ -30,7 +30,7 @@ echo "========================================"
 # Build fresh binary
 echo ""
 echo "Building binary..."
-cargo build --release -p runie-term 2>&1 | tail -1
+cargo build --release -p runie-tui --bin runie 2>&1 | tail -1
 
 # ============================================================================
 # SECTION 1: BASIC INPUT & SUBMISSION

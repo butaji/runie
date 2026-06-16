@@ -1,12 +1,14 @@
 # Unify Rendering Pipeline
 
-**Status**: done
+**Status**: todo
 **Milestone**: R3
 **Category**: TUI / Rendering
 **Priority**: P1
 
 **Depends on**: merge-runie-term-into-tui
 **Blocks**: (none)
+
+**Re-opened**: 2026-06-16 — `runie-core/src/ui/` still contains element/feed/transform logic tied to the view layer, and `runie-tui/src/ui/messages.rs` duplicates scroll/render concerns.
 
 ## Description
 

@@ -2,7 +2,7 @@
 # Deep UI/UX Audit — 100+ scenarios
 # Don't set -e — we handle failures manually
 
-BINARY="/Users/admin/.herdr/worktrees/runie/agent-impl/target/release/runie"
+BINARY="$(pwd)/target/release/runie"
 SESSION="runie_ui_$$"
 LOG="/tmp/ui_audit_$$.log"
 PASS=0
@@ -18,7 +18,7 @@ info() { echo "  ℹ $1"; }
 echo "========================================"
 echo "  DEEP UI/UX AUDIT — 100+ Scenarios"
 echo "========================================"
-cargo build --release -p runie-term 2>&1 | tail -1
+cargo build --release -p runie-tui --bin runie 2>&1 | tail -1
 
 # Helper: start fresh session
 fresh() {

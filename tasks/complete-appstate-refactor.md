@@ -1,12 +1,14 @@
 # Complete AppState Refactor
 
-**Status**: done
+**Status**: todo
 **Milestone**: R3
 **Category**: Core / State
 **Priority**: P1
 
 **Depends on**: (none)
 **Blocks**: coalesce-update-modules
+
+**Re-opened**: 2026-06-16 — `AppState` still mixes singleton UI flags with sub-states and contains display-only fields; the refactor is incomplete despite Phase comments being removed.
 
 ## Description
 

@@ -117,7 +117,7 @@
       "blocks": [],
       "file": "tasks/fff-location-parser.md",
       "completed_in": "current",
-      "notes": "Created crates/runie-core/src/location.rs — re-exports fff_search::Location, implements parse_location() (mirrors fff_query_parser logic), location_line(), location_col() helpers. 7 tests pass."
+      "notes": "Created crates/runie-core/src/location.rs \u2014 re-exports fff_search::Location, implements parse_location() (mirrors fff_query_parser logic), location_line(), location_col() helpers. 7 tests pass."
     },
     {
       "id": "fff-glob-tool",
@@ -224,7 +224,7 @@
       ],
       "file": "tasks/fff-indexer-actor.md",
       "completed_in": "current",
-      "notes": "FffIndexerActor implemented with fff-search crate. LMDB-backed FrecencyTracker and QueryTracker. FilePicker with background scan + watcher. SearchRequest → SearchResult event pipeline. 3 new tests pass, all 2032 workspace tests pass."
+      "notes": "FffIndexerActor implemented with fff-search crate. LMDB-backed FrecencyTracker and QueryTracker. FilePicker with background scan + watcher. SearchRequest \u2192 SearchResult event pipeline. 3 new tests pass, all 2032 workspace tests pass."
     },
     {
       "id": "harness-skill-tool-schema-enricher",
@@ -1593,7 +1593,7 @@
       "priority": "P1",
       "file": "tasks/consolidate-keybindings-into-config-toml.md",
       "depends_on": [],
-      "notes": "Added [keybindings] HashMap to Config, merged_keybindings() and load_keybindings(Some(&config)), KeybindingsReloaded event, v2→v3 migration auto-migrates keybindings.json, config watcher detects keybindings changes. 33 tests pass."
+      "notes": "Added [keybindings] HashMap to Config, merged_keybindings() and load_keybindings(Some(&config)), KeybindingsReloaded event, v2\u2192v3 migration auto-migrates keybindings.json, config watcher detects keybindings changes. 33 tests pass."
     },
     {
       "id": "unify-config-types",
@@ -1648,11 +1648,10 @@
     },
     {
       "id": "complete-appstate-refactor",
-      "status": "done",
+      "status": "todo",
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P1",
-      "completed_in": "current",
       "notes": "Phase comments gone; AppState fields already cleanly separated into sub-states (Input/Agent/View/Session/Config/Completion). No Phase N comments found.",
       "file": "tasks/complete-appstate-refactor.md",
       "depends_on": [],
@@ -1676,23 +1675,21 @@
     },
     {
       "id": "unify-command-dsl",
-      "status": "done",
+      "status": "todo",
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P1",
-      "completed_in": "current",
       "notes": "Already unified: handlers/ re-exports dsl/handlers/; all logic lives in dsl/handlers/; spec.rs is shared.",
       "file": "tasks/unify-command-dsl.md",
       "depends_on": []
     },
     {
       "id": "merge-runie-term-into-tui",
-      "status": "done",
+      "status": "todo",
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P1",
       "file": "tasks/merge-runie-term-into-tui.md",
-      "completed_in": "current",
       "depends_on": [],
       "blocks": [
         "unify-rendering-pipeline"
@@ -1723,11 +1720,10 @@
     },
     {
       "id": "unify-rendering-pipeline",
-      "status": "done",
+      "status": "todo",
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P1",
-      "completed_in": "current",
       "file": "tasks/unify-rendering-pipeline.md",
       "depends_on": [
         "merge-runie-term-into-tui"
@@ -1736,7 +1732,7 @@
     },
     {
       "id": "unify-markdown-pipeline",
-      "status": "done",
+      "status": "todo",
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P2",
@@ -1744,7 +1740,6 @@
       "depends_on": [
         "unify-rendering-pipeline"
       ],
-      "completed_in": "current",
       "notes": "Unified markdown AST in runie-core: CodeBlock and MdInline enums shared by core (line-count math) and TUI (styled rendering). BlockParser injects inline markers into text_buf; parse_spans_from_events checks style_stack on Event::Text to emit correct MdInline variant. TUI applies colors via apply_color_to_inlines. 12 markdown tests + all 2040 workspace tests pass."
     },
     {
@@ -1757,6 +1752,179 @@
       "file": "tasks/cleanup-state-helpers.md",
       "depends_on": [],
       "notes": "SpeedWindow uses VecDeque. Stub functions removed."
+    },
+    {
+      "id": "delete-runie-term-archive",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "depends_on": [],
+      "blocks": [
+        "fix-ci-runie-term-references"
+      ],
+      "file": "tasks/delete-runie-term-archive.md"
+    },
+    {
+      "id": "fix-ci-runie-term-references",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "depends_on": [
+        "delete-runie-term-archive"
+      ],
+      "blocks": [],
+      "file": "tasks/fix-ci-runie-term-references.md"
+    },
+    {
+      "id": "align-build-rs-lint-thresholds",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/align-build-rs-lint-thresholds.md"
+    },
+    {
+      "id": "unify-tool-implementations",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P0",
+      "depends_on": [],
+      "blocks": [
+        "extract-core-monolith"
+      ],
+      "file": "tasks/unify-tool-implementations.md"
+    },
+    {
+      "id": "flatten-event-enum",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "depends_on": [],
+      "blocks": [
+        "coalesce-update-modules",
+        "fix-durable-event-mapping"
+      ],
+      "file": "tasks/flatten-event-enum.md"
+    },
+    {
+      "id": "fix-durable-event-mapping",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P0",
+      "depends_on": [
+        "flatten-event-enum"
+      ],
+      "blocks": [
+        "unify-session-persistence"
+      ],
+      "file": "tasks/fix-durable-event-mapping.md"
+    },
+    {
+      "id": "unify-session-persistence",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P0",
+      "depends_on": [
+        "fix-durable-event-mapping"
+      ],
+      "blocks": [],
+      "file": "tasks/unify-session-persistence.md"
+    },
+    {
+      "id": "extract-ui-actor",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "depends_on": [
+        "extract-core-monolith"
+      ],
+      "blocks": [],
+      "file": "tasks/extract-ui-actor.md"
+    },
+    {
+      "id": "extract-core-monolith",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "depends_on": [
+        "unify-tool-implementations"
+      ],
+      "blocks": [
+        "extract-ui-actor"
+      ],
+      "file": "tasks/extract-core-monolith.md"
+    },
+    {
+      "id": "unify-permission-models",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Architecture / Security",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/unify-permission-models.md"
+    },
+    {
+      "id": "remove-tui-mouse-target-dupe",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/remove-tui-mouse-target-dupe.md"
+    },
+    {
+      "id": "dedupe-keymap-tests",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/dedupe-keymap-tests.md"
+    },
+    {
+      "id": "fix-clippy-warning-rot",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/fix-clippy-warning-rot.md"
+    },
+    {
+      "id": "box-large-event-variants",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "depends_on": [
+        "flatten-event-enum"
+      ],
+      "blocks": [],
+      "file": "tasks/box-large-event-variants.md"
+    },
+    {
+      "id": "dedupe-small-helpers",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/dedupe-small-helpers.md"
     }
   ]
 }

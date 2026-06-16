@@ -1,12 +1,14 @@
 # Unify Command DSL
 
-**Status**: done
+**Status**: todo
 **Milestone**: R3
 **Category**: Core / State
 **Priority**: P1
 
 **Depends on**: (none)
 **Blocks**: (none)
+
+**Re-opened**: 2026-06-16 — `commands/handlers/` still exists as a separate layer from `commands/dsl/`; commands are not defined in a single place.
 
 ## Description
 

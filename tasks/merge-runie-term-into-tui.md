@@ -1,12 +1,14 @@
 # Merge runie-term into runie-tui
 
-**Status**: done
+**Status**: todo
 **Milestone**: R3
 **Category**: TUI / Rendering
 **Priority**: P1
 
 **Depends on**: (none)
 **Blocks**: unify-rendering-pipeline
+
+**Re-opened**: 2026-06-16 — `crates/runie-term-archive/` still exists as a near-duplicate of `runie-tui` and must be removed.
 
 ## Description
 

@@ -164,8 +164,8 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build binary for e2e tests
-        run: cargo build -p runie-term
+      - name: Build TUI binary
+        run: cargo build -p runie-tui --bin runie
 
-      - name: Run Rust-native e2e suite
-        run: cargo test -p runie-term --test e2e -- --ignored
+      - name: Run TUI e2e-style tests
+        run: cargo test -p runie-tui toggle_e2e

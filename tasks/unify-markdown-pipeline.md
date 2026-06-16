@@ -1,12 +1,14 @@
 # Unify Markdown Pipeline
 
-**Status**: done
+**Status**: todo
 **Milestone**: R3
 **Category**: TUI / Rendering
 **Priority**: P2
 
 **Depends on**: unify-rendering-pipeline
 **Blocks**: (none)
+
+**Re-opened**: 2026-06-16 — `runie-core/src/markdown.rs` and `runie-tui/src/markdown.rs` still perform separate parsing passes; AST unification is not complete.
 
 ## Description
 

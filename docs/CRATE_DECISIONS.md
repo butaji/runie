@@ -44,6 +44,13 @@ This document records which third-party crates replace custom Runie code, which 
 | Actor runtime / EventBus | Lightweight and sufficient for current needs. |
 | Streaming buffer | Project-specific incremental “stable vs tail” behavior; no drop-in crate. |
 
+## Pending Cleanup
+
+| Area | Status | Task |
+|------|--------|------|
+| `runie-term-archive` crate | Delete after porting unique tests | `tasks/delete-runie-term-archive.md` |
+| `runie-core` monolith | Extract tool/update/dialog/ui logic to `runie-agent`/`runie-engine`/`runie-tui` | `tasks/extract-core-monolith.md` |
+
 ## References
 
 - Prior audit: `tasks/archive/crate-replacement-audit.md`
