@@ -1,6 +1,6 @@
 # Unify Rendering Pipeline
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: TUI / Rendering
 **Priority**: P1
@@ -53,3 +53,12 @@ separate core test renderer.
 
 This unifies the two markdown parsers as a side effect: core decomposes
 blocks once, TUI styles them.
+
+Verification (2026-06-16): `runie-core/src/ui/` exposes only the
+renderable AST (`Element`, `Feed`, `Post`) and pure state-to-AST
+transformation (`LazyCache`, `PostBuilder`); no Ratatui imports exist in
+core. `runie-tui` is the sole crate importing `ratatui` for rendering.
+The former core `format_test` ASCII renderer was deleted and its coverage
+folded into `crates/runie-tui/src/tests/render/flow.rs` TestBackend tests.
+Scroll math in core uses `layout::element_line_count`, which derives line
+counts from the same markdown-block AST the TUI renders.
