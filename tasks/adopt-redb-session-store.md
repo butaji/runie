@@ -1,6 +1,6 @@
 # Adopt `redb` for Session Persistence
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Sessions
 **Priority**: P2

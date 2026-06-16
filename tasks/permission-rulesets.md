@@ -1,6 +1,6 @@
 # Permission Rulesets + Read-Only Tool Classification
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Architecture / Security
 **Priority**: P1

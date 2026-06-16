@@ -1,6 +1,6 @@
 # Orchestrator Domain Types
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P0
@@ -12,60 +12,52 @@
 
 Define the pure data structures that represent an Orchestrator plan:
 `OrchestratorPlan`, `SubagentTask`, `TaskStatus`, and `PlanResult`. These types
-must be serializable and usable by the runtime without any TUI dependencies.
+are serializable and usable by the runtime without any TUI dependencies.
+
+## What was implemented
+
+- `ModelTrait` enum: `Fast`, `General`, `Reasoning`, `Vision`, `LongContext`
+  - With `label()`, `short_label()`, `Display` impl
+- `TaskStatus` enum: `Pending`, `Running`, `AwaitingUser`, `Done`, `Failed`
+  - `can_transition_to()` for lifecycle validation
+  - `is_terminal()`, `label()`
+- `SubagentTask`: `id`, `role_prompt`, `task_description`, `tool_filter`,
+  `model_trait`, `status`, `output`
+  - `SubagentTask::new()` builder
+  - `is_runnable()`
+- `OrchestratorPlan`: `tasks`, `synthesis_trait`, `summary`, `rationale`
+  - `OrchestratorPlan::simple()` helper
+  - `task_count()`, `completed_count()`, `is_complete()`, `is_unstarted()`
+- `PlanResult`: `success`, `response`, `failures`, `elapsed_secs`
+- `TaskFailure`: `task_id`, `error`
 
 ## Acceptance Criteria
 
-- [ ] `OrchestratorPlan` contains a list of `SubagentTask` items, a target model
+- [x] `OrchestratorPlan` contains a list of `SubagentTask` items, a target model
   trait for synthesis, and an optional user-facing summary.
-- [ ] `SubagentTask` has `id`, `role_prompt`, `task_description`, `tool_filter`,
+- [x] `SubagentTask` has `id`, `role_prompt`, `task_description`, `tool_filter`,
   `model_trait`, `status`, and `output`.
-- [ ] `TaskStatus` enum covers `Pending`, `Running`, `AwaitingUser`, `Done`,
+- [x] `TaskStatus` enum covers `Pending`, `Running`, `AwaitingUser`, `Done`,
   `Failed`.
-- [ ] Types implement `Serialize`/`Deserialize` and a small property-based or
-  round-trip JSON test.
-- [ ] Linter guardrails in `crates/runie-core/build.rs` still pass.
+- [x] Types implement `Serialize`/`Deserialize` and round-trip JSON tests.
+- [x] Linter guardrails in `crates/runie-core/build.rs` still pass.
 
 ## Tests
 
 ### Layer 1 — State / Logic
 
-```rust
-#[test]
-fn plan_serializes_round_trip() {
-    let plan = OrchestratorPlan {
-        tasks: vec![SubagentTask {
-            id: "t1".into(),
-            role_prompt: "You are a code reviewer.".into(),
-            task_description: "Review src/main.rs.".into(),
-            tool_filter: None,
-            model_trait: ModelTrait::Reasoning,
-            status: TaskStatus::Pending,
-            output: None,
-        }],
-        synthesis_trait: ModelTrait::General,
-        summary: None,
-    };
-    let json = serde_json::to_string(&plan).unwrap();
-    let decoded: OrchestratorPlan = serde_json::from_str(&json).unwrap();
-    assert_eq!(decoded.tasks.len(), 1);
-    assert_eq!(decoded.tasks[0].id, "t1");
-}
-```
-
-```rust
-#[test]
-fn task_status_transitions_are_valid() {
-    assert!(TaskStatus::Pending.can_transition_to(TaskStatus::Running));
-    assert!(TaskStatus::Running.can_transition_to(TaskStatus::Done));
-    assert!(!TaskStatus::Done.can_transition_to(TaskStatus::Pending));
-}
-```
+- 12 unit tests in `crates/runie-core/src/orchestrator.rs`
+  - Task status valid/invalid transitions
+  - `plan_serializes_round_trip` (JSON round-trip with all fields)
+  - `plan_simple_helper`, `plan_completion_helpers`
+  - `subagent_task_builder`, `subagent_task_not_runnable_when_not_pending`
+  - `model_trait_labels`, `model_trait_display`
+  - `plan_result_serializes`, `plan_result_with_failures`
 
 ## Files touched
 
-- `crates/runie-core/src/orchestrator.rs` (new)
-- `crates/runie-core/src/lib.rs`
+- `crates/runie-core/src/orchestrator.rs` (new — 456 lines)
+- `crates/runie-core/src/lib.rs` (added `pub mod orchestrator`)
 
 ## Out of scope
 

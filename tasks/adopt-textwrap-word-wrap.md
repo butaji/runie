@@ -1,6 +1,6 @@
 # Adopt `textwrap` for Word Wrapping
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: TUI / Rendering
 **Priority**: P1

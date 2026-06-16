@@ -1,6 +1,6 @@
 # Harness Skill: Loop Detector
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Tools
 **Priority**: P1

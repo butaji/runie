@@ -1,6 +1,6 @@
 # Welcome / Launcher Screen
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P2

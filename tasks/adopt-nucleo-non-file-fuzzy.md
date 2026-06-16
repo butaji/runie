@@ -1,6 +1,6 @@
 # Adopt `nucleo-matcher` for Non-File Fuzzy Matching
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: TUI / Rendering
 **Priority**: P1

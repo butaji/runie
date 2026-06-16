@@ -1,6 +1,6 @@
 # Unify Markdown Pipeline
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: TUI / Rendering
 **Priority**: P2

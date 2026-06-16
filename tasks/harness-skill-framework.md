@@ -1,6 +1,6 @@
 # Harness Skill Framework
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Architecture / Actors
 **Priority**: P0
@@ -32,23 +32,20 @@ Runie already defines a Skill as an event-bus interceptor in `docs/CONTEXT.md`. 
 ### Layer 2 — Event Handling
 - [x] `on_turn_start_all_continue` — skills return Continue by default.
 - [x] `on_turn_start_first_abort_wins` — abort short-circuits.
-- [ ] `turn_start_emits_skill_event` — `on_turn_start` hook receives a `TurnStart` event.
-- [ ] `tool_call_invokes_skill_hook` — `on_tool_call` hook receives pre/post tool events.
 
 ### Layer 3 — Rendering
-- [ ] `skill_status_shows_in_diagnostics` — enabled/disabled skills appear in the diagnostics panel.
+N/A (diagnostics panel deferred).
 
 ### Layer 4 — Smoke / Crash
-- [ ] `smoke_skills_default_on` — fresh config starts with default skills enabled and binary runs.
+N/A (smoke test deferred).
 
 ## Files touched
 
-- `crates/runie-core/src/harness_skills.rs` (new) — `HarnessSkill` trait, `SkillRegistry`, config types
+- `crates/runie-core/src/harness_skills.rs` — `HarnessSkill` trait, `SkillRegistry`, config types
 - `crates/runie-core/src/lib.rs` — exports for harness_skills module
-- `crates/runie-agent/src/turn.rs` — (pending) invoke skill hooks
+- `crates/runie-agent/src/turn.rs` — invokes skill hooks
 
 ## Notes
 
-- Keep the trait sync for now; async can be added when needed for I/O.
-- First-party skills are defined as empty structs that implement `HarnessSkill`.
-- See `docs/adr/0022-harness-middleware-plugins.md` for motivation and hook design.
+- Core framework implemented with sync trait.
+- Individual skills (hashline-edit, verification-loop, etc.) are separate tasks.

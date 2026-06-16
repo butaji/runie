@@ -10,12 +10,18 @@
 
 ## Description
 
-A number of small redundancies and dead functions add noise:
+A number of small redundancies and dead functions added noise:
 
-- `SpeedWindow` in `state.rs` uses `Vec::remove(0)` instead of `VecDeque`.
-- `update/mod.rs` contains stub functions that always return `false` or
-  `None` (`is_login_flow_event_input`, `is_providers_event_input`,
-  `handle_vim_nav_event_input`).
+- `SpeedWindow` in `state.rs` used `Vec::remove(0)` instead of `VecDeque`.
+- `update/mod.rs` contained stub functions that always returned `false` or
+  `None` (`is_login_flow_event_input`, `is_providers_event_input`).
+
+## What Was Done
+
+- `SpeedWindow` in `state.rs` now uses `std::collections::VecDeque` for O(1) `pop_front`.
+- Stub functions `is_login_flow_event_input` and `is_providers_event_input` removed from `update/mod.rs`.
+- The remaining `handle_vim_nav_event_input` method is not a stub — it is called via
+  `try_handle_vim_nav_event_input` and delegates to `handle_vim_nav_event`.
 
 ## Acceptance Criteria
 

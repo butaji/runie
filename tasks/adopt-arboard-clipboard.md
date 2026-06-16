@@ -1,6 +1,6 @@
 # Adopt `arboard` for Clipboard Image I/O
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: TUI / Rendering
 **Priority**: P1

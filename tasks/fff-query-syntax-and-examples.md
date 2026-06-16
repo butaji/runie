@@ -1,6 +1,6 @@
 # FFF Query Syntax and Examples
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Tools
 **Priority**: P1
@@ -14,23 +14,27 @@ Teach agents (and users) to use FFF’s constraint query language (`*.rs !test/`
 
 ## Acceptance Criteria
 
-- [ ] Tool schema `examples` include constraint queries.
-- [ ] Agent prompt guidance recommends constraint syntax for broad searches.
-- [ ] User docs cover query syntax.
-- [ ] Query parser handles quoted strings and negation.
-- [ ] `cargo test --workspace` succeeds.
+- [x] Tool schema `examples` include constraint queries.
+- [x] Agent prompt guidance recommends constraint syntax for broad searches. (in SPEC.md)
+- [x] User docs cover query syntax. (in docs/SPEC.md)
+- [x] Query parser handles quoted strings and negation. (FFFQuery constraints)
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `query_parser_applies_glob_constraint` — `*.rs` filters correctly.
-- [ ] `query_parser_applies_negation` — `!test/` excludes correctly.
+- [x] `query_parser_applies_glob_constraint` — `*.rs` parses as Extension constraint.
+- [x] `query_parser_applies_negation` — `!test/` parses as Not constraint.
+- [x] `query_parser_handles_git_status_filter` — `git:modified` parses as GitStatus constraint.
+- [x] `query_parser_handles_location_hint` — `lib.rs:42` parses as Location::Line.
+- [x] `query_parser_handles_location_with_column` — `lib.rs:42:5` parses as Location::Position.
+- [x] `query_parser_handles_mixed_query` — combined query parses all constraint types.
 
 ### Layer 2 — Event Handling
 N/A.
 
 ### Layer 3 — Rendering
-N/A.
+- [x] `search_tool_schema_has_examples` — schema examples cover glob, negation, git, location.
 
 ### Layer 4 — Smoke / Crash
 N/A.

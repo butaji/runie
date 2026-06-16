@@ -1,6 +1,6 @@
 # FFF TUI File Picker
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: TUI / Rendering
 **Priority**: P0

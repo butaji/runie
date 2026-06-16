@@ -1,6 +1,6 @@
 # Contextual Footer Hints (Full Coverage)
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P0

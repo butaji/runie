@@ -1,6 +1,6 @@
 # Adopt `patch` Crate for TUI Diff Parsing
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: TUI / Rendering
 **Priority**: P1

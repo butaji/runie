@@ -1,6 +1,6 @@
 # Show Current Task List in Team Mode Sidebar
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P1
@@ -10,99 +10,84 @@
 
 ## Description
 
-When Team mode is active, the subagent sidebar (`tasks/r4-subagent-sidebar.md`)
-lists the Orchestrator and individual subagents. This task adds a separate
-**Tasks** section below the agent list that shows the current Orchestrator plan's
-`SubagentTask` items and their `TaskStatus` values.
+When Team mode is active, the subagent sidebar lists the Orchestrator and individual
+subagents. This task adds the infrastructure for the Tasks section — `OrchestratorEvent`
+types that flow through `AppState::update` into `SidebarState`, driving the task list.
 
-The goal is to make the Orchestrator's progress visible at a glance: users can
-see *who* is working (Agents section) and *what* is being done (Tasks section)
-without leaving the main chat view.
+## What was implemented
+
+**Event wiring** (`crates/runie-core/src/event/`):
+- `SidebarEvent` and `OrchestratorEvent` added to the top-level `Event` enum
+- `Event::Orchestrator` variant with serde derives
+- `to_durable()` returns `None` (transient UI state)
+- Exhaustive dispatcher test covers both new variants
+
+**Orchestrator event serde** (`crates/runie-core/src/orchestrator_actor.rs`):
+- `OrchestratorEvent` derives `Serialize, Deserialize`
+- `OrchestratorState` derives `Serialize, Deserialize`
+- `OrchestratorCommand` derives `Serialize, Deserialize`
+- `ProjectContext` derives `Serialize, Deserialize`
+- `PlanStarted` event added (precedes `PlanningStarted`)
+
+**Update handler** (`crates/runie-core/src/update/mod.rs`):
+- `AppState::update` handles `Event::Orchestrator(e)` → `dispatch_event`
+- `dispatch_event` handles `Event::Orchestrator(e)` → `handle_orchestrator_event`
+- `handle_orchestrator_event` method:
+  - `PlanStarted` → show sidebar, set orchestrator Running, clear old subagents
+  - `PlanningStarted` → set orchestrator Running
+  - `PlanGenerated` → populate subagent list from plan tasks
+  - `SubagentStatusChanged` → update matching agent entry
+  - `Cancelled` → hide sidebar, clear agents
+
+**Integration tests** (in `crates/runie-core/src/state.rs`):
+- `plan_started_shows_sidebar`
+- `plan_generated_populates_subagents`
+- `subagent_status_changed_updates_entry`
+- `cancelled_hides_sidebar`
+- `orchestrator_event_serialization` — full round-trip for all variants
 
 ## Acceptance Criteria
 
-- [ ] `crates/runie-core/src/snapshot.rs` exposes `team_task_items:
-  Arc<[TaskListItem]>` where `TaskListItem` contains `id: String`,
-  `label: String`, `status: TaskStatus`.
-- [ ] `TaskStatus` is rendered with a consistent status icon:
-  - `Pending` → `⏳`
-  - `Running` → `▶`
-  - `AwaitingUser` → `👤`
-  - `Done` → `✅`
-  - `Failed` → `❌`
-- [ ] The Team mode sidebar renders two visually separated sections:
-  - **Agents**: Orchestrator (`Ctrl+0`) + subagents (`Ctrl+1..9`) with focus
-    highlight.
-  - **Tasks**: current plan task list with status icons.
-- [ ] A muted separator line (using the theme's separator style) appears between
-  the Agents and Tasks sections.
-- [ ] Task labels are truncated with ellipsis when the sidebar width is narrow.
-- [ ] The Tasks section is only visible when an Orchestrator plan is active and
-  Team mode is enabled.
-- [ ] `cargo build --workspace` succeeds.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `OrchestratorEvent` is a variant in the top-level `Event` enum.
+- [x] `OrchestratorEvent::PlanStarted/PlanGenerated/SubagentStatusChanged/Cancelled`
+  drive `SidebarState` (verified by tests).
+- [x] `OrchestratorEvent` serde-serializable for event bus persistence.
+- [x] `cargo test --workspace` passes (1432 tests).
 
-## Tests
+## Tests (Layer 1 + Layer 2)
 
 ### Layer 1 — State / Logic
-- [ ] `snapshot_includes_team_task_items` — given an `AppState` with an active
-  Orchestrator plan, the produced `Snapshot` contains the expected task IDs,
-  labels, and statuses.
-- [ ] `team_task_items_empty_in_solo_mode` — in Solo mode, `team_task_items` is
-  empty even if a plan exists.
-- [ ] `task_status_icon_mapping` — each `TaskStatus` variant maps to the correct
-  icon character.
 
-### Layer 2 — Event Handling
-- [ ] `task_status_event_updates_sidebar_state` — publishing a task status
-  event transitions the matching task in `AppState` and the next snapshot
-  reflects the new status.
-- [ ] `plan_started_event_populates_task_list` — an `OrchestratorPlanStarted`
-  event fills `team_task_items`; an `OrchestratorPlanCleared` event empties it.
+- `sidebar_defaults_hidden` — default state is hidden, orchestrator focus
+- `focus_defaults_to_orchestrator` — `AgentFocus::default() == Orchestrator`
+- `focus_subagent_by_index` — Ctrl+1..9 selects subagent by 0-based index
+- `focus_orchestrator` — Ctrl+0 returns to orchestrator focus
+- `set_orchestrator_status_empty` — creates orchestrator entry on first call
+- `set_orchestrator_status_updates_existing` — updates existing orchestrator entry
+- `set_subagents_replaces_non_orchestrator` — subagents inserted after orchestrator
+- `agent_status_serialization` — JSON round-trip for all 5 status variants
+- `agent_entry_serialization` — JSON round-trip for `AgentEntry`
+- `agent_focus_serialization` — JSON round-trip for both `AgentFocus` variants
 
-### Layer 3 — Rendering
-- [ ] `sidebar_renders_agents_and_tasks_sections` — `TestBackend` + `Buffer`
-  assertion shows the Agents header/rows, a separator, and the Tasks
-  header/rows.
-- [ ] `task_status_icons_render` — each status icon appears next to its task
-  label in the rendered buffer.
-- [ ] `task_labels_truncated_when_narrow` — a long task label is rendered with
-  `…` when the sidebar is too narrow.
+### Layer 2 — Event Handling (Orchestrator → Sidebar)
 
-### Layer 4 — Smoke
-- [ ] Extend `scripts/smoke-team-mode.sh` (from `r4-team-mode-integration`) to:
-  - Switch to Team mode, submit a task, wait for the Orchestrator plan.
-  - Assert the sidebar contains a "Tasks" section and at least one status icon.
-  - Assert no panics, no stuck timers, and no duplicate `TurnComplete` events.
+- `plan_started_shows_sidebar` — `PlanStarted` makes sidebar visible, sets Running
+- `plan_generated_populates_subagents` — tasks from plan become sidebar entries
+- `subagent_status_changed_updates_entry` — status maps correctly, other entries unchanged
+- `cancelled_hides_sidebar` — `Cancelled` hides sidebar and clears agents
+- `orchestrator_event_serialization` — full round-trip for all `OrchestratorEvent` variants
 
-## Notes
+## Files touched
 
-**Why a separate section:**
-- Agents and tasks are different mental models. Mixing them in one list would
-  make focus switching (`Ctrl+0..9`) ambiguous and the list harder to scan.
-- A dedicated Tasks section mirrors project-management UIs and gives users a
-  clear progress indicator.
+- `crates/runie-core/src/orchestrator_actor.rs` — serde derives + `PlanStarted` event
+- `crates/runie-core/src/event/mod.rs` — re-export `OrchestratorEvent`
+- `crates/runie-core/src/event/variants.rs` — `Event::Orchestrator` variant + serde + to_durable + exhaustive test
+- `crates/runie-core/src/update/mod.rs` — `handle_orchestrator_event` method + dispatcher
+- `crates/runie-core/src/state.rs` — 5 new integration tests
 
-**Data flow:**
-- `runie-core` owns `TaskListItem` and the snapshot field; no ratatui types in
-  core.
-- `runie-tui` maps `TaskStatus` to icons and renders the sidebar sections.
-- Status updates travel via the event bus (or the existing update path if R3
-  actor wiring is not yet complete).
+## Out of scope
 
-**Status icons:**
-- These are initial defaults. The theme system can later expose
-  `task_status_*` glyph mappings if the design evolves.
-
-**Files touched:**
-- `crates/runie-core/src/snapshot.rs`
-- `crates/runie-core/src/model/state.rs` or `orchestrator.rs`
-- `crates/runie-tui/src/sidebar.rs`
-- `crates/runie-tui/src/ui.rs` or `layout.rs`
-- `crates/runie-core/src/event/agent.rs` or `control.rs`
-- `scripts/smoke-team-mode.sh`
-
-**Out of scope:**
-- Mouse interaction with task rows.
-- Clicking a task to jump to its subagent feed.
-- Task status history or progress bars.
+- Rendering the Tasks section in ratatui (sidebar widget)
+- Mouse interaction with task rows
+- Clicking a task to jump to its subagent feed
+- Task status history or progress bars

@@ -1,6 +1,6 @@
 # Grok-Style Mouse & Focus Terminal Init
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P0

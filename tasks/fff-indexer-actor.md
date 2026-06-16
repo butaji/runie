@@ -1,6 +1,6 @@
 # FFF Indexer Actor
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Architecture / Actors
 **Priority**: P0

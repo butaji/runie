@@ -1,6 +1,6 @@
 # Harness Skill: Hashline Edit Tool
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Tools
 **Priority**: P0

@@ -1,6 +1,6 @@
 # Adopt `notify` for Config File Watching
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Configuration
 **Priority**: P1

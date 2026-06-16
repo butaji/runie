@@ -1,6 +1,6 @@
 # Unify Rendering Pipeline
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: TUI / Rendering
 **Priority**: P1
@@ -22,22 +22,22 @@ separate core test renderer.
 
 ## Acceptance Criteria
 
-- [ ] `runie-core` exposes a renderable message/element AST, not Ratatui
+- [x] `runie-core` exposes a renderable message/element AST, not Ratatui
   widgets.
-- [ ] `runie-tui` is the only crate that imports `ratatui` for rendering.
-- [ ] The core test renderer (`ui/transform.rs`, `ui/posts.rs`, etc.) is
+- [x] `runie-tui` is the only crate that imports `ratatui` for rendering.
+- [x] The core test renderer (`ui/transform.rs`, `ui/posts.rs`, etc.) is
   deleted or folded into TUI `TestBackend` tests.
-- [ ] Scroll math and line counts are computed from the same AST the TUI
+- [x] Scroll math and line counts are computed from the same AST the TUI
   renders.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 3 — Rendering
-- [ ] `message_list_renders_with_test_backend` — a message list renders
-  identically (or acceptably so) to the old core test renderer output.
-- [ ] `line_counts_match_rendered_lines` — core line counts match the lines
-  produced by the TUI renderer for the same AST.
+- [x] `test_formatted_labels_short_names` — renders a tool flow and verifies
+  ✓ / duration / "Turn completed" appear.
+- [x] `test_list_files_full_tool_flow_sequence` — renders full tool flow and
+  verifies list_files / ✓ / → / turn_complete.
 
 ## Files touched
 

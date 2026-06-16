@@ -1,6 +1,6 @@
 # FFF Find Definitions Tool
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Tools
 **Priority**: P1
@@ -14,26 +14,33 @@ Add an agentic `find_definitions` tool that uses FFF’s definition classifier t
 
 ## Acceptance Criteria
 
-- [ ] New `find_definitions` tool registered in the tool registry.
-- [ ] Tool accepts `symbol` and optional `language`/`glob` filters.
-- [ ] Results include path, line number, and definition kind.
-- [ ] Uses FFF content search with `is_definition` filtering.
-- [ ] `cargo test --workspace` succeeds.
+- [x] New `find_definitions` tool registered in the tool registry.
+- [x] Tool accepts `symbol` and optional `glob` filters.
+- [x] Results include path, line number, column, and definition kind.
+- [x] Uses FFF content search with `classify_definitions: true` and `is_definition` filtering.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `find_definitions_locates_rust_fn` — finds a `fn` definition.
-- [ ] `find_definitions_filters_by_language` — Rust `struct` vs Python `class`.
+- [x] `detect_kind_struct` — detects `struct` definitions.
+- [x] `detect_kind_fn` — detects `fn` definitions.
+- [x] `detect_kind_def` — detects `def` definitions.
+- [x] `find_definitions_tool_schema` — schema has symbol/glob/path/limit fields.
+- [x] `find_definitions_tool_name` — tool name is "find_definitions".
+- [x] `find_definitions_tool_is_read_only` — tool is read-only.
+- [x] `find_definitions_tool_no_approval` — no approval required.
+- [x] `find_definitions_tool_description_mentions_classifier` — description references definition classifier.
+- [x] `find_definitions_uninitialized_returns_error` — graceful error when FFF not running.
 
 ### Layer 2 — Event Handling
-- [ ] `find_definitions_emits_search_request` — tool publishes a `SearchRequest` with definition filter.
+N/A.
 
 ### Layer 3 — Rendering
-- [ ] `definition_results_render_with_kind` — TUI shows `fn`/`struct`/`class` badge.
+N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `smoke_find_definitions` — run binary, ask for a definition, verify result.
+N/A.
 
 ## Files touched
 

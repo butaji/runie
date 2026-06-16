@@ -1,6 +1,6 @@
 # FFF Location Parser
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Tools
 **Priority**: P2
@@ -14,16 +14,20 @@ Use FFF’s `file:line:col` parser for agent/TUI references like `@path/to/file.
 
 ## Acceptance Criteria
 
-- [ ] Parse `file:line:col`, `file:line`, and `file` forms.
-- [ ] Validate that the parsed path exists in the index (or fallback to filesystem).
-- [ ] Expose a helper usable by both agent tools and the TUI.
-- [ ] `cargo test --workspace` succeeds.
+- [x] Parse `file:line:col`, `file:line`, and `file` forms.
+- [x] Validate that the parsed path exists in the index (or fallback to filesystem).
+- [x] Expose a helper usable by both agent tools and the TUI.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `parser_extracts_line_and_column` — `src/lib.rs:10:5` → path, 10, 5.
-- [ ] `parser_handles_missing_column` — `src/lib.rs:10` → path, 10, None.
+- [x] `parser_extracts_line_and_column` — `src/lib.rs:10:5` → path, 10, 5.
+- [x] `parser_handles_missing_column` — `src/lib.rs:10` → path, 10, None.
+- [x] `parser_handles_no_location` — `src/lib.rs` → path, None.
+- [x] `parser_handles_line_range` — `src/lib.rs:10-20` → path, range.
+- [x] `parser_handles_column_range` — `src/lib.rs:10:5-20` → path, range.
+- [x] `location_line_extraction` / `location_col` helpers.
 
 ### Layer 2 — Event Handling
 N/A.

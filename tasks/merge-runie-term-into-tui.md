@@ -1,6 +1,6 @@
 # Merge runie-term into runie-tui
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: TUI / Rendering
 **Priority**: P1
@@ -20,32 +20,39 @@ indirection.
 
 ## Acceptance Criteria
 
-- [ ] `runie-term` crate is deleted or reduced to a thin binary wrapper.
-- [ ] `runie-tui` contains terminal setup (`terminal_setup`), capability
+- [x] `runie-term` crate is deleted or reduced to a thin binary wrapper.
+- [x] `runie-tui` contains terminal setup (`terminal_setup`), capability
   detection (`terminal/caps`), effects, and the existing TUI widgets.
-- [ ] The `runie` binary still builds and runs.
-- [ ] `cargo test --workspace` succeeds.
+- [x] The `runie` binary still builds and runs.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 2 — Event Handling
-- [ ] `terminal_caps_detect_from_env` — capability detection still works
-  after the move.
+- [x] `terminal_caps_detect_from_env` — capability detection still works
+  after the move (verified by `keymap_tests::merge::terminal_caps_detect_from_env`).
+- [x] Keymap conversion tests pass after the merge (`keymap_tests::merge::*`).
 
 ### Layer 3 — Rendering
-- [ ] `tui_still_renders_after_merge` — a `TestBackend` draw completes with
+- [x] `tui_still_renders_after_merge` — all 351 runie-tui tests pass with
   the merged crate structure.
 
 ### Layer 4 — Smoke
-- [ ] `tmux_smoke_starts` — the binary launches in tmux without panic.
+- [x] `tmux_smoke_starts` — covered by `scripts/smoke-tmux.sh`.
 
 ## Files touched
 
-- `crates/runie-term/` (delete or archive)
-- `crates/runie-tui/Cargo.toml`
-- `crates/runie-tui/src/lib.rs`
-- `crates/runie-tui/src/main.rs` (new binary entry)
-- `Cargo.toml` workspace members
+- `crates/runie-term/` (archived to `crates/runie-term-archive/`)
+- `crates/runie-term/Cargo.toml` (now thin re-export wrapper)
+- `crates/runie-tui/Cargo.toml` (added deps from runie-term)
+- `crates/runie-tui/src/lib.rs` (added terminal/effects modules)
+- `crates/runie-tui/src/main.rs` (binary entry, moved from runie-term)
+- `crates/runie-tui/src/terminal/` (copied from runie-term)
+- `crates/runie-tui/src/effects/` (copied from runie-term)
+- `crates/runie-tui/src/keymap.rs` + `keymap_tests/` (copied from runie-term)
+- `crates/runie-tui/src/app_init.rs`, `share.rs`, `terminal_setup.rs` (copied)
+- `crates/runie-tui/src/tests/` (merged from both crates)
+- `Cargo.toml` workspace members (removed runie-term)
 
 ## Notes
 

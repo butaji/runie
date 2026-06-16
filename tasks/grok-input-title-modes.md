@@ -1,6 +1,6 @@
 # Mode Suffix in Input Title
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P0

@@ -1,6 +1,6 @@
 # Richer Status Bar
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P1

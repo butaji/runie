@@ -1,6 +1,6 @@
 # Fix SessionStore Atomic Writes
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Sessions
 **Priority**: P1
@@ -14,16 +14,16 @@
 
 ## Acceptance Criteria
 
-- [ ] `SessionStore::append` writes to a temp file and renames it to the target path.
-- [ ] The unused `temp_path` variable is removed or used correctly.
-- [ ] `sync_all()` is not called on every append (or is justified and tested).
-- [ ] `cargo test --workspace` succeeds.
+- [x] `SessionStore::append` writes to a temp file and renames it to the target path.
+- [x] The unused `temp_path` variable is removed or used correctly. (It was already used correctly)
+- [x] `sync_all()` is not called on every append (or is justified and tested). (Removed - not needed for atomic rename)
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `session_store_atomic_write_survives_crash` — simulated crash mid-write leaves the original file intact.
-- [ ] `session_store_appends_and_replays_events` — existing append/replay test still passes.
+- [x] `session_store_atomic_write_survives_crash` — simulated crash mid-write leaves the original file intact.
+- [x] `session_store_appends_and_replays_events` — existing append/replay test still passes.
 
 ### Layer 2 — Event Handling
 N/A — persistence only.
@@ -41,4 +41,5 @@ N/A — covered by Layer 1.
 ## Notes
 
 - A simple atomic append: write the new line to `<id>.jsonl.tmp`, then `fs::rename` to `<id>.jsonl`.
-- Consider buffering/batching if `sync_all()` was intended for durability; document the trade-off.
+- Removed `sync_all()` - not needed for atomic rename, adds overhead.
+- Documented the atomic guarantee and POSIX rename semantics.
