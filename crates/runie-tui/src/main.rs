@@ -194,13 +194,8 @@ async fn forward_orchestrator_events(
     mut orch_sub: runie_core::bus::ReplayReceiver<OrchestratorEvent>,
     main_bus: EventBus<Event>,
 ) {
-    loop {
-        match orch_sub.recv().await {
-            Ok(evt) => {
-                let _ = main_bus.publish(Event::Orchestrator(evt));
-            }
-            Err(_) => break, // channel closed
-        }
+    while let Ok(evt) = orch_sub.recv().await {
+        let _ = main_bus.publish(Event::Orchestrator(evt));
     }
 }
 
@@ -240,12 +235,12 @@ async fn event_loop(
     mut input_rx: mpsc::Receiver<Event>,
     mut agent_rx: mpsc::Receiver<Event>,
     cmd_tx: mpsc::Sender<AgentCommand>,
-    orchestrator_tx: Option<mpsc::Sender<OrchestratorCommand>>,
+    _orchestrator_tx: Option<mpsc::Sender<OrchestratorCommand>>,
     render_tx: watch::Sender<Snapshot>,
     input_tx: mpsc::Sender<Event>,
     kb_tx: watch::Sender<HashMap<String, String>>,
     terminal_caps: terminal::caps::TerminalCapabilities,
-    bus: EventBus<Event>,
+    _bus: EventBus<Event>,
 ) -> io::Result<()> {
     let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
 

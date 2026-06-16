@@ -75,7 +75,7 @@ impl ModelProfile {
 
     /// Whether this profile declares the given trait.
     pub fn has_trait(&self, trait_: ModelTrait) -> bool {
-        self.traits.iter().any(|&t| t == trait_)
+        self.traits.contains(&trait_)
     }
 
     /// Number of declared traits.

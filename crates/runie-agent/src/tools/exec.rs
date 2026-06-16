@@ -9,13 +9,13 @@ pub(crate) fn run_inner(tool: &Tool, policy: &TruncationPolicy) -> ToolOutput {
     let name = tool.name();
     let args = tool.to_args();
     match tool {
-        Tool::ReadFile { .. } => run_read_file_tool(tool, policy, &name, &args, start),
+        Tool::ReadFile { .. } => run_read_file_tool(tool, policy, name, &args, start),
         Tool::ListDir { .. } => super::list_dir(tool, policy),
         Tool::WriteFile { .. } => write_file(tool, start),
         Tool::EditFile { .. } => super::edit_file(tool, policy),
         Tool::Bash { .. } => super::bash::run_bash_legacy(tool, policy),
-        Tool::Grep { .. } => run_grep_tool(tool, policy, &name, &args, start),
-        Tool::Find { .. } => run_find_tool(tool, policy, &name, &args, start),
+        Tool::Grep { .. } => run_grep_tool(tool, policy, name, &args, start),
+        Tool::Find { .. } => run_find_tool(tool, policy, name, &args, start),
         Tool::FetchDocs { .. } => super::run_fetch_docs(tool, start),
     }
 }

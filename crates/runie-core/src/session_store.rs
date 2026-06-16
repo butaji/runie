@@ -18,6 +18,7 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
+#[allow(dead_code)] // reserved for future schema migration checks
 const SCHEMA_VERSION: u64 = 1;
 
 // Table definitions
@@ -34,11 +35,6 @@ impl SessionStore {
     /// Create a new store at the given directory.
     pub fn new(dir: PathBuf) -> Self {
         Self { dir }
-    }
-
-    /// Get the default store location.
-    pub fn default() -> Option<Self> {
-        dirs::data_dir().map(|d| Self::new(d.join("runie").join("sessions")))
     }
 
     /// Path to the redb file for a session.
@@ -178,7 +174,7 @@ impl SessionStore {
 
         // Sort events by their sequence key
         // Rebuild with original keys preserved
-        let mut paired: Vec<_> = keys.into_iter().zip(events.into_iter()).collect();
+        let mut paired: Vec<_> = keys.into_iter().zip(events).collect();
         paired.sort_by_key(|(k, _)| *k);
         events = paired.into_iter().map(|(_, e)| e).collect();
 

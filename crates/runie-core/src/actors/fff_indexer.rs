@@ -203,14 +203,12 @@ impl Actor for FffIndexerActor {
     type Msg = FffSearchRequest;
     type Event = FffSearchResult;
 
-    fn run_body(
+    async fn run_body(
         self,
         rx: mpsc::Receiver<Self::Msg>,
         bus: EventBus<FffSearchResult>,
-    ) -> impl std::future::Future<Output = ()> + Send + 'static {
-        async move {
-            self.run_inner(rx, bus).await;
-        }
+    ) {
+        self.run_inner(rx, bus).await;
     }
 }
 
@@ -304,7 +302,7 @@ impl FffIndexerActor {
     /// Handle a search request.
     async fn handle_search(&self, req: FffSearchRequest) -> FffSearchResultPayload {
         let limit = req.limit.unwrap_or(DEFAULT_LIMIT);
-        let project_path_str = req.project_path.to_string_lossy().to_string();
+        let _project_path_str = req.project_path.to_string_lossy().to_string();
 
         // Acquire read lock on shared picker
         let picker_guard = match self.shared_picker.read() {
@@ -345,7 +343,6 @@ impl FffIndexerActor {
                 },
                 combo_boost_score_multiplier: 100,
                 min_combo_count: 2,
-                ..Default::default()
             },
         );
 

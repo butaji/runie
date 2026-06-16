@@ -5,9 +5,9 @@
 use crate::actor::{Actor, ActorFuture};
 use crate::bus::EventBus;
 use crate::event::DurableCoreEvent;
-use crate::session_store::{SessionMeta, SessionStore};
+use crate::session_store::SessionStore;
 use crate::Event;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 
 /// Actor that persists durable events to a JSONL session file.
 pub struct SessionActor {

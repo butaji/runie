@@ -223,7 +223,7 @@ impl Tool {
                 serde_json::json!({ "path": path, "offset": offset, "limit": limit })
             }
             Tool::ListDir { path } => serde_json::json!({ "path": path }),
-            Tool::WriteFile { path, content } => {
+            Tool::WriteFile { path, content: _ } => {
                 serde_json::json!({ "path": path, "content": "<redacted>" })
             }
             Tool::EditFile { path, search, replace } => {

@@ -83,7 +83,6 @@ impl Diff {
 }
 
 /// ── Internal hunk builder ──────────────────────────────────────────────────
-
 struct HunkBuilder {
     hunks: Vec<DiffHunk>,
     current: Vec<DiffLine>,

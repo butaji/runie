@@ -17,10 +17,13 @@ use crate::model::AppState;
 // Re-export only what callers actually need.
 pub use scroll::{element_jump_down, element_jump_up, scroll_event};
 pub use support::{
-    at_suggestion_hints, empty_input_hints, feed_focused_hints, find_word_boundary_left,
+    at_suggestion_hints, empty_input_hints, find_word_boundary_left,
     find_word_boundary_right, input_active_hints, is_quit_command, modal_hints,
     next_grapheme_boundary, prev_grapheme_boundary, team_mode_hints, vim_nav_hints,
 };
+
+#[cfg(test)]
+pub use support::feed_focused_hints;
 
 pub fn input_event(state: &mut AppState, event: InputEvent) {
     match event {

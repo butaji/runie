@@ -415,18 +415,15 @@ pub struct CompletionState {
 
 /// Which agent feed is currently visible / focused.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum AgentFocus {
     /// Showing the Orchestrator's main feed.
+    #[default]
     Orchestrator,
     /// Showing a specific subagent's feed.
     Subagent(String),
 }
 
-impl Default for AgentFocus {
-    fn default() -> Self {
-        Self::Orchestrator
-    }
-}
 
 /// Per-agent status for the sidebar list.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

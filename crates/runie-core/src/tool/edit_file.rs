@@ -86,10 +86,7 @@ fn edit_file_impl(
         Err(e) => return Ok(error_output(&format!("Error reading {}: {}", path.display(), e), start)),
     };
 
-    match validate_match_count(&content, search, path) {
-        Some(err) => return Ok(error_output(&err, start)),
-        None => {}
-    }
+    if let Some(err) = validate_match_count(&content, search, path) { return Ok(error_output(&err, start)) }
 
     let new_content = content.replacen(search, replace, 1);
     match std::fs::write(path, &new_content) {

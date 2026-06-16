@@ -64,7 +64,7 @@ fn v2_to_v3(config: &mut toml::Value, config_path: Option<std::path::PathBuf>) -
                     let mut kb_table = toml::value::Table::new();
                     for (k, v) in obj {
                         if let Some(s) = v.as_str() {
-                            kb_table.insert(k.clone().into(), toml::Value::String(s.to_string()));
+                            kb_table.insert(k.clone(), toml::Value::String(s.to_string()));
                         }
                     }
                     map.insert("keybindings".into(), toml::Value::Table(kb_table));

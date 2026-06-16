@@ -46,18 +46,15 @@ struct SearchItem {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Default)]
 enum SearchMode {
+    #[default]
     Files,
     Content,
     Mixed,
     Glob,
 }
 
-impl Default for SearchMode {
-    fn default() -> Self {
-        SearchMode::Files
-    }
-}
 
 impl SearchMode {
     fn from_str(s: &str) -> Self {
@@ -162,7 +159,7 @@ fn resolve_path(path: &str, working_dir: &Path) -> PathBuf {
 fn search_impl(
     query: &str,
     mode: SearchMode,
-    path: &Path,
+    _path: &Path,
     limit: usize,
     start: Instant,
 ) -> Result<ToolOutput> {
@@ -239,7 +236,7 @@ fn search_impl(
         SearchMode::Glob => search_glob(picker, query, limit, indexed, start),
         SearchMode::Files | SearchMode::Mixed => {
             let qt = qt_guard.as_ref();
-            search_files(picker, qt.as_deref(), query, limit, indexed, start)
+            search_files(picker, qt, query, limit, indexed, start)
         }
     }
 }
@@ -267,7 +264,7 @@ fn search_files(
             },
             combo_boost_score_multiplier: 100,
             min_combo_count: 2,
-            ..Default::default()
+
         },
     );
 
@@ -278,7 +275,7 @@ fn search_files(
         .map(|(item, score)| {
             let git_status = item
                 .git_status
-                .map(|s| format_git_status(s))
+                .map(format_git_status)
                 .unwrap_or_default();
             SearchItem {
                 path: item.relative_path(picker),
@@ -399,7 +396,7 @@ fn search_glob(
             },
             combo_boost_score_multiplier: 100,
             min_combo_count: 2,
-            ..Default::default()
+
         },
     );
 
@@ -410,7 +407,7 @@ fn search_glob(
         .map(|(item, score)| {
             let git_status = item
                 .git_status
-                .map(|s| format_git_status(s))
+                .map(format_git_status)
                 .unwrap_or_default();
             SearchItem {
                 path: item.relative_path(picker),

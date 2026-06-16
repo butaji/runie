@@ -241,7 +241,6 @@ enum InlineMarker {
     Bold,
     Italic,
     Strike,
-    Code,
 }
 
 impl BlockParser {

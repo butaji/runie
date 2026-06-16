@@ -34,11 +34,10 @@ impl AppState {
                 line_start = i + 1;
             }
         }
-        if line_end == self.input.input.len() && self.input.input.ends_with('\n') {
-            if self.input.cursor_pos > line_start {
+        if line_end == self.input.input.len() && self.input.input.ends_with('\n')
+            && self.input.cursor_pos > line_start {
                 line_end = self.input.input.len();
             }
-        }
         (line_start, line_end)
     }
 

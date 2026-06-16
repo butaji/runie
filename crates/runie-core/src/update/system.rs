@@ -265,7 +265,6 @@ fn first_model_for_provider(provider: &str) -> Option<String> {
 // ── Control Event Handler (merged from control.rs) ────────────────────────────
 
 use crate::event::ControlEvent;
-use crate::model::AppState as AppState2;
 
 pub fn control_event(state: &mut AppState, event: ControlEvent) {
     match event {
@@ -338,7 +337,6 @@ fn handle_editor_done(state: &mut AppState, content: String) {
 
 // ── System actions (merged from system_actions.rs) ───────────────────────────
 
-use crate::model::AppState as AppState3;
 
 impl AppState {
     pub(crate) fn reload_all(&mut self) {

@@ -26,7 +26,11 @@
 use anyhow::Result;
 use runie_agent::{build_provider_with_warning, run_headless_turn, HeadlessOptions};
 use runie_core::message::ChatMessage;
-use runie_core::{config_reload, llm_event::LLMEvent};
+use runie_core::config_reload;
+
+#[cfg(test)]
+use runie_core::llm_event::LLMEvent;
+
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
 

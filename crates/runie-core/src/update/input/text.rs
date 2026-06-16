@@ -1,6 +1,5 @@
 //! Text editing (merged from input_text.rs).
 
-use unicode_segmentation::UnicodeSegmentation;
 
 use crate::message::{now, ChatMessage, Role};
 use crate::model::AppState;

@@ -22,6 +22,7 @@ pub struct HeadlessResult {
 }
 
 /// Options for headless turn execution.
+#[allow(clippy::type_complexity)]
 pub struct HeadlessOptions {
     /// Execute tools and collect results.
     pub execute_tools: bool,

@@ -47,7 +47,7 @@ fn handle_panel_close(state: &mut AppState, event: &Event, stack: &mut PanelStac
     false
 }
 
-fn handle_panel_navigation(state: &mut AppState, event: &Event, stack: &mut PanelStack) -> bool {
+fn handle_panel_navigation(_state: &mut AppState, event: &Event, stack: &mut PanelStack) -> bool {
     match event {
         Event::Input(InputEvent::HistoryPrev)
         | Event::ModelConfig(ModelConfigEvent::SettingsUp)

@@ -124,6 +124,7 @@ pub enum DialogType {
 
 /// Command result
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::large_enum_variant)]
 pub enum CommandResult {
     Message(String),
     Warning(String),

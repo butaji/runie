@@ -1,7 +1,7 @@
 //! Sidebar events for Team mode subagent panel.
 
 use serde::{Deserialize, Serialize};
-use crate::state::{AgentEntry, AgentFocus, AgentStatus};
+use crate::state::{AgentEntry, AgentStatus};
 
 /// Events for the subagent sidebar in Team mode.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

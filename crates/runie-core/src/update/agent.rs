@@ -549,7 +549,6 @@ fn handle_settings_events(state: &mut AppState, event: &ModelConfigEvent) -> boo
 
 // ── Scoped models (merged from scoped_models.rs) ─────────────────────────────
 
-use crate::model::AppState as AppState2;
 
 pub fn toggle_scoped_model(state: &mut AppState, name: &str) {
     if let Some(idx) = state

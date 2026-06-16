@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Metadata for a single session in the index.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,12 +32,12 @@ pub struct SessionIndex {
 
 impl SessionIndex {
     /// Path to the index file.
-    pub fn path(data_dir: &PathBuf) -> PathBuf {
+    pub fn path(data_dir: &Path) -> PathBuf {
         data_dir.join("runie").join("sessions.json")
     }
 
     /// Load index from disk.
-    pub fn load(data_dir: &PathBuf) -> anyhow::Result<Self> {
+    pub fn load(data_dir: &Path) -> anyhow::Result<Self> {
         let path = Self::path(data_dir);
         if !path.exists() {
             return Ok(Self::default());
@@ -48,7 +48,7 @@ impl SessionIndex {
     }
 
     /// Save index to disk atomically.
-    pub fn save(&self, data_dir: &PathBuf) -> anyhow::Result<()> {
+    pub fn save(&self, data_dir: &Path) -> anyhow::Result<()> {
         let path = Self::path(data_dir);
         let temp_path = path.with_extension("tmp");
         let dir = path.parent().unwrap();
@@ -109,7 +109,7 @@ impl SessionIndex {
         self.sessions.iter()
             .filter(|s| {
                 s.display_name.to_lowercase().contains(&query_lower) ||
-                s.summary.as_ref().map_or(false, |sum| sum.to_lowercase().contains(&query_lower))
+                s.summary.as_ref().is_some_and(|sum| sum.to_lowercase().contains(&query_lower))
             })
             .collect()
     }

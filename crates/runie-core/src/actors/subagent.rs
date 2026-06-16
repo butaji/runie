@@ -164,6 +164,7 @@ pub struct SubagentActor {
     /// Isolated context for this subagent.
     pub ctx: SubagentContext,
     /// Current execution status.
+    #[allow(dead_code)]
     status: SubagentStatus,
     /// Output captured during execution.
     output: Option<String>,
@@ -199,6 +200,7 @@ impl SubagentActor {
         spawn_actor(self, bus)
     }
 
+    #[allow(dead_code)]
     fn transition_to(&mut self, status: SubagentStatus) {
         self.status = status;
     }

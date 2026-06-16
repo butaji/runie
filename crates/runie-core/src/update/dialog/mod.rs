@@ -4,7 +4,7 @@ use git2;
 use crate::commands::{DialogState, DialogType};
 use crate::{FffSearchState, FffFileEntry};
 use crate::dialog::builders::{command_palette, model_selector, scoped_models, session_tree};
-use crate::event::{CommandEvent, ControlEvent, DialogEvent, InputEvent, ModelConfigEvent, SessionEvent};
+use crate::event::{CommandEvent, ControlEvent, DialogEvent, ModelConfigEvent, SessionEvent};
 use crate::model::AppState;
 use crate::model_catalog::model_catalog;
 
@@ -61,7 +61,6 @@ fn query_fff_files(query: &str, limit: usize) -> Vec<FffFileEntry> {
             },
             combo_boost_score_multiplier: 100,
             min_combo_count: 2,
-            ..Default::default()
         },
     );
 
@@ -114,8 +113,10 @@ mod panel;
 mod tab_complete;
 pub mod toggle;
 
-pub use form::{apply_form_action, form_panel_action, FormAction};
 pub use toggle::dialog_toggle_event;
+
+#[cfg(test)]
+pub use form::{apply_form_action, form_panel_action, FormAction};
 
 // ── Form panel free functions (merged from dialog_form) ────────────────────────
 
@@ -297,6 +298,7 @@ pub fn push_dialog_to_back_stack(state: &mut AppState, dialog: DialogState) {
 }
 
 /// Toggle a dialog open/closed.
+#[allow(dead_code)]
 pub fn toggle_dialog(state: &mut AppState, is_same: bool, open: fn(&mut AppState)) {
     if is_same {
         state.open_dialog = None;

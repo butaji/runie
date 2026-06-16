@@ -7,10 +7,12 @@ use crate::Event;
 
 /// What a form panel should do in response to an event.
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum FormAction {
     /// Keep the form open, persist the panel state.
     KeepOpen,
     /// Close the form (no submit).
+    #[allow(dead_code)]
     Close,
     /// Close the form and dispatch the submit event.
     Submit(Option<crate::Event>),

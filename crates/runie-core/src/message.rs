@@ -31,7 +31,7 @@ impl Role {
     }
 
     /// Convert from API string representation.
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s {
             "user" => Some(Role::User),
             "thought" => Some(Role::Thought),
@@ -174,7 +174,7 @@ mod tests {
     fn role_from_str_round_trip() {
         for role in [Role::User, Role::Assistant, Role::System, Role::Tool] {
             let s = role.as_str();
-            let parsed = Role::from_str(s).unwrap();
+            let parsed = Role::parse(s).unwrap();
             assert_eq!(parsed, role);
         }
     }

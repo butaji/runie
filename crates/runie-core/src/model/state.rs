@@ -1,6 +1,5 @@
 //! Core application state types and simple accessors.
 
-use std::collections::HashMap;
 
 use crate::state::CommandUsage;
 use crate::ui::elements::Element;
@@ -385,7 +384,7 @@ impl AppState {
 /// Score is scaled so it doesn't dominate the fuzzy score.
 fn compute_ranking_score(
     _query: &str,
-    cmd: &crate::commands::CommandDef,
+    _cmd: &crate::commands::CommandDef,
     usage: Option<&CommandUsage>,
 ) -> i32 {
     let usage_boost = usage.map(|u| u.count as i32).unwrap_or(0);

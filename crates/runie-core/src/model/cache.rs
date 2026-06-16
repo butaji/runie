@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::model::state::AppState;
 use crate::model::{build_model_selector_items, model_catalog, ModelSelectorItem};
 use crate::snapshot::{
-    compute_current_top_element, compute_hovered_element, compute_mouse_target, MouseTarget,
+    compute_current_top_element, compute_hovered_element, compute_mouse_target,
     Snapshot,
 };
 

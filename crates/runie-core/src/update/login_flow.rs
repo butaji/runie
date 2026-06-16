@@ -13,6 +13,7 @@ use crate::login_flow::{
 
 /// Event handler for providers dialog (not part of the login flow state machine).
 /// Routes `ProvidersDialog`, `ProvidersSelectModel`, `ProvidersDisconnect`, `ProvidersAdd`.
+#[allow(dead_code)]
 pub fn providers_event(state: &mut crate::model::AppState, event: crate::Event) {
     match event {
         crate::Event::Dialog(crate::event::DialogEvent::ProvidersDialog) => {
@@ -50,6 +51,7 @@ fn open_providers_dialog(state: &mut crate::model::AppState) {
     state.mark_dirty();
 }
 
+#[allow(dead_code)]
 fn providers_select_model(state: &mut crate::model::AppState, provider: &str, model: &str) {
     state.config.current_provider = provider.to_string();
     state.config.current_model = model.to_string();
@@ -59,6 +61,7 @@ fn providers_select_model(state: &mut crate::model::AppState, provider: &str, mo
     state.mark_dirty();
 }
 
+#[allow(dead_code)]
 fn providers_disconnect(state: &mut crate::model::AppState, provider: &str) {
     match crate::login_config::remove_provider_config(provider) {
         Ok(()) => {

@@ -2,7 +2,6 @@
 
 use crate::event::{CommandEvent, DialogEvent, SessionEvent, SystemEvent};
 use crate::model::AppState;
-use crate::orchestrator_actor::OrchestratorEvent;
 use crate::Event;
 
 use crate::session::Session;
@@ -253,6 +252,7 @@ impl AppState {
             .map(|p| p.index)
     }
 
+    #[allow(dead_code)]
     fn handle_vim_nav_event_input(&mut self, _event: &crate::event::InputEvent) -> Option<bool> {
         None
     }

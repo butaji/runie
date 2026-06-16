@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 /// MCP server configuration from `~/.runie/mcp.toml`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct McpServerConfig {
     pub name: String,
     pub command: String,
@@ -114,6 +115,7 @@ pub fn namespace_tool(server_name: &str, tool_name: &str) -> String {
 
 /// MCP JSON-RPC request/response types for stdio transport.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 #[serde(tag = "jsonrpc", content = "2.0")]
 enum JsonRpc {
     Request { id: u64, method: String, params: Option<serde_json::Value> },
@@ -122,6 +124,7 @@ enum JsonRpc {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct JsonRpcError { code: i32, message: String, data: Option<serde_json::Value> }
 
 /// MCP tool definition from server.
@@ -131,6 +134,7 @@ pub struct McpTool { pub name: String, pub description: String, pub input_schema
 /// MCP client manager for stdio-based MCP servers.
 pub struct McpClientManager {
     servers: HashMap<String, McpServerHandle>,
+    #[allow(dead_code)]
     next_id: u64,
 }
 
@@ -170,7 +174,7 @@ impl McpClientManager {
         let name = config.name.clone();
         let env_vars = build_env_vars(&name, &config.env);
         
-        let mut child = std::process::Command::new(&config.command)
+        let child = std::process::Command::new(&config.command)
             .args(&config.args)
             .envs(env_vars)
             .stdin(std::process::Stdio::piped())
@@ -225,6 +229,7 @@ impl McpClientManager {
         Ok(serde_json::json!({ "success": true, "message": "MCP tool call not yet implemented" }))
     }
 
+    #[allow(dead_code)]
     fn next_id(&mut self) -> u64 {
         let id = self.next_id;
         self.next_id += 1;
@@ -242,11 +247,6 @@ fn build_env_vars(name: &str, extra_env: &HashMap<String, String>) -> HashMap<St
     env_vars
 }
 
-impl Default for McpServerConfig {
-    fn default() -> Self {
-        Self { name: String::new(), command: String::new(), args: Vec::new(), env: HashMap::new() }
-    }
-}
 
 impl Default for McpClientManager {
     fn default() -> Self { Self::new() }

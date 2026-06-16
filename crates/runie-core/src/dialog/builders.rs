@@ -96,6 +96,7 @@ pub struct SettingsRow {
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum SettingsRowKind {
     Bool(bool),
     Cycle {

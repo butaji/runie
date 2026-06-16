@@ -54,7 +54,7 @@ impl AgentPhase {
 /// Format elapsed duration as `12.3s` or `1m5s`.
 pub fn format_elapsed(started: Option<Instant>) -> String {
     match started {
-        Some(start) => {
+        Some(_start) => {
             let elapsed = started.map(|s| s.elapsed()).unwrap_or_default();
             let secs = elapsed.as_secs();
             if secs >= 60 {

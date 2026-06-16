@@ -1,7 +1,6 @@
 //! Form Panel Builder - Fluent API for creating forms with submit handling
 
 use crate::dialog::Panel;
-use crate::event::CommandEvent;
 use crate::Event;
 
 /// Form panel builder with submit handling

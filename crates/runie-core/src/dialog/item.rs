@@ -76,6 +76,7 @@ impl PanelItem {
 
 /// What happens when a navigable panel item is activated.
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::large_enum_variant)]
 pub enum ItemAction {
     /// Navigate to another panel by id.
     Push(String),

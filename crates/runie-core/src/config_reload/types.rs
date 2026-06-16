@@ -4,17 +4,20 @@
 //! with code that imports from this module path.
 
 pub use crate::config::{
-    config_path, Config, ConfigChange, ModelsSection, ModelProvider, TruncationSection,
+    config_path, Config, ConfigChange, TruncationSection,
 };
 
 /// TelemetrySection is duplicated here for backward compatibility.
 /// The canonical definition is in `crate::config::TelemetrySection`.
+#[allow(dead_code)]
 pub type TelemetrySection = crate::config::TelemetrySection;
 
 /// PromptsSection is duplicated here for backward compatibility.
 /// The canonical definition is in `crate::config::PromptsSection`.
+#[allow(dead_code)]
 pub type PromptsSection = crate::config::PromptsSection;
 
 /// UiSection is duplicated here for backward compatibility.
 /// The canonical definition is in `crate::config::UiSection`.
+#[allow(dead_code)]
 pub type UiSection = crate::config::UiSection;

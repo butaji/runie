@@ -11,7 +11,11 @@ use runie_core::llm_event::LLMEvent;
 use runie_core::message::ChatMessage;
 use runie_core::orchestrator::{ModelTrait, OrchestratorContext, OrchestratorPlan};
 use runie_core::provider::Provider;
-use runie_core::trait_resolver::{ModelProfile, ModelResolver};
+use runie_core::trait_resolver::ModelResolver;
+
+#[cfg(test)]
+use runie_core::trait_resolver::ModelProfile;
+
 use serde::{Deserialize, Serialize};
 use tokio::time::{timeout, Duration};
 
@@ -359,7 +363,7 @@ fn parse_raw_plan(raw: RawPlan, tool_names: &HashMap<String, ()>) -> Result<Orch
 /// failure up to `config.max_retries` times.
 pub struct OneShotPlanner<'a, P: Provider> {
     provider: &'a P,
-    resolver: &'a ModelResolver,
+    _resolver: &'a ModelResolver,
     tools: &'a [ToolDescription],
     config: PlannerConfig,
 }
@@ -369,7 +373,7 @@ impl<'a, P: Provider> OneShotPlanner<'a, P> {
     pub fn new(provider: &'a P, resolver: &'a ModelResolver) -> Self {
         Self {
             provider,
-            resolver,
+            _resolver: resolver,
             tools: &[],
             config: PlannerConfig::default(),
         }

@@ -20,7 +20,7 @@ pub fn spawn_config_watcher(event_tx: mpsc::Sender<Event>, config_path: PathBuf)
             }
         }
         while let Ok(Ok(events)) = rx.recv() {
-            if !events.iter().any(|e| &e.path == &config_path) { continue; }
+            if !events.iter().any(|e| e.path == config_path) { continue; }
             if !events.iter().any(|e| matches!(e.kind, DebouncedEventKind::Any | DebouncedEventKind::AnyContinuous)) { continue; }
             let config = Config::load_from(&config_path);
             for change in config.classify_change(&last_config) {

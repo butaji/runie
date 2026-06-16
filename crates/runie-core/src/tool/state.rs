@@ -1,7 +1,10 @@
 //! Tool call state machine for UI display.
 
 use std::time::Instant;
-use serde_json::{Value, json};
+use serde_json::Value;
+
+#[cfg(test)]
+use serde_json::json;
 
 /// Tracks the lifecycle of a single tool call for UI display.
 #[derive(Debug, Clone)]

@@ -1,5 +1,8 @@
 //! Welcome / launcher screen — shown when no session is active.
 
+#![allow(clippy::vec_init_then_push)]
+
+#[cfg(test)]
 use std::sync::Arc;
 
 use ratatui::{
@@ -15,6 +18,7 @@ use crate::popups::palette_popup_rect;
 use crate::theme::{block_popup, color_accent, color_bg_panel, color_dim};
 
 /// Render the welcome/launcher overlay covering the main area.
+#[allow(clippy::vec_init_then_push)]
 pub fn render_welcome(f: &mut Frame, snap: &Snapshot) {
     let area = palette_popup_rect(f.area());
     f.buffer_mut()

@@ -167,7 +167,7 @@ impl Tool for FindDefinitionsTool {
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
-        let (symbol, glob, path, limit) = parse_input(&input, ctx)?;
+        let (symbol, glob, _path, limit) = parse_input(&input, ctx)?;
 
         let state = match FffSearchState::get() {
             Some(s) => s,

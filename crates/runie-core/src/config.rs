@@ -75,19 +75,12 @@ impl Default for TelemetrySection {
 /// Prompts configuration section.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
+#[derive(Default)]
 pub struct PromptsSection {
     pub default: Option<String>,
     pub custom: Option<String>,
 }
 
-impl Default for PromptsSection {
-    fn default() -> Self {
-        Self {
-            default: None,
-            custom: None,
-        }
-    }
-}
 
 // ============================================================================
 // Truncation Section

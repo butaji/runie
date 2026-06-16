@@ -26,11 +26,11 @@ pub struct PermissionRule {
 
 impl PermissionRule {
     fn matches_tool(&self, tool: &str) -> bool {
-        Pattern::new(&self.tool_pattern).map_or(false, |p| p.matches(tool))
+        Pattern::new(&self.tool_pattern).is_ok_and(|p| p.matches(tool))
     }
     fn matches_path(&self, path: &str) -> bool {
         match &self.path_pattern {
-            Some(p) => Pattern::new(p).map_or(false, |pat| pat.matches(path)),
+            Some(p) => Pattern::new(p).is_ok_and(|pat| pat.matches(path)),
             None => true,
         }
     }
@@ -91,7 +91,7 @@ impl PermissionSet {
 /// Sensitive path patterns that are always denied.
 pub fn is_sensitive_path(path: &str) -> bool {
     let sensitive = ["**/.env", ".env", "**/.ssh/*", ".ssh/*", "**/.aws/*", ".aws/*", "**/.git/config"];
-    sensitive.iter().any(|p| Pattern::new(p).map_or(false, |pat| pat.matches(path)))
+    sensitive.iter().any(|p| Pattern::new(p).is_ok_and(|pat| pat.matches(path)))
 }
 
 // ---------------------------------------------------------------------------
@@ -123,6 +123,12 @@ impl ApprovalSink for TuiApprovalSink {
 
 /// Scripted sink for tests.
 pub struct ScriptedSink { decisions: std::sync::RwLock<Vec<(String, PermissionAction)>> }
+impl Default for ScriptedSink {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ScriptedSink {
     pub fn new() -> Self { Self { decisions: std::sync::RwLock::new(Vec::new()) } }
     pub fn add_decision(&self, tool: impl Into<String>, action: PermissionAction) {

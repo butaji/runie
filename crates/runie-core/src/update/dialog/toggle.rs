@@ -6,7 +6,7 @@ use crate::model::AppState;
 
 use super::{
     open_at_file_picker_all, open_command_palette, open_model_selector,
-    open_scoped_models_dialog, open_settings_dialog, toggle_dialog,
+    open_scoped_models_dialog, open_settings_dialog,
 };
 
 pub fn dialog_toggle_event(state: &mut AppState, event: DialogEvent) {

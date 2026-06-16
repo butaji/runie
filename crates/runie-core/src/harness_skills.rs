@@ -557,7 +557,7 @@ impl HashlineEditSkill {
         let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
         // Apply from bottom to top to avoid line number shifting
         let mut sorted = edits.to_vec();
-        sorted.sort_by(|a, b| b.line.cmp(&a.line));
+        sorted.sort_by_key(|b| std::cmp::Reverse(b.line));
         for edit in sorted {
             let idx = edit.line.saturating_sub(1);
             if idx >= lines.len() {

@@ -35,6 +35,7 @@ macro_rules! ctor {
 
 /// Bindable event names paired with their default zero-arg constructors.
 /// This is generated from the sub-enum variants; see module docs for how to extend.
+#[allow(clippy::type_complexity)]
 pub const EVENT_NAMES: &[(&str, fn() -> Event)] = &[
     // ── Input events (unit variants only) ──────────────────────────────────
     ("Backspace", ctor!(Input::Backspace)),

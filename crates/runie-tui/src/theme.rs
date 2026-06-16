@@ -452,7 +452,7 @@ fn blend(bg: Color, fg: Color, opacity: f32) -> Color {
     use palette::Srgba;
     use palette::blend::BlendWith;
     use palette::blend::PreAlpha;
-    use palette::IntoColor;
+    
     let opacity = opacity.clamp(0.0, 1.0);
 
     let (br, bb, bblue) = match bg {

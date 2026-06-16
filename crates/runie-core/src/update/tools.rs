@@ -121,7 +121,6 @@ pub fn update(state: &mut AppState, event: EditEvent) {
 
 // ── Edit approval/rejection (merged from edit_approval.rs) ───────────────────
 
-use crate::model::AppState as AppState2;
 
 impl AppState {
     pub(crate) fn approve_edits(&mut self) {

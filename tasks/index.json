@@ -1912,13 +1912,15 @@
     },
     {
       "id": "fix-clippy-warning-rot",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P1",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/fix-clippy-warning-rot.md"
+      "file": "tasks/fix-clippy-warning-rot.md",
+      "notes": "Workspace clippy warnings reduced from 233 to 0. cargo test --workspace passes."
     },
     {
       "id": "box-large-event-variants",

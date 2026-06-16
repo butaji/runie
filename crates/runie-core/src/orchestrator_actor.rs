@@ -19,8 +19,10 @@ use crate::orchestrator::{
 
 /// Runtime state of the OrchestratorActor.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum OrchestratorState {
     /// Idle — no active request.
+    #[default]
     Idle,
     /// Aligning — waiting for user answers to clarifying questions.
     Aligning,
@@ -36,11 +38,6 @@ pub enum OrchestratorState {
     Failed { error: String },
 }
 
-impl Default for OrchestratorState {
-    fn default() -> Self {
-        Self::Idle
-    }
-}
 
 impl OrchestratorState {
     /// Whether this is a terminal state.
@@ -189,6 +186,7 @@ impl OrchestratorActor {
     }
 
     /// Record a question that was asked (e.g., ask_user tool was called).
+    #[allow(dead_code)]
     fn record_question(&mut self, question: String) {
         self.awaiting_answer = true;
         self.ctx.record_question(question);
@@ -213,6 +211,7 @@ impl OrchestratorActor {
     }
 
     /// Mark a subagent task as dispatched.
+    #[allow(dead_code)]
     fn dispatch_subagent(&mut self, task: SubagentTask) {
         self.results.push((task.id.clone(), String::new()));
     }
@@ -237,7 +236,8 @@ impl OrchestratorActor {
 /// Emit a bus event if the actor holds a bus reference.
 /// (The actor's run_body gets the bus passed in, so we use a shared cell pattern.)
 impl OrchestratorActor {
-    fn emit<E: Clone + Send + 'static>(bus: &EventBus<OrchestratorEvent>, event: OrchestratorEvent) {
+    #[allow(dead_code)]
+    fn emit(bus: &EventBus<OrchestratorEvent>, event: OrchestratorEvent) {
         bus.publish(event);
     }
 }

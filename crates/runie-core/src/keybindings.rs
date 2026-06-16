@@ -10,7 +10,10 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 
-use crate::event::{ControlEvent, Event, InputEvent};
+use crate::event::Event;
+
+#[cfg(test)]
+use crate::event::{ControlEvent, InputEvent};
 
 /// Valid final key names for key combos.
 const VALID_KEYS: &[&str] = &[

@@ -3,7 +3,6 @@ use crate::AgentCommand;
 use anyhow::Result;
 use futures::StreamExt;
 use runie_core::event::AgentEvent;
-use runie_core::event::EditEvent;
 use runie_core::event::Event;
 use runie_core::harness_skills::{
     SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult, TurnEndCtx, TurnEndResult,
@@ -61,7 +60,7 @@ pub async fn run_agent_turn_with_skills(
         }
     }
 
-    let mut has_intermediate_steps = run_iterations(
+    let has_intermediate_steps = run_iterations(
         provider, command, &mut messages, emit.clone(), skills, max_iterations, &mut tool_call_count,
     )
     .await?;
@@ -305,7 +304,7 @@ fn check_tool_call_before_hook(
     match skills.on_tool_call(&tool_ctx) {
         ToolCallResult::Continue => None,
         ToolCallResult::SkipWithOutput(output) => Some(output),
-        ToolCallResult::Abort(reason) => {
+        ToolCallResult::Abort(_reason) => {
             panic!("Tool abort not implemented in this path");
         }
     }

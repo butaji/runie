@@ -20,6 +20,7 @@ use super::{
 /// e.g. `Event::Input(InputEvent::Submit)`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
+#[allow(clippy::large_enum_variant)]
 pub enum Event {
     Input(InputEvent),
     Agent(AgentEvent),

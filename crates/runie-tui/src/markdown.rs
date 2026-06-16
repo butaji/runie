@@ -23,7 +23,7 @@ pub fn apply_color_to_inlines(inlines: &[MdInline], base_color: Color) -> Vec<Md
     let base = Style::default().fg(base_color);
     let code_style = Style::default().fg(color_accent()).bg(color_code_bg());
     let mut spans = Vec::new();
-    let mut style_stack: Vec<Style> = vec![base];
+    let style_stack: Vec<Style> = vec![base];
 
     for inline in inlines {
         match inline {
