@@ -1,4 +1,4 @@
-//! Status bar rendering — left ( git/folder · Working... ) and right ( ↑1.2k ↓4.8k 42/s 12%/128k ○ )
+//! Status bar rendering — left ( git/folder · Working... ) and right ( ↑1.2k ↓4.8k 42/s 12k/128k 12% ⛀ )
 
 use ratatui::{
     layout::{Constraint, Rect},
@@ -108,11 +108,20 @@ pub(crate) fn build_right_status(snap: &Snapshot) -> String {
             piece
         )
     } else {
-        format!("{}%/{} {}", usage.percent, limit, piece)
+        let used_k = format_k(usage.used);
+        format!("{}/{} {}% {}", used_k, limit, usage.percent, piece)
     }
 }
 
 /// Format a possibly-animated (floating point) token count for display.
+fn format_k(n: usize) -> String {
+    if n >= 1_000 {
+        format!("{}k", n / 1_000)
+    } else {
+        n.to_string()
+    }
+}
+
 fn format_k_animated(n: f64) -> String {
     let n = n.round().max(0.0);
     if n >= 1_000.0 {

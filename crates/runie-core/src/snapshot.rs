@@ -29,10 +29,7 @@ impl GitInfo {
             (None, None) => format!("{}/", cwd_name),
         };
         if self.is_worktree {
-            if let Some(ref source) = self.worktree_source {
-                return format!("worktree of {} · {}", source, base);
-            }
-            return format!("worktree · {}", base);
+            return format!("{} • worktree", base);
         }
         base
     }
