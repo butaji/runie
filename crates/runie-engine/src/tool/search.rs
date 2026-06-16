@@ -4,7 +4,7 @@
 //! `search` tool backed by `fff-search`. Supports file search, content search,
 //! glob patterns, and git-status filters via a unified query syntax.
 
-use crate::actors::FffSearchState;
+use runie_core::actors::FffSearchState;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;

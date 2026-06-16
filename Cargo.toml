@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-print", "crates/runie-json", "crates/runie-server"]
+members = ["crates/runie-core", "crates/runie-engine", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-print", "crates/runie-json", "crates/runie-server"]
 resolver = "2"
 
 [workspace.package]
@@ -35,6 +35,7 @@ parking_lot = "0.12"
 palette = "0.7"
 
 runie-core = { path = "crates/runie-core" }
+runie-engine = { path = "crates/runie-engine" }
 runie-tui = { path = "crates/runie-tui" }
 runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }

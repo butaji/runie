@@ -2,7 +2,8 @@
 use crate::tests::ensure_mock_provider;
 use crate::{run_agent_turn, turn::build_initial_messages, AgentCommand};
 use runie_core::event::AgentEvent;
-use runie_core::tool::{ToolContext, ToolStatus, builtin_registry};
+use runie_core::tool::{ToolContext, ToolStatus};
+use runie_engine::tool::builtin_registry;
 use runie_provider::DynProvider;
 use std::sync::{Arc, Mutex};
 

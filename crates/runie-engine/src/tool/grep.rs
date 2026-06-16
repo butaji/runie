@@ -92,7 +92,7 @@ fn run_grep_impl(
     limit: usize,
     start: Instant,
 ) -> Result<ToolOutput> {
-    let tool = if super::which_tool("rg").is_some() { "rg" } else { "grep" };
+    let tool = if crate::tool::which_tool("rg").is_some() { "rg" } else { "grep" };
     let args = build_grep_args(pattern, path, glob.as_deref(), ignore_case, literal, limit);
 
     let output = match std::process::Command::new(tool).args(&args).output() {

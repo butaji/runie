@@ -92,7 +92,7 @@ async fn execute_headless_tools(
     tool_outputs: &mut Vec<ToolOutput>,
 ) -> Result<()> {
     let ctx = ToolContext::default();
-    let registry = runie_core::tool::builtin_registry();
+    let registry = runie_engine::tool::builtin_registry();
 
     for tool_call in tools {
         let output = execute_tool_call(&registry, tool_call, &ctx).await;

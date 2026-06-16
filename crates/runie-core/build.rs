@@ -17,8 +17,7 @@ const ALLOWED_FILE_VIOLATIONS: &[&str] = &[
     "crates/runie-core/src/orchestrator.rs",             // r4-orchestrator-actor
     "crates/runie-core/src/skills.rs",                   // adopt-serde-yaml-skills cleanup
     "crates/runie-core/src/state.rs",                    // complete-appstate-refactor
-    "crates/runie-core/src/tool/mod.rs",                 // unify-tool-implementations
-    "crates/runie-core/src/tool/search.rs",              // fff-unified-search-tool cleanup
+    "crates/runie-engine/src/tool/search.rs",            // fff-unified-search-tool cleanup
     "crates/runie-core/src/update/agent.rs",             // coalesce-update-modules
     "crates/runie-core/src/update/dialog/mod.rs",        // coalesce-update-modules
     "crates/runie-core/src/update/mod.rs",               // coalesce-update-modules
@@ -51,13 +50,13 @@ const ALLOWED_FUNC_VIOLATIONS: &[(&str, &str)] = &[
     ("crates/runie-core/src/skills.rs", "pub fn load_from_dir"),
     ("crates/runie-core/src/skills.rs", "fn parse_skill_md"),
     ("crates/runie-core/src/snapshot.rs", "pub fn compute_mouse_target"),
-    ("crates/runie-core/src/tool/find_definitions.rs", "fn detect_kind"),
-    ("crates/runie-core/src/tool/find_definitions.rs", "async fn call"),
-    ("crates/runie-core/src/tool/search.rs", "fn search_impl"),
-    ("crates/runie-core/src/tool/search.rs", "fn search_files"),
-    ("crates/runie-core/src/tool/search.rs", "fn search_content"),
-    ("crates/runie-core/src/tool/search.rs", "fn search_glob"),
-    ("crates/runie-core/src/tool/search.rs", "fn format_git_status"),
+    ("crates/runie-engine/src/tool/find_definitions.rs", "fn detect_kind"),
+    ("crates/runie-engine/src/tool/find_definitions.rs", "async fn call"),
+    ("crates/runie-engine/src/tool/search.rs", "fn search_impl"),
+    ("crates/runie-engine/src/tool/search.rs", "fn search_files"),
+    ("crates/runie-engine/src/tool/search.rs", "fn search_content"),
+    ("crates/runie-engine/src/tool/search.rs", "fn search_glob"),
+    ("crates/runie-engine/src/tool/search.rs", "fn format_git_status"),
     ("crates/runie-core/src/trait_resolver.rs", "pub(crate) fn score"),
     ("crates/runie-core/src/update/agent.rs", "pub fn agent_event"),
     ("crates/runie-core/src/update/dialog/mod.rs", "fn query_fff_files"),

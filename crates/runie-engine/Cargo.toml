@@ -1,0 +1,18 @@
+[package]
+name = "runie-engine"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+runie-core.workspace = true
+anyhow.workspace = true
+serde = { version = "1.0", features = ["derive"] }
+serde_json.workspace = true
+async-trait = "0.1"
+tokio.workspace = true
+reqwest.workspace = true
+fff-search.workspace = true
+git2.workspace = true

@@ -3064,6 +3064,7 @@ dependencies = [
  "futures",
  "reqwest",
  "runie-core",
+ "runie-engine",
  "runie-provider",
  "serde",
  "serde_json",
@@ -3110,6 +3111,21 @@ dependencies = [
  "tracing",
  "unicode-segmentation",
  "unicode-width",
+]
+
+[[package]]
+name = "runie-engine"
+version = "0.2.16"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "fff-search",
+ "git2",
+ "reqwest",
+ "runie-core",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

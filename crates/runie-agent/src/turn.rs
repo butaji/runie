@@ -226,7 +226,7 @@ async fn execute_tools(
     tool_call_count: &mut usize,
 ) {
     let ctx = ToolContext::default();
-    let registry = runie_core::tool::builtin_registry();
+    let registry = runie_engine::tool::builtin_registry();
 
     for tool_call in tools {
         *tool_call_count += 1;

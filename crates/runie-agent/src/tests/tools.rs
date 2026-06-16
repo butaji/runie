@@ -1,6 +1,7 @@
 //! Tests for canonical tool execution via `runie_core::tool`.
 
-use runie_core::tool::{ToolContext, ToolStatus, builtin_registry};
+use runie_core::tool::{ToolContext, ToolStatus};
+use runie_engine::tool::builtin_registry;
 
 async fn call_tool(name: &str, args: serde_json::Value) -> runie_core::tool::ToolOutput {
     let registry = builtin_registry();

@@ -3,7 +3,7 @@
 //! Uses FFF's content search with `classify_definitions: true` to find
 //! `struct`, `fn`, `class`, `def`, `impl`, etc. definitions.
 
-use crate::actors::FffSearchState;
+use runie_core::actors::FffSearchState;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;

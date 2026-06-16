@@ -8,7 +8,7 @@ use std::time::Instant;
 
 /// Update frecency when a file is successfully read.
 fn record_file_access(path: &std::path::Path) {
-    if let Some(state) = crate::actors::FffSearchState::get() {
+    if let Some(state) = runie_core::actors::FffSearchState::get() {
         state.record_file_access(path);
     }
 }

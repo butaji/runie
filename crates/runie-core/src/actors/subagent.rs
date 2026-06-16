@@ -7,7 +7,7 @@
 
 use crate::actor::{spawn_actor, Actor, ActorHandle};
 use crate::orchestrator::{ModelTrait, OrchestratorPlan, SubagentTask, TaskStatus};
-use crate::tool::{ToolRegistry, builtin_registry};
+use crate::tool::ToolRegistry;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -55,16 +55,6 @@ impl SubagentContext {
         }
     }
 
-    /// Build a filtered `ToolRegistry` from this context's allowed tool list.
-    ///
-    /// If `allowed_tools` is empty, all built-in tools are available.
-    pub fn filtered_registry(&self) -> ToolRegistry {
-        let all = builtin_registry();
-        if self.allowed_tools.is_empty() {
-            return all;
-        }
-        all.filtered(&self.allowed_tools)
-    }
 }
 
 /// Minimal project snapshot visible to a subagent.
@@ -222,9 +212,6 @@ impl Actor for SubagentActor {
     ) -> impl std::future::Future<Output = ()> + Send + 'static {
         let task_id = self.ctx.task_id.clone();
         async move {
-            // Build isolated tool registry from context
-            let registry = self.ctx.filtered_registry();
-
             // Emit started event
             bus.publish(SubagentEvent::Started {
                 task_id: task_id.clone(),
@@ -239,7 +226,7 @@ impl Actor for SubagentActor {
             }
 
             // When channel closes, the orchestrator has dropped us — normal exit.
-            let _ = (registry, task_id);
+            let _ = task_id;
         }
     }
 }
@@ -351,10 +338,6 @@ mod tests {
         }
     }
 
-    fn all_registry() -> ToolRegistry {
-        builtin_registry()
-    }
-
     #[test]
     fn subagent_context_hides_orchestrator_plan() {
         let plan = sample_plan();
@@ -375,33 +358,6 @@ mod tests {
         let task = &plan.tasks[0];
         let ctx = SubagentContext::from_task(task, &plan);
         assert_eq!(ctx.allowed_tools, vec!["read_file", "grep"]);
-    }
-
-    #[test]
-    fn tool_filter_limits_registry() {
-        let registry = all_registry();
-        let filtered = registry.filtered(&["read_file".to_string(), "grep".to_string()]);
-        assert!(filtered.get("read_file").is_some());
-        assert!(filtered.get("grep").is_some());
-        assert!(filtered.get("bash").is_none());
-        assert!(filtered.get("write_file").is_none());
-    }
-
-    #[test]
-    fn tool_filter_empty_allows_all() {
-        let registry = all_registry();
-        let filtered = registry.filtered(&[]);
-        // Empty filter means no restriction — all tools available
-        assert!(filtered.get("bash").is_some());
-        assert!(filtered.get("read_file").is_some());
-    }
-
-    #[test]
-    fn tool_filter_unknown_names_skipped() {
-        let registry = all_registry();
-        let filtered = registry.filtered(&["read_file".to_string(), "nonexistent".to_string()]);
-        assert!(filtered.get("read_file").is_some());
-        assert!(filtered.get("nonexistent").is_none());
     }
 
     #[test]

@@ -1,8 +1,8 @@
-//! Tool registry and built-in tools for runie-agent.
+//! Tool registry and shared types for Runie.
 //!
-//! Each tool implements the [`Tool`] trait. The [`builtin_registry`] function creates
-//! a [`ToolRegistry`] with all built-ins. This module also provides pure formatting
-//! helpers for inline tool rendering.
+//! The concrete tool implementations have moved to `runie-engine::tool`. This
+//! module keeps the [`Tool`] trait, [`ToolRegistry`], context/output/status
+//! types, and pure formatting helpers so that crates can depend only on core.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -118,49 +118,6 @@ pub fn which_tool(name: &str) -> Option<String> {
         .ok()
         .filter(|o| o.status.success())
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-}
-
-// ─── Built-in Tools ───────────────────────────────────────────────────────────
-
-mod ask_user;
-mod bash;
-mod list_dir;
-mod read_file;
-mod write_file;
-mod edit_file;
-mod grep;
-mod find;
-mod fetch_docs;
-pub mod search;
-pub mod find_definitions;
-
-pub use ask_user::AskUserTool;
-pub use bash::BashTool;
-pub use list_dir::ListDirTool;
-pub use read_file::ReadFileTool;
-pub use write_file::WriteFileTool;
-pub use edit_file::EditFileTool;
-pub use grep::GrepTool;
-pub use find::FindTool;
-pub use fetch_docs::FetchDocsTool;
-pub use search::SearchTool;
-pub use find_definitions::FindDefinitionsTool;
-
-/// Create a registry with all built-in tools registered.
-pub fn builtin_registry() -> ToolRegistry {
-    let mut registry = ToolRegistry::new();
-    registry.register(Arc::new(AskUserTool));
-    registry.register(Arc::new(BashTool));
-    registry.register(Arc::new(ReadFileTool));
-    registry.register(Arc::new(WriteFileTool));
-    registry.register(Arc::new(EditFileTool));
-    registry.register(Arc::new(ListDirTool));
-    registry.register(Arc::new(GrepTool));
-    registry.register(Arc::new(FindTool));
-    registry.register(Arc::new(FetchDocsTool));
-    registry.register(Arc::new(SearchTool));
-    registry.register(Arc::new(FindDefinitionsTool));
-    registry
 }
 
 // ─── Inline Tool Rendering Helpers ─────────────────────────────────────────────
@@ -327,38 +284,6 @@ mod tests {
         let tool = registry.get("test_tool");
         assert!(tool.is_some());
         assert_eq!(tool.unwrap().name(), "test_tool");
-    }
-
-    #[test]
-    fn tool_registry_unique() {
-        let registry = builtin_registry();
-        let names: std::collections::HashSet<String> = registry
-            .list()
-            .iter()
-            .map(|t| t.name().to_string())
-            .collect();
-        let expected = [
-            "ask_user",
-            "bash",
-            "read_file",
-            "write_file",
-            "edit_file",
-            "list_dir",
-            "grep",
-            "find",
-            "fetch_docs",
-            "search",
-            "find_definitions",
-        ];
-        for name in expected {
-            assert!(
-                names.contains(name),
-                "builtin_registry must contain {}",
-                name
-            );
-        }
-        // Each tool name appears exactly once: no duplicate built-in definitions.
-        assert_eq!(names.len(), expected.len());
     }
 
     #[tokio::test]
