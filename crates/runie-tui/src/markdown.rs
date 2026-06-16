@@ -79,3 +79,54 @@ pub fn md_to_spans(md_spans: &[MdSpan]) -> Vec<Span<'static>> {
         .map(|s| Span::styled(s.content.clone(), s.style))
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::backend::TestBackend;
+    use ratatui::text::Line;
+    use ratatui::widgets::Paragraph;
+    use ratatui::Terminal;
+
+    #[test]
+    fn styled_spans_preserved() {
+        let inlines = vec![
+            MdInline::Text("plain ".into()),
+            MdInline::Bold("bold".into()),
+            MdInline::Text(" ".into()),
+            MdInline::Italic("italic".into()),
+            MdInline::Text(" ".into()),
+            MdInline::Code("code".into()),
+        ];
+        let spans = apply_color_to_inlines(&inlines, Color::White);
+
+        let has_bold = spans
+            .iter()
+            .any(|s| s.content == "bold" && s.style.add_modifier(Modifier::BOLD) == s.style);
+        let has_italic = spans
+            .iter()
+            .any(|s| s.content == "italic" && s.style.add_modifier(Modifier::ITALIC) == s.style);
+        let has_code = spans
+            .iter()
+            .any(|s| s.content == "code" && s.style.bg.is_some());
+        assert!(has_bold, "missing bold span");
+        assert!(has_italic, "missing italic span");
+        assert!(has_code, "missing code span");
+
+        let backend = TestBackend::new(30, 3);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal
+            .draw(|f| {
+                let line = Line::from(md_to_spans(&spans));
+                f.render_widget(Paragraph::new(line), f.area());
+            })
+            .unwrap();
+        let buf = terminal.backend().buffer();
+        let first_line = buf.content.chunks(30).next().unwrap();
+        let text: String = first_line.iter().map(|c| c.symbol()).collect();
+        assert!(
+            text.contains("plain bold italic code"),
+            "rendered text missing: {text}"
+        );
+    }
+}

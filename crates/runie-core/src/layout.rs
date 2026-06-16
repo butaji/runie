@@ -125,8 +125,8 @@ fn markdown_block_line_count(
     is_first: &mut bool,
 ) -> usize {
     let lines = match block {
-        CodeBlock::Text { content, .. } => text_block_line_count(
-            content,
+        CodeBlock::Text { inlines, .. } => text_block_line_count(
+            &inlines_to_plain_text(inlines),
             inner_width,
             prefix_width,
             indent_width,
@@ -139,6 +139,13 @@ fn markdown_block_line_count(
     };
     *is_first = false;
     lines
+}
+
+fn inlines_to_plain_text(inlines: &[crate::markdown::MdInline]) -> String {
+    inlines
+        .iter()
+        .map(|i| if i.is_break() { "\n" } else { i.as_text() })
+        .collect()
 }
 
 fn text_block_line_count(

@@ -1738,15 +1738,16 @@
     },
     {
       "id": "unify-markdown-pipeline",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P2",
+      "completed_in": "current",
       "file": "tasks/unify-markdown-pipeline.md",
       "depends_on": [
         "unify-rendering-pipeline"
       ],
-      "notes": "Unified markdown AST in runie-core: CodeBlock and MdInline enums shared by core (line-count math) and TUI (styled rendering). BlockParser injects inline markers into text_buf; parse_spans_from_events checks style_stack on Event::Text to emit correct MdInline variant. TUI applies colors via apply_color_to_inlines. 12 markdown tests + all 2040 workspace tests pass."
+      "notes": "Core layout now uses CodeBlock::Text.inlines (via MdInline::is_break) for plain-text line-count math. TUI message rendering uses apply_color_to_inlines on AST inlines and wraps styled spans without re-parsing. Added Layer 1 test ast_line_count_matches_render and Layer 3 test styled_spans_preserved. cargo test --workspace green."
     },
     {
       "id": "cleanup-state-helpers",

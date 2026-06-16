@@ -32,6 +32,11 @@ impl MdInline {
             MdInline::SoftBreak | MdInline::HardBreak => "",
         }
     }
+
+    /// True for soft or hard line breaks.
+    pub fn is_break(&self) -> bool {
+        matches!(self, MdInline::SoftBreak | MdInline::HardBreak)
+    }
 }
 
 // ── Block AST ────────────────────────────────────────────────────────────────

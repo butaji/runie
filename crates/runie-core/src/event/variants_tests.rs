@@ -204,6 +204,7 @@ mod tests {
                 | Event::ToolEnd { .. }
                 | Event::ResponseDelta { .. }
                 | Event::Response { .. }
+                | Event::MessageReplayed { .. }
                 | Event::TurnComplete { .. }
                 | Event::Done { .. }
                 | Event::Error { .. } => Event::Done { id: "x".into() },

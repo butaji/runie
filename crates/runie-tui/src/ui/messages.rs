@@ -415,6 +415,16 @@ mod tests {
     }
 
     #[test]
+    fn ast_line_count_matches_render() {
+        assert_count_matches(Element::agent("plain **bold** _italic_ `code` text").at(0.0), 80);
+        assert_count_matches(Element::agent(&"**bold** word ".repeat(20)).at(0.0), 40);
+        assert_count_matches(
+            Element::agent("line with `code` and **bold**\nnext line with *italic*").at(0.0),
+            50,
+        );
+    }
+
+    #[test]
     fn agent_message_with_code_block_line_count_matches_rendered_rows() {
         assert_count_matches(
             Element::agent("intro\n```rust\nlet x = 1;\n```\noutro").at(0.0),
