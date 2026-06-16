@@ -44,18 +44,18 @@ esac
 case "$mode" in
   run|run-delay)
     echo "[dev] Hot reload (release, RUNIE_MOCK=1). Ctrl+C to stop."
-    cargo watch -x 'run --release -p runie-term' -w crates
+    cargo watch -x 'run --release -p runie-tui' -w crates
     ;;
   fast|fast-delay)
     echo "[dev] Hot reload (debug, RUNIE_MOCK=1). Ctrl+C to stop."
-    cargo watch -x 'run -p runie-term' -w crates
+    cargo watch -x 'run -p runie-tui' -w crates
     ;;
   test)
     cargo test --all
     ;;
   smoke)
     echo "[dev] Running smoke tests..."
-    cargo build --release -p runie-term 2>&1 | tail -2
+    cargo build --release -p runie-tui 2>&1 | tail -2
     ./scripts/smoke-tmux.sh
     echo "[dev] All smoke tests passed!"
     ;;
