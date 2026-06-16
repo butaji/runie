@@ -1685,7 +1685,7 @@
     },
     {
       "id": "merge-runie-term-into-tui",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P1",
@@ -1693,7 +1693,8 @@
       "depends_on": [],
       "blocks": [
         "unify-rendering-pipeline"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "unify-diff-model",
@@ -1755,7 +1756,7 @@
     },
     {
       "id": "delete-runie-term-archive",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P0",
@@ -1763,11 +1764,12 @@
       "blocks": [
         "fix-ci-runie-term-references"
       ],
-      "file": "tasks/delete-runie-term-archive.md"
+      "file": "tasks/delete-runie-term-archive.md",
+      "completed_in": "current"
     },
     {
       "id": "fix-ci-runie-term-references",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P0",
@@ -1775,7 +1777,8 @@
         "delete-runie-term-archive"
       ],
       "blocks": [],
-      "file": "tasks/fix-ci-runie-term-references.md"
+      "file": "tasks/fix-ci-runie-term-references.md",
+      "completed_in": "current"
     },
     {
       "id": "align-build-rs-lint-thresholds",

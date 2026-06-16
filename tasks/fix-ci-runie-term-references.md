@@ -1,6 +1,6 @@
 # Fix CI and Scripts Referencing runie-term
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Configuration
 **Priority**: P0
