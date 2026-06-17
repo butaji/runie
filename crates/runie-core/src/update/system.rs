@@ -42,6 +42,8 @@ impl AppState {
             ..Default::default()
         });
         self.messages_changed();
+        self.transient_until =
+            Some(std::time::Instant::now() + std::time::Duration::from_secs(5));
     }
 
     /// Emit a transient notification in the hints line (not in the feed).

@@ -11,79 +11,73 @@ pub fn load_from_dir(dir: &Path) -> Vec<Skill> {
         Ok(e) => e,
         Err(_) => return Vec::new(),
     };
+    let (subdir_skills, subdir_names) = load_subdir_skills(entries);
+    let mut skills = subdir_skills;
 
-    // Track which skill names we've loaded from subdirectories
-    let mut subdir_names: std::collections::HashSet<String> = std::collections::HashSet::new();
-    let mut skills = Vec::new();
-
-    for entry in entries.flatten() {
-        let path = entry.path();
-
-        // Check for subdirectory with SKILL.md
-        if path.is_dir() {
-            let skill_md = path.join("SKILL.md");
-            if skill_md.exists() {
-                if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
-                    subdir_names.insert(name.to_string());
-                }
-                if let Some(skill) = parse_skill_md(&skill_md) {
-                    skills.push(skill);
-                }
-            }
-        }
-    }
-
-    // Now scan for flat .md files, skipping those already loaded from subdirectories
     let entries = match std::fs::read_dir(dir) {
         Ok(e) => e,
         Err(_) => return skills,
     };
+    load_flat_skills(entries, &subdir_names, &mut skills);
+    skills
+}
 
+fn load_subdir_skills(
+    entries: std::fs::ReadDir,
+) -> (Vec<Skill>, std::collections::HashSet<String>) {
+    let mut names = std::collections::HashSet::new();
+    let mut skills = Vec::new();
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) == Some("md") {
-            let stem = path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("unnamed");
-            if !subdir_names.contains(stem) {
-                if let Some(skill) = parse_skill_md(&path) {
-                    skills.push(skill);
-                }
-            }
+        if !path.is_dir() {
+            continue;
+        }
+        let skill_md = path.join("SKILL.md");
+        if !skill_md.exists() {
+            continue;
+        }
+        if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+            names.insert(name.to_string());
+        }
+        if let Some(skill) = parse_skill_md(&skill_md) {
+            skills.push(skill);
         }
     }
+    (skills, names)
+}
 
-    skills
+fn load_flat_skills(
+    entries: std::fs::ReadDir,
+    subdir_names: &std::collections::HashSet<String>,
+    skills: &mut Vec<Skill>,
+) {
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("md") {
+            continue;
+        }
+        let stem = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("unnamed");
+        if subdir_names.contains(stem) {
+            continue;
+        }
+        if let Some(skill) = parse_skill_md(&path) {
+            skills.push(skill);
+        }
+    }
 }
 
 /// Parse a single SKILL.md file, optionally with YAML frontmatter.
 pub(crate) fn parse_skill_md(path: &Path) -> Option<Skill> {
     let content = std::fs::read_to_string(path).ok()?;
-
-    // Parse optional YAML frontmatter using serde_yaml
     let frontmatter = extract_frontmatter(&content);
-
-    let name = frontmatter
-        .get("name")
-        .cloned()
-        .or_else(|| {
-            // Derive name from path: for subdir/SKILL.md use dir name, else file stem
-            if path.file_name().and_then(|s| s.to_str()) == Some("SKILL.md") {
-                path.parent()?.file_name()?.to_str().map(|s| s.to_string())
-            } else {
-                path.file_stem()
-                    .and_then(|s| s.to_str())
-                    .map(|s| s.to_string())
-            }
-        })
-        .unwrap_or_else(|| "unnamed".to_string());
-
+    let name = resolve_skill_name(path, &frontmatter);
     let description = frontmatter
         .get("description")
         .cloned()
         .unwrap_or_else(|| extract_section(&content, "Description").unwrap_or_default());
-
     let context = frontmatter
         .get("context")
         .cloned()
@@ -92,8 +86,7 @@ pub(crate) fn parse_skill_md(path: &Path) -> Option<Skill> {
         .get("invocation")
         .cloned()
         .unwrap_or_else(|| extract_section(&content, "Invocation").unwrap_or_default());
-    let user_invocable = invocation.to_lowercase().contains("user can invoke")
-        || invocation.to_lowercase().contains("/skill");
+    let user_invocable = is_user_invocable(&invocation);
 
     Some(Skill {
         name,
@@ -102,6 +95,28 @@ pub(crate) fn parse_skill_md(path: &Path) -> Option<Skill> {
         user_invocable,
         file_path: path.to_owned(),
     })
+}
+
+fn resolve_skill_name(path: &Path, frontmatter: &HashMap<String, String>) -> String {
+    frontmatter
+        .get("name")
+        .cloned()
+        .unwrap_or_else(|| derive_skill_name(path).unwrap_or_else(|| "unnamed".to_string()))
+}
+
+fn derive_skill_name(path: &Path) -> Option<String> {
+    if path.file_name().and_then(|s| s.to_str()) == Some("SKILL.md") {
+        path.parent()?.file_name()?.to_str().map(|s| s.to_string())
+    } else {
+        path.file_stem()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_string())
+    }
+}
+
+fn is_user_invocable(invocation: &str) -> bool {
+    let lower = invocation.to_lowercase();
+    lower.contains("user can invoke") || lower.contains("/skill")
 }
 
 /// Extract YAML frontmatter from content if present, using serde_yaml.

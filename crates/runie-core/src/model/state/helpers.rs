@@ -82,7 +82,7 @@ pub(crate) fn element_metadata(elem: &Element) -> Option<String> {
             duration_secs,
             timestamp,
             ..
-        } => Some(format!("thought {:.0}s → {:.1}s", timestamp, duration_secs)),
+        } => Some(thought_metadata(*timestamp, *duration_secs)),
         Element::ToolRunning {
             name, timestamp, ..
         } => Some(format!("{} running at {:.0}s", name, timestamp)),
@@ -91,19 +91,13 @@ pub(crate) fn element_metadata(elem: &Element) -> Option<String> {
             duration_secs,
             timestamp,
             ..
-        } => Some(format!(
-            "{} done in {:.1}s at {:.0}s",
-            name, duration_secs, timestamp
-        )),
+        } => Some(tool_done_metadata(name, *duration_secs, *timestamp)),
         Element::ToolSummary {
             name,
             duration_secs,
             timestamp,
             ..
-        } => Some(format!(
-            "{} {:.1}s at {:.0}s",
-            name, duration_secs, timestamp
-        )),
+        } => Some(tool_summary_metadata(name, *duration_secs, *timestamp)),
         Element::TurnComplete {
             duration_secs,
             timestamp,
@@ -111,4 +105,16 @@ pub(crate) fn element_metadata(elem: &Element) -> Option<String> {
         } => Some(format!("turn {:.1}s at {:.0}s", duration_secs, timestamp)),
         _ => None,
     }
+}
+
+fn thought_metadata(timestamp: f64, duration_secs: f64) -> String {
+    format!("thought {:.0}s → {:.1}s", timestamp, duration_secs)
+}
+
+fn tool_done_metadata(name: &str, duration_secs: f64, timestamp: f64) -> String {
+    format!("{} done in {:.1}s at {:.0}s", name, duration_secs, timestamp)
+}
+
+fn tool_summary_metadata(name: &str, duration_secs: f64, timestamp: f64) -> String {
+    format!("{} {:.1}s at {:.0}s", name, duration_secs, timestamp)
 }

@@ -25,84 +25,91 @@ pub fn parse_location(query: &str) -> (&str, Option<Location>) {
         None => return (query, None),
     };
 
-    // Try line:col-col (column range on same line)
     if location_part.contains('-') {
-        if let Some((start_part, end_part)) = location_part.split_once('-') {
-            if start_part.contains(':') && end_part.contains(':') {
-                // line:col-line:col
-                if let Some((sl, sc)) = start_part.split_once(':') {
-                    if let (Ok(start_line), Ok(start_col)) = (sl.parse::<i32>(), sc.parse::<i32>())
-                    {
-                        if let Some((el, ec)) = end_part.split_once(':') {
-                            if let (Ok(end_line), Ok(end_col)) =
-                                (el.parse::<i32>(), ec.parse::<i32>())
-                            {
-                                return (
-                                    file_path,
-                                    Some(Location::Range {
-                                        start: (start_line, start_col),
-                                        end: (end_line, end_col),
-                                    }),
-                                );
-                            }
-                        }
-                    }
-                }
-            } else if start_part.contains(':') {
-                // line:col-col (column range)
-                if let Some((line_str, start_col_str)) = start_part.split_once(':') {
-                    if let (Ok(line), Ok(start_col), Ok(end_col)) = (
-                        line_str.parse::<i32>(),
-                        start_col_str.parse::<i32>(),
-                        end_part.parse::<i32>(),
-                    ) {
-                        return (
-                            file_path,
-                            Some(Location::Range {
-                                start: (line, start_col),
-                                end: (line, end_col),
-                            }),
-                        );
-                    }
-                }
-            } else {
-                // line-line (line range)
-                if let (Ok(start_line), Ok(end_line)) =
-                    (start_part.parse::<i32>(), end_part.parse::<i32>())
-                {
-                    let end = if end_line < start_line {
-                        start_line
-                    } else {
-                        end_line
-                    };
-                    return (
-                        file_path,
-                        Some(Location::Range {
-                            start: (start_line, 0),
-                            end: (end, 0),
-                        }),
-                    );
-                }
-            }
+        let (path, loc) = parse_range(file_path, location_part);
+        if loc.is_some() {
+            return (path, loc);
         }
     }
-
-    // Try line:col (position)
     if location_part.contains(':') {
-        if let Some((line_str, col_str)) = location_part.split_once(':') {
-            if let (Ok(line), Ok(col)) = (line_str.parse::<i32>(), col_str.parse::<i32>()) {
-                return (file_path, Some(Location::Position { line, col }));
-            }
+        let (path, loc) = parse_position(file_path, location_part);
+        if loc.is_some() {
+            return (path, loc);
         }
     }
-
-    // Try just a line number
-    if let Ok(line) = location_part.parse::<i32>() {
-        return (file_path, Some(Location::Line(line)));
+    let (path, loc) = parse_line(file_path, location_part);
+    if loc.is_some() {
+        return (path, loc);
     }
 
     // Not a valid location — treat the whole thing as the path
     (query, None)
+}
+
+fn parse_range<'a>(file_path: &'a str, location_part: &str) -> (&'a str, Option<Location>) {
+    let Some((start_part, end_part)) = location_part.split_once('-') else {
+        return (file_path, None);
+    };
+    if start_part.contains(':') && end_part.contains(':') {
+        let Some((start_line, start_col)) = parse_line_col(start_part) else {
+            return (file_path, None);
+        };
+        let Some((end_line, end_col)) = parse_line_col(end_part) else {
+            return (file_path, None);
+        };
+        return (
+            file_path,
+            Some(Location::Range {
+                start: (start_line, start_col),
+                end: (end_line, end_col),
+            }),
+        );
+    }
+    if start_part.contains(':') {
+        let Some((line, start_col)) = parse_line_col(start_part) else {
+            return (file_path, None);
+        };
+        let Some(end_col) = end_part.parse::<i32>().ok() else {
+            return (file_path, None);
+        };
+        return (
+            file_path,
+            Some(Location::Range {
+                start: (line, start_col),
+                end: (line, end_col),
+            }),
+        );
+    }
+    (file_path, parse_line_range(start_part, end_part))
+}
+
+fn parse_line_range(start_part: &str, end_part: &str) -> Option<Location> {
+    let start_line = start_part.parse::<i32>().ok()?;
+    let end_line = end_part.parse::<i32>().ok()?;
+    let end = end_line.max(start_line);
+    Some(Location::Range {
+        start: (start_line, 0),
+        end: (end, 0),
+    })
+}
+
+fn parse_line_col(part: &str) -> Option<(i32, i32)> {
+    let (line_str, col_str) = part.split_once(':')?;
+    Some((line_str.parse::<i32>().ok()?, col_str.parse::<i32>().ok()?))
+}
+
+fn parse_position<'a>(file_path: &'a str, location_part: &str) -> (&'a str, Option<Location>) {
+    let Some((line, col)) = parse_line_col(location_part) else {
+        return (file_path, None);
+    };
+    (file_path, Some(Location::Position { line, col }))
+}
+
+fn parse_line<'a>(file_path: &'a str, location_part: &str) -> (&'a str, Option<Location>) {
+    let Ok(line) = location_part.parse::<i32>() else {
+        return (file_path, None);
+    };
+    (file_path, Some(Location::Line(line)))
 }
 
 /// Returns the line number from a location, if present.

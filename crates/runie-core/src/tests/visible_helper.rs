@@ -22,11 +22,20 @@ pub fn compute_viewport(state: &AppState, visible_height: usize) -> TestViewport
     let (viewport_start, viewport_end) = viewport_bounds(total, visible_height, state.view.scroll);
     let (start_idx, skip_lines) = find_start_index(state.view.line_counts(), viewport_start);
     let end_idx = find_end_index(state.view.line_counts(), viewport_end, cache.len());
+    let end_idx = trim_trailing_spacers(cache, start_idx, end_idx);
 
     TestViewport {
         elements: &cache[start_idx..end_idx.min(cache.len())],
         skip_lines,
     }
+}
+
+fn trim_trailing_spacers(cache: &[Element], start_idx: usize, end_idx: usize) -> usize {
+    let mut end = end_idx.min(cache.len());
+    while end > start_idx && matches!(cache.get(end - 1), Some(Element::Spacer { .. })) {
+        end -= 1;
+    }
+    end
 }
 
 fn viewport_bounds(total: usize, visible_height: usize, scroll: usize) -> (usize, usize) {

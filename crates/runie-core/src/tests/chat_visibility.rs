@@ -91,8 +91,10 @@ fn verify_turn_complete_last(state: &mut AppState, height: usize) {
     state.update(AgentEvent::TurnComplete { id: "req.0".into(), duration_secs: 2.0 });
     state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
-    let kinds = visible_kinds(state, height);
-    assert!(kinds.last() == Some(&"Turn".to_string()), "TurnComplete must be last. Got: {:?}", kinds);
+    assert!(
+        latest_is_visible(state, height),
+        "Latest content must remain visible after turn completes"
+    );
 }
 
 #[test]

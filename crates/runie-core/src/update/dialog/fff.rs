@@ -8,40 +8,25 @@ use crate::FffSearchState;
 /// Query FFF indexer for files. Falls back to file_refs if FFF is unavailable or
 /// returns no results (e.g. not indexed yet in tests).
 pub(crate) fn query_fff_files(query: &str, limit: usize) -> Vec<FffFileEntry> {
-    // Primary: use file_refs (deterministic, sorted by name).
-    let fallback: Vec<FffFileEntry> = crate::file_refs::find_file_entries(".", limit)
-        .into_iter()
-        .map(|e| FffFileEntry {
-            name: e.name.clone(),
-            path: e.name,
-            is_dir: e.is_dir,
-            score: 0.0,
-            git_status: None,
-        })
-        .collect();
-
+    let fallback = build_fff_fallback(limit);
     let Some(state) = FffSearchState::get() else {
         return fallback;
     };
-
-    let picker_guard = match state.picker.read() {
-        Ok(g) => g,
-        Err(_) => return fallback,
+    let Ok(picker_guard) = state.picker.read() else {
+        return fallback;
     };
-    let qt_guard = match state.query_tracker.read() {
-        Ok(g) => g,
-        Err(_) => return fallback,
+    let Ok(qt_guard) = state.query_tracker.read() else {
+        return fallback;
     };
-
-    let picker = match picker_guard.as_ref() {
-        Some(p) => p,
-        None => return fallback,
+    let Some(picker) = picker_guard.as_ref() else {
+        return fallback;
     };
+    let query_tracker = qt_guard.as_ref();
 
     let parsed = fff_search::QueryParser::default().parse(query);
     let results = picker.fuzzy_search(
         &parsed,
-        qt_guard.as_ref(),
+        query_tracker,
         fff_search::FuzzySearchOptions {
             max_threads: 0,
             current_file: None,
@@ -51,12 +36,29 @@ pub(crate) fn query_fff_files(query: &str, limit: usize) -> Vec<FffFileEntry> {
             min_combo_count: 2,
         },
     );
-
-    // If FFF returned no results (not indexed yet), use file_refs fallback.
     if results.items.is_empty() {
         return fallback;
     }
+    format_fff_results(picker, &results)
+}
 
+fn build_fff_fallback(limit: usize) -> Vec<FffFileEntry> {
+    crate::file_refs::find_file_entries(".", limit)
+        .into_iter()
+        .map(|e| FffFileEntry {
+            name: e.name.clone(),
+            path: e.name,
+            is_dir: e.is_dir,
+            score: 0.0,
+            git_status: None,
+        })
+        .collect()
+}
+
+fn format_fff_results(
+    picker: &fff_search::FilePicker,
+    results: &fff_search::SearchResult,
+) -> Vec<FffFileEntry> {
     results
         .items
         .iter()
@@ -82,15 +84,20 @@ pub(crate) fn query_fff_files(query: &str, limit: usize) -> Vec<FffFileEntry> {
 
 fn format_fff_git_status(status: git2::Status) -> String {
     use git2::Status as G;
-    if status.contains(G::WT_NEW) || status.contains(G::INDEX_NEW) {
-        "untracked".to_string()
-    } else if status.contains(G::WT_MODIFIED) || status.contains(G::INDEX_MODIFIED) {
-        "modified".to_string()
-    } else if status.contains(G::WT_DELETED) || status.contains(G::INDEX_DELETED) {
-        "deleted".to_string()
-    } else if status.contains(G::WT_RENAMED) || status.contains(G::INDEX_RENAMED) {
-        "renamed".to_string()
-    } else {
-        String::new()
+    const STATUS_LABELS: &[(git2::Status, &str)] = &[
+        (G::WT_NEW, "untracked"),
+        (G::INDEX_NEW, "untracked"),
+        (G::WT_MODIFIED, "modified"),
+        (G::INDEX_MODIFIED, "modified"),
+        (G::WT_DELETED, "deleted"),
+        (G::INDEX_DELETED, "deleted"),
+        (G::WT_RENAMED, "renamed"),
+        (G::INDEX_RENAMED, "renamed"),
+    ];
+    for (flag, label) in STATUS_LABELS {
+        if status.contains(*flag) {
+            return (*label).to_string();
+        }
     }
+    String::new()
 }

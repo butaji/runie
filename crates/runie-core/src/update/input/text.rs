@@ -12,44 +12,30 @@ impl AppState {
     }
 
     fn mode_hints(&self) -> Vec<String> {
-        // Modal dialog overrides everything — show modal nav only
         if self.open_dialog.is_some() {
             return crate::update::input::modal_hints();
         }
         if self.view.vim_nav_mode {
-            // Feed is focused in vim nav — show scrollback navigation
             return crate::update::input::vim_nav_hints();
         }
         if self.completion.at_suggestions.is_some() {
             return crate::update::input::at_suggestion_hints();
         }
         if self.agent.turn_active {
-            let mut hints = self.active_turn_hints();
-            if self.config.execution_mode.uses_orchestrator() {
-                hints.extend(crate::update::input::team_mode_hints());
-            }
-            return hints;
+            return self.with_team_mode(self.active_turn_hints());
         }
         if !self.input.input.is_empty() {
-            let mut hints = crate::update::input::input_active_hints();
-            if self.config.execution_mode.uses_orchestrator() {
-                hints.extend(crate::update::input::team_mode_hints());
-            }
-            return hints;
+            return self.with_team_mode(crate::update::input::input_active_hints());
         }
         if self.config.vim_mode {
-            // Input is empty and vim mode is on — advertise nav mode
-            let mut hints = vec!["esc nav".to_string()];
-            if self.config.execution_mode.uses_orchestrator() {
-                hints.extend(crate::update::input::team_mode_hints());
-            }
-            return hints;
+            return self.with_team_mode(vec!["esc nav".to_string()]);
         }
-        let hints = crate::update::input::empty_input_hints();
+        self.with_team_mode(crate::update::input::empty_input_hints())
+    }
+
+    fn with_team_mode(&self, mut hints: Vec<String>) -> Vec<String> {
         if self.config.execution_mode.uses_orchestrator() {
-            let mut h = hints;
-            h.extend(crate::update::input::team_mode_hints());
-            return h;
+            hints.extend(crate::update::input::team_mode_hints());
         }
         hints
     }
@@ -387,6 +373,8 @@ impl AppState {
     fn dispatch_submit_content(&mut self, content: String) {
         if let Some(result) = self.handle_slash(&content) {
             self.apply_command_result(result);
+            self.view.scroll = 0;
+            self.mark_dirty();
             return;
         }
         if self.agent.turn_active {

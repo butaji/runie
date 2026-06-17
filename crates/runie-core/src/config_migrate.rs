@@ -56,33 +56,36 @@ fn v2_to_v3(
         .ok_or_else(|| anyhow::anyhow!("config must be a table"))?;
 
     if map.get("keybindings").is_some() {
-        // Already has keybindings table — nothing to migrate
         return Ok(());
     }
 
-    // Check for legacy keybindings.json relative to config path
     let cfg_path = config_path.unwrap_or_else(crate::config::config_path);
     let json_path = cfg_path.with_file_name("keybindings.json");
-    if json_path.exists() {
-        if let Ok(content) = std::fs::read_to_string(&json_path) {
-            if let Ok(value) = serde_json::from_str::<serde_json::Value>(&content) {
-                if let Some(obj) = value.as_object() {
-                    let mut kb_table = toml::value::Table::new();
-                    for (k, v) in obj {
-                        if let Some(s) = v.as_str() {
-                            kb_table.insert(k.clone(), toml::Value::String(s.to_string()));
-                        }
-                    }
-                    map.insert("keybindings".into(), toml::Value::Table(kb_table));
-                    // Rename JSON file to .bak
-                    let bak_path = json_path.with_extension("json.bak");
-                    let _ = std::fs::rename(&json_path, &bak_path);
-                }
-            }
-        }
+    if let Some(kb_table) = read_legacy_keybindings(&json_path) {
+        map.insert("keybindings".into(), toml::Value::Table(kb_table));
     }
 
     Ok(())
+}
+
+fn read_legacy_keybindings(json_path: &std::path::Path) -> Option<toml::value::Table> {
+    if !json_path.exists() {
+        return None;
+    }
+    let content = std::fs::read_to_string(json_path).ok()?;
+    let value = serde_json::from_str::<serde_json::Value>(&content).ok()?;
+    let obj = value.as_object()?;
+    let mut kb_table = toml::value::Table::new();
+    for (k, v) in obj {
+        if let Some(s) = v.as_str() {
+            kb_table.insert(k.clone(), toml::Value::String(s.to_string()));
+        }
+    }
+    if !kb_table.is_empty() {
+        let bak_path = json_path.with_extension("json.bak");
+        let _ = std::fs::rename(json_path, bak_path);
+    }
+    Some(kb_table)
 }
 
 /// Backup the config file before migration.

@@ -241,26 +241,8 @@ impl AppState {
     pub(crate) fn try_vim_nav_motion(&mut self, c: char) -> Option<bool> {
         let last = self.view.posts.len().saturating_sub(1);
         match c {
-            'j' => {
-                if self.view.selected_post.unwrap_or(0) >= last {
-                    self.view.vim_nav_mode = false;
-                    self.mark_dirty();
-                    Some(true)
-                } else {
-                    crate::update::input::element_jump_down(self);
-                    Some(true)
-                }
-            }
-            'k' => {
-                if self.view.selected_post.unwrap_or(0) == 0 {
-                    self.input.input_flash = 3;
-                    self.mark_dirty();
-                    Some(true)
-                } else {
-                    crate::update::input::element_jump_up(self);
-                    Some(true)
-                }
-            }
+            'j' => Some(self.handle_vim_jump_down(last)),
+            'k' => Some(self.handle_vim_jump_up()),
             'g' => {
                 self.update(ScrollEvent::GoToTop);
                 Some(true)
@@ -269,20 +251,39 @@ impl AppState {
                 self.update(ScrollEvent::GoToBottom);
                 Some(true)
             }
-            'y' => {
-                self.update(DialogEvent::CopySelectedBlock);
-                self.view.vim_nav_mode = false;
-                self.mark_dirty();
-                Some(true)
-            }
-            'Y' => {
-                self.update(DialogEvent::CopyBlockMetadata);
-                self.view.vim_nav_mode = false;
-                self.mark_dirty();
-                Some(true)
-            }
+            'y' => Some(self.handle_vim_copy(DialogEvent::CopySelectedBlock)),
+            'Y' => Some(self.handle_vim_copy(DialogEvent::CopyBlockMetadata)),
             _ => None,
         }
+    }
+
+    fn handle_vim_jump_down(&mut self, last: usize) -> bool {
+        if self.view.selected_post.unwrap_or(0) >= last {
+            self.view.vim_nav_mode = false;
+            self.mark_dirty();
+            true
+        } else {
+            crate::update::input::element_jump_down(self);
+            true
+        }
+    }
+
+    fn handle_vim_jump_up(&mut self) -> bool {
+        if self.view.selected_post.unwrap_or(0) == 0 {
+            self.input.input_flash = 3;
+            self.mark_dirty();
+            true
+        } else {
+            crate::update::input::element_jump_up(self);
+            true
+        }
+    }
+
+    fn handle_vim_copy(&mut self, evt: DialogEvent) -> bool {
+        self.update(evt);
+        self.view.vim_nav_mode = false;
+        self.mark_dirty();
+        true
     }
 
     pub(crate) fn handle_vim_nav_event(&mut self, event: &Event) -> Option<bool> {

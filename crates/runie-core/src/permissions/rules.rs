@@ -76,50 +76,34 @@ impl PermissionSet {
     /// are denied via `effective_action`.
     pub fn default_rules() -> Self {
         Self::new(vec![
-            PermissionRule {
-                tool_pattern: "read_file".into(),
-                path_pattern: None,
-                action: PermissionAction::Allow,
-            },
-            PermissionRule {
-                tool_pattern: "list_dir".into(),
-                path_pattern: None,
-                action: PermissionAction::Allow,
-            },
-            PermissionRule {
-                tool_pattern: "grep".into(),
-                path_pattern: None,
-                action: PermissionAction::Allow,
-            },
-            PermissionRule {
-                tool_pattern: "find".into(),
-                path_pattern: None,
-                action: PermissionAction::Allow,
-            },
-            PermissionRule {
-                tool_pattern: "fetch_docs".into(),
-                path_pattern: None,
-                action: PermissionAction::Allow,
-            },
-            PermissionRule {
-                tool_pattern: "write_file".into(),
-                path_pattern: None,
-                action: PermissionAction::Ask,
-            },
-            PermissionRule {
-                tool_pattern: "edit_file".into(),
-                path_pattern: None,
-                action: PermissionAction::Ask,
-            },
-            PermissionRule {
-                tool_pattern: "bash".into(),
-                path_pattern: None,
-                action: PermissionAction::Ask,
-            },
+            allow_rule("read_file"),
+            allow_rule("list_dir"),
+            allow_rule("grep"),
+            allow_rule("find"),
+            allow_rule("fetch_docs"),
+            ask_rule("write_file"),
+            ask_rule("edit_file"),
+            ask_rule("bash"),
         ])
     }
 
     pub fn rules(&self) -> &[PermissionRule] {
         &self.rules
+    }
+}
+
+fn allow_rule(tool: &str) -> PermissionRule {
+    PermissionRule {
+        tool_pattern: tool.into(),
+        path_pattern: None,
+        action: PermissionAction::Allow,
+    }
+}
+
+fn ask_rule(tool: &str) -> PermissionRule {
+    PermissionRule {
+        tool_pattern: tool.into(),
+        path_pattern: None,
+        action: PermissionAction::Ask,
     }
 }

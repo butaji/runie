@@ -55,17 +55,18 @@ pub fn input_event(state: &mut AppState, event: InputEvent) {
         InputEvent::MouseScrollUp => scroll_event(state, ScrollEvent::Up),
         InputEvent::MouseScrollDown => scroll_event(state, ScrollEvent::Down),
         InputEvent::MouseClick { row, col, button } => {
-            state.view.mouse_position = Some((row, col));
-            handle_mouse_click(state, row, col, &button);
+            handle_mouse_click_event(state, row, col, &button);
         }
         InputEvent::MouseMove { row, col } => {
             state.view.mouse_position = Some((row, col));
         }
-        InputEvent::MouseRelease { .. } | InputEvent::MouseDrag { .. } => {}
-        InputEvent::FocusGained | InputEvent::FocusLost => {}
-        InputEvent::TerminalSize { .. } => {}
         _ => {}
     }
+}
+
+fn handle_mouse_click_event(state: &mut AppState, row: u16, col: u16, button: &str) {
+    state.view.mouse_position = Some((row, col));
+    handle_mouse_click(state, row, col, button);
 }
 
 fn handle_history_prev(state: &mut AppState) {

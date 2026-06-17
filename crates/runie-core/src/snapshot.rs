@@ -299,11 +299,21 @@ pub fn compute_mouse_target(
         Some(pos) => pos,
         None => return MouseTarget::Unknown,
     };
-
     if width == 0 || height == 0 {
         return MouseTarget::Unknown;
     }
+    let layout = compute_layout(width, height, input);
+    target_from_row(row, col, &layout)
+}
 
+struct MouseLayout {
+    width: u16,
+    margin: u16,
+    feed_end: u16,
+    input_height: u16,
+}
+
+fn compute_layout(width: u16, height: u16, input: &str) -> MouseLayout {
     let margin = if width > 20 && height > 10 { 1 } else { 0 };
     let area_height = height.saturating_sub(margin * 2);
     let input_lines = if input.is_empty() {
@@ -313,24 +323,30 @@ pub fn compute_mouse_target(
     };
     let input_height = (input_lines + 2).min(10) as u16;
     let feed_end = margin + area_height.saturating_sub(input_height + 4);
+    MouseLayout {
+        width,
+        margin,
+        feed_end,
+        input_height,
+    }
+}
 
-    if col > width || row < margin {
-        MouseTarget::Unknown
-    } else if row < feed_end {
-        MouseTarget::Feed
+fn target_from_row(row: u16, col: u16, layout: &MouseLayout) -> MouseTarget {
+    if col > layout.width || row < layout.margin {
+        return MouseTarget::Unknown;
+    }
+    if row < layout.feed_end {
+        return MouseTarget::Feed;
+    }
+    let mut y = layout.feed_end + layout.margin + 1; // status bar
+    if row < y {
+        return MouseTarget::StatusBar;
+    }
+    y += layout.input_height;
+    if row < y {
+        MouseTarget::Input
     } else {
-        let mut y = feed_end + margin;
-        y += 1; // status bar
-        if row < y {
-            MouseTarget::StatusBar
-        } else {
-            y += input_height;
-            if row < y {
-                MouseTarget::Input
-            } else {
-                MouseTarget::Hints
-            }
-        }
+        MouseTarget::Hints
     }
 }
 

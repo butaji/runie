@@ -56,54 +56,59 @@ impl SessionStore {
     }
 
     /// Open (or create) a session database, migrating from JSONL if needed.
-    ///
-    /// Returns the database and a flag indicating whether migration occurred.
     fn open_db(path: &Path) -> anyhow::Result<(Database, bool)> {
         let jsonl_path = path.with_extension("jsonl");
         let db_existed = path.exists();
-
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
-        }
+        Self::ensure_parent_dir(path)?;
         let db = Database::create(path)?;
-        let mut migrated = false;
-
-        // Initialize schema
-        {
-            let tx = db.begin_write()?;
-            let _ = tx.open_table(TABLE_META)?;
-            let _ = tx.open_table(TABLE_EVENTS)?;
-            tx.commit()?;
-        }
-
-        // Migrate JSONL if it exists and the DB was just created
-        if jsonl_path.exists() && !db_existed {
-            let content = fs::read_to_string(&jsonl_path)?;
-            let mut seq = 0u32;
-            let tx = db.begin_write()?;
-            {
-                let mut table = tx.open_table(TABLE_EVENTS)?;
-                for line in content.lines() {
-                    let line = line.trim();
-                    if line.is_empty() {
-                        continue;
-                    }
-                    if serde_json::from_str::<DurableCoreEvent>(line).is_ok() {
-                        table.insert(&seq, line)?;
-                        seq += 1;
-                    }
-                }
-            }
-            tx.commit()?;
-            // Rename JSONL to .jsonl.migrated so it won't be re-imported
-            let backup = path.with_extension("jsonl.migrated");
-            fs::rename(&jsonl_path, backup).ok();
-            migrated = true;
-        }
-
+        Self::init_db_tables(&db)?;
+        let migrated = if jsonl_path.exists() && !db_existed {
+            Self::migrate_jsonl(&db, &jsonl_path, path)?
+        } else {
+            false
+        };
         Ok((db, migrated))
     }
 
+    fn ensure_parent_dir(path: &Path) -> anyhow::Result<()> {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        Ok(())
+    }
+    fn init_db_tables(db: &Database) -> anyhow::Result<()> {
+        let tx = db.begin_write()?;
+        let _ = tx.open_table(TABLE_META)?;
+        let _ = tx.open_table(TABLE_EVENTS)?;
+        tx.commit()?;
+        Ok(())
+    }
+    fn migrate_jsonl(
+        db: &Database,
+        jsonl_path: &Path,
+        db_path: &Path,
+    ) -> anyhow::Result<bool> {
+        let content = fs::read_to_string(jsonl_path)?;
+        let tx = db.begin_write()?;
+        {
+            let mut table = tx.open_table(TABLE_EVENTS)?;
+            let mut seq = 0u32;
+            for line in content.lines() {
+                let line = line.trim();
+                if line.is_empty() {
+                    continue;
+                }
+                if serde_json::from_str::<DurableCoreEvent>(line).is_ok() {
+                    table.insert(&seq, line)?;
+                    seq += 1;
+                }
+            }
+        }
+        tx.commit()?;
+        let backup = db_path.with_extension("jsonl.migrated");
+        fs::rename(jsonl_path, backup).ok();
+        Ok(true)
+    }
     /// Internal: get max event sequence number in a db.
     fn max_seq(db: &Database) -> anyhow::Result<u32> {
         let tx = db.begin_read()?;

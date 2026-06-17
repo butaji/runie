@@ -113,41 +113,36 @@ impl ModelResolver {
     /// (tier 0 = exact) beats [General, X] (tier 2) — but tier 0 still beats tier 1.
     pub(crate) fn score(&self, profile: &ModelProfile, requested: ModelTrait) -> (u8, isize) {
         let has_requested = profile.has_trait(requested);
-
-        // Non-General traits beyond the requested one.
-        let extra_non_general: usize = profile
-            .traits
-            .iter()
-            .filter(|&&t| t != ModelTrait::General && t != requested)
-            .count();
-
-        // Whether the profile only has General alongside the requested trait.
-        let general_only_extra =
-            profile.has_trait(ModelTrait::General) && profile.traits.len() == 2;
+        let extra_non_general = count_extra_non_general(profile, requested);
+        let spec_score = extra_non_general as isize;
 
         if profile.traits.len() == 1 && has_requested {
-            // Exact single-trait match → tier 0.
-            (0, extra_non_general as isize)
-        } else if has_requested {
-            if requested == ModelTrait::General {
-                // [General, X]: tier 2 for General requests (least specialized).
-                // [X, General]: tier 2 when X is not the requested non-General.
-                if general_only_extra {
-                    (2, extra_non_general as isize)
-                } else {
-                    // [General, X, Y] — still tier 1 (more specialized than [General,X])
-                    (1, extra_non_general as isize)
-                }
-            } else {
-                // Partial match on a non-General request.
-                (1, extra_non_general as isize)
-            }
-        } else {
-            // No match → tier 3 (never returned by resolve anyway)
-            (3, extra_non_general as isize)
+            return (0, spec_score);
         }
-    }
+        if !has_requested {
+            return (3, spec_score);
+        }
 
+        if requested == ModelTrait::General && is_general_only_pair(profile) {
+            return (2, spec_score);
+        }
+        (1, spec_score)
+    }
+}
+
+fn count_extra_non_general(profile: &ModelProfile, requested: ModelTrait) -> usize {
+    profile
+        .traits
+        .iter()
+        .filter(|&&t| t != ModelTrait::General && t != requested)
+        .count()
+}
+
+fn is_general_only_pair(profile: &ModelProfile) -> bool {
+    profile.has_trait(ModelTrait::General) && profile.traits.len() == 2
+}
+
+impl ModelResolver {
     fn priority_index(&self, profile: &ModelProfile) -> usize {
         self.priority
             .iter()

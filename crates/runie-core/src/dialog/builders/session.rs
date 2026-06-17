@@ -73,28 +73,31 @@ fn add_session_section(
     let mut panel = panel;
     let mut first = true;
     for session in sessions {
-        let matches = if is_system {
-            session.is_system
-        } else if is_starred {
-            session.is_starred && !session.is_system
-        } else {
-            !session.is_starred && !session.is_system
-        };
-
-        if matches {
-            if first {
-                if let Some(h) = header {
-                    panel = panel.header(h);
-                }
-                first = false;
-            }
-            add_session_item(&mut panel, session);
+        if !session_matches_section(session, is_system, is_starred) {
+            continue;
         }
+        if first {
+            if let Some(h) = header {
+                panel = panel.header(h);
+            }
+            first = false;
+        }
+        add_session_item(&mut panel, session);
     }
     if !first && (is_system || is_starred) {
         panel = panel.separator();
     }
     panel
+}
+
+fn session_matches_section(session: &SessionRow, is_system: bool, is_starred: bool) -> bool {
+    if is_system {
+        return session.is_system;
+    }
+    if is_starred {
+        return session.is_starred && !session.is_system;
+    }
+    !session.is_starred && !session.is_system
 }
 
 fn add_session_item(panel: &mut Panel, session: &SessionRow) {

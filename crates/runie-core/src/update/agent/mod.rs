@@ -30,14 +30,11 @@ pub fn agent_event(state: &mut AppState, event: AgentEvent) {
             state.end_tool(duration_secs, output);
             state.ensure_turn_complete_last();
         }
-        // Transient streaming delta — update buffer, don't persist
         AgentEvent::ResponseDelta { id, content } => {
             state.append_response_delta(id, content);
         }
-        // Complete response — append to message list
         AgentEvent::Response { id, content } => {
-            state.append_response(id, content);
-            state.ensure_turn_complete_last();
+            handle_agent_response(state, id, content);
         }
         AgentEvent::TurnComplete { id, duration_secs } => {
             state.complete_turn(id, duration_secs);
@@ -50,4 +47,9 @@ pub fn agent_event(state: &mut AppState, event: AgentEvent) {
         }
         _ => {}
     }
+}
+
+fn handle_agent_response(state: &mut AppState, id: String, content: String) {
+    state.append_response(id, content);
+    state.ensure_turn_complete_last();
 }

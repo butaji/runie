@@ -67,6 +67,7 @@ impl AppState {
     pub(crate) fn start_tool(&mut self, id: String, name: String) {
         self.agent.current_request_id = Some(id.clone());
         self.agent.current_tool_name = Some(name.clone());
+        self.agent.thinking_started_at = None;
         self.agent.tool_started_at = Some(std::time::Instant::now());
         self.agent.intermediate_step_count += 1;
         self.agent.current_action = Some(format!("Running {}", name));

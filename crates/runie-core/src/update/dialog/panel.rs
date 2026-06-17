@@ -176,43 +176,45 @@ fn handle_panel_action(state: &mut AppState, action: ItemAction, stack: &mut Pan
             state.mark_dirty();
             true
         }
-        ItemAction::Emit(evt) => {
-            let keep_open = stack
-                .current()
-                .map(|p| p.keep_open_on_activate)
-                .unwrap_or(false);
-            if !keep_open {
-                state.open_dialog = None;
-            }
-            state.mark_dirty();
-            state.update(evt);
-            !keep_open
-        }
+        ItemAction::Emit(evt) => handle_emit_action(state, stack, evt),
         ItemAction::Toggle(key) => {
             panel_toggle_item(state, stack, &key);
-            let keep_open = stack
-                .current()
-                .map(|p| p.keep_open_on_activate)
-                .unwrap_or(false);
-            if !keep_open {
-                state.open_dialog = None;
-                state.mark_dirty();
-            }
-            !keep_open
+            close_panel_on_activate(state, stack)
         }
         ItemAction::Cycle(key) => {
             panel_cycle_item(state, stack, &key);
-            let keep_open = stack
-                .current()
-                .map(|p| p.keep_open_on_activate)
-                .unwrap_or(false);
-            if !keep_open {
-                state.open_dialog = None;
-                state.mark_dirty();
-            }
-            !keep_open
+            close_panel_on_activate(state, stack)
         }
     }
+}
+
+fn handle_emit_action(
+    state: &mut AppState,
+    stack: &mut PanelStack,
+    evt: crate::Event,
+) -> bool {
+    let keep_open = stack
+        .current()
+        .map(|p| p.keep_open_on_activate)
+        .unwrap_or(false);
+    if !keep_open {
+        state.open_dialog = None;
+    }
+    state.mark_dirty();
+    state.update(evt);
+    !keep_open
+}
+
+fn close_panel_on_activate(state: &mut AppState, stack: &mut PanelStack) -> bool {
+    let keep_open = stack
+        .current()
+        .map(|p| p.keep_open_on_activate)
+        .unwrap_or(false);
+    if !keep_open {
+        state.open_dialog = None;
+        state.mark_dirty();
+    }
+    !keep_open
 }
 
 fn panel_toggle_item(state: &mut AppState, stack: &mut PanelStack, key: &str) {

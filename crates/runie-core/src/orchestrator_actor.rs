@@ -13,7 +13,6 @@ use crate::bus::EventBus;
 use crate::orchestrator::{
     ModelTrait, OrchestratorContext, OrchestratorPlan, PlanResult, SubagentTask, TaskStatus,
 };
-
 // ─── State machine ───────────────────────────────────────────────────────────
 
 /// Runtime state of the OrchestratorActor.
@@ -332,27 +331,30 @@ async fn handle_subagent_done(
     });
 
     if actor.all_subagents_done() {
-        actor.transition_to(OrchestratorState::Synthesizing);
-        bus.publish(OrchestratorEvent::SynthesisStarted);
-        let elapsed = actor
-            .started_at
-            .map(|s| s.elapsed().as_secs_f64())
-            .unwrap_or(0.0);
-        let plan = actor
-            .active_plan
-            .take()
-            .unwrap_or_else(|| OrchestratorPlan::simple("fallback", ModelTrait::General));
-        actor.transition_to(OrchestratorState::Done {
-            plan: plan.clone(),
-            result: PlanResult {
-                success: true,
-                response: "Synthesis complete.".into(),
-                failures: vec![],
-                elapsed_secs: elapsed,
-            },
-        });
-        bus.publish(OrchestratorEvent::Finished { success: true });
+        finish_subagent_plan(actor, bus);
     }
+}
+fn finish_subagent_plan(actor: &mut OrchestratorActor, bus: &EventBus<OrchestratorEvent>) {
+    actor.transition_to(OrchestratorState::Synthesizing);
+    bus.publish(OrchestratorEvent::SynthesisStarted);
+    let elapsed = actor
+        .started_at
+        .map(|s| s.elapsed().as_secs_f64())
+        .unwrap_or(0.0);
+    let plan = actor
+        .active_plan
+        .take()
+        .unwrap_or_else(|| OrchestratorPlan::simple("fallback", ModelTrait::General));
+    actor.transition_to(OrchestratorState::Done {
+        plan: plan.clone(),
+        result: PlanResult {
+            success: true,
+            response: "Synthesis complete.".into(),
+            failures: vec![],
+            elapsed_secs: elapsed,
+        },
+    });
+    bus.publish(OrchestratorEvent::Finished { success: true });
 }
 
 fn handle_subagent_failed(
@@ -400,9 +402,7 @@ fn emit_state_change(
         });
     }
 }
-
 // ─── Tests ───────────────────────────────────────────────────────────────────
-
 #[cfg(test)]
 mod tests {
     use super::*;
