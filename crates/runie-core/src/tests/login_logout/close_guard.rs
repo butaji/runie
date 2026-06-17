@@ -49,7 +49,7 @@ fn login_panel_dialog_back_blocked_without_model() {
 }
 
 #[test]
-fn login_panel_quit_blocked_without_model() {
+fn login_panel_quit_blocked_but_force_quit_allowed() {
     clean_config();
     let mut state = disconnected_state();
     state.update(LoginFlowEvent::Start);
@@ -62,8 +62,8 @@ fn login_panel_quit_blocked_without_model() {
 
     state.update(ControlEvent::ForceQuit);
     assert!(
-        !state.should_quit,
-        "ForceQuit should be blocked when no model is connected"
+        state.should_quit,
+        "ForceQuit must quit the app even when no model is connected"
     );
 }
 

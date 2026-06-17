@@ -328,11 +328,11 @@ fn handle_cancel_agent(state: &mut AppState, agent_id: String) {
 }
 
 fn handle_quit_event(state: &mut AppState, event: ControlEvent) {
-    if state.login_flow.is_some() && !state.has_models() {
-        return;
-    }
     if matches!(event, ControlEvent::ForceQuit) {
         state.should_quit = true;
+        return;
+    }
+    if state.login_flow.is_some() && !state.has_models() {
         return;
     }
     if !state.input.input.is_empty() {
