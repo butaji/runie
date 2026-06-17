@@ -9,6 +9,7 @@ mod find;
 mod fs;
 mod grep;
 mod read_file;
+mod runtime;
 
 pub(crate) use fetch_docs::run_fetch_docs;
 pub(crate) use find::run_find;

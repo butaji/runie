@@ -3293,6 +3293,7 @@ name = "runie-agent"
 version = "0.2.16"
 dependencies = [
  "anyhow",
+ "async-trait",
  "dirs",
  "futures",
  "reqwest",

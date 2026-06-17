@@ -7,11 +7,15 @@
 mod context;
 mod format;
 mod registry;
+pub mod runtime;
 mod state;
 #[cfg(test)]
 mod tests;
 
 pub use context::{ToolContext, ToolOutput, ToolStatus};
+pub use runtime::{
+    ExecApprovalRequirement, NetworkApprovalSpec, SandboxAttempt, ToolError, ToolRuntime,
+};
 pub use format::{
     format_bytes, format_duration, format_tool_label, resolve_path, tool_error, tool_status_line,
     which_tool,
