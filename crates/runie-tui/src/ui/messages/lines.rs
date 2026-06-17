@@ -1,5 +1,5 @@
 use ratatui::text::Line;
-use runie_core::Element;
+use crate::core_ui::Element;
 
 use crate::ui::render_lines::to_lines_and_count;
 

@@ -1,4 +1,4 @@
-use crate::model::AppState;
+use runie_core::model::AppState;
 
 #[test]
 fn spinner_frame_cycles_twelve_times() {

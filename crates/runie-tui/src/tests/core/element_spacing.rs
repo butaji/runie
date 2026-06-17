@@ -1,11 +1,11 @@
 //! Tests for empty line between elements in chat feed.
 
-use crate::event::Event;
+use runie_core::event::Event;
 
-use crate::event::{AgentEvent, InputEvent};
-use crate::layout::element_line_count;
-use crate::model::AppState;
-use crate::ui::LazyCache;
+use runie_core::event::{AgentEvent, InputEvent};
+use runie_core::layout::element_line_count;
+use runie_core::model::AppState;
+use runie_core::ui::LazyCache;
 
 const TEST_WIDTH: u16 = 80;
 
@@ -31,7 +31,7 @@ fn spacer_contributes_one_line() {
     let spacers: Vec<_> = feed
         .elements
         .iter()
-        .filter(|e| matches!(e, crate::ui::Element::Spacer { .. }))
+        .filter(|e| matches!(e, runie_core::ui::Element::Spacer { .. }))
         .collect();
     assert!(!spacers.is_empty(), "Feed should have spacers");
     for spacer in spacers {
@@ -54,7 +54,7 @@ fn single_user_message_has_spacer_after() {
     assert_eq!(feed.elements.len(), 2, "UserMessage + Spacer");
     assert!(matches!(
         feed.elements[1],
-        crate::ui::Element::Spacer { .. }
+        runie_core::ui::Element::Spacer { .. }
     ));
     assert_eq!(element_line_count(&feed.elements[1], TEST_WIDTH), 1);
 }
@@ -76,11 +76,11 @@ fn two_messages_have_spacer_between_and_after() {
     assert_eq!(feed.elements.len(), 4);
     assert!(matches!(
         feed.elements[1],
-        crate::ui::Element::Spacer { .. }
+        runie_core::ui::Element::Spacer { .. }
     ));
     assert!(matches!(
         feed.elements[3],
-        crate::ui::Element::Spacer { .. }
+        runie_core::ui::Element::Spacer { .. }
     ));
 }
 

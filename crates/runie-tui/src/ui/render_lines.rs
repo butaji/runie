@@ -6,7 +6,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 
 use ratatui::text::Line;
 use ratatui::widgets::{Paragraph, Wrap};
-use runie_core::Element;
+use crate::core_ui::Element;
 
 use crate::message as msg;
 

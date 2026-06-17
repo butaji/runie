@@ -1,5 +1,5 @@
-use crate::event::AgentEvent;
-use crate::model::AppState;
+use runie_core::event::AgentEvent;
+use runie_core::model::AppState;
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -36,34 +36,34 @@ fn run_tool_turn(state: &mut AppState, response: &str, tool_output: &str) {
 }
 
 fn agent_pos(state: &AppState) -> Option<usize> {
-    crate::ui::LazyCache::feed(state)
+    runie_core::ui::LazyCache::feed(state)
         .elements
         .iter()
-        .position(|e| matches!(e, crate::ui::Element::AgentMessage { .. }))
+        .position(|e| matches!(e, runie_core::ui::Element::AgentMessage { .. }))
 }
 
 fn tool_pos(state: &AppState) -> Option<usize> {
-    crate::ui::LazyCache::feed(state)
+    runie_core::ui::LazyCache::feed(state)
         .elements
         .iter()
-        .position(|e| matches!(e, crate::ui::Element::ToolDone { .. }))
+        .position(|e| matches!(e, runie_core::ui::Element::ToolDone { .. }))
 }
 
 fn thought_pos(state: &AppState) -> Option<usize> {
-    crate::ui::LazyCache::feed(state)
+    runie_core::ui::LazyCache::feed(state)
         .elements
         .iter()
-        .position(|e| matches!(e, crate::ui::Element::ThoughtMarker { .. }))
+        .position(|e| matches!(e, runie_core::ui::Element::ThoughtMarker { .. }))
 }
 
 fn agent_turn_complete_kinds(state: &AppState) -> Vec<&'static str> {
-    crate::ui::LazyCache::feed(state)
+    runie_core::ui::LazyCache::feed(state)
         .elements
         .iter()
         .map(|e| match e {
-            crate::ui::Element::AgentMessage { .. } => "A",
-            crate::ui::Element::TurnComplete { .. } => "T",
-            crate::ui::Element::Spacer { .. } => "S",
+            runie_core::ui::Element::AgentMessage { .. } => "A",
+            runie_core::ui::Element::TurnComplete { .. } => "T",
+            runie_core::ui::Element::Spacer { .. } => "S",
             _ => "?",
         })
         .collect()
@@ -92,9 +92,9 @@ fn final_agent_visible_when_tool_overflows() {
     state.agent.streaming = true;
     run_tool_turn(&mut state, "Done!", &big_output());
     state.view.scroll = 0;
-    let region = crate::tests::visible_helper::compute_viewport(&state, 5);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, 5);
     let has_agent = region.elements.iter().any(
-        |e| matches!(e, crate::ui::Element::AgentMessage { content, .. } if content == "Done!"),
+        |e| matches!(e, runie_core::ui::Element::AgentMessage { content, .. } if content == "Done!"),
     );
     assert!(has_agent, "Final agent 'Done!' must be visible at bottom");
 }

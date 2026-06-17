@@ -1,6 +1,6 @@
 use ratatui::{layout::Rect, Frame};
-use runie_core::ui::elements::PostKind;
-use runie_core::{Element, Snapshot};
+use crate::core_ui::{Element, PostKind};
+use runie_core::Snapshot;
 
 pub(crate) fn compute_scroll_offset(snap: &Snapshot, row_to_element: &[usize], visible_height: usize) -> u16 {
     let mut offset = snap.scroll_offset(visible_height);
@@ -148,7 +148,7 @@ fn selected_post_row_range(
 
 fn post_content_range(
     snap: &Snapshot,
-    post: &runie_core::ui::elements::Post,
+    post: &crate::core_ui::Post,
     elem_start_rows: &[usize],
     elem_line_counts: &[usize],
 ) -> Option<(usize, usize)> {

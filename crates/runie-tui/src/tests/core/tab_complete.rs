@@ -1,6 +1,6 @@
-use crate::event::Event;
-use crate::event::InputEvent;
-use crate::model::AppState;
+use runie_core::event::Event;
+use runie_core::event::InputEvent;
+use runie_core::model::AppState;
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -103,7 +103,7 @@ fn file_picker_replaces_typed_prefix() {
 // =============================================================================
 
 fn get_panel_selection(state: &AppState) -> usize {
-    use crate::commands::DialogState;
+    use runie_core::commands::DialogState;
     if let Some(DialogState::PanelStack(stack)) = &state.open_dialog {
         if let Some(panel) = stack.current() {
             return panel.selected;
@@ -113,7 +113,7 @@ fn get_panel_selection(state: &AppState) -> usize {
 }
 
 fn get_panel_items_count(state: &AppState) -> usize {
-    use crate::commands::DialogState;
+    use runie_core::commands::DialogState;
     if let Some(DialogState::PanelStack(stack)) = &state.open_dialog {
         if let Some(panel) = stack.current() {
             return panel.items.len();

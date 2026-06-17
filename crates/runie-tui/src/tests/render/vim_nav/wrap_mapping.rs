@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use ratatui::widgets::{Paragraph, Wrap};
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::ui::elements::{Post, PostKind};
-use runie_core::{Element, Snapshot};
+use crate::core_ui::{Element, Post, PostKind};
+use runie_core::Snapshot;
 
 use crate::ui::messages::build_lines_with_mapping;
 

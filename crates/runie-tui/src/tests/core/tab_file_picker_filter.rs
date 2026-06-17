@@ -5,9 +5,9 @@
 //! - Cursor in middle of input -> inserts at cursor position preserving surrounding text
 //! - @ opens file picker but inserts path without brackets
 
-use crate::event::{ControlEvent, InputEvent};
+use runie_core::event::{ControlEvent, InputEvent};
 
-use crate::{AppState, Event};
+use runie_core::{AppState, Event};
 
 /// "ca ca" -> Tab -> pick -> "ca filename" (space preserved, NO brackets).
 #[test]

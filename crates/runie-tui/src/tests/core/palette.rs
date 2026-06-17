@@ -1,6 +1,6 @@
-use crate::commands::DialogState;
-use crate::event::{ControlEvent, DialogEvent, Event, InputEvent};
-use crate::model::AppState;
+use runie_core::commands::DialogState;
+use runie_core::event::{ControlEvent, DialogEvent, Event, InputEvent};
+use runie_core::model::AppState;
 
 fn palette_state(state: &AppState) -> Option<(String, usize)> {
     match &state.open_dialog {

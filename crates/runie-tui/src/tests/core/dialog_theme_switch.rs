@@ -1,10 +1,10 @@
 //! Tests that global events (theme, model) pass through when dialogs are open.
 
-use crate::event::{ControlEvent, DialogEvent, ModelConfigEvent};
+use runie_core::event::{ControlEvent, DialogEvent, ModelConfigEvent};
 
-use crate::commands::DialogState;
-use crate::dialog::builders::theme_picker;
-use crate::model::AppState;
+use runie_core::commands::DialogState;
+use runie_core::dialog::builders::theme_picker;
+use runie_core::model::AppState;
 
 #[test]
 fn theme_switch_reaches_handler_while_settings_dialog_open() {
@@ -93,8 +93,8 @@ fn theme_picker_panel_keeps_open_for_preview() {
     assert!(panel.items.iter().any(|item| {
         matches!(
             item,
-            crate::dialog::PanelItem::Action {
-                action: crate::dialog::ItemAction::Emit(_),
+            runie_core::dialog::PanelItem::Action {
+                action: runie_core::dialog::ItemAction::Emit(_),
                 ..
             }
         )

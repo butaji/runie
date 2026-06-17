@@ -200,7 +200,7 @@ fn empty_chat_scroll_is_zero() {
     let state = fresh_state();
     assert_eq!(state.view.scroll, 0, "Empty chat should have scroll=0");
     let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
-    assert!(visible.is_empty(), "Empty chat should return empty visible");
+    assert!(visible.elements.is_empty(), "Empty chat should return empty visible");
 }
 
 #[test]

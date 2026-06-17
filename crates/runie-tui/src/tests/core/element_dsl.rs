@@ -1,4 +1,4 @@
-use crate::ui::elements::Element;
+use runie_core::ui::elements::Element;
 
 #[test]
 fn user_message_builder() {

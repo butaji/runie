@@ -1,7 +1,7 @@
-use crate::event::{DialogEvent, ModelConfigEvent};
-use crate::model::ThinkingLevel;
-use crate::session::{Session, Store};
-use crate::{AppState, Event};
+use runie_core::event::{DialogEvent, ModelConfigEvent};
+use runie_core::model::ThinkingLevel;
+use runie_core::session::{Session, Store};
+use runie_core::{AppState, Event};
 
 #[test]
 fn cycle_rotates() {
@@ -111,7 +111,7 @@ fn slash_thinking_sets() {
         .session
         .messages
         .iter()
-        .filter(|m| m.role == crate::model::Role::System)
+        .filter(|m| m.role == runie_core::model::Role::System)
         .collect();
     assert!(sys_msgs
         .iter()
@@ -132,14 +132,14 @@ fn slash_thinking_no_args_shows_panel() {
         .session
         .messages
         .iter()
-        .filter(|m| m.role == crate::model::Role::System)
+        .filter(|m| m.role == runie_core::model::Role::System)
         .collect();
     assert!(sys_msgs.is_empty(), "no system messages yet");
 }
 
 #[test]
 fn thinking_panel_contains_all_levels() {
-    use crate::commands::DialogState;
+    use runie_core::commands::DialogState;
     let mut state = AppState::default();
     state.config.thinking_level = ThinkingLevel::Medium;
     state.input.input.push_str("/thinking");
@@ -178,7 +178,7 @@ fn thinking_panel_uses_thinking_level_all() {
 fn thinking_panel_has_cli_usage_hint() {
     // After moving /thinking to a panel selector, the CLI form
     // ("/thinking off|low|medium|high") should still be discoverable.
-    use crate::commands::DialogState;
+    use runie_core::commands::DialogState;
     let mut state = AppState::default();
     state.input.input.push_str("/thinking");
     state.update(Event::submit());
@@ -203,9 +203,9 @@ fn thinking_panel_has_cli_usage_hint() {
 fn thinking_does_not_create_a_form_panel() {
     // /thinking must use a select panel, not a form. Forms are for free-text
     // input; thinking levels are a fixed enum.
-    use crate::commands::{CommandRegistry, CommandResult};
+    use runie_core::commands::{CommandRegistry, CommandResult};
     let mut reg = CommandRegistry::new();
-    crate::commands::dsl::handlers::register_all(&mut reg);
+    runie_core::commands::dsl::handlers::register_all(&mut reg);
     let cmd = reg.get("thinking").expect("thinking command");
     let mut state = AppState::default();
     state.config.thinking_level = ThinkingLevel::Medium;
@@ -227,7 +227,7 @@ fn thinking_does_not_create_a_form_panel() {
 fn set_thinking_level_event_updates_state() {
     let mut state = AppState::default();
     state.update(ModelConfigEvent::SetThinkingLevel(
-        crate::model::ThinkingLevel::High,
+        runie_core::model::ThinkingLevel::High,
     ));
     assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 }

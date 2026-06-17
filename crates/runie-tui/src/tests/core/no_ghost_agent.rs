@@ -1,7 +1,7 @@
-use crate::event::AgentEvent;
-use crate::event::Event;
-use crate::model::AppState;
-use crate::ui::LazyCache;
+use runie_core::event::AgentEvent;
+use runie_core::event::Event;
+use runie_core::model::AppState;
+use runie_core::ui::LazyCache;
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -11,7 +11,7 @@ fn has_agent_message(state: &AppState) -> bool {
     let feed = LazyCache::feed(state);
     feed.elements
         .iter()
-        .any(|e| matches!(e, crate::ui::Element::AgentMessage { .. }))
+        .any(|e| matches!(e, runie_core::ui::Element::AgentMessage { .. }))
 }
 
 fn agent_texts(state: &AppState) -> Vec<String> {
@@ -19,7 +19,7 @@ fn agent_texts(state: &AppState) -> Vec<String> {
     feed.elements
         .iter()
         .filter_map(|e| match e {
-            crate::ui::Element::AgentMessage { content, .. } => Some(content.clone()),
+            runie_core::ui::Element::AgentMessage { content, .. } => Some(content.clone()),
             _ => None,
         })
         .collect()
@@ -144,7 +144,7 @@ fn thought_renders_after_thought_done() {
     let has_thought = feed
         .elements
         .iter()
-        .any(|e| matches!(e, crate::ui::Element::ThoughtMarker { .. }));
+        .any(|e| matches!(e, runie_core::ui::Element::ThoughtMarker { .. }));
     assert!(has_thought, "Thought must render after AgentThoughtDone");
     assert!(
         !has_agent_message(&state),

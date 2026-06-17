@@ -6,8 +6,8 @@
 //! assistant response). This is element-level navigation, distinct
 //! from line-level scrolling.
 
-use crate::event::{DialogEvent, InputEvent};
-use crate::model::{AppState, ChatMessage, Role};
+use runie_core::event::{DialogEvent, InputEvent};
+use runie_core::model::{AppState, ChatMessage, Role};
 
 fn state_with_vim_and_messages() -> AppState {
     let mut state = AppState::default();

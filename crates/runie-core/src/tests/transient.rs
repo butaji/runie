@@ -2,7 +2,7 @@
 
 use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 
-use crate::event::{Event, SystemEvent};
+use crate::event::Event;
 use crate::model::{AppState, Role};
 
 fn fresh_state() -> AppState {

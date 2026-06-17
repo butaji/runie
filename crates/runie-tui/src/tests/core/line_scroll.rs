@@ -1,5 +1,5 @@
-use crate::model::{AppState, ChatMessage, Role};
-use crate::ui::Element;
+use runie_core::model::{AppState, ChatMessage, Role};
+use runie_core::ui::Element;
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -108,7 +108,7 @@ fn visible_shows_latest_element_at_bottom() {
     state.ensure_fresh();
     state.view.scroll = 0; // at bottom
 
-    let region = crate::tests::visible_helper::compute_viewport(&state, 3); // 3 lines viewport
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, 3); // 3 lines viewport
                                                                             // 3 messages = 3*3 UserMessage + 3 Spacer = 12 lines total
     assert!(
         region
@@ -140,7 +140,7 @@ fn visible_skips_lines_from_first_element_when_overflow() {
     state.messages_changed();
     state.ensure_fresh();
     state.view.scroll = 0;
-    let region = crate::tests::visible_helper::compute_viewport(&state, 10);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, 10);
     assert!(
         region
             .elements
@@ -178,7 +178,7 @@ fn scroll_up_shows_older_content() {
     // 5 messages = 20 lines total (5*3 messages + 5 spacers). Viewport of 3 lines.
     // scroll=8: viewport [9, 12) — msg2 visible, msg4 hidden
     state.view.scroll = 8;
-    let region = crate::tests::visible_helper::compute_viewport(&state, 3);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, 3);
     assert!(
         region
             .elements
@@ -305,7 +305,7 @@ fn large_thought_overflows_viewport() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = crate::tests::visible_helper::compute_viewport(&state, 10);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, 10);
 
     assert!(
         region
@@ -341,7 +341,7 @@ fn multi_line_tool_at_bottom_visible() {
     state.view.scroll = 0;
 
     // Total: 3*4 + 7 = 19 lines (3 users with margins + 3 spacers + tool 6 lines + spacer)
-    let region = crate::tests::visible_helper::compute_viewport(&state, 5);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, 5);
 
     assert!(
         region
@@ -382,7 +382,7 @@ fn new_message_at_bottom_auto_shows() {
     state.messages_changed();
     state.ensure_fresh();
 
-    let region = crate::tests::visible_helper::compute_viewport(&state, 5);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, 5);
     assert!(
         region
             .elements

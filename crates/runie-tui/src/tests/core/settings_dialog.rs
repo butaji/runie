@@ -1,10 +1,10 @@
 //! Settings dialog tests (Layer 2 + Layer 3)
 
-use crate::commands::DialogState;
-use crate::event::{ControlEvent, DialogEvent, InputEvent, ModelConfigEvent};
-use crate::model::{AppState, DeliveryMode};
-use crate::settings::{SettingValue, SettingsCategory};
-use crate::update::settings_dialog::build_setting_items;
+use runie_core::commands::DialogState;
+use runie_core::event::{ControlEvent, DialogEvent, InputEvent, ModelConfigEvent};
+use runie_core::model::{AppState, DeliveryMode};
+use runie_core::settings::{SettingValue, SettingsCategory};
+use runie_core::update::settings_dialog::build_setting_items;
 
 fn settings_selected(state: &AppState) -> Option<usize> {
     match &state.open_dialog {

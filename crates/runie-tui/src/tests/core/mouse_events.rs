@@ -1,7 +1,7 @@
 //! Tests for mouse event handling in the AppState.
 
-use crate::event::{InputEvent, ScrollEvent};
-use crate::AppState;
+use runie_core::event::{InputEvent, ScrollEvent};
+use runie_core::AppState;
 
 /// Mouse click event should not crash the state.
 #[test]

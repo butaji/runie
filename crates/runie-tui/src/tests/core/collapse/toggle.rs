@@ -1,9 +1,9 @@
 //! toggle tests.
 
-use crate::event::{AgentEvent, ControlEvent};
-use crate::model::{AppState, ChatMessage, Role};
-use crate::ui::elements::Element;
-use crate::ui::LazyCache;
+use runie_core::event::{AgentEvent, ControlEvent};
+use runie_core::model::{AppState, ChatMessage, Role};
+use runie_core::ui::elements::Element;
+use runie_core::ui::LazyCache;
 fn fresh_state() -> AppState {
     AppState::default()
 }

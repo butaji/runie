@@ -1870,7 +1870,7 @@
     },
     {
       "id": "extract-core-monolith",
-      "status": "todo",
+      "status": "in_progress",
       "milestone": "R3",
       "category": "Architecture / Actors",
       "priority": "P0",
@@ -1880,7 +1880,8 @@
       "blocks": [
         "extract-ui-actor"
       ],
-      "file": "tasks/extract-core-monolith.md"
+      "file": "tasks/extract-core-monolith.md",
+      "notes": "Partial: UI AST re-exported from runie-tui::core_ui; TUI tests moved; update/dialog blocked by orphan rules; tests blocked by pre-existing lint violations."
     },
     {
       "id": "unify-permission-models",
@@ -2033,33 +2034,36 @@
     },
     {
       "id": "adopt-tool-runtime-trait",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Tools",
       "priority": "P1",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/adopt-tool-runtime-trait.md"
+      "file": "tasks/adopt-tool-runtime-trait.md",
+      "completed_in": "current"
     },
     {
       "id": "adopt-permission-policy-chain",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Security",
       "priority": "P1",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/adopt-permission-policy-chain.md"
+      "file": "tasks/adopt-permission-policy-chain.md",
+      "completed_in": "current"
     },
     {
       "id": "adopt-queue-pair-ipc",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P2",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/adopt-queue-pair-ipc.md"
+      "file": "tasks/adopt-queue-pair-ipc.md",
+      "completed_in": "current"
     },
     {
       "id": "adopt-test-helpers",
@@ -2085,13 +2089,14 @@
     },
     {
       "id": "adopt-domain-dsls",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/adopt-domain-dsls.md"
+      "file": "tasks/adopt-domain-dsls.md",
+      "completed_in": "current"
     },
     {
       "id": "adopt-workflow-dsl",
@@ -2201,13 +2206,14 @@
     },
     {
       "id": "split-large-files",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Refactoring",
       "priority": "P2",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/split-large-files.md"
+      "file": "tasks/split-large-files.md",
+      "completed_in": "current"
     },
     {
       "id": "unify-form-submit-handlers",
@@ -2291,7 +2297,7 @@
     },
     {
       "id": "align-build-rs-lint-thresholds",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Refactoring",
       "priority": "P0",
@@ -2306,7 +2312,8 @@
         "split-large-files"
       ],
       "blocks": [],
-      "file": "tasks/align-build-rs-lint-thresholds.md"
+      "file": "tasks/align-build-rs-lint-thresholds.md",
+      "completed_in": "current"
     }
   ]
 }

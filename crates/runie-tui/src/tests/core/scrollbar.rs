@@ -1,5 +1,5 @@
-use crate::event::ScrollEvent;
-use crate::model::AppState;
+use runie_core::event::ScrollEvent;
+use runie_core::model::AppState;
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -9,8 +9,8 @@ fn fresh_state() -> AppState {
 fn scrollbar_no_scrollbar_when_content_fits() {
     let mut state = fresh_state();
     for i in 0..2 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{}", i),
             timestamp: 0.0,
             id: format!("u{}", i),
@@ -28,8 +28,8 @@ fn scrollbar_no_scrollbar_when_content_fits() {
 fn scrollbar_shows_when_content_overflows() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -50,8 +50,8 @@ fn scrollbar_shows_when_content_overflows() {
 fn scrollbar_thumb_at_bottom_when_not_scrolled() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -69,8 +69,8 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
 fn scrollbar_thumb_at_top_when_fully_scrolled() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -88,8 +88,8 @@ fn scrollbar_thumb_at_top_when_fully_scrolled() {
 fn scrollbar_thumb_in_middle_when_half_scrolled() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -112,8 +112,8 @@ fn scrollbar_thumb_in_middle_when_half_scrolled() {
 fn scroll_clamped_to_max() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -131,8 +131,8 @@ fn scroll_clamped_to_max() {
 fn visible_uses_scroll_offset() {
     let mut state = fresh_state();
     for i in 0..10 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -144,21 +144,21 @@ fn visible_uses_scroll_offset() {
     // 10 messages = 40 lines (10*3 messages + 10 spacers), max_scroll = 35
 
     // At scroll=0 (bottom), we see newest 5 lines worth of elements
-    let visible_bottom = crate::tests::visible_helper::compute_viewport(&state, 5);
-    assert!(visible_bottom.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::UserMessage { content, .. } if content == "msg9")), "Bottom should show latest");
+    let visible_bottom = crate::tests::core::visible_helper::compute_viewport(&state, 5);
+    assert!(visible_bottom.elements.iter().any(|e| matches!(e, runie_core::ui::elements::Element::UserMessage { content, .. } if content == "msg9")), "Bottom should show latest");
 
     // At scroll=35 (top), we see oldest: first is msg0
     state.view.scroll = 35;
-    let visible_top = crate::tests::visible_helper::compute_viewport(&state, 5);
-    assert!(visible_top.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::UserMessage { content, .. } if content == "msg0")), "Top should show oldest");
+    let visible_top = crate::tests::core::visible_helper::compute_viewport(&state, 5);
+    assert!(visible_top.elements.iter().any(|e| matches!(e, runie_core::ui::elements::Element::UserMessage { content, .. } if content == "msg0")), "Top should show oldest");
 }
 
 #[test]
 fn scrollbar_thumb_never_exceeds_track() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -191,8 +191,8 @@ fn scrollbar_thumb_never_exceeds_track() {
 fn scrollbar_consistent_between_offset_and_metrics() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -219,8 +219,8 @@ fn scrollbar_consistent_between_offset_and_metrics() {
 fn compute_viewport_handles_partial_element_at_top() {
     let mut state = fresh_state();
     for i in 0..5 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -230,7 +230,7 @@ fn compute_viewport_handles_partial_element_at_top() {
     state.messages_changed();
     state.ensure_fresh();
     state.view.scroll = state.view.total_lines.saturating_sub(3);
-    let visible = crate::tests::visible_helper::compute_viewport(&state, 3);
+    let visible = crate::tests::core::visible_helper::compute_viewport(&state, 3);
     assert!(!visible.elements.is_empty(), "Should have visible elements");
 }
 
@@ -238,8 +238,8 @@ fn compute_viewport_handles_partial_element_at_top() {
 fn pageup_scrolls_by_five_lines() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -261,8 +261,8 @@ fn pageup_scrolls_by_five_lines() {
 fn pagedown_scrolls_down_by_five_lines() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -287,8 +287,8 @@ fn pagedown_scrolls_down_by_five_lines() {
 fn pagedown_stops_at_zero() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -320,8 +320,8 @@ fn pageup_flashes_when_empty() {
 fn pagedown_flashes_at_bottom() {
     let mut state = fresh_state();
     for i in 0..5 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -342,8 +342,8 @@ fn pagedown_flashes_at_bottom() {
 #[test]
 fn scrollbar_with_single_message() {
     let mut state = fresh_state();
-    state.session.messages.push(crate::model::ChatMessage {
-        role: crate::model::Role::User,
+    state.session.messages.push(runie_core::model::ChatMessage {
+        role: runie_core::model::Role::User,
         content: "only".into(),
         timestamp: 0.0,
         id: "u0".into(),
@@ -370,8 +370,8 @@ fn page_down_scrolls_by_rendered_lines() {
     let mut state = fresh_state();
     // Fill with enough content that wrapping occurs at the default width.
     for i in 0..10 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{} {}", i, "x".repeat(100)),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -400,8 +400,8 @@ fn page_down_scrolls_by_rendered_lines() {
 fn scrollbar_thumb_position_matches_line_count() {
     let mut state = fresh_state();
     for i in 0..20 {
-        state.session.messages.push(crate::model::ChatMessage {
-            role: crate::model::Role::User,
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
             content: format!("msg{} {}", i, "x".repeat(100)),
             timestamp: i as f64,
             id: format!("u{}", i),
@@ -416,7 +416,7 @@ fn scrollbar_thumb_position_matches_line_count() {
         .view
         .elements_cache()
         .iter()
-        .map(|e| crate::layout::element_line_count(e, width))
+        .map(|e| runie_core::layout::element_line_count(e, width))
         .sum();
     assert_eq!(
         state.view.total_lines, expected_total,

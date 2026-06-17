@@ -1,8 +1,8 @@
-use crate::event::Event;
-use crate::event::{AgentEvent, ControlEvent};
-use crate::model::AppState;
-use crate::ui::elements::Element;
-use crate::ui::LazyCache;
+use runie_core::event::Event;
+use runie_core::event::{AgentEvent, ControlEvent};
+use runie_core::model::AppState;
+use runie_core::ui::elements::Element;
+use runie_core::ui::LazyCache;
 
 fn dispatch(state: &mut AppState, events: &[Event]) {
     for e in events {

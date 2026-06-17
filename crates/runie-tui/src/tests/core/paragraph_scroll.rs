@@ -1,4 +1,4 @@
-use crate::model::{AppState, ChatMessage, Role};
+use runie_core::model::{AppState, ChatMessage, Role};
 
 fn fresh_state() -> AppState {
     AppState::default()

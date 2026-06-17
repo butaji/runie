@@ -1,8 +1,8 @@
 //! Tests for @ file picker functionality
 
-use crate::event::InputEvent;
+use runie_core::event::InputEvent;
 
-use crate::{AppState, Event};
+use runie_core::{AppState, Event};
 
 /// Typing @ at the beginning of input (empty input) opens the file picker.
 #[test]
@@ -151,7 +151,7 @@ fn submit_inserts_selected_file() {
 // Helper functions to access internal state
 
 fn get_panel_selection(state: &AppState) -> usize {
-    use crate::commands::DialogState;
+    use runie_core::commands::DialogState;
     if let Some(DialogState::PanelStack(stack)) = &state.open_dialog {
         if let Some(panel) = stack.current() {
             return panel.selected;
@@ -161,7 +161,7 @@ fn get_panel_selection(state: &AppState) -> usize {
 }
 
 fn get_panel_items_count(state: &AppState) -> usize {
-    use crate::commands::DialogState;
+    use runie_core::commands::DialogState;
     if let Some(DialogState::PanelStack(stack)) = &state.open_dialog {
         if let Some(panel) = stack.current() {
             return panel.items.len();

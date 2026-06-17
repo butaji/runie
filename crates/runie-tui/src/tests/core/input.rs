@@ -1,14 +1,14 @@
-use crate::event::Event;
-use crate::event::{AgentEvent, ControlEvent, DialogEvent, InputEvent};
-use crate::model::AppState;
+use runie_core::event::Event;
+use runie_core::event::{AgentEvent, ControlEvent, DialogEvent, InputEvent};
+use runie_core::model::AppState;
 
 fn fresh_state() -> AppState {
     AppState::default()
 }
 
 fn push_user_msg(state: &mut AppState, content: &str, id: &str) {
-    state.session.messages.push(crate::model::ChatMessage {
-        role: crate::model::Role::User,
+    state.session.messages.push(runie_core::model::ChatMessage {
+        role: runie_core::model::Role::User,
         content: content.into(),
         timestamp: 0.0,
         id: id.into(),
@@ -17,7 +17,7 @@ fn push_user_msg(state: &mut AppState, content: &str, id: &str) {
 }
 
 fn thinking_started(state: &AppState) -> std::time::Instant {
-    use crate::ui::Element;
+    use runie_core::ui::Element;
     state
         .view
         .elements_cache()
@@ -99,8 +99,8 @@ fn typing_without_at_does_not_open_dialog() {
 #[test]
 fn input_change_marks_dirty_but_does_not_bump_cache_gen() {
     let mut state = fresh_state();
-    state.session.messages.push(crate::model::ChatMessage {
-        role: crate::model::Role::User,
+    state.session.messages.push(runie_core::model::ChatMessage {
+        role: runie_core::model::Role::User,
         content: "hi".into(),
         timestamp: 0.0,
         id: "t1".into(),
@@ -138,8 +138,8 @@ fn message_change_bumps_cache_gen() {
 #[test]
 fn ensure_fresh_skips_rebuild_when_only_input_changed() {
     let mut state = fresh_state();
-    state.session.messages.push(crate::model::ChatMessage {
-        role: crate::model::Role::User,
+    state.session.messages.push(runie_core::model::ChatMessage {
+        role: runie_core::model::Role::User,
         content: "hi".into(),
         timestamp: 0.0,
         id: "t1".into(),
@@ -158,10 +158,10 @@ fn ensure_fresh_skips_rebuild_when_only_input_changed() {
 
 #[test]
 fn thinking_element_stores_instant_not_elapsed() {
-    use crate::ui::Element;
+    use runie_core::ui::Element;
     let mut state = fresh_state();
-    state.session.messages.push(crate::model::ChatMessage {
-        role: crate::model::Role::User,
+    state.session.messages.push(runie_core::model::ChatMessage {
+        role: runie_core::model::Role::User,
         content: "hi".into(),
         timestamp: 0.0,
         id: "t1".into(),
@@ -193,10 +193,10 @@ fn thinking_element_stores_instant_not_elapsed() {
 
 #[test]
 fn tool_running_element_stores_instant_not_elapsed() {
-    use crate::ui::Element;
+    use runie_core::ui::Element;
     let mut state = fresh_state();
-    state.session.messages.push(crate::model::ChatMessage {
-        role: crate::model::Role::Tool,
+    state.session.messages.push(runie_core::model::ChatMessage {
+        role: runie_core::model::Role::Tool,
         content: "⠋ Running list_files...".into(),
         timestamp: 0.0,
         id: "t1".into(),

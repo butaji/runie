@@ -1,8 +1,8 @@
 #![allow(clippy::needless_borrow)]
 
-use crate::event::AgentEvent;
-use crate::event::Event;
-use crate::model::{AppState, ChatMessage, Role};
+use runie_core::event::AgentEvent;
+use runie_core::event::Event;
+use runie_core::model::{AppState, ChatMessage, Role};
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -26,8 +26,8 @@ fn verify_user_submit_visible(state: &mut AppState, height: usize) {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = crate::tests::visible_helper::compute_viewport(&state, height);
-    assert!(region.elements.iter().any(|e| matches!(e, crate::ui::Element::UserMessage { content, .. } if content == "list files")),
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, height);
+    assert!(region.elements.iter().any(|e| matches!(e, runie_core::ui::Element::UserMessage { content, .. } if content == "list files")),
         "User message must be visible after submit");
 }
 
@@ -42,12 +42,12 @@ fn verify_thought_visible(state: &mut AppState, height: usize) {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = crate::tests::visible_helper::compute_viewport(&state, height);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, height);
     assert!(
         region
             .elements
             .iter()
-            .any(|e| matches!(e, crate::ui::Element::ThoughtMarker { .. })),
+            .any(|e| matches!(e, runie_core::ui::Element::ThoughtMarker { .. })),
         "Thought must be visible"
     );
 }
@@ -70,7 +70,7 @@ fn verify_tool_output_visible(state: &mut AppState, height: usize) {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = crate::tests::visible_helper::compute_viewport(&state, height);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, height);
     assert!(
         !region.elements.is_empty(),
         "Visible region must not be empty"
@@ -79,7 +79,7 @@ fn verify_tool_output_visible(state: &mut AppState, height: usize) {
         .elements
         .iter()
         .rev()
-        .find(|e| !matches!(e, crate::ui::Element::Spacer { .. }));
+        .find(|e| !matches!(e, runie_core::ui::Element::Spacer { .. }));
     assert!(last_elem.is_some(), "Last visible element must exist");
 }
 
@@ -91,10 +91,10 @@ fn verify_final_done_visible(state: &mut AppState, height: usize) {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = crate::tests::visible_helper::compute_viewport(&state, height);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, height);
     assert!(
         region.elements.iter().any(
-            |e| matches!(e, crate::ui::Element::AgentMessage { content, .. } if content == "Done!")
+            |e| matches!(e, runie_core::ui::Element::AgentMessage { content, .. } if content == "Done!")
         ),
         "Final 'Done!' must be visible at bottom"
     );
@@ -121,7 +121,7 @@ fn large_thought_bottom_lines_visible() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = crate::tests::visible_helper::compute_viewport(&state, height);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, height);
     assert!(
         !region.elements.is_empty(),
         "Visible region must not be empty"
@@ -132,7 +132,7 @@ fn large_thought_bottom_lines_visible() {
     let thought_elems: Vec<_> = region
         .elements
         .iter()
-        .filter(|e| matches!(e, crate::ui::Element::ThoughtMarker { .. }))
+        .filter(|e| matches!(e, runie_core::ui::Element::ThoughtMarker { .. }))
         .collect();
     assert!(
         !thought_elems.is_empty(),
@@ -159,7 +159,7 @@ fn viewport_never_empty_when_content_exists() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = crate::tests::visible_helper::compute_viewport(&state, height);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, height);
     assert!(
         !region.elements.is_empty(),
         "Visible region must not be empty when content exists"
@@ -185,12 +185,12 @@ fn scroll_zero_always_shows_latest() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = crate::tests::visible_helper::compute_viewport(&state, height);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, height);
     // Latest message (msg2) should be visible
     let has_latest = region
         .elements
         .iter()
-        .any(|e| matches!(e, crate::ui::Element::UserMessage { content, .. } if content == "msg2"));
+        .any(|e| matches!(e, runie_core::ui::Element::UserMessage { content, .. } if content == "msg2"));
     assert!(has_latest, "Latest message must be visible when scroll=0");
 }
 
@@ -218,14 +218,14 @@ fn tool_output_exceeding_viewport_shows_latest_files() {
 
     // ToolDone: header (1) + 50 output lines = 51 lines total. Viewport = 5.
     // The bottom 5 lines should be visible: file50, file49, file48, file47, header
-    let region = crate::tests::visible_helper::compute_viewport(&state, height);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, height);
     assert!(!region.elements.is_empty(), "Tool output must be visible");
 
     // The tool element should be in the visible region
     let tool_elems: Vec<_> = region
         .elements
         .iter()
-        .filter(|e| matches!(e, crate::ui::Element::ToolDone { .. }))
+        .filter(|e| matches!(e, runie_core::ui::Element::ToolDone { .. }))
         .collect();
     assert!(!tool_elems.is_empty(), "ToolDone must be in visible region");
 }

@@ -1,7 +1,7 @@
-use crate::event::AgentEvent;
-use crate::event::Event;
-use crate::layout::element_line_count;
-use crate::model::{AppState, ChatMessage, Role};
+use runie_core::event::AgentEvent;
+use runie_core::event::Event;
+use runie_core::layout::element_line_count;
+use runie_core::model::{AppState, ChatMessage, Role};
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -38,14 +38,14 @@ fn large_tool_output_bottom_lines_in_viewport() {
     // Lines: User[0], Spacer[1], ToolDone[2..22], Spacer[23]
     // [19,24) = lines 19,20,21,22,23
     // = ToolDone lines 17,18,19,20 (indices 17-20 = "file17","file18","file19","file20") + Spacer
-    let region = crate::tests::visible_helper::compute_viewport(&state, 5);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, 5);
     assert!(!region.elements.is_empty(), "Viewport must not be empty");
 
     // The visible region should contain the ToolDone element
     let tool_elems: Vec<_> = region
         .elements
         .iter()
-        .filter(|e| matches!(e, crate::ui::Element::ToolDone { .. }))
+        .filter(|e| matches!(e, runie_core::ui::Element::ToolDone { .. }))
         .collect();
     assert!(!tool_elems.is_empty(), "ToolDone must be in viewport");
 }
@@ -67,7 +67,7 @@ fn viewport_never_exceeds_height() {
 
     // ToolDone: header(1) + 5 output = 6 lines + spacer = 7 lines total
     // Viewport = 5, max_scroll = 2, viewport [2, 7)
-    let region = crate::tests::visible_helper::compute_viewport(&state, 5);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, 5);
 
     // Count visible lines (accounting for skip_lines on first element)
     let mut visible_lines = 0usize;
@@ -95,7 +95,7 @@ fn last_element_lines_clipped_to_fit_viewport() {
     add_user_and_huge_thought(&mut state);
     state.ensure_fresh();
 
-    let region = crate::tests::visible_helper::compute_viewport(&state, 5);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, 5);
     let total_visible = count_visible_lines(&region, state.view.last_content_width);
     assert_eq!(
         total_visible, 5,
@@ -125,7 +125,7 @@ fn add_user_and_huge_thought(state: &mut AppState) {
     state.messages_changed();
 }
 
-fn count_visible_lines(region: &crate::tests::visible_helper::TestViewport, width: u16) -> usize {
+fn count_visible_lines(region: &crate::tests::core::visible_helper::TestViewport, width: u16) -> usize {
     let mut total = 0usize;
     for (i, elem) in region.elements.iter().enumerate() {
         let count = element_line_count(elem, width);
@@ -165,12 +165,12 @@ fn submit_then_large_response_stays_at_bottom() {
     // Scroll must still be 0 (at bottom) — user didn't scroll
     assert_eq!(state.view.scroll, 0, "Scroll must stay at 0 after response");
     // Latest file must be visible
-    let region = crate::tests::visible_helper::compute_viewport(&state, 5);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, 5);
     let tool_texts: Vec<String> = region
         .elements
         .iter()
         .filter_map(|e| match e {
-            crate::ui::Element::ToolDone { output, .. } => Some(output.clone()),
+            runie_core::ui::Element::ToolDone { output, .. } => Some(output.clone()),
             _ => None,
         })
         .collect();
@@ -208,6 +208,6 @@ fn streaming_large_content_scroll_zero_shows_latest() {
     });
     state.ensure_fresh();
 
-    let region = crate::tests::visible_helper::compute_viewport(&state, 5);
+    let region = crate::tests::core::visible_helper::compute_viewport(&state, 5);
     assert!(!region.elements.is_empty(), "Viewport must show content");
 }

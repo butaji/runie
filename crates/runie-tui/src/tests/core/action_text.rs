@@ -1,4 +1,4 @@
-use crate::labels::action_text;
+use runie_core::labels::action_text;
 
 #[test]
 fn working_tag_gets_ellipsis() {

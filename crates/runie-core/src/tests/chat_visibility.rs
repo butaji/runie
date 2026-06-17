@@ -174,7 +174,7 @@ fn verify_thought_visible(state: &AppState, height: usize) {
     assert!(has_thought, "Thought must be visible after overflow");
 
     let thought_texts: Vec<String> = region.elements.iter().filter_map(|e| match e {
-        crate::ui::Element::ThoughtMarker { content } => Some(content.clone()),
+        crate::ui::Element::ThoughtMarker { content, .. } => Some(content.clone()),
         _ => None,
     }).collect();
     if !thought_texts.is_empty() {

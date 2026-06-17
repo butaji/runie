@@ -6,6 +6,8 @@ pub use crate::ui::view;
 use runie_core::event::{AgentEvent, InputEvent};
 
 #[cfg(test)]
+mod core;
+#[cfg(test)]
 mod smoke;
 #[cfg(test)]
 mod snapshot;
