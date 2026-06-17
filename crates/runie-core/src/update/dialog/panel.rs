@@ -135,7 +135,7 @@ fn pop_dialog_or_close(state: &mut AppState) -> bool {
 fn update_form_panel(state: &mut AppState, event: Event, stack: &mut PanelStack) -> bool {
     let action = {
         let panel = stack.current_mut().expect("form panel");
-        super::form::form_panel_action(panel, event)
+        super::form::form_panel_action(state, panel, event)
     };
 
     if matches!(&action, FormAction::Back) {

@@ -1,4 +1,4 @@
-use crate::event::{DialogEvent, LoginFlowEvent};
+use crate::event::{DialogEvent, InputEvent, LoginFlowEvent};
 use crate::login_config::list_configured_providers;
 use crate::model::AppState;
 
@@ -152,4 +152,75 @@ fn login_flow_save_allows_model_selection_from_multiple() {
     if defaults.len() >= 2 {
         assert_eq!(state.config.current_model, defaults[1]);
     }
+}
+
+#[test]
+fn login_key_input_reads_typed_key() {
+    clean_config();
+    let mut state = AppState::default();
+    state.config.current_provider.clear();
+    state.config.current_model.clear();
+
+    state.update(LoginFlowEvent::Start);
+    state.update(LoginFlowEvent::SelectProvider {
+        provider: "minimax".into(),
+    });
+    for c in "sk-test".chars() {
+        state.update(InputEvent::Input(c));
+    }
+    state.update(InputEvent::Submit);
+
+    let flow = state.login_flow.as_ref().unwrap();
+    assert_eq!(flow.step, crate::login_flow::LoginStep::ModelSelect);
+    assert_eq!(flow.key, "sk-test");
+}
+
+#[test]
+fn login_key_input_rejects_empty_key() {
+    clean_config();
+    let mut state = AppState::default();
+    state.config.current_provider.clear();
+    state.config.current_model.clear();
+
+    state.update(LoginFlowEvent::Start);
+    state.update(LoginFlowEvent::SelectProvider {
+        provider: "minimax".into(),
+    });
+    state.update(InputEvent::Submit);
+
+    let flow = state.login_flow.as_ref().unwrap();
+    assert_eq!(
+        flow.step,
+        crate::login_flow::LoginStep::KeyInput,
+        "empty key should keep the key input panel open"
+    );
+}
+
+#[test]
+fn login_flow_save_blocked_after_validation_failure() {
+    clean_config();
+    let mut state = AppState::default();
+    state.config.current_provider.clear();
+    state.config.current_model.clear();
+
+    state.update(LoginFlowEvent::Start);
+    state.update(LoginFlowEvent::SelectProvider {
+        provider: "minimax".into(),
+    });
+    state.update(LoginFlowEvent::SubmitKey {
+        provider: "minimax".into(),
+        key: "sk-test".into(),
+    });
+    state.update(LoginFlowEvent::ValidationFailed {
+        provider: "minimax".into(),
+        key: "sk-test".into(),
+        error: "bad key".into(),
+    });
+    state.update(LoginFlowEvent::Save);
+
+    assert!(
+        state.login_flow.is_some(),
+        "save should be blocked after validation failure"
+    );
+    assert!(list_configured_providers().is_empty());
 }

@@ -342,7 +342,8 @@ fn form_button_activated_by_enter() {
         );
     // Navigate to the first button (index 1, after form field at index 0)
     panel.selected = 1;
-    let action = crate::update::dialog::form_panel_action(&mut panel, crate::Event::submit());
+    let mut state = crate::model::AppState::default();
+    let action = crate::update::dialog::form_panel_action(&mut state, &mut panel, crate::Event::submit());
     assert!(matches!(
         action,
         crate::update::dialog::FormAction::Submit(Some(crate::event::LoginFlowEvent::Save))
@@ -364,8 +365,9 @@ fn form_button_activated_by_accelerator() {
         );
     // On a form field, typing 'c' should type into the field
     panel.selected = 0;
+    let mut state = crate::model::AppState::default();
     let action =
-        crate::update::dialog::form_panel_action(&mut panel, crate::event::InputEvent::Input('c'));
+        crate::update::dialog::form_panel_action(&mut state, &mut panel, crate::event::InputEvent::Input('c'));
     assert!(matches!(
         action,
         crate::update::dialog::FormAction::KeepOpen
@@ -375,7 +377,7 @@ fn form_button_activated_by_accelerator() {
     // On a button, typing 'c' should activate Cancel
     panel.selected = 2;
     let action =
-        crate::update::dialog::form_panel_action(&mut panel, crate::event::InputEvent::Input('c'));
+        crate::update::dialog::form_panel_action(&mut state, &mut panel, crate::event::InputEvent::Input('c'));
     assert!(matches!(
         action,
         crate::update::dialog::FormAction::Submit(Some(crate::event::LoginFlowEvent::Cancel))
@@ -396,7 +398,8 @@ fn form_field_submit_still_builds_form_values() {
     });
     // On the form field, Enter should submit the form
     panel.selected = 0;
-    let action = crate::update::dialog::form_panel_action(&mut panel, crate::Event::submit());
+    let mut state = crate::model::AppState::default();
+    let action = crate::update::dialog::form_panel_action(&mut state, &mut panel, crate::Event::submit());
     assert!(matches!(
         action,
         crate::update::dialog::FormAction::Submit(Some(

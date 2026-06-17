@@ -1,7 +1,7 @@
 //! Form Action Types and panel form handling (merged from dialog_form.rs).
 
 use crate::dialog::{ItemAction, Panel, PanelItem};
-use crate::event::{DialogEvent, InputEvent, ModelConfigEvent};
+use crate::event::{DialogEvent, InputEvent, ModelConfigEvent, TransientLevel};
 use crate::model::AppState;
 use crate::Event;
 
@@ -22,7 +22,7 @@ pub enum FormAction {
 }
 
 /// Map a single event to an action on a form panel.
-pub fn form_panel_action(panel: &mut Panel, event: Event) -> FormAction {
+pub fn form_panel_action(state: &mut AppState, panel: &mut Panel, event: Event) -> FormAction {
     use FormAction as A;
     match &event {
         ModelConfigEvent::SettingsClose
@@ -44,8 +44,8 @@ pub fn form_panel_action(panel: &mut Panel, event: Event) -> FormAction {
             let _ = panel.select_down();
             A::KeepOpen
         }
-        DialogEvent::CommandFormInput(c) => handle_form_input(panel, *c),
-        InputEvent::Input(c) => handle_form_input(panel, *c),
+        DialogEvent::CommandFormInput(c) => handle_form_input(state, panel, *c),
+        InputEvent::Input(c) => handle_form_input(state, panel, *c),
         DialogEvent::CommandFormBackspace | InputEvent::Backspace => {
             form_panel_edit_char(panel, ' ', false);
             A::KeepOpen
@@ -53,25 +53,46 @@ pub fn form_panel_action(panel: &mut Panel, event: Event) -> FormAction {
         DialogEvent::CommandFormSubmit
         | InputEvent::Submit
         | ModelConfigEvent::SettingsSelect
-        | DialogEvent::PaletteSelect => handle_form_submit(panel),
+        | DialogEvent::PaletteSelect => handle_form_submit(state, panel),
         _ => A::KeepOpen,
     }
 }
 
-fn handle_form_input(panel: &mut Panel, c: char) -> FormAction {
+fn handle_form_input(state: &mut AppState, panel: &mut Panel, c: char) -> FormAction {
     use FormAction as A;
     if panel.selected_form_field().is_some() {
         form_panel_edit_char(panel, c, true);
         return A::KeepOpen;
     }
     if let Some(ItemAction::Emit(evt)) = panel.find_button_by_accel(c) {
+        if panel.id == "login-key" && is_empty_submit_key(evt, panel) {
+            state.set_transient(
+                "API key is required.".into(),
+                TransientLevel::Warning,
+            );
+            return A::KeepOpen;
+        }
         return A::Submit(Some(evt.clone()));
     }
     A::KeepOpen
 }
 
-fn handle_form_submit(panel: &mut Panel) -> FormAction {
+fn is_empty_submit_key(evt: &crate::Event, panel: &Panel) -> bool {
+    matches!(
+        evt,
+        crate::Event::SubmitKey { key, .. } if key.trim().is_empty() && key_field_empty(panel)
+    )
+}
+
+fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
     use FormAction as A;
+    if panel.id == "login-key" && key_field_empty(panel) {
+        state.set_transient(
+            "API key is required.".into(),
+            TransientLevel::Warning,
+        );
+        return A::KeepOpen;
+    }
     if let Some(item) = panel.selected_item() {
         match item {
             PanelItem::Action {
@@ -87,6 +108,14 @@ fn handle_form_submit(panel: &mut Panel) -> FormAction {
         }
     }
     A::Submit(form_build_submit(panel))
+}
+
+fn key_field_empty(panel: &Panel) -> bool {
+    panel
+        .form_values
+        .get("key")
+        .map(|v| v.trim().is_empty())
+        .unwrap_or(true)
 }
 
 fn form_panel_edit_char(panel: &mut Panel, c: char, push: bool) {

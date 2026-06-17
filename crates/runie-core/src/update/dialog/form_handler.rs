@@ -8,21 +8,23 @@ use super::form;
 
 /// Handle command form dialog events. Entry point for `CommandForm*` events.
 pub fn handle_form_dialog(state: &mut AppState, event: DialogEvent) {
-    let action = {
-        let Some(d) = &mut state.open_dialog else {
-            return;
-        };
-        let DialogState::PanelStack(stack) = d else {
-            return;
-        };
-        let Some(panel) = stack.current_mut() else {
-            return;
-        };
-        if !panel.is_form() {
-            return;
-        }
-        form::form_panel_action(panel, event)
+    let Some(mut dialog) = state.open_dialog.take() else {
+        return;
     };
+    let DialogState::PanelStack(ref mut stack) = dialog else {
+        state.open_dialog = Some(dialog);
+        return;
+    };
+    let Some(panel) = stack.current_mut() else {
+        state.open_dialog = Some(dialog);
+        return;
+    };
+    if !panel.is_form() {
+        state.open_dialog = Some(dialog);
+        return;
+    }
+    let action = form::form_panel_action(state, panel, event);
+    state.open_dialog = Some(dialog);
     form::apply_form_action(state, action);
 }
 

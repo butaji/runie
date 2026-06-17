@@ -465,7 +465,7 @@ mod tests {
     }
 
     #[test]
-    fn s13_empty_key_still_shows_defaults() {
+    fn s13_empty_key_is_rejected() {
         let mut state = AppState::default();
         state.update(LoginFlowEvent::Start);
         state.update(LoginFlowEvent::SelectProvider {
@@ -476,7 +476,7 @@ mod tests {
             key: "".into(),
         });
         let flow = state.login_flow.as_ref().unwrap();
-        assert_eq!(flow.step, LoginStep::ModelSelect);
-        assert!(!flow.available_models.is_empty());
+        assert_eq!(flow.step, LoginStep::KeyInput);
+        assert_transient_contains(&state, "API key is required");
     }
 }

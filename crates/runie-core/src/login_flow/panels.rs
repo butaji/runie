@@ -33,17 +33,19 @@ pub fn build_key_input(provider_key: &str) -> Panel {
     Panel::new("login-key", format!("Login to {}", name))
         .header(format!("Enter your {} API key", name))
         .form_field("API Key", "sk-...", "key")
-        .item(
-            "_Submit",
-            ItemAction::Emit(crate::event::LoginFlowEvent::SubmitKey {
-                provider: provider_key.to_string(),
-                key: String::new(),
-            }),
-        )
+        .form_hidden("provider", provider_key)
+        .form_submit_with(login_key_submit)
         .item(
             "_Cancel",
             ItemAction::Emit(crate::event::ControlEvent::Abort),
         )
+}
+
+fn login_key_submit(values: &std::collections::HashMap<String, String>) -> crate::event::Event {
+    crate::event::Event::SubmitKey {
+        provider: values.get("provider").cloned().unwrap_or_default(),
+        key: values.get("key").cloned().unwrap_or_default(),
+    }
 }
 
 /// Build the model multi-select panel.

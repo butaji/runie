@@ -215,6 +215,12 @@ impl Panel {
         self
     }
 
+    /// Add a hidden form value (no visible field) to be read by the submit factory.
+    pub fn form_hidden(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.form_values.insert(key.into(), value.into());
+        self
+    }
+
     pub fn form_submit(mut self) -> Self {
         self.view = PanelView::Form;
         self.items.push(PanelItem::FormSubmit);

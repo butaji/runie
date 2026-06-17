@@ -125,7 +125,36 @@ fn login_flow_select_provider(state: &mut crate::model::AppState, provider: Stri
     push_login_panel(state, build_key_input(&provider_clone));
 }
 
+fn reject_empty_key(
+    state: &mut crate::model::AppState,
+    provider: &str,
+    key: &str,
+) -> Option<String> {
+    if key.trim().is_empty() {
+        let p = if provider.is_empty() {
+            state
+                .login_flow
+                .as_ref()
+                .map(|f| f.provider.clone())
+                .unwrap_or_default()
+        } else {
+            provider.to_string()
+        };
+        state.set_transient(
+            "API key is required.".into(),
+            crate::event::TransientLevel::Warning,
+        );
+        return Some(p);
+    }
+    None
+}
+
 fn login_flow_submit_key(state: &mut crate::model::AppState, provider: String, key: String) {
+    if let Some(p) = reject_empty_key(state, &provider, &key) {
+        replace_top_login_panel_with(state, build_key_input(&p));
+        return;
+    }
+
     // Compute defaults + final provider first (immutable borrows).
     let final_provider = if provider.is_empty() {
         state
