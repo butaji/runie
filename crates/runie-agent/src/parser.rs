@@ -82,7 +82,16 @@ fn parse_structured_tool(line: &str) -> Option<ParsedToolCall> {
     let call: ToolCall = serde_json::from_str(line).ok()?;
 
     // Only parse known tool names
-    let known_tools = ["read_file", "list_dir", "write_file", "edit_file", "bash", "grep", "find", "fetch_docs"];
+    let known_tools = [
+        "read_file",
+        "list_dir",
+        "write_file",
+        "edit_file",
+        "bash",
+        "grep",
+        "find",
+        "fetch_docs",
+    ];
     if !known_tools.contains(&call.name.as_str()) {
         return None;
     }

@@ -5,7 +5,9 @@ use runie_engine::tool::builtin_registry;
 
 async fn call_tool(name: &str, args: serde_json::Value) -> runie_core::tool::ToolOutput {
     let registry = builtin_registry();
-    let tool = registry.get(name).unwrap_or_else(|| panic!("unknown tool: {}", name));
+    let tool = registry
+        .get(name)
+        .unwrap_or_else(|| panic!("unknown tool: {}", name));
     tool.call(args, &ToolContext::default())
         .await
         .unwrap_or_else(|e| panic!("tool {} failed: {}", name, e))

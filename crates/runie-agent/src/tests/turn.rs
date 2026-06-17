@@ -31,7 +31,9 @@ async fn test_agent_loop_simple_response() {
     run_agent_turn(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().unwrap().push(evt))),
+        Arc::new(Mutex::new(move |evt| {
+            events_clone.lock().unwrap().push(evt)
+        })),
         5,
     )
     .await
@@ -76,7 +78,9 @@ async fn test_agent_loop_with_tool_call() {
     run_agent_turn(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().unwrap().push(evt))),
+        Arc::new(Mutex::new(move |evt| {
+            events_clone.lock().unwrap().push(evt)
+        })),
         5,
     )
     .await
@@ -121,7 +125,9 @@ async fn test_agent_loop_respects_max_iterations() {
     run_agent_turn(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().unwrap().push(evt))),
+        Arc::new(Mutex::new(move |evt| {
+            events_clone.lock().unwrap().push(evt)
+        })),
         3,
     )
     .await
@@ -149,7 +155,9 @@ async fn test_agent_loop_events_have_correct_id() {
     run_agent_turn(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().unwrap().push(evt))),
+        Arc::new(Mutex::new(move |evt| {
+            events_clone.lock().unwrap().push(evt)
+        })),
         5,
     )
     .await
@@ -252,7 +260,9 @@ async fn agent_tool_uses_core_trait() {
     run_agent_turn(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().unwrap().push(evt))),
+        Arc::new(Mutex::new(move |evt| {
+            events_clone.lock().unwrap().push(evt)
+        })),
         5,
     )
     .await
@@ -300,7 +310,9 @@ async fn tool_call_event_matches_output() {
     run_agent_turn(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().unwrap().push(evt))),
+        Arc::new(Mutex::new(move |evt| {
+            events_clone.lock().unwrap().push(evt)
+        })),
         5,
     )
     .await

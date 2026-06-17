@@ -90,40 +90,42 @@ async fn run_subagent_turn(
     cmd: &AgentCommand,
     max_iterations: usize,
 ) -> Result<String, SubagentError> {
-    let responses = Arc::new(Mutex::new(Vec::new()));
-    let done = Arc::new(Mutex::new(false));
-    let error = Arc::new(Mutex::new(None::<String>));
+    let state = Arc::new(SubagentState::default());
+    let callback = build_subagent_callback(state.clone());
 
-    let responses_clone = responses.clone();
-    let done_clone = done.clone();
-    let error_clone = error.clone();
+    run_agent_turn(provider, cmd, callback, max_iterations)
+        .await
+        .map_err(|e| SubagentError::Agent(e.to_string()))?;
 
-    run_agent_turn(
-        provider,
-        cmd,
-        Arc::new(Mutex::new(move |evt: runie_core::Event| {
-            match evt {
-                // Collect both ResponseDelta (streaming) and Response (complete)
-                AgentEvent::ResponseDelta { content, .. }
-                | AgentEvent::Response { content, .. } => {
-                    responses_clone.lock().unwrap().push(content)
-                }
-                AgentEvent::Error { message, .. } => *error_clone.lock().unwrap() = Some(message),
-                AgentEvent::Done { .. } => *done_clone.lock().unwrap() = true,
-                _ => {}
-            }
-        })),
-        max_iterations,
-    )
-    .await
-    .map_err(|e| SubagentError::Agent(e.to_string()))?;
+    finalize_subagent_result(state)
+}
 
-    if let Some(msg) = error.lock().unwrap().take() {
+#[derive(Default)]
+struct SubagentState {
+    responses: Mutex<Vec<String>>,
+    done: Mutex<bool>,
+    error: Mutex<Option<String>>,
+}
+
+fn build_subagent_callback(
+    state: Arc<SubagentState>,
+) -> Arc<Mutex<dyn FnMut(runie_core::Event) + Send + Sync>> {
+    Arc::new(Mutex::new(move |evt: runie_core::Event| match evt {
+        AgentEvent::ResponseDelta { content, .. } | AgentEvent::Response { content, .. } => {
+            state.responses.lock().unwrap().push(content)
+        }
+        AgentEvent::Error { message, .. } => *state.error.lock().unwrap() = Some(message),
+        AgentEvent::Done { .. } => *state.done.lock().unwrap() = true,
+        _ => {}
+    }))
+}
+
+fn finalize_subagent_result(state: Arc<SubagentState>) -> Result<String, SubagentError> {
+    if let Some(msg) = state.error.lock().unwrap().take() {
         return Err(SubagentError::Agent(msg));
     }
-    if !*done.lock().unwrap() {
+    if !*state.done.lock().unwrap() {
         return Err(SubagentError::Agent("subagent did not finish".into()));
     }
-    let result = responses.lock().unwrap().join("");
-    Ok(result)
+    Ok(state.responses.lock().unwrap().join(""))
 }

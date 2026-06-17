@@ -1,4 +1,6 @@
-use runie_core::permissions::{is_read_only_tool, is_sensitive_path, PermissionAction, PermissionSet};
+use runie_core::permissions::{
+    is_read_only_tool, is_sensitive_path, PermissionAction, PermissionSet,
+};
 
 #[test]
 fn policy_matches_core() {
@@ -18,7 +20,11 @@ fn assert_read_only_tools_allowed(rules: &PermissionSet) {
             "{} should be allowed by default",
             tool
         );
-        assert!(is_read_only_tool(tool), "{} should be classified read-only", tool);
+        assert!(
+            is_read_only_tool(tool),
+            "{} should be classified read-only",
+            tool
+        );
     }
 }
 
@@ -30,7 +36,11 @@ fn assert_mutating_tools_ask(rules: &PermissionSet) {
             "{} should ask by default",
             tool
         );
-        assert!(!is_read_only_tool(tool), "{} should not be classified read-only", tool);
+        assert!(
+            !is_read_only_tool(tool),
+            "{} should not be classified read-only",
+            tool
+        );
     }
 }
 

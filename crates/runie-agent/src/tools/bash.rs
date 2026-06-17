@@ -34,7 +34,11 @@ pub fn run_bash(command: &str, policy: &TruncationPolicy) -> ShellOutput {
 /// Run bash and return ToolOutput for exec.rs.
 pub fn run_bash_legacy(tool: &Tool, policy: &TruncationPolicy) -> ToolOutput {
     let start = Instant::now();
-    let command = if let Tool::Bash { command } = tool { command } else { unreachable!() };
+    let command = if let Tool::Bash { command } = tool {
+        command
+    } else {
+        unreachable!()
+    };
     let name = tool.name();
     let args = tool.to_args();
     let out = run_bash(command, policy);
@@ -106,7 +110,11 @@ fn run_bash_output(
         false,
         is_truncated,
         full_output_path.as_ref(),
-        if is_truncated { &truncated_content } else { &combined },
+        if is_truncated {
+            &truncated_content
+        } else {
+            &combined
+        },
     );
 
     ShellOutput {
@@ -131,10 +139,7 @@ fn combine_output(stdout: &str, stderr: &str) -> String {
     format!("{}\n{}", stdout.trim_end(), stderr.trim_end())
 }
 
-fn truncate_combined(
-    combined: &str,
-    policy: &TruncationPolicy,
-) -> (bool, String) {
+fn truncate_combined(combined: &str, policy: &TruncationPolicy) -> (bool, String) {
     let mut acc = OutputAccumulator::new(policy, TruncateStrategy::Tail);
     acc.append(combined.as_bytes());
     let snap = acc.snapshot();
@@ -172,9 +177,10 @@ fn run_command_with_timeout(
 
     match rx.recv_timeout(timeout) {
         Ok(result) => result,
-        Err(mpsc::RecvTimeoutError::Timeout) => {
-            Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "Command timed out"))
-        }
+        Err(mpsc::RecvTimeoutError::Timeout) => Err(std::io::Error::new(
+            std::io::ErrorKind::TimedOut,
+            "Command timed out",
+        )),
         Err(mpsc::RecvTimeoutError::Disconnected) => {
             Err(std::io::Error::other("Channel disconnected unexpectedly"))
         }

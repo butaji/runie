@@ -14,11 +14,7 @@ use runie_engine::tool::builtin_registry;
 pub trait Inspector: Send + Sync {
     /// Called before the tool executes. Return `Ok(())` to continue,
     /// or `Err(msg)` to short-circuit with a blocked result.
-    fn before_call(
-        &self,
-        _tool_name: &str,
-        _tool_input: &serde_json::Value,
-    ) -> Result<(), String> {
+    fn before_call(&self, _tool_name: &str, _tool_input: &serde_json::Value) -> Result<(), String> {
         Ok(())
     }
 
@@ -58,41 +54,54 @@ impl ToolPipeline {
     ) -> ToolOutput {
         for insp in &self.inspectors {
             if let Err(msg) = insp.before_call(name, &input) {
-                return ToolOutput {
-                    tool_name: name.to_string(),
-                    tool_args: input,
-                    content: format!("Inspector blocked: {}", msg),
-                    bytes_transferred: None,
-                    duration: Instant::now().elapsed(),
-                    status: ToolStatus::Blocked,
-                };
+                return blocked_output(name, input, &msg);
             }
         }
 
-        let output = match self.registry.get(name) {
-            Some(tool) => tool.call(input, ctx).await.unwrap_or_else(|e| ToolOutput {
-                tool_name: name.to_string(),
-                tool_args: serde_json::Value::Null,
-                content: format!("Tool execution failed: {}", e),
-                bytes_transferred: None,
-                duration: Instant::now().elapsed(),
-                status: ToolStatus::Error,
-            }),
-            None => ToolOutput {
-                tool_name: name.to_string(),
-                tool_args: serde_json::Value::Null,
-                content: format!("Error: unknown tool '{}'", name),
-                bytes_transferred: None,
-                duration: Instant::now().elapsed(),
-                status: ToolStatus::Error,
-            },
-        };
+        let output = dispatch_tool(&self.registry, name, input, ctx).await;
 
         for insp in &self.inspectors {
             insp.after_call(name, &output);
         }
 
         output
+    }
+}
+
+fn blocked_output(name: &str, input: serde_json::Value, msg: &str) -> ToolOutput {
+    ToolOutput {
+        tool_name: name.to_string(),
+        tool_args: input,
+        content: format!("Inspector blocked: {}", msg),
+        bytes_transferred: None,
+        duration: Instant::now().elapsed(),
+        status: ToolStatus::Blocked,
+    }
+}
+
+async fn dispatch_tool(
+    registry: &ToolRegistry,
+    name: &str,
+    input: serde_json::Value,
+    ctx: &ToolContext,
+) -> ToolOutput {
+    match registry.get(name) {
+        Some(tool) => tool.call(input, ctx).await.unwrap_or_else(|e| ToolOutput {
+            tool_name: name.to_string(),
+            tool_args: serde_json::Value::Null,
+            content: format!("Tool execution failed: {}", e),
+            bytes_transferred: None,
+            duration: Instant::now().elapsed(),
+            status: ToolStatus::Error,
+        }),
+        None => ToolOutput {
+            tool_name: name.to_string(),
+            tool_args: serde_json::Value::Null,
+            content: format!("Error: unknown tool '{}'", name),
+            bytes_transferred: None,
+            duration: Instant::now().elapsed(),
+            status: ToolStatus::Error,
+        },
     }
 }
 
@@ -133,7 +142,12 @@ pub struct LatencyTracker {
 impl LatencyTracker {
     /// Returns the total elapsed time for a tool name.
     pub fn total(&self, name: &str) -> std::time::Duration {
-        *self.totals.lock().unwrap().get(name).unwrap_or(&std::time::Duration::ZERO)
+        *self
+            .totals
+            .lock()
+            .unwrap()
+            .get(name)
+            .unwrap_or(&std::time::Duration::ZERO)
     }
 }
 
@@ -198,7 +212,11 @@ mod tests {
     async fn inspector_before_call_blocks() {
         let pipeline = ToolPipeline::new(vec![Arc::new(FailInspector)]);
         let output = pipeline
-            .call("bash", serde_json::json!({"command": "echo hi"}), &ToolContext::default())
+            .call(
+                "bash",
+                serde_json::json!({"command": "echo hi"}),
+                &ToolContext::default(),
+            )
             .await;
         assert_eq!(output.status, ToolStatus::Blocked);
         assert!(output.content.contains("blocked by inspector"));
@@ -226,10 +244,18 @@ mod tests {
         let pipeline = ToolPipeline::new(vec![counter.clone()]);
 
         pipeline
-            .call("bash", serde_json::json!({"command": "echo hi"}), &ToolContext::default())
+            .call(
+                "bash",
+                serde_json::json!({"command": "echo hi"}),
+                &ToolContext::default(),
+            )
             .await;
         pipeline
-            .call("bash", serde_json::json!({"command": "echo hi"}), &ToolContext::default())
+            .call(
+                "bash",
+                serde_json::json!({"command": "echo hi"}),
+                &ToolContext::default(),
+            )
             .await;
 
         assert_eq!(counter.count("bash"), 2);
@@ -239,7 +265,11 @@ mod tests {
     async fn empty_pipeline_runs_tool() {
         let pipeline = ToolPipeline::new(vec![]);
         let output = pipeline
-            .call("bash", serde_json::json!({"command": "echo hello"}), &ToolContext::default())
+            .call(
+                "bash",
+                serde_json::json!({"command": "echo hello"}),
+                &ToolContext::default(),
+            )
             .await;
         assert_eq!(output.status, ToolStatus::Success);
         assert!(output.content.contains("hello"));
@@ -252,7 +282,11 @@ mod tests {
         let pipeline = ToolPipeline::new(vec![spy1.clone(), spy2.clone()]);
 
         pipeline
-            .call("bash", serde_json::json!({"command": "echo hi"}), &ToolContext::default())
+            .call(
+                "bash",
+                serde_json::json!({"command": "echo hi"}),
+                &ToolContext::default(),
+            )
             .await;
 
         assert!(spy1.was_called(), "first inspector after_call should run");
@@ -268,7 +302,11 @@ mod tests {
             .push(spy.clone());
 
         pipeline
-            .call("bash", serde_json::json!({"command": "echo hi"}), &ToolContext::default())
+            .call(
+                "bash",
+                serde_json::json!({"command": "echo hi"}),
+                &ToolContext::default(),
+            )
             .await;
 
         assert_eq!(counter.count("bash"), 1);

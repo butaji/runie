@@ -40,33 +40,59 @@ pub async fn run_agent_turn_with_skills(
     let turn_start = Instant::now();
     let mut tool_call_count = 0;
 
-    // Check turn start hooks
     if let Some(skills) = skills {
-        if let TurnStartResult::SkipWithMessage(msg) = skills.on_turn_start(&TurnStartCtx {
-            message: command.content.clone(),
-            system_prompt: command.system_prompt.clone(),
-            skills_context: command.skills_context.clone(),
-        }) {
-            emit_response_and_done(&emit, &command.id, msg);
-            return Ok(());
-        }
-        if let TurnStartResult::Abort(reason) = skills.on_turn_start(&TurnStartCtx {
-            message: command.content.clone(),
-            system_prompt: command.system_prompt.clone(),
-            skills_context: command.skills_context.clone(),
-        }) {
-            emit_error_and_done(&emit, &command.id, format!("Turn aborted by skill: {}", reason));
-            return Ok(());
+        if let Some(result) = check_turn_start(skills, command, &emit) {
+            return result;
         }
     }
 
     let has_intermediate_steps = run_iterations(
-        provider, command, &mut messages, emit.clone(), skills, max_iterations, &mut tool_call_count,
+        provider,
+        command,
+        &mut messages,
+        emit.clone(),
+        skills,
+        max_iterations,
+        &mut tool_call_count,
     )
     .await?;
 
-    emit_turn_end(&emit, &command.id, skills, &messages, tool_call_count, has_intermediate_steps, turn_start);
+    emit_turn_end(
+        &emit,
+        &command.id,
+        skills,
+        &messages,
+        tool_call_count,
+        has_intermediate_steps,
+        turn_start,
+    );
     Ok(())
+}
+
+fn check_turn_start(
+    skills: &SkillRegistry,
+    command: &AgentCommand,
+    emit: &EmitFn,
+) -> Option<Result<()>> {
+    let ctx = TurnStartCtx {
+        message: command.content.clone(),
+        system_prompt: command.system_prompt.clone(),
+        skills_context: command.skills_context.clone(),
+    };
+
+    if let TurnStartResult::SkipWithMessage(msg) = skills.on_turn_start(&ctx) {
+        emit_response_and_done(emit, &command.id, msg);
+        return Some(Ok(()));
+    }
+    if let TurnStartResult::Abort(reason) = skills.on_turn_start(&ctx) {
+        emit_error_and_done(
+            emit,
+            &command.id,
+            format!("Turn aborted by skill: {}", reason),
+        );
+        return Some(Ok(()));
+    }
+    None
 }
 
 /// Emit final turn end events including on_turn_end hook.
@@ -87,7 +113,11 @@ fn emit_turn_end(
             .map(|m| m.content.clone())
             .unwrap_or_default();
 
-        let ctx = TurnEndCtx { assistant_message: assistant_msg, tool_call_count, success: true };
+        let ctx = TurnEndCtx {
+            assistant_message: assistant_msg,
+            tool_call_count,
+            success: true,
+        };
         match skills.on_turn_end(&ctx) {
             TurnEndResult::Continue | TurnEndResult::Abort(_) => {}
             TurnEndResult::RequestAnotherPass => {}
@@ -95,21 +125,36 @@ fn emit_turn_end(
     }
 
     if has_intermediate_steps {
-        emit_now(emit, AgentEvent::TurnComplete {
-            id: id.to_string(),
-            duration_secs: turn_start.elapsed().as_secs_f64(),
-        });
+        emit_now(
+            emit,
+            AgentEvent::TurnComplete {
+                id: id.to_string(),
+                duration_secs: turn_start.elapsed().as_secs_f64(),
+            },
+        );
     }
     emit_now(emit, AgentEvent::Done { id: id.to_string() });
 }
 
 fn emit_response_and_done(emit: &EmitFn, id: &str, content: String) {
-    emit_now(emit, AgentEvent::Response { id: id.to_string(), content });
+    emit_now(
+        emit,
+        AgentEvent::Response {
+            id: id.to_string(),
+            content,
+        },
+    );
     emit_now(emit, AgentEvent::Done { id: id.to_string() });
 }
 
 fn emit_error_and_done(emit: &EmitFn, id: &str, message: String) {
-    emit_now(emit, AgentEvent::Error { id: id.to_string(), message });
+    emit_now(
+        emit,
+        AgentEvent::Error {
+            id: id.to_string(),
+            message,
+        },
+    );
     emit_now(emit, AgentEvent::Done { id: id.to_string() });
 }
 
@@ -124,7 +169,16 @@ async fn run_iterations(
 ) -> Result<bool> {
     let mut has_intermediate_steps = false;
     for _ in 0..max_iterations {
-        if !run_agent_iteration(provider, command, messages, emit.clone(), skills, tool_call_count).await? {
+        if !run_agent_iteration(
+            provider,
+            command,
+            messages,
+            emit.clone(),
+            skills,
+            tool_call_count,
+        )
+        .await?
+        {
             break;
         }
         has_intermediate_steps = true;
@@ -144,10 +198,20 @@ async fn run_agent_iteration(
     skills: Option<&SkillRegistry>,
     tool_call_count: &mut usize,
 ) -> Result<bool> {
-    emit_now(&emit, AgentEvent::Thinking { id: command.id.clone() });
+    emit_now(
+        &emit,
+        AgentEvent::Thinking {
+            id: command.id.clone(),
+        },
+    );
 
     let response_text = stream_response(provider, command, messages, emit.clone()).await?;
-    emit_now(&emit, AgentEvent::ThoughtDone { id: command.id.clone() });
+    emit_now(
+        &emit,
+        AgentEvent::ThoughtDone {
+            id: command.id.clone(),
+        },
+    );
 
     let tools = parse_tool_calls(&response_text);
     if tools.is_empty() {
@@ -172,10 +236,13 @@ async fn stream_response(
         match event {
             runie_core::llm_event::LLMEvent::TextDelta(text) => {
                 response_text.push_str(&text);
-                emit_now(&emit, AgentEvent::ResponseDelta {
-                    id: command.id.clone(),
-                    content: text,
-                });
+                emit_now(
+                    &emit,
+                    AgentEvent::ResponseDelta {
+                        id: command.id.clone(),
+                        content: text,
+                    },
+                );
             }
             runie_core::llm_event::LLMEvent::Finish { .. } => break,
             runie_core::llm_event::LLMEvent::Error(e) => {
@@ -184,10 +251,13 @@ async fn stream_response(
             _ => {}
         }
     }
-    emit_now(&emit, AgentEvent::Response {
-        id: command.id.clone(),
-        content: response_text.clone(),
-    });
+    emit_now(
+        &emit,
+        AgentEvent::Response {
+            id: command.id.clone(),
+            content: response_text.clone(),
+        },
+    );
     Ok(response_text)
 }
 
@@ -230,13 +300,17 @@ async fn execute_tools(
 
     for tool_call in tools {
         *tool_call_count += 1;
-        let output = execute_single_tool(cmd_id, tool_call, emit.clone(), skills, &ctx, &registry).await;
+        let output =
+            execute_single_tool(cmd_id, tool_call, emit.clone(), skills, &ctx, &registry).await;
 
-        emit_now(&emit, AgentEvent::ToolEnd {
-            id: cmd_id.to_string(),
-            duration_secs: output.duration.as_secs_f64(),
-            output: output.content.clone(),
-        });
+        emit_now(
+            &emit,
+            AgentEvent::ToolEnd {
+                id: cmd_id.to_string(),
+                duration_secs: output.duration.as_secs_f64(),
+                output: output.content.clone(),
+            },
+        );
         messages.push(ChatMessage::tool_result(format!(
             "{} result:\n{}",
             tool_call.name, output.content
@@ -252,28 +326,48 @@ async fn execute_single_tool(
     ctx: &ToolContext,
     registry: &runie_core::tool::ToolRegistry,
 ) -> ToolOutput {
-    emit_now(&emit, AgentEvent::ToolStart {
-        id: cmd_id.to_string(),
-        name: tool_call.name.clone(),
-        input: tool_call.args.clone(),
-    });
+    emit_tool_start(cmd_id, tool_call, &emit);
 
-    // Check skill Before hook
-    let skill_override = check_tool_call_before_hook(skills, tool_call);
-    if let Some(output) = skill_override {
-        return ToolOutput {
-            tool_name: tool_call.name.clone(),
-            tool_args: tool_call.args.clone(),
-            content: output,
-            bytes_transferred: None,
-            duration: std::time::Duration::from_millis(0),
-            status: ToolStatus::Success,
-        };
+    if let Some(output) = skill_override_output(skills, tool_call) {
+        return output;
     }
 
     let output = execute_tool_call(registry, tool_call, ctx).await;
+    fire_tool_after_hook(skills, tool_call, &output);
 
-    // Fire skill After hook
+    output
+}
+
+fn emit_tool_start(cmd_id: &str, tool_call: &ParsedToolCall, emit: &EmitFn) {
+    emit_now(
+        emit,
+        AgentEvent::ToolStart {
+            id: cmd_id.to_string(),
+            name: tool_call.name.clone(),
+            input: tool_call.args.clone(),
+        },
+    );
+}
+
+fn skill_override_output(
+    skills: Option<&SkillRegistry>,
+    tool_call: &ParsedToolCall,
+) -> Option<ToolOutput> {
+    check_tool_call_before_hook(skills, tool_call).map(|output| ToolOutput {
+        tool_name: tool_call.name.clone(),
+        tool_args: tool_call.args.clone(),
+        content: output,
+        bytes_transferred: None,
+        duration: std::time::Duration::from_millis(0),
+        status: ToolStatus::Success,
+    })
+}
+
+fn fire_tool_after_hook(
+    skills: Option<&SkillRegistry>,
+    tool_call: &ParsedToolCall,
+    output: &ToolOutput,
+) {
     if let Some(skills) = skills {
         skills.on_tool_call(&ToolCallCtx {
             tool_name: tool_call.name.clone(),
@@ -283,8 +377,6 @@ async fn execute_single_tool(
             success: Some(output.status == ToolStatus::Success),
         });
     }
-
-    output
 }
 
 fn check_tool_call_before_hook(
@@ -318,16 +410,17 @@ async fn execute_tool_call(
     let tool_name = &tool_call.name;
 
     match registry.get(tool_name) {
-        Some(tool) => tool.call(tool_call.args.clone(), ctx).await.unwrap_or_else(|e| {
-            ToolOutput {
+        Some(tool) => tool
+            .call(tool_call.args.clone(), ctx)
+            .await
+            .unwrap_or_else(|e| ToolOutput {
                 tool_name: tool_name.clone(),
                 tool_args: tool_call.args.clone(),
                 content: format!("Tool execution failed: {}", e),
                 bytes_transferred: None,
                 duration: std::time::Duration::from_millis(0),
                 status: ToolStatus::Error,
-            }
-        }),
+            }),
         None => ToolOutput {
             tool_name: tool_name.clone(),
             tool_args: tool_call.args.clone(),

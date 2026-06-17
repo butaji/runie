@@ -39,7 +39,13 @@ mod tests {
         // Diff was generated canonically.
         assert!(!preview.diff.hunks.is_empty());
         let diff_str = preview.diff.to_unified_string();
-        assert!(diff_str.contains("-hello world"), "diff should show removed line");
-        assert!(diff_str.contains("+hello universe"), "diff should show added line");
+        assert!(
+            diff_str.contains("-hello world"),
+            "diff should show removed line"
+        );
+        assert!(
+            diff_str.contains("+hello universe"),
+            "diff should show added line"
+        );
     }
 }

@@ -230,27 +230,90 @@ impl Tool {
     /// Convert the tool to JSON arguments for ToolOutput.
     pub fn to_args(&self) -> serde_json::Value {
         match self {
-            Tool::ReadFile { path, offset, limit } => {
-                serde_json::json!({ "path": path, "offset": offset, "limit": limit })
-            }
+            Tool::ReadFile {
+                path,
+                offset,
+                limit,
+            } => read_file_args(path, *offset, *limit),
             Tool::ListDir { path } => serde_json::json!({ "path": path }),
             Tool::WriteFile { path, content: _ } => {
                 serde_json::json!({ "path": path, "content": "<redacted>" })
             }
-            Tool::EditFile { path, search, replace } => {
-                serde_json::json!({ "path": path, "search": search, "replace": replace })
-            }
-            Tool::Bash { command } => serde_json::json!({ "command": command }),
-            Tool::Grep { pattern, path, glob, ignore_case, literal, context, limit } => {
-                serde_json::json!({ "pattern": pattern, "path": path, "glob": glob, "ignore_case": ignore_case, "literal": literal, "context": context, "limit": limit })
-            }
-            Tool::Find { pattern, path, limit } => {
-                serde_json::json!({ "pattern": pattern, "path": path, "limit": limit })
-            }
-            Tool::FetchDocs { library } => serde_json::json!({ "library": library }),
+            Tool::EditFile {
+                path,
+                search,
+                replace,
+            } => edit_file_args(path, search, replace),
+            other => other.to_args_rest(),
         }
     }
+}
 
+impl Tool {
+    fn to_args_rest(&self) -> serde_json::Value {
+        match self {
+            Tool::Bash { command } => serde_json::json!({ "command": command }),
+            Tool::Grep {
+                pattern,
+                path,
+                glob,
+                ignore_case,
+                literal,
+                context,
+                limit,
+            } => grep_args(
+                pattern,
+                path,
+                glob,
+                *ignore_case,
+                *literal,
+                *context,
+                *limit,
+            ),
+            Tool::Find {
+                pattern,
+                path,
+                limit,
+            } => find_args(pattern, path, *limit),
+            Tool::FetchDocs { library } => serde_json::json!({ "library": library }),
+            _ => unreachable!(),
+        }
+    }
+}
+
+fn read_file_args(path: &str, offset: Option<usize>, limit: Option<usize>) -> serde_json::Value {
+    serde_json::json!({ "path": path, "offset": offset, "limit": limit })
+}
+
+fn edit_file_args(path: &str, search: &str, replace: &str) -> serde_json::Value {
+    serde_json::json!({ "path": path, "search": search, "replace": replace })
+}
+
+fn find_args(pattern: &str, path: &str, limit: usize) -> serde_json::Value {
+    serde_json::json!({ "pattern": pattern, "path": path, "limit": limit })
+}
+
+fn grep_args(
+    pattern: &str,
+    path: &str,
+    glob: &Option<String>,
+    ignore_case: bool,
+    literal: bool,
+    context: usize,
+    limit: usize,
+) -> serde_json::Value {
+    serde_json::json!({
+        "pattern": pattern,
+        "path": path,
+        "glob": glob,
+        "ignore_case": ignore_case,
+        "literal": literal,
+        "context": context,
+        "limit": limit
+    })
+}
+
+impl Tool {
     pub fn execute(&self) -> ToolResult {
         self.execute_with_policy(&crate::truncate::TruncationPolicy::default())
     }

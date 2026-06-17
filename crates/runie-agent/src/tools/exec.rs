@@ -20,7 +20,13 @@ pub(crate) fn run_inner(tool: &Tool, policy: &TruncationPolicy) -> ToolOutput {
     }
 }
 
-fn run_read_file_tool(tool: &Tool, policy: &TruncationPolicy, name: &str, args: &serde_json::Value, start: Instant) -> ToolOutput {
+fn run_read_file_tool(
+    tool: &Tool,
+    policy: &TruncationPolicy,
+    name: &str,
+    args: &serde_json::Value,
+    start: Instant,
+) -> ToolOutput {
     if let Tool::ReadFile {
         path,
         offset,
@@ -28,20 +34,19 @@ fn run_read_file_tool(tool: &Tool, policy: &TruncationPolicy, name: &str, args: 
     } = tool
     {
         let (content, success) = read_file(path, *offset, *limit, policy);
-        ToolOutput {
-            tool_name: name.to_string(),
-            tool_args: args.clone(),
-            content,
-            bytes_transferred: None,
-            duration: start.elapsed(),
-            status: if success { ToolStatus::Success } else { ToolStatus::Error },
-        }
+        build_output(name, args, content, success, start)
     } else {
         unreachable!()
     }
 }
 
-fn run_grep_tool(tool: &Tool, policy: &TruncationPolicy, name: &str, args: &serde_json::Value, start: Instant) -> ToolOutput {
+fn run_grep_tool(
+    tool: &Tool,
+    policy: &TruncationPolicy,
+    name: &str,
+    args: &serde_json::Value,
+    start: Instant,
+) -> ToolOutput {
     if let Tool::Grep {
         pattern,
         path,
@@ -62,20 +67,19 @@ fn run_grep_tool(tool: &Tool, policy: &TruncationPolicy, name: &str, args: &serd
             *limit,
             policy,
         );
-        ToolOutput {
-            tool_name: name.to_string(),
-            tool_args: args.clone(),
-            content,
-            bytes_transferred: None,
-            duration: start.elapsed(),
-            status: if success { ToolStatus::Success } else { ToolStatus::Error },
-        }
+        build_output(name, args, content, success, start)
     } else {
         unreachable!()
     }
 }
 
-fn run_find_tool(tool: &Tool, policy: &TruncationPolicy, name: &str, args: &serde_json::Value, start: Instant) -> ToolOutput {
+fn run_find_tool(
+    tool: &Tool,
+    policy: &TruncationPolicy,
+    name: &str,
+    args: &serde_json::Value,
+    start: Instant,
+) -> ToolOutput {
     if let Tool::Find {
         pattern,
         path,
@@ -83,16 +87,30 @@ fn run_find_tool(tool: &Tool, policy: &TruncationPolicy, name: &str, args: &serd
     } = tool
     {
         let (content, success) = run_find(pattern, path, *limit, policy);
-        ToolOutput {
-            tool_name: name.to_string(),
-            tool_args: args.clone(),
-            content,
-            bytes_transferred: None,
-            duration: start.elapsed(),
-            status: if success { ToolStatus::Success } else { ToolStatus::Error },
-        }
+        build_output(name, args, content, success, start)
     } else {
         unreachable!()
+    }
+}
+
+fn build_output(
+    name: &str,
+    args: &serde_json::Value,
+    content: String,
+    success: bool,
+    start: Instant,
+) -> ToolOutput {
+    ToolOutput {
+        tool_name: name.to_string(),
+        tool_args: args.clone(),
+        content,
+        bytes_transferred: None,
+        duration: start.elapsed(),
+        status: if success {
+            ToolStatus::Success
+        } else {
+            ToolStatus::Error
+        },
     }
 }
 
@@ -105,36 +123,63 @@ fn write_file(tool: &Tool, start: Instant) -> ToolOutput {
     let path = crate::path_utils::resolve_path(path);
     let name = tool.name();
     let args = tool.to_args();
-    if let Some(parent) = path.parent() {
-        if !parent.as_os_str().is_empty() {
-            if let Err(e) = std::fs::create_dir_all(parent) {
-                return ToolOutput {
-                    tool_name: name.to_string(),
-                    tool_args: args,
-                    content: format!("Error creating parent directories: {}", e),
-                    bytes_transferred: None,
-                    duration: start.elapsed(),
-                    status: ToolStatus::Error,
-                };
-            }
-        }
+    if let Err(e) = ensure_parent_dir(&path) {
+        return write_error_output(
+            name,
+            args,
+            &format!("Error creating parent directories: {}", e),
+            start,
+        );
     }
     match std::fs::write(&path, content) {
-        Ok(()) => ToolOutput {
-            tool_name: name.to_string(),
-            tool_args: args,
-            content: format!("Wrote {} bytes to {}", content.len(), path.display()),
-            bytes_transferred: Some(content.len() as u64),
-            duration: start.elapsed(),
-            status: ToolStatus::Success,
-        },
-        Err(e) => ToolOutput {
-            tool_name: name.to_string(),
-            tool_args: args,
-            content: format!("Error writing {}: {}", path.display(), e),
-            bytes_transferred: None,
-            duration: start.elapsed(),
-            status: ToolStatus::Error,
-        },
+        Ok(()) => write_success_output(name, args, path, content, start),
+        Err(e) => write_error_output(
+            name,
+            args,
+            &format!("Error writing {}: {}", path.display(), e),
+            start,
+        ),
+    }
+}
+
+fn ensure_parent_dir(path: &std::path::Path) -> std::io::Result<()> {
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            return std::fs::create_dir_all(parent);
+        }
+    }
+    Ok(())
+}
+
+fn write_success_output(
+    name: &str,
+    args: serde_json::Value,
+    path: std::path::PathBuf,
+    content: &str,
+    start: Instant,
+) -> ToolOutput {
+    ToolOutput {
+        tool_name: name.to_string(),
+        tool_args: args,
+        content: format!("Wrote {} bytes to {}", content.len(), path.display()),
+        bytes_transferred: Some(content.len() as u64),
+        duration: start.elapsed(),
+        status: ToolStatus::Success,
+    }
+}
+
+fn write_error_output(
+    name: &str,
+    args: serde_json::Value,
+    message: &str,
+    start: Instant,
+) -> ToolOutput {
+    ToolOutput {
+        tool_name: name.to_string(),
+        tool_args: args,
+        content: message.to_string(),
+        bytes_transferred: None,
+        duration: start.elapsed(),
+        status: ToolStatus::Error,
     }
 }

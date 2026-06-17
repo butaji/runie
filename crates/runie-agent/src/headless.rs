@@ -45,7 +45,8 @@ pub async fn run_headless_turn(
     let mut tool_outputs = Vec::new();
 
     for _ in 0..options.max_tool_rounds.max(1) {
-        let response_text = stream_response_text(provider, &messages, &mut content, &mut options).await?;
+        let response_text =
+            stream_response_text(provider, &messages, &mut content, &mut options).await?;
         let tools = parse_tool_calls(&response_text);
         if tools.is_empty() || !options.execute_tools {
             break;
@@ -55,7 +56,10 @@ pub async fn run_headless_turn(
         execute_headless_tools(&tools, &mut messages, &mut tool_outputs).await?;
     }
 
-    Ok(HeadlessResult { content, tool_outputs })
+    Ok(HeadlessResult {
+        content,
+        tool_outputs,
+    })
 }
 
 async fn stream_response_text(
@@ -111,16 +115,17 @@ async fn execute_tool_call(
     ctx: &ToolContext,
 ) -> ToolOutput {
     match registry.get(&tool_call.name) {
-        Some(tool) => tool.call(tool_call.args.clone(), ctx).await.unwrap_or_else(|e| {
-            ToolOutput {
+        Some(tool) => tool
+            .call(tool_call.args.clone(), ctx)
+            .await
+            .unwrap_or_else(|e| ToolOutput {
                 tool_name: tool_call.name.clone(),
                 tool_args: tool_call.args.clone(),
                 content: format!("Tool execution failed: {}", e),
                 bytes_transferred: None,
                 duration: std::time::Duration::from_millis(0),
                 status: runie_core::tool::ToolStatus::Error,
-            }
-        }),
+            }),
         None => ToolOutput {
             tool_name: tool_call.name.clone(),
             tool_args: tool_call.args.clone(),

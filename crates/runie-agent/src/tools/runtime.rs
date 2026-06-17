@@ -38,8 +38,8 @@ fn runtime_output(output: ToolOutput) -> Result<ToolOutput, ToolError> {
         ToolStatus::Error => Err(ToolError::Execution(output.content)),
         ToolStatus::TimedOut => Err(ToolError::Execution("command timed out".to_string())),
         ToolStatus::Blocked => Err(ToolError::SandboxBlocked(output.content)),
-        ToolStatus::AwaitingUser => Err(ToolError::ApprovalRequired(
-            ExecApprovalRequirement::Prompt,
-        )),
+        ToolStatus::AwaitingUser => {
+            Err(ToolError::ApprovalRequired(ExecApprovalRequirement::Prompt))
+        }
     }
 }

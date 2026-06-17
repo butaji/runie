@@ -26,7 +26,9 @@ fn parse_find_tool_json() {
 
 async fn call_tool(name: &str, args: serde_json::Value) -> runie_core::tool::ToolOutput {
     let registry = builtin_registry();
-    let tool = registry.get(name).unwrap_or_else(|| panic!("unknown tool: {}", name));
+    let tool = registry
+        .get(name)
+        .unwrap_or_else(|| panic!("unknown tool: {}", name));
     tool.call(args, &ToolContext::default())
         .await
         .unwrap_or_else(|e| panic!("tool {} failed: {}", name, e))
@@ -45,9 +47,7 @@ async fn grep_executes_and_finds_matches() {
     )
     .await;
     assert_eq!(output.status, ToolStatus::Success);
-    assert!(
-        output.content.contains("fn main") || output.content.contains("No matches")
-    );
+    assert!(output.content.contains("fn main") || output.content.contains("No matches"));
 }
 
 #[tokio::test]
@@ -90,7 +90,11 @@ async fn find_respects_limit() {
         .lines()
         .filter(|l| !l.is_empty() && !l.starts_with('['))
         .collect();
-    assert!(lines.len() <= 3, "Expected at most 3 files, got {}", lines.len());
+    assert!(
+        lines.len() <= 3,
+        "Expected at most 3 files, got {}",
+        lines.len()
+    );
 }
 
 #[tokio::test]

@@ -53,11 +53,7 @@ fn build_dir_output(
     ToolOutput {
         tool_name: name.to_string(),
         tool_args: args.clone(),
-        content: apply_truncation(
-            content,
-            crate::accumulator::TruncateStrategy::Head,
-            policy,
-        ),
+        content: apply_truncation(content, crate::accumulator::TruncateStrategy::Head, policy),
         bytes_transferred: None,
         duration: start.elapsed(),
         status: ToolStatus::Success,
