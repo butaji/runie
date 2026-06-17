@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use runie_core::orchestrator::{OrchestratorPlan, SubagentTask, SynthesisConfig, TaskStatus};
+use runie_core::orchestrator::{
+    OrchestratorPlan, SubagentTask, SynthesisConfig, TaskStatus,
+};
 use runie_core::trait_resolver::ModelTrait;
 use serde::Deserialize;
 
@@ -44,45 +46,14 @@ pub(crate) fn parse_raw_plan(
     raw: RawPlan,
     tool_names: &HashMap<String, ()>,
 ) -> Result<OrchestratorPlan, PlannerError> {
-    let mut tasks = Vec::new();
+    let tasks: Result<Vec<_>, _> = raw
+        .tasks
+        .into_iter()
+        .map(|raw_task| parse_task(raw_task, tool_names))
+        .collect();
+    let tasks = tasks?;
 
-    for raw_task in raw.tasks {
-        let model_trait = parse_trait(&raw_task.model_trait).ok_or_else(|| {
-            PlannerError::ValidationFailed(format!(
-                "unknown model trait '{}' in task '{}'",
-                raw_task.model_trait, raw_task.id
-            ))
-        })?;
-
-        // Validate tool_filter: all tools must exist.
-        for tool_name in &raw_task.tool_filter {
-            if !tool_names.contains_key(tool_name) {
-                return Err(PlannerError::ValidationFailed(format!(
-                    "task '{}' references unknown tool '{}'",
-                    raw_task.id, tool_name
-                )));
-            }
-        }
-
-        tasks.push(SubagentTask {
-            id: raw_task.id,
-            role_prompt: raw_task.role_prompt,
-            task_description: raw_task.task_description,
-            tool_filter: if raw_task.tool_filter.is_empty() {
-                None
-            } else {
-                Some(raw_task.tool_filter)
-            },
-            model_trait,
-            status: TaskStatus::Pending,
-        });
-    }
-
-    if tasks.is_empty() {
-        return Err(PlannerError::ValidationFailed(
-            "plan has no tasks".to_string(),
-        ));
-    }
+    ensure_has_tasks(&tasks)?;
 
     let synthesis_trait = raw
         .synthesis_trait
@@ -97,6 +68,63 @@ pub(crate) fn parse_raw_plan(
         rationale: raw.rationale,
         synthesis: SynthesisConfig::default(),
     })
+}
+
+fn parse_task(
+    raw: RawTask,
+    tool_names: &HashMap<String, ()>,
+) -> Result<SubagentTask, PlannerError> {
+    let model_trait = parse_trait(&raw.model_trait).ok_or_else(|| {
+        PlannerError::ValidationFailed(format!(
+            "unknown model trait '{}' in task '{}'",
+            raw.model_trait, raw.id
+        ))
+    })?;
+
+    validate_tool_filter(tool_names, &raw.tool_filter, &raw.id)?;
+
+    Ok(SubagentTask {
+        id: raw.id,
+        role_prompt: raw.role_prompt,
+        task_description: raw.task_description,
+        tool_filter: optional_tool_filter(raw.tool_filter),
+        model_trait,
+        status: TaskStatus::Pending,
+    })
+}
+
+fn validate_tool_filter(
+    tool_names: &HashMap<String, ()>,
+    filter: &[String],
+    task_id: &str,
+) -> Result<(), PlannerError> {
+    for tool_name in filter {
+        if !tool_names.contains_key(tool_name) {
+            return Err(PlannerError::ValidationFailed(format!(
+                "task '{}' references unknown tool '{}'",
+                task_id, tool_name
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn optional_tool_filter(filter: Vec<String>) -> Option<Vec<String>> {
+    if filter.is_empty() {
+        None
+    } else {
+        Some(filter)
+    }
+}
+
+fn ensure_has_tasks(tasks: &[SubagentTask]) -> Result<(), PlannerError> {
+    if tasks.is_empty() {
+        Err(PlannerError::ValidationFailed(
+            "plan has no tasks".to_string(),
+        ))
+    } else {
+        Ok(())
+    }
 }
 
 /// Try to extract JSON from a markdown code block, or return the original text.

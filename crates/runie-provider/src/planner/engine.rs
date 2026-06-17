@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use anyhow::Result;
 use futures::StreamExt;
 use runie_core::llm_event::LLMEvent;
 use runie_core::message::ChatMessage;
@@ -62,104 +61,20 @@ impl<'a, P: Provider> OneShotPlanner<'a, P> {
 
     /// Run the planner and return an `OrchestratorPlan`.
     pub async fn plan(&self, input: &PlanInput<'_>) -> Result<OrchestratorPlan, PlannerError> {
-        let system = build_planner_system_prompt(input.available_traits, self.tools);
-        let user = build_user_prompt(input);
-
-        let mut messages = vec![ChatMessage::system(system), ChatMessage::user(user)];
-
+        let mut messages = self.build_messages(input);
         let mut last_error = String::new();
 
         for attempt in 1..=self.config.max_retries + 1 {
-            let mut stream = self.provider.generate(messages.clone());
+            let text = self.collect_stream_text(&messages).await?;
+            log_parse_attempt(&text);
 
-            // Collect the full stream, timing out on the first item only.
-            let text = match timeout(self.config.timeout, stream.next()).await {
-                Ok(Some(Ok(LLMEvent::TextDelta(initial)))) => {
-                    let mut text = initial;
-                    while let Some(event) = stream.next().await {
-                        if let Ok(LLMEvent::TextDelta(delta)) = event {
-                            text.push_str(&delta);
-                        }
-                    }
-                    text
-                }
-                Ok(Some(Ok(LLMEvent::ThinkingDelta(_)))) => {
-                    // Collect thinking content (may contain useful info)
-                    let mut text = String::new();
-                    while let Some(event) = stream.next().await {
-                        if let Ok(LLMEvent::TextDelta(delta)) = event {
-                            text.push_str(&delta);
-                        }
-                    }
-                    text
-                }
-                Ok(Some(Ok(_))) => {
-                    // Other event types (tool calls etc.) - ignore for planning
-                    String::new()
-                }
-                Ok(Some(Err(e))) => return Err(PlannerError::ProviderError(e.to_string())),
-                Ok(None) => String::new(),
-                Err(_) => return Err(PlannerError::Timeout),
-            };
-
-            // Parse the response
-            eprintln!(
-                "DEBUG: Trying to parse text (first 100 chars): {:?}",
-                &text[..text.len().min(100)]
-            );
-            let parse_result = serde_json::from_str::<serde_json::Value>(&text);
-
-            // Try parsing directly as RawPlan
-            if parse_result.is_ok() {
-                if let Ok(value) = parse_result {
-                    match serde_json::from_value::<RawPlan>(value) {
-                        Ok(raw) => {
-                            let tool_names = self.tool_names();
-                            match parse_raw_plan(raw, &tool_names) {
-                                Ok(plan) => return Ok(plan),
-                                Err(e) => {
-                                    last_error = e.to_string();
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            last_error = e.to_string();
-                        }
-                    }
-                }
-            } else {
-                // from_str failed, store error
-                if let Err(e) = parse_result {
-                    last_error = e.to_string();
-                }
-            }
-
-            // Try extracting JSON from markdown code block (regardless of above result)
-            if let Some(json_text) = extract_json_from_text(&text) {
-                match serde_json::from_str::<RawPlan>(&json_text) {
-                    Ok(raw) => {
-                        let tool_names = self.tool_names();
-                        match parse_raw_plan(raw, &tool_names) {
-                            Ok(plan) => return Ok(plan),
-                            Err(e) => {
-                                last_error = e.to_string();
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        last_error = format!("{}; also failed markdown extract", e);
-                    }
-                }
+            match try_parse_plan(&text, &self.tool_names()) {
+                Ok(plan) => return Ok(plan),
+                Err(e) => last_error = e,
             }
 
             if attempt <= self.config.max_retries {
-                // Append a correction hint and retry
-                let correction = format!(
-                    "\n\n[Planner] Your previous output was not valid JSON: {}. \
-                     Please respond with ONLY the JSON plan object, no explanation.",
-                    last_error
-                );
-                messages.push(ChatMessage::user(correction));
+                append_correction(&mut messages, &last_error);
             }
         }
 
@@ -168,4 +83,89 @@ impl<'a, P: Provider> OneShotPlanner<'a, P> {
             last_error,
         })
     }
+
+    fn build_messages(&self, input: &PlanInput<'_>) -> Vec<ChatMessage> {
+        let system = build_planner_system_prompt(input.available_traits, self.tools);
+        let user = build_user_prompt(input);
+        vec![ChatMessage::system(system), ChatMessage::user(user)]
+    }
+
+    async fn collect_stream_text(
+        &self,
+        messages: &[ChatMessage],
+    ) -> Result<String, PlannerError> {
+        let mut stream = self.provider.generate(messages.to_vec());
+
+        match timeout(self.config.timeout, stream.next()).await {
+            Ok(Some(Ok(LLMEvent::TextDelta(initial)))) => {
+                Ok(collect_text_deltas(&mut stream, initial).await)
+            }
+            Ok(Some(Ok(LLMEvent::ThinkingDelta(_)))) => {
+                Ok(collect_text_deltas(&mut stream, String::new()).await)
+            }
+            Ok(Some(Ok(_))) => Ok(String::new()),
+            Ok(Some(Err(e))) => Err(PlannerError::ProviderError(e.to_string())),
+            Ok(None) => Ok(String::new()),
+            Err(_) => Err(PlannerError::Timeout),
+        }
+    }
+}
+
+async fn collect_text_deltas<S>(stream: &mut S, mut text: String) -> String
+where
+    S: StreamExt<Item = anyhow::Result<LLMEvent>> + Unpin,
+{
+    while let Some(event) = stream.next().await {
+        if let Ok(LLMEvent::TextDelta(delta)) = event {
+            text.push_str(&delta);
+        }
+    }
+    text
+}
+
+fn log_parse_attempt(text: &str) {
+    eprintln!(
+        "DEBUG: Trying to parse text (first 100 chars): {:?}",
+        &text[..text.len().min(100)]
+    );
+}
+
+fn try_parse_plan(
+    text: &str,
+    tool_names: &HashMap<String, ()>,
+) -> Result<OrchestratorPlan, String> {
+    if let Ok(plan) = parse_raw_plan_text(text, tool_names) {
+        return Ok(plan);
+    }
+    parse_raw_plan_markdown(text, tool_names)
+        .map_err(|e| format!("{}; also failed markdown extract", e))
+}
+
+fn parse_raw_plan_text(
+    text: &str,
+    tool_names: &HashMap<String, ()>,
+) -> Result<OrchestratorPlan, String> {
+    serde_json::from_str::<RawPlan>(text)
+        .map_err(|e| e.to_string())
+        .and_then(|raw| parse_raw_plan(raw, tool_names).map_err(|e| e.to_string()))
+}
+
+fn parse_raw_plan_markdown(
+    text: &str,
+    tool_names: &HashMap<String, ()>,
+) -> Result<OrchestratorPlan, String> {
+    let json_text = extract_json_from_text(text)
+        .ok_or_else(|| "no markdown code block".to_string())?;
+    serde_json::from_str::<RawPlan>(&json_text)
+        .map_err(|e| e.to_string())
+        .and_then(|raw| parse_raw_plan(raw, tool_names).map_err(|e| e.to_string()))
+}
+
+fn append_correction(messages: &mut Vec<ChatMessage>, last_error: &str) {
+    let correction = format!(
+        "\n\n[Planner] Your previous output was not valid JSON: {}. \
+         Please respond with ONLY the JSON plan object, no explanation.",
+        last_error
+    );
+    messages.push(ChatMessage::user(correction));
 }

@@ -102,6 +102,16 @@ fn response_chunks(last: Option<&ChatMessage>, user_input: &str) -> Vec<String> 
         .collect()
 }
 
+fn last_user_content(messages: &[ChatMessage]) -> Option<String> {
+    messages.iter().rev().find_map(|m| {
+        if m.role == Role::User {
+            Some(m.content.clone())
+        } else {
+            None
+        }
+    })
+}
+
 impl Provider for MockProvider {
     fn generate(
         &self,
@@ -109,18 +119,7 @@ impl Provider for MockProvider {
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>> {
         let delay_ms = self.random_delay();
         let last = messages.last();
-        let user_input = messages
-            .iter()
-            .rev()
-            .find_map(|m| {
-                if m.role == Role::User {
-                    Some(m.content.clone())
-                } else {
-                    None
-                }
-            })
-            .unwrap_or_default();
-
+        let user_input = last_user_content(&messages).unwrap_or_default();
         let chunks = response_chunks(last, &user_input);
 
         Box::pin(async_stream::stream! {
@@ -186,41 +185,36 @@ impl Provider for MockStreamingProvider {
         &self,
         messages: Vec<ChatMessage>,
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>> {
-        let user_input = messages
-            .iter()
-            .rev()
-            .find_map(|m| {
-                if m.role == Role::User {
-                    Some(m.content.clone())
-                } else {
-                    None
-                }
-            })
+        let user_input = last_user_content(&messages)
             .unwrap_or_else(|| "This is a test response with multiple words.".to_string());
-
         let response = format!(
             "You said: '{}'. I understand and will help you with that task. ",
             user_input
         );
-
         let total_chunks = self
             .total_chunks
             .unwrap_or_else(|| response.len().div_ceil(self.chunk_size));
 
-        let delay_ms = self.delay_ms;
-        let chunk_size = self.chunk_size;
-
-        Box::pin(async_stream::stream! {
-            for i in 0..total_chunks {
-                let start = i * chunk_size;
-                let end = (start + chunk_size).min(response.len());
-                let chunk = String::from_utf8_lossy(&response.as_bytes()[start..end]).to_string();
-                yield Ok(LLMEvent::TextDelta(chunk));
-                if i < total_chunks - 1 && delay_ms > 0 {
-                    tokio::time::sleep(Duration::from_millis(delay_ms)).await;
-                }
-            }
-            yield Ok(LLMEvent::Finish { reason: StopReason::Stop });
-        })
+        stream_response(response, self.chunk_size, total_chunks, self.delay_ms)
     }
+}
+
+fn stream_response(
+    response: String,
+    chunk_size: usize,
+    total_chunks: usize,
+    delay_ms: u64,
+) -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + 'static>> {
+    Box::pin(async_stream::stream! {
+        for i in 0..total_chunks {
+            let start = i * chunk_size;
+            let end = (start + chunk_size).min(response.len());
+            let chunk = String::from_utf8_lossy(&response.as_bytes()[start..end]).to_string();
+            yield Ok(LLMEvent::TextDelta(chunk));
+            if i < total_chunks - 1 && delay_ms > 0 {
+                tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+            }
+        }
+        yield Ok(LLMEvent::Finish { reason: StopReason::Stop });
+    })
 }
