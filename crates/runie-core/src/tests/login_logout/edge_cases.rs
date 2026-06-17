@@ -18,7 +18,7 @@ fn login_flow_with_unknown_provider() {
     });
 
     let flow = state.login_flow.as_ref().unwrap();
-    assert_eq!(flow.step, crate::login_flow::LoginStep::ModelSelect);
+    assert_eq!(flow.step, crate::login_flow::LoginStep::Validating);
     assert!(flow.available_models.is_empty());
     assert!(flow.selected_models.is_empty());
 }

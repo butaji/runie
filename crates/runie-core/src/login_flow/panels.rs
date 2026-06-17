@@ -28,12 +28,12 @@ pub fn build_provider_picker() -> Panel {
 }
 
 /// Build the API key input panel for a provider.
-pub fn build_key_input(provider_key: &str) -> Panel {
-    let name = display_name(provider_key);
+pub fn build_key_input(state: &LoginFlowState) -> Panel {
+    let name = display_name(&state.provider);
     Panel::new("login-key", format!("Login to {}", name))
         .header(format!("Enter your {} API key", name))
-        .form_field("API Key", "sk-...", "key")
-        .form_hidden("provider", provider_key)
+        .form_field_value("API Key", "sk-...", "key", state.key.clone())
+        .form_hidden("provider", state.provider.clone())
         .form_submit_with(login_key_submit)
         .item(
             "_Cancel",
@@ -46,6 +46,14 @@ fn login_key_submit(values: &std::collections::HashMap<String, String>) -> crate
         provider: values.get("provider").cloned().unwrap_or_default(),
         key: values.get("key").cloned().unwrap_or_default(),
     }
+}
+
+/// Build the "verifying API key" panel shown while waiting for the provider.
+pub fn build_validating_panel(provider_key: &str) -> Panel {
+    let name = display_name(provider_key);
+    Panel::new("login-validating", format!("Verifying {}", name))
+        .header(format!("Verifying your {} API key…", name))
+        .keep_open()
 }
 
 /// Build the model multi-select panel.
@@ -110,7 +118,8 @@ mod tests {
     fn model_flow() -> LoginFlowState {
         LoginFlowState::new()
             .with_provider("minimax".into())
-            .with_key_and_defaults("sk".into(), vec!["M3".into(), "M2".into()])
+            .with_key("sk".into())
+            .with_validation_success(vec!["M3".into(), "M2".into()])
     }
 
     #[test]
@@ -132,7 +141,8 @@ mod tests {
 
     #[test]
     fn key_input_panel_has_form_field() {
-        let panel = build_key_input("minimax");
+        let state = LoginFlowState::new().with_provider("minimax".into());
+        let panel = build_key_input(&state);
         assert!(panel.is_form());
         assert!(panel
             .items
@@ -174,7 +184,8 @@ mod tests {
     fn model_selector_empty_when_no_models() {
         let state = LoginFlowState::new()
             .with_provider("minimax".into())
-            .with_key_and_defaults("sk".into(), vec![]);
+            .with_key("sk".into())
+            .with_validation_success(vec![]);
         let panel = build_model_selector(&state);
         assert!(panel.is_form());
         let toggles = panel

@@ -31,7 +31,7 @@ fn login_flow_state_machine_key_input() {
 }
 
 #[test]
-fn login_flow_state_machine_model_select() {
+fn login_flow_state_machine_validating() {
     clean_config();
     let mut state = AppState::default();
 
@@ -42,6 +42,30 @@ fn login_flow_state_machine_model_select() {
     state.update(LoginFlowEvent::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
+    });
+
+    let flow = state.login_flow.as_ref().unwrap();
+    assert_eq!(flow.step, crate::login_flow::LoginStep::Validating);
+    assert_eq!(flow.key, "sk-test");
+}
+
+#[test]
+fn login_flow_state_machine_model_select_after_validation() {
+    clean_config();
+    let mut state = AppState::default();
+
+    state.update(LoginFlowEvent::Start);
+    state.update(LoginFlowEvent::SelectProvider {
+        provider: "minimax".into(),
+    });
+    state.update(LoginFlowEvent::SubmitKey {
+        provider: "minimax".into(),
+        key: "sk-test".into(),
+    });
+    state.update(LoginFlowEvent::ModelsFetched {
+        provider: "minimax".into(),
+        key: "sk-test".into(),
+        models: vec!["MiniMax-M3".into()],
     });
 
     let flow = state.login_flow.as_ref().unwrap();
@@ -61,6 +85,11 @@ fn login_flow_toggle_model() {
     state.update(LoginFlowEvent::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
+    });
+    state.update(LoginFlowEvent::ModelsFetched {
+        provider: "minimax".into(),
+        key: "sk-test".into(),
+        models: vec!["MiniMax-M3".into()],
     });
 
     let flow = state.login_flow.as_ref().unwrap();

@@ -7,6 +7,7 @@ use std::collections::HashSet;
 pub enum LoginStep {
     ProviderPicker,
     KeyInput,
+    Validating,
     ModelSelect,
     Done,
 }
@@ -43,16 +44,35 @@ impl LoginFlowState {
         }
     }
 
-    /// Transition to the model selector, pre-populating with the given
-    /// default models (typically the provider's `models` list from the
-    /// registry). All provided models are selected by default.
-    pub fn with_key_and_defaults(self, key: String, default_models: Vec<String>) -> Self {
-        let selected_models: HashSet<String> = default_models.iter().cloned().collect();
+    /// Store the submitted key and wait for API validation.
+    pub fn with_key(self, key: String) -> Self {
+        Self {
+            step: LoginStep::Validating,
+            key,
+            available_models: Vec::new(),
+            selected_models: HashSet::new(),
+            validated: false,
+            ..self
+        }
+    }
+
+    /// Transition to the model selector after a successful API validation.
+    pub fn with_validation_success(self, models: Vec<String>) -> Self {
+        let selected_models: HashSet<String> = models.iter().cloned().collect();
         Self {
             step: LoginStep::ModelSelect,
-            key,
-            available_models: default_models,
+            available_models: models,
             selected_models,
+            validated: true,
+            ..self
+        }
+    }
+
+    /// Return to the key input panel after a failed validation.
+    pub fn with_validation_error(self) -> Self {
+        Self {
+            step: LoginStep::KeyInput,
+            validated: false,
             ..self
         }
     }

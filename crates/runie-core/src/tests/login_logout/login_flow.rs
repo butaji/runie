@@ -171,8 +171,16 @@ fn login_key_input_reads_typed_key() {
     state.update(InputEvent::Submit);
 
     let flow = state.login_flow.as_ref().unwrap();
-    assert_eq!(flow.step, crate::login_flow::LoginStep::ModelSelect);
+    assert_eq!(flow.step, crate::login_flow::LoginStep::Validating);
     assert_eq!(flow.key, "sk-test");
+
+    state.update(LoginFlowEvent::ModelsFetched {
+        provider: "minimax".into(),
+        key: "sk-test".into(),
+        models: vec!["MiniMax-M3".into()],
+    });
+    let flow = state.login_flow.as_ref().unwrap();
+    assert_eq!(flow.step, crate::login_flow::LoginStep::ModelSelect);
 }
 
 #[test]

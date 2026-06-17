@@ -7,8 +7,8 @@
 use crate::dialog::{Panel, PanelStack};
 use crate::event::LoginFlowEvent;
 use crate::login_flow::{
-    build_key_input, build_login_root, build_model_selector, build_provider_picker, LoginFlowState,
-    LoginStep,
+    build_key_input, build_login_root, build_model_selector, build_provider_picker,
+    build_validating_panel, LoginFlowState, LoginStep,
 };
 
 /// Event handler for providers dialog (not part of the login flow state machine).
@@ -115,14 +115,14 @@ pub(crate) fn login_flow_start(state: &mut crate::model::AppState) {
 }
 
 fn login_flow_select_provider(state: &mut crate::model::AppState, provider: String) {
-    let provider_clone = provider.clone();
     if let Some(ref mut flow) = state.login_flow {
         *flow = flow.clone().with_provider(provider);
         state.mark_dirty();
     }
     // Push the key input panel onto the real login stack (root + pushed).
     // ESC / Cancel will pop back to the provider picker.
-    push_login_panel(state, build_key_input(&provider_clone));
+    let panel = build_key_input(state.login_flow.as_ref().unwrap());
+    push_login_panel(state, panel);
 }
 
 fn reject_empty_key(
@@ -150,12 +150,12 @@ fn reject_empty_key(
 }
 
 fn login_flow_submit_key(state: &mut crate::model::AppState, provider: String, key: String) {
-    if let Some(p) = reject_empty_key(state, &provider, &key) {
-        replace_top_login_panel_with(state, build_key_input(&p));
+    if reject_empty_key(state, &provider, &key).is_some() {
+        let panel = build_key_input(state.login_flow.as_ref().unwrap());
+        replace_top_login_panel_with(state, panel);
         return;
     }
 
-    // Compute defaults + final provider first (immutable borrows).
     let final_provider = if provider.is_empty() {
         state
             .login_flow
@@ -163,59 +163,56 @@ fn login_flow_submit_key(state: &mut crate::model::AppState, provider: String, k
             .map(|f| f.provider.clone())
             .unwrap_or_default()
     } else {
-        provider.clone()
+        provider
     };
-    let defaults: Vec<String> = crate::provider_registry::find_provider(&final_provider)
-        .map(|meta| meta.models.iter().map(|m| m.name.to_string()).collect())
-        .unwrap_or_default();
-    // Update state (mutable borrow).
     if let Some(ref mut flow) = state.login_flow {
-        *flow = flow.clone().with_key_and_defaults(key, defaults);
         flow.provider = final_provider.clone();
+        *flow = flow.clone().with_key(key);
     }
-    // Replace the key input panel with the model selector on the
-    // real login stack. The key input is "consumed" (submitted) —
-    // it should NOT remain in the back stack, otherwise Esc from
-    // the model selector would pop back to a stale key input.
-    if let Some(flow) = state.login_flow.as_ref() {
-        replace_top_login_panel_with(state, build_model_selector(flow));
-    }
+    replace_top_login_panel_with(state, build_validating_panel(&final_provider));
 }
 
 fn login_flow_validation_done(state: &mut crate::model::AppState, models: Vec<String>) {
-    if let Some(ref mut flow) = state.login_flow {
-        // Non-blocking: enrich the model list in place on the top
-        // panel (model selector). We do NOT push a new panel.
-        *flow = flow.clone().with_fetched_models(models);
-        flow.validated = true;
-        replace_top_login_panel(state);
-        state.mark_dirty();
+    let Some(flow) = state.login_flow.clone() else {
+        return;
+    };
+    if flow.step != LoginStep::Validating {
+        return;
     }
+    let updated = flow.with_validation_success(models);
+    state.login_flow = Some(updated.clone());
+    replace_top_login_panel_with(state, build_model_selector(&updated));
+    state.mark_dirty();
 }
 
 fn login_flow_models_fetched(state: &mut crate::model::AppState, models: Vec<String>) {
-    if let Some(ref mut flow) = state.login_flow {
-        if flow.step == LoginStep::ModelSelect {
-            *flow = flow.clone().with_fetched_models(models);
-            flow.validated = true;
-            replace_top_login_panel(state);
-            state.mark_dirty();
-        }
+    let Some(flow) = state.login_flow.clone() else {
+        return;
+    };
+    if flow.step != LoginStep::Validating {
+        return;
     }
+    let updated = flow.with_validation_success(models);
+    state.login_flow = Some(updated.clone());
+    replace_top_login_panel_with(state, build_model_selector(&updated));
+    state.mark_dirty();
 }
 
 fn login_flow_validation_failed(state: &mut crate::model::AppState, error: String) {
-    // Non-blocking: surface a transient warning, do NOT change the step
-    // or the panel stack.
-    if let Some(ref flow) = state.login_flow {
-        if flow.step == LoginStep::ModelSelect {
-            state.set_transient(
-                format!("Could not verify key: {}", error),
-                crate::event::TransientLevel::Warning,
-            );
-            state.mark_dirty();
-        }
+    let Some(flow) = state.login_flow.clone() else {
+        return;
+    };
+    if flow.step != LoginStep::Validating {
+        return;
     }
+    state.set_transient(
+        format!("Could not verify key: {}", error),
+        crate::event::TransientLevel::Warning,
+    );
+    let updated = flow.with_validation_error();
+    state.login_flow = Some(updated.clone());
+    replace_top_login_panel_with(state, build_key_input(&updated));
+    state.mark_dirty();
 }
 
 fn login_flow_toggle_model(state: &mut crate::model::AppState, model: String) {
@@ -299,6 +296,7 @@ fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
             flow.step = match stack.current().map(|p| p.id.as_str()) {
                 Some("login-provider") => LoginStep::ProviderPicker,
                 Some("login-key") => LoginStep::KeyInput,
+                Some("login-validating") => LoginStep::Validating,
                 Some("login-models") => LoginStep::ModelSelect,
                 _ => flow.step.clone(),
             };
@@ -329,6 +327,7 @@ fn push_login_panel(state: &mut crate::model::AppState, panel: Panel) {
         flow.step = match panel.id.as_str() {
             "login-provider" => LoginStep::ProviderPicker,
             "login-key" => LoginStep::KeyInput,
+            "login-validating" => LoginStep::Validating,
             "login-models" => LoginStep::ModelSelect,
             _ => flow.step.clone(),
         };
@@ -350,7 +349,8 @@ fn replace_top_login_panel(state: &mut crate::model::AppState) {
     if let Some(last) = stack.panels.last_mut() {
         *last = match last.id.as_str() {
             "login-models" => build_model_selector(&flow),
-            "login-key" => build_key_input(&flow.provider),
+            "login-key" => build_key_input(&flow),
+            "login-validating" => build_validating_panel(&flow.provider),
             "login-provider" => build_provider_picker(),
             _ => build_model_selector(&flow),
         };
