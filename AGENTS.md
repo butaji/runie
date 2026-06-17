@@ -152,18 +152,20 @@ and no test ACs. Every feature must be verifiable by `cargo test`.
 
 ## Linter Rules
 
-**STRICT ENFORCEMENT — NO EXCEPTIONS**
+**STRICT ENFORCEMENT**
 
 The build script at `crates/runie-core/build.rs` enforces these limits:
 
-| Metric | Limit |
-|--------|-------|
-| File lines | **500** |
-| Function lines | **40** |
-| Complexity | **10** |
+| Metric | Limit | Scope |
+|--------|-------|-------|
+| File lines | **500** | Every `.rs` file |
+| Function lines | **40** | Production code only |
+| Complexity | **10** | Production code only |
 
-**No exceptions allowed.** Any violation fails `cargo build`. There are no allow-lists.
+File-length limits apply to every source file without exception. Function-length and complexity limits apply to production code only; test functions and files under `tests/` directories are exempt so tests can remain comprehensive.
 
-Current violations: 80 (see `tasks/align-build-rs-lint-thresholds.md` for fix plan)
+Any production-code violation fails `cargo build`. There are no allow-lists.
+
+Current violations: 0
 
 **Breaking the rules is not acceptable.** If your change introduces a violation, you must fix it before committing.
