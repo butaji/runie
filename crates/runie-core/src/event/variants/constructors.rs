@@ -38,6 +38,9 @@ impl Event {
     pub fn quit() -> Self {
         Event::Quit
     }
+    pub fn force_quit() -> Self {
+        Event::ForceQuit
+    }
     pub fn reset() -> Self {
         Event::Reset
     }

@@ -128,6 +128,7 @@ fn is_named_system_variant(event: &Event) -> bool {
     matches!(
         event,
         Event::Quit
+            | Event::ForceQuit
             | Event::Reset
             | Event::Abort
             | Event::FollowUp

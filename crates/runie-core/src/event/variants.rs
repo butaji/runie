@@ -135,6 +135,7 @@ pub enum Event {
 
     // Control
     Quit,
+    ForceQuit,
     Reset,
     Abort,
     FollowUp,

@@ -86,6 +86,7 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("FocusLost", ctor!(Input::FocusLost)),
     // ── Control events ──────────────────────────────────────────────────────
     ("Quit", ctor!(Control::Quit)),
+    ("ForceQuit", ctor!(Control::ForceQuit)),
     ("Reset", ctor!(Control::Reset)),
     ("Abort", ctor!(Control::Abort)),
     ("FollowUp", ctor!(Control::FollowUp)),

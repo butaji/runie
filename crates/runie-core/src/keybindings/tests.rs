@@ -49,12 +49,12 @@ fn ctrl_shift_o_defaults_to_copy_last_response() {
 }
 
 #[test]
-fn ctrl_q_defaults_to_quit() {
+fn ctrl_q_defaults_to_force_quit() {
     let bindings = default_keybindings();
     assert_eq!(
         bindings.get("ctrl+q"),
-        Some(&"Quit".to_string()),
-        "ctrl+q should quit the app"
+        Some(&"ForceQuit".to_string()),
+        "ctrl+q should force-quit the app"
     );
 }
 

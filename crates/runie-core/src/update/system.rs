@@ -270,7 +270,7 @@ use crate::event::ControlEvent;
 
 pub fn control_event(state: &mut AppState, event: ControlEvent) {
     match event {
-        ControlEvent::Quit => handle_quit(state),
+        ControlEvent::Quit | ControlEvent::ForceQuit => handle_quit_event(state, event),
         ControlEvent::Reset => handle_reset(state),
         ControlEvent::Abort => handle_abort(state),
         ControlEvent::ExternalEditorDone { content } => handle_editor_done(state, content),
@@ -327,7 +327,11 @@ fn handle_cancel_agent(state: &mut AppState, agent_id: String) {
     }
 }
 
-fn handle_quit(state: &mut AppState) {
+fn handle_quit_event(state: &mut AppState, event: ControlEvent) {
+    if matches!(event, ControlEvent::ForceQuit) {
+        state.should_quit = true;
+        return;
+    }
     if !state.input.input.is_empty() {
         state.input.input.clear();
         state.input.cursor_pos = 0;

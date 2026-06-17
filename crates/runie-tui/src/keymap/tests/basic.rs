@@ -103,13 +103,13 @@ fn ctrl_e_on_repeat_kind_still_works() {
 }
 
 #[test]
-fn ctrl_q_converts_to_quit() {
+fn ctrl_q_converts_to_force_quit() {
     let key = KeyEvent::new(KeyCode::Char('q'), KeyModifiers::CONTROL);
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::ControlEvent::Quit)),
-        "Ctrl+Q should map to Quit, got {:?}",
+        matches!(result, Some(runie_core::ControlEvent::ForceQuit)),
+        "Ctrl+Q should map to ForceQuit, got {:?}",
         result
     );
 }

@@ -149,7 +149,7 @@ fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
         KeyCode::Char('z') | KeyCode::Char('Z') => Some(CoreEvent::Suspend),
         KeyCode::Char('y') | KeyCode::Char('Y') => Some(CoreEvent::Redo),
         KeyCode::Char('c') | KeyCode::Char('C') => Some(CoreEvent::Quit),
-        KeyCode::Char('q') | KeyCode::Char('Q') => Some(CoreEvent::Quit),
+        KeyCode::Char('q') | KeyCode::Char('Q') => Some(CoreEvent::ForceQuit),
         KeyCode::Char('s') | KeyCode::Char('S') => Some(CoreEvent::Abort),
         KeyCode::Char('l') | KeyCode::Char('L') => Some(CoreEvent::ToggleModelSelector),
         _ => None,

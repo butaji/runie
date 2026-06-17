@@ -371,6 +371,19 @@ fn ctrl_q_event_quits_app() {
 }
 
 #[test]
+fn ctrl_q_quits_even_when_input_is_not_empty() {
+    let mut state = fresh_state();
+    state.update(InputEvent::Input('h'));
+    state.update(InputEvent::Input('i'));
+    assert!(!state.input.input.is_empty());
+    state.update(ControlEvent::ForceQuit);
+    assert!(
+        state.should_quit,
+        "ControlEvent::ForceQuit should quit even with text in the input box"
+    );
+}
+
+#[test]
 fn cursor_end_moves_to_end_of_input() {
     let mut state = fresh_state();
     for c in "hello".chars() {

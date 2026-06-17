@@ -81,7 +81,7 @@ pub const DEFAULT_BINDINGS: &[(&str, &str)] = &[
     ("ctrl+z", "Suspend"),
     ("ctrl+y", "Redo"),
     ("ctrl+c", "Quit"),
-    ("ctrl+q", "Quit"),
+    ("ctrl+q", "ForceQuit"),
     ("ctrl+s", "Abort"),
     ("ctrl+g", "OpenExternalEditor"),
     ("ctrl+shift+o", "CopyLastResponse"),

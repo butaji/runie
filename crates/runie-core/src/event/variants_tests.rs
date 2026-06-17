@@ -89,6 +89,7 @@ fn all_sub_enums_have_variants() {
     let _ = Event::Done { id: "x".into() };
     let _ = Event::Up;
     let _ = Event::Quit;
+    let _ = Event::ForceQuit;
     let _ = Event::SwitchModel {
         provider: "openai".into(),
         model: "gpt-4".into(),
@@ -112,6 +113,7 @@ fn convenience_constructors() {
     assert!(matches!(Event::submit(), Event::Submit));
     assert!(matches!(Event::scroll_up(), Event::Up));
     assert!(matches!(Event::quit(), Event::Quit));
+    assert!(matches!(Event::force_quit(), Event::ForceQuit));
     assert!(matches!(
         Event::switch_model("anthropic".into(), "claude-3".into()),
         Event::SwitchModel { .. }
@@ -236,6 +238,7 @@ fn dispatcher_handles_all_variants() {
 
             // Control
             Event::Quit
+            | Event::ForceQuit
             | Event::Reset
             | Event::Abort
             | Event::FollowUp
