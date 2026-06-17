@@ -163,14 +163,24 @@ pub fn build_provider_with_warning(
 
 /// Build a provider from `Config`.
 pub fn from_config(config: &Config, model: &str) -> DynProvider {
-    let provider_key = if model.contains('/') {
-        model.split('/').next().unwrap_or("mock")
-    } else {
-        config.provider.as_deref().unwrap_or("mock")
-    };
-    build_provider_with_warning(provider_key, model).expect(
-        "from_config: provider key is always known or panic — use new() for explicit errors",
-    )
+    let chain = config.provider_chain();
+    build_provider_with_fallback(&chain, model)
+        .expect("from_config: provider key is always known or panic — use new() for explicit errors")
+}
+
+/// Try each provider in the chain until one builds successfully.
+pub fn build_provider_with_fallback(
+    chain: &[&str],
+    model: &str,
+) -> Result<DynProvider, ProviderError> {
+    let mut last_err = None;
+    for key in chain {
+        match build_dyn_provider(key, model) {
+            Ok(provider) => return Ok(provider),
+            Err(e) => last_err = Some(e),
+        }
+    }
+    Err(last_err.unwrap_or_else(|| ProviderError::UnknownProvider("none".to_string())))
 }
 
 /// Switch a live provider to a new key/model pair.

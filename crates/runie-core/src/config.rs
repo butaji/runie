@@ -5,16 +5,17 @@
 //! for the config file format.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 mod layers;
+pub mod schema;
 
 // ============================================================================
 // Models Section
 // ============================================================================
 
 /// Models configuration section.
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 pub struct ModelsSection {
     /// The default model to use when no model is specified.
     pub default: Option<String>,
@@ -28,7 +29,7 @@ pub struct ModelsSection {
 // ============================================================================
 
 /// A provider's configuration entry.
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, schemars::JsonSchema)]
 pub struct ModelProvider {
     #[serde(rename = "type")]
     pub provider_type: Option<String>,
@@ -41,7 +42,7 @@ pub struct ModelProvider {
 // ============================================================================
 
 /// UI configuration section.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct UiSection {
     pub vim_mode: bool,
@@ -58,7 +59,7 @@ impl Default for UiSection {
 // ============================================================================
 
 /// Telemetry configuration section.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct TelemetrySection {
     pub enabled: bool,
@@ -75,9 +76,8 @@ impl Default for TelemetrySection {
 // ============================================================================
 
 /// Prompts configuration section.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(default)]
-#[derive(Default)]
 pub struct PromptsSection {
     pub default: Option<String>,
     pub custom: Option<String>,
@@ -89,7 +89,7 @@ pub struct PromptsSection {
 // ============================================================================
 
 /// Truncation limits for tool output.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct TruncationSection {
     pub max_lines: usize,
@@ -110,7 +110,7 @@ impl Default for TruncationSection {
 // ============================================================================
 
 /// Hook configuration.
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct HooksConfig {
     /// Map of hook event name to list of shell commands to run.
@@ -122,7 +122,7 @@ pub struct HooksConfig {
 // ============================================================================
 
 /// Canonical config type for `~/.runie/config.toml`.
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 pub struct Config {
     /// Default provider name.
     pub provider: Option<String>,
@@ -139,6 +139,9 @@ pub struct Config {
     /// Provider configurations.
     #[serde(default)]
     pub model_providers: HashMap<String, ModelProvider>,
+    /// Fallback provider chain used when the primary provider is unavailable.
+    #[serde(default)]
+    pub fallback_providers: Vec<String>,
     /// Telemetry settings.
     #[serde(default)]
     pub telemetry: TelemetrySection,
@@ -199,6 +202,53 @@ impl Config {
     /// Layered config loader with explicit paths (useful for tests).
     pub fn load_layers_from_paths(global: PathBuf, local: PathBuf) -> Self {
         layers::load_layers_from_paths(global, local)
+    }
+
+    /// Load config and validate it against the JSON schema.
+    ///
+    /// Returns an error describing all validation failures.
+    pub fn load_strict(path: Option<&Path>) -> Result<Self, Vec<String>> {
+        let config = Self::load(path);
+        config.validate().map(|_| config)
+    }
+
+    /// Validate this config against the canonical JSON schema.
+    pub fn validate(&self) -> Result<(), Vec<String>> {
+        let value = serde_json::to_value(self)
+            .map_err(|e| vec![format!("config serialization failed: {e}")])?;
+        Self::validate_value(&value)
+    }
+
+    /// Validate a raw TOML value against the canonical JSON schema.
+    pub fn validate_toml(value: &toml::Value) -> Result<(), Vec<String>> {
+        let json = serde_json::to_value(value)
+            .map_err(|e| vec![format!("config serialization failed: {e}")])?;
+        Self::validate_value(&json)
+    }
+
+    fn validate_value(value: &serde_json::Value) -> Result<(), Vec<String>> {
+        let schema = schema::schema_value();
+        let validator = jsonschema::validator_for(&schema)
+            .map_err(|e| vec![format!("invalid schema: {e}")])?;
+        let errors: Vec<String> = validator
+            .iter_errors(value)
+            .map(|e| e.to_string())
+            .collect();
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
+    /// Return the provider chain: primary provider followed by fallbacks.
+    pub fn provider_chain(&self) -> Vec<&str> {
+        let mut chain = Vec::new();
+        if let Some(p) = self.provider.as_deref() {
+            chain.push(p);
+        }
+        chain.extend(self.fallback_providers.iter().map(String::as_str));
+        chain
     }
 
     /// Save config to the default path.
@@ -310,189 +360,4 @@ pub fn config_path() -> PathBuf {
 // ============================================================================
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs;
-
-    fn make_test_config(dir: &tempfile::TempDir, content: &str) -> std::path::PathBuf {
-        let path = dir.path().join("config.toml");
-        fs::write(&path, content).unwrap();
-        path
-    }
-
-    #[test]
-    fn config_load_parses_basic_fields() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = make_test_config(&dir, r#"
-provider = "openai"
-model = "gpt-4"
-"#);
-        let config = Config::load(Some(&path));
-        assert_eq!(config.provider, Some("openai".to_string()));
-        assert_eq!(config.default_model(), Some("gpt-4"));
-    }
-
-    #[test]
-    fn config_load_parses_models_section() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = make_test_config(&dir, r#"
-[models]
-default = "gpt-4o"
-scoped = ["gpt-4", "gpt-3.5-turbo"]
-"#);
-        let config = Config::load(Some(&path));
-        assert_eq!(config.default_model(), Some("gpt-4o"));
-        let scoped = config.scoped_models().unwrap();
-        assert_eq!(scoped.len(), 2);
-    }
-
-    #[test]
-    fn config_load_parses_provider_section() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = make_test_config(&dir, r#"
-[model_providers.openai]
-type = "openai"
-base_url = "https://api.openai.com"
-api_key = "sk-test"
-"#);
-        let config = Config::load(Some(&path));
-        let provider = config.provider_for_model("openai/gpt-4").unwrap();
-        assert_eq!(provider.base_url, "https://api.openai.com");
-    }
-
-    #[test]
-    fn config_load_parses_ui_section() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = make_test_config(&dir, r#"
-[ui]
-vim_mode = false
-"#);
-        let config = Config::load(Some(&path));
-        assert!(!config.vim_mode());
-    }
-
-    #[test]
-    fn config_load_parses_telemetry_section() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = make_test_config(&dir, r#"
-[telemetry]
-enabled = false
-"#);
-        let config = Config::load(Some(&path));
-        assert!(!config.telemetry_enabled());
-    }
-
-    #[test]
-    fn config_defaults_when_missing() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("nonexistent.toml");
-        let config = Config::load(Some(&path));
-        assert_eq!(config.provider, None);
-        assert_eq!(config.default_model(), None);
-        assert!(config.vim_mode());
-    }
-
-    #[test]
-    fn config_path_returns_expected_path() {
-        let path = config_path();
-        assert!(path.file_name().is_some_and(|n| n == "config.toml"));
-    }
-
-    #[cfg(test)]
-    mod layered_tests;
-
-    #[test]
-    fn classify_change_detects_model_change() {
-        let prev = Config { provider: Some("openai".to_string()), ..Config::default() };
-        let curr = Config { provider: Some("anthropic".to_string()), ..Config::default() };
-        let changes = curr.classify_change(&prev);
-        assert!(matches!(changes.as_slice(), [ConfigChange::Model { provider, .. }] if provider == "anthropic"));
-    }
-
-    #[test]
-    fn classify_change_detects_theme_change() {
-        let prev = Config { theme: Some("dark".to_string()), ..Config::default() };
-        let curr = Config { theme: Some("light".to_string()), ..Config::default() };
-        let changes = curr.classify_change(&prev);
-        assert!(matches!(changes.as_slice(), [ConfigChange::Theme { name }] if name == "light"));
-    }
-
-    #[test]
-    fn classify_change_returns_empty_when_identical() {
-        let prev = Config { provider: Some("openai".to_string()), theme: Some("dark".to_string()), ..Config::default() };
-        let curr = prev.clone();
-        assert!(curr.classify_change(&prev).is_empty());
-    }
-
-    #[test]
-    fn classify_change_detects_keybindings_change() {
-        let mut prev = Config::default();
-        let mut curr = Config::default();
-        prev.keybindings.insert("ctrl+c".to_string(), "Quit".to_string());
-        curr.keybindings.insert("ctrl+c".to_string(), "Abort".to_string());
-        let changes = curr.classify_change(&prev);
-        assert!(matches!(changes.as_slice(), [ConfigChange::Keybindings]));
-    }
-
-    #[test]
-    fn classify_change_multiple_changes() {
-        let mut prev = Config::default();
-        let mut curr = Config::default();
-        prev.provider = Some("openai".to_string());
-        curr.provider = Some("anthropic".to_string());
-        curr.theme = Some("nord".to_string());
-        curr.keybindings.insert("ctrl+c".to_string(), "Abort".to_string());
-        let changes = curr.classify_change(&prev);
-        assert_eq!(changes.len(), 3);
-    }
-
-    #[test]
-    fn config_load_parses_all_sections() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = make_test_config(&dir, r#"
-provider = "openai"
-model = "gpt-4"
-theme = "nord"
-
-[models]
-default = "gpt-4o"
-
-[ui]
-vim_mode = false
-
-[telemetry]
-enabled = false
-
-[truncation]
-max_lines = 100
-max_bytes = 100000
-
-[prompts]
-default = "default"
-"#);
-        let config = Config::load(Some(&path));
-        assert_eq!(config.provider, Some("openai".to_string()));
-        // default_model() prefers [models].default over top-level model
-        assert_eq!(config.default_model(), Some("gpt-4o"));
-        assert_eq!(config.theme, Some("nord".to_string()));
-        assert!(!config.vim_mode());
-        assert!(!config.telemetry_enabled());
-    }
-
-    #[test]
-    fn provider_and_core_see_same_default_model() {
-        // Both provider crate and core crate should read from the same Config type
-        // This is verified by re-exports in runie-provider/src/config.rs:
-        //   pub use runie_core::config::{Config, ModelProvider, ModelsSection};
-        let dir = tempfile::tempdir().unwrap();
-        let path = make_test_config(&dir, r#"
-[models]
-default = "gpt-4o"
-"#);
-        let config = Config::load(Some(&path));
-        let default = config.default_model();
-        // Re-load from path to verify consistency
-        let config2 = Config::load(Some(&path));
-        assert_eq!(default, config2.default_model());
-    }
-}
+mod tests;

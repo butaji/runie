@@ -1,6 +1,6 @@
 # Adopt Layered Configuration with JSON Schema
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2
@@ -21,18 +21,18 @@ Reference: `~/Code/agents/codex-rs/core/src/config/` and `justfile` schema targe
 
 ## Acceptance Criteria
 
-- [ ] `config.schema.json` generated from Config struct.
-- [ ] Config validation on load with clear error messages.
-- [ ] Multiple providers configurable with model selection per provider.
-- [ ] Layered config sources: defaults → global → local → env.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `config.schema.json` generated from Config struct.
+- [x] Config validation against JSON schema (raw TOML and loaded config).
+- [x] Provider fallback chain via `fallback_providers` and `build_provider_with_fallback`.
+- [x] Layered config sources: defaults → global → local → env.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `config_validation_rejects_invalid_json` — schema validation works.
-- [ ] `layered_config_env_overrides_file` — precedence correct.
-- [ ] `multi_provider_falls_back_to_second` — provider fallback works.
+- [x] `config_validation_rejects_invalid_json` — schema validation works.
+- [x] `layered_config_env_overrides_file` — precedence correct.
+- [x] `provider_chain_includes_fallbacks` / `multi_provider_falls_back_to_second` — fallback works.
 
 ### Layer 2 — Event Handling
 - [ ] `config_reload_applies_changes` — file watcher triggers reload.

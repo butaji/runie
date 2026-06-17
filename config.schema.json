@@ -1,0 +1,245 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Config",
+  "description": "Canonical config type for `~/.runie/config.toml`.",
+  "type": "object",
+  "properties": {
+    "fallback_providers": {
+      "description": "Fallback provider chain used when the primary provider is unavailable.",
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "hooks": {
+      "description": "Hook commands registered by event name.",
+      "default": {
+        "commands": {}
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/HooksConfig"
+        }
+      ]
+    },
+    "keybindings": {
+      "description": "User-defined keybindings that override defaults. Parsed from `[keybindings]` table in `config.toml`.",
+      "default": {},
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "model": {
+      "description": "Legacy model field (use `[models].default` instead).",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "model_providers": {
+      "description": "Provider configurations.",
+      "default": {},
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/ModelProvider"
+      }
+    },
+    "models": {
+      "description": "Model configurations.",
+      "default": {
+        "default": null,
+        "scoped": null
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/ModelsSection"
+        }
+      ]
+    },
+    "prompts": {
+      "description": "Prompt templates.",
+      "default": {
+        "custom": null,
+        "default": null
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/PromptsSection"
+        }
+      ]
+    },
+    "provider": {
+      "description": "Default provider name.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "telemetry": {
+      "description": "Telemetry settings.",
+      "default": {
+        "enabled": true
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/TelemetrySection"
+        }
+      ]
+    },
+    "theme": {
+      "description": "Theme name.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "truncation": {
+      "description": "Truncation settings.",
+      "default": {
+        "max_bytes": 51200,
+        "max_lines": 2000
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/TruncationSection"
+        }
+      ]
+    },
+    "ui": {
+      "description": "UI settings.",
+      "default": {
+        "vim_mode": true
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/UiSection"
+        }
+      ]
+    }
+  },
+  "definitions": {
+    "HooksConfig": {
+      "description": "Hook configuration.",
+      "type": "object",
+      "properties": {
+        "commands": {
+          "description": "Map of hook event name to list of shell commands to run.",
+          "default": {},
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "ModelProvider": {
+      "description": "A provider's configuration entry.",
+      "type": "object",
+      "required": [
+        "api_key",
+        "base_url"
+      ],
+      "properties": {
+        "api_key": {
+          "type": "string"
+        },
+        "base_url": {
+          "type": "string"
+        },
+        "type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "ModelsSection": {
+      "description": "Models configuration section.",
+      "type": "object",
+      "properties": {
+        "default": {
+          "description": "The default model to use when no model is specified.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scoped": {
+          "description": "Scoped models list (for model selector UI).",
+          "default": null,
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "PromptsSection": {
+      "description": "Prompts configuration section.",
+      "type": "object",
+      "properties": {
+        "custom": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "default": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "TelemetrySection": {
+      "description": "Telemetry configuration section.",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "type": "boolean"
+        }
+      }
+    },
+    "TruncationSection": {
+      "description": "Truncation limits for tool output.",
+      "type": "object",
+      "properties": {
+        "max_bytes": {
+          "default": 51200,
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0.0
+        },
+        "max_lines": {
+          "default": 2000,
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0.0
+        }
+      }
+    },
+    "UiSection": {
+      "description": "UI configuration section.",
+      "type": "object",
+      "properties": {
+        "vim_mode": {
+          "default": true,
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

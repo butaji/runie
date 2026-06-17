@@ -12,7 +12,7 @@
 //! - `listSessions` → `{}` → `{ "sessions": [...] }`
 
 use anyhow::Result;
-use runie_agent::{build_provider_with_warning, run_headless_turn, HeadlessOptions};
+use runie_agent::{run_headless_turn, HeadlessOptions};
 use runie_core::{config_reload, message::ChatMessage};
 use runie_protocol::{Error, Message, Request, Response};
 use serde_json::Value;
@@ -150,9 +150,10 @@ fn load_config() -> runie_core::config::Config {
 }
 
 fn build_headless_provider(config: &runie_core::config::Config) -> Result<runie_provider::DynProvider, Error> {
-    let provider_name = config.provider.as_deref().unwrap_or("mock");
+    let chain = config.provider_chain();
     let model = config.default_model().unwrap_or("echo");
-    build_provider_with_warning(provider_name, model).map_err(|e| Error::internal(format!("{e}")))
+    runie_provider::build_provider_with_fallback(&chain, model)
+        .map_err(|e| Error::internal(format!("{e}")))
 }
 
 fn headless_system_prompt() -> String {

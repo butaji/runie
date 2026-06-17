@@ -38,6 +38,8 @@ redb.workspace = true
 fff-search.workspace = true
 git2.workspace = true
 tracing = "0.1"
+schemars = "0.8"
+jsonschema = "0.29"
 
 
 [dev-dependencies]
