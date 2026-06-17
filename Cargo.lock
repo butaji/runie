@@ -3186,6 +3186,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "runie-protocol"
+version = "0.2.16"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "runie-provider"
 version = "0.2.16"
 dependencies = [
@@ -3210,6 +3218,7 @@ dependencies = [
  "futures",
  "runie-agent",
  "runie-core",
+ "runie-protocol",
  "runie-provider",
  "serde",
  "serde_json",

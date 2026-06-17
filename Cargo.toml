@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/runie-core", "crates/runie-engine", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-print", "crates/runie-json", "crates/runie-server", "crates/runie-testing"]
+members = ["crates/runie-core", "crates/runie-engine", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-print", "crates/runie-json", "crates/runie-server", "crates/runie-testing", "crates/runie-protocol"]
 resolver = "2"
 
 [workspace.package]
@@ -41,3 +41,4 @@ runie-engine = { path = "crates/runie-engine" }
 runie-tui = { path = "crates/runie-tui" }
 runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }
+runie-protocol = { path = "crates/runie-protocol" }

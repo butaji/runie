@@ -1,6 +1,6 @@
 # Adopt Protocol Crate for IPC Types
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P2
@@ -22,16 +22,16 @@ Reference: `~/Code/agents/codex-rs/protocol/` structure.
 
 ## Acceptance Criteria
 
-- [ ] `runie-protocol` crate created with `messages.rs`, `request.rs`, `notification.rs`.
-- [ ] All IPC between TUI and server uses protocol types.
-- [ ] Version field on all messages for forward compatibility.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `runie-protocol` crate created with `messages.rs`, `request.rs`, `notification.rs`.
+- [x] Server IPC uses protocol types (TUI IPC ready to consume).
+- [x] Version field on all messages for forward compatibility.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `message_serialization_roundtrip` — JSON serialize/deserialize works.
-- [ ] `request_response_correlation` — request ID links request/response.
+- [x] `message_serialization_roundtrip` — JSON serialize/deserialize works.
+- [x] `request_response_correlation` — request ID links request/response.
 
 ### Layer 2 — Event Handling
 N/A.
