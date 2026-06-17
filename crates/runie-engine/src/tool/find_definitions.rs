@@ -6,7 +6,7 @@
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
-use fff_search::{GrepMatch, GrepMode, GrepSearchOptions, QueryParser};
+use fff_search::{FilePicker, GrepMatch, GrepMode, GrepResult, GrepSearchOptions, QueryParser};
 use runie_core::actors::FffSearchState;
 use serde_json::Value;
 use std::time::Instant;
@@ -14,47 +14,32 @@ use std::time::Instant;
 /// Default max results.
 const DEFAULT_LIMIT: usize = 30;
 
+type Detector = (&'static str, fn(&str) -> bool);
+
 /// Detect the definition kind from the line text.
 fn detect_kind(line: &str) -> &'static str {
     let t = line.trim();
     if t.starts_with("impl<") || t.starts_with("pub impl<") {
         return "impl";
     }
-    if detect_struct(t) {
-        return "struct";
-    }
-    if detect_fn(t) {
-        return "fn";
-    }
-    if detect_enum(t) {
-        return "enum";
-    }
-    if detect_trait(t) {
-        return "trait";
-    }
-    if detect_impl(t) {
-        return "impl";
-    }
-    if detect_class(t) {
-        return "class";
-    }
-    if detect_def(t) {
-        return "def";
-    }
-    if detect_func(t) {
-        return "func";
-    }
-    if detect_type(t) {
-        return "type";
-    }
-    if detect_module(t) {
-        return "module";
-    }
-    if detect_interface(t) {
-        return "interface";
-    }
-    if detect_object(t) {
-        return "object";
+    const DETECTORS: &[Detector] = &[
+        ("struct", detect_struct),
+        ("fn", detect_fn),
+        ("enum", detect_enum),
+        ("trait", detect_trait),
+        ("impl", detect_impl),
+        ("class", detect_class),
+        ("def", detect_def),
+        ("func", detect_func),
+        ("type", detect_type),
+        ("module", detect_module),
+        ("interface", detect_interface),
+        ("object", detect_object),
+    ];
+    for (kind, detector) in DETECTORS {
+        if detector(t) {
+            return kind;
+        }
     }
     "definition"
 }
@@ -171,118 +156,33 @@ impl Tool for FindDefinitionsTool {
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
         let (symbol, glob, _path, limit) = parse_input(&input, ctx)?;
-
         let state = match FffSearchState::get() {
             Some(s) => s,
-            None => {
-                return Ok(ToolOutput {
-                    tool_name: "find_definitions".to_string(),
-                    tool_args: serde_json::json!({ "symbol": symbol }),
-                    content: serde_json::to_string_pretty(&serde_json::json!({
-                        "error": "FFF indexer not initialized",
-                        "results": [],
-                    }))?,
-                    bytes_transferred: None,
-                    duration: start.elapsed(),
-                    status: ToolStatus::Error,
-                });
-            }
+            None => return build_uninitialized_output(&symbol, start),
         };
-
-        let picker_guard = match state.picker.read() {
-            Ok(g) => g,
-            Err(_) => {
-                return Ok(ToolOutput {
-                    tool_name: "find_definitions".to_string(),
-                    tool_args: serde_json::json!({ "symbol": symbol }),
-                    content: "Error acquiring picker lock".to_string(),
-                    bytes_transferred: None,
-                    duration: start.elapsed(),
-                    status: ToolStatus::Error,
-                });
-            }
-        };
-
-        let picker = match picker_guard.as_ref() {
-            Some(p) => p,
-            None => {
-                return Ok(ToolOutput {
-                    tool_name: "find_definitions".to_string(),
-                    tool_args: serde_json::json!({ "symbol": symbol }),
-                    content: serde_json::to_string_pretty(&serde_json::json!({
-                        "error": "FFF picker not initialized",
-                        "results": [],
-                    }))?,
-                    bytes_transferred: None,
-                    duration: start.elapsed(),
-                    status: ToolStatus::Error,
-                });
-            }
-        };
-
-        // Build query: symbol name + optional glob filter.
-        let query_str = if glob.is_empty() {
-            symbol.clone()
-        } else {
-            format!("{} {}", symbol, glob)
-        };
-
-        let parsed = QueryParser::default().parse(&query_str);
-
-        let results = picker.grep(
-            &parsed,
-            &GrepSearchOptions {
-                max_file_size: fff_search::MAX_FFFILE_SIZE,
-                max_matches_per_file: 5,
-                smart_case: true,
-                file_offset: 0,
-                page_limit: limit,
-                mode: GrepMode::Regex,
-                time_budget_ms: 5000,
-                before_context: 0,
-                after_context: 0,
-                classify_definitions: true,
-                trim_whitespace: true,
-                abort_signal: None,
-            },
-        );
-
-        // Filter to only definition matches.
-        let defs: Vec<DefResult> = results
-            .matches
-            .iter()
-            .filter(|m| m.is_definition)
-            .take(limit)
-            .map(|m: &GrepMatch| {
-                let path = results
-                    .files
-                    .get(m.file_index)
-                    .map(|f| f.relative_path(picker))
-                    .unwrap_or_else(|| format!("<file {}>", m.file_index));
-                let kind = detect_kind(&m.line_content);
-                DefResult {
-                    path,
-                    line: m.line_number,
-                    col: m.col,
-                    kind: kind.to_string(),
-                    content: m.line_content.clone(),
-                }
-            })
-            .collect();
-
-        let indexed = FffSearchState::is_indexed();
-
-        Ok(ToolOutput {
-            tool_name: "find_definitions".to_string(),
-            tool_args: serde_json::json!({ "symbol": symbol }),
-            content: serde_json::to_string_pretty(&serde_json::json!({
-                "results": defs,
-                "total": defs.len(),
-                "indexed": indexed,
-            }))?,
-            bytes_transferred: None,
-            duration: start.elapsed(),
-            status: ToolStatus::Success,
+        with_picker(&state, &symbol, start, |picker| {
+            let query_str = build_query(&symbol, &glob);
+            let parsed = QueryParser::default().parse(&query_str);
+            let results = picker.grep(
+                &parsed,
+                &GrepSearchOptions {
+                    max_file_size: fff_search::MAX_FFFILE_SIZE,
+                    max_matches_per_file: 5,
+                    smart_case: true,
+                    file_offset: 0,
+                    page_limit: limit,
+                    mode: GrepMode::Regex,
+                    time_budget_ms: 5000,
+                    before_context: 0,
+                    after_context: 0,
+                    classify_definitions: true,
+                    trim_whitespace: true,
+                    abort_signal: None,
+                },
+            );
+            let defs = map_definition_results(picker, &results, limit);
+            let indexed = FffSearchState::is_indexed();
+            build_definitions_output(&symbol, defs, indexed, start)
         })
     }
 }
@@ -300,6 +200,115 @@ fn parse_input(
     let limit = input["limit"].as_u64().unwrap_or(DEFAULT_LIMIT as u64) as usize;
     let full_path = ctx.working_dir.join(path);
     Ok((symbol, glob, full_path, limit))
+}
+
+fn build_uninitialized_output(symbol: &str, start: Instant) -> Result<ToolOutput> {
+    Ok(ToolOutput {
+        tool_name: "find_definitions".to_string(),
+        tool_args: serde_json::json!({ "symbol": symbol }),
+        content: serde_json::to_string_pretty(&serde_json::json!({
+            "error": "FFF indexer not initialized",
+            "results": [],
+        }))?,
+        bytes_transferred: None,
+        duration: start.elapsed(),
+        status: ToolStatus::Error,
+    })
+}
+
+fn with_picker<F>(state: &FffSearchState, symbol: &str, start: Instant, f: F) -> Result<ToolOutput>
+where
+    F: FnOnce(&FilePicker) -> Result<ToolOutput>,
+{
+    let guard = match state.picker.read() {
+        Ok(g) => g,
+        Err(_) => {
+            return Ok(ToolOutput {
+                tool_name: "find_definitions".to_string(),
+                tool_args: serde_json::json!({ "symbol": symbol }),
+                content: "Error acquiring picker lock".to_string(),
+                bytes_transferred: None,
+                duration: start.elapsed(),
+                status: ToolStatus::Error,
+            });
+        }
+    };
+    match guard.as_ref() {
+        Some(p) => f(p),
+        None => build_picker_not_initialized_output(symbol, start),
+    }
+}
+
+fn build_picker_not_initialized_output(symbol: &str, start: Instant) -> Result<ToolOutput> {
+    Ok(ToolOutput {
+        tool_name: "find_definitions".to_string(),
+        tool_args: serde_json::json!({ "symbol": symbol }),
+        content: serde_json::to_string_pretty(&serde_json::json!({
+            "error": "FFF picker not initialized",
+            "results": [],
+        }))?,
+        bytes_transferred: None,
+        duration: start.elapsed(),
+        status: ToolStatus::Error,
+    })
+}
+
+fn build_query(symbol: &str, glob: &str) -> String {
+    if glob.is_empty() {
+        symbol.to_string()
+    } else {
+        format!("{} {}", symbol, glob)
+    }
+}
+
+fn map_definition_results(
+    picker: &FilePicker,
+    results: &GrepResult<'_>,
+    limit: usize,
+) -> Vec<DefResult> {
+    results
+        .matches
+        .iter()
+        .filter(|m| m.is_definition)
+        .take(limit)
+        .map(|m| build_def_result(picker, results, m))
+        .collect()
+}
+
+fn build_def_result(picker: &FilePicker, results: &GrepResult<'_>, m: &GrepMatch) -> DefResult {
+    let path = results
+        .files
+        .get(m.file_index)
+        .map(|f| f.relative_path(picker))
+        .unwrap_or_else(|| format!("<file {}>", m.file_index));
+    let kind = detect_kind(&m.line_content);
+    DefResult {
+        path,
+        line: m.line_number,
+        col: m.col,
+        kind: kind.to_string(),
+        content: m.line_content.clone(),
+    }
+}
+
+fn build_definitions_output(
+    symbol: &str,
+    defs: Vec<DefResult>,
+    indexed: bool,
+    start: Instant,
+) -> Result<ToolOutput> {
+    Ok(ToolOutput {
+        tool_name: "find_definitions".to_string(),
+        tool_args: serde_json::json!({ "symbol": symbol }),
+        content: serde_json::to_string_pretty(&serde_json::json!({
+            "results": defs,
+            "total": defs.len(),
+            "indexed": indexed,
+        }))?,
+        bytes_transferred: None,
+        duration: start.elapsed(),
+        status: ToolStatus::Success,
+    })
 }
 
 #[cfg(test)]

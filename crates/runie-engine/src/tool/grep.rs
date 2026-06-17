@@ -101,37 +101,46 @@ fn run_grep_impl(
     limit: usize,
     start: Instant,
 ) -> Result<ToolOutput> {
-    let tool = if crate::tool::which_tool("rg").is_some() {
+    let tool = select_grep_tool();
+    let args = build_grep_args(pattern, path, glob.as_deref(), ignore_case, literal, limit);
+    let output = match run_grep_command(tool, &args) {
+        Ok(o) => o,
+        Err(e) => return Ok(tool_error("grep", &format!("Error running grep: {}", e), start, false)),
+    };
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    let (content, status) = parse_grep_output(&stdout, &stderr, output.status.code());
+    Ok(build_grep_output(pattern, path, content, status, stdout.len(), start))
+}
+
+fn select_grep_tool() -> &'static str {
+    if crate::tool::which_tool("rg").is_some() {
         "rg"
     } else {
         "grep"
-    };
-    let args = build_grep_args(pattern, path, glob.as_deref(), ignore_case, literal, limit);
+    }
+}
 
-    let output = match std::process::Command::new(tool).args(&args).output() {
-        Ok(o) => o,
-        Err(e) => {
-            return Ok(tool_error(
-                "grep",
-                &format!("Error running grep: {}", e),
-                start,
-                false,
-            ))
-        }
-    };
+fn run_grep_command(tool: &str, args: &[String]) -> Result<std::process::Output, std::io::Error> {
+    std::process::Command::new(tool).args(args).output()
+}
 
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-
-    let (content, status) = parse_grep_output(&stdout, &stderr, output.status.code());
-    Ok(ToolOutput {
+fn build_grep_output(
+    pattern: &str,
+    path: &std::path::Path,
+    content: String,
+    status: ToolStatus,
+    bytes: usize,
+    start: Instant,
+) -> ToolOutput {
+    ToolOutput {
         tool_name: "grep".to_string(),
         tool_args: serde_json::json!({ "path": path, "pattern": pattern }),
         content,
-        bytes_transferred: Some(stdout.len() as u64),
+        bytes_transferred: Some(bytes as u64),
         duration: start.elapsed(),
         status,
-    })
+    }
 }
 
 fn parse_grep_output(stdout: &str, stderr: &str, code: Option<i32>) -> (String, ToolStatus) {

@@ -69,15 +69,16 @@ pub fn build_search_item(
 /// Map a git status to a short label.
 pub fn format_git_status(status: GitStatus) -> String {
     if status.contains(GitStatus::WT_NEW) || status.contains(GitStatus::INDEX_NEW) {
-        "untracked".to_string()
-    } else if status.contains(GitStatus::WT_MODIFIED) || status.contains(GitStatus::INDEX_MODIFIED)
-    {
-        "modified".to_string()
-    } else if status.contains(GitStatus::WT_DELETED) || status.contains(GitStatus::INDEX_DELETED) {
-        "deleted".to_string()
-    } else if status.contains(GitStatus::WT_RENAMED) || status.contains(GitStatus::INDEX_RENAMED) {
-        "renamed".to_string()
-    } else {
-        "clean".to_string()
+        return "untracked".to_string();
     }
+    if status.contains(GitStatus::WT_MODIFIED) || status.contains(GitStatus::INDEX_MODIFIED) {
+        return "modified".to_string();
+    }
+    if status.contains(GitStatus::WT_DELETED) || status.contains(GitStatus::INDEX_DELETED) {
+        return "deleted".to_string();
+    }
+    if status.contains(GitStatus::WT_RENAMED) || status.contains(GitStatus::INDEX_RENAMED) {
+        return "renamed".to_string();
+    }
+    "clean".to_string()
 }

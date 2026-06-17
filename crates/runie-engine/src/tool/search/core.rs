@@ -5,6 +5,7 @@ use crate::tool::search::types::{SearchMode, DEFAULT_LIMIT};
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
+use fff_search::{FilePicker, QueryTracker};
 use runie_core::actors::FffSearchState;
 use runie_core::tool::resolve_path;
 use serde_json::Value;
@@ -103,78 +104,101 @@ pub(crate) fn search_impl(
 ) -> Result<ToolOutput> {
     let state = match FffSearchState::get() {
         Some(s) => s,
-        None => {
-            return Ok(ToolOutput {
-                tool_name: "search".to_string(),
-                tool_args: serde_json::json!({ "query": query }),
-                content: serde_json::to_string_pretty(&serde_json::json!({
-                    "error": "FFF indexer not initialized",
-                    "items": [],
-                    "total": 0,
-                    "indexed": false
-                }))?,
-                bytes_transferred: None,
-                duration: start.elapsed(),
-                status: ToolStatus::Error,
-            });
-        }
+        None => return build_not_indexed_output(query, start),
     };
+    with_picker(&state, query, start, |picker| {
+        with_query_tracker(&state, query, start, |qt| {
+            dispatch_search(picker, qt, query, mode, limit, start)
+        })
+    })
+}
 
-    let picker_guard = match state.picker.read() {
+fn build_not_indexed_output(query: &str, start: Instant) -> Result<ToolOutput> {
+    build_json_error_output(query, "FFF indexer not initialized", false, start)
+}
+
+fn build_picker_not_initialized_output(query: &str, start: Instant) -> Result<ToolOutput> {
+    build_json_error_output(query, "FFF picker not initialized", false, start)
+}
+
+fn build_json_error_output(
+    query: &str,
+    error: &str,
+    indexed: bool,
+    start: Instant,
+) -> Result<ToolOutput> {
+    Ok(ToolOutput {
+        tool_name: "search".to_string(),
+        tool_args: serde_json::json!({ "query": query }),
+        content: serde_json::to_string_pretty(&serde_json::json!({
+            "error": error,
+            "items": [],
+            "total": 0,
+            "indexed": indexed
+        }))?,
+        bytes_transferred: None,
+        duration: start.elapsed(),
+        status: ToolStatus::Error,
+    })
+}
+
+fn with_picker<F>(state: &FffSearchState, query: &str, start: Instant, f: F) -> Result<ToolOutput>
+where
+    F: FnOnce(&FilePicker) -> Result<ToolOutput>,
+{
+    let guard = match state.picker.read() {
+        Ok(g) => g,
+        Err(e) => return Ok(build_lock_error_output(query, "picker", &e.to_string(), start)),
+    };
+    match guard.as_ref() {
+        Some(p) => f(p),
+        None => build_picker_not_initialized_output(query, start),
+    }
+}
+
+fn with_query_tracker<F>(
+    state: &FffSearchState,
+    query: &str,
+    start: Instant,
+    f: F,
+) -> Result<ToolOutput>
+where
+    F: FnOnce(Option<&QueryTracker>) -> Result<ToolOutput>,
+{
+    let guard = match state.query_tracker.read() {
         Ok(g) => g,
         Err(e) => {
-            return Ok(ToolOutput {
-                tool_name: "search".to_string(),
-                tool_args: serde_json::json!({ "query": query }),
-                content: format!("Error acquiring picker lock: {}", e),
-                bytes_transferred: None,
-                duration: start.elapsed(),
-                status: ToolStatus::Error,
-            });
+            return Ok(build_lock_error_output(query, "query tracker", &e.to_string(), start))
         }
     };
+    f(guard.as_ref())
+}
 
-    let qt_guard = match state.query_tracker.read() {
-        Ok(g) => g,
-        Err(e) => {
-            return Ok(ToolOutput {
-                tool_name: "search".to_string(),
-                tool_args: serde_json::json!({ "query": query }),
-                content: format!("Error acquiring query tracker lock: {}", e),
-                bytes_transferred: None,
-                duration: start.elapsed(),
-                status: ToolStatus::Error,
-            });
-        }
-    };
+fn build_lock_error_output(query: &str, resource: &str, error: &str, start: Instant) -> ToolOutput {
+    ToolOutput {
+        tool_name: "search".to_string(),
+        tool_args: serde_json::json!({ "query": query }),
+        content: format!("Error acquiring {} lock: {}", resource, error),
+        bytes_transferred: None,
+        duration: start.elapsed(),
+        status: ToolStatus::Error,
+    }
+}
 
-    let picker = match picker_guard.as_ref() {
-        Some(p) => p,
-        None => {
-            return Ok(ToolOutput {
-                tool_name: "search".to_string(),
-                tool_args: serde_json::json!({ "query": query }),
-                content: serde_json::to_string_pretty(&serde_json::json!({
-                    "error": "FFF picker not initialized",
-                    "items": [],
-                    "total": 0,
-                    "indexed": false
-                }))?,
-                bytes_transferred: None,
-                duration: start.elapsed(),
-                status: ToolStatus::Error,
-            });
-        }
-    };
-
+fn dispatch_search(
+    picker: &FilePicker,
+    query_tracker: Option<&QueryTracker>,
+    query: &str,
+    mode: SearchMode,
+    limit: usize,
+    start: Instant,
+) -> Result<ToolOutput> {
     let indexed = FffSearchState::is_indexed();
-    let qt = qt_guard.as_ref();
-
     match mode {
         SearchMode::Content => search_content(picker, query, limit, indexed, start),
         SearchMode::Glob => search_glob(picker, query, limit, indexed, start),
         SearchMode::Files | SearchMode::Mixed => {
-            search_files(picker, qt, query, limit, indexed, start)
+            search_files(picker, query_tracker, query, limit, indexed, start)
         }
     }
 }

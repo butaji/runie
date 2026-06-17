@@ -50,35 +50,9 @@ impl Tool for ListDirTool {
 fn list_dir_impl(path: &std::path::Path, start: Instant) -> Result<ToolOutput> {
     let entries = match std::fs::read_dir(path) {
         Ok(e) => e,
-        Err(e) => {
-            return Ok(tool_error(
-                "list_dir",
-                &format!("Error listing {}: {}", path.display(), e),
-                start,
-                false,
-            ));
-        }
+        Err(e) => return Ok(tool_error("list_dir", &format!("Error listing {}: {}", path.display(), e), start, false)),
     };
-
-    let lines: Vec<String> = entries
-        .flatten()
-        .map(|e| {
-            let name = e.file_name().to_string_lossy().to_string();
-            let typ = if e.file_type().map(|t| t.is_dir()).unwrap_or(false) {
-                "dir"
-            } else {
-                "file"
-            };
-            format!("{} ({})", name, typ)
-        })
-        .collect();
-
-    let content = if lines.is_empty() {
-        "(empty directory)".to_string()
-    } else {
-        lines.join("\n")
-    };
-
+    let content = format_dir_entries(entries);
     Ok(ToolOutput {
         tool_name: "list_dir".to_string(),
         tool_args: serde_json::json!({ "path": path }),
@@ -87,4 +61,23 @@ fn list_dir_impl(path: &std::path::Path, start: Instant) -> Result<ToolOutput> {
         duration: start.elapsed(),
         status: ToolStatus::Success,
     })
+}
+
+fn format_dir_entries(entries: std::fs::ReadDir) -> String {
+    let lines: Vec<String> = entries.flatten().map(format_dir_entry).collect();
+    if lines.is_empty() {
+        "(empty directory)".to_string()
+    } else {
+        lines.join("\n")
+    }
+}
+
+fn format_dir_entry(entry: std::fs::DirEntry) -> String {
+    let name = entry.file_name().to_string_lossy().to_string();
+    let typ = if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+        "dir"
+    } else {
+        "file"
+    };
+    format!("{} ({})", name, typ)
 }

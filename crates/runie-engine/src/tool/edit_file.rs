@@ -79,51 +79,55 @@ fn edit_file_impl(
     start: Instant,
 ) -> Result<ToolOutput> {
     if search.is_empty() {
-        return Ok(tool_error(
-            "edit_file",
-            "Error: search text cannot be empty",
-            start,
-            false,
-        ));
+        return Ok(tool_error("edit_file", "Error: search text cannot be empty", start, false));
     }
-
-    let content = match std::fs::read_to_string(path) {
+    let content = match read_file(path) {
         Ok(c) => c,
-        Err(e) => {
-            return Ok(tool_error(
-                "edit_file",
-                &format!("Error reading {}: {}", path.display(), e),
-                start,
-                false,
-            ))
-        }
+        Err(e) => return Ok(tool_error("edit_file", &format!("Error reading {}: {}", path.display(), e), start, false)),
     };
-
     if let Some(err) = validate_match_count(&content, search, path) {
         return Ok(tool_error("edit_file", &err, start, false));
     }
-
     let new_content = content.replacen(search, replace, 1);
-    match std::fs::write(path, &new_content) {
-        Ok(()) => Ok(ToolOutput {
-            tool_name: "edit_file".to_string(),
-            tool_args: serde_json::json!({ "path": path.to_string_lossy(), "search": search, "replace": replace }),
-            content: format!(
-                "Replaced 1 occurrence in {}\n\nBefore:\n{}\n\nAfter:\n{}",
-                path.display(),
-                search,
-                replace
-            ),
-            bytes_transferred: Some(new_content.len() as u64),
-            duration: start.elapsed(),
-            status: ToolStatus::Success,
-        }),
-        Err(e) => Ok(tool_error(
-            "edit_file",
-            &format!("Error writing {}: {}", path.display(), e),
-            start,
-            false,
-        )),
+    write_edited_file(path, search, replace, &new_content, start)
+}
+
+fn read_file(path: &std::path::Path) -> Result<String, std::io::Error> {
+    std::fs::read_to_string(path)
+}
+
+fn write_edited_file(
+    path: &std::path::Path,
+    search: &str,
+    replace: &str,
+    new_content: &str,
+    start: Instant,
+) -> Result<ToolOutput> {
+    match std::fs::write(path, new_content) {
+        Ok(()) => Ok(build_edit_output(path, search, replace, new_content, start)),
+        Err(e) => Ok(tool_error("edit_file", &format!("Error writing {}: {}", path.display(), e), start, false)),
+    }
+}
+
+fn build_edit_output(
+    path: &std::path::Path,
+    search: &str,
+    replace: &str,
+    new_content: &str,
+    start: Instant,
+) -> ToolOutput {
+    ToolOutput {
+        tool_name: "edit_file".to_string(),
+        tool_args: serde_json::json!({ "path": path.to_string_lossy(), "search": search, "replace": replace }),
+        content: format!(
+            "Replaced 1 occurrence in {}\n\nBefore:\n{}\n\nAfter:\n{}",
+            path.display(),
+            search,
+            replace
+        ),
+        bytes_transferred: Some(new_content.len() as u64),
+        duration: start.elapsed(),
+        status: ToolStatus::Success,
     }
 }
 

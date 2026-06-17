@@ -50,37 +50,11 @@ impl Tool for FindTool {
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
-        let pattern = input["pattern"]
-            .as_str()
-            .ok_or_else(|| anyhow::anyhow!("pattern is required"))?;
-        let path = input["path"].as_str().unwrap_or(".");
-        let limit = input["limit"].as_u64().unwrap_or(100) as usize;
-
-        let full_path = resolve_path(path, &ctx.working_dir);
-
-        // Try fd first, fall back to find
-        let tool = if crate::tool::which_tool("fd").is_some() {
-            "fd"
-        } else {
-            "find"
-        };
-        let result = if tool == "fd" {
-            run_fd(pattern, &full_path, limit)
-        } else {
-            run_find(pattern, &full_path, limit)
-        };
-
-        let content = match result {
-            Ok(output) => output,
-            Err(e) => format!("Error running find: {}", e),
-        };
-
-        let status = if content.starts_with("Error") || content.is_empty() {
-            ToolStatus::Error
-        } else {
-            ToolStatus::Success
-        };
-
+        let (pattern, path, limit) = parse_find_input(&input)?;
+        let full_path = resolve_path(&path, &ctx.working_dir);
+        let content = run_find(&pattern, &full_path, limit)
+            .unwrap_or_else(|e| format!("Error running find: {}", e));
+        let status = determine_find_status(&content);
         Ok(ToolOutput {
             tool_name: "find".to_string(),
             tool_args: serde_json::json!({ "path": path, "pattern": pattern }),
@@ -89,6 +63,32 @@ impl Tool for FindTool {
             duration: start.elapsed(),
             status,
         })
+    }
+}
+
+fn parse_find_input(input: &Value) -> Result<(String, String, usize)> {
+    let pattern = input["pattern"]
+        .as_str()
+        .ok_or_else(|| anyhow::anyhow!("pattern is required"))?
+        .to_string();
+    let path = input["path"].as_str().unwrap_or(".").to_string();
+    let limit = input["limit"].as_u64().unwrap_or(100) as usize;
+    Ok((pattern, path, limit))
+}
+
+fn run_find(pattern: &str, path: &std::path::Path, limit: usize) -> Result<String, std::io::Error> {
+    if crate::tool::which_tool("fd").is_some() {
+        run_fd(pattern, path, limit)
+    } else {
+        run_find_fallback(pattern, path, limit)
+    }
+}
+
+fn determine_find_status(content: &str) -> ToolStatus {
+    if content.starts_with("Error") || content.is_empty() {
+        ToolStatus::Error
+    } else {
+        ToolStatus::Success
     }
 }
 
@@ -113,9 +113,12 @@ fn run_fd(pattern: &str, path: &std::path::Path, limit: usize) -> Result<String,
     Ok(stdout.trim_end().to_string())
 }
 
-fn run_find(pattern: &str, path: &std::path::Path, limit: usize) -> Result<String, std::io::Error> {
+fn run_find_fallback(
+    pattern: &str,
+    path: &std::path::Path,
+    limit: usize,
+) -> Result<String, std::io::Error> {
     let path_str = path.to_str().unwrap_or(".");
-
     let output = if pattern.contains('/') {
         std::process::Command::new("find")
             .arg(path_str)
@@ -127,7 +130,6 @@ fn run_find(pattern: &str, path: &std::path::Path, limit: usize) -> Result<Strin
             .args(["-maxdepth", "10", "-name", pattern])
             .output()?
     };
-
     let stdout = String::from_utf8_lossy(&output.stdout);
     if stdout.trim().is_empty() {
         return Ok("No files found matching pattern".to_string());

@@ -5,8 +5,8 @@ use crate::tool::search::types::{
 };
 use crate::tool::{ToolOutput, ToolStatus};
 use fff_search::{
-    FilePicker, FuzzySearchOptions, GrepMode, GrepSearchOptions, PaginationArgs, QueryParser,
-    QueryTracker,
+    FilePicker, FuzzySearchOptions, GrepMatch, GrepMode, GrepResult, GrepSearchOptions,
+    PaginationArgs, QueryParser, QueryTracker,
 };
 use std::time::Instant;
 
@@ -19,7 +19,6 @@ pub(crate) fn search_files(
     start: Instant,
 ) -> anyhow::Result<ToolOutput> {
     let parsed = QueryParser::default().parse(query);
-
     let results = picker.fuzzy_search(
         &parsed,
         query_tracker,
@@ -32,7 +31,6 @@ pub(crate) fn search_files(
             min_combo_count: 2,
         },
     );
-
     let items: Vec<SearchItem> = results
         .items
         .iter()
@@ -45,21 +43,7 @@ pub(crate) fn search_files(
             )
         })
         .collect();
-
-    let result = SearchResult {
-        total: results.total_matched,
-        items,
-        indexed,
-    };
-
-    Ok(ToolOutput {
-        tool_name: "search".to_string(),
-        tool_args: serde_json::json!({ "query": query }),
-        content: serde_json::to_string_pretty(&result)?,
-        bytes_transferred: None,
-        duration: start.elapsed(),
-        status: ToolStatus::Success,
-    })
+    build_search_output(query, None, results.total_matched, items, indexed, start)
 }
 
 pub(crate) fn search_content(
@@ -70,7 +54,6 @@ pub(crate) fn search_content(
     start: Instant,
 ) -> anyhow::Result<ToolOutput> {
     let parsed = QueryParser::default().parse(query);
-
     let results = picker.grep(
         &parsed,
         &GrepSearchOptions {
@@ -88,46 +71,12 @@ pub(crate) fn search_content(
             abort_signal: None,
         },
     );
-
     let items: Vec<SearchItem> = results
         .matches
         .iter()
-        .map(|m| {
-            let path = results
-                .files
-                .get(m.file_index)
-                .map(|f| f.relative_path(picker))
-                .unwrap_or_else(|| format!("<file {}>", m.file_index));
-            let content = if m.line_content.len() > 200 {
-                format!("{}…", &m.line_content[..200])
-            } else {
-                m.line_content.clone()
-            };
-            SearchItem {
-                path,
-                line: Some(m.line_number),
-                col: Some(m.col),
-                content: Some(content),
-                score: m.fuzzy_score.unwrap_or(0) as f64,
-                git_status: None,
-            }
-        })
+        .map(|m| map_content_match(picker, &results, m))
         .collect();
-
-    let result = SearchResult {
-        total: results.files_with_matches,
-        items,
-        indexed,
-    };
-
-    Ok(ToolOutput {
-        tool_name: "search".to_string(),
-        tool_args: serde_json::json!({ "query": query }),
-        content: serde_json::to_string_pretty(&result)?,
-        bytes_transferred: None,
-        duration: start.elapsed(),
-        status: ToolStatus::Success,
-    })
+    build_search_output(query, None, results.files_with_matches, items, indexed, start)
 }
 
 pub(crate) fn search_glob(
@@ -148,7 +97,6 @@ pub(crate) fn search_glob(
             min_combo_count: 2,
         },
     );
-
     let items: Vec<SearchItem> = results
         .items
         .iter()
@@ -161,16 +109,54 @@ pub(crate) fn search_glob(
             )
         })
         .collect();
+    build_search_output(pattern, Some("glob"), results.total_matched, items, indexed, start)
+}
 
-    let result = SearchResult {
-        total: results.total_matched,
-        items,
-        indexed,
+fn map_content_match(
+    picker: &FilePicker,
+    results: &GrepResult<'_>,
+    m: &GrepMatch,
+) -> SearchItem {
+    let path = results
+        .files
+        .get(m.file_index)
+        .map(|f| f.relative_path(picker))
+        .unwrap_or_else(|| format!("<file {}>", m.file_index));
+    SearchItem {
+        path,
+        line: Some(m.line_number),
+        col: Some(m.col),
+        content: Some(truncate_content(&m.line_content, 200)),
+        score: m.fuzzy_score.unwrap_or(0) as f64,
+        git_status: None,
+    }
+}
+
+fn truncate_content(content: &str, max_len: usize) -> String {
+    if content.len() > max_len {
+        format!("{}…", &content[..max_len])
+    } else {
+        content.to_string()
+    }
+}
+
+fn build_search_output(
+    query: &str,
+    mode: Option<&str>,
+    total: usize,
+    items: Vec<SearchItem>,
+    indexed: bool,
+    start: Instant,
+) -> anyhow::Result<ToolOutput> {
+    let result = SearchResult { total, items, indexed };
+    let tool_args = if let Some(m) = mode {
+        serde_json::json!({ "query": query, "mode": m })
+    } else {
+        serde_json::json!({ "query": query })
     };
-
     Ok(ToolOutput {
         tool_name: "search".to_string(),
-        tool_args: serde_json::json!({ "query": pattern, "mode": "glob" }),
+        tool_args,
         content: serde_json::to_string_pretty(&result)?,
         bytes_transferred: None,
         duration: start.elapsed(),
