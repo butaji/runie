@@ -9,6 +9,8 @@
 //!   ui        :: Elements, Transform (view layer)
 //!   labels    :: Static text constants
 
+extern crate self as runie_core;
+
 pub mod actors;
 pub use actors::{
     FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
