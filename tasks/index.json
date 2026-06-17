@@ -2095,15 +2095,17 @@
     },
     {
       "id": "adopt-workflow-dsl",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P3",
+      "completed_in": "current",
       "depends_on": [
         "adopt-multi-agent-spawning"
       ],
       "blocks": [],
-      "file": "tasks/adopt-workflow-dsl.md"
+      "file": "tasks/adopt-workflow-dsl.md",
+      "notes": "Created dsl/workflow.rs parser and commands/workflow.rs handler. /workflow parses single tasks and parallel lists, supports --synthesize and --template, switches to Team mode, and emits PlanGenerated. cargo test and clippy pass."
     },
     {
       "id": "unify-resolve-path",

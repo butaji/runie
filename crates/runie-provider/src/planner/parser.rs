@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use runie_core::orchestrator::{OrchestratorPlan, SubagentTask, TaskStatus};
+use runie_core::orchestrator::{OrchestratorPlan, SubagentTask, SynthesisConfig, TaskStatus};
 use runie_core::trait_resolver::ModelTrait;
 use serde::Deserialize;
 
@@ -95,6 +95,7 @@ pub(crate) fn parse_raw_plan(
         synthesis_trait,
         summary: raw.summary,
         rationale: raw.rationale,
+        synthesis: SynthesisConfig::default(),
     })
 }
 

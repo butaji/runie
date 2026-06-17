@@ -27,6 +27,7 @@
 pub mod agents_manager;
 pub mod dsl;
 mod registry;
+pub mod workflow;
 #[cfg(test)]
 mod tests;
 

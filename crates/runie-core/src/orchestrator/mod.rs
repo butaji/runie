@@ -18,7 +18,7 @@ mod task;
 
 pub use context::{DialogueEntry, OrchestratorContext};
 pub use lifecycle::AgentLifecycleStatus;
-pub use plan::{OrchestratorPlan, PlanResult, TaskFailure};
+pub use plan::{OrchestratorPlan, PlanResult, SynthesisConfig, TaskFailure};
 pub use task::{ModelTrait, SubagentTask};
 
 /// Backward-compatible alias used by plan/task code.

@@ -27,4 +27,5 @@ pub fn register_all(registry: &mut crate::commands::CommandRegistry) {
     subagent::register(registry);
     agents::register(registry);
     help::register(registry);
+    crate::commands::workflow::register(registry);
 }

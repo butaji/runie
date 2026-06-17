@@ -331,6 +331,7 @@ mod tests {
             synthesis_trait: ModelTrait::General,
             summary: Some("Review and test".to_string()),
             rationale: None,
+            synthesis: crate::orchestrator::SynthesisConfig::default(),
         }
     }
 

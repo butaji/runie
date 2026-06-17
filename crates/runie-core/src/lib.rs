@@ -33,7 +33,6 @@ pub mod dialog;
 pub mod diff;
 pub mod display_width;
 pub mod dry_run;
-#[cfg(test)]
 pub mod dsl;
 pub mod edit_preview;
 pub mod event;

@@ -259,7 +259,9 @@ mod sidebar_tests {
 #[cfg(test)]
 mod orchestrator_sidebar_tests {
     use super::*;
-    use crate::orchestrator::{ModelTrait, OrchestratorPlan, SubagentTask, TaskStatus};
+    use crate::orchestrator::{
+        ModelTrait, OrchestratorPlan, SubagentTask, SynthesisConfig, TaskStatus,
+    };
     use crate::orchestrator_actor::OrchestratorEvent;
 
     fn orchestrator_plan() -> OrchestratorPlan {
@@ -276,6 +278,7 @@ mod orchestrator_sidebar_tests {
             synthesis_trait: ModelTrait::General,
             summary: None,
             rationale: None,
+            synthesis: SynthesisConfig::default(),
         }
     }
 

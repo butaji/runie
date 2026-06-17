@@ -2,6 +2,19 @@ use serde::{Deserialize, Serialize};
 
 use super::{ModelTrait, SubagentTask, TaskStatus};
 
+/// Synthesis strategy for combining subagent outputs into the final response.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", tag = "type", content = "value")]
+pub enum SynthesisConfig {
+    /// Default LLM synthesis.
+    #[default]
+    Llm,
+    /// Custom synthesis prompt.
+    Prompt(String),
+    /// Template-based synthesis.
+    Template(String),
+}
+
 /// A complete Orchestrator plan for Team mode execution.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -14,6 +27,9 @@ pub struct OrchestratorPlan {
     pub summary: Option<String>,
     /// Optional human-readable plan rationale (shown before execution).
     pub rationale: Option<String>,
+    /// Synthesis strategy for the final response.
+    #[serde(default)]
+    pub synthesis: SynthesisConfig,
 }
 
 impl OrchestratorPlan {
@@ -29,6 +45,7 @@ impl OrchestratorPlan {
             synthesis_trait: ModelTrait::General,
             summary: None,
             rationale: None,
+            synthesis: SynthesisConfig::default(),
         }
     }
 
@@ -95,6 +112,7 @@ mod tests {
             synthesis_trait: ModelTrait::General,
             summary: Some("Review then synthesize".into()),
             rationale: Some("Parallelize review across files".into()),
+            synthesis: SynthesisConfig::default(),
         };
 
         let json = serde_json::to_string(&plan).unwrap();
