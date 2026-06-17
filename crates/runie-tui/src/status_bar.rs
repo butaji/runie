@@ -24,43 +24,72 @@ pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect) {
 
 pub(crate) fn build_left_text(snap: &Snapshot) -> String {
     let mut parts = Vec::new();
-    // When idle, show git repo/branch or current folder name
-    if !snap.turn_active {
-        let git_or_folder = snap
-            .git_info
-            .as_ref()
-            .map(|g| g.format_right(&snap.cwd_name))
-            .unwrap_or_else(|| format!("{}/", snap.cwd_name));
-        parts.push(git_or_folder);
-    }
+    push_git_or_folder(&mut parts, snap);
+    push_turn_status(&mut parts, snap);
+    push_thinking(&mut parts, snap);
+    push_orchestrator(&mut parts, snap);
+    push_pending_edits(&mut parts, snap);
+    push_read_only(&mut parts, snap);
+    parts.join(" · ")
+}
+
+fn push_git_or_folder(parts: &mut Vec<String>, snap: &Snapshot) {
     if snap.turn_active {
-        let mut text = if let Some(elapsed) = snap.turn_elapsed_secs {
-            runie_core::labels::action_text(snap.spinner_frame, "Working", elapsed)
-        } else {
-            format!("{} Working...", snap.spinner_frame)
-        };
-        if snap.queue_count > 0 {
-            text.push_str(&format!(" ({} queued)", snap.queue_count));
-        }
-        parts.push(text);
+        return;
     }
-    if snap.thinking_level != runie_core::model::ThinkingLevel::Off {
-        parts.push(format!("Think: {}", snap.thinking_level.as_str()));
+    let git_or_folder = snap
+        .git_info
+        .as_ref()
+        .map(|g| g.format_right(&snap.cwd_name))
+        .unwrap_or_else(|| format!("{}/", snap.cwd_name));
+    parts.push(git_or_folder);
+}
+
+fn push_turn_status(parts: &mut Vec<String>, snap: &Snapshot) {
+    if !snap.turn_active {
+        return;
     }
-    if snap.execution_mode.uses_orchestrator() {
-        if let Some(ref state) = snap.orchestrator_state {
-            parts.push(state.label().to_string());
-        } else {
-            parts.push("[Team]".to_string());
-        }
+    let mut text = if let Some(elapsed) = snap.turn_elapsed_secs {
+        runie_core::labels::action_text(snap.spinner_frame, "Working", elapsed)
+    } else {
+        format!("{} Working...", snap.spinner_frame)
+    };
+    if snap.queue_count > 0 {
+        text.push_str(&format!(" ({} queued)", snap.queue_count));
     }
-    if !snap.pending_edits.is_empty() {
-        parts.push(format!("{} pending", snap.pending_edits.len()));
+    parts.push(text);
+}
+
+fn push_thinking(parts: &mut Vec<String>, snap: &Snapshot) {
+    if snap.thinking_level == runie_core::model::ThinkingLevel::Off {
+        return;
     }
+    parts.push(format!("Think: {}", snap.thinking_level.as_str()));
+}
+
+fn push_orchestrator(parts: &mut Vec<String>, snap: &Snapshot) {
+    if !snap.execution_mode.uses_orchestrator() {
+        return;
+    }
+    let label = snap
+        .orchestrator_state
+        .as_ref()
+        .map(|s| s.label().to_string())
+        .unwrap_or_else(|| "[Team]".to_string());
+    parts.push(label);
+}
+
+fn push_pending_edits(parts: &mut Vec<String>, snap: &Snapshot) {
+    if snap.pending_edits.is_empty() {
+        return;
+    }
+    parts.push(format!("{} pending", snap.pending_edits.len()));
+}
+
+fn push_read_only(parts: &mut Vec<String>, snap: &Snapshot) {
     if snap.read_only {
         parts.push("🔒 RO".to_string());
     }
-    parts.join(" · ")
 }
 
 // =============================================================================

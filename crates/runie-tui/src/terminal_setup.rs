@@ -75,26 +75,72 @@ pub fn restore_terminal_graphics<W: io::Write>(
     Ok(())
 }
 
+fn mouse_sequence(cap: caps::MouseCapability) -> Option<&'static [u8]> {
+    match cap {
+        caps::MouseCapability::None => None,
+        caps::MouseCapability::Legacy => Some(b"\x1b[?1000h"),
+        caps::MouseCapability::Sgr => Some(b"\x1b[?1006h"),
+        caps::MouseCapability::SgrExtended => Some(b"\x1b[?1006;6h"),
+    }
+}
+
 /// Write the mouse mode escape sequence for the given capability level.
 pub fn enable_mouse<W: io::Write>(writer: &mut W, caps: caps::MouseCapability) -> io::Result<()> {
-    match caps {
-        caps::MouseCapability::None => Ok(()),
-        caps::MouseCapability::Legacy => {
-            // CSI ? 1000 h — ButtonEvent + NormalMove + DragEvents
-            writer.write_all(b"\x1b[?1000h")?;
-            writer.flush()
-        }
-        caps::MouseCapability::Sgr => {
-            // CSI ? 1006 h — SGR coordinates (1-based, no button state encoding)
-            writer.write_all(b"\x1b[?1006h")?;
-            writer.flush()
-        }
-        caps::MouseCapability::SgrExtended => {
-            // CSI ? 1006;6 h — SGR + SGRPixels + AlternateScroll
-            writer.write_all(b"\x1b[?1006;6h")?;
-            writer.flush()
-        }
+    if let Some(seq) = mouse_sequence(caps) {
+        writer.write_all(seq)?;
+        writer.flush()
+    } else {
+        Ok(())
     }
+}
+
+fn enter_alternate_screen<W: io::Write>(writer: &mut W) -> io::Result<()> {
+    writer.write_all(b"\x1b[?1049h")
+}
+
+const GROK_MOUSE_SEQUENCES: &[&[u8]] = &[
+    b"\x1b[?1000h",
+    b"\x1b[?1002h",
+    b"\x1b[?1003h",
+    b"\x1b[?1015h",
+    b"\x1b[?1006h",
+];
+
+fn write_grok_mouse_modes<W: io::Write>(
+    writer: &mut W,
+    caps: &caps::TerminalCapabilities,
+) -> io::Result<()> {
+    if caps.mouse == caps::MouseCapability::None {
+        return Ok(());
+    }
+    for seq in GROK_MOUSE_SEQUENCES {
+        writer.write_all(seq)?;
+    }
+    Ok(())
+}
+
+fn enable_focus_tracking<W: io::Write>(
+    writer: &mut W,
+    caps: &caps::TerminalCapabilities,
+) -> io::Result<()> {
+    if caps.focus_tracking {
+        writer.write_all(b"\x1b[?1004h")?;
+    }
+    Ok(())
+}
+
+fn enable_bracketed_paste<W: io::Write>(writer: &mut W) -> io::Result<()> {
+    writer.write_all(b"\x1b[?2004h")
+}
+
+fn begin_sync_update<W: io::Write>(writer: &mut W) -> io::Result<()> {
+    writer.write_all(b"\x1b[?2026h")
+}
+
+fn hide_cursor_and_set_block<W: io::Write>(writer: &mut W) -> io::Result<()> {
+    writer.write_all(b"\x1b[?25l")?;
+    writer.write_all(b"\x1b[1 q")?;
+    Ok(())
 }
 
 /// Write the full Grok-style mouse + terminal init sequence.
@@ -105,52 +151,50 @@ pub fn enable_mouse_grok_style<W: io::Write>(
     writer: &mut W,
     caps: &caps::TerminalCapabilities,
 ) -> io::Result<()> {
-    // ── alternate screen ──────────────────────────────────────────────────
-    writer.write_all(b"\x1b[?1049h")?;
-
-    // ── mouse modes (conditional) ─────────────────────────────────────────
-    if caps.mouse != caps::MouseCapability::None {
-        writer.write_all(b"\x1b[?1000h")?;  // legacy press/release
-        writer.write_all(b"\x1b[?1002h")?;  // button-event tracking
-        writer.write_all(b"\x1b[?1003h")?;  // all motion events
-        writer.write_all(b"\x1b[?1015h")?;  // urxvt SGR coordinates
-        writer.write_all(b"\x1b[?1006h")?;  // standard SGR coordinates
-    }
-
-    // ── focus tracking (unconditional) ───────────────────────────────────
-    if caps.focus_tracking {
-        writer.write_all(b"\x1b[?1004h")?;
-    }
-
-    // ── bracketed paste (unconditional) ──────────────────────────────────
-    writer.write_all(b"\x1b[?2004h")?;
-
-    // ── synchronized update begin (unconditional) ─────────────────────────
-    writer.write_all(b"\x1b[?2026h")?;
-
-    // ── hide cursor + block cursor ────────────────────────────────────────
-    writer.write_all(b"\x1b[?25l")?;        // hide cursor
-    writer.write_all(b"\x1b[1 q")?;         // block cursor
-
+    enter_alternate_screen(writer)?;
+    write_grok_mouse_modes(writer, caps)?;
+    enable_focus_tracking(writer, caps)?;
+    enable_bracketed_paste(writer)?;
+    begin_sync_update(writer)?;
+    hide_cursor_and_set_block(writer)?;
     writer.flush()
+}
+
+fn end_sync_update<W: io::Write>(writer: &mut W) -> io::Result<()> {
+    writer.write_all(b"\x1b[?2026l")
+}
+
+fn show_cursor<W: io::Write>(writer: &mut W) -> io::Result<()> {
+    writer.write_all(b"\x1b[?25h")
+}
+
+fn disable_bracketed_paste<W: io::Write>(writer: &mut W) -> io::Result<()> {
+    writer.write_all(b"\x1b[?2004l")
+}
+
+fn disable_focus_tracking<W: io::Write>(writer: &mut W) -> io::Result<()> {
+    writer.write_all(b"\x1b[?1004l")
+}
+
+fn disable_all_mouse_modes<W: io::Write>(writer: &mut W) -> io::Result<()> {
+    writer.write_all(b"\x1b[?1003l")?;
+    writer.write_all(b"\x1b[?1002l")?;
+    writer.write_all(b"\x1b[?1000l")?;
+    Ok(())
+}
+
+fn leave_alternate_screen<W: io::Write>(writer: &mut W) -> io::Result<()> {
+    writer.write_all(b"\x1b[?1049l")
 }
 
 /// Disable all Grok-style terminal modes.
 pub fn disable_mouse_grok_style<W: io::Write>(writer: &mut W) -> io::Result<()> {
-    // Synchronized update end
-    writer.write_all(b"\x1b[?2026l")?;
-    // Show cursor
-    writer.write_all(b"\x1b[?25h")?;
-    // Disable bracketed paste
-    writer.write_all(b"\x1b[?2004l")?;
-    // Disable focus tracking
-    writer.write_all(b"\x1b[?1004l")?;
-    // Disable all mouse modes
-    writer.write_all(b"\x1b[?1003l")?;
-    writer.write_all(b"\x1b[?1002l")?;
-    writer.write_all(b"\x1b[?1000l")?;
-    // Exit alternate screen
-    writer.write_all(b"\x1b[?1049l")?;
+    end_sync_update(writer)?;
+    show_cursor(writer)?;
+    disable_bracketed_paste(writer)?;
+    disable_focus_tracking(writer)?;
+    disable_all_mouse_modes(writer)?;
+    leave_alternate_screen(writer)?;
     writer.flush()
 }
 

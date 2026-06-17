@@ -126,38 +126,44 @@ fn parse_patch_hunks(hunks: &[patch::Hunk]) -> Vec<ParsedDiffLine> {
                 line_number: None,
             });
         }
-        let mut old_line = hunk.old_range.start as u32;
-        let mut new_line = hunk.new_range.start as u32;
-        for line in &hunk.lines {
-            match line {
-                Add(s) => {
-                    let num = new_line;
-                    new_line += 1;
-                    lines.push(ParsedDiffLine {
-                        line_type: DiffLineType::Added,
-                        content: s.to_string(),
-                        line_number: Some(num),
-                    });
-                }
-                Remove(s) => {
-                    let num = old_line;
-                    old_line += 1;
-                    lines.push(ParsedDiffLine {
-                        line_type: DiffLineType::Removed,
-                        content: s.to_string(),
-                        line_number: Some(num),
-                    });
-                }
-                Context(s) => {
-                    let num = old_line;
-                    old_line += 1;
-                    new_line += 1;
-                    lines.push(ParsedDiffLine {
-                        line_type: DiffLineType::Context,
-                        content: s.to_string(),
-                        line_number: Some(num),
-                    });
-                }
+        lines.extend(parse_hunk_lines(hunk));
+    }
+    lines
+}
+
+fn parse_hunk_lines(hunk: &patch::Hunk) -> Vec<ParsedDiffLine> {
+    let mut lines = Vec::new();
+    let mut old_line = hunk.old_range.start as u32;
+    let mut new_line = hunk.new_range.start as u32;
+    for line in &hunk.lines {
+        match line {
+            Add(s) => {
+                let num = new_line;
+                new_line += 1;
+                lines.push(ParsedDiffLine {
+                    line_type: DiffLineType::Added,
+                    content: s.to_string(),
+                    line_number: Some(num),
+                });
+            }
+            Remove(s) => {
+                let num = old_line;
+                old_line += 1;
+                lines.push(ParsedDiffLine {
+                    line_type: DiffLineType::Removed,
+                    content: s.to_string(),
+                    line_number: Some(num),
+                });
+            }
+            Context(s) => {
+                let num = old_line;
+                old_line += 1;
+                new_line += 1;
+                lines.push(ParsedDiffLine {
+                    line_type: DiffLineType::Context,
+                    content: s.to_string(),
+                    line_number: Some(num),
+                });
             }
         }
     }
@@ -193,46 +199,54 @@ impl LegacyParseState {
             return;
         }
         match line.as_bytes().first() {
-            Some(b'-') if line.starts_with("--- ") => {
-                self.old_path = Some(line[4..].to_string());
-                self.push_line(DiffLineType::FileHeader, line.to_string(), None);
-            }
-            Some(b'+') if line.starts_with("+++ ") => {
-                self.new_path = Some(line[4..].to_string());
-                self.push_line(DiffLineType::FileHeader, line.to_string(), None);
-            }
-            Some(b'@') if line.starts_with("@@ ") => {
-                self.parse_hunk_header(line);
-            }
-            Some(b'+') => {
-                let num = self.new_line_num;
-                if let Some(ref mut n) = self.new_line_num {
-                    *n += 1;
-                }
-                self.push_line(DiffLineType::Added, line[1..].to_string(), num);
-            }
-            Some(b'-') => {
-                let num = self.old_line_num;
-                if let Some(ref mut n) = self.old_line_num {
-                    *n += 1;
-                }
-                self.push_line(DiffLineType::Removed, line[1..].to_string(), num);
-            }
-            Some(b' ') => {
-                if let Some(ref mut o) = self.old_line_num {
-                    *o += 1;
-                }
-                if let Some(ref mut n) = self.new_line_num {
-                    *n += 1;
-                }
-                self.push_line(
-                    DiffLineType::Context,
-                    line[1..].to_string(),
-                    self.old_line_num,
-                );
-            }
+            Some(b'-') if line.starts_with("--- ") => self.parse_old_header(line),
+            Some(b'+') if line.starts_with("+++ ") => self.parse_new_header(line),
+            Some(b'@') if line.starts_with("@@ ") => self.parse_hunk_header(line),
+            Some(b'+') => self.parse_added(line),
+            Some(b'-') => self.parse_removed(line),
+            Some(b' ') => self.parse_context(line),
             _ => {}
         }
+    }
+
+    fn parse_old_header(&mut self, line: &str) {
+        self.old_path = Some(line[4..].to_string());
+        self.push_line(DiffLineType::FileHeader, line.to_string(), None);
+    }
+
+    fn parse_new_header(&mut self, line: &str) {
+        self.new_path = Some(line[4..].to_string());
+        self.push_line(DiffLineType::FileHeader, line.to_string(), None);
+    }
+
+    fn parse_added(&mut self, line: &str) {
+        let num = self.new_line_num;
+        if let Some(ref mut n) = self.new_line_num {
+            *n += 1;
+        }
+        self.push_line(DiffLineType::Added, line[1..].to_string(), num);
+    }
+
+    fn parse_removed(&mut self, line: &str) {
+        let num = self.old_line_num;
+        if let Some(ref mut n) = self.old_line_num {
+            *n += 1;
+        }
+        self.push_line(DiffLineType::Removed, line[1..].to_string(), num);
+    }
+
+    fn parse_context(&mut self, line: &str) {
+        if let Some(ref mut o) = self.old_line_num {
+            *o += 1;
+        }
+        if let Some(ref mut n) = self.new_line_num {
+            *n += 1;
+        }
+        self.push_line(
+            DiffLineType::Context,
+            line[1..].to_string(),
+            self.old_line_num,
+        );
     }
 
     fn parse_hunk_header(&mut self, line: &str) {

@@ -38,6 +38,26 @@ impl Drop for Cleanup {
     }
 }
 
+fn spawn_session_persistence(bus: &EventBus<Event>) -> mpsc::Sender<()> {
+    let session_id = format!(
+        "session_{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let store = SessionStore::new(
+        dirs::data_dir()
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join("runie")
+            .join("sessions"),
+    );
+    let session_actor = runie_core::SessionActor::new(session_id, "main".into(), store);
+    let (session_tx, session_rx) = mpsc::channel(1);
+    tokio::spawn(session_actor.run(session_rx, bus.clone()));
+    session_tx
+}
+
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
@@ -60,22 +80,7 @@ async fn main() -> io::Result<()> {
     let bus: EventBus<Event> = EventBus::new(100);
 
     // Spawn SessionActor to persist durable events to JSONL
-    let session_id = format!(
-        "session_{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    );
-    let store = SessionStore::new(
-        dirs::data_dir()
-            .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join("runie")
-            .join("sessions"),
-    );
-    let session_actor = runie_core::SessionActor::new(session_id, "main".into(), store);
-    let (_session_tx, session_rx) = mpsc::channel(1);
-    tokio::spawn(session_actor.run(session_rx, bus.clone()));
+    let _session_tx = spawn_session_persistence(&bus);
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
@@ -109,6 +114,18 @@ fn run_init_hooks(state: &mut AppState) {
     }
 }
 
+fn spawn_orchestrator_if_needed(state: &AppState, bus: EventBus<Event>) {
+    if !state.config.execution_mode.uses_orchestrator() {
+        return;
+    }
+    let orch_bus: EventBus<OrchestratorEvent> = EventBus::new(100);
+    let main_bus = bus.clone();
+    tokio::spawn(forward_orchestrator_events(orch_bus.subscribe(), main_bus));
+    let orchestrator = OrchestratorActor::new();
+    let (_tx, handle) = spawn_actor(orchestrator, orch_bus);
+    tokio::spawn(handle);
+}
+
 fn spawn_background_tasks(
     terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
     mut state: AppState,
@@ -138,15 +155,7 @@ fn spawn_background_tasks(
         config_reload::config_path(),
     ));
 
-    // Spawn OrchestratorActor with its own EventBus, forwarding to main bus
-    if state.config.execution_mode.uses_orchestrator() {
-        let orch_bus: EventBus<OrchestratorEvent> = EventBus::new(100);
-        let main_bus = bus.clone();
-        tokio::spawn(forward_orchestrator_events(orch_bus.subscribe(), main_bus));
-        let orchestrator = OrchestratorActor::new();
-        let (_tx, handle) = spawn_actor(orchestrator, orch_bus);
-        tokio::spawn(handle);
-    }
+    spawn_orchestrator_if_needed(&state, bus.clone());
 
     // UiActor is the sole owner of AppState and the only runtime mutator.
     let ui_sub = bus.subscribe();

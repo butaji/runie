@@ -36,79 +36,80 @@ pub fn render_welcome(f: &mut Frame, snap: &Snapshot) {
 
 fn build_welcome_content(snap: &Snapshot, inner: Rect) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
+    build_header(&mut lines);
+    build_session_options(&mut lines);
+    build_quit_option(&mut lines);
+    build_recent_sessions(&mut lines, snap);
+    build_hint(&mut lines);
+    pad_to_height(&mut lines, inner.height);
+    lines
+}
 
-    // ── Header ──────────────────────────────────────────────────────────────
+fn build_header(lines: &mut Vec<Line<'static>>) {
     lines.push(Line::from(vec![
         Span::raw("  "),
         Span::styled("Runie", Style::default().fg(color_accent()).bold()),
     ]));
     lines.push(Line::from(""));
+}
 
-    // ── Session options ─────────────────────────────────────────────────────
-    lines.push(Line::from(vec![
-        Span::raw("  "),
-        "New session".white(),
-        Span::raw("     "),
-        Span::styled("Ctrl+N", Style::default().fg(color_accent())),
-    ]));
-    lines.push(Line::from(vec![
-        Span::raw("  "),
-        "Resume session".white(),
-        Span::raw("  "),
-        Span::styled("Ctrl+R", Style::default().fg(color_accent())),
-    ]));
-    lines.push(Line::from(vec![
-        Span::raw("  "),
-        "Command palette".white(),
-        Span::raw(" "),
-        Span::styled("Ctrl+P", Style::default().fg(color_accent())),
-    ]));
+fn option_line(prefix: &str, label: &str, spacing: &str, key: &str) -> Line<'static> {
+    Line::from(vec![
+        Span::raw(prefix.to_string()),
+        label.to_string().white(),
+        Span::raw(spacing.to_string()),
+        Span::styled(key.to_string(), Style::default().fg(color_accent())),
+    ])
+}
+
+fn build_session_options(lines: &mut Vec<Line<'static>>) {
+    lines.push(option_line("  ", "New session", "     ", "Ctrl+N"));
+    lines.push(option_line("  ", "Resume session", "  ", "Ctrl+R"));
+    lines.push(option_line("  ", "Command palette", " ", "Ctrl+P"));
     lines.push(Line::from(""));
+}
 
-    // ── Quit ────────────────────────────────────────────────────────────────
-    lines.push(Line::from(vec![
-        Span::raw("  "),
-        "Quit".white(),
-        Span::raw("         "),
-        Span::styled("Ctrl+Q", Style::default().fg(color_accent())),
-    ]));
+fn build_quit_option(lines: &mut Vec<Line<'static>>) {
+    lines.push(option_line("  ", "Quit", "         ", "Ctrl+Q"));
     lines.push(Line::from(""));
+}
 
-    // ── Recent sessions ─────────────────────────────────────────────────────
-    if !snap.session_tree_items.is_empty() {
-        lines.push(Line::from(vec![
-            Span::raw("  "),
-            Span::styled("Recent sessions", Style::default().fg(color_dim()).bold()),
-        ]));
-        for (depth, preview) in snap.session_tree_items.iter().take(5) {
-            let indent = "  ".repeat(*depth + 1);
-            lines.push(Line::from(vec![
-                Span::raw(indent),
-                Span::styled(
-                    preview.chars().take(40).collect::<String>(),
-                    Style::default().fg(color_dim()),
-                ),
-            ]));
-        }
-        lines.push(Line::from(""));
+fn build_recent_sessions(lines: &mut Vec<Line<'static>>, snap: &Snapshot) {
+    if snap.session_tree_items.is_empty() {
+        return;
     }
+    lines.push(Line::from(vec![
+        Span::raw("  "),
+        Span::styled("Recent sessions", Style::default().fg(color_dim()).bold()),
+    ]));
+    for (depth, preview) in snap.session_tree_items.iter().take(5) {
+        let indent = "  ".repeat(*depth + 1);
+        lines.push(Line::from(vec![
+            Span::raw(indent),
+            Span::styled(
+                preview.chars().take(40).collect::<String>(),
+                Style::default().fg(color_dim()),
+            ),
+        ]));
+    }
+    lines.push(Line::from(""));
+}
 
-    // ── Hint at bottom ──────────────────────────────────────────────────────
+fn build_hint(lines: &mut Vec<Line<'static>>) {
     lines.push(Line::from(""));
     lines.push(Line::from(vec![
         Span::raw("  "),
         Span::styled("Tab", Style::default().fg(color_accent())),
         Span::raw(" to focus the input prompt"),
     ]));
+}
 
-    // Pad to fill the popup height
+fn pad_to_height(lines: &mut Vec<Line<'static>>, height: u16) {
     let used = lines.len() as u16;
-    let remaining = inner.height.saturating_sub(used);
+    let remaining = height.saturating_sub(used);
     for _ in 0..remaining {
         lines.push(Line::from(""));
     }
-
-    lines
 }
 
 #[cfg(test)]

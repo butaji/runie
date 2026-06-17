@@ -77,11 +77,8 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
-    use super::*;
     use crate::ui::render_lines::{element_line_count, to_lines_internal};
-    use ratatui::{backend::TestBackend, Terminal, widgets::Paragraph};
+    use ratatui::widgets::Paragraph;
     use runie_core::ui::elements::Element;
 
     fn assert_count_matches(element: Element, width: u16) {
