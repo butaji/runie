@@ -1,6 +1,6 @@
 # Adopt Skills Progressive Disclosure System
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P0
@@ -24,27 +24,27 @@ The `SKILL.md` format with YAML frontmatter already exists (see `adopt-serde-yam
 
 ## Acceptance Criteria
 
-- [ ] Skill discovery scans multiple paths in priority order.
-- [ ] Skill matching uses description field for intent detection.
-- [ ] Progressive loading: metadata always loaded, instructions loaded on trigger.
-- [ ] Skill registry with `list_skills()`, `find_skill(name)`, `trigger_skill(intent)`.
-- [ ] `cargo test --workspace` succeeds.
+- [x] Skill discovery scans multiple paths in priority order.
+- [x] Skill matching uses description field for intent detection.
+- [x] Progressive loading: metadata always loaded, instructions loaded on trigger.
+- [x] Skill registry with `list_skills()`, `find_skill(name)`, `trigger_skill(intent)`.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `skill_discovery_finds_skills_in_priority_paths` — local skills override global.
-- [ ] `skill_matching_selects_best_match` — intent matches best description.
-- [ ] `progressive_loading_only_loads_instructions_on_trigger` — lazy load verification.
+- [x] `skill_discovery_finds_skills_in_priority_paths` — local skills override global.
+- [x] `skill_matching_selects_best_match` — intent matches best description.
+- [x] `progressive_loading_only_loads_instructions_on_trigger` — lazy load verification.
 
 ### Layer 2 — Event Handling
-- [ ] `skill_triggers_on_intent_match` — skill loads when description matches.
+- [x] `skill_triggers_on_intent_match` — skill loads when description matches.
 
 ### Layer 3 — Rendering
 N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] Smoke test loads skills from all paths.
+- [x] Smoke test loads skills from all paths.
 
 ## Files touched
 

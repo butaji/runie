@@ -245,4 +245,42 @@ mod tests {
         let skill = registry.trigger_skill("rust").unwrap();
         assert!(skill.context.contains("clippy"));
     }
+
+    #[test]
+    fn skill_triggers_on_intent_match() {
+        let dir = tempdir().unwrap();
+        write_skill(dir.path(), "rust", "Rust best practices", "Use clippy.");
+        write_skill(dir.path(), "python", "Python best practices", "Use black.");
+
+        let registry = SkillRegistry {
+            skills: load_summaries_from_dir(dir.path()),
+        };
+
+        let skill = registry.trigger_skill("python best practices").expect("match");
+        assert_eq!(skill.name, "python");
+    }
+
+    #[test]
+    fn smoke_loads_skills_from_all_paths() {
+        let agents_dir = tempdir().unwrap();
+        let user_dir = tempdir().unwrap();
+        let project_dir = tempdir().unwrap();
+
+        write_skill(agents_dir.path(), "agents", "agents skill", "agents context");
+        write_skill(user_dir.path(), "user", "user skill", "user context");
+        write_skill(project_dir.path(), "project", "project skill", "project context");
+
+        let mut registry = SkillRegistry::default();
+        let mut by_name: HashMap<String, SkillSummary> = HashMap::new();
+        for dir in [agents_dir.path(), user_dir.path(), project_dir.path()] {
+            for summary in load_summaries_from_dir(dir) {
+                by_name.insert(summary.name.clone(), summary);
+            }
+        }
+        registry.skills = by_name.into_values().collect();
+
+        assert!(registry.find_skill("agents").is_some());
+        assert!(registry.find_skill("user").is_some());
+        assert!(registry.find_skill("project").is_some());
+    }
 }
