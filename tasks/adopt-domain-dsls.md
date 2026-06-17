@@ -1,6 +1,6 @@
 # Adopt Domain DSLs for Declarative Code
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P2
@@ -72,22 +72,22 @@ Reference: `~/Code/agents/omegacode/` for workflow DSL patterns
 
 ## Acceptance Criteria
 
-- [ ] `define_event!` macro for event definitions.
-- [ ] `define_tool!` macro for tool definitions.
-- [ ] `define_command!` macro for command registration.
-- [ ] `define_hook!` macro for hook registration.
-- [ ] `define_policy!` macro for permission policies.
-- [ ] All existing functionality preserved (macros are syntactic sugar).
-- [ ] `cargo test --workspace` succeeds.
+- [x] `define_event!` macro for event definitions.
+- [x] `define_tool!` macro for tool definitions.
+- [x] `define_command!` macro for command registration.
+- [x] `define_hook!` macro for hook registration.
+- [x] `define_policy!` macro for permission policies.
+- [x] All existing functionality preserved (macros are syntactic sugar).
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `define_event_generates_correct_enum` — generated code compiles and works.
-- [ ] `define_tool_generates_correct_impl` — generated trait impl correct.
-- [ ] `define_command_generates_handler` — command handler generated.
-- [ ] `define_hook_generates_closure` — hook closure generated.
-- [ ] `define_policy_generates_policy` — policy matches correctly.
+- [x] `define_event_generates_correct_enum` — generated code compiles and works.
+- [x] `define_tool_generates_correct_impl` — generated trait impl correct.
+- [x] `define_command_generates_handler` — command handler generated.
+- [x] `define_hook_generates_closure` — hook closure generated.
+- [x] `define_policy_generates_policy` — policy matches correctly.
 
 ### Layer 2 — Event Handling
 N/A.
@@ -111,3 +111,19 @@ N/A.
 ## Notes
 
 DSLs reduce boilerplate and enforce consistency. Macros generate type-safe code at compile time.
+
+
+## Test Results
+
+```
+cargo test -p runie-core define_
+...
+running 5 tests
+test dsl::macro_tests::tests::define_command_generates_handler ... ok
+test dsl::macro_tests::tests::define_event_generates_correct_enum ... ok
+test dsl::macro_tests::tests::define_hook_generates_closure ... ok
+test dsl::macro_tests::tests::define_policy_generates_policy ... ok
+test dsl::macro_tests::tests::define_tool_generates_correct_impl ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored
+```
