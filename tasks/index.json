@@ -2061,13 +2061,15 @@
     },
     {
       "id": "adopt-test-helpers",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Testing",
       "priority": "P2",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/adopt-test-helpers.md"
+      "file": "tasks/adopt-test-helpers.md",
+      "notes": "Fleshed out runie-testing crate with TestRunner, fixtures, mock event builders, and skip macros. Added runner tests."
     },
     {
       "id": "adopt-dry-run-preview",

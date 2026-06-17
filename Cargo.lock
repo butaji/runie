@@ -3229,6 +3229,8 @@ dependencies = [
 name = "runie-testing"
 version = "0.2.16"
 dependencies = [
+ "anyhow",
+ "runie-agent",
  "runie-core",
  "runie-provider",
  "serde_json",

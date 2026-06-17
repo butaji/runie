@@ -5,7 +5,9 @@ edition.workspace = true
 
 [dependencies]
 runie-core = { path = "../runie-core" }
+runie-agent = { path = "../runie-agent" }
 runie-provider = { path = "../runie-provider" }
+anyhow.workspace = true
 tokio.workspace = true
 tempfile.workspace = true
 serde_json.workspace = true

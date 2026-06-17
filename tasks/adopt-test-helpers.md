@@ -1,6 +1,6 @@
 # Adopt Shared Test Infrastructure
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Testing
 **Priority**: P2
@@ -46,12 +46,12 @@ Reference: `~/Code/agents/codex-rs/core/tests/common/` and `test_codex.rs`
 
 ## Acceptance Criteria
 
-- [ ] `runie-testing` crate created with test infrastructure.
-- [ ] `TestRunner` helper for event-driven tests.
-- [ ] Mock API response builders.
-- [ ] Common fixtures (config, provider, session).
-- [ ] Skip macros for conditional tests.
-- [ ] `cargo test --workspace` succeeds with shared helpers.
+- [x] `runie-testing` crate created with test infrastructure.
+- [x] `TestRunner` helper for event-driven tests.
+- [x] Mock API response builders.
+- [x] Common fixtures (config, provider, session).
+- [x] Skip macros for conditional tests.
+- [x] `cargo test --workspace` succeeds with shared helpers.
 
 ## Tests
 
@@ -59,8 +59,8 @@ Reference: `~/Code/agents/codex-rs/core/tests/common/` and `test_codex.rs`
 N/A (this is test infrastructure itself).
 
 ### Layer 2 — Event Handling
-- [ ] `test_runner_submit_and_expect_event` — integration test pattern works.
-- [ ] `mock_provider_handles_stream` — mock streams responses.
+- [x] `test_runner_submit_and_expect_event` — integration test pattern works.
+- [x] `mock_provider_handles_stream` — mock streams responses.
 
 ### Layer 3 — Rendering
 N/A.
