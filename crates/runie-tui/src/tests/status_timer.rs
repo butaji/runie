@@ -1,4 +1,5 @@
 use super::*;
+use crate::tests::connect_model;
 
 fn render_status(state: &mut AppState) -> String {
     let backend = TestBackend::new(60, 12);
@@ -11,6 +12,7 @@ fn render_status(state: &mut AppState) -> String {
 #[test]
 fn status_line_shows_timer_when_turn_active() {
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.agent.turn_active = true;
     state.agent.turn_started_at = Some(std::time::Instant::now());
     state.ensure_fresh();
@@ -23,6 +25,7 @@ fn status_line_shows_timer_when_turn_active() {
 #[test]
 fn status_line_shows_spinner_and_timer() {
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.agent.turn_active = true;
     state.agent.turn_started_at = Some(std::time::Instant::now());
     state.view.animation_frame = 3;
@@ -40,6 +43,7 @@ fn status_line_shows_spinner_and_timer() {
 #[test]
 fn status_line_empty_when_turn_inactive() {
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.agent.turn_active = false;
     state.ensure_fresh();
 
@@ -53,6 +57,7 @@ fn status_line_empty_when_turn_inactive() {
 #[test]
 fn status_timer_updates_over_time() {
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.agent.turn_active = true;
     state.agent.turn_started_at = Some(std::time::Instant::now());
     state.ensure_fresh();

@@ -15,6 +15,9 @@ use crate::theme::{
 };
 
 pub(crate) fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
+    if !snap.has_models {
+        return;
+    }
     let title = format!(" {}/{} ", snap.provider, snap.model);
     let block = block_input(&title, snap.input_flash > 0);
     // Unified "input enabled" flag: the input box is enabled only when

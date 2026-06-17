@@ -12,6 +12,9 @@ use crate::theme::{style_status_idle, style_timestamp};
 use crate::ui::{estimate_element_tokens, hstack};
 
 pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect) {
+    if !snap.has_models {
+        return;
+    }
     let left_text = format!(" {}", build_left_text(snap));
     let right_text = format!("{} ", build_right_status(snap));
     let right_width = width(&right_text) as u16;

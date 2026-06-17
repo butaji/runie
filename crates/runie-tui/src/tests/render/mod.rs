@@ -65,6 +65,7 @@ fn is_border_line(line: &str) -> bool {
 mod form;
 mod input;
 mod input_box;
+mod no_model;
 mod panel_list;
 mod popup_bg;
 mod scoped_models;

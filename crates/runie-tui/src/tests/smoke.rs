@@ -5,6 +5,8 @@ use ratatui::{backend::TestBackend, Terminal};
 use runie_core::event::{AgentEvent, ControlEvent, InputEvent};
 use runie_core::AppState;
 
+use super::connect_model;
+
 pub(crate) fn draw_state(state: &mut AppState) -> String {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -21,6 +23,7 @@ pub(crate) fn draw_state(state: &mut AppState) -> String {
 #[test]
 fn empty_state_renders_input_prompt() {
     let mut state = AppState::default();
+    connect_model(&mut state);
     let content = draw_state(&mut state);
     assert!(
         content.contains("❯ "),
@@ -31,6 +34,7 @@ fn empty_state_renders_input_prompt() {
 #[test]
 fn user_message_renders() {
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.update(InputEvent::Input('H'));
     state.update(InputEvent::Input('i'));
     state.update(InputEvent::Submit);
@@ -42,6 +46,7 @@ fn user_message_renders() {
 #[test]
 fn agent_response_renders() {
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.agent.streaming = true;
     state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
@@ -60,6 +65,7 @@ fn agent_response_renders() {
 #[test]
 fn tool_done_renders() {
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_files".to_string(), input: serde_json::Value::Null });
     state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
      });
@@ -71,9 +77,11 @@ fn tool_done_renders() {
 #[test]
 fn reset_clears_messages() {
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.update(InputEvent::Input('T'));
     state.update(InputEvent::Submit);
     state.update(ControlEvent::Reset);
+    connect_model(&mut state);
     let content = draw_state(&mut state);
     let count = content.matches("❯ ").count();
     assert_eq!(
@@ -85,6 +93,7 @@ fn reset_clears_messages() {
 #[test]
 fn status_shows_provider_model() {
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4".to_string();
     let backend = TestBackend::new(60, 10);
@@ -105,6 +114,7 @@ fn status_shows_provider_model() {
 #[test]
 fn status_shows_thinking_badge_when_active() {
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.config.thinking_level = runie_core::model::ThinkingLevel::Medium;
     let backend = TestBackend::new(100, 10); // 60-wide too narrow for worktree + badge
     let mut terminal = Terminal::new(backend).unwrap();
@@ -127,6 +137,7 @@ fn status_shows_thinking_badge_when_active() {
 #[test]
 fn status_hides_thinking_badge_when_off() {
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.config.thinking_level = runie_core::model::ThinkingLevel::Off;
     let backend = TestBackend::new(60, 10);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -149,6 +160,7 @@ fn status_hides_thinking_badge_when_off() {
 #[test]
 fn empty_state_shows_hint() {
     let mut state = AppState::default();
+    connect_model(&mut state);
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();

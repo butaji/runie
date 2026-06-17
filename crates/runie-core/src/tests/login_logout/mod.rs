@@ -16,6 +16,21 @@ pub(super) fn clean_config() {
     crate::login_config::set_test_config_path(path);
 }
 
+pub(super) fn default_models_for_provider(provider: &str) -> Vec<String> {
+    crate::provider_registry::find_provider(provider)
+        .map(|p| p.models.iter().map(|m| m.name.to_string()).collect())
+        .unwrap_or_default()
+}
+
+pub(super) fn validate_provider(state: &mut crate::model::AppState, provider: &str, key: &str) {
+    let models = default_models_for_provider(provider);
+    state.update(crate::event::LoginFlowEvent::ModelsFetched {
+        provider: provider.into(),
+        key: key.into(),
+        models,
+    });
+}
+
 pub(super) fn add_minimax_provider(state: &mut crate::model::AppState) {
     state.update(crate::event::DialogEvent::ProvidersDialog);
     state.update(crate::event::DialogEvent::ProvidersAdd);
@@ -26,6 +41,7 @@ pub(super) fn add_minimax_provider(state: &mut crate::model::AppState) {
         provider: "minimax".into(),
         key: "sk-test".into(),
     });
+    validate_provider(state, "minimax", "sk-test");
     state.update(crate::event::LoginFlowEvent::Save);
 }
 
@@ -51,6 +67,7 @@ pub(super) fn add_provider_and_select_model(
         provider: provider.into(),
         key: key.into(),
     });
+    validate_provider(state, provider, key);
     state.update(crate::event::LoginFlowEvent::Save);
     state.update(crate::event::DialogEvent::ProvidersSelectModel {
         provider: provider.into(),
@@ -59,6 +76,7 @@ pub(super) fn add_provider_and_select_model(
 }
 
 mod add_provider;
+mod close_guard;
 mod core;
 mod disconnect;
 mod edge_cases;

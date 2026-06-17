@@ -1,4 +1,5 @@
 use super::find_input_box_bounds;
+use crate::tests::connect_model;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::event::{DialogEvent, InputEvent};
@@ -19,6 +20,7 @@ fn buffer_content(terminal: &Terminal<TestBackend>) -> String {
 fn input_box_shows_model_name_at_bottom_right() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
     let backend = TestBackend::new(60, 20);
@@ -48,6 +50,7 @@ fn input_box_shows_model_name_at_bottom_right() {
 fn theme_selector_renders_theme_list() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.input.input = "/theme".to_string();
     state.update(InputEvent::Submit);
     assert!(matches!(
@@ -79,6 +82,7 @@ fn theme_selector_renders_theme_list() {
 fn command_palette_has_panel_background() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.update(DialogEvent::ToggleCommandPalette);
     let backend = TestBackend::new(60, 24);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -103,6 +107,7 @@ fn command_palette_has_panel_background() {
 fn empty_line_between_input_box_and_hints() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
+    connect_model(&mut state);
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -129,6 +134,7 @@ fn empty_line_between_input_box_and_hints() {
 fn input_box_single_line() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.input.input = "hello".to_string();
     state.input.cursor_pos = 5;
     let backend = TestBackend::new(60, 20);
@@ -148,6 +154,7 @@ fn input_box_single_line() {
 fn input_box_grows_with_multiline_content() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.input.input = "line1\nline2\nline3".to_string();
     state.input.cursor_pos = 17;
     let backend = TestBackend::new(60, 30);
@@ -162,6 +169,7 @@ fn input_box_grows_with_multiline_content() {
 fn input_box_cursor_visible_after_trailing_newline() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.input.input = "hello\n".to_string();
     state.input.cursor_pos = 6;
     let backend = TestBackend::new(60, 20);
@@ -190,6 +198,7 @@ fn input_box_cursor_visible_after_trailing_newline() {
 fn input_box_height_reduces_when_content_shrinks() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.input.input = "line1\nline2\nline3\nline4".to_string();
     let backend = TestBackend::new(60, 30);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -217,6 +226,7 @@ fn input_box_height_reduces_when_content_shrinks() {
 fn input_box_wraps_long_words() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
+    connect_model(&mut state);
     // A long word that exceeds the width - will wrap visually
     state.input.input = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".to_string();
     state.input.cursor_pos = state.input.input.len();
@@ -237,6 +247,7 @@ fn input_box_wraps_long_words() {
 fn input_box_height_fixed_by_layout() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
+    connect_model(&mut state);
     // Short content
     state.input.input = "AAA".to_string();
     state.input.cursor_pos = 3;

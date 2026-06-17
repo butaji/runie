@@ -23,7 +23,7 @@ fn providers_disconnect_removes_provider() {
 }
 
 #[test]
-fn providers_disconnect_closes_dialog() {
+fn providers_disconnect_opens_login_when_no_models_remain() {
     clean_config();
     let mut state = AppState::default();
 
@@ -36,8 +36,12 @@ fn providers_disconnect_closes_dialog() {
     });
 
     assert!(
-        state.open_dialog.is_none(),
-        "disconnecting should close the dialog"
+        state.login_flow.is_some(),
+        "disconnecting the last provider should reopen the login flow"
+    );
+    assert!(
+        !state.has_models(),
+        "no model should be connected after disconnecting the last provider"
     );
 }
 
@@ -59,7 +63,7 @@ fn disconnect_clears_active_provider_when_no_other() {
     });
 
     assert!(
-        state.open_dialog.is_none(),
-        "disconnect should close the dialog"
+        state.login_flow.is_some(),
+        "disconnect should open login flow when no providers remain"
     );
 }

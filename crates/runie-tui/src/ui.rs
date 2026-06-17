@@ -43,26 +43,38 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
         Margin::new(0, 0)
     };
     let area = full_area.inner(margin);
-    let input_lines = count_input_lines(&snap.input);
-    let input_height = (input_lines + 2).min(10) as u16;
-    let c = layout::vstack(
-        area,
-        &[
+    let constraints = snapshot_constraints(snap);
+    let c = layout::vstack(area, &constraints);
+    messages::render_messages(f, snap, c[0]);
+    if snap.has_models {
+        // c[1] is the empty margin line — no rendering needed
+        crate::status_bar::render(f, snap, c[2]);
+        input::input(f, snap, c[3]);
+    }
+    if snap.has_models {
+        hints::hints(f, snap, c[5]);
+    } else if c.len() > 1 {
+        hints::hints(f, snap, c[1]);
+    }
+    crate::popups::path_suggestions(f, snap);
+    crate::popups::panel::panel_dialog(f, snap);
+}
+
+fn snapshot_constraints(snap: &Snapshot) -> Vec<Constraint> {
+    if snap.has_models {
+        let input_lines = count_input_lines(&snap.input);
+        let input_height = (input_lines + 2).min(10) as u16;
+        vec![
             Constraint::Min(3),
             Constraint::Length(1), // empty margin above status
             Constraint::Length(1), // status
             Constraint::Length(input_height),
             Constraint::Length(1),
-            Constraint::Length(1),
-        ],
-    );
-    messages::render_messages(f, snap, c[0]);
-    // c[1] is the empty margin line — no rendering needed
-    crate::status_bar::render(f, snap, c[2]);
-    input::input(f, snap, c[3]);
-    hints::hints(f, snap, c[5]);
-    crate::popups::path_suggestions(f, snap);
-    crate::popups::panel::panel_dialog(f, snap);
+            Constraint::Length(1), // hints
+        ]
+    } else {
+        vec![Constraint::Min(3), Constraint::Length(1)]
+    }
 }
 
 /// Legacy entry point for code that still builds AppState directly.

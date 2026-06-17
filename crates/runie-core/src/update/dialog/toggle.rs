@@ -105,6 +105,7 @@ fn handle_providers_select_model(state: &mut AppState, event: &DialogEvent) {
         }
         state.config.current_provider = provider.clone();
         state.config.current_model = model.clone();
+        state.configure_token_tracker();
         state.record_model_usage(provider, model);
         state.open_dialog = None;
         state.dialog_back_stack.clear();
@@ -124,8 +125,13 @@ fn handle_providers_disconnect(state: &mut AppState, event: &DialogEvent) {
                 state.config.current_provider.clear();
                 state.config.current_model.clear();
             }
+            state.configure_token_tracker();
         }
-        state.open_dialog = None;
+        if state.has_models() {
+            state.open_dialog = None;
+        } else {
+            crate::update::login_flow::login_flow_start(state);
+        }
         state.dialog_back_stack.clear();
         state.mark_dirty();
     }

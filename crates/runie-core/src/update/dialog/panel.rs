@@ -115,6 +115,11 @@ fn handle_panel_filter(state: &mut AppState, event: &Event, stack: &mut PanelSta
 }
 
 fn pop_dialog_or_close(state: &mut AppState) -> bool {
+    if state.login_flow.is_some() && !state.has_models() {
+        // Keep the login panel open until a model is connected.
+        state.mark_dirty();
+        return false;
+    }
     if let Some(previous) = state.dialog_back_stack.pop() {
         state.open_dialog = Some(previous);
         state.mark_dirty();

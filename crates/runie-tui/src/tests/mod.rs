@@ -39,6 +39,12 @@ mod toggle_e2e;
 #[cfg(test)]
 mod vim_mode;
 
+/// Helper: give a default state a connected model so input/status render.
+pub fn connect_model(state: &mut AppState) {
+    state.config.current_provider = "openai".to_string();
+    state.config.current_model = "gpt-4o".to_string();
+}
+
 /// Helper: simulate full tool flow
 pub fn simulate_list_files_flow(state: &mut AppState) {
     state.update(AgentEvent::Thinking {

@@ -65,7 +65,6 @@ fn providers_disconnect(state: &mut crate::model::AppState, provider: &str) {
         Ok(()) => {
             // If this was the active provider, switch to another one or clear.
             if state.config.current_provider == provider {
-                // Try to find another configured provider.
                 let configured = crate::login_config::list_configured_providers();
                 if let Some((name, _, models)) = configured.first() {
                     state.config.current_provider = name.clone();
@@ -76,7 +75,11 @@ fn providers_disconnect(state: &mut crate::model::AppState, provider: &str) {
                 }
                 state.configure_token_tracker();
             }
-            state.open_dialog = None;
+            if state.has_models() {
+                state.open_dialog = None;
+            } else {
+                login_flow_start(state);
+            }
             state.mark_dirty();
         }
         Err(e) => {
@@ -106,7 +109,7 @@ pub fn login_flow_event(state: &mut crate::model::AppState, event: LoginFlowEven
     }
 }
 
-fn login_flow_start(state: &mut crate::model::AppState) {
+pub(crate) fn login_flow_start(state: &mut crate::model::AppState) {
     state.login_flow = Some(LoginFlowState::new());
     rebuild_login_dialog(state);
 }
@@ -155,6 +158,7 @@ fn login_flow_validation_done(state: &mut crate::model::AppState, models: Vec<St
         // Non-blocking: enrich the model list in place on the top
         // panel (model selector). We do NOT push a new panel.
         *flow = flow.clone().with_fetched_models(models);
+        flow.validated = true;
         replace_top_login_panel(state);
         state.mark_dirty();
     }
@@ -164,6 +168,7 @@ fn login_flow_models_fetched(state: &mut crate::model::AppState, models: Vec<Str
     if let Some(ref mut flow) = state.login_flow {
         if flow.step == LoginStep::ModelSelect {
             *flow = flow.clone().with_fetched_models(models);
+            flow.validated = true;
             replace_top_login_panel(state);
             state.mark_dirty();
         }
@@ -194,36 +199,53 @@ fn login_flow_toggle_model(state: &mut crate::model::AppState, model: String) {
 }
 
 fn login_flow_save(state: &mut crate::model::AppState) {
-    let _provider = if let Some(ref flow) = state.login_flow {
-        let base_url = crate::provider_registry::find_provider(&flow.provider)
-            .map(|p| p.base_url.to_string())
-            .unwrap_or_default();
-        let selected: Vec<String> = flow.selected_models.iter().cloned().collect::<Vec<_>>();
-        let provider = flow.provider.clone();
-        if let Err(e) =
-            crate::login_config::save_provider_config(&provider, &base_url, &flow.key, &selected)
-        {
-            state.add_system_msg(format!("Failed to save provider config: {}", e));
-            return;
-        }
-        provider
-    } else {
+    let Some(flow) = state.login_flow.clone() else {
         return;
     };
 
-    // Clear the login flow state.
-    state.login_flow = None;
-
-    // Restore the providers dialog (from back stack) so the user can
-    // choose which model to activate.
-    if let Some(previous) = state.dialog_back_stack.pop() {
-        state.open_dialog = Some(previous);
-    } else {
-        // Fallback: open the providers dialog directly.
-        open_providers_dialog(state);
+    if !flow.validated {
+        state.set_transient(
+            "Please wait for the API key to be validated before saving.".into(),
+            crate::event::TransientLevel::Warning,
+        );
+        return;
     }
 
+    if flow.selected_models.is_empty() {
+        state.set_transient(
+            "Select at least one model before saving.".into(),
+            crate::event::TransientLevel::Warning,
+        );
+        return;
+    }
+
+    let base_url = crate::provider_registry::find_provider(&flow.provider)
+        .map(|p| p.base_url.to_string())
+        .unwrap_or_default();
+    let selected: Vec<String> = flow.selected_models.iter().cloned().collect();
+    if let Err(e) =
+        crate::login_config::save_provider_config(&flow.provider, &base_url, &flow.key, &selected)
+    {
+        state.add_system_msg(format!("Failed to save provider config: {}", e));
+        return;
+    }
+
+    activate_first_selected_model(state, &flow);
+    state.login_flow = None;
+    state.dialog_back_stack.clear();
+    state.open_dialog = None;
     state.mark_dirty();
+}
+
+fn activate_first_selected_model(state: &mut crate::model::AppState, flow: &LoginFlowState) {
+    let first_model = flow
+        .available_models
+        .iter()
+        .find(|m| flow.selected_models.contains(*m))
+        .or_else(|| flow.selected_models.iter().next())
+        .cloned()
+        .unwrap_or_default();
+    state.switch_model(flow.provider.clone(), first_model);
 }
 
 pub fn login_flow_cancel(state: &mut crate::model::AppState) {
@@ -254,7 +276,7 @@ fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
         }
         state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
         state.mark_dirty();
-    } else {
+    } else if state.has_models() {
         // At the root: close the login flow and restore the previous
         // dialog from the back stack.
         state.login_flow = None;
@@ -265,6 +287,10 @@ fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
             state.open_dialog = None;
             state.mark_dirty();
         }
+    } else {
+        // No model connected yet: keep the login panel open.
+        state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
+        state.mark_dirty();
     }
 }
 

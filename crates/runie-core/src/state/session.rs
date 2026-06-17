@@ -68,6 +68,11 @@ impl Default for ConfigState {
         // The startup hook detects this and auto-opens the login dialog
         // so the user is immediately productive. In dev (RUNIE_MOCK=1),
         // the mock provider is the default so the app works out of the box.
+        // In unit tests we also default to a connected model so the bulk of
+        // the rendering suite does not need to set one manually.
+        #[cfg(test)]
+        let (provider, model) = ("mock".to_string(), "echo".to_string());
+        #[cfg(not(test))]
         let (provider, model) = if crate::provider_registry::is_mock_enabled() {
             ("mock".to_string(), "echo".to_string())
         } else {

@@ -154,6 +154,11 @@ impl AppState {
         self.view.message_gen
     }
 
+    /// True when a provider and model are active/connected.
+    pub fn has_models(&self) -> bool {
+        !self.config.current_provider.is_empty() && !self.config.current_model.is_empty()
+    }
+
     /// Visible elements slice — O(1), zero allocation
     pub fn visible(&self, skip: usize, take: usize) -> &[Element] {
         if self.view.elements_cache.is_empty() {

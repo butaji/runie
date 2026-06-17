@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::tests::connect_model;
 use runie_core::event::ScrollEvent;
 
 fn make_messages(count: usize) -> Vec<ChatMessage> {
@@ -18,6 +19,7 @@ fn test_scrollbar_shows_when_content_overflows() {
     let backend = TestBackend::new(40, 10);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.session.messages = make_messages(20);
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
@@ -40,6 +42,7 @@ fn test_scrollbar_thumb_at_bottom_by_default() {
     let backend = TestBackend::new(40, 10);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.session.messages = make_messages(20);
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
@@ -61,6 +64,7 @@ fn test_scrollbar_moves_when_scrolled_up() {
     let backend = TestBackend::new(40, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
+    connect_model(&mut state);
     state.session.messages = make_messages(50);
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
@@ -102,6 +106,7 @@ fn test_scrollbar_shows_when_content_overflows_small() {
     let backend = TestBackend::new(40, 10);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
+    connect_model(&mut state);
 
     // Single short message - still overflows due to margins
     state.session.messages.push(ChatMessage {

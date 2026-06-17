@@ -19,6 +19,8 @@ pub struct LoginFlowState {
     pub key: String,
     pub available_models: Vec<String>,
     pub selected_models: HashSet<String>,
+    /// Whether the API key has been validated by a successful /models call.
+    pub validated: bool,
 }
 
 impl LoginFlowState {
@@ -29,6 +31,7 @@ impl LoginFlowState {
             key: String::new(),
             available_models: Vec::new(),
             selected_models: HashSet::new(),
+            validated: false,
         }
     }
 

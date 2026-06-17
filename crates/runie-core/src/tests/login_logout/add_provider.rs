@@ -1,12 +1,15 @@
 use crate::event::{DialogEvent, LoginFlowEvent};
 use crate::model::AppState;
 
-use super::clean_config;
+use super::{clean_config, validate_provider};
 
 #[test]
 fn providers_add_starts_login_flow() {
     clean_config();
     let mut state = AppState::default();
+    state.config.current_provider.clear();
+    state.config.current_model.clear();
+
     state.update(DialogEvent::ProvidersDialog);
     assert!(
         state.open_dialog.is_some(),
@@ -23,12 +26,47 @@ fn providers_add_starts_login_flow() {
 }
 
 #[test]
-fn login_flow_cancel_returns_to_providers_dialog() {
+fn login_flow_cancel_blocked_without_model() {
+    clean_config();
+    let mut state = AppState::default();
+    state.config.current_provider.clear();
+    state.config.current_model.clear();
+
+    state.update(DialogEvent::ProvidersDialog);
+    state.update(DialogEvent::ProvidersAdd);
+    assert!(state.login_flow.is_some());
+
+    state.update(LoginFlowEvent::Cancel);
+
+    assert!(
+        state.login_flow.is_some(),
+        "cancel should be blocked when no model is connected"
+    );
+    assert!(
+        state.open_dialog.is_some(),
+        "login panel should stay open"
+    );
+}
+
+#[test]
+fn login_flow_cancel_allowed_with_model() {
     clean_config();
     let mut state = AppState::default();
 
     state.update(DialogEvent::ProvidersDialog);
-    assert!(state.open_dialog.is_some());
+    state.update(DialogEvent::ProvidersAdd);
+    state.update(LoginFlowEvent::SelectProvider {
+        provider: "minimax".into(),
+    });
+    state.update(LoginFlowEvent::SubmitKey {
+        provider: "minimax".into(),
+        key: "sk-test".into(),
+    });
+    validate_provider(&mut state, "minimax", "sk-test");
+    state.update(LoginFlowEvent::Save);
+
+    assert!(state.login_flow.is_none());
+    assert!(state.has_models());
 
     state.update(DialogEvent::ProvidersAdd);
     assert!(state.login_flow.is_some());
@@ -37,9 +75,6 @@ fn login_flow_cancel_returns_to_providers_dialog() {
 
     assert!(
         state.login_flow.is_none(),
-        "login flow should be cleared on cancel"
+        "cancel should close login flow when a model is already connected"
     );
-
-    let restored = state.open_dialog.is_some() || !state.dialog_back_stack.is_empty();
-    assert!(restored, "cancel should return to previous dialog");
 }

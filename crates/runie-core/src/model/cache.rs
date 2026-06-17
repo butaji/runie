@@ -278,6 +278,28 @@ impl AppState {
         false
     }
 
+    fn snapshot_mouse(&self) -> (crate::snapshot::MouseTarget, Option<usize>) {
+        let has_models = self.has_models();
+        let target = compute_mouse_target(
+            self.view.mouse_position,
+            self.view.last_content_width,
+            self.view.last_visible_height,
+            &self.input.input,
+            has_models,
+        );
+        let hovered = compute_hovered_element(
+            self.view.mouse_position,
+            self.view.last_content_width,
+            self.view.last_visible_height,
+            &self.input.input,
+            &self.view.elements_cache,
+            &self.view.line_counts,
+            self.view.total_lines,
+            has_models,
+        );
+        (target, hovered)
+    }
+
     /// Build an immutable Snapshot for the render actor.
     pub fn snapshot(&mut self) -> Snapshot {
         let mut s = self.snapshot_base();
@@ -296,21 +318,7 @@ impl AppState {
     }
 
     fn snapshot_feed(&self) -> Snapshot {
-        let mouse_target = compute_mouse_target(
-            self.view.mouse_position,
-            self.view.last_content_width,
-            self.view.last_visible_height,
-            &self.input.input,
-        );
-        let hovered_element = compute_hovered_element(
-            self.view.mouse_position,
-            self.view.last_content_width,
-            self.view.last_visible_height,
-            &self.input.input,
-            &self.view.elements_cache,
-            &self.view.line_counts,
-            self.view.total_lines,
-        );
+        let (mouse_target, hovered_element) = self.snapshot_mouse();
         Snapshot {
             elements: Arc::clone(&self.view.elements_cache),
             line_counts: Arc::clone(&self.view.line_counts),
@@ -363,6 +371,7 @@ impl AppState {
     fn fill_snapshot_config(&self, s: &mut Snapshot) {
         s.provider = self.config.current_provider.clone();
         s.model = self.config.current_model.clone();
+        s.has_models = self.has_models();
         s.execution_mode = self.config.execution_mode;
         s.theme_name = self.config.theme_name.clone();
         s.thinking_level = self.config.thinking_level;

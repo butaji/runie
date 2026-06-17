@@ -1,6 +1,7 @@
 //! End-to-end-ish render tests for vim navigation mode.
 
 	use super::*;
+	use crate::tests::connect_model;
 	use ratatui::backend::TestBackend;
 	use ratatui::buffer::Buffer;
 	use ratatui::style::Style;
@@ -9,6 +10,7 @@
 
 	fn state_with_vim_and_messages() -> AppState {
 	    let mut state = AppState::default();
+	    connect_model(&mut state);
 	    state.config.vim_mode = true;
 	    add_messages(&mut state, 30);
 	    state.messages_changed();
@@ -60,6 +62,7 @@
 
 	fn nav_state() -> AppState {
 	    let mut state = AppState::default();
+	    connect_model(&mut state);
 	    state.config.vim_mode = true;
 	    state.update(DialogEvent::DialogBack);
 	    assert!(state.view.vim_nav_mode);
@@ -243,10 +246,12 @@
 
 	#[test]
 	fn nav_mode_and_command_bar_share_disabled_chevron_style() {
-	    let s1 = AppState::default();
+	    let mut s1 = AppState::default();
+	    connect_model(&mut s1);
 	    let cell_enabled = chevron_cell(&s1).expect("enabled chevron cell");
 
 	    let mut s2 = AppState::default();
+	    connect_model(&mut s2);
 	    s2.config.vim_mode = true;
 	    s2.update(DialogEvent::DialogBack);
 	    assert!(s2.view.vim_nav_mode);

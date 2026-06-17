@@ -382,18 +382,27 @@ mod tests {
     }
 
     #[test]
-    fn s6_save_before_fetch_then_fetch_is_ignored() {
+    fn s6_save_before_fetch_is_rejected() {
         let mut state = drive_to_model_select("minimax");
         state.update(LoginFlowEvent::Save);
-        assert!(state.login_flow.is_none());
-        assert!(state.open_dialog.is_some());
+        assert!(
+            state.login_flow.is_some(),
+            "save should be rejected before validation"
+        );
+        assert_transient_contains(&state, "validated");
+    }
+
+    #[test]
+    fn s6b_late_fetch_after_rejected_save_is_ignored() {
+        let mut state = drive_to_model_select("minimax");
+        state.update(LoginFlowEvent::Save);
+        assert!(state.login_flow.is_some());
         state.update(LoginFlowEvent::ModelsFetched {
             provider: "minimax".into(),
             key: "sk-test".into(),
             models: vec!["late".into()],
         });
-        assert!(state.login_flow.is_none());
-        assert!(state.transient_message.is_none());
+        assert!(state.login_flow.is_some());
     }
 
     #[test]

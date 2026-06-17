@@ -132,6 +132,7 @@ fn handle_mouse_click(state: &mut AppState, row: u16, col: u16, button: &str) {
         state.view.last_content_width,
         state.view.last_visible_height,
         &state.input.input,
+        state.has_models(),
     );
 
     if button == "left" {

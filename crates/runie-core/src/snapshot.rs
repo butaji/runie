@@ -158,6 +158,8 @@ pub struct Snapshot {
     /// Input box title: `provider/model · mode suffixes`.
     /// Mode suffixes (Team, read-only) are shown only when not the default state.
     pub input_title: String,
+    /// True when a provider and model are connected.
+    pub has_models: bool,
 }
 
 /// Compute the index of the element currently at the top of the
@@ -294,6 +296,7 @@ pub fn compute_mouse_target(
     width: u16,
     height: u16,
     input: &str,
+    has_models: bool,
 ) -> MouseTarget {
     let (row, col) = match mouse_pos {
         Some(pos) => pos,
@@ -302,7 +305,7 @@ pub fn compute_mouse_target(
     if width == 0 || height == 0 {
         return MouseTarget::Unknown;
     }
-    let layout = compute_layout(width, height, input);
+    let layout = compute_layout(width, height, input, has_models);
     target_from_row(row, col, &layout)
 }
 
@@ -313,7 +316,7 @@ struct MouseLayout {
     input_height: u16,
 }
 
-fn compute_layout(width: u16, height: u16, input: &str) -> MouseLayout {
+fn compute_layout(width: u16, height: u16, input: &str, has_models: bool) -> MouseLayout {
     let margin = if width > 20 && height > 10 { 1 } else { 0 };
     let area_height = height.saturating_sub(margin * 2);
     let input_lines = if input.is_empty() {
@@ -322,7 +325,11 @@ fn compute_layout(width: u16, height: u16, input: &str) -> MouseLayout {
         input.lines().count().max(1)
     };
     let input_height = (input_lines + 2).min(10) as u16;
-    let feed_end = margin + area_height.saturating_sub(input_height + 4);
+    let feed_end = if has_models {
+        margin + area_height.saturating_sub(input_height + 4)
+    } else {
+        margin + area_height.saturating_sub(1)
+    };
     MouseLayout {
         width,
         margin,
@@ -360,8 +367,9 @@ pub fn compute_hovered_element(
     elements: &[crate::ui::elements::Element],
     line_counts: &[usize],
     total_lines: usize,
+    has_models: bool,
 ) -> Option<usize> {
-    if compute_mouse_target(mouse_pos, width, height, input) != MouseTarget::Feed {
+    if compute_mouse_target(mouse_pos, width, height, input, has_models) != MouseTarget::Feed {
         return None;
     }
 

@@ -1,6 +1,7 @@
 //! Tests for vim-nav selection background and non-selection areas.
 
 use super::helpers::{accent_bg, add_message, draw, state_with_selected_post};
+use crate::tests::connect_model;
 use runie_core::{AppState, Role};
 
 #[test]
@@ -65,7 +66,8 @@ fn user_post_in_feed_has_background_color() {
 #[test]
 fn input_box_chevron_has_no_accent_background() {
     let _lock = crate::theme::test_lock();
-    let state = AppState::default();
+    let mut state = AppState::default();
+    connect_model(&mut state);
 
     let buf = draw(&mut state.clone(), 60, 12);
     let bg = accent_bg();

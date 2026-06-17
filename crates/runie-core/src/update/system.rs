@@ -328,6 +328,9 @@ fn handle_cancel_agent(state: &mut AppState, agent_id: String) {
 }
 
 fn handle_quit_event(state: &mut AppState, event: ControlEvent) {
+    if state.login_flow.is_some() && !state.has_models() {
+        return;
+    }
     if matches!(event, ControlEvent::ForceQuit) {
         state.should_quit = true;
         return;
@@ -351,7 +354,13 @@ fn handle_reset(state: &mut AppState) {
 fn handle_abort(state: &mut AppState) {
     if state.completion.path_suggestions.is_some() {
         state.path_completion_close();
-    } else if state.open_dialog.is_some() {
+        return;
+    }
+    if state.login_flow.is_some() {
+        crate::update::login_flow::login_flow_cancel(state);
+        return;
+    }
+    if state.open_dialog.is_some() {
         // Close dialog when open
         state.open_dialog = None;
         state.mark_dirty();

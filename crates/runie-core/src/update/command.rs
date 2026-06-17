@@ -154,6 +154,10 @@ fn run_logout_command(state: &mut AppState, provider: &str) {
                     state.config.current_provider.clear();
                     state.config.current_model.clear();
                 }
+                state.configure_token_tracker();
+            }
+            if !state.has_models() {
+                crate::update::login_flow::login_flow_start(state);
             }
             dialog::process_command_result(
                 state,
