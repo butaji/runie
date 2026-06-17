@@ -41,6 +41,7 @@ pub mod file_refs;
 pub mod fuzzy;
 pub mod hooks;
 pub mod input_history;
+pub mod ipc;
 pub mod keybindings;
 pub mod labels;
 pub mod layout;
