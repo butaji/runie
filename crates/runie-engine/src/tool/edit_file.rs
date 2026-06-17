@@ -3,6 +3,7 @@
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
+use runie_core::tool::{resolve_path, tool_error};
 use serde_json::Value;
 use std::time::Instant;
 
@@ -78,15 +79,17 @@ fn edit_file_impl(
     start: Instant,
 ) -> Result<ToolOutput> {
     if search.is_empty() {
-        return Ok(error_output("Error: search text cannot be empty", start));
+        return Ok(tool_error("edit_file", "Error: search text cannot be empty", start, false));
     }
 
     let content = match std::fs::read_to_string(path) {
         Ok(c) => c,
-        Err(e) => return Ok(error_output(&format!("Error reading {}: {}", path.display(), e), start)),
+        Err(e) => return Ok(tool_error("edit_file", &format!("Error reading {}: {}", path.display(), e), start, false)),
     };
 
-    if let Some(err) = validate_match_count(&content, search, path) { return Ok(error_output(&err, start)) }
+    if let Some(err) = validate_match_count(&content, search, path) {
+        return Ok(tool_error("edit_file", &err, start, false));
+    }
 
     let new_content = content.replacen(search, replace, 1);
     match std::fs::write(path, &new_content) {
@@ -103,7 +106,7 @@ fn edit_file_impl(
             duration: start.elapsed(),
             status: ToolStatus::Success,
         }),
-        Err(e) => Ok(error_output(&format!("Error writing {}: {}", path.display(), e), start)),
+        Err(e) => Ok(tool_error("edit_file", &format!("Error writing {}: {}", path.display(), e), start, false)),
     }
 }
 
@@ -122,22 +125,4 @@ fn validate_match_count(content: &str, search: &str, path: &std::path::Path) -> 
     }
 }
 
-fn error_output(msg: &str, start: Instant) -> ToolOutput {
-    ToolOutput {
-        tool_name: "edit_file".to_string(),
-        tool_args: serde_json::Value::Null,
-        content: msg.to_string(),
-        bytes_transferred: None,
-        duration: start.elapsed(),
-        status: ToolStatus::Error,
-    }
-}
 
-fn resolve_path(path: &str, working_dir: &std::path::Path) -> std::path::PathBuf {
-    let p = std::path::Path::new(path);
-    if p.is_absolute() {
-        p.to_path_buf()
-    } else {
-        working_dir.join(p)
-    }
-}

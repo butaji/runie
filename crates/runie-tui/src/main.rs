@@ -12,19 +12,17 @@
 //!   - SessionActor subscribes to bus, persists durable events to JSONL
 
 use runie_agent::{build_provider_with_warning, run_agent_turn, AgentCommand};
-use runie_core::orchestrator_actor::{OrchestratorActor, OrchestratorCommand, OrchestratorEvent};
 use runie_core::actor::{spawn_actor, Actor};
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
-use runie_core::event::{AgentEvent, ControlEvent, InputEvent, LoginFlowEvent, ModelConfigEvent};
+use runie_core::event::{AgentEvent, LoginFlowEvent};
+use runie_core::orchestrator_actor::{OrchestratorActor, OrchestratorEvent};
 use runie_core::session_store::SessionStore;
 use runie_core::{config_reload, AppState, Snapshot};
-use runie_tui::{app_init, effects, keymap, terminal, terminal_setup, ui, theme};
+use runie_tui::{app_init, keymap, terminal, terminal_setup, theme, ui, ui_actor::UiActor};
 use futures::StreamExt;
-use std::{collections::HashMap, io, sync::Arc, sync::Mutex, time::Duration};
-use tokio::sync::{mpsc, watch};
-
-const ANIM_MS: u64 = 200;
+use std::{collections::HashMap, io, sync::Arc, sync::Mutex};
+use tokio::sync::{mpsc, oneshot, watch};
 
 struct Cleanup;
 
@@ -73,22 +71,20 @@ async fn main() -> io::Result<()> {
     let (_session_tx, session_rx) = mpsc::channel(1);
     tokio::spawn(session_actor.run(session_rx, bus.clone()));
 
-    let channels =
-        spawn_background_tasks(terminal, &mut state, &terminal_caps, bus.clone());
+    let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
-    event_loop(
+    spawn_background_tasks(
+        terminal,
         state,
-        channels.input_rx,
-        channels.agent_rx,
-        channels.cmd_tx,
-        channels.orchestrator_tx,
-        channels.render_tx,
-        channels.input_tx,
-        channels.kb_tx,
         terminal_caps,
-        bus,
-    )
-    .await
+        bus.clone(),
+        shutdown_tx,
+    );
+
+    shutdown_rx
+        .await
+        .map_err(|_| io::Error::new(io::ErrorKind::Other, "shutdown signal dropped"))?;
+    Ok(())
 }
 
 fn init_terminal_state(state: &mut AppState) {
@@ -114,31 +110,29 @@ fn run_init_hooks(state: &mut AppState) {
     }
 }
 
-struct BackgroundChannels {
-    input_tx: mpsc::Sender<Event>,
-    input_rx: mpsc::Receiver<Event>,
-    agent_rx: mpsc::Receiver<Event>,
-    cmd_tx: mpsc::Sender<AgentCommand>,
-    orchestrator_tx: Option<mpsc::Sender<runie_core::orchestrator_actor::OrchestratorCommand>>,
-    render_tx: watch::Sender<Snapshot>,
-    kb_tx: watch::Sender<HashMap<String, String>>,
-}
-
 fn spawn_background_tasks(
     terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
-    state: &mut AppState,
-    _caps: &terminal::caps::TerminalCapabilities,
+    mut state: AppState,
+    caps: terminal::caps::TerminalCapabilities,
     bus: EventBus<Event>,
-) -> BackgroundChannels {
-    let (input_tx, input_rx) = mpsc::channel::<Event>(100);
-    let (agent_tx, agent_rx) = mpsc::channel::<Event>(100);
+    shutdown_tx: oneshot::Sender<()>,
+) {
+    let (input_tx, mut input_rx) = mpsc::channel::<Event>(100);
     let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
     let (render_tx, render_rx) = watch::channel(state.snapshot());
     let (kb_tx, kb_rx) = watch::channel(state.config.keybindings.clone());
 
+    // Forward all input events (keyboard + config watcher) into the shared bus.
+    let bus_clone = bus.clone();
+    tokio::spawn(async move {
+        while let Some(evt) = input_rx.recv().await {
+            bus_clone.publish(evt);
+        }
+    });
+
     // Spawn agents that publish to EventBus
-    tokio::spawn(agent_loop(cmd_rx, agent_tx, bus.clone()));
-    tokio::spawn(input_reader(input_tx.clone(), kb_rx, bus.clone()));
+    tokio::spawn(agent_loop(cmd_rx, bus.clone()));
+    tokio::spawn(input_reader(input_tx.clone(), kb_rx));
     tokio::spawn(render_task(terminal, render_rx));
     tokio::spawn(config_reload::spawn_config_watcher(
         input_tx.clone(),
@@ -146,28 +140,18 @@ fn spawn_background_tasks(
     ));
 
     // Spawn OrchestratorActor with its own EventBus, forwarding to main bus
-    let orchestrator_tx = if state.config.execution_mode.uses_orchestrator() {
+    if state.config.execution_mode.uses_orchestrator() {
         let orch_bus: EventBus<OrchestratorEvent> = EventBus::new(100);
         let main_bus = bus.clone();
-        // Forward orchestrator events into the main event stream
         tokio::spawn(forward_orchestrator_events(orch_bus.subscribe(), main_bus));
         let orchestrator = OrchestratorActor::new();
-        let (tx, handle) = spawn_actor(orchestrator, orch_bus);
+        let (_tx, handle) = spawn_actor(orchestrator, orch_bus);
         tokio::spawn(handle);
-        Some(tx)
-    } else {
-        None
-    };
-
-    BackgroundChannels {
-        input_tx,
-        input_rx,
-        agent_rx,
-        cmd_tx,
-        orchestrator_tx,
-        render_tx,
-        kb_tx,
     }
+
+    // UiActor is the sole owner of AppState and the only runtime mutator.
+    let ui_sub = bus.subscribe();
+    tokio::spawn(UiActor::new(state, render_tx, cmd_tx, kb_tx, bus, shutdown_tx, caps).run(ui_sub));
 }
 
 async fn render_task(
@@ -199,28 +183,20 @@ async fn forward_orchestrator_events(
     }
 }
 
-/// Input reader that also publishes events to EventBus for SessionActor.
+/// Input reader that sends mapped events to the shared bus via `input_tx`.
 async fn input_reader(
     input_tx: mpsc::Sender<Event>,
     mut kb_rx: watch::Receiver<HashMap<String, String>>,
-    bus: EventBus<Event>,
 ) {
     let mut reader = crossterm::event::EventStream::new();
     while let Some(Ok(event)) = reader.next().await {
         let bindings = kb_rx.borrow_and_update().clone();
         if let Some(evt) = keymap::convert_event(&event, &bindings) {
-            let is_quit = matches!(
-                &evt,
-                ControlEvent::Quit | ControlEvent::Reset
-            );
+            let is_quit = matches!(evt, Event::Quit | Event::Reset);
 
-            // Send to main loop
-            if input_tx.send(evt.clone()).await.is_err() {
+            if input_tx.send(evt).await.is_err() {
                 break;
             }
-
-            // Publish to EventBus for SessionActor
-            bus.publish(evt);
 
             if is_quit {
                 break;
@@ -229,106 +205,9 @@ async fn input_reader(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn event_loop(
-    mut state: AppState,
-    mut input_rx: mpsc::Receiver<Event>,
-    mut agent_rx: mpsc::Receiver<Event>,
-    cmd_tx: mpsc::Sender<AgentCommand>,
-    _orchestrator_tx: Option<mpsc::Sender<OrchestratorCommand>>,
-    render_tx: watch::Sender<Snapshot>,
-    input_tx: mpsc::Sender<Event>,
-    kb_tx: watch::Sender<HashMap<String, String>>,
-    terminal_caps: terminal::caps::TerminalCapabilities,
-    _bus: EventBus<Event>,
-) -> io::Result<()> {
-    let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
-
-    state.ensure_fresh();
-    let _ = render_tx.send(state.snapshot());
-
-    loop {
-        tokio::select! {
-            biased;
-
-            Some(evt) = input_rx.recv() => {
-                if handle_input_with_effects(evt, &mut state, &input_tx, &render_tx, &kb_tx, &cmd_tx, &terminal_caps).await? {
-                    return Ok(());
-                }
-            }
-
-            Some(evt) = agent_rx.recv() => {
-                handle_agent_event(evt, &mut state, &cmd_tx).await;
-            }
-
-            _ = anim.tick() => {
-                state.tick_animation();
-            }
-        }
-
-        state.ensure_fresh();
-        let _ = render_tx.send(state.snapshot());
-    }
-}
-
-async fn handle_input_with_effects(
-    evt: Event,
-    state: &mut AppState,
-    input_tx: &mpsc::Sender<Event>,
-    render_tx: &watch::Sender<Snapshot>,
-    kb_tx: &watch::Sender<HashMap<String, String>>,
-    cmd_tx: &mpsc::Sender<AgentCommand>,
-    terminal_caps: &terminal::caps::TerminalCapabilities,
-) -> io::Result<bool> {
-    if let Some(cmd) = effects::EffectCommand::try_from_event(&evt, state, terminal_caps) {
-        state.update(evt);
-        cmd.dispatch(input_tx.clone(), render_tx.clone(), state, *terminal_caps);
-        return Ok(false);
-    }
-    handle_input_event(evt, state, kb_tx, cmd_tx).await
-}
-
-async fn handle_input_event(
-    evt: Event,
-    state: &mut AppState,
-    kb_tx: &watch::Sender<HashMap<String, String>>,
-    cmd_tx: &mpsc::Sender<AgentCommand>,
-) -> io::Result<bool> {
-    let was_submit = matches!(evt, InputEvent::Submit);
-    let was_followup = matches!(evt, ControlEvent::FollowUp);
-    let was_reload = matches!(evt, ModelConfigEvent::ReloadAll);
-    state.update(evt);
-    if state.should_quit {
-        return Ok(true);
-    }
-    if was_reload {
-        let _ = kb_tx.send(state.config.keybindings.clone());
-    }
-    if was_submit || was_followup {
-        spawn_if_queued(state, cmd_tx).await;
-    }
-    Ok(false)
-}
-
-async fn handle_agent_event(evt: Event, state: &mut AppState, cmd_tx: &mpsc::Sender<AgentCommand>) {
-    let was_done = matches!(
-        evt,
-        AgentEvent::Done { .. } | AgentEvent::Error { .. }
-    );
-    state.update(evt);
-    if was_done {
-        spawn_if_queued(state, cmd_tx).await;
-    }
-}
-
-/// Agent loop that also publishes events to EventBus for SessionActor.
-async fn agent_loop(
-    mut cmd_rx: mpsc::Receiver<AgentCommand>,
-    agent_tx: mpsc::Sender<Event>,
-    bus: EventBus<Event>,
-) {
+/// Agent loop that publishes events to EventBus for SessionActor and UiActor.
+async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, bus: EventBus<Event>) {
     while let Some(cmd) = cmd_rx.recv().await {
-        let agent_tx_clone = agent_tx.clone();
         let bus_clone = bus.clone();
         let cmd_id = cmd.id.clone();
 
@@ -339,7 +218,6 @@ async fn agent_loop(
                     id: cmd_id,
                     message: format!("Provider error: {}", e),
                 };
-                let _ = agent_tx.send(evt.clone()).await;
                 bus_clone.publish(evt);
                 continue;
             }
@@ -349,10 +227,7 @@ async fn agent_loop(
             &provider,
             &cmd,
             Arc::new(Mutex::new(move |evt: Event| {
-                let tx = agent_tx_clone.clone();
-                let b = bus_clone.clone();
-                let _ = tx.try_send(evt.clone());
-                b.publish(evt);
+                bus_clone.publish(evt);
             })),
             5,
         )
@@ -363,100 +238,8 @@ async fn agent_loop(
                 id: cmd_id,
                 message: format!("Agent error: {}", e),
             };
-            let _ = agent_tx.send(evt.clone()).await;
             bus.publish(evt);
         }
     }
 }
 
-async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentCommand>) {
-    if let Some((content, id)) = state.peek_queue() {
-        let content = content.clone();
-        let id = id.clone();
-        state.pop_queue();
-        state.agent.streaming = true;
-        state.agent.turn_active = true;
-        state.agent.inflight += 1;
-        let skills_context = runie_core::skills::build_skills_context(&state.skills);
-        let system_prompt = state
-            .prompts
-            .iter()
-            .find(|p| p.name == state.input.current_prompt)
-            .map(|p| p.content.clone())
-            .unwrap_or_default();
-        let _ = cmd_tx
-            .send(AgentCommand {
-                content,
-                id,
-                provider: state.config.current_provider.clone(),
-                model: state.config.current_model.clone(),
-                thinking_level: state.config.thinking_level,
-                read_only: state.config.read_only,
-                skills_context,
-                system_prompt,
-                truncation: runie_agent::truncate::policy_from_section(
-                    state.config.truncation.max_lines,
-                    state.config.truncation.max_bytes,
-                ),
-            })
-            .await;
-    }
-}
-
-#[cfg(test)]
-mod tests {
-
-    #[test]
-    fn animation_interval_is_200ms() {
-        assert_eq!(
-            super::ANIM_MS,
-            200,
-            "ANIM_MS must be 200ms for visible braille spinner, got {}",
-            super::ANIM_MS
-        );
-    }
-
-    #[tokio::test]
-    async fn spawn_if_queued_sets_turn_active_and_inflight() {
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<super::AgentCommand>(10);
-        let mut state = super::AppState::default();
-        state
-            .agent
-            .request_queue
-            .push_back(("hello".to_string(), "req.0".to_string()));
-
-        assert!(!state.agent.turn_active);
-        assert_eq!(state.agent.inflight, 0);
-
-        super::spawn_if_queued(&mut state, &tx).await;
-
-        assert!(
-            state.agent.turn_active,
-            "spawn_if_queued must set turn_active"
-        );
-        assert_eq!(
-            state.agent.inflight, 1,
-            "spawn_if_queued must increment inflight"
-        );
-        assert!(
-            state.agent.request_queue.is_empty(),
-            "Message should be popped from request_queue"
-        );
-
-        let cmd = rx.try_recv().expect("Command should be sent to agent");
-        assert_eq!(cmd.content, "hello");
-        assert_eq!(cmd.thinking_level, runie_core::model::ThinkingLevel::Off);
-        assert_eq!(cmd.system_prompt, "");
-    }
-
-    #[tokio::test]
-    async fn spawn_if_queued_noop_when_queue_empty() {
-        let (tx, _rx) = tokio::sync::mpsc::channel::<super::AgentCommand>(10);
-        let mut state = super::AppState::default();
-
-        super::spawn_if_queued(&mut state, &tx).await;
-
-        assert!(!state.agent.turn_active);
-        assert_eq!(state.agent.inflight, 0);
-    }
-}

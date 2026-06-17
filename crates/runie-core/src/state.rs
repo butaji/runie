@@ -433,14 +433,17 @@ pub struct AgentEntry {
     pub status: AgentStatus,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum AgentStatus {
-    Pending,
-    Running,
-    AwaitingUser,
-    Done,
-    Failed,
-}
+/// Per-agent lifecycle status for the sidebar list.
+///
+/// Alias for the canonical lifecycle enum shared with the orchestrator and
+/// subagent actor.
+pub type AgentStatus = crate::orchestrator::AgentLifecycleStatus;
+
+/// Alias for subagent lifecycle status.
+pub type SubagentStatus = crate::orchestrator::AgentLifecycleStatus;
+
+/// Alias for task lifecycle status.
+pub type TaskStatus = crate::orchestrator::AgentLifecycleStatus;
 
 /// Sidebar state for Team mode — tracks subagent list and focus.
 #[derive(Debug, Clone, Default)]
@@ -572,9 +575,9 @@ mod sidebar_tests {
     fn set_orchestrator_status_updates_existing() {
         let mut sidebar = SidebarState::default();
         sidebar.set_orchestrator_status(AgentStatus::Pending);
-        sidebar.set_orchestrator_status(AgentStatus::Done);
+        sidebar.set_orchestrator_status(AgentStatus::Done { output: None });
         assert_eq!(sidebar.agents.len(), 1);
-        assert!(matches!(sidebar.agents[0].status, AgentStatus::Done));
+        assert!(matches!(sidebar.agents[0].status, AgentStatus::Done { output: _ }));
     }
 
     #[test]
@@ -597,8 +600,8 @@ mod sidebar_tests {
             AgentStatus::Pending,
             AgentStatus::Running,
             AgentStatus::AwaitingUser,
-            AgentStatus::Done,
-            AgentStatus::Failed,
+            AgentStatus::Done { output: Some("done".into()) },
+            AgentStatus::Failed { error: "boom".into() },
         ];
         for status in statuses {
             let json = serde_json::to_string(&status).unwrap();
@@ -619,6 +622,22 @@ mod sidebar_tests {
         assert_eq!(roundtrip.id, "t1");
         assert_eq!(roundtrip.label, "Reviewer");
         assert!(matches!(roundtrip.status, AgentStatus::Running));
+    }
+
+    #[test]
+    fn task_status_into_agent_status() {
+        let status: TaskStatus = TaskStatus::AwaitingUser;
+        let agent: AgentStatus = status.into();
+        assert_eq!(agent, AgentStatus::AwaitingUser);
+    }
+
+    #[test]
+    fn subagent_status_into_agent_status() {
+        let status: SubagentStatus = SubagentStatus::Failed {
+            error: "boom".into(),
+        };
+        let agent: AgentStatus = status.into();
+        assert_eq!(agent, AgentStatus::Failed { error: "boom".into() });
     }
 
     #[test]

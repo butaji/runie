@@ -75,6 +75,7 @@ pub mod tokens;
 pub mod trait_resolver;
 pub mod tool_markers;
 pub mod tool;
+pub use tool::{format_bytes, format_duration};
 pub mod trust;
 pub mod permissions;
 pub mod ui;

@@ -1,6 +1,8 @@
 # Add `From` Implementations for Status Conversion
 
-**Status**: todo
+**Status**: done
+**Completed**: 2026-06-16
+**Notes**: Status enums are aliases of `AgentLifecycleStatus`, so the standard `From<T> for T` blanket impl provides `.into()`. Added aliases and conversion tests in `state.rs`. cargo test --workspace passes.
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P2

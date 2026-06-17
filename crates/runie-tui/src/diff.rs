@@ -379,6 +379,15 @@ mod tests {
 
     #[test]
     fn diff_line_styles() {
+        // Force truecolor so quantized approximations do not break RGB assertions.
+        crate::theme::set_current_theme_with_caps(
+            crate::theme::DEFAULT_THEME_NAME,
+            crate::terminal::caps::TerminalCapabilities {
+                truecolor: true,
+                ..crate::terminal::caps::TerminalCapabilities::default()
+            },
+        );
+
         assert_eq!(
             diff_line_style(&DiffLineType::Added).fg,
             Some(color_success())

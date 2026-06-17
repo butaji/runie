@@ -24,6 +24,7 @@ pub mod keymap;
 pub mod share;
 pub mod terminal;
 pub mod terminal_setup;
+pub mod ui_actor;
 
 #[cfg(test)]
 mod tests;

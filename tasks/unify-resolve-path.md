@@ -1,6 +1,8 @@
 # Unify `resolve_path` Function
 
-**Status**: todo
+**Status**: done
+**Completed**: 2026-06-16
+**Notes**: Extracted `resolve_path` to `runie_core::tool::resolve_path`. All 7 tool implementations in `runie-engine` now use the shared helper. Added 2 Layer 1 tests. cargo test --workspace passes.
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P1

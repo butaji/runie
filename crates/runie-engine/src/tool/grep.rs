@@ -3,6 +3,7 @@
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
+use runie_core::tool::{resolve_path, tool_error};
 use serde_json::Value;
 use std::time::Instant;
 
@@ -97,7 +98,7 @@ fn run_grep_impl(
 
     let output = match std::process::Command::new(tool).args(&args).output() {
         Ok(o) => o,
-        Err(e) => return Ok(error_result(&format!("Error running grep: {}", e), start)),
+        Err(e) => return Ok(tool_error("grep", &format!("Error running grep: {}", e), start, false)),
     };
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
@@ -126,25 +127,7 @@ fn parse_grep_output(stdout: &str, stderr: &str, code: Option<i32>) -> (String, 
     }
 }
 
-fn error_result(msg: &str, start: Instant) -> ToolOutput {
-    ToolOutput {
-        tool_name: "grep".to_string(),
-        tool_args: serde_json::Value::Null,
-        content: msg.to_string(),
-        bytes_transferred: None,
-        duration: start.elapsed(),
-        status: ToolStatus::Error,
-    }
-}
 
-fn resolve_path(path: &str, working_dir: &std::path::Path) -> std::path::PathBuf {
-    let p = std::path::Path::new(path);
-    if p.is_absolute() {
-        p.to_path_buf()
-    } else {
-        working_dir.join(p)
-    }
-}
 
 fn build_grep_args(
     pattern: &str,

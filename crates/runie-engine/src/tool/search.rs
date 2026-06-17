@@ -8,6 +8,7 @@ use runie_core::actors::FffSearchState;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
+use runie_core::tool::resolve_path;
 use fff_search::{
     FilePicker, FuzzySearchOptions, GrepMode, GrepSearchOptions, PaginationArgs,
     QueryParser, QueryTracker,
@@ -147,15 +148,6 @@ fn parse_input(
     Ok((query, mode, full_path, limit))
 }
 
-fn resolve_path(path: &str, working_dir: &Path) -> PathBuf {
-    let p = Path::new(path);
-    if p.is_absolute() {
-        p.to_path_buf()
-    } else {
-        working_dir.join(p)
-    }
-}
-
 fn search_impl(
     query: &str,
     mode: SearchMode,
@@ -241,6 +233,18 @@ fn search_impl(
     }
 }
 
+fn build_search_item(path: String, git_status: Option<GitStatus>, score: f64) -> SearchItem {
+    let git_status = git_status.map(format_git_status).filter(|s| !s.is_empty());
+    SearchItem {
+        path,
+        line: None,
+        col: None,
+        content: None,
+        score,
+        git_status,
+    }
+}
+
 fn search_files(
     picker: &FilePicker,
     query_tracker: Option<&QueryTracker>,
@@ -273,22 +277,7 @@ fn search_files(
         .iter()
         .zip(results.scores.iter())
         .map(|(item, score)| {
-            let git_status = item
-                .git_status
-                .map(format_git_status)
-                .unwrap_or_default();
-            SearchItem {
-                path: item.relative_path(picker),
-                line: None,
-                col: None,
-                content: None,
-                score: score.total as f64,
-                git_status: if git_status.is_empty() {
-                    None
-                } else {
-                    Some(git_status)
-                },
-            }
+            build_search_item(item.relative_path(picker), item.git_status, score.total as f64)
         })
         .collect();
 
@@ -405,22 +394,7 @@ fn search_glob(
         .iter()
         .zip(results.scores.iter())
         .map(|(item, score)| {
-            let git_status = item
-                .git_status
-                .map(format_git_status)
-                .unwrap_or_default();
-            SearchItem {
-                path: item.relative_path(picker),
-                line: None,
-                col: None,
-                content: None,
-                score: score.total as f64,
-                git_status: if git_status.is_empty() {
-                    None
-                } else {
-                    Some(git_status)
-                },
-            }
+            build_search_item(item.relative_path(picker), item.git_status, score.total as f64)
         })
         .collect();
 
@@ -512,6 +486,24 @@ mod tests {
         };
         let json = serde_json::to_string(&item).unwrap();
         assert!(json.contains("gitStatus"), "SearchItem should serialize gitStatus field");
+    }
+
+    #[test]
+    fn build_search_item_creates_valid_item() {
+        let status = GitStatus::from_bits_truncate(1 << 1); // WT_MODIFIED
+        let item = build_search_item("src/lib.rs".to_string(), Some(status), 0.95);
+        assert_eq!(item.path, "src/lib.rs");
+        assert_eq!(item.score, 0.95);
+        assert_eq!(item.git_status, Some("modified".to_string()));
+        assert!(item.line.is_none());
+        assert!(item.col.is_none());
+        assert!(item.content.is_none());
+    }
+
+    #[test]
+    fn build_search_item_skips_empty_git_status() {
+        let item = build_search_item("src/main.rs".to_string(), None, 0.8);
+        assert_eq!(item.git_status, None);
     }
 
     #[test]

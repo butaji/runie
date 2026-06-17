@@ -105,45 +105,28 @@ impl AppState {
 
     fn handle_orchestrator_event(&mut self, event: crate::orchestrator_actor::OrchestratorEvent) {
         use crate::orchestrator_actor::OrchestratorEvent;
-        use crate::orchestrator::TaskStatus;
-        use crate::state::{AgentEntry, AgentStatus};
+        use crate::state::AgentEntry;
 
         match event {
             OrchestratorEvent::PlanStarted => {
                 self.sidebar.visible = true;
-                self.sidebar.set_orchestrator_status(AgentStatus::Running);
+                self.sidebar.set_orchestrator_status(crate::state::AgentStatus::Running);
                 self.sidebar.agents.truncate(1); // clear old subagents
             }
             OrchestratorEvent::PlanningStarted => {
-                self.sidebar.set_orchestrator_status(AgentStatus::Running);
+                self.sidebar.set_orchestrator_status(crate::state::AgentStatus::Running);
             }
             OrchestratorEvent::PlanGenerated { plan } => {
-                let entries: Vec<AgentEntry> = plan.tasks.iter().map(|t| {
-                    let status = match t.status {
-                        TaskStatus::Pending => AgentStatus::Pending,
-                        TaskStatus::Running => AgentStatus::Running,
-                        TaskStatus::AwaitingUser => AgentStatus::AwaitingUser,
-                        TaskStatus::Done => AgentStatus::Done,
-                        TaskStatus::Failed => AgentStatus::Failed,
-                    };
-                    AgentEntry {
-                        id: t.id.clone(),
-                        label: t.task_description.chars().take(20).collect(),
-                        status,
-                    }
+                let entries: Vec<AgentEntry> = plan.tasks.iter().map(|t| AgentEntry {
+                    id: t.id.clone(),
+                    label: t.task_description.chars().take(20).collect(),
+                    status: t.status.clone(),
                 }).collect();
                 self.sidebar.set_subagents(entries);
             }
             OrchestratorEvent::SubagentStatusChanged { task_id, status } => {
-                let agent_status = match status {
-                    TaskStatus::Pending => AgentStatus::Pending,
-                    TaskStatus::Running => AgentStatus::Running,
-                    TaskStatus::AwaitingUser => AgentStatus::AwaitingUser,
-                    TaskStatus::Done => AgentStatus::Done,
-                    TaskStatus::Failed => AgentStatus::Failed,
-                };
                 if let Some(entry) = self.sidebar.agents.iter_mut().find(|a| a.id == task_id) {
-                    entry.status = agent_status;
+                    entry.status = status;
                 }
             }
             OrchestratorEvent::Cancelled => {

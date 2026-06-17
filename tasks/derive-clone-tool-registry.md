@@ -1,6 +1,8 @@
 # Add `#[derive(Clone)]` to ToolRegistry
 
-**Status**: todo
+**Status**: done
+**Completed**: 2026-06-16
+**Notes**: Replaced manual `Clone` impl with `#[derive(Clone)]` on `ToolRegistry` and removed the manual impl from `actors/subagent.rs`. cargo test --workspace passes.
 **Milestone**: R4
 **Category**: Tools
 **Priority**: P2

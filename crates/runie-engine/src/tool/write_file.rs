@@ -3,6 +3,7 @@
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
+use runie_core::tool::resolve_path;
 use serde_json::Value;
 use std::time::Instant;
 
@@ -95,14 +96,5 @@ fn output_error(tool: &str, _path: &str, msg: &str, start: Instant) -> ToolOutpu
         bytes_transferred: None,
         duration: start.elapsed(),
         status: ToolStatus::Error,
-    }
-}
-
-fn resolve_path(path: &str, working_dir: &std::path::Path) -> std::path::PathBuf {
-    let p = std::path::Path::new(path);
-    if p.is_absolute() {
-        p.to_path_buf()
-    } else {
-        working_dir.join(p)
     }
 }

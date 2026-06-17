@@ -3,6 +3,7 @@
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
+use runie_core::tool::resolve_path;
 use serde_json::Value;
 use std::time::Instant;
 
@@ -84,15 +85,6 @@ impl Tool for FindTool {
             duration: start.elapsed(),
             status,
         })
-    }
-}
-
-fn resolve_path(path: &str, working_dir: &std::path::Path) -> std::path::PathBuf {
-    let p = std::path::Path::new(path);
-    if p.is_absolute() {
-        p.to_path_buf()
-    } else {
-        working_dir.join(p)
     }
 }
 

@@ -1,6 +1,8 @@
 # Unify Tool Error Output Functions
 
-**Status**: todo
+**Status**: done
+**Completed**: 2026-06-16
+**Notes**: Added `runie_core::tool::tool_error` helper and updated `list_dir`, `edit_file`, and `grep` tool implementations in `runie-engine`. Added 2 Layer 1 tests. cargo test --workspace passes.
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P1

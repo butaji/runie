@@ -41,10 +41,11 @@ pub struct SubagentContext {
 }
 
 impl SubagentContext {
-    /// Construct from a `SubagentTask` and the originating `OrchestratorPlan`.
+    /// Construct from a `SubagentTask`.
     ///
-    /// The plan is **not** stored — the subagent must not access other tasks.
-    pub fn from_task(task: &SubagentTask, _plan: &OrchestratorPlan) -> Self {
+    /// The originating orchestrator plan is **not** stored — the subagent must not
+    /// access other tasks.
+    pub fn from_task(task: &SubagentTask) -> Self {
         Self {
             task_id: task.id.clone(),
             role_prompt: task.role_prompt.clone(),
@@ -111,18 +112,10 @@ pub enum SubagentCommand {
 }
 
 /// Status of a running subagent.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum SubagentStatus {
-    /// Task has been dispatched but not yet started.
-    Pending,
-    /// Task is actively running.
-    Running,
-    /// Task completed successfully with output.
-    Done { output: String },
-    /// Task failed with an error message.
-    Failed { error: String },
-}
+///
+/// This is an alias for the canonical lifecycle enum so the orchestrator, the
+/// sidebar, and the subagent actor all share the same representation.
+pub type SubagentStatus = crate::orchestrator::AgentLifecycleStatus;
 
 /// Event emitted by a `SubagentActor` to the shared bus.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -161,10 +154,10 @@ pub struct SubagentActor {
 }
 
 impl SubagentActor {
-    /// Create a new `SubagentActor` from a task and the originating plan.
-    pub fn new(task: &SubagentTask, plan: &OrchestratorPlan) -> Self {
+    /// Create a new `SubagentActor` from a task.
+    pub fn new(task: &SubagentTask, _plan: &OrchestratorPlan) -> Self {
         Self {
-            ctx: SubagentContext::from_task(task, plan),
+            ctx: SubagentContext::from_task(task),
             status: SubagentStatus::Pending,
             output: None,
         }
@@ -296,15 +289,6 @@ impl ToolRegistry {
     }
 }
 
-// We need Clone for ToolRegistry
-impl Clone for ToolRegistry {
-    fn clone(&self) -> Self {
-        Self {
-            tools: self.tools.clone(),
-        }
-    }
-}
-
 // We need is_sensitive_env_key in permissions
 fn is_sensitive_env_key(key: &str) -> bool {
     let upper = key.to_uppercase();
@@ -342,7 +326,7 @@ mod tests {
     fn subagent_context_hides_orchestrator_plan() {
         let plan = sample_plan();
         let task = &plan.tasks[0];
-        let ctx = SubagentContext::from_task(task, &plan);
+        let ctx = SubagentContext::from_task(task);
         assert_eq!(ctx.task_id, "t1");
         assert_eq!(ctx.task_description, "Review src/main.rs");
         assert_eq!(ctx.role_prompt, "You are a code reviewer.");
@@ -356,19 +340,19 @@ mod tests {
         let mut plan = sample_plan();
         plan.tasks[0].tool_filter = Some(vec!["read_file".to_string(), "grep".to_string()]);
         let task = &plan.tasks[0];
-        let ctx = SubagentContext::from_task(task, &plan);
+        let ctx = SubagentContext::from_task(task);
         assert_eq!(ctx.allowed_tools, vec!["read_file", "grep"]);
     }
 
     #[test]
     fn subagent_status_serialization() {
         let status = SubagentStatus::Done {
-            output: "test output".to_string(),
+            output: Some("test output".to_string()),
         };
         let json = serde_json::to_string(&status).unwrap();
         assert!(json.contains("done"));
         let roundtrip: SubagentStatus = serde_json::from_str(&json).unwrap();
-        assert!(matches!(roundtrip, SubagentStatus::Done { output } if output == "test output"));
+        assert!(matches!(roundtrip, SubagentStatus::Done { output } if output.as_deref() == Some("test output")));
     }
 
     #[test]

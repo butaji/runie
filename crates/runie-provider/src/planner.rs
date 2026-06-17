@@ -334,7 +334,6 @@ fn parse_raw_plan(raw: RawPlan, tool_names: &HashMap<String, ()>) -> Result<Orch
             },
             model_trait,
             status: runie_core::orchestrator::TaskStatus::Pending,
-            output: None,
         });
     }
 

@@ -1,6 +1,8 @@
 # Extract Search Item Builder
 
-**Status**: todo
+**Status**: done
+**Completed**: 2026-06-16
+**Notes**: Extracted `build_search_item(path, git_status, score)` in `runie-engine/src/tool/search.rs` and reused it for fuzzy file search and glob search. Added 2 Layer 1 tests. cargo test --workspace passes.
 **Milestone**: R4
 **Category**: Tools
 **Priority**: P2

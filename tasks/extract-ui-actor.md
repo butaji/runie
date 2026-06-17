@@ -1,6 +1,8 @@
 # Extract UiActor from TUI Main Loop
 
-**Status**: todo
+**Status**: done
+**Completed**: 2026-06-16
+**Notes**: Created `runie_tui::ui_actor::UiActor` that owns `AppState`, subscribes to `EventBus<Event>`, applies events, and publishes `Snapshot` via a `watch` channel to `render_task`. Main loop now only sets up terminal/actors and waits for a shutdown signal. Side-effects, agent spawns, and keybinding reloads are handled inside `UiActor`. Added 2 Layer 2/3 tests. cargo test --workspace passes.
 **Milestone**: R3
 **Category**: Architecture / Actors
 **Priority**: P0

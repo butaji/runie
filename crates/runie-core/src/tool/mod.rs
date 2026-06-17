@@ -67,6 +67,7 @@ pub trait Tool: Send + Sync {
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput>;
 }
 
+#[derive(Clone)]
 pub struct ToolRegistry {
     pub(crate) tools: HashMap<String, Arc<dyn Tool>>,
 }
@@ -118,6 +119,35 @@ pub fn which_tool(name: &str) -> Option<String> {
         .ok()
         .filter(|o| o.status.success())
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+}
+
+/// Resolve a path relative to `working_dir` if it is not already absolute.
+pub fn resolve_path(path: &str, working_dir: &std::path::Path) -> std::path::PathBuf {
+    let p = std::path::Path::new(path);
+    if p.is_absolute() {
+        p.to_path_buf()
+    } else {
+        working_dir.join(p)
+    }
+}
+
+/// Build a standard error (or warning) [`ToolOutput`].
+///
+/// The `is_warning` flag reports success semantics while still surfacing the
+/// message, which is useful for recoverable failures such as "no matches found".
+pub fn tool_error(tool_name: &str, msg: &str, start: std::time::Instant, is_warning: bool) -> ToolOutput {
+    ToolOutput {
+        tool_name: tool_name.to_string(),
+        tool_args: serde_json::Value::Null,
+        content: msg.to_string(),
+        bytes_transferred: None,
+        duration: start.elapsed(),
+        status: if is_warning {
+            ToolStatus::Success
+        } else {
+            ToolStatus::Error
+        },
+    }
 }
 
 // ─── Inline Tool Rendering Helpers ─────────────────────────────────────────────
@@ -423,5 +453,36 @@ mod tests {
             line
         );
         assert!(line.contains("[✗]"), "error line should show [✗]: {}", line);
+    }
+
+    #[test]
+    fn resolve_path_absolute_returns_as_is() {
+        let abs = std::path::Path::new("/tmp/foo");
+        assert_eq!(resolve_path("/tmp/foo", std::path::Path::new("/home")), abs.to_path_buf());
+    }
+
+    #[test]
+    fn resolve_path_relative_joins_working_dir() {
+        let wd = std::path::Path::new("/home/user");
+        assert_eq!(
+            resolve_path("src/main.rs", wd),
+            std::path::PathBuf::from("/home/user/src/main.rs")
+        );
+    }
+
+    #[test]
+    fn tool_error_returns_error_output() {
+        let start = std::time::Instant::now();
+        let out = tool_error("bash", "boom", start, false);
+        assert_eq!(out.tool_name, "bash");
+        assert_eq!(out.content, "boom");
+        assert_eq!(out.status, ToolStatus::Error);
+    }
+
+    #[test]
+    fn tool_error_warning_flag_reports_success() {
+        let start = std::time::Instant::now();
+        let out = tool_error("grep", "no matches", start, true);
+        assert_eq!(out.status, ToolStatus::Success);
     }
 }

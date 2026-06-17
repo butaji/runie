@@ -1857,7 +1857,7 @@
     },
     {
       "id": "extract-ui-actor",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Architecture / Actors",
       "priority": "P0",
@@ -1865,7 +1865,8 @@
         "extract-core-monolith"
       ],
       "blocks": [],
-      "file": "tasks/extract-ui-actor.md"
+      "file": "tasks/extract-ui-actor.md",
+      "completed": "2026-06-16"
     },
     {
       "id": "extract-core-monolith",
@@ -2096,17 +2097,18 @@
     },
     {
       "id": "unify-resolve-path",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/unify-resolve-path.md"
+      "file": "tasks/unify-resolve-path.md",
+      "completed": "2026-06-16"
     },
     {
       "id": "unify-tool-error-output",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
@@ -2114,21 +2116,23 @@
         "unify-resolve-path"
       ],
       "blocks": [],
-      "file": "tasks/unify-tool-error-output.md"
+      "file": "tasks/unify-tool-error-output.md",
+      "completed": "2026-06-16"
     },
     {
       "id": "unify-agent-status-enum",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/unify-agent-status-enum.md"
+      "file": "tasks/unify-agent-status-enum.md",
+      "completed": "2026-06-16"
     },
     {
       "id": "add-agent-lifecycle-from-impls",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
@@ -2136,47 +2140,52 @@
         "unify-agent-status-enum"
       ],
       "blocks": [],
-      "file": "tasks/add-agent-lifecycle-from-impls.md"
+      "file": "tasks/add-agent-lifecycle-from-impls.md",
+      "completed": "2026-06-16"
     },
     {
       "id": "remove-unused-plan-param",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/remove-unused-plan-param.md"
+      "file": "tasks/remove-unused-plan-param.md",
+      "completed": "2026-06-16"
     },
     {
       "id": "extract-search-item-builder",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Tools",
       "priority": "P2",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/extract-search-item-builder.md"
+      "file": "tasks/extract-search-item-builder.md",
+      "completed": "2026-06-16"
     },
     {
       "id": "derive-clone-tool-registry",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Tools",
       "priority": "P2",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/derive-clone-tool-registry.md"
+      "file": "tasks/derive-clone-tool-registry.md",
+      "completed": "2026-06-16"
     },
     {
       "id": "export-format-helpers",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "TUI / Rendering",
       "priority": "P3",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/export-format-helpers.md"
+      "file": "tasks/export-format-helpers.md",
+      "completed": "2026-06-16"
     },
     {
       "id": "split-large-files",

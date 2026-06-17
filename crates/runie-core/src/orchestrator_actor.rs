@@ -287,12 +287,12 @@ fn handle_subagent_status(
 ) {
     if let Some(plan) = &mut actor.active_plan {
         if let Some(task) = plan.tasks.iter_mut().find(|t| t.id == task_id) {
-            let old = task.status;
+            let old = task.status.clone();
             if old != *status {
-                task.status = *status;
+                task.status = status.clone();
                 bus.publish(OrchestratorEvent::SubagentStatusChanged {
                     task_id: task_id.to_string(),
-                    status: *status,
+                    status: status.clone(),
                 });
             }
         }
@@ -308,8 +308,9 @@ async fn handle_subagent_done(
     actor.collect_result(task_id.to_string(), output.to_string());
     if let Some(plan) = &mut actor.active_plan {
         if let Some(task) = plan.tasks.iter_mut().find(|t| t.id == task_id) {
-            task.status = TaskStatus::Done;
-            task.output = Some(output.to_string());
+            task.status = TaskStatus::Done {
+                output: Some(output.to_string()),
+            };
         }
     }
     bus.publish(OrchestratorEvent::SubagentCompleted {
@@ -344,7 +345,9 @@ fn handle_subagent_failed(
 ) {
     if let Some(plan) = &mut actor.active_plan {
         if let Some(task) = plan.tasks.iter_mut().find(|t| t.id == task_id) {
-            task.status = TaskStatus::Failed;
+            task.status = TaskStatus::Failed {
+                error: error.to_string(),
+            };
         }
     }
     bus.publish(OrchestratorEvent::SubagentFailed {

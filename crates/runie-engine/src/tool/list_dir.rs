@@ -3,6 +3,7 @@
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
+use runie_core::tool::{resolve_path, tool_error};
 use serde_json::Value;
 use std::time::Instant;
 
@@ -50,7 +51,7 @@ fn list_dir_impl(path: &std::path::Path, start: Instant) -> Result<ToolOutput> {
     let entries = match std::fs::read_dir(path) {
         Ok(e) => e,
         Err(e) => {
-            return Ok(error_output(path, e, start));
+            return Ok(tool_error("list_dir", &format!("Error listing {}: {}", path.display(), e), start, false));
         }
     };
 
@@ -83,22 +84,4 @@ fn list_dir_impl(path: &std::path::Path, start: Instant) -> Result<ToolOutput> {
     })
 }
 
-fn error_output(path: &std::path::Path, e: std::io::Error, start: Instant) -> ToolOutput {
-    ToolOutput {
-        tool_name: "list_dir".to_string(),
-        tool_args: serde_json::json!({ "path": path.to_string_lossy() }),
-        content: format!("Error listing {}: {}", path.display(), e),
-        bytes_transferred: None,
-        duration: start.elapsed(),
-        status: ToolStatus::Error,
-    }
-}
 
-fn resolve_path(path: &str, working_dir: &std::path::Path) -> std::path::PathBuf {
-    let p = std::path::Path::new(path);
-    if p.is_absolute() {
-        p.to_path_buf()
-    } else {
-        working_dir.join(p)
-    }
-}

@@ -1,6 +1,8 @@
 # Unify Agent Status Enums
 
-**Status**: todo
+**Status**: done
+**Completed**: 2026-06-16
+**Notes**: Introduced canonical `AgentLifecycleStatus` in `orchestrator.rs` with `Done { output }` and `Failed { error }` payloads. `TaskStatus`, `SubagentStatus`, and `AgentStatus` are now type aliases. Removed mapping boilerplate in `update/mod.rs`. Added 3 Layer 1 tests. cargo test --workspace passes.
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P1

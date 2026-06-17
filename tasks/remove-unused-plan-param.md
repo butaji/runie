@@ -1,6 +1,8 @@
 # Remove Unused `_plan` Parameter
 
-**Status**: todo
+**Status**: done
+**Completed**: 2026-06-16
+**Notes**: Removed `_plan` parameter from `SubagentContext::from_task` and updated `SubagentActor::new` and tests. cargo test --workspace passes.
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P2

@@ -107,37 +107,40 @@ impl fmt::Display for ModelTrait {
 // Task status
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Lifecycle state of a single subagent task.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Lifecycle state of an agent or subagent task.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum TaskStatus {
+pub enum AgentLifecycleStatus {
     /// Task is queued but not yet started.
     Pending,
     /// Task is currently executing.
     Running,
     /// Task is waiting for user input/approval before continuing.
     AwaitingUser,
-    /// Task completed successfully.
-    Done,
-    /// Task failed with an error.
-    Failed,
+    /// Task completed successfully, optionally with output.
+    Done { output: Option<String> },
+    /// Task failed with an error message.
+    Failed { error: String },
 }
 
-impl TaskStatus {
+/// Backward-compatible alias used by plan/task code.
+pub type TaskStatus = AgentLifecycleStatus;
+
+impl AgentLifecycleStatus {
     /// Whether a status transition from `self` to `next` is valid.
-    pub fn can_transition_to(&self, next: TaskStatus) -> bool {
-        use TaskStatus::*;
-        match (self, next) {
+    pub fn can_transition_to(&self, next: AgentLifecycleStatus) -> bool {
+        use AgentLifecycleStatus::*;
+        match (self, &next) {
             // Pending can start running
             (Pending, Running) => true,
             // Running can await user, complete, or fail
-            (Running, AwaitingUser) | (Running, Done) | (Running, Failed) => true,
+            (Running, AwaitingUser) | (Running, Done { .. }) | (Running, Failed { .. }) => true,
             // AwaitingUser can resume running or fail
-            (AwaitingUser, Running) | (AwaitingUser, Failed) => true,
+            (AwaitingUser, Running) | (AwaitingUser, Failed { .. }) => true,
             // Done and Failed are terminal — no transitions
-            (Done, _) | (Failed, _) => false,
+            (Done { .. }, _) | (Failed { .. }, _) => false,
             // Same state is always allowed
-            (a, b) if *a == b => true,
+            (a, b) if a == b => true,
             // All other transitions are invalid
             _ => false,
         }
@@ -146,17 +149,17 @@ impl TaskStatus {
     /// Human-readable label for display.
     pub fn label(&self) -> &'static str {
         match self {
-            TaskStatus::Pending => "pending",
-            TaskStatus::Running => "running",
-            TaskStatus::AwaitingUser => "awaiting",
-            TaskStatus::Done => "done",
-            TaskStatus::Failed => "failed",
+            AgentLifecycleStatus::Pending => "pending",
+            AgentLifecycleStatus::Running => "running",
+            AgentLifecycleStatus::AwaitingUser => "awaiting",
+            AgentLifecycleStatus::Done { .. } => "done",
+            AgentLifecycleStatus::Failed { .. } => "failed",
         }
     }
 
     /// Whether this status is terminal (no further transitions).
     pub fn is_terminal(&self) -> bool {
-        matches!(self, TaskStatus::Done | TaskStatus::Failed)
+        matches!(self, AgentLifecycleStatus::Done { .. } | AgentLifecycleStatus::Failed { .. })
     }
 }
 
@@ -165,7 +168,7 @@ impl TaskStatus {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// A single task assigned to a subagent in the Orchestrator workflow.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SubagentTask {
     /// Unique identifier for this task within the plan.
@@ -179,10 +182,8 @@ pub struct SubagentTask {
     pub tool_filter: Option<Vec<String>>,
     /// Model trait required for this task (harness resolves to concrete model).
     pub model_trait: ModelTrait,
-    /// Current lifecycle status.
+    /// Current lifecycle status (includes output/error payload when terminal).
     pub status: TaskStatus,
-    /// Output produced by the subagent (populated on Done).
-    pub output: Option<String>,
 }
 
 impl SubagentTask {
@@ -200,7 +201,6 @@ impl SubagentTask {
             tool_filter: None,
             model_trait,
             status: TaskStatus::Pending,
-            output: None,
         }
     }
 
@@ -382,6 +382,35 @@ impl OrchestratorContext {
 mod tests {
     use super::*;
 
+    // ── AgentLifecycleStatus ────────────────────────────────────────────────
+
+    #[test]
+    fn agent_lifecycle_status_variants() {
+        let _ = AgentLifecycleStatus::Pending;
+        let _ = AgentLifecycleStatus::Running;
+        let _ = AgentLifecycleStatus::AwaitingUser;
+        let _ = AgentLifecycleStatus::Done { output: None };
+        let _ = AgentLifecycleStatus::Failed { error: "boom".into() };
+    }
+
+    #[test]
+    fn agent_lifecycle_status_serialization() {
+        let status = AgentLifecycleStatus::Done {
+            output: Some("result".into()),
+        };
+        let json = serde_json::to_string(&status).unwrap();
+        let roundtrip: AgentLifecycleStatus = serde_json::from_str(&json).unwrap();
+        assert_eq!(roundtrip, status);
+    }
+
+    #[test]
+    fn task_status_alias_converts() {
+        // TaskStatus is a type alias for AgentLifecycleStatus; ensure it can be
+        // constructed and compared through the alias.
+        let ts: TaskStatus = TaskStatus::Pending;
+        assert_eq!(ts, AgentLifecycleStatus::Pending);
+    }
+
     // ── TaskStatus transitions ──────────────────────────────────────────────
 
     #[test]
@@ -391,7 +420,7 @@ mod tests {
             "Pending → Running must be valid"
         );
         assert!(
-            TaskStatus::Running.can_transition_to(TaskStatus::Done),
+            TaskStatus::Running.can_transition_to(TaskStatus::Done { output: None }),
             "Running → Done must be valid"
         );
         assert!(
@@ -399,7 +428,7 @@ mod tests {
             "Running → AwaitingUser must be valid"
         );
         assert!(
-            TaskStatus::Running.can_transition_to(TaskStatus::Failed),
+            TaskStatus::Running.can_transition_to(TaskStatus::Failed { error: "err".into() }),
             "Running → Failed must be valid"
         );
         assert!(
@@ -411,15 +440,15 @@ mod tests {
     #[test]
     fn task_status_transitions_invalid() {
         assert!(
-            !TaskStatus::Done.can_transition_to(TaskStatus::Pending),
+            !TaskStatus::Done { output: None }.can_transition_to(TaskStatus::Pending),
             "Done → Pending must be invalid"
         );
         assert!(
-            !TaskStatus::Failed.can_transition_to(TaskStatus::Running),
+            !TaskStatus::Failed { error: "err".into() }.can_transition_to(TaskStatus::Running),
             "Failed → Running must be invalid"
         );
         assert!(
-            !TaskStatus::Pending.can_transition_to(TaskStatus::Done),
+            !TaskStatus::Pending.can_transition_to(TaskStatus::Done { output: None }),
             "Pending → Done must be invalid (must go through Running)"
         );
         assert!(
@@ -430,8 +459,8 @@ mod tests {
 
     #[test]
     fn task_status_is_terminal() {
-        assert!(TaskStatus::Done.is_terminal());
-        assert!(TaskStatus::Failed.is_terminal());
+        assert!(TaskStatus::Done { output: None }.is_terminal());
+        assert!(TaskStatus::Failed { error: "err".into() }.is_terminal());
         assert!(!TaskStatus::Pending.is_terminal());
         assert!(!TaskStatus::Running.is_terminal());
         assert!(!TaskStatus::AwaitingUser.is_terminal());
@@ -449,7 +478,6 @@ mod tests {
                 tool_filter: Some(vec!["Read".into(), "Bash".into()]),
                 model_trait: ModelTrait::Reasoning,
                 status: TaskStatus::Pending,
-                output: None,
             }],
             synthesis_trait: ModelTrait::General,
             summary: Some("Review then synthesize".into()),
@@ -464,7 +492,6 @@ mod tests {
         assert_eq!(decoded.tasks[0].role_prompt, "You are a code reviewer.");
         assert_eq!(decoded.tasks[0].model_trait, ModelTrait::Reasoning);
         assert_eq!(decoded.tasks[0].status, TaskStatus::Pending);
-        assert!(decoded.tasks[0].output.is_none());
         assert_eq!(decoded.synthesis_trait, ModelTrait::General);
         assert_eq!(decoded.summary.as_deref(), Some("Review then synthesize"));
     }
@@ -488,7 +515,7 @@ mod tests {
         assert!(!plan.is_unstarted());
         assert!(!plan.is_complete());
 
-        plan.tasks[0].status = TaskStatus::Done;
+        plan.tasks[0].status = TaskStatus::Done { output: None };
         assert!(plan.is_complete());
     }
 
@@ -502,7 +529,6 @@ mod tests {
         assert_eq!(task.task_description, "Find all TODOs");
         assert_eq!(task.model_trait, ModelTrait::Fast);
         assert_eq!(task.status, TaskStatus::Pending);
-        assert!(task.output.is_none());
         assert!(task.tool_filter.is_none());
         assert!(task.is_runnable());
     }
@@ -517,8 +543,7 @@ mod tests {
             task_description: task.task_description,
             tool_filter: task.tool_filter,
             model_trait: task.model_trait,
-            status: TaskStatus::Done,
-            output: Some("result".into()),
+            status: TaskStatus::Done { output: Some("result".into()) },
         };
         assert!(!done.is_runnable());
     }

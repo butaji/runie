@@ -1,6 +1,8 @@
 # Export Format Helpers
 
-**Status**: todo
+**Status**: done
+**Completed**: 2026-06-16
+**Notes**: Re-exported `format_bytes` and `format_duration` from `runie_core` root so status bar/TUI can use them without reaching into `tool::`. Existing Layer 1 tests in `tool/mod.rs` cover both helpers. cargo test --workspace passes.
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P3
