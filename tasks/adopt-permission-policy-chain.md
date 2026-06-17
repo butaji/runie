@@ -1,6 +1,6 @@
 # Adopt Permission Policy Chain
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Security
 **Priority**: P1
@@ -36,19 +36,19 @@ Reference: `~/Code/agents/kimi-code/packages/agent-core/src/permission/`
 
 ## Acceptance Criteria
 
-- [ ] `PermissionPolicy` trait with `name()`, `matches()`, `evaluate()`.
-- [ ] `PermissionManager` evaluates policies in order (first-match-wins).
-- [ ] Built-in policies implemented: DefaultToolApprove, GitTrackedWrite, FileAccessAsk.
-- [ ] Policy configuration via config file.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `PermissionPolicy` trait with `name()`, `matches()`, `evaluate()`.
+- [x] `PermissionManager` evaluates policies in order (first-match-wins).
+- [x] Built-in policies implemented: DefaultToolApprove, GitTrackedWrite, FileAccessAsk.
+- [x] Policy configuration via config file (`[permissions]` section with `mode`).
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `permission_policy_chain_first_match_wins` — first matching policy used.
-- [ ] `default_tool_approve_allows_safe_tools` — safe tools auto-approved.
-- [ ] `git_tracked_write_approve_passes_git_files` — git-tracked files approved.
-- [ ] `file_access_ask_requires_approval` — non-cwd files prompt.
+- [x] `permission_policy_chain_first_match_wins` — first matching policy used.
+- [x] `default_tool_approve_allows_safe_tools` — safe tools auto-approved.
+- [x] `git_tracked_write_approve_passes_git_files` — git-tracked files approved.
+- [x] `file_access_ask_requires_approval` — non-cwd files prompt.
 
 ### Layer 2 — Event Handling
 - [ ] `permission_request_emits_event` — pending request event emitted.
@@ -63,8 +63,15 @@ N/A.
 ## Files touched
 
 - `crates/runie-core/src/permissions/` (refactor existing)
-- `crates/runie-core/src/policy.rs` (new)
+- `crates/runie-core/src/config.rs` (`PermissionsConfig` section)
+- `config.schema.json`
 
 ## Notes
 
-Chain-of-responsibility enables extensibility without modifying core permission logic.
+Chain-of-responsibility enables extensibility without modifying core permission logic. Legacy `PermissionSet`/`PermissionRule` API preserved and re-exported from `permissions/mod.rs`.
+
+## Test Results
+
+- `cargo test --workspace`: passed (workspace tests + doc tests)
+- `cargo clippy --workspace -- -D warnings`: passed
+- Linter (build.rs): no new file/function/complexity violations

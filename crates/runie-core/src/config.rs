@@ -117,6 +117,26 @@ pub struct HooksConfig {
 }
 
 // ============================================================================
+// Permissions Section
+// ============================================================================
+
+/// Permission policy configuration.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[serde(default)]
+pub struct PermissionsConfig {
+    /// Global permission mode: yolo, manual, or auto.
+    pub mode: crate::permissions::PermissionMode,
+}
+
+impl Default for PermissionsConfig {
+    fn default() -> Self {
+        Self {
+            mode: crate::permissions::PermissionMode::Auto,
+        }
+    }
+}
+
+// ============================================================================
 // Main Config
 // ============================================================================
 
@@ -157,6 +177,9 @@ pub struct Config {
     /// Hook commands registered by event name.
     #[serde(default)]
     pub hooks: HooksConfig,
+    /// Permission policy configuration.
+    #[serde(default)]
+    pub permissions: PermissionsConfig,
 }
 
 impl Config {

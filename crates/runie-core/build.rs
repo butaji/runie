@@ -30,7 +30,7 @@ const ALLOWED_FUNC_VIOLATIONS: &[(&str, &str)] = &[
     ("crates/runie-core/src/location.rs", "pub fn parse_location"),
     ("crates/runie-core/src/model/state/app_state.rs", "fn rank_commands"),
     ("crates/runie-core/src/model/state/helpers.rs", "fn element_metadata"),
-    ("crates/runie-core/src/permissions.rs", "fn default_rules"),
+    ("crates/runie-core/src/permissions/rules.rs", "fn default_rules"),
     ("crates/runie-core/src/session_actor.rs", "async fn session_actor_replays_to_uactor"),
     ("crates/runie-core/src/session_actor.rs", "event_bus_filters_durable_events"),
     ("crates/runie-core/src/session_store.rs", "fn open_db"),
