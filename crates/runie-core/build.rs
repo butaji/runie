@@ -1,6 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+// Shared complexity heuristic. See `src/build_lint.rs` for docs and tests.
+include!("src/build_lint.rs");
+
 // Lint thresholds from AGENTS.md. File length is enforced for every source
 // file. Function length and complexity are enforced for production code only;
 // tests are allowed to be comprehensive.
@@ -61,17 +64,6 @@ fn check_file_length(rel_path: &str, lines: &[&str], errors: &mut Vec<String>) {
             MAX_FILE_LINES
         ));
     }
-}
-
-fn count_complexity(trimmed: &str) -> usize {
-    trimmed.matches("if ").count()
-        + trimmed.matches("else if").count()
-        + trimmed.matches("match ").count()
-        + trimmed.matches("while ").count()
-        + trimmed.matches("for ").count()
-        + trimmed.matches("&&").count()
-        + trimmed.matches("||").count()
-        + trimmed.matches('?').count()
 }
 
 fn is_function_start(trimmed: &str) -> bool {

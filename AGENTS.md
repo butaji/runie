@@ -164,6 +164,12 @@ The build script at `crates/runie-core/build.rs` enforces these limits:
 
 File-length limits apply to every source file without exception. Function-length and complexity limits apply to production code only; test functions and files under `tests/` directories are exempt so tests can remain comprehensive.
 
+Complexity is an approximate heuristic (`crates/runie-core/build.rs`) that counts
+`if`, `else if`, `match`, `while`, `for`, `loop`, `break`, `continue`, `return`,
+`&&`, `||`, and `?` tokens. It is intentionally lightweight and does not parse
+Rust syntax, so it may miss nested closures, `try` blocks, match guards, and
+similar constructs. It is used as a coarse guardrail, not a precise metric.
+
 Any production-code violation fails `cargo build`. There are no allow-lists.
 
 Current violations: 0

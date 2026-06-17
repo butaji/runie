@@ -39,6 +39,8 @@ mod ghost_completion;
 #[cfg(test)]
 mod harness_skills;
 #[cfg(test)]
+mod hashline_edit_apply;
+#[cfg(test)]
 mod hints;
 #[cfg(test)]
 mod input_cursor;

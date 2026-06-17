@@ -29,6 +29,15 @@ impl ApprovalSink for TuiApprovalSink {
     }
 }
 
+/// Always deny — safe default for headless/server modes.
+pub struct DenyAllSink;
+#[async_trait]
+impl ApprovalSink for DenyAllSink {
+    async fn ask(&self, _tool: &str, _input: &Value) -> PermissionAction {
+        PermissionAction::Deny
+    }
+}
+
 /// Scripted sink for tests.
 pub struct ScriptedSink {
     decisions: std::sync::RwLock<Vec<(String, PermissionAction)>>,

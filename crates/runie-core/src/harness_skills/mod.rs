@@ -5,6 +5,7 @@
 //!
 //! See `docs/adr/0022-harness-middleware-plugins.md` for motivation.
 
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -21,6 +22,7 @@ pub use tool_schema_enricher::{ToolSchemaEnricherConfig, ToolSchemaEnricherSkill
 pub use verification_loop::{VerificationConfig, VerificationLoopSkill};
 
 /// A harness skill that intercepts agent turn lifecycle events.
+#[async_trait]
 pub trait HarnessSkill: Send + Sync {
     /// Human-readable name for diagnostics.
     fn name(&self) -> &str;
@@ -36,7 +38,7 @@ pub trait HarnessSkill: Send + Sync {
     }
 
     /// Called after the model declares completion.
-    fn on_turn_end(&self, _ctx: &TurnEndCtx) -> TurnEndResult {
+    async fn on_turn_end(&self, _ctx: &TurnEndCtx) -> TurnEndResult {
         TurnEndResult::Continue
     }
 }
@@ -251,13 +253,13 @@ impl SkillRegistry {
     }
 
     /// Dispatch `on_turn_end` to all enabled skills.
-    pub fn on_turn_end(&self, ctx: &TurnEndCtx) -> TurnEndResult {
+    pub async fn on_turn_end(&self, ctx: &TurnEndCtx) -> TurnEndResult {
         let mut result = TurnEndResult::Continue;
         for skill in &self.skills {
             if !self.is_enabled(skill.name()) {
                 continue;
             }
-            let r = skill.on_turn_end(ctx);
+            let r = skill.on_turn_end(ctx).await;
             match &r {
                 TurnEndResult::Continue => {}
                 TurnEndResult::RequestAnotherPass => {

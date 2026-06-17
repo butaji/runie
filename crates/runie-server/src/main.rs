@@ -12,8 +12,11 @@
 //! - `listSessions` → `{}` → `{ "sessions": [...] }`
 
 use anyhow::Result;
-use runie_agent::{run_headless_turn, HeadlessOptions};
+use runie_agent::{run_headless_turn, HeadlessOptions, PermissionGate};
+use runie_core::permissions::{AutoAllowSink, DenyAllSink, PermissionManager};
 use runie_core::{config_reload, message::ChatMessage};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use runie_protocol::{Error, Message, Request, Response};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -22,10 +25,17 @@ use tokio::net::{TcpListener, TcpStream};
 
 const CURRENT_VERSION: &str = runie_protocol::PROTOCOL_VERSION;
 
+static YOLO: AtomicBool = AtomicBool::new(false);
+
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
     let use_stdio = args.iter().any(|a| a == "--stdio");
+    let yolo = args.iter().any(|a| a == "--yolo");
+    YOLO.store(yolo, Ordering::Relaxed);
+    if yolo {
+        eprintln!("warning: --yolo enabled; destructive tools will be auto-approved");
+    }
 
     let result = if use_stdio {
         run_stdio_server().await
@@ -170,10 +180,16 @@ fn headless_system_prompt() -> String {
 }
 
 fn headless_options() -> HeadlessOptions {
+    let sink: Arc<dyn runie_core::permissions::ApprovalSink> = if YOLO.load(Ordering::Relaxed) {
+        Arc::new(AutoAllowSink)
+    } else {
+        Arc::new(DenyAllSink)
+    };
     HeadlessOptions {
         execute_tools: false,
         max_tool_rounds: 1,
         on_chunk: None,
+        permission_gate: PermissionGate::new(PermissionManager::default(), sink),
     }
 }
 

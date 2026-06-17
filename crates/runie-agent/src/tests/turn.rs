@@ -1,11 +1,16 @@
 //! Tests for agent turn execution
 use crate::tests::ensure_mock_provider;
-use crate::{run_agent_turn, turn::build_initial_messages, AgentCommand};
+use crate::{run_agent_turn, turn::build_initial_messages, AgentCommand, PermissionGate};
 use runie_core::event::AgentEvent;
+use runie_core::permissions::{AutoAllowSink, PermissionManager};
 use runie_core::tool::{ToolContext, ToolStatus};
 use runie_engine::tool::builtin_registry;
 use runie_provider::DynProvider;
 use std::sync::{Arc, Mutex};
+
+fn allow_all_gate() -> PermissionGate {
+    PermissionGate::new(PermissionManager::default(), Arc::new(AutoAllowSink))
+}
 
 fn mock_provider() -> DynProvider {
     DynProvider::new("mock", "echo").expect("mock provider must be available in tests")
@@ -35,6 +40,7 @@ async fn test_agent_loop_simple_response() {
             events_clone.lock().unwrap().push(evt)
         })),
         5,
+        allow_all_gate(),
     )
     .await
     .unwrap();
@@ -82,6 +88,7 @@ async fn test_agent_loop_with_tool_call() {
             events_clone.lock().unwrap().push(evt)
         })),
         5,
+        allow_all_gate(),
     )
     .await
     .unwrap();
@@ -129,6 +136,7 @@ async fn test_agent_loop_respects_max_iterations() {
             events_clone.lock().unwrap().push(evt)
         })),
         3,
+        allow_all_gate(),
     )
     .await
     .unwrap();
@@ -159,6 +167,7 @@ async fn test_agent_loop_events_have_correct_id() {
             events_clone.lock().unwrap().push(evt)
         })),
         5,
+        allow_all_gate(),
     )
     .await
     .unwrap();
@@ -264,6 +273,7 @@ async fn agent_tool_uses_core_trait() {
             events_clone.lock().unwrap().push(evt)
         })),
         5,
+        allow_all_gate(),
     )
     .await
     .unwrap();
@@ -314,6 +324,7 @@ async fn tool_call_event_matches_output() {
             events_clone.lock().unwrap().push(evt)
         })),
         5,
+        allow_all_gate(),
     )
     .await
     .unwrap();

@@ -72,7 +72,17 @@ impl FffIndexerActor {
 
     async fn wait_for_fff_scan(&mut self) {
         let timeout = Duration::from_secs(SCAN_TIMEOUT_SECS);
-        if !self.shared_picker.wait_for_scan(timeout) {
+        let picker = self.shared_picker.clone();
+        let completed = match tokio::task::spawn_blocking(move || picker.wait_for_scan(timeout))
+            .await
+        {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::error!("fff indexer: scan task failed: {e}");
+                return;
+            }
+        };
+        if !completed {
             tracing::warn!("fff indexer: scan timed out after {SCAN_TIMEOUT_SECS}s");
             return;
         }

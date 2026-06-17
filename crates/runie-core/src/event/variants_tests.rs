@@ -397,6 +397,17 @@ fn dispatcher_handles_all_variants() {
             | Event::SynthesisComplete { .. }
             | Event::Finished { .. }
             | Event::Cancelled => Event::Cancelled,
+
+            // Permissions
+            Event::PermissionRequest { .. } => Event::PermissionRequest {
+                request_id: String::new(),
+                tool: String::new(),
+                input: serde_json::Value::Null,
+            },
+            Event::PermissionResponse { .. } => Event::PermissionResponse {
+                request_id: String::new(),
+                action: crate::permissions::PermissionAction::Ask,
+            },
         }
     }
     let _ = assert_exhaustive(Event::Submit);

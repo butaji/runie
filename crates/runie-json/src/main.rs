@@ -27,6 +27,8 @@ use anyhow::Result;
 use runie_agent::{build_provider_with_warning, run_headless_turn, HeadlessOptions};
 use runie_core::config_reload;
 use runie_core::message::ChatMessage;
+use runie_core::permissions::{AutoAllowSink, DenyAllSink};
+use std::sync::Arc;
 
 #[cfg(test)]
 use runie_core::llm_event::LLMEvent;
@@ -68,13 +70,17 @@ struct StreamChunk {
 
 #[tokio::main]
 async fn main() {
-    if let Err(e) = run_json().await {
+    let yolo = std::env::args().any(|a| a == "--yolo");
+    if yolo {
+        eprintln!("warning: --yolo enabled; destructive tools will be auto-approved");
+    }
+    if let Err(e) = run_json(yolo).await {
         eprintln!("Error: {}", e);
         std::process::exit(1);
     }
 }
 
-async fn run_json() -> Result<()> {
+async fn run_json(yolo: bool) -> Result<()> {
     let req = read_json_request().await?;
     let config = config_reload::Config::load(Some(&config_reload::config_path()));
     let (provider_name, model) = resolve_provider_and_model(&req, &config);
@@ -83,7 +89,7 @@ async fn run_json() -> Result<()> {
         .map_err(|e| anyhow::anyhow!("{}", e))?;
     let start = Instant::now();
 
-    let result = run_json_turn(messages, &provider).await?;
+    let result = run_json_turn(messages, &provider, yolo).await?;
     let response = build_json_response(result, start.elapsed().as_millis() as u64);
     println!("{}", serde_json::to_string(&response)?);
     Ok(())
@@ -136,8 +142,14 @@ fn build_json_messages(req: &JsonRequest) -> Vec<ChatMessage> {
 
 async fn run_json_turn(
     messages: Vec<ChatMessage>,
-    provider: &runie_provider::DynProvider,
+    provider: &dyn runie_core::provider::Provider,
+    yolo: bool,
 ) -> Result<runie_agent::HeadlessResult> {
+    let sink: Arc<dyn runie_core::permissions::ApprovalSink> = if yolo {
+        Arc::new(AutoAllowSink)
+    } else {
+        Arc::new(DenyAllSink)
+    };
     let options = HeadlessOptions {
         execute_tools: true,
         max_tool_rounds: 5,
@@ -148,6 +160,10 @@ async fn run_json_turn(
             .unwrap_or_default();
             println!("{}", line);
         })),
+        permission_gate: runie_agent::PermissionGate::new(
+            runie_core::permissions::PermissionManager::default(),
+            sink,
+        ),
     };
 
     run_headless_turn(messages, provider, options).await
@@ -174,6 +190,11 @@ fn build_json_response(result: runie_agent::HeadlessResult, duration_ms: u64) ->
 #[cfg(test)]
 mod tests {
     use super::*;
+    use runie_core::tool::ToolStatus;
+    use std::sync::Mutex;
+
+    /// Guards current-directory mutations during tests that run tools.
+    static CWD_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn json_mode_parses_request() {
@@ -219,5 +240,55 @@ mod tests {
         // MockProvider returns deterministic response; may or may not have tools
         // We just verify the pipeline works
         assert!(!response_text.is_empty());
+    }
+
+    #[tokio::test]
+    async fn headless_default_denies_destructive_tool() {
+        let _guard = CWD_LOCK.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let original = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+
+        let provider = runie_provider::MockProvider::default();
+        let messages = vec![
+            ChatMessage::system("You are helpful."),
+            ChatMessage::user("write something".to_string()),
+        ];
+        let result = run_json_turn(messages, &provider, false).await.unwrap();
+
+        std::env::set_current_dir(original).unwrap();
+
+        let write_output = result
+            .tool_outputs
+            .iter()
+            .find(|o| o.tool_name == "write_file")
+            .expect("expected a write_file tool call");
+        assert_eq!(write_output.status, ToolStatus::Blocked);
+        assert!(!dir.path().join("hello.txt").exists());
+    }
+
+    #[tokio::test]
+    async fn headless_yolo_allows_destructive_tool() {
+        let _guard = CWD_LOCK.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let original = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&dir).unwrap();
+
+        let provider = runie_provider::MockProvider::default();
+        let messages = vec![
+            ChatMessage::system("You are helpful."),
+            ChatMessage::user("write something".to_string()),
+        ];
+        let result = run_json_turn(messages, &provider, true).await.unwrap();
+
+        std::env::set_current_dir(original).unwrap();
+
+        let write_output = result
+            .tool_outputs
+            .iter()
+            .find(|o| o.tool_name == "write_file")
+            .expect("expected a write_file tool call");
+        assert_eq!(write_output.status, ToolStatus::Success);
+        assert!(dir.path().join("hello.txt").exists());
     }
 }

@@ -1,94 +1,48 @@
 # Runie Implementation Roadmap
 
-This roadmap sequences the active R3/R4 work in dependency order. It is a living document; task statuses are authoritative in `tasks/index.json`.
+This roadmap reflects the current state after the R3 simplification and the architecture/code review. Task statuses are authoritative in `tasks/index.json`.
 
-## Phase 0 — Build Blocker & Quick Wins
+## Completed Foundations
 
-Goal: get `cargo test --workspace` green and land low-risk crate adoptions.
+R3 crate adoptions, actor/event-bus, tool registry, FFF search, harness skills, TUI rendering pipeline, and redb session persistence are complete. Historical task files for these items live in `tasks/archive/`.
 
-- [x] ~~`tasks/archive/unblock-workspace-build.md`~~ — done
-- [x] ~~`tasks/adopt-notify-config-watcher.md`~~ — done
-- [x] ~~`tasks/adopt-arboard-clipboard.md`~~ — done
-- [x] ~~`tasks/adopt-patch-diff-parser.md`~~ — done
-- [x] ~~`tasks/adopt-serde-yaml-skills.md`~~ — done (serde_yaml 0.9 for skill frontmatter)
-- [ ] `tasks/adopt-palette-theme-colors.md` — replace theme color helpers with `palette` crate
-- [x] ~~`tasks/fix-session-store-atomic-writes.md`~~ — done
+## Active Work — Review Findings
 
-## Phase 1 — Actor/EventBus & Core Abstractions
+The following issues were identified in the latest architecture/code review and are tracked as new `tasks/` entries. They are listed in priority order.
 
-Goal: complete the actor/runtime foundation and simplify the core event/state model.
+### Critical
 
-- [x] ~~`tasks/adopt-or-remove-actor-framework.md`~~ — done
-- [x] ~~`tasks/event-bus-jsonl-persistence.md`~~ — done
-- [x] ~~`tasks/tool-registry-trait.md`~~ — done
-- [x] ~~`tasks/harness-skill-framework.md`~~ — done
-- [x] ~~`tasks/complete-appstate-refactor.md`~~ — done
-- [x] ~~`tasks/flatten-event-system.md`~~ — done
-- [ ] `tasks/fff-indexer-actor.md` — long-lived FFFIndexerActor (P0, blocks all FFF tools)
+- [ ] `tasks/permission-system-runtime-wiring.md` — wire `PermissionManager`/`ApprovalSink` into the real tool execution path in `runie-agent` and headless/server modes.
+- [ ] `tasks/write-file-error-handling.md` — fix `WriteFileTool` so parent-directory creation failures are surfaced and abort the write.
+- [ ] `tasks/event-bus-replay-semantics.md` — clone replay events instead of draining the buffer so late subscribers receive history.
+- [ ] `tasks/session-replay-startup-ordering.md` — ensure the UI actor subscribes with replay before `SessionActor` publishes durable replay events.
 
-## Phase 2 — Tools, Search & Skills
+### High
 
-Goal: land FFF-powered search and the harness skill suite.
+- [ ] `tasks/orchestrator-stub-implementation.md` — implement the planner call and subagent dispatch in `OrchestratorActor`, or gate Team mode as incomplete.
+- [ ] `tasks/bash-safety-hardening.md` — replace trivial substring checks with a real shell parser or command allowlist.
+- [ ] `tasks/session-store-blocking-io.md` — move `SessionStore` I/O off the async runtime with `tokio::task::spawn_blocking`.
+- [ ] `tasks/fff-indexer-blocking-scan.md` — run the FFF picker scan wait in `spawn_blocking`.
+- [ ] `tasks/tool-context-env-reduction.md` — default `ToolContext` to a minimal environment instead of capturing full process env.
 
-### FFF Tools (blocked on fff-indexer-actor)
-- [ ] `tasks/fff-unified-search-tool.md` — replace grep/find/list_dir (P0)
-- [ ] `tasks/fff-tui-file-picker.md` — FFF-backed @ picker (P0)
-- [ ] `tasks/fff-find-definitions-tool.md` — definition classifier tool (P1)
-- [ ] `tasks/fff-query-syntax-and-examples.md` — agent query syntax (P1)
-- [ ] `tasks/fff-frecency-and-git-status.md` — frecency + git filtering (P1)
-- [ ] `tasks/fff-glob-tool.md` — fast glob tool (P2)
-- [ ] `tasks/fff-location-parser.md` — file:line:col parsing (P2)
+### Medium
 
-### Harness Skills (independent of FFF)
-- [ ] `tasks/harness-skill-verification-loop.md` — post-completion verification (P0)
-- [ ] `tasks/harness-skill-hashline-edit.md` — hashline edit tool (P0)
+- [ ] `tasks/legacy-tool-enum-removal.md` — delete the orphaned `runie_agent::tools::Tool` enum and consolidate bash logic.
+- [ ] `tasks/hashline-edit-skill-apply.md` — make `HashlineEditSkill` actually apply validated edits.
+- [ ] `tasks/verification-loop-async.md` — make verification loop asynchronous and remove `unwrap`.
+- [ ] `tasks/session-summary-incremental.md` — update session summary incrementally instead of reloading the full event log.
+- [ ] `tasks/subagent-async-api.md` — expose `run_subagent` as an `async fn` and remove the nested runtime.
+- [ ] `tasks/mock-provider-determinism.md` — use a seeded RNG in `MockProvider` delays.
+- [ ] `tasks/build-rs-complexity-heuristic.md` — document or replace the simplistic complexity metric.
 
-## Phase 3 — TUI & Rendering Polish
+### Low / Info
 
-Goal: consolidate the TUI layer and adopt remaining rendering crates.
-
-- [ ] `tasks/merge-runie-term-into-tui.md` — move terminal setup into runie-tui (P1)
-- [x] ~~`tasks/unify-rendering-pipeline.md`~~ — deleted core format_test; TUI sole renderer (done)
-- [x] ~~`tasks/adopt-nucleo-non-file-fuzzy.md`~~ — done
-- [x] ~~`tasks/adopt-textwrap-word-wrap.md`~~ — done
-- [x] ~~`tasks/adopt-syntect.md`~~ — done
-- [x] ~~`tasks/adopt-pulldown-cmark.md`~~ — done
-- [x] ~~`tasks/adopt-tiktoken-rs.md`~~ — done
-- [ ] `tasks/unify-markdown-pipeline.md` — consolidate core + TUI markdown parsing (P2, depends on unify-rendering-pipeline ✅)
-- [ ] `tasks/adopt-palette-theme-colors.md` — palette crate for theme colors (P2)
-
-## Phase 4 — R4 Team / Orchestrator
-
-Goal: add solo/team execution modes and the orchestrator actor.
-
-- [ ] `tasks/r4-orchestrator-domain-types.md` (P0, blocks r4-*)
-- [ ] `tasks/r4-model-trait-resolution.md` (P0)
-- [ ] `tasks/r4-ask-user-tool.md` (P0)
-- [ ] `tasks/r4-one-shot-orchestrator-llm.md` (P0)
-- [ ] `tasks/r4-orchestrator-actor.md` (P0)
-- [ ] `tasks/r4-subagent-isolation.md` (P0)
-- [ ] `tasks/r4-subagent-sidebar.md` (P0)
-- [ ] `tasks/r4-sidebar-task-list.md` (P1)
-- [ ] `tasks/r4-solo-team-mode-toggle.md` (P0)
-- [ ] `tasks/r4-team-mode-integration.md` (P0)
-
-## Phase 5 — R3 Simplification Cleanup
-
-Goal: finish the R3 simplification pass.
-
-- [x] ~~`tasks/coalesce-update-modules.md`~~ — reduced update/ to 8 flat + 2 subdirs (done)
-- [x] ~~`tasks/unify-command-dsl.md`~~ — done
-- [x] ~~`tasks/unify-diff-model.md`~~ — done
-- [x] ~~`tasks/cleanup-state-helpers.md`~~ — SpeedWindow VecDeque, stubs removed (done)
-- [ ] `tasks/session-list-summaries.md` — core done; UI wiring and LLM summaries (P2)
-
-## Phase 6 — Persistence & Advanced Features
-
-Goal: upgrade session persistence and enable long-running features.
-
-- [ ] `tasks/adopt-redb-session-store.md` — migrate sessions to redb (P2, depends on event-bus-jsonl-persistence ✅)
-- [x] ~~`tasks/remove-test-sleeps.md`~~ — done
-- [x] ~~`tasks/fix-harness-crate-or-archive.md`~~ — done
+- [ ] `docs/spec-lint-thresholds.md` — resolved; `docs/SPEC.md` now matches enforced 500/40/10 limits.
+- [ ] `tasks/orchestrator-event-alias-docs.md` — add doc comment explaining `OrchestratorEvent` alias.
+- [ ] `tasks/event-bus-poisoned-mutex.md` — use `parking_lot::Mutex` or handle poisoning gracefully in `EventBus::publish`.
+- [ ] `tasks/providers-dialog-clones.md` — reduce unnecessary model string cloning.
+- [ ] `tasks/headless-approval-defaults.md` — define safe defaults for non-interactive modes once permission wiring lands.
+- [ ] `tasks/agent-registry-depth-tracking.md` — implement real subagent depth tracking.
 
 ## Lint Rules (Strict Enforcement)
 
@@ -100,7 +54,7 @@ Goal: upgrade session persistence and enable long-running features.
 | Function lines | 40 |
 | Complexity | 10 |
 
-Enforced by `crates/runie-core/build.rs`. Build fails on violations.
+Production code only is subject to function-length and complexity checks; test functions and files under `tests/` are exempt. Enforced by `crates/runie-core/build.rs`. Build fails on violations.
 
 ## Decision Records
 

@@ -12,7 +12,8 @@
 //!   - SessionActor subscribes to bus, persists durable events to JSONL
 
 use futures::StreamExt;
-use runie_agent::{build_provider_with_warning, run_agent_turn, AgentCommand};
+use runie_agent::{build_provider_with_warning, emit_approval_sink::EmitApprovalSink, run_agent_turn, AgentCommand, PermissionGate};
+use runie_core::permissions::{DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager};
 use runie_core::actor::{spawn_actor, Actor};
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
@@ -158,7 +159,8 @@ fn spawn_background_tasks(
     spawn_orchestrator_if_needed(&state, bus.clone());
 
     // UiActor is the sole owner of AppState and the only runtime mutator.
-    let ui_sub = bus.subscribe();
+    // Subscribe with replay so resuming a session restores prior messages.
+    let ui_sub = bus.subscribe_with_replay();
     tokio::spawn(UiActor::new(state, render_tx, cmd_tx, kb_tx, bus, shutdown_tx, caps).run(ui_sub));
 }
 
@@ -234,15 +236,16 @@ async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, bus: EventBus<Even
             }
         };
 
-        let result = run_agent_turn(
-            &provider,
-            &cmd,
-            Arc::new(Mutex::new(move |evt: Event| {
-                bus_clone.publish(evt);
-            })),
-            5,
-        )
-        .await;
+        let emit = Arc::new(Mutex::new(move |evt: Event| {
+            bus_clone.publish(evt);
+        }));
+        let permissions = PermissionManager::default().with_policies(vec![
+            Box::new(DefaultToolApprove::new()),
+            Box::new(GitTrackedWriteApprove::new()),
+            Box::new(FileAccessAsk::new()),
+        ]);
+        let gate = PermissionGate::new(permissions, Arc::new(EmitApprovalSink::new(emit.clone())));
+        let result = run_agent_turn(&provider, &cmd, emit, 5, gate).await;
 
         if let Err(e) = result {
             let evt = AgentEvent::Error {

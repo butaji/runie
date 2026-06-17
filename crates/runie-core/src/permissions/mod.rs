@@ -21,7 +21,7 @@ pub use default_tool_approve::DefaultToolApprove;
 pub use file_access_ask::FileAccessAsk;
 pub use git_tracked_write::GitTrackedWriteApprove;
 pub use rules::{PermissionRule, PermissionSet};
-pub use sink::{ApprovalSink, AutoAllowSink, ScriptedSink, TuiApprovalSink};
+pub use sink::{ApprovalSink, AutoAllowSink, DenyAllSink, ScriptedSink, TuiApprovalSink};
 
 #[cfg(test)]
 mod tests;

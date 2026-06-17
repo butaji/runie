@@ -137,12 +137,13 @@ fn verification_loop_no_verification_plain_text() {
     ));
 }
 
-#[test]
-fn verification_loop_disabled_continues() {
+#[tokio::test]
+async fn verification_loop_disabled_continues() {
     let skill = VerificationLoopSkill::new(VerificationConfig {
         enabled: false,
         command: Some("cargo test".into()),
         max_fix_passes: 3,
+        ..Default::default()
     });
 
     let ctx = TurnEndCtx {
@@ -151,16 +152,17 @@ fn verification_loop_disabled_continues() {
         success: true,
     };
 
-    let result = skill.on_turn_end(&ctx);
+    let result = skill.on_turn_end(&ctx).await;
     assert!(matches!(result, TurnEndResult::Continue));
 }
 
-#[test]
-fn verification_loop_no_command_continues() {
+#[tokio::test]
+async fn verification_loop_no_command_continues() {
     let skill = VerificationLoopSkill::new(VerificationConfig {
         enabled: true,
         command: None,
         max_fix_passes: 3,
+        ..Default::default()
     });
 
     let ctx = TurnEndCtx {
@@ -169,7 +171,7 @@ fn verification_loop_no_command_continues() {
         success: true,
     };
 
-    let result = skill.on_turn_end(&ctx);
+    let result = skill.on_turn_end(&ctx).await;
     assert!(matches!(result, TurnEndResult::Continue));
 }
 

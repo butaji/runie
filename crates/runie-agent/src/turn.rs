@@ -1,9 +1,10 @@
 use crate::parser::{parse_tool_calls, ParsedToolCall};
+use crate::permission_gate::PermissionGate;
 use crate::AgentCommand;
 use anyhow::Result;
 use futures::StreamExt;
-use runie_core::event::AgentEvent;
-use runie_core::event::Event;
+use runie_core::event::{AgentEvent, Event};
+use runie_core::permissions::{PermissionAction, PermissionContext};
 use runie_core::harness_skills::{
     SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult, TurnEndCtx, TurnEndResult,
     TurnStartCtx, TurnStartResult,
@@ -24,8 +25,9 @@ pub async fn run_agent_turn(
     command: &AgentCommand,
     emit: EmitFn,
     max_iterations: usize,
+    gate: PermissionGate,
 ) -> Result<()> {
-    run_agent_turn_with_skills(provider, command, emit, max_iterations, None).await
+    run_agent_turn_with_skills(provider, command, emit, max_iterations, None, gate).await
 }
 
 /// Run an agent turn with explicit skill registry.
@@ -35,6 +37,7 @@ pub async fn run_agent_turn_with_skills(
     emit: EmitFn,
     max_iterations: usize,
     skills: Option<&SkillRegistry>,
+    gate: PermissionGate,
 ) -> Result<()> {
     let mut messages = build_initial_messages(command);
     let turn_start = Instant::now();
@@ -54,19 +57,32 @@ pub async fn run_agent_turn_with_skills(
         skills,
         max_iterations,
         &mut tool_call_count,
+        gate,
     )
     .await?;
 
+    finalize_turn(&emit, command, skills, &messages, tool_call_count, has_intermediate_steps, turn_start).await;
+    Ok(())
+}
+
+async fn finalize_turn(
+    emit: &EmitFn,
+    command: &AgentCommand,
+    skills: Option<&SkillRegistry>,
+    messages: &[ChatMessage],
+    tool_call_count: usize,
+    has_intermediate_steps: bool,
+    turn_start: Instant,
+) {
     emit_turn_end(
-        &emit,
+        emit,
         &command.id,
         skills,
-        &messages,
+        messages,
         tool_call_count,
         has_intermediate_steps,
         turn_start,
-    );
-    Ok(())
+    ).await;
 }
 
 fn check_turn_start(
@@ -96,7 +112,7 @@ fn check_turn_start(
 }
 
 /// Emit final turn end events including on_turn_end hook.
-fn emit_turn_end(
+async fn emit_turn_end(
     emit: &EmitFn,
     id: &str,
     skills: Option<&SkillRegistry>,
@@ -118,7 +134,7 @@ fn emit_turn_end(
             tool_call_count,
             success: true,
         };
-        match skills.on_turn_end(&ctx) {
+        match skills.on_turn_end(&ctx).await {
             TurnEndResult::Continue | TurnEndResult::Abort(_) => {}
             TurnEndResult::RequestAnotherPass => {}
         }
@@ -166,6 +182,7 @@ async fn run_iterations(
     skills: Option<&SkillRegistry>,
     max_iterations: usize,
     tool_call_count: &mut usize,
+    gate: PermissionGate,
 ) -> Result<bool> {
     let mut has_intermediate_steps = false;
     for _ in 0..max_iterations {
@@ -176,6 +193,7 @@ async fn run_iterations(
             emit.clone(),
             skills,
             tool_call_count,
+            &gate,
         )
         .await?
         {
@@ -197,6 +215,7 @@ async fn run_agent_iteration(
     emit: EmitFn,
     skills: Option<&SkillRegistry>,
     tool_call_count: &mut usize,
+    gate: &PermissionGate,
 ) -> Result<bool> {
     emit_now(
         &emit,
@@ -219,7 +238,7 @@ async fn run_agent_iteration(
     }
 
     messages.push(ChatMessage::assistant(response_text));
-    execute_tools(&command.id, &tools, emit, messages, skills, tool_call_count).await;
+    execute_tools(&command.id, &tools, emit, messages, skills, tool_call_count, gate).await;
     Ok(true)
 }
 
@@ -294,14 +313,17 @@ async fn execute_tools(
     messages: &mut Vec<ChatMessage>,
     skills: Option<&SkillRegistry>,
     tool_call_count: &mut usize,
+    gate: &PermissionGate,
 ) {
     let ctx = ToolContext::default();
     let registry = runie_engine::tool::builtin_registry();
 
     for tool_call in tools {
         *tool_call_count += 1;
-        let output =
-            execute_single_tool(cmd_id, tool_call, emit.clone(), skills, &ctx, &registry).await;
+        let output = execute_single_tool(
+            cmd_id, tool_call, emit.clone(), skills, &ctx, &registry, gate,
+        )
+        .await;
 
         emit_now(
             &emit,
@@ -325,6 +347,7 @@ async fn execute_single_tool(
     skills: Option<&SkillRegistry>,
     ctx: &ToolContext,
     registry: &runie_core::tool::ToolRegistry,
+    gate: &PermissionGate,
 ) -> ToolOutput {
     emit_tool_start(cmd_id, tool_call, &emit);
 
@@ -332,7 +355,7 @@ async fn execute_single_tool(
         return output;
     }
 
-    let output = execute_tool_call(registry, tool_call, ctx).await;
+    let output = execute_tool_call(registry, tool_call, ctx, gate).await;
     fire_tool_after_hook(skills, tool_call, &output);
 
     output
@@ -406,28 +429,72 @@ async fn execute_tool_call(
     registry: &runie_core::tool::ToolRegistry,
     tool_call: &ParsedToolCall,
     ctx: &ToolContext,
+    gate: &PermissionGate,
 ) -> ToolOutput {
     let tool_name = &tool_call.name;
 
     match registry.get(tool_name) {
-        Some(tool) => tool
-            .call(tool_call.args.clone(), ctx)
-            .await
-            .unwrap_or_else(|e| ToolOutput {
-                tool_name: tool_name.clone(),
-                tool_args: tool_call.args.clone(),
-                content: format!("Tool execution failed: {}", e),
-                bytes_transferred: None,
-                duration: std::time::Duration::from_millis(0),
-                status: ToolStatus::Error,
-            }),
-        None => ToolOutput {
-            tool_name: tool_name.clone(),
-            tool_args: tool_call.args.clone(),
-            content: format!("Error: unknown tool '{}'", tool_name),
-            bytes_transferred: None,
-            duration: std::time::Duration::from_millis(0),
-            status: ToolStatus::Error,
-        },
+        Some(tool) => {
+            let perm_ctx = build_permission_context(tool_name, &tool_call.args, &ctx.working_dir);
+            match gate.evaluate(&perm_ctx).await {
+                PermissionAction::Allow => run_tool(tool, tool_call, ctx).await,
+                PermissionAction::Deny | PermissionAction::Ask => blocked_output(tool_name, tool_call),
+            }
+        }
+        None => unknown_tool_output(tool_name, tool_call),
+    }
+}
+
+async fn run_tool(
+    tool: &std::sync::Arc<dyn runie_core::tool::Tool>,
+    tool_call: &ParsedToolCall,
+    ctx: &ToolContext,
+) -> ToolOutput {
+    tool.call(tool_call.args.clone(), ctx).await.unwrap_or_else(|e| ToolOutput {
+        tool_name: tool_call.name.clone(),
+        tool_args: tool_call.args.clone(),
+        content: format!("Tool execution failed: {}", e),
+        bytes_transferred: None,
+        duration: std::time::Duration::from_millis(0),
+        status: ToolStatus::Error,
+    })
+}
+
+fn blocked_output(tool_name: &str, tool_call: &ParsedToolCall) -> ToolOutput {
+    ToolOutput {
+        tool_name: tool_name.to_string(),
+        tool_args: tool_call.args.clone(),
+        content: format!("Permission denied for tool '{}'", tool_name),
+        bytes_transferred: None,
+        duration: std::time::Duration::from_millis(0),
+        status: ToolStatus::Blocked,
+    }
+}
+
+fn unknown_tool_output(tool_name: &str, tool_call: &ParsedToolCall) -> ToolOutput {
+    ToolOutput {
+        tool_name: tool_name.to_string(),
+        tool_args: tool_call.args.clone(),
+        content: format!("Error: unknown tool '{}'", tool_name),
+        bytes_transferred: None,
+        duration: std::time::Duration::from_millis(0),
+        status: ToolStatus::Error,
+    }
+}
+
+fn build_permission_context<'a>(
+    tool: &'a str,
+    input: &'a serde_json::Value,
+    cwd: &'a std::path::Path,
+) -> PermissionContext<'a> {
+    let path = input
+        .get("path")
+        .and_then(|v| v.as_str())
+        .map(std::path::Path::new);
+    PermissionContext {
+        tool,
+        path,
+        input: Some(input),
+        cwd: Some(cwd),
     }
 }

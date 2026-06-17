@@ -54,33 +54,26 @@ impl Tool for WriteFileTool {
             .ok_or_else(|| anyhow::anyhow!("content is required"))?;
         let full_path = resolve_path(path, &ctx.working_dir);
 
-        ensure_parent_dirs(&full_path, start)?;
+        if let Err(e) = ensure_parent_dirs(&full_path) {
+            return Ok(output_error(
+                "write_file",
+                path,
+                &format!("Error creating parent directories: {}", e),
+                start,
+            ));
+        }
 
         write_and_return(path, &full_path, content, start)
     }
 }
 
-fn ensure_parent_dirs(full_path: &std::path::Path, start: Instant) -> Result<ToolOutput> {
+fn ensure_parent_dirs(full_path: &std::path::Path) -> Result<()> {
     if let Some(parent) = full_path.parent() {
         if !parent.as_os_str().is_empty() {
-            if let Err(e) = std::fs::create_dir_all(parent) {
-                return Ok(output_error(
-                    "write_file",
-                    "path",
-                    &format!("Error creating parent directories: {}", e),
-                    start,
-                ));
-            }
+            std::fs::create_dir_all(parent)?;
         }
     }
-    Ok(ToolOutput {
-        tool_name: "write_file".to_string(),
-        tool_args: serde_json::json!({ "path": "path", "content": "<redacted>" }),
-        content: String::new(),
-        bytes_transferred: None,
-        duration: start.elapsed(),
-        status: ToolStatus::Success,
-    })
+    Ok(())
 }
 
 fn write_and_return(
@@ -115,5 +108,54 @@ fn output_error(tool: &str, _path: &str, msg: &str, start: Instant) -> ToolOutpu
         bytes_transferred: None,
         duration: start.elapsed(),
         status: ToolStatus::Error,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ctx() -> ToolContext {
+        ToolContext {
+            working_dir: std::env::current_dir().unwrap(),
+            ..Default::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn write_file_creates_file_and_parent_dirs() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("nested/dir/file.txt");
+        let tool = WriteFileTool;
+        let input = serde_json::json!({
+            "path": file.to_string_lossy(),
+            "content": "hello"
+        });
+
+        let out = tool.call(input, &ctx()).await.unwrap();
+
+        assert_eq!(out.status, ToolStatus::Success);
+        assert!(file.exists());
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "hello");
+    }
+
+    #[tokio::test]
+    async fn write_file_reports_parent_dir_creation_error() {
+        let dir = tempfile::tempdir().unwrap();
+        // Create a file where we expect a parent directory, forcing create_dir_all to fail.
+        let blocking = dir.path().join("blocking");
+        std::fs::write(&blocking, "x").unwrap();
+        let file = blocking.join("file.txt");
+        let tool = WriteFileTool;
+        let input = serde_json::json!({
+            "path": file.to_string_lossy(),
+            "content": "hello"
+        });
+
+        let out = tool.call(input, &ctx()).await.unwrap();
+
+        assert_eq!(out.status, ToolStatus::Error);
+        assert!(out.content.contains("Error creating parent directories"));
+        assert!(!file.exists());
     }
 }

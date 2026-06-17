@@ -150,6 +150,19 @@ fn mock_provider_with_delay_configured() {
     assert_eq!(p.delay_ms(), Some((500, 3000)));
 }
 
+#[test]
+fn mock_provider_delay_is_deterministic() {
+    let p1 = MockProvider::with_seed(10, 100, 123);
+    let p2 = MockProvider::with_seed(10, 100, 123);
+    let mut delays1 = Vec::new();
+    let mut delays2 = Vec::new();
+    for _ in 0..5 {
+        delays1.push(p1.random_delay());
+        delays2.push(p2.random_delay());
+    }
+    assert_eq!(delays1, delays2);
+}
+
 // ============================================================================
 // DynProvider tests
 // ============================================================================

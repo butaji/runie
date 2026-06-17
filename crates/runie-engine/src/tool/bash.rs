@@ -3,6 +3,7 @@
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
+use runie_core::bash_safety::check_bash_safety;
 use serde_json::Value;
 use std::time::{Duration, Instant};
 
@@ -51,6 +52,16 @@ impl Tool for BashTool {
         let command = input["command"]
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("command is required"))?;
+        if let Some(reason) = check_bash_safety(command) {
+            return Ok(ToolOutput {
+                tool_name: "bash".to_string(),
+                tool_args: serde_json::json!({ "command": command }),
+                content: format!("Blocked: {}", reason),
+                bytes_transferred: None,
+                duration: start.elapsed(),
+                status: ToolStatus::Blocked,
+            });
+        }
         let timeout_secs = input["timeout_seconds"]
             .as_u64()
             .unwrap_or(DEFAULT_TIMEOUT_SECS);
@@ -60,7 +71,8 @@ impl Tool for BashTool {
         let result = tokio::task::spawn_blocking({
             let command = command.to_string();
             let working_dir = ctx.working_dir.clone();
-            move || run_bash_inner(&command, &working_dir, timeout)
+            let env = ctx.env.clone();
+            move || run_bash_inner(&command, &working_dir, &env, timeout)
         })
         .await
         .map_err(|e| anyhow::anyhow!("task join error: {}", e))?;
@@ -82,7 +94,12 @@ struct BashResult {
     status: ToolStatus,
 }
 
-fn run_bash_inner(command: &str, working_dir: &std::path::Path, timeout: Duration) -> BashResult {
+fn run_bash_inner(
+    command: &str,
+    working_dir: &std::path::Path,
+    env: &std::collections::HashMap<String, String>,
+    timeout: Duration,
+) -> BashResult {
     use std::process::Command;
     use std::sync::mpsc;
     use std::thread;
@@ -90,35 +107,40 @@ fn run_bash_inner(command: &str, working_dir: &std::path::Path, timeout: Duratio
     let (tx, rx) = mpsc::channel();
     let work_dir = working_dir.to_path_buf();
     let cmd = command.to_string();
+    let env = env.clone();
 
     thread::spawn(move || {
         let result = Command::new("bash")
             .args(["-c", &cmd])
             .current_dir(&work_dir)
+            .envs(&env)
             .output();
         let _ = tx.send(result);
     });
 
     match rx.recv_timeout(timeout) {
         Ok(Ok(output)) => process_output(output),
-        Ok(Err(e)) => BashResult {
-            output: format!("Error executing command: {}", e),
-            bytes_transferred: None,
-            status: ToolStatus::Error,
-        },
-        Err(mpsc::RecvTimeoutError::Timeout) => BashResult {
-            output: format!(
-                "Command timed out after {:.0} seconds",
-                timeout.as_secs_f64()
-            ),
-            bytes_transferred: None,
-            status: ToolStatus::TimedOut,
-        },
-        Err(mpsc::RecvTimeoutError::Disconnected) => BashResult {
-            output: "Command channel disconnected unexpectedly".to_string(),
-            bytes_transferred: None,
-            status: ToolStatus::Error,
-        },
+        Ok(Err(e)) => bash_error(&format!("Error executing command: {}", e)),
+        Err(mpsc::RecvTimeoutError::Timeout) => bash_timeout(timeout),
+        Err(mpsc::RecvTimeoutError::Disconnected) => {
+            bash_error("Command channel disconnected unexpectedly")
+        }
+    }
+}
+
+fn bash_error(msg: &str) -> BashResult {
+    BashResult {
+        output: msg.to_string(),
+        bytes_transferred: None,
+        status: ToolStatus::Error,
+    }
+}
+
+fn bash_timeout(timeout: Duration) -> BashResult {
+    BashResult {
+        output: format!("Command timed out after {:.0} seconds", timeout.as_secs_f64()),
+        bytes_transferred: None,
+        status: ToolStatus::TimedOut,
     }
 }
 
@@ -161,6 +183,7 @@ mod tests {
         let result = run_bash_inner(
             "echo hello",
             std::path::Path::new("."),
+            &std::collections::HashMap::new(),
             Duration::from_secs(5),
         );
         assert_eq!(result.status, ToolStatus::Success);
@@ -172,6 +195,7 @@ mod tests {
         let result = run_bash_inner(
             "sleep 10",
             std::path::Path::new("."),
+            &std::collections::HashMap::new(),
             Duration::from_secs(1),
         );
         assert_eq!(result.status, ToolStatus::TimedOut);

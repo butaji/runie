@@ -4,7 +4,7 @@ use runie_core::model::ThinkingLevel;
 use runie_core::Event as CoreEvent;
 use tokio::sync::mpsc;
 
-/// Run the subagent in a blocking task and emit a `SystemMessage` when done.
+/// Run the subagent asynchronously and emit a `SystemMessage` when done.
 pub fn run(
     prompt: String,
     provider: String,
@@ -15,7 +15,7 @@ pub fn run(
     tx: mpsc::Sender<CoreEvent>,
 ) {
     let preview = truncate_preview(&prompt, 60);
-    tokio::task::spawn_blocking(move || {
+    tokio::spawn(async move {
         let result = runie_agent::subagent::run_subagent(
             &prompt,
             &provider,
@@ -25,9 +25,12 @@ pub fn run(
             &skills_context,
             "",
             5,
-        );
+        )
+        .await;
         let msg = format_result(&preview, result);
-        let _ = tx.blocking_send(CoreEvent::SystemMessage { content: msg });
+        let _ = tx
+            .send(CoreEvent::SystemMessage { content: msg })
+            .await;
     });
 }
 

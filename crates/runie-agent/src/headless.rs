@@ -6,9 +6,11 @@
 //! simply returns the streamed content.
 
 use crate::parser::{parse_tool_calls, ParsedToolCall};
+use crate::PermissionGate;
 use anyhow::Result;
 use futures::StreamExt;
 use runie_core::message::ChatMessage;
+use runie_core::permissions::{PermissionAction, PermissionContext};
 use runie_core::provider::Provider;
 use runie_core::tool::{ToolContext, ToolOutput};
 
@@ -30,6 +32,8 @@ pub struct HeadlessOptions {
     pub max_tool_rounds: usize,
     /// Callback for each text chunk received from the LLM.
     pub on_chunk: Option<Box<dyn FnMut(&str) + Send>>,
+    /// Permission gate for tool execution.
+    pub permission_gate: PermissionGate,
 }
 
 /// Run a headless turn with the given provider.
@@ -53,7 +57,8 @@ pub async fn run_headless_turn(
         }
 
         messages.push(ChatMessage::assistant(response_text.to_string()));
-        execute_headless_tools(&tools, &mut messages, &mut tool_outputs).await?;
+        execute_headless_tools(&tools, &mut messages, &mut tool_outputs, &options.permission_gate)
+            .await?;
     }
 
     Ok(HeadlessResult {
@@ -94,12 +99,13 @@ async fn execute_headless_tools(
     tools: &[ParsedToolCall],
     messages: &mut Vec<ChatMessage>,
     tool_outputs: &mut Vec<ToolOutput>,
+    gate: &PermissionGate,
 ) -> Result<()> {
     let ctx = ToolContext::default();
     let registry = runie_engine::tool::builtin_registry();
 
     for tool_call in tools {
-        let output = execute_tool_call(&registry, tool_call, &ctx).await;
+        let output = execute_tool_call(&registry, tool_call, &ctx, gate).await;
         tool_outputs.push(output.clone());
         messages.push(ChatMessage::tool_result(format!(
             "{} result:\n{}",
@@ -113,27 +119,57 @@ async fn execute_tool_call(
     registry: &runie_core::tool::ToolRegistry,
     tool_call: &ParsedToolCall,
     ctx: &ToolContext,
+    gate: &PermissionGate,
 ) -> ToolOutput {
-    match registry.get(&tool_call.name) {
-        Some(tool) => tool
-            .call(tool_call.args.clone(), ctx)
-            .await
-            .unwrap_or_else(|e| ToolOutput {
-                tool_name: tool_call.name.clone(),
+    let tool_name = &tool_call.name;
+    let perm_ctx = build_permission_context(tool_name, &tool_call.args, &ctx.working_dir);
+    match gate.evaluate(&perm_ctx).await {
+        PermissionAction::Allow => match registry.get(tool_name) {
+            Some(tool) => tool
+                .call(tool_call.args.clone(), ctx)
+                .await
+                .unwrap_or_else(|e| ToolOutput {
+                    tool_name: tool_name.clone(),
+                    tool_args: tool_call.args.clone(),
+                    content: format!("Tool execution failed: {}", e),
+                    bytes_transferred: None,
+                    duration: std::time::Duration::from_millis(0),
+                    status: runie_core::tool::ToolStatus::Error,
+                }),
+            None => ToolOutput {
+                tool_name: tool_name.clone(),
                 tool_args: tool_call.args.clone(),
-                content: format!("Tool execution failed: {}", e),
+                content: format!("Error: unknown tool '{}'", tool_name),
                 bytes_transferred: None,
                 duration: std::time::Duration::from_millis(0),
                 status: runie_core::tool::ToolStatus::Error,
-            }),
-        None => ToolOutput {
-            tool_name: tool_call.name.clone(),
+            },
+        },
+        PermissionAction::Deny | PermissionAction::Ask => ToolOutput {
+            tool_name: tool_name.clone(),
             tool_args: tool_call.args.clone(),
-            content: format!("Error: unknown tool '{}'", tool_call.name),
+            content: format!("Permission denied for tool '{}'", tool_name),
             bytes_transferred: None,
             duration: std::time::Duration::from_millis(0),
-            status: runie_core::tool::ToolStatus::Error,
+            status: runie_core::tool::ToolStatus::Blocked,
         },
+    }
+}
+
+fn build_permission_context<'a>(
+    tool: &'a str,
+    input: &'a serde_json::Value,
+    cwd: &'a std::path::Path,
+) -> PermissionContext<'a> {
+    let path = input
+        .get("path")
+        .and_then(|v| v.as_str())
+        .map(std::path::Path::new);
+    PermissionContext {
+        tool,
+        path,
+        input: Some(input),
+        cwd: Some(cwd),
     }
 }
 
@@ -141,7 +177,13 @@ async fn execute_tool_call(
 mod tests {
     use super::*;
     use crate::tests::ensure_mock_provider;
+    use runie_core::permissions::{AutoAllowSink, PermissionManager};
     use runie_provider::MockProvider;
+    use std::sync::Arc;
+
+    fn allow_all_gate() -> PermissionGate {
+        PermissionGate::new(PermissionManager::default(), Arc::new(AutoAllowSink))
+    }
 
     #[tokio::test]
     async fn headless_runner_with_mock_returns_content() {
@@ -154,6 +196,7 @@ mod tests {
             execute_tools: false,
             max_tool_rounds: 5,
             on_chunk: None,
+            permission_gate: allow_all_gate(),
         };
         let result = run_headless_turn(messages, &provider, options)
             .await
@@ -174,6 +217,7 @@ mod tests {
             execute_tools: true,
             max_tool_rounds: 5,
             on_chunk: None,
+            permission_gate: allow_all_gate(),
         };
         let result = run_headless_turn(messages, &provider, options)
             .await
@@ -197,6 +241,7 @@ mod tests {
             execute_tools: true,
             max_tool_rounds: 5,
             on_chunk: None,
+            permission_gate: allow_all_gate(),
         };
         let result = run_headless_turn(messages, &provider, options)
             .await

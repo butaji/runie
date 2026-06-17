@@ -20,10 +20,55 @@ impl Default for ToolContext {
     fn default() -> Self {
         Self {
             working_dir: std::env::current_dir().unwrap_or_default(),
-            env: std::env::vars().collect(),
+            env: minimal_tool_env(),
             agent_id: None,
             agent_registry: None,
         }
+    }
+}
+
+/// Returns a minimal, safe environment for tool execution.
+///
+/// Only well-known, non-sensitive variables needed by typical shell commands
+/// are included. Secrets such as API keys, tokens, and passwords are excluded.
+fn minimal_tool_env() -> HashMap<String, String> {
+    let allowed = [
+        "PATH",
+        "HOME",
+        "USER",
+        "SHELL",
+        "TMPDIR",
+        "TMP",
+        "TEMP",
+        "LANG",
+        "LC_ALL",
+        "LC_CTYPE",
+        "PWD",
+    ];
+    let mut env = HashMap::new();
+    for key in allowed {
+        if let Ok(value) = std::env::var(key) {
+            env.insert(key.to_string(), value);
+        }
+    }
+    env
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_context_excludes_secrets() {
+        std::env::set_var("RUNIE_TEST_API_KEY", "should-not-appear");
+        let ctx = ToolContext::default();
+        assert!(!ctx.env.contains_key("RUNIE_TEST_API_KEY"));
+    }
+
+    #[test]
+    fn default_context_includes_path() {
+        let ctx = ToolContext::default();
+        assert!(ctx.env.contains_key("PATH"));
     }
 }
 

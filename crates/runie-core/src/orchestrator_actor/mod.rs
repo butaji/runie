@@ -85,6 +85,13 @@ pub enum OrchestratorCommand {
 // ─── Events ─────────────────────────────────────────────────────────────────
 
 /// Type alias for the flat `Event` variants emitted by the OrchestratorActor.
+///
+/// The orchestrator intentionally uses the same event enum as the rest of the
+/// application so that orchestrator state changes, planning lifecycle events,
+/// and subagent progress can be consumed by existing subscribers without a
+/// separate forwarding layer. Callers that need to distinguish orchestrator
+/// events should match on the `Orchestrator*` / `Subagent*` / `Planning*` /
+/// `Synthesis*` variants in `crate::event::Event`.
 pub type OrchestratorEvent = crate::Event;
 
 // ─── Project context (from planner crate, re-exported) ──────────────────────
@@ -269,8 +276,7 @@ fn handle_start_request(actor: &mut OrchestratorActor, bus: &EventBus<Orchestrat
     if !actor.has_pending_questions() {
         actor.transition_to(OrchestratorState::Planning);
         bus.publish(OrchestratorEvent::PlanningStarted);
-        // Async planner call goes in r4-subagent-execution; stub here
-        actor.transition_to(OrchestratorState::Executing);
+        fail_team_mode_not_implemented(actor, bus);
     }
 }
 
@@ -287,8 +293,19 @@ fn handle_user_answer(
     );
     actor.transition_to(OrchestratorState::Planning);
     bus.publish(OrchestratorEvent::PlanningStarted);
-    // Async planner call goes in r4-subagent-execution; stub here
-    actor.transition_to(OrchestratorState::Executing);
+    fail_team_mode_not_implemented(actor, bus);
+}
+
+fn fail_team_mode_not_implemented(
+    actor: &mut OrchestratorActor,
+    bus: &EventBus<OrchestratorEvent>,
+) {
+    tracing::warn!("orchestrator: Team mode planning is not implemented");
+    bus.publish(OrchestratorEvent::PlanningFailed {
+        error: "Team mode is not yet implemented; switch to Solo mode.".into(),
+    });
+    actor.transition_to(OrchestratorState::Idle);
+    bus.publish(OrchestratorEvent::Finished { success: false });
 }
 
 fn handle_subagent_status(
@@ -404,97 +421,4 @@ fn emit_state_change(
 }
 // ─── Tests ───────────────────────────────────────────────────────────────────
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn idle() -> OrchestratorActor {
-        OrchestratorActor::new()
-    }
-
-    #[test]
-    fn actor_starts_idle() {
-        let orch = idle();
-        assert!(matches!(orch.state, OrchestratorState::Idle));
-        assert!(orch.active_plan.is_none());
-        assert!(orch.results.is_empty());
-    }
-
-    #[test]
-    fn start_request_transitions_to_aligning() {
-        let mut orch = idle();
-        orch.state = OrchestratorState::Idle;
-        // Simulate StartRequest command
-        let ctx = orch.ctx.clone();
-        drop(ctx);
-        assert!(orch.can_start_request());
-        assert!(!orch.has_pending_questions());
-        // Without pending questions, it goes to Planning
-        // We verify state machine accepts StartRequest when idle
-        assert!(orch.state == OrchestratorState::Idle);
-    }
-
-    #[test]
-    fn record_question_marks_pending() {
-        let mut orch = idle();
-        assert!(!orch.has_pending_questions());
-        orch.record_question("Which file?".into());
-        assert!(orch.has_pending_questions());
-        assert!(!orch.can_submit_plan());
-    }
-
-    #[test]
-    fn record_answer_clears_pending() {
-        let mut orch = idle();
-        orch.record_question("Which file?".into());
-        assert!(orch.has_pending_questions());
-        orch.record_answer("src/main.rs".into());
-        assert!(!orch.has_pending_questions());
-        assert!(orch.can_submit_plan());
-    }
-
-    #[test]
-    fn cancel_resets_to_idle() {
-        let mut orch = idle();
-        orch.state = OrchestratorState::Executing;
-        orch.active_plan = Some(OrchestratorPlan::simple("test", ModelTrait::General));
-        orch.ctx.record_question("Q");
-        // Simulate cancel
-        orch.state = OrchestratorState::Idle;
-        orch.active_plan = None;
-        orch.results.clear();
-        orch.ctx = OrchestratorContext::new();
-        assert!(matches!(orch.state, OrchestratorState::Idle));
-        assert!(orch.active_plan.is_none());
-    }
-
-    #[test]
-    fn collect_subagent_result() {
-        let mut orch = idle();
-        orch.dispatch_subagent(SubagentTask::new("t1", "role", "task", ModelTrait::General));
-        assert_eq!(orch.results.len(), 1);
-        orch.collect_result("t1".into(), "output".into());
-        assert_eq!(orch.results[0].1, "output");
-    }
-
-    #[test]
-    fn orchestrator_state_is_terminal() {
-        assert!(OrchestratorState::Idle.is_terminal());
-        assert!(OrchestratorState::Done {
-            plan: OrchestratorPlan::simple("", ModelTrait::General),
-            result: PlanResult {
-                success: true,
-                response: String::new(),
-                failures: vec![],
-                elapsed_secs: 0.0
-            },
-        }
-        .is_terminal());
-        assert!(OrchestratorState::Failed {
-            error: String::new()
-        }
-        .is_terminal());
-        assert!(!OrchestratorState::Aligning.is_terminal());
-        assert!(!OrchestratorState::Planning.is_terminal());
-        assert!(!OrchestratorState::Executing.is_terminal());
-    }
-}
+mod tests;

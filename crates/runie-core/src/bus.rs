@@ -3,7 +3,8 @@
 //! Provides a publish-subscribe bus with replay buffer for late subscribers.
 
 use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 use tokio::sync::broadcast;
 
 /// Typed event bus for actor communication.
@@ -101,15 +102,15 @@ impl<E: Send + Clone> ReplayBuffer<E> {
     }
 
     fn push(&self, event: E) {
-        let mut events = self.events.lock().unwrap();
+        let mut events = self.events.lock();
         if events.len() >= self.capacity {
             events.pop_front();
         }
         events.push_back(event);
     }
 
-    fn drain(&self) -> Vec<E> {
-        self.events.lock().unwrap().drain(..).collect()
+    fn clone_events(&self) -> Vec<E> {
+        self.events.lock().iter().cloned().collect()
     }
 }
 
@@ -129,7 +130,7 @@ impl<E: Send + Clone + 'static> ReplayReceiver<E> {
 
     /// Create a new receiver with replay buffer contents.
     fn with_replay(receiver: broadcast::Receiver<E>, replay: Arc<ReplayBuffer<E>>) -> Self {
-        let events: Vec<E> = replay.drain();
+        let events: Vec<E> = replay.clone_events();
         Self {
             replay_queue: events.into(),
             receiver,
@@ -235,6 +236,30 @@ mod tests {
                 TestEvent::Data(9),
                 TestEvent::Data(10),
             ]
+        );
+    }
+
+    #[tokio::test]
+    async fn replay_not_consumed_by_first_subscriber() {
+        let bus = EventBus::<TestEvent>::new(5);
+
+        for i in 1..=3 {
+            bus.publish(TestEvent::Data(i));
+        }
+
+        let mut sub1 = bus.subscribe_with_replay();
+        let events1: Vec<TestEvent> = drain(&mut sub1);
+        assert_eq!(
+            events1,
+            vec![TestEvent::Data(1), TestEvent::Data(2), TestEvent::Data(3)]
+        );
+
+        // A second late subscriber should still receive the same replay.
+        let mut sub2 = bus.subscribe_with_replay();
+        let events2: Vec<TestEvent> = drain(&mut sub2);
+        assert_eq!(
+            events2,
+            vec![TestEvent::Data(1), TestEvent::Data(2), TestEvent::Data(3)]
         );
     }
 

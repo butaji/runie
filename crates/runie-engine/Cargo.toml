@@ -16,3 +16,6 @@ tokio.workspace = true
 reqwest.workspace = true
 fff-search.workspace = true
 git2.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

@@ -2,8 +2,9 @@
 //! and appends them to a JSONL session file. Also maintains a session
 //! metadata index for browsing.
 
-use crate::actor::{Actor, ActorFuture};
+use crate::actor::Actor;
 use crate::bus::EventBus;
+use std::future::Future;
 use crate::event::DurableCoreEvent;
 use crate::session_replay::durable_to_event;
 use crate::session_store::SessionStore;
@@ -17,6 +18,7 @@ pub struct SessionActor {
     store: SessionStore,
     message_count: usize,
     summary: Option<String>,
+    summary_buffer: String,
     started_at: f64,
 }
 
@@ -29,6 +31,7 @@ impl SessionActor {
             store,
             message_count: 0,
             summary: None,
+            summary_buffer: String::new(),
             started_at: now,
         }
     }
@@ -46,42 +49,23 @@ impl SessionActor {
         }
     }
 
-    fn update_index(&self) {
-        if let Err(e) = self.store.update_index(&self.build_meta()) {
-            eprintln!("SessionActor: failed to update index: {}", e);
-        }
-    }
+
 
     /// Generate a simple summary from the first 500 characters of session
     /// message content (no LLM call needed).
-    fn generate_summary(&self, events: &[DurableCoreEvent]) -> String {
-        let mut content = String::new();
-        for ev in events {
-            if let DurableCoreEvent::MessageSent { content: msg, .. } = ev {
-                if content.len() >= 500 {
-                    break;
-                }
-                content.push_str(msg);
-            }
-        }
-        let chars: Vec<char> = content.chars().take(500).collect();
+    fn generate_summary(&self) -> String {
+        let chars: Vec<char> = self.summary_buffer.chars().take(500).collect();
         let truncated: String = chars.into_iter().collect();
-        if truncated.len() < content.len() {
+        if truncated.len() < self.summary_buffer.len() {
             format!("{}…", truncated)
         } else {
             truncated
         }
     }
-}
 
-fn replay_existing_events(store: &SessionStore, session_id: &str, bus: &EventBus<Event>) {
-    let events = match store.load_events(session_id) {
-        Ok(events) => events,
-        Err(_) => return,
-    };
-    for event in events {
-        if let Some(evt) = durable_to_event(&event) {
-            bus.publish(evt);
+    fn append_to_summary(&mut self, msg: &str) {
+        if self.summary_buffer.len() < 500 {
+            self.summary_buffer.push_str(msg);
         }
     }
 }
@@ -90,44 +74,92 @@ impl Actor for SessionActor {
     type Msg = ();
     type Event = Event;
 
-    fn run(self, _rx: mpsc::Receiver<Self::Msg>, bus: EventBus<Self::Event>) -> ActorFuture {
-        replay_existing_events(&self.store, &self.session_id, &bus);
-        Box::pin(self.run_body(_rx, bus))
+    fn run_body(
+        self,
+        _rx: mpsc::Receiver<Self::Msg>,
+        bus: EventBus<Self::Event>,
+    ) -> impl Future<Output = ()> + Send + 'static {
+        async move {
+            self.replay_existing_events(&bus).await;
+            self.run_loop(_rx, bus).await;
+        }
+    }
+}
+
+impl SessionActor {
+    async fn replay_existing_events(&self, bus: &EventBus<Event>) {
+        let events = match self.load_events().await {
+            Ok(events) => events,
+            Err(_) => return,
+        };
+        for event in events {
+            if let Some(evt) = durable_to_event(&event) {
+                bus.publish(evt);
+            }
+        }
     }
 
-    async fn run_body(mut self, _rx: mpsc::Receiver<Self::Msg>, bus: EventBus<Self::Event>) {
+    async fn run_loop(mut self, _rx: mpsc::Receiver<()>, bus: EventBus<Event>) {
         let mut sub = bus.subscribe();
         loop {
             match sub.recv().await {
                 Ok(event) => {
                     if let Some(durable) = event.to_durable() {
-                        if let Err(e) = self.store.append(&self.session_id, &durable) {
+                        if let Err(e) = self.persist(&durable).await {
                             eprintln!("SessionActor: failed to persist event: {}", e);
                             continue;
                         }
 
-                        if matches!(&durable, DurableCoreEvent::MessageSent { .. }) {
+                        if let DurableCoreEvent::MessageSent { content: msg, .. } = &durable {
                             self.message_count += 1;
-                            let events =
-                                self.store.load_events(&self.session_id).unwrap_or_default();
-                            self.summary = Some(self.generate_summary(&events));
+                            self.append_to_summary(msg);
+                            self.summary = Some(self.generate_summary());
                         }
 
                         if let DurableCoreEvent::SessionRenamed { name } = &durable {
                             self.display_name = name.clone();
                         }
 
-                        self.update_index();
+                        self.update_index_async().await;
                     }
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => {
-                    self.update_index();
+                    self.update_index_async().await;
                     break;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     eprintln!("SessionActor: lagged by {} events", n);
                 }
             }
+        }
+    }
+
+    async fn persist(&self, durable: &DurableCoreEvent) -> anyhow::Result<()> {
+        let store = self.store.clone();
+        let session_id = self.session_id.clone();
+        let event = durable.clone();
+        tokio::task::spawn_blocking(move || store.append(&session_id, &event))
+            .await
+            .map_err(|e| anyhow::anyhow!("spawn_blocking failed: {}", e))?
+    }
+
+    async fn load_events(&self) -> anyhow::Result<Vec<DurableCoreEvent>> {
+        let store = self.store.clone();
+        let session_id = self.session_id.clone();
+        tokio::task::spawn_blocking(move || store.load_events(&session_id))
+            .await
+            .map_err(|e| anyhow::anyhow!("spawn_blocking failed: {}", e))?
+    }
+
+    async fn update_index_async(&self) {
+        let store = self.store.clone();
+        let meta = self.build_meta();
+        if let Err(e) = tokio::task::spawn_blocking(move || store.update_index(&meta))
+            .await
+            .map_err(|e| anyhow::anyhow!("spawn_blocking failed: {}", e))
+            .and_then(|r| r)
+        {
+            eprintln!("SessionActor: failed to update index: {}", e);
         }
     }
 }
@@ -269,6 +301,32 @@ mod tests {
         let mut sub = h.bus.subscribe_with_replay();
         let handle = spawn_replay_actor(&h, session_id);
         let collected = collect_replayed_events(&mut sub, 3).await;
+        handle.abort();
+
+        let mut state = crate::model::AppState::default();
+        for event in collected {
+            state.update(event);
+        }
+        assert_replayed_state(&state);
+    }
+
+    #[tokio::test]
+    async fn session_actor_replays_available_to_late_subscriber() {
+        let h = make_harness();
+        let session_id = "replay_late_test";
+        h.store
+            .append_batch(session_id, &replay_events_fixture())
+            .unwrap();
+
+        // Spawn actor first (production order), then subscribe — replay must still be available.
+        let handle = spawn_replay_actor(&h, session_id);
+        let mut sub = h.bus.subscribe_with_replay();
+        let collected = tokio::time::timeout(
+            std::time::Duration::from_secs(1),
+            collect_replayed_events(&mut sub, 3),
+        )
+        .await
+        .expect("timed out waiting for replay");
         handle.abort();
 
         let mut state = crate::model::AppState::default();

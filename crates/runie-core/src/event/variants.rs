@@ -110,6 +110,15 @@ pub enum Event {
         id: String,
         message: String,
     },
+    PermissionRequest {
+        request_id: String,
+        tool: String,
+        input: serde_json::Value,
+    },
+    PermissionResponse {
+        request_id: String,
+        action: crate::permissions::PermissionAction,
+    },
 
     // Replay
     MessageReplayed {

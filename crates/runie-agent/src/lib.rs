@@ -1,22 +1,23 @@
 #![warn(clippy::all)]
 
-pub mod accumulator;
 pub mod context7;
 pub mod diff;
+pub mod emit_approval_sink;
 pub mod headless;
 pub mod inspector;
 pub mod parser;
 pub mod path_utils;
+pub mod permission_gate;
 pub mod profiles;
 pub mod safety;
 pub mod subagent;
-pub mod tools;
 pub mod truncate;
 pub mod turn;
 
 pub use headless::{run_headless_turn, HeadlessOptions, HeadlessResult};
 pub use parser::{has_tool_calls, parse_tool_calls, ParsedToolCall};
 pub use runie_core::tool::ToolOutput;
+pub use permission_gate::PermissionGate;
 pub use turn::run_agent_turn;
 
 use runie_provider::DynProvider;

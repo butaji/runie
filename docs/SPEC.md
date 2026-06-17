@@ -268,8 +268,9 @@ Historical design documents have been removed; current decisions are captured in
 - ~2,000 automated tests across the workspace; ~78 intentionally ignored
   (e2e / platform-specific)
 - 4-layer TDD per `AGENTS.md`: state/logic, event handling, rendering, smoke
-- Build-time lint guardrails are currently 1000 lines/file, 120 lines/function,
-  25 complexity (long-term targets remain 500/40/10; see `AGENTS.md`)
+- Build-time lint guardrails are enforced at 500 lines/file, 40 lines/function,
+  10 complexity for production code (see `AGENTS.md`); tests are exempt from
+  function-length and complexity checks.
 - Pre-existing failures: none blocking the main suite
 
 ### Out of scope (by design)
@@ -342,6 +343,12 @@ crates/
 | Complexity | **10** |
 
 Enforced by `crates/runie-core/build.rs`. Build fails on any violation.
+
+The complexity metric is an approximate heuristic that counts control-flow
+tokens (`if`, `else if`, `match`, `while`, `for`, `loop`, `break`, `continue`,
+`return`, `&&`, `||`, `?`). It does not parse Rust syntax and therefore may
+under-count nested closures, `try` blocks, match guards, and similar constructs.
+It is a coarse guardrail rather than a precise cyclomatic-complexity score.
 
 **Breaking the rules is not acceptable.** Fix violations before committing.
 

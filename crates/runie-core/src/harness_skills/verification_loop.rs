@@ -1,3 +1,6 @@
+use std::time::Duration;
+
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use super::{HarnessSkill, TurnEndCtx, TurnEndResult};
@@ -14,10 +17,17 @@ pub struct VerificationConfig {
     /// Whether verification is enabled.
     #[serde(default = "super::default_true")]
     pub enabled: bool,
+    /// Timeout for the verification command in seconds.
+    #[serde(default = "default_timeout_seconds")]
+    pub timeout_seconds: u64,
 }
 
 fn default_max_fix_passes() -> usize {
     3
+}
+
+fn default_timeout_seconds() -> u64 {
+    120
 }
 
 /// Verification loop skill: runs command after turn to verify results.
@@ -41,23 +51,27 @@ impl VerificationLoopSkill {
             || message.contains("const ")
             || message.contains("let ")
     }
-    fn run_verification(command: &str) -> std::process::Output {
+
+    async fn run_verification(command: &str, timeout: Duration) -> Option<std::process::Output> {
         let parts: Vec<&str> = command.split_whitespace().collect();
         if parts.is_empty() {
-            return std::process::Command::new("true").output().unwrap();
+            return None;
         }
-        std::process::Command::new(parts[0])
-            .args(&parts[1..])
-            .output()
-            .unwrap_or_else(|_| std::process::Command::new("true").output().unwrap())
+        let mut cmd = tokio::process::Command::new(parts[0]);
+        cmd.args(&parts[1..]);
+        tokio::time::timeout(timeout, cmd.output())
+            .await
+            .ok()
+            .and_then(|res| res.ok())
     }
 }
 
+#[async_trait]
 impl HarnessSkill for VerificationLoopSkill {
     fn name(&self) -> &str {
         "verification_loop"
     }
-    fn on_turn_end(&self, ctx: &TurnEndCtx) -> TurnEndResult {
+    async fn on_turn_end(&self, ctx: &TurnEndCtx) -> TurnEndResult {
         if !self.config.enabled {
             return TurnEndResult::Continue;
         }
@@ -74,7 +88,11 @@ impl HarnessSkill for VerificationLoopSkill {
         if passes >= self.config.max_fix_passes {
             return TurnEndResult::Continue;
         }
-        let output = Self::run_verification(command);
+        let timeout = Duration::from_secs(self.config.timeout_seconds);
+        let output = match Self::run_verification(command, timeout).await {
+            Some(out) => out,
+            None => return TurnEndResult::Continue,
+        };
         if output.status.success() {
             self.fix_pass_count
                 .store(0, std::sync::atomic::Ordering::Relaxed);

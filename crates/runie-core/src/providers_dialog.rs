@@ -57,18 +57,17 @@ fn add_provider_section(
     let provider_label = provider_label(provider_name, is_active);
     panel = panel.header(format!("── {} ──", provider_label));
 
+    let provider = provider_name.to_string();
     for model in models {
         let label = model_label(model, is_active, model == current_model);
         let evt = crate::event::DialogEvent::ProvidersSelectModel {
-            provider: provider_name.to_string(),
+            provider: provider.clone(),
             model: model.clone(),
         };
-        panel = panel.item(&label, ItemAction::Emit(evt));
+        panel = panel.item(label, ItemAction::Emit(evt));
     }
 
-    let disconnect_evt = crate::event::DialogEvent::ProvidersDisconnect {
-        provider: provider_name.to_string(),
-    };
+    let disconnect_evt = crate::event::DialogEvent::ProvidersDisconnect { provider };
     panel
         .item("  ✕ Disconnect", ItemAction::Emit(disconnect_evt))
         .separator()

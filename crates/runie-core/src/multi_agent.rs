@@ -61,18 +61,37 @@ pub struct SubagentEntry {
     pub messages: Vec<String>,
     pub token_budget: usize,
     pub model_trait: ModelTrait,
+    pub depth: usize,
 }
 
 /// Registry of subagents spawned by the orchestrator.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct AgentRegistry {
     agents: HashMap<String, SubagentEntry>,
+    max_depth: usize,
+}
+
+impl Default for AgentRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AgentRegistry {
-    /// Create an empty registry.
+    /// Create an empty registry with the default depth limit of 1.
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            agents: HashMap::new(),
+            max_depth: 1,
+        }
+    }
+
+    /// Create a registry with a custom depth limit.
+    pub fn with_max_depth(max_depth: usize) -> Self {
+        Self {
+            agents: HashMap::new(),
+            max_depth,
+        }
     }
 
     /// Spawn a new subagent with the given role and prompt.
@@ -85,7 +104,12 @@ impl AgentRegistry {
         model_trait: ModelTrait,
         budget: usize,
     ) -> Result<String, String> {
-        if depth(role) >= 1 {
+        let depth = self
+            .agents
+            .get(role)
+            .map(|parent| parent.depth + 1)
+            .unwrap_or(1);
+        if depth > self.max_depth {
             return Err("subagent depth limit reached".into());
         }
         let agent_id = generate_agent_id(role);
@@ -97,6 +121,7 @@ impl AgentRegistry {
             messages: vec![prompt],
             token_budget: budget,
             model_trait,
+            depth,
         };
         self.agents.insert(agent_id.clone(), entry);
         Ok(agent_id)
@@ -171,11 +196,6 @@ fn is_active(entry: &SubagentEntry) -> bool {
             | AgentLifecycleStatus::Pending
             | AgentLifecycleStatus::AwaitingUser
     )
-}
-
-fn depth(_role: &str) -> usize {
-    // Orchestrator is depth 0; any subagent spawned through this registry is depth 1.
-    0
 }
 
 fn generate_agent_id(role: &str) -> String {
@@ -262,16 +282,26 @@ mod tests {
     }
 
     #[test]
-    fn depth_limit_one_level() {
+    fn spawn_allows_within_depth_limit() {
+        let mut registry = AgentRegistry::with_max_depth(2);
+        let id = registry
+            .spawn("coder", "task".into(), ModelTrait::Fast, 500)
+            .unwrap();
+        assert!(registry
+            .spawn(&id, "subtask".into(), ModelTrait::Fast, 500)
+            .is_ok());
+    }
+
+    #[test]
+    fn spawn_rejects_excessive_depth() {
         let mut registry = AgentRegistry::new();
         let id = registry
             .spawn("coder", "task".into(), ModelTrait::Fast, 500)
             .unwrap();
-        // Registry is depth 0 from orchestrator perspective; attempting to treat
-        // a subagent as a parent would require a registry on the subagent.
+        // Default depth limit is 1; spawning a child of the first agent exceeds it.
         assert!(registry
             .spawn(&id, "subtask".into(), ModelTrait::Fast, 500)
-            .is_ok());
+            .is_err());
     }
 
     #[test]

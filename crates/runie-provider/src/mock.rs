@@ -3,11 +3,25 @@ use runie_core::llm_event::{LLMEvent, StopReason};
 use runie_core::message::{ChatMessage, Role};
 use runie_core::provider::Provider;
 use std::pin::Pin;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct MockProvider {
     delay_ms: Option<(u64, u64)>,
+    seed: Option<u64>,
+    counter: Arc<AtomicU64>,
+}
+
+impl Default for MockProvider {
+    fn default() -> Self {
+        Self {
+            delay_ms: None,
+            seed: None,
+            counter: Arc::new(AtomicU64::new(0)),
+        }
+    }
 }
 
 impl MockProvider {
@@ -15,9 +29,18 @@ impl MockProvider {
         Self::default()
     }
 
+    /// Create a provider with a deterministic delay sequence for reproducible
+    /// tests. The same seed always yields the same delays across calls.
     pub fn with_delay(min_ms: u64, max_ms: u64) -> Self {
+        Self::with_seed(min_ms, max_ms, 42)
+    }
+
+    /// Create a provider with an explicit seed for deterministic delays.
+    pub fn with_seed(min_ms: u64, max_ms: u64, seed: u64) -> Self {
         Self {
             delay_ms: Some((min_ms, max_ms)),
+            seed: Some(seed),
+            counter: Arc::new(AtomicU64::new(0)),
         }
     }
 
@@ -25,12 +48,25 @@ impl MockProvider {
         self.delay_ms
     }
 
-    fn random_delay(&self) -> Option<Duration> {
+    pub(crate) fn random_delay(&self) -> Option<Duration> {
         self.delay_ms.map(|(min, max)| {
             let range = max.saturating_sub(min) + 1;
-            Duration::from_millis(rand::random::<u64>() % range + min)
+            let offset = if let Some(seed) = self.seed {
+                let n = self.counter.fetch_add(1, Ordering::Relaxed);
+                xorshift64star(seed.wrapping_add(n)) % range
+            } else {
+                rand::random::<u64>() % range
+            };
+            Duration::from_millis(offset + min)
         })
     }
+}
+
+fn xorshift64star(mut x: u64) -> u64 {
+    x ^= x >> 12;
+    x ^= x << 25;
+    x ^= x >> 27;
+    x.wrapping_mul(0x2545F4914F6CDD1D)
 }
 
 fn file_tool_chunks(input: &str) -> Option<Vec<String>> {

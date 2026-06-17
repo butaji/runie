@@ -9,7 +9,8 @@
 //!
 //! Errors (network, parse, etc.) are returned as a structured `SubagentError`.
 
-use crate::{run_agent_turn, AgentCommand};
+use crate::{run_agent_turn, AgentCommand, PermissionGate};
+use runie_core::permissions::{AutoAllowSink, PermissionManager};
 use runie_core::event::AgentEvent;
 use runie_core::model::ThinkingLevel;
 use std::sync::{Arc, Mutex};
@@ -23,13 +24,13 @@ pub enum SubagentError {
     Agent(String),
 }
 
-/// Run a subagent turn synchronously. Returns the final assistant text.
+/// Run a subagent turn asynchronously. Returns the final assistant text.
 ///
 /// `prompt` is the user request. The subagent's message buffer is empty
 /// (no parent history leaks in), but it uses the same provider, model,
 /// and skills context as the parent.
 #[allow(clippy::too_many_arguments)]
-pub fn run_subagent(
+pub async fn run_subagent(
     prompt: &str,
     provider_key: &str,
     model: &str,
@@ -52,8 +53,7 @@ pub fn run_subagent(
         system_prompt,
     );
 
-    let rt = build_subagent_runtime()?;
-    rt.block_on(run_subagent_turn(&provider, &cmd, max_iterations))
+    run_subagent_turn(&provider, &cmd, max_iterations).await
 }
 
 fn build_subagent_command(
@@ -78,13 +78,6 @@ fn build_subagent_command(
     }
 }
 
-fn build_subagent_runtime() -> Result<tokio::runtime::Runtime, SubagentError> {
-    tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .map_err(|e| SubagentError::Agent(e.to_string()))
-}
-
 async fn run_subagent_turn(
     provider: &runie_provider::DynProvider,
     cmd: &AgentCommand,
@@ -92,8 +85,12 @@ async fn run_subagent_turn(
 ) -> Result<String, SubagentError> {
     let state = Arc::new(SubagentState::default());
     let callback = build_subagent_callback(state.clone());
+    let gate = PermissionGate::new(
+        PermissionManager::default(),
+        Arc::new(AutoAllowSink),
+    );
 
-    run_agent_turn(provider, cmd, callback, max_iterations)
+    run_agent_turn(provider, cmd, callback, max_iterations, gate)
         .await
         .map_err(|e| SubagentError::Agent(e.to_string()))?;
 

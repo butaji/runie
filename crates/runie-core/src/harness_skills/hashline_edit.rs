@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
+use similar::TextDiff;
 
-use super::{HarnessSkill, ToolCallCtx, ToolCallResult};
+use super::{HarnessSkill, ToolCallCtx, ToolCallPhase, ToolCallResult};
 
 /// Configuration for the hashline edit skill.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -58,8 +59,12 @@ impl HashlineEditSkill {
                     "description": "Line edits to apply",
                     "items": {
                         "type": "object",
-                        "properties": {"line": {"type": "integer", "description": "Line number (1-indexed)"}, "content": {"type": "string", "description": "New content (empty to delete)"}},
-                        "required": ["line", "content"]
+                        "properties": {
+                            "line": {"type": "integer", "description": "Line number (1-indexed)"},
+                            "hash": {"type": "string", "description": "Expected hash of current line content"},
+                            "content": {"type": "string", "description": "New content (empty to delete)"}
+                        },
+                        "required": ["line", "hash", "content"]
                     }
                 }
             },
@@ -127,44 +132,62 @@ pub struct HashlineEdit {
     pub content: String,
 }
 
+fn format_diff(old: &str, new: &str) -> String {
+    let diff = TextDiff::from_lines(old, new);
+    let mut out = String::from("Applied hashline edits. Diff:\n");
+    for change in diff.iter_all_changes() {
+        let sign = match change.tag() {
+            similar::ChangeTag::Delete => '-',
+            similar::ChangeTag::Insert => '+',
+            similar::ChangeTag::Equal => ' ',
+        };
+        out.push(sign);
+        out.push_str(change.value());
+    }
+    out
+}
+
+fn try_apply_hashline(ctx: &ToolCallCtx) -> Result<ToolCallResult, String> {
+    let edits = ctx
+        .tool_input
+        .get("edits")
+        .cloned()
+        .unwrap_or_default();
+    let edits: Vec<HashlineEdit> =
+        serde_json::from_value(edits).map_err(|e| format!("Invalid hashline edit format: {}", e))?;
+    let path = ctx
+        .tool_input
+        .get("path")
+        .and_then(|p| p.as_str())
+        .ok_or_else(|| "path is required for hashline edit".to_string())?;
+    let path = std::path::PathBuf::from(path);
+
+    HashlineEditSkill::validate_hashes(&path, &edits)?;
+    let old_content = std::fs::read_to_string(&path)
+        .map_err(|e| format!("Error reading {}: {}", path.display(), e))?;
+    let new_content = HashlineEditSkill::apply_edits(&path, &edits)?;
+    Ok(ToolCallResult::SkipWithOutput(format_diff(&old_content, &new_content)))
+}
+
 impl HarnessSkill for HashlineEditSkill {
     fn name(&self) -> &str {
         "hashline_edit"
     }
 
     fn on_tool_call(&self, ctx: &ToolCallCtx) -> ToolCallResult {
-        // Check if this is a hashline edit call and skill is enabled
-        if ctx.tool_name != "edit_file" {
+        if ctx.tool_name != "edit_file" || !self.config.enabled {
+            return ToolCallResult::Continue;
+        }
+        if ctx.phase != ToolCallPhase::Before {
+            return ToolCallResult::Continue;
+        }
+        if ctx.tool_input.get("edits").is_none() {
             return ToolCallResult::Continue;
         }
 
-        if !self.config.enabled {
-            return ToolCallResult::Continue;
+        match try_apply_hashline(ctx) {
+            Ok(result) => result,
+            Err(e) => ToolCallResult::Abort(format!("Hashline edit failed: {}", e)),
         }
-
-        // Check if this is a hashline format call (has "edits" field)
-        if let Some(edits) = ctx.tool_input.get("edits") {
-            // This is a hashline format call
-            let edits: Vec<HashlineEdit> = match serde_json::from_value(edits.clone()) {
-                Ok(e) => e,
-                Err(e) => {
-                    return ToolCallResult::Abort(format!("Invalid hashline edit format: {}", e));
-                }
-            };
-
-            let path = match ctx.tool_input.get("path").and_then(|p| p.as_str()) {
-                Some(p) => std::path::PathBuf::from(p),
-                None => {
-                    return ToolCallResult::Abort("path is required for hashline edit".to_string());
-                }
-            };
-
-            // Validate hashes
-            if let Err(e) = HashlineEditSkill::validate_hashes(&path, &edits) {
-                return ToolCallResult::Abort(format!("Hashline validation failed: {}", e));
-            }
-        }
-
-        ToolCallResult::Continue
     }
 }

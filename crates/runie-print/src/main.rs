@@ -1,7 +1,8 @@
 //! runie-print — Non-interactive CLI for single-turn LLM execution.
 
 use anyhow::Result;
-use runie_agent::{build_provider_with_warning, run_headless_turn, HeadlessOptions};
+use runie_agent::{build_provider_with_warning, run_headless_turn, HeadlessOptions, PermissionGate};
+use runie_core::permissions::{DenyAllSink, PermissionManager};
 use runie_core::{config_reload, message::ChatMessage, provider::Provider};
 
 #[tokio::main]
@@ -51,6 +52,10 @@ async fn run_print_with(prompt: &str, provider: &dyn Provider) -> Result<()> {
             print!("{}", chunk);
             let _ = std::io::Write::flush(&mut std::io::stdout());
         })),
+        permission_gate: PermissionGate::new(
+            PermissionManager::default(),
+            std::sync::Arc::new(DenyAllSink),
+        ),
     };
 
     run_headless_turn(messages, provider, options).await?;
