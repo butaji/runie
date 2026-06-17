@@ -64,7 +64,15 @@ impl Tool for GrepTool {
         let start = Instant::now();
         let (pattern, path, glob, ignore_case, literal, limit) = parse_grep_input(&input)?;
         let full_path = resolve_path(&path, &ctx.working_dir);
-        run_grep_impl(&pattern, &full_path, glob, ignore_case, literal, limit, start)
+        run_grep_impl(
+            &pattern,
+            &full_path,
+            glob,
+            ignore_case,
+            literal,
+            limit,
+            start,
+        )
     }
 }
 
@@ -93,12 +101,23 @@ fn run_grep_impl(
     limit: usize,
     start: Instant,
 ) -> Result<ToolOutput> {
-    let tool = if crate::tool::which_tool("rg").is_some() { "rg" } else { "grep" };
+    let tool = if crate::tool::which_tool("rg").is_some() {
+        "rg"
+    } else {
+        "grep"
+    };
     let args = build_grep_args(pattern, path, glob.as_deref(), ignore_case, literal, limit);
 
     let output = match std::process::Command::new(tool).args(&args).output() {
         Ok(o) => o,
-        Err(e) => return Ok(tool_error("grep", &format!("Error running grep: {}", e), start, false)),
+        Err(e) => {
+            return Ok(tool_error(
+                "grep",
+                &format!("Error running grep: {}", e),
+                start,
+                false,
+            ))
+        }
     };
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
@@ -126,8 +145,6 @@ fn parse_grep_output(stdout: &str, stderr: &str, code: Option<i32>) -> (String, 
         (stdout.to_string(), ToolStatus::Success)
     }
 }
-
-
 
 fn build_grep_args(
     pattern: &str,

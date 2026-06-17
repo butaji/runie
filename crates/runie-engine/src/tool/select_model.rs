@@ -124,13 +124,22 @@ fn fallback_full(
     match trait_ {
         ModelTrait::Fast => catalog
             .iter()
-            .find(|m| m.name.contains("mini") || m.name.contains("flash") || m.name.contains("haiku"))
+            .find(|m| {
+                m.name.contains("mini") || m.name.contains("flash") || m.name.contains("haiku")
+            })
             .map(|m| m.full()),
         ModelTrait::Reasoning => catalog
             .iter()
-            .find(|m| m.capabilities.supports_reasoning || m.name.contains("reasoner") || m.name.contains("o1"))
+            .find(|m| {
+                m.capabilities.supports_reasoning
+                    || m.name.contains("reasoner")
+                    || m.name.contains("o1")
+            })
             .map(|m| m.full()),
-        ModelTrait::Vision => catalog.iter().find(|m| m.capabilities.supports_vision).map(|m| m.full()),
+        ModelTrait::Vision => catalog
+            .iter()
+            .find(|m| m.capabilities.supports_vision)
+            .map(|m| m.full()),
         ModelTrait::LongContext => catalog
             .iter()
             .max_by_key(|m| m.capabilities.max_context_tokens)
@@ -146,13 +155,17 @@ mod tests {
     #[test]
     fn select_model_resolves_general() {
         let tool = SelectModelTool;
-        let result = tool.execute(serde_json::json!({"trait": "general"})).unwrap();
+        let result = tool
+            .execute(serde_json::json!({"trait": "general"}))
+            .unwrap();
         assert!(result.content.contains('/'));
     }
 
     #[test]
     fn select_model_rejects_unknown_trait() {
         let tool = SelectModelTool;
-        assert!(tool.execute(serde_json::json!({"trait": "unknown"})).is_err());
+        assert!(tool
+            .execute(serde_json::json!({"trait": "unknown"}))
+            .is_err());
     }
 }

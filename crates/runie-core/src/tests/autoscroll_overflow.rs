@@ -1,7 +1,7 @@
 #![allow(clippy::needless_borrow)]
 
-use crate::event::Event;
 use crate::event::AgentEvent;
+use crate::event::Event;
 use crate::model::{AppState, ChatMessage, Role};
 
 fn fresh_state() -> AppState {
@@ -53,7 +53,11 @@ fn verify_thought_visible(state: &mut AppState, height: usize) {
 }
 
 fn verify_tool_output_visible(state: &mut AppState, height: usize) {
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "list_dir".into(),
+        input: serde_json::Value::Null,
+    });
     let output = (1..=20)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
@@ -195,7 +199,11 @@ fn tool_output_exceeding_viewport_shows_latest_files() {
     let mut state = fresh_state();
     let height = 5;
 
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+        input: serde_json::Value::Null,
+    });
     let output = (1..=50)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()

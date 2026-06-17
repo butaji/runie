@@ -140,19 +140,31 @@ impl ModelMeta {
     }
 
     pub const fn with_tools(self, supports_tools: bool) -> Self {
-        Self { supports_tools, ..self }
+        Self {
+            supports_tools,
+            ..self
+        }
     }
 
     pub const fn with_reasoning(self) -> Self {
-        Self { supports_reasoning: true, ..self }
+        Self {
+            supports_reasoning: true,
+            ..self
+        }
     }
 
     pub const fn with_output_limit(self, max_output_tokens: usize) -> Self {
-        Self { max_output_tokens, ..self }
+        Self {
+            max_output_tokens,
+            ..self
+        }
     }
 
     pub const fn with_cache_control(self) -> Self {
-        Self { cache_control: true, ..self }
+        Self {
+            cache_control: true,
+            ..self
+        }
     }
 }
 

@@ -158,7 +158,11 @@ mod tests {
 
     #[test]
     fn bash_tool_runs_quick_command() {
-        let result = run_bash_inner("echo hello", std::path::Path::new("."), Duration::from_secs(5));
+        let result = run_bash_inner(
+            "echo hello",
+            std::path::Path::new("."),
+            Duration::from_secs(5),
+        );
         assert_eq!(result.status, ToolStatus::Success);
         assert!(result.output.contains("hello"));
     }

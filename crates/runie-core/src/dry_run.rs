@@ -138,6 +138,9 @@ mod tests {
     fn dry_run_no_llm_calls() {
         let config = temp_config_with_provider("openai", "gpt-4o");
         let report = run_dry_run(&config);
-        assert!(report.lines.iter().any(|l| l.contains("No model calls made")));
+        assert!(report
+            .lines
+            .iter()
+            .any(|l| l.contains("No model calls made")));
     }
 }

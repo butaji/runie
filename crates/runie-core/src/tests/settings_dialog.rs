@@ -1,7 +1,7 @@
 //! Settings dialog tests (Layer 2 + Layer 3)
 
 use crate::commands::DialogState;
-use crate::event::{ControlEvent, InputEvent, ModelConfigEvent, DialogEvent};
+use crate::event::{ControlEvent, DialogEvent, InputEvent, ModelConfigEvent};
 use crate::model::{AppState, DeliveryMode};
 use crate::settings::{SettingValue, SettingsCategory};
 use crate::update::settings_dialog::build_setting_items;

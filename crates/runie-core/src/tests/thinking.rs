@@ -1,5 +1,5 @@
+use crate::event::{DialogEvent, ModelConfigEvent};
 use crate::model::ThinkingLevel;
-use crate::event::{ModelConfigEvent, DialogEvent};
 use crate::session::{Session, Store};
 use crate::{AppState, Event};
 
@@ -226,6 +226,8 @@ fn thinking_does_not_create_a_form_panel() {
 #[test]
 fn set_thinking_level_event_updates_state() {
     let mut state = AppState::default();
-    state.update(ModelConfigEvent::SetThinkingLevel(crate::model::ThinkingLevel::High));
+    state.update(ModelConfigEvent::SetThinkingLevel(
+        crate::model::ThinkingLevel::High,
+    ));
     assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 }

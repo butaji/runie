@@ -16,7 +16,10 @@ pub struct ModelCapabilities {
 
 impl ModelCapabilities {
     pub fn streaming() -> Self {
-        Self { streaming: true, ..Default::default() }
+        Self {
+            streaming: true,
+            ..Default::default()
+        }
     }
 
     pub fn with_vision(mut self) -> Self {
@@ -345,7 +348,10 @@ mod tests {
     fn model_capabilities_derives_from_registry() {
         let catalog = model_catalog();
         // Default streaming=true, tools=true
-        let gpt4o = catalog.iter().find(|m| m.provider == "openai" && m.name == "gpt-4o").unwrap();
+        let gpt4o = catalog
+            .iter()
+            .find(|m| m.provider == "openai" && m.name == "gpt-4o")
+            .unwrap();
         assert!(gpt4o.capabilities.streaming);
         assert!(gpt4o.capabilities.supports_tools);
         assert!(gpt4o.capabilities.supports_vision);

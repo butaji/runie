@@ -42,7 +42,11 @@ impl TestRunner {
     /// Run a single agent turn with the given input and provider.
     ///
     /// Returns the generated submission id.
-    pub async fn submit(&self, input: &str, provider: &DynProvider) -> anyhow::Result<SubmissionId> {
+    pub async fn submit(
+        &self,
+        input: &str,
+        provider: &DynProvider,
+    ) -> anyhow::Result<SubmissionId> {
         let id = format!("sub.{}", nanoid());
         let cmd = AgentCommand {
             content: input.to_string(),
@@ -57,7 +61,9 @@ impl TestRunner {
         };
 
         let events = self.events.clone();
-        let emit = Arc::new(Mutex::new(move |evt: Event| events.lock().unwrap().push(evt)));
+        let emit = Arc::new(Mutex::new(move |evt: Event| {
+            events.lock().unwrap().push(evt)
+        }));
         run_agent_turn(provider, &cmd, emit, 5).await?;
         Ok(id)
     }
@@ -91,7 +97,8 @@ impl TestRunner {
     where
         F: Fn(&Event) -> bool,
     {
-        self.expect_event_with_timeout(Duration::from_secs(2), predicate).await
+        self.expect_event_with_timeout(Duration::from_secs(2), predicate)
+            .await
     }
 
     /// Return all collected events.

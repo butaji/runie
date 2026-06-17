@@ -1,7 +1,7 @@
 //! Scoped models tests (Layer 1 + Layer 2)
 
 use crate::commands::DialogState;
-use crate::event::{ControlEvent, Event, InputEvent, ModelConfigEvent, DialogEvent};
+use crate::event::{ControlEvent, DialogEvent, Event, InputEvent, ModelConfigEvent};
 use crate::model::{AppState, ScopedModel};
 
 fn sm(provider: &str, name: &str, enabled: bool) -> ScopedModel {

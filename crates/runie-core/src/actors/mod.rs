@@ -4,11 +4,13 @@
 //! receiving typed messages. This module contains the actors that live inside
 //! a running session.
 
-mod subagent;
 mod fff_indexer;
+mod subagent;
 
-pub use subagent::{SubagentActor, SubagentCommand, SubagentContext, SubagentEvent, SubagentStatus};
 pub use fff_indexer::{
-    FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult,
-    FffSearchResultPayload, FffSearchState,
+    FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
+    FffSearchState,
+};
+pub use subagent::{
+    SubagentActor, SubagentCommand, SubagentContext, SubagentEvent, SubagentStatus,
 };

@@ -1,5 +1,5 @@
 use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, DialogEvent, ScrollEvent, AgentEvent};
+use crate::event::{AgentEvent, ControlEvent, DialogEvent, InputEvent, ScrollEvent};
 use crate::model::{AppState, Role};
 
 fn fresh_state() -> AppState {
@@ -70,9 +70,16 @@ fn test_tool_flow_creates_two_thoughts() {
         &[
             AgentEvent::Thinking { id: "req.0".into() },
             AgentEvent::ThoughtDone { id: "req.0".into() },
-            AgentEvent::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null },
-            AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
-             },
+            AgentEvent::ToolStart {
+                id: "req.0".into(),
+                name: "list_files".into(),
+                input: serde_json::Value::Null,
+            },
+            AgentEvent::ToolEnd {
+                id: "".to_string(),
+                duration_secs: 0.5,
+                output: String::new(),
+            },
             AgentEvent::Thinking { id: "req.0".into() },
             AgentEvent::ThoughtDone { id: "req.0".into() },
             AgentEvent::Response {
@@ -134,9 +141,16 @@ fn test_turn_complete_always_added_when_event_received() {
 #[test]
 fn test_tool_done_event() {
     let mut state = fresh_state();
-    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_files".to_string(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: String::new(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".to_string(),
+        name: "list_files".to_string(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.3,
+        output: String::new(),
+    });
     assert_eq!(state.session.messages.len(), 1);
     let msg = &state.session.messages[0];
     assert_eq!(msg.role, Role::Tool);
@@ -153,9 +167,16 @@ fn test_turn_complete_shows_even_if_done_arrives_first() {
         &[
             AgentEvent::Thinking { id: "req.0".into() },
             AgentEvent::ThoughtDone { id: "req.0".into() },
-            AgentEvent::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null },
-            AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
-             },
+            AgentEvent::ToolStart {
+                id: "req.0".into(),
+                name: "list_files".into(),
+                input: serde_json::Value::Null,
+            },
+            AgentEvent::ToolEnd {
+                id: "".to_string(),
+                duration_secs: 0.5,
+                output: String::new(),
+            },
             AgentEvent::Response {
                 id: "req.0".into(),
                 content: "Here are files".into(),

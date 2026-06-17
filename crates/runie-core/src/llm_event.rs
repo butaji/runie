@@ -18,19 +18,11 @@ pub enum LLMEvent {
     /// A delta of thinking/reasoning content (if supported).
     ThinkingDelta(String),
     /// An LLM started invoking a tool.
-    ToolCallStart {
-        id: String,
-        name: String,
-    },
+    ToolCallStart { id: String, name: String },
     /// A delta of tool input content.
-    ToolCallInputDelta {
-        id: String,
-        delta: String,
-    },
+    ToolCallInputDelta { id: String, delta: String },
     /// An LLM finished a tool invocation.
-    ToolCallEnd {
-        id: String,
-    },
+    ToolCallEnd { id: String },
     /// An error occurred during generation.
     Error(LLMError),
     /// Token usage information.
@@ -39,9 +31,7 @@ pub enum LLMEvent {
         output_tokens: usize,
     },
     /// Generation finished.
-    Finish {
-        reason: StopReason,
-    },
+    Finish { reason: StopReason },
 }
 
 /// Why the generation stopped.

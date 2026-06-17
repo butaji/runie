@@ -1,9 +1,9 @@
-use crate::event::{ControlEvent, SystemEvent, DialogEvent};
+use crate::commands::DialogState;
+use crate::dialog::{Panel, PanelStack};
+use crate::event::{ControlEvent, DialogEvent, SystemEvent};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::orchestrator::ExecutionMode;
 use crate::update::input::{feed_focused_hints, modal_hints, team_mode_hints};
-use crate::dialog::{Panel, PanelStack};
-use crate::commands::DialogState;
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -189,7 +189,7 @@ fn toggle_expand_twice_restores() {
 #[test]
 fn transient_message_sets_content_and_expiry() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientMessage{
+    state.update(SystemEvent::TransientMessage {
         content: "hello".into(),
         level: crate::event::TransientLevel::Info,
     });
@@ -203,7 +203,7 @@ fn transient_message_sets_content_and_expiry() {
 #[test]
 fn transient_error_sets_content_without_expiry() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientError{
+    state.update(SystemEvent::TransientError {
         content: "err".into(),
     });
     assert_eq!(state.transient_message, Some("err".into()));
@@ -216,7 +216,7 @@ fn transient_error_sets_content_without_expiry() {
 #[test]
 fn clear_transient_unsets_message() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientError{
+    state.update(SystemEvent::TransientError {
         content: "err".into(),
     });
     state.update(SystemEvent::ClearTransient);
@@ -227,11 +227,11 @@ fn clear_transient_unsets_message() {
 #[test]
 fn transient_message_overwrites_existing() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientMessage{
+    state.update(SystemEvent::TransientMessage {
         content: "first".into(),
         level: crate::event::TransientLevel::Info,
     });
-    state.update(SystemEvent::TransientMessage{
+    state.update(SystemEvent::TransientMessage {
         content: "second".into(),
         level: crate::event::TransientLevel::Info,
     });
@@ -241,7 +241,7 @@ fn transient_message_overwrites_existing() {
 #[test]
 fn transient_message_in_snapshot() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientMessage{
+    state.update(SystemEvent::TransientMessage {
         content: "snap".into(),
         level: crate::event::TransientLevel::Info,
     });
@@ -257,7 +257,7 @@ fn transient_message_in_snapshot() {
 #[test]
 fn transient_success_has_expiry() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientMessage{
+    state.update(SystemEvent::TransientMessage {
         content: "ok".into(),
         level: crate::event::TransientLevel::Success,
     });
@@ -274,7 +274,7 @@ fn transient_success_has_expiry() {
 #[test]
 fn transient_error_has_no_expiry() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientError{
+    state.update(SystemEvent::TransientError {
         content: "err".into(),
     });
     assert!(
@@ -342,9 +342,18 @@ fn vim_nav_hints_show_scroll_and_quit() {
     state.update(DialogEvent::DialogBack); // enter vim nav
     assert!(state.view.vim_nav_mode);
     let hint = state.hint_text();
-    assert!(hint.contains("j/k"), "feed nav hint should show j/k: {hint}");
-    assert!(hint.contains("q quit"), "feed nav hint should show q quit: {hint}");
-    assert!(hint.contains("enter expand"), "feed nav hint should show enter expand: {hint}");
+    assert!(
+        hint.contains("j/k"),
+        "feed nav hint should show j/k: {hint}"
+    );
+    assert!(
+        hint.contains("q quit"),
+        "feed nav hint should show q quit: {hint}"
+    );
+    assert!(
+        hint.contains("enter expand"),
+        "feed nav hint should show enter expand: {hint}"
+    );
 }
 
 // Team mode hints: shown when execution mode is Team

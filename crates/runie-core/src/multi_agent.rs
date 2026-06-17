@@ -39,7 +39,9 @@ impl SubagentConfig {
 fn redact_secrets(env: HashMap<String, String>) -> HashMap<String, String> {
     env.into_iter()
         .map(|(k, v)| {
-            if k.to_uppercase().contains("KEY") || k.to_uppercase().contains("SECRET") || k.to_uppercase().contains("TOKEN")
+            if k.to_uppercase().contains("KEY")
+                || k.to_uppercase().contains("SECRET")
+                || k.to_uppercase().contains("TOKEN")
             {
                 (k, "***".into())
             } else {
@@ -139,7 +141,9 @@ impl AgentRegistry {
             .agents
             .get_mut(agent_id)
             .ok_or_else(|| format!("agent {} not found", agent_id))?;
-        entry.status = AgentLifecycleStatus::Done { output: output.clone() };
+        entry.status = AgentLifecycleStatus::Done {
+            output: output.clone(),
+        };
         entry.output = output;
         Ok(())
     }
@@ -161,7 +165,12 @@ impl AgentRegistry {
 }
 
 fn is_active(entry: &SubagentEntry) -> bool {
-    matches!(entry.status, AgentLifecycleStatus::Running | AgentLifecycleStatus::Pending | AgentLifecycleStatus::AwaitingUser)
+    matches!(
+        entry.status,
+        AgentLifecycleStatus::Running
+            | AgentLifecycleStatus::Pending
+            | AgentLifecycleStatus::AwaitingUser
+    )
 }
 
 fn depth(_role: &str) -> usize {
@@ -210,7 +219,9 @@ mod tests {
     #[test]
     fn subagent_naming_format() {
         let mut registry = AgentRegistry::new();
-        let id = registry.spawn("researcher", "go".into(), ModelTrait::General, 1000).unwrap();
+        let id = registry
+            .spawn("researcher", "go".into(), ModelTrait::General, 1000)
+            .unwrap();
         assert!(id.starts_with("researcher-"));
         let suffix = id.strip_prefix("researcher-").unwrap();
         assert_eq!(suffix.len(), 3);
@@ -253,35 +264,55 @@ mod tests {
     #[test]
     fn depth_limit_one_level() {
         let mut registry = AgentRegistry::new();
-        let id = registry.spawn("coder", "task".into(), ModelTrait::Fast, 500).unwrap();
+        let id = registry
+            .spawn("coder", "task".into(), ModelTrait::Fast, 500)
+            .unwrap();
         // Registry is depth 0 from orchestrator perspective; attempting to treat
         // a subagent as a parent would require a registry on the subagent.
-        assert!(registry.spawn(&id, "subtask".into(), ModelTrait::Fast, 500).is_ok());
+        assert!(registry
+            .spawn(&id, "subtask".into(), ModelTrait::Fast, 500)
+            .is_ok());
     }
 
     #[test]
     fn steer_command_delivers_message() {
         let mut registry = AgentRegistry::new();
-        let id = registry.spawn("coder", "task".into(), ModelTrait::Fast, 500).unwrap();
+        let id = registry
+            .spawn("coder", "task".into(), ModelTrait::Fast, 500)
+            .unwrap();
         registry.send(id.clone(), "focus".into()).unwrap();
-        let entry = registry.list().into_iter().find(|e| e.agent_id == id).unwrap();
+        let entry = registry
+            .list()
+            .into_iter()
+            .find(|e| e.agent_id == id)
+            .unwrap();
         assert!(entry.messages.contains(&"focus".to_string()));
     }
 
     #[test]
     fn cancel_command_stops_subagent() {
         let mut registry = AgentRegistry::new();
-        let id = registry.spawn("coder", "task".into(), ModelTrait::Fast, 500).unwrap();
+        let id = registry
+            .spawn("coder", "task".into(), ModelTrait::Fast, 500)
+            .unwrap();
         registry.close(id.clone()).unwrap();
-        assert!(matches!(registry.status(&id), Some(AgentLifecycleStatus::Failed { .. })));
+        assert!(matches!(
+            registry.status(&id),
+            Some(AgentLifecycleStatus::Failed { .. })
+        ));
     }
 
     #[test]
     fn done_tool_signals_completion() {
         let mut registry = AgentRegistry::new();
-        let id = registry.spawn("coder", "task".into(), ModelTrait::Fast, 500).unwrap();
+        let id = registry
+            .spawn("coder", "task".into(), ModelTrait::Fast, 500)
+            .unwrap();
         registry.signal_done(&id, Some("result".into())).unwrap();
         assert_eq!(registry.output(&id), Some("result"));
-        assert!(matches!(registry.status(&id), Some(AgentLifecycleStatus::Done { .. })));
+        assert!(matches!(
+            registry.status(&id),
+            Some(AgentLifecycleStatus::Done { .. })
+        ));
     }
 }

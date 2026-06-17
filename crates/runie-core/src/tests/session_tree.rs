@@ -1,10 +1,10 @@
 //! Session tree tests — fork, clone, filter
 
+use crate::event::Event;
+use crate::event::{DialogEvent, InputEvent, SessionEvent};
 use crate::message::{ChatMessage, Role};
 use crate::model::AppState;
 use crate::session_tree::{SessionTree, SessionTreeFilter};
-use crate::event::{InputEvent, DialogEvent, SessionEvent};
-use crate::event::Event;
 
 fn msg(role: Role, content: &str) -> ChatMessage {
     ChatMessage {

@@ -28,7 +28,10 @@ fn buffer_completes_code_fence() {
     let mut buf = StreamingBuffer::new();
     buf.push_delta("Some text.\n```python\nprint('hello')\n```");
     let flushed = buf.force_flush();
-    assert_eq!(flushed, vec!["Some text.", "```python", "print('hello')", "```"]);
+    assert_eq!(
+        flushed,
+        vec!["Some text.", "```python", "print('hello')", "```"]
+    );
     assert!(buf.tail().is_empty());
     assert!(buf.is_stable());
 }

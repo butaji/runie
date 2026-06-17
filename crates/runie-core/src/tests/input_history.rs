@@ -1,6 +1,5 @@
 //! Tests for input history (Up/Down arrows)
 
-
 #[cfg(test)]
 mod tests {
     use crate::event::{Event, InputEvent};

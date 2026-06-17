@@ -292,13 +292,18 @@ mod tests {
     }
 
     fn append_msg(store: &SessionStore, sid: &str, mid: &str, role: &str, content: &str, ts: f64) {
-        store.append(sid, &DurableCoreEvent::MessageSent {
-            id: mid.into(),
-            role: role.into(),
-            content: content.into(),
-            timestamp: ts,
-            provider: String::new(),
-        }).unwrap();
+        store
+            .append(
+                sid,
+                &DurableCoreEvent::MessageSent {
+                    id: mid.into(),
+                    role: role.into(),
+                    content: content.into(),
+                    timestamp: ts,
+                    provider: String::new(),
+                },
+            )
+            .unwrap();
     }
 
     #[test]
@@ -308,15 +313,22 @@ mod tests {
 
         append_msg(&store, sid, "msg1", "user", "Hello", 1.0);
         append_msg(&store, sid, "msg2", "assistant", "Hi there!", 2.0);
-        store.append(sid, &DurableCoreEvent::ModelSwitched {
-            provider: "anthropic".into(),
-            model: "claude-3".into(),
-        }).unwrap();
+        store
+            .append(
+                sid,
+                &DurableCoreEvent::ModelSwitched {
+                    provider: "anthropic".into(),
+                    model: "claude-3".into(),
+                },
+            )
+            .unwrap();
 
         let events = store.load_events(sid).unwrap();
         assert_eq!(events.len(), 3);
         assert!(matches!(&events[0], DurableCoreEvent::MessageSent { id, .. } if id == "msg1"));
-        assert!(matches!(&events[2], DurableCoreEvent::ModelSwitched { provider, .. } if provider == "anthropic"));
+        assert!(
+            matches!(&events[2], DurableCoreEvent::ModelSwitched { provider, .. } if provider == "anthropic")
+        );
     }
 
     #[test]
@@ -325,9 +337,27 @@ mod tests {
         let sid = "test-crash";
 
         let batch = vec![
-            DurableCoreEvent::MessageSent { id: "1".into(), role: "user".into(), content: "First".into(), timestamp: 1.0, provider: String::new() },
-            DurableCoreEvent::MessageSent { id: "2".into(), role: "user".into(), content: "Second".into(), timestamp: 2.0, provider: String::new() },
-            DurableCoreEvent::MessageSent { id: "3".into(), role: "user".into(), content: "Third".into(), timestamp: 3.0, provider: String::new() },
+            DurableCoreEvent::MessageSent {
+                id: "1".into(),
+                role: "user".into(),
+                content: "First".into(),
+                timestamp: 1.0,
+                provider: String::new(),
+            },
+            DurableCoreEvent::MessageSent {
+                id: "2".into(),
+                role: "user".into(),
+                content: "Second".into(),
+                timestamp: 2.0,
+                provider: String::new(),
+            },
+            DurableCoreEvent::MessageSent {
+                id: "3".into(),
+                role: "user".into(),
+                content: "Third".into(),
+                timestamp: 3.0,
+                provider: String::new(),
+            },
         ];
 
         store.append_batch(sid, &batch).unwrap();
@@ -335,7 +365,9 @@ mod tests {
         // Verify all events persisted
         let events = store.load_events(sid).unwrap();
         assert_eq!(events.len(), 3);
-        assert!(events.iter().all(|e| matches!(e, DurableCoreEvent::MessageSent { .. })));
+        assert!(events
+            .iter()
+            .all(|e| matches!(e, DurableCoreEvent::MessageSent { .. })));
     }
 
     #[test]
@@ -425,12 +457,30 @@ mod tests {
     fn redb_multiple_sessions_isolated() {
         let store = test_store();
 
-        store.append("s1", &DurableCoreEvent::MessageSent {
-            id: "1".into(), role: "user".into(), content: "S1".into(), timestamp: 1.0, provider: String::new(),
-        }).unwrap();
-        store.append("s2", &DurableCoreEvent::MessageSent {
-            id: "2".into(), role: "user".into(), content: "S2".into(), timestamp: 2.0, provider: String::new(),
-        }).unwrap();
+        store
+            .append(
+                "s1",
+                &DurableCoreEvent::MessageSent {
+                    id: "1".into(),
+                    role: "user".into(),
+                    content: "S1".into(),
+                    timestamp: 1.0,
+                    provider: String::new(),
+                },
+            )
+            .unwrap();
+        store
+            .append(
+                "s2",
+                &DurableCoreEvent::MessageSent {
+                    id: "2".into(),
+                    role: "user".into(),
+                    content: "S2".into(),
+                    timestamp: 2.0,
+                    provider: String::new(),
+                },
+            )
+            .unwrap();
 
         let ev1 = store.load_events("s1").unwrap();
         let ev2 = store.load_events("s2").unwrap();

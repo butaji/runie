@@ -123,8 +123,8 @@ fn build_profile_missing_items(panel: Panel, path: &std::path::Path) -> Panel {
 pub fn build_edit_panel(name: &str) -> PanelStack {
     let dir = profiles_dir();
     let path = dir.join(format!("{}.toml", name));
-    let profile =
-        agent_profiles::load_profile_from_file(&path).unwrap_or_else(|_| AgentProfile::new(name, ""));
+    let profile = agent_profiles::load_profile_from_file(&path)
+        .unwrap_or_else(|_| AgentProfile::new(name, ""));
 
     let title = edit_panel_title(name, &path);
     let panel = Panel::new(format!("agents_edit:{}", name), title);
@@ -199,15 +199,18 @@ fn add_edit_actions(panel: Panel, name: &str) -> Panel {
 
 /// Build the confirm-delete panel.
 pub fn build_delete_panel(name: &str) -> PanelStack {
-    let panel = Panel::new(format!("agents_delete:{}", name), format!("Delete {}?", name))
-        .item(
-            format!("Yes, delete {}", name),
-            ItemAction::Emit(DialogEvent::AgentsManagerDelete {
-                name: name.to_string(),
-            }),
-        )
-        .item("No, go back", ItemAction::Pop)
-        .item("Close", ItemAction::Close);
+    let panel = Panel::new(
+        format!("agents_delete:{}", name),
+        format!("Delete {}?", name),
+    )
+    .item(
+        format!("Yes, delete {}", name),
+        ItemAction::Emit(DialogEvent::AgentsManagerDelete {
+            name: name.to_string(),
+        }),
+    )
+    .item("No, go back", ItemAction::Pop)
+    .item("Close", ItemAction::Close);
     PanelStack::new(panel)
 }
 

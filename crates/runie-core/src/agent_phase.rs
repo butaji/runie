@@ -82,7 +82,11 @@ mod tests {
     fn format_elapsed_under_minute() {
         let start = Instant::now() - std::time::Duration::from_millis(12300);
         let formatted = format_elapsed(Some(start));
-        assert!(formatted.ends_with('s'), "should end with 's': {}", formatted);
+        assert!(
+            formatted.ends_with('s'),
+            "should end with 's': {}",
+            formatted
+        );
     }
 
     #[test]

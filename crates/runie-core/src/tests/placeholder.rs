@@ -1,6 +1,5 @@
 //! Tests for placeholder text
 
-
 #[cfg(test)]
 mod tests {
     use crate::event::InputEvent;

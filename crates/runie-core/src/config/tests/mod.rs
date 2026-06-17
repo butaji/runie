@@ -12,10 +12,13 @@ fn make_test_config(dir: &tempfile::TempDir, content: &str) -> std::path::PathBu
 #[test]
 fn config_load_parses_basic_fields() {
     let dir = tempfile::tempdir().unwrap();
-    let path = make_test_config(&dir, r#"
+    let path = make_test_config(
+        &dir,
+        r#"
 provider = "openai"
 model = "gpt-4"
-"#);
+"#,
+    );
     let config = Config::load(Some(&path));
     assert_eq!(config.provider, Some("openai".to_string()));
     assert_eq!(config.default_model(), Some("gpt-4"));
@@ -24,11 +27,14 @@ model = "gpt-4"
 #[test]
 fn config_load_parses_models_section() {
     let dir = tempfile::tempdir().unwrap();
-    let path = make_test_config(&dir, r#"
+    let path = make_test_config(
+        &dir,
+        r#"
 [models]
 default = "gpt-4o"
 scoped = ["gpt-4", "gpt-3.5-turbo"]
-"#);
+"#,
+    );
     let config = Config::load(Some(&path));
     assert_eq!(config.default_model(), Some("gpt-4o"));
     let scoped = config.scoped_models().unwrap();
@@ -38,12 +44,15 @@ scoped = ["gpt-4", "gpt-3.5-turbo"]
 #[test]
 fn config_load_parses_provider_section() {
     let dir = tempfile::tempdir().unwrap();
-    let path = make_test_config(&dir, r#"
+    let path = make_test_config(
+        &dir,
+        r#"
 [model_providers.openai]
 type = "openai"
 base_url = "https://api.openai.com"
 api_key = "sk-test"
-"#);
+"#,
+    );
     let config = Config::load(Some(&path));
     let provider = config.provider_for_model("openai/gpt-4").unwrap();
     assert_eq!(provider.base_url, "https://api.openai.com");
@@ -52,10 +61,13 @@ api_key = "sk-test"
 #[test]
 fn config_load_parses_ui_section() {
     let dir = tempfile::tempdir().unwrap();
-    let path = make_test_config(&dir, r#"
+    let path = make_test_config(
+        &dir,
+        r#"
 [ui]
 vim_mode = false
-"#);
+"#,
+    );
     let config = Config::load(Some(&path));
     assert!(!config.vim_mode());
 }
@@ -63,10 +75,13 @@ vim_mode = false
 #[test]
 fn config_load_parses_telemetry_section() {
     let dir = tempfile::tempdir().unwrap();
-    let path = make_test_config(&dir, r#"
+    let path = make_test_config(
+        &dir,
+        r#"
 [telemetry]
 enabled = false
-"#);
+"#,
+    );
     let config = Config::load(Some(&path));
     assert!(!config.telemetry_enabled());
 }
@@ -89,23 +104,41 @@ fn config_path_returns_expected_path() {
 
 #[test]
 fn classify_change_detects_model_change() {
-    let prev = Config { provider: Some("openai".to_string()), ..Config::default() };
-    let curr = Config { provider: Some("anthropic".to_string()), ..Config::default() };
+    let prev = Config {
+        provider: Some("openai".to_string()),
+        ..Config::default()
+    };
+    let curr = Config {
+        provider: Some("anthropic".to_string()),
+        ..Config::default()
+    };
     let changes = curr.classify_change(&prev);
-    assert!(matches!(changes.as_slice(), [ConfigChange::Model { provider, .. }] if provider == "anthropic"));
+    assert!(
+        matches!(changes.as_slice(), [ConfigChange::Model { provider, .. }] if provider == "anthropic")
+    );
 }
 
 #[test]
 fn classify_change_detects_theme_change() {
-    let prev = Config { theme: Some("dark".to_string()), ..Config::default() };
-    let curr = Config { theme: Some("light".to_string()), ..Config::default() };
+    let prev = Config {
+        theme: Some("dark".to_string()),
+        ..Config::default()
+    };
+    let curr = Config {
+        theme: Some("light".to_string()),
+        ..Config::default()
+    };
     let changes = curr.classify_change(&prev);
     assert!(matches!(changes.as_slice(), [ConfigChange::Theme { name }] if name == "light"));
 }
 
 #[test]
 fn classify_change_returns_empty_when_identical() {
-    let prev = Config { provider: Some("openai".to_string()), theme: Some("dark".to_string()), ..Config::default() };
+    let prev = Config {
+        provider: Some("openai".to_string()),
+        theme: Some("dark".to_string()),
+        ..Config::default()
+    };
     let curr = prev.clone();
     assert!(curr.classify_change(&prev).is_empty());
 }
@@ -114,8 +147,10 @@ fn classify_change_returns_empty_when_identical() {
 fn classify_change_detects_keybindings_change() {
     let mut prev = Config::default();
     let mut curr = Config::default();
-    prev.keybindings.insert("ctrl+c".to_string(), "Quit".to_string());
-    curr.keybindings.insert("ctrl+c".to_string(), "Abort".to_string());
+    prev.keybindings
+        .insert("ctrl+c".to_string(), "Quit".to_string());
+    curr.keybindings
+        .insert("ctrl+c".to_string(), "Abort".to_string());
     let changes = curr.classify_change(&prev);
     assert!(matches!(changes.as_slice(), [ConfigChange::Keybindings]));
 }
@@ -127,7 +162,8 @@ fn classify_change_multiple_changes() {
     prev.provider = Some("openai".to_string());
     curr.provider = Some("anthropic".to_string());
     curr.theme = Some("nord".to_string());
-    curr.keybindings.insert("ctrl+c".to_string(), "Abort".to_string());
+    curr.keybindings
+        .insert("ctrl+c".to_string(), "Abort".to_string());
     let changes = curr.classify_change(&prev);
     assert_eq!(changes.len(), 3);
 }
@@ -135,7 +171,9 @@ fn classify_change_multiple_changes() {
 #[test]
 fn config_load_parses_all_sections() {
     let dir = tempfile::tempdir().unwrap();
-    let path = make_test_config(&dir, r#"
+    let path = make_test_config(
+        &dir,
+        r#"
 provider = "openai"
 model = "gpt-4"
 theme = "nord"
@@ -155,7 +193,8 @@ max_bytes = 100000
 
 [prompts]
 default = "default"
-"#);
+"#,
+    );
     let config = Config::load(Some(&path));
     assert_eq!(config.provider, Some("openai".to_string()));
     assert_eq!(config.default_model(), Some("gpt-4o"));
@@ -167,10 +206,13 @@ default = "default"
 #[test]
 fn provider_and_core_see_same_default_model() {
     let dir = tempfile::tempdir().unwrap();
-    let path = make_test_config(&dir, r#"
+    let path = make_test_config(
+        &dir,
+        r#"
 [models]
 default = "gpt-4o"
-"#);
+"#,
+    );
     let config = Config::load(Some(&path));
     let default = config.default_model();
     let config2 = Config::load(Some(&path));
@@ -180,10 +222,13 @@ default = "gpt-4o"
 #[test]
 fn config_validation_accepts_valid_config() {
     let dir = tempfile::tempdir().unwrap();
-    let path = make_test_config(&dir, r#"
+    let path = make_test_config(
+        &dir,
+        r#"
 provider = "openai"
 model = "gpt-4o"
-"#);
+"#,
+    );
     let config = Config::load(Some(&path));
     assert!(config.validate().is_ok());
 }
@@ -192,7 +237,10 @@ model = "gpt-4o"
 fn config_validation_rejects_invalid_json() {
     let raw: toml::Value = toml::from_str(r#"provider = 123"#).unwrap();
     let result = Config::validate_toml(&raw);
-    assert!(result.is_err(), "provider as integer should fail validation");
+    assert!(
+        result.is_err(),
+        "provider as integer should fail validation"
+    );
 }
 
 #[test]

@@ -34,10 +34,12 @@ impl AppState {
                 line_start = i + 1;
             }
         }
-        if line_end == self.input.input.len() && self.input.input.ends_with('\n')
-            && self.input.cursor_pos > line_start {
-                line_end = self.input.input.len();
-            }
+        if line_end == self.input.input.len()
+            && self.input.input.ends_with('\n')
+            && self.input.cursor_pos > line_start
+        {
+            line_end = self.input.input.len();
+        }
         (line_start, line_end)
     }
 
@@ -114,7 +116,10 @@ impl AppState {
             return;
         }
         let pos = self.input.cursor_pos.min(self.input.input.len());
-        let cursor_line = self.input.input[..pos].chars().filter(|&c| c == '\n').count();
+        let cursor_line = self.input.input[..pos]
+            .chars()
+            .filter(|&c| c == '\n')
+            .count();
         if cursor_line < self.input.input_scroll {
             self.input.input_scroll = cursor_line;
         } else if cursor_line >= self.input.input_scroll + visible_height {
@@ -126,8 +131,10 @@ impl AppState {
 
     pub(crate) fn cursor_left(&mut self) {
         if self.input.cursor_pos > 0 {
-            self.input.cursor_pos =
-                crate::update::input::prev_grapheme_boundary(&self.input.input, self.input.cursor_pos);
+            self.input.cursor_pos = crate::update::input::prev_grapheme_boundary(
+                &self.input.input,
+                self.input.cursor_pos,
+            );
             self.clear_ghost();
             self.clamp_input_scroll();
             self.mark_dirty();
@@ -142,8 +149,10 @@ impl AppState {
             return;
         }
         if self.input.cursor_pos < self.input.input.len() {
-            self.input.cursor_pos =
-                crate::update::input::next_grapheme_boundary(&self.input.input, self.input.cursor_pos);
+            self.input.cursor_pos = crate::update::input::next_grapheme_boundary(
+                &self.input.input,
+                self.input.cursor_pos,
+            );
             self.clamp_input_scroll();
             self.mark_dirty();
         } else {
@@ -179,8 +188,10 @@ impl AppState {
 
     pub(crate) fn cursor_word_left(&mut self) {
         if self.input.cursor_pos > 0 {
-            self.input.cursor_pos =
-                crate::update::input::find_word_boundary_left(&self.input.input, self.input.cursor_pos);
+            self.input.cursor_pos = crate::update::input::find_word_boundary_left(
+                &self.input.input,
+                self.input.cursor_pos,
+            );
             self.clear_ghost();
             self.clamp_input_scroll();
             self.mark_dirty();
@@ -191,8 +202,10 @@ impl AppState {
 
     pub(crate) fn cursor_word_right(&mut self) {
         if self.input.cursor_pos < self.input.input.len() {
-            self.input.cursor_pos =
-                crate::update::input::find_word_boundary_right(&self.input.input, self.input.cursor_pos);
+            self.input.cursor_pos = crate::update::input::find_word_boundary_right(
+                &self.input.input,
+                self.input.cursor_pos,
+            );
             self.clear_ghost();
             self.clamp_input_scroll();
             self.mark_dirty();
@@ -290,10 +303,7 @@ impl AppState {
                 Some(false)
             }
             DialogEvent::ToggleCommandPalette => {
-                crate::update::dialog::dialog_toggle_event(
-                    self,
-                    DialogEvent::ToggleCommandPalette,
-                );
+                crate::update::dialog::dialog_toggle_event(self, DialogEvent::ToggleCommandPalette);
                 Some(false)
             }
             _ => Some(true),

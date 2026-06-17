@@ -47,7 +47,10 @@ impl ProviderConfigResolver {
                 continue;
             }
             if let Some((key, val)) = line.split_once('=') {
-                map.insert(key.trim().to_string(), val.trim().trim_matches('"').to_string());
+                map.insert(
+                    key.trim().to_string(),
+                    val.trim().trim_matches('"').to_string(),
+                );
             }
         }
         map
@@ -84,7 +87,9 @@ mod tests {
     fn resolve_env_takes_priority() {
         let config = Config::default();
         let mut resolver = ProviderConfigResolver::from_config(&config);
-        resolver.env.insert("TESTPROVIDER_API_KEY".to_string(), "env-key".to_string());
+        resolver
+            .env
+            .insert("TESTPROVIDER_API_KEY".to_string(), "env-key".to_string());
         resolver.config_file.insert(
             "testprovider".to_string(),
             ModelProvider {
@@ -94,16 +99,24 @@ mod tests {
             },
         );
 
-        assert_eq!(resolver.resolve_api_key("testprovider"), Some("env-key".to_string()));
+        assert_eq!(
+            resolver.resolve_api_key("testprovider"),
+            Some("env-key".to_string())
+        );
     }
 
     #[test]
     fn resolve_dotenv_fallback() {
         let config = Config::default();
         let mut resolver = ProviderConfigResolver::from_config(&config);
-        resolver.dotenv.insert("TESTPROVIDER_API_KEY".to_string(), "dotenv-key".to_string());
+        resolver
+            .dotenv
+            .insert("TESTPROVIDER_API_KEY".to_string(), "dotenv-key".to_string());
 
-        assert_eq!(resolver.resolve_api_key("testprovider"), Some("dotenv-key".to_string()));
+        assert_eq!(
+            resolver.resolve_api_key("testprovider"),
+            Some("dotenv-key".to_string())
+        );
     }
 
     #[test]
@@ -119,16 +132,25 @@ mod tests {
         );
         let resolver = ProviderConfigResolver::from_config(&config);
 
-        assert_eq!(resolver.resolve_api_key("testprovider"), Some("config-key".to_string()));
+        assert_eq!(
+            resolver.resolve_api_key("testprovider"),
+            Some("config-key".to_string())
+        );
     }
 
     #[test]
     fn resolve_base_url_from_env() {
         let config = Config::default();
         let mut resolver = ProviderConfigResolver::from_config(&config);
-        resolver.env.insert("MYPROVIDER_BASE_URL".to_string(), "http://env.local".to_string());
+        resolver.env.insert(
+            "MYPROVIDER_BASE_URL".to_string(),
+            "http://env.local".to_string(),
+        );
 
-        assert_eq!(resolver.resolve_base_url("myprovider"), Some("http://env.local".to_string()));
+        assert_eq!(
+            resolver.resolve_base_url("myprovider"),
+            Some("http://env.local".to_string())
+        );
     }
 
     #[test]

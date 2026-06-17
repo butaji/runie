@@ -3,11 +3,11 @@
 //! Uses FFF's content search with `classify_definitions: true` to find
 //! `struct`, `fn`, `class`, `def`, `impl`, etc. definitions.
 
-use runie_core::actors::FffSearchState;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
 use fff_search::{GrepMatch, GrepMode, GrepSearchOptions, QueryParser};
+use runie_core::actors::FffSearchState;
 use serde_json::Value;
 use std::time::Instant;
 
@@ -64,7 +64,10 @@ fn detect_struct(t: &str) -> bool {
 }
 
 fn detect_fn(t: &str) -> bool {
-    t.starts_with("fn ") || t.starts_with("pub fn ") || t.starts_with("async fn ") || t.starts_with("pub async fn ")
+    t.starts_with("fn ")
+        || t.starts_with("pub fn ")
+        || t.starts_with("async fn ")
+        || t.starts_with("pub async fn ")
 }
 
 fn detect_enum(t: &str) -> bool {
@@ -385,7 +388,11 @@ mod tests {
     #[test]
     fn find_definitions_tool_description_mentions_classifier() {
         let desc = FindDefinitionsTool.description();
-        assert!(desc.contains("definition classifier"), "description: {}", desc);
+        assert!(
+            desc.contains("definition classifier"),
+            "description: {}",
+            desc
+        );
     }
 
     #[tokio::test]

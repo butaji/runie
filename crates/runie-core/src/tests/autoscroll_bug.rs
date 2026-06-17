@@ -1,5 +1,5 @@
-use crate::event::Event;
 use crate::event::AgentEvent;
+use crate::event::Event;
 use crate::layout::element_line_count;
 use crate::model::{AppState, ChatMessage, Role};
 
@@ -147,7 +147,11 @@ fn submit_then_large_response_stays_at_bottom() {
     state.ensure_fresh();
     assert_eq!(state.view.scroll, 0, "Scroll must be 0 after submit");
     // Agent tool with large output
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+        input: serde_json::Value::Null,
+    });
     let output = (1..=20)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()

@@ -2,11 +2,7 @@
 
 use anyhow::Result;
 use runie_agent::{build_provider_with_warning, run_headless_turn, HeadlessOptions};
-use runie_core::{
-    config_reload,
-    message::ChatMessage,
-    provider::Provider,
-};
+use runie_core::{config_reload, message::ChatMessage, provider::Provider};
 
 #[tokio::main]
 async fn main() {

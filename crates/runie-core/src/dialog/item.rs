@@ -1,6 +1,6 @@
 //! Panel item types and activation actions.
 
-use crate::event::{ControlEvent, InputEvent, CommandEvent};
+use crate::event::{CommandEvent, ControlEvent, InputEvent};
 use crate::Event;
 
 /// A single row inside a panel.

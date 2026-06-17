@@ -3,7 +3,7 @@
 //! These tests exercise the full update flow: a multi-panel stack, ESC
 //! events (SettingsClose / PaletteClose), and the open_dialog state.
 
-use crate::event::{ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, LoginFlowEvent};
+use crate::event::{ControlEvent, DialogEvent, LoginFlowEvent, ModelConfigEvent, SystemEvent};
 
 use crate::commands::DialogState;
 use crate::dialog::{ItemAction, Panel, PanelStack};

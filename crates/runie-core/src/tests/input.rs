@@ -1,5 +1,5 @@
 use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, DialogEvent, AgentEvent};
+use crate::event::{AgentEvent, ControlEvent, DialogEvent, InputEvent};
 use crate::model::AppState;
 
 fn fresh_state() -> AppState {
@@ -364,7 +364,10 @@ fn submit_quit_is_case_insensitive() {
 fn ctrl_q_event_quits_app() {
     let mut state = fresh_state();
     state.update(ControlEvent::Quit);
-    assert!(state.should_quit, "ControlEvent::Quit should set should_quit");
+    assert!(
+        state.should_quit,
+        "ControlEvent::Quit should set should_quit"
+    );
 }
 
 #[test]

@@ -37,8 +37,10 @@ fn thought_summary_builder() {
 fn tool_running_builder() {
     let started = std::time::Instant::now();
     let e = Element::tool_running("ls", ".", started).at(5.0);
-    assert!(matches!(e, Element::ToolRunning { name, args, timestamp, .. }
-        if name == "ls" && args == "." && timestamp == 5.0));
+    assert!(
+        matches!(e, Element::ToolRunning { name, args, timestamp, .. }
+        if name == "ls" && args == "." && timestamp == 5.0)
+    );
 }
 
 #[test]

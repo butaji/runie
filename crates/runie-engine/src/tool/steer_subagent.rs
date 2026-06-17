@@ -28,7 +28,9 @@ impl SteerSubagentTool {
             .as_ref()
             .ok_or_else(|| anyhow!("steer_subagent: no agent registry in context"))?;
         let mut guard = registry.lock().map_err(|e| anyhow!("lock poisoned: {e}"))?;
-        guard.send(agent_id.clone(), message).map_err(|e| anyhow!("{e}"))?;
+        guard
+            .send(agent_id.clone(), message)
+            .map_err(|e| anyhow!("{e}"))?;
         Ok(ToolOutput {
             tool_name: "steer_subagent".to_string(),
             tool_args: input,

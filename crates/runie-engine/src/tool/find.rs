@@ -59,7 +59,11 @@ impl Tool for FindTool {
         let full_path = resolve_path(path, &ctx.working_dir);
 
         // Try fd first, fall back to find
-        let tool = if crate::tool::which_tool("fd").is_some() { "fd" } else { "find" };
+        let tool = if crate::tool::which_tool("fd").is_some() {
+            "fd"
+        } else {
+            "find"
+        };
         let result = if tool == "fd" {
             run_fd(pattern, &full_path, limit)
         } else {

@@ -1,6 +1,5 @@
 //! Text editing (merged from input_text.rs).
 
-
 use crate::message::{now, ChatMessage, Role};
 use crate::model::AppState;
 
@@ -114,7 +113,8 @@ impl AppState {
 
     fn remove_grapheme_before_cursor(&mut self) {
         self.push_undo();
-        let new_pos = crate::update::input::prev_grapheme_boundary(&self.input.input, self.input.cursor_pos);
+        let new_pos =
+            crate::update::input::prev_grapheme_boundary(&self.input.input, self.input.cursor_pos);
         self.input.input.drain(new_pos..self.input.cursor_pos);
         self.input.cursor_pos = new_pos;
         self.clear_redo();
@@ -142,7 +142,8 @@ impl AppState {
             return;
         }
         self.push_undo();
-        let start = crate::update::input::find_word_boundary_left(&self.input.input, self.input.cursor_pos);
+        let start =
+            crate::update::input::find_word_boundary_left(&self.input.input, self.input.cursor_pos);
         self.input.input.drain(start..self.input.cursor_pos);
         self.input.cursor_pos = start;
         self.clear_redo();
@@ -181,7 +182,10 @@ impl AppState {
     pub(crate) fn kill_char(&mut self) {
         if self.input.cursor_pos < self.input.input.len() {
             self.push_undo();
-            let end = crate::update::input::next_grapheme_boundary(&self.input.input, self.input.cursor_pos);
+            let end = crate::update::input::next_grapheme_boundary(
+                &self.input.input,
+                self.input.cursor_pos,
+            );
             self.input.input.drain(self.input.cursor_pos..end);
             self.clear_redo();
             self.handle_at_trigger();
@@ -284,8 +288,7 @@ impl AppState {
             self.handle_vim_nav_char(c);
             return;
         }
-        let is_at_trigger_position =
-            self.input.input.is_empty() || self.input.input.ends_with(' ');
+        let is_at_trigger_position = self.input.input.is_empty() || self.input.input.ends_with(' ');
         if is_at_trigger_position && self.completion.path_suggestions.is_none() {
             if self.config.vim_mode {
                 if let Some(evt) = self.vim_motion_event(c) {
@@ -420,9 +423,7 @@ impl AppState {
                 DialogType::CommandPalette => crate::update::dialog::open_command_palette(self),
                 DialogType::ModelSelector => crate::update::dialog::open_model_selector(self),
                 DialogType::Settings => crate::update::dialog::open_settings_dialog(self),
-                DialogType::ScopedModels => {
-                    crate::update::dialog::open_scoped_models_dialog(self)
-                }
+                DialogType::ScopedModels => crate::update::dialog::open_scoped_models_dialog(self),
             },
             crate::commands::CommandResult::OpenPanelStack(stack) => {
                 self.open_dialog = Some(crate::commands::DialogState::PanelStack(*stack));

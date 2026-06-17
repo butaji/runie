@@ -20,9 +20,10 @@ pub fn build_provider_picker() -> Panel {
         panel = panel.item(&label, ItemAction::Emit(evt));
     }
 
-    panel = panel
-        .separator()
-        .item("_Cancel", ItemAction::Emit(crate::event::ControlEvent::Abort));
+    panel = panel.separator().item(
+        "_Cancel",
+        ItemAction::Emit(crate::event::ControlEvent::Abort),
+    );
     panel
 }
 
@@ -39,7 +40,10 @@ pub fn build_key_input(provider_key: &str) -> Panel {
                 key: String::new(),
             }),
         )
-        .item("_Cancel", ItemAction::Emit(crate::event::ControlEvent::Abort))
+        .item(
+            "_Cancel",
+            ItemAction::Emit(crate::event::ControlEvent::Abort),
+        )
 }
 
 /// Build the model multi-select panel.
@@ -64,8 +68,14 @@ pub fn build_model_selector(state: &LoginFlowState) -> Panel {
 
     panel = panel
         .separator()
-        .item("_Save", ItemAction::Emit(crate::event::LoginFlowEvent::Save))
-        .item("_Cancel", ItemAction::Emit(crate::event::ControlEvent::Abort));
+        .item(
+            "_Save",
+            ItemAction::Emit(crate::event::LoginFlowEvent::Save),
+        )
+        .item(
+            "_Cancel",
+            ItemAction::Emit(crate::event::ControlEvent::Abort),
+        );
     panel
 }
 

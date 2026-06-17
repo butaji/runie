@@ -39,7 +39,12 @@ fn read_git_info(git_dir: &std::path::Path) -> Option<crate::snapshot::GitInfo> 
     let branch = read_branch(&head_path);
     let config_path = git_dir.join("config");
     let repo_name = read_origin_repo_name(&config_path);
-    Some(crate::snapshot::GitInfo { repo_name, branch, is_worktree: false, worktree_source: None })
+    Some(crate::snapshot::GitInfo {
+        repo_name,
+        branch,
+        is_worktree: false,
+        worktree_source: None,
+    })
 }
 
 fn read_worktree_git_info(git_file: &std::path::Path) -> Option<crate::snapshot::GitInfo> {
@@ -62,7 +67,12 @@ fn read_worktree_git_info(git_file: &std::path::Path) -> Option<crate::snapshot:
         .and_then(|p| p.parent())
         .and_then(|p| p.parent())
         .map(|p| p.to_string_lossy().to_string());
-    Some(crate::snapshot::GitInfo { repo_name, branch, is_worktree: true, worktree_source })
+    Some(crate::snapshot::GitInfo {
+        repo_name,
+        branch,
+        is_worktree: true,
+        worktree_source,
+    })
 }
 
 fn read_branch(head_path: &std::path::Path) -> Option<String> {

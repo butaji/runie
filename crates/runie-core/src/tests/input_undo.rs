@@ -1,6 +1,5 @@
 //! Tests for input undo/redo
 
-
 #[cfg(test)]
 mod tests {
     use crate::event::InputEvent;

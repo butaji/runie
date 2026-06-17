@@ -2,7 +2,7 @@
 
 use crate::event::Event;
 
-use crate::event::{InputEvent, ControlEvent};
+use crate::event::{ControlEvent, InputEvent};
 use crate::model::AppState;
 
 // ── Layer 1: Pure logic tests ──────────────────────────────────────────────

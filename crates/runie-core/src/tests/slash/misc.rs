@@ -1,6 +1,6 @@
 use super::{exec, fresh_state, type_str};
-use crate::event::{InputEvent, DialogEvent};
 use crate::event::Event;
+use crate::event::{DialogEvent, InputEvent};
 use crate::model::Role;
 
 /// Open palette and select a command by name

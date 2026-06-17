@@ -1,7 +1,7 @@
 //! Tool call state machine for UI display.
 
-use std::time::Instant;
 use serde_json::Value;
+use std::time::Instant;
 
 #[cfg(test)]
 use serde_json::json;
@@ -10,36 +10,78 @@ use serde_json::json;
 #[derive(Debug, Clone)]
 pub enum ToolCallState {
     /// Tool call has been invoked, waiting for first response.
-    Pending { id: String, name: String, input: Value },
+    Pending {
+        id: String,
+        name: String,
+        input: Value,
+    },
     /// Tool is currently executing.
-    Running { id: String, name: String, input: Value, started: Instant },
+    Running {
+        id: String,
+        name: String,
+        input: Value,
+        started: Instant,
+    },
     /// Tool completed successfully.
-    Completed { id: String, name: String, output: String, bytes: Option<u64>, duration_secs: f64 },
+    Completed {
+        id: String,
+        name: String,
+        output: String,
+        bytes: Option<u64>,
+        duration_secs: f64,
+    },
     /// Tool encountered an error.
-    Error { id: String, name: String, error: String, duration_secs: f64 },
+    Error {
+        id: String,
+        name: String,
+        error: String,
+        duration_secs: f64,
+    },
 }
 
 impl ToolCallState {
     /// Start the tool (transition from Pending to Running).
     pub fn start(&mut self) {
         if let ToolCallState::Pending { id, name, input } = self.clone() {
-            *self = ToolCallState::Running { id, name, input, started: Instant::now() };
+            *self = ToolCallState::Running {
+                id,
+                name,
+                input,
+                started: Instant::now(),
+            };
         }
     }
 
     /// Complete the tool (transition from Running to Completed).
     pub fn complete(&mut self, output: String, bytes: Option<u64>) {
-        if let ToolCallState::Running { id, name, started, .. } = self.clone() {
+        if let ToolCallState::Running {
+            id, name, started, ..
+        } = self.clone()
+        {
             let duration_secs = started.elapsed().as_secs_f64();
-            *self = ToolCallState::Completed { id, name, output, bytes, duration_secs };
+            *self = ToolCallState::Completed {
+                id,
+                name,
+                output,
+                bytes,
+                duration_secs,
+            };
         }
     }
 
     /// Mark tool as errored (transition from Running to Error).
     pub fn fail(&mut self, error: String) {
-        if let ToolCallState::Running { id, name, started, .. } = self.clone() {
+        if let ToolCallState::Running {
+            id, name, started, ..
+        } = self.clone()
+        {
             let duration_secs = started.elapsed().as_secs_f64();
-            *self = ToolCallState::Error { id, name, error, duration_secs };
+            *self = ToolCallState::Error {
+                id,
+                name,
+                error,
+                duration_secs,
+            };
         }
     }
 
@@ -66,8 +108,12 @@ impl ToolCallState {
     /// Check if this tool call matches another (for coalescing).
     pub fn matches(&self, name: &str, input: &Value) -> bool {
         match self {
-            ToolCallState::Pending { name: n, input: i, .. } => n == name && i == input,
-            ToolCallState::Running { name: n, input: i, .. } => n == name && i == input,
+            ToolCallState::Pending {
+                name: n, input: i, ..
+            } => n == name && i == input,
+            ToolCallState::Running {
+                name: n, input: i, ..
+            } => n == name && i == input,
             _ => false,
         }
     }
@@ -80,11 +126,14 @@ pub struct ToolCallTracker {
 }
 
 impl ToolCallTracker {
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     /// Add a new pending tool call.
     pub fn add(&mut self, id: String, name: String, input: Value) {
-        self.calls.insert(id.clone(), ToolCallState::Pending { id, name, input });
+        self.calls
+            .insert(id.clone(), ToolCallState::Pending { id, name, input });
     }
 
     /// Start a pending tool call.
@@ -120,7 +169,10 @@ impl ToolCallTracker {
 
     /// Count how many times an identical call (name + input) appears consecutively.
     pub fn coalesce_count(&self, name: &str, input: &Value) -> usize {
-        self.calls.values().filter(|s| s.matches(name, input)).count()
+        self.calls
+            .values()
+            .filter(|s| s.matches(name, input))
+            .count()
     }
 }
 
@@ -137,7 +189,9 @@ mod tests {
         };
         state.start();
         match state {
-            ToolCallState::Running { id, name, started, .. } => {
+            ToolCallState::Running {
+                id, name, started, ..
+            } => {
                 assert_eq!(id, "call.1");
                 assert_eq!(name, "bash");
                 assert!(started.elapsed().as_secs() >= 0);
@@ -156,7 +210,12 @@ mod tests {
         };
         state.complete("files listed".into(), None);
         match state {
-            ToolCallState::Completed { id, output, duration_secs, .. } => {
+            ToolCallState::Completed {
+                id,
+                output,
+                duration_secs,
+                ..
+            } => {
                 assert_eq!(id, "call.1");
                 assert_eq!(output, "files listed");
                 assert!(duration_secs >= 0.0);

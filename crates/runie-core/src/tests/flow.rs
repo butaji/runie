@@ -1,5 +1,5 @@
 use crate::event::Event;
-use crate::event::{InputEvent, AgentEvent};
+use crate::event::{AgentEvent, InputEvent};
 use crate::model::{AppState, Role};
 
 fn fresh_state() -> AppState {

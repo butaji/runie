@@ -2,7 +2,7 @@
 
 use crate::event::Event;
 
-use crate::event::{InputEvent, AgentEvent};
+use crate::event::{AgentEvent, InputEvent};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::snapshot::Snapshot;
 use std::sync::Arc;

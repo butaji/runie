@@ -1,4 +1,6 @@
-use crate::commands::dsl::handlers::agents::{build_delete_panel, build_root_panel, build_view_panel};
+use crate::commands::dsl::handlers::agents::{
+    build_delete_panel, build_root_panel, build_view_panel,
+};
 use crate::dialog::{ItemAction, PanelItem};
 
 #[test]

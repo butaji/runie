@@ -1,11 +1,11 @@
 //! Tests for command form dialogs.
 
-use crate::event::{InputEvent, ControlEvent, DialogEvent};
+use crate::event::{ControlEvent, DialogEvent, InputEvent};
 
 use crate::commands::DialogState;
 use crate::model::AppState;
-use crate::Event;
 use crate::tests::slash::ENV_LOCK;
+use crate::Event;
 
 fn fresh_state() -> AppState {
     let mut state = AppState::default();
@@ -332,8 +332,14 @@ fn form_button_activated_by_enter() {
     use crate::dialog::{ItemAction, Panel};
     let mut panel = Panel::new("test", "Test")
         .form_field("Name", "", "name")
-        .item("_Submit", ItemAction::Emit(crate::event::LoginFlowEvent::Save))
-        .item("_Cancel", ItemAction::Emit(crate::event::LoginFlowEvent::Cancel));
+        .item(
+            "_Submit",
+            ItemAction::Emit(crate::event::LoginFlowEvent::Save),
+        )
+        .item(
+            "_Cancel",
+            ItemAction::Emit(crate::event::LoginFlowEvent::Cancel),
+        );
     // Navigate to the first button (index 1, after form field at index 0)
     panel.selected = 1;
     let action = crate::update::dialog::form_panel_action(&mut panel, crate::Event::submit());
@@ -348,13 +354,22 @@ fn form_button_activated_by_accelerator() {
     use crate::dialog::{ItemAction, Panel};
     let mut panel = Panel::new("test", "Test")
         .form_field("Name", "", "name")
-        .item("_Submit", ItemAction::Emit(crate::event::LoginFlowEvent::Save))
-        .item("_Cancel", ItemAction::Emit(crate::event::LoginFlowEvent::Cancel));
+        .item(
+            "_Submit",
+            ItemAction::Emit(crate::event::LoginFlowEvent::Save),
+        )
+        .item(
+            "_Cancel",
+            ItemAction::Emit(crate::event::LoginFlowEvent::Cancel),
+        );
     // On a form field, typing 'c' should type into the field
     panel.selected = 0;
     let action =
         crate::update::dialog::form_panel_action(&mut panel, crate::event::InputEvent::Input('c'));
-    assert!(matches!(action, crate::update::dialog::FormAction::KeepOpen));
+    assert!(matches!(
+        action,
+        crate::update::dialog::FormAction::KeepOpen
+    ));
     assert_eq!(panel.form_values.get("name"), Some(&"c".to_string()));
 
     // On a button, typing 'c' should activate Cancel
@@ -372,7 +387,10 @@ fn form_field_submit_still_builds_form_values() {
     use crate::dialog::{ItemAction, Panel};
     let mut panel = Panel::new("save", "Save")
         .form_field("Name", "my-session", "name")
-        .item("_Submit", ItemAction::Emit(crate::event::LoginFlowEvent::Save));
+        .item(
+            "_Submit",
+            ItemAction::Emit(crate::event::LoginFlowEvent::Save),
+        );
     panel.submit_factory = Some(|values| crate::event::CommandEvent::RunSaveCommand {
         name: crate::dialog::dsl::get_field(values, "name"),
     });
@@ -381,6 +399,8 @@ fn form_field_submit_still_builds_form_values() {
     let action = crate::update::dialog::form_panel_action(&mut panel, crate::Event::submit());
     assert!(matches!(
         action,
-        crate::update::dialog::FormAction::Submit(Some(crate::event::CommandEvent::RunSaveCommand { .. }))
+        crate::update::dialog::FormAction::Submit(Some(
+            crate::event::CommandEvent::RunSaveCommand { .. }
+        ))
     ));
 }

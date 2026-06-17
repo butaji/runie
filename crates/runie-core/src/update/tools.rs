@@ -122,7 +122,6 @@ pub fn update(state: &mut AppState, event: EditEvent) {
 
 // ── Edit approval/rejection (merged from edit_approval.rs) ───────────────────
 
-
 impl AppState {
     pub(crate) fn approve_edits(&mut self) {
         if self.session.pending_edits.is_empty() {

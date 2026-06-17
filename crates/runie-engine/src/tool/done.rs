@@ -98,7 +98,12 @@ mod tests {
         let id = registry
             .lock()
             .unwrap()
-            .spawn("reviewer", "task".to_string(), runie_core::orchestrator::ModelTrait::General, 4000)
+            .spawn(
+                "reviewer",
+                "task".to_string(),
+                runie_core::orchestrator::ModelTrait::General,
+                4000,
+            )
             .unwrap();
         let ctx = ToolContext {
             agent_id: Some(id.clone()),

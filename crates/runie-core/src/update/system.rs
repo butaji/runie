@@ -281,7 +281,10 @@ pub fn control_event(state: &mut AppState, event: ControlEvent) {
         }
         ControlEvent::NewSession => {
             // Close welcome screen if open
-            if matches!(state.open_dialog, Some(crate::commands::DialogState::Welcome)) {
+            if matches!(
+                state.open_dialog,
+                Some(crate::commands::DialogState::Welcome)
+            ) {
                 state.open_dialog = None;
             }
             // Ready for user input — welcome is gone
@@ -292,7 +295,9 @@ pub fn control_event(state: &mut AppState, event: ControlEvent) {
             state.open_dialog = Some(crate::commands::DialogState::Welcome);
             state.mark_dirty();
         }
-        ControlEvent::SteerAgent { agent_id, message } => handle_steer_agent(state, agent_id, message),
+        ControlEvent::SteerAgent { agent_id, message } => {
+            handle_steer_agent(state, agent_id, message)
+        }
         ControlEvent::CancelAgent { agent_id } => handle_cancel_agent(state, agent_id),
         ControlEvent::SpawnAgent { .. }
         | ControlEvent::Suspend
@@ -304,13 +309,19 @@ pub fn control_event(state: &mut AppState, event: ControlEvent) {
 
 fn handle_steer_agent(state: &mut AppState, agent_id: String, message: String) {
     if let Err(e) = state.multi_agent.send(agent_id, message) {
-        state.notify(format!("steer failed: {e}"), crate::event::TransientLevel::Error);
+        state.notify(
+            format!("steer failed: {e}"),
+            crate::event::TransientLevel::Error,
+        );
     }
 }
 
 fn handle_cancel_agent(state: &mut AppState, agent_id: String) {
     if let Err(e) = state.multi_agent.close(agent_id) {
-        state.notify(format!("cancel failed: {e}"), crate::event::TransientLevel::Error);
+        state.notify(
+            format!("cancel failed: {e}"),
+            crate::event::TransientLevel::Error,
+        );
     }
 }
 
@@ -350,7 +361,6 @@ fn handle_editor_done(state: &mut AppState, content: String) {
 }
 
 // ── System actions (merged from system_actions.rs) ───────────────────────────
-
 
 impl AppState {
     pub(crate) fn reload_all(&mut self) {
@@ -407,6 +417,32 @@ impl AppState {
             self.config.scoped_models.len()
         ));
         self.add_system_msg(lines.join("\n"));
+    }
+}
+
+// ── System event dispatcher ──────────────────────────────────────────────────
+
+use crate::event::SystemEvent;
+
+pub(super) fn handle_system_event(state: &mut AppState, event: SystemEvent) {
+    match event {
+        SystemEvent::SystemMessage { content } => state.add_system_msg(content),
+        SystemEvent::TransientMessage { content, level } => state.set_transient(content, level),
+        SystemEvent::TransientError { content } => {
+            state.set_transient(content, crate::event::TransientLevel::Error)
+        }
+        SystemEvent::ClearTransient => state.clear_transient(),
+        SystemEvent::ShowDiagnostics => state.show_diagnostics(),
+        SystemEvent::ToggleReadOnly => state.toggle_read_only(),
+        SystemEvent::TrustProject => state.trust_project(),
+        SystemEvent::UntrustProject => state.untrust_project(),
+        SystemEvent::OpenAgentsManager => {
+            state.set_transient(
+                "Agents manager not yet implemented".into(),
+                crate::event::TransientLevel::Info,
+            );
+        }
+        _ => {}
     }
 }
 

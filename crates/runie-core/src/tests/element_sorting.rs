@@ -2,7 +2,7 @@
 
 use crate::event::Event;
 
-use crate::event::{InputEvent, AgentEvent};
+use crate::event::{AgentEvent, InputEvent};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::LazyCache;
 
@@ -54,9 +54,16 @@ fn response_after_tool_events() -> Vec<Event> {
             id: "req.0".into(),
             content: "Let me ".into(),
         },
-        AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
-        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file.txt".into(),
-         },
+        AgentEvent::ToolStart {
+            id: "req.0".into(),
+            name: "ls".into(),
+            input: serde_json::Value::Null,
+        },
+        AgentEvent::ToolEnd {
+            id: "".to_string(),
+            duration_secs: 0.5,
+            output: "file.txt".into(),
+        },
         AgentEvent::Response {
             id: "req.0".into(),
             content: "check files.".into(),
@@ -137,9 +144,16 @@ fn thought_before_agent_events() -> Vec<Event> {
     vec![
         AgentEvent::Thinking { id: "req.0".into() },
         AgentEvent::ThoughtDone { id: "req.0".into() },
-        AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
-        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-         },
+        AgentEvent::ToolStart {
+            id: "req.0".into(),
+            name: "ls".into(),
+            input: serde_json::Value::Null,
+        },
+        AgentEvent::ToolEnd {
+            id: "".to_string(),
+            duration_secs: 0.5,
+            output: "a".into(),
+        },
         AgentEvent::Response {
             id: "req.0".into(),
             content: "Result".into(),
@@ -188,9 +202,16 @@ fn turn_complete_last_during_turn_despite_updates() {
     state.agent.streaming = true;
     state.update(AgentEvent::Thinking { id: "req.0".into() });
     state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "a".into(),
+    });
     state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello".into(),
@@ -222,9 +243,16 @@ fn turn_then_user_events() -> Vec<Event> {
     vec![
         AgentEvent::Thinking { id: "req.0".into() },
         AgentEvent::ThoughtDone { id: "req.0".into() },
-        AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
-        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-         },
+        AgentEvent::ToolStart {
+            id: "req.0".into(),
+            name: "ls".into(),
+            input: serde_json::Value::Null,
+        },
+        AgentEvent::ToolEnd {
+            id: "".to_string(),
+            duration_secs: 0.5,
+            output: "a".into(),
+        },
         AgentEvent::Response {
             id: "req.0".into(),
             content: "T1".into(),

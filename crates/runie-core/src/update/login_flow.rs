@@ -16,9 +16,7 @@ use crate::login_flow::{
 #[allow(dead_code)]
 pub fn providers_event(state: &mut crate::model::AppState, event: crate::Event) {
     match event {
-        crate::event::DialogEvent::ProvidersDialog => {
-            open_providers_dialog(state)
-        }
+        crate::event::DialogEvent::ProvidersDialog => open_providers_dialog(state),
         crate::event::DialogEvent::ProvidersSelectModel { provider, model } => {
             providers_select_model(state, &provider, &model);
         }
@@ -94,21 +92,13 @@ fn providers_disconnect(state: &mut crate::model::AppState, provider: &str) {
 pub fn login_flow_event(state: &mut crate::model::AppState, event: LoginFlowEvent) {
     match event {
         LoginFlowEvent::Start => login_flow_start(state),
-        LoginFlowEvent::SelectProvider { provider } => {
-            login_flow_select_provider(state, provider)
-        }
-        LoginFlowEvent::SubmitKey { provider, key } => {
-            login_flow_submit_key(state, provider, key)
-        }
-        LoginFlowEvent::ValidationDone { models, .. } => {
-            login_flow_validation_done(state, models)
-        }
+        LoginFlowEvent::SelectProvider { provider } => login_flow_select_provider(state, provider),
+        LoginFlowEvent::SubmitKey { provider, key } => login_flow_submit_key(state, provider, key),
+        LoginFlowEvent::ValidationDone { models, .. } => login_flow_validation_done(state, models),
         LoginFlowEvent::ValidationFailed { error, .. } => {
             login_flow_validation_failed(state, error)
         }
-        LoginFlowEvent::ModelsFetched { models, .. } => {
-            login_flow_models_fetched(state, models)
-        }
+        LoginFlowEvent::ModelsFetched { models, .. } => login_flow_models_fetched(state, models),
         LoginFlowEvent::ToggleModel { model } => login_flow_toggle_model(state, model),
         LoginFlowEvent::Save => login_flow_save(state),
         LoginFlowEvent::Cancel => login_flow_cancel(state),

@@ -17,14 +17,14 @@ use tokio::sync::broadcast;
 /// # Example
 /// ```ignore
 /// let bus = EventBus::<MyEvent>::new(100); // 100-event replay buffer
-/// 
+///
 /// // Subscriber 1 (misses events before subscription)
 /// let mut sub1 = bus.subscribe();
 ///
 /// // Publisher
 /// bus.publish(MyEvent::Start);
 /// bus.publish(MyEvent::Done);
-/// 
+///
 /// // Subscriber 2 (gets replay of recent events)
 /// let mut sub2 = bus.subscribe_with_replay();
 ///
@@ -188,11 +188,10 @@ mod tests {
         bus.publish(TestEvent::End);
 
         let events: Vec<TestEvent> = drain(&mut sub);
-        assert_eq!(events, vec![
-            TestEvent::Start,
-            TestEvent::Data(42),
-            TestEvent::End,
-        ]);
+        assert_eq!(
+            events,
+            vec![TestEvent::Start, TestEvent::Data(42), TestEvent::End,]
+        );
     }
 
     #[tokio::test]
@@ -227,13 +226,16 @@ mod tests {
 
         // Should contain last 5 events: Data(6), Data(7), Data(8), Data(9), Data(10)
         assert_eq!(events.len(), 5);
-        assert_eq!(events, vec![
-            TestEvent::Data(6),
-            TestEvent::Data(7),
-            TestEvent::Data(8),
-            TestEvent::Data(9),
-            TestEvent::Data(10),
-        ]);
+        assert_eq!(
+            events,
+            vec![
+                TestEvent::Data(6),
+                TestEvent::Data(7),
+                TestEvent::Data(8),
+                TestEvent::Data(9),
+                TestEvent::Data(10),
+            ]
+        );
     }
 
     fn drain<E: Clone + Send + 'static>(sub: &mut ReplayReceiver<E>) -> Vec<E> {

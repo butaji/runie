@@ -1,7 +1,6 @@
 //! rebuild tests.
 
-
-use crate::event::{ControlEvent, AgentEvent};
+use crate::event::{AgentEvent, ControlEvent};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::elements::Element;
 use crate::ui::LazyCache;
@@ -198,9 +197,16 @@ fn assistant_preserved_when_no_tools() {
 fn tool_stores_output() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_dir".to_string(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1\nfile2".to_string(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".to_string(),
+        name: "list_dir".to_string(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "file1\nfile2".to_string(),
+    });
 
     let tool = state
         .session

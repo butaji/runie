@@ -44,12 +44,8 @@ pub fn form_panel_action(panel: &mut Panel, event: Event) -> FormAction {
             let _ = panel.select_down();
             A::KeepOpen
         }
-        DialogEvent::CommandFormInput(c) => {
-            handle_form_input(panel, *c)
-        }
-        InputEvent::Input(c) => {
-            handle_form_input(panel, *c)
-        }
+        DialogEvent::CommandFormInput(c) => handle_form_input(panel, *c),
+        InputEvent::Input(c) => handle_form_input(panel, *c),
         DialogEvent::CommandFormBackspace | InputEvent::Backspace => {
             form_panel_edit_char(panel, ' ', false);
             A::KeepOpen

@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 
-pub use runie_core::tool::{Tool, ToolContext, ToolOutput, ToolRegistry, ToolStatus, which_tool};
+pub use runie_core::tool::{which_tool, Tool, ToolContext, ToolOutput, ToolRegistry, ToolStatus};
 
 mod ask_user;
 mod bash;

@@ -95,11 +95,7 @@ impl Actor for SessionActor {
         Box::pin(self.run_body(_rx, bus))
     }
 
-    async fn run_body(
-        mut self,
-        _rx: mpsc::Receiver<Self::Msg>,
-        bus: EventBus<Self::Event>,
-    ) {
+    async fn run_body(mut self, _rx: mpsc::Receiver<Self::Msg>, bus: EventBus<Self::Event>) {
         let mut sub = bus.subscribe();
         loop {
             match sub.recv().await {
@@ -112,7 +108,8 @@ impl Actor for SessionActor {
 
                         if matches!(&durable, DurableCoreEvent::MessageSent { .. }) {
                             self.message_count += 1;
-                            let events = self.store.load_events(&self.session_id).unwrap_or_default();
+                            let events =
+                                self.store.load_events(&self.session_id).unwrap_or_default();
                             self.summary = Some(self.generate_summary(&events));
                         }
 
@@ -152,7 +149,11 @@ mod tests {
         let bus = EventBus::new(64);
         let dir = TempDir::new().unwrap();
         let store = SessionStore::new(dir.path().to_path_buf());
-        TestHarness { bus, store, _dir: dir }
+        TestHarness {
+            bus,
+            store,
+            _dir: dir,
+        }
     }
 
     #[tokio::test]
@@ -162,11 +163,22 @@ mod tests {
 
         // Directly test filtering: publish events and check store directly
         let events = vec![
-            AgentEvent::Response { id: "resp.1".into(), content: "hello".into() },
+            AgentEvent::Response {
+                id: "resp.1".into(),
+                content: "hello".into(),
+            },
             InputEvent::Input('x'),
-            AgentEvent::ToolStart { id: "tool.1".into(), name: "bash".into(), input: serde_json::Value::Null },
+            AgentEvent::ToolStart {
+                id: "tool.1".into(),
+                name: "bash".into(),
+                input: serde_json::Value::Null,
+            },
             InputEvent::Submit,
-            AgentEvent::ToolEnd { id: "tool.1".into(), duration_secs: 1.0, output: "done".into() },
+            AgentEvent::ToolEnd {
+                id: "tool.1".into(),
+                duration_secs: 1.0,
+                output: "done".into(),
+            },
             ScrollEvent::Up,
         ];
 
@@ -223,7 +235,10 @@ mod tests {
         handle
     }
 
-    async fn collect_replayed_events(sub: &mut crate::bus::ReplayReceiver<Event>, count: usize) -> Vec<Event> {
+    async fn collect_replayed_events(
+        sub: &mut crate::bus::ReplayReceiver<Event>,
+        count: usize,
+    ) -> Vec<Event> {
         let mut collected = Vec::new();
         while collected.len() < count {
             if let Ok(event) = sub.recv().await {
@@ -247,7 +262,9 @@ mod tests {
     async fn session_actor_replays_to_uactor() {
         let h = make_harness();
         let session_id = "replay_test";
-        h.store.append_batch(session_id, &replay_events_fixture()).unwrap();
+        h.store
+            .append_batch(session_id, &replay_events_fixture())
+            .unwrap();
 
         let mut sub = h.bus.subscribe_with_replay();
         let handle = spawn_replay_actor(&h, session_id);

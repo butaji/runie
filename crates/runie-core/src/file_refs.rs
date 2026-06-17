@@ -266,10 +266,7 @@ pub fn extract_lines(text: &str, range: RangeInclusive<u32>) -> Result<String, S
     let end = *range.end();
 
     if start > end {
-        return Err(format!(
-            "Invalid range: start ({}) > end ({})",
-            start, end
-        ));
+        return Err(format!("Invalid range: start ({}) > end ({})", start, end));
     }
 
     // Clamp to file bounds.
@@ -280,7 +277,11 @@ pub fn extract_lines(text: &str, range: RangeInclusive<u32>) -> Result<String, S
     let start_idx = (start - 1) as usize;
     let end_idx = (end - 1) as usize;
 
-    let lines: Vec<&str> = text.lines().skip(start_idx).take(end_idx - start_idx + 1).collect();
+    let lines: Vec<&str> = text
+        .lines()
+        .skip(start_idx)
+        .take(end_idx - start_idx + 1)
+        .collect();
     Ok(lines.join("\n"))
 }
 

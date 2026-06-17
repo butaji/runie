@@ -96,9 +96,7 @@ mod tests {
     #[test]
     fn ask_user_tool_returns_pending_marker() {
         let tool = AskUserTool;
-        let result = tool
-            .execute(json!({"question": "Which file?"}))
-            .unwrap();
+        let result = tool.execute(json!({"question": "Which file?"})).unwrap();
         assert_eq!(result.status, ToolStatus::AwaitingUser);
         assert_eq!(result.content, "Which file?");
         assert_eq!(result.tool_name, "ask_user");

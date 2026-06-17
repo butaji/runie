@@ -55,7 +55,6 @@ impl SubagentContext {
             project_snapshot: ProjectSnapshot::default(),
         }
     }
-
 }
 
 /// Minimal project snapshot visible to a subagent.
@@ -124,7 +123,10 @@ pub enum SubagentEvent {
     /// Subagent started execution.
     Started { task_id: String },
     /// Subagent sent a status update.
-    StatusChanged { task_id: String, status: SubagentStatus },
+    StatusChanged {
+        task_id: String,
+        status: SubagentStatus,
+    },
     /// Subagent completed successfully.
     Completed { task_id: String, output: String },
     /// Subagent failed with an error.
@@ -313,8 +315,18 @@ mod tests {
     fn sample_plan() -> OrchestratorPlan {
         OrchestratorPlan {
             tasks: vec![
-                SubagentTask::new("t1", "You are a code reviewer.", "Review src/main.rs", ModelTrait::General),
-                SubagentTask::new("t2", "You are a test writer.", "Write tests for src/main.rs", ModelTrait::General),
+                SubagentTask::new(
+                    "t1",
+                    "You are a code reviewer.",
+                    "Review src/main.rs",
+                    ModelTrait::General,
+                ),
+                SubagentTask::new(
+                    "t2",
+                    "You are a test writer.",
+                    "Write tests for src/main.rs",
+                    ModelTrait::General,
+                ),
             ],
             synthesis_trait: ModelTrait::General,
             summary: Some("Review and test".to_string()),
@@ -352,7 +364,9 @@ mod tests {
         let json = serde_json::to_string(&status).unwrap();
         assert!(json.contains("done"));
         let roundtrip: SubagentStatus = serde_json::from_str(&json).unwrap();
-        assert!(matches!(roundtrip, SubagentStatus::Done { output } if output.as_deref() == Some("test output")));
+        assert!(
+            matches!(roundtrip, SubagentStatus::Done { output } if output.as_deref() == Some("test output"))
+        );
     }
 
     #[test]
@@ -390,17 +404,11 @@ mod tests {
             "MY_PASSWORD",
         ];
         for key in sensitive {
-            assert!(
-                is_sensitive_env_key(key),
-                "should be sensitive: {key}"
-            );
+            assert!(is_sensitive_env_key(key), "should be sensitive: {key}");
         }
         let safe = ["PATH", "HOME", "USER", "TERM", "EDITOR"];
         for key in safe {
-            assert!(
-                !is_sensitive_env_key(key),
-                "should not be sensitive: {key}"
-            );
+            assert!(!is_sensitive_env_key(key), "should not be sensitive: {key}");
         }
     }
 }

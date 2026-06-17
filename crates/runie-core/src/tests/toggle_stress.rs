@@ -1,5 +1,5 @@
 use crate::event::Event;
-use crate::event::{ControlEvent, AgentEvent};
+use crate::event::{AgentEvent, ControlEvent};
 use crate::model::AppState;
 use crate::ui::elements::Element;
 use crate::ui::LazyCache;
@@ -27,9 +27,16 @@ fn first_turn_before_collapse() -> Vec<Event> {
 
 fn first_turn_after_collapse() -> Vec<Event> {
     vec![
-        AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null },
-        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1\nfile2".into(),
-         },
+        AgentEvent::ToolStart {
+            id: "req.0".into(),
+            name: "list_dir".into(),
+            input: serde_json::Value::Null,
+        },
+        AgentEvent::ToolEnd {
+            id: "".to_string(),
+            duration_secs: 0.5,
+            output: "file1\nfile2".into(),
+        },
         AgentEvent::Response {
             id: "req.0".into(),
             content: "Done.".into(),
@@ -54,9 +61,16 @@ fn turn_events(id: &str, content: &str, tool: &str, output: &str) -> Vec<Event> 
             content: format!("TOOL:{}.", tool),
         },
         AgentEvent::ThoughtDone { id: id.into() },
-        AgentEvent::ToolStart { id: id.into(), name: tool.into(), input: serde_json::Value::Null },
-        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: output.into(),
-         },
+        AgentEvent::ToolStart {
+            id: id.into(),
+            name: tool.into(),
+            input: serde_json::Value::Null,
+        },
+        AgentEvent::ToolEnd {
+            id: "".to_string(),
+            duration_secs: 0.5,
+            output: output.into(),
+        },
         AgentEvent::Done { id: id.into() },
     ]
 }
@@ -73,9 +87,16 @@ fn multiple_tool_first_half() -> Vec<Event> {
             content: "TOOL:list_dir:.".into(),
         },
         AgentEvent::ThoughtDone { id: "req.0".into() },
-        AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
-        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-         },
+        AgentEvent::ToolStart {
+            id: "req.0".into(),
+            name: "ls".into(),
+            input: serde_json::Value::Null,
+        },
+        AgentEvent::ToolEnd {
+            id: "".to_string(),
+            duration_secs: 0.5,
+            output: "a".into(),
+        },
     ]
 }
 
@@ -91,9 +112,16 @@ fn multiple_tool_second_half() -> Vec<Event> {
             content: "TOOL:grep:fn main:.".into(),
         },
         AgentEvent::ThoughtDone { id: "req.0".into() },
-        AgentEvent::ToolStart { id: "req.0".into(), name: "grep".into(), input: serde_json::Value::Null },
-        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "result".into(),
-         },
+        AgentEvent::ToolStart {
+            id: "req.0".into(),
+            name: "grep".into(),
+            input: serde_json::Value::Null,
+        },
+        AgentEvent::ToolEnd {
+            id: "".to_string(),
+            duration_secs: 0.3,
+            output: "result".into(),
+        },
         AgentEvent::Done { id: "req.0".into() },
     ]
 }
@@ -110,9 +138,16 @@ fn single_thought_events(id: &str, reasoning: &str, output: &str) -> Vec<Event> 
             content: "TOOL:ls.".into(),
         },
         AgentEvent::ThoughtDone { id: id.into() },
-        AgentEvent::ToolStart { id: id.into(), name: "ls".into(), input: serde_json::Value::Null },
-        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.1, output: output.into(),
-         },
+        AgentEvent::ToolStart {
+            id: id.into(),
+            name: "ls".into(),
+            input: serde_json::Value::Null,
+        },
+        AgentEvent::ToolEnd {
+            id: "".to_string(),
+            duration_secs: 0.1,
+            output: output.into(),
+        },
         AgentEvent::Done { id: id.into() },
     ]
 }

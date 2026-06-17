@@ -1,6 +1,6 @@
 //! Safety command tests — read-only mode and trust system
 use super::slash::exec;
-use crate::event::{InputEvent, ModelConfigEvent, DialogEvent};
+use crate::event::{DialogEvent, InputEvent, ModelConfigEvent};
 use crate::model::AppState;
 
 pub fn fresh_state() -> AppState {

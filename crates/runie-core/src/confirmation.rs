@@ -19,9 +19,7 @@ pub enum ConfirmationKind {
     /// No confirmation needed — the tool is read-only or auto-approved.
     None,
     /// Show a unified diff and ask the user to approve or reject.
-    Diff {
-        preview: EditPreview,
-    },
+    Diff { preview: EditPreview },
     /// Show file write details and ask for confirmation.
     Write {
         path: String,
@@ -46,7 +44,9 @@ impl ConfirmationKind {
         match self {
             Self::None => "No confirmation needed".to_string(),
             Self::Diff { preview } => format!("Edit {}", preview.path.display()),
-            Self::Write { path, byte_count, .. } => {
+            Self::Write {
+                path, byte_count, ..
+            } => {
                 format!("Write {} ({} bytes)", path, byte_count)
             }
             Self::Bash { command, .. } => {
@@ -132,11 +132,7 @@ mod tests {
 
     #[test]
     fn diff_confirmation_contains_preview() {
-        let kind = ConfirmationRouter::for_edit(
-            "/tmp/foo.txt",
-            "hello",
-            "hello world",
-        );
+        let kind = ConfirmationRouter::for_edit("/tmp/foo.txt", "hello", "hello world");
         match kind {
             ConfirmationKind::Diff { preview } => {
                 assert_eq!(preview.path, std::path::PathBuf::from("/tmp/foo.txt"));
@@ -151,7 +147,9 @@ mod tests {
     fn write_confirmation_contains_bytes() {
         let kind = ConfirmationRouter::for_write("/tmp/new.txt", "some content");
         match kind {
-            ConfirmationKind::Write { path, byte_count, .. } => {
+            ConfirmationKind::Write {
+                path, byte_count, ..
+            } => {
                 assert_eq!(path, "/tmp/new.txt");
                 assert_eq!(byte_count, 12);
             }
@@ -173,7 +171,10 @@ mod tests {
 
     #[test]
     fn confirmation_kind_summary() {
-        assert_eq!(ConfirmationRouter::for_read_only().summary(), "No confirmation needed");
+        assert_eq!(
+            ConfirmationRouter::for_read_only().summary(),
+            "No confirmation needed"
+        );
 
         let diff = ConfirmationRouter::for_edit("/a.txt", "a", "b");
         assert!(diff.summary().contains("Edit"));
@@ -196,8 +197,14 @@ mod tests {
     #[test]
     fn approval_rejection_events() {
         let diff = ConfirmationRouter::for_edit("/a", "a", "b");
-        assert_eq!(ConfirmationRouter::approval_event(&diff), Some(EditEvent::ApproveEdit));
-        assert_eq!(ConfirmationRouter::rejection_event(&diff), Some(EditEvent::RejectEdit));
+        assert_eq!(
+            ConfirmationRouter::approval_event(&diff),
+            Some(EditEvent::ApproveEdit)
+        );
+        assert_eq!(
+            ConfirmationRouter::rejection_event(&diff),
+            Some(EditEvent::RejectEdit)
+        );
 
         let write = ConfirmationRouter::for_write("/a", "x");
         assert_eq!(ConfirmationRouter::approval_event(&write), None);

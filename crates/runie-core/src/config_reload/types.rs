@@ -3,9 +3,7 @@
 //! This module re-exports types from `crate::config` for backward compatibility
 //! with code that imports from this module path.
 
-pub use crate::config::{
-    config_path, Config, ConfigChange, TruncationSection,
-};
+pub use crate::config::{config_path, Config, ConfigChange, TruncationSection};
 
 /// TelemetrySection is duplicated here for backward compatibility.
 /// The canonical definition is in `crate::config::TelemetrySection`.

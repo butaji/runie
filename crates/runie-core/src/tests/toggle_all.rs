@@ -1,4 +1,4 @@
-use crate::event::{ControlEvent, AgentEvent};
+use crate::event::{AgentEvent, ControlEvent};
 use crate::model::{AppState, ChatMessage, Role};
 
 fn fresh_state() -> AppState {
@@ -198,9 +198,16 @@ fn new_tool_respects_global_collapse_when_true() {
     let mut state = fresh_state();
     state.view.all_collapsed = true;
 
-    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".to_string(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".to_string(),
+        name: "ls".to_string(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "a".to_string(),
+    });
     state.ensure_fresh();
 
     let feed = crate::ui::LazyCache::feed(&state);
@@ -219,9 +226,16 @@ fn new_tool_respects_global_expand_when_false() {
     let mut state = fresh_state();
     state.view.all_collapsed = false;
 
-    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".to_string(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".to_string(),
+        name: "ls".to_string(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "a".to_string(),
+    });
     state.ensure_fresh();
 
     let feed = crate::ui::LazyCache::feed(&state);

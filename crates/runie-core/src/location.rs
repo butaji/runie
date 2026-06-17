@@ -31,8 +31,7 @@ pub fn parse_location(query: &str) -> (&str, Option<Location>) {
             if start_part.contains(':') && end_part.contains(':') {
                 // line:col-line:col
                 if let Some((sl, sc)) = start_part.split_once(':') {
-                    if let (Ok(start_line), Ok(start_col)) =
-                        (sl.parse::<i32>(), sc.parse::<i32>())
+                    if let (Ok(start_line), Ok(start_col)) = (sl.parse::<i32>(), sc.parse::<i32>())
                     {
                         if let Some((el, ec)) = end_part.split_once(':') {
                             if let (Ok(end_line), Ok(end_col)) =
@@ -68,10 +67,9 @@ pub fn parse_location(query: &str) -> (&str, Option<Location>) {
                 }
             } else {
                 // line-line (line range)
-                if let (Ok(start_line), Ok(end_line)) = (
-                    start_part.parse::<i32>(),
-                    end_part.parse::<i32>(),
-                ) {
+                if let (Ok(start_line), Ok(end_line)) =
+                    (start_part.parse::<i32>(), end_part.parse::<i32>())
+                {
                     let end = if end_line < start_line {
                         start_line
                     } else {

@@ -45,9 +45,16 @@ fn turn_complete_is_last_after_normal_flow() {
         content: "Hello".into(),
     });
     state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".into(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "file1".into(),
+    });
     state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done".into(),
@@ -74,9 +81,16 @@ fn turn_complete_is_last_when_response_after_turn_complete() {
     state.agent.streaming = true;
     state.update(AgentEvent::Thinking { id: "req.0".into() });
     state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "a".into(),
+    });
     state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello ".into(),
@@ -107,12 +121,26 @@ fn turn_complete_is_last_with_multiple_tools() {
     state.agent.streaming = true;
     state.update(AgentEvent::Thinking { id: "req.0".into() });
     state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "cat".into(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.1, output: "a".into(),
-     });
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.2, output: "b".into(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "cat".into(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.1,
+        output: "a".into(),
+    });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.2,
+        output: "b".into(),
+    });
     state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done".into(),
@@ -139,13 +167,20 @@ fn turn_complete_is_last_when_tool_end_after_turn_complete() {
     state.agent.streaming = true;
     state.update(AgentEvent::Thinking { id: "req.0".into() });
     state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+        input: serde_json::Value::Null,
+    });
     state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
     });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".into(),
-     });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "file1".into(),
+    });
     state.update(AgentEvent::Done { id: "req.0".into() });
     state.ensure_fresh();
 
@@ -164,9 +199,16 @@ fn turn_complete_survives_empty_content_timestamp_bump() {
     state.agent.streaming = true;
     state.update(AgentEvent::Thinking { id: "req.0".into() });
     state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "a".into(),
+    });
     state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello".into(),
@@ -195,9 +237,16 @@ fn first_turn_with_tool_events() -> Vec<Event> {
     vec![
         AgentEvent::Thinking { id: "req.0".into() },
         AgentEvent::ThoughtDone { id: "req.0".into() },
-        AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
-        AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(),
-         },
+        AgentEvent::ToolStart {
+            id: "req.0".into(),
+            name: "ls".into(),
+            input: serde_json::Value::Null,
+        },
+        AgentEvent::ToolEnd {
+            id: "".to_string(),
+            duration_secs: 0.5,
+            output: "a".into(),
+        },
         AgentEvent::Response {
             id: "req.0".into(),
             content: "First turn".into(),

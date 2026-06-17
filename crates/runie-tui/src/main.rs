@@ -11,6 +11,7 @@
 //!   - EventBus<Event> for cross-component communication
 //!   - SessionActor subscribes to bus, persists durable events to JSONL
 
+use futures::StreamExt;
 use runie_agent::{build_provider_with_warning, run_agent_turn, AgentCommand};
 use runie_core::actor::{spawn_actor, Actor};
 use runie_core::bus::EventBus;
@@ -20,7 +21,6 @@ use runie_core::orchestrator_actor::{OrchestratorActor, OrchestratorEvent};
 use runie_core::session_store::SessionStore;
 use runie_core::{config_reload, AppState, Snapshot};
 use runie_tui::{app_init, keymap, terminal, terminal_setup, theme, ui, ui_actor::UiActor};
-use futures::StreamExt;
 use std::{collections::HashMap, io, sync::Arc, sync::Mutex};
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -79,13 +79,7 @@ async fn main() -> io::Result<()> {
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
-    spawn_background_tasks(
-        terminal,
-        state,
-        terminal_caps,
-        bus.clone(),
-        shutdown_tx,
-    );
+    spawn_background_tasks(terminal, state, terminal_caps, bus.clone(), shutdown_tx);
 
     shutdown_rx
         .await
@@ -109,8 +103,7 @@ fn run_init_hooks(state: &mut AppState) {
     app_init::init_truncation(state);
     app_init::init_ui_config(state);
 
-    if state.config.current_provider.is_empty()
-        && !runie_core::provider_registry::is_mock_enabled()
+    if state.config.current_provider.is_empty() && !runie_core::provider_registry::is_mock_enabled()
     {
         state.update(LoginFlowEvent::Start);
     }
@@ -167,7 +160,10 @@ async fn render_task(
     let mut last_size: Option<(u16, u16)> = None;
     loop {
         let snap = render_rx.borrow_and_update().clone();
-        let new_size = terminal.size().map(|r| (r.width, r.height)).unwrap_or((0, 0));
+        let new_size = terminal
+            .size()
+            .map(|r| (r.width, r.height))
+            .unwrap_or((0, 0));
         if last_size != Some(new_size) {
             let _ = terminal.clear();
             last_size = Some(new_size);
@@ -248,4 +244,3 @@ async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, bus: EventBus<Even
         }
     }
 }
-

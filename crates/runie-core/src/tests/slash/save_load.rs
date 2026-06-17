@@ -1,6 +1,6 @@
 use super::{exec, fresh_state, minimal_session, tmp_store, ENV_LOCK};
-use crate::event::{InputEvent, DialogEvent};
 use crate::event::Event;
+use crate::event::{DialogEvent, InputEvent};
 use crate::model::{ChatMessage, Role};
 use crate::session::Session;
 

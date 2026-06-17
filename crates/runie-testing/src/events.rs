@@ -39,7 +39,9 @@ pub fn llm_text_delta(text: impl Into<String>) -> LLMEvent {
 
 /// Build an `LLMEvent::Finish`.
 pub fn llm_finish() -> LLMEvent {
-    LLMEvent::Finish { reason: StopReason::Stop }
+    LLMEvent::Finish {
+        reason: StopReason::Stop,
+    }
 }
 
 #[cfg(test)]
@@ -49,7 +51,10 @@ mod tests {
     #[test]
     fn events_build_expected_variants() {
         assert!(matches!(ev_response_created("1"), Event::Response { .. }));
-        assert!(matches!(ev_output_text_delta("1", "hi"), Event::ResponseDelta { .. }));
+        assert!(matches!(
+            ev_output_text_delta("1", "hi"),
+            Event::ResponseDelta { .. }
+        ));
         assert!(matches!(ev_completed("1"), Event::Done { .. }));
         assert!(matches!(ev_error("1", "oops"), Event::Error { .. }));
     }

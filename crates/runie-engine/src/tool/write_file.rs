@@ -46,8 +46,12 @@ impl Tool for WriteFileTool {
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
-        let path = input["path"].as_str().ok_or_else(|| anyhow::anyhow!("path is required"))?;
-        let content = input["content"].as_str().ok_or_else(|| anyhow::anyhow!("content is required"))?;
+        let path = input["path"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("path is required"))?;
+        let content = input["content"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("content is required"))?;
         let full_path = resolve_path(path, &ctx.working_dir);
 
         ensure_parent_dirs(&full_path, start)?;
@@ -60,7 +64,12 @@ fn ensure_parent_dirs(full_path: &std::path::Path, start: Instant) -> Result<Too
     if let Some(parent) = full_path.parent() {
         if !parent.as_os_str().is_empty() {
             if let Err(e) = std::fs::create_dir_all(parent) {
-                return Ok(output_error("write_file", "path", &format!("Error creating parent directories: {}", e), start));
+                return Ok(output_error(
+                    "write_file",
+                    "path",
+                    &format!("Error creating parent directories: {}", e),
+                    start,
+                ));
             }
         }
     }
@@ -74,7 +83,12 @@ fn ensure_parent_dirs(full_path: &std::path::Path, start: Instant) -> Result<Too
     })
 }
 
-fn write_and_return(path: &str, full_path: &std::path::Path, content: &str, start: Instant) -> Result<ToolOutput> {
+fn write_and_return(
+    path: &str,
+    full_path: &std::path::Path,
+    content: &str,
+    start: Instant,
+) -> Result<ToolOutput> {
     match std::fs::write(full_path, content) {
         Ok(()) => Ok(ToolOutput {
             tool_name: "write_file".to_string(),
@@ -84,7 +98,12 @@ fn write_and_return(path: &str, full_path: &std::path::Path, content: &str, star
             duration: start.elapsed(),
             status: ToolStatus::Success,
         }),
-        Err(e) => Ok(output_error("write_file", path, &format!("Error writing {}: {}", full_path.display(), e), start)),
+        Err(e) => Ok(output_error(
+            "write_file",
+            path,
+            &format!("Error writing {}: {}", full_path.display(), e),
+            start,
+        )),
     }
 }
 

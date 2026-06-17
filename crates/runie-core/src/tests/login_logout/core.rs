@@ -1,4 +1,4 @@
-use crate::event::{InputEvent, DialogEvent};
+use crate::event::{DialogEvent, InputEvent};
 use crate::model::AppState;
 
 use super::clean_config;

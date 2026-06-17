@@ -294,7 +294,9 @@ fn handle_team(state: &mut AppState, _: &str) -> CommandResult {
     } else {
         state.config.execution_mode = ExecutionMode::Team;
         state.mark_dirty();
-        CommandResult::Message("Switched to Team mode. The Orchestrator will plan and coordinate subagents.".into())
+        CommandResult::Message(
+            "Switched to Team mode. The Orchestrator will plan and coordinate subagents.".into(),
+        )
     }
 }
 

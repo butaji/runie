@@ -1,6 +1,6 @@
 # Split Large Files Into Modules
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Refactoring
 **Priority**: P2
@@ -25,9 +25,9 @@ Split files over 500 lines into focused modules. Target files:
 
 ## Acceptance Criteria
 
-- [ ] All files under 500 lines.
-- [ ] Public API unchanged (re-exports from `lib.rs`).
-- [ ] `cargo test --workspace` succeeds.
+- [x] All files under 500 lines.
+- [x] Public API unchanged (re-exports from `lib.rs`).
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 

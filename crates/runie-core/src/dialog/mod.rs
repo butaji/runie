@@ -64,11 +64,11 @@ mod stack;
 #[cfg(test)]
 mod tests;
 
+pub use crate::settings::SettingValue;
 pub use builders::{
     command_palette, file_picker, model_selector, scoped_models, session_list, session_tree,
     settings, theme_picker, SettingsRow,
 };
-pub use crate::settings::SettingValue;
 pub use item::{parse_accel, strip_accel, ItemAction, PanelItem};
 pub use panel::{FormSubmitFn, Panel, PanelView};
 pub use stack::{PanelId, PanelStack};

@@ -1,5 +1,5 @@
-use super::*;
 use super::layers::load_layers_from_paths;
+use super::*;
 use std::fs;
 
 #[test]

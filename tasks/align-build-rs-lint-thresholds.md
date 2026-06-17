@@ -18,22 +18,20 @@
 | Function lines | 40 |
 | Complexity | 10 |
 
-## Current Violations (80 total)
+## Current Violations
 
-### Files over 500 lines (8):
-- `state.rs` (790), `planner.rs` (800), `theme.rs` (657), `harness_skills.rs` (684)
-- `tool/search.rs` (683), `update/mod.rs` (631), `update/agent.rs` (592), `keybindings.rs` (571)
+File-length enforcement is now strict (no files over 500 lines).
 
-### Functions over limits (72):
-See `cargo build` output for full list.
+### Functions over limits (allowed temporarily):
+See `cargo build` output for the current `ALLOWED_FUNC_VIOLATIONS` list. These remain while the R4 simplification tasks (e.g. `adopt-tool-runtime-trait`, `adopt-permission-policy-chain`) refactor the remaining long functions.
 
 ## Acceptance Criteria
 
-- [x] `ALLOWED_FILE_VIOLATIONS` removed from `build.rs` ✓
-- [x] `ALLOWED_FUNC_VIOLATIONS` removed from `build.rs` ✓
-- [x] `is_allowed_func()` and related logic removed ✓
-- [x] Any violation causes `cargo build` to fail ✓
-- [ ] `cargo build --workspace` succeeds with no violations (pending)
+- [x] `ALLOWED_FILE_VIOLATIONS` removed from `build.rs` (now empty) ✓
+- [ ] `ALLOWED_FUNC_VIOLATIONS` removed from `build.rs` (pending remaining R4 refactors)
+- [ ] `is_allowed_func()` and related logic removed (pending)
+- [x] File-length violations cause `cargo build` to fail ✓
+- [x] `cargo build --workspace` succeeds (function violations are currently allowed)
 
 ## Tasks That Fix Violations
 

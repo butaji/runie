@@ -6,8 +6,7 @@
 //! assistant response). This is element-level navigation, distinct
 //! from line-level scrolling.
 
-
-use crate::event::{InputEvent, DialogEvent};
+use crate::event::{DialogEvent, InputEvent};
 use crate::model::{AppState, ChatMessage, Role};
 
 fn state_with_vim_and_messages() -> AppState {

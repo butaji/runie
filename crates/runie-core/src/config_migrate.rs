@@ -14,7 +14,10 @@ pub fn migrate(config: &mut toml::Value) -> anyhow::Result<bool> {
 }
 
 /// Migrate with a specific config path (useful for testing).
-pub fn migrate_with_path(config: &mut toml::Value, config_path: Option<std::path::PathBuf>) -> anyhow::Result<bool> {
+pub fn migrate_with_path(
+    config: &mut toml::Value,
+    config_path: Option<std::path::PathBuf>,
+) -> anyhow::Result<bool> {
     let version = config
         .get("version")
         .and_then(|v| v.as_integer())
@@ -44,7 +47,10 @@ pub fn migrate_with_path(config: &mut toml::Value, config_path: Option<std::path
 }
 
 /// v2 → v3: migrate `keybindings.json` to `[keybindings]` table in config.toml.
-fn v2_to_v3(config: &mut toml::Value, config_path: Option<std::path::PathBuf>) -> anyhow::Result<()> {
+fn v2_to_v3(
+    config: &mut toml::Value,
+    config_path: Option<std::path::PathBuf>,
+) -> anyhow::Result<()> {
     let map = config
         .as_table_mut()
         .ok_or_else(|| anyhow::anyhow!("config must be a table"))?;

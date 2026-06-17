@@ -1,6 +1,5 @@
 //! Tests for bracketed paste handling
 
-
 #[cfg(test)]
 mod tests {
     use crate::event::InputEvent;

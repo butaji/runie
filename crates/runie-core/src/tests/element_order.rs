@@ -1,5 +1,5 @@
-use crate::model::{AppState, ChatMessage, Role};
 use crate::event::AgentEvent;
+use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::LazyCache;
 
 fn element_kinds(state: &AppState) -> Vec<String> {
@@ -289,9 +289,16 @@ fn via_events_appended_assistant_found_anywhere_in_vec() {
         id: "req.0".into(),
         content: "hello ".into(),
     });
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".into(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "file1".into(),
+    });
     // This next response should append to the SAME assistant message, not create a new one
     state.update(AgentEvent::Response {
         id: "req.0".into(),

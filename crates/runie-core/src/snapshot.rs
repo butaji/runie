@@ -361,7 +361,9 @@ pub fn compute_hovered_element(
     let visible_height = (height.saturating_sub(margin * 2)).max(3) as usize;
     let max_scroll = total_lines.saturating_sub(visible_height);
     let top_line = max_scroll.saturating_sub(max_scroll); // feed top = 0 when scroll=0
-    let target_line = top_line.saturating_add(content_row).min(total_lines.saturating_sub(1));
+    let target_line = top_line
+        .saturating_add(content_row)
+        .min(total_lines.saturating_sub(1));
 
     let mut cum = 0usize;
     for (i, &c) in line_counts.iter().enumerate() {

@@ -16,7 +16,7 @@ fn disconnect_active_provider_switches_to_another() {
     state.dialog_back_stack.clear();
 
     state.update(DialogEvent::ProvidersDialog);
-    state.update(DialogEvent::ProvidersDisconnect{
+    state.update(DialogEvent::ProvidersDisconnect {
         provider: "openai".into(),
     });
 

@@ -52,7 +52,10 @@ impl Tool for FetchDocsTool {
 
         let (content, status) = match result {
             Ok(output) => (output, ToolStatus::Success),
-            Err(e) => (format!("Error fetching docs for '{}': {}", library, e), ToolStatus::Error),
+            Err(e) => (
+                format!("Error fetching docs for '{}': {}", library, e),
+                ToolStatus::Error,
+            ),
         };
 
         Ok(ToolOutput {
@@ -69,10 +72,7 @@ impl Tool for FetchDocsTool {
 async fn fetch_docs(library: &str) -> anyhow::Result<String> {
     // Step 1: Search for the library ID
     let search_url = format!("{}?q={}", SEARCH_URL, library);
-    let search_resp: serde_json::Value = reqwest::get(&search_url)
-        .await?
-        .json()
-        .await?;
+    let search_resp: serde_json::Value = reqwest::get(&search_url).await?.json().await?;
 
     let lib_id = search_resp["libs"]
         .as_array()

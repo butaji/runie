@@ -96,20 +96,29 @@ impl SessionIndex {
 
     /// Get regular sessions sorted by updated_at descending.
     pub fn regular_sessions(&self) -> Vec<&SessionMetadata> {
-        let mut sessions: Vec<_> = self.sessions.iter()
+        let mut sessions: Vec<_> = self
+            .sessions
+            .iter()
             .filter(|s| !s.is_starred && !s.is_system)
             .collect();
-        sessions.sort_by(|a, b| b.updated_at.partial_cmp(&a.updated_at).unwrap_or(std::cmp::Ordering::Equal));
+        sessions.sort_by(|a, b| {
+            b.updated_at
+                .partial_cmp(&a.updated_at)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         sessions
     }
 
     /// Search sessions by name or summary (simple substring match).
     pub fn search(&self, query: &str) -> Vec<&SessionMetadata> {
         let query_lower = query.to_lowercase();
-        self.sessions.iter()
+        self.sessions
+            .iter()
             .filter(|s| {
-                s.display_name.to_lowercase().contains(&query_lower) ||
-                s.summary.as_ref().is_some_and(|sum| sum.to_lowercase().contains(&query_lower))
+                s.display_name.to_lowercase().contains(&query_lower)
+                    || s.summary
+                        .as_ref()
+                        .is_some_and(|sum| sum.to_lowercase().contains(&query_lower))
             })
             .collect()
     }
@@ -175,7 +184,10 @@ mod tests {
         let loaded = SessionIndex::load(&dir).unwrap();
         assert_eq!(loaded.sessions.len(), 2);
         assert_eq!(loaded.get("s1").unwrap().display_name, "Session One");
-        assert_eq!(loaded.get("s2").unwrap().summary.as_deref(), Some("Summary of Session Two"));
+        assert_eq!(
+            loaded.get("s2").unwrap().summary.as_deref(),
+            Some("Summary of Session Two")
+        );
     }
 
     #[test]

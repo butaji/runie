@@ -1,8 +1,8 @@
 //! Theme slash command tests
 
-use crate::event::{InputEvent, DialogEvent};
 use super::slash::{exec, fresh_state, tmp_store, ENV_LOCK};
 use crate::event::Event;
+use crate::event::{DialogEvent, InputEvent};
 use crate::model::Role;
 
 /// Open palette and select a command by name

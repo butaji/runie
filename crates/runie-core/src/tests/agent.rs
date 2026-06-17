@@ -138,8 +138,11 @@ fn tool_end_updates_timestamp() {
     let mut state = fresh_state();
     state.agent("req.0").tool_start("list_files");
     let t1 = state.session.messages[0].timestamp;
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(),
-     });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: String::new(),
+    });
     let t2 = state.session.messages[0].timestamp;
     assert!(
         t2 >= t1,

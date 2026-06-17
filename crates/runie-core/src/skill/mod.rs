@@ -198,9 +198,24 @@ mod tests {
         let user_dir = tempdir().unwrap();
         let project_dir = tempdir().unwrap();
 
-        write_skill(agents_dir.path(), "shared", "agents description", "agents context");
-        write_skill(user_dir.path(), "shared", "user description", "user context");
-        write_skill(project_dir.path(), "shared", "project description", "project context");
+        write_skill(
+            agents_dir.path(),
+            "shared",
+            "agents description",
+            "agents context",
+        );
+        write_skill(
+            user_dir.path(),
+            "shared",
+            "user description",
+            "user context",
+        );
+        write_skill(
+            project_dir.path(),
+            "shared",
+            "project description",
+            "project context",
+        );
 
         let mut registry = SkillRegistry::default();
         let mut by_name: HashMap<String, SkillSummary> = HashMap::new();
@@ -233,7 +248,12 @@ mod tests {
     #[test]
     fn progressive_loading_only_loads_instructions_on_trigger() {
         let dir = tempdir().unwrap();
-        write_skill(dir.path(), "rust", "Rust best practices", "Use clippy always.");
+        write_skill(
+            dir.path(),
+            "rust",
+            "Rust best practices",
+            "Use clippy always.",
+        );
 
         let registry = SkillRegistry {
             skills: load_summaries_from_dir(dir.path()),
@@ -256,7 +276,9 @@ mod tests {
             skills: load_summaries_from_dir(dir.path()),
         };
 
-        let skill = registry.trigger_skill("python best practices").expect("match");
+        let skill = registry
+            .trigger_skill("python best practices")
+            .expect("match");
         assert_eq!(skill.name, "python");
     }
 
@@ -266,9 +288,19 @@ mod tests {
         let user_dir = tempdir().unwrap();
         let project_dir = tempdir().unwrap();
 
-        write_skill(agents_dir.path(), "agents", "agents skill", "agents context");
+        write_skill(
+            agents_dir.path(),
+            "agents",
+            "agents skill",
+            "agents context",
+        );
         write_skill(user_dir.path(), "user", "user skill", "user context");
-        write_skill(project_dir.path(), "project", "project skill", "project context");
+        write_skill(
+            project_dir.path(),
+            "project",
+            "project skill",
+            "project context",
+        );
 
         let mut registry = SkillRegistry::default();
         let mut by_name: HashMap<String, SkillSummary> = HashMap::new();

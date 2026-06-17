@@ -65,7 +65,11 @@ fn unknown_command_does_not_record_usage() {
         "unknown command should return Some(Message)"
     );
     assert!(
-        state.config.command_usage.get("does_not_exist_xyz").is_none(),
+        state
+            .config
+            .command_usage
+            .get("does_not_exist_xyz")
+            .is_none(),
         "unknown command should not record usage"
     );
 }
@@ -74,10 +78,7 @@ fn unknown_command_does_not_record_usage() {
 fn rank_commands_empty_query_returns_all() {
     let state = AppState::default();
     let ranked = state.rank_commands("", 50);
-    assert!(
-        ranked.len() >= 20,
-        "empty query should return all commands"
-    );
+    assert!(ranked.len() >= 20, "empty query should return all commands");
 }
 
 #[test]
@@ -88,9 +89,7 @@ fn rank_commands_with_query_filters() {
     let model_hits: usize = ranked
         .iter()
         .take(5)
-        .filter(|(cmd, _)| {
-            cmd.name.contains("model") || cmd.desc.contains("model")
-        })
+        .filter(|(cmd, _)| cmd.name.contains("model") || cmd.desc.contains("model"))
         .count();
     assert!(
         model_hits >= 2,

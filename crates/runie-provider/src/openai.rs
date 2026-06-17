@@ -129,7 +129,9 @@ fn drain_buffer(buffer: &mut String) -> Vec<LLMEvent> {
         *buffer = buffer[pos + 1..].to_string();
         match parse_sse_event(&line) {
             Some(SseEvent::Done) => {
-                events.push(LLMEvent::Finish { reason: StopReason::Stop });
+                events.push(LLMEvent::Finish {
+                    reason: StopReason::Stop,
+                });
                 break;
             }
             Some(SseEvent::Content(content)) => {

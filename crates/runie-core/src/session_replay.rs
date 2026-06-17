@@ -42,9 +42,7 @@ pub fn durable_to_event(event: &DurableCoreEvent) -> Option<Event> {
             model: model.clone(),
         }),
         DurableCoreEvent::SessionRenamed { .. } => None,
-        DurableCoreEvent::ThemeSwitched { name } => Some(Event::SwitchTheme {
-            name: name.clone(),
-        }),
+        DurableCoreEvent::ThemeSwitched { name } => Some(Event::SwitchTheme { name: name.clone() }),
         DurableCoreEvent::ThinkingLevelSet { level } => Some(Event::SetThinkingLevel(*level)),
         DurableCoreEvent::ReadOnlySet { .. } => Some(Event::ToggleReadOnly),
     }
@@ -106,23 +104,16 @@ pub fn state_to_durable_events(state: &AppState) -> Vec<DurableCoreEvent> {
         level: state.config.thinking_level,
     });
     if state.config.read_only {
-        events.push(DurableCoreEvent::ReadOnlySet {
-            read_only: true,
-        });
+        events.push(DurableCoreEvent::ReadOnlySet { read_only: true });
     }
     if let Some(name) = &state.session.session_display_name {
-        events.push(DurableCoreEvent::SessionRenamed {
-            name: name.clone(),
-        });
+        events.push(DurableCoreEvent::SessionRenamed { name: name.clone() });
     }
     events
 }
 
 fn messages_to_events(messages: &[ChatMessage]) -> Vec<DurableCoreEvent> {
-    messages
-        .iter()
-        .filter_map(message_to_event)
-        .collect()
+    messages.iter().filter_map(message_to_event).collect()
 }
 
 fn message_to_event(message: &ChatMessage) -> Option<DurableCoreEvent> {
@@ -142,7 +133,11 @@ fn message_to_event(message: &ChatMessage) -> Option<DurableCoreEvent> {
 fn build_metadata(state: &AppState, name: &str) -> SessionMetadata {
     SessionMetadata {
         id: name.to_string(),
-        display_name: state.session.session_display_name.clone().unwrap_or_else(|| name.to_string()),
+        display_name: state
+            .session
+            .session_display_name
+            .clone()
+            .unwrap_or_else(|| name.to_string()),
         created_at: state.session.session_created_at,
         updated_at: crate::message::now(),
         message_count: state.session.messages.len(),
@@ -154,7 +149,8 @@ fn build_metadata(state: &AppState, name: &str) -> SessionMetadata {
 
 /// Save current application state as durable events.
 pub fn save_session(name: &str, state: &AppState) -> anyhow::Result<()> {
-    let store = SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
+    let store =
+        SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
     let events = state_to_durable_events(state);
     store.append_batch(name, &events)?;
     store.update_index(&build_metadata(state, name))?;
@@ -164,7 +160,8 @@ pub fn save_session(name: &str, state: &AppState) -> anyhow::Result<()> {
 /// Load durable events into application state.
 /// Falls back to a legacy JSON session if no durable store exists.
 pub fn load_session(name: &str, state: &mut AppState) -> anyhow::Result<()> {
-    let store = SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
+    let store =
+        SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
     let events = store.load_events(name)?;
     if events.is_empty() {
         return load_legacy_session(name, state);
@@ -235,12 +232,14 @@ pub fn list_sessions() -> anyhow::Result<Vec<String>> {
 }
 
 fn durable_list() -> anyhow::Result<Vec<String>> {
-    let store = SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
+    let store =
+        SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
     store.list()
 }
 
 fn legacy_list() -> anyhow::Result<Vec<String>> {
-    let store = crate::session::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
+    let store =
+        crate::session::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
     store.list()
 }
 
@@ -280,7 +279,9 @@ mod tests {
     fn state_to_events_includes_messages_and_config() {
         let state = sample_state();
         let events = state_to_durable_events(&state);
-        assert!(events.iter().any(|e| matches!(e, DurableCoreEvent::MessageSent { content, .. } if content == "Hello")));
+        assert!(events.iter().any(
+            |e| matches!(e, DurableCoreEvent::MessageSent { content, .. } if content == "Hello")
+        ));
         assert!(events.iter().any(|e| matches!(e, DurableCoreEvent::ModelSwitched { provider, .. } if provider == "anthropic")));
     }
 
@@ -304,7 +305,9 @@ mod tests {
 
         let loaded = store.load_events("save_test").unwrap();
         assert!(
-            loaded.iter().any(|e| matches!(e, DurableCoreEvent::MessageSent { content, .. } if content == "Hello")),
+            loaded.iter().any(
+                |e| matches!(e, DurableCoreEvent::MessageSent { content, .. } if content == "Hello")
+            ),
             "save should persist user message as durable event"
         );
         assert!(
@@ -339,16 +342,18 @@ mod tests {
 
         let events = state_to_durable_events(&state);
         store.append_batch("roundtrip", &events).unwrap();
-        store.update_index(&SessionMetadata {
-            id: "roundtrip".into(),
-            display_name: "roundtrip".into(),
-            created_at: 10.0,
-            updated_at: 20.0,
-            message_count: 2,
-            summary: None,
-            is_starred: false,
-            is_system: false,
-        }).unwrap();
+        store
+            .update_index(&SessionMetadata {
+                id: "roundtrip".into(),
+                display_name: "roundtrip".into(),
+                created_at: 10.0,
+                updated_at: 20.0,
+                message_count: 2,
+                summary: None,
+                is_starred: false,
+                is_system: false,
+            })
+            .unwrap();
 
         let mut loaded = AppState::default();
         let events = store.load_events("roundtrip").unwrap();

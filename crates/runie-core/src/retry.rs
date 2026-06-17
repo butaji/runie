@@ -1,8 +1,8 @@
 //! Retry with exponential backoff for transient errors.
 
+use anyhow::Error;
 use std::future::Future;
 use std::time::Duration;
-use anyhow::Error;
 
 /// Configuration for retry behaviour.
 #[derive(Debug, Clone)]
@@ -60,7 +60,10 @@ pub fn classify_provider_error(err: &Error) -> Option<RetryableError> {
         return Some(RetryableError::NetworkError);
     }
     // parse status from "status: 429" or "429"
-    if let Some(pos) = msg.find(|c: char| c.is_ascii_digit()).filter(|_| msg.len() >= 3) {
+    if let Some(pos) = msg
+        .find(|c: char| c.is_ascii_digit())
+        .filter(|_| msg.len() >= 3)
+    {
         let slice = &msg[pos..pos + 3];
         if let Ok(status) = slice.parse::<u16>() {
             return RetryableError::from_status(status);
@@ -96,7 +99,8 @@ where
                         if attempt >= config.max_attempts {
                             return Err(anyhow::anyhow!(
                                 "operation failed after {} attempts ({:?})",
-                                attempt, retryable
+                                attempt,
+                                retryable
                             ));
                         }
                         let delay = compute_delay(config, attempt);
@@ -124,8 +128,7 @@ fn compute_delay(config: &RetryConfig, attempt: u32) -> Duration {
 fn rand_u64() -> u64 {
     use std::time::Instant;
     let n = Instant::now();
-    ((n.elapsed().as_nanos() as u64)
-        ^ (std::process::id() as u64).wrapping_mul(0x517cc1b727220a95))
+    ((n.elapsed().as_nanos() as u64) ^ (std::process::id() as u64).wrapping_mul(0x517cc1b727220a95))
         .wrapping_add(0x9e3779b97f4a7c15)
 }
 
@@ -180,9 +183,18 @@ mod tests {
 
     #[test]
     fn retryable_error_from_status() {
-        assert_eq!(RetryableError::from_status(429), Some(RetryableError::RateLimited));
-        assert_eq!(RetryableError::from_status(500), Some(RetryableError::ServerError(500)));
-        assert_eq!(RetryableError::from_status(502), Some(RetryableError::ServerError(502)));
+        assert_eq!(
+            RetryableError::from_status(429),
+            Some(RetryableError::RateLimited)
+        );
+        assert_eq!(
+            RetryableError::from_status(500),
+            Some(RetryableError::ServerError(500))
+        );
+        assert_eq!(
+            RetryableError::from_status(502),
+            Some(RetryableError::ServerError(502))
+        );
         assert_eq!(RetryableError::from_status(200), None);
         assert_eq!(RetryableError::from_status(400), None);
     }
@@ -198,13 +210,19 @@ mod tests {
     #[test]
     fn classify_provider_error_rate_limit() {
         let err = anyhow::anyhow!("429");
-        assert_eq!(classify_provider_error(&err), Some(RetryableError::RateLimited));
+        assert_eq!(
+            classify_provider_error(&err),
+            Some(RetryableError::RateLimited)
+        );
     }
 
     #[test]
     fn classify_provider_error_network() {
         let err = anyhow::anyhow!("connection reset");
-        assert_eq!(classify_provider_error(&err), Some(RetryableError::NetworkError));
+        assert_eq!(
+            classify_provider_error(&err),
+            Some(RetryableError::NetworkError)
+        );
     }
 
     #[test]

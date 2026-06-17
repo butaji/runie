@@ -79,12 +79,24 @@ fn edit_file_impl(
     start: Instant,
 ) -> Result<ToolOutput> {
     if search.is_empty() {
-        return Ok(tool_error("edit_file", "Error: search text cannot be empty", start, false));
+        return Ok(tool_error(
+            "edit_file",
+            "Error: search text cannot be empty",
+            start,
+            false,
+        ));
     }
 
     let content = match std::fs::read_to_string(path) {
         Ok(c) => c,
-        Err(e) => return Ok(tool_error("edit_file", &format!("Error reading {}: {}", path.display(), e), start, false)),
+        Err(e) => {
+            return Ok(tool_error(
+                "edit_file",
+                &format!("Error reading {}: {}", path.display(), e),
+                start,
+                false,
+            ))
+        }
     };
 
     if let Some(err) = validate_match_count(&content, search, path) {
@@ -106,14 +118,22 @@ fn edit_file_impl(
             duration: start.elapsed(),
             status: ToolStatus::Success,
         }),
-        Err(e) => Ok(tool_error("edit_file", &format!("Error writing {}: {}", path.display(), e), start, false)),
+        Err(e) => Ok(tool_error(
+            "edit_file",
+            &format!("Error writing {}: {}", path.display(), e),
+            start,
+            false,
+        )),
     }
 }
 
 fn validate_match_count(content: &str, search: &str, path: &std::path::Path) -> Option<String> {
     let count = content.matches(search).count();
     if count == 0 {
-        Some(format!("Error: search text not found in {}", path.display()))
+        Some(format!(
+            "Error: search text not found in {}",
+            path.display()
+        ))
     } else if count > 1 {
         Some(format!(
             "Error: search text appears {} times in {}. Be more specific.",
@@ -124,5 +144,3 @@ fn validate_match_count(content: &str, search: &str, path: &std::path::Path) -> 
         None
     }
 }
-
-

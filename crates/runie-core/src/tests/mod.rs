@@ -7,8 +7,6 @@ pub static ENV_LOCK: Mutex<()> = Mutex::new(());
 #[cfg(test)]
 mod action_text;
 #[cfg(test)]
-mod streaming_buffer;
-#[cfg(test)]
 mod agent;
 #[cfg(test)]
 mod agents_manager_e2e;
@@ -47,8 +45,6 @@ mod file_refs;
 #[cfg(test)]
 mod flow;
 #[cfg(test)]
-mod harness_skills;
-#[cfg(test)]
 mod focus_events;
 #[cfg(test)]
 mod form_dialog;
@@ -56,6 +52,8 @@ mod form_dialog;
 mod fuzzy;
 #[cfg(test)]
 mod ghost_completion;
+#[cfg(test)]
+mod harness_skills;
 #[cfg(test)]
 mod hints;
 #[cfg(test)]
@@ -124,6 +122,8 @@ mod snapshot_optimization;
 mod stack_navigation;
 #[cfg(test)]
 mod status_timer;
+#[cfg(test)]
+mod streaming_buffer;
 #[cfg(test)]
 mod subagent_cmd;
 #[cfg(test)]

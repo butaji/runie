@@ -204,11 +204,19 @@ fn glyph_width(s: &str) -> u16 {
 /// Word-wrap `text` into lines using display-cell width so wide characters
 /// (CJK, emoji) count as two cells and are never split.
 pub fn word_wrap(text: &str, first_width: u16, _rest_width: u16) -> Vec<String> {
-    if text.is_empty() { return vec![String::new()]; }
+    if text.is_empty() {
+        return vec![String::new()];
+    }
     let width = first_width.max(1) as usize;
-    if width == 0 { return vec![String::new()]; }
+    if width == 0 {
+        return vec![String::new()];
+    }
     let wrapped = wrap(text, width);
-    if wrapped.is_empty() { vec![String::new()] } else { wrapped.into_iter().map(|s| s.into_owned()).collect() }
+    if wrapped.is_empty() {
+        vec![String::new()]
+    } else {
+        wrapped.into_iter().map(|s| s.into_owned()).collect()
+    }
 }
 
 #[cfg(test)]

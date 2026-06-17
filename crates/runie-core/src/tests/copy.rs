@@ -122,7 +122,8 @@ fn copy_event_payload_does_not_include_older_messages() {
     });
 
     let result = state.handle_slash("/copy");
-    if let Some(crate::commands::CommandResult::Event(DialogEvent::CopyToClipboard(text))) = result {
+    if let Some(crate::commands::CommandResult::Event(DialogEvent::CopyToClipboard(text))) = result
+    {
         assert!(
             !text.contains("old response"),
             "should NOT copy older messages, got: {:?}",
@@ -215,10 +216,7 @@ fn copy_selected_post_text_agent_message() {
 fn copy_selected_post_text_tool_done() {
     let state = state_with_selected_post_tool_done();
     let text = state.copy_selected_post_text();
-    assert!(
-        text.is_some(),
-        "y on a tool-done post should return Some"
-    );
+    assert!(text.is_some(), "y on a tool-done post should return Some");
     let text = text.unwrap();
     assert!(
         text.contains("ls") || text.contains("bash"),

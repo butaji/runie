@@ -1,6 +1,5 @@
 //! Tests for grapheme-aware cursor movement
 
-
 #[cfg(test)]
 mod tests {
     use crate::event::{Event, InputEvent};

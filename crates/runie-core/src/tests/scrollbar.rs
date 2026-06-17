@@ -1,5 +1,5 @@
-use crate::model::AppState;
 use crate::event::ScrollEvent;
+use crate::model::AppState;
 
 fn fresh_state() -> AppState {
     AppState::default()

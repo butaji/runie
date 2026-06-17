@@ -1,6 +1,5 @@
 //! Tests for input validation flash
 
-
 #[cfg(test)]
 mod tests {
     use crate::event::{InputEvent, ScrollEvent};

@@ -1,6 +1,5 @@
 //! Tests for word-level cursor navigation
 
-
 #[cfg(test)]
 mod tests {
     use crate::event::InputEvent;

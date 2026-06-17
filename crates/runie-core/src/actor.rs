@@ -42,7 +42,11 @@ pub trait Actor: Send + 'static {
     ///
     /// The default implementation wraps the async body in a pin-boxed future
     /// for easier composition.
-    fn run(self, rx: mpsc::Receiver<Self::Msg>, bus: crate::bus::EventBus<Self::Event>) -> ActorFuture
+    fn run(
+        self,
+        rx: mpsc::Receiver<Self::Msg>,
+        bus: crate::bus::EventBus<Self::Event>,
+    ) -> ActorFuture
     where
         Self: Sized,
     {
@@ -75,7 +79,10 @@ pub type ActorFuture = Pin<Box<dyn Future<Output = ()> + Send>>;
 /// let (tx, handle) = spawn_actor(MyActor, bus);
 /// tx.send("hello".into()).await?;
 /// ```
-pub fn spawn_actor<A>(actor: A, bus: crate::bus::EventBus<A::Event>) -> (mpsc::Sender<A::Msg>, ActorHandle)
+pub fn spawn_actor<A>(
+    actor: A,
+    bus: crate::bus::EventBus<A::Event>,
+) -> (mpsc::Sender<A::Msg>, ActorHandle)
 where
     A: Actor,
 {
@@ -93,7 +100,11 @@ pub struct ActorHandle {
 
 impl ActorHandle {
     /// Spawn the actor task and return a handle.
-    pub(crate) fn spawn<A>(actor: A, rx: mpsc::Receiver<A::Msg>, bus: crate::bus::EventBus<A::Event>) -> Self
+    pub(crate) fn spawn<A>(
+        actor: A,
+        rx: mpsc::Receiver<A::Msg>,
+        bus: crate::bus::EventBus<A::Event>,
+    ) -> Self
     where
         A: Actor,
     {
@@ -161,21 +172,21 @@ mod tests {
     async fn actor_trait_runs_and_receives_messages() {
         let bus = EventBus::new(10);
         let mut subscriber = bus.subscribe();
-        
+
         let actor = TestActor { count: 0 };
         let (tx, handle) = spawn_actor(actor, bus.clone());
-        
+
         // Send 3 messages
         tx.send("hi".into()).await.unwrap();
         tx.send("there".into()).await.unwrap();
         tx.send("!".into()).await.unwrap();
-        
+
         // Drop sender to signal completion
         drop(tx);
-        
+
         // Wait for actor to finish
         handle.await.unwrap();
-        
+
         // Collect events
         let events: Vec<usize> = drain_events(&mut subscriber, 3);
         assert_eq!(events, vec![2, 7, 8]); // "hi"=2, "hi there"=7, "hi there!"=8
@@ -186,15 +197,18 @@ mod tests {
         let bus = EventBus::new(10);
         let actor = TestActor { count: 0 };
         let (tx, _handle) = spawn_actor(actor, bus.clone());
-        
+
         // Send a message
         tx.send("test".into()).await.unwrap();
-        
+
         // Drop handle (aborts actor)
         // The actor task should be cancelled
     }
 
-    fn drain_events<E: Clone + Send + 'static>(sub: &mut crate::bus::ReplayReceiver<E>, count: usize) -> Vec<E> {
+    fn drain_events<E: Clone + Send + 'static>(
+        sub: &mut crate::bus::ReplayReceiver<E>,
+        count: usize,
+    ) -> Vec<E> {
         let mut events = Vec::with_capacity(count);
         for _ in 0..count {
             match sub.try_recv() {

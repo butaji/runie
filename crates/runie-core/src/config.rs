@@ -83,7 +83,6 @@ pub struct PromptsSection {
     pub custom: Option<String>,
 }
 
-
 // ============================================================================
 // Truncation Section
 // ============================================================================
@@ -176,7 +175,8 @@ impl Config {
                     Ok(v) => v,
                     Err(_) => return Self::default(),
                 };
-                match crate::config_migrate::migrate_with_path(&mut value, Some(path.to_path_buf())) {
+                match crate::config_migrate::migrate_with_path(&mut value, Some(path.to_path_buf()))
+                {
                     Ok(true) => {
                         let _ = crate::config_migrate::backup_config(path);
                         if let Ok(migrated) = toml::to_string(&value) {
@@ -228,8 +228,8 @@ impl Config {
 
     fn validate_value(value: &serde_json::Value) -> Result<(), Vec<String>> {
         let schema = schema::schema_value();
-        let validator = jsonschema::validator_for(&schema)
-            .map_err(|e| vec![format!("invalid schema: {e}")])?;
+        let validator =
+            jsonschema::validator_for(&schema).map_err(|e| vec![format!("invalid schema: {e}")])?;
         let errors: Vec<String> = validator
             .iter_errors(value)
             .map(|e| e.to_string())
@@ -328,14 +328,8 @@ fn current_config_values(config: &Config) -> (String, String, String) {
         .provider
         .clone()
         .unwrap_or_else(|| default_provider.to_string());
-    let model = config
-        .default_model()
-        .unwrap_or(default_model)
-        .to_string();
-    let theme = config
-        .theme
-        .clone()
-        .unwrap_or_else(|| "runie".to_string());
+    let model = config.default_model().unwrap_or(default_model).to_string();
+    let theme = config.theme.clone().unwrap_or_else(|| "runie".to_string());
     (provider, model, theme)
 }
 

@@ -105,8 +105,8 @@ fn open_root(state: &mut AppState) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::AppState;
     use crate::tests::ENV_LOCK;
+    use crate::AppState;
 
     #[test]
     fn set_field_updates_pending_edit() {

@@ -1,6 +1,5 @@
 //! Reload tests (Layer 2)
 
-
 use crate::event::ModelConfigEvent;
 use crate::model::AppState;
 

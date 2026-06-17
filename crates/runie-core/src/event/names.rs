@@ -10,19 +10,45 @@ use super::variants::Event;
 
 /// Helper to build a zero-arg constructor for a flat event variant.
 macro_rules! ctor {
-    (Input::$v:ident) => {|| Event::$v};
-    (Agent::$v:ident) => {|| Event::$v};
-    (Scroll::$v:ident) => {|| Event::$v};
-    (Control::$v:ident) => {|| Event::$v};
-    (Dialog::$v:ident) => {|| Event::$v};
-    (Edit::$v:ident) => {|| Event::$v};
-    (System::$v:ident) => {|| Event::$v};
-    (Session::$v:ident) => {|| Event::$v};
-    (LoginFlow::$v:ident) => {|| Event::$v};
-    (Command::$v:ident) => {|| Event::$v};
-    (Sidebar::$v:ident) => {|| Event::$v};
-    (Orchestrator::$v:ident) => {|| Event::$v};
-    (ModelConfig::$v:ident) => {|| Event::$v};
+    (Input::$v:ident) => {
+        || Event::$v
+    };
+    (Agent::$v:ident) => {
+        || Event::$v
+    };
+    (Scroll::$v:ident) => {
+        || Event::$v
+    };
+    (Control::$v:ident) => {
+        || Event::$v
+    };
+    (Dialog::$v:ident) => {
+        || Event::$v
+    };
+    (Edit::$v:ident) => {
+        || Event::$v
+    };
+    (System::$v:ident) => {
+        || Event::$v
+    };
+    (Session::$v:ident) => {
+        || Event::$v
+    };
+    (LoginFlow::$v:ident) => {
+        || Event::$v
+    };
+    (Command::$v:ident) => {
+        || Event::$v
+    };
+    (Sidebar::$v:ident) => {
+        || Event::$v
+    };
+    (Orchestrator::$v:ident) => {
+        || Event::$v
+    };
+    (ModelConfig::$v:ident) => {
+        || Event::$v
+    };
 }
 
 // ── Bindable event table ───────────────────────────────────────────────────────
@@ -58,7 +84,6 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("PasteImage", ctor!(Input::PasteImage)),
     ("FocusGained", ctor!(Input::FocusGained)),
     ("FocusLost", ctor!(Input::FocusLost)),
-
     // ── Control events ──────────────────────────────────────────────────────
     ("Quit", ctor!(Control::Quit)),
     ("Reset", ctor!(Control::Reset)),
@@ -76,7 +101,6 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("ResumeSession", ctor!(Control::ResumeSession)),
     ("CopySelectedBlock", ctor!(Dialog::CopySelectedBlock)),
     ("CopyBlockMetadata", ctor!(Dialog::CopyBlockMetadata)),
-
     // ── Dialog events ───────────────────────────────────────────────────────
     ("ToggleCommandPalette", ctor!(Dialog::ToggleCommandPalette)),
     ("PaletteBackspace", ctor!(Dialog::PaletteBackspace)),
@@ -85,7 +109,10 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("PaletteSelect", ctor!(Dialog::PaletteSelect)),
     ("PaletteClose", ctor!(Dialog::PaletteClose)),
     ("ToggleModelSelector", ctor!(Dialog::ToggleModelSelector)),
-    ("ModelSelectorBackspace", ctor!(Dialog::ModelSelectorBackspace)),
+    (
+        "ModelSelectorBackspace",
+        ctor!(Dialog::ModelSelectorBackspace),
+    ),
     ("ModelSelectorUp", ctor!(Dialog::ModelSelectorUp)),
     ("ModelSelectorDown", ctor!(Dialog::ModelSelectorDown)),
     ("ModelSelectorSelect", ctor!(Dialog::ModelSelectorSelect)),
@@ -102,9 +129,15 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("CommandFormDown", ctor!(Dialog::CommandFormDown)),
     ("CommandFormSubmit", ctor!(Dialog::CommandFormSubmit)),
     ("CommandFormClose", ctor!(Dialog::CommandFormClose)),
-    ("ToggleScopedModelsDialog", ctor!(Dialog::ToggleScopedModelsDialog)),
+    (
+        "ToggleScopedModelsDialog",
+        ctor!(Dialog::ToggleScopedModelsDialog),
+    ),
     ("ScopedModelEnableAll", ctor!(Dialog::ScopedModelEnableAll)),
-    ("ScopedModelDisableAll", ctor!(Dialog::ScopedModelDisableAll)),
+    (
+        "ScopedModelDisableAll",
+        ctor!(Dialog::ScopedModelDisableAll),
+    ),
     ("DialogBack", ctor!(Dialog::DialogBack)),
     ("TogglePathCompletion", ctor!(Dialog::TogglePathCompletion)),
     ("PathCompletionUp", ctor!(Dialog::PathCompletionUp)),
@@ -114,12 +147,10 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("ProvidersDialog", ctor!(Dialog::ProvidersDialog)),
     ("ProvidersAdd", ctor!(Dialog::ProvidersAdd)),
     ("AtFilePicker", ctor!(Dialog::AtFilePicker)),
-
     // ── Model config events ─────────────────────────────────────────────────
     ("CycleModelNext", ctor!(ModelConfig::CycleModelNext)),
     ("CycleModelPrev", ctor!(ModelConfig::CycleModelPrev)),
     ("CycleThinkingLevel", ctor!(ModelConfig::CycleThinkingLevel)),
-
     // ── System events ───────────────────────────────────────────────────────
     ("ToggleReadOnly", ctor!(System::ToggleReadOnly)),
     ("TrustProject", ctor!(System::TrustProject)),

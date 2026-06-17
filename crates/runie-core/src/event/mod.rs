@@ -12,6 +12,7 @@ pub use names::EVENT_NAMES;
 pub use variants::Event;
 
 // Re-export sub-enums for ergonomic external use
+pub use crate::orchestrator_actor::OrchestratorEvent;
 pub use agent::AgentEvent;
 pub use control::ControlEvent;
 pub use dialog_display::DialogEvent;
@@ -21,7 +22,6 @@ pub use input::InputEvent;
 pub use level::TransientLevel;
 pub use login_flow::LoginFlowEvent;
 pub use model_config::ModelConfigEvent;
-pub use crate::orchestrator_actor::OrchestratorEvent;
 pub use scroll::ScrollEvent;
 pub use session::SessionEvent;
 pub use sidebar::SidebarEvent;

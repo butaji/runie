@@ -77,9 +77,7 @@ impl Provider for DynProvider {
         messages: Vec<ChatMessage>,
     ) -> Pin<
         Box<
-            dyn futures::Stream<Item = anyhow::Result<runie_core::llm_event::LLMEvent>>
-                + Send
-                + '_,
+            dyn futures::Stream<Item = anyhow::Result<runie_core::llm_event::LLMEvent>> + Send + '_,
         >,
     > {
         self.inner.generate(messages)
@@ -164,8 +162,9 @@ pub fn build_provider_with_warning(
 /// Build a provider from `Config`.
 pub fn from_config(config: &Config, model: &str) -> DynProvider {
     let chain = config.provider_chain();
-    build_provider_with_fallback(&chain, model)
-        .expect("from_config: provider key is always known or panic — use new() for explicit errors")
+    build_provider_with_fallback(&chain, model).expect(
+        "from_config: provider key is always known or panic — use new() for explicit errors",
+    )
 }
 
 /// Try each provider in the chain until one builds successfully.

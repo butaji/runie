@@ -12,8 +12,8 @@ pub fn load_layers() -> Config {
 
 /// Layered config loader with explicit paths (useful for tests).
 pub fn load_layers_from_paths(global: PathBuf, local: PathBuf) -> Config {
-    let mut value =
-        toml::Value::try_from(Config::default()).unwrap_or_else(|_| toml::Value::Table(toml::map::Map::new()));
+    let mut value = toml::Value::try_from(Config::default())
+        .unwrap_or_else(|_| toml::Value::Table(toml::map::Map::new()));
 
     if let Ok(text) = std::fs::read_to_string(&global) {
         if let Ok(v) = toml::from_str::<toml::Value>(&text) {

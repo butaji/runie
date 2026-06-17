@@ -226,24 +226,31 @@ mod tests {
     #[test]
     fn hook_registry_calls_handler_on_event() {
         let mut registry = HookRegistry::new();
-        registry.register(HookEvent::PreToolUse, Box::new(|_payload: &Value| {
-            HookDecision::Deny {
+        registry.register(
+            HookEvent::PreToolUse,
+            Box::new(|_payload: &Value| HookDecision::Deny {
                 reason: "blocked".into(),
-            }
-        }));
+            }),
+        );
 
         let decision = registry.emit(HookEvent::PreToolUse, &Value::Null);
-        assert_eq!(decision, HookDecision::Deny { reason: "blocked".into() });
+        assert_eq!(
+            decision,
+            HookDecision::Deny {
+                reason: "blocked".into()
+            }
+        );
     }
 
     #[test]
     fn hook_can_modify_input() {
         let mut registry = HookRegistry::new();
-        registry.register(HookEvent::UserPromptSubmit, Box::new(|_payload: &Value| {
-            HookDecision::Modify {
+        registry.register(
+            HookEvent::UserPromptSubmit,
+            Box::new(|_payload: &Value| HookDecision::Modify {
                 payload: Value::String("transformed".into()),
-            }
-        }));
+            }),
+        );
 
         let decision = registry.emit(HookEvent::UserPromptSubmit, &Value::Null);
         assert_eq!(
@@ -257,11 +264,12 @@ mod tests {
     #[test]
     fn hook_can_deny_action() {
         let mut registry = HookRegistry::new();
-        registry.register(HookEvent::PreToolUse, Box::new(|_payload: &Value| {
-            HookDecision::Deny {
+        registry.register(
+            HookEvent::PreToolUse,
+            Box::new(|_payload: &Value| HookDecision::Deny {
                 reason: "no tools".into(),
-            }
-        }));
+            }),
+        );
 
         let decision = registry.emit(HookEvent::PreToolUse, &Value::Null);
         assert!(matches!(decision, HookDecision::Deny { .. }));
@@ -270,15 +278,18 @@ mod tests {
     #[test]
     fn pre_tool_hook_intercepts_tool_call() {
         let mut registry = HookRegistry::new();
-        registry.register(HookEvent::PreToolUse, Box::new(|payload: &Value| {
-            if payload.get("tool").and_then(|v| v.as_str()) == Some("write_file") {
-                HookDecision::Deny {
-                    reason: "writes blocked".into(),
+        registry.register(
+            HookEvent::PreToolUse,
+            Box::new(|payload: &Value| {
+                if payload.get("tool").and_then(|v| v.as_str()) == Some("write_file") {
+                    HookDecision::Deny {
+                        reason: "writes blocked".into(),
+                    }
+                } else {
+                    HookDecision::Allow
                 }
-            } else {
-                HookDecision::Allow
-            }
-        }));
+            }),
+        );
 
         let payload = serde_json::json!({"tool": "write_file"});
         let decision = registry.emit(HookEvent::PreToolUse, &payload);
@@ -327,7 +338,10 @@ mod tests {
 
     #[test]
     fn parse_event_name_handles_snake_case() {
-        assert_eq!(parse_event_name("pre_tool_use"), Some(HookEvent::PreToolUse));
+        assert_eq!(
+            parse_event_name("pre_tool_use"),
+            Some(HookEvent::PreToolUse)
+        );
         assert_eq!(parse_event_name("stop"), Some(HookEvent::Stop));
         assert_eq!(parse_event_name("unknown"), None);
     }

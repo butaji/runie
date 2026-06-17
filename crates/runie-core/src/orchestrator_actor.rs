@@ -11,15 +11,13 @@ use tokio::sync::mpsc;
 use crate::actor::Actor;
 use crate::bus::EventBus;
 use crate::orchestrator::{
-    ModelTrait, OrchestratorContext, OrchestratorPlan, PlanResult,
-    SubagentTask, TaskStatus,
+    ModelTrait, OrchestratorContext, OrchestratorPlan, PlanResult, SubagentTask, TaskStatus,
 };
 
 // ─── State machine ───────────────────────────────────────────────────────────
 
 /// Runtime state of the OrchestratorActor.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum OrchestratorState {
     /// Idle — no active request.
     #[default]
@@ -33,11 +31,13 @@ pub enum OrchestratorState {
     /// Synthesizing — collecting subagent outputs for final synthesis.
     Synthesizing,
     /// Done — plan completed successfully.
-    Done { plan: OrchestratorPlan, result: PlanResult },
+    Done {
+        plan: OrchestratorPlan,
+        result: PlanResult,
+    },
     /// Failed — plan or execution failed.
     Failed { error: String },
 }
-
 
 impl OrchestratorState {
     /// Whether this is a terminal state.
@@ -144,7 +144,12 @@ impl OrchestratorActor {
 
     /// Check if the actor can accept a new request.
     pub fn can_start_request(&self) -> bool {
-        matches!(self.state, OrchestratorState::Idle | OrchestratorState::Done { .. } | OrchestratorState::Failed { .. })
+        matches!(
+            self.state,
+            OrchestratorState::Idle
+                | OrchestratorState::Done { .. }
+                | OrchestratorState::Failed { .. }
+        )
     }
 
     /// Check if the orchestrator has pending questions for the user.
@@ -270,9 +275,17 @@ fn handle_start_request(actor: &mut OrchestratorActor, bus: &EventBus<Orchestrat
     }
 }
 
-fn handle_user_answer(actor: &mut OrchestratorActor, bus: &EventBus<OrchestratorEvent>, answer: &str) {
+fn handle_user_answer(
+    actor: &mut OrchestratorActor,
+    bus: &EventBus<OrchestratorEvent>,
+    answer: &str,
+) {
     actor.record_answer(answer.to_string());
-    emit_state_change(bus, &OrchestratorState::Aligning, &OrchestratorState::Planning);
+    emit_state_change(
+        bus,
+        &OrchestratorState::Aligning,
+        &OrchestratorState::Planning,
+    );
     actor.transition_to(OrchestratorState::Planning);
     bus.publish(OrchestratorEvent::PlanningStarted);
     // Async planner call goes in r4-subagent-execution; stub here
@@ -321,8 +334,13 @@ async fn handle_subagent_done(
     if actor.all_subagents_done() {
         actor.transition_to(OrchestratorState::Synthesizing);
         bus.publish(OrchestratorEvent::SynthesisStarted);
-        let elapsed = actor.started_at.map(|s| s.elapsed().as_secs_f64()).unwrap_or(0.0);
-        let plan = actor.active_plan.take()
+        let elapsed = actor
+            .started_at
+            .map(|s| s.elapsed().as_secs_f64())
+            .unwrap_or(0.0);
+        let plan = actor
+            .active_plan
+            .take()
             .unwrap_or_else(|| OrchestratorPlan::simple("fallback", ModelTrait::General));
         actor.transition_to(OrchestratorState::Done {
             plan: plan.clone(),
@@ -354,7 +372,9 @@ fn handle_subagent_failed(
         task_id: task_id.to_string(),
         error: error.to_string(),
     });
-    actor.transition_to(OrchestratorState::Failed { error: error.to_string() });
+    actor.transition_to(OrchestratorState::Failed {
+        error: error.to_string(),
+    });
     bus.publish(OrchestratorEvent::Finished { success: false });
 }
 
@@ -368,7 +388,11 @@ fn handle_cancel(actor: &mut OrchestratorActor, bus: &EventBus<OrchestratorEvent
     bus.publish(OrchestratorEvent::Cancelled);
 }
 
-fn emit_state_change(bus: &EventBus<OrchestratorEvent>, from: &OrchestratorState, to: &OrchestratorState) {
+fn emit_state_change(
+    bus: &EventBus<OrchestratorEvent>,
+    from: &OrchestratorState,
+    to: &OrchestratorState,
+) {
     if from != to {
         bus.publish(OrchestratorEvent::StateChanged {
             from: Box::new(from.clone()),
@@ -457,9 +481,18 @@ mod tests {
         assert!(OrchestratorState::Idle.is_terminal());
         assert!(OrchestratorState::Done {
             plan: OrchestratorPlan::simple("", ModelTrait::General),
-            result: PlanResult { success: true, response: String::new(), failures: vec![], elapsed_secs: 0.0 },
-        }.is_terminal());
-        assert!(OrchestratorState::Failed { error: String::new() }.is_terminal());
+            result: PlanResult {
+                success: true,
+                response: String::new(),
+                failures: vec![],
+                elapsed_secs: 0.0
+            },
+        }
+        .is_terminal());
+        assert!(OrchestratorState::Failed {
+            error: String::new()
+        }
+        .is_terminal());
         assert!(!OrchestratorState::Aligning.is_terminal());
         assert!(!OrchestratorState::Planning.is_terminal());
         assert!(!OrchestratorState::Executing.is_terminal());

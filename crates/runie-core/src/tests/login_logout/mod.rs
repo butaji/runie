@@ -5,7 +5,6 @@
 //!
 //! Flow: /providers → Add → Login flow → Save → Providers dialog → Select model
 
-
 pub(super) fn clean_config() {
     let dir = std::env::temp_dir().join(format!(
         "runie_login_test_{:?}",

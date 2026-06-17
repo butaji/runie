@@ -1,6 +1,5 @@
 //! Tests for input cursor movement (Emacs-style hotkeys)
 
-
 #[cfg(test)]
 mod tests {
     use crate::event::{Event, InputEvent};
@@ -127,7 +126,7 @@ mod tests {
         state.update(InputEvent::CursorLeft); // at 10
         state.update(InputEvent::CursorLeft); // at 9
         state.update(InputEvent::CursorLeft); // at 8 (before 'r')
-                                         // DeleteWord should delete from position 6 ("w") to cursor 8 = "wo"
+                                              // DeleteWord should delete from position 6 ("w") to cursor 8 = "wo"
         state.update(InputEvent::DeleteWord);
         assert_eq!(state.input.input, "hello rld");
         assert_eq!(state.input.cursor_pos, 6);

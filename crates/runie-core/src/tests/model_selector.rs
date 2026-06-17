@@ -1,6 +1,6 @@
 //! Model selector tests (Layer 1 + Layer 2)
 
-use crate::event::{InputEvent, ControlEvent, DialogEvent};
+use crate::event::{ControlEvent, DialogEvent, InputEvent};
 
 use crate::commands::DialogState;
 use crate::model::{AppState, ScopedModel};

@@ -1,7 +1,6 @@
 //! toggle tests.
 
-
-use crate::event::{ControlEvent, AgentEvent};
+use crate::event::{AgentEvent, ControlEvent};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::elements::Element;
 use crate::ui::LazyCache;
@@ -37,9 +36,16 @@ fn thought_created_via_pipeline_is_expanded() {
 fn tool_created_via_pipeline_is_expanded() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_dir".to_string(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1\nfile2".to_string(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".to_string(),
+        name: "list_dir".to_string(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "file1\nfile2".to_string(),
+    });
     assert!(
         !state.view.all_collapsed,
         "Tools should be expanded by default"
@@ -73,9 +79,16 @@ fn toggle_expand_collapses_all_thoughts() {
 fn toggle_expand_collapses_all_tools() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_dir".to_string(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".to_string(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".to_string(),
+        name: "list_dir".to_string(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "file1".to_string(),
+    });
 
     assert!(!state.view.all_collapsed, "Should start expanded");
     state.update(ControlEvent::ToggleExpand);

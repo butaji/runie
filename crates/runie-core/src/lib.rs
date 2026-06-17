@@ -10,10 +10,14 @@
 //!   labels    :: Static text constants
 
 pub mod actors;
-pub use actors::{FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload, FffSearchState};
+pub use actors::{
+    FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
+    FffSearchState,
+};
 pub use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
-pub use model::{FffFileEntry, now, AppState, ChatMessage, Role};
+pub use model::{now, AppState, ChatMessage, FffFileEntry, Role};
 pub mod actor;
+pub mod agent_phase;
 pub mod agent_profiles;
 pub mod auth;
 pub mod bus;
@@ -21,14 +25,14 @@ pub mod clipboard_image;
 pub mod commands;
 pub mod config;
 pub mod config_migrate;
-pub mod confirmation;
 pub mod config_reload;
+pub mod confirmation;
 pub mod dialog;
+pub mod diff;
 pub mod display_width;
 pub mod dry_run;
 #[cfg(test)]
 pub mod dsl;
-pub mod diff;
 pub mod edit_preview;
 pub mod event;
 pub mod file_refs;
@@ -37,19 +41,19 @@ pub mod hooks;
 pub mod input_history;
 pub mod keybindings;
 pub mod labels;
-pub mod location;
 pub mod layout;
 pub mod llm_event;
+pub mod location;
 pub mod login_config;
 pub mod login_flow;
-pub mod agent_phase;
-pub mod mcp;
 pub mod markdown;
+pub mod mcp;
 pub mod message;
 pub mod model;
 pub mod model_catalog;
 pub mod multi_agent;
 pub use multi_agent::{AgentRegistry, RetryPlan, SubagentConfig};
+pub mod harness_skills;
 pub mod model_scroll;
 pub mod notification;
 pub mod orchestrator;
@@ -57,9 +61,9 @@ pub mod orchestrator_actor;
 pub mod path_complete;
 pub mod prompts;
 pub mod provider;
-pub mod retry;
 pub mod provider_registry;
 pub mod providers_dialog;
+pub mod retry;
 pub mod scoped_model;
 pub mod session;
 pub mod session_actor;
@@ -70,19 +74,18 @@ pub mod session_tree;
 pub mod settings;
 pub mod skill;
 pub mod skills;
-pub mod harness_skills;
 pub mod snapshot;
 pub mod state;
 pub mod streaming_buffer;
 pub mod telemetry;
 pub mod themes;
 pub mod tokens;
-pub mod trait_resolver;
-pub mod tool_markers;
 pub mod tool;
+pub mod tool_markers;
+pub mod trait_resolver;
 pub use tool::{format_bytes, format_duration};
-pub mod trust;
 pub mod permissions;
+pub mod trust;
 pub mod ui;
 pub mod update;
 pub mod utils;
@@ -92,20 +95,26 @@ mod file_refs_lookup_tests;
 #[cfg(test)]
 mod tests;
 
+pub use agent_phase::{elapsed_secs, format_elapsed, AgentPhase};
 pub use auth::{AuthStorage, AuthToken};
 pub use clipboard_image::read_clipboard_image;
-pub use config::{Config, ConfigChange, ModelsSection, ModelProvider, TruncationSection};
+pub use config::{Config, ConfigChange, ModelProvider, ModelsSection, TruncationSection};
 pub use confirmation::{ConfirmationKind, ConfirmationRouter};
 pub use diff::{Diff, DiffHunk, DiffLine};
 pub use dry_run::{run_dry_run, DryRunReport, DryRunStatus};
 pub use edit_preview::EditPreview;
-pub use event::Event;
 pub use event::DialogEvent; // Re-export to avoid circular dependency with dialog module
+pub use event::Event;
 pub use event::{
     AgentEvent, CommandEvent, ControlEvent, EditEvent, InputEvent, LoginFlowEvent,
     ModelConfigEvent, OrchestratorEvent, ScrollEvent, SessionEvent, SidebarEvent, SystemEvent,
 };
 pub use file_refs::{find_files, is_image_file, read_file_ref, FileRef};
+pub use harness_skills::{
+    HarnessConfig, HarnessSkill, HashlineEdit, HashlineEditConfig, HashlineEditSkill,
+    SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult, TurnEndCtx, TurnEndResult,
+    TurnStartCtx, TurnStartResult, VerificationConfig, VerificationLoopSkill,
+};
 pub use input_history::{filter_history, load_history, save_history, search_history};
 pub use keybindings::{
     default_keybindings, event_from_name, load_keybindings, merged_keybindings,
@@ -121,8 +130,11 @@ pub use login_flow::{
     build_key_input, build_login_root, build_model_selector, build_provider_picker, LoginFlowState,
     LoginStep,
 };
-pub use agent_phase::{AgentPhase, format_elapsed, elapsed_secs};
-pub use model_catalog::{model_catalog, filter_models, ModelCapabilities, ModelInfo};
+pub use model_catalog::{filter_models, model_catalog, ModelCapabilities, ModelInfo};
+pub use permissions::{
+    is_read_only_tool, is_sensitive_path, ApprovalSink, AutoAllowSink, PermissionAction,
+    PermissionRule, PermissionSet, ScriptedSink, TuiApprovalSink,
+};
 pub use prompts::{
     build_system_prompt, load_prompts, PromptSource, PromptTemplate, DEFAULT_PROMPT, DEFAULT_TOOLS,
 };
@@ -137,11 +149,6 @@ pub use session_index::{SessionIndex, SessionMetadata};
 pub use session_store::SessionStore;
 pub use session_tree::{SessionTree, SessionTreeFilter, TreeNode};
 pub use skills::{build_skills_context, load_all, load_from_dir, Skill};
-pub use harness_skills::{
-    HarnessConfig, HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult,
-    TurnEndCtx, TurnEndResult, TurnStartCtx, TurnStartResult,
-    VerificationConfig, VerificationLoopSkill, HashlineEdit, HashlineEditConfig, HashlineEditSkill,
-};
 pub use snapshot::{GitInfo, SidebarData, Snapshot};
 pub use state::{AgentEntry, AgentFocus, AgentStatus, SidebarState};
 pub use telemetry::Telemetry;
@@ -150,8 +157,4 @@ pub use tokens::{
     TokenTracker, Tokenizer,
 };
 pub use trust::{TrustDecision, TrustManager};
-pub use permissions::{
-    ApprovalSink, AutoAllowSink, is_read_only_tool, is_sensitive_path, PermissionAction,
-    PermissionRule, PermissionSet, ScriptedSink, TuiApprovalSink,
-};
 pub use ui::{Element, Feed, LazyCache};

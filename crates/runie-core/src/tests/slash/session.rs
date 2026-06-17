@@ -1,6 +1,6 @@
 use super::{exec, fresh_state, tmp_store, ENV_LOCK};
-use crate::event::{InputEvent, DialogEvent};
 use crate::event::Event;
+use crate::event::{DialogEvent, InputEvent};
 use crate::model::Role;
 
 /// Open palette and select a command by name
@@ -79,10 +79,7 @@ fn save_trims_whitespace() {
 
     // Should save with trimmed name
     let redb_path = crate::session_store::SessionStore::new(store.dir.clone()).path("trimmed");
-    assert!(
-        redb_path.exists(),
-        "whitespace should be trimmed"
-    );
+    assert!(redb_path.exists(), "whitespace should be trimmed");
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }

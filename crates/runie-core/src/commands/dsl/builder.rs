@@ -189,8 +189,8 @@ fn build_form_stack_from_template(template: FormPanel, args: &str) -> CoreStack 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Event;
     use crate::event::CommandEvent;
+    use crate::Event;
 
     #[test]
     fn test_cmd_macro() {

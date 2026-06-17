@@ -1,5 +1,5 @@
 use crate::event::Event;
-use crate::event::{InputEvent, ControlEvent, AgentEvent};
+use crate::event::{AgentEvent, ControlEvent, InputEvent};
 use crate::model::{AppState, ChatMessage, Role};
 
 #[test]

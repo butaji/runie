@@ -342,7 +342,11 @@ fn handle_history(state: &mut AppState, _: &str) -> CommandResult {
         .enumerate()
         .map(|(i, e)| format!("{}: {}", i + 1, e))
         .collect();
-    CommandResult::Message(format!("History ({} total):\n{}", count, entries.join("\n")))
+    CommandResult::Message(format!(
+        "History ({} total):\n{}",
+        count,
+        entries.join("\n")
+    ))
 }
 
 fn handle_session(state: &mut AppState, _: &str) -> CommandResult {
@@ -370,7 +374,12 @@ fn count_messages_by_role(state: &AppState) -> (usize, usize, usize) {
 }
 
 fn count_role(state: &AppState, role: crate::model::Role) -> usize {
-    state.session.messages.iter().filter(|m| m.role == role).count()
+    state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == role)
+        .count()
 }
 
 fn build_session_info(
@@ -448,10 +457,14 @@ fn find_most_recent() -> Option<String> {
     most_recent
 }
 
-fn load_session_metadata(store: &crate::session_store::SessionStore, name: &str) -> anyhow::Result<crate::session_index::SessionMetadata> {
+fn load_session_metadata(
+    store: &crate::session_store::SessionStore,
+    name: &str,
+) -> anyhow::Result<crate::session_index::SessionMetadata> {
     let data_dir = store.dir().parent().unwrap_or(store.dir()).to_path_buf();
     let index = crate::session_index::SessionIndex::load(&data_dir)?;
-    index.get(name)
+    index
+        .get(name)
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("not found"))
 }

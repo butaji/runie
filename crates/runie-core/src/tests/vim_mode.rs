@@ -1,6 +1,6 @@
 //! Tests for opt-in vim navigation mode.
 
-use crate::event::{InputEvent, ControlEvent, DialogEvent};
+use crate::event::{ControlEvent, DialogEvent, InputEvent};
 use crate::model::{AppState, ChatMessage, Role};
 
 fn fresh_state() -> AppState {
@@ -223,7 +223,10 @@ fn esc_during_active_turn_stops_first_then_enters_nav() {
     state.update(InputEvent::Escape);
     // First Esc stops the turn; user is NOT yet in nav mode.
     assert!(!state.agent.turn_active, "first Esc should stop the turn");
-    assert!(!state.view.vim_nav_mode, "first Esc should not yet enter nav");
+    assert!(
+        !state.view.vim_nav_mode,
+        "first Esc should not yet enter nav"
+    );
     assert!(
         state.view.vim_nav_pending,
         "first Esc should arm the nav-on-next-esc"
@@ -292,10 +295,7 @@ fn hint_text_in_nav_mode_shows_nav_hotkeys() {
     let mut state = state_with_vim();
     state.update(DialogEvent::DialogBack); // enter nav
     let hint = state.hint_text();
-    assert!(
-        hint.contains("j/k"),
-        "hint should advertise j/k: {hint}"
-    );
+    assert!(hint.contains("j/k"), "hint should advertise j/k: {hint}");
     assert!(
         hint.contains("space") && hint.contains("i"),
         "hint missing space/i hint: {hint}"
@@ -452,10 +452,7 @@ fn y_in_vim_nav_copies_block_and_exits_nav() {
     // Press y — should emit CopySelectedBlock and exit vim nav
     state.update(InputEvent::Input('y'));
 
-    assert!(
-        !state.view.vim_nav_mode,
-        "y should exit vim nav mode"
-    );
+    assert!(!state.view.vim_nav_mode, "y should exit vim nav mode");
 }
 
 #[test]
@@ -467,10 +464,7 @@ fn Y_in_vim_nav_copies_metadata_and_exits_nav() {
     // Press Y — should emit CopyBlockMetadata and exit vim nav
     state.update(InputEvent::Input('Y'));
 
-    assert!(
-        !state.view.vim_nav_mode,
-        "Y should exit vim nav mode"
-    );
+    assert!(!state.view.vim_nav_mode, "Y should exit vim nav mode");
 }
 
 #[test]
@@ -480,5 +474,8 @@ fn y_on_empty_selection_does_not_crash() {
     state.view.vim_nav_mode = true;
     // No post selected — pressing y should not panic
     state.update(InputEvent::Input('y'));
-    assert!(!state.view.vim_nav_mode, "y should still exit nav mode even with no selection");
+    assert!(
+        !state.view.vim_nav_mode,
+        "y should still exit nav mode even with no selection"
+    );
 }

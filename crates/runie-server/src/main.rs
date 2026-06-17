@@ -121,7 +121,9 @@ async fn dispatch_method(req: &Request) -> Result<Option<Value>, Error> {
             .map(Some)
             .map_err(complete_error),
         "listModels" => Ok(Some(handle_list_models())),
-        "listSessions" => handle_list_sessions().map(Some).map_err(list_sessions_error),
+        "listSessions" => handle_list_sessions()
+            .map(Some)
+            .map_err(list_sessions_error),
         _ => Err(Error::method_not_found(format!(
             "Method not found: {}",
             req.method
@@ -149,7 +151,9 @@ fn load_config() -> runie_core::config::Config {
     config_reload::Config::load(Some(&config_reload::config_path()))
 }
 
-fn build_headless_provider(config: &runie_core::config::Config) -> Result<runie_provider::DynProvider, Error> {
+fn build_headless_provider(
+    config: &runie_core::config::Config,
+) -> Result<runie_provider::DynProvider, Error> {
     let chain = config.provider_chain();
     let model = config.default_model().unwrap_or("echo");
     runie_provider::build_provider_with_fallback(&chain, model)
@@ -227,9 +231,12 @@ mod tests {
 
     #[test]
     fn rpc_parses_request() {
-        let json = r#"{"kind":"request","id":1,"method":"initialize","params":{},"version":"0.1.0"}"#;
+        let json =
+            r#"{"kind":"request","id":1,"method":"initialize","params":{},"version":"0.1.0"}"#;
         let msg: Message = serde_json::from_str(json).unwrap();
-        let Message::Request(req) = msg else { panic!("expected request") };
+        let Message::Request(req) = msg else {
+            panic!("expected request")
+        };
         assert_eq!(req.method, "initialize");
         assert_eq!(req.version, Version::current());
     }

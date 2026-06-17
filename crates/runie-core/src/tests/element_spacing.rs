@@ -2,7 +2,7 @@
 
 use crate::event::Event;
 
-use crate::event::{InputEvent, AgentEvent};
+use crate::event::{AgentEvent, InputEvent};
 use crate::layout::element_line_count;
 use crate::model::AppState;
 use crate::ui::LazyCache;

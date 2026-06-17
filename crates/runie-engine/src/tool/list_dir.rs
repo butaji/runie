@@ -51,7 +51,12 @@ fn list_dir_impl(path: &std::path::Path, start: Instant) -> Result<ToolOutput> {
     let entries = match std::fs::read_dir(path) {
         Ok(e) => e,
         Err(e) => {
-            return Ok(tool_error("list_dir", &format!("Error listing {}: {}", path.display(), e), start, false));
+            return Ok(tool_error(
+                "list_dir",
+                &format!("Error listing {}: {}", path.display(), e),
+                start,
+                false,
+            ));
         }
     };
 
@@ -83,5 +88,3 @@ fn list_dir_impl(path: &std::path::Path, start: Instant) -> Result<ToolOutput> {
         status: ToolStatus::Success,
     })
 }
-
-

@@ -1,5 +1,5 @@
-use crate::event::Event;
 use crate::event::AgentEvent;
+use crate::event::Event;
 use crate::model::AppState;
 use crate::ui::LazyCache;
 
@@ -164,9 +164,16 @@ fn post_tool_assistant_renders() {
         content: "I'll list files.\nTOOL:list_dir:.".into(),
     });
     state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".into(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "list_dir".into(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "file1".into(),
+    });
     state.update(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done!".into(),
@@ -237,9 +244,16 @@ fn verify_no_agent_after_thought_done(state: &mut AppState) {
 }
 
 fn verify_no_agent_during_tool(state: &mut AppState) {
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a\nb\nc".into(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "list_dir".into(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "a\nb\nc".into(),
+    });
     state.ensure_fresh();
     assert!(
         agent_texts(state).is_empty(),

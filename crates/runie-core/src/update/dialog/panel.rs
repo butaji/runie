@@ -62,8 +62,7 @@ fn handle_panel_navigation(_state: &mut AppState, event: &Event, stack: &mut Pan
             stack.select_down();
             return true;
         }
-        InputEvent::CursorLeft
-        | ModelConfigEvent::SettingsLeft => {
+        InputEvent::CursorLeft | ModelConfigEvent::SettingsLeft => {
             stack.pop();
             return true;
         }

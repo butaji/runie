@@ -23,7 +23,9 @@ where
 }
 
 /// Collect all text deltas from a stream.
-async fn collect_text(stream: impl futures::Stream<Item = anyhow::Result<LLMEvent>> + Unpin) -> Vec<String> {
+async fn collect_text(
+    stream: impl futures::Stream<Item = anyhow::Result<LLMEvent>> + Unpin,
+) -> Vec<String> {
     let mut texts = Vec::new();
     futures::pin_mut!(stream);
     while let Some(result) = stream.next().await {
@@ -204,13 +206,19 @@ fn test_provider_trait_is_dyn_compatible() {
 fn test_build_provider_with_warning_returns_err_for_unknown() {
     let result = crate::build_provider_with_warning("not-a-provider", "gpt-4");
     assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), ProviderError::UnknownProvider(_)));
+    assert!(matches!(
+        result.unwrap_err(),
+        ProviderError::UnknownProvider(_)
+    ));
 }
 
 #[test]
 fn test_build_provider_panics_for_unknown() {
     let result = std::panic::catch_unwind(|| crate::build_provider("totally-invalid-key", "model"));
-    assert!(result.is_err(), "build_provider should panic for unknown provider");
+    assert!(
+        result.is_err(),
+        "build_provider should panic for unknown provider"
+    );
 }
 
 #[test]
@@ -280,7 +288,10 @@ async fn test_validate_api_key_times_out_on_hanging_server() {
 
     let elapsed = start.elapsed();
     assert!(result.is_err(), "hanging server should produce an error");
-    assert!(elapsed < Duration::from_secs(2), "should return quickly due to timeout");
+    assert!(
+        elapsed < Duration::from_secs(2),
+        "should return quickly due to timeout"
+    );
 }
 
 #[tokio::test]

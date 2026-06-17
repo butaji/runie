@@ -259,3 +259,31 @@ impl AppState {
         }
     }
 }
+
+// ── Session event dispatcher ─────────────────────────────────────────────────
+
+use crate::event::SessionEvent;
+
+pub(super) fn handle_session_event(state: &mut AppState, event: SessionEvent) {
+    match event {
+        SessionEvent::ForkSession { message_index } => {
+            state.fork_session_at(message_index);
+            state.view.cached_session_tree_valid = false;
+        }
+        SessionEvent::CloneSession => {
+            state.clone_session();
+            state.view.cached_session_tree_valid = false;
+        }
+        SessionEvent::ToggleSessionTree => {
+            state.toggle_session_tree_dialog();
+            state.view.cached_session_tree_valid = false;
+        }
+        SessionEvent::SessionTreeFilterCycle => {
+            state.cycle_session_tree_filter();
+        }
+        SessionEvent::SessionTreeSelect { id } => {
+            state.session_tree_select(&id);
+        }
+        _ => {}
+    }
+}

@@ -1,4 +1,3 @@
-
 /// Partition model catalog items into recent models and provider groups.
 #[allow(clippy::type_complexity)]
 pub fn partition_model_items(
