@@ -31,7 +31,8 @@ mod registry;
 mod tests;
 
 pub use dsl::{
-    build_spawn_form_panel, CommandCategory, CommandDef, CommandFlow, CommandResult, DialogType,
+    build_cancel_form_panel, build_spawn_form_panel, build_steer_form_panel, CommandCategory,
+    CommandDef, CommandFlow, CommandResult, DialogType,
 };
 pub use registry::{filter_commands, CommandRegistry, DialogState};
 

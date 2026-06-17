@@ -27,8 +27,11 @@ macro_rules! ctor {
 
 // ── Bindable event table ───────────────────────────────────────────────────────
 
+/// Zero-argument event constructor signature.
+pub type EventCtor = fn() -> Event;
+
 /// Bindable event names paired with their default zero-arg constructors.
-pub const EVENT_NAMES: &[(&str, fn() -> Event)] = &[
+pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     // ── Input events (unit variants only) ──────────────────────────────────
     ("Backspace", ctor!(Input::Backspace)),
     ("Newline", ctor!(Input::Newline)),

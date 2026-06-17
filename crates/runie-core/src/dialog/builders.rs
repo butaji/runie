@@ -6,6 +6,7 @@
 
 use super::{ItemAction, Panel, PanelItem, PanelStack};
 use crate::event::{ControlEvent, ModelConfigEvent};
+use crate::settings::SettingValue;
 use crate::Event;
 
 // ============================================================================
@@ -92,17 +93,7 @@ pub fn model_selector(
 pub struct SettingsRow {
     pub label: String,
     pub key: String,
-    pub kind: SettingsRowKind,
-}
-
-#[derive(Debug, Clone)]
-pub enum SettingsRowKind {
-    Bool(bool),
-    Cycle {
-        current: String,
-        options: Vec<String>,
-    },
-    Action(Event),
+    pub kind: SettingValue,
 }
 
 /// Build a settings dialog panel with category headers.
@@ -116,20 +107,18 @@ pub fn settings(categories: Vec<(String, Vec<SettingsRow>)>) -> PanelStack {
         panel = panel.header(cat_name);
         for row in rows {
             let item = match row.kind {
-                SettingsRowKind::Bool(value) => PanelItem::Toggle {
+                SettingValue::Bool(value) => PanelItem::Toggle {
                     label: row.label,
                     value,
                     action: ItemAction::Toggle(row.key.clone()),
                 },
-                SettingsRowKind::Cycle {
-                    current, options, ..
-                } => PanelItem::Select {
+                SettingValue::Cycle { current, options } => PanelItem::Select {
                     label: row.label,
                     current,
                     options,
                     key: row.key,
                 },
-                SettingsRowKind::Action(evt) => PanelItem::Action {
+                SettingValue::Action(evt) => PanelItem::Action {
                     label: row.label,
                     action: ItemAction::Emit(evt),
                 },
@@ -372,7 +361,7 @@ mod tests {
                 vec![SettingsRow {
                     label: "Provider".into(),
                     key: "provider".into(),
-                    kind: SettingsRowKind::Cycle {
+                    kind: SettingValue::Cycle {
                         current: "mock".into(),
                         options: vec!["mock".into(), "openai".into()],
                     },
@@ -383,7 +372,7 @@ mod tests {
                 vec![SettingsRow {
                     label: "Theme".into(),
                     key: "theme".into(),
-                    kind: SettingsRowKind::Cycle {
+                    kind: SettingValue::Cycle {
                         current: "runie".into(),
                         options: vec!["runie".into(), "dracula".into()],
                     },

@@ -1,7 +1,7 @@
 //! Session persistence handlers (save/load/delete/import/export).
 
 use crate::commands::CommandResult;
-use crate::model::{now, AppState};
+use crate::model::AppState;
 
 use super::build_delete_form;
 use super::build_export_form;
@@ -61,20 +61,9 @@ pub fn handle_import(state: &mut AppState, path: &str) -> CommandResult {
     match std::fs::read_to_string(path) {
         Ok(json) => match serde_json::from_str::<crate::session::Session>(&json) {
             Ok(session) => {
-                state.session.messages = session.messages;
-                state.config.current_provider = session.provider;
-                state.config.current_model = session.model;
-                state.config.theme_name = session.theme_name;
-                state.config.thinking_level = session.thinking_level;
-                state.config.read_only = session.read_only;
-                state.session.session_display_name =
-                    session.display_name.or(Some(session.name));
-                state.session.session_created_at = session.created_at;
-                state.session.session_updated_at = session.updated_at;
-                state.session.session_tree = session.session_tree;
-                state.configure_token_tracker();
-                state.messages_changed();
-                CommandResult::Message(format!("Session imported from '{}'", path))
+                let msg = format!("Session imported from '{}'", path);
+                state.restore_session(&session);
+                CommandResult::Message(msg)
             }
             Err(e) => CommandResult::Message(format!("Invalid session file: {}", e)),
         },
@@ -87,23 +76,12 @@ pub fn handle_export(state: &mut AppState, path: &str) -> CommandResult {
     if path.is_empty() {
         return build_export_form();
     }
-    let session = crate::session::Session {
-        name: state
-            .session
-            .session_display_name
-            .clone()
-            .unwrap_or_else(|| "exported".into()),
-        display_name: state.session.session_display_name.clone(),
-        created_at: state.session.session_created_at,
-        updated_at: now(),
-        messages: state.session.messages.clone(),
-        provider: state.config.current_provider.clone(),
-        model: state.config.current_model.clone(),
-        theme_name: state.config.theme_name.clone(),
-        thinking_level: state.config.thinking_level,
-        read_only: state.config.read_only,
-        session_tree: state.session.session_tree.clone(),
-    };
+    let name = state
+        .session
+        .session_display_name
+        .clone()
+        .unwrap_or_else(|| "exported".into());
+    let session = crate::session::Session::from_state(state, name);
     match std::fs::write(
         path,
         serde_json::to_string_pretty(&session).unwrap_or_default(),

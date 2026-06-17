@@ -9,7 +9,7 @@ use super::types::Config;
 /// Start a config file watcher using notify crate.
 pub fn spawn_config_watcher(event_tx: mpsc::Sender<Event>, config_path: PathBuf) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
-        let mut last_config = Config::load_from(&config_path);
+        let mut last_config = Config::load(Some(&config_path));
         let (tx, rx) = std::sync::mpsc::channel();
         let mut debouncer = match new_debouncer(std::time::Duration::from_millis(300), tx) {
             Ok(d) => d, Err(e) => { eprintln!("Failed to create watcher: {:?}", e); return; }
@@ -22,7 +22,7 @@ pub fn spawn_config_watcher(event_tx: mpsc::Sender<Event>, config_path: PathBuf)
         while let Ok(Ok(events)) = rx.recv() {
             if !events.iter().any(|e| e.path == config_path) { continue; }
             if !events.iter().any(|e| matches!(e.kind, DebouncedEventKind::Any | DebouncedEventKind::AnyContinuous)) { continue; }
-            let config = Config::load_from(&config_path);
+            let config = Config::load(Some(&config_path));
             for change in config.classify_change(&last_config) {
                 match change {
                     super::types::ConfigChange::Model { provider, model } => { let _ = event_tx.send(ModelConfigEvent::SwitchModel { provider, model }).await; }

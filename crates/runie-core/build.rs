@@ -48,7 +48,7 @@ const ALLOWED_FUNC_VIOLATIONS: &[(&str, &str)] = &[
     ("crates/runie-core/src/session_actor.rs", "async fn session_actor_replays_to_uactor"),
     ("crates/runie-core/src/session_store.rs", "fn open_db"),
     ("crates/runie-core/src/skills.rs", "pub fn load_from_dir"),
-    ("crates/runie-core/src/skills.rs", "fn parse_skill_md"),
+    ("crates/runie-core/src/skills.rs", "pub(crate) fn parse_skill_md"),
     ("crates/runie-core/src/snapshot.rs", "pub fn compute_mouse_target"),
     ("crates/runie-engine/src/tool/find_definitions.rs", "fn detect_kind"),
     ("crates/runie-engine/src/tool/find_definitions.rs", "async fn call"),

@@ -88,7 +88,7 @@ dependencies = [
  "objc2-foundation",
  "parking_lot",
  "percent-encoding",
- "windows-sys 0.52.0",
+ "windows-sys 0.60.2",
  "x11rb",
 ]
 
@@ -416,6 +416,17 @@ dependencies = [
  "rustversion",
  "ryu",
  "static_assertions",
+]
+
+[[package]]
+name = "console"
+version = "0.16.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d64e8af5551369d19cf50138de61f1c42074ab970f74e99be916646777f8fc87"
+dependencies = [
+ "encode_unicode",
+ "libc",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -777,6 +788,12 @@ name = "either"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91622ff5e7162018101f2fea40d6ebf4a78bbe5a49736a2020649edf9693679e"
+
+[[package]]
+name = "encode_unicode"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
 
 [[package]]
 name = "encoding_rs"
@@ -1686,6 +1703,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e05c02b5e89bff3b946cedeca278abc628fe811e604f027c45a8aa3cf793d0eb"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "insta"
+version = "1.48.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86f0f8fee8c926415c58d6ae43a08523a26faccb2323f5e6b644fe7dd4ef6b82"
+dependencies = [
+ "console",
+ "once_cell",
+ "similar 2.7.0",
+ "tempfile",
 ]
 
 [[package]]
@@ -3068,7 +3097,7 @@ dependencies = [
  "runie-provider",
  "serde",
  "serde_json",
- "similar",
+ "similar 3.1.1",
  "tempfile",
  "thiserror 1.0.69",
  "tokio",
@@ -3101,7 +3130,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "similar",
+ "similar 3.1.1",
  "strum 0.26.3",
  "tempfile",
  "textwrap",
@@ -3188,6 +3217,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "runie-testing"
+version = "0.2.16"
+dependencies = [
+ "runie-core",
+ "runie-provider",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "runie-tui"
 version = "0.2.16"
 dependencies = [
@@ -3196,6 +3236,7 @@ dependencies = [
  "crossterm",
  "dirs",
  "futures",
+ "insta",
  "libc",
  "nix 0.31.3",
  "opaline",
@@ -3487,6 +3528,12 @@ name = "simd-adler32"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "703d5c7ef118737c72f1af64ad2f6f8c5e1921f818cdcb97b8fe6fc69bf66214"
+
+[[package]]
+name = "similar"
+version = "2.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 
 [[package]]
 name = "similar"

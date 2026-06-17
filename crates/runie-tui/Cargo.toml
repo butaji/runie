@@ -36,6 +36,7 @@ nix.workspace = true
 
 [dev-dependencies]
 regex = "1"
+insta.workspace = true
 
 [target.'cfg(unix)'.dev-dependencies]
 libc = "0.2"

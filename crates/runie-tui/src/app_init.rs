@@ -4,7 +4,7 @@ use runie_core::config_reload;
 use runie_core::model::AppState;
 
 pub fn init_scoped_models(state: &mut AppState) {
-    let config = config_reload::Config::load_from(&config_reload::config_path());
+    let config = config_reload::Config::load(Some(&config_reload::config_path()));
     if let Some(scoped) = config.scoped_models() {
         state.config.scoped_models = scoped
             .iter()
@@ -75,7 +75,7 @@ pub fn init_skills(state: &mut AppState) {
 }
 
 pub fn init_prompts(state: &mut AppState) {
-    let config = config_reload::Config::load_from(&config_reload::config_path());
+    let config = config_reload::Config::load(Some(&config_reload::config_path()));
     let prompts_section = config.prompts();
     state.prompts = runie_core::prompts::load_prompts(
         prompts_section.default.as_deref(),
@@ -84,7 +84,7 @@ pub fn init_prompts(state: &mut AppState) {
 }
 
 pub fn init_telemetry(state: &mut AppState) {
-    let config = config_reload::Config::load_from(&config_reload::config_path());
+    let config = config_reload::Config::load(Some(&config_reload::config_path()));
     state.config.telemetry = runie_core::Telemetry::new(config.telemetry_enabled());
     if state.config.telemetry.is_enabled() {
         state
@@ -95,7 +95,7 @@ pub fn init_telemetry(state: &mut AppState) {
 }
 
 pub fn init_truncation(state: &mut AppState) {
-    let config = config_reload::Config::load_from(&config_reload::config_path());
+    let config = config_reload::Config::load(Some(&config_reload::config_path()));
     state.config.truncation = config.truncation;
 }
 
@@ -104,6 +104,6 @@ pub fn init_truncation(state: &mut AppState) {
 /// the initial vim_mode opt-in (and any future [ui] fields) must be loaded
 /// here.
 pub fn init_ui_config(state: &mut AppState) {
-    let config = config_reload::Config::load_from(&config_reload::config_path());
+    let config = config_reload::Config::load(Some(&config_reload::config_path()));
     state.config.vim_mode = config.vim_mode();
 }

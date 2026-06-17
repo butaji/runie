@@ -1,0 +1,14 @@
+[package]
+name = "runie-testing"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+runie-core = { path = "../runie-core" }
+runie-provider = { path = "../runie-provider" }
+tokio.workspace = true
+tempfile.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

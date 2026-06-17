@@ -30,7 +30,7 @@ fn provider_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         "provider",
         "Provider",
-        SettingValue::Enum {
+        SettingValue::Cycle {
             current: state.config.current_provider.clone(),
             options: provider_options(),
         },
@@ -43,7 +43,7 @@ fn model_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         "model",
         "Model",
-        SettingValue::Enum {
+        SettingValue::Cycle {
             current: state.config.current_model.clone(),
             options: model_options(&state.config.current_provider),
         },
@@ -56,7 +56,7 @@ fn theme_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         "theme",
         "Theme",
-        SettingValue::Enum {
+        SettingValue::Cycle {
             current: state.config.theme_name.clone(),
             options: theme_options(),
         },
@@ -69,7 +69,7 @@ fn thinking_level_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         "thinking_level",
         "Thinking Level",
-        SettingValue::Enum {
+        SettingValue::Cycle {
             current: state.config.thinking_level.as_str().to_string(),
             options: vec!["off".into(), "low".into(), "medium".into(), "high".into()],
         },
@@ -92,7 +92,7 @@ fn steering_mode_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         "steering_mode",
         "Steering Mode",
-        SettingValue::Enum {
+        SettingValue::Cycle {
             current: delivery_mode_str(state.config.steering_mode).to_string(),
             options: vec!["one-at-a-time".into(), "all".into()],
         },
@@ -105,7 +105,7 @@ fn follow_up_mode_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         "follow_up_mode",
         "Follow-Up Mode",
-        SettingValue::Enum {
+        SettingValue::Cycle {
             current: delivery_mode_str(state.config.follow_up_mode).to_string(),
             options: vec!["one-at-a-time".into(), "all".into()],
         },
@@ -145,7 +145,7 @@ fn truncation_max_lines_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         "truncation_max_lines",
         "Truncation Max Lines",
-        SettingValue::Enum {
+        SettingValue::Cycle {
             current: state.config.truncation.max_lines.to_string(),
             options: truncation_lines_options(),
         },
@@ -158,7 +158,7 @@ fn truncation_max_bytes_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         "truncation_max_bytes",
         "Truncation Max Bytes",
-        SettingValue::Enum {
+        SettingValue::Cycle {
             current: state.config.truncation.max_bytes.to_string(),
             options: truncation_bytes_options(),
         },

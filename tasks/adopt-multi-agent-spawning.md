@@ -1,6 +1,6 @@
 # Adopt Multi-Agent Spawning
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0
@@ -69,38 +69,38 @@ Task fails
 
 ## Acceptance Criteria
 
-- [ ] `AgentRegistry` with `spawn()`, `send()`, `wait()`, `close()` methods.
-- [ ] Depth limit = 1 (orchestrator + subagents only).
-- [ ] Config inheritance: provider, tools (filtered), cwd, env (redacted), permissions.
-- [ ] Model NOT inherited — specified per subagent via `select_model` tool.
-- [ ] Subagent naming: `{Role}-{3 alphanumeric}`.
-- [ ] `done` tool for explicit completion signal.
-- [ ] Token budget per subagent.
-- [ ] 3 retries → same-trait fallback → user escalation.
-- [ ] Steer (`/steer`) and cancel (`/cancel`) commands.
-- [ ] Orchestrator tools: list/get_status/get_output/steer/cancel.
-- [ ] Approval requests routed to orchestrator.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `AgentRegistry` with `spawn()`, `send()`, `wait()`, `close()` methods.
+- [x] Depth limit = 1 (orchestrator + subagents only).
+- [x] Config inheritance: provider, tools (filtered), cwd, env (redacted), permissions.
+- [x] Model NOT inherited — specified per subagent via `select_model` tool.
+- [x] Subagent naming: `{Role}-{3 alphanumeric}`.
+- [x] `done` tool for explicit completion signal.
+- [x] Token budget per subagent.
+- [x] 3 retries → same-trait fallback → user escalation.
+- [x] Steer (`/steer`) and cancel (`/cancel`) commands.
+- [x] Orchestrator tools: list/get_status/get_output/steer/cancel.
+- [x] Approval requests routed to orchestrator.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `subagent_naming_format` — `researcher-A1B` matches pattern.
-- [ ] `retry_strategy_3_retries` — exactly 3 retries before fallback.
-- [ ] `model_not_inherited` — subagent must have explicit model.
-- [ ] `config_inheritance_excludes_model` — other configs inherited.
-- [ ] `depth_limit_one_level` — subagent cannot spawn subagent.
+- [x] `subagent_naming_format` — `researcher-A1B` matches pattern.
+- [x] `retry_strategy_3_retries` — exactly 3 retries before fallback.
+- [x] `model_not_inherited` — subagent must have explicit model.
+- [x] `config_inheritance_excludes_model` — other configs inherited.
+- [x] `depth_limit_one_level` — subagent cannot spawn subagent.
 
 ### Layer 2 — Event Handling
-- [ ] `steer_command_delivers_message` — `/steer` reaches subagent.
-- [ ] `cancel_command_stops_subagent` — `/cancel` terminates subagent.
-- [ ] `done_tool_signals_completion` — `done` triggers completion event.
+- [x] `steer_command_delivers_message` — `/steer` reaches subagent.
+- [x] `cancel_command_stops_subagent` — `/cancel` terminates subagent.
+- [x] `done_tool_signals_completion` — `done` triggers completion event.
 
 ### Layer 3 — Rendering
 N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] Smoke test: spawn team, verify subagent responds.
+- [x] Smoke test: spawn team, verify subagent responds.
 
 ## Files touched
 

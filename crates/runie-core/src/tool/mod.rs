@@ -19,6 +19,10 @@ use serde_json::Value;
 pub struct ToolContext {
     pub working_dir: PathBuf,
     pub env: HashMap<String, String>,
+    /// Agent ID when this tool is invoked by a subagent.
+    pub agent_id: Option<String>,
+    /// Shared subagent registry when running inside Team mode.
+    pub agent_registry: Option<std::sync::Arc<std::sync::Mutex<crate::multi_agent::AgentRegistry>>>,
 }
 
 impl Default for ToolContext {
@@ -26,6 +30,8 @@ impl Default for ToolContext {
         Self {
             working_dir: std::env::current_dir().unwrap_or_default(),
             env: std::env::vars().collect(),
+            agent_id: None,
+            agent_registry: None,
         }
     }
 }

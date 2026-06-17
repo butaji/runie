@@ -163,7 +163,7 @@ impl CommandResult {
 /// Collects the prompt via a single text field.
 fn spawn_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
     crate::event::ControlEvent::SpawnAgent {
-        prompt: values.get("prompt").cloned().unwrap_or_default(),
+        prompt: crate::dialog::dsl::get_field(values, "prompt"),
     }
 }
 
@@ -172,6 +172,38 @@ pub fn build_spawn_form_panel() -> PanelStack {
     form("spawn", "Spawn Subagent")
         .field("Prompt", "Describe the task for the subagent", "prompt")
         .on_submit(spawn_submit)
+        .into_stack()
+}
+
+fn steer_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
+    crate::event::ControlEvent::SteerAgent {
+        agent_id: crate::dialog::dsl::get_field(values, "agent_id"),
+        message: crate::dialog::dsl::get_field(values, "message"),
+    }
+}
+
+/// Build a form panel for the `/steer` command when called without arguments.
+pub fn build_steer_form_panel() -> PanelStack {
+    use crate::dialog::dsl::form;
+    form("steer", "Steer Subagent")
+        .field("Agent ID", "researcher-A1B", "agent_id")
+        .field("Message", "Focus on src/lib.rs", "message")
+        .on_submit(steer_submit)
+        .into_stack()
+}
+
+fn cancel_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
+    crate::event::ControlEvent::CancelAgent {
+        agent_id: crate::dialog::dsl::get_field(values, "agent_id"),
+    }
+}
+
+/// Build a form panel for the `/cancel` command when called without arguments.
+pub fn build_cancel_form_panel() -> PanelStack {
+    use crate::dialog::dsl::form;
+    form("cancel", "Cancel Subagent")
+        .field("Agent ID", "researcher-A1B", "agent_id")
+        .on_submit(cancel_submit)
         .into_stack()
 }
 

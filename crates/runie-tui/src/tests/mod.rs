@@ -8,6 +8,8 @@ use runie_core::event::{AgentEvent, InputEvent};
 #[cfg(test)]
 mod smoke;
 #[cfg(test)]
+mod snapshot;
+#[cfg(test)]
 mod render;
 
 #[cfg(test)]

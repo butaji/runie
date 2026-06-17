@@ -12,7 +12,17 @@ use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::dialog::PanelStack;
 use crate::model::AppState;
 
+use std::collections::HashMap;
+
 use super::spec::{CommandKind, CommandSpec};
+
+/// Build a `CommandEvent` from a single form field.
+fn make_submit<F>(values: &HashMap<String, String>, key: &str, f: F) -> crate::Event
+where
+    F: FnOnce(String) -> crate::Event,
+{
+    f(crate::dialog::dsl::get_field(values, key))
+}
 
 /// Build the /load form panel (used to re-open when submitted empty).
 pub fn build_load_form() -> CommandResult {
@@ -72,46 +82,46 @@ fn build_form_stack(
     builder.on_submit(submit).into_stack()
 }
 
-fn save_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::event::CommandEvent::RunSaveCommand {
-        name: values.get("name").cloned().unwrap_or_default(),
-    }
+fn save_submit(values: &HashMap<String, String>) -> crate::Event {
+    make_submit(values, "name", |name| {
+        crate::event::CommandEvent::RunSaveCommand { name }
+    })
 }
-fn load_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::event::CommandEvent::RunLoadCommand {
-        name: values.get("name").cloned().unwrap_or_default(),
-    }
+fn load_submit(values: &HashMap<String, String>) -> crate::Event {
+    make_submit(values, "name", |name| {
+        crate::event::CommandEvent::RunLoadCommand { name }
+    })
 }
-fn delete_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::event::CommandEvent::RunDeleteCommand {
-        name: values.get("name").cloned().unwrap_or_default(),
-    }
+fn delete_submit(values: &HashMap<String, String>) -> crate::Event {
+    make_submit(values, "name", |name| {
+        crate::event::CommandEvent::RunDeleteCommand { name }
+    })
 }
-fn export_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::event::CommandEvent::RunExportCommand {
-        path: values.get("path").cloned().unwrap_or_default(),
-    }
+fn export_submit(values: &HashMap<String, String>) -> crate::Event {
+    make_submit(values, "path", |path| {
+        crate::event::CommandEvent::RunExportCommand { path }
+    })
 }
-fn import_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::event::CommandEvent::RunImportCommand {
-        path: values.get("path").cloned().unwrap_or_default(),
-    }
+fn import_submit(values: &HashMap<String, String>) -> crate::Event {
+    make_submit(values, "path", |path| {
+        crate::event::CommandEvent::RunImportCommand { path }
+    })
 }
-fn compact_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
+fn compact_submit(values: &HashMap<String, String>) -> crate::Event {
     crate::event::CommandEvent::RunCompactCommand {
-        keep: values.get("keep").cloned().unwrap_or_default(),
-        focus: values.get("focus").cloned().unwrap_or_default(),
+        keep: crate::dialog::dsl::get_field(values, "keep"),
+        focus: crate::dialog::dsl::get_field(values, "focus"),
     }
 }
-fn fork_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
+fn fork_submit(values: &HashMap<String, String>) -> crate::Event {
     crate::event::CommandEvent::RunForkCommand {
-        message_index: values.get("index").cloned().unwrap_or_default(),
+        message_index: crate::dialog::dsl::get_field(values, "index"),
     }
 }
-fn name_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::event::CommandEvent::RunNameCommand {
-        name: values.get("name").cloned().unwrap_or_default(),
-    }
+fn name_submit(values: &HashMap<String, String>) -> crate::Event {
+    make_submit(values, "name", |name| {
+        crate::event::CommandEvent::RunNameCommand { name }
+    })
 }
 
 static SESSION_COMMANDS: &[CommandSpec] = &[

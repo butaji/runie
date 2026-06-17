@@ -245,7 +245,7 @@ mod tests {
 
     fn save_submit(values: &std::collections::HashMap<String, String>) -> Event {
         CommandEvent::RunSaveCommand {
-            name: values.get("name").cloned().unwrap_or_default(),
+            name: crate::dialog::dsl::get_field(values, "name"),
         }
     }
 

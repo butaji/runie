@@ -218,6 +218,8 @@ mod tests {
                 | Event::Abort
                 | Event::FollowUp
                 | Event::SpawnAgent { .. }
+                | Event::SteerAgent { .. }
+                | Event::CancelAgent { .. }
                 | Event::ToggleExpand
                 | Event::Dequeue
                 | Event::OpenExternalEditor

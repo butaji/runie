@@ -7,6 +7,8 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+mod layers;
+
 // ============================================================================
 // Models Section
 // ============================================================================
@@ -104,6 +106,18 @@ impl Default for TruncationSection {
 }
 
 // ============================================================================
+// Hooks Section
+// ============================================================================
+
+/// Hook configuration.
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct HooksConfig {
+    /// Map of hook event name to list of shell commands to run.
+    pub commands: HashMap<String, Vec<String>>,
+}
+
+// ============================================================================
 // Main Config
 // ============================================================================
 
@@ -138,13 +152,18 @@ pub struct Config {
     /// Parsed from `[keybindings]` table in `config.toml`.
     #[serde(default)]
     pub keybindings: HashMap<String, String>,
+    /// Hook commands registered by event name.
+    #[serde(default)]
+    pub hooks: HooksConfig,
 }
 
 impl Config {
-    /// Load config from a specific path.
+    /// Load config from an optional path, falling back to the default path.
     ///
     /// Automatically migrates outdated configs and writes them back.
-    pub fn load_from(path: &PathBuf) -> Self {
+    pub fn load(path: Option<&std::path::Path>) -> Self {
+        let default_path = config_path();
+        let path = path.unwrap_or(&default_path);
         if !path.exists() {
             return Self::default();
         }
@@ -154,7 +173,7 @@ impl Config {
                     Ok(v) => v,
                     Err(_) => return Self::default(),
                 };
-                match crate::config_migrate::migrate_with_path(&mut value, Some(path.clone())) {
+                match crate::config_migrate::migrate_with_path(&mut value, Some(path.to_path_buf())) {
                     Ok(true) => {
                         let _ = crate::config_migrate::backup_config(path);
                         if let Ok(migrated) = toml::to_string(&value) {
@@ -171,9 +190,15 @@ impl Config {
         }
     }
 
-    /// Load config from the default path.
-    pub fn load() -> Self {
-        Self::load_from(&config_path())
+    /// Load configuration from layered sources: defaults → global config →
+    /// local project config → environment variables.
+    pub fn load_layers() -> Self {
+        layers::load_layers()
+    }
+
+    /// Layered config loader with explicit paths (useful for tests).
+    pub fn load_layers_from_paths(global: PathBuf, local: PathBuf) -> Self {
+        layers::load_layers_from_paths(global, local)
     }
 
     /// Save config to the default path.
@@ -302,7 +327,7 @@ mod tests {
 provider = "openai"
 model = "gpt-4"
 "#);
-        let config = Config::load_from(&path);
+        let config = Config::load(Some(&path));
         assert_eq!(config.provider, Some("openai".to_string()));
         assert_eq!(config.default_model(), Some("gpt-4"));
     }
@@ -315,7 +340,7 @@ model = "gpt-4"
 default = "gpt-4o"
 scoped = ["gpt-4", "gpt-3.5-turbo"]
 "#);
-        let config = Config::load_from(&path);
+        let config = Config::load(Some(&path));
         assert_eq!(config.default_model(), Some("gpt-4o"));
         let scoped = config.scoped_models().unwrap();
         assert_eq!(scoped.len(), 2);
@@ -330,7 +355,7 @@ type = "openai"
 base_url = "https://api.openai.com"
 api_key = "sk-test"
 "#);
-        let config = Config::load_from(&path);
+        let config = Config::load(Some(&path));
         let provider = config.provider_for_model("openai/gpt-4").unwrap();
         assert_eq!(provider.base_url, "https://api.openai.com");
     }
@@ -342,7 +367,7 @@ api_key = "sk-test"
 [ui]
 vim_mode = false
 "#);
-        let config = Config::load_from(&path);
+        let config = Config::load(Some(&path));
         assert!(!config.vim_mode());
     }
 
@@ -353,7 +378,7 @@ vim_mode = false
 [telemetry]
 enabled = false
 "#);
-        let config = Config::load_from(&path);
+        let config = Config::load(Some(&path));
         assert!(!config.telemetry_enabled());
     }
 
@@ -361,7 +386,7 @@ enabled = false
     fn config_defaults_when_missing() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("nonexistent.toml");
-        let config = Config::load_from(&path);
+        let config = Config::load(Some(&path));
         assert_eq!(config.provider, None);
         assert_eq!(config.default_model(), None);
         assert!(config.vim_mode());
@@ -372,6 +397,9 @@ enabled = false
         let path = config_path();
         assert!(path.file_name().is_some_and(|n| n == "config.toml"));
     }
+
+    #[cfg(test)]
+    mod layered_tests;
 
     #[test]
     fn classify_change_detects_model_change() {
@@ -442,7 +470,7 @@ max_bytes = 100000
 [prompts]
 default = "default"
 "#);
-        let config = Config::load_from(&path);
+        let config = Config::load(Some(&path));
         assert_eq!(config.provider, Some("openai".to_string()));
         // default_model() prefers [models].default over top-level model
         assert_eq!(config.default_model(), Some("gpt-4o"));
@@ -461,10 +489,10 @@ default = "default"
 [models]
 default = "gpt-4o"
 "#);
-        let config = Config::load_from(&path);
+        let config = Config::load(Some(&path));
         let default = config.default_model();
         // Re-load from path to verify consistency
-        let config2 = Config::load_from(&path);
+        let config2 = Config::load(Some(&path));
         assert_eq!(default, config2.default_model());
     }
 }

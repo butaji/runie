@@ -5,6 +5,7 @@ use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::event::{DialogEvent, SystemEvent};
 use crate::model::AppState;
+use crate::utils::{join_optional, truncate};
 
 use super::spec::{CommandKind, CommandSpec};
 
@@ -82,8 +83,8 @@ pub fn build_view_panel(name: &str) -> PanelStack {
 
 fn build_profile_view_items(panel: Panel, name: &str, p: &AgentProfile) -> Panel {
     let tools_str = p.tools.join(", ");
-    let allowed = join_optional(&p.allowlist_tools);
-    let denied = join_optional(&p.denylist_tools);
+    let allowed = join_optional(&p.allowlist_tools, ", ");
+    let denied = join_optional(&p.denylist_tools, ", ");
     let max = p.max_turns.map(|n| n.to_string()).unwrap_or_default();
 
     panel
@@ -118,10 +119,6 @@ fn build_profile_missing_items(panel: Panel, path: &std::path::Path) -> Panel {
         .item("Back", ItemAction::Pop)
 }
 
-fn join_optional(list: &Option<Vec<String>>) -> String {
-    list.as_ref().map(|v| v.join(", ")).unwrap_or_default()
-}
-
 /// Build the edit panel for a profile (or new profile).
 pub fn build_edit_panel(name: &str) -> PanelStack {
     let dir = profiles_dir();
@@ -145,8 +142,8 @@ fn edit_panel_title(name: &str, path: &std::path::Path) -> String {
 
 fn add_edit_field_items(panel: Panel, name: &str, profile: &AgentProfile) -> Panel {
     let tools_csv = profile.tools.join(",");
-    let allowed_csv = join_optional_csv(&profile.allowlist_tools);
-    let denied_csv = join_optional_csv(&profile.denylist_tools);
+    let allowed_csv = join_optional(&profile.allowlist_tools, ",");
+    let denied_csv = join_optional(&profile.denylist_tools, ",");
     let max_str = profile.max_turns.map(|n| n.to_string()).unwrap_or_default();
 
     panel
@@ -178,10 +175,6 @@ fn add_edit_field_items(panel: Panel, name: &str, profile: &AgentProfile) -> Pan
             format!("Max turns: {}", max_str),
             edit_field_event(name, "max_turns", &max_str),
         )
-}
-
-fn join_optional_csv(list: &Option<Vec<String>>) -> String {
-    list.as_ref().map(|v| v.join(",")).unwrap_or_default()
 }
 
 fn edit_field_event(name: &str, field: &str, value: &str) -> ItemAction {
@@ -216,16 +209,6 @@ pub fn build_delete_panel(name: &str) -> PanelStack {
         .item("No, go back", ItemAction::Pop)
         .item("Close", ItemAction::Close);
     PanelStack::new(panel)
-}
-
-fn truncate(s: &str, n: usize) -> String {
-    if s.chars().count() <= n {
-        s.to_string()
-    } else {
-        let mut out: String = s.chars().take(n).collect();
-        out.push('…');
-        out
-    }
 }
 
 /// Save a profile to disk given its full state.

@@ -71,13 +71,18 @@ pub fn form(id: impl Into<String>, title: impl Into<String>) -> FormPanel {
     FormPanel::new(id, title)
 }
 
+/// Read a form field value, returning an empty string when missing.
+pub fn get_field(values: &std::collections::HashMap<String, String>, key: &str) -> String {
+    values.get(key).cloned().unwrap_or_default()
+}
+
 // ============================================================================
 // Tests
 // ============================================================================
 
 #[cfg(test)]
 mod tests {
-    use super::form;
+    use super::{form, get_field};
     use crate::dialog::dsl::panel;
     use crate::dialog::ItemAction;
     use crate::event::CommandEvent;
@@ -85,7 +90,7 @@ mod tests {
 
     fn save_submit(values: &std::collections::HashMap<String, String>) -> Event {
         CommandEvent::RunSaveCommand {
-            name: values.get("name").cloned().unwrap_or_default(),
+            name: get_field(values, "name"),
         }
     }
 
@@ -122,5 +127,18 @@ mod tests {
 
         assert!(p.is_form());
         assert!(!p.filterable);
+    }
+
+    #[test]
+    fn test_get_field_returns_value() {
+        let mut values = std::collections::HashMap::new();
+        values.insert("name".into(), "session-a".into());
+        assert_eq!(get_field(&values, "name"), "session-a");
+    }
+
+    #[test]
+    fn test_get_field_returns_default() {
+        let values = std::collections::HashMap::<String, String>::new();
+        assert_eq!(get_field(&values, "missing"), "");
     }
 }

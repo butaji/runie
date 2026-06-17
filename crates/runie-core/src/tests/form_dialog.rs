@@ -216,7 +216,7 @@ fn invalid_fork_index_shows_error_for_out_of_range() {
     });
     let mut panel = Panel::new("fork", "Fork Session").form_field("Message index", "0", "index");
     panel.submit_factory = Some(|values| crate::event::CommandEvent::RunForkCommand {
-        message_index: values.get("index").cloned().unwrap_or_default(),
+        message_index: crate::dialog::dsl::get_field(values, "index"),
     });
     panel.form_values.insert("index".into(), "999".into());
     state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
@@ -250,8 +250,8 @@ fn compact_with_invalid_keep_shows_error() {
         .form_field("Keep tokens", "2000", "keep")
         .form_field("Focus", "f", "focus");
     panel.submit_factory = Some(|values| crate::event::CommandEvent::RunCompactCommand {
-        keep: values.get("keep").cloned().unwrap_or_default(),
-        focus: values.get("focus").cloned().unwrap_or_default(),
+        keep: crate::dialog::dsl::get_field(values, "keep"),
+        focus: crate::dialog::dsl::get_field(values, "focus"),
     });
     panel
         .form_values
@@ -374,7 +374,7 @@ fn form_field_submit_still_builds_form_values() {
         .form_field("Name", "my-session", "name")
         .item("_Submit", ItemAction::Emit(crate::event::LoginFlowEvent::Save));
     panel.submit_factory = Some(|values| crate::event::CommandEvent::RunSaveCommand {
-        name: values.get("name").cloned().unwrap_or_default(),
+        name: crate::dialog::dsl::get_field(values, "name"),
     });
     // On the form field, Enter should submit the form
     panel.selected = 0;

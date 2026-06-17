@@ -286,11 +286,11 @@ fn settings_truncation_defaults_match_config() {
         .into_iter()
         .find(|i| i.key == "truncation_max_lines")
         .expect("truncation_max_lines item");
-    if let SettingValue::Enum { current, options } = &lines_item.value {
+    if let SettingValue::Cycle { current, options } = &lines_item.value {
         assert_eq!(current, "2000");
         assert!(options.iter().any(|o| o == "2000"));
     } else {
-        panic!("truncation_max_lines should be Enum");
+        panic!("truncation_max_lines should be Cycle");
     }
 }
 

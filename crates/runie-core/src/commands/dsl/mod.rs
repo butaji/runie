@@ -11,7 +11,10 @@ pub mod spec;
 
 pub use builder::{cmd, CommandDef};
 pub use category::CommandCategory;
-pub use flow::{build_spawn_form_panel, CommandFlow, CommandResult, DialogType};
+pub use flow::{
+    build_cancel_form_panel, build_spawn_form_panel, build_steer_form_panel, CommandFlow,
+    CommandResult, DialogType,
+};
 
 #[macro_export]
 macro_rules! cmd {

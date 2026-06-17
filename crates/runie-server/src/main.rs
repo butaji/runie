@@ -210,7 +210,7 @@ fn error_response(id: Option<Value>, code: i32, message: String) -> JsonRpcRespo
 async fn handle_chat(params: &Value) -> Result<Value> {
     let messages: Vec<ChatMessage> =
         serde_json::from_value(params.get("messages").cloned().unwrap_or_default())?;
-    let config = config_reload::Config::load_from(&config_reload::config_path());
+    let config = config_reload::Config::load(Some(&config_reload::config_path()));
     let provider_name = config.provider.as_deref().unwrap_or("mock");
     let model = config.default_model().unwrap_or("echo");
     let provider =
@@ -238,7 +238,7 @@ async fn handle_chat(params: &Value) -> Result<Value> {
 
 async fn handle_complete(params: &Value) -> Result<Value> {
     let prompt = params.get("prompt").and_then(|v| v.as_str()).unwrap_or("");
-    let config = config_reload::Config::load_from(&config_reload::config_path());
+    let config = config_reload::Config::load(Some(&config_reload::config_path()));
     let provider_name = config.provider.as_deref().unwrap_or("mock");
     let model = config.default_model().unwrap_or("echo");
     let provider =

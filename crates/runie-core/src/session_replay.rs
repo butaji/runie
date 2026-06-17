@@ -183,7 +183,7 @@ fn load_legacy_session(name: &str, state: &mut AppState) -> anyhow::Result<()> {
 }
 
 fn restore_metadata(name: &str, state: &mut AppState, store: &SessionStore) -> anyhow::Result<()> {
-    let data_dir = store.dir().parent().unwrap_or(&store.dir().to_path_buf()).to_path_buf();
+    let data_dir = store.dir().parent().unwrap_or(store.dir()).to_path_buf();
     let index = crate::session_index::SessionIndex::load(&data_dir).unwrap_or_default();
     if let Some(meta) = index.get(name) {
         state.session.session_display_name = Some(meta.display_name.clone());
@@ -195,18 +195,7 @@ fn restore_metadata(name: &str, state: &mut AppState, store: &SessionStore) -> a
 
 /// Apply a legacy JSON session snapshot to application state.
 pub fn apply_json_session(state: &mut AppState, session: &JsonSession) {
-    state.session.messages = session.messages.clone();
-    state.config.current_provider = session.provider.clone();
-    state.config.current_model = session.model.clone();
-    state.config.theme_name = session.theme_name.clone();
-    state.config.thinking_level = session.thinking_level;
-    state.config.read_only = session.read_only;
-    state.session.session_display_name = session.display_name.clone().or(Some(session.name.clone()));
-    state.session.session_created_at = session.created_at;
-    state.session.session_updated_at = session.updated_at;
-    state.session.session_tree = session.session_tree.clone();
-    state.configure_token_tracker();
-    state.messages_changed();
+    state.restore_session(session);
 }
 
 /// Delete a session from both the durable store and legacy JSON.

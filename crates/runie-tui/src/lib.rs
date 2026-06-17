@@ -12,6 +12,7 @@ pub mod popups;
 pub mod quantize;
 pub mod semantic_tokens;
 pub mod status_bar;
+pub mod stylize;
 pub mod syntax;
 pub mod theme;
 pub mod ui;
@@ -19,6 +20,7 @@ pub mod ui;
 // ── Terminal setup (moved from runie-term) ────────────────────────────────────
 
 pub mod app_init;
+pub mod dry_run;
 pub mod effects;
 pub mod keymap;
 pub mod share;
@@ -32,3 +34,4 @@ mod tests;
 mod theme_tests;
 
 pub use runie_core::{AppState, ChatMessage};
+pub use stylize::Stylize;

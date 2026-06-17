@@ -25,7 +25,7 @@ async fn main() {
 }
 
 async fn run_print(prompt: &str) -> Result<()> {
-    let config = config_reload::Config::load_from(&config_reload::config_path());
+    let config = config_reload::Config::load(Some(&config_reload::config_path()));
     let provider_name = config.provider.as_deref().unwrap_or("mock");
     let model = config.default_model().unwrap_or("echo");
     let provider =
@@ -90,7 +90,7 @@ model = "gpt-4o"
         )
         .unwrap();
 
-        let config = config_reload::Config::load_from(&path);
+        let config = config_reload::Config::load(Some(&path));
         assert_eq!(config.provider, Some("openai".to_string()));
         assert_eq!(config.default_model(), Some("gpt-4o"));
     }

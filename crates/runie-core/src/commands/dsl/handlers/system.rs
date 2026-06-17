@@ -8,7 +8,7 @@ use super::spec::{CommandKind, CommandSpec};
 
 fn prompt_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
     crate::event::CommandEvent::RunPromptCommand {
-        name: values.get("name").cloned().unwrap_or_default(),
+        name: crate::dialog::dsl::get_field(values, "name"),
     }
 }
 
@@ -170,7 +170,7 @@ fn write_clipboard(text: &str) -> std::io::Result<std::path::PathBuf> {
 }
 
 fn handle_reload(state: &mut AppState, _: &str) -> CommandResult {
-    let config = crate::config::Config::load();
+    let config = crate::config::Config::load(None);
     state.config.keybindings = crate::keybindings::load_keybindings(Some(&config));
     CommandResult::Event(crate::event::ModelConfigEvent::ReloadAll)
 }
@@ -196,7 +196,7 @@ fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
         let stack = form("skill", "Show Skill")
             .field("Name", "skill-name", "name")
             .on_submit(|values| crate::event::CommandEvent::RunSkillCommand {
-                name: values.get("name").cloned().unwrap_or_default(),
+                name: crate::dialog::dsl::get_field(values, "name"),
             })
             .into_stack();
         return CommandResult::OpenPanelStack(Box::new(stack));

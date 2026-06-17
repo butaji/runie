@@ -1965,17 +1965,19 @@
     },
     {
       "id": "adopt-multi-agent-spawning",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/adopt-multi-agent-spawning.md"
+      "file": "tasks/adopt-multi-agent-spawning.md",
+      "notes": "Added AgentRegistry in runie-core with spawn/send/wait/close/signal_done and retry_plan. Added /steer and /cancel slash commands with fallback forms. Added orchestrator tools in runie-engine: select_model, done, list_subagents, get_subagent_status, get_subagent_output, steer_subagent, cancel_subagent. All workspace tests pass."
     },
     {
       "id": "adopt-hooks-registry",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P1",
@@ -1985,7 +1987,7 @@
     },
     {
       "id": "adopt-snapshot-testing",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "TUI / Rendering",
       "priority": "P1",
@@ -1995,7 +1997,7 @@
     },
     {
       "id": "adopt-stylize-helpers",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "TUI / Rendering",
       "priority": "P2",
@@ -2065,7 +2067,7 @@
     },
     {
       "id": "adopt-dry-run-preview",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
@@ -2196,6 +2198,86 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/split-large-files.md"
+    },
+    {
+      "id": "unify-form-submit-handlers",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/unify-form-submit-handlers.md"
+    },
+    {
+      "id": "extract-session-restore-helper",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Sessions",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/extract-session-restore-helper.md"
+    },
+    {
+      "id": "add-get-field-helper",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/add-get-field-helper.md"
+    },
+    {
+      "id": "unify-session-construction",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Sessions",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/unify-session-construction.md"
+    },
+    {
+      "id": "merge-settings-row-kind",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/merge-settings-row-kind.md"
+    },
+    {
+      "id": "dedupe-truncate-helper",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/dedupe-truncate-helper.md"
+    },
+    {
+      "id": "consolidate-join-optional-helpers",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/consolidate-join-optional-helpers.md"
+    },
+    {
+      "id": "unify-config-loading",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/unify-config-loading.md"
     },
     {
       "id": "align-build-rs-lint-thresholds",

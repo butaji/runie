@@ -27,6 +27,25 @@ pub struct Session {
     pub session_tree: Option<crate::session_tree::SessionTree>,
 }
 
+impl Session {
+    /// Build a JSON session snapshot from the current application state.
+    pub fn from_state(state: &crate::model::AppState, name: String) -> Self {
+        Self {
+            name,
+            display_name: state.session.session_display_name.clone(),
+            created_at: state.session.session_created_at,
+            updated_at: crate::model::now(),
+            messages: state.session.messages.clone(),
+            provider: state.config.current_provider.clone(),
+            model: state.config.current_model.clone(),
+            theme_name: state.config.theme_name.clone(),
+            thinking_level: state.config.thinking_level,
+            read_only: state.config.read_only,
+            session_tree: state.session.session_tree.clone(),
+        }
+    }
+}
+
 /// Session store — handles save/load/list/delete
 #[derive(Debug, Clone)]
 pub struct Store {

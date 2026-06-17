@@ -16,6 +16,7 @@ use runie_core::Snapshot;
 
 use crate::popups::palette_popup_rect;
 use crate::theme::{block_popup, color_accent, color_bg_panel, color_dim};
+use crate::Stylize;
 
 /// Render the welcome/launcher overlay covering the main area.
 #[allow(clippy::vec_init_then_push)]
@@ -34,7 +35,6 @@ pub fn render_welcome(f: &mut Frame, snap: &Snapshot) {
 }
 
 fn build_welcome_content(snap: &Snapshot, inner: Rect) -> Vec<Line<'static>> {
-    use ratatui::style::Color;
     let mut lines = Vec::new();
 
     // ── Header ──────────────────────────────────────────────────────────────
@@ -47,19 +47,19 @@ fn build_welcome_content(snap: &Snapshot, inner: Rect) -> Vec<Line<'static>> {
     // ── Session options ─────────────────────────────────────────────────────
     lines.push(Line::from(vec![
         Span::raw("  "),
-        Span::styled("New session", Style::default().fg(Color::White)),
+        "New session".white(),
         Span::raw("     "),
         Span::styled("Ctrl+N", Style::default().fg(color_accent())),
     ]));
     lines.push(Line::from(vec![
         Span::raw("  "),
-        Span::styled("Resume session", Style::default().fg(Color::White)),
+        "Resume session".white(),
         Span::raw("  "),
         Span::styled("Ctrl+R", Style::default().fg(color_accent())),
     ]));
     lines.push(Line::from(vec![
         Span::raw("  "),
-        Span::styled("Command palette", Style::default().fg(Color::White)),
+        "Command palette".white(),
         Span::raw(" "),
         Span::styled("Ctrl+P", Style::default().fg(color_accent())),
     ]));
@@ -68,7 +68,7 @@ fn build_welcome_content(snap: &Snapshot, inner: Rect) -> Vec<Line<'static>> {
     // ── Quit ────────────────────────────────────────────────────────────────
     lines.push(Line::from(vec![
         Span::raw("  "),
-        Span::styled("Quit", Style::default().fg(Color::White)),
+        "Quit".white(),
         Span::raw("         "),
         Span::styled("Ctrl+Q", Style::default().fg(color_accent())),
     ]));

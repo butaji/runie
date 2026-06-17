@@ -371,23 +371,15 @@ pub fn open_model_selector(state: &mut AppState) {
 }
 
 pub fn open_settings_dialog(state: &mut AppState) {
-    use crate::dialog::builders::{settings, SettingsRow, SettingsRowKind};
-    use crate::settings::SettingValue;
+    use crate::dialog::builders::{settings, SettingsRow};
     let items = settings_dialog::build_setting_items(state);
     let mut categories: Vec<(String, Vec<SettingsRow>)> = Vec::new();
     for item in items {
         let cat_name = item.category.as_str().to_string();
-        let row = match item.value {
-            SettingValue::Bool(v) => SettingsRow {
-                label: item.label,
-                key: item.key,
-                kind: SettingsRowKind::Bool(v),
-            },
-            SettingValue::Enum { current, options } => SettingsRow {
-                label: item.label,
-                key: item.key,
-                kind: SettingsRowKind::Cycle { current, options },
-            },
+        let row = SettingsRow {
+            label: item.label,
+            key: item.key,
+            kind: item.value,
         };
         if let Some(last) = categories.last_mut() {
             if last.0 == cat_name {

@@ -40,6 +40,12 @@ impl Drop for Cleanup {
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() -> io::Result<()> {
+    let args: Vec<String> = std::env::args().collect();
+    if let Some(report) = runie_tui::dry_run::run_from_args(&args) {
+        println!("{report}");
+        return Ok(());
+    }
+
     let _cleanup = Cleanup;
     let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
 
@@ -83,7 +89,7 @@ async fn main() -> io::Result<()> {
 
     shutdown_rx
         .await
-        .map_err(|_| io::Error::new(io::ErrorKind::Other, "shutdown signal dropped"))?;
+        .map_err(|_| io::Error::other("shutdown signal dropped"))?;
     Ok(())
 }
 

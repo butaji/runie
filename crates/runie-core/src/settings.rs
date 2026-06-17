@@ -1,5 +1,7 @@
 //! Settings dialog state and items.
 
+use crate::Event;
+
 /// Category for grouping settings in the dialog.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SettingsCategory {
@@ -30,17 +32,18 @@ impl SettingsCategory {
 }
 
 /// Value type for a setting.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SettingValue {
     Bool(bool),
-    Enum {
+    Cycle {
         current: String,
         options: Vec<String>,
     },
+    Action(Event),
 }
 
 /// A single setting item displayed in the dialog.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SettingItem {
     pub key: String,
     pub label: String,

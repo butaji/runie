@@ -9,26 +9,40 @@ pub use runie_core::tool::{Tool, ToolContext, ToolOutput, ToolRegistry, ToolStat
 
 mod ask_user;
 mod bash;
+mod cancel_subagent;
+mod done;
 mod edit_file;
 mod fetch_docs;
 mod find;
 mod find_definitions;
+mod get_subagent_output;
+mod get_subagent_status;
 mod grep;
 mod list_dir;
+mod list_subagents;
 mod read_file;
 mod search;
+mod select_model;
+mod steer_subagent;
 mod write_file;
 
 pub use ask_user::AskUserTool;
 pub use bash::BashTool;
+pub use cancel_subagent::CancelSubagentTool;
+pub use done::DoneTool;
 pub use edit_file::EditFileTool;
 pub use fetch_docs::FetchDocsTool;
 pub use find::FindTool;
 pub use find_definitions::FindDefinitionsTool;
+pub use get_subagent_output::GetSubagentOutputTool;
+pub use get_subagent_status::GetSubagentStatusTool;
 pub use grep::GrepTool;
 pub use list_dir::ListDirTool;
+pub use list_subagents::ListSubagentsTool;
 pub use read_file::ReadFileTool;
 pub use search::SearchTool;
+pub use select_model::SelectModelTool;
+pub use steer_subagent::SteerSubagentTool;
 pub use write_file::WriteFileTool;
 
 /// Create a registry with all built-in tools registered.
@@ -45,6 +59,13 @@ pub fn builtin_registry() -> ToolRegistry {
     registry.register(Arc::new(FetchDocsTool));
     registry.register(Arc::new(SearchTool));
     registry.register(Arc::new(FindDefinitionsTool));
+    registry.register(Arc::new(SelectModelTool));
+    registry.register(Arc::new(DoneTool));
+    registry.register(Arc::new(ListSubagentsTool));
+    registry.register(Arc::new(GetSubagentStatusTool));
+    registry.register(Arc::new(GetSubagentOutputTool));
+    registry.register(Arc::new(SteerSubagentTool));
+    registry.register(Arc::new(CancelSubagentTool));
     registry
 }
 
@@ -72,6 +93,13 @@ mod tests {
             "fetch_docs",
             "search",
             "find_definitions",
+            "select_model",
+            "done",
+            "list_subagents",
+            "get_subagent_status",
+            "get_subagent_output",
+            "steer_subagent",
+            "cancel_subagent",
         ];
         for name in expected {
             assert!(

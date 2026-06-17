@@ -292,11 +292,25 @@ pub fn control_event(state: &mut AppState, event: ControlEvent) {
             state.open_dialog = Some(crate::commands::DialogState::Welcome);
             state.mark_dirty();
         }
+        ControlEvent::SteerAgent { agent_id, message } => handle_steer_agent(state, agent_id, message),
+        ControlEvent::CancelAgent { agent_id } => handle_cancel_agent(state, agent_id),
         ControlEvent::SpawnAgent { .. }
         | ControlEvent::Suspend
         | ControlEvent::ShareSession
         | ControlEvent::OpenExternalEditor => {}
         _ => {}
+    }
+}
+
+fn handle_steer_agent(state: &mut AppState, agent_id: String, message: String) {
+    if let Err(e) = state.multi_agent.send(agent_id, message) {
+        state.notify(format!("steer failed: {e}"), crate::event::TransientLevel::Error);
+    }
+}
+
+fn handle_cancel_agent(state: &mut AppState, agent_id: String) {
+    if let Err(e) = state.multi_agent.close(agent_id) {
+        state.notify(format!("cancel failed: {e}"), crate::event::TransientLevel::Error);
     }
 }
 
@@ -340,7 +354,7 @@ fn handle_editor_done(state: &mut AppState, content: String) {
 
 impl AppState {
     pub(crate) fn reload_all(&mut self) {
-        let config = crate::config_reload::Config::load_from(&crate::config_reload::config_path());
+        let config = crate::config_reload::Config::load(Some(&crate::config_reload::config_path()));
         if let Some(provider) = &config.provider {
             self.config.config_provider = provider.clone();
         }
@@ -400,6 +414,8 @@ impl AppState {
 mod tests {
     #[test]
     fn reload_all_reloads_skills() {
+        let dir = tempfile::tempdir().unwrap();
+        std::env::set_var("HOME", dir.path());
         let mut state = crate::model::AppState {
             skills: vec![crate::skills::Skill {
                 name: "dummy".into(),

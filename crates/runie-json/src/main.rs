@@ -76,7 +76,7 @@ async fn main() {
 
 async fn run_json() -> Result<()> {
     let req = read_json_request().await?;
-    let config = config_reload::Config::load_from(&config_reload::config_path());
+    let config = config_reload::Config::load(Some(&config_reload::config_path()));
     let (provider_name, model) = resolve_provider_and_model(&req, &config);
     let messages = build_json_messages(&req);
     let provider = build_provider_with_warning(&provider_name, &model)

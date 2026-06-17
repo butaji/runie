@@ -83,6 +83,8 @@ pub enum Event {
     Abort,
     FollowUp,
     SpawnAgent { prompt: String },
+    SteerAgent { agent_id: String, message: String },
+    CancelAgent { agent_id: String },
     ToggleExpand,
     Dequeue,
     OpenExternalEditor,

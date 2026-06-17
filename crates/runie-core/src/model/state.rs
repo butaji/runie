@@ -156,6 +156,8 @@ pub struct AppState {
     /// Used to detect stale FFF results (result counter != current counter means ignore).
     pub fff_debounce: u32,
     pub pending_agent_edit: Option<crate::agent_profiles::AgentProfile>,
+    /// Multi-agent registry for Team mode.
+    pub multi_agent: crate::multi_agent::AgentRegistry,
 }
 
 impl Default for AppState {
@@ -185,6 +187,7 @@ impl Default for AppState {
             fff_file_results: Vec::new(),
             fff_debounce: 0,
             pending_agent_edit: None,
+            multi_agent: crate::multi_agent::AgentRegistry::default(),
         }
     }
 }
@@ -377,6 +380,23 @@ impl AppState {
         } else {
             Some(parts.join(" "))
         }
+    }
+
+    /// Restore application state from a JSON session snapshot.
+    pub fn restore_session(&mut self, session: &crate::session::Session) {
+        self.session.messages = session.messages.clone();
+        self.config.current_provider = session.provider.clone();
+        self.config.current_model = session.model.clone();
+        self.config.theme_name = session.theme_name.clone();
+        self.config.thinking_level = session.thinking_level;
+        self.config.read_only = session.read_only;
+        self.session.session_display_name =
+            session.display_name.clone().or(Some(session.name.clone()));
+        self.session.session_created_at = session.created_at;
+        self.session.session_updated_at = session.updated_at;
+        self.session.session_tree = session.session_tree.clone();
+        self.configure_token_tracker();
+        self.messages_changed();
     }
 }
 

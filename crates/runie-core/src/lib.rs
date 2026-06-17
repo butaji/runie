@@ -25,6 +25,7 @@ pub mod confirmation;
 pub mod config_reload;
 pub mod dialog;
 pub mod display_width;
+pub mod dry_run;
 #[cfg(test)]
 pub mod dsl;
 pub mod diff;
@@ -32,6 +33,7 @@ pub mod edit_preview;
 pub mod event;
 pub mod file_refs;
 pub mod fuzzy;
+pub mod hooks;
 pub mod input_history;
 pub mod keybindings;
 pub mod labels;
@@ -46,6 +48,8 @@ pub mod markdown;
 pub mod message;
 pub mod model;
 pub mod model_catalog;
+pub mod multi_agent;
+pub use multi_agent::{AgentRegistry, RetryPlan, SubagentConfig};
 pub mod model_scroll;
 pub mod notification;
 pub mod orchestrator;
@@ -64,6 +68,7 @@ pub mod session_replay;
 pub mod session_store;
 pub mod session_tree;
 pub mod settings;
+pub mod skill;
 pub mod skills;
 pub mod harness_skills;
 pub mod snapshot;
@@ -80,6 +85,7 @@ pub mod trust;
 pub mod permissions;
 pub mod ui;
 pub mod update;
+pub mod utils;
 
 #[cfg(test)]
 mod file_refs_lookup_tests;
@@ -91,6 +97,7 @@ pub use clipboard_image::read_clipboard_image;
 pub use config::{Config, ConfigChange, ModelsSection, ModelProvider, TruncationSection};
 pub use confirmation::{ConfirmationKind, ConfirmationRouter};
 pub use diff::{Diff, DiffHunk, DiffLine};
+pub use dry_run::{run_dry_run, DryRunReport, DryRunStatus};
 pub use edit_preview::EditPreview;
 pub use event::Event;
 pub use event::DialogEvent; // Re-export to avoid circular dependency with dialog module

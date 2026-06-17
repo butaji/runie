@@ -7,5 +7,5 @@ mod form;
 mod panel;
 
 pub use super::{ItemAction, PanelItem, PanelStack};
-pub use form::{form, FormPanel};
+pub use form::{form, get_field, FormPanel};
 pub use panel::{list, panel};

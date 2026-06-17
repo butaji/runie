@@ -28,18 +28,15 @@ impl Skill {
     }
 }
 
-/// Load skills from both user (`~/.runie/skills/`) and project (`./.runie/skills/`) directories.
+/// Load skills from user (`~/.runie/skills/`), project (`./.runie/skills/`),
+/// and system (`~/.agents/skills/`) directories.
 pub fn load_all() -> Vec<Skill> {
     let mut skills = Vec::new();
-
     if let Some(home) = dirs::home_dir() {
-        let user_dir = home.join(".runie").join("skills");
-        skills.extend(load_from_dir(&user_dir));
+        skills.extend(load_from_dir(&home.join(".agents").join("skills")));
+        skills.extend(load_from_dir(&home.join(".runie").join("skills")));
     }
-
-    let project_dir = PathBuf::from(".runie").join("skills");
-    skills.extend(load_from_dir(&project_dir));
-
+    skills.extend(load_from_dir(&PathBuf::from(".runie").join("skills")));
     skills
 }
 
@@ -95,7 +92,7 @@ pub fn load_from_dir(dir: &Path) -> Vec<Skill> {
 }
 
 /// Parse a single SKILL.md file, optionally with YAML frontmatter.
-fn parse_skill_md(path: &Path) -> Option<Skill> {
+pub(crate) fn parse_skill_md(path: &Path) -> Option<Skill> {
     let content = std::fs::read_to_string(path).ok()?;
 
     // Parse optional YAML frontmatter using serde_yaml
@@ -141,7 +138,7 @@ fn parse_skill_md(path: &Path) -> Option<Skill> {
 
 /// Extract YAML frontmatter from content if present, using serde_yaml.
 /// Returns a HashMap of key-value pairs suitable for the skill frontmatter schema.
-fn extract_frontmatter(content: &str) -> HashMap<String, String> {
+pub(crate) fn extract_frontmatter(content: &str) -> HashMap<String, String> {
     // Only recognize frontmatter if content starts with "---"
     if !content.starts_with("---\n") {
         return HashMap::new();
@@ -181,7 +178,7 @@ fn extract_frontmatter(content: &str) -> HashMap<String, String> {
 }
 
 /// Extract text under a markdown `## Section` heading.
-fn extract_section(content: &str, heading: &str) -> Option<String> {
+pub(crate) fn extract_section(content: &str, heading: &str) -> Option<String> {
     let search = format!("## {}", heading);
     let start = content.find(&search)?;
     let after_heading = &content[start + search.len()..];

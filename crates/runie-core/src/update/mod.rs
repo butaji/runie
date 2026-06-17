@@ -355,6 +355,7 @@ fn dispatch_event(state: &mut AppState, event: Event) {
         Event::Up | Event::Down => input::scroll_event(state, event),
         // Control
         Event::Quit | Event::Reset | Event::Abort | Event::FollowUp | Event::SpawnAgent { .. } |
+        Event::SteerAgent { .. } | Event::CancelAgent { .. } |
         Event::ToggleExpand | Event::Dequeue | Event::OpenExternalEditor | Event::ExternalEditorDone { .. } |
         Event::ShareSession | Event::Suspend | Event::ToggleVimMode | Event::CopyLastResponse |
         Event::OpenSessionList | Event::NewSession | Event::ResumeSession | Event::SelectSession { .. } |
@@ -578,18 +579,9 @@ fn run_import_command(state: &mut AppState, path: &str) {
         .ok()
         .and_then(|json| serde_json::from_str::<Session>(&json).ok())
         .map(|session| {
-            state.session.messages = session.messages;
-            state.config.current_provider = session.provider;
-            state.config.current_model = session.model;
-            state.config.theme_name = session.theme_name;
-            state.config.thinking_level = session.thinking_level;
-            state.config.read_only = session.read_only;
-            state.session.session_display_name = session.display_name.or(Some(session.name));
-            state.session.session_created_at = session.created_at;
-            state.session.session_updated_at = session.updated_at;
-            state.session.session_tree = session.session_tree;
-            state.messages_changed();
-            CommandResult::Message(format!("Session imported from '{}'", path))
+            let msg = format!("Session imported from '{}'", path);
+            state.restore_session(&session);
+            CommandResult::Message(msg)
         })
         .unwrap_or_else(|| {
             CommandResult::Message(format!("Could not import session from '{}'", path))
@@ -599,19 +591,12 @@ fn run_import_command(state: &mut AppState, path: &str) {
 
 fn run_export_command(state: &mut AppState, path: &str) {
     use crate::commands::CommandResult;
-    let session = Session {
-        name: state.session.session_display_name.clone().unwrap_or_else(|| "exported".into()),
-        display_name: state.session.session_display_name.clone(),
-        created_at: state.session.session_created_at,
-        updated_at: now(),
-        messages: state.session.messages.clone(),
-        provider: state.config.current_provider.clone(),
-        model: state.config.current_model.clone(),
-        theme_name: state.config.theme_name.clone(),
-        thinking_level: state.config.thinking_level,
-        read_only: state.config.read_only,
-        session_tree: state.session.session_tree.clone(),
-    };
+    let name = state
+        .session
+        .session_display_name
+        .clone()
+        .unwrap_or_else(|| "exported".into());
+    let session = Session::from_state(state, name);
     let result =
         std::fs::write(path, serde_json::to_string_pretty(&session).unwrap_or_default())
             .map(|_| CommandResult::Message(format!("Session exported to '{}'", path)))
