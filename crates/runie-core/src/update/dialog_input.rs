@@ -29,7 +29,8 @@ impl AppState {
             | InputEvent::HistoryPrev
             | InputEvent::HistoryNext
             | InputEvent::CursorLeft
-            | InputEvent::CursorRight => {
+            | InputEvent::CursorRight
+            | InputEvent::Paste(_) => {
                 dialog::update_dialog(self, event.clone());
                 return true;
             }

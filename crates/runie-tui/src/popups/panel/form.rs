@@ -11,14 +11,14 @@ use runie_core::dialog::{Panel, PanelItem};
 use crate::theme::{color_accent, style_hint, style_placeholder, style_thinking};
 use crate::ui::parse_hint_spans;
 
-use super::{circled_number, pad_to_width, setup_popup, style_border, truncate};
+use super::{pad_to_width, setup_popup, style_border, truncate};
 
-pub(super) fn render_form(f: &mut Frame, panel: &Panel) {
+pub(super) fn render_form(f: &mut Frame, panel: &Panel, root_closable: bool) {
     let inner = setup_popup(f, &panel.title);
     let inner_h = inner.height as usize;
     let inner_w = inner.width as usize;
 
-    let hint_lines = hint_lines(panel);
+    let hint_lines = hint_lines(panel, root_closable);
     let button_line = build_button_line(panel, inner_w);
     let mut body = build_body(panel, inner_w);
 
@@ -40,19 +40,20 @@ pub(super) fn render_form(f: &mut Frame, panel: &Panel) {
     );
 }
 
-fn hint_lines(panel: &Panel) -> Vec<Line<'_>> {
+fn hint_lines(panel: &Panel, root_closable: bool) -> Vec<Line<'_>> {
     let on_button = panel
         .selected_item()
         .is_some_and(|i| matches!(i, PanelItem::Action { .. }));
     let on_submit = panel
         .selected_item()
         .is_some_and(|i| matches!(i, PanelItem::FormSubmit));
+    let close_hint = if root_closable { " · esc close" } else { "" };
     let hint_text = if on_button || on_submit {
-        "↑↓ navigate · enter activate · esc close"
+        format!("↑↓ navigate · enter activate{}", close_hint)
     } else {
-        "↑↓ navigate · enter edit · esc close"
+        format!("↑↓ navigate · enter edit{}", close_hint)
     };
-    vec![Line::from(""), Line::from(parse_hint_spans(hint_text))]
+    vec![Line::from(""), Line::from(parse_hint_spans(&hint_text))]
 }
 
 fn build_body(panel: &Panel, inner_w: usize) -> Vec<Line<'_>> {
@@ -163,7 +164,7 @@ fn push_toggle_body<'a>(
 /// Render a toggle (checkbox) line in the form body. Toggle items are
 /// the universal checkbox in the DSL — no separate Checkbox variant.
 fn push_toggle_item<'a>(body: &mut Vec<Line<'a>>, label: &'a str, checked: bool, is_active: bool) {
-    let mark = if checked { "[✓]" } else { "[ ]" };
+    let mark = if checked { "[x]" } else { "[ ]" };
     let text = format!("  {} {}", mark, label);
     let style = if is_active {
         Style::default()
@@ -286,15 +287,9 @@ fn field_label_line<'a>(
     is_active: bool,
 ) -> Line<'a> {
     let text = if total > 1 {
-        format!(
-            "  {} {} ({}/{})",
-            circled_number(field_num),
-            label,
-            field_num,
-            total
-        )
+        format!("  {}. {} ({}/{})", field_num, label, field_num, total)
     } else {
-        format!("  {} {}", circled_number(field_num), label)
+        format!("  {}. {}", field_num, label)
     };
     let style = if is_active {
         Style::default()

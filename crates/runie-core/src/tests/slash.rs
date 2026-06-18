@@ -49,7 +49,12 @@ pub fn minimal_session(name: &str) -> crate::session::Session {
     }
 }
 
+pub mod compact;
+pub mod copy;
 pub mod misc;
+pub mod mode;
 pub mod model;
+pub mod prompts;
 pub mod save_load;
 pub mod session;
+pub mod workflow;

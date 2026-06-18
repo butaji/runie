@@ -187,10 +187,9 @@ fn scroll_zero_always_shows_latest() {
 
     let region = crate::tests::core::visible_helper::compute_viewport(&state, height);
     // Latest message (msg2) should be visible
-    let has_latest = region
-        .elements
-        .iter()
-        .any(|e| matches!(e, runie_core::ui::Element::UserMessage { content, .. } if content == "msg2"));
+    let has_latest = region.elements.iter().any(
+        |e| matches!(e, runie_core::ui::Element::UserMessage { content, .. } if content == "msg2"),
+    );
     assert!(has_latest, "Latest message must be visible when scroll=0");
 }
 

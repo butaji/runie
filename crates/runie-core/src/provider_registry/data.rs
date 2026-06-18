@@ -44,11 +44,13 @@ pub(crate) static KNOWN_PROVIDERS: &[ProviderMeta] = &[
             ModelMeta::new("o3-mini")
                 .with_cost(1.1, 4.4)
                 .with_thinking()
+                .with_no_system()
                 .with_tokenizer("o200k_base")
                 .with_context_window(200_000),
             ModelMeta::new("o1")
                 .with_cost(15.0, 60.0)
                 .with_thinking()
+                .with_no_system()
                 .with_vision()
                 .with_tokenizer("o200k_base")
                 .with_context_window(200_000),

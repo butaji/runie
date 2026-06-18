@@ -8,10 +8,9 @@ use runie_core::ChatMessage;
 /// Uses OSC 52 when the terminal supports it; otherwise falls back to
 /// a platform-specific command-line tool (pbcopy / wl-copy / xclip / clip).
 pub fn copy_to_clipboard(text: String, caps: TerminalCapabilities) {
-    if caps.clipboard
-        && term_clipboard::copy_to_clipboard(&mut std::io::stdout(), &text).is_ok() {
-            return;
-        }
+    if caps.clipboard && term_clipboard::copy_to_clipboard(&mut std::io::stdout(), &text).is_ok() {
+        return;
+    }
     let _ = platform_copy(&text);
 }
 
@@ -26,10 +25,9 @@ pub fn copy_last_response(messages: Vec<ChatMessage>, caps: TerminalCapabilities
     if text.is_empty() {
         return;
     }
-    if caps.clipboard
-        && term_clipboard::copy_to_clipboard(&mut std::io::stdout(), &text).is_ok() {
-            return;
-        }
+    if caps.clipboard && term_clipboard::copy_to_clipboard(&mut std::io::stdout(), &text).is_ok() {
+        return;
+    }
     let _ = platform_copy(&text);
 }
 

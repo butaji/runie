@@ -32,24 +32,13 @@ pub enum DurableCoreEvent {
         success: bool,
     },
     /// The user switched the active model or provider.
-    ModelSwitched {
-        provider: String,
-        model: String,
-    },
+    ModelSwitched { provider: String, model: String },
     /// The session was renamed by the user.
-    SessionRenamed {
-        name: String,
-    },
+    SessionRenamed { name: String },
     /// The user switched the active theme.
-    ThemeSwitched {
-        name: String,
-    },
+    ThemeSwitched { name: String },
     /// The user changed the thinking level.
-    ThinkingLevelSet {
-        level: crate::model::ThinkingLevel,
-    },
+    ThinkingLevelSet { level: crate::model::ThinkingLevel },
     /// The user toggled read-only mode.
-    ReadOnlySet {
-        read_only: bool,
-    },
+    ReadOnlySet { read_only: bool },
 }

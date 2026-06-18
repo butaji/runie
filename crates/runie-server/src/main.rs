@@ -15,11 +15,11 @@ use anyhow::Result;
 use runie_agent::{run_headless_turn, HeadlessOptions, PermissionGate};
 use runie_core::permissions::{AutoAllowSink, DenyAllSink, PermissionManager};
 use runie_core::{config_reload, message::ChatMessage};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 use runie_protocol::{Error, Message, Request, Response};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 
@@ -166,7 +166,7 @@ fn build_headless_provider(
 ) -> Result<runie_provider::DynProvider, Error> {
     let chain = config.provider_chain();
     let model = config.default_model().unwrap_or("echo");
-    runie_provider::build_provider_with_fallback(&chain, model)
+    runie_provider::build_provider_with_fallback(&chain, model, config)
         .map_err(|e| Error::internal(format!("{e}")))
 }
 

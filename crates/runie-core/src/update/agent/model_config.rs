@@ -59,8 +59,8 @@ fn handle_scoped_events(state: &mut AppState, event: &ModelConfigEvent) -> bool 
             state.reload_all();
             false
         }
-        ModelConfigEvent::ScopedModelToggle { name } => {
-            super::scoped_models::toggle_scoped_model(state, name);
+        ModelConfigEvent::ScopedModelToggle { provider, name } => {
+            super::scoped_models::toggle_scoped_model(state, provider, name);
             false
         }
         ModelConfigEvent::ScopedModelEnableAll => {

@@ -7,6 +7,7 @@ use crate::Event;
 
 use super::{
     open_command_palette, open_model_selector, open_scoped_models_dialog, open_settings_dialog,
+    panel::{update_panel_stack, PanelUpdateResult},
 };
 
 /// Handles dialog-specific events. Returns whether the dialog was closed.
@@ -30,8 +31,8 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
     let stack = dialog
         .panel_stack_mut()
         .expect("non-welcome dialog has panel stack");
-    let activated = super::panel::update_panel_stack(state, event, stack);
-    restore_or_pop_dialog(state, dialog, activated, is_palette_activation);
+    let result = update_panel_stack(state, event, stack);
+    restore_or_pop_dialog(state, dialog, result, is_palette_activation);
 
     if is_dialog_back && state.open_dialog.is_none() {
         state.handle_vim_dialog_back();
@@ -67,10 +68,10 @@ fn is_palette_activation(dialog: &DialogState, event: &Event) -> bool {
 fn restore_or_pop_dialog(
     state: &mut AppState,
     dialog: DialogState,
-    activated: bool,
+    result: PanelUpdateResult,
     is_palette_activation: bool,
 ) {
-    if !activated && state.open_dialog.is_none() {
+    if result != PanelUpdateResult::Closed && state.open_dialog.is_none() {
         if is_palette_activation {
             state.dialog_back_stack.pop();
         } else {

@@ -36,6 +36,7 @@ pub(super) fn palette_stack(state: &AppState) -> Option<&crate::dialog::PanelSta
 mod forms;
 mod handlers;
 mod hotkeys;
+mod model;
 mod palette;
 mod prompts;
 mod registry;

@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use runie_core::orchestrator::{
-    OrchestratorPlan, SubagentTask, SynthesisConfig, TaskStatus,
-};
+use runie_core::orchestrator::{OrchestratorPlan, SubagentTask, SynthesisConfig, TaskStatus};
 use runie_core::trait_resolver::ModelTrait;
 use serde::Deserialize;
 

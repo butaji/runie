@@ -27,7 +27,11 @@ fn latest_user_message_visible_after_submit() {
 fn large_tool_output_latest_visible_at_bottom() {
     let mut state = AppState::default();
 
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+        input: serde_json::Value::Null,
+    });
     let output = (1..=20)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
@@ -58,7 +62,11 @@ fn final_response_visible_after_full_turn() {
         content: "I'll list files.\nTOOL:list_dir:.".into(),
     });
     state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "list_dir".into(),
+        input: serde_json::Value::Null,
+    });
     let output = (1..=15)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
@@ -154,5 +162,65 @@ fn new_content_auto_shows_when_at_bottom() {
     assert!(
         out.contains("NEWEST"),
         "New content must be visible when at bottom"
+    );
+}
+
+#[test]
+fn scrolled_up_does_not_auto_scroll_during_streaming() {
+    let mut state = AppState::default();
+    for i in 0..10 {
+        state.input.input = format!("msg{}", i);
+        state.update(InputEvent::Submit);
+    }
+    state.ensure_fresh();
+    state.view.scroll = 3;
+    state.agent.streaming = true;
+
+    state.update(AgentEvent::Response {
+        id: "req.0".into(),
+        content: "new streaming content".into(),
+    });
+    state.ensure_fresh();
+
+    assert!(
+        state.view.scroll > 3,
+        "Scroll should increase to preserve viewport position during streaming, got {}",
+        state.view.scroll
+    );
+    let out = render_chat(&mut state, 40, 15);
+    assert!(
+        !out.contains("new streaming content"),
+        "New streaming content should not auto-scroll into view: {}",
+        out
+    );
+}
+
+#[test]
+fn scroll_preserved_until_user_scrolls_down_during_streaming() {
+    let mut state = AppState::default();
+    for i in 0..10 {
+        state.input.input = format!("msg{}", i);
+        state.update(InputEvent::Submit);
+    }
+    state.ensure_fresh();
+    state.view.scroll = 5;
+    state.agent.streaming = true;
+
+    state.update(AgentEvent::Response {
+        id: "req.0".into(),
+        content: "first chunk".into(),
+    });
+    state.ensure_fresh();
+    let first_scroll = state.view.scroll;
+
+    state.update(AgentEvent::Response {
+        id: "req.0".into(),
+        content: " second chunk that is long enough to wrap to additional lines".into(),
+    });
+    state.ensure_fresh();
+
+    assert!(
+        state.view.scroll > first_scroll,
+        "Scroll should keep increasing while user stays scrolled up"
     );
 }

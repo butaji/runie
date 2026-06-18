@@ -125,13 +125,15 @@ mod tests {
         let mut terminal = Terminal::new(backend).unwrap();
         terminal.draw(|f| render_welcome(f, &snap)).unwrap();
         let buf = terminal.backend().buffer();
-        let content: String = buf
-            .content
-            .iter()
-            .map(|c| c.symbol())
-            .collect();
-        assert!(content.contains("New session"), "should show New session: {content}");
-        assert!(content.contains("Resume session"), "should show Resume session: {content}");
+        let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+        assert!(
+            content.contains("New session"),
+            "should show New session: {content}"
+        );
+        assert!(
+            content.contains("Resume session"),
+            "should show Resume session: {content}"
+        );
         assert!(content.contains("Quit"), "should show Quit: {content}");
         assert!(content.contains("Ctrl+N"), "should show Ctrl+N: {content}");
         assert!(content.contains("Ctrl+R"), "should show Ctrl+R: {content}");
@@ -151,11 +153,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).unwrap();
         terminal.draw(|f| render_welcome(f, &snap)).unwrap();
         let buf = terminal.backend().buffer();
-        let content: String = buf
-            .content
-            .iter()
-            .map(|c| c.symbol())
-            .collect();
+        let content: String = buf.content.iter().map(|c| c.symbol()).collect();
         assert!(
             content.contains("Implement X feature"),
             "should show recent session: {content}"

@@ -4,9 +4,9 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, LazyLock, Mutex};
 
+use crate::core_ui::Element;
 use ratatui::text::Line;
 use ratatui::widgets::{Paragraph, Wrap};
-use crate::core_ui::Element;
 
 use crate::message as msg;
 
@@ -77,9 +77,20 @@ fn render_element(elem: &Element, content_width: u16) -> Vec<Line<'static>> {
             ..
         } => msg::render_thought_summary(content, *duration_secs),
         ThoughtMarker { content, .. } => msg::render_thought_marker(content, content_width),
-        ToolRunning { name, args, started, .. } => {
-            msg::render_tool_running(name, args, started.elapsed().as_secs_f64())
-        }
+        ContextGroup { tools, collapsed, .. } => msg::render_context_group(tools, *collapsed),
+        _ => render_tool_element(elem, content_width),
+    }
+}
+
+fn render_tool_element(elem: &Element, _content_width: u16) -> Vec<Line<'static>> {
+    use runie_core::Element::*;
+    match elem {
+        ToolRunning {
+            name,
+            args,
+            started,
+            ..
+        } => msg::render_tool_running(name, args, started.elapsed().as_secs_f64()),
         ToolDone {
             name,
             args,
@@ -88,13 +99,21 @@ fn render_element(elem: &Element, content_width: u16) -> Vec<Line<'static>> {
             bytes_transferred,
             error,
             ..
-        } => msg::render_tool_done(name, args, *duration_secs, output, *bytes_transferred, *error),
+        } => msg::render_tool_done(
+            name,
+            args,
+            *duration_secs,
+            output,
+            *bytes_transferred,
+            *error,
+        ),
         ToolSummary {
             name,
             duration_secs,
             ..
         } => msg::render_tool_summary(name, "", *duration_secs),
         TurnComplete { duration_secs, .. } => msg::render_turn_complete(*duration_secs),
+        _ => vec![Line::from("")],
     }
 }
 

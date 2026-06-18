@@ -5,6 +5,4 @@ mod helpers;
 mod types;
 
 pub use app_state::AppState;
-pub use types::{
-    DeliveryMode, FffFileEntry, QueuedMessage, QueuedMessageKind, ThinkingLevel,
-};
+pub use types::{DeliveryMode, FffFileEntry, QueuedMessage, QueuedMessageKind, ThinkingLevel};

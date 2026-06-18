@@ -33,6 +33,21 @@ fn sample_catalog() -> Vec<ModelInfo> {
     ]
 }
 
+fn configure(providers: &[(String, Vec<String>)]) {
+    crate::login_config::set_test_config_with_providers(providers);
+}
+
+fn reset_config() {
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let n = COUNTER.fetch_add(1, Ordering::SeqCst);
+    crate::login_config::set_test_config_path(PathBuf::from(format!(
+        "/tmp/runie_selector_test_reset_{}.toml",
+        n
+    )));
+}
+
 // === Layer 1: State/Logic ===
 
 #[test]
@@ -96,13 +111,14 @@ fn recent_only_shows_known_models() {
 
 #[test]
 fn select_emits_switch_model() {
+    configure(&[("openai".into(), vec!["gpt-4o".into()])]);
     let mut state = AppState::default();
     state.update(DialogEvent::ToggleModelSelector);
     assert!(selector_state(&state).is_some());
     state.update(DialogEvent::ModelSelectorSelect);
     assert!(state.open_dialog.is_none());
-    let switched = state.config.current_provider != "mock" || state.config.current_model != "echo";
-    assert!(switched, "Should switch model on select");
+    assert_eq!(state.config.current_provider, "openai");
+    assert_eq!(state.config.current_model, "gpt-4o");
 }
 
 #[test]
@@ -167,6 +183,7 @@ fn ctrl_l_opens_selector() {
 
 #[test]
 fn slash_model_no_args_opens_selector() {
+    configure(&[("openai".into(), vec!["gpt-4o".into()])]);
     let mut state = AppState::default();
     palette_select(&mut state, "model");
     assert!(selector_state(&state).is_some());
@@ -179,6 +196,26 @@ fn esc_closes_selector() {
     assert!(state.open_dialog.is_some());
     state.update(DialogEvent::ModelSelectorClose);
     assert!(state.open_dialog.is_none());
+}
+
+#[test]
+fn empty_current_marker_when_no_active_model() {
+    reset_config();
+    let mut state = AppState::default();
+    state.config.current_provider.clear();
+    state.config.current_model.clear();
+    state.update(DialogEvent::ToggleModelSelector);
+
+    let items = match &state.open_dialog {
+        Some(DialogState::ModelSelector(stack)) => {
+            stack.current().map(|p| p.items.clone()).unwrap_or_default()
+        }
+        _ => Vec::new(),
+    };
+    assert!(
+        !items.iter().any(|i| i.label().map(|l| l.starts_with('★')).unwrap_or(false)),
+        "no item should be starred when there is no active model"
+    );
 }
 
 #[test]
@@ -203,6 +240,7 @@ fn filter_narrows_selector() {
 
 #[test]
 fn up_down_navigates_selector() {
+    configure(&[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
     let mut state = AppState::default();
     state.update(DialogEvent::ToggleModelSelector);
     state.update(DialogEvent::ModelSelectorDown);
@@ -215,6 +253,7 @@ fn up_down_navigates_selector() {
 
 #[test]
 fn selector_wraps_up() {
+    configure(&[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
     let mut state = AppState::default();
     state.update(DialogEvent::ToggleModelSelector);
     state.update(DialogEvent::ModelSelectorUp);
@@ -228,10 +267,15 @@ fn selector_wraps_up() {
 
 #[test]
 fn selector_wraps_down() {
+    configure(&[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
     let mut state = AppState::default();
     state.update(DialogEvent::ToggleModelSelector);
-    let catalog = model_catalog();
-    let count = build_model_selector_items(&catalog, &[], "", "mock", "echo").len();
+    let count = match &state.open_dialog {
+        Some(DialogState::ModelSelector(stack)) => {
+            stack.current().map(|p| p.navigable_count()).unwrap_or(0)
+        }
+        _ => 0,
+    };
     for _ in 0..count {
         state.update(DialogEvent::ModelSelectorDown);
     }

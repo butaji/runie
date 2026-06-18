@@ -62,6 +62,7 @@ fn is_border_line(line: &str) -> bool {
         || line.contains('┘')
 }
 
+mod flow;
 mod form;
 mod input;
 mod input_box;
@@ -72,7 +73,8 @@ mod scoped_models;
 mod scrollbar;
 mod timestamps;
 mod toggle_expand;
-mod flow;
+mod tool_truncation;
 mod tools;
 mod transient;
+mod trust_banner;
 mod vim_nav;

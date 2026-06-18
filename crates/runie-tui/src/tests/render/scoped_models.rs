@@ -2,7 +2,8 @@
 
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::{model::ScopedModel, AppState, DialogEvent};
+use runie_core::event::InputEvent;
+use runie_core::{model::ScopedModel, AppState, DialogEvent, Event};
 
 fn sm(provider: &str, name: &str, enabled: bool) -> ScopedModel {
     ScopedModel {
@@ -129,5 +130,33 @@ fn hotkeys_use_styled_key_indicator() {
     assert!(
         has_hint,
         "Hotkey hint should be rendered in the dialog buffer"
+    );
+}
+
+#[test]
+fn space_toggles_scoped_model_checkbox() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    state.config.scoped_models = vec![sm("openai", "gpt-4o", false)];
+    state.update(DialogEvent::ToggleScopedModelsDialog);
+
+    let before = render_dialog(&mut state);
+    assert!(
+        rect_contains_text(&before, popup_inner_rect(), "[ ] gpt-4o"),
+        "unchecked scoped model should render [ ], got: {:?}",
+        before
+    );
+
+    state.update(Event::from(InputEvent::Input(' ')));
+
+    let after = render_dialog(&mut state);
+    assert!(
+        rect_contains_text(&after, popup_inner_rect(), "[x] gpt-4o"),
+        "Space should toggle scoped model checkbox, got: {:?}",
+        after
+    );
+    assert!(
+        state.config.scoped_models[0].enabled,
+        "model should be enabled after Space toggle"
     );
 }

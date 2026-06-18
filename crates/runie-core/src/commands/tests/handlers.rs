@@ -7,6 +7,11 @@ use super::{exec_handler, run_slash};
 #[test]
 fn handler_model_switches() {
     let mut state = AppState::default();
+    state.config.current_provider = "openai".into();
+    crate::login_config::set_test_config_with_providers(&[(
+        "openai".into(),
+        vec!["gpt-4o".into()],
+    )]);
     let result = exec_handler(&mut state, "model", "gpt-4o");
     assert_eq!(state.config.current_model, "gpt-4o");
     assert!(matches!(result, CommandResult::Message(_)));

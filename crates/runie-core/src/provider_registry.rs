@@ -28,6 +28,7 @@ pub struct ModelMeta {
     pub streaming: bool,
     pub supports_tools: bool,
     pub supports_reasoning: bool,
+    pub supports_system: bool,
     pub max_output_tokens: usize,
     pub cache_control: bool,
 }
@@ -45,6 +46,7 @@ impl ModelMeta {
             streaming: true,
             supports_tools: true,
             supports_reasoning: false,
+            supports_system: true,
             max_output_tokens: 0,
             cache_control: false,
         }
@@ -62,6 +64,7 @@ impl ModelMeta {
             streaming: self.streaming,
             supports_tools: self.supports_tools,
             supports_reasoning: self.supports_reasoning,
+            supports_system: self.supports_system,
             max_output_tokens: self.max_output_tokens,
             cache_control: self.cache_control,
         }
@@ -79,6 +82,7 @@ impl ModelMeta {
             streaming: self.streaming,
             supports_tools: self.supports_tools,
             supports_reasoning: self.supports_reasoning,
+            supports_system: self.supports_system,
             max_output_tokens: self.max_output_tokens,
             cache_control: self.cache_control,
         }
@@ -96,6 +100,7 @@ impl ModelMeta {
             streaming: self.streaming,
             supports_tools: self.supports_tools,
             supports_reasoning: self.supports_reasoning,
+            supports_system: self.supports_system,
             max_output_tokens: self.max_output_tokens,
             cache_control: self.cache_control,
         }
@@ -113,6 +118,7 @@ impl ModelMeta {
             streaming: self.streaming,
             supports_tools: self.supports_tools,
             supports_reasoning: self.supports_reasoning,
+            supports_system: self.supports_system,
             max_output_tokens: self.max_output_tokens,
             cache_control: self.cache_control,
         }
@@ -130,6 +136,7 @@ impl ModelMeta {
             streaming: self.streaming,
             supports_tools: self.supports_tools,
             supports_reasoning: self.supports_reasoning,
+            supports_system: self.supports_system,
             max_output_tokens: self.max_output_tokens,
             cache_control: self.cache_control,
         }
@@ -163,6 +170,13 @@ impl ModelMeta {
     pub const fn with_cache_control(self) -> Self {
         Self {
             cache_control: true,
+            ..self
+        }
+    }
+
+    pub const fn with_no_system(self) -> Self {
+        Self {
+            supports_system: false,
             ..self
         }
     }
@@ -234,6 +248,14 @@ pub fn find_provider(key: &str) -> Option<&'static ProviderMeta> {
 /// Find a provider by its environment variable name.
 pub fn find_provider_by_env_var(env_var: &str) -> Option<&'static ProviderMeta> {
     known_providers().iter().find(|p| p.env_var == env_var)
+}
+
+/// Find a model across all known providers by its canonical model name.
+pub fn find_model(model: &str) -> Option<&'static ModelMeta> {
+    known_providers()
+        .iter()
+        .flat_map(|p| p.models.iter())
+        .find(|m| m.name == model)
 }
 
 /// Check if a provider key is known.

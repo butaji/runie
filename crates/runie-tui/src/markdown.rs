@@ -38,7 +38,10 @@ pub fn apply_color_to_inlines(inlines: &[MdInline], base_color: Color) -> Vec<Md
             }
             MdInline::Code(s) => push_span(&mut spans, s, code_style),
             MdInline::Strike(s) => {
-                let strike = style_stack.last().unwrap().add_modifier(Modifier::CROSSED_OUT);
+                let strike = style_stack
+                    .last()
+                    .unwrap()
+                    .add_modifier(Modifier::CROSSED_OUT);
                 push_span(&mut spans, s, strike);
             }
             MdInline::SoftBreak | MdInline::HardBreak => {
@@ -59,7 +62,10 @@ fn push_span(spans: &mut Vec<MdSpan>, text: &str, style: Style) {
             return;
         }
     }
-    spans.push(MdSpan { content: text.to_string(), style });
+    spans.push(MdSpan {
+        content: text.to_string(),
+        style,
+    });
 }
 
 /// Parse inline markdown into styled spans (delegates to core + color application).

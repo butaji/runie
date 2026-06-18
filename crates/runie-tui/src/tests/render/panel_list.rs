@@ -9,6 +9,7 @@ use ratatui::{backend::TestBackend, Terminal};
 use runie_core::{
     commands::DialogState,
     dialog::{Panel, PanelStack},
+    event::InputEvent,
     AppState,
 };
 
@@ -238,5 +239,83 @@ fn unselected_action_does_not_fill_full_width_with_active_bg() {
         active_cells < r.width as usize,
         "unselected item should not have active background across full width, got {} cells",
         active_cells
+    );
+}
+
+fn bottom_hint_text(buf: &ratatui::buffer::Buffer) -> String {
+    let r = content_rect();
+    (r.y + r.height - 2..r.y + r.height)
+        .flat_map(|y| (r.x..r.x + r.width).map(move |x| buf[(x, y)].symbol()))
+        .collect()
+}
+
+#[test]
+fn list_hint_shows_close_when_root_closable() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    let panel = Panel::new("cmds", "Commands")
+        .closable(true)
+        .item("Do thing", runie_core::dialog::ItemAction::Close);
+    open_panel(&mut state, panel);
+
+    let buf = render(&mut state);
+    let hint = bottom_hint_text(&buf);
+    assert!(
+        hint.contains("esc") && hint.contains("close"),
+        "closable root should show esc close hint, got: {}",
+        hint
+    );
+}
+
+#[test]
+fn list_hint_omits_close_when_root_not_closable() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    let panel = Panel::new("cmds", "Commands")
+        .non_closable()
+        .item("Do thing", runie_core::dialog::ItemAction::Close);
+    open_panel(&mut state, panel);
+
+    let buf = render(&mut state);
+    let hint = bottom_hint_text(&buf);
+    assert!(
+        !hint.contains("close"),
+        "non-closable root should omit close hint, got: {}",
+        hint
+    );
+}
+
+#[test]
+fn space_toggles_checkbox_render_state() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    let panel = Panel::new("settings", "Settings").toggle(
+        "Read-only",
+        false,
+        runie_core::dialog::ItemAction::Toggle("read_only".into()),
+    );
+    open_panel(&mut state, panel);
+
+    let before = render(&mut state);
+    let y = item_y(&before, "Read-only").expect("toggle item should be rendered");
+    let line_before: String = (content_rect().x..content_rect().x + content_rect().width)
+        .map(|x| before[(x, y)].symbol())
+        .collect();
+    assert!(
+        line_before.contains("[ ]"),
+        "unchecked toggle should render [ ], got: {}",
+        line_before
+    );
+
+    state.update(InputEvent::Input(' '));
+
+    let after = render(&mut state);
+    let line_after: String = (content_rect().x..content_rect().x + content_rect().width)
+        .map(|x| after[(x, y)].symbol())
+        .collect();
+    assert!(
+        line_after.contains("[x]"),
+        "checked toggle should render [x], got: {}",
+        line_after
     );
 }

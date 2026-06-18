@@ -27,11 +27,12 @@ pub fn panel_dialog(f: &mut Frame, snap: &Snapshot) {
         Some(p) => p,
         None => return,
     };
+    let root_closable = stack.root().map(|p| p.closable).unwrap_or(true);
     if panel.is_form() {
-        form::render_form(f, panel);
+        form::render_form(f, panel, root_closable);
         return;
     }
-    list::render_list(f, panel, stack.len() > 1);
+    list::render_list(f, panel, stack.len() > 1, root_closable);
 }
 
 /// Clear/popup rect + block border + 1-cell inner margin.
@@ -52,22 +53,17 @@ pub(super) fn setup_popup(f: &mut Frame, title: &str) -> Rect {
     }
 }
 
-pub(super) fn below(area: &Rect, header_h: u16) -> Rect {
-    Rect {
-        x: area.x,
-        y: area.y + header_h,
-        height: area.height.saturating_sub(header_h),
-        width: area.width,
-    }
-}
-
 pub(super) fn hotkey_area(inner: &Rect) -> Rect {
     Rect {
         x: inner.x,
-        y: inner.y + inner.height.saturating_sub(2),
+        y: inner.y + inner.height.saturating_sub(hotkey_area_height()),
         width: inner.width,
-        height: 2,
+        height: hotkey_area_height(),
     }
+}
+
+pub(super) const fn hotkey_area_height() -> u16 {
+    2
 }
 
 pub(super) struct ScrollLayout {
@@ -117,21 +113,6 @@ pub(super) fn compute_scrolling(
 
 pub(super) fn style_border() -> Style {
     Style::default().fg(crate::theme::color_border())
-}
-
-pub(super) fn circled_number(n: usize) -> String {
-    match n {
-        1 => "①".into(),
-        2 => "②".into(),
-        3 => "③".into(),
-        4 => "④".into(),
-        5 => "⑤".into(),
-        6 => "⑥".into(),
-        7 => "⑦".into(),
-        8 => "⑧".into(),
-        9 => "⑨".into(),
-        _ => format!("{}.", n),
-    }
 }
 
 pub(super) fn truncate(s: &str, max: usize) -> (String, bool) {

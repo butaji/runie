@@ -42,10 +42,7 @@ fn login_flow_cancel_blocked_without_model() {
         state.login_flow.is_some(),
         "cancel should be blocked when no model is connected"
     );
-    assert!(
-        state.open_dialog.is_some(),
-        "login panel should stay open"
-    );
+    assert!(state.open_dialog.is_some(), "login panel should stay open");
 }
 
 #[test]

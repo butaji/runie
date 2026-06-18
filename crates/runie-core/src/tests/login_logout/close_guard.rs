@@ -23,10 +23,7 @@ fn login_panel_abort_blocked_without_model() {
         state.login_flow.is_some(),
         "Abort should not close the login panel when no model is connected"
     );
-    assert!(
-        state.open_dialog.is_some(),
-        "login panel should stay open"
-    );
+    assert!(state.open_dialog.is_some(), "login panel should stay open");
 }
 
 #[test]
@@ -42,10 +39,7 @@ fn login_panel_dialog_back_blocked_without_model() {
         state.login_flow.is_some(),
         "DialogBack should not close the login panel when no model is connected"
     );
-    assert!(
-        state.open_dialog.is_some(),
-        "login panel should stay open"
-    );
+    assert!(state.open_dialog.is_some(), "login panel should stay open");
 }
 
 #[test]

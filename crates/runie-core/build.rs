@@ -45,10 +45,16 @@ fn is_test_function(lines: &[&str], fn_start: usize) -> bool {
             let t = line.trim();
             t.is_empty() || t.starts_with("//") || t.starts_with("#!")
         })
-        .chain(lines[..fn_start].iter().rev().skip_while(|line| {
-            let t = line.trim();
-            t.is_empty() || t.starts_with("//") || t.starts_with("#!")
-        }).take(1))
+        .chain(
+            lines[..fn_start]
+                .iter()
+                .rev()
+                .skip_while(|line| {
+                    let t = line.trim();
+                    t.is_empty() || t.starts_with("//") || t.starts_with("#!")
+                })
+                .take(1),
+        )
         .any(|line| {
             let t = line.trim();
             t.starts_with("#[test]") || t.starts_with("#[tokio::test]")
@@ -153,13 +159,7 @@ impl FnTracker {
         self.in_fn_body && self.brace_depth == 0 && trimmed.contains('}')
     }
 
-    fn report_and_reset(
-        &mut self,
-        path: &str,
-        i: usize,
-        lines: &[&str],
-        errors: &mut Vec<String>,
-    ) {
+    fn report_and_reset(&mut self, path: &str, i: usize, lines: &[&str], errors: &mut Vec<String>) {
         let fn_len = i - self.fn_start + 1;
         if !is_test_file(path) && !is_test_function(lines, self.fn_start) {
             report_fn_violation(

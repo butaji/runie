@@ -85,10 +85,7 @@ fn register_diff_styles(theme: &mut opaline::Theme) {
         opaline::OpalineStyle::fg(theme.color("accent.primary")).bold(),
     );
     // File header: dim text.
-    theme.register_default_style(
-        "runie.diff.file_header",
-        opaline::OpalineStyle::fg(dim),
-    );
+    theme.register_default_style("runie.diff.file_header", opaline::OpalineStyle::fg(dim));
     // Context: plain foreground.
     theme.register_default_style(
         "runie.diff.context",
@@ -97,7 +94,11 @@ fn register_diff_styles(theme: &mut opaline::Theme) {
 }
 
 /// Blend two opaline colors at the given opacity (0.0–1.0).
-fn blend_opaline(bg: opaline::OpalineColor, fg: opaline::OpalineColor, opacity: f32) -> opaline::OpalineColor {
+fn blend_opaline(
+    bg: opaline::OpalineColor,
+    fg: opaline::OpalineColor,
+    opacity: f32,
+) -> opaline::OpalineColor {
     bg.lerp(fg, opacity)
 }
 

@@ -231,3 +231,132 @@ fn test_multiple_thoughts_for_sequential_requests() {
         .collect();
     assert_eq!(thoughts.len(), 2);
 }
+
+#[test]
+fn test_think_tags_split_into_thought_and_answer() {
+    let mut state = fresh_state();
+    state.update(AgentEvent::Thinking {
+        id: "req.0".to_string(),
+    });
+    state.update(AgentEvent::Response {
+        id: "req.0".to_string(),
+        content: "<think>reasoning</think>answer".to_string(),
+    });
+    state.update(AgentEvent::ThoughtDone {
+        id: "req.0".to_string(),
+    });
+    let thoughts: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::Thought)
+        .collect();
+    assert_eq!(thoughts.len(), 1);
+    assert!(thoughts[0].content.contains("reasoning"));
+    let assistants: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::Assistant)
+        .collect();
+    assert_eq!(assistants.len(), 1);
+    assert_eq!(assistants[0].content, "answer");
+    // Cached assistant index must point to the answer, not the thought.
+    assert_eq!(state.agent.last_assistant_index, Some(1));
+}
+
+#[test]
+fn test_think_tags_only_reasoning_removes_assistant() {
+    let mut state = fresh_state();
+    state.update(AgentEvent::Thinking {
+        id: "req.0".to_string(),
+    });
+    state.update(AgentEvent::Response {
+        id: "req.0".to_string(),
+        content: "<think>only reasoning</think>".to_string(),
+    });
+    state.update(AgentEvent::ThoughtDone {
+        id: "req.0".to_string(),
+    });
+    let assistants: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::Assistant)
+        .collect();
+    assert!(assistants.is_empty());
+    assert!(state.agent.last_assistant_index.is_none());
+}
+
+#[test]
+fn test_unclosed_think_tag_hides_reasoning() {
+    let mut state = fresh_state();
+    state.update(AgentEvent::Thinking {
+        id: "req.0".to_string(),
+    });
+    state.update(AgentEvent::Response {
+        id: "req.0".to_string(),
+        content: "visible<think>still reasoning".to_string(),
+    });
+    state.update(AgentEvent::ThoughtDone {
+        id: "req.0".to_string(),
+    });
+    let assistants: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::Assistant)
+        .collect();
+    assert_eq!(assistants.len(), 1);
+    assert_eq!(assistants[0].content, "visible");
+    let thoughts: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::Thought)
+        .collect();
+    assert_eq!(thoughts.len(), 1);
+    assert!(thoughts[0].content.contains("still reasoning"));
+}
+
+#[test]
+fn test_think_tags_update_cached_assistant_index_for_tail_flush() {
+    let mut state = fresh_state();
+    state.update(AgentEvent::Thinking {
+        id: "req.0".to_string(),
+    });
+    state.update(AgentEvent::Response {
+        id: "req.0".to_string(),
+        content: "<think>reasoning</think>answer".to_string(),
+    });
+    state.update(AgentEvent::ThoughtDone {
+        id: "req.0".to_string(),
+    });
+    assert_eq!(state.agent.last_assistant_index, Some(1));
+
+    // Simulate a trailing streaming delta being flushed on turn end.
+    state.agent.streaming_buffer.push_delta(" tail");
+    let tail = state.agent.streaming_buffer.force_flush().join("");
+    if !tail.is_empty() {
+        if let Some(idx) = state.agent.last_assistant_index {
+            state.session.messages[idx].content.push_str(&tail);
+        }
+    }
+    let assistants: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::Assistant)
+        .collect();
+    assert_eq!(assistants[0].content, "answer tail");
+    let thoughts: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::Thought)
+        .collect();
+    assert!(
+        !thoughts[0].content.contains("tail"),
+        "tail must not leak into thought"
+    );
+}

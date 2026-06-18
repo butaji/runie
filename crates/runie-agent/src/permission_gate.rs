@@ -1,6 +1,8 @@
 //! Permission gate combining a policy chain with an approval sink.
 
-use runie_core::permissions::{ApprovalSink, PermissionAction, PermissionContext, PermissionManager, PermissionResult};
+use runie_core::permissions::{
+    ApprovalSink, PermissionAction, PermissionContext, PermissionManager, PermissionResult,
+};
 use std::sync::Arc;
 
 /// Combines a permission policy chain with an approval sink.

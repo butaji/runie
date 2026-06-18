@@ -1,5 +1,6 @@
 use super::*;
 use crate::tests::connect_model;
+use runie_core::event::AgentEvent;
 
 fn render_status(state: &mut AppState) -> String {
     let backend = TestBackend::new(60, 12);
@@ -74,4 +75,29 @@ fn status_timer_updates_over_time() {
     // Both should show Working with a timer
     assert!(out1.contains("Working"));
     assert!(out2.contains("Working"));
+}
+
+#[test]
+fn status_line_hides_working_after_provider_error() {
+    let mut state = AppState::default();
+    connect_model(&mut state);
+    state.agent.turn_active = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now());
+    state.ensure_fresh();
+
+    let out = render_status(&mut state);
+    assert!(out.contains("Working"), "Setup should show Working");
+
+    state.update(AgentEvent::Error {
+        id: "req.0".to_string(),
+        message: "Provider error: Missing API key".to_string(),
+    });
+    state.ensure_fresh();
+
+    let out = render_status(&mut state);
+    assert!(
+        !out.contains("Working"),
+        "Status must hide Working after provider error, got: {}",
+        out
+    );
 }

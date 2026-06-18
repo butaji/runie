@@ -1,5 +1,5 @@
-use ratatui::text::Line;
 use crate::core_ui::Element;
+use ratatui::text::Line;
 
 use crate::ui::render_lines::to_lines_and_count;
 
@@ -71,6 +71,7 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
         Thinking { .. } | ThoughtSummary { .. } | ToolSummary { .. } | TurnComplete { .. } => 10,
         ToolRunning { .. } => 10,
         ToolDone { output, .. } => output.len() / 4 + 10,
+        ContextGroup { tools, .. } => tools.iter().map(estimate_element_tokens).sum(),
         Spacer { .. } => 0,
     }
 }
@@ -116,7 +117,10 @@ mod tests {
 
     #[test]
     fn ast_line_count_matches_render() {
-        assert_count_matches(Element::agent("plain **bold** _italic_ `code` text").at(0.0), 80);
+        assert_count_matches(
+            Element::agent("plain **bold** _italic_ `code` text").at(0.0),
+            80,
+        );
         assert_count_matches(Element::agent(&"**bold** word ".repeat(20)).at(0.0), 40);
         assert_count_matches(
             Element::agent("line with `code` and **bold**\nnext line with *italic*").at(0.0),

@@ -1,6 +1,9 @@
 use crate::config::{Config, ModelProvider};
 use runie_core::ProviderError;
 use std::collections::HashMap;
+use std::sync::Mutex;
+
+static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]
 fn config_defaults_empty() {
@@ -104,6 +107,7 @@ api_key = "dummy"
 
 #[test]
 fn dyn_provider_from_registry_key() {
+    let _guard = ENV_LOCK.lock().unwrap();
     // openai requires OPENAI_API_KEY; without it and without RUNIE_MOCK, we get MissingApiKey.
     // Save and restore so the test is environment-independent.
     let saved_key = std::env::var("OPENAI_API_KEY").ok();
@@ -128,4 +132,82 @@ fn dyn_provider_unknown_key_returns_error() {
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(matches!(err, ProviderError::UnknownProvider(k) if k == "nonexistent-provider"));
+}
+
+#[test]
+fn dyn_provider_reads_api_key_from_config() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    let mut cfg = Config::default();
+    cfg.model_providers.insert(
+        "openai".to_string(),
+        ModelProvider {
+            provider_type: None,
+            base_url: "https://api.openai.com/v1".to_string(),
+            api_key: "sk-from-config".to_string(),
+        },
+    );
+
+    let saved_key = std::env::var("OPENAI_API_KEY").ok();
+    std::env::remove_var("OPENAI_API_KEY");
+
+    let provider = crate::build_provider_with_warning_with_config("openai", "gpt-4o", &cfg)
+        .expect("should build from config key");
+    assert_eq!(provider.key(), "openai");
+    assert_eq!(provider.model(), "gpt-4o");
+
+    if let Some(v) = saved_key {
+        std::env::set_var("OPENAI_API_KEY", v);
+    }
+}
+
+#[test]
+fn dyn_provider_prefers_env_over_config() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    let mut cfg = Config::default();
+    cfg.model_providers.insert(
+        "openai".to_string(),
+        ModelProvider {
+            provider_type: None,
+            base_url: "https://api.openai.com/v1".to_string(),
+            api_key: "sk-from-config".to_string(),
+        },
+    );
+
+    let saved_key = std::env::var("OPENAI_API_KEY").ok();
+    std::env::set_var("OPENAI_API_KEY", "sk-from-env");
+
+    let provider = crate::build_provider_with_warning_with_config("openai", "gpt-4o", &cfg)
+        .expect("should build from env key");
+    assert_eq!(provider.key(), "openai");
+
+    if let Some(v) = saved_key {
+        std::env::set_var("OPENAI_API_KEY", v);
+    } else {
+        std::env::remove_var("OPENAI_API_KEY");
+    }
+}
+
+#[test]
+fn fallback_uses_config_api_key() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    let mut cfg = Config::default();
+    cfg.model_providers.insert(
+        "openai".to_string(),
+        ModelProvider {
+            provider_type: None,
+            base_url: "https://api.openai.com/v1".to_string(),
+            api_key: "sk-fallback".to_string(),
+        },
+    );
+
+    let saved_key = std::env::var("OPENAI_API_KEY").ok();
+    std::env::remove_var("OPENAI_API_KEY");
+
+    let provider = crate::build_provider_with_fallback(&["openai"], "gpt-4o", &cfg)
+        .expect("fallback should build from config key");
+    assert_eq!(provider.key(), "openai");
+
+    if let Some(v) = saved_key {
+        std::env::set_var("OPENAI_API_KEY", v);
+    }
 }

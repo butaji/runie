@@ -144,6 +144,10 @@ impl AppState {
             dispatch::dispatch_event(self, event.clone());
             return;
         }
+        if self.login_flow.is_some() && matches!(event, DialogEvent::DialogBack) {
+            login_flow::login_flow_cancel(self);
+            return;
+        }
         if self.try_handle_dialog_event_dialog(event) {
             return;
         }

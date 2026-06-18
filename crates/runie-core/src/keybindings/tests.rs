@@ -335,4 +335,3 @@ fn keybindings_json_migration() {
 fn invalid_key_combo_rejected() {
     assert!(!validate_key_combo("ctrl+💩"));
 }
-

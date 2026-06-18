@@ -312,8 +312,6 @@ fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     state.input.cursor_pos = 0;
     state.agent.message_queue.clear();
     state.agent.request_queue.clear();
-    state.config.current_provider = state.config.config_provider.clone();
-    state.config.current_model = state.config.config_model.clone();
     state.configure_token_tracker();
     state.session.session_display_name = None;
     let now = crate::update::now();
@@ -324,7 +322,7 @@ fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 fn handle_reset(state: &mut AppState, _: &str) -> CommandResult {
-    *state = AppState::default();
+    state.reset_session();
     CommandResult::Message("State cleared.".into())
 }
 

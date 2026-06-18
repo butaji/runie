@@ -254,9 +254,15 @@ mod tests {
         assert!(s.contains("\x1b[?1015h"), "missing ?1015h");
         assert!(s.contains("\x1b[?1006h"), "missing ?1006h");
         assert!(s.contains("\x1b[?1004h"), "missing ?1004h (focus)");
-        assert!(s.contains("\x1b[?2004h"), "missing ?2004h (bracketed paste)");
+        assert!(
+            s.contains("\x1b[?2004h"),
+            "missing ?2004h (bracketed paste)"
+        );
         assert!(s.contains("\x1b[?2026h"), "missing ?2026h (sync update)");
-        assert!(s.contains("\x1b[?1049h"), "missing ?1049h (alternate screen)");
+        assert!(
+            s.contains("\x1b[?1049h"),
+            "missing ?1049h (alternate screen)"
+        );
         assert!(s.contains("\x1b[?25l"), "missing ?25l (hide cursor)");
         assert!(s.contains("\x1b[1 q"), "missing block cursor");
     }
@@ -283,7 +289,10 @@ mod tests {
         let s = String::from_utf8(buf).unwrap();
         assert!(s.contains("\x1b[?2026l"), "missing ?2026l (sync end)");
         assert!(s.contains("\x1b[?25h"), "missing ?25h (show cursor)");
-        assert!(s.contains("\x1b[?2004l"), "missing ?2004l (bracketed paste)");
+        assert!(
+            s.contains("\x1b[?2004l"),
+            "missing ?2004l (bracketed paste)"
+        );
         assert!(s.contains("\x1b[?1004l"), "missing ?1004l (focus)");
         assert!(s.contains("\x1b[?1003l"), "missing ?1003l");
         assert!(s.contains("\x1b[?1002l"), "missing ?1002l");

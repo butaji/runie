@@ -125,7 +125,10 @@ fn add_user_and_huge_thought(state: &mut AppState) {
     state.messages_changed();
 }
 
-fn count_visible_lines(region: &crate::tests::core::visible_helper::TestViewport, width: u16) -> usize {
+fn count_visible_lines(
+    region: &crate::tests::core::visible_helper::TestViewport,
+    width: u16,
+) -> usize {
     let mut total = 0usize;
     for (i, elem) in region.elements.iter().enumerate() {
         let count = element_line_count(elem, width);

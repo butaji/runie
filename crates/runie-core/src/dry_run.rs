@@ -28,6 +28,10 @@ impl std::fmt::Display for DryRunReport {
 
 /// Validate the current configuration without making any API calls.
 pub fn run_dry_run(config: &Config) -> DryRunReport {
+    dry_run_report_with_skills(config, &crate::skills::load_all())
+}
+
+fn dry_run_report_with_skills(config: &Config, skills: &[crate::skills::Skill]) -> DryRunReport {
     let mut lines = Vec::new();
     let mut status = DryRunStatus::Ready;
 
@@ -44,7 +48,6 @@ pub fn run_dry_run(config: &Config) -> DryRunReport {
     let tools = core_tool_names();
     lines.push(format!("✓ Tools: {}", tools.join(", ")));
 
-    let skills = crate::skills::load_all();
     if skills.is_empty() {
         lines.push("✓ Skills: none loaded".into());
     } else {
@@ -92,7 +95,6 @@ fn core_tool_names() -> Vec<&'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
 
     fn temp_config_with_provider(provider: &str, model: &str) -> Config {
         Config {
@@ -121,16 +123,16 @@ mod tests {
 
     #[test]
     fn dry_run_loads_skills() {
-        let dir = tempfile::tempdir().unwrap();
-        std::env::set_var("HOME", dir.path());
-
-        let skill_dir = dir.path().join(".runie").join("skills").join("rust");
-        std::fs::create_dir_all(&skill_dir).unwrap();
-        let mut file = std::fs::File::create(skill_dir.join("SKILL.md")).unwrap();
-        write!(file, "# Rust\n\n## Description\n\nRust skill.\n").unwrap();
+        let skill = crate::skills::Skill {
+            name: "rust".to_string(),
+            description: "Rust skill.".to_string(),
+            context: String::new(),
+            user_invocable: false,
+            file_path: std::path::PathBuf::from("rust/SKILL.md"),
+        };
 
         let config = temp_config_with_provider("openai", "gpt-4o");
-        let report = run_dry_run(&config);
+        let report = dry_run_report_with_skills(&config, &[skill]);
         assert!(report.lines.iter().any(|l| l.contains("Skills: 1 loaded")));
     }
 

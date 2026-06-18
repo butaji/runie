@@ -298,3 +298,65 @@ fn test_filtered_walk_cache_invalidated_on_change() {
     let result = tree.filtered_walk(SessionTreeFilter::All);
     assert_eq!(result.len(), 4); // original 3 + fork placeholder
 }
+
+#[test]
+fn tree_select_branch_switches_conversation() {
+    let mut state = AppState::default();
+    state.session.session_tree = Some(SessionTree::from_messages(&[
+        ChatMessage {
+            role: Role::User,
+            content: "root".into(),
+            timestamp: 0.0,
+            id: "root".into(),
+            ..Default::default()
+        },
+        ChatMessage {
+            role: Role::Assistant,
+            content: "branch-a".into(),
+            timestamp: 1.0,
+            id: "branch-a".into(),
+            ..Default::default()
+        },
+        ChatMessage {
+            role: Role::Assistant,
+            content: "branch-b".into(),
+            timestamp: 2.0,
+            id: "branch-b".into(),
+            ..Default::default()
+        },
+    ]));
+    state.update(SessionEvent::ToggleSessionTree);
+    assert!(
+        matches!(
+            state.open_dialog,
+            Some(crate::commands::DialogState::SessionTree(_))
+        ),
+        "tree dialog should be open"
+    );
+
+    state.update(SessionEvent::SessionTreeSelect {
+        id: "branch-b".into(),
+    });
+
+    assert!(state.open_dialog.is_none(), "dialog should close on select");
+    let sys: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::System)
+        .collect();
+    assert!(
+        sys.iter().any(|m| m.content.contains("Switched")),
+        "should confirm branch switch: {:?}",
+        sys.last()
+    );
+    assert_eq!(
+        state
+            .session
+            .session_tree
+            .as_ref()
+            .map(|t| t.current_branch.clone()),
+        Some(vec![0, 0]),
+        "current branch should navigate to branch-b"
+    );
+}

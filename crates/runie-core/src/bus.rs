@@ -2,9 +2,9 @@
 //!
 //! Provides a publish-subscribe bus with replay buffer for late subscribers.
 
+use parking_lot::Mutex;
 use std::collections::VecDeque;
 use std::sync::Arc;
-use parking_lot::Mutex;
 use tokio::sync::broadcast;
 
 /// Typed event bus for actor communication.

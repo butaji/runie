@@ -331,9 +331,7 @@ fn dispatcher_handles_all_variants() {
             | Event::InsertAtRef(_) => Event::PaletteClose,
 
             // Edit
-            Event::PendingEdit { .. } | Event::ApproveEdit | Event::RejectEdit => {
-                Event::RejectEdit
-            }
+            Event::PendingEdit { .. } | Event::ApproveEdit | Event::RejectEdit => Event::RejectEdit,
 
             // System
             Event::SystemMessage { .. }
@@ -415,4 +413,3 @@ fn dispatcher_handles_all_variants() {
     }
     let _ = assert_exhaustive(Event::Submit);
 }
-

@@ -359,3 +359,128 @@ fn dequeue_lifo() {
     assert!(state.agent.message_queue.is_empty());
     assert_eq!(state.input.input, "a");
 }
+// Alt+Enter follow-up queue
+#[test]
+fn alt_enter_queues_follow_up_while_thinking() {
+    let mut state = AppState::default();
+    state.agent.turn_active = true;
+    for c in "follow up".chars() {
+        state.update(InputEvent::Input(c));
+    }
+    state.update(ControlEvent::FollowUp);
+
+    assert_eq!(state.agent.message_queue.len(), 1);
+    assert!(matches!(
+        state.agent.message_queue[0].kind,
+        crate::model::QueuedMessageKind::FollowUp
+    ));
+    assert_eq!(state.agent.message_queue[0].content, "follow up");
+    assert!(state.input.input.is_empty());
+}
+
+#[test]
+fn alt_enter_queues_input_as_follow_up_when_idle() {
+    let mut state = AppState::default();
+    state.agent.turn_active = false;
+    for c in "hello".chars() {
+        state.update(InputEvent::Input(c));
+    }
+    state.update(ControlEvent::FollowUp);
+
+    assert_eq!(state.agent.message_queue.len(), 1);
+    assert!(matches!(
+        state.agent.message_queue[0].kind,
+        crate::model::QueuedMessageKind::FollowUp
+    ));
+    assert_eq!(state.agent.message_queue[0].content, "hello");
+    assert!(state.input.input.is_empty());
+}
+// Alt+Up dequeue
+#[test]
+fn alt_up_restores_last_queued_message() {
+    let mut state = AppState::default();
+    state.agent.turn_active = true;
+    for c in "queued".chars() {
+        state.update(InputEvent::Input(c));
+    }
+    state.update(Event::submit());
+    assert_eq!(state.agent.message_queue.len(), 1);
+
+    state.update(ControlEvent::Dequeue);
+    assert!(state.agent.message_queue.is_empty());
+    assert_eq!(state.input.input, "queued");
+    assert_eq!(state.input.cursor_pos, 6);
+}
+
+#[test]
+fn alt_up_replaces_current_input_with_queued() {
+    let mut state = AppState::default();
+    state.agent.turn_active = true;
+    for c in "old".chars() {
+        state.update(InputEvent::Input(c));
+    }
+    state.update(Event::submit());
+
+    for c in "new".chars() {
+        state.update(InputEvent::Input(c));
+    }
+    assert_eq!(state.input.input, "new");
+
+    state.update(ControlEvent::Dequeue);
+    assert_eq!(state.input.input, "old");
+}
+
+#[test]
+fn alt_up_empty_queue_flashes_input() {
+    let mut state = AppState::default();
+    assert!(state.agent.message_queue.is_empty());
+    assert_eq!(state.input.input_flash, 0);
+
+    state.update(ControlEvent::Dequeue);
+    assert_eq!(state.input.input_flash, 3);
+}
+// Abort during streaming
+#[test]
+fn abort_during_streaming_clears_turn_and_allows_new_submit() {
+    let mut state = AppState::default();
+    state.config.vim_mode = true;
+    state.agent.turn_active = true;
+    state.agent.streaming = true;
+    state.input.input = "hi".into();
+    state.update(Event::submit());
+    assert_eq!(state.agent.message_queue.len(), 1);
+
+    state.update(InputEvent::Escape);
+    assert!(!state.agent.turn_active);
+    assert!(!state.agent.streaming);
+    assert!(state.agent.message_queue.is_empty());
+    assert_eq!(state.input.input, "hi");
+
+    state.input.input = "hi again".into();
+    state.update(Event::submit());
+    assert!(
+        state
+            .session
+            .messages
+            .iter()
+            .any(|m| m.content == "hi again"),
+        "New submit should work after abort"
+    );
+}
+
+#[test]
+fn abort_during_streaming_resets_timers() {
+    let mut state = AppState::default();
+    state.config.vim_mode = true;
+    state.agent.turn_active = true;
+    state.agent.streaming = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now());
+    state.agent.thinking_started_at = Some(std::time::Instant::now());
+    state.agent.tool_started_at = Some(std::time::Instant::now());
+
+    state.update(InputEvent::Escape);
+
+    assert!(state.agent.turn_started_at.is_none());
+    assert!(state.agent.thinking_started_at.is_none());
+    assert!(state.agent.tool_started_at.is_none());
+}

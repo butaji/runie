@@ -4,9 +4,9 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use runie_agent::{run_agent_turn, AgentCommand, PermissionGate};
-use runie_core::permissions::{AutoAllowSink, PermissionManager};
 use runie_core::config::Config;
 use runie_core::event::Event;
+use runie_core::permissions::{AutoAllowSink, PermissionManager};
 use runie_provider::DynProvider;
 use tempfile::TempDir;
 
@@ -65,10 +65,7 @@ impl TestRunner {
         let emit = Arc::new(Mutex::new(move |evt: Event| {
             events.lock().unwrap().push(evt)
         }));
-        let gate = PermissionGate::new(
-            PermissionManager::default(),
-            Arc::new(AutoAllowSink),
-        );
+        let gate = PermissionGate::new(PermissionManager::default(), Arc::new(AutoAllowSink));
         run_agent_turn(provider, &cmd, emit, 5, gate).await?;
         Ok(id)
     }

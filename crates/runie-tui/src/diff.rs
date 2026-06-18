@@ -51,7 +51,10 @@ fn canonical_to_parsed(canonical: &runie_core::diff::Diff) -> ParsedDiff {
 }
 
 /// Render a canonical diff to styled ratatui lines.
-pub fn render_canonical_diff(diff: &runie_core::diff::Diff, gutter_width: usize) -> Vec<Line<'static>> {
+pub fn render_canonical_diff(
+    diff: &runie_core::diff::Diff,
+    gutter_width: usize,
+) -> Vec<Line<'static>> {
     let parsed = canonical_to_parsed(diff);
     render_diff(&parsed, gutter_width)
 }
@@ -97,8 +100,9 @@ pub fn is_diff_output(text: &str) -> bool {
 
 /// Parse unified diff format — tries patch crate first, falls back to legacy parser.
 pub fn parse_diff(text: &str) -> ParsedDiff {
-    let result =
-        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| patch::Patch::from_single(text)));
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        patch::Patch::from_single(text)
+    }));
     if let Ok(Ok(p)) = result {
         return parse_patch(p);
     }
@@ -277,9 +281,7 @@ pub fn diff_line_style(line_type: &DiffLineType) -> Style {
         DiffLineType::Added => Style::default()
             .fg(color_success())
             .bg(color_diff_insert_bg()),
-        DiffLineType::Removed => Style::default()
-            .fg(Color::Red)
-            .bg(color_diff_remove_bg()),
+        DiffLineType::Removed => Style::default().fg(Color::Red).bg(color_diff_remove_bg()),
         DiffLineType::HunkHeader => Style::default()
             .fg(color_accent())
             .add_modifier(Modifier::BOLD),
@@ -315,7 +317,9 @@ pub fn render_diff(diff: &ParsedDiff, gutter_width: usize) -> Vec<Line<'static>>
         let spans: Vec<Span<'static>> = vec![
             Span::styled(
                 line_num_str,
-                Style::default().fg(color_dim()).bg(style.bg.unwrap_or(Color::Reset)),
+                Style::default()
+                    .fg(color_dim())
+                    .bg(style.bg.unwrap_or(Color::Reset)),
             ),
             Span::styled(prefix, style),
             Span::styled(parsed.content.clone(), style),
@@ -344,8 +348,7 @@ mod tests {
 
     #[test]
     fn detects_diff_output() {
-        let diff =
-            "--- a/file.txt\n+++ b/file.txt\n@@ -1,3 +1,4 @@\n line1\n-old\n+new\n line3";
+        let diff = "--- a/file.txt\n+++ b/file.txt\n@@ -1,3 +1,4 @@\n line1\n-old\n+new\n line3";
         assert!(is_diff_output(diff));
     }
 
@@ -357,8 +360,7 @@ mod tests {
 
     #[test]
     fn parses_simple_diff() {
-        let diff =
-            "--- a/test.txt\n+++ b/test.txt\n@@ -1,3 +1,4 @@\n line1\n-old\n+new\n line3";
+        let diff = "--- a/test.txt\n+++ b/test.txt\n@@ -1,3 +1,4 @@\n line1\n-old\n+new\n line3";
         let parsed = parse_diff(diff);
 
         assert_eq!(parsed.old_path, Some("a/test.txt".to_string()));
@@ -409,17 +411,11 @@ mod tests {
         // Added lines now carry an insert (green) background.
         assert_ne!(diff_line_style(&DiffLineType::Added).bg, None);
 
-        assert_eq!(
-            diff_line_style(&DiffLineType::Removed).fg,
-            Some(Color::Red)
-        );
+        assert_eq!(diff_line_style(&DiffLineType::Removed).fg, Some(Color::Red));
         // Removed lines now carry a remove (red) background.
         assert_ne!(diff_line_style(&DiffLineType::Removed).bg, None);
 
-        assert_eq!(
-            diff_line_style(&DiffLineType::Context).fg,
-            Some(color_fg())
-        );
+        assert_eq!(diff_line_style(&DiffLineType::Context).fg, Some(color_fg()));
     }
 
     #[test]
@@ -431,8 +427,7 @@ mod tests {
 
     #[test]
     fn render_diff_output() {
-        let diff =
-            "--- a/test.txt\n+++ b/test.txt\n@@ -1,1 +1,1 @@\n-old\n+new";
+        let diff = "--- a/test.txt\n+++ b/test.txt\n@@ -1,1 +1,1 @@\n-old\n+new";
         let lines = render_diff_text(diff);
 
         assert!(!lines.is_empty());

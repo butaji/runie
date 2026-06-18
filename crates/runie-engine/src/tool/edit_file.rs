@@ -79,11 +79,23 @@ fn edit_file_impl(
     start: Instant,
 ) -> Result<ToolOutput> {
     if search.is_empty() {
-        return Ok(tool_error("edit_file", "Error: search text cannot be empty", start, false));
+        return Ok(tool_error(
+            "edit_file",
+            "Error: search text cannot be empty",
+            start,
+            false,
+        ));
     }
     let content = match read_file(path) {
         Ok(c) => c,
-        Err(e) => return Ok(tool_error("edit_file", &format!("Error reading {}: {}", path.display(), e), start, false)),
+        Err(e) => {
+            return Ok(tool_error(
+                "edit_file",
+                &format!("Error reading {}: {}", path.display(), e),
+                start,
+                false,
+            ))
+        }
     };
     if let Some(err) = validate_match_count(&content, search, path) {
         return Ok(tool_error("edit_file", &err, start, false));
@@ -105,7 +117,12 @@ fn write_edited_file(
 ) -> Result<ToolOutput> {
     match std::fs::write(path, new_content) {
         Ok(()) => Ok(build_edit_output(path, search, replace, new_content, start)),
-        Err(e) => Ok(tool_error("edit_file", &format!("Error writing {}: {}", path.display(), e), start, false)),
+        Err(e) => Ok(tool_error(
+            "edit_file",
+            &format!("Error writing {}: {}", path.display(), e),
+            start,
+            false,
+        )),
     }
 }
 

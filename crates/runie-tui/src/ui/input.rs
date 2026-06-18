@@ -221,14 +221,12 @@ fn render_cursor_spans<'a>(
     } else {
         (style_hint(), style_input_cursor_disabled())
     };
-    let before = &line_content[..cursor_col_in_line.min(line_content.len())];
-    let (at_cursor, after) = if cursor_col_in_line < line_content.len() {
-        let c = line_content[cursor_col_in_line..].chars().next().unwrap();
+    let boundary = line_content.floor_char_boundary(cursor_col_in_line);
+    let before = &line_content[..boundary];
+    let (at_cursor, after) = if boundary < line_content.len() {
+        let c = line_content[boundary..].chars().next().unwrap();
         let char_len = c.len_utf8();
-        (
-            c.to_string(),
-            &line_content[cursor_col_in_line + char_len..],
-        )
+        (c.to_string(), &line_content[boundary + char_len..])
     } else if token_held {
         (" ".to_string(), "")
     } else {
@@ -251,5 +249,38 @@ fn image_attachment_label(snap: &Snapshot) -> Option<String> {
         0 => None,
         1 => Some(" 📎 1 image".to_string()),
         n => Some(format!(" 📎 {} images", n)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn render_cursor_spans_clamps_to_char_boundary() {
+        // "é" is two bytes. A cursor at byte 1 used to slice in the middle
+        // of the character and panic.
+        let spans = render_cursor_spans("café", 4, true, "");
+        assert_eq!(spans.len(), 3);
+        assert_eq!(spans[0].content, "caf");
+        assert_eq!(spans[1].content, "é");
+        assert_eq!(spans[2].content, "");
+    }
+
+    #[test]
+    fn render_cursor_spans_does_not_panic_in_mid_character() {
+        // Byte 3 is inside the two-byte "é" (bytes 3-4). floor_char_boundary
+        // snaps it back to byte 3, the start of "é".
+        let spans = render_cursor_spans("café", 3, true, "");
+        assert_eq!(spans[0].content, "caf");
+        assert_eq!(spans[1].content, "é");
+    }
+
+    #[test]
+    fn render_cursor_spans_renders_space_at_end_when_held() {
+        let spans = render_cursor_spans("hi", 2, true, "");
+        assert_eq!(spans[0].content, "hi");
+        assert_eq!(spans[1].content, " ");
+        assert_eq!(spans[2].content, "");
     }
 }

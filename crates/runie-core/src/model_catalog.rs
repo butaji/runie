@@ -2,6 +2,9 @@
 
 use crate::model::ModelSelectorItem;
 
+pub mod configured;
+pub use configured::configured_models_catalog;
+
 /// Model capability flags — drives runtime adaptation and UI filtering.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ModelCapabilities {
@@ -398,4 +401,5 @@ mod tests {
             );
         }
     }
+
 }

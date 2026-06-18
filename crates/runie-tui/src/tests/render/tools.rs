@@ -1,6 +1,6 @@
 //! Layer 3 rendering tests for inline tool rendering.
 
-use ratatui::{backend::TestBackend, Terminal, widgets::Paragraph};
+use ratatui::{backend::TestBackend, widgets::Paragraph, Terminal};
 
 use crate::message::{render_tool_done, render_tool_running, render_tool_summary};
 
@@ -22,10 +22,7 @@ fn render_to_string(lines: Vec<ratatui::text::Line<'static>>, width: u16, height
         .join("\n")
 }
 
-fn row_text(
-    buf: &ratatui::buffer::Buffer,
-    y: u16,
-) -> String {
+fn row_text(buf: &ratatui::buffer::Buffer, y: u16) -> String {
     (0..buf.area().width)
         .map(|x| buf[(x, y)].symbol())
         .collect()
@@ -104,14 +101,7 @@ fn render_tool_done_shows_label() {
 
 #[test]
 fn render_tool_done_shows_bytes() {
-    let lines = render_tool_done(
-        "bash",
-        "echo hello",
-        1.0,
-        "hello",
-        Some(5_000_000),
-        false,
-    );
+    let lines = render_tool_done("bash", "echo hello", 1.0, "hello", Some(5_000_000), false);
     let output = render_to_string(lines, 80, 5);
     assert!(
         output.contains("⇣") && output.contains("5.0M"),
@@ -153,6 +143,22 @@ fn render_tool_done_no_bytes_when_none() {
     );
 }
 
+#[test]
+fn render_tool_done_shows_error_text() {
+    let lines = render_tool_done("bash", "exit 1", 0.5, "command not found", None, true);
+    let output = render_to_string(lines, 80, 5);
+    assert!(
+        output.contains("✗"),
+        "Output should contain error icon: {}",
+        output
+    );
+    assert!(
+        output.contains("command not found"),
+        "Output should contain error text: {}",
+        output
+    );
+}
+
 // ─── render_tool_summary ────────────────────────────────────────────────────
 
 #[test]
@@ -163,7 +169,11 @@ fn render_tool_summary_is_one_line() {
     assert!(!lines.is_empty(), "Should return at least one line");
     // Check that the content contains the expected text (first line)
     let output = lines[0].to_string();
-    assert!(output.contains("✓") && output.contains("Run ls"), "Should show summary: {}", output);
+    assert!(
+        output.contains("✓") && output.contains("Run ls"),
+        "Should show summary: {}",
+        output
+    );
 }
 
 #[test]

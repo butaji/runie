@@ -8,7 +8,7 @@ use crate::terminal::caps::TerminalCapabilities;
 
 mod clipboard;
 mod editor;
-mod login;
+pub(crate) mod login;
 mod share;
 mod subagent;
 mod suspend;
@@ -65,12 +65,12 @@ impl EffectCommand {
             CoreEvent::CopyLastResponse => Some(Self::CopyLastResponse {
                 messages: state.session.messages.clone(),
             }),
-            CoreEvent::CopySelectedBlock => {
-                state.copy_selected_post_text().map(|text| Self::CopySelectedBlock { text })
-            }
-            CoreEvent::CopyBlockMetadata => {
-                state.copy_selected_post_metadata().map(|text| Self::CopyBlockMetadata { text })
-            }
+            CoreEvent::CopySelectedBlock => state
+                .copy_selected_post_text()
+                .map(|text| Self::CopySelectedBlock { text }),
+            CoreEvent::CopyBlockMetadata => state
+                .copy_selected_post_metadata()
+                .map(|text| Self::CopyBlockMetadata { text }),
             CoreEvent::ShareSession => Some(Self::ShareSession {
                 messages: state.session.messages.clone(),
                 display_name: state.session.session_display_name.clone(),

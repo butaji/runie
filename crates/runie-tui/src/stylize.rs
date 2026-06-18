@@ -35,10 +35,16 @@ impl Stylize for &str {
         Span::styled(self.to_string(), Style::default().fg(Color::White))
     }
     fn dim(self) -> Span<'static> {
-        Span::styled(self.to_string(), Style::default().add_modifier(Modifier::DIM))
+        Span::styled(
+            self.to_string(),
+            Style::default().add_modifier(Modifier::DIM),
+        )
     }
     fn bold(self) -> Span<'static> {
-        Span::styled(self.to_string(), Style::default().add_modifier(Modifier::BOLD))
+        Span::styled(
+            self.to_string(),
+            Style::default().add_modifier(Modifier::BOLD),
+        )
     }
     fn underlined(self) -> Span<'static> {
         Span::styled(

@@ -311,3 +311,60 @@ fn find_button_by_accel_matches_case_insensitive() {
     ));
     assert!(panel.find_button_by_accel('X').is_none());
 }
+
+// ─── Panel closable DSL ─────────────────────────────────────────────────
+
+#[test]
+fn panel_defaults_to_closable() {
+    let panel = Panel::new("root", "Root");
+    assert!(panel.closable);
+}
+
+#[test]
+fn panel_closable_builder_sets_false() {
+    let panel = Panel::new("root", "Root").closable(false);
+    assert!(!panel.closable);
+}
+
+#[test]
+fn panel_non_closable_alias_sets_false() {
+    let panel = Panel::new("root", "Root").non_closable();
+    assert!(!panel.closable);
+}
+
+#[test]
+fn panel_stack_root_closable_preserved() {
+    let root = Panel::new("root", "Root").non_closable();
+    let stack = PanelStack::new(root);
+    assert_eq!(stack.root().map(|p| p.closable), Some(false));
+}
+
+#[test]
+fn panel_title_has_exactly_one_leading_and_trailing_space() {
+    let panel = Panel::new("test", "Settings");
+    assert_eq!(panel.title, " Settings ");
+}
+
+#[test]
+fn panel_title_trims_extra_whitespace() {
+    let panel = Panel::new("test", "  Settings  ");
+    assert_eq!(panel.title, " Settings ");
+}
+
+#[test]
+fn panel_with_title_normalizes() {
+    let panel = Panel::new("test", "Old").with_title("New");
+    assert_eq!(panel.title, " New ");
+}
+
+#[test]
+fn panel_title_alias_normalizes() {
+    let panel = Panel::new("test", "Old").title("New");
+    assert_eq!(panel.title, " New ");
+}
+
+#[test]
+fn panel_empty_title_stays_empty() {
+    let panel = Panel::new("test", "   ");
+    assert_eq!(panel.title, "");
+}

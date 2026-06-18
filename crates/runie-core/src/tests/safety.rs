@@ -100,3 +100,70 @@ fn slash_untrust_sets_untrusted() {
         Some(crate::event::TransientLevel::Warning)
     );
 }
+
+#[test]
+fn slash_approve_applies_pending_edits() {
+    let mut state = fresh_state();
+    let file = std::env::temp_dir().join(format!("runie_approve_test_{}.txt", std::process::id()));
+    let _ = std::fs::remove_file(&file);
+    state
+        .session
+        .pending_edits
+        .push(crate::edit_preview::EditPreview::new(
+            file.clone(),
+            "old".into(),
+            "new content".into(),
+        ));
+
+    exec(&mut state, "/approve");
+
+    assert!(
+        state.session.pending_edits.is_empty(),
+        "pending edits cleared"
+    );
+    let written = std::fs::read_to_string(&file).unwrap_or_default();
+    assert_eq!(written, "new content", "edit applied");
+    let _ = std::fs::remove_file(&file);
+}
+
+#[test]
+fn slash_reject_clears_pending_edits() {
+    let mut state = fresh_state();
+    let file = std::env::temp_dir().join(format!("runie_reject_test_{}.txt", std::process::id()));
+    let _ = std::fs::remove_file(&file);
+    state
+        .session
+        .pending_edits
+        .push(crate::edit_preview::EditPreview::new(
+            file.clone(),
+            "old".into(),
+            "new content".into(),
+        ));
+
+    exec(&mut state, "/reject");
+
+    assert!(
+        state.session.pending_edits.is_empty(),
+        "pending edits cleared"
+    );
+    assert!(!file.exists(), "file should not be written");
+}
+
+#[test]
+fn slash_approve_without_edits_warns() {
+    let mut state = fresh_state();
+    exec(&mut state, "/approve");
+
+    let sys: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == crate::model::Role::System)
+        .collect();
+    let last = sys.last().expect("system message");
+    assert!(
+        last.content.contains("No pending edits"),
+        "expected warning: {}",
+        last.content
+    );
+}

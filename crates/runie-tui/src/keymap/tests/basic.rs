@@ -32,7 +32,10 @@ fn ctrl_o_toggles_expand_state() {
     let key = KeyEvent::new(KeyCode::Char('o'), KeyModifiers::CONTROL);
     let event = crossterm::event::Event::Key(key);
     let core_event = crate::keymap::convert_event(&event, &default_bindings());
-    assert!(matches!(core_event, Some(runie_core::ControlEvent::ToggleExpand)));
+    assert!(matches!(
+        core_event,
+        Some(runie_core::ControlEvent::ToggleExpand)
+    ));
 
     state.update(core_event.unwrap());
     assert_ne!(

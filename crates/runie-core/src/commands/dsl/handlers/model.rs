@@ -40,29 +40,61 @@ pub fn register(registry: &mut CommandRegistry) {
 pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
     let rest = args.trim();
     if rest.is_empty() {
-        return CommandResult::OpenDialog(DialogType::ModelSelector);
+        return if crate::login_config::list_configured_providers().is_empty() {
+            CommandResult::Message(
+                "No connected providers. Use /login to add a provider first.".into(),
+            )
+        } else {
+            CommandResult::OpenDialog(DialogType::ModelSelector)
+        };
     }
     let parts: Vec<_> = rest.split('/').filter(|s| !s.is_empty()).collect();
     match parts.len() {
-        2 => {
-            state.config.current_provider = parts[0].to_string();
-            state.config.current_model = parts[1].to_string();
-        }
+        2 => switch_to_model(state, parts[0], parts[1]),
         1 => {
-            state.config.current_model = parts[0].to_string();
+            let provider = state.config.current_provider.clone();
+            switch_to_model(state, &provider, parts[0])
         }
-        _ => {
-            return CommandResult::Message(format!(
-                "Current: {}/{}. Format: /model provider/model or /model model",
-                state.config.current_provider, state.config.current_model
-            ));
+        _ => CommandResult::Message(format!(
+            "Current: {}/{}. Format: /model provider/model or /model model",
+            state.config.current_provider, state.config.current_model
+        )),
+    }
+}
+
+fn switch_to_model(state: &mut AppState, provider: &str, model: &str) -> CommandResult {
+    if !is_model_configured(provider, model) {
+        return CommandResult::Warning(format!(
+            "Model {}/{} is not available. Connect the provider and choose models with /login.",
+            provider, model
+        ));
+    }
+    state.switch_model(provider.to_string(), model.to_string());
+    CommandResult::Message(format!("Switched to {}/{}", provider, model))
+}
+
+fn is_model_configured(provider: &str, model: &str) -> bool {
+    // Saved providers from config.toml.
+    let configured = crate::login_config::list_configured_providers()
+        .iter()
+        .any(|(p, _, models)| p == provider && models.contains(&model.to_string()));
+    if configured {
+        return true;
+    }
+
+    // A known provider with its env var set can also run the requested model.
+    if let Some(meta) = crate::provider_registry::find_provider(provider) {
+        if !meta.env_var.is_empty()
+            && std::env::var(meta.env_var).is_ok_and(|v| !v.is_empty())
+            && crate::model_catalog::model_catalog()
+                .iter()
+                .any(|m| m.provider == provider && m.name == model)
+        {
+            return true;
         }
     }
-    state.configure_token_tracker();
-    CommandResult::Message(format!(
-        "Switched to {}/{}",
-        state.config.current_provider, state.config.current_model
-    ))
+
+    false
 }
 
 fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
@@ -103,10 +135,10 @@ fn open_thinking_panel(state: &mut AppState) -> CommandResult {
     CommandResult::OpenPanelStack(Box::new(PanelStack::new(panel)))
 }
 
-fn handle_scoped_models(state: &mut AppState, _: &str) -> CommandResult {
-    if state.config.scoped_models.is_empty() {
+fn handle_scoped_models(_state: &mut AppState, _: &str) -> CommandResult {
+    if crate::login_config::list_configured_providers().is_empty() {
         return CommandResult::Message(
-            "No scoped models configured. Add [models.scoped] to config.toml.".into(),
+            "No connected providers. Use /login to add a provider first.".into(),
         );
     }
     CommandResult::OpenDialog(DialogType::ScopedModels)

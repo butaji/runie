@@ -138,7 +138,10 @@ fn bash_error(msg: &str) -> BashResult {
 
 fn bash_timeout(timeout: Duration) -> BashResult {
     BashResult {
-        output: format!("Command timed out after {:.0} seconds", timeout.as_secs_f64()),
+        output: format!(
+            "Command timed out after {:.0} seconds",
+            timeout.as_secs_f64()
+        ),
         bytes_transferred: None,
         status: ToolStatus::TimedOut,
     }

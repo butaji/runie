@@ -5,6 +5,7 @@ mod at_refs;
 mod core;
 mod model_config;
 mod scoped_models;
+mod thought;
 
 pub use model_config::model_config_event;
 

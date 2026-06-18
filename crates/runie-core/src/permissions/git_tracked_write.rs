@@ -46,7 +46,9 @@ fn is_git_tracked(path: &Path) -> bool {
         return false;
     };
     let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-    let canonical_workdir = workdir.canonicalize().unwrap_or_else(|_| workdir.to_path_buf());
+    let canonical_workdir = workdir
+        .canonicalize()
+        .unwrap_or_else(|_| workdir.to_path_buf());
     let Ok(relative) = canonical_path.strip_prefix(&canonical_workdir) else {
         return false;
     };

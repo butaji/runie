@@ -11,97 +11,19 @@ use crate::login_flow::{
     build_validating_panel, LoginFlowState, LoginStep,
 };
 
-/// Event handler for providers dialog (not part of the login flow state machine).
-/// Routes `ProvidersDialog`, `ProvidersSelectModel`, `ProvidersDisconnect`, `ProvidersAdd`.
-#[allow(dead_code)]
-pub fn providers_event(state: &mut crate::model::AppState, event: crate::Event) {
-    match event {
-        crate::event::DialogEvent::ProvidersDialog => open_providers_dialog(state),
-        crate::event::DialogEvent::ProvidersSelectModel { provider, model } => {
-            providers_select_model(state, &provider, &model);
-        }
-        crate::event::DialogEvent::ProvidersDisconnect { provider } => {
-            providers_disconnect(state, &provider);
-        }
-        crate::event::DialogEvent::ProvidersAdd => {
-            // Close the providers dialog and start the login flow.
-            // Push current dialog to back stack so Esc returns here.
-            if let Some(current) = state.open_dialog.take() {
-                state.dialog_back_stack.push(current);
-            }
-            state.login_flow = Some(LoginFlowState::new());
-            rebuild_login_dialog(state);
-        }
-        _ => {}
-    }
-}
-
-fn open_providers_dialog(state: &mut crate::model::AppState) {
-    use crate::providers_dialog::build_providers_dialog;
-    // Save the current dialog (e.g. palette) to the back stack so Esc
-    // can restore it after the providers dialog or login flow closes.
-    if let Some(current) = state.open_dialog.take() {
-        state.dialog_back_stack.push(current);
-    }
-    state.open_dialog = Some(crate::commands::DialogState::PanelStack(
-        build_providers_dialog(&state.config.current_provider, &state.config.current_model),
-    ));
-    state.mark_dirty();
-}
-
-#[allow(dead_code)]
-fn providers_select_model(state: &mut crate::model::AppState, provider: &str, model: &str) {
-    state.config.current_provider = provider.to_string();
-    state.config.current_model = model.to_string();
-    state.configure_token_tracker();
-    state.record_model_usage(provider, model);
-    state.open_dialog = None;
-    state.mark_dirty();
-}
-
-#[allow(dead_code)]
-fn providers_disconnect(state: &mut crate::model::AppState, provider: &str) {
-    match crate::login_config::remove_provider_config(provider) {
-        Ok(()) => {
-            // If this was the active provider, switch to another one or clear.
-            if state.config.current_provider == provider {
-                let configured = crate::login_config::list_configured_providers();
-                if let Some((name, _, models)) = configured.first() {
-                    state.config.current_provider = name.clone();
-                    state.config.current_model = models.first().cloned().unwrap_or_default();
-                } else {
-                    state.config.current_provider.clear();
-                    state.config.current_model.clear();
-                }
-                state.configure_token_tracker();
-            }
-            if state.has_models() {
-                state.open_dialog = None;
-            } else {
-                login_flow_start(state);
-            }
-            state.mark_dirty();
-        }
-        Err(e) => {
-            state.set_transient(
-                format!("Could not disconnect {}: {}", provider, e),
-                crate::event::TransientLevel::Error,
-            );
-        }
-    }
-}
-
 /// Top-level login flow dispatcher.
 pub fn login_flow_event(state: &mut crate::model::AppState, event: LoginFlowEvent) {
     match event {
         LoginFlowEvent::Start => login_flow_start(state),
         LoginFlowEvent::SelectProvider { provider } => login_flow_select_provider(state, provider),
         LoginFlowEvent::SubmitKey { provider, key } => login_flow_submit_key(state, provider, key),
-        LoginFlowEvent::ValidationDone { models, .. } => login_flow_validation_done(state, models),
+        LoginFlowEvent::ValidationDone { models, .. }
+        | LoginFlowEvent::ModelsFetched { models, .. } => {
+            login_flow_validation_success(state, models)
+        }
         LoginFlowEvent::ValidationFailed { error, .. } => {
             login_flow_validation_failed(state, error)
         }
-        LoginFlowEvent::ModelsFetched { models, .. } => login_flow_models_fetched(state, models),
         LoginFlowEvent::ToggleModel { model } => login_flow_toggle_model(state, model),
         LoginFlowEvent::Save => login_flow_save(state),
         LoginFlowEvent::Cancel => login_flow_cancel(state),
@@ -167,25 +89,13 @@ fn login_flow_submit_key(state: &mut crate::model::AppState, provider: String, k
     };
     if let Some(ref mut flow) = state.login_flow {
         flow.provider = final_provider.clone();
-        *flow = flow.clone().with_key(key);
+        *flow = flow.clone().with_key(key.clone());
     }
-    replace_top_login_panel_with(state, build_validating_panel(&final_provider));
+    push_login_panel(state, build_validating_panel(&final_provider));
+    state.trigger_login_validation(&final_provider, &key);
 }
 
-fn login_flow_validation_done(state: &mut crate::model::AppState, models: Vec<String>) {
-    let Some(flow) = state.login_flow.clone() else {
-        return;
-    };
-    if flow.step != LoginStep::Validating {
-        return;
-    }
-    let updated = flow.with_validation_success(models);
-    state.login_flow = Some(updated.clone());
-    replace_top_login_panel_with(state, build_model_selector(&updated));
-    state.mark_dirty();
-}
-
-fn login_flow_models_fetched(state: &mut crate::model::AppState, models: Vec<String>) {
+fn login_flow_validation_success(state: &mut crate::model::AppState, models: Vec<String>) {
     let Some(flow) = state.login_flow.clone() else {
         return;
     };
@@ -210,40 +120,35 @@ fn login_flow_validation_failed(state: &mut crate::model::AppState, error: Strin
         crate::event::TransientLevel::Warning,
     );
     let updated = flow.with_validation_error();
-    state.login_flow = Some(updated.clone());
-    replace_top_login_panel_with(state, build_key_input(&updated));
+    state.login_flow = Some(updated);
+    pop_login_panel(state);
     state.mark_dirty();
 }
 
 fn login_flow_toggle_model(state: &mut crate::model::AppState, model: String) {
     if let Some(ref mut flow) = state.login_flow {
         flow.toggle_model(&model);
-        // Refresh the top panel to reflect the new toggle state.
-        replace_top_login_panel(state);
+        // The form handler already flipped the checkbox value in place,
+        // so there is no need to rebuild the panel (which would reset the
+        // selection index).
         state.mark_dirty();
     }
 }
 
 fn login_flow_save(state: &mut crate::model::AppState) {
-    let Some(flow) = state.login_flow.clone() else {
+    let Some(flow) = take_login_flow_if_ready(state) else {
+        // Save was rejected (e.g. no models selected). Reopen the login dialog
+        // at the current step so the user can correct the input.
+        if let Some(flow) = state.login_flow.as_ref() {
+            let panel = match flow.step {
+                LoginStep::KeyInput => build_key_input(flow),
+                LoginStep::ModelSelect => build_model_selector(flow),
+                _ => build_model_selector(flow),
+            };
+            replace_top_login_panel_with(state, panel);
+        }
         return;
     };
-
-    if !flow.validated {
-        state.set_transient(
-            "Please wait for the API key to be validated before saving.".into(),
-            crate::event::TransientLevel::Warning,
-        );
-        return;
-    }
-
-    if flow.selected_models.is_empty() {
-        state.set_transient(
-            "Select at least one model before saving.".into(),
-            crate::event::TransientLevel::Warning,
-        );
-        return;
-    }
 
     let base_url = crate::provider_registry::find_provider(&flow.provider)
         .map(|p| p.base_url.to_string())
@@ -256,11 +161,35 @@ fn login_flow_save(state: &mut crate::model::AppState) {
         return;
     }
 
-    activate_first_selected_model(state, &flow);
+    // Only switch to the newly saved provider when no provider/model is
+    // currently active. This keeps the existing selection when the user is
+    // adding another provider through the providers dialog.
+    if !state.has_models() {
+        activate_first_selected_model(state, &flow);
+    }
     state.login_flow = None;
     state.dialog_back_stack.clear();
     state.open_dialog = None;
     state.mark_dirty();
+}
+
+fn take_login_flow_if_ready(state: &mut crate::model::AppState) -> Option<LoginFlowState> {
+    let flow = state.login_flow.clone()?;
+    if !flow.validated {
+        state.set_transient(
+            "Please wait for the API key to be validated before saving.".into(),
+            crate::event::TransientLevel::Warning,
+        );
+        return None;
+    }
+    if flow.selected_models.is_empty() {
+        state.set_transient(
+            "Select at least one model before saving.".into(),
+            crate::event::TransientLevel::Warning,
+        );
+        return None;
+    }
+    Some(flow)
 }
 
 fn activate_first_selected_model(state: &mut crate::model::AppState, flow: &LoginFlowState) {
@@ -303,7 +232,7 @@ fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
         }
         state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
         state.mark_dirty();
-    } else if state.has_models() {
+    } else if stack.root().map(|p| p.closable).unwrap_or(true) {
         // At the root: close the login flow and restore the previous
         // dialog from the back stack.
         state.login_flow = None;
@@ -315,10 +244,33 @@ fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
             state.mark_dirty();
         }
     } else {
-        // No model connected yet: keep the login panel open.
+        // The root panel is marked non-closable: keep it open.
         state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
         state.mark_dirty();
     }
+}
+
+/// Pop the top panel of the login stack without closing the dialog.
+/// Updates `LoginFlowState::step` to reflect the panel we returned to.
+fn pop_login_panel(state: &mut crate::model::AppState) {
+    if state.login_flow.is_none() {
+        return;
+    }
+    let mut stack = take_or_create_login_stack(state);
+    if stack.len() > 1 {
+        stack.pop();
+    }
+    if let Some(flow) = state.login_flow.as_mut() {
+        flow.step = match stack.current().map(|p| p.id.as_str()) {
+            Some("login-provider") => LoginStep::ProviderPicker,
+            Some("login-key") => LoginStep::KeyInput,
+            Some("login-validating") => LoginStep::Validating,
+            Some("login-models") => LoginStep::ModelSelect,
+            _ => flow.step.clone(),
+        };
+    }
+    state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
+    state.mark_dirty();
 }
 
 /// Push a panel onto the login stack (and set the step on the state).
@@ -335,27 +287,7 @@ fn push_login_panel(state: &mut crate::model::AppState, panel: Panel) {
     let mut stack = take_or_create_login_stack(state);
     stack.push(panel);
     state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
-}
-
-/// Replace the top panel of the login stack with a freshly built one
-/// from the current `LoginFlowState`. Used to update the model
-/// selector when models are fetched or a model is toggled.
-fn replace_top_login_panel(state: &mut crate::model::AppState) {
-    let flow = state.login_flow.as_ref().cloned();
-    let Some(flow) = flow else {
-        return;
-    };
-    let mut stack = take_or_create_login_stack(state);
-    if let Some(last) = stack.panels.last_mut() {
-        *last = match last.id.as_str() {
-            "login-models" => build_model_selector(&flow),
-            "login-key" => build_key_input(&flow),
-            "login-validating" => build_validating_panel(&flow.provider),
-            "login-provider" => build_provider_picker(),
-            _ => build_model_selector(&flow),
-        };
-    }
-    state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
+    state.mark_dirty();
 }
 
 /// Replace the top panel of the login stack with `new_top`, popping
@@ -368,16 +300,39 @@ fn replace_top_login_panel_with(state: &mut crate::model::AppState, new_top: Pan
     }
     stack.push(new_top);
     state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
+    state.mark_dirty();
 }
 
 /// Take the current login PanelStack out of `open_dialog`, or build a
 /// fresh root stack if there is no dialog.
+///
+/// When the dialog has been temporarily taken out of `open_dialog` (e.g.
+/// while a dialog event is being processed), this reconstructs the full
+/// stack from the current `LoginFlowState` so that nested updates such as
+/// toggling a model or pressing Cancel still operate on the correct panels.
 fn take_or_create_login_stack(state: &mut crate::model::AppState) -> PanelStack {
     if let Some(crate::commands::DialogState::PanelStack(stack)) = state.open_dialog.take() {
-        stack
-    } else {
-        build_login_root()
+        return stack;
     }
+    if let Some(flow) = state.login_flow.as_ref() {
+        return build_login_stack_for_flow(flow);
+    }
+    build_login_root()
+}
+
+/// Reconstruct the login panel stack that corresponds to the current flow step.
+fn build_login_stack_for_flow(flow: &LoginFlowState) -> PanelStack {
+    let mut stack = build_login_root();
+    if flow.step == LoginStep::ProviderPicker {
+        return stack;
+    }
+    stack.push(build_key_input(flow));
+    match flow.step {
+        LoginStep::Validating => stack.push(build_validating_panel(&flow.provider)),
+        LoginStep::ModelSelect => stack.push(build_model_selector(flow)),
+        _ => {}
+    }
+    stack
 }
 
 fn rebuild_login_dialog(state: &mut crate::model::AppState) {
@@ -387,7 +342,9 @@ fn rebuild_login_dialog(state: &mut crate::model::AppState) {
         if let Some(current) = state.open_dialog.take() {
             state.dialog_back_stack.push(current);
         }
-        let stack = build_login_root();
+        let mut root = build_provider_picker();
+        root.closable = state.has_models();
+        let stack = PanelStack::new(root);
         state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
         state.mark_dirty();
     }

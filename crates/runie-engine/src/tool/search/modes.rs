@@ -76,7 +76,14 @@ pub(crate) fn search_content(
         .iter()
         .map(|m| map_content_match(picker, &results, m))
         .collect();
-    build_search_output(query, None, results.files_with_matches, items, indexed, start)
+    build_search_output(
+        query,
+        None,
+        results.files_with_matches,
+        items,
+        indexed,
+        start,
+    )
 }
 
 pub(crate) fn search_glob(
@@ -109,14 +116,17 @@ pub(crate) fn search_glob(
             )
         })
         .collect();
-    build_search_output(pattern, Some("glob"), results.total_matched, items, indexed, start)
+    build_search_output(
+        pattern,
+        Some("glob"),
+        results.total_matched,
+        items,
+        indexed,
+        start,
+    )
 }
 
-fn map_content_match(
-    picker: &FilePicker,
-    results: &GrepResult<'_>,
-    m: &GrepMatch,
-) -> SearchItem {
+fn map_content_match(picker: &FilePicker, results: &GrepResult<'_>, m: &GrepMatch) -> SearchItem {
     let path = results
         .files
         .get(m.file_index)
@@ -148,7 +158,11 @@ fn build_search_output(
     indexed: bool,
     start: Instant,
 ) -> anyhow::Result<ToolOutput> {
-    let result = SearchResult { total, items, indexed };
+    let result = SearchResult {
+        total,
+        items,
+        indexed,
+    };
     let tool_args = if let Some(m) = mode {
         serde_json::json!({ "query": query, "mode": m })
     } else {

@@ -3,7 +3,6 @@
 use crate::commands::DialogState;
 use crate::dialog::builders::{command_palette, model_selector, scoped_models, session_tree};
 use crate::model::AppState;
-use crate::model_catalog::model_catalog;
 
 use super::build_file_picker_panel;
 use crate::update::settings_dialog;
@@ -39,12 +38,15 @@ pub fn open_command_palette(state: &mut AppState) {
 }
 
 pub fn open_model_selector(state: &mut AppState) {
-    let current = format!(
-        "{}/{}",
-        state.config.current_provider, state.config.current_model
-    );
+    let current = if state.has_models() {
+        format!("{}/{}", state.config.current_provider, state.config.current_model)
+    } else {
+        String::new()
+    };
+    let configured = crate::login_config::list_configured_providers();
+    let models = crate::model_catalog::configured_models_catalog(&configured);
     let items = crate::model_catalog::build_model_selector_items(
-        &model_catalog(),
+        &models,
         &state.config.recent_models,
         "",
         &state.config.current_provider,
@@ -81,6 +83,7 @@ pub fn open_settings_dialog(state: &mut AppState) {
 }
 
 pub fn open_scoped_models_dialog(state: &mut AppState) {
+    sync_scoped_models_with_config(state);
     let models: Vec<(String, String, bool)> = state
         .config
         .scoped_models
@@ -89,6 +92,31 @@ pub fn open_scoped_models_dialog(state: &mut AppState) {
         .collect();
     state.open_dialog = Some(DialogState::ScopedModels(scoped_models(models)));
     state.mark_dirty();
+}
+
+fn sync_scoped_models_with_config(state: &mut AppState) {
+    let configured = crate::login_config::list_configured_providers();
+    if configured.is_empty() {
+        return;
+    }
+    // Add any configured model that is missing, preserving the existing
+    // enabled state when it is already present.
+    for (provider, _, models) in configured {
+        for name in models {
+            let already_present = state
+                .config
+                .scoped_models
+                .iter()
+                .any(|m| m.provider == provider && m.name == name);
+            if !already_present {
+                state.config.scoped_models.push(crate::model::ScopedModel {
+                    provider: provider.clone(),
+                    name,
+                    enabled: true,
+                });
+            }
+        }
+    }
 }
 
 pub fn open_session_tree_dialog(state: &mut AppState) {

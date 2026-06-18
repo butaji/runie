@@ -80,3 +80,40 @@ fn spawn_event_round_trips_through_state() {
     // No crash; state is still consistent.
     assert!(state.open_dialog.is_none());
 }
+
+#[test]
+fn steer_command_is_registered() {
+    let state = AppState::default();
+    assert!(
+        state.registry.get("steer").is_some(),
+        "/steer must be registered in the command registry"
+    );
+}
+
+#[test]
+fn steer_emits_steer_agent_event() {
+    let mut state = AppState::default();
+    let cmd = state.registry.get("steer").expect("registered");
+    let cmd_name = cmd.name.clone();
+    let result = cmd
+        .flow
+        .clone()
+        .exec(&mut state, &cmd_name, "agent-123 fix the bug");
+    match result {
+        crate::commands::CommandResult::Event(ControlEvent::SteerAgent { agent_id, message }) => {
+            assert_eq!(agent_id, "agent-123");
+            assert_eq!(message, "fix the bug");
+        }
+        other => panic!("expected SteerAgent event, got: {:?}", other),
+    }
+}
+
+#[test]
+fn steer_event_round_trips_through_state() {
+    let mut state = AppState::default();
+    exec(&mut state, "/steer agent-123 fix the bug");
+    assert!(
+        state.open_dialog.is_none(),
+        "/steer with args should not open dialog"
+    );
+}

@@ -38,6 +38,13 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
         Element::ToolRunning { .. } => 1,
         Element::ToolDone { output, .. } => tool_done_line_count(output),
         Element::ToolSummary { .. } => 1,
+        Element::ContextGroup { tools, collapsed, .. } => {
+            if *collapsed {
+                1
+            } else {
+                tools.iter().map(|t| element_line_count(t, width)).sum()
+            }
+        }
         Element::TurnComplete { .. } => 1,
     }
 }
@@ -59,6 +66,13 @@ fn fallback_line_count(element: &Element) -> usize {
             }
         }
         Element::ToolSummary { .. } => 1,
+        Element::ContextGroup { tools, collapsed, .. } => {
+            if *collapsed {
+                1
+            } else {
+                tools.iter().map(|t| fallback_line_count(t)).sum()
+            }
+        }
         Element::TurnComplete { .. } => 1,
     }
 }

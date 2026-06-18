@@ -12,13 +12,18 @@
 //!   - SessionActor subscribes to bus, persists durable events to JSONL
 
 use futures::StreamExt;
-use runie_agent::{build_provider_with_warning, emit_approval_sink::EmitApprovalSink, run_agent_turn, AgentCommand, PermissionGate};
-use runie_core::permissions::{DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager};
+use runie_agent::{
+    build_provider_with_warning_with_config, emit_approval_sink::EmitApprovalSink, run_agent_turn,
+    AgentCommand, PermissionGate,
+};
 use runie_core::actor::{spawn_actor, Actor};
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::event::{AgentEvent, LoginFlowEvent};
 use runie_core::orchestrator_actor::{OrchestratorActor, OrchestratorEvent};
+use runie_core::permissions::{
+    DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
+};
 use runie_core::session_store::SessionStore;
 use runie_core::{config_reload, AppState, Snapshot};
 use runie_tui::{app_init, keymap, terminal, terminal_setup, theme, ui, ui_actor::UiActor};
@@ -102,6 +107,7 @@ fn init_terminal_state(state: &mut AppState) {
 
 fn run_init_hooks(state: &mut AppState) {
     app_init::apply_trust_on_startup(state);
+    app_init::init_provider_model(state);
     app_init::init_scoped_models(state);
     app_init::init_skills(state);
     app_init::init_prompts(state);
@@ -147,7 +153,8 @@ fn spawn_background_tasks(
         }
     });
 
-    // Spawn agents that publish to EventBus
+    // Spawn agents that publish to EventBus. The loop reloads the saved config
+    // before each turn so API keys from onboarding are visible immediately.
     tokio::spawn(agent_loop(cmd_rx, bus.clone()));
     tokio::spawn(input_reader(input_tx.clone(), kb_rx));
     tokio::spawn(render_task(terminal, render_rx));
@@ -221,38 +228,49 @@ async fn input_reader(
 /// Agent loop that publishes events to EventBus for SessionActor and UiActor.
 async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, bus: EventBus<Event>) {
     while let Some(cmd) = cmd_rx.recv().await {
-        let bus_clone = bus.clone();
-        let cmd_id = cmd.id.clone();
-
-        let provider = match build_provider_with_warning(&cmd.provider, &cmd.model) {
-            Ok(p) => p,
-            Err(e) => {
-                let evt = AgentEvent::Error {
-                    id: cmd_id,
-                    message: format!("Provider error: {}", e),
-                };
-                bus_clone.publish(evt);
-                continue;
-            }
-        };
-
-        let emit = Arc::new(Mutex::new(move |evt: Event| {
-            bus_clone.publish(evt);
-        }));
-        let permissions = PermissionManager::default().with_policies(vec![
-            Box::new(DefaultToolApprove::new()),
-            Box::new(GitTrackedWriteApprove::new()),
-            Box::new(FileAccessAsk::new()),
-        ]);
-        let gate = PermissionGate::new(permissions, Arc::new(EmitApprovalSink::new(emit.clone())));
-        let result = run_agent_turn(&provider, &cmd, emit, 5, gate).await;
-
-        if let Err(e) = result {
-            let evt = AgentEvent::Error {
-                id: cmd_id,
-                message: format!("Agent error: {}", e),
-            };
-            bus.publish(evt);
-        }
+        run_single_turn(&cmd, &bus).await;
     }
+}
+
+fn load_provider_config() -> runie_core::config::Config {
+    runie_core::config_reload::Config::load(Some(&runie_core::config_reload::config_path()))
+}
+
+async fn run_single_turn(cmd: &AgentCommand, bus: &EventBus<Event>) {
+    let bus_clone = bus.clone();
+    let cmd_id = cmd.id.clone();
+
+    // Reload the saved config for every turn so API keys added during this
+    // session (e.g. through the login flow) are visible immediately.
+    let config = load_provider_config();
+    let provider = match build_provider_with_warning_with_config(&cmd.provider, &cmd.model, &config)
+    {
+        Ok(p) => p,
+        Err(e) => {
+            emit_error_and_done(&bus_clone, &cmd_id, format!("Provider error: {}", e));
+            return;
+        }
+    };
+
+    let emit = Arc::new(Mutex::new(move |evt: Event| {
+        bus_clone.publish(evt);
+    }));
+    let permissions = PermissionManager::default().with_policies(vec![
+        Box::new(DefaultToolApprove::new()),
+        Box::new(GitTrackedWriteApprove::new()),
+        Box::new(FileAccessAsk::new()),
+    ]);
+    let gate = PermissionGate::new(permissions, Arc::new(EmitApprovalSink::new(emit.clone())));
+
+    if let Err(e) = run_agent_turn(&provider, cmd, emit, 5, gate).await {
+        emit_error_and_done(bus, &cmd_id, format!("Agent error: {}", e));
+    }
+}
+
+fn emit_error_and_done(bus: &EventBus<Event>, id: &str, message: String) {
+    bus.publish(AgentEvent::Error {
+        id: id.to_string(),
+        message,
+    });
+    bus.publish(AgentEvent::Done { id: id.to_string() });
 }

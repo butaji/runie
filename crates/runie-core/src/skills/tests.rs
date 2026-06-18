@@ -311,9 +311,7 @@ fn serde_yaml_frontmatter_empty_frontmatter_returns_empty() {
 
 #[test]
 fn serde_yaml_frontmatter_single_quoted_values() {
-    let fm =
-        extract_frontmatter("---\nname: 'single quoted'\ndescription: 'also single'\n---\n");
+    let fm = extract_frontmatter("---\nname: 'single quoted'\ndescription: 'also single'\n---\n");
     assert_eq!(fm.get("name"), Some(&"single quoted".to_string()));
     assert_eq!(fm.get("description"), Some(&"also single".to_string()));
 }
-

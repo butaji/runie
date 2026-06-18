@@ -90,11 +90,10 @@ fn handle_providers_dialog(state: &mut AppState) {
 }
 
 fn handle_providers_add(state: &mut AppState) {
-    if let Some(current) = state.open_dialog.take() {
-        state.push_dialog_to_back_stack(current);
-    }
-    state.login_flow = Some(crate::login_flow::LoginFlowState::new());
-    state.mark_dirty();
+    // Hand off to the login flow machinery, which pushes the current dialog to
+    // the back stack and opens the provider picker. The root panel is marked
+    // non-closable when no model is connected so the user cannot cancel out.
+    crate::update::login_flow::login_flow_start(state);
 }
 
 fn handle_providers_select_model(state: &mut AppState, event: &DialogEvent) {
@@ -103,10 +102,7 @@ fn handle_providers_select_model(state: &mut AppState, event: &DialogEvent) {
             flow.selected_models.insert(model.clone());
             state.login_flow = Some(flow);
         }
-        state.config.current_provider = provider.clone();
-        state.config.current_model = model.clone();
-        state.configure_token_tracker();
-        state.record_model_usage(provider, model);
+        state.switch_model(provider.clone(), model.clone());
         state.open_dialog = None;
         state.dialog_back_stack.clear();
         state.mark_dirty();

@@ -4,7 +4,6 @@
 
 use crate::actor::Actor;
 use crate::bus::EventBus;
-use std::future::Future;
 use crate::event::DurableCoreEvent;
 use crate::session_replay::durable_to_event;
 use crate::session_store::SessionStore;
@@ -49,8 +48,6 @@ impl SessionActor {
         }
     }
 
-
-
     /// Generate a simple summary from the first 500 characters of session
     /// message content (no LLM call needed).
     fn generate_summary(&self) -> String {
@@ -74,15 +71,9 @@ impl Actor for SessionActor {
     type Msg = ();
     type Event = Event;
 
-    fn run_body(
-        self,
-        _rx: mpsc::Receiver<Self::Msg>,
-        bus: EventBus<Self::Event>,
-    ) -> impl Future<Output = ()> + Send + 'static {
-        async move {
-            self.replay_existing_events(&bus).await;
-            self.run_loop(_rx, bus).await;
-        }
+    async fn run_body(self, _rx: mpsc::Receiver<Self::Msg>, bus: EventBus<Self::Event>) {
+        self.replay_existing_events(&bus).await;
+        self.run_loop(_rx, bus).await;
     }
 }
 

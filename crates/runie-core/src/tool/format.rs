@@ -87,6 +87,24 @@ pub fn format_tool_label(name: &str, args: &str) -> String {
     }
 }
 
+/// Extract a compact display argument from a tool-call JSON value.
+///
+/// Prefers the `path` or `command` field, then any string value, then falls
+/// back to an empty string so the rendered label stays short.
+pub fn compact_json_args(args: &serde_json::Value) -> String {
+    match args {
+        serde_json::Value::Object(map) => map
+            .get("path")
+            .or_else(|| map.get("command"))
+            .and_then(|v| v.as_str())
+            .map(String::from)
+            .or_else(|| map.values().find_map(|v| v.as_str().map(String::from)))
+            .unwrap_or_default(),
+        serde_json::Value::String(s) => s.clone(),
+        _ => String::new(),
+    }
+}
+
 /// Format bytes into human-readable form.
 ///
 /// Examples:
@@ -116,6 +134,40 @@ pub fn format_duration(secs: f64) -> String {
         let remaining = secs - (minutes as f64 * 60.0);
         format!("{}m{:.0}s", minutes, remaining)
     }
+}
+
+/// Truncate tool output to the configured byte and line limits.
+///
+/// Applies both limits and appends `"…"` when truncated. Multi-byte
+/// character boundaries are preserved.
+pub fn truncate_output(output: &str, max_bytes: usize, max_lines: usize) -> String {
+    if output.len() <= max_bytes && output.lines().count() <= max_lines {
+        return output.to_string();
+    }
+
+    let mut truncated = truncate_to_bytes(output, max_bytes);
+    truncated = truncate_to_lines(&truncated, max_lines);
+    truncated
+}
+
+fn truncate_to_bytes(s: &str, max_bytes: usize) -> String {
+    if s.len() <= max_bytes {
+        return s.to_string();
+    }
+    let mut end = max_bytes;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    format!("{}…", &s[..end])
+}
+
+fn truncate_to_lines(s: &str, max_lines: usize) -> String {
+    let count = s.lines().count();
+    if count <= max_lines {
+        return s.to_string();
+    }
+    let kept: Vec<&str> = s.lines().take(max_lines).collect();
+    format!("{}\n…", kept.join("\n"))
 }
 
 /// Build the inline status line for a tool block.

@@ -50,11 +50,7 @@ impl SearchMode {
 }
 
 /// Build a file search item with formatted git status.
-pub fn build_search_item(
-    path: String,
-    git_status: Option<GitStatus>,
-    score: f64,
-) -> SearchItem {
+pub fn build_search_item(path: String, git_status: Option<GitStatus>, score: f64) -> SearchItem {
     let git_status = git_status.map(format_git_status).filter(|s| !s.is_empty());
     SearchItem {
         path,

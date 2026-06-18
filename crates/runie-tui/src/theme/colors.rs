@@ -19,7 +19,9 @@ pub fn color_fg_mid() -> Color {
     Color::from(crate::theme::current_theme().color("text.secondary"))
 }
 pub fn color_fg_bright() -> Color {
-    let c = crate::theme::current_theme().color("text.primary").lighten(0.3);
+    let c = crate::theme::current_theme()
+        .color("text.primary")
+        .lighten(0.3);
     Color::Rgb(c.r, c.g, c.b)
 }
 pub fn color_accent() -> Color {
@@ -106,10 +108,10 @@ pub fn color_accent_bg() -> Color {
 /// Blend two RGB colors with the given opacity (0.0-1.0).
 /// Uses palette::Srgba for proper premultiplied-alpha blending.
 fn blend(bg: Color, fg: Color, opacity: f32) -> Color {
-    use palette::Srgba;
     use palette::blend::BlendWith;
     use palette::blend::PreAlpha;
-    
+    use palette::Srgba;
+
     let opacity = opacity.clamp(0.0, 1.0);
 
     let (br, bb, bblue) = match bg {

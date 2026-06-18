@@ -1,7 +1,7 @@
 use pulldown_cmark::{Event, Parser, Tag, TagEnd};
 
-use super::CodeBlock;
 use super::md_options;
+use super::CodeBlock;
 
 pub(crate) fn split_unclosed_fence(text: &str) -> (&str, Option<&str>) {
     let mut offset = 0;

@@ -5,6 +5,4 @@
 //! introducing a renderer trait, which is blocked by orphan rules and the
 //! current crate dependency graph.
 
-pub use runie_core::ui::{
-    Element, Feed, LazyCache, Post, PostKind, PostBuilder,
-};
+pub use runie_core::ui::{Element, Feed, LazyCache, Post, PostBuilder, PostKind};

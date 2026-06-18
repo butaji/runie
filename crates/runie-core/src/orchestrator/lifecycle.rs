@@ -94,25 +94,31 @@ mod tests {
     #[test]
     fn task_status_transitions_valid() {
         assert!(
-            crate::orchestrator::TaskStatus::Pending.can_transition_to(crate::orchestrator::TaskStatus::Running),
+            crate::orchestrator::TaskStatus::Pending
+                .can_transition_to(crate::orchestrator::TaskStatus::Running),
             "Pending → Running must be valid"
         );
         assert!(
-            crate::orchestrator::TaskStatus::Running.can_transition_to(crate::orchestrator::TaskStatus::Done { output: None }),
+            crate::orchestrator::TaskStatus::Running
+                .can_transition_to(crate::orchestrator::TaskStatus::Done { output: None }),
             "Running → Done must be valid"
         );
         assert!(
-            crate::orchestrator::TaskStatus::Running.can_transition_to(crate::orchestrator::TaskStatus::AwaitingUser),
+            crate::orchestrator::TaskStatus::Running
+                .can_transition_to(crate::orchestrator::TaskStatus::AwaitingUser),
             "Running → AwaitingUser must be valid"
         );
         assert!(
-            crate::orchestrator::TaskStatus::Running.can_transition_to(crate::orchestrator::TaskStatus::Failed {
-                error: "err".into()
-            }),
+            crate::orchestrator::TaskStatus::Running.can_transition_to(
+                crate::orchestrator::TaskStatus::Failed {
+                    error: "err".into()
+                }
+            ),
             "Running → Failed must be valid"
         );
         assert!(
-            crate::orchestrator::TaskStatus::AwaitingUser.can_transition_to(crate::orchestrator::TaskStatus::Running),
+            crate::orchestrator::TaskStatus::AwaitingUser
+                .can_transition_to(crate::orchestrator::TaskStatus::Running),
             "AwaitingUser → Running must be valid"
         );
     }
@@ -120,7 +126,8 @@ mod tests {
     #[test]
     fn task_status_transitions_invalid() {
         assert!(
-            !crate::orchestrator::TaskStatus::Done { output: None }.can_transition_to(crate::orchestrator::TaskStatus::Pending),
+            !crate::orchestrator::TaskStatus::Done { output: None }
+                .can_transition_to(crate::orchestrator::TaskStatus::Pending),
             "Done → Pending must be invalid"
         );
         assert!(
@@ -131,11 +138,13 @@ mod tests {
             "Failed → Running must be invalid"
         );
         assert!(
-            !crate::orchestrator::TaskStatus::Pending.can_transition_to(crate::orchestrator::TaskStatus::Done { output: None }),
+            !crate::orchestrator::TaskStatus::Pending
+                .can_transition_to(crate::orchestrator::TaskStatus::Done { output: None }),
             "Pending → Done must be invalid (must go through Running)"
         );
         assert!(
-            !crate::orchestrator::TaskStatus::Pending.can_transition_to(crate::orchestrator::TaskStatus::AwaitingUser),
+            !crate::orchestrator::TaskStatus::Pending
+                .can_transition_to(crate::orchestrator::TaskStatus::AwaitingUser),
             "Pending → AwaitingUser must be invalid (must go through Running)"
         );
     }

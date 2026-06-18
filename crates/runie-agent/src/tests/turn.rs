@@ -59,8 +59,14 @@ async fn test_agent_loop_simple_response() {
         .filter(|e| matches!(e, AgentEvent::Done { .. }))
         .count();
 
+    let responses = events
+        .iter()
+        .filter(|e| matches!(e, AgentEvent::Response { .. }))
+        .count();
+
     assert_eq!(thinking, 1);
     assert_eq!(deltas, 2); // streaming deltas
+    assert_eq!(responses, 0); // full-text Response is not emitted; deltas already streamed it
     assert_eq!(done, 1);
 }
 
@@ -110,6 +116,54 @@ async fn test_agent_loop_with_tool_call() {
     assert!(tool_starts >= 1);
     assert_eq!(tool_starts, tool_ends);
     assert_eq!(completes, 1);
+}
+
+#[tokio::test]
+async fn test_agent_loop_with_native_tool_call_events() {
+    ensure_mock_provider();
+    let provider = mock_provider();
+    let cmd = AgentCommand {
+        content: "run native tool".to_string(),
+        id: "req.0".to_string(),
+        provider: "mock".to_string(),
+        model: "echo".to_string(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: false,
+        skills_context: String::new(),
+        system_prompt: String::new(),
+        truncation: crate::truncate::TruncationPolicy::default(),
+    };
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let events_clone = events.clone();
+    run_agent_turn(
+        &provider,
+        &cmd,
+        Arc::new(Mutex::new(move |evt| {
+            events_clone.lock().unwrap().push(evt)
+        })),
+        1,
+        allow_all_gate(),
+    )
+    .await
+    .unwrap();
+
+    let events = events.lock().unwrap();
+    let tool_starts = events
+        .iter()
+        .filter(|e| matches!(e, AgentEvent::ToolStart { .. }))
+        .count();
+    let tool_ends = events
+        .iter()
+        .filter(|e| matches!(e, AgentEvent::ToolEnd { .. }))
+        .count();
+    let bash_calls = events
+        .iter()
+        .filter(|e| matches!(e, AgentEvent::ToolStart { name, .. } if name == "bash"))
+        .count();
+
+    assert_eq!(tool_starts, 1, "expected one tool start");
+    assert_eq!(tool_starts, tool_ends);
+    assert_eq!(bash_calls, 1, "expected bash tool from native events");
 }
 
 #[tokio::test]

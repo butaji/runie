@@ -1,8 +1,8 @@
-use crate::labels::{thought_with_time, tool_done, tool_running};
+use crate::labels::{tool_done, tool_running};
 use crate::message::now;
 use crate::model::{AppState, ChatMessage, Role};
-
-use crate::update::{content_has_tool_markers, strip_tool_markers};
+use crate::update::agent::thought::{plan_thought, ThoughtPlan};
+use crate::update::strip_tool_markers;
 
 impl AppState {
     pub(crate) fn set_thinking(&mut self, id: String) {
@@ -30,37 +30,37 @@ impl AppState {
         let duration = self.thinking_elapsed_secs().unwrap_or(0.0);
         self.agent.current_action = None;
         self.agent.thinking_started_at = None;
-        let mut insert_idx = self.session.messages.len();
-        let thought_content = if let Some(idx) = self
-            .session
-            .messages
-            .iter()
-            .position(|m| m.role == Role::Assistant && m.id == id)
-        {
-            let assistant = &self.session.messages[idx];
-            let has_tools = content_has_tool_markers(&assistant.content);
-            let stripped = strip_tool_markers(&assistant.content);
-            if has_tools && !stripped.trim().is_empty() {
+        self.flush_buffered_response(&id);
+
+        let (insert_idx, plan) = if let Some(idx) = self.find_assistant_by_id(&id) {
+            let plan = plan_thought(&self.session.messages[idx].content, duration);
+            if plan.remove_assistant {
                 self.session.messages.remove(idx);
-                insert_idx = idx;
-                format!("{}\n{}", thought_with_time(duration), stripped)
-            } else {
-                insert_idx = idx;
-                thought_with_time(duration)
+                self.agent.last_assistant_index = None;
+            } else if let Some(visible) = &plan.visible_content {
+                self.session.messages[idx].content = visible.clone();
             }
+            (idx, plan)
         } else {
-            thought_with_time(duration)
+            (self.session.messages.len(), ThoughtPlan::plain(duration))
         };
+
         let thought_id = format!("{}#thought.{}", id, self.agent.thought_seq);
         self.agent.thought_seq += 1;
-        let thought = ChatMessage {
-            role: Role::Thought,
-            content: thought_content,
-            timestamp: now(),
-            id: thought_id,
-            ..Default::default()
-        };
-        self.session.messages.insert(insert_idx, thought);
+        self.session.messages.insert(
+            insert_idx,
+            ChatMessage {
+                role: Role::Thought,
+                content: plan.thought_content,
+                timestamp: now(),
+                id: thought_id,
+                ..Default::default()
+            },
+        );
+
+        if !plan.remove_assistant && self.agent.last_assistant_index == Some(insert_idx) {
+            self.agent.last_assistant_index = Some(insert_idx + 1);
+        }
         self.messages_changed();
     }
 
@@ -98,6 +98,11 @@ impl AppState {
                 .rposition(|m| m.role == Role::Tool && m.content.contains("⠋ Running "))
             {
                 if let Some(last) = self.session.messages.get_mut(idx) {
+                    let output = crate::tool::truncate_output(
+                        &output,
+                        self.config.truncation.max_bytes,
+                        self.config.truncation.max_lines,
+                    );
                     last.content = if output.trim().is_empty() {
                         tool_done(&name, duration_secs)
                     } else {
@@ -166,6 +171,19 @@ impl AppState {
             .messages
             .iter()
             .position(|m| m.role == Role::Assistant && m.id == id)
+    }
+
+    fn flush_buffered_response(&mut self, id: &str) {
+        let buffered = self.agent.streaming_buffer.force_flush().join("");
+        if buffered.is_empty() {
+            return;
+        }
+        if let Some(idx) = self.find_cached_assistant_index(id) {
+            self.append_to_message(idx, &buffered);
+        } else if let Some(idx) = self.find_assistant_by_id(id) {
+            self.agent.last_assistant_index = Some(idx);
+            self.append_to_message(idx, &buffered);
+        }
     }
 
     fn append_to_message(&mut self, idx: usize, content: &str) {
@@ -325,6 +343,21 @@ impl AppState {
 
     pub(crate) fn add_error(&mut self, id: String, message: String) {
         self.agent.streaming = false;
+        self.agent.turn_active = false;
+        self.agent.current_request_id = None;
+        self.agent.inflight = 0;
+        self.agent.turn_started_at = None;
+        self.agent.thinking_started_at = None;
+        self.agent.tool_started_at = None;
+        self.agent.current_tool_name = None;
+        self.agent.current_action = None;
+        self.agent.turn_tokens_out = 0;
+        self.agent.intermediate_step_count = 0;
+        self.agent.thought_seq = 0;
+        self.agent.last_assistant_index = None;
+        self.agent.streaming_buffer.reset();
+        self.view.vim_nav_pending = false;
+
         let mut error = ChatMessage {
             role: Role::Assistant,
             content: format!("Error: {}", message),
@@ -347,3 +380,4 @@ impl AppState {
         self.messages_changed();
     }
 }
+

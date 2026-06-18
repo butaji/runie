@@ -33,16 +33,7 @@ impl Default for ToolContext {
 /// are included. Secrets such as API keys, tokens, and passwords are excluded.
 fn minimal_tool_env() -> HashMap<String, String> {
     let allowed = [
-        "PATH",
-        "HOME",
-        "USER",
-        "SHELL",
-        "TMPDIR",
-        "TMP",
-        "TEMP",
-        "LANG",
-        "LC_ALL",
-        "LC_CTYPE",
+        "PATH", "HOME", "USER", "SHELL", "TMPDIR", "TMP", "TEMP", "LANG", "LC_ALL", "LC_CTYPE",
         "PWD",
     ];
     let mut env = HashMap::new();

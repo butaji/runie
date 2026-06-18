@@ -2,6 +2,8 @@ use runie_core::commands::DialogState;
 use runie_core::event::{ControlEvent, DialogEvent, Event, InputEvent};
 use runie_core::model::AppState;
 
+use crate::tests::view;
+
 fn palette_state(state: &AppState) -> Option<(String, usize)> {
     match &state.open_dialog {
         Some(DialogState::CommandPalette(stack)) => {
@@ -188,6 +190,7 @@ fn filter_reduces_selection() {
 fn typing_in_model_selector_filters_models() {
     // Regression: typing a character in the model selector must update
     // the model selector's filter, not pop back to the command palette.
+    super::super::configure_test_providers(&[("openai".into(), vec!["gpt-4o".into()])]);
     let mut state = AppState::default();
     state.update(Event::toggle_command_palette());
     // Filter to and open the model selector.
@@ -242,5 +245,59 @@ fn esc_restores_palette_in_same_state() {
     assert_eq!(
         selected_after, selected_before,
         "Esc must preserve palette selection"
+    );
+}
+
+#[test]
+fn palette_model_with_zero_providers_shows_message() {
+    // Ensure no providers are configured.
+    super::super::configure_test_providers(&[]);
+    let mut state = AppState::default();
+    state.update(Event::toggle_command_palette());
+    for c in "model".chars() {
+        state.update(Event::palette_filter(c));
+    }
+    state.update(Event::palette_select());
+
+    assert!(
+        state.open_dialog.is_none(),
+        "model command with no providers should close palette, got {:?}",
+        state.open_dialog
+    );
+    let msgs: Vec<&str> = state
+        .session
+        .messages
+        .iter()
+        .map(|m| m.content.as_str())
+        .collect();
+    assert!(
+        msgs.iter().any(|m| m.contains("No connected providers")),
+        "expected message about no connected providers, got messages: {:?}",
+        msgs
+    );
+}
+
+#[test]
+fn palette_model_with_zero_providers_renders_message() {
+    use ratatui::{backend::TestBackend, Terminal};
+
+    super::super::configure_test_providers(&[]);
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+
+    state.update(Event::toggle_command_palette());
+    for c in "model".chars() {
+        state.update(Event::palette_filter(c));
+    }
+    state.update(Event::palette_select());
+
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(
+        content.contains("No connected providers"),
+        "render should show no-providers message: {}",
+        content
     );
 }

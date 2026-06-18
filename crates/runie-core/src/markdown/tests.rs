@@ -80,4 +80,3 @@ fn text_block_content_helper() {
     let blocks = parse_markdown("hello **bold**");
     assert_eq!(text_block_content(&blocks[0]), Some("hello **bold**"));
 }
-

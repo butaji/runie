@@ -151,6 +151,16 @@ mod tests {
     }
 
     #[test]
+    fn key_input_panel_is_not_filterable() {
+        let state = LoginFlowState::new().with_provider("minimax".into());
+        let panel = build_key_input(&state);
+        assert!(
+            !panel.filterable,
+            "login key form must not be filterable so keystrokes edit the field"
+        );
+    }
+
+    #[test]
     fn model_selector_is_form_with_toggle_checkboxes_and_action_buttons() {
         let state = model_flow();
         let panel = build_model_selector(&state);

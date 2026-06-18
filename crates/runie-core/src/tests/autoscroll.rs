@@ -1,6 +1,9 @@
-use crate::model::{AppState, ChatMessage, Role};
-use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 use crate::event::Event;
+use crate::event::{
+    AgentEvent, CommandEvent, ControlEvent, DialogEvent, DurableCoreEvent, EditEvent, InputEvent,
+    ModelConfigEvent, ScrollEvent, SessionEvent, SystemEvent,
+};
+use crate::model::{AppState, ChatMessage, Role};
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -48,7 +51,10 @@ fn submit_when_turn_active_resets_scroll() {
     state.update(InputEvent::Input('r'));
     state.update(Event::submit());
 
-    assert_eq!(state.view.scroll, 0, "Steering submit must reset scroll to bottom");
+    assert_eq!(
+        state.view.scroll, 0,
+        "Steering submit must reset scroll to bottom"
+    );
 }
 
 // ── FollowUp resets scroll ────────────────────────────────────────────
@@ -78,7 +84,10 @@ fn steering_delivery_resets_scroll() {
 
     state.deliver_queued();
 
-    assert_eq!(state.view.scroll, 0, "Steering delivery must reset scroll to bottom");
+    assert_eq!(
+        state.view.scroll, 0,
+        "Steering delivery must reset scroll to bottom"
+    );
 }
 
 #[test]
@@ -92,7 +101,10 @@ fn follow_up_delivery_resets_scroll() {
 
     state.deliver_queued();
 
-    assert_eq!(state.view.scroll, 0, "Follow-up delivery must reset scroll to bottom");
+    assert_eq!(
+        state.view.scroll, 0,
+        "Follow-up delivery must reset scroll to bottom"
+    );
 }
 
 // ── Agent content visible when at bottom ──────────────────────────────
@@ -103,14 +115,20 @@ fn at_bottom_shows_new_agent_response() {
     add_messages(&mut state, 20);
     state.view.scroll = 0;
 
-    state.update(AgentEvent::Response { id: "req.0".to_string(), content: "hi".to_string() });
+    state.update(AgentEvent::Response {
+        id: "req.0".to_string(),
+        content: "hi".to_string(),
+    });
     state.ensure_fresh();
 
     let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
     let last = visible.elements.last().unwrap();
     match last {
         crate::ui::elements::Element::AgentMessage { content, .. } => {
-            assert_eq!(content, "hi", "New agent response should be visible at bottom");
+            assert_eq!(
+                content, "hi",
+                "New agent response should be visible at bottom"
+            );
         }
         _ => panic!("Expected AgentMessage at bottom, got: {:?}", last),
     }
@@ -122,16 +140,24 @@ fn at_bottom_shows_new_thought() {
     add_messages(&mut state, 20);
     state.view.scroll = 0;
 
-    state.update(AgentEvent::Thinking { id: "req.0".to_string() });
-    state.update(AgentEvent::Response { id: "req.0".to_string(), content: "Thinking...".to_string() });
-    state.update(AgentEvent::ThoughtDone { id: "req.0".to_string() });
+    state.update(AgentEvent::Thinking {
+        id: "req.0".to_string(),
+    });
+    state.update(AgentEvent::Response {
+        id: "req.0".to_string(),
+        content: "Thinking...".to_string(),
+    });
+    state.update(AgentEvent::ThoughtDone {
+        id: "req.0".to_string(),
+    });
     state.ensure_fresh();
 
     let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
     let last = visible.elements.last().unwrap();
     assert!(
         matches!(last, crate::ui::elements::Element::ThoughtMarker { .. }),
-        "New thought should be visible at bottom: {:?}", last
+        "New thought should be visible at bottom: {:?}",
+        last
     );
 }
 
@@ -141,15 +167,24 @@ fn at_bottom_shows_new_tool() {
     add_messages(&mut state, 20);
     state.view.scroll = 0;
 
-    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string() , input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".to_string()  });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".to_string(),
+        name: "ls".to_string(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "file1".to_string(),
+    });
     state.ensure_fresh();
 
     let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
     let last = visible.elements.last().unwrap();
     assert!(
         matches!(last, crate::ui::elements::Element::ToolDone { .. }),
-        "New tool should be visible at bottom: {:?}", last
+        "New tool should be visible at bottom: {:?}",
+        last
     );
 }
 
@@ -161,10 +196,16 @@ fn scrolled_up_stays_scrolled_up_on_agent_response() {
     add_messages(&mut state, 20);
     state.view.scroll = 10;
 
-    state.update(AgentEvent::Response { id: "req.0".to_string(), content: "new".to_string() });
+    state.update(AgentEvent::Response {
+        id: "req.0".to_string(),
+        content: "new".to_string(),
+    });
     state.ensure_fresh();
 
-    assert_eq!(state.view.scroll, 10, "Manual scroll should be preserved when agent responds");
+    assert_eq!(
+        state.view.scroll, 10,
+        "Manual scroll should be preserved when agent responds"
+    );
 }
 
 #[test]
@@ -190,7 +231,10 @@ fn scroll_down_cannot_go_below_zero() {
     state.view.scroll = 0;
     state.update(ScrollEvent::Down);
     state.update(ScrollEvent::Down);
-    assert_eq!(state.view.scroll, 0, "ScrollDown at bottom should stay at 0");
+    assert_eq!(
+        state.view.scroll, 0,
+        "ScrollDown at bottom should stay at 0"
+    );
 }
 
 // ── Edge cases ────────────────────────────────────────────────────────
@@ -200,7 +244,10 @@ fn empty_chat_scroll_is_zero() {
     let state = fresh_state();
     assert_eq!(state.view.scroll, 0, "Empty chat should have scroll=0");
     let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
-    assert!(visible.elements.is_empty(), "Empty chat should return empty visible");
+    assert!(
+        visible.elements.is_empty(),
+        "Empty chat should return empty visible"
+    );
 }
 
 #[test]
@@ -217,7 +264,11 @@ fn single_message_visible() {
     state.ensure_fresh();
 
     let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
-    assert_eq!(visible.elements.len(), 1, "Single message should be visible");
+    assert_eq!(
+        visible.elements.len(),
+        1,
+        "Single message should be visible"
+    );
 }
 
 #[test]
@@ -230,7 +281,10 @@ fn slash_command_shows_at_bottom() {
     state.update(Event::submit());
     state.ensure_fresh();
 
-    assert_eq!(state.view.scroll, 0, "Slash command output should be visible at bottom");
+    assert_eq!(
+        state.view.scroll, 0,
+        "Slash command output should be visible at bottom"
+    );
 }
 
 #[test]
@@ -239,10 +293,15 @@ fn agent_done_keeps_bottom_when_already_there() {
     add_messages(&mut state, 10);
     state.view.scroll = 0;
 
-    state.update(AgentEvent::Done { id: "req.0".to_string() });
+    state.update(AgentEvent::Done {
+        id: "req.0".to_string(),
+    });
     state.ensure_fresh();
 
-    assert_eq!(state.view.scroll, 0, "AgentDone should keep user at bottom when already there");
+    assert_eq!(
+        state.view.scroll, 0,
+        "AgentDone should keep user at bottom when already there"
+    );
 }
 
 #[test]
@@ -251,8 +310,13 @@ fn agent_done_preserves_scroll_when_not_at_bottom() {
     add_messages(&mut state, 10);
     state.view.scroll = 5;
 
-    state.update(AgentEvent::Done { id: "req.0".to_string() });
+    state.update(AgentEvent::Done {
+        id: "req.0".to_string(),
+    });
     state.ensure_fresh();
 
-    assert_eq!(state.view.scroll, 5, "AgentDone should not change scroll when user is not at bottom");
+    assert_eq!(
+        state.view.scroll, 5,
+        "AgentDone should not change scroll when user is not at bottom"
+    );
 }

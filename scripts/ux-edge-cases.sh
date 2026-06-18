@@ -2,15 +2,24 @@
 # Edge case UX testing — finding real bugs
 set -e
 
-BINARY="/Users/admin/.herdr/worktrees/runie/agent-impl/target/release/runie"
+BINARY="${1:-./target/release/runie}"
 SESSION="runie_edge_$$"
 LOG="/tmp/runie_edge_$$.log"
+HOME_DIR="/tmp/runie_edge_home_$$"
 
 cleanup() {
     tmux kill-session -t "$SESSION" 2>/dev/null || true
-    rm -f "$LOG"
+    rm -rf "$LOG" "$HOME_DIR"
 }
 trap cleanup EXIT
+
+mkdir -p "$HOME_DIR/.runie"
+cat > "$HOME_DIR/.runie/config.toml" <<'TOML'
+[model_providers.mock]
+base_url = "http://test"
+api_key = "testkey"
+models = ["echo"]
+TOML
 
 pass() { echo "  ✓ $1"; }
 fail() { echo "  ✗ FAIL: $1"; exit 1; }
@@ -25,7 +34,7 @@ echo "========================================"
 # ============================================================================
 echo ""
 echo "--- Edge 1: Empty input submit ---"
-tmux new-session -d -s "$SESSION" -x 80 -y 24 "$BINARY"
+tmux new-session -d -s "$SESSION" -x 80 -y 24 "HOME=$HOME_DIR RUNIE_MOCK=1 $BINARY"
 sleep 0.5
 tmux send-keys -t "$SESSION" Enter
 sleep 1.0
@@ -46,7 +55,7 @@ pass "Empty submit does not trigger agent"
 echo ""
 echo "--- Edge 2: Abort during tool running ---"
 tmux kill-session -t "$SESSION" 2>/dev/null || true; sleep 0.3
-tmux new-session -d -s "$SESSION" -x 80 -y 24 "$BINARY"
+tmux new-session -d -s "$SESSION" -x 80 -y 24 "HOME=$HOME_DIR RUNIE_MOCK=1 $BINARY"
 sleep 0.5
 tmux send-keys -t "$SESSION" "list files"
 tmux send-keys -t "$SESSION" Enter
@@ -75,7 +84,7 @@ fi
 echo ""
 echo "--- Edge 3: Rapid submit 10x ---"
 tmux kill-session -t "$SESSION" 2>/dev/null || true; sleep 0.3
-tmux new-session -d -s "$SESSION" -x 80 -y 24 "$BINARY"
+tmux new-session -d -s "$SESSION" -x 80 -y 24 "HOME=$HOME_DIR RUNIE_MOCK=1 $BINARY"
 sleep 0.5
 tmux send-keys -t "$SESSION" "count to 100"
 tmux send-keys -t "$SESSION" Enter
@@ -104,7 +113,7 @@ pass "Rapid 10x submit handled"
 echo ""
 echo "--- Edge 4: History with multiline ---"
 tmux kill-session -t "$SESSION" 2>/dev/null || true; sleep 0.3
-tmux new-session -d -s "$SESSION" -x 80 -y 24 "$BINARY"
+tmux new-session -d -s "$SESSION" -x 80 -y 24 "HOME=$HOME_DIR RUNIE_MOCK=1 $BINARY"
 sleep 0.5
 tmux send-keys -t "$SESSION" "line1"
 tmux send-keys -t "$SESSION" S-Enter
@@ -130,7 +139,7 @@ pass "History navigation with multiline handled"
 echo ""
 echo "--- Edge 5: Delete word at start of input ---"
 tmux kill-session -t "$SESSION" 2>/dev/null || true; sleep 0.3
-tmux new-session -d -s "$SESSION" -x 80 -y 24 "$BINARY"
+tmux new-session -d -s "$SESSION" -x 80 -y 24 "HOME=$HOME_DIR RUNIE_MOCK=1 $BINARY"
 sleep 0.5
 tmux send-keys -t "$SESSION" C-w
 sleep 0.3
@@ -160,7 +169,7 @@ pass "Ctrl+K at end handled"
 echo ""
 echo "--- Edge 7: Scroll up then submit ---"
 tmux kill-session -t "$SESSION" 2>/dev/null || true; sleep 0.3
-tmux new-session -d -s "$SESSION" -x 80 -y 24 "$BINARY"
+tmux new-session -d -s "$SESSION" -x 80 -y 24 "HOME=$HOME_DIR RUNIE_MOCK=1 $BINARY"
 sleep 0.5
 tmux send-keys -t "$SESSION" "say hello world this is a test"
 tmux send-keys -t "$SESSION" Enter
@@ -182,7 +191,7 @@ pass "Scroll up then submit handled"
 echo ""
 echo "--- Edge 8: Toggle collapse during streaming ---"
 tmux kill-session -t "$SESSION" 2>/dev/null || true; sleep 0.3
-tmux new-session -d -s "$SESSION" -x 80 -y 24 "$BINARY"
+tmux new-session -d -s "$SESSION" -x 80 -y 24 "HOME=$HOME_DIR RUNIE_MOCK=1 $BINARY"
 sleep 0.5
 tmux send-keys -t "$SESSION" "count to 100"
 tmux send-keys -t "$SESSION" Enter
@@ -203,7 +212,7 @@ pass "Toggle collapse during streaming handled"
 echo ""
 echo "--- Edge 9: Open palette during streaming ---"
 tmux kill-session -t "$SESSION" 2>/dev/null || true; sleep 0.3
-tmux new-session -d -s "$SESSION" -x 80 -y 24 "$BINARY"
+tmux new-session -d -s "$SESSION" -x 80 -y 24 "HOME=$HOME_DIR RUNIE_MOCK=1 $BINARY"
 sleep 0.5
 tmux send-keys -t "$SESSION" "count to 100"
 tmux send-keys -t "$SESSION" Enter
@@ -224,7 +233,7 @@ pass "Palette during streaming handled"
 echo ""
 echo "--- Edge 10: Trust toggle while thinking ---"
 tmux kill-session -t "$SESSION" 2>/dev/null || true; sleep 0.3
-tmux new-session -d -s "$SESSION" -x 80 -y 24 "$BINARY"
+tmux new-session -d -s "$SESSION" -x 80 -y 24 "HOME=$HOME_DIR RUNIE_MOCK=1 $BINARY"
 sleep 0.5
 tmux send-keys -t "$SESSION" "count to 100"
 tmux send-keys -t "$SESSION" Enter
@@ -244,7 +253,7 @@ pass "Trust toggle while thinking handled"
 echo ""
 echo "--- Edge 11: Footer shows correct status ---"
 tmux kill-session -t "$SESSION" 2>/dev/null || true; sleep 0.3
-tmux new-session -d -s "$SESSION" -x 80 -y 24 "$BINARY"
+tmux new-session -d -s "$SESSION" -x 80 -y 24 "HOME=$HOME_DIR RUNIE_MOCK=1 $BINARY"
 sleep 0.5
 tmux send-keys -t "$SESSION" "list files"
 tmux send-keys -t "$SESSION" Enter
@@ -273,7 +282,7 @@ pass "Footer shows idle after turn complete"
 echo ""
 echo "--- Edge 12: Input placeholder when scrolled ---"
 tmux kill-session -t "$SESSION" 2>/dev/null || true; sleep 0.3
-tmux new-session -d -s "$SESSION" -x 80 -y 24 "$BINARY"
+tmux new-session -d -s "$SESSION" -x 80 -y 24 "HOME=$HOME_DIR RUNIE_MOCK=1 $BINARY"
 sleep 0.5
 tmux send-keys -t "$SESSION" "say hello"
 tmux send-keys -t "$SESSION" Enter
@@ -287,6 +296,78 @@ if grep -q "↑\|Scroll\|more" "$LOG"; then
     pass "Input shows scroll indicator when scrolled up"
 else
     info "Scroll indicator not visible (may be at bottom)"
+fi
+
+# ============================================================================
+# EDGE CASE 13: Alt+Enter queues follow-up while agent is thinking
+# ============================================================================
+echo ""
+echo "--- Edge 13: Alt+Enter follow-up queue ---"
+tmux kill-session -t "$SESSION" 2>/dev/null || true; sleep 0.3
+tmux new-session -d -s "$SESSION" -x 80 -y 24 "HOME=$HOME_DIR RUNIE_MOCK=1 $BINARY"
+sleep 0.5
+tmux send-keys -t "$SESSION" "count to 100"
+tmux send-keys -t "$SESSION" Enter
+sleep 1.0
+tmux send-keys -t "$SESSION" "follow up"
+tmux send-keys -t "$SESSION" M-Enter
+sleep 0.5
+tmux capture-pane -t "$SESSION" -p > "$LOG"
+if grep -qi "panic" "$LOG"; then
+    fail "Panic after Alt+Enter follow-up"
+fi
+pass "Alt+Enter follow-up handled"
+
+# ============================================================================
+# EDGE CASE 14: Alt+Up restores queued message to input
+# ============================================================================
+echo ""
+echo "--- Edge 14: Alt+Up dequeue ---"
+tmux kill-session -t "$SESSION" 2>/dev/null || true; sleep 0.3
+tmux new-session -d -s "$SESSION" -x 80 -y 24 "HOME=$HOME_DIR RUNIE_MOCK=1 $BINARY"
+sleep 0.5
+tmux send-keys -t "$SESSION" "count to 100"
+tmux send-keys -t "$SESSION" Enter
+sleep 1.0
+tmux send-keys -t "$SESSION" "restore me"
+tmux send-keys -t "$SESSION" Enter
+sleep 0.5
+tmux send-keys -t "$SESSION" M-Up
+sleep 0.5
+tmux capture-pane -t "$SESSION" -p > "$LOG"
+if grep -qi "panic" "$LOG"; then
+    fail "Panic after Alt+Up dequeue"
+fi
+pass "Alt+Up dequeue handled"
+
+# ============================================================================
+# EDGE CASE 15: Abort during streaming then submit new message
+# ============================================================================
+echo ""
+echo "--- Edge 15: Abort during streaming + new submit ---"
+tmux kill-session -t "$SESSION" 2>/dev/null || true; sleep 0.3
+tmux new-session -d -s "$SESSION" -x 80 -y 24 "HOME=$HOME_DIR RUNIE_MOCK=1 $BINARY"
+sleep 0.5
+tmux send-keys -t "$SESSION" "count to 100"
+tmux send-keys -t "$SESSION" Enter
+sleep 1.0
+# Ctrl+\ is bound to Abort and stops the current turn.
+tmux send-keys -t "$SESSION" C-'\'
+sleep 0.5
+tmux send-keys -t "$SESSION" "hello after abort"
+tmux send-keys -t "$SESSION" Enter
+sleep 4.0
+tmux capture-pane -t "$SESSION" -p > "$LOG"
+if grep -qi "panic" "$LOG"; then
+    fail "Panic after abort + new submit"
+fi
+if grep -E "[0-9]{4}\.[0-9]s" "$LOG"; then
+    fail "Stuck timer after abort + new submit"
+fi
+if grep -q "hello after abort" "$LOG"; then
+    pass "New submit works after abort"
+else
+    fail "New submit did not work after abort"
 fi
 
 echo ""

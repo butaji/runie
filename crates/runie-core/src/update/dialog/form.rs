@@ -5,6 +5,8 @@ use crate::event::{DialogEvent, InputEvent, ModelConfigEvent, TransientLevel};
 use crate::model::AppState;
 use crate::Event;
 
+use super::panel::toggle_selected_checkbox;
+
 /// What a form panel should do in response to an event.
 #[derive(Debug, Clone)]
 pub enum FormAction {
@@ -45,7 +47,9 @@ pub fn form_panel_action(state: &mut AppState, panel: &mut Panel, event: Event) 
             A::KeepOpen
         }
         DialogEvent::CommandFormInput(c) => handle_form_input(state, panel, *c),
+        InputEvent::Input(' ') => handle_form_space(state, panel),
         InputEvent::Input(c) => handle_form_input(state, panel, *c),
+        InputEvent::Paste(text) => handle_form_paste(panel, text),
         DialogEvent::CommandFormBackspace | InputEvent::Backspace => {
             form_panel_edit_char(panel, ' ', false);
             A::KeepOpen
@@ -66,15 +70,39 @@ fn handle_form_input(state: &mut AppState, panel: &mut Panel, c: char) -> FormAc
     }
     if let Some(ItemAction::Emit(evt)) = panel.find_button_by_accel(c) {
         if panel.id == "login-key" && is_empty_submit_key(evt, panel) {
-            state.set_transient(
-                "API key is required.".into(),
-                TransientLevel::Warning,
-            );
+            state.set_transient("API key is required.".into(), TransientLevel::Warning);
             return A::KeepOpen;
         }
         return A::Submit(Some(evt.clone()));
     }
     A::KeepOpen
+}
+
+fn handle_form_space(state: &mut AppState, panel: &mut Panel) -> FormAction {
+    use FormAction as A;
+    if toggle_selected_checkbox(state, panel) {
+        return A::KeepOpen;
+    }
+    handle_form_input(state, panel, ' ')
+}
+
+fn handle_form_paste(panel: &mut Panel, text: &str) -> FormAction {
+    use FormAction as A;
+    if panel.selected_form_field().is_some() {
+        form_panel_paste(panel, text);
+    }
+    A::KeepOpen
+}
+
+fn form_panel_paste(panel: &mut Panel, text: &str) {
+    let Some(idx) = panel.selected_form_field() else {
+        return;
+    };
+    let PanelItem::FormField { value, key, .. } = &mut panel.items[idx] else {
+        return;
+    };
+    value.push_str(text);
+    panel.form_values.insert(key.clone(), value.clone());
 }
 
 fn is_empty_submit_key(evt: &crate::Event, panel: &Panel) -> bool {
@@ -87,25 +115,35 @@ fn is_empty_submit_key(evt: &crate::Event, panel: &Panel) -> bool {
 fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
     use FormAction as A;
     if panel.id == "login-key" && key_field_empty(panel) {
-        state.set_transient(
-            "API key is required.".into(),
-            TransientLevel::Warning,
-        );
+        state.set_transient("API key is required.".into(), TransientLevel::Warning);
         return A::KeepOpen;
     }
-    if let Some(item) = panel.selected_item() {
-        match item {
-            PanelItem::Action {
-                action: ItemAction::Emit(evt),
-                ..
-            } => {
-                return A::Submit(Some(evt.clone()));
-            }
-            PanelItem::Action { .. } | PanelItem::FormSubmit => {
-                return A::Submit(None);
-            }
-            _ => {}
+    match panel.selected_item().cloned() {
+        Some(PanelItem::Action {
+            action: ItemAction::Emit(evt),
+            ..
+        }) => {
+            return A::Submit(Some(evt));
         }
+        Some(PanelItem::Action { .. }) => {
+            return A::Submit(None);
+        }
+        Some(PanelItem::Toggle {
+            action: ItemAction::Emit(crate::Event::ToggleModel { model }),
+            ..
+        }) if panel.id == "login-models" => {
+            // In the login model selector, Enter confirms the selection and
+            // saves. Make sure the focused model is selected before saving.
+            if let Some(flow) = state.login_flow.as_mut() {
+                flow.selected_models.insert(model.clone());
+            }
+            return A::Submit(Some(crate::Event::Save));
+        }
+        Some(PanelItem::Toggle { .. }) => {
+            toggle_selected_checkbox(state, panel);
+            return A::KeepOpen;
+        }
+        _ => {}
     }
     A::Submit(form_build_submit(panel))
 }
@@ -159,4 +197,96 @@ pub fn form_build_submit(panel: &mut Panel) -> Option<crate::Event> {
     let factory = panel.submit_factory?;
     let values = panel.get_form_values().clone();
     Some(factory(&values))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::LoginFlowEvent;
+
+    fn key_panel() -> Panel {
+        Panel::new("login-key", "Login")
+            .form_field_value("API Key", "sk-...", "key", String::new())
+            .form_submit()
+    }
+
+    #[test]
+    fn paste_appends_to_selected_form_field() {
+        let mut state = AppState::default();
+        let mut panel = key_panel();
+        let action = form_panel_action(&mut state, &mut panel, Event::Paste("sk-pasted".into()));
+        assert!(matches!(action, FormAction::KeepOpen));
+        assert_eq!(panel.form_values.get("key"), Some(&"sk-pasted".to_string()));
+    }
+
+    #[test]
+    fn paste_ignores_paste_when_no_field_selected() {
+        let mut state = AppState::default();
+        let mut panel = key_panel();
+        // Move selection down to the Submit button.
+        panel.select_down();
+        let action = form_panel_action(&mut state, &mut panel, Event::Paste("sk-pasted".into()));
+        assert!(matches!(action, FormAction::KeepOpen));
+        assert!(!panel.form_values.contains_key("key"));
+    }
+
+    #[test]
+    fn submit_on_toggle_checkbox_keeps_form_open() {
+        let mut state = AppState::default();
+        state.config.read_only = false;
+        let mut panel = Panel::new("settings", "Settings").toggle(
+            "Read-Only",
+            false,
+            ItemAction::Toggle("read_only".into()),
+        );
+
+        let action = form_panel_action(&mut state, &mut panel, Event::Submit);
+
+        assert!(matches!(action, FormAction::KeepOpen));
+        assert!(state.config.read_only, "toggle setting should be applied");
+        assert!(
+            matches!(
+                panel.selected_item(),
+                Some(PanelItem::Toggle { value: true, .. })
+            ),
+            "checkbox value should flip"
+        );
+    }
+
+    #[test]
+    fn submit_on_emit_toggle_checkbox_updates_state_and_keeps_open() {
+        let mut state = AppState::default();
+        let mut flow = crate::login_flow::LoginFlowState::new()
+            .with_provider("minimax".into())
+            .with_key("sk".into())
+            .with_validation_success(vec!["m1".into()]);
+        flow.selected_models.clear();
+        state.login_flow = Some(flow);
+
+        let mut panel = Panel::new("models", "Models").toggle(
+            "m1",
+            false,
+            ItemAction::Emit(LoginFlowEvent::ToggleModel { model: "m1".into() }),
+        );
+
+        let action = form_panel_action(&mut state, &mut panel, Event::Submit);
+
+        assert!(matches!(action, FormAction::KeepOpen));
+        let flow = state.login_flow.as_ref().expect("login flow");
+        assert!(flow.selected_models.contains("m1"));
+    }
+
+    #[test]
+    fn submit_on_emit_action_dispatches_event() {
+        let mut state = AppState::default();
+        let mut panel =
+            Panel::new("models", "Models").item("_Save", ItemAction::Emit(LoginFlowEvent::Save));
+
+        let action = form_panel_action(&mut state, &mut panel, Event::Submit);
+
+        assert!(
+            matches!(action, FormAction::Submit(Some(crate::Event::Save))),
+            "Enter on an emit action should submit its event"
+        );
+    }
 }

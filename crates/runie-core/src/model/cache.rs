@@ -161,6 +161,9 @@ impl AppState {
 
     /// Rebuild cache only when messages changed — O(n) but gated
     pub fn ensure_fresh(&mut self) {
+        let prev_total_lines = self.view.total_lines;
+        let was_streaming = self.agent.streaming;
+        let prev_scroll = self.view.scroll;
         if self.view.dirty && self.view.message_gen != self.view.cached_gen {
             let feed = crate::ui::LazyCache::feed(self);
             self.view.element_count = feed.elements.len();
@@ -180,6 +183,12 @@ impl AppState {
         if let Some(sel) = self.view.selected_post {
             let max = self.view.posts.len().saturating_sub(1);
             self.view.selected_post = Some(sel.min(max));
+        }
+        // While streaming, preserve the user's scroll position so new content
+        // does not auto-scroll the viewport when the user has scrolled up.
+        if was_streaming && prev_scroll > 0 {
+            let delta = self.view.total_lines.saturating_sub(prev_total_lines);
+            self.view.scroll = self.view.scroll.saturating_add(delta);
         }
         self.view.dirty = false;
     }
@@ -410,7 +419,6 @@ impl AppState {
         s.sidebar = crate::snapshot::SidebarData::from(&self.sidebar);
     }
 }
-
 /// Build the input box title string.
 /// Format: `provider/model · mode · ...`
 /// Mode suffixes are shown only when not the default (Solo, read-write).
@@ -429,72 +437,5 @@ fn build_input_title(
         (ExecutionMode::Team, true) => format!("{} · Team · read-only", base),
     }
 }
-
 #[cfg(test)]
-mod input_title_tests {
-    use super::*;
-
-    fn solo() -> crate::orchestrator::ExecutionMode {
-        crate::orchestrator::ExecutionMode::Solo
-    }
-    fn team() -> crate::orchestrator::ExecutionMode {
-        crate::orchestrator::ExecutionMode::Team
-    }
-
-    #[test]
-    fn input_title_default_is_base() {
-        let title = build_input_title("openai", "gpt-4o", &solo(), false);
-        assert_eq!(title, "openai/gpt-4o");
-    }
-
-    #[test]
-    fn input_title_includes_team_mode() {
-        let title = build_input_title("openai", "gpt-4o", &team(), false);
-        assert!(title.contains("Team"), "title should contain Team: {title}");
-    }
-
-    #[test]
-    fn input_title_includes_read_only() {
-        let title = build_input_title("openai", "gpt-4o", &solo(), true);
-        assert!(
-            title.contains("read-only"),
-            "title should contain read-only: {title}"
-        );
-    }
-
-    #[test]
-    fn input_title_includes_team_and_read_only() {
-        let title = build_input_title("openai", "gpt-4o", &team(), true);
-        assert!(title.contains("Team"), "title should contain Team: {title}");
-        assert!(
-            title.contains("read-only"),
-            "title should contain read-only: {title}"
-        );
-    }
-
-    #[test]
-    fn input_title_no_mode_suffix_for_default() {
-        let title = build_input_title("anthropic", "claude-3-5-sonnet", &solo(), false);
-        assert!(
-            !title.contains("Solo"),
-            "Solo mode should not appear: {title}"
-        );
-        assert!(
-            !title.contains("read-only"),
-            "read-only should not appear: {title}"
-        );
-    }
-
-    #[test]
-    fn input_title_uses_provider_and_model() {
-        let title = build_input_title("google", "gemini-2.5", &solo(), false);
-        assert!(
-            title.starts_with("google/"),
-            "title should start with provider: {title}"
-        );
-        assert!(
-            title.contains("gemini-2.5"),
-            "title should contain model: {title}"
-        );
-    }
-}
+mod tests;

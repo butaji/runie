@@ -120,3 +120,35 @@ api_key = "sk-openai"
     assert_eq!(minimax.1, "https://api.minimaxi.chat/v1");
     assert_eq!(minimax.2, vec!["MiniMax-M3"]);
 }
+
+#[test]
+fn list_configured_providers_sorted_alphabetically() {
+    use super::list_configured_providers;
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.toml");
+    std::fs::write(
+        &path,
+        r#"
+[model_providers.zulu]
+base_url = "https://zulu.example/v1"
+api_key = "sk-zulu"
+models = ["z-model"]
+
+[model_providers.anthropic]
+base_url = "https://api.anthropic.com/v1"
+api_key = "sk-anthropic"
+models = ["claude-sonnet-4-6"]
+
+[model_providers.openai]
+base_url = "https://api.openai.com/v1"
+api_key = "sk-openai"
+models = ["gpt-4o"]
+"#,
+    )
+    .unwrap();
+
+    super::set_test_config_path(path);
+    let providers = list_configured_providers();
+    let names: Vec<_> = providers.iter().map(|(n, _, _)| n.as_str()).collect();
+    assert_eq!(names, vec!["anthropic", "openai", "zulu"]);
+}

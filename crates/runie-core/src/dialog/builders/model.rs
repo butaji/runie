@@ -15,12 +15,14 @@ pub fn scoped_models(
                 panel = panel.separator();
             }
             panel = panel.header(provider.clone());
-            last_provider = provider;
+            last_provider = provider.clone();
         }
         // Emit a toggle event for each model — the state will mutate.
-        let evt = ModelConfigEvent::ScopedModelToggle { name: name.clone() };
-        let label = format!("{} {}", if enabled { "[x]" } else { "[ ]" }, name);
-        panel = panel.item(label, ItemAction::Emit(evt));
+        let evt = ModelConfigEvent::ScopedModelToggle {
+            provider: provider.clone(),
+            name: name.clone(),
+        };
+        panel = panel.toggle(name, enabled, ItemAction::Emit(evt));
     }
     PanelStack::new(panel)
 }

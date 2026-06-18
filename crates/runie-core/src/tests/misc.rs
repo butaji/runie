@@ -31,12 +31,20 @@ fn palette_select(state: &mut AppState, cmd: &str) {
 #[test]
 fn test_reset_clears_state() {
     let mut state = fresh_state();
+    state.config.current_provider = "openai".to_string();
+    state.config.current_model = "gpt-4o".to_string();
     state.input.input = "test".to_string();
     state.agent.streaming = true;
     state.update(ControlEvent::Reset);
     assert_eq!(state.input.input, "");
     assert!(!state.agent.streaming);
     assert_eq!(state.session.messages.len(), 0);
+    assert_eq!(state.config.current_provider, "openai");
+    assert_eq!(state.config.current_model, "gpt-4o");
+    assert!(
+        state.has_models(),
+        "provider/model must stay active after reset"
+    );
 }
 
 #[test]

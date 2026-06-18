@@ -59,10 +59,84 @@ impl ToolRegistry {
             })
             .collect()
     }
+
+    /// Convert the registry into OpenAI function-style tool definitions.
+    pub fn to_openai_functions(&self) -> Vec<Value> {
+        self.tools
+            .values()
+            .map(|tool| {
+                serde_json::json!({
+                    "type": "function",
+                    "function": {
+                        "name": tool.name(),
+                        "description": tool.description(),
+                        "parameters": tool.input_schema(),
+                    }
+                })
+            })
+            .collect()
+    }
+
+    /// Return a registry containing only tools that are safe in read-only mode.
+    pub fn read_only_subset(&self) -> Self {
+        const WRITE_TOOLS: &[&str] = &["write_file", "edit_file", "bash"];
+        let mut filtered = Self::new();
+        for tool in self.tools.values() {
+            if !WRITE_TOOLS.contains(&tool.name()) {
+                filtered.register(tool.clone());
+            }
+        }
+        filtered
+    }
 }
 
 impl Default for ToolRegistry {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct DummyTool;
+
+    #[async_trait]
+    impl Tool for DummyTool {
+        fn name(&self) -> &str {
+            "dummy"
+        }
+
+        fn description(&self) -> &str {
+            "A dummy tool for testing."
+        }
+
+        fn input_schema(&self) -> Value {
+            serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "value": { "type": "string" }
+                }
+            })
+        }
+
+        async fn call(&self, _input: Value, _ctx: &ToolContext) -> Result<ToolOutput> {
+            anyhow::bail!("not implemented")
+        }
+    }
+
+    #[test]
+    fn to_openai_functions_wraps_schemas() {
+        let mut registry = ToolRegistry::new();
+        registry.register(Arc::new(DummyTool));
+        let functions = registry.to_openai_functions();
+        assert_eq!(functions.len(), 1);
+        assert_eq!(functions[0]["type"], "function");
+        assert_eq!(functions[0]["function"]["name"], "dummy");
+        assert_eq!(
+            functions[0]["function"]["parameters"]["properties"]["value"]["type"],
+            "string"
+        );
     }
 }

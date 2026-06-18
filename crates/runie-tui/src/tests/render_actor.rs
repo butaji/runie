@@ -1,10 +1,9 @@
+use crate::ui::draw_snapshot;
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::event::{AgentEvent, InputEvent};
-use runie_core::{AppState, Snapshot, Element};
-use crate::ui::draw_snapshot;
+use runie_core::{AppState, Element, Snapshot};
 
 fn has_content(elem: &Element, text: &str) -> bool {
-    
     match elem {
         Element::AgentMessage { content, .. } => content.contains(text),
         Element::UserMessage { content, .. } => content.contains(text),
@@ -157,16 +156,37 @@ fn ui_actor_snapshot_after_events() {
     });
 
     // Feed tool call events
-    state.update(AgentEvent::ToolStart { id: "tool.1".to_string(), name: "bash".to_string(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 1.5, output: "done".to_string(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "tool.1".to_string(),
+        name: "bash".to_string(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 1.5,
+        output: "done".to_string(),
+    });
 
     state.ensure_fresh();
     let snap = state.snapshot();
 
     // Verify snapshot contains the expected messages
-    assert!(snap.elements.iter().any(|e| has_content(e, "Hello!")), "Should contain msg1");
-    assert!(snap.elements.iter().any(|e| has_content(e, "How can I help?")), "Should contain msg2");
-    assert!(snap.elements.iter().any(|e| has_content(e, "done")), "Should contain tool output");
-    assert!(!snap.turn_active || snap.turn_elapsed_secs.is_some(), "Should have turn state");
+    assert!(
+        snap.elements.iter().any(|e| has_content(e, "Hello!")),
+        "Should contain msg1"
+    );
+    assert!(
+        snap.elements
+            .iter()
+            .any(|e| has_content(e, "How can I help?")),
+        "Should contain msg2"
+    );
+    assert!(
+        snap.elements.iter().any(|e| has_content(e, "done")),
+        "Should contain tool output"
+    );
+    assert!(
+        !snap.turn_active || snap.turn_elapsed_secs.is_some(),
+        "Should have turn state"
+    );
 }

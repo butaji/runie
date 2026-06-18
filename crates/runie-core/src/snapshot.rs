@@ -359,6 +359,7 @@ fn target_from_row(row: u16, col: u16, layout: &MouseLayout) -> MouseTarget {
 
 /// Compute which element is under the mouse cursor in the feed area.
 /// Returns the element index, or None if the mouse is not in the feed.
+#[allow(clippy::too_many_arguments)]
 pub fn compute_hovered_element(
     mouse_pos: Option<(u16, u16)>,
     width: u16,

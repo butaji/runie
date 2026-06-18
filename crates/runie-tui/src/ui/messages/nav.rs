@@ -1,8 +1,12 @@
-use ratatui::{layout::Rect, Frame};
 use crate::core_ui::{Element, PostKind};
+use ratatui::{layout::Rect, Frame};
 use runie_core::Snapshot;
 
-pub(crate) fn compute_scroll_offset(snap: &Snapshot, row_to_element: &[usize], visible_height: usize) -> u16 {
+pub(crate) fn compute_scroll_offset(
+    snap: &Snapshot,
+    row_to_element: &[usize],
+    visible_height: usize,
+) -> u16 {
     let mut offset = snap.scroll_offset(visible_height);
     if snap.vim_nav_mode {
         if let Some(selected_post) = snap.selected_post {

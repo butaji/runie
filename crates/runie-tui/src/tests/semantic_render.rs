@@ -19,7 +19,11 @@ fn agent_response_visible_after_large_tool() {
         id: "req.0".into(),
         content: "Done!".into(),
     });
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+        input: serde_json::Value::Null,
+    });
     let output = (1..=20)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
@@ -54,7 +58,11 @@ fn agent_at_bottom_tool_files_above() {
         id: "req.0".into(),
         content: "Here are the files.".into(),
     });
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+        input: serde_json::Value::Null,
+    });
     let output = (1..=15)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
@@ -96,9 +104,16 @@ fn turn_complete_always_last_visible() {
         id: "req.0".into(),
         content: "Done!".into(),
     });
-    state.update(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a\nb\nc".into(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "a\nb\nc".into(),
+    });
     state.update(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,

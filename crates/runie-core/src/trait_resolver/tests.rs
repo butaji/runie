@@ -224,4 +224,3 @@ fn resolver_error_display() {
     let err2 = ResolverError::NoModelsConfigured;
     assert!(err2.to_string().contains("no models"));
 }
-

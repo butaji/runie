@@ -188,6 +188,7 @@ pub enum Event {
     CycleModelPrev,
     ToggleScopedModelsDialog,
     ScopedModelToggle {
+        provider: String,
         name: String,
     },
     ScopedModelEnableAll,
@@ -429,5 +430,3 @@ pub enum Event {
     },
     Cancelled,
 }
-
-

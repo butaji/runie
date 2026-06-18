@@ -94,6 +94,5 @@ fn run_subagent_is_async() {
         5,
     );
     // Type-level assertion: a future is returned, not a String.
-    let _assert_future: std::pin::Pin<Box<dyn std::future::Future<Output = _>>> =
-        Box::pin(future);
+    let _assert_future: std::pin::Pin<Box<dyn std::future::Future<Output = _>>> = Box::pin(future);
 }

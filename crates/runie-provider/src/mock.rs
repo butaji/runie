@@ -70,6 +70,12 @@ fn xorshift64star(mut x: u64) -> u64 {
 }
 
 fn file_tool_chunks(input: &str) -> Option<Vec<String>> {
+    if input.contains("markup") {
+        return Some(vec![
+            "I'll list the files in the current directory.\n".to_string(),
+            r#"[TOOL_CALL]{tool => "list_dir", args => {"path" => "."}}[/TOOL_CALL]"#.to_string(),
+        ]);
+    }
     if input.contains("list files") || input.contains("files") {
         return Some(vec![
             "I'll list the files in the current directory.\n".to_string(),
@@ -93,6 +99,16 @@ fn file_tool_chunks(input: &str) -> Option<Vec<String>> {
             "I'll make that edit for you.\n".to_string(),
             r#"{"name": "edit_file", "arguments": {"path": "src/main.rs", "search": "old", "replace": "new"}}"#
                 .to_string(),
+        ]);
+    }
+    None
+}
+
+fn malformed_tool_chunks(input: &str) -> Option<Vec<String>> {
+    if input.contains("malformed") {
+        return Some(vec![
+            "I will call a malformed tool.\n".to_string(),
+            r#"{"name": "bash" "arguments": {"command": "echo hi"}}"#.to_string(),
         ]);
     }
     None
@@ -132,6 +148,9 @@ fn response_chunks(last: Option<&ChatMessage>, user_input: &str) -> Vec<String> 
     if let Some(chunks) = command_tool_chunks(&input_lower) {
         return chunks;
     }
+    if let Some(chunks) = malformed_tool_chunks(&input_lower) {
+        return chunks;
+    }
     user_input
         .split_whitespace()
         .map(|w| format!("{} ", w))
@@ -168,6 +187,34 @@ impl Provider for MockProvider {
             yield Ok(LLMEvent::Finish { reason: StopReason::Stop });
         })
     }
+
+    fn generate_with_tools(
+        &self,
+        messages: Vec<ChatMessage>,
+        _tools: Vec<serde_json::Value>,
+    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>> {
+        let user_input = last_user_content(&messages).unwrap_or_default();
+        if user_input.contains("native tool") {
+            return Box::pin(native_tool_stream());
+        }
+        self.generate(messages)
+    }
+}
+
+fn native_tool_stream() -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + 'static>> {
+    Box::pin(async_stream::stream! {
+        yield Ok(LLMEvent::TextDelta("I'll run a command.\n".into()));
+        yield Ok(LLMEvent::ToolCallStart {
+            id: "call_1".into(),
+            name: "bash".into(),
+        });
+        yield Ok(LLMEvent::ToolCallInputDelta {
+            id: "call_1".into(),
+            delta: "{\"command\":\"echo hi\"}".into(),
+        });
+        yield Ok(LLMEvent::ToolCallEnd { id: "call_1".into() });
+        yield Ok(LLMEvent::Finish { reason: StopReason::ToolCalls });
+    })
 }
 
 /// Mock provider that streams tokens character-by-character for testing animations.

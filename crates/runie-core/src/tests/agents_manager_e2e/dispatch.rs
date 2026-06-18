@@ -9,7 +9,7 @@ fn open_event_opens_root_panel() {
     assert!(state.open_dialog.is_some());
     if let Some(DialogState::PanelStack(stack)) = &state.open_dialog {
         let panel = stack.current().unwrap();
-        assert_eq!(panel.title, "Agent Profiles");
+        assert_eq!(panel.title, " Agent Profiles ");
     } else {
         panic!("expected PanelStack dialog");
     }

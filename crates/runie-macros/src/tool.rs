@@ -48,7 +48,9 @@ fn build_tool(def: &ToolDef) -> proc_macro2::TokenStream {
     }
 }
 
-fn field_tokens(fields: &Punctuated<Field, Token![,]>) -> impl Iterator<Item = proc_macro2::TokenStream> + '_ {
+fn field_tokens(
+    fields: &Punctuated<Field, Token![,]>,
+) -> impl Iterator<Item = proc_macro2::TokenStream> + '_ {
     fields.iter().map(|f| {
         let field_name = &f.name;
         let field_ty = &f.ty;

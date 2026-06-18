@@ -2,6 +2,10 @@ use super::super::*;
 use runie_core::event::DialogEvent;
 
 fn render_selector() -> Vec<String> {
+    super::super::configure_test_providers(&[
+        ("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()]),
+        ("anthropic".into(), vec!["claude-sonnet".into()]),
+    ]);
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
@@ -61,6 +65,10 @@ fn selector_marks_current() {
 
 #[test]
 fn filter_shows_matching_models() {
+    super::super::configure_test_providers(&[(
+        "openai".into(),
+        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+    )]);
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();

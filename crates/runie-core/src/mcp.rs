@@ -73,7 +73,9 @@ pub fn save_mcp_servers(path: &Path, servers: &[McpServerConfig]) -> anyhow::Res
         }),
     };
     let content = toml::to_string_pretty(&config)?;
-    fs::create_dir_all(path.parent().unwrap())?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
     fs::write(path, content)?;
     Ok(())
 }
@@ -466,5 +468,15 @@ command = "sentry-mcp"
             unavailable_badge(6),
             Some("⛔ 6 MCP servers unavailable".into())
         );
+    }
+
+    #[test]
+    fn save_mcp_servers_does_not_panic_on_parentless_path() {
+        let path = std::path::PathBuf::from("runie_mcp_parentless_test.toml");
+        let _ = std::fs::remove_file(&path);
+        let result = save_mcp_servers(&path, &[]);
+        assert!(result.is_ok(), "saving to a path with no parent should succeed");
+        assert!(path.exists());
+        let _ = std::fs::remove_file(&path);
     }
 }

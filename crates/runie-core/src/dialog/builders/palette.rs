@@ -43,9 +43,10 @@ pub fn model_selector(
     if !recent.is_empty() {
         panel = panel.header("Recent");
         for model in recent {
+            let (provider, model_name) = model.split_once('/').unwrap_or(("", &model));
             let evt = ModelConfigEvent::SwitchModel {
-                provider: model.split('/').next().unwrap_or("").into(),
-                model: model.clone(),
+                provider: provider.into(),
+                model: model_name.into(),
             };
             let label = if model == current {
                 format!("★ {}", model)
@@ -69,4 +70,36 @@ pub fn model_selector(
         }
     }
     PanelStack::new(panel)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dialog::PanelItem;
+    use crate::event::ModelConfigEvent;
+
+    #[test]
+    fn recent_model_event_splits_provider_and_model() {
+        let stack = model_selector(vec!["minimax/M3".into()], vec![], "minimax/M3");
+        let panel = stack.current().unwrap();
+        let action = panel
+            .items
+            .iter()
+            .find_map(|i| match i {
+                PanelItem::Action { action, .. } => Some(action.clone()),
+                _ => None,
+            })
+            .expect("recent model should be an action item");
+
+        let ItemAction::Emit(evt) = action else {
+            panic!("expected emit action");
+        };
+        assert_eq!(
+            evt,
+            crate::Event::from(ModelConfigEvent::SwitchModel {
+                provider: "minimax".into(),
+                model: "M3".into(),
+            })
+        );
+    }
 }

@@ -83,11 +83,7 @@ impl SessionStore {
         tx.commit()?;
         Ok(())
     }
-    fn migrate_jsonl(
-        db: &Database,
-        jsonl_path: &Path,
-        db_path: &Path,
-    ) -> anyhow::Result<bool> {
+    fn migrate_jsonl(db: &Database, jsonl_path: &Path, db_path: &Path) -> anyhow::Result<bool> {
         let content = fs::read_to_string(jsonl_path)?;
         let tx = db.begin_write()?;
         {

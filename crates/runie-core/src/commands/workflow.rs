@@ -4,7 +4,9 @@ use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::dsl::workflow::{parse_workflow_args, WorkflowTask};
 use crate::event::CommandEvent;
 use crate::model::AppState;
-use crate::orchestrator::{ExecutionMode, ModelTrait, OrchestratorPlan, SubagentTask, SynthesisConfig};
+use crate::orchestrator::{
+    ExecutionMode, ModelTrait, OrchestratorPlan, SubagentTask, SynthesisConfig,
+};
 use crate::orchestrator_actor::OrchestratorState;
 
 use super::dsl::handlers::spec::{CommandKind, CommandSpec};
@@ -63,7 +65,12 @@ fn build_subagent_task(task: &WorkflowTask, idx: usize) -> SubagentTask {
     let role = normalize_role(&task.alias);
     let id = generate_task_id(&role, idx);
     let role_prompt = format!("You are a {}.", role);
-    SubagentTask::new(id, role_prompt, task.description.clone(), ModelTrait::General)
+    SubagentTask::new(
+        id,
+        role_prompt,
+        task.description.clone(),
+        ModelTrait::General,
+    )
 }
 
 fn normalize_role(alias: &str) -> String {
@@ -114,7 +121,10 @@ mod tests {
         let mut state = AppState::default();
         let result = handle_workflow(&mut state, "\"echo test\" as tester");
         assert!(
-            matches!(result, CommandResult::Event(CommandEvent::PlanGenerated { .. })),
+            matches!(
+                result,
+                CommandResult::Event(CommandEvent::PlanGenerated { .. })
+            ),
             "expected PlanGenerated event, got {:?}",
             result
         );
@@ -124,10 +134,7 @@ mod tests {
     #[test]
     fn parallel_workflow_creates_multiple_agents() {
         let mut state = AppState::default();
-        let result = handle_workflow(
-            &mut state,
-            "[\"Task A\" as a, \"Task B\" as b]",
-        );
+        let result = handle_workflow(&mut state, "[\"Task A\" as a, \"Task B\" as b]");
         let plan = match result {
             CommandResult::Event(CommandEvent::PlanGenerated { plan }) => plan,
             other => panic!("expected PlanGenerated event, got {:?}", other),
@@ -148,17 +155,18 @@ mod tests {
             CommandResult::Event(CommandEvent::PlanGenerated { plan }) => plan,
             other => panic!("expected PlanGenerated event, got {:?}", other),
         };
-        assert!(matches!(plan.synthesis, SynthesisConfig::Prompt(ref s) if s == "Combine findings"));
-
-        let result = handle_workflow(
-            &mut state,
-            "[\"A\" as a] --template \"Results:\\n{tasks}\"",
+        assert!(
+            matches!(plan.synthesis, SynthesisConfig::Prompt(ref s) if s == "Combine findings")
         );
+
+        let result = handle_workflow(&mut state, "[\"A\" as a] --template \"Results:\\n{tasks}\"");
         let plan = match result {
             CommandResult::Event(CommandEvent::PlanGenerated { plan }) => plan,
             other => panic!("expected PlanGenerated event, got {:?}", other),
         };
-        assert!(matches!(plan.synthesis, SynthesisConfig::Template(ref s) if s == "Results:\\n{tasks}"));
+        assert!(
+            matches!(plan.synthesis, SynthesisConfig::Template(ref s) if s == "Results:\\n{tasks}")
+        );
     }
 
     #[test]
@@ -166,12 +174,18 @@ mod tests {
         let mut state = AppState::default();
         let result = handle_workflow(&mut state, "\"echo test\" as tester");
         assert!(
-            matches!(result, CommandResult::Event(CommandEvent::PlanGenerated { .. })),
+            matches!(
+                result,
+                CommandResult::Event(CommandEvent::PlanGenerated { .. })
+            ),
             "expected PlanGenerated event, got {:?}",
             result
         );
         assert_eq!(state.config.execution_mode, ExecutionMode::Team);
-        assert!(matches!(state.orchestrator_state, OrchestratorState::Executing));
+        assert!(matches!(
+            state.orchestrator_state,
+            OrchestratorState::Executing
+        ));
     }
 
     #[test]

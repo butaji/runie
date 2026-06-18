@@ -90,10 +90,7 @@ impl<'a, P: Provider> OneShotPlanner<'a, P> {
         vec![ChatMessage::system(system), ChatMessage::user(user)]
     }
 
-    async fn collect_stream_text(
-        &self,
-        messages: &[ChatMessage],
-    ) -> Result<String, PlannerError> {
+    async fn collect_stream_text(&self, messages: &[ChatMessage]) -> Result<String, PlannerError> {
         let mut stream = self.provider.generate(messages.to_vec());
 
         match timeout(self.config.timeout, stream.next()).await {
@@ -154,8 +151,8 @@ fn parse_raw_plan_markdown(
     text: &str,
     tool_names: &HashMap<String, ()>,
 ) -> Result<OrchestratorPlan, String> {
-    let json_text = extract_json_from_text(text)
-        .ok_or_else(|| "no markdown code block".to_string())?;
+    let json_text =
+        extract_json_from_text(text).ok_or_else(|| "no markdown code block".to_string())?;
     serde_json::from_str::<RawPlan>(&json_text)
         .map_err(|e| e.to_string())
         .and_then(|raw| parse_raw_plan(raw, tool_names).map_err(|e| e.to_string()))

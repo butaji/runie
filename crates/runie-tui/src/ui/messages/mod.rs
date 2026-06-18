@@ -72,9 +72,9 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
+    use crate::core_ui::Element;
     use crate::ui::render_lines::to_lines_internal;
     use ratatui::{backend::TestBackend, Terminal};
-    use crate::core_ui::Element;
 
     #[test]
     fn scrollbar_thumb_matches_markdown_message_height() {

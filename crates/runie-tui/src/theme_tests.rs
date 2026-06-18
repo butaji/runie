@@ -39,7 +39,13 @@ fn truecolor_theme_keeps_rgb_colors() {
 
     // All key semantic tokens should resolve without falling back to FALLBACK.
     // Tokens that actually exist in the DEFAULT_THEME_TOML.
-    for token in ["accent.primary", "success", "error", "text.primary", "accent.secondary"] {
+    for token in [
+        "accent.primary",
+        "success",
+        "error",
+        "text.primary",
+        "accent.secondary",
+    ] {
         let c = theme.color(token);
         assert!(
             c != opaline::OpalineColor::FALLBACK,
@@ -55,7 +61,13 @@ fn non_truecolor_quantizes_to_indexed_approximations() {
     let theme = current_theme();
 
     // Quantized theme should still resolve all key tokens without falling back.
-    for token in ["accent.primary", "success", "error", "text.primary", "accent.secondary"] {
+    for token in [
+        "accent.primary",
+        "success",
+        "error",
+        "text.primary",
+        "accent.secondary",
+    ] {
         let c = theme.color(token);
         assert!(
             c != opaline::OpalineColor::FALLBACK,

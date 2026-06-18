@@ -38,11 +38,26 @@ impl SemanticTokens {
             text_primary: theme.color("text.primary").into(),
             text_secondary: theme.color("text.secondary").into(),
             text_accent: theme.color("accent.primary").into(),
-            text_link: theme.try_color("text.link").map(Into::into).unwrap_or_else(|| theme.color("accent.secondary").into()),
-            background_base: theme.try_color("bg.base").map(Into::into).unwrap_or_else(|| theme.color("bg.elevated").into()),
-            background_input: theme.try_color("bg.input").map(Into::into).unwrap_or_else(|| theme.color("bg.elevated").into()),
-            background_message_user: theme.try_color("bg.user").map(Into::into).unwrap_or_else(|| theme.color("bg.elevated").into()),
-            background_message_assistant: theme.try_color("bg.agent").map(Into::into).unwrap_or_else(|| theme.color("bg.base").into()),
+            text_link: theme
+                .try_color("text.link")
+                .map(Into::into)
+                .unwrap_or_else(|| theme.color("accent.secondary").into()),
+            background_base: theme
+                .try_color("bg.base")
+                .map(Into::into)
+                .unwrap_or_else(|| theme.color("bg.elevated").into()),
+            background_input: theme
+                .try_color("bg.input")
+                .map(Into::into)
+                .unwrap_or_else(|| theme.color("bg.elevated").into()),
+            background_message_user: theme
+                .try_color("bg.user")
+                .map(Into::into)
+                .unwrap_or_else(|| theme.color("bg.elevated").into()),
+            background_message_assistant: theme
+                .try_color("bg.agent")
+                .map(Into::into)
+                .unwrap_or_else(|| theme.color("bg.base").into()),
             border_default: theme.color("border.unfocused").into(),
             status_success: theme.color("success").into(),
             status_error: theme.color("error").into(),

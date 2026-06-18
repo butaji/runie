@@ -10,14 +10,16 @@ pub mod path_utils;
 pub mod permission_gate;
 pub mod profiles;
 pub mod safety;
+pub mod stream_response;
 pub mod subagent;
+pub mod tool_runner;
 pub mod truncate;
 pub mod turn;
 
 pub use headless::{run_headless_turn, HeadlessOptions, HeadlessResult};
 pub use parser::{has_tool_calls, parse_tool_calls, ParsedToolCall};
-pub use runie_core::tool::ToolOutput;
 pub use permission_gate::PermissionGate;
+pub use runie_core::tool::ToolOutput;
 pub use turn::run_agent_turn;
 
 use runie_provider::DynProvider;
@@ -47,6 +49,15 @@ pub fn build_provider_with_warning(
     model: &str,
 ) -> Result<DynProvider, runie_core::ProviderError> {
     runie_provider::build_provider_with_warning(provider, model)
+}
+
+/// Build a provider using the saved config file.
+pub fn build_provider_with_warning_with_config(
+    provider: &str,
+    model: &str,
+    config: &runie_core::config::Config,
+) -> Result<DynProvider, runie_core::ProviderError> {
+    runie_provider::build_provider_with_warning_with_config(provider, model, config)
 }
 
 #[cfg(test)]

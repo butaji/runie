@@ -14,7 +14,7 @@ pub fn check_bash_safety(command: &str) -> Option<&'static str> {
         return Some(reason);
     }
     for segment in split_segments(&normalized) {
-        if let Some(reason) = check_segment(&segment) {
+        if let Some(reason) = check_segment(segment) {
             return Some(reason);
         }
     }
@@ -40,7 +40,7 @@ fn normalize_command(command: &str) -> String {
                         break;
                     }
                 }
-                out.push_str(&expand_var(&name));
+                out.push_str(expand_var(&name));
             }
             _ => out.push(c),
         }

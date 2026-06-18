@@ -7,6 +7,8 @@ pub static ENV_LOCK: Mutex<()> = Mutex::new(());
 #[cfg(test)]
 mod agent;
 #[cfg(test)]
+mod agent_error;
+#[cfg(test)]
 mod agents_manager_e2e;
 #[cfg(test)]
 mod appstate_structural;
@@ -14,6 +16,8 @@ mod appstate_structural;
 mod autoscroll;
 #[cfg(test)]
 mod chat_visibility;
+#[cfg(test)]
+mod context_grouping;
 #[cfg(test)]
 mod command_forms;
 #[cfg(test)]
@@ -50,6 +54,10 @@ mod input_flash;
 mod input_grapheme;
 #[cfg(test)]
 mod input_history;
+#[cfg(test)]
+mod input_multiline;
+#[cfg(test)]
+mod input_paste;
 #[cfg(test)]
 mod input_scroll;
 #[cfg(test)]
@@ -100,6 +108,8 @@ mod timer_bugs;
 mod token_counters;
 #[cfg(test)]
 mod tokens;
+#[cfg(test)]
+mod tool_truncation;
 #[cfg(test)]
 mod transient;
 #[cfg(test)]

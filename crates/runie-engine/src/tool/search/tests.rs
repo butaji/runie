@@ -1,5 +1,5 @@
-use super::*;
 use super::types::*;
+use super::*;
 use crate::tool::{Tool, ToolContext, ToolStatus};
 use fff_search::{Constraint, Location, QueryParser};
 use git2::Status as GitStatus;

@@ -34,7 +34,10 @@ async fn permission_policy_chain_first_match_wins() {
     assert_eq!(manager.evaluate(&outside).await, PermissionResult::Allow);
 
     let write_outside = ctx("write_file", Some(Path::new("/etc/passwd")), Some(cwd));
-    assert_eq!(manager.evaluate(&write_outside).await, PermissionResult::Ask);
+    assert_eq!(
+        manager.evaluate(&write_outside).await,
+        PermissionResult::Ask
+    );
 }
 
 #[tokio::test]
@@ -99,7 +102,11 @@ async fn file_access_ask_requires_approval() {
 #[test]
 fn permission_mode_yolo_allows_everything() {
     let manager = PermissionManager::new(PermissionMode::Yolo);
-    let ctx = ctx("bash", Some(Path::new("/etc/passwd")), Some(Path::new("/tmp")));
+    let ctx = ctx(
+        "bash",
+        Some(Path::new("/etc/passwd")),
+        Some(Path::new("/tmp")),
+    );
     // evaluate is async; use a minimal runtime block.
     let rt = tokio::runtime::Runtime::new().unwrap();
     let result = rt.block_on(manager.evaluate(&ctx));
@@ -189,12 +196,18 @@ async fn scripted_sink_returns_decisions() {
     let sink = ScriptedSink::new();
     sink.add_decision("bash", PermissionAction::Allow);
     sink.add_decision("write_file", PermissionAction::Deny);
-    assert_eq!(sink.ask("bash", &Value::Null).await, PermissionAction::Allow);
+    assert_eq!(
+        sink.ask("bash", &Value::Null).await,
+        PermissionAction::Allow
+    );
     assert_eq!(
         sink.ask("write_file", &Value::Null).await,
         PermissionAction::Deny
     );
-    assert_eq!(sink.ask("read_file", &Value::Null).await, PermissionAction::Ask);
+    assert_eq!(
+        sink.ask("read_file", &Value::Null).await,
+        PermissionAction::Ask
+    );
 }
 
 #[test]
@@ -238,8 +251,14 @@ fn default_rules_read_only_allowed_write_asks() {
         rules.effective_action("list_dir", None),
         PermissionAction::Allow
     );
-    assert_eq!(rules.effective_action("grep", None), PermissionAction::Allow);
-    assert_eq!(rules.effective_action("find", None), PermissionAction::Allow);
+    assert_eq!(
+        rules.effective_action("grep", None),
+        PermissionAction::Allow
+    );
+    assert_eq!(
+        rules.effective_action("find", None),
+        PermissionAction::Allow
+    );
     assert_eq!(
         rules.effective_action("fetch_docs", None),
         PermissionAction::Allow

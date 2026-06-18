@@ -31,6 +31,11 @@ impl PanelStack {
         self.panels.last_mut()
     }
 
+    /// The root panel of the stack.
+    pub fn root(&self) -> Option<&Panel> {
+        self.panels.first()
+    }
+
     /// Push a new panel onto the stack.
     pub fn push(&mut self, panel: Panel) {
         self.panels.push(panel);
@@ -45,9 +50,9 @@ impl PanelStack {
         }
     }
 
-    /// Breadcrumb path of panel titles.
+    /// Breadcrumb path of panel titles (without the rendering padding).
     pub fn breadcrumb(&self) -> Vec<&str> {
-        self.panels.iter().map(|p| p.title.as_str()).collect()
+        self.panels.iter().map(|p| p.title.trim()).collect()
     }
 
     /// Navigate up in the current panel.

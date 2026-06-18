@@ -6,8 +6,8 @@ use async_trait::async_trait;
 use serde_json::{json, Value};
 
 use crate::tool::{
-    format_bytes, format_duration, format_tool_label, resolve_path, tool_error,
-    tool_status_line, Tool, ToolContext, ToolOutput, ToolRegistry, ToolStatus,
+    format_bytes, format_duration, format_tool_label, resolve_path, tool_error, tool_status_line,
+    Tool, ToolContext, ToolOutput, ToolRegistry, ToolStatus,
 };
 
 struct TestTool;
@@ -261,4 +261,3 @@ fn tool_error_warning_flag_reports_success() {
     let out = tool_error("grep", "no matches", start, true);
     assert_eq!(out.status, ToolStatus::Success);
 }
-

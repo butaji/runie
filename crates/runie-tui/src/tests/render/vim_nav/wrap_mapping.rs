@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
+use crate::core_ui::{Element, Post, PostKind};
 use ratatui::widgets::{Paragraph, Wrap};
 use ratatui::{backend::TestBackend, Terminal};
-use crate::core_ui::{Element, Post, PostKind};
 use runie_core::Snapshot;
 
 use crate::ui::messages::build_lines_with_mapping;

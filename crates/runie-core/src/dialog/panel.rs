@@ -32,6 +32,9 @@ pub struct Panel {
     /// When true, activating an item (Enter) does NOT close the dialog.
     /// Useful for previews (e.g. theme picker) and live toggles.
     pub keep_open_on_activate: bool,
+    /// When false, the dialog cannot be dismissed from the root panel
+    /// (Esc/DialogBack, Abort, Quit are ignored). ForceQuit still works.
+    pub closable: bool,
     /// For form panels: stores form values (key -> value)
     pub form_values: std::collections::HashMap<String, String>,
     /// For form panels: factory that turns form values into the submit event.
@@ -44,7 +47,7 @@ impl Panel {
     pub fn new(id: impl Into<String>, title: impl Into<String>) -> Self {
         Self {
             id: id.into(),
-            title: title.into(),
+            title: normalize_title(title),
             items: Vec::new(),
             selected: 0,
             filter: String::new(),
@@ -52,6 +55,7 @@ impl Panel {
             // explicitly since they use keyboard input for field editing.
             filterable: true,
             keep_open_on_activate: false,
+            closable: true,
             form_values: std::collections::HashMap::new(),
             submit_factory: None,
             view: PanelView::List,
@@ -69,6 +73,18 @@ impl Panel {
         self.view = PanelView::Form;
         self.filterable = false;
         self
+    }
+
+    /// Set the panel title, normalizing it to exactly one leading and
+    /// trailing space.
+    pub fn with_title(mut self, title: impl Into<String>) -> Self {
+        self.title = normalize_title(title);
+        self
+    }
+
+    /// Alias for `with_title()`.
+    pub fn title(self, title: impl Into<String>) -> Self {
+        self.with_title(title)
     }
 
     pub fn item(mut self, label: impl Into<String>, action: ItemAction) -> Self {
@@ -183,6 +199,7 @@ impl Panel {
         key: impl Into<String>,
     ) -> Self {
         self.view = PanelView::Form;
+        self.filterable = false;
         self.items.push(PanelItem::FormField {
             label: label.into(),
             value: String::new(),
@@ -201,6 +218,7 @@ impl Panel {
         value: impl Into<String>,
     ) -> Self {
         self.view = PanelView::Form;
+        self.filterable = false;
         let value_str = value.into();
         let key_str = key.into();
         self.items.push(PanelItem::FormField {
@@ -223,12 +241,14 @@ impl Panel {
 
     pub fn form_submit(mut self) -> Self {
         self.view = PanelView::Form;
+        self.filterable = false;
         self.items.push(PanelItem::FormSubmit);
         self
     }
 
     pub fn form_submit_with(mut self, factory: FormSubmitFn) -> Self {
         self.view = PanelView::Form;
+        self.filterable = false;
         self.submit_factory = Some(factory);
         self.items.push(PanelItem::FormSubmit);
         self
@@ -254,6 +274,17 @@ impl Panel {
     pub fn keep_open(mut self) -> Self {
         self.keep_open_on_activate = true;
         self
+    }
+
+    /// Set whether the dialog can be dismissed from this (root) panel.
+    pub fn closable(mut self, enabled: bool) -> Self {
+        self.closable = enabled;
+        self
+    }
+
+    /// Mark the root panel as non-closable. Alias for `closable(false)`.
+    pub fn non_closable(self) -> Self {
+        self.closable(false)
     }
 
     /// Add a header followed by items from a closure.
@@ -448,5 +479,16 @@ impl Panel {
             .collect();
         scored.sort_by_key(|b| std::cmp::Reverse(b.1));
         scored.into_iter().map(|(i, _)| i).collect()
+    }
+}
+
+/// Normalize a panel title so it always has exactly one leading and one
+/// trailing space. Extra whitespace is trimmed; empty titles stay empty.
+fn normalize_title(title: impl Into<String>) -> String {
+    let trimmed = title.into().trim().to_string();
+    if trimmed.is_empty() {
+        trimmed
+    } else {
+        format!(" {} ", trimmed)
     }
 }

@@ -87,6 +87,7 @@ fn test_render_sessions_list_on_separate_lines() {
 
 #[test]
 fn test_render_model_no_args_opens_selector() {
+    super::super::configure_test_providers(&[("openai".into(), vec!["gpt-4o".into()])]);
     let content = render_slash("/model");
     assert!(
         content.contains("Select Model"),

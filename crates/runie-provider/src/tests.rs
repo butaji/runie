@@ -5,6 +5,7 @@ use futures::StreamExt;
 use runie_core::llm_event::LLMEvent;
 use runie_core::message::ChatMessage;
 use runie_core::provider::{Provider, ProviderError};
+use std::io::{Read, Write};
 use std::sync::Mutex;
 
 /// Guards environment variable mutations during parallel test execution.
@@ -319,6 +320,61 @@ async fn test_validate_api_key_rejects_unreachable_port() {
     .await;
 
     assert!(result.is_err(), "unreachable port should produce an error");
+}
+
+#[tokio::test]
+async fn test_validate_api_key_parses_minimax_models_and_trims_key() {
+    use std::time::Duration;
+
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let (tx, rx) = std::sync::mpsc::channel();
+
+    std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let mut buf = [0u8; 1024];
+        let n = stream.read(&mut buf).unwrap_or(0);
+        let request = String::from_utf8_lossy(&buf[..n]);
+        let auth = request
+            .lines()
+            .find(|l| l.to_lowercase().starts_with("authorization:"))
+            .unwrap_or("")
+            .to_string();
+        let _ = tx.send(auth);
+        let body = r#"{"data":[{"id":"MiniMax-M3"},{"id":"MiniMax-M2.7"}]}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        let _ = stream.write_all(response.as_bytes());
+    });
+
+    let models = crate::validate_api_key_with_timeout(
+        &format!("http://127.0.0.1:{}/v1", port),
+        "  sk-test\n ",
+        Duration::from_secs(2),
+    )
+    .await
+    .expect("valid MiniMax-style response should succeed");
+
+    assert_eq!(models, vec!["MiniMax-M3", "MiniMax-M2.7"]);
+    let auth = rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("server sent auth header");
+    assert!(
+        auth.contains("Bearer sk-test"),
+        "key should be trimmed in request header: {}",
+        auth
+    );
+}
+
+#[test]
+fn test_dyn_provider_trims_whitespace_api_key_from_env() {
+    with_env_lock("OPENAI_API_KEY", "  sk-with-space\n ", || {
+        let provider = DynProvider::new("openai", "gpt-4o-mini").expect("trimmed key should build");
+        assert_eq!(provider.key(), "openai");
+    });
 }
 
 #[tokio::test]

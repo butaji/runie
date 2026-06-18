@@ -1,8 +1,13 @@
 //! `AppState` struct and its inherent methods.
 
+use std::sync::Arc;
+
 use super::helpers::{compute_ranking_score, element_metadata, element_text};
 use super::FffFileEntry;
 use crate::ui::elements::Element;
+
+/// Callback invoked by the login flow to run async API-key validation.
+pub type LoginValidationHook = Arc<dyn Fn(&str, &str) + Send + Sync>;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -50,6 +55,9 @@ pub struct AppState {
     pub pending_agent_edit: Option<crate::agent_profiles::AgentProfile>,
     /// Multi-agent registry for Team mode.
     pub multi_agent: crate::multi_agent::AgentRegistry,
+    /// Optional hook invoked when the login flow enters the validating step.
+    /// The UI sets this to trigger the async API-key validation effect.
+    pub login_validation_hook: Option<LoginValidationHook>,
 }
 
 impl Default for AppState {
@@ -80,6 +88,7 @@ impl Default for AppState {
             fff_debounce: 0,
             pending_agent_edit: None,
             multi_agent: crate::multi_agent::AgentRegistry::default(),
+            login_validation_hook: None,
         }
     }
 }
@@ -121,10 +130,34 @@ impl AppState {
         self.view.dirty = true;
     }
 
+    /// Register a hook that the login flow invokes after transitioning to the
+    /// validating step. The hook receives `(provider, key)` and is responsible
+    /// for running the async validation and publishing the result back as a
+    /// `ModelsFetched` / `ValidationFailed` event.
+    pub fn set_login_validation_hook(&mut self, hook: LoginValidationHook) {
+        self.login_validation_hook = Some(hook);
+    }
+
+    /// Trigger the login validation hook, if one is registered.
+    pub(crate) fn trigger_login_validation(&self, provider: &str, key: &str) {
+        if let Some(ref hook) = self.login_validation_hook {
+            hook(provider, key);
+        }
+    }
+
     pub fn messages_changed(&mut self) {
         self.view.message_gen = self.view.message_gen.wrapping_add(1);
         self.session.session_updated_at = crate::message::now();
         self.view.dirty = true;
+    }
+
+    /// Reset session/input/agent state without clearing the connected provider/model.
+    pub fn reset_session(&mut self) {
+        let config = self.config.clone();
+        let hook = self.login_validation_hook.clone();
+        *self = Self::default();
+        self.config = config;
+        self.login_validation_hook = hook;
     }
 
     /// Record the height of the message viewport. Called by the render

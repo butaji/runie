@@ -1,32 +1,58 @@
 //! Panel stack navigation and item activation (merged from dialog_panel.rs).
 
 use crate::commands::DialogState;
-use crate::dialog::{ItemAction, PanelItem, PanelStack};
+use crate::dialog::{ItemAction, Panel, PanelItem, PanelStack};
 use crate::event::{DialogEvent, InputEvent, ModelConfigEvent};
 use crate::model::AppState;
 use crate::Event;
 
 use super::form::FormAction;
 
-/// Update a panel stack in response to an event. Returns `true` if an item was activated.
-pub fn update_panel_stack(state: &mut AppState, event: Event, stack: &mut PanelStack) -> bool {
+/// Result of handling a single event in a panel stack.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum PanelUpdateResult {
+    /// Event was consumed and the dialog should remain open.
+    Consumed,
+    /// Event closed the dialog.
+    Closed,
+    /// Event was ignored by the panel stack.
+    Ignored,
+}
+
+/// Whether the root panel of the active dialog allows dismissal.
+pub(crate) fn root_closable(state: &AppState) -> bool {
+    state
+        .open_dialog
+        .as_ref()
+        .and_then(|d| d.panel_stack())
+        .and_then(|s| s.root())
+        .map(|p| p.closable)
+        .unwrap_or(true)
+}
+
+/// Update a panel stack in response to an event.
+pub fn update_panel_stack(
+    state: &mut AppState,
+    event: Event,
+    stack: &mut PanelStack,
+) -> PanelUpdateResult {
     let is_form = stack.current().is_some_and(|p| p.is_form());
     if is_form {
         return update_form_panel(state, event, stack);
     }
 
     if handle_panel_close(state, &event, stack) {
-        return true;
+        return PanelUpdateResult::Closed;
     }
     if handle_panel_navigation(state, &event, stack) {
-        return false;
+        return PanelUpdateResult::Consumed;
     }
-    if handle_panel_activation(state, &event, stack) {
-        return true;
+    if let Some(result) = handle_panel_activation(state, &event, stack) {
+        return result;
     }
     handle_panel_filter(state, &event, stack);
     state.mark_dirty();
-    false
+    PanelUpdateResult::Ignored
 }
 
 fn handle_panel_close(state: &mut AppState, event: &Event, stack: &mut PanelStack) -> bool {
@@ -38,7 +64,8 @@ fn handle_panel_close(state: &mut AppState, event: &Event, stack: &mut PanelStac
             if stack.len() > 1 {
                 stack.pop();
             } else {
-                return pop_dialog_or_close(state);
+                let root_closable = stack.root().map(|p| p.closable).unwrap_or(true);
+                return pop_dialog_or_close(state, root_closable);
             }
         }
         _ => {}
@@ -75,17 +102,28 @@ fn handle_panel_navigation(_state: &mut AppState, event: &Event, stack: &mut Pan
     false
 }
 
-fn handle_panel_activation(state: &mut AppState, event: &Event, stack: &mut PanelStack) -> bool {
+fn handle_panel_activation(
+    state: &mut AppState,
+    event: &Event,
+    stack: &mut PanelStack,
+) -> Option<PanelUpdateResult> {
     match event {
         InputEvent::Submit
         | ModelConfigEvent::SettingsSelect
         | DialogEvent::PaletteSelect
         | DialogEvent::ModelSelectorSelect => {
-            return try_activate_panel(state, stack);
+            return Some(try_activate_panel(state, stack));
+        }
+        InputEvent::Input(' ') => {
+            if let Some(panel) = stack.current_mut() {
+                if toggle_selected_checkbox(state, panel) {
+                    return Some(PanelUpdateResult::Consumed);
+                }
+            }
         }
         _ => {}
     }
-    false
+    None
 }
 
 fn handle_panel_filter(state: &mut AppState, event: &Event, stack: &mut PanelStack) {
@@ -114,9 +152,9 @@ fn handle_panel_filter(state: &mut AppState, event: &Event, stack: &mut PanelSta
     }
 }
 
-fn pop_dialog_or_close(state: &mut AppState) -> bool {
-    if state.login_flow.is_some() && !state.has_models() {
-        // Keep the login panel open until a model is connected.
+fn pop_dialog_or_close(state: &mut AppState, root_closable: bool) -> bool {
+    if !root_closable {
+        // The root panel has asked to stay open.
         state.mark_dirty();
         return false;
     }
@@ -131,23 +169,35 @@ fn pop_dialog_or_close(state: &mut AppState) -> bool {
     }
 }
 
-/// Update a form panel. Returns `true` if closed.
-fn update_form_panel(state: &mut AppState, event: Event, stack: &mut PanelStack) -> bool {
+/// Update a form panel.
+fn update_form_panel(
+    state: &mut AppState,
+    event: Event,
+    stack: &mut PanelStack,
+) -> PanelUpdateResult {
     let action = {
         let panel = stack.current_mut().expect("form panel");
         super::form::form_panel_action(state, panel, event)
     };
 
     if matches!(&action, FormAction::Back) {
-        return handle_back_action(state, stack);
+        return if handle_back_action(state, stack) {
+            PanelUpdateResult::Closed
+        } else {
+            PanelUpdateResult::Consumed
+        };
     }
 
     let keep_open = matches!(&action, FormAction::KeepOpen);
-    if keep_open {
+    if keep_open && state.open_dialog.is_none() {
         state.open_dialog = Some(DialogState::PanelStack(stack.clone()));
     }
     super::form::apply_form_action(state, action);
-    !keep_open
+    if keep_open {
+        PanelUpdateResult::Consumed
+    } else {
+        PanelUpdateResult::Closed
+    }
 }
 
 fn handle_back_action(state: &mut AppState, stack: &mut PanelStack) -> bool {
@@ -156,17 +206,18 @@ fn handle_back_action(state: &mut AppState, stack: &mut PanelStack) -> bool {
         state.open_dialog = Some(DialogState::PanelStack(stack.clone()));
         false
     } else {
-        pop_dialog_or_close(state)
+        let root_closable = stack.root().map(|p| p.closable).unwrap_or(true);
+        pop_dialog_or_close(state, root_closable)
     }
 }
 
-fn try_activate_panel(state: &mut AppState, stack: &mut PanelStack) -> bool {
+fn try_activate_panel(state: &mut AppState, stack: &mut PanelStack) -> PanelUpdateResult {
     if let Some(action) = stack.activate() {
         if handle_panel_action(state, action, stack) {
-            return true;
+            return PanelUpdateResult::Closed;
         }
     }
-    false
+    PanelUpdateResult::Consumed
 }
 
 /// Handle a panel item action. Returns `true` if the dialog was closed.
@@ -193,11 +244,7 @@ fn handle_panel_action(state: &mut AppState, action: ItemAction, stack: &mut Pan
     }
 }
 
-fn handle_emit_action(
-    state: &mut AppState,
-    stack: &mut PanelStack,
-    evt: crate::Event,
-) -> bool {
+fn handle_emit_action(state: &mut AppState, stack: &mut PanelStack, evt: crate::Event) -> bool {
     let keep_open = stack
         .current()
         .map(|p| p.keep_open_on_activate)
@@ -222,13 +269,38 @@ fn close_panel_on_activate(state: &mut AppState, stack: &mut PanelStack) -> bool
     !keep_open
 }
 
-fn panel_toggle_item(state: &mut AppState, stack: &mut PanelStack, key: &str) {
-    if let Some(PanelItem::Toggle { value, .. }) =
-        stack.current_mut().and_then(|p| p.selected_item_mut())
-    {
-        *value = !*value;
+fn panel_toggle_item(state: &mut AppState, stack: &mut PanelStack, _key: &str) {
+    if let Some(panel) = stack.current_mut() {
+        let _ = toggle_selected_checkbox(state, panel);
     }
-    apply_panel_setting(state, stack, key);
+}
+
+/// Toggle the currently selected checkbox (if any) and apply its side effect.
+/// Returns `true` if a toggle item was selected.
+pub(super) fn toggle_selected_checkbox(state: &mut AppState, panel: &mut Panel) -> bool {
+    let Some(item) = panel.selected_item_mut() else {
+        return false;
+    };
+    toggle_checkbox_item(state, item)
+}
+
+fn toggle_checkbox_item(state: &mut AppState, item: &mut PanelItem) -> bool {
+    if let PanelItem::Toggle { value, action, .. } = item {
+        *value = !*value;
+        match action {
+            ItemAction::Toggle(key) => {
+                apply_checkbox_setting(state, key);
+            }
+            ItemAction::Emit(evt) => {
+                state.update(evt.clone());
+            }
+            _ => {}
+        }
+        state.mark_dirty();
+        true
+    } else {
+        false
+    }
 }
 
 fn panel_cycle_item(state: &mut AppState, stack: &mut PanelStack, key: &str) {
@@ -245,8 +317,10 @@ fn panel_cycle_item(state: &mut AppState, stack: &mut PanelStack, key: &str) {
 }
 
 fn apply_panel_setting(state: &mut AppState, stack: &mut PanelStack, key: &str) {
+    if apply_checkbox_setting(state, key) {
+        return;
+    }
     match key {
-        "read_only" => state.toggle_read_only(),
         "steering_mode" => {
             state.config.steering_mode = cycle_delivery_mode(state.config.steering_mode)
         }
@@ -256,13 +330,21 @@ fn apply_panel_setting(state: &mut AppState, stack: &mut PanelStack, key: &str) 
         "provider" | "model" | "theme" | "thinking_level" => {
             apply_select_setting(state, stack, key);
         }
-        "vim_mode" => toggle_vim_mode(state),
-        "telemetry_enabled" => toggle_telemetry(state),
         "truncation_max_lines" | "truncation_max_bytes" => {
             apply_truncation_setting(state, stack, key);
         }
         _ => {}
     }
+}
+
+fn apply_checkbox_setting(state: &mut AppState, key: &str) -> bool {
+    match key {
+        "read_only" => state.toggle_read_only(),
+        "vim_mode" => toggle_vim_mode(state),
+        "telemetry_enabled" => toggle_telemetry(state),
+        _ => return false,
+    }
+    true
 }
 
 fn apply_select_setting(state: &mut AppState, stack: &mut PanelStack, key: &str) {
@@ -329,4 +411,90 @@ fn selected_select_value(stack: &mut PanelStack) -> Option<String> {
             crate::dialog::PanelItem::Select { current, .. } => Some(current.clone()),
             _ => None,
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::commands::DialogState;
+    use crate::dialog::Panel;
+    use crate::event::LoginFlowEvent;
+
+    #[test]
+    fn space_toggles_checkbox_item_value() {
+        let mut state = AppState::default();
+        state.config.read_only = false;
+        let mut panel = Panel::new("test", "Test").toggle(
+            "Read-Only",
+            false,
+            ItemAction::Toggle("read_only".into()),
+        );
+
+        assert!(toggle_selected_checkbox(&mut state, &mut panel));
+        assert!(
+            matches!(
+                panel.selected_item(),
+                Some(PanelItem::Toggle { value: true, .. })
+            ),
+            "checkbox value should flip to true"
+        );
+        assert!(
+            state.config.read_only,
+            "read_only setting should be applied"
+        );
+    }
+
+    #[test]
+    fn space_on_non_toggle_does_nothing() {
+        let mut state = AppState::default();
+        let mut panel = Panel::new("test", "Test").item("Do", ItemAction::Close);
+        assert!(!toggle_selected_checkbox(&mut state, &mut panel));
+    }
+
+    #[test]
+    fn space_on_emit_checkbox_updates_state() {
+        let mut state = AppState::default();
+        let mut flow = crate::login_flow::LoginFlowState::new()
+            .with_provider("minimax".into())
+            .with_key("sk".into())
+            .with_validation_success(vec!["m1".into()]);
+        flow.selected_models.clear();
+        state.login_flow = Some(flow);
+
+        let mut panel = Panel::new("models", "Models").toggle(
+            "m1",
+            false,
+            ItemAction::Emit(crate::Event::from(LoginFlowEvent::ToggleModel {
+                model: "m1".into(),
+            })),
+        );
+
+        assert!(toggle_selected_checkbox(&mut state, &mut panel));
+        let flow = state.login_flow.as_ref().expect("login flow");
+        assert!(flow.selected_models.contains("m1"));
+    }
+
+    #[test]
+    fn space_in_list_panel_keeps_dialog_open() {
+        let mut state = AppState::default();
+        let panel = Panel::new("settings", "Settings").toggle(
+            "Read-Only",
+            false,
+            ItemAction::Toggle("read_only".into()),
+        );
+        let mut stack = PanelStack::new(panel);
+        state.open_dialog = Some(DialogState::PanelStack(stack.clone()));
+
+        let result = update_panel_stack(&mut state, InputEvent::Input(' ').into(), &mut stack);
+        assert_eq!(
+            result,
+            PanelUpdateResult::Consumed,
+            "space should be consumed by the toggle"
+        );
+        assert!(
+            matches!(state.open_dialog, Some(DialogState::PanelStack(_))),
+            "dialog should stay open after toggling"
+        );
+        assert!(state.config.read_only);
+    }
 }

@@ -265,3 +265,74 @@ fn form_hotkeys_pinned_to_bottom() {
         lines
     );
 }
+
+fn bottom_hint_text(buf: &ratatui::buffer::Buffer) -> String {
+    let lines = all_lines(buf);
+    lines.iter().rev().take(2).flat_map(|l| l.chars()).collect()
+}
+
+#[test]
+fn form_hint_shows_close_when_root_closable() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    let panel = Panel::new("save", "Save Session")
+        .closable(true)
+        .form_field("Name", "session-name", "name");
+    open_form_dialog(&mut state, panel);
+
+    let buf = render(&mut state);
+    let hint = bottom_hint_text(&buf);
+    assert!(
+        hint.contains("esc") && hint.contains("close"),
+        "closable root form should show esc close hint, got: {}",
+        hint
+    );
+}
+
+#[test]
+fn form_hint_omits_close_when_root_not_closable() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    let panel = Panel::new("save", "Save Session")
+        .non_closable()
+        .form_field("Name", "session-name", "name");
+    open_form_dialog(&mut state, panel);
+
+    let buf = render(&mut state);
+    let hint = bottom_hint_text(&buf);
+    assert!(
+        !hint.contains("close"),
+        "non-closable root form should omit close hint, got: {}",
+        hint
+    );
+}
+
+/// Field labels must use a single-width ASCII marker. Full-width circled
+/// numbers can be clipped or wrapped by terminals that do not handle
+/// East-Asian Width characters correctly, causing labels like "API Key" to
+/// render only partially.
+#[test]
+fn form_label_uses_single_width_marker() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    let panel = Panel::new("login-key", "Login").form_field("API Key", "sk-...", "key");
+    open_form_dialog(&mut state, panel);
+
+    let buf = render(&mut state);
+    let lines = all_lines(&buf);
+    let label_line = lines
+        .iter()
+        .find(|l| l.contains("API Key"))
+        .expect("Form should render an 'API Key' label");
+
+    assert!(
+        label_line.contains("1. API Key"),
+        "label should use a single-width numeric marker, got: {:?}",
+        label_line
+    );
+    assert!(
+        !label_line.contains('①') && !label_line.contains('②') && !label_line.contains('③'),
+        "label should not use full-width circled numbers, got: {:?}",
+        label_line
+    );
+}

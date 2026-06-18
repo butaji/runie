@@ -142,7 +142,12 @@ fn parse_list(
         match &tokens[i] {
             Token::String(_) => i = parse_single(tokens, i, tasks)?,
             Token::Comma => i += 1,
-            other => return Err(format!("expected task in list, found {}", token_name(other))),
+            other => {
+                return Err(format!(
+                    "expected task in list, found {}",
+                    token_name(other)
+                ))
+            }
         }
     }
     Ok(end + 1)
@@ -221,7 +226,10 @@ where
 fn expect_string(token: &Token) -> Result<String, String> {
     match token {
         Token::String(s) => Ok(s.clone()),
-        other => Err(format!("expected quoted string, found {}", token_name(other))),
+        other => Err(format!(
+            "expected quoted string, found {}",
+            token_name(other)
+        )),
     }
 }
 

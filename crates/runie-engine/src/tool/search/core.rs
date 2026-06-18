@@ -148,7 +148,14 @@ where
 {
     let guard = match state.picker.read() {
         Ok(g) => g,
-        Err(e) => return Ok(build_lock_error_output(query, "picker", &e.to_string(), start)),
+        Err(e) => {
+            return Ok(build_lock_error_output(
+                query,
+                "picker",
+                &e.to_string(),
+                start,
+            ))
+        }
     };
     match guard.as_ref() {
         Some(p) => f(p),
@@ -168,7 +175,12 @@ where
     let guard = match state.query_tracker.read() {
         Ok(g) => g,
         Err(e) => {
-            return Ok(build_lock_error_output(query, "query tracker", &e.to_string(), start))
+            return Ok(build_lock_error_output(
+                query,
+                "query tracker",
+                &e.to_string(),
+                start,
+            ))
         }
     };
     f(guard.as_ref())

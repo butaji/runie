@@ -147,9 +147,16 @@ fn test_list_files_message_content() {
     state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_files".to_string(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 1.0, output: String::new(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".to_string(),
+        name: "list_files".to_string(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 1.0,
+        output: String::new(),
+    });
     state.update(AgentEvent::Thinking {
         id: "req.0".to_string(),
     });

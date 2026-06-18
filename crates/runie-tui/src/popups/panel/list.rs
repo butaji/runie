@@ -15,13 +15,25 @@ use crate::theme::{
 };
 use crate::ui::{parse_hint_spans, render_scrollbar};
 
-use super::{below, compute_scrolling, hotkey_area, setup_popup, ScrollLayout};
+use super::{compute_scrolling, hotkey_area, hotkey_area_height, setup_popup, ScrollLayout};
 
-pub(super) fn render_list(f: &mut Frame, panel: &Panel, show_breadcrumb: bool) {
+pub(super) fn render_list(
+    f: &mut Frame,
+    panel: &Panel,
+    show_breadcrumb: bool,
+    root_closable: bool,
+) {
     let inner = setup_popup(f, &panel.title);
     let inner_w = inner.width as usize;
     let (header_lines, header_height) = build_header(panel, inner_w);
-    let items_area = below(&inner, header_height);
+    let items_area = Rect {
+        x: inner.x,
+        y: inner.y + header_height,
+        width: inner.width,
+        height: inner
+            .height
+            .saturating_sub(header_height + hotkey_area_height()),
+    };
     let item_width = item_width(panel, &items_area, inner_w);
     let (item_lines, selected_line) = build_items(panel, item_width);
     let scroll = compute_scrolling(&items_area, item_lines.len(), selected_line);
@@ -29,7 +41,7 @@ pub(super) fn render_list(f: &mut Frame, panel: &Panel, show_breadcrumb: bool) {
 
     render_header(f, header_lines, header_height, inner, bg);
     render_item_list(f, item_lines, scroll, bg);
-    render_hotkeys(f, show_breadcrumb, inner, bg);
+    render_hotkeys(f, show_breadcrumb, root_closable, inner, bg);
 }
 
 fn item_width(panel: &Panel, items_area: &Rect, inner_w: usize) -> usize {
@@ -75,11 +87,18 @@ fn render_item_list(f: &mut Frame, item_lines: Vec<Line<'_>>, scroll: ScrollLayo
     }
 }
 
-fn render_hotkeys(f: &mut Frame, show_breadcrumb: bool, inner: Rect, bg: Style) {
-    let hotkey_text = if show_breadcrumb {
-        "↑↓ navigate · enter select · ← back · esc close"
-    } else {
-        "↑↓ navigate · enter select · esc close"
+fn render_hotkeys(
+    f: &mut Frame,
+    show_breadcrumb: bool,
+    root_closable: bool,
+    inner: Rect,
+    bg: Style,
+) {
+    let hotkey_text = match (show_breadcrumb, root_closable) {
+        (true, true) => "↑↓ navigate · enter select · ← back · esc close",
+        (true, false) => "↑↓ navigate · enter select · ← back",
+        (false, true) => "↑↓ navigate · enter select · esc close",
+        (false, false) => "↑↓ navigate · enter select",
     };
     f.render_widget(
         Paragraph::new(vec![

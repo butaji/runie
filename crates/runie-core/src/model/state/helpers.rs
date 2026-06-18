@@ -112,7 +112,10 @@ fn thought_metadata(timestamp: f64, duration_secs: f64) -> String {
 }
 
 fn tool_done_metadata(name: &str, duration_secs: f64, timestamp: f64) -> String {
-    format!("{} done in {:.1}s at {:.0}s", name, duration_secs, timestamp)
+    format!(
+        "{} done in {:.1}s at {:.0}s",
+        name, duration_secs, timestamp
+    )
 }
 
 fn tool_summary_metadata(name: &str, duration_secs: f64, timestamp: f64) -> String {

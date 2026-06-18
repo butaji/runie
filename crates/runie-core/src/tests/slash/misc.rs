@@ -40,14 +40,21 @@ fn reset_clears_messages_and_input() {
 }
 
 #[test]
-fn reset_keeps_default_provider() {
+fn reset_keeps_provider_and_model() {
     let mut state = fresh_state();
-    let initial_provider = state.config.current_provider.clone();
-    let initial_model = state.config.current_model.clone();
+    // Different default so we can detect if /reset accidentally reverts.
+    state.config.config_provider = "anthropic".into();
+    state.config.config_model = "claude-3-sonnet".into();
+    state.config.current_provider = "openai".to_string();
+    state.config.current_model = "gpt-4o".to_string();
     palette_select(&mut state, "reset");
     // /reset must not change the current provider/model.
-    assert_eq!(state.config.current_provider, initial_provider);
-    assert_eq!(state.config.current_model, initial_model);
+    assert_eq!(state.config.current_provider, "openai");
+    assert_eq!(state.config.current_model, "gpt-4o");
+    assert!(
+        state.has_models(),
+        "provider/model must stay active after /reset"
+    );
 }
 
 #[test]
@@ -73,6 +80,10 @@ fn help_clears_input() {
 
 #[test]
 fn model_switches_provider_and_model() {
+    crate::login_config::set_test_config_with_providers(&[(
+        "openai".into(),
+        vec!["gpt-4o".into()],
+    )]);
     let mut state = fresh_state();
     exec(&mut state, "/model openai/gpt-4o");
 
@@ -82,6 +93,10 @@ fn model_switches_provider_and_model() {
 
 #[test]
 fn model_shows_confirmation_message() {
+    crate::login_config::set_test_config_with_providers(&[(
+        "anthropic".into(),
+        vec!["claude-3-sonnet".into()],
+    )]);
     let mut state = fresh_state();
     exec(&mut state, "/model anthropic/claude-3-sonnet");
 
@@ -97,13 +112,17 @@ fn model_shows_confirmation_message() {
 
 #[test]
 fn model_just_model_name_keeps_provider() {
+    crate::login_config::set_test_config_with_providers(&[(
+        "openai".into(),
+        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+    )]);
     let mut state = fresh_state();
-    state.config.current_provider = "mock".into();
-    state.config.current_model = "echo".into();
-    exec(&mut state, "/model openai");
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4o".into();
+    exec(&mut state, "/model gpt-4o-mini");
 
-    assert_eq!(state.config.current_provider, "mock");
-    assert_eq!(state.config.current_model, "openai");
+    assert_eq!(state.config.current_provider, "openai");
+    assert_eq!(state.config.current_model, "gpt-4o-mini");
     let sys_msgs: Vec<_> = state
         .session
         .messages
@@ -112,8 +131,10 @@ fn model_just_model_name_keeps_provider() {
         .collect();
     assert_eq!(sys_msgs.len(), 1);
     assert!(
-        sys_msgs[0].content.contains("Switched to mock/openai"),
-        "openai without provider keeps current provider: {}",
+        sys_msgs[0]
+            .content
+            .contains("Switched to openai/gpt-4o-mini"),
+        "model without provider keeps current provider: {}",
         sys_msgs[0].content
     );
 }

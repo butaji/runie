@@ -9,10 +9,20 @@ use std::pin::Pin;
 /// Message roles for LLM conversations
 #[derive(Debug, Clone, PartialEq)]
 pub enum Message {
-    System { content: String },
-    User { content: String },
-    Assistant { content: String },
-    ToolResult { content: String },
+    System {
+        content: String,
+    },
+    User {
+        content: String,
+    },
+    Assistant {
+        content: String,
+        tool_calls: Vec<crate::message::ToolCall>,
+    },
+    ToolResult {
+        content: String,
+        tool_call_id: Option<String>,
+    },
 }
 
 impl Message {
@@ -29,8 +39,8 @@ impl Message {
         match self {
             Message::System { content }
             | Message::User { content }
-            | Message::Assistant { content }
-            | Message::ToolResult { content } => content,
+            | Message::Assistant { content, .. }
+            | Message::ToolResult { content, .. } => content,
         }
     }
 }
@@ -80,4 +90,17 @@ pub trait Provider: Send + Sync {
         &self,
         messages: Vec<ChatMessage>,
     ) -> Pin<Box<dyn Stream<Item = Result<LLMEvent>> + Send + '_>>;
+
+    /// Generate with a set of tool definitions that the model may invoke.
+    ///
+    /// Providers that do not support native tool calling can ignore `tools`
+    /// and fall back to `generate`. The default implementation does exactly
+    /// that, preserving backward compatibility for existing providers.
+    fn generate_with_tools(
+        &self,
+        messages: Vec<ChatMessage>,
+        _tools: Vec<serde_json::Value>,
+    ) -> Pin<Box<dyn Stream<Item = Result<LLMEvent>> + Send + '_>> {
+        self.generate(messages)
+    }
 }

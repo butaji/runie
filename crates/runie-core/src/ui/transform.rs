@@ -1,3 +1,4 @@
+use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::elements::{Element, Feed};
 
@@ -13,7 +14,8 @@ impl LazyCache {
     }
 
     fn build(state: &AppState) -> Feed {
-        let mut entries = Self::collect_entries(state);
+        let entries = Self::collect_entries(state);
+        let mut entries = Self::group_context_tools(entries, state.view.all_collapsed);
         entries.sort_by(|a, b| {
             a.timestamp()
                 .partial_cmp(&b.timestamp())
@@ -49,6 +51,7 @@ impl LazyCache {
             E::ToolRunning { .. } => PostKind::ToolRunning,
             E::ToolDone { .. } => PostKind::ToolDone,
             E::ToolSummary { .. } => PostKind::ToolSummary,
+            E::ContextGroup { .. } => PostKind::ContextGroup,
             E::TurnComplete { .. } => PostKind::TurnComplete,
         }
     }
@@ -115,7 +118,7 @@ impl LazyCache {
                     continue;
                 }
             }
-            entries.push(Self::msg_to_elem(msg, state));
+            entries.extend(Self::msg_to_elem(msg, state));
         }
 
         if let Some(started) = state.agent.thinking_started_at {
@@ -125,15 +128,56 @@ impl LazyCache {
         entries
     }
 
+    fn group_context_tools(entries: Vec<Element>, collapsed: bool) -> Vec<Element> {
+        const CONTEXT_TOOLS: &[&str] = &["read_file", "list_dir", "grep", "find", "fetch_docs"];
+        let mut out = Vec::with_capacity(entries.len());
+        let mut group: Vec<Element> = Vec::new();
+
+        for elem in entries {
+            if Self::is_context_tool(&elem, CONTEXT_TOOLS) {
+                group.push(elem);
+                continue;
+            }
+            if !group.is_empty() {
+                out.extend(Self::flush_context_group(std::mem::take(&mut group), collapsed));
+            }
+            out.push(elem);
+        }
+        if !group.is_empty() {
+            out.extend(Self::flush_context_group(group, collapsed));
+        }
+        out
+    }
+
+    fn flush_context_group(group: Vec<Element>, collapsed: bool) -> Vec<Element> {
+        if group.len() > 1 {
+            let ts = group
+                .iter()
+                .map(|e| e.timestamp())
+                .fold(0.0, f64::max);
+            vec![Element::context_group(group, collapsed).at(ts)]
+        } else {
+            group
+        }
+    }
+
+    fn is_context_tool(elem: &Element, context_tools: &[&str]) -> bool {
+        let name = match elem {
+            Element::ToolDone { name, .. } | Element::ToolSummary { name, .. } => name,
+            _ => return false,
+        };
+        context_tools.contains(&name.as_str())
+    }
+
     fn should_skip_msg(msg: &ChatMessage, state: &AppState) -> bool {
         if msg.role != Role::Assistant {
             return false;
         }
-        if crate::update::content_has_tool_markers(&msg.content) {
-            return true;
-        }
-        state.agent.thinking_started_at.is_some()
-            && state.agent.current_request_id.as_deref() == Some(&msg.id)
+        let is_tool_call_msg = !msg.tool_calls.is_empty()
+            || crate::update::content_has_tool_markers(&msg.content);
+        is_tool_call_msg
+            || (state.agent.thinking_started_at.is_some()
+                && state.agent.current_request_id.as_deref() == Some(&msg.id))
     }
 
     pub fn visible(cache: &[Element], skip: usize, take: usize) -> &[Element] {
@@ -142,20 +186,73 @@ impl LazyCache {
         &cache[start..end]
     }
 
-    fn msg_to_elem(msg: &ChatMessage, state: &AppState) -> Element {
+    fn msg_to_elem(msg: &ChatMessage, state: &AppState) -> Vec<Element> {
         let ts = msg.timestamp;
         match msg.role {
-            Role::User => Element::user(msg.content.clone()).at(ts),
-            Role::Thought => Self::thought_elem(msg, state, ts),
-            Role::Assistant => Element::AgentMessage {
+            Role::User => vec![Element::user(msg.content.clone()).at(ts)],
+            Role::Thought => vec![Self::thought_elem(msg, state, ts)],
+            Role::Assistant => Self::assistant_elems(msg, state, ts),
+            Role::Tool => vec![Self::tool_elem(msg, state, ts)],
+            Role::TurnComplete => {
+                vec![Element::turn_complete(Self::parse_dur(&msg.content)).at(ts)]
+            } // filtered in collect_entries
+            Role::System => vec![Element::thought(msg.content.clone()).at(ts)],
+        }
+    }
+
+    fn assistant_elems(msg: &ChatMessage, state: &AppState, ts: f64) -> Vec<Element> {
+        if msg.parts.is_empty() {
+            return vec![Element::AgentMessage {
                 content: crate::update::strip_tool_markers(&msg.content),
                 timestamp: ts,
                 provider: msg.provider.clone(),
-            },
-            Role::Tool => Self::tool_elem(msg, state, ts),
-            Role::TurnComplete => Element::turn_complete(Self::parse_dur(&msg.content)).at(ts), // filtered in collect_entries
-            Role::System => Element::thought(msg.content.clone()).at(ts),
+            }];
         }
+
+        msg.parts
+            .iter()
+            .filter_map(|part| Self::part_to_element(part, state, ts, &msg.provider))
+            .collect()
+    }
+
+    fn part_to_element(
+        part: &Part,
+        state: &AppState,
+        ts: f64,
+        provider: &str,
+    ) -> Option<Element> {
+        match part {
+            Part::Text { content } => Some(Self::text_elem(content, ts, provider)),
+            Part::Reasoning { content } => Some(Self::reasoning_elem(content, state, ts)),
+            Part::ToolCall { name, args, .. } => Some(Self::tool_call_elem(name, args, ts)),
+            Part::ToolResult { output, .. } => Some(Self::tool_result_elem(output, ts)),
+        }
+    }
+
+    fn text_elem(content: &str, ts: f64, provider: &str) -> Element {
+        Element::AgentMessage {
+            content: crate::update::strip_tool_markers(content),
+            timestamp: ts,
+            provider: provider.to_string(),
+        }
+    }
+
+    fn reasoning_elem(content: &str, state: &AppState, ts: f64) -> Element {
+        if state.view.all_collapsed {
+            let first_line = content.lines().next().unwrap_or(content).to_string();
+            Element::thought_summary(first_line, 0.0).at(ts)
+        } else {
+            Element::thought(content.to_string()).at(ts)
+        }
+    }
+
+    fn tool_call_elem(name: &str, args: &serde_json::Value, ts: f64) -> Element {
+        let args_compact = crate::tool::compact_json_args(args);
+        Element::tool_done(name, args_compact, 0.0, String::new(), None, false).at(ts)
+    }
+
+    fn tool_result_elem(output: &str, ts: f64) -> Element {
+        Element::tool_done("tool", String::new(), 0.0, output, None, false).at(ts)
     }
 
     fn thought_elem(msg: &ChatMessage, state: &AppState, ts: f64) -> Element {

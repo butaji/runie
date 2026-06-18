@@ -13,14 +13,18 @@ fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
 }
 
 #[test]
-fn model_m3_just_model_name() {
+fn model_gpt4o_just_model_name() {
+    crate::login_config::set_test_config_with_providers(&[(
+        "openai".into(),
+        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+    )]);
     let mut state = fresh_state();
-    state.config.current_provider = "mock".into();
-    state.config.current_model = "echo".into();
-    exec(&mut state, "/model m3");
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4o-mini".into();
+    exec(&mut state, "/model gpt-4o");
 
-    assert_eq!(state.config.current_provider, "mock");
-    assert_eq!(state.config.current_model, "m3");
+    assert_eq!(state.config.current_provider, "openai");
+    assert_eq!(state.config.current_model, "gpt-4o");
     let sys_msgs: Vec<_> = state
         .session
         .messages
@@ -29,22 +33,26 @@ fn model_m3_just_model_name() {
         .collect();
     assert_eq!(sys_msgs.len(), 1);
     assert!(
-        sys_msgs[0].content.contains("Switched to mock/m3"),
-        "/model m3 should work: {}",
+        sys_msgs[0].content.contains("Switched to openai/gpt-4o"),
+        "/model gpt-4o should work: {}",
         sys_msgs[0].content
     );
 }
 
 #[test]
 fn model_leading_slash_ignored_for_model_name() {
+    crate::login_config::set_test_config_with_providers(&[(
+        "openai".into(),
+        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+    )]);
     let mut state = fresh_state();
-    state.config.current_provider = "mock".into();
-    state.config.current_model = "echo".into();
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4o".into();
     let initial_provider = state.config.current_provider.clone();
-    exec(&mut state, "/model /gpt");
+    exec(&mut state, "/model /gpt-4o-mini");
 
     assert_eq!(state.config.current_provider, initial_provider);
-    assert_eq!(state.config.current_model, "gpt");
+    assert_eq!(state.config.current_model, "gpt-4o-mini");
     let sys_msgs: Vec<_> = state
         .session
         .messages
@@ -53,7 +61,9 @@ fn model_leading_slash_ignored_for_model_name() {
         .collect();
     assert_eq!(sys_msgs.len(), 1);
     assert!(
-        sys_msgs[0].content.contains("Switched to mock/gpt"),
+        sys_msgs[0]
+            .content
+            .contains("Switched to openai/gpt-4o-mini"),
         "leading slash ignored: {}",
         sys_msgs[0].content
     );
@@ -80,6 +90,10 @@ fn model_only_slashes_shows_usage() {
 
 #[test]
 fn model_no_args_opens_selector() {
+    crate::login_config::set_test_config_with_providers(&[(
+        "openai".into(),
+        vec!["gpt-4o".into()],
+    )]);
     let mut state = fresh_state();
     palette_select(&mut state, "model");
 

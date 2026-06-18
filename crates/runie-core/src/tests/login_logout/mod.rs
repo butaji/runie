@@ -5,6 +5,12 @@
 //!
 //! Flow: /providers → Add → Login flow → Save → Providers dialog → Select model
 
+pub(super) mod helpers;
+pub(super) use helpers::{
+    assert_panel_id, assert_step, assert_transient_contains, current_panel, current_panel_id,
+    fetch_models, fetch_models_for, save_login_flow, select_provider, start_login_flow, submit_key,
+};
+
 pub(super) fn clean_config() {
     let dir = std::env::temp_dir().join(format!(
         "runie_login_test_{:?}",
@@ -24,25 +30,16 @@ pub(super) fn default_models_for_provider(provider: &str) -> Vec<String> {
 
 pub(super) fn validate_provider(state: &mut crate::model::AppState, provider: &str, key: &str) {
     let models = default_models_for_provider(provider);
-    state.update(crate::event::LoginFlowEvent::ModelsFetched {
-        provider: provider.into(),
-        key: key.into(),
-        models,
-    });
+    fetch_models_for(state, provider, key, &models);
 }
 
 pub(super) fn add_minimax_provider(state: &mut crate::model::AppState) {
     state.update(crate::event::DialogEvent::ProvidersDialog);
     state.update(crate::event::DialogEvent::ProvidersAdd);
-    state.update(crate::event::LoginFlowEvent::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(crate::event::LoginFlowEvent::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    select_provider(state, "minimax");
+    submit_key(state, "sk-test");
     validate_provider(state, "minimax", "sk-test");
-    state.update(crate::event::LoginFlowEvent::Save);
+    save_login_flow(state);
 }
 
 pub(super) fn select_minimax_model(state: &mut crate::model::AppState) {
@@ -60,15 +57,10 @@ pub(super) fn add_provider_and_select_model(
 ) {
     state.update(crate::event::DialogEvent::ProvidersDialog);
     state.update(crate::event::DialogEvent::ProvidersAdd);
-    state.update(crate::event::LoginFlowEvent::SelectProvider {
-        provider: provider.into(),
-    });
-    state.update(crate::event::LoginFlowEvent::SubmitKey {
-        provider: provider.into(),
-        key: key.into(),
-    });
+    select_provider(state, provider);
+    submit_key(state, key);
     validate_provider(state, provider, key);
-    state.update(crate::event::LoginFlowEvent::Save);
+    save_login_flow(state);
     state.update(crate::event::DialogEvent::ProvidersSelectModel {
         provider: provider.into(),
         model: model.into(),
@@ -76,11 +68,15 @@ pub(super) fn add_provider_and_select_model(
 }
 
 mod add_provider;
+mod cancel_nav;
 mod close_guard;
 mod core;
 mod disconnect;
 mod edge_cases;
+mod happy_path;
 mod login_flow;
 mod model_select;
+mod model_select_edge_cases;
 mod multiple;
 mod state_machine;
+mod validation_retry;

@@ -3,7 +3,6 @@
 //! This sink lets the TUI show a permission dialog without blocking the agent
 //! turn. A future iteration can wire the `PermissionResponse` event back into
 /// the sink to await user approval.
-
 use async_trait::async_trait;
 use runie_core::event::Event;
 use runie_core::permissions::{ApprovalSink, PermissionAction};

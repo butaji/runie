@@ -7,7 +7,6 @@ thread_local! {
 }
 
 /// Override the config file path for the current thread (tests only).
-#[cfg(test)]
 pub fn set_test_config_path(path: PathBuf) {
     TEST_CONFIG_PATH.with(|p| *p.borrow_mut() = Some(path));
 }
@@ -104,6 +103,29 @@ pub fn remove_provider_config(name: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Configure providers for the current thread's tests.
+///
+/// Sets a unique test config path and writes the given providers with dummy
+/// credentials. Each provider's model list is the set of models that will be
+/// considered "chosen" by the `/model` selector.
+#[cfg(test)]
+pub fn set_test_config_with_providers(providers: &[(String, Vec<String>)]) {
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let n = COUNTER.fetch_add(1, Ordering::SeqCst);
+    let path = PathBuf::from(format!(
+        "/tmp/runie_test_config_{}_{}.toml",
+        std::process::id(),
+        n
+    ));
+    set_test_config_path(path);
+    for (name, models) in providers {
+        let _ = save_provider_config(name, "http://test", "key", models);
+    }
+}
+
 /// List providers that have configurations in `~/.runie/config.toml`.
 pub fn list_configured_providers() -> Vec<(String, String, Vec<String>)> {
     let path = config_path();
@@ -136,6 +158,7 @@ pub fn list_configured_providers() -> Vec<(String, String, Vec<String>)> {
             result.push((name.clone(), base_url, models));
         }
     }
+    result.sort_by(|a, b| a.0.cmp(&b.0));
     result
 }
 

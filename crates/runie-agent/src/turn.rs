@@ -1,23 +1,20 @@
-use crate::parser::{parse_tool_calls, ParsedToolCall};
+use crate::parser::{
+    assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
+};
 use crate::permission_gate::PermissionGate;
+use crate::stream_response::{stream_response, EmitFn, StreamedResponse};
+use crate::tool_runner::{execute_tool_call, tool_result_message};
 use crate::AgentCommand;
 use anyhow::Result;
-use futures::StreamExt;
 use runie_core::event::{AgentEvent, Event};
-use runie_core::permissions::{PermissionAction, PermissionContext};
 use runie_core::harness_skills::{
     SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult, TurnEndCtx, TurnEndResult,
     TurnStartCtx, TurnStartResult,
 };
 use runie_core::message::{ChatMessage, Role};
-use runie_core::provider::Provider;
-use runie_core::tool::{ToolContext, ToolOutput, ToolStatus};
+use runie_core::tool::{ToolContext, ToolOutput, ToolRegistry, ToolStatus};
 use runie_provider::DynProvider;
-use std::sync::{Arc, Mutex};
 use std::time::Instant;
-
-/// Emit type: Arc<Mutex<dyn FnMut(Event) + Send + Sync>>
-type EmitFn = Arc<Mutex<dyn FnMut(Event) + Send + Sync>>;
 
 /// Run an agent turn with optional skill hooks.
 pub async fn run_agent_turn(
@@ -42,13 +39,11 @@ pub async fn run_agent_turn_with_skills(
     let mut messages = build_initial_messages(command);
     let turn_start = Instant::now();
     let mut tool_call_count = 0;
-
     if let Some(skills) = skills {
         if let Some(result) = check_turn_start(skills, command, &emit) {
             return result;
         }
     }
-
     let has_intermediate_steps = run_iterations(
         provider,
         command,
@@ -61,28 +56,17 @@ pub async fn run_agent_turn_with_skills(
     )
     .await?;
 
-    finalize_turn(&emit, command, skills, &messages, tool_call_count, has_intermediate_steps, turn_start).await;
-    Ok(())
-}
-
-async fn finalize_turn(
-    emit: &EmitFn,
-    command: &AgentCommand,
-    skills: Option<&SkillRegistry>,
-    messages: &[ChatMessage],
-    tool_call_count: usize,
-    has_intermediate_steps: bool,
-    turn_start: Instant,
-) {
     emit_turn_end(
-        emit,
+        &emit,
         &command.id,
         skills,
-        messages,
+        &messages,
         tool_call_count,
         has_intermediate_steps,
         turn_start,
-    ).await;
+    )
+    .await;
+    Ok(())
 }
 
 fn check_turn_start(
@@ -110,7 +94,6 @@ fn check_turn_start(
     }
     None
 }
-
 /// Emit final turn end events including on_turn_end hook.
 async fn emit_turn_end(
     emit: &EmitFn,
@@ -162,7 +145,6 @@ fn emit_response_and_done(emit: &EmitFn, id: &str, content: String) {
     );
     emit_now(emit, AgentEvent::Done { id: id.to_string() });
 }
-
 fn emit_error_and_done(emit: &EmitFn, id: &str, message: String) {
     emit_now(
         emit,
@@ -173,7 +155,7 @@ fn emit_error_and_done(emit: &EmitFn, id: &str, message: String) {
     );
     emit_now(emit, AgentEvent::Done { id: id.to_string() });
 }
-
+#[allow(clippy::too_many_arguments)]
 async fn run_iterations(
     provider: &DynProvider,
     command: &AgentCommand,
@@ -205,7 +187,8 @@ async fn run_iterations(
 }
 
 fn emit_now(emit: &EmitFn, event: Event) {
-    emit.lock().unwrap()(event);
+    let mut emit = emit.lock().unwrap_or_else(|p| p.into_inner());
+    emit(event);
 }
 
 async fn run_agent_iteration(
@@ -217,67 +200,51 @@ async fn run_agent_iteration(
     tool_call_count: &mut usize,
     gate: &PermissionGate,
 ) -> Result<bool> {
-    emit_now(
-        &emit,
-        AgentEvent::Thinking {
-            id: command.id.clone(),
-        },
-    );
-
-    let response_text = stream_response(provider, command, messages, emit.clone()).await?;
-    emit_now(
-        &emit,
-        AgentEvent::ThoughtDone {
-            id: command.id.clone(),
-        },
-    );
-
-    let tools = parse_tool_calls(&response_text);
-    if tools.is_empty() {
+    emit_now(&emit, AgentEvent::Thinking { id: command.id.clone() });
+    let tools = build_tool_registry(command.read_only).to_openai_functions();
+    let response = stream_response(provider, &command.id, messages, tools, emit.clone()).await?;
+    emit_now(&emit, AgentEvent::ThoughtDone { id: command.id.clone() });
+    if response.tool_calls.is_empty() {
         return Ok(false);
     }
-
-    messages.push(ChatMessage::assistant(response_text));
-    execute_tools(&command.id, &tools, emit, messages, skills, tool_call_count, gate).await;
+    let tools = collect_parsed_tool_calls(&response, messages);
+    execute_tools(
+        &command.id,
+        &tools,
+        emit,
+        messages,
+        skills,
+        tool_call_count,
+        gate,
+    )
+    .await;
     Ok(true)
 }
 
-async fn stream_response(
-    provider: &DynProvider,
-    command: &AgentCommand,
-    messages: &[ChatMessage],
-    emit: EmitFn,
-) -> Result<String> {
-    let mut response_text = String::new();
-    let mut stream = provider.generate(messages.to_vec());
-    while let Some(event_result) = stream.next().await {
-        let event = event_result?;
-        match event {
-            runie_core::llm_event::LLMEvent::TextDelta(text) => {
-                response_text.push_str(&text);
-                emit_now(
-                    &emit,
-                    AgentEvent::ResponseDelta {
-                        id: command.id.clone(),
-                        content: text,
-                    },
-                );
-            }
-            runie_core::llm_event::LLMEvent::Finish { .. } => break,
-            runie_core::llm_event::LLMEvent::Error(e) => {
-                return Err(anyhow::anyhow!("LLM error: {:?}", e));
-            }
-            _ => {}
-        }
+fn collect_parsed_tool_calls(
+    response: &StreamedResponse,
+    messages: &mut Vec<ChatMessage>,
+) -> Vec<ParsedToolCall> {
+    let mut tools = response.tool_calls.clone();
+    assign_tool_call_ids(&mut tools);
+    messages.push(build_assistant_message(
+        &response.text,
+        response.reasoning.as_deref(),
+        &tools,
+    ));
+    for (i, err) in response.parse_errors.iter().enumerate() {
+        messages.push(tool_parse_error_message(err, &format!("parse_{}", i)));
     }
-    emit_now(
-        &emit,
-        AgentEvent::Response {
-            id: command.id.clone(),
-            content: response_text.clone(),
-        },
-    );
-    Ok(response_text)
+    tools
+}
+
+fn build_tool_registry(read_only: bool) -> ToolRegistry {
+    let registry = runie_engine::tool::builtin_registry();
+    if read_only {
+        registry.read_only_subset()
+    } else {
+        registry
+    }
 }
 
 pub(crate) fn build_initial_messages(command: &AgentCommand) -> Vec<ChatMessage> {
@@ -321,7 +288,13 @@ async fn execute_tools(
     for tool_call in tools {
         *tool_call_count += 1;
         let output = execute_single_tool(
-            cmd_id, tool_call, emit.clone(), skills, &ctx, &registry, gate,
+            cmd_id,
+            tool_call,
+            emit.clone(),
+            skills,
+            &ctx,
+            &registry,
+            gate,
         )
         .await;
 
@@ -333,10 +306,7 @@ async fn execute_tools(
                 output: output.content.clone(),
             },
         );
-        messages.push(ChatMessage::tool_result(format!(
-            "{} result:\n{}",
-            tool_call.name, output.content
-        )));
+        messages.push(tool_result_message(tool_call, &output));
     }
 }
 
@@ -419,82 +389,28 @@ fn check_tool_call_before_hook(
     match skills.on_tool_call(&tool_ctx) {
         ToolCallResult::Continue => None,
         ToolCallResult::SkipWithOutput(output) => Some(output),
-        ToolCallResult::Abort(_reason) => {
-            panic!("Tool abort not implemented in this path");
+        ToolCallResult::Abort(reason) => {
+            Some(format!("Tool {} aborted: {}", tool_call.name, reason))
         }
     }
 }
 
-async fn execute_tool_call(
-    registry: &runie_core::tool::ToolRegistry,
-    tool_call: &ParsedToolCall,
-    ctx: &ToolContext,
-    gate: &PermissionGate,
-) -> ToolOutput {
-    let tool_name = &tool_call.name;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{Arc, Mutex};
 
-    match registry.get(tool_name) {
-        Some(tool) => {
-            let perm_ctx = build_permission_context(tool_name, &tool_call.args, &ctx.working_dir);
-            match gate.evaluate(&perm_ctx).await {
-                PermissionAction::Allow => run_tool(tool, tool_call, ctx).await,
-                PermissionAction::Deny | PermissionAction::Ask => blocked_output(tool_name, tool_call),
-            }
-        }
-        None => unknown_tool_output(tool_name, tool_call),
-    }
-}
+    #[test]
+    fn emit_now_recovers_from_poisoned_mutex() {
+        let emit: EmitFn = Arc::new(Mutex::new(|_| {}));
+        let emit2 = emit.clone();
+        let handle = std::thread::spawn(move || {
+            let _guard = emit2.lock().unwrap();
+            panic!("poison emit mutex")
+        });
+        let _ = handle.join();
 
-async fn run_tool(
-    tool: &std::sync::Arc<dyn runie_core::tool::Tool>,
-    tool_call: &ParsedToolCall,
-    ctx: &ToolContext,
-) -> ToolOutput {
-    tool.call(tool_call.args.clone(), ctx).await.unwrap_or_else(|e| ToolOutput {
-        tool_name: tool_call.name.clone(),
-        tool_args: tool_call.args.clone(),
-        content: format!("Tool execution failed: {}", e),
-        bytes_transferred: None,
-        duration: std::time::Duration::from_millis(0),
-        status: ToolStatus::Error,
-    })
-}
-
-fn blocked_output(tool_name: &str, tool_call: &ParsedToolCall) -> ToolOutput {
-    ToolOutput {
-        tool_name: tool_name.to_string(),
-        tool_args: tool_call.args.clone(),
-        content: format!("Permission denied for tool '{}'", tool_name),
-        bytes_transferred: None,
-        duration: std::time::Duration::from_millis(0),
-        status: ToolStatus::Blocked,
-    }
-}
-
-fn unknown_tool_output(tool_name: &str, tool_call: &ParsedToolCall) -> ToolOutput {
-    ToolOutput {
-        tool_name: tool_name.to_string(),
-        tool_args: tool_call.args.clone(),
-        content: format!("Error: unknown tool '{}'", tool_name),
-        bytes_transferred: None,
-        duration: std::time::Duration::from_millis(0),
-        status: ToolStatus::Error,
-    }
-}
-
-fn build_permission_context<'a>(
-    tool: &'a str,
-    input: &'a serde_json::Value,
-    cwd: &'a std::path::Path,
-) -> PermissionContext<'a> {
-    let path = input
-        .get("path")
-        .and_then(|v| v.as_str())
-        .map(std::path::Path::new);
-    PermissionContext {
-        tool,
-        path,
-        input: Some(input),
-        cwd: Some(cwd),
+        // Should not panic despite the poisoned mutex.
+        emit_now(&emit, Event::Abort);
     }
 }

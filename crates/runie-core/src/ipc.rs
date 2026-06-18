@@ -41,10 +41,7 @@ impl CoreIpc {
     }
 
     /// Send an event to the TUI.
-    pub async fn send_event(
-        &self,
-        event: Event,
-    ) -> Result<(), mpsc::error::SendError<Event>> {
+    pub async fn send_event(&self, event: Event) -> Result<(), mpsc::error::SendError<Event>> {
         self.event_tx.send(event).await
     }
 }

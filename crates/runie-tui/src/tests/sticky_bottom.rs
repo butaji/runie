@@ -90,9 +90,16 @@ fn latest_tool_visible_when_at_bottom() {
     add_messages(&mut state, 30);
     state.view.scroll = 0;
 
-    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "list_dir".to_string(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1\nfile2\nfile3".to_string(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".to_string(),
+        name: "list_dir".to_string(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "file1\nfile2\nfile3".to_string(),
+    });
     state.ensure_fresh();
 
     let out = render_content(&mut state);
@@ -180,9 +187,16 @@ fn mixed_content_latest_visible() {
     state.update(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
-    state.update(AgentEvent::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1\nfile2".to_string(),
-     });
+    state.update(AgentEvent::ToolStart {
+        id: "req.0".to_string(),
+        name: "ls".to_string(),
+        input: serde_json::Value::Null,
+    });
+    state.update(AgentEvent::ToolEnd {
+        id: "".to_string(),
+        duration_secs: 0.5,
+        output: "file1\nfile2".to_string(),
+    });
     state.update(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Done!".to_string(),

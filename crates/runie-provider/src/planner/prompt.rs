@@ -92,10 +92,7 @@ pub(crate) fn build_user_prompt(input: &PlanInput) -> String {
 
 fn push_project_context(prompt: &mut String, project: &ProjectContext) {
     if !project.description.is_empty() {
-        prompt.push_str(&format!(
-            "## Project Context\n{}\n\n",
-            project.description
-        ));
+        prompt.push_str(&format!("## Project Context\n{}\n\n", project.description));
     }
 }
 

@@ -15,6 +15,7 @@ fn element_kinds(state: &AppState) -> Vec<String> {
             runie_core::ui::Element::ToolRunning { .. } => "ToolRun".to_string(),
             runie_core::ui::Element::ToolDone { .. } => "ToolDone".to_string(),
             runie_core::ui::Element::ToolSummary { .. } => "ToolSum".to_string(),
+            runie_core::ui::Element::ContextGroup { .. } => "Context".to_string(),
             runie_core::ui::Element::TurnComplete { .. } => "Turn".to_string(),
             runie_core::ui::Element::Spacer { .. } => "Spacer".to_string(),
         })

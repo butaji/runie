@@ -1,4 +1,51 @@
-use crate::parser::{has_tool_calls, parse_tool_calls};
+use crate::parser::{has_tool_calls, parse_tool_calls, parse_tool_calls_fallible};
+
+#[test]
+fn test_parse_markup_bash_tool() {
+    let text = r#"[TOOL_CALL]{tool => "bash", args => {"command" => "echo hi"}}[/TOOL_CALL]"#;
+    let tools = parse_tool_calls(text);
+    assert_eq!(tools.len(), 1);
+    assert_eq!(tools[0].name, "bash");
+    assert_eq!(tools[0].args["command"], "echo hi");
+}
+
+#[test]
+fn test_parse_markup_read_file_tool() {
+    let text = r#"[TOOL_CALL]{tool => "read_file", args => {"path" => "Cargo.toml"}}[/TOOL_CALL]"#;
+    let tools = parse_tool_calls(text);
+    assert_eq!(tools.len(), 1);
+    assert_eq!(tools[0].name, "read_file");
+    assert_eq!(tools[0].args["path"], "Cargo.toml");
+}
+
+#[test]
+fn test_parse_markup_unknown_tool_ignored() {
+    let text = r#"[TOOL_CALL]{tool => "unknown_tool", args => {}}[/TOOL_CALL]"#;
+    let tools = parse_tool_calls(text);
+    assert!(tools.is_empty());
+}
+
+#[test]
+fn test_parse_markup_malformed_markup_error() {
+    let text = r#"[TOOL_CALL]{tool => "bash", args => {}}"#;
+    let results = parse_tool_calls_fallible(text);
+    assert_eq!(results.len(), 1);
+    assert!(results[0].is_err());
+}
+
+#[test]
+fn test_parse_markup_mixed_with_other_formats() {
+    let text = r#"
+TOOL:bash:echo hi
+{"name": "read_file", "arguments": {"path": "Cargo.toml"}}
+[TOOL_CALL]{tool => "list_dir", args => {"path" => "src"}}[/TOOL_CALL]
+"#;
+    let tools = parse_tool_calls(text);
+    assert_eq!(tools.len(), 3);
+    assert_eq!(tools[0].name, "bash");
+    assert_eq!(tools[1].name, "read_file");
+    assert_eq!(tools[2].name, "list_dir");
+}
 
 #[test]
 fn test_parse_read_file_tool() {
@@ -142,4 +189,123 @@ fn core_strip_tool_markers_removes_only_tool_lines() {
     let input = "Before\nTOOL:bash ls\n{\"name\": \"read_file\", \"arguments\": {}}\nAfter";
     let result = runie_core::tool_markers::strip_tool_markers(input);
     assert_eq!(result, "Before\nAfter");
+}
+
+#[test]
+fn parse_legacy_bash_tool() {
+    let result = parse_tool_calls("TOOL:bash:ls -la");
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].name, "bash");
+    assert_eq!(result[0].args["command"], "ls -la");
+}
+
+#[test]
+fn parse_legacy_read_file() {
+    let result = parse_tool_calls("TOOL:read_file:src/main.rs");
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].name, "read_file");
+    assert_eq!(result[0].args["path"], "src/main.rs");
+}
+
+#[test]
+fn parse_json_tool_call() {
+    let json = r#"{"name": "bash", "arguments": {"command": "echo hi"}}"#;
+    let result = parse_tool_calls(json);
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].name, "bash");
+    assert_eq!(result[0].args["command"], "echo hi");
+}
+
+#[test]
+fn parse_multiple_tool_calls() {
+    let text = r#"
+TOOL:bash:ls
+{"name": "read_file", "arguments": {"path": "Cargo.toml"}}
+"#;
+    let result = parse_tool_calls(text);
+    assert_eq!(result.len(), 2);
+    assert_eq!(result[0].name, "bash");
+    assert_eq!(result[1].name, "read_file");
+}
+
+#[test]
+fn parse_fallible_returns_errors_for_malformed_calls() {
+    let text = r#"
+TOOL:unknown_tool:arg
+{"name": "bash", "arguments": {"command": "echo hi"}}
+{"name": "bash" "arguments": {}}
+"#;
+    let results = parse_tool_calls_fallible(text);
+    assert_eq!(results.len(), 3);
+    assert!(results[0].is_err(), "unknown legacy tool should error");
+    assert!(results[1].is_ok(), "valid JSON tool should parse");
+    assert!(results[2].is_err(), "malformed JSON should error");
+}
+
+#[test]
+fn parse_error_message_includes_raw_input() {
+    use crate::parser::{tool_parse_error_message, ToolParseError};
+    use runie_core::message::Role;
+    let error = ToolParseError {
+        raw: "{bad json".into(),
+        reason: "invalid JSON".into(),
+    };
+    let msg = tool_parse_error_message(&error, "parse_0");
+    assert_eq!(msg.role, Role::Tool);
+    assert!(msg.content.contains("{bad json"));
+    assert_eq!(msg.tool_call_id, Some("parse_0".into()));
+}
+
+#[test]
+fn parse_minimax_list_dir_tool() {
+    let text = r#"<minimax:tool_call>
+<invoke name="list_dir">
+<parameter name="path">.</parameter>
+</invoke>
+</minimax:tool_call>"#;
+    let tools = parse_tool_calls(text);
+    assert_eq!(tools.len(), 1);
+    assert_eq!(tools[0].name, "list_dir");
+    assert_eq!(tools[0].args["path"], ".");
+}
+
+#[test]
+fn parse_minimax_multiple_tools() {
+    let text = r#"<minimax:tool_call>
+<invoke name="read_file">
+<parameter name="path">Cargo.toml</parameter>
+</invoke>
+<invoke name="bash">
+<parameter name="command">echo hi</parameter>
+</invoke>
+</minimax:tool_call>"#;
+    let tools = parse_tool_calls(text);
+    assert_eq!(tools.len(), 2);
+    assert_eq!(tools[0].name, "read_file");
+    assert_eq!(tools[1].name, "bash");
+}
+
+#[test]
+fn parse_minimax_unknown_tool_ignored() {
+    let text = r#"<minimax:tool_call>
+<invoke name="unknown_tool">
+<parameter name="x">1</parameter>
+</invoke>
+</minimax:tool_call>"#;
+    let tools = parse_tool_calls(text);
+    assert!(tools.is_empty());
+}
+
+#[test]
+fn parse_minimax_mixed_with_text() {
+    let text = r#"I'll list the files.
+<minimax:tool_call>
+<invoke name="list_dir">
+<parameter name="path">.</parameter>
+</invoke>
+</minimax:tool_call>
+Done."#;
+    let tools = parse_tool_calls(text);
+    assert_eq!(tools.len(), 1);
+    assert_eq!(tools[0].name, "list_dir");
 }

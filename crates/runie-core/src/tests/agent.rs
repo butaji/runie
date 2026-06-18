@@ -119,6 +119,54 @@ fn agent_message_strips_structured_tool() {
 }
 
 #[test]
+fn agent_message_strips_tool_call_markup() {
+    let mut state = fresh_state();
+    state
+        .agent("req.0")
+        .respond(r#"[TOOL_CALL]{tool => "bash", args => {"command" => "ls"}}[/TOOL_CALL]"#)
+        .done();
+    let count = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::Assistant)
+        .count();
+    assert_eq!(count, 0);
+}
+
+#[test]
+fn agent_message_keeps_natural_language_around_tool_call_markup() {
+    let mut state = fresh_state();
+    state
+        .agent("req.0")
+        .respond("I will list files.\n[TOOL_CALL]{tool => \"list_dir\", args => {\"path\" => \".\"}}[/TOOL_CALL]\nDone.")
+        .done();
+    let msg = state
+        .session
+        .messages
+        .iter()
+        .find(|m| m.role == Role::Assistant)
+        .unwrap();
+    assert_eq!(msg.content, "I will list files.\nDone.");
+}
+
+#[test]
+fn feed_does_not_render_tool_call_markup() {
+    use crate::ui::LazyCache;
+    let mut state = fresh_state();
+    state
+        .agent("req.0")
+        .respond(r#"[TOOL_CALL]{tool => "bash", args => {"command" => "ls"}}[/TOOL_CALL]"#)
+        .done();
+    let feed = LazyCache::feed(&state);
+    let has_tool = feed.elements.iter().any(|e| match e {
+        crate::ui::Element::AgentMessage { content, .. } => content.contains("[TOOL_CALL]"),
+        _ => false,
+    });
+    assert!(!has_tool, "Feed should never render [TOOL_CALL] markers");
+}
+
+#[test]
 fn streaming_append_updates_timestamp() {
     let mut state = fresh_state();
     state.agent("req.0").respond("Hello ");

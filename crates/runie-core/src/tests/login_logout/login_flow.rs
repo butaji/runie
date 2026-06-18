@@ -64,6 +64,11 @@ fn login_flow_save_activates_first_model_after_validation() {
         !state.config.current_model.is_empty(),
         "a model should be auto-activated"
     );
+    assert!(state.has_models(), "state should report a connected model");
+    assert!(
+        state.snapshot().has_models,
+        "snapshot should expose has_models after save"
+    );
 }
 
 #[test]
@@ -184,6 +189,33 @@ fn login_key_input_reads_typed_key() {
 }
 
 #[test]
+fn login_key_input_submit_button_submits_typed_key() {
+    clean_config();
+    let mut state = AppState::default();
+    state.config.current_provider.clear();
+    state.config.current_model.clear();
+
+    state.update(LoginFlowEvent::Start);
+    state.update(LoginFlowEvent::SelectProvider {
+        provider: "minimax".into(),
+    });
+    for c in "sk-test".chars() {
+        state.update(InputEvent::Input(c));
+    }
+    // Move focus from the API Key field down to the Submit button.
+    state.update(InputEvent::HistoryNext);
+    state.update(InputEvent::Submit);
+
+    let flow = state.login_flow.as_ref().unwrap();
+    assert_eq!(
+        flow.step,
+        crate::login_flow::LoginStep::Validating,
+        "pressing Enter on the Submit button should submit the typed key"
+    );
+    assert_eq!(flow.key, "sk-test");
+}
+
+#[test]
 fn login_key_input_rejects_empty_key() {
     clean_config();
     let mut state = AppState::default();
@@ -231,4 +263,22 @@ fn login_flow_save_blocked_after_validation_failure() {
         "save should be blocked after validation failure"
     );
     assert!(list_configured_providers().is_empty());
+}
+
+#[test]
+fn login_flow_panel_changes_mark_dirty() {
+    clean_config();
+    let mut state = AppState::default();
+    state.view.dirty = false;
+
+    state.update(DialogEvent::ProvidersDialog);
+    state.update(DialogEvent::ProvidersAdd);
+    state.update(LoginFlowEvent::SelectProvider {
+        provider: "minimax".into(),
+    });
+
+    assert!(
+        state.view.dirty,
+        "pushing a new login panel should mark the view dirty"
+    );
 }

@@ -168,6 +168,13 @@ fn truncation_max_bytes_item(state: &AppState) -> SettingItem {
 }
 
 fn provider_options() -> Vec<String> {
+    let configured: Vec<String> = crate::login_config::list_configured_providers()
+        .into_iter()
+        .map(|(name, _, _)| name)
+        .collect();
+    if !configured.is_empty() {
+        return configured;
+    }
     crate::provider_registry::known_providers()
         .iter()
         .map(|p| p.key.to_string())
@@ -175,6 +182,14 @@ fn provider_options() -> Vec<String> {
 }
 
 fn model_options(provider: &str) -> Vec<String> {
+    let configured: Vec<String> = crate::login_config::list_configured_providers()
+        .into_iter()
+        .filter(|(name, _, _)| name == provider)
+        .flat_map(|(_, _, models)| models)
+        .collect();
+    if !configured.is_empty() {
+        return configured;
+    }
     crate::model_catalog::model_catalog()
         .iter()
         .filter(|m| m.provider == provider)

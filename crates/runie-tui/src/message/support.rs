@@ -47,8 +47,7 @@ pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'s
 pub fn render_tool_running(name: &str, args: &str, duration_secs: f64) -> Vec<Line<'static>> {
     let label = format_tool_label(name, args);
     let lines = vec![
-        Line::from(format!("{} {} {:.1}s", "⠋", label, duration_secs))
-            .style(style_tool_running()),
+        Line::from(format!("{} {} {:.1}s", "⠋", label, duration_secs)).style(style_tool_running()),
     ];
     add_lr_margins_to_lines(lines)
 }
@@ -67,7 +66,14 @@ pub fn render_tool_done(
     let bytes_str = bytes_transferred
         .map(|b| format!(" ⇣{}", format_bytes(b)))
         .unwrap_or_default();
-    let header = format!("{} {} {} {}{}", status_icon, label, duration, bytes_str, if error { " [✗]" } else { "" });
+    let header = format!(
+        "{} {} {} {}{}",
+        status_icon,
+        label,
+        duration,
+        bytes_str,
+        if error { " [✗]" } else { "" }
+    );
     let mut lines = vec![Line::from(header).style(style_tool_header())];
     if !output.is_empty() {
         if crate::diff::is_diff_output(output) {
@@ -84,9 +90,8 @@ pub fn render_tool_done(
 pub fn render_tool_summary(name: &str, args: &str, duration_secs: f64) -> Vec<Line<'static>> {
     let label = format_tool_label(name, args);
     let duration = format_duration(duration_secs);
-    let lines = vec![
-        Line::from(format!("✓ {} {} [+]", label, duration)).style(style_tool_summary())
-    ];
+    let lines =
+        vec![Line::from(format!("✓ {} {} [+]", label, duration)).style(style_tool_summary())];
     add_lr_margins_to_lines(lines)
 }
 
@@ -95,6 +100,64 @@ pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
         Line::from(format!("Turn completed in {:.1}s", duration_secs)).style(style_turn_complete()),
     ];
     add_lr_margins_to_lines(lines)
+}
+
+pub fn render_context_group(
+    tools: &[runie_core::Element],
+    collapsed: bool,
+) -> Vec<Line<'static>> {
+    if collapsed {
+        return vec![add_lr_margins(
+            Line::from(context_group_summary(tools)).style(style_tool_summary()),
+        )];
+    }
+
+    let mut lines = Vec::new();
+    for tool in tools {
+        lines.extend(render_context_tool(tool));
+    }
+    lines
+}
+
+fn context_group_summary(tools: &[runie_core::Element]) -> String {
+    let mut counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    for name in tools.iter().filter_map(tool_element_name) {
+        *counts.entry(name).or_insert(0) += 1;
+    }
+    let mut pairs: Vec<(String, usize)> = counts.into_iter().collect();
+    pairs.sort_by(|a, b| a.0.cmp(&b.0));
+    let summary = pairs
+        .iter()
+        .map(|(name, count)| format!("{}×{}", name, count))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("Gathering context… {}", summary)
+}
+
+fn tool_element_name(elem: &runie_core::Element) -> Option<String> {
+    match elem {
+        runie_core::Element::ToolDone { name, .. }
+        | runie_core::Element::ToolSummary { name, .. } => Some(name.clone()),
+        _ => None,
+    }
+}
+
+fn render_context_tool(elem: &runie_core::Element) -> Vec<Line<'static>> {
+    match elem {
+        runie_core::Element::ToolDone {
+            name,
+            args,
+            duration_secs,
+            output,
+            bytes_transferred,
+            error,
+            ..
+        } => render_tool_done(name, args, *duration_secs, output, *bytes_transferred, *error),
+        runie_core::Element::ToolSummary { name, duration_secs, .. } => {
+            render_tool_summary(name, "", *duration_secs)
+        }
+        _ => Vec::new(),
+    }
 }
 
 pub fn render_blockquote_lines(text: &str) -> Vec<Line<'static>> {

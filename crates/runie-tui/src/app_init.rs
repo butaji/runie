@@ -107,3 +107,55 @@ pub fn init_ui_config(state: &mut AppState) {
     let config = config_reload::Config::load(Some(&config_reload::config_path()));
     state.config.vim_mode = config.vim_mode();
 }
+
+/// Restore the active provider/model from the saved config at startup.
+/// Falls back to the legacy `provider`/`model` fields, then to the first
+/// configured provider, so users who have already onboarded do not have to
+/// re-enter credentials after every restart.
+pub fn init_provider_model(state: &mut AppState) {
+    if state.has_models() {
+        return;
+    }
+
+    let config = config_reload::Config::load(Some(&runie_core::login_config::config_path()));
+    let configured = runie_core::login_config::list_configured_providers();
+
+    if let Some((provider, model)) = provider_model_from_config(&config, &configured) {
+        state.config.current_provider = provider.clone();
+        state.config.config_provider = provider;
+        state.config.current_model = model.clone();
+        state.config.config_model = model;
+        return;
+    }
+
+    if let Some((name, _, models)) = configured.first() {
+        state.config.current_provider = name.clone();
+        state.config.config_provider = name.clone();
+        let model = models.first().cloned().unwrap_or_default();
+        state.config.current_model = model.clone();
+        state.config.config_model = model;
+    }
+}
+
+fn provider_model_from_config(
+    config: &runie_core::config_reload::Config,
+    configured: &[(String, String, Vec<String>)],
+) -> Option<(String, String)> {
+    let provider = config.provider.as_deref()?;
+    if provider.is_empty() || !config.model_providers.contains_key(provider) {
+        return None;
+    }
+
+    let models = configured
+        .iter()
+        .find(|(p, _, _)| p == provider)
+        .map(|(_, _, models)| models.as_slice())
+        .unwrap_or(&[]);
+    let default = config.model.as_deref().or(config.default_model());
+    let model = default
+        .filter(|m| models.is_empty() || models.contains(&m.to_string()))
+        .or_else(|| models.first().map(|s| s.as_str()))
+        .unwrap_or("")
+        .to_string();
+    Some((provider.to_string(), model))
+}

@@ -47,6 +47,11 @@ pub enum Element {
         duration_secs: f64,
         timestamp: f64,
     },
+    ContextGroup {
+        tools: Vec<Element>,
+        collapsed: bool,
+        timestamp: f64,
+    },
     TurnComplete {
         duration_secs: f64,
         timestamp: f64,
@@ -69,6 +74,7 @@ impl ElementBuilder {
             Element::ToolRunning { timestamp: ts, .. } => *ts = timestamp,
             Element::ToolDone { timestamp: ts, .. } => *ts = timestamp,
             Element::ToolSummary { timestamp: ts, .. } => *ts = timestamp,
+            Element::ContextGroup { timestamp: ts, .. } => *ts = timestamp,
             Element::TurnComplete { timestamp: ts, .. } => *ts = timestamp,
         }
         e
@@ -145,6 +151,13 @@ impl Element {
             timestamp: 0.0,
         })
     }
+    pub fn context_group(tools: Vec<Element>, collapsed: bool) -> ElementBuilder {
+        ElementBuilder(Element::ContextGroup {
+            tools,
+            collapsed,
+            timestamp: 0.0,
+        })
+    }
     pub fn turn_complete(duration_secs: f64) -> ElementBuilder {
         ElementBuilder(Element::TurnComplete {
             duration_secs,
@@ -171,6 +184,7 @@ impl Element {
             Element::ToolRunning { timestamp: ts, .. } => *ts = timestamp,
             Element::ToolDone { timestamp: ts, .. } => *ts = timestamp,
             Element::ToolSummary { timestamp: ts, .. } => *ts = timestamp,
+            Element::ContextGroup { timestamp: ts, .. } => *ts = timestamp,
             Element::TurnComplete { timestamp: ts, .. } => *ts = timestamp,
         }
     }
@@ -187,6 +201,7 @@ impl Element {
             Element::ToolRunning { timestamp, .. } => *timestamp,
             Element::ToolDone { timestamp, .. } => *timestamp,
             Element::ToolSummary { timestamp, .. } => *timestamp,
+            Element::ContextGroup { timestamp, .. } => *timestamp,
             Element::TurnComplete { timestamp, .. } => *timestamp,
         }
     }
@@ -212,6 +227,8 @@ pub enum PostKind {
     ToolDone,
     /// A collapsed tool result.
     ToolSummary,
+    /// A group of context-gathering tools.
+    ContextGroup,
     /// Turn completion marker.
     TurnComplete,
 }

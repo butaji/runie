@@ -1,11 +1,11 @@
 use crate::model::AppState;
 
-pub fn toggle_scoped_model(state: &mut AppState, name: &str) {
+pub fn toggle_scoped_model(state: &mut AppState, provider: &str, name: &str) {
     if let Some(idx) = state
         .config
         .scoped_models
         .iter()
-        .position(|m| m.name == name)
+        .position(|m| m.provider == provider && m.name == name)
     {
         state.config.scoped_models[idx].enabled = !state.config.scoped_models[idx].enabled;
         state.mark_dirty();

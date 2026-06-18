@@ -12,6 +12,10 @@ fn sm(provider: &str, name: &str, enabled: bool) -> ScopedModel {
     }
 }
 
+fn configure(providers: &[(String, Vec<String>)]) {
+    crate::login_config::set_test_config_with_providers(providers);
+}
+
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
     state.update(InputEvent::Input('/'));
@@ -27,6 +31,7 @@ fn toggle_model_excludes_from_cycle() {
     state.config.scoped_models = vec![sm("mock", "echo", true), sm("openai", "gpt-4o", true)];
 
     state.update(ModelConfigEvent::ScopedModelToggle {
+        provider: "openai".to_string(),
         name: "gpt-4o".to_string(),
     });
 
@@ -98,8 +103,11 @@ fn scoped_selected(state: &AppState) -> Option<usize> {
 
 #[test]
 fn slash_scoped_models_opens_dialog() {
+    configure(&[
+        ("mock".into(), vec!["echo".into()]),
+        ("openai".into(), vec!["gpt-4o".into()]),
+    ]);
     let mut state = AppState::default();
-    state.config.scoped_models = vec![sm("mock", "echo", true), sm("openai", "gpt-4o", true)];
 
     palette_select(&mut state, "scoped-models");
 
@@ -112,12 +120,12 @@ fn slash_scoped_models_opens_dialog() {
 
 #[test]
 fn scoped_models_dialog_navigates_up() {
+    configure(&[
+        ("mock".into(), vec!["echo".into()]),
+        ("openai".into(), vec!["gpt-4o".into()]),
+        ("anthropic".into(), vec!["claude-3".into()]),
+    ]);
     let mut state = AppState::default();
-    state.config.scoped_models = vec![
-        sm("mock", "echo", true),
-        sm("openai", "gpt-4o", true),
-        sm("anthropic", "claude-3", true),
-    ];
     state.update(ModelConfigEvent::ToggleScopedModelsDialog);
 
     state.update(InputEvent::HistoryPrev);
@@ -131,12 +139,12 @@ fn scoped_models_dialog_navigates_up() {
 
 #[test]
 fn scoped_models_dialog_navigates_down() {
+    configure(&[
+        ("mock".into(), vec!["echo".into()]),
+        ("openai".into(), vec!["gpt-4o".into()]),
+        ("anthropic".into(), vec!["claude-3".into()]),
+    ]);
     let mut state = AppState::default();
-    state.config.scoped_models = vec![
-        sm("mock", "echo", true),
-        sm("openai", "gpt-4o", true),
-        sm("anthropic", "claude-3", true),
-    ];
     state.update(ModelConfigEvent::ToggleScopedModelsDialog);
     state.update(InputEvent::HistoryNext);
     state.update(InputEvent::HistoryNext);
@@ -151,8 +159,11 @@ fn scoped_models_dialog_navigates_down() {
 
 #[test]
 fn scoped_models_dialog_submit_toggles() {
+    configure(&[
+        ("mock".into(), vec!["echo".into()]),
+        ("openai".into(), vec!["gpt-4o".into()]),
+    ]);
     let mut state = AppState::default();
-    state.config.scoped_models = vec![sm("mock", "echo", true), sm("openai", "gpt-4o", true)];
     state.update(ModelConfigEvent::ToggleScopedModelsDialog);
     state.update(InputEvent::HistoryNext);
 
@@ -164,11 +175,61 @@ fn scoped_models_dialog_submit_toggles() {
 
 #[test]
 fn scoped_models_dialog_esc_closes() {
+    configure(&[("mock".into(), vec!["echo".into()])]);
     let mut state = AppState::default();
-    state.config.scoped_models = vec![sm("mock", "echo", true)];
     state.update(ModelConfigEvent::ToggleScopedModelsDialog);
 
     state.update(ControlEvent::Abort);
 
     assert!(state.open_dialog.is_none());
+}
+
+#[test]
+fn toggle_scoped_model_uses_provider_and_name() {
+    let mut state = AppState::default();
+    state.config.scoped_models = vec![
+        sm("openai", "gpt-4o", true),
+        sm("anthropic", "gpt-4o", true),
+    ];
+
+    state.update(ModelConfigEvent::ScopedModelToggle {
+        provider: "anthropic".into(),
+        name: "gpt-4o".into(),
+    });
+
+    assert!(state.config.scoped_models[0].enabled, "openai model stayed on");
+    assert!(
+        !state.config.scoped_models[1].enabled,
+        "anthropic model was toggled off"
+    );
+}
+
+#[test]
+fn scoped_models_dialog_populates_from_configured_providers() {
+    crate::login_config::set_test_config_with_providers(&[(
+        "minimax".into(),
+        vec!["MiniMax-M3".into(), "MiniMax-M2.7".into()],
+    )]);
+    let mut state = AppState::default();
+    state.config.scoped_models.clear();
+
+    state.update(ModelConfigEvent::ToggleScopedModelsDialog);
+
+    let items = match &state.open_dialog {
+        Some(DialogState::ScopedModels(stack)) => {
+            stack.current().map(|p| p.items.clone()).unwrap_or_default()
+        }
+        _ => Vec::new(),
+    };
+    let labels: Vec<_> = items.iter().filter_map(|i| i.label()).collect();
+    assert!(
+        labels.iter().any(|l| l.contains("MiniMax-M3")),
+        "expected MiniMax-M3 in {:?}",
+        labels
+    );
+    assert!(
+        labels.iter().any(|l| l.contains("MiniMax-M2.7")),
+        "expected MiniMax-M2.7 in {:?}",
+        labels
+    );
 }

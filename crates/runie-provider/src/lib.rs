@@ -6,6 +6,7 @@ pub mod config;
 pub mod mock;
 pub mod openai;
 pub mod planner;
+pub mod retry;
 
 pub use config::Config;
 pub use mock::{MockProvider, MockStreamingProvider};
@@ -42,13 +43,26 @@ impl DynProvider {
     /// Returns `Err(UnknownProvider)` for unknown keys (no silent Mock fallback).
     /// Returns `Err(MissingApiKey)` when `RUNIE_MOCK` is not set and the key
     /// requires an API key.
+    ///
+    /// This variant only checks environment variables. Use [`Self::new_with_config`]
+    /// to also read the API key/base URL from the saved config file.
     pub fn new(key: &str, model: &str) -> Result<Self, ProviderError> {
-        build_dyn_provider(key, model)
+        build_dyn_provider(key, model, None)
+    }
+
+    /// Build a provider from the saved config file, falling back to environment
+    /// variables when the config does not specify a value.
+    pub fn new_with_config(
+        key: &str,
+        model: &str,
+        config: &runie_core::config::Config,
+    ) -> Result<Self, ProviderError> {
+        build_dyn_provider(key, model, Some(config))
     }
 
     /// Build a provider, returning the key even on error for better error messages.
     pub fn new_checked(key: &str, model: &str) -> Result<Self, ProviderError> {
-        build_dyn_provider(key, model)
+        build_dyn_provider(key, model, None)
     }
 
     /// Returns the registry key used to build this provider.
@@ -82,6 +96,18 @@ impl Provider for DynProvider {
     > {
         self.inner.generate(messages)
     }
+
+    fn generate_with_tools(
+        &self,
+        messages: Vec<ChatMessage>,
+        tools: Vec<serde_json::Value>,
+    ) -> Pin<
+        Box<
+            dyn futures::Stream<Item = anyhow::Result<runie_core::llm_event::LLMEvent>> + Send + '_,
+        >,
+    > {
+        self.inner.generate_with_tools(messages, tools)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -98,12 +124,48 @@ pub fn is_openai_compatible(key: &str) -> bool {
     provider_registry::find_provider(key).is_some()
 }
 
+/// Resolve API key and base URL for a provider.
+///
+/// When a config is supplied, use the layered resolver
+/// (env > dotenv > config file) so keys saved during onboarding are available
+/// even when the env var is empty. Otherwise fall back to the env var only.
+fn resolve_credentials(
+    key: &str,
+    meta: &runie_core::provider_registry::ProviderMeta,
+    config: Option<&runie_core::config::Config>,
+) -> (String, String) {
+    let (api_key, base_url) = if let Some(cfg) = config {
+        let resolver = config::ProviderConfigResolver::from_config(cfg);
+        (
+            resolver.resolve_api_key(key).unwrap_or_default(),
+            resolver
+                .resolve_base_url(key)
+                .unwrap_or_else(|| meta.base_url.to_string()),
+        )
+    } else {
+        let api_key = if meta.env_var.is_empty() {
+            String::new()
+        } else {
+            std::env::var(meta.env_var).unwrap_or_default()
+        };
+        (api_key, meta.base_url.to_string())
+    };
+    (
+        api_key.trim().to_string(),
+        base_url.trim_end_matches('/').to_string(),
+    )
+}
+
 /// Build a `DynProvider` from a registry key and model name.
 ///
 /// **No silent Mock fallback.** Unknown keys return `Err(UnknownProvider)`.
 /// If the API key is not set (and `RUNIE_MOCK` is not enabled), returns
 /// `Err(MissingApiKey)`.
-fn build_dyn_provider(key: &str, model: &str) -> Result<DynProvider, ProviderError> {
+fn build_dyn_provider(
+    key: &str,
+    model: &str,
+    config: Option<&runie_core::config::Config>,
+) -> Result<DynProvider, ProviderError> {
     // Mock is always available in dev mode (RUNIE_MOCK=1 or RUNIE_MOCK_DELAY=1).
     if key == "mock" && provider_registry::is_mock_enabled() {
         return Ok(DynProvider {
@@ -116,21 +178,20 @@ fn build_dyn_provider(key: &str, model: &str) -> Result<DynProvider, ProviderErr
     let meta = provider_registry::find_provider(key)
         .ok_or_else(|| ProviderError::UnknownProvider(key.to_string()))?;
 
-    // Resolve API key from the environment variable.
-    let api_key = if meta.env_var.is_empty() {
-        String::new()
-    } else {
-        std::env::var(meta.env_var).unwrap_or_default()
-    };
-
+    let (api_key, base_url) = resolve_credentials(key, meta, config);
     if api_key.is_empty() && !provider_registry::is_mock_enabled() {
         return Err(ProviderError::MissingApiKey(meta.env_var.to_string()));
     }
 
     // All registered providers use OpenAI-compatible API.
     let provider: Box<dyn Provider> = {
-        let p = OpenAiProvider::new(api_key, model);
-        Box::new(p.with_base_url(meta.base_url))
+        let p = OpenAiProvider::new(api_key, model).with_base_url(&base_url);
+        let p = if let Some(meta) = provider_registry::find_model(model) {
+            p.with_model_meta(meta)
+        } else {
+            p
+        };
+        Box::new(retry::RetryProvider::new(p))
     };
 
     Ok(DynProvider {
@@ -152,29 +213,43 @@ pub fn build_provider(provider: &str, model: &str) -> DynProvider {
 
 /// Build a provider and return a warning message if a known non-critical condition occurred.
 /// In the new design there is no warning — the error is returned explicitly.
+///
+/// This variant only checks environment variables. Use
+/// [`build_provider_with_warning_with_config`] to read saved config.
 pub fn build_provider_with_warning(
     provider: &str,
     model: &str,
 ) -> Result<DynProvider, ProviderError> {
-    build_dyn_provider(provider, model)
+    build_dyn_provider(provider, model, None)
+}
+
+/// Build a provider using the saved config file.
+pub fn build_provider_with_warning_with_config(
+    provider: &str,
+    model: &str,
+    config: &runie_core::config::Config,
+) -> Result<DynProvider, ProviderError> {
+    build_dyn_provider(provider, model, Some(config))
 }
 
 /// Build a provider from `Config`.
 pub fn from_config(config: &Config, model: &str) -> DynProvider {
     let chain = config.provider_chain();
-    build_provider_with_fallback(&chain, model).expect(
+    build_provider_with_fallback(&chain, model, config).expect(
         "from_config: provider key is always known or panic — use new() for explicit errors",
     )
 }
 
-/// Try each provider in the chain until one builds successfully.
+/// Try each provider in the chain until one builds successfully, using the
+/// provided config to resolve API keys and base URLs.
 pub fn build_provider_with_fallback(
     chain: &[&str],
     model: &str,
+    config: &runie_core::config::Config,
 ) -> Result<DynProvider, ProviderError> {
     let mut last_err = None;
     for key in chain {
-        match build_dyn_provider(key, model) {
+        match build_dyn_provider(key, model, Some(config)) {
             Ok(provider) => return Ok(provider),
             Err(e) => last_err = Some(e),
         }
@@ -182,13 +257,15 @@ pub fn build_provider_with_fallback(
     Err(last_err.unwrap_or_else(|| ProviderError::UnknownProvider("none".to_string())))
 }
 
-/// Switch a live provider to a new key/model pair.
+/// Switch a live provider to a new key/model pair, reading credentials from
+/// the saved config file.
 pub fn switch_provider(
     provider: &mut DynProvider,
     key: &str,
     model: &str,
 ) -> Result<(), ProviderError> {
-    *provider = build_dyn_provider(key, model)?;
+    let config = runie_core::config::Config::load(None);
+    *provider = build_dyn_provider(key, model, Some(&config))?;
     Ok(())
 }
 
@@ -227,7 +304,7 @@ async fn fetch_models(
     let url = format!("{}/models", base_url.trim_end_matches('/'));
     let resp = client
         .get(&url)
-        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Authorization", format!("Bearer {}", api_key.trim()))
         .send()
         .await?;
 

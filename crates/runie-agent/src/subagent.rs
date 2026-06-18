@@ -10,9 +10,9 @@
 //! Errors (network, parse, etc.) are returned as a structured `SubagentError`.
 
 use crate::{run_agent_turn, AgentCommand, PermissionGate};
-use runie_core::permissions::{AutoAllowSink, PermissionManager};
 use runie_core::event::AgentEvent;
 use runie_core::model::ThinkingLevel;
+use runie_core::permissions::{AutoAllowSink, PermissionManager};
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
@@ -29,6 +29,8 @@ pub enum SubagentError {
 /// `prompt` is the user request. The subagent's message buffer is empty
 /// (no parent history leaks in), but it uses the same provider, model,
 /// and skills context as the parent.
+///
+/// This convenience wrapper loads the saved config to resolve API keys.
 #[allow(clippy::too_many_arguments)]
 pub async fn run_subagent(
     prompt: &str,
@@ -40,7 +42,35 @@ pub async fn run_subagent(
     system_prompt: &str,
     max_iterations: usize,
 ) -> Result<String, SubagentError> {
-    let provider = crate::build_provider_with_warning(provider_key, model)
+    let config = runie_core::config::Config::load(None);
+    run_subagent_with_config(
+        prompt,
+        provider_key,
+        model,
+        thinking_level,
+        read_only,
+        skills_context,
+        system_prompt,
+        max_iterations,
+        &config,
+    )
+    .await
+}
+
+/// Run a subagent turn with an explicit config for resolving API keys.
+#[allow(clippy::too_many_arguments)]
+pub async fn run_subagent_with_config(
+    prompt: &str,
+    provider_key: &str,
+    model: &str,
+    thinking_level: ThinkingLevel,
+    read_only: bool,
+    skills_context: &str,
+    system_prompt: &str,
+    max_iterations: usize,
+    config: &runie_core::config::Config,
+) -> Result<String, SubagentError> {
+    let provider = crate::build_provider_with_warning_with_config(provider_key, model, config)
         .map_err(|e| SubagentError::Provider(e.to_string()))?;
 
     let cmd = build_subagent_command(
@@ -85,10 +115,7 @@ async fn run_subagent_turn(
 ) -> Result<String, SubagentError> {
     let state = Arc::new(SubagentState::default());
     let callback = build_subagent_callback(state.clone());
-    let gate = PermissionGate::new(
-        PermissionManager::default(),
-        Arc::new(AutoAllowSink),
-    );
+    let gate = PermissionGate::new(PermissionManager::default(), Arc::new(AutoAllowSink));
 
     run_agent_turn(provider, cmd, callback, max_iterations, gate)
         .await
@@ -109,20 +136,60 @@ fn build_subagent_callback(
 ) -> Arc<Mutex<dyn FnMut(runie_core::Event) + Send + Sync>> {
     Arc::new(Mutex::new(move |evt: runie_core::Event| match evt {
         AgentEvent::ResponseDelta { content, .. } | AgentEvent::Response { content, .. } => {
-            state.responses.lock().unwrap().push(content)
+            state
+                .responses
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .push(content)
         }
-        AgentEvent::Error { message, .. } => *state.error.lock().unwrap() = Some(message),
-        AgentEvent::Done { .. } => *state.done.lock().unwrap() = true,
+        AgentEvent::Error { message, .. } => {
+            *state.error.lock().unwrap_or_else(|p| p.into_inner()) = Some(message)
+        }
+        AgentEvent::Done { .. } => {
+            *state.done.lock().unwrap_or_else(|p| p.into_inner()) = true
+        }
         _ => {}
     }))
 }
 
 fn finalize_subagent_result(state: Arc<SubagentState>) -> Result<String, SubagentError> {
-    if let Some(msg) = state.error.lock().unwrap().take() {
+    if let Some(msg) = state
+        .error
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .take()
+    {
         return Err(SubagentError::Agent(msg));
     }
-    if !*state.done.lock().unwrap() {
+    if !*state.done.lock().unwrap_or_else(|p| p.into_inner()) {
         return Err(SubagentError::Agent("subagent did not finish".into()));
     }
-    Ok(state.responses.lock().unwrap().join(""))
+    Ok(state
+        .responses
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .join(""))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn finalize_recovers_from_poisoned_done_mutex() {
+        let state = Arc::new(SubagentState::default());
+        let state2 = state.clone();
+        let handle = std::thread::spawn(move || {
+            let _guard = state2.done.lock().unwrap();
+            panic!("poison done mutex")
+        });
+        let _ = handle.join();
+
+        let result = finalize_subagent_result(state);
+        assert!(
+            matches!(result, Err(SubagentError::Agent(ref msg)) if msg == "subagent did not finish"),
+            "expected 'did not finish' error, got {:?}",
+            result
+        );
+    }
 }

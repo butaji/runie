@@ -148,13 +148,9 @@ fn format_diff(old: &str, new: &str) -> String {
 }
 
 fn try_apply_hashline(ctx: &ToolCallCtx) -> Result<ToolCallResult, String> {
-    let edits = ctx
-        .tool_input
-        .get("edits")
-        .cloned()
-        .unwrap_or_default();
-    let edits: Vec<HashlineEdit> =
-        serde_json::from_value(edits).map_err(|e| format!("Invalid hashline edit format: {}", e))?;
+    let edits = ctx.tool_input.get("edits").cloned().unwrap_or_default();
+    let edits: Vec<HashlineEdit> = serde_json::from_value(edits)
+        .map_err(|e| format!("Invalid hashline edit format: {}", e))?;
     let path = ctx
         .tool_input
         .get("path")
@@ -166,7 +162,10 @@ fn try_apply_hashline(ctx: &ToolCallCtx) -> Result<ToolCallResult, String> {
     let old_content = std::fs::read_to_string(&path)
         .map_err(|e| format!("Error reading {}: {}", path.display(), e))?;
     let new_content = HashlineEditSkill::apply_edits(&path, &edits)?;
-    Ok(ToolCallResult::SkipWithOutput(format_diff(&old_content, &new_content)))
+    Ok(ToolCallResult::SkipWithOutput(format_diff(
+        &old_content,
+        &new_content,
+    )))
 }
 
 impl HarnessSkill for HashlineEditSkill {

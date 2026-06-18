@@ -102,6 +102,18 @@ fn scoped_models_groups_by_provider() {
     let panel = stack.current().unwrap();
     // 2 provider headers + 1 separator + 3 model items = 6
     assert_eq!(panel.items.len(), 6);
+    // Model items must be Toggle variants so Space toggles them instead of
+    // adding a character to the panel filter.
+    let toggles: Vec<_> = panel
+        .items
+        .iter()
+        .filter(|i| matches!(i, PanelItem::Toggle { .. }))
+        .collect();
+    assert_eq!(
+        toggles.len(),
+        3,
+        "scoped model items should be Toggle variants"
+    );
 }
 
 #[test]
@@ -189,4 +201,3 @@ fn session_list_empty_shows_message() {
         .any(|i| matches!(i, PanelItem::Header(_)));
     assert!(has_header);
 }
-

@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use runie_agent::{AgentCommand, truncate::policy_from_section};
+use runie_agent::{truncate::policy_from_section, AgentCommand};
 use runie_core::bus::{EventBus, ReplayReceiver};
 use runie_core::event::{ControlEvent, Event, InputEvent, ModelConfigEvent};
 use runie_core::{AppState, Snapshot};
@@ -53,16 +53,11 @@ impl UiActor {
 
     /// Run the actor until a quit event is processed.
     pub async fn run(mut self, mut rx: ReplayReceiver<Event>) {
-        let (effect_tx, mut effect_rx) = mpsc::channel::<Event>(16);
-        let bus = self.bus.clone();
-        tokio::spawn(async move {
-            while let Some(evt) = effect_rx.recv().await {
-                bus.publish(evt);
-            }
-        });
+        let (effect_tx, effect_rx) = mpsc::channel::<Event>(16);
+        Self::spawn_effect_forwarder(self.bus.clone(), effect_rx);
+        Self::setup_login_validation_hook(&mut self.state, effect_tx.clone());
 
         let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
-
         self.state.ensure_fresh();
         let _ = self.render_tx.send(self.state.snapshot());
 
@@ -87,6 +82,20 @@ impl UiActor {
         }
     }
 
+    fn spawn_effect_forwarder(bus: EventBus<Event>, mut rx: mpsc::Receiver<Event>) {
+        tokio::spawn(async move {
+            while let Some(evt) = rx.recv().await {
+                bus.publish(evt);
+            }
+        });
+    }
+
+    fn setup_login_validation_hook(state: &mut AppState, effect_tx: mpsc::Sender<Event>) {
+        state.set_login_validation_hook(std::sync::Arc::new(move |provider: &str, key: &str| {
+            crate::effects::login::run(provider.to_string(), key.to_string(), effect_tx.clone());
+        }));
+    }
+
     /// Handle a single event. Returns `true` when the actor should shut down.
     async fn handle_event(&mut self, evt: Event, effect_tx: mpsc::Sender<Event>) -> bool {
         let was_submit = matches!(evt, InputEvent::Submit);
@@ -96,7 +105,12 @@ impl UiActor {
 
         if let Some(cmd) = EffectCommand::try_from_event(&evt, &self.state, &self.caps) {
             self.state.update(evt);
-            cmd.dispatch(effect_tx, self.render_tx.clone(), &mut self.state, self.caps);
+            cmd.dispatch(
+                effect_tx,
+                self.render_tx.clone(),
+                &mut self.state,
+                self.caps,
+            );
         } else {
             self.state.update(evt);
         }
@@ -131,8 +145,7 @@ pub async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentCo
     let Some((content, id)) = state.peek_queue() else {
         return;
     };
-    let content = content.clone();
-    let id = id.clone();
+    let (content, id) = (content.clone(), id.clone());
     state.pop_queue();
 
     state.agent.turn_active = true;
@@ -157,7 +170,10 @@ pub async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentCo
             read_only: state.config.read_only,
             skills_context,
             system_prompt,
-            truncation: policy_from_section(state.config.truncation.max_lines, state.config.truncation.max_bytes),
+            truncation: policy_from_section(
+                state.config.truncation.max_lines,
+                state.config.truncation.max_bytes,
+            ),
         })
         .await;
 }
@@ -235,8 +251,14 @@ mod tests {
 
         spawn_if_queued(&mut state, &tx).await;
 
-        assert!(state.agent.turn_active, "spawn_if_queued must set turn_active");
-        assert_eq!(state.agent.inflight, 1, "spawn_if_queued must increment inflight");
+        assert!(
+            state.agent.turn_active,
+            "spawn_if_queued must set turn_active"
+        );
+        assert_eq!(
+            state.agent.inflight, 1,
+            "spawn_if_queued must increment inflight"
+        );
         assert!(
             state.agent.request_queue.is_empty(),
             "Message should be popped from request_queue"

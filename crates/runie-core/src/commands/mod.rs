@@ -27,9 +27,9 @@
 pub mod agents_manager;
 pub mod dsl;
 mod registry;
-pub mod workflow;
 #[cfg(test)]
 mod tests;
+pub mod workflow;
 
 pub use dsl::{
     build_cancel_form_panel, build_spawn_form_panel, build_steer_form_panel, CommandCategory,

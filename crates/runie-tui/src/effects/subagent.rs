@@ -15,8 +15,10 @@ pub fn run(
     tx: mpsc::Sender<CoreEvent>,
 ) {
     let preview = truncate_preview(&prompt, 60);
+    let config =
+        runie_core::config_reload::Config::load(Some(&runie_core::config_reload::config_path()));
     tokio::spawn(async move {
-        let result = runie_agent::subagent::run_subagent(
+        let result = runie_agent::subagent::run_subagent_with_config(
             &prompt,
             &provider,
             &model,
@@ -25,12 +27,11 @@ pub fn run(
             &skills_context,
             "",
             5,
+            &config,
         )
         .await;
         let msg = format_result(&preview, result);
-        let _ = tx
-            .send(CoreEvent::SystemMessage { content: msg })
-            .await;
+        let _ = tx.send(CoreEvent::SystemMessage { content: msg }).await;
     });
 }
 

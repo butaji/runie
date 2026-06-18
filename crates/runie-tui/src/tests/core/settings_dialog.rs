@@ -89,6 +89,27 @@ fn settings_select_toggles_read_only() {
 }
 
 #[test]
+fn settings_space_toggles_read_only_and_keeps_dialog_open() {
+    let mut state = AppState::default();
+    state.config.read_only = false;
+    state.update(DialogEvent::ToggleSettingsDialog);
+    navigate_to_setting(&mut state, "Read-Only");
+
+    state.update(InputEvent::Input(' '));
+    assert!(state.config.read_only, "space should toggle read_only on");
+    assert!(
+        matches!(state.open_dialog, Some(DialogState::Settings(_))),
+        "space toggle should keep the dialog open"
+    );
+
+    state.update(InputEvent::Input(' '));
+    assert!(
+        !state.config.read_only,
+        "second space should toggle read_only off"
+    );
+}
+
+#[test]
 fn settings_esc_closes() {
     let mut state = AppState::default();
     state.update(DialogEvent::ToggleSettingsDialog);
@@ -127,6 +148,10 @@ fn settings_select_toggles_steering_mode() {
 
 #[test]
 fn settings_select_cycles_provider() {
+    crate::tests::configure_test_providers(&[
+        ("anthropic".into(), vec!["claude-3".into()]),
+        ("openai".into(), vec!["gpt-4o".into()]),
+    ]);
     let mut state = AppState::default();
     state.config.current_provider = "anthropic".into();
     state.update(DialogEvent::ToggleSettingsDialog);
@@ -209,6 +234,26 @@ fn select_by_label(state: &mut AppState, label: &str) {
         };
         if is_match {
             state.update(ModelConfigEvent::SettingsSelect);
+            return;
+        }
+        state.update(ModelConfigEvent::SettingsDown);
+    }
+    panic!("setting label {:?} not found", label);
+}
+
+fn navigate_to_setting(state: &mut AppState, label: &str) {
+    let count = settings_count(state);
+    for _ in 0..count {
+        let is_match = if let Some(DialogState::Settings(stack)) = &state.open_dialog {
+            stack
+                .current()
+                .and_then(|p| p.selected_item())
+                .and_then(|i| i.label())
+                == Some(label)
+        } else {
+            false
+        };
+        if is_match {
             return;
         }
         state.update(ModelConfigEvent::SettingsDown);
@@ -320,4 +365,51 @@ fn settings_contains_every_runtime_tunable_config_key() {
             "settings must contain config key {key}"
         );
     }
+}
+
+#[test]
+fn settings_select_changes_truncation_max_lines() {
+    let mut state = AppState::default();
+    let before = state.config.truncation.max_lines;
+    state.update(DialogEvent::ToggleSettingsDialog);
+    navigate_to_setting(&mut state, "Truncation Max Lines");
+    state.update(ModelConfigEvent::SettingsSelect);
+
+    assert_ne!(
+        state.config.truncation.max_lines, before,
+        "select should change truncation_max_lines"
+    );
+}
+
+#[test]
+fn settings_select_changes_truncation_max_bytes() {
+    let mut state = AppState::default();
+    let before = state.config.truncation.max_bytes;
+    state.update(DialogEvent::ToggleSettingsDialog);
+    navigate_to_setting(&mut state, "Truncation Max Bytes");
+    state.update(ModelConfigEvent::SettingsSelect);
+
+    assert_ne!(
+        state.config.truncation.max_bytes, before,
+        "select should change truncation_max_bytes"
+    );
+}
+
+#[test]
+fn settings_truncation_values_persist_after_close() {
+    let mut state = AppState::default();
+    state.update(DialogEvent::ToggleSettingsDialog);
+    navigate_to_setting(&mut state, "Truncation Max Lines");
+    state.update(ModelConfigEvent::SettingsSelect);
+    let lines_after = state.config.truncation.max_lines;
+
+    state.update(DialogEvent::ToggleSettingsDialog);
+    navigate_to_setting(&mut state, "Truncation Max Bytes");
+    state.update(ModelConfigEvent::SettingsSelect);
+    let bytes_after = state.config.truncation.max_bytes;
+
+    state.update(ControlEvent::Abort);
+    assert!(state.open_dialog.is_none());
+    assert_eq!(state.config.truncation.max_lines, lines_after);
+    assert_eq!(state.config.truncation.max_bytes, bytes_after);
 }
