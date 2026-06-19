@@ -91,6 +91,7 @@ pub const DEFAULT_BINDINGS: &[(&str, &str)] = &[
     ("ctrl+r", "ResumeSession"),
     ("ctrl+m", "CycleModelNext"),
     ("ctrl+shift+m", "CycleModelPrev"),
+    ("ctrl+shift+l", "ToggleProviderModelsDialog"),
     ("alt+enter", "FollowUp"),
     ("alt+up", "Dequeue"),
     ("alt+b", "CursorWordLeft"),

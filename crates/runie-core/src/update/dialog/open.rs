@@ -1,7 +1,9 @@
 //! Functions that open specific dialogs.
 
 use crate::commands::DialogState;
-use crate::dialog::builders::{command_palette, model_selector, scoped_models, session_tree};
+use crate::dialog::builders::{
+    command_palette, model_selector, provider_models, scoped_models, session_tree,
+};
 use crate::model::AppState;
 
 use super::build_file_picker_panel;
@@ -79,6 +81,34 @@ pub fn open_settings_dialog(state: &mut AppState) {
         categories.push((cat_name, vec![row]));
     }
     state.open_dialog = Some(DialogState::Settings(settings(categories)));
+    state.mark_dirty();
+}
+
+pub fn open_provider_models_dialog(state: &mut AppState, provider: &str) {
+    let configured = crate::login_config::list_configured_providers();
+    let saved_models: Vec<String> = configured
+        .iter()
+        .find(|(p, _, _)| p == provider)
+        .map(|(_, _, models)| models.clone())
+        .unwrap_or_default();
+    let saved_set: std::collections::HashSet<String> =
+        saved_models.iter().cloned().collect();
+
+    let mut available: Vec<String> = Vec::new();
+    if let Some(meta) = crate::provider_registry::find_provider(provider) {
+        for model in meta.models {
+            available.push(model.name.to_string());
+        }
+    }
+    for model in saved_models {
+        if !available.contains(&model) {
+            available.push(model);
+        }
+    }
+
+    state.open_dialog = Some(DialogState::PanelStack(provider_models(
+        provider, &available, &saved_set,
+    )));
     state.mark_dirty();
 }
 

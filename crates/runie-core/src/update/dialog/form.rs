@@ -145,16 +145,15 @@ fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
         state.set_transient("API key is required.".into(), TransientLevel::Warning);
         return A::KeepOpen;
     }
+    if let Some(action) = try_provider_models_submit(panel) {
+        return action;
+    }
     match panel.selected_item().cloned() {
         Some(PanelItem::Action {
             action: ItemAction::Emit(evt),
             ..
-        }) => {
-            return A::Submit(Some(evt));
-        }
-        Some(PanelItem::Action { .. }) => {
-            return A::Submit(None);
-        }
+        }) => A::Submit(Some(evt)),
+        Some(PanelItem::Action { .. }) => A::Submit(None),
         Some(PanelItem::Toggle {
             action: ItemAction::Emit(crate::Event::ToggleModel { model }),
             ..
@@ -164,15 +163,47 @@ fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
             if let Some(flow) = state.login_flow.as_mut() {
                 flow.selected_models.insert(model.clone());
             }
-            return A::Submit(Some(crate::Event::Save));
+            A::Submit(Some(crate::Event::Save))
         }
         Some(PanelItem::Toggle { .. }) => {
             toggle_selected_checkbox(state, panel);
-            return A::KeepOpen;
+            A::KeepOpen
         }
-        _ => {}
+        _ => A::Submit(form_build_submit(panel)),
     }
-    A::Submit(form_build_submit(panel))
+}
+
+fn try_provider_models_submit(panel: &Panel) -> Option<FormAction> {
+    use FormAction as A;
+    let selected = panel.selected_item()?;
+    let PanelItem::Action {
+        action: ItemAction::Emit(crate::Event::ProviderModelsSave { provider, .. }),
+        ..
+    } = selected
+    else {
+        return None;
+    };
+    if panel.id != "provider-models" {
+        return None;
+    }
+    let models = collect_provider_models_selection(panel);
+    Some(A::Submit(Some(crate::Event::ProviderModelsSave {
+        provider: provider.clone(),
+        models,
+    })))
+}
+
+fn collect_provider_models_selection(panel: &Panel) -> Vec<String> {
+    panel
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            PanelItem::Toggle {
+                label, value: true, ..
+            } => Some(label.clone()),
+            _ => None,
+        })
+        .collect()
 }
 
 fn key_field_empty(panel: &Panel) -> bool {

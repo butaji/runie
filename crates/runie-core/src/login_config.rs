@@ -126,6 +126,31 @@ pub fn set_test_config_with_providers(providers: &[(String, Vec<String>)]) {
     }
 }
 
+/// Get the full configuration for a single provider, including API key.
+pub fn get_provider_config(name: &str) -> Option<(String, String, Vec<String>)> {
+    let path = config_path();
+    let content = std::fs::read_to_string(&path).ok()?;
+    let doc: toml::Value = content.parse().ok()?;
+    let providers = doc.get("model_providers")?.as_table()?;
+    let val = providers.get(name)?;
+    let base_url = val
+        .get("base_url")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let api_key = val
+        .get("api_key")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let models = val
+        .get("models")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|m| m.as_str().map(String::from)).collect())
+        .unwrap_or_default();
+    Some((base_url, api_key, models))
+}
+
 /// List providers that have configurations in `~/.runie/config.toml`.
 pub fn list_configured_providers() -> Vec<(String, String, Vec<String>)> {
     let path = config_path();
@@ -166,3 +191,13 @@ pub fn list_configured_providers() -> Vec<(String, String, Vec<String>)> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[test]
+fn get_provider_config_reads_saved_config() {
+    set_test_config_with_providers(&[("openai".into(), vec!["gpt-4o".into()])]);
+    let (base_url, api_key, models) = get_provider_config("openai").expect("openai config");
+    assert_eq!(base_url, "http://test");
+    assert_eq!(api_key, "key");
+    assert_eq!(models, &["gpt-4o"]);
+}

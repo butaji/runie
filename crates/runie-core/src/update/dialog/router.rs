@@ -6,7 +6,8 @@ use crate::model::AppState;
 use crate::Event;
 
 use super::{
-    open_command_palette, open_model_selector, open_scoped_models_dialog, open_settings_dialog,
+    open_command_palette, open_model_selector, open_provider_models_dialog,
+    open_scoped_models_dialog, open_settings_dialog,
     panel::{update_panel_stack, PanelUpdateResult},
 };
 
@@ -110,6 +111,12 @@ pub fn process_command_result(state: &mut AppState, result: CommandResult) {
             match d {
                 DialogType::CommandPalette => open_command_palette(state),
                 DialogType::ModelSelector => open_model_selector(state),
+                DialogType::ProviderModels => {
+                    let provider = state.config.current_provider.clone();
+                    if !provider.is_empty() {
+                        open_provider_models_dialog(state, &provider);
+                    }
+                }
                 DialogType::Settings => open_settings_dialog(state),
                 DialogType::ScopedModels => open_scoped_models_dialog(state),
             }

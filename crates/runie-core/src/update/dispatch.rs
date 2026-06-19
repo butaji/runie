@@ -223,6 +223,10 @@ fn is_dialog_category_event(event: &Event) -> bool {
                 | Event::ProvidersSelectModel { .. }
                 | Event::ProvidersDisconnect { .. }
                 | Event::ProvidersAdd
+                | Event::ToggleProviderModelsDialog
+                | Event::ProviderModelsToggle { .. }
+                | Event::ProviderModelsSave { .. }
+                | Event::ProviderModelsClose
                 | Event::OpenAgentsManager
                 | Event::AgentsManagerSetField { .. }
                 | Event::AgentsManagerSave { .. }
@@ -348,42 +352,44 @@ pub(crate) fn is_dialog_event(event: &Event) -> bool {
 }
 
 fn is_toggle_dialog_event(event: &DialogEvent) -> bool {
+    is_palette_selector_event(event)
+        || is_path_form_event(event)
+        || is_agents_manager_event(event)
+        || is_provider_models_event(event)
+        || matches!(
+            event,
+            DialogEvent::ToggleWelcome
+                | DialogEvent::ToggleSettingsDialog
+                | DialogEvent::ToggleModelSelector
+                | DialogEvent::AtFilePicker
+                | DialogEvent::ToggleVimMode
+                | DialogEvent::ProvidersDialog
+                | DialogEvent::ProvidersAdd
+                | DialogEvent::ProvidersSelectModel { .. }
+                | DialogEvent::ProvidersDisconnect { .. }
+                | DialogEvent::ToggleScopedModelsDialog
+                | DialogEvent::ScopedModelEnableAll
+                | DialogEvent::ScopedModelDisableAll
+        )
+}
+
+fn is_agents_manager_event(event: &DialogEvent) -> bool {
     matches!(
         event,
-        DialogEvent::ToggleWelcome
-            | DialogEvent::ToggleCommandPalette
-            | DialogEvent::ToggleSettingsDialog
-            | DialogEvent::ToggleModelSelector
-            | DialogEvent::AtFilePicker
-            | DialogEvent::PaletteFilter(_)
-            | DialogEvent::PaletteBackspace
-            | DialogEvent::PaletteUp
-            | DialogEvent::PaletteDown
-            | DialogEvent::PaletteSelect
-            | DialogEvent::PaletteClose
-            | DialogEvent::ModelSelectorFilter(_)
-            | DialogEvent::ModelSelectorBackspace
-            | DialogEvent::ModelSelectorUp
-            | DialogEvent::ModelSelectorDown
-            | DialogEvent::ModelSelectorSelect
-            | DialogEvent::ModelSelectorClose
-            | DialogEvent::TogglePathCompletion
-            | DialogEvent::PathCompletionUp
-            | DialogEvent::PathCompletionDown
-            | DialogEvent::PathCompletionSelect
-            | DialogEvent::PathCompletionClose
-            | DialogEvent::ToggleVimMode
-            | DialogEvent::OpenAgentsManager
+        DialogEvent::OpenAgentsManager
             | DialogEvent::AgentsManagerSetField { .. }
             | DialogEvent::AgentsManagerSave { .. }
             | DialogEvent::AgentsManagerDelete { .. }
-            | DialogEvent::ProvidersDialog
-            | DialogEvent::ProvidersAdd
-            | DialogEvent::ProvidersSelectModel { .. }
-            | DialogEvent::ProvidersDisconnect { .. }
-            | DialogEvent::ToggleScopedModelsDialog
-            | DialogEvent::ScopedModelEnableAll
-            | DialogEvent::ScopedModelDisableAll
+    )
+}
+
+fn is_provider_models_event(event: &DialogEvent) -> bool {
+    matches!(
+        event,
+        DialogEvent::ToggleProviderModelsDialog
+            | DialogEvent::ProviderModelsToggle { .. }
+            | DialogEvent::ProviderModelsSave { .. }
+            | DialogEvent::ProviderModelsClose
     )
 }
 

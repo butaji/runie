@@ -134,6 +134,10 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
         "ToggleScopedModelsDialog",
         ctor!(Dialog::ToggleScopedModelsDialog),
     ),
+    (
+        "ToggleProviderModelsDialog",
+        ctor!(Dialog::ToggleProviderModelsDialog),
+    ),
     ("ScopedModelEnableAll", ctor!(Dialog::ScopedModelEnableAll)),
     (
         "ScopedModelDisableAll",

@@ -1,6 +1,6 @@
 use super::{exec, fresh_state, tmp_store, type_str, ENV_LOCK};
 use crate::event::Event;
-use crate::event::{DialogEvent, InputEvent};
+use crate::event::DialogEvent;
 use crate::model::Role;
 
 /// Open palette and select a command by name
@@ -121,6 +121,124 @@ fn model_no_args_opens_selector() {
         ),
         "no args should open model selector dialog"
     );
+}
+
+#[test]
+fn provider_models_no_provider_shows_message() {
+    let mut state = fresh_state();
+    state.config.current_provider.clear();
+    state.config.current_model.clear();
+    exec(&mut state, "/provider-models");
+
+    let sys_msgs: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::System)
+        .collect();
+    assert_eq!(sys_msgs.len(), 1);
+    assert!(
+        sys_msgs[0].content.contains("No connected provider"),
+        "should prompt to login first: {}",
+        sys_msgs[0].content
+    );
+}
+
+#[test]
+fn provider_models_opens_dialog_for_current_provider() {
+    crate::login_config::set_test_config_with_providers(&[(
+        "openai".into(),
+        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+    )]);
+    let mut state = fresh_state();
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4o".into();
+    exec(&mut state, "/provider-models");
+
+    let dialog = state.open_dialog.expect("dialog should be open");
+    let stack = dialog.panel_stack().expect("panel stack");
+    let panel = stack.current().expect("panel");
+    assert_eq!(panel.id, "provider-models");
+    assert!(panel.title.contains("OpenAI"));
+}
+
+#[test]
+fn provider_models_save_persists_selection() {
+    crate::login_config::set_test_config_with_providers(&[(
+        "openai".into(),
+        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+    )]);
+    let mut state = fresh_state();
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4o".into();
+    exec(&mut state, "/provider-models");
+
+    // Flip the second toggle off by emitting the toggle event. The generic
+    // checkbox handler already flips the value when the user activates the
+    // toggle, so we mimic that by directly mutating the panel item and then
+    // submitting the save action.
+    let dialog = state.open_dialog.as_mut().expect("dialog");
+    let stack = dialog.panel_stack_mut().expect("stack");
+    let panel = stack.current_mut().expect("panel");
+    let gpt4o_mini_item = panel
+        .items
+        .iter_mut()
+        .find(|i| i.label() == Some("gpt-4o-mini"))
+        .expect("gpt-4o-mini toggle");
+    if let crate::dialog::PanelItem::Toggle { value, .. } = gpt4o_mini_item {
+        *value = false;
+    }
+    // Select the Save action (navigable index, not raw item index) and submit.
+    panel.selected = panel
+        .items
+        .iter()
+        .enumerate()
+        .filter(|(_, i)| i.is_navigable())
+        .position(|(_, i)| i.label() == Some("_Save"))
+        .expect("save action");
+    state.update(Event::submit());
+
+    let saved = crate::login_config::list_configured_providers();
+    let (_, _, models) = saved.iter().find(|(p, _, _)| p == "openai").expect("openai");
+    assert_eq!(models, &["gpt-4o"]);
+    assert_eq!(state.config.current_model, "gpt-4o");
+}
+
+#[test]
+fn provider_models_cancel_does_not_persist() {
+    crate::login_config::set_test_config_with_providers(&[(
+        "openai".into(),
+        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+    )]);
+    let mut state = fresh_state();
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4o".into();
+    exec(&mut state, "/provider-models");
+
+    let dialog = state.open_dialog.as_mut().expect("dialog");
+    let stack = dialog.panel_stack_mut().expect("stack");
+    let panel = stack.current_mut().expect("panel");
+    let gpt4o_mini_item = panel
+        .items
+        .iter_mut()
+        .find(|i| i.label() == Some("gpt-4o-mini"))
+        .expect("gpt-4o-mini toggle");
+    if let crate::dialog::PanelItem::Toggle { value, .. } = gpt4o_mini_item {
+        *value = false;
+    }
+    panel.selected = panel
+        .items
+        .iter()
+        .enumerate()
+        .filter(|(_, i)| i.is_navigable())
+        .position(|(_, i)| i.label() == Some("_Cancel"))
+        .expect("cancel action");
+    state.update(Event::submit());
+
+    let saved = crate::login_config::list_configured_providers();
+    let (_, _, models) = saved.iter().find(|(p, _, _)| p == "openai").expect("openai");
+    assert_eq!(models, &["gpt-4o", "gpt-4o-mini"]);
+    assert!(state.open_dialog.is_none());
 }
 
 #[test]

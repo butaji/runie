@@ -407,6 +407,12 @@ impl AppState {
             crate::commands::CommandResult::OpenDialog(d) => match d {
                 DialogType::CommandPalette => crate::update::dialog::open_command_palette(self),
                 DialogType::ModelSelector => crate::update::dialog::open_model_selector(self),
+                DialogType::ProviderModels => {
+                    let provider = self.config.current_provider.clone();
+                    if !provider.is_empty() {
+                        crate::update::dialog::open_provider_models_dialog(self, &provider);
+                    }
+                }
                 DialogType::Settings => crate::update::dialog::open_settings_dialog(self),
                 DialogType::ScopedModels => crate::update::dialog::open_scoped_models_dialog(self),
             },

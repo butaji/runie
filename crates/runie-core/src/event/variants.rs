@@ -187,6 +187,16 @@ pub enum Event {
     CycleModelNext,
     CycleModelPrev,
     ToggleScopedModelsDialog,
+    ToggleProviderModelsDialog,
+    ProviderModelsToggle {
+        provider: String,
+        model: String,
+    },
+    ProviderModelsSave {
+        provider: String,
+        models: Vec<String>,
+    },
+    ProviderModelsClose,
     ScopedModelToggle {
         provider: String,
         name: String,

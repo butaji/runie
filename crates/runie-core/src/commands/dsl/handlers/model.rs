@@ -16,6 +16,14 @@ static MODEL_COMMANDS: &[CommandSpec] = &[
         kind: CommandKind::Handler(handle_model),
     },
     CommandSpec {
+        name: "provider-models",
+        desc: "Edit models for the connected provider",
+        aliases: &["pm"],
+        category: CommandCategory::Model,
+        sub: true,
+        kind: CommandKind::Handler(handle_provider_models),
+    },
+    CommandSpec {
         name: "thinking",
         desc: "Set thinking level (off/low/medium/high)",
         aliases: &[],
@@ -95,6 +103,15 @@ fn is_model_configured(provider: &str, model: &str) -> bool {
     }
 
     false
+}
+
+fn handle_provider_models(state: &mut AppState, _args: &str) -> CommandResult {
+    if state.config.current_provider.is_empty() {
+        return CommandResult::Message(
+            "No connected provider. Use /login to add a provider first.".into(),
+        );
+    }
+    CommandResult::OpenDialog(DialogType::ProviderModels)
 }
 
 fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
