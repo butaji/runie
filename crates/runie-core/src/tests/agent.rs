@@ -356,3 +356,19 @@ fn message_stores_provider() {
         .unwrap();
     assert_eq!(msg.provider, "anthropic");
 }
+
+#[test]
+fn assistant_message_preserves_unicode_after_tool_strip() {
+    let mut state = fresh_state();
+    state
+        .agent("req.0")
+        .respond("hello 😊 world")
+        .done();
+    let msg = state
+        .session
+        .messages
+        .iter()
+        .find(|m| m.role == Role::Assistant)
+        .expect("assistant message");
+    assert_eq!(msg.content, "hello 😊 world");
+}

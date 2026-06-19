@@ -94,23 +94,26 @@ fn strip_language_prefix(rest: &str) -> &str {
 }
 
 fn strip_inline_json_objects(content: &str) -> String {
-    let bytes = content.as_bytes();
     let mut result = String::with_capacity(content.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] != b'{' {
-            result.push(bytes[i] as char);
-            i += 1;
+    let mut chars = content.char_indices().peekable();
+    while let Some((i, c)) = chars.next() {
+        if c != '{' {
+            result.push(c);
             continue;
         }
-        if let Some((end, value)) = parse_json_object_at(bytes, i) {
+        if let Some((end, value)) = parse_json_object_at(content.as_bytes(), i) {
             if is_tool_call_value(&value) {
-                i = end + 1;
+                while chars
+                    .peek()
+                    .map(|(idx, _)| *idx <= end)
+                    .unwrap_or(false)
+                {
+                    chars.next();
+                }
                 continue;
             }
         }
         result.push('{');
-        i += 1;
     }
     result
 }
@@ -344,5 +347,31 @@ Done."#;
         let input = "```json\n{\"name\": \"foo\"}\n```";
         let result = strip_all(input);
         assert_eq!(result, input);
+    }
+}
+
+#[cfg(test)]
+mod unicode_bug_tests {
+    use super::*;
+
+    #[test]
+    fn strip_inline_json_objects_preserves_unicode() {
+        let content = "hello 😊 world";
+        let result = strip_inline_json_objects(content);
+        assert_eq!(result, content);
+    }
+
+    #[test]
+    fn strip_all_preserves_unicode() {
+        let content = "café ñiño 日本";
+        let result = strip_all(content);
+        assert_eq!(result, content);
+    }
+
+    #[test]
+    fn strip_inline_json_objects_strips_tool_call_and_preserves_unicode() {
+        let content = r#"hola 😊 {"name":"bash","arguments":{"command":"ls"}} adiós 🎉"#;
+        let result = strip_inline_json_objects(content);
+        assert_eq!(result, "hola 😊  adiós 🎉");
     }
 }
