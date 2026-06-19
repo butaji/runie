@@ -67,8 +67,12 @@ fn add_provider_section(
         panel = panel.item(label, ItemAction::Emit(evt));
     }
 
+    let edit_models_evt = crate::event::DialogEvent::ProviderEditModels {
+        provider: provider.clone(),
+    };
     let disconnect_evt = crate::event::DialogEvent::ProvidersDisconnect { provider };
     panel
+        .item("  ✎ Edit models", ItemAction::Emit(edit_models_evt))
         .item("  ✕ Disconnect", ItemAction::Emit(disconnect_evt))
         .separator()
 }

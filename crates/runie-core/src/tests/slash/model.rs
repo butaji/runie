@@ -124,46 +124,46 @@ fn model_no_args_opens_selector() {
 }
 
 #[test]
-fn provider_models_no_provider_shows_message() {
-    let mut state = fresh_state();
-    state.config.current_provider.clear();
-    state.config.current_model.clear();
-    exec(&mut state, "/provider-models");
-
-    let sys_msgs: Vec<_> = state
-        .session
-        .messages
-        .iter()
-        .filter(|m| m.role == Role::System)
-        .collect();
-    assert_eq!(sys_msgs.len(), 1);
-    assert!(
-        sys_msgs[0].content.contains("No connected provider"),
-        "should prompt to login first: {}",
-        sys_msgs[0].content
-    );
-}
-
-#[test]
-fn provider_models_opens_dialog_for_current_provider() {
+fn provider_dialog_shows_edit_models_action() {
     crate::login_config::set_test_config_with_providers(&[(
         "openai".into(),
         vec!["gpt-4o".into(), "gpt-4o-mini".into()],
     )]);
     let mut state = fresh_state();
-    state.config.current_provider = "openai".into();
-    state.config.current_model = "gpt-4o".into();
-    exec(&mut state, "/provider-models");
+    exec(&mut state, "/provider");
 
     let dialog = state.open_dialog.expect("dialog should be open");
     let stack = dialog.panel_stack().expect("panel stack");
     let panel = stack.current().expect("panel");
-    assert_eq!(panel.id, "provider-models");
+    assert!(
+        panel
+            .items
+            .iter()
+            .any(|i| i.label().is_some_and(|l| l.contains("Edit models"))),
+        "provider dialog should offer Edit models action"
+    );
+}
+
+#[test]
+fn provider_edit_models_opens_editor_for_provider() {
+    crate::login_config::set_test_config_with_providers(&[(
+        "openai".into(),
+        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+    )]);
+    let mut state = fresh_state();
+    state.update(DialogEvent::ProviderEditModels {
+        provider: "openai".into(),
+    });
+
+    let dialog = state.open_dialog.expect("dialog should be open");
+    let stack = dialog.panel_stack().expect("panel stack");
+    let panel = stack.current().expect("panel");
+    assert_eq!(panel.id, "provider-model-editor");
     assert!(panel.title.contains("OpenAI"));
 }
 
 #[test]
-fn provider_models_save_persists_selection() {
+fn provider_edit_models_save_persists_selection() {
     crate::login_config::set_test_config_with_providers(&[(
         "openai".into(),
         vec!["gpt-4o".into(), "gpt-4o-mini".into()],
@@ -171,11 +171,11 @@ fn provider_models_save_persists_selection() {
     let mut state = fresh_state();
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
-    exec(&mut state, "/provider-models");
+    state.update(DialogEvent::ProviderEditModels {
+        provider: "openai".into(),
+    });
 
-    // Flip the second toggle off by emitting the toggle event. The generic
-    // checkbox handler already flips the value when the user activates the
-    // toggle, so we mimic that by directly mutating the panel item and then
+    // Flip the second toggle off by directly mutating the panel item and then
     // submitting the save action.
     let dialog = state.open_dialog.as_mut().expect("dialog");
     let stack = dialog.panel_stack_mut().expect("stack");
@@ -205,7 +205,7 @@ fn provider_models_save_persists_selection() {
 }
 
 #[test]
-fn provider_models_cancel_does_not_persist() {
+fn provider_edit_models_cancel_does_not_persist() {
     crate::login_config::set_test_config_with_providers(&[(
         "openai".into(),
         vec!["gpt-4o".into(), "gpt-4o-mini".into()],
@@ -213,7 +213,9 @@ fn provider_models_cancel_does_not_persist() {
     let mut state = fresh_state();
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
-    exec(&mut state, "/provider-models");
+    state.update(DialogEvent::ProviderEditModels {
+        provider: "openai".into(),
+    });
 
     let dialog = state.open_dialog.as_mut().expect("dialog");
     let stack = dialog.panel_stack_mut().expect("stack");

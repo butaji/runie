@@ -320,10 +320,10 @@ fn dispatcher_handles_all_variants() {
             | Event::ProvidersSelectModel { .. }
             | Event::ProvidersDisconnect { .. }
             | Event::ProvidersAdd
-            | Event::ToggleProviderModelsDialog
-            | Event::ProviderModelsToggle { .. }
-            | Event::ProviderModelsSave { .. }
-            | Event::ProviderModelsClose
+            | Event::ProviderEditModels { .. }
+            | Event::ProviderEditModelsToggle { .. }
+            | Event::ProviderEditModelsSave { .. }
+            | Event::ProviderEditModelsClose
             | Event::OpenAgentsManager
             | Event::AgentsManagerSetField { .. }
             | Event::AgentsManagerSave { .. }

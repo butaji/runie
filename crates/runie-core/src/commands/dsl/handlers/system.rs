@@ -106,9 +106,9 @@ static SYSTEM_COMMANDS: &[CommandSpec] = &[
         kind: CommandKind::Handler(handle_reject),
     },
     CommandSpec {
-        name: "providers",
-        desc: "Manage providers: add, disconnect, switch models",
-        aliases: &["provider"],
+        name: "provider",
+        desc: "Manage providers: add, disconnect, choose models",
+        aliases: &["providers"],
         category: CommandCategory::System,
         sub: true,
         kind: CommandKind::Handler(handle_providers),

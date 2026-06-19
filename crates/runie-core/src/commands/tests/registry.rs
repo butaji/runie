@@ -17,13 +17,13 @@ fn registry_get_by_alias() {
 }
 
 #[test]
-fn registry_get_providers_alias() {
+fn registry_get_provider_alias() {
     let state = AppState::default();
-    let providers = state.registry.get("providers");
     let provider = state.registry.get("provider");
-    assert!(providers.is_some());
-    assert_eq!(providers.unwrap().name, "providers");
-    assert_eq!(provider.unwrap().name, "providers");
+    let providers = state.registry.get("providers");
+    assert!(provider.is_some());
+    assert_eq!(provider.unwrap().name, "provider");
+    assert_eq!(providers.unwrap().name, "provider");
 }
 
 #[test]

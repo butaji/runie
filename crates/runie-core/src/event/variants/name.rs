@@ -75,7 +75,6 @@ fn is_named_dialog_variant(event: &Event) -> bool {
                 | Event::SettingsSelect
                 | Event::SettingsClose
                 | Event::ToggleScopedModelsDialog
-                | Event::ToggleProviderModelsDialog
                 | Event::ScopedModelEnableAll
                 | Event::ScopedModelDisableAll
                 | Event::DialogBack

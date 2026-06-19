@@ -117,7 +117,6 @@ impl CommandFlow {
 pub enum DialogType {
     CommandPalette,
     ModelSelector,
-    ProviderModels,
     Settings,
     ScopedModels,
 }

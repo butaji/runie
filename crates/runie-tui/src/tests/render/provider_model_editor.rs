@@ -1,12 +1,14 @@
-//! Render tests for the provider-models dialog.
+//! Render tests for the provider model editor dialog.
 
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::event::DialogEvent;
 use runie_core::{AppState, ChatMessage, Role};
 
-fn open_provider_models(state: &mut AppState) {
-    state.update(DialogEvent::ToggleProviderModelsDialog);
+fn open_provider_model_editor(state: &mut AppState) {
+    state.update(DialogEvent::ProviderEditModels {
+        provider: "openai".into(),
+    });
 }
 
 fn setup_provider_config(provider: &str, models: &[String]) {
@@ -31,14 +33,14 @@ fn find_row_with_text(buf: &ratatui::buffer::Buffer, text: &str) -> Option<u16> 
 }
 
 #[test]
-fn provider_models_dialog_renders_provider_and_models() {
+fn provider_model_editor_renders_provider_and_models() {
     let _lock = crate::theme::test_lock();
     setup_provider_config("openai", &["gpt-4o".into(), "gpt-4o-mini".into()]);
     let mut state = AppState::default();
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
 
-    open_provider_models(&mut state);
+    open_provider_model_editor(&mut state);
 
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -60,14 +62,14 @@ fn provider_models_dialog_renders_provider_and_models() {
 }
 
 #[test]
-fn provider_models_dialog_renders_checked_state() {
+fn provider_model_editor_renders_checked_state() {
     let _lock = crate::theme::test_lock();
     setup_provider_config("openai", &["gpt-4o".into()]);
     let mut state = AppState::default();
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
 
-    open_provider_models(&mut state);
+    open_provider_model_editor(&mut state);
 
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -81,5 +83,3 @@ fn provider_models_dialog_renders_checked_state() {
     });
     assert!(has_check, "checked model should render [x]");
 }
-
-

@@ -2,7 +2,7 @@
 
 use crate::commands::DialogState;
 use crate::dialog::builders::{
-    command_palette, model_selector, provider_models, scoped_models, session_tree,
+    command_palette, model_selector, provider_model_editor, scoped_models, session_tree,
 };
 use crate::model::AppState;
 
@@ -84,7 +84,7 @@ pub fn open_settings_dialog(state: &mut AppState) {
     state.mark_dirty();
 }
 
-pub fn open_provider_models_dialog(state: &mut AppState, provider: &str) {
+pub fn open_provider_model_editor(state: &mut AppState, provider: &str) {
     let configured = crate::login_config::list_configured_providers();
     let saved_models: Vec<String> = configured
         .iter()
@@ -106,7 +106,7 @@ pub fn open_provider_models_dialog(state: &mut AppState, provider: &str) {
         }
     }
 
-    state.open_dialog = Some(DialogState::PanelStack(provider_models(
+    state.open_dialog = Some(DialogState::PanelStack(provider_model_editor(
         provider, &available, &saved_set,
     )));
     state.mark_dirty();

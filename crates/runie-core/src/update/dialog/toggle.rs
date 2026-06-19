@@ -5,7 +5,7 @@ use crate::event::DialogEvent;
 use crate::model::AppState;
 
 use super::{
-    open_at_file_picker_all, open_command_palette, open_model_selector, open_provider_models_dialog,
+    open_at_file_picker_all, open_command_palette, open_model_selector, open_provider_model_editor,
     open_scoped_models_dialog, open_settings_dialog,
 };
 
@@ -30,10 +30,12 @@ pub fn dialog_toggle_event(state: &mut AppState, event: DialogEvent) {
         DialogEvent::ProvidersAdd => handle_providers_add(state),
         DialogEvent::ProvidersSelectModel { .. } => handle_providers_select_model(state, &event),
         DialogEvent::ProvidersDisconnect { .. } => handle_providers_disconnect(state, &event),
-        DialogEvent::ToggleProviderModelsDialog => handle_provider_models_toggle(state),
-        DialogEvent::ProviderModelsToggle { .. } => handle_provider_models_toggle_item(state, &event),
-        DialogEvent::ProviderModelsSave { .. } => handle_provider_models_save(state, &event),
-        DialogEvent::ProviderModelsClose => handle_provider_models_close(state),
+        DialogEvent::ProviderEditModels { .. } => handle_provider_edit_models(state, &event),
+        DialogEvent::ProviderEditModelsToggle { .. } => {
+            handle_provider_edit_models_toggle_item(state, &event)
+        }
+        DialogEvent::ProviderEditModelsSave { .. } => handle_provider_edit_models_save(state, &event),
+        DialogEvent::ProviderEditModelsClose => handle_provider_edit_models_close(state),
         DialogEvent::ToggleScopedModelsDialog => handle_scoped_models_toggle(state),
         DialogEvent::ScopedModelEnableAll => handle_scoped_model_enable_all(state),
         DialogEvent::ScopedModelDisableAll => handle_scoped_model_disable_all(state),
@@ -137,41 +139,32 @@ fn handle_providers_disconnect(state: &mut AppState, event: &DialogEvent) {
     }
 }
 
-fn handle_provider_models_toggle(state: &mut AppState) {
-    let is_open = state
-        .open_dialog
-        .as_ref()
-        .and_then(|d| d.panel_stack())
-        .is_some_and(crate::dialog::builders::is_provider_models_stack);
-    if is_open {
-        state.open_dialog = None;
-        state.mark_dirty();
-    } else if !state.config.current_provider.is_empty() {
-        let provider = state.config.current_provider.clone();
-        open_provider_models_dialog(state, &provider);
+fn handle_provider_edit_models(state: &mut AppState, event: &DialogEvent) {
+    if let DialogEvent::ProviderEditModels { provider } = event {
+        open_provider_model_editor(state, provider);
     }
 }
 
-fn handle_provider_models_toggle_item(state: &mut AppState, event: &DialogEvent) {
-    let DialogEvent::ProviderModelsToggle { .. } = event else {
+fn handle_provider_edit_models_toggle_item(state: &mut AppState, event: &DialogEvent) {
+    let DialogEvent::ProviderEditModelsToggle { .. } = event else {
         return;
     };
     if state
         .open_dialog
         .as_ref()
         .and_then(|d| d.panel_stack())
-        .is_some_and(crate::dialog::builders::is_provider_models_stack)
+        .is_some_and(crate::dialog::builders::is_provider_model_editor_stack)
     {
         // The generic checkbox toggle already flipped the PanelItem value and
         // emitted this event; no further state change is needed because the
-        // panel item itself is the source of truth for the provider-models
-        // dialog. Just ensure the view is redrawn.
+        // panel item itself is the source of truth for the editor. Just ensure
+        // the view is redrawn.
         state.mark_dirty();
     }
 }
 
-fn handle_provider_models_save(state: &mut AppState, event: &DialogEvent) {
-    let DialogEvent::ProviderModelsSave { provider, models } = event else {
+fn handle_provider_edit_models_save(state: &mut AppState, event: &DialogEvent) {
+    let DialogEvent::ProviderEditModelsSave { provider, models } = event else {
         return;
     };
     if models.is_empty() {
@@ -202,7 +195,7 @@ fn handle_provider_models_save(state: &mut AppState, event: &DialogEvent) {
     state.mark_dirty();
 }
 
-fn handle_provider_models_close(state: &mut AppState) {
+fn handle_provider_edit_models_close(state: &mut AppState) {
     state.open_dialog = None;
     state.dialog_back_stack.clear();
     state.mark_dirty();

@@ -223,10 +223,10 @@ fn is_dialog_category_event(event: &Event) -> bool {
                 | Event::ProvidersSelectModel { .. }
                 | Event::ProvidersDisconnect { .. }
                 | Event::ProvidersAdd
-                | Event::ToggleProviderModelsDialog
-                | Event::ProviderModelsToggle { .. }
-                | Event::ProviderModelsSave { .. }
-                | Event::ProviderModelsClose
+                | Event::ProviderEditModels { .. }
+                | Event::ProviderEditModelsToggle { .. }
+                | Event::ProviderEditModelsSave { .. }
+                | Event::ProviderEditModelsClose
                 | Event::OpenAgentsManager
                 | Event::AgentsManagerSetField { .. }
                 | Event::AgentsManagerSave { .. }
@@ -355,7 +355,7 @@ fn is_toggle_dialog_event(event: &DialogEvent) -> bool {
     is_palette_selector_event(event)
         || is_path_form_event(event)
         || is_agents_manager_event(event)
-        || is_provider_models_event(event)
+        || is_provider_edit_models_event(event)
         || matches!(
             event,
             DialogEvent::ToggleWelcome
@@ -367,6 +367,7 @@ fn is_toggle_dialog_event(event: &DialogEvent) -> bool {
                 | DialogEvent::ProvidersAdd
                 | DialogEvent::ProvidersSelectModel { .. }
                 | DialogEvent::ProvidersDisconnect { .. }
+                | DialogEvent::ProviderEditModels { .. }
                 | DialogEvent::ToggleScopedModelsDialog
                 | DialogEvent::ScopedModelEnableAll
                 | DialogEvent::ScopedModelDisableAll
@@ -383,13 +384,13 @@ fn is_agents_manager_event(event: &DialogEvent) -> bool {
     )
 }
 
-fn is_provider_models_event(event: &DialogEvent) -> bool {
+fn is_provider_edit_models_event(event: &DialogEvent) -> bool {
     matches!(
         event,
-        DialogEvent::ToggleProviderModelsDialog
-            | DialogEvent::ProviderModelsToggle { .. }
-            | DialogEvent::ProviderModelsSave { .. }
-            | DialogEvent::ProviderModelsClose
+        DialogEvent::ProviderEditModels { .. }
+            | DialogEvent::ProviderEditModelsToggle { .. }
+            | DialogEvent::ProviderEditModelsSave { .. }
+            | DialogEvent::ProviderEditModelsClose
     )
 }
 

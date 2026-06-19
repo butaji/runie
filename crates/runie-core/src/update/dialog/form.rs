@@ -145,7 +145,7 @@ fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
         state.set_transient("API key is required.".into(), TransientLevel::Warning);
         return A::KeepOpen;
     }
-    if let Some(action) = try_provider_models_submit(panel) {
+    if let Some(action) = try_provider_edit_models_submit(panel) {
         return action;
     }
     match panel.selected_item().cloned() {
@@ -173,27 +173,27 @@ fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
     }
 }
 
-fn try_provider_models_submit(panel: &Panel) -> Option<FormAction> {
+fn try_provider_edit_models_submit(panel: &Panel) -> Option<FormAction> {
     use FormAction as A;
     let selected = panel.selected_item()?;
     let PanelItem::Action {
-        action: ItemAction::Emit(crate::Event::ProviderModelsSave { provider, .. }),
+        action: ItemAction::Emit(crate::Event::ProviderEditModelsSave { provider, .. }),
         ..
     } = selected
     else {
         return None;
     };
-    if panel.id != "provider-models" {
+    if panel.id != "provider-model-editor" {
         return None;
     }
-    let models = collect_provider_models_selection(panel);
-    Some(A::Submit(Some(crate::Event::ProviderModelsSave {
+    let models = collect_provider_edit_models_selection(panel);
+    Some(A::Submit(Some(crate::Event::ProviderEditModelsSave {
         provider: provider.clone(),
         models,
     })))
 }
 
-fn collect_provider_models_selection(panel: &Panel) -> Vec<String> {
+fn collect_provider_edit_models_selection(panel: &Panel) -> Vec<String> {
     panel
         .items
         .iter()

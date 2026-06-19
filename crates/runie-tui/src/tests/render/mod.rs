@@ -69,7 +69,7 @@ mod input_box;
 mod no_model;
 mod panel_list;
 mod popup_bg;
-mod provider_models;
+mod provider_model_editor;
 mod scoped_models;
 mod scrollbar;
 mod timestamps;
