@@ -148,6 +148,70 @@ fn test_render_agent_response() {
 }
 
 #[test]
+fn test_user_message_is_right_aligned_bubble() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    let mut state = AppState::default();
+    state.input.input = "right aligned".to_string();
+    state.update(InputEvent::Submit);
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+
+    let buf = terminal.backend().buffer();
+    let mut found_x: Option<u16> = None;
+    for y in 0..buf.area().height {
+        for x in 0..buf.area().width {
+            if buf[(x, y)].symbol() == "r" {
+                // First char of "right aligned".
+                found_x = Some(x);
+                break;
+            }
+        }
+        if found_x.is_some() {
+            break;
+        }
+    }
+    let x = found_x.expect("user content must be rendered");
+    assert!(
+        x > 30,
+        "User message should be right of center in a Grok-style bubble, got x={}",
+        x
+    );
+}
+
+#[test]
+fn test_agent_message_is_left_aligned_plain_text() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    let mut state = AppState::default();
+    state.update(AgentEvent::Response {
+        id: "req.0".to_string(),
+        content: "left side".to_string(),
+    });
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+
+    let buf = terminal.backend().buffer();
+    let mut found_x: Option<u16> = None;
+    for y in 0..buf.area().height {
+        for x in 0..buf.area().width {
+            if buf[(x, y)].symbol() == "l" {
+                // First char of "left side".
+                found_x = Some(x);
+                break;
+            }
+        }
+        if found_x.is_some() {
+            break;
+        }
+    }
+    let x = found_x.expect("agent content must be rendered");
+    assert!(
+        x < 10,
+        "Agent message should be left-aligned plain text, got x={}",
+        x
+    );
+}
+
+#[test]
 fn test_render_thinking_indicator() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
