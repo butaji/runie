@@ -151,6 +151,25 @@ fn mock_provider_with_delay_configured() {
     assert_eq!(p.delay_ms(), Some((500, 3000)));
 }
 
+#[tokio::test]
+async fn test_dyn_provider_mock_delay_adds_streaming_delay() {
+    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    std::env::remove_var("RUNIE_MOCK");
+    std::env::set_var("RUNIE_MOCK_DELAY", "1");
+
+    let provider = DynProvider::new("mock", "echo").expect("mock should build with RUNIE_MOCK_DELAY");
+    let start = std::time::Instant::now();
+    let texts = collect_text(provider.generate(vec![ChatMessage::user("hello world".to_string())])).await;
+
+    std::env::remove_var("RUNIE_MOCK_DELAY");
+    assert!(!texts.is_empty());
+    assert!(
+        start.elapsed() >= std::time::Duration::from_millis(50),
+        "RUNIE_MOCK_DELAY should introduce a streaming delay, elapsed: {:?}",
+        start.elapsed()
+    );
+}
+
 #[test]
 fn mock_provider_delay_is_deterministic() {
     let p1 = MockProvider::with_seed(10, 100, 123);

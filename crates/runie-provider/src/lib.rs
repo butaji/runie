@@ -168,8 +168,14 @@ fn build_dyn_provider(
 ) -> Result<DynProvider, ProviderError> {
     // Mock is always available in dev mode (RUNIE_MOCK=1 or RUNIE_MOCK_DELAY=1).
     if key == "mock" && provider_registry::is_mock_enabled() {
+        let provider: Box<dyn Provider> =
+            if std::env::var_os("RUNIE_MOCK_DELAY").is_some() {
+                Box::new(MockProvider::with_delay(300, 800))
+            } else {
+                Box::new(MockProvider::default())
+            };
         return Ok(DynProvider {
-            inner: Box::new(MockProvider::default()),
+            inner: provider,
             key: key.to_string(),
             model: model.to_string(),
         });

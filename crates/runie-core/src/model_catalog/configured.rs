@@ -14,10 +14,21 @@ pub fn configured_models_catalog(
     let catalog = model_catalog();
     let mut models = Vec::new();
     for (provider, _base_url, chosen) in configured {
-        for name in chosen {
+        let names: Vec<String> = if chosen.is_empty() {
+            // When a provider is configured without an explicit model list,
+            // fall back to the static catalog so the /model selector is usable.
+            catalog
+                .iter()
+                .filter(|m| m.provider == *provider)
+                .map(|m| m.name.clone())
+                .collect()
+        } else {
+            chosen.clone()
+        };
+        for name in names {
             if let Some(info) = catalog
                 .iter()
-                .find(|m| m.provider == *provider && m.name == *name)
+                .find(|m| m.provider == *provider && m.name == name)
             {
                 models.push(info.clone());
             } else {
@@ -63,5 +74,19 @@ mod tests {
         let models = configured_models_catalog(&configured);
         assert_eq!(models.len(), 1);
         assert!(!models.iter().any(|m| m.name == "gpt-4o-mini"));
+    }
+
+    #[test]
+    fn falls_back_to_static_catalog_when_no_models_configured() {
+        let configured = vec![("minimax".into(), "http://test".into(), vec![])];
+        let models = configured_models_catalog(&configured);
+        assert!(
+            models.iter().any(|m| m.full() == "minimax/MiniMax-M3"),
+            "should include MiniMax-M3 from static catalog"
+        );
+        assert!(
+            models.iter().any(|m| m.full() == "minimax/MiniMax-M2.7"),
+            "should include MiniMax-M2.7 from static catalog"
+        );
     }
 }

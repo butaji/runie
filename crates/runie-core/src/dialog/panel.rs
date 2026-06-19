@@ -347,6 +347,11 @@ impl Panel {
         }
     }
 
+    /// Returns true if the current filter has at least one match.
+    pub fn has_filter_matches(&self) -> bool {
+        self.filter.is_empty() || !self.filtered_navigable_indices().is_empty()
+    }
+
     /// Number of items that can receive selection.
     pub fn navigable_count(&self) -> usize {
         if !self.filterable || self.filter.is_empty() {

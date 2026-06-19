@@ -5,7 +5,7 @@ use crate::model::Role;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
-    state.update(InputEvent::Input('/'));
+    state.update(DialogEvent::ToggleCommandPalette);
     for c in cmd.chars() {
         state.update(DialogEvent::PaletteFilter(c));
     }
@@ -86,6 +86,23 @@ fn model_only_slashes_shows_usage() {
         "only slashes shows usage: {}",
         sys_msgs[0].content
     );
+}
+
+#[test]
+fn model_with_args_dispatches_from_typed_input_when_vim_mode_off() {
+    crate::login_config::set_test_config_with_providers(&[(
+        "openai".into(),
+        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+    )]);
+    let mut state = fresh_state();
+    state.config.vim_mode = false;
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4o-mini".into();
+
+    type_str(&mut state, "/model gpt-4o");
+    state.update(Event::submit());
+
+    assert_eq!(state.config.current_model, "gpt-4o");
 }
 
 #[test]

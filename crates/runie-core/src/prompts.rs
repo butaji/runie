@@ -71,7 +71,8 @@ pub fn build_system_prompt(
     let mut system = base_prompt.to_string();
     system.push_str(&format!(
         " Use structured JSON format: {{\"name\": \"tool_name\", \"arguments\": {{...}}}}. \
-            Available tools: {}.",
+            Available tools: {}. \
+            When a task can be satisfied with a tool, prefer the tool over answering from memory.",
         tools_list
     ));
     if !read_only {
@@ -129,5 +130,11 @@ mod tests {
         let prompt = build_system_prompt("Hi.", "tools", false, " Think deeply.");
         assert!(prompt.contains("Hi."));
         assert!(prompt.contains("Think deeply."));
+    }
+
+    #[test]
+    fn build_system_prompt_prefers_tools() {
+        let prompt = build_system_prompt("Hi.", "read_file, bash", false, "");
+        assert!(prompt.contains("prefer the tool over answering from memory"));
     }
 }

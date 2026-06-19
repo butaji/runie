@@ -244,6 +244,31 @@ fn panel_filtered_items_is_case_insensitive() {
 }
 
 #[test]
+fn panel_has_filter_matches_reflects_filter() {
+    let mut panel = Panel::new("test", "Test")
+        .with_filter()
+        .item("alpha", ItemAction::Close);
+    assert!(panel.has_filter_matches(), "empty filter always matches");
+    panel.push_filter('a');
+    assert!(panel.has_filter_matches());
+    panel.push_filter('z');
+    assert!(!panel.has_filter_matches());
+}
+
+#[test]
+fn panel_filtered_items_falls_back_to_all_navigable_when_nothing_matches() {
+    let mut panel = Panel::new("test", "Test")
+        .with_filter()
+        .item("alpha", ItemAction::Close)
+        .item("beta", ItemAction::Close);
+    panel.push_filter('z');
+    // Fallback keeps navigation usable for pickers; rendering uses
+    // has_filter_matches() to show an empty state instead.
+    assert_eq!(panel.filtered_items().len(), 2);
+    assert!(!panel.has_filter_matches());
+}
+
+#[test]
 fn panel_filtered_items_drops_headers_when_filtering() {
     let mut panel = Panel::new("test", "Test")
         .with_filter()

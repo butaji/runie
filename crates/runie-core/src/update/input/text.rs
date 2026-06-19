@@ -281,22 +281,19 @@ impl AppState {
                     self.update(evt);
                     return;
                 }
-            }
-            match c {
-                '/' => {
+                if c == '/' {
                     crate::update::dialog::open_command_palette(self);
                     self.mark_dirty();
                     return;
                 }
-                '@' => {
-                    let needs_brackets = false;
-                    let cursor = self.input.cursor_pos;
-                    self.input.file_picker_backup =
-                        Some((self.input.input.clone(), cursor, cursor, needs_brackets));
-                    crate::update::dialog::open_at_file_picker_all(self);
-                    return;
-                }
-                _ => {}
+            }
+            if c == '@' {
+                let needs_brackets = false;
+                let cursor = self.input.cursor_pos;
+                self.input.file_picker_backup =
+                    Some((self.input.input.clone(), cursor, cursor, needs_brackets));
+                crate::update::dialog::open_at_file_picker_all(self);
+                return;
             }
         }
         self.insert_char(c);

@@ -126,6 +126,11 @@ fn build_items(panel: &Panel, width: usize) -> (Vec<Line<'_>>, Option<usize>) {
     let mut selected_line: Option<usize> = None;
     let mut nav_idx = 0;
 
+    if panel.filterable && !panel.filter.is_empty() && !panel.has_filter_matches() {
+        push_empty_state(&mut lines, "No matching commands");
+        return (lines, None);
+    }
+
     for item in filtered.iter() {
         match item {
             PanelItem::Header(_) | PanelItem::Separator => push_static_item(&mut lines, item),
@@ -140,6 +145,10 @@ fn build_items(panel: &Panel, width: usize) -> (Vec<Line<'_>>, Option<usize>) {
         }
     }
     (lines, selected_line)
+}
+
+fn push_empty_state(lines: &mut Vec<Line>, text: &str) {
+    lines.push(Line::from(format!("  {}", text)).style(style_hint()));
 }
 
 fn push_static_item(lines: &mut Vec<Line>, item: &PanelItem) {
