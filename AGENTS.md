@@ -2,8 +2,10 @@
 
 Track tasks in tasks/index.json, details per each in tasks/xxx.md
 
-All features, fixes, and improvements must be implemented with coverage of automatic tests that are lightweight and run fast.
+All features, fixes, and improvements must be implemented with coverage of automatic tests that are lightweight and run fast: unit and e2e.
 No artificail delays in automatic tests!
+
+Each implementation must be live tested to make sure everything is working as expected.
 
 ## Testing Strategy (4 Layers)
 
