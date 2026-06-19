@@ -148,6 +148,7 @@ fn vim_nav_mode_hint_renders_in_status() {
 
 #[test]
 fn nav_mode_renders_input_box_with_disabled_style() {
+    let _lock = crate::theme::test_lock();
     let mut state = nav_state();
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).expect("terminal");
@@ -171,6 +172,7 @@ fn nav_mode_renders_input_box_with_disabled_style() {
 
 #[test]
 fn nav_mode_highlights_selected_post_with_orange_bracket() {
+    let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.config.vim_mode = true;
     add_messages(&mut state, 4);
@@ -214,6 +216,7 @@ fn find_accent_bracket(buf: &Buffer, accent: ratatui::style::Color) -> bool {
 
 #[test]
 fn command_bar_open_renders_input_box_as_disabled() {
+    let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.update(DialogEvent::ToggleCommandPalette);
     assert!(state.open_dialog.is_some(), "palette should be open");
@@ -246,6 +249,7 @@ fn chevron_cell(state: &AppState) -> Option<Style> {
 
 #[test]
 fn nav_mode_and_command_bar_share_disabled_chevron_style() {
+    let _lock = crate::theme::test_lock();
     let mut s1 = AppState::default();
     connect_model(&mut s1);
     let cell_enabled = chevron_cell(&s1).expect("enabled chevron cell");
