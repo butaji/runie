@@ -56,64 +56,34 @@ fn renders_hello() {
 }
 ```
 
-### Layer 4: Smoke & Crash Tests (tmux)
-Run the real binary inside tmux, feed keys via `tmux send-keys`, capture pane output, assert no panics/stuck timers/crashes. These are **not** deterministic unit tests — they find bugs the layers above cannot: async event ordering, race conditions, stale indices, infinite loops.
+### Layer 4: Provider Replay / Mock-Tool E2E
+Run the agent turn end-to-end with captured provider SSE fixtures and fake tool outputs. These tests catch the bugs lower layers cannot — async event ordering, race conditions, stale indices, inflight leaks, TurnComplete duplication, stuck timers — without shelling out or using tmux.
 
-```bash
-#!/bin/bash
-set -e
-BINARY="$(pwd)/target/release/runie"
-SESSION="runie_smoke_$$"
-LOG="/tmp/runie_smoke_$$.log"
-
-trap 'tmux kill-session -t "$SESSION" 2>/dev/null || true' EXIT
-
-tmux new-session -d -s "$SESSION" -x 80 -y 24 "$BINARY"
-sleep 0.3
-
-# Type and submit
-tmux send-keys -t "$SESSION" "list files"
-tmux send-keys -t "$SESSION" Enter
-sleep 1.0
-
-# Resize stress
-for i in $(seq 1 10); do
-    tmux resize-window -t "$SESSION" -x $((20 + i * 6)) -y $((5 + i * 2))
-    sleep 0.05
-done
-
-# Rapid submit
-tmux send-keys -t "$SESSION" "list files"
-tmux send-keys -t "$SESSION" Enter
-tmux send-keys -t "$SESSION" "list files"
-tmux send-keys -t "$SESSION" Enter
-sleep 3.0
-
-# Capture and check
-tmux capture-pane -t "$SESSION" -p > "$LOG"
-tmux send-keys -t "$SESSION" C-c
-
-# Assert no stuck timers (elapsed > 1000s means infinite loop)
-if grep -E '[0-9]{4}\.[0-9]s' "$LOG"; then
-    echo "STUCK TIMER!"; exit 1
-fi
-
-# Assert no panics
-if grep -i "panic\|thread.*panicked" "$LOG"; then
-    echo "PANIC!"; exit 1
-fi
-
-echo "Smoke test passed"
+```rust
+#[tokio::test]
+async fn minimax_m3_multi_tool_turn() {
+    let provider = DynProvider::from_provider(
+        Box::new(replay_minimax_m3_fixture()) as Box<dyn Provider>
+    );
+    let skills: Vec<Box<dyn HarnessSkill>> = vec![
+        Box::new(MockToolSkill::new(hashmap! {
+            "list_dir" => "README.md\nCargo.toml\nsrc/",
+            "read_file" => "# Runie\nTerminal coding agent harness.",
+        })),
+    ];
+    let events = run_agent_turn_with_skills(provider, "list files and read README", skills).await;
+    assert!(events.iter().any(|e| matches!(e, AgentEvent::TurnComplete)));
+}
 ```
 
 **When to run:** Before every push, in CI, or when changing async/event logic.
-**What they catch:** Event reordering, stale indices, inflight leaks, TurnComplete duplication, stuck timers, memory leaks in long-running sessions.
+**What they catch:** Event reordering, stale indices, inflight leaks, TurnComplete duplication, stuck timers, and provider-specific parser regressions.
 
 ## Anti-Patterns (Never Do These)
 
 | Don't | Why |
 |-------|-----|
-| Use tmux tests as replacement for Layers 1-3 | They complement, not replace, fast unit tests |
+| Use shell or tmux tests | Prefer deterministic Rust tests with mock IO |
 | Use `sleep()` in tests | Non-deterministic |
 | Test widget internals | Test output, not structure |
 | Mix state + rendering in one test | Hard to debug |

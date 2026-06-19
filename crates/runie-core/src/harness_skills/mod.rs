@@ -3,7 +3,7 @@
 //! Skills are default-on, configurable, and togglable harness behaviors.
 //! They register hooks: `on_turn_start`, `on_tool_call`, `on_turn_end`.
 //!
-//! See `docs/adr/0022-harness-middleware-plugins.md` for motivation.
+//! See `docs/Architecture.md#harness-skills` for the high-level design.
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};

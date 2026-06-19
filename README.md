@@ -165,7 +165,7 @@ See `AGENTS.md` for conventions.
 ## Roadmap
 
 - **R3** — Unify types, flatten events, finish state refactor, consolidate TUI crates. See `tasks/`.
-- **R4** — Team mode: orchestrated multi-agent workflows. See `docs/adr/0020-team-mode-orchestration.md`.
+- **R4** — Team mode: orchestrated multi-agent workflows. See `docs/Architecture.md#execution-modes`.
 
 ## License
 
@@ -188,7 +188,7 @@ Key differentiators:
 - **Persistent, forkable sessions** — conversations become reusable assets.
 - **Terminal-native workflow** — keyboard shortcuts, inline file references, fuzzy command palette.
 - **Team mode (R4)** — orchestrator designs workflows of specialized roles and routes them to the best models.
-- **Four layers of tests** — state logic, event handling, TestBackend rendering, and tmux smoke tests.
+- **Four layers of tests** — state logic, event handling, TestBackend rendering, and mock-tool/provider-replay E2E tests.
 
 Runie is built for developers who refuse to leave the terminal and want every model they pay for to pull its weight.
 </details>
