@@ -4,7 +4,6 @@
 //! The spec is used to build a `CommandDef` via `build_cmd()`.
 
 use super::{CommandCategory, CommandDef, CommandResult};
-use crate::dialog::PanelStack;
 use crate::model::AppState;
 use crate::Event;
 
@@ -22,10 +21,6 @@ pub enum CommandKind {
         fields: &'static [(&'static str, &'static str, &'static str)],
         submit: FormSubmitFn,
     },
-    /// Open a named dialog.
-    Dialog(super::DialogType),
-    /// Open a panel stack produced at runtime.
-    Panel(fn(&mut AppState, &str) -> PanelStack),
     /// Show a static message.
     Msg(&'static str),
 }
@@ -60,8 +55,6 @@ pub fn build_cmd(spec: &CommandSpec) -> CommandDef {
             let submit = *submit;
             cmd.form(title, move |f| add_fields(f, fields).on_submit(submit))
         }
-        CommandKind::Dialog(d) => cmd.dialog(d.clone()),
-        CommandKind::Panel(f) => cmd.panel(*f),
         CommandKind::Msg(m) => cmd.msg(m),
     }
 }

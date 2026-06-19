@@ -36,6 +36,7 @@ pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
         EventCategory::Session => super::session::handle_session_event(state, event),
         EventCategory::Command => super::command::handle_command_event(state, event),
         EventCategory::LoginFlow => super::login_flow::login_flow_event(state, event),
+        EventCategory::Permission => super::permission::permission_event(state, event),
         EventCategory::Other => {}
     }
 }
@@ -53,10 +54,14 @@ enum EventCategory {
     Session,
     Command,
     LoginFlow,
+    Permission,
     Other,
 }
 
 fn categorize(event: &Event) -> EventCategory {
+    if matches!(event, Event::PermissionRequest { .. }) {
+        return EventCategory::Permission;
+    }
     if let Some(cat) = categorize_input_agent_scroll(event) {
         return cat;
     }
@@ -161,9 +166,6 @@ fn is_control_event(event: &Event) -> bool {
             | Event::Reset
             | Event::Abort
             | Event::FollowUp
-            | Event::SpawnAgent { .. }
-            | Event::SteerAgent { .. }
-            | Event::CancelAgent { .. }
             | Event::ToggleExpand
             | Event::Dequeue
             | Event::OpenExternalEditor
@@ -223,14 +225,6 @@ fn is_dialog_category_event(event: &Event) -> bool {
                 | Event::ProvidersSelectModel { .. }
                 | Event::ProvidersDisconnect { .. }
                 | Event::ProvidersAdd
-                | Event::ProviderEditModels { .. }
-                | Event::ProviderEditModelsToggle { .. }
-                | Event::ProviderEditModelsSave { .. }
-                | Event::ProviderEditModelsClose
-                | Event::OpenAgentsManager
-                | Event::AgentsManagerSetField { .. }
-                | Event::AgentsManagerSave { .. }
-                | Event::AgentsManagerDelete { .. }
                 | Event::CopyToClipboard(_)
                 | Event::CopySelectedBlock
                 | Event::CopyBlockMetadata
@@ -314,7 +308,6 @@ fn categorize_command_login(event: &Event) -> Option<EventCategory> {
         Event::Start
         | Event::SelectProvider { .. }
         | Event::SubmitKey { .. }
-        | Event::ValidationDone { .. }
         | Event::ValidationFailed { .. }
         | Event::ModelsFetched { .. }
         | Event::ToggleModel { .. }
@@ -354,8 +347,6 @@ pub(crate) fn is_dialog_event(event: &Event) -> bool {
 fn is_toggle_dialog_event(event: &DialogEvent) -> bool {
     is_palette_selector_event(event)
         || is_path_form_event(event)
-        || is_agents_manager_event(event)
-        || is_provider_edit_models_event(event)
         || matches!(
             event,
             DialogEvent::ToggleWelcome
@@ -367,31 +358,10 @@ fn is_toggle_dialog_event(event: &DialogEvent) -> bool {
                 | DialogEvent::ProvidersAdd
                 | DialogEvent::ProvidersSelectModel { .. }
                 | DialogEvent::ProvidersDisconnect { .. }
-                | DialogEvent::ProviderEditModels { .. }
                 | DialogEvent::ToggleScopedModelsDialog
                 | DialogEvent::ScopedModelEnableAll
                 | DialogEvent::ScopedModelDisableAll
         )
-}
-
-fn is_agents_manager_event(event: &DialogEvent) -> bool {
-    matches!(
-        event,
-        DialogEvent::OpenAgentsManager
-            | DialogEvent::AgentsManagerSetField { .. }
-            | DialogEvent::AgentsManagerSave { .. }
-            | DialogEvent::AgentsManagerDelete { .. }
-    )
-}
-
-fn is_provider_edit_models_event(event: &DialogEvent) -> bool {
-    matches!(
-        event,
-        DialogEvent::ProviderEditModels { .. }
-            | DialogEvent::ProviderEditModelsToggle { .. }
-            | DialogEvent::ProviderEditModelsSave { .. }
-            | DialogEvent::ProviderEditModelsClose
-    )
 }
 
 fn is_form_dialog_event(event: &DialogEvent) -> bool {

@@ -1,23 +1,28 @@
-//! Approval sink that emits a `PermissionRequest` event and denies by default.
+//! Approval sink that emits a `PermissionRequest` event and awaits a response.
 //!
-//! This sink lets the TUI show a permission dialog without blocking the agent
-//! turn. A future iteration can wire the `PermissionResponse` event back into
-/// the sink to await user approval.
+//! The sink registers itself in the app state's [`ApprovalRegistry`] before
+//! emitting the request. The TUI resolves the request when the user chooses an
+//! action, completing the oneshot receiver and unblocking the agent turn.
 use async_trait::async_trait;
 use runie_core::event::Event;
-use runie_core::permissions::{ApprovalSink, PermissionAction};
+use runie_core::permissions::{ApprovalRegistry, ApprovalSink, PermissionAction};
 use serde_json::Value;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 /// Approval sink that emits a permission request event.
 pub struct EmitApprovalSink {
     emit: Arc<Mutex<dyn FnMut(Event) + Send + Sync>>,
+    registry: Arc<Mutex<ApprovalRegistry>>,
 }
 
 impl EmitApprovalSink {
-    /// Create a new sink backed by the given emit callback.
-    pub fn new(emit: Arc<Mutex<dyn FnMut(Event) + Send + Sync>>) -> Self {
-        Self { emit }
+    /// Create a new sink backed by the given emit callback and approval registry.
+    pub fn new(
+        emit: Arc<Mutex<dyn FnMut(Event) + Send + Sync>>,
+        registry: Arc<Mutex<ApprovalRegistry>>,
+    ) -> Self {
+        Self { emit, registry }
     }
 }
 
@@ -25,6 +30,10 @@ impl EmitApprovalSink {
 impl ApprovalSink for EmitApprovalSink {
     async fn ask(&self, tool: &str, input: &Value) -> PermissionAction {
         let request_id = uuid();
+        let rx = {
+            let registry = self.registry.lock().expect("approval registry poisoned");
+            registry.register(&request_id)
+        };
         let event = Event::PermissionRequest {
             request_id,
             tool: tool.to_string(),
@@ -33,8 +42,11 @@ impl ApprovalSink for EmitApprovalSink {
         if let Ok(mut emit) = self.emit.lock() {
             emit(event);
         }
-        // Safe default: deny until a response channel is wired.
-        PermissionAction::Deny
+
+        match tokio::time::timeout(Duration::from_secs(300), rx).await {
+            Ok(Ok(action)) => action,
+            _ => PermissionAction::Deny,
+        }
     }
 }
 

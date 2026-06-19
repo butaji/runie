@@ -1,12 +1,7 @@
 //! End-to-end onboarding tests (Layer 2 + Layer 3).
 //!
 //! Drives the first-run login flow and the providers-add flow through core
-//! events and verifies both state transitions and rendered UI, including the
-//! async validation hook.
-
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc;
-use std::sync::Arc;
+//! events and verifies both state transitions and rendered UI.
 
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::event::InputEvent;
@@ -42,18 +37,10 @@ fn render_content(state: &mut AppState) -> String {
 #[test]
 fn full_flow_from_empty_to_input_box() {
     clean_config();
-    let (tx, rx) = mpsc::channel::<Event>();
 
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(move |provider: &str, key: &str| {
-        let _ = tx.send(Event::ModelsFetched {
-            provider: provider.to_string(),
-            key: key.to_string(),
-            models: vec!["MiniMax-M3".into()],
-        });
-    }));
 
     state.update(Event::Start);
     state.update(Event::SelectProvider {
@@ -63,10 +50,11 @@ fn full_flow_from_empty_to_input_box() {
         provider: "minimax".into(),
         key: "sk-test".into(),
     });
-
-    let event = rx.recv().expect("validation hook should emit event");
-    assert!(matches!(event, Event::ModelsFetched { .. }));
-    state.update(event);
+    state.update(Event::ModelsFetched {
+        provider: "minimax".into(),
+        key: "sk-test".into(),
+        models: vec!["MiniMax-M3".into()],
+    });
     state.update(Event::Save);
 
     assert!(state.has_models(), "model should be active after save");
@@ -86,20 +74,12 @@ fn full_flow_from_empty_to_input_box() {
 }
 
 #[test]
-fn validation_hook_failure_shows_error() {
+fn validation_failure_shows_error() {
     clean_config();
-    let (tx, rx) = mpsc::channel::<Event>();
 
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(move |provider: &str, key: &str| {
-        let _ = tx.send(Event::ValidationFailed {
-            provider: provider.to_string(),
-            key: key.to_string(),
-            error: "invalid key".into(),
-        });
-    }));
 
     state.update(Event::Start);
     state.update(Event::SelectProvider {
@@ -109,10 +89,11 @@ fn validation_hook_failure_shows_error() {
         provider: "minimax".into(),
         key: "sk-test".into(),
     });
-
-    let event = rx.recv().expect("validation hook should emit event");
-    assert!(matches!(event, Event::ValidationFailed { .. }));
-    state.update(event);
+    state.update(Event::ValidationFailed {
+        provider: "minimax".into(),
+        key: "sk-test".into(),
+        error: "invalid key".into(),
+    });
 
     assert!(
         state.login_flow.is_some(),
@@ -141,7 +122,6 @@ fn add_second_provider_keeps_first_active() {
     let mut state = AppState::default();
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
 
     state.update(Event::ProvidersDialog);
     state.update(Event::ProvidersAdd);
@@ -224,29 +204,10 @@ fn login_flow_auto_opens_when_no_model_connected() {
 #[test]
 fn invalid_key_retry_with_valid_key_saves_and_connects() {
     clean_config();
-    let (tx, rx) = mpsc::channel::<Event>();
-    let failed_once = Arc::new(AtomicBool::new(false));
-    let failed_once_hook = failed_once.clone();
-    let tx_hook = tx.clone();
 
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(move |provider: &str, key: &str| {
-        if !failed_once_hook.swap(true, Ordering::SeqCst) {
-            let _ = tx_hook.send(Event::ValidationFailed {
-                provider: provider.to_string(),
-                key: key.to_string(),
-                error: "invalid key".into(),
-            });
-        } else {
-            let _ = tx_hook.send(Event::ModelsFetched {
-                provider: provider.to_string(),
-                key: key.to_string(),
-                models: vec!["MiniMax-M3".into()],
-            });
-        }
-    }));
 
     state.update(Event::Start);
     state.update(Event::SelectProvider {
@@ -256,10 +217,11 @@ fn invalid_key_retry_with_valid_key_saves_and_connects() {
         provider: "minimax".into(),
         key: "sk-bad".into(),
     });
-
-    let event = rx.recv().expect("validation hook should emit failure");
-    assert!(matches!(event, Event::ValidationFailed { .. }));
-    state.update(event);
+    state.update(Event::ValidationFailed {
+        provider: "minimax".into(),
+        key: "sk-bad".into(),
+        error: "invalid key".into(),
+    });
 
     assert!(
         state.login_flow.is_some(),
@@ -283,9 +245,11 @@ fn invalid_key_retry_with_valid_key_saves_and_connects() {
         provider: "minimax".into(),
         key: "sk-good".into(),
     });
-    let event = rx.recv().expect("validation hook should emit success");
-    assert!(matches!(event, Event::ModelsFetched { .. }));
-    state.update(event);
+    state.update(Event::ModelsFetched {
+        provider: "minimax".into(),
+        key: "sk-good".into(),
+        models: vec!["MiniMax-M3".into()],
+    });
 
     assert_eq!(
         state.login_flow.as_ref().unwrap().step,
@@ -316,7 +280,6 @@ fn uncheck_all_models_rejects_save_with_transient_error() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
 
     state.update(Event::Start);
     state.update(Event::SelectProvider {

@@ -236,7 +236,9 @@ fn handle_list_models() -> Value {
 }
 
 fn handle_list_sessions() -> Result<Value> {
-    let sessions = runie_core::session::list()?;
+    let sessions = runie_core::session_store::SessionStore::default_store()
+        .ok_or_else(|| anyhow::anyhow!("No data directory"))?
+        .list()?;
     Ok(serde_json::json!({ "sessions": sessions }))
 }
 

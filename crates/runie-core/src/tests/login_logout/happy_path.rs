@@ -75,7 +75,7 @@ fn validation_done_legacy_reaches_model_select() {
     start_login_flow(&mut state);
     select_provider(&mut state, "minimax");
     submit_key(&mut state, "sk-test");
-    state.update(LoginFlowEvent::ValidationDone {
+    state.update(LoginFlowEvent::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into()],

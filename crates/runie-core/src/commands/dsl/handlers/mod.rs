@@ -4,11 +4,9 @@
 //!   - defines a `static COMMANDS: &[CommandSpec]` table
 //!   - exposes `pub fn register(registry: &mut CommandRegistry)`
 
-pub mod agents;
 pub mod help;
 pub mod model;
 pub mod session;
-pub mod subagent;
 pub mod system;
 pub mod tool;
 
@@ -24,8 +22,5 @@ pub fn register_all(registry: &mut crate::commands::CommandRegistry) {
     model::register(registry);
     tool::register(registry);
     system::register(registry);
-    subagent::register(registry);
-    agents::register(registry);
     help::register(registry);
-    crate::commands::workflow::register(registry);
 }

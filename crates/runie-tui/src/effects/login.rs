@@ -10,14 +10,8 @@ pub fn run(provider: String, key: String, tx: mpsc::Sender<CoreEvent>) {
     }
 
     tokio::spawn(async move {
-        use runie_core::provider_registry::find_provider;
-        use runie_provider::validate_api_key;
-
-        let result = if let Some(meta) = find_provider(&provider) {
-            validate_api_key(meta.base_url, &key).await
-        } else {
-            Err(anyhow::anyhow!("Unknown provider: {}", provider))
-        };
+        let config = runie_core::config::Config::load(None);
+        let result = validate_provider(&provider, &key, &config).await;
 
         match result {
             Ok(models) => {
@@ -41,3 +35,29 @@ pub fn run(provider: String, key: String, tx: mpsc::Sender<CoreEvent>) {
         }
     });
 }
+
+async fn validate_provider(
+    provider: &str,
+    key: &str,
+    config: &runie_core::config::Config,
+) -> anyhow::Result<Vec<String>> {
+    use runie_core::provider_registry::find_provider;
+    use runie_provider::validate_api_key;
+
+    let meta = find_provider(provider)
+        .ok_or_else(|| anyhow::anyhow!("Unknown provider: {}", provider))?;
+    let base_url = validation_base_url(provider, config)
+        .unwrap_or_else(|| meta.base_url.to_string());
+    validate_api_key(&base_url, key).await
+}
+
+fn validation_base_url(
+    provider: &str,
+    config: &runie_core::config::Config,
+) -> Option<String> {
+    let resolver = runie_provider::config::ProviderConfigResolver::from_config(config);
+    resolver.resolve_base_url(provider)
+}
+
+#[cfg(test)]
+mod tests;

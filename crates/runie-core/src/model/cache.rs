@@ -318,7 +318,6 @@ impl AppState {
         self.fill_snapshot_config(&mut s);
         self.fill_snapshot_dialog(&mut s);
         self.fill_snapshot_meta(&mut s);
-        self.fill_snapshot_sidebar(&mut s);
         s
     }
 
@@ -384,16 +383,13 @@ impl AppState {
         s.provider = self.config.current_provider.clone();
         s.model = self.config.current_model.clone();
         s.has_models = self.has_models();
-        s.execution_mode = self.config.execution_mode;
         s.theme_name = self.config.theme_name.clone();
         s.thinking_level = self.config.thinking_level;
         s.read_only = self.config.read_only;
-        s.orchestrator_state = Some(self.orchestrator_state.clone());
-        // Build input title: "provider/model · mode · ..."
+        // Build input title: "provider/model · read-only"
         s.input_title = build_input_title(
             &self.config.current_provider,
             &self.config.current_model,
-            &self.config.execution_mode,
             self.config.read_only,
         );
     }
@@ -415,29 +411,19 @@ impl AppState {
         s.pending_edits = self.session.pending_edits.clone();
         s.scoped_models = self.config.scoped_models.clone();
         s.image_attachments = self.session.image_attachments.clone();
+        s.permission_request = self.permission_request.clone();
         s.last_visible_height = self.view.last_visible_height;
     }
 
-    fn fill_snapshot_sidebar(&self, s: &mut Snapshot) {
-        s.sidebar = crate::snapshot::SidebarData::from(&self.sidebar);
-    }
 }
 /// Build the input box title string.
-/// Format: `provider/model · mode · ...`
-/// Mode suffixes are shown only when not the default (Solo, read-write).
-fn build_input_title(
-    provider: &str,
-    model: &str,
-    mode: &crate::orchestrator::ExecutionMode,
-    read_only: bool,
-) -> String {
-    use crate::orchestrator::ExecutionMode;
+/// Format: `provider/model · read-only` when read-only, otherwise `provider/model`.
+fn build_input_title(provider: &str, model: &str, read_only: bool) -> String {
     let base = format!("{}/{}", provider, model);
-    match (mode, read_only) {
-        (ExecutionMode::Solo, false) => base,
-        (ExecutionMode::Team, false) => format!("{} · Team", base),
-        (ExecutionMode::Solo, true) => format!("{} · read-only", base),
-        (ExecutionMode::Team, true) => format!("{} · Team · read-only", base),
+    if read_only {
+        format!("{} · read-only", base)
+    } else {
+        base
     }
 }
 #[cfg(test)]

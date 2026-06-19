@@ -17,10 +17,7 @@ pub fn login_flow_event(state: &mut crate::model::AppState, event: LoginFlowEven
         LoginFlowEvent::Start => login_flow_start(state),
         LoginFlowEvent::SelectProvider { provider } => login_flow_select_provider(state, provider),
         LoginFlowEvent::SubmitKey { provider, key } => login_flow_submit_key(state, provider, key),
-        LoginFlowEvent::ValidationDone { models, .. }
-        | LoginFlowEvent::ModelsFetched { models, .. } => {
-            login_flow_validation_success(state, models)
-        }
+        LoginFlowEvent::ModelsFetched { models, .. } => login_flow_validation_success(state, models),
         LoginFlowEvent::ValidationFailed { error, .. } => {
             login_flow_validation_failed(state, error)
         }
@@ -92,7 +89,6 @@ fn login_flow_submit_key(state: &mut crate::model::AppState, provider: String, k
         *flow = flow.clone().with_key(key.clone());
     }
     push_login_panel(state, build_validating_panel(&final_provider));
-    state.trigger_login_validation(&final_provider, &key);
 }
 
 fn login_flow_validation_success(state: &mut crate::model::AppState, models: Vec<String>) {
@@ -135,6 +131,17 @@ fn login_flow_toggle_model(state: &mut crate::model::AppState, model: String) {
     }
 }
 
+fn provider_base_url(provider: &str) -> String {
+    crate::login_config::get_provider_config(provider)
+        .filter(|(url, _, _)| !url.is_empty())
+        .map(|(url, _, _)| url)
+        .unwrap_or_else(|| {
+            crate::provider_registry::find_provider(provider)
+                .map(|p| p.base_url.to_string())
+                .unwrap_or_default()
+        })
+}
+
 fn login_flow_save(state: &mut crate::model::AppState) {
     let Some(flow) = take_login_flow_if_ready(state) else {
         // Save was rejected (e.g. no models selected). Reopen the login dialog
@@ -150,9 +157,7 @@ fn login_flow_save(state: &mut crate::model::AppState) {
         return;
     };
 
-    let base_url = crate::provider_registry::find_provider(&flow.provider)
-        .map(|p| p.base_url.to_string())
-        .unwrap_or_default();
+    let base_url = provider_base_url(&flow.provider);
     let selected: Vec<String> = flow.selected_models.iter().cloned().collect();
     if let Err(e) =
         crate::login_config::save_provider_config(&flow.provider, &base_url, &flow.key, &selected)
@@ -200,7 +205,7 @@ fn activate_first_selected_model(state: &mut crate::model::AppState, flow: &Logi
         .or_else(|| flow.selected_models.iter().next())
         .cloned()
         .unwrap_or_default();
-    state.switch_model(flow.provider.clone(), first_model);
+    state.switch_model(flow.provider.clone(), first_model, false);
 }
 
 pub fn login_flow_cancel(state: &mut crate::model::AppState) {
@@ -349,3 +354,6 @@ fn rebuild_login_dialog(state: &mut crate::model::AppState) {
         state.mark_dirty();
     }
 }
+
+#[cfg(test)]
+mod tests;

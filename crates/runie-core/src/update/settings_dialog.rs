@@ -3,6 +3,7 @@
 //! Settings rows are rendered as a generic panel and mutated through
 //! `dialog_panel::apply_panel_setting`, not through this module.
 
+use crate::dialog::{ItemAction, PanelItem};
 use crate::model::{AppState, DeliveryMode};
 use crate::settings::{SettingItem, SettingValue, SettingsCategory};
 
@@ -10,10 +11,66 @@ pub fn handle_settings_category(state: &mut AppState, _category: SettingsCategor
     state.mark_dirty();
 }
 
+/// Build settings items grouped by category, already mapped to panel items.
+pub fn build_setting_categories(state: &AppState) -> Vec<(SettingsCategory, Vec<PanelItem>)> {
+    let items = build_setting_items(state);
+    let mut categories: Vec<(SettingsCategory, Vec<PanelItem>)> = Vec::new();
+    for item in items {
+        let panel_items = setting_value_to_panel_items(&item.key, &item.label, &item.value);
+        if let Some(last) = categories.last_mut() {
+            if last.0 == item.category {
+                last.1.extend(panel_items);
+                continue;
+            }
+        }
+        categories.push((item.category, panel_items));
+    }
+    categories
+}
+
+fn setting_value_to_panel_items(
+    key: &str,
+    label: &str,
+    value: &SettingValue,
+) -> Vec<PanelItem> {
+    match value {
+        SettingValue::Bool(v) => vec![PanelItem::Toggle {
+            label: label.into(),
+            value: *v,
+            action: ItemAction::Toggle(key.into()),
+        }],
+        SettingValue::Cycle { current, options } => vec![PanelItem::Select {
+            label: label.into(),
+            current: current.clone(),
+            options: options.clone(),
+            key: key.into(),
+        }],
+        SettingValue::Action(evt) => vec![PanelItem::Action {
+            label: label.into(),
+            action: ItemAction::Emit(evt.clone()),
+        }],
+        SettingValue::MultiSelect { current, options } => {
+            let mut items = vec![PanelItem::Header(format!("{} models", label))];
+            let selected: std::collections::HashSet<String> =
+                current.iter().cloned().collect();
+            for option in options {
+                let toggle_key = format!("edit_provider:{}:{}", key, option);
+                items.push(PanelItem::Toggle {
+                    label: option.clone(),
+                    value: selected.contains(option),
+                    action: ItemAction::Toggle(toggle_key),
+                });
+            }
+            items
+        }
+    }
+}
+
 pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
     vec![
         provider_item(state),
         model_item(state),
+        provider_models_item(state),
         theme_item(state),
         thinking_level_item(state),
         read_only_item(state),
@@ -50,6 +107,37 @@ fn model_item(state: &AppState) -> SettingItem {
         "Active model",
         SettingsCategory::Models,
     )
+}
+
+fn provider_models_item(state: &AppState) -> SettingItem {
+    let provider = state.config.current_provider.clone();
+    let (saved, available) = provider_model_lists(&provider);
+    SettingItem::new(
+        "edit_provider",
+        "Provider Models",
+        SettingValue::MultiSelect {
+            current: saved,
+            options: available,
+        },
+        "Enabled models for the current provider",
+        SettingsCategory::Models,
+    )
+}
+
+fn provider_model_lists(provider: &str) -> (Vec<String>, Vec<String>) {
+    let config = crate::config::Config::load(None);
+    let saved = config.models_for_provider(provider);
+    let mut available = saved.clone();
+    if let Some(meta) = crate::provider_registry::find_provider(provider) {
+        for model in meta.models {
+            let name = model.name.to_string();
+            if !available.contains(&name) {
+                available.push(name);
+            }
+        }
+    }
+    available.sort();
+    (saved, available)
 }
 
 fn theme_item(state: &AppState) -> SettingItem {
@@ -215,4 +303,26 @@ fn truncation_bytes_options() -> Vec<String> {
         "102400".into(), // 100 KiB
         "512000".into(), // 500 KiB
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_setting_items_includes_provider_models_multi_select() {
+        let mut state = AppState::default();
+        state.config.current_provider = "openai".into();
+        let items = build_setting_items(&state);
+        let edit = items
+            .iter()
+            .find(|i| i.key == "edit_provider")
+            .expect("edit_provider setting should exist");
+        assert_eq!(edit.label, "Provider Models");
+        assert!(
+            matches!(edit.value, SettingValue::MultiSelect { .. }),
+            "edit_provider should be a multi-select, got {:?}",
+            edit.value
+        );
+    }
 }

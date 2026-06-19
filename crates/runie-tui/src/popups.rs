@@ -13,6 +13,7 @@ use crate::theme::{
 };
 
 pub mod panel;
+pub mod permission;
 pub mod welcome;
 
 /// Clear the given rect with the panel background color.

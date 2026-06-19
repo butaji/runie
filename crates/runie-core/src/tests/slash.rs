@@ -2,7 +2,7 @@
 
 use crate::event::{Event, InputEvent};
 use crate::model::AppState;
-use crate::session::Store;
+use crate::session_store::SessionStore;
 use std::sync::Mutex;
 
 pub static ENV_LOCK: Mutex<()> = Mutex::new(());
@@ -25,12 +25,12 @@ pub fn exec(state: &mut AppState, text: &str) {
     state.update(Event::submit());
 }
 
-pub fn tmp_store() -> Store {
+pub fn tmp_store() -> SessionStore {
     static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     let dir = std::env::temp_dir().join(format!("runie_slash_test_{}_{}", std::process::id(), n));
     let _ = std::fs::remove_dir_all(&dir);
-    Store::new(dir)
+    SessionStore::new(dir)
 }
 
 pub fn minimal_session(name: &str) -> crate::session::Session {
@@ -52,9 +52,7 @@ pub fn minimal_session(name: &str) -> crate::session::Session {
 pub mod compact;
 pub mod copy;
 pub mod misc;
-pub mod mode;
 pub mod model;
 pub mod prompts;
 pub mod save_load;
 pub mod session;
-pub mod workflow;

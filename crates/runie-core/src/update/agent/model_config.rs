@@ -13,8 +13,14 @@ pub fn model_config_event(state: &mut AppState, event: ModelConfigEvent) {
 
 fn handle_main_events(state: &mut AppState, event: &ModelConfigEvent) -> bool {
     match event {
-        ModelConfigEvent::SwitchModel { provider, model } => {
-            state.switch_model(provider.clone(), model.clone());
+        ModelConfigEvent::SwitchModel {
+            provider,
+            model,
+            explicit,
+        } => {
+            if *explicit || state.config.model_source != crate::state::ModelSource::UserOverride {
+                state.switch_model(provider.clone(), model.clone(), *explicit);
+            }
             true
         }
         ModelConfigEvent::SwitchTheme { name } => {

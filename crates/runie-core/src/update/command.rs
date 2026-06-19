@@ -146,15 +146,13 @@ fn run_logout_command(state: &mut AppState, provider: &str) {
     match crate::login_config::remove_provider_config(provider) {
         Ok(()) => {
             if state.config.current_provider == provider {
-                let configured = crate::login_config::list_configured_providers();
-                if let Some((name, _, models)) = configured.first() {
-                    state.config.current_provider = name.clone();
-                    state.config.current_model = models.first().cloned().unwrap_or_default();
-                } else {
-                    state.config.current_provider.clear();
-                    state.config.current_model.clear();
-                }
-                state.configure_token_tracker();
+                let config = crate::config::Config::load(None);
+                let (provider, model) = config.resolve_default_model();
+                state.set_active_model(
+                    provider,
+                    model,
+                    crate::state::ModelSource::ConfigDefault,
+                );
             }
             if !state.has_models() {
                 crate::update::login_flow::login_flow_start(state);

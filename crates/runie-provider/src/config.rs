@@ -59,23 +59,43 @@ impl ProviderConfigResolver {
     pub fn resolve_api_key(&self, provider: &str) -> Option<String> {
         let env_key = format!("{}_API_KEY", provider.to_uppercase());
         if let Some(val) = self.env.get(&env_key) {
-            return Some(val.clone());
+            if !val.is_empty() {
+                return Some(val.clone());
+            }
         }
         if let Some(val) = self.dotenv.get(&env_key) {
-            return Some(val.clone());
+            if !val.is_empty() {
+                return Some(val.clone());
+            }
         }
-        self.config_file.get(provider).map(|p| p.api_key.clone())
+        self.config_file
+            .get(provider)
+            .and_then(|p| non_empty(&p.api_key))
     }
 
     pub fn resolve_base_url(&self, provider: &str) -> Option<String> {
         let env_key = format!("{}_BASE_URL", provider.to_uppercase());
         if let Some(val) = self.env.get(&env_key) {
-            return Some(val.clone());
+            if !val.is_empty() {
+                return Some(val.clone());
+            }
         }
         if let Some(val) = self.dotenv.get(&env_key) {
-            return Some(val.clone());
+            if !val.is_empty() {
+                return Some(val.clone());
+            }
         }
-        self.config_file.get(provider).map(|p| p.base_url.clone())
+        self.config_file
+            .get(provider)
+            .and_then(|p| non_empty(&p.base_url))
+    }
+}
+
+fn non_empty(s: &str) -> Option<String> {
+    if s.is_empty() {
+        None
+    } else {
+        Some(s.to_string())
     }
 }
 
@@ -96,6 +116,7 @@ mod tests {
                 provider_type: None,
                 base_url: "http://example.com".to_string(),
                 api_key: "config-key".to_string(),
+                models: Vec::new(),
             },
         );
 
@@ -128,6 +149,7 @@ mod tests {
                 provider_type: None,
                 base_url: "http://example.com".to_string(),
                 api_key: "config-key".to_string(),
+                models: Vec::new(),
             },
         );
         let resolver = ProviderConfigResolver::from_config(&config);
@@ -151,6 +173,47 @@ mod tests {
             resolver.resolve_base_url("myprovider"),
             Some("http://env.local".to_string())
         );
+    }
+
+    #[test]
+    fn empty_env_falls_back_to_config() {
+        let mut config = Config::default();
+        config.model_providers.insert(
+            "testprovider".to_string(),
+            ModelProvider {
+                provider_type: None,
+                base_url: "http://example.com".to_string(),
+                api_key: "config-key".to_string(),
+                models: Vec::new(),
+            },
+        );
+        let mut resolver = ProviderConfigResolver::from_config(&config);
+        resolver
+            .env
+            .insert("TESTPROVIDER_API_KEY".to_string(), "".to_string());
+
+        assert_eq!(
+            resolver.resolve_api_key("testprovider"),
+            Some("config-key".to_string())
+        );
+    }
+
+    #[test]
+    fn empty_config_value_returns_none() {
+        let mut config = Config::default();
+        config.model_providers.insert(
+            "testprovider".to_string(),
+            ModelProvider {
+                provider_type: None,
+                base_url: "".to_string(),
+                api_key: "".to_string(),
+                models: Vec::new(),
+            },
+        );
+        let resolver = ProviderConfigResolver::from_config(&config);
+
+        assert_eq!(resolver.resolve_api_key("testprovider"), None);
+        assert_eq!(resolver.resolve_base_url("testprovider"), None);
     }
 
     #[test]

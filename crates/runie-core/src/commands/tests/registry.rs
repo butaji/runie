@@ -49,8 +49,8 @@ fn registry_list_returns_all() {
     let state = AppState::default();
     let defs = state.registry.list();
     assert!(
-        defs.len() >= 22,
-        "registry should have 22+ commands, got {}",
+        defs.len() >= 18,
+        "registry should have 18+ commands, got {}",
         defs.len()
     );
 }
@@ -61,5 +61,5 @@ fn registry_list_groups_by_category() {
     let groups = state.registry.list_by_category();
     assert!(!groups.is_empty());
     let total: usize = groups.iter().map(|g| g.1.len()).sum();
-    assert!(total >= 22);
+    assert!(total >= 18);
 }

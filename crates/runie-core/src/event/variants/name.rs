@@ -150,7 +150,6 @@ fn is_named_system_variant(event: &Event) -> bool {
             | Event::ToggleReadOnly
             | Event::TrustProject
             | Event::UntrustProject
-            | Event::OpenAgentsManager
             | Event::ClearTransient
     )
 }

@@ -22,22 +22,15 @@ impl AppState {
             return crate::update::input::at_suggestion_hints();
         }
         if self.agent.turn_active {
-            return self.with_team_mode(self.active_turn_hints());
+            return self.active_turn_hints();
         }
         if !self.input.input.is_empty() {
-            return self.with_team_mode(crate::update::input::input_active_hints());
+            return crate::update::input::input_active_hints();
         }
         if self.config.vim_mode {
-            return self.with_team_mode(vec!["esc nav".to_string()]);
+            return vec!["esc nav".to_string()];
         }
-        self.with_team_mode(crate::update::input::empty_input_hints())
-    }
-
-    fn with_team_mode(&self, mut hints: Vec<String>) -> Vec<String> {
-        if self.config.execution_mode.uses_orchestrator() {
-            hints.extend(crate::update::input::team_mode_hints());
-        }
-        hints
+        crate::update::input::empty_input_hints()
     }
 
     fn active_turn_hints(&self) -> Vec<String> {

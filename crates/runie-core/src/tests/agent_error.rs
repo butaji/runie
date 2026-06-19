@@ -2,7 +2,7 @@
 //! turn so the UI does not show a stuck "Working..." status.
 
 use crate::event::AgentEvent;
-use crate::model::AppState;
+use crate::model::{AppState, QueuedMessage, QueuedMessageKind};
 
 #[test]
 fn agent_error_clears_turn_active() {
@@ -107,4 +107,23 @@ fn agent_error_resets_streaming_buffer() {
     });
 
     assert!(!state.agent.streaming_buffer.has_pending_content());
+}
+
+#[test]
+fn agent_error_delivers_queued_messages() {
+    let mut state = AppState::default();
+    state.agent.turn_active = true;
+    state.agent.message_queue.push(QueuedMessage {
+        content: "follow up".to_string(),
+        kind: QueuedMessageKind::FollowUp,
+    });
+
+    state.update(AgentEvent::Error {
+        id: "req.0".to_string(),
+        message: "Provider error".to_string(),
+    });
+
+    assert!(state.agent.message_queue.is_empty());
+    assert_eq!(state.agent.request_queue.len(), 1);
+    assert_eq!(state.agent.request_queue.front().map(|(c, _)| c), Some(&"follow up".to_string()));
 }

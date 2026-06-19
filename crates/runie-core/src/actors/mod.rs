@@ -5,12 +5,8 @@
 //! a running session.
 
 mod fff_indexer;
-mod subagent;
 
 pub use fff_indexer::{
     FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
     FffSearchState,
-};
-pub use subagent::{
-    SubagentActor, SubagentCommand, SubagentContext, SubagentEvent, SubagentStatus,
 };

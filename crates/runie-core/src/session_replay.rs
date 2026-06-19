@@ -1,13 +1,12 @@
 //! Session replay — convert between `AppState` and durable events.
 //!
 //! This module is the single persistence path for `/save` and `/load`.
-//! Legacy JSON sessions remain readable via `crate::session::Store` for
-//! import and migration, but new writes go through `SessionStore`.
+//! Import/export still uses the `Session` snapshot DTO in `crate::session`,
+//! but runtime persistence goes exclusively through `SessionStore`.
 
 use crate::event::{DurableCoreEvent, Event};
 use crate::message::ChatMessage;
 use crate::model::{AppState, Role};
-use crate::session::Session as JsonSession;
 use crate::session_index::SessionMetadata;
 use crate::session_store::SessionStore;
 
@@ -40,6 +39,7 @@ pub fn durable_to_event(event: &DurableCoreEvent) -> Option<Event> {
         DurableCoreEvent::ModelSwitched { provider, model } => Some(Event::SwitchModel {
             provider: provider.clone(),
             model: model.clone(),
+            explicit: false,
         }),
         DurableCoreEvent::SessionRenamed { .. } => None,
         DurableCoreEvent::ThemeSwitched { name } => Some(Event::SwitchTheme { name: name.clone() }),
@@ -158,24 +158,17 @@ pub fn save_session(name: &str, state: &AppState) -> anyhow::Result<()> {
 }
 
 /// Load durable events into application state.
-/// Falls back to a legacy JSON session if no durable store exists.
 pub fn load_session(name: &str, state: &mut AppState) -> anyhow::Result<()> {
     let store =
         SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
     let events = store.load_events(name)?;
     if events.is_empty() {
-        return load_legacy_session(name, state);
+        return Err(anyhow::anyhow!("Session '{}' not found", name));
     }
     replay_events(state, &events);
     restore_metadata(name, state, &store)?;
     state.configure_token_tracker();
     state.messages_changed();
-    Ok(())
-}
-
-fn load_legacy_session(name: &str, state: &mut AppState) -> anyhow::Result<()> {
-    let json = crate::session::load(name)?;
-    apply_json_session(state, &json);
     Ok(())
 }
 
@@ -190,57 +183,31 @@ fn restore_metadata(name: &str, state: &mut AppState, store: &SessionStore) -> a
     Ok(())
 }
 
-/// Apply a legacy JSON session snapshot to application state.
-pub fn apply_json_session(state: &mut AppState, session: &JsonSession) {
+/// Apply a JSON session snapshot to application state.
+pub fn apply_json_session(state: &mut AppState, session: &crate::session::Session) {
     state.restore_session(session);
 }
 
-/// Delete a session from both the durable store and legacy JSON.
+/// Delete a session from the durable store.
 pub fn delete_session(name: &str) -> anyhow::Result<()> {
-    let mut deleted = false;
-    if let Some(store) = SessionStore::default_store() {
-        if store.path(name).exists() {
-            store.delete(name)?;
-            deleted = true;
-        }
-    }
-    if let Some(store) = crate::session::default_store() {
-        if store.path(name).exists() {
-            store.delete(name)?;
-            deleted = true;
-        }
-    }
-    if deleted {
-        Ok(())
-    } else {
-        Err(anyhow::anyhow!("Session not found"))
-    }
+    let store =
+        SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
+    store.delete(name)
 }
 
-/// List session names from both the durable store and legacy JSON.
+/// List session names from the durable store.
 pub fn list_sessions() -> anyhow::Result<Vec<String>> {
-    let mut names = std::collections::HashSet::new();
-    if let Ok(list) = durable_list() {
-        names.extend(list);
-    }
-    if let Ok(list) = legacy_list() {
-        names.extend(list);
-    }
-    let mut names: Vec<String> = names.into_iter().collect();
-    names.sort();
-    Ok(names)
-}
-
-fn durable_list() -> anyhow::Result<Vec<String>> {
     let store =
         SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
     store.list()
 }
 
-fn legacy_list() -> anyhow::Result<Vec<String>> {
-    let store =
-        crate::session::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
-    store.list()
+/// Seed the durable store from a snapshot DTO. Test helper only.
+#[cfg(test)]
+pub fn save_snapshot(name: &str, session: &crate::session::Session) -> anyhow::Result<()> {
+    let mut state = AppState::default();
+    state.restore_session(session);
+    save_session(name, &state)
 }
 
 #[cfg(test)]

@@ -43,5 +43,4 @@ mod registry;
 mod session;
 mod skills;
 mod slash_dispatch;
-mod spawn;
 mod usage;

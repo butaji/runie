@@ -5,8 +5,8 @@ use crate::event::DialogEvent;
 use crate::model::AppState;
 
 use super::{
-    open_at_file_picker_all, open_command_palette, open_model_selector, open_provider_model_editor,
-    open_scoped_models_dialog, open_settings_dialog,
+    open_at_file_picker_all, open_command_palette, open_model_selector, open_scoped_models_dialog,
+    open_settings_dialog,
 };
 
 pub fn dialog_toggle_event(state: &mut AppState, event: DialogEvent) {
@@ -17,10 +17,6 @@ pub fn dialog_toggle_event(state: &mut AppState, event: DialogEvent) {
         DialogEvent::ToggleModelSelector => handle_model_selector_toggle(state),
         DialogEvent::AtFilePicker => open_at_file_picker_all(state),
         DialogEvent::ToggleVimMode => handle_vim_mode_toggle(state),
-        DialogEvent::OpenAgentsManager
-        | DialogEvent::AgentsManagerSetField { .. }
-        | DialogEvent::AgentsManagerSave { .. }
-        | DialogEvent::AgentsManagerDelete { .. } => handle_agents_manager_event(state, &event),
         DialogEvent::TogglePathCompletion => state.toggle_path_completion(),
         DialogEvent::PathCompletionUp => state.path_completion_up(),
         DialogEvent::PathCompletionDown => state.path_completion_down(),
@@ -30,12 +26,7 @@ pub fn dialog_toggle_event(state: &mut AppState, event: DialogEvent) {
         DialogEvent::ProvidersAdd => handle_providers_add(state),
         DialogEvent::ProvidersSelectModel { .. } => handle_providers_select_model(state, &event),
         DialogEvent::ProvidersDisconnect { .. } => handle_providers_disconnect(state, &event),
-        DialogEvent::ProviderEditModels { .. } => handle_provider_edit_models(state, &event),
-        DialogEvent::ProviderEditModelsToggle { .. } => {
-            handle_provider_edit_models_toggle_item(state, &event)
-        }
-        DialogEvent::ProviderEditModelsSave { .. } => handle_provider_edit_models_save(state, &event),
-        DialogEvent::ProviderEditModelsClose => handle_provider_edit_models_close(state),
+
         DialogEvent::ToggleScopedModelsDialog => handle_scoped_models_toggle(state),
         DialogEvent::ScopedModelEnableAll => handle_scoped_model_enable_all(state),
         DialogEvent::ScopedModelDisableAll => handle_scoped_model_disable_all(state),
@@ -51,10 +42,6 @@ fn handle_welcome_toggle(state: &mut AppState) {
         Some(DialogState::Welcome)
     };
     state.mark_dirty();
-}
-
-fn handle_agents_manager_event(state: &mut AppState, event: &DialogEvent) {
-    crate::commands::agents_manager::agents_manager_event(state, event.clone());
 }
 
 fn handle_model_selector_toggle(state: &mut AppState) {
@@ -108,7 +95,7 @@ fn handle_providers_select_model(state: &mut AppState, event: &DialogEvent) {
             flow.selected_models.insert(model.clone());
             state.login_flow = Some(flow);
         }
-        state.switch_model(provider.clone(), model.clone());
+        state.switch_model(provider.clone(), model.clone(), true);
         state.open_dialog = None;
         state.dialog_back_stack.clear();
         state.mark_dirty();
@@ -119,15 +106,22 @@ fn handle_providers_disconnect(state: &mut AppState, event: &DialogEvent) {
     if let DialogEvent::ProvidersDisconnect { provider } = event {
         let _ = crate::login_config::remove_provider_config(provider);
         if state.config.current_provider == *provider {
-            let configured = crate::login_config::list_configured_providers();
-            if let Some((name, _, models)) = configured.first() {
-                state.config.current_provider = name.clone();
-                state.config.current_model = models.first().cloned().unwrap_or_default();
+            let config = crate::config::Config::load(Some(&crate::login_config::config_path()));
+            let (provider, model) = config.resolve_default_model();
+            let (provider, model) = if provider.is_empty() {
+                crate::login_config::list_configured_providers()
+                    .into_iter()
+                    .next()
+                    .map(|(p, _, models)| (p, models.into_iter().next().unwrap_or_default()))
+                    .unwrap_or_default()
             } else {
-                state.config.current_provider.clear();
-                state.config.current_model.clear();
-            }
-            state.configure_token_tracker();
+                (provider, model)
+            };
+            state.set_active_model(
+                provider,
+                model,
+                crate::state::ModelSource::ConfigDefault,
+            );
         }
         if state.has_models() {
             state.open_dialog = None;
@@ -137,68 +131,6 @@ fn handle_providers_disconnect(state: &mut AppState, event: &DialogEvent) {
         state.dialog_back_stack.clear();
         state.mark_dirty();
     }
-}
-
-fn handle_provider_edit_models(state: &mut AppState, event: &DialogEvent) {
-    if let DialogEvent::ProviderEditModels { provider } = event {
-        open_provider_model_editor(state, provider);
-    }
-}
-
-fn handle_provider_edit_models_toggle_item(state: &mut AppState, event: &DialogEvent) {
-    let DialogEvent::ProviderEditModelsToggle { .. } = event else {
-        return;
-    };
-    if state
-        .open_dialog
-        .as_ref()
-        .and_then(|d| d.panel_stack())
-        .is_some_and(crate::dialog::builders::is_provider_model_editor_stack)
-    {
-        // The generic checkbox toggle already flipped the PanelItem value and
-        // emitted this event; no further state change is needed because the
-        // panel item itself is the source of truth for the editor. Just ensure
-        // the view is redrawn.
-        state.mark_dirty();
-    }
-}
-
-fn handle_provider_edit_models_save(state: &mut AppState, event: &DialogEvent) {
-    let DialogEvent::ProviderEditModelsSave { provider, models } = event else {
-        return;
-    };
-    if models.is_empty() {
-        state.set_transient(
-            "Select at least one model before saving.".into(),
-            crate::event::TransientLevel::Warning,
-        );
-        return;
-    }
-    let provider = provider.clone();
-    if let Some((base_url, api_key, _)) = crate::login_config::get_provider_config(&provider) {
-        let _ = crate::login_config::save_provider_config(
-            &provider,
-            &base_url,
-            &api_key,
-            models.as_slice(),
-        );
-    }
-    if provider == state.config.current_provider
-        && !models.contains(&state.config.current_model)
-    {
-        if let Some(first) = models.first() {
-            state.switch_model(provider, first.clone());
-        }
-    }
-    state.open_dialog = None;
-    state.dialog_back_stack.clear();
-    state.mark_dirty();
-}
-
-fn handle_provider_edit_models_close(state: &mut AppState) {
-    state.open_dialog = None;
-    state.dialog_back_stack.clear();
-    state.mark_dirty();
 }
 
 fn handle_scoped_model_enable_all(state: &mut AppState) {

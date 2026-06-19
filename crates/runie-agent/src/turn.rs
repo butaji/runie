@@ -1,4 +1,4 @@
-use crate::parser::{
+use runie_core::tool_parser::{
     assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
 };
 use crate::permission_gate::PermissionGate;

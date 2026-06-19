@@ -71,14 +71,14 @@ fn save_trims_whitespace() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
+    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf());
 
     let mut state = fresh_state();
     exec(&mut state, "/save  trimmed"); // Opens form with pre-filled name
     state.update(Event::submit()); // Submits the form
 
     // Should save with trimmed name
-    let redb_path = crate::session_store::SessionStore::new(store.dir.clone()).path("trimmed");
+    let redb_path = crate::session_store::SessionStore::new(store.dir().to_path_buf()).path("trimmed");
     assert!(redb_path.exists(), "whitespace should be trimmed");
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
@@ -89,10 +89,9 @@ fn new_clears_session_keeps_provider_model() {
     let mut state = fresh_state();
     // The configured default is different from the currently active model.
     // /new must keep the active model, not revert to the default.
-    state.config.config_provider = "anthropic".into();
-    state.config.config_model = "claude-3-sonnet".into();
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
+    state.config.model_source = crate::state::ModelSource::UserOverride;
     state.session.session_display_name = Some("my chat".into());
 
     type_str(&mut state, "hello");
@@ -129,6 +128,30 @@ fn new_clears_session_keeps_provider_model() {
         "confirmation: {:?}",
         sys.last()
     );
+}
+
+#[test]
+fn new_closes_open_dialog_and_clears_ui_state() {
+    let mut state = fresh_state();
+    palette_select(&mut state, "delete");
+    assert!(state.open_dialog.is_some(), "dialog should be open");
+    state.dialog_back_stack.push(crate::commands::DialogState::Welcome);
+    state.login_flow = Some(crate::login_flow::LoginFlowState::default());
+    state.permission_request = Some(crate::model::PermissionRequestState {
+        request_id: "perm".into(),
+        tool: "bash".into(),
+        input: serde_json::Value::Null,
+    });
+
+    state.update(Event::RunPaletteCommand {
+        name: "new".into(),
+        args: "".into(),
+    });
+
+    assert!(state.open_dialog.is_none(), "open_dialog cleared");
+    assert!(state.dialog_back_stack.is_empty(), "back stack cleared");
+    assert!(state.login_flow.is_none(), "login_flow cleared");
+    assert!(state.permission_request.is_none(), "permission_request cleared");
 }
 
 #[test]
@@ -170,7 +193,7 @@ fn resume_loads_most_recent_session() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
+    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf());
 
     // Save an older session
     let mut older = fresh_state();

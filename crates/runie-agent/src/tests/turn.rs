@@ -13,7 +13,8 @@ fn allow_all_gate() -> PermissionGate {
 }
 
 fn mock_provider() -> DynProvider {
-    DynProvider::new("mock", "echo").expect("mock provider must be available in tests")
+    DynProvider::new_with_config("mock", "echo", &runie_core::config::Config::default())
+        .expect("mock provider must be available in tests")
 }
 
 #[tokio::test]

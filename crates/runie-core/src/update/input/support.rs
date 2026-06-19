@@ -107,14 +107,6 @@ pub fn empty_input_hints() -> Vec<String> {
     vec!["alt+enter follow-up".to_string(), "esc clear".to_string()]
 }
 
-/// Team mode subagent sidebar hotkeys.
-pub fn team_mode_hints() -> Vec<String> {
-    vec![
-        "ctrl+0 orchestrator".to_string(),
-        "ctrl+1..9 agents".to_string(),
-    ]
-}
-
 /// Modal navigation hints (command palette, model selector, settings, etc.).
 pub fn modal_hints() -> Vec<String> {
     vec![

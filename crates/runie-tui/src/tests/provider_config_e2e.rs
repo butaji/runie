@@ -37,7 +37,7 @@ fn minimax_key_saved_during_login_is_used_when_sending_message() {
     std::env::remove_var("MINIMAX_API_KEY");
 
     let provider =
-        runie_provider::build_provider_with_warning_with_config("minimax", "MiniMax-M3", &config)
+        runie_provider::DynProvider::new_with_config("minimax", "MiniMax-M3", &config)
             .expect("provider should build from saved config key");
     assert_eq!(provider.key(), "minimax");
     assert_eq!(provider.model(), "MiniMax-M3");
@@ -67,7 +67,7 @@ fn env_var_still_takes_priority_over_saved_config() {
     std::env::set_var("MINIMAX_API_KEY", "sk-from-env");
 
     let provider =
-        runie_provider::build_provider_with_warning_with_config("minimax", "MiniMax-M3", &config)
+        runie_provider::DynProvider::new_with_config("minimax", "MiniMax-M3", &config)
             .expect("provider should build");
     assert_eq!(provider.key(), "minimax");
 

@@ -69,7 +69,7 @@ fn switch_to_model(state: &mut AppState, provider: &str, model: &str) -> Command
             provider, model
         ));
     }
-    state.switch_model(provider.to_string(), model.to_string());
+    state.switch_model(provider.to_string(), model.to_string(), true);
     CommandResult::Message(format!("Switched to {}/{}", provider, model))
 }
 

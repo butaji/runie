@@ -1,15 +1,14 @@
 //! Session commands.
 //!
-//! Session IO (save/load/delete/import/export) lives in `io.rs`.
+//! Session IO (save/load/delete/import/export) is handled via
+//! `CommandEvent::Run*Command` in `update::command`.
 //! Session run helpers (name/fork/compact) live in `run.rs`.
 
-pub mod io;
 pub mod run;
 
 pub use run::{run_compact, run_fork, run_name};
 
 use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
-use crate::dialog::PanelStack;
 use crate::model::AppState;
 
 use std::collections::HashMap;
@@ -22,64 +21,6 @@ where
     F: FnOnce(String) -> crate::Event,
 {
     f(crate::dialog::dsl::get_field(values, key))
-}
-
-/// Build the /load form panel (used to re-open when submitted empty).
-pub fn build_load_form() -> CommandResult {
-    let stack = build_form_stack(
-        "load",
-        "Load Session",
-        &[("Name", "session-name", "name")],
-        load_submit,
-    );
-    CommandResult::OpenPanelStack(Box::new(stack))
-}
-
-/// Build the /delete form panel.
-pub fn build_delete_form() -> CommandResult {
-    let stack = build_form_stack(
-        "delete",
-        "Delete Session",
-        &[("Name", "session-name", "name")],
-        delete_submit,
-    );
-    CommandResult::OpenPanelStack(Box::new(stack))
-}
-
-/// Build the /import form panel.
-pub fn build_import_form() -> CommandResult {
-    let stack = build_form_stack(
-        "import",
-        "Import Session",
-        &[("Path", "session.json", "path")],
-        import_submit,
-    );
-    CommandResult::OpenPanelStack(Box::new(stack))
-}
-
-/// Build the /export form panel.
-pub fn build_export_form() -> CommandResult {
-    let stack = build_form_stack(
-        "export",
-        "Export Session",
-        &[("Path", "session.json", "path")],
-        export_submit,
-    );
-    CommandResult::OpenPanelStack(Box::new(stack))
-}
-
-fn build_form_stack(
-    id: &str,
-    title: &str,
-    fields: &[(&str, &str, &str)],
-    submit: super::spec::FormSubmitFn,
-) -> PanelStack {
-    use crate::dialog::dsl::form;
-    let mut builder = form(id, title);
-    for (label, placeholder, key) in fields {
-        builder = builder.field(*label, *placeholder, *key);
-    }
-    builder.on_submit(submit).into_stack()
 }
 
 fn save_submit(values: &HashMap<String, String>) -> crate::Event {
@@ -314,6 +255,10 @@ fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     state.agent.request_queue.clear();
     state.configure_token_tracker();
     state.session.session_display_name = None;
+    state.open_dialog = None;
+    state.dialog_back_stack.clear();
+    state.login_flow = None;
+    state.permission_request = None;
     let now = crate::update::now();
     state.session.session_created_at = now;
     state.session.session_updated_at = now;

@@ -14,7 +14,10 @@ fn settings_selected(state: &AppState) -> Option<usize> {
 }
 
 fn settings_count(state: &AppState) -> usize {
-    build_setting_items(state).len()
+    runie_core::update::settings_dialog::build_setting_categories(state)
+        .into_iter()
+        .map(|(_, items)| items.into_iter().filter(|i| i.is_navigable()).count())
+        .sum()
 }
 
 /// Open palette and select a command by name

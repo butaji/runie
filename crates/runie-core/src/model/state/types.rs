@@ -107,3 +107,11 @@ pub struct QueuedMessage {
     pub content: String,
     pub kind: QueuedMessageKind,
 }
+
+/// Active permission approval prompt shown as a blocking modal dialog.
+#[derive(Clone, Debug)]
+pub struct PermissionRequestState {
+    pub request_id: String,
+    pub tool: String,
+    pub input: serde_json::Value,
+}

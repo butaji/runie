@@ -40,6 +40,12 @@ pub enum SettingValue {
         options: Vec<String>,
     },
     Action(Event),
+    /// Multi-select checkbox list. `current` is the set of selected options;
+    /// `options` is the full set of available options.
+    MultiSelect {
+        current: Vec<String>,
+        options: Vec<String>,
+    },
 }
 
 /// A single setting item displayed in the dialog.

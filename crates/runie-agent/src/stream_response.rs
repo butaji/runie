@@ -4,7 +4,6 @@
 //! `StreamedResponse`. Callers still get the legacy text fallback when the
 //! provider does not emit structured tool-call events.
 
-use crate::parser::{parse_tool_calls_fallible, ParsedToolCall, ToolParseError};
 use anyhow::Result;
 use futures::StreamExt;
 use runie_core::event::{AgentEvent, Event};
@@ -12,6 +11,7 @@ use runie_core::llm_event::LLMEvent;
 use runie_core::message::ChatMessage;
 use runie_core::provider::Provider;
 use runie_core::tool_markers::strip_tool_markers;
+use runie_core::tool_parser::{parse_tool_calls_fallible, ParsedToolCall, ToolParseError};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::ops::ControlFlow;

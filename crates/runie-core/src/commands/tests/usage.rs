@@ -1,4 +1,3 @@
-use crate::commands::dsl::handlers::session::io as session_io;
 use crate::commands::{CommandDef, CommandFlow, CommandResult};
 use crate::model::AppState;
 
@@ -141,10 +140,28 @@ fn no_command_returns_usage_message() {
 fn no_form_submit_handler_returns_usage_message() {
     let mut state = AppState::default();
 
-    assert_no_usage_message("load", &session_io::handle_load(&mut state, ""));
-    assert_no_usage_message("delete", &session_io::handle_delete(&mut state, ""));
-    assert_no_usage_message("import", &session_io::handle_import(&mut state, ""));
-    assert_no_usage_message("export", &session_io::handle_export(&mut state, ""));
+    assert_no_usage_message(
+        "load",
+        &state.handle_slash("/load").expect("load should return result"),
+    );
+    assert_no_usage_message(
+        "delete",
+        &state
+            .handle_slash("/delete")
+            .expect("delete should return result"),
+    );
+    assert_no_usage_message(
+        "import",
+        &state
+            .handle_slash("/import")
+            .expect("import should return result"),
+    );
+    assert_no_usage_message(
+        "export",
+        &state
+            .handle_slash("/export")
+            .expect("export should return result"),
+    );
 }
 
 fn assert_form_submit_does_not_show_usage(
@@ -171,7 +188,7 @@ fn assert_form_submit_does_not_show_usage(
 fn load_form_submit_empty_does_not_show_usage() {
     let mut state = AppState::default();
     let initial_msg_count = state.session.messages.len();
-    let result = session_io::handle_load(&mut state, "");
+    let result = state.handle_slash("/load").expect("load should return result");
     assert_form_submit_does_not_show_usage("load", &result, initial_msg_count, &state);
 }
 
@@ -179,7 +196,9 @@ fn load_form_submit_empty_does_not_show_usage() {
 fn delete_form_submit_empty_does_not_show_usage() {
     let mut state = AppState::default();
     let initial_msg_count = state.session.messages.len();
-    let result = session_io::handle_delete(&mut state, "");
+    let result = state
+        .handle_slash("/delete")
+        .expect("delete should return result");
     assert_form_submit_does_not_show_usage("delete", &result, initial_msg_count, &state);
 }
 
@@ -187,7 +206,9 @@ fn delete_form_submit_empty_does_not_show_usage() {
 fn import_form_submit_empty_does_not_show_usage() {
     let mut state = AppState::default();
     let initial_msg_count = state.session.messages.len();
-    let result = session_io::handle_import(&mut state, "");
+    let result = state
+        .handle_slash("/import")
+        .expect("import should return result");
     assert_form_submit_does_not_show_usage("import", &result, initial_msg_count, &state);
 }
 
@@ -195,7 +216,9 @@ fn import_form_submit_empty_does_not_show_usage() {
 fn export_form_submit_empty_does_not_show_usage() {
     let mut state = AppState::default();
     let initial_msg_count = state.session.messages.len();
-    let result = session_io::handle_export(&mut state, "");
+    let result = state
+        .handle_slash("/export")
+        .expect("export should return result");
     assert_form_submit_does_not_show_usage("export", &result, initial_msg_count, &state);
 }
 

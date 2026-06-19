@@ -14,20 +14,10 @@ pub enum CommandFlow {
     None,
     /// Show a static message
     Message(&'static str),
-    /// Show a dynamic message computed at runtime
-    Dynamic(fn(&AppState, &str) -> String),
-    /// Open a named dialog
-    Dialog(DialogType),
-    /// Open a panel stack produced at runtime
-    PanelStack(PanelStackFn),
     /// Execute a handler function
     Handler(fn(&mut AppState, &str) -> CommandResult),
-    /// Chain multiple flows (tries each until one succeeds)
-    Chain(Vec<CommandFlow>),
-    /// Conditional flow based on state
-    When(fn(&AppState) -> bool, Box<CommandFlow>),
-    /// Message or fallback
-    OrMessage(fn(&AppState, &str) -> CommandResult, &'static str),
+    /// Open a panel stack produced at runtime
+    PanelStack(PanelStackFn),
     /// Sub-dialog: push the current dialog (e.g. the command palette
     /// = Main Menu) onto the global back stack before executing the
     /// inner flow. Esc returns to the previous dialog. Only at the
@@ -41,61 +31,9 @@ impl CommandFlow {
         match self {
             Self::None => CommandResult::None,
             Self::Message(msg) => CommandResult::Message((*msg).into()),
-            Self::Dynamic(f) => CommandResult::Message(f(state, args)),
-            Self::Dialog(d) => CommandResult::OpenDialog(d.clone()),
-            Self::PanelStack(f) => CommandResult::OpenPanelStack(Box::new(f(state, args))),
             Self::Handler(f) => f(state, args),
-            Self::Chain(flows) => Self::exec_chain(flows, state, _cmd_name, args),
-            Self::When(predicate, flow) => {
-                Self::exec_when(*predicate, flow, state, _cmd_name, args)
-            }
-            Self::OrMessage(handler, fallback) => {
-                Self::exec_or_message(*handler, fallback, state, args)
-            }
+            Self::PanelStack(f) => CommandResult::OpenPanelStack(Box::new(f(state, args))),
             Self::Sub(inner) => Self::exec_sub(inner, state, _cmd_name, args),
-        }
-    }
-
-    fn exec_chain(
-        flows: &[CommandFlow],
-        state: &mut AppState,
-        cmd_name: &str,
-        args: &str,
-    ) -> CommandResult {
-        for flow in flows {
-            let result = flow.exec(state, cmd_name, args);
-            if !matches!(result, CommandResult::None) {
-                return result;
-            }
-        }
-        CommandResult::None
-    }
-
-    fn exec_when(
-        predicate: fn(&AppState) -> bool,
-        flow: &CommandFlow,
-        state: &mut AppState,
-        cmd_name: &str,
-        args: &str,
-    ) -> CommandResult {
-        if predicate(state) {
-            flow.exec(state, cmd_name, args)
-        } else {
-            CommandResult::None
-        }
-    }
-
-    fn exec_or_message(
-        handler: fn(&AppState, &str) -> CommandResult,
-        fallback: &'static str,
-        state: &AppState,
-        args: &str,
-    ) -> CommandResult {
-        let result = handler(state, args);
-        if matches!(result, CommandResult::None) {
-            CommandResult::Message(fallback.into())
-        } else {
-            result
         }
     }
 
@@ -110,15 +48,6 @@ impl CommandFlow {
         }
         inner.exec(state, cmd_name, args)
     }
-}
-
-/// Dialog types
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DialogType {
-    CommandPalette,
-    ModelSelector,
-    Settings,
-    ScopedModels,
 }
 
 /// Command result
@@ -159,52 +88,13 @@ impl CommandResult {
     }
 }
 
-/// Build a form panel for the /spawn command when called without arguments.
-/// Collects the prompt via a single text field.
-fn spawn_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::event::ControlEvent::SpawnAgent {
-        prompt: crate::dialog::dsl::get_field(values, "prompt"),
-    }
-}
-
-pub fn build_spawn_form_panel() -> PanelStack {
-    use crate::dialog::dsl::form;
-    form("spawn", "Spawn Subagent")
-        .field("Prompt", "Describe the task for the subagent", "prompt")
-        .on_submit(spawn_submit)
-        .into_stack()
-}
-
-fn steer_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::event::ControlEvent::SteerAgent {
-        agent_id: crate::dialog::dsl::get_field(values, "agent_id"),
-        message: crate::dialog::dsl::get_field(values, "message"),
-    }
-}
-
-/// Build a form panel for the `/steer` command when called without arguments.
-pub fn build_steer_form_panel() -> PanelStack {
-    use crate::dialog::dsl::form;
-    form("steer", "Steer Subagent")
-        .field("Agent ID", "researcher-A1B", "agent_id")
-        .field("Message", "Focus on src/lib.rs", "message")
-        .on_submit(steer_submit)
-        .into_stack()
-}
-
-fn cancel_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::event::ControlEvent::CancelAgent {
-        agent_id: crate::dialog::dsl::get_field(values, "agent_id"),
-    }
-}
-
-/// Build a form panel for the `/cancel` command when called without arguments.
-pub fn build_cancel_form_panel() -> PanelStack {
-    use crate::dialog::dsl::form;
-    form("cancel", "Cancel Subagent")
-        .field("Agent ID", "researcher-A1B", "agent_id")
-        .on_submit(cancel_submit)
-        .into_stack()
+/// Dialog types
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DialogType {
+    CommandPalette,
+    ModelSelector,
+    Settings,
+    ScopedModels,
 }
 
 #[cfg(test)]
@@ -217,30 +107,6 @@ mod tests {
         let mut state = AppState::default();
         let result = flow.exec(&mut state, "test", "");
         assert_eq!(result, CommandResult::Message("test".into()));
-    }
-
-    #[test]
-    fn test_command_flow_chain() {
-        let flow = CommandFlow::Chain(vec![CommandFlow::None, CommandFlow::Message("fallback")]);
-        let mut state = AppState::default();
-        let result = flow.exec(&mut state, "test", "");
-        assert!(matches!(result, CommandResult::Message(_)));
-    }
-
-    #[test]
-    fn test_command_flow_when_true() {
-        let flow = CommandFlow::When(|_| true, Box::new(CommandFlow::Message("shown")));
-        let mut state = AppState::default();
-        let result = flow.exec(&mut state, "test", "");
-        assert_eq!(result, CommandResult::Message("shown".into()));
-    }
-
-    #[test]
-    fn test_command_flow_when_false() {
-        let flow = CommandFlow::When(|_| false, Box::new(CommandFlow::Message("hidden")));
-        let mut state = AppState::default();
-        let result = flow.exec(&mut state, "test", "");
-        assert_eq!(result, CommandResult::None);
     }
 
     #[test]

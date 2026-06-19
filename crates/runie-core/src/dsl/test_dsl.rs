@@ -6,8 +6,6 @@
 //! state.agent("req.0").think().respond("hi").complete(1.0).done();
 //! ```
 
-pub mod macro_tests;
-
 use crate::event::{AgentEvent, InputEvent};
 use crate::model::AppState;
 

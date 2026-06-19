@@ -1,6 +1,4 @@
-//! Domain-specific languages for tests and workflows.
-
-pub mod workflow;
+//! Domain-specific languages for tests.
 
 #[cfg(test)]
 mod test_dsl;

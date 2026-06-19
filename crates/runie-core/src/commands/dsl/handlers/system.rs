@@ -1,6 +1,6 @@
 //! System commands.
 
-use crate::commands::{CommandCategory, CommandRegistry, CommandResult, DialogType};
+use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
 
@@ -19,7 +19,7 @@ static SYSTEM_COMMANDS: &[CommandSpec] = &[
         aliases: &[],
         category: CommandCategory::System,
         sub: true,
-        kind: CommandKind::Dialog(DialogType::Settings),
+        kind: CommandKind::Handler(handle_settings),
     },
     CommandSpec {
         name: "copy",
@@ -113,22 +113,6 @@ static SYSTEM_COMMANDS: &[CommandSpec] = &[
         sub: true,
         kind: CommandKind::Handler(handle_providers),
     },
-    CommandSpec {
-        name: "team",
-        desc: "Switch to Team mode (Orchestrator + subagents)",
-        aliases: &[],
-        category: CommandCategory::System,
-        sub: false,
-        kind: CommandKind::Handler(handle_team),
-    },
-    CommandSpec {
-        name: "solo",
-        desc: "Switch to Solo mode (single agent)",
-        aliases: &[],
-        category: CommandCategory::System,
-        sub: false,
-        kind: CommandKind::Handler(handle_solo),
-    },
 ];
 
 pub fn register(registry: &mut CommandRegistry) {
@@ -150,29 +134,15 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::event::DialogEvent::CopyToClipboard(text))
 }
 
-/// Fallback: write `text` to the clipboard file. Used when OSC 52 is not
-/// supported by the terminal.
-#[allow(dead_code)]
-fn write_clipboard(text: &str) -> std::io::Result<std::path::PathBuf> {
-    use std::io::Write;
-    let dir = if let Ok(p) = std::env::var("RUNIE_CACHE_DIR") {
-        std::path::PathBuf::from(p)
-    } else {
-        dirs::data_dir()
-            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "no data dir"))?
-            .join("runie")
-    };
-    std::fs::create_dir_all(&dir)?;
-    let path = dir.join("clipboard.md");
-    let mut f = std::fs::File::create(&path)?;
-    f.write_all(text.as_bytes())?;
-    Ok(path)
-}
-
 fn handle_reload(state: &mut AppState, _: &str) -> CommandResult {
     let config = crate::config::Config::load(None);
     state.config.keybindings = crate::keybindings::load_keybindings(Some(&config));
     CommandResult::Event(crate::event::ModelConfigEvent::ReloadAll)
+}
+
+fn handle_settings(state: &mut AppState, _: &str) -> CommandResult {
+    crate::update::dialog::open_settings_dialog(state);
+    CommandResult::None
 }
 
 fn handle_diagnostics(_: &mut AppState, _: &str) -> CommandResult {
@@ -286,30 +256,6 @@ fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 // ── Form-submit handlers ──────────────────────────────────────────────────────
-
-fn handle_team(state: &mut AppState, _: &str) -> CommandResult {
-    use crate::orchestrator::ExecutionMode;
-    if state.config.execution_mode == ExecutionMode::Team {
-        CommandResult::Message("Already in Team mode.".into())
-    } else {
-        state.config.execution_mode = ExecutionMode::Team;
-        state.mark_dirty();
-        CommandResult::Message(
-            "Switched to Team mode. The Orchestrator will plan and coordinate subagents.".into(),
-        )
-    }
-}
-
-fn handle_solo(state: &mut AppState, _: &str) -> CommandResult {
-    use crate::orchestrator::ExecutionMode;
-    if state.config.execution_mode == ExecutionMode::Solo {
-        CommandResult::Message("Already in Solo mode.".into())
-    } else {
-        state.config.execution_mode = ExecutionMode::Solo;
-        state.mark_dirty();
-        CommandResult::Message("Switched to Solo mode. Single agent will handle all turns.".into())
-    }
-}
 
 pub fn run_prompt(state: &mut AppState, name: &str) {
     let name = name.trim();

@@ -58,6 +58,7 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     }
     crate::popups::path_suggestions(f, snap);
     crate::popups::panel::panel_dialog(f, snap);
+    crate::popups::permission::permission_dialog(f, snap);
 }
 
 fn snapshot_constraints(snap: &Snapshot) -> Vec<Constraint> {
@@ -77,17 +78,13 @@ fn snapshot_constraints(snap: &Snapshot) -> Vec<Constraint> {
     }
 }
 
-/// Legacy entry point for code that still builds AppState directly.
+/// Test helper: render the current AppState to a frame.
+///
+/// Production code should build a `Snapshot` and call `draw_snapshot` instead.
+/// This helper only performs cache-building (ensure_fresh + snapshot); it no
+/// longer writes viewport dimensions back into state.
 pub fn view(f: &mut Frame, state: &mut runie_core::AppState) {
     state.ensure_fresh();
-    // Record the message viewport height so vim nav mode `j`/`k` and
-    // arrow keys can compute element-level jumps. The messages area is
-    // the top chunk of the vertical stack; approximate it as the full
-    // area minus the input box, status, and margins.
-    let full = f.area();
-    let messages_height = full.height.saturating_sub(8).max(3);
-    state.set_last_visible_height(messages_height);
-    state.set_last_content_width(full.width);
     let snap = state.snapshot();
     draw_snapshot(f, &snap);
 }

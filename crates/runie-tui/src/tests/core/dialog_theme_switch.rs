@@ -46,6 +46,7 @@ fn model_switch_reaches_handler_while_dialog_open() {
     state.update(ModelConfigEvent::SwitchModel {
         provider: "openai".into(),
         model: "gpt-4o".into(),
+        explicit: true,
     });
 
     assert_eq!(state.config.current_provider, "openai");

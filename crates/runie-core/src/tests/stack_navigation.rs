@@ -175,7 +175,7 @@ fn check_command_is_sub(reg: &crate::commands::CommandRegistry, name: &str) -> O
             };
             let opens_sub = matches!(
                 flow,
-                CommandFlow::Dialog(_) | CommandFlow::PanelStack(_) | CommandFlow::Handler(_)
+                CommandFlow::PanelStack(_) | CommandFlow::Handler(_)
             );
             let is_sub = matches!(def.flow, CommandFlow::Sub(_));
             if !is_sub {

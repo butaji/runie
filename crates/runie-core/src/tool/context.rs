@@ -12,8 +12,6 @@ pub struct ToolContext {
     pub env: HashMap<String, String>,
     /// Agent ID when this tool is invoked by a subagent.
     pub agent_id: Option<String>,
-    /// Shared subagent registry when running inside Team mode.
-    pub agent_registry: Option<std::sync::Arc<std::sync::Mutex<crate::multi_agent::AgentRegistry>>>,
 }
 
 impl Default for ToolContext {
@@ -22,7 +20,6 @@ impl Default for ToolContext {
             working_dir: std::env::current_dir().unwrap_or_default(),
             env: minimal_tool_env(),
             agent_id: None,
-            agent_registry: None,
         }
     }
 }

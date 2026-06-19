@@ -12,15 +12,12 @@
 //!   - SessionActor subscribes to bus, persists durable events to JSONL
 
 use futures::StreamExt;
-use runie_agent::{
-    build_provider_with_warning_with_config, emit_approval_sink::EmitApprovalSink, run_agent_turn,
-    AgentCommand, PermissionGate,
-};
-use runie_core::actor::{spawn_actor, Actor};
+use runie_agent::{emit_approval_sink::EmitApprovalSink, run_agent_turn, AgentCommand, PermissionGate};
+use runie_provider::DynProvider;
+use runie_core::actor::Actor;
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::event::{AgentEvent, LoginFlowEvent};
-use runie_core::orchestrator_actor::{OrchestratorActor, OrchestratorEvent};
 use runie_core::permissions::{
     DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
 };
@@ -85,9 +82,6 @@ async fn main() -> io::Result<()> {
     // Create EventBus for cross-component communication (SessionActor subscription)
     let bus: EventBus<Event> = EventBus::new(100);
 
-    // Spawn SessionActor to persist durable events to JSONL
-    let _session_tx = spawn_session_persistence(&bus);
-
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
     spawn_background_tasks(terminal, state, terminal_caps, bus.clone(), shutdown_tx);
@@ -121,18 +115,6 @@ fn run_init_hooks(state: &mut AppState) {
     }
 }
 
-fn spawn_orchestrator_if_needed(state: &AppState, bus: EventBus<Event>) {
-    if !state.config.execution_mode.uses_orchestrator() {
-        return;
-    }
-    let orch_bus: EventBus<OrchestratorEvent> = EventBus::new(100);
-    let main_bus = bus.clone();
-    tokio::spawn(forward_orchestrator_events(orch_bus.subscribe(), main_bus));
-    let orchestrator = OrchestratorActor::new();
-    let (_tx, handle) = spawn_actor(orchestrator, orch_bus);
-    tokio::spawn(handle);
-}
-
 fn spawn_background_tasks(
     terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
     mut state: AppState,
@@ -155,7 +137,7 @@ fn spawn_background_tasks(
 
     // Spawn agents that publish to EventBus. The loop reloads the saved config
     // before each turn so API keys from onboarding are visible immediately.
-    tokio::spawn(agent_loop(cmd_rx, bus.clone()));
+    tokio::spawn(agent_loop(cmd_rx, bus.clone(), state.approval_registry.clone()));
     tokio::spawn(input_reader(input_tx.clone(), kb_rx));
     tokio::spawn(render_task(terminal, render_rx));
     tokio::spawn(config_reload::spawn_config_watcher(
@@ -163,12 +145,15 @@ fn spawn_background_tasks(
         config_reload::config_path(),
     ));
 
-    spawn_orchestrator_if_needed(&state, bus.clone());
-
     // UiActor is the sole owner of AppState and the only runtime mutator.
     // Subscribe with replay so resuming a session restores prior messages.
+    // UiActor MUST subscribe before SessionActor replays durable events.
     let ui_sub = bus.subscribe_with_replay();
-    tokio::spawn(UiActor::new(state, render_tx, cmd_tx, kb_tx, bus, shutdown_tx, caps).run(ui_sub));
+    tokio::spawn(UiActor::new(state, render_tx, cmd_tx, kb_tx, bus.clone(), shutdown_tx, caps).run(ui_sub));
+
+    // Spawn SessionActor to persist durable events to JSONL.
+    // This is done after UiActor subscribes so replayed events are received live.
+    let _session_tx = spawn_session_persistence(&bus);
 }
 
 async fn render_task(
@@ -190,16 +175,6 @@ async fn render_task(
         if render_rx.changed().await.is_err() {
             break;
         }
-    }
-}
-
-/// Forward `OrchestratorEvent` into the main `EventBus<Event>`.
-async fn forward_orchestrator_events(
-    mut orch_sub: runie_core::bus::ReplayReceiver<OrchestratorEvent>,
-    main_bus: EventBus<Event>,
-) {
-    while let Ok(evt) = orch_sub.recv().await {
-        let _ = main_bus.publish(evt);
     }
 }
 
@@ -226,9 +201,13 @@ async fn input_reader(
 }
 
 /// Agent loop that publishes events to EventBus for SessionActor and UiActor.
-async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, bus: EventBus<Event>) {
+async fn agent_loop(
+    mut cmd_rx: mpsc::Receiver<AgentCommand>,
+    bus: EventBus<Event>,
+    approval_registry: std::sync::Arc<std::sync::Mutex<runie_core::permissions::ApprovalRegistry>>,
+) {
     while let Some(cmd) = cmd_rx.recv().await {
-        run_single_turn(&cmd, &bus).await;
+        run_single_turn(&cmd, &bus, approval_registry.clone()).await;
     }
 }
 
@@ -236,15 +215,18 @@ fn load_provider_config() -> runie_core::config::Config {
     runie_core::config_reload::Config::load(Some(&runie_core::config_reload::config_path()))
 }
 
-async fn run_single_turn(cmd: &AgentCommand, bus: &EventBus<Event>) {
+async fn run_single_turn(
+    cmd: &AgentCommand,
+    bus: &EventBus<Event>,
+    approval_registry: std::sync::Arc<std::sync::Mutex<runie_core::permissions::ApprovalRegistry>>,
+) {
     let bus_clone = bus.clone();
     let cmd_id = cmd.id.clone();
 
     // Reload the saved config for every turn so API keys added during this
     // session (e.g. through the login flow) are visible immediately.
     let config = load_provider_config();
-    let provider = match build_provider_with_warning_with_config(&cmd.provider, &cmd.model, &config)
-    {
+    let provider = match DynProvider::new_with_config(&cmd.provider, &cmd.model, &config) {
         Ok(p) => p,
         Err(e) => {
             emit_error_and_done(&bus_clone, &cmd_id, format!("Provider error: {}", e));
@@ -260,7 +242,10 @@ async fn run_single_turn(cmd: &AgentCommand, bus: &EventBus<Event>) {
         Box::new(GitTrackedWriteApprove::new()),
         Box::new(FileAccessAsk::new()),
     ]);
-    let gate = PermissionGate::new(permissions, Arc::new(EmitApprovalSink::new(emit.clone())));
+    let gate = PermissionGate::new(
+        permissions,
+        Arc::new(EmitApprovalSink::new(emit.clone(), approval_registry)),
+    );
 
     if let Err(e) = run_agent_turn(&provider, cmd, emit, 5, gate).await {
         emit_error_and_done(bus, &cmd_id, format!("Agent error: {}", e));

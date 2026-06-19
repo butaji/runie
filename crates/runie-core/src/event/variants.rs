@@ -7,10 +7,7 @@ use serde::{Deserialize, Serialize};
 use strum::IntoStaticStr;
 
 use crate::model::ThinkingLevel;
-use crate::orchestrator::{OrchestratorPlan, SubagentTask, TaskStatus};
-use crate::orchestrator_actor::OrchestratorState;
 use crate::settings::SettingsCategory;
-use crate::state::{AgentEntry, AgentStatus};
 
 mod constructors;
 mod name;
@@ -139,16 +136,6 @@ pub enum Event {
     Reset,
     Abort,
     FollowUp,
-    SpawnAgent {
-        prompt: String,
-    },
-    SteerAgent {
-        agent_id: String,
-        message: String,
-    },
-    CancelAgent {
-        agent_id: String,
-    },
     ToggleExpand,
     Dequeue,
     OpenExternalEditor,
@@ -180,6 +167,7 @@ pub enum Event {
     SwitchModel {
         provider: String,
         model: String,
+        explicit: bool,
     },
     SwitchTheme {
         name: String,
@@ -187,18 +175,6 @@ pub enum Event {
     CycleModelNext,
     CycleModelPrev,
     ToggleScopedModelsDialog,
-    ProviderEditModels {
-        provider: String,
-    },
-    ProviderEditModelsToggle {
-        provider: String,
-        model: String,
-    },
-    ProviderEditModelsSave {
-        provider: String,
-        models: Vec<String>,
-    },
-    ProviderEditModelsClose,
     ScopedModelToggle {
         provider: String,
         name: String,
@@ -253,9 +229,6 @@ pub enum Event {
     CommandFormDown,
     CommandFormSubmit,
     CommandFormClose,
-    RunSaveCommand {
-        name: String,
-    },
     DialogBack,
     ProvidersDialog,
     ProvidersSelectModel {
@@ -266,18 +239,6 @@ pub enum Event {
         provider: String,
     },
     ProvidersAdd,
-    OpenAgentsManager,
-    AgentsManagerSetField {
-        name: String,
-        field: String,
-        value: String,
-    },
-    AgentsManagerSave {
-        name: String,
-    },
-    AgentsManagerDelete {
-        name: String,
-    },
     CopyToClipboard(String),
     CopySelectedBlock,
     CopyBlockMetadata,
@@ -320,6 +281,9 @@ pub enum Event {
 
     // Command
     RunLoadCommand {
+        name: String,
+    },
+    RunSaveCommand {
         name: String,
     },
     RunDeleteCommand {
@@ -371,11 +335,6 @@ pub enum Event {
         provider: String,
         key: String,
     },
-    ValidationDone {
-        provider: String,
-        key: String,
-        models: Vec<String>,
-    },
     ValidationFailed {
         provider: String,
         key: String,
@@ -392,53 +351,4 @@ pub enum Event {
     Save,
     Cancel,
 
-    // Sidebar
-    Show,
-    Hide,
-    FocusOrchestrator,
-    FocusSubagent(usize),
-    UpdateStatus {
-        id: String,
-        status: AgentStatus,
-    },
-    SetSubagents(Vec<AgentEntry>),
-    SetOrchestratorStatus(AgentStatus),
-
-    // Orchestrator
-    StateChanged {
-        from: Box<OrchestratorState>,
-        to: Box<OrchestratorState>,
-    },
-    PlanStarted,
-    PlanningStarted,
-    PlanGenerated {
-        plan: Box<OrchestratorPlan>,
-    },
-    PlanningFailed {
-        error: String,
-    },
-    SubagentDispatched {
-        task: Box<SubagentTask>,
-    },
-    SubagentStatusChanged {
-        task_id: String,
-        status: TaskStatus,
-    },
-    SubagentCompleted {
-        task_id: String,
-        output: String,
-    },
-    SubagentFailed {
-        task_id: String,
-        error: String,
-    },
-    SynthesisStarted,
-    SynthesisComplete {
-        response: String,
-        elapsed_secs: f64,
-    },
-    Finished {
-        success: bool,
-    },
-    Cancelled,
 }

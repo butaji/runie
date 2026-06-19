@@ -55,7 +55,6 @@ impl UiActor {
     pub async fn run(mut self, mut rx: ReplayReceiver<Event>) {
         let (effect_tx, effect_rx) = mpsc::channel::<Event>(16);
         Self::spawn_effect_forwarder(self.bus.clone(), effect_rx);
-        Self::setup_login_validation_hook(&mut self.state, effect_tx.clone());
 
         let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
         self.state.ensure_fresh();
@@ -88,12 +87,6 @@ impl UiActor {
                 bus.publish(evt);
             }
         });
-    }
-
-    fn setup_login_validation_hook(state: &mut AppState, effect_tx: mpsc::Sender<Event>) {
-        state.set_login_validation_hook(std::sync::Arc::new(move |provider: &str, key: &str| {
-            crate::effects::login::run(provider.to_string(), key.to_string(), effect_tx.clone());
-        }));
     }
 
     /// Handle a single event. Returns `true` when the actor should shut down.

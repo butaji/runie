@@ -5,7 +5,7 @@
 //! `max_tool_rounds` rounds. The server mode sets `execute_tools: false` and
 //! simply returns the streamed content.
 
-use crate::parser::{
+use runie_core::tool_parser::{
     assign_tool_call_ids, build_assistant_message, parse_tool_calls_fallible,
     tool_parse_error_message, ParsedToolCall, ToolParseError,
 };

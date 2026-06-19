@@ -1,6 +1,5 @@
 //! Typed effect commands dispatched from the main event loop.
 
-use runie_core::model::ThinkingLevel;
 use runie_core::{AppState, ChatMessage, Event as CoreEvent, Snapshot};
 use tokio::sync::{mpsc, watch};
 
@@ -10,7 +9,6 @@ mod clipboard;
 mod editor;
 pub(crate) mod login;
 mod share;
-mod subagent;
 mod suspend;
 
 pub enum EffectCommand {
@@ -39,14 +37,6 @@ pub enum EffectCommand {
     LoginFlowSubmitKey {
         provider: String,
         key: String,
-    },
-    SpawnAgent {
-        prompt: String,
-        provider: String,
-        model: String,
-        thinking: ThinkingLevel,
-        read_only: bool,
-        skills_context: String,
     },
 }
 
@@ -79,14 +69,6 @@ impl EffectCommand {
                 terminal_caps: *caps,
             }),
             CoreEvent::SubmitKey { .. } => login_command(evt),
-            CoreEvent::SpawnAgent { prompt } => Some(Self::SpawnAgent {
-                prompt: prompt.clone(),
-                provider: state.config.current_provider.clone(),
-                model: state.config.current_model.clone(),
-                thinking: state.config.thinking_level,
-                read_only: state.config.read_only,
-                skills_context: runie_core::skills::build_skills_context(&state.skills),
-            }),
             _ => None,
         }
     }
@@ -113,22 +95,6 @@ impl EffectCommand {
             } => share::run(messages, display_name, tx),
             Self::Suspend { terminal_caps } => suspend::run(terminal_caps, render_tx, state),
             Self::LoginFlowSubmitKey { provider, key } => login::run(provider, key, tx),
-            Self::SpawnAgent {
-                prompt,
-                provider,
-                model,
-                thinking,
-                read_only,
-                skills_context,
-            } => subagent::run(
-                prompt,
-                provider,
-                model,
-                thinking,
-                read_only,
-                skills_context,
-                tx,
-            ),
         }
     }
 }

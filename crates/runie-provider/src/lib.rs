@@ -5,7 +5,6 @@
 pub mod config;
 pub mod mock;
 pub mod openai;
-pub mod planner;
 pub mod retry;
 
 pub use config::Config;
@@ -38,18 +37,6 @@ pub struct DynProvider {
 }
 
 impl DynProvider {
-    /// Build a provider by registry key and model name.
-    ///
-    /// Returns `Err(UnknownProvider)` for unknown keys (no silent Mock fallback).
-    /// Returns `Err(MissingApiKey)` when `RUNIE_MOCK` is not set and the key
-    /// requires an API key.
-    ///
-    /// This variant only checks environment variables. Use [`Self::new_with_config`]
-    /// to also read the API key/base URL from the saved config file.
-    pub fn new(key: &str, model: &str) -> Result<Self, ProviderError> {
-        build_dyn_provider(key, model, None)
-    }
-
     /// Build a provider from the saved config file, falling back to environment
     /// variables when the config does not specify a value.
     pub fn new_with_config(
@@ -58,11 +45,6 @@ impl DynProvider {
         config: &runie_core::config::Config,
     ) -> Result<Self, ProviderError> {
         build_dyn_provider(key, model, Some(config))
-    }
-
-    /// Build a provider, returning the key even on error for better error messages.
-    pub fn new_checked(key: &str, model: &str) -> Result<Self, ProviderError> {
-        build_dyn_provider(key, model, None)
     }
 
     /// Returns the registry key used to build this provider.
@@ -117,11 +99,6 @@ impl Provider for DynProvider {
 /// Check whether `key` is known in the registry.
 pub fn is_known(key: &str) -> bool {
     provider_registry::is_known_provider(key)
-}
-
-/// Check whether `key` is an OpenAI-compatible provider.
-pub fn is_openai_compatible(key: &str) -> bool {
-    provider_registry::find_provider(key).is_some()
 }
 
 /// Resolve API key and base URL for a provider.
@@ -209,43 +186,8 @@ fn build_openai_provider(api_key: String, model: &str, base_url: &str) -> Box<dy
 }
 
 // ---------------------------------------------------------------------------
-// Legacy helpers (kept for API compatibility during migration)
+// Provider construction helpers
 // ---------------------------------------------------------------------------
-
-/// Build a provider. Returns `DynProvider` or error — no silent fallback.
-pub fn build_provider(provider: &str, model: &str) -> DynProvider {
-    build_provider_with_warning(provider, model)
-        .expect("build_provider_with_warning returns Ok or panic — use new() for explicit errors")
-}
-
-/// Build a provider and return a warning message if a known non-critical condition occurred.
-/// In the new design there is no warning — the error is returned explicitly.
-///
-/// This variant only checks environment variables. Use
-/// [`build_provider_with_warning_with_config`] to read saved config.
-pub fn build_provider_with_warning(
-    provider: &str,
-    model: &str,
-) -> Result<DynProvider, ProviderError> {
-    build_dyn_provider(provider, model, None)
-}
-
-/// Build a provider using the saved config file.
-pub fn build_provider_with_warning_with_config(
-    provider: &str,
-    model: &str,
-    config: &runie_core::config::Config,
-) -> Result<DynProvider, ProviderError> {
-    build_dyn_provider(provider, model, Some(config))
-}
-
-/// Build a provider from `Config`.
-pub fn from_config(config: &Config, model: &str) -> DynProvider {
-    let chain = config.provider_chain();
-    build_provider_with_fallback(&chain, model, config).expect(
-        "from_config: provider key is always known or panic — use new() for explicit errors",
-    )
-}
 
 /// Try each provider in the chain until one builds successfully, using the
 /// provided config to resolve API keys and base URLs.
@@ -262,18 +204,6 @@ pub fn build_provider_with_fallback(
         }
     }
     Err(last_err.unwrap_or_else(|| ProviderError::UnknownProvider("none".to_string())))
-}
-
-/// Switch a live provider to a new key/model pair, reading credentials from
-/// the saved config file.
-pub fn switch_provider(
-    provider: &mut DynProvider,
-    key: &str,
-    model: &str,
-) -> Result<(), ProviderError> {
-    let config = runie_core::config::Config::load(None);
-    *provider = build_dyn_provider(key, model, Some(&config))?;
-    Ok(())
 }
 
 // ---------------------------------------------------------------------------

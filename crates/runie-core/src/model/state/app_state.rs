@@ -1,13 +1,8 @@
 //! `AppState` struct and its inherent methods.
 
-use std::sync::Arc;
-
 use super::helpers::{compute_ranking_score, element_metadata, element_text};
 use super::FffFileEntry;
 use crate::ui::elements::Element;
-
-/// Callback invoked by the login flow to run async API-key validation.
-pub type LoginValidationHook = Arc<dyn Fn(&str, &str) + Send + Sync>;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -18,10 +13,6 @@ pub struct AppState {
     pub view: crate::state::ViewState,
     pub config: crate::state::ConfigState,
     pub completion: crate::state::CompletionState,
-    /// Sidebar state (Team mode subagent panel).
-    pub sidebar: crate::state::SidebarState,
-    /// Current orchestrator state (Team mode) for status bar display.
-    pub orchestrator_state: crate::orchestrator_actor::OrchestratorState,
 
     // Singleton UI/control flags (don't fit a single domain)
     /// Quit flag read by the main event loop
@@ -52,12 +43,15 @@ pub struct AppState {
     /// Counter incremented each time the user types in the file picker.
     /// Used to detect stale FFF results (result counter != current counter means ignore).
     pub fff_debounce: u32,
-    pub pending_agent_edit: Option<crate::agent_profiles::AgentProfile>,
-    /// Multi-agent registry for Team mode.
-    pub multi_agent: crate::multi_agent::AgentRegistry,
-    /// Optional hook invoked when the login flow enters the validating step.
-    /// The UI sets this to trigger the async API-key validation effect.
-    pub login_validation_hook: Option<LoginValidationHook>,
+    /// Active permission approval prompt (blocking modal dialog).
+    pub permission_request: Option<crate::model::PermissionRequestState>,
+    /// Cross-actor coordination registry for in-flight permission approvals.
+    ///
+    /// The agent turn registers a oneshot here and blocks; the UI resolves it
+    /// when the user chooses an action. This shared registry is deliberate
+    /// request/response plumbing between the agent task and the UI task, not
+    /// accidental global mutable state.
+    pub approval_registry: std::sync::Arc<std::sync::Mutex<crate::permissions::ApprovalRegistry>>,
 }
 
 impl Default for AppState {
@@ -70,8 +64,6 @@ impl Default for AppState {
             view: crate::state::ViewState::default(),
             config: crate::state::ConfigState::default(),
             completion: crate::state::CompletionState::default(),
-            sidebar: crate::state::SidebarState::default(),
-            orchestrator_state: crate::orchestrator_actor::OrchestratorState::default(),
             should_quit: false,
             open_dialog: None,
             dialog_back_stack: Vec::new(),
@@ -86,9 +78,10 @@ impl Default for AppState {
             cwd_name,
             fff_file_results: Vec::new(),
             fff_debounce: 0,
-            pending_agent_edit: None,
-            multi_agent: crate::multi_agent::AgentRegistry::default(),
-            login_validation_hook: None,
+            permission_request: None,
+            approval_registry: std::sync::Arc::new(std::sync::Mutex::new(
+                crate::permissions::ApprovalRegistry::new(),
+            )),
         }
     }
 }
@@ -130,21 +123,6 @@ impl AppState {
         self.view.dirty = true;
     }
 
-    /// Register a hook that the login flow invokes after transitioning to the
-    /// validating step. The hook receives `(provider, key)` and is responsible
-    /// for running the async validation and publishing the result back as a
-    /// `ModelsFetched` / `ValidationFailed` event.
-    pub fn set_login_validation_hook(&mut self, hook: LoginValidationHook) {
-        self.login_validation_hook = Some(hook);
-    }
-
-    /// Trigger the login validation hook, if one is registered.
-    pub(crate) fn trigger_login_validation(&self, provider: &str, key: &str) {
-        if let Some(ref hook) = self.login_validation_hook {
-            hook(provider, key);
-        }
-    }
-
     pub fn messages_changed(&mut self) {
         self.view.message_gen = self.view.message_gen.wrapping_add(1);
         self.session.session_updated_at = crate::message::now();
@@ -154,10 +132,10 @@ impl AppState {
     /// Reset session/input/agent state without clearing the connected provider/model.
     pub fn reset_session(&mut self) {
         let config = self.config.clone();
-        let hook = self.login_validation_hook.clone();
+        let registry = self.approval_registry.clone();
         *self = Self::default();
         self.config = config;
-        self.login_validation_hook = hook;
+        self.approval_registry = registry;
     }
 
     /// Record the height of the message viewport. Called by the render
@@ -194,16 +172,7 @@ impl AppState {
 
     /// Visible elements slice — O(1), zero allocation
     pub fn visible(&self, skip: usize, take: usize) -> &[Element] {
-        if self.view.elements_cache.is_empty() {
-            return &[];
-        }
-        let start = skip
-            .min(self.view.element_count)
-            .min(self.view.elements_cache.len());
-        let end = (start + take)
-            .min(self.view.element_count)
-            .min(self.view.elements_cache.len());
-        &self.view.elements_cache[start..end]
+        crate::snapshot::visible_slice(&self.view.elements_cache, skip, take)
     }
 
     pub fn count(&self) -> usize {
@@ -216,6 +185,14 @@ impl AppState {
 
     pub fn total_lines(&self) -> usize {
         self.view.total_lines
+    }
+
+    pub fn scroll_offset(&self, visible_height: usize) -> u16 {
+        crate::snapshot::scroll_offset(self.view.total_lines, self.view.scroll, visible_height)
+    }
+
+    pub fn scrollbar_metrics(&self, visible_height: usize) -> (usize, usize) {
+        crate::snapshot::scrollbar_metrics(self.view.total_lines, self.view.scroll, visible_height)
     }
 
     pub fn elements_cache(&self) -> &[Element] {
@@ -300,8 +277,11 @@ impl AppState {
     /// Restore application state from a JSON session snapshot.
     pub fn restore_session(&mut self, session: &crate::session::Session) {
         self.session.messages = session.messages.clone();
-        self.config.current_provider = session.provider.clone();
-        self.config.current_model = session.model.clone();
+        self.set_active_model(
+            session.provider.clone(),
+            session.model.clone(),
+            crate::state::ModelSource::UserOverride,
+        );
         self.config.theme_name = session.theme_name.clone();
         self.config.thinking_level = session.thinking_level;
         self.config.read_only = session.read_only;
@@ -310,7 +290,6 @@ impl AppState {
         self.session.session_created_at = session.created_at;
         self.session.session_updated_at = session.updated_at;
         self.session.session_tree = session.session_tree.clone();
-        self.configure_token_tracker();
         self.messages_changed();
     }
 }

@@ -24,7 +24,8 @@
 //! ```
 
 use anyhow::Result;
-use runie_agent::{build_provider_with_warning_with_config, run_headless_turn, HeadlessOptions};
+use runie_agent::{run_headless_turn, HeadlessOptions};
+use runie_provider::DynProvider;
 use runie_core::config_reload;
 use runie_core::message::ChatMessage;
 use runie_core::permissions::{AutoAllowSink, DenyAllSink};
@@ -85,7 +86,7 @@ async fn run_json(yolo: bool) -> Result<()> {
     let config = config_reload::Config::load(Some(&config_reload::config_path()));
     let (provider_name, model) = resolve_provider_and_model(&req, &config);
     let messages = build_json_messages(&req);
-    let provider = build_provider_with_warning_with_config(&provider_name, &model, &config)
+    let provider = DynProvider::new_with_config(&provider_name, &model, &config)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
     let start = Instant::now();
 
@@ -220,7 +221,7 @@ mod tests {
     #[tokio::test]
     async fn json_mode_returns_tool_calls() {
         use futures::StreamExt;
-        use runie_agent::parser::parse_tool_calls;
+        use runie_core::tool_parser::parse_tool_calls;
         use runie_core::message::ChatMessage;
         use runie_core::provider::Provider;
         let provider = runie_provider::MockProvider::default();

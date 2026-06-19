@@ -88,6 +88,17 @@ impl ToolRegistry {
         }
         filtered
     }
+
+    /// Return a registry containing only the named tools.
+    pub fn filtered(&self, names: &[String]) -> Self {
+        let mut filtered = Self::new();
+        for name in names {
+            if let Some(tool) = self.tools.get(name) {
+                filtered.register(tool.clone());
+            }
+        }
+        filtered
+    }
 }
 
 impl Default for ToolRegistry {

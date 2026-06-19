@@ -1,9 +1,7 @@
 //! Functions that open specific dialogs.
 
 use crate::commands::DialogState;
-use crate::dialog::builders::{
-    command_palette, model_selector, provider_model_editor, scoped_models, session_tree,
-};
+use crate::dialog::builders::{command_palette, model_selector, scoped_models, session_tree};
 use crate::model::AppState;
 
 use super::build_file_picker_panel;
@@ -62,53 +60,13 @@ pub fn open_model_selector(state: &mut AppState) {
 }
 
 pub fn open_settings_dialog(state: &mut AppState) {
-    use crate::dialog::builders::{settings, SettingsRow};
-    let items = settings_dialog::build_setting_items(state);
-    let mut categories: Vec<(String, Vec<SettingsRow>)> = Vec::new();
-    for item in items {
-        let cat_name = item.category.as_str().to_string();
-        let row = SettingsRow {
-            label: item.label,
-            key: item.key,
-            kind: item.value,
-        };
-        if let Some(last) = categories.last_mut() {
-            if last.0 == cat_name {
-                last.1.push(row);
-                continue;
-            }
-        }
-        categories.push((cat_name, vec![row]));
-    }
+    use crate::dialog::builders::settings;
+
+    let categories: Vec<(String, Vec<_>)> = settings_dialog::build_setting_categories(state)
+        .into_iter()
+        .map(|(cat, items)| (cat.as_str().to_string(), items))
+        .collect();
     state.open_dialog = Some(DialogState::Settings(settings(categories)));
-    state.mark_dirty();
-}
-
-pub fn open_provider_model_editor(state: &mut AppState, provider: &str) {
-    let configured = crate::login_config::list_configured_providers();
-    let saved_models: Vec<String> = configured
-        .iter()
-        .find(|(p, _, _)| p == provider)
-        .map(|(_, _, models)| models.clone())
-        .unwrap_or_default();
-    let saved_set: std::collections::HashSet<String> =
-        saved_models.iter().cloned().collect();
-
-    let mut available: Vec<String> = Vec::new();
-    if let Some(meta) = crate::provider_registry::find_provider(provider) {
-        for model in meta.models {
-            available.push(model.name.to_string());
-        }
-    }
-    for model in saved_models {
-        if !available.contains(&model) {
-            available.push(model);
-        }
-    }
-
-    state.open_dialog = Some(DialogState::PanelStack(provider_model_editor(
-        provider, &available, &saved_set,
-    )));
     state.mark_dirty();
 }
 

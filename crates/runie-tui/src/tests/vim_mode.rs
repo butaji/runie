@@ -87,6 +87,7 @@ fn vim_mode_scroll_renders_older_content() {
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).expect("terminal");
 
+    state.update(InputEvent::TerminalSize { width: 80, height: 24 });
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     state.update(InputEvent::Input('g'));
     terminal.draw(|f| view(f, &mut state)).expect("draw");
@@ -111,6 +112,7 @@ fn vim_mode_page_down_renders_newer_content() {
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).expect("terminal");
 
+    state.update(InputEvent::TerminalSize { width: 80, height: 24 });
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     state.update(InputEvent::Input('g'));
     state.update(InputEvent::Input(' '));

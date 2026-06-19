@@ -2,6 +2,7 @@
 
 use super::types::Config;
 use crate::event::{Event, ModelConfigEvent};
+use crate::event::TransientLevel;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 use std::path::PathBuf;
 use tokio::sync::mpsc;
@@ -63,7 +64,11 @@ async fn apply_config_changes(
         match change {
             super::types::ConfigChange::Model { provider, model } => {
                 let _ = event_tx
-                    .send(ModelConfigEvent::SwitchModel { provider, model })
+                    .send(ModelConfigEvent::SwitchModel {
+                        provider,
+                        model,
+                        explicit: false,
+                    })
                     .await;
             }
             super::types::ConfigChange::Theme { name } => {
@@ -71,6 +76,15 @@ async fn apply_config_changes(
             }
             super::types::ConfigChange::Keybindings => {
                 let _ = event_tx.send(ModelConfigEvent::KeybindingsReloaded).await;
+            }
+            super::types::ConfigChange::Credentials => {
+                let _ = event_tx
+                    .send(Event::TransientMessage {
+                        content: "Credentials updated. The next turn will use the new key."
+                            .to_string(),
+                        level: TransientLevel::Info,
+                    })
+                    .await;
             }
         }
     }
@@ -97,11 +111,31 @@ mod tests {
         handle.abort();
     }
 
-    fn write_test_config(path: &std::path::Path, provider: &str, model: &str) {
-        fs::write(
-            path,
-            format!(r#"provider = "{provider}" model = "{model}""#),
-        )
-        .unwrap();
+    #[tokio::test]
+    async fn apply_config_changes_emits_credentials_message() {
+        let (tx, mut rx) = mpsc::channel::<Event>(10);
+        let mut prev = crate::config::Config::default();
+        prev.model_providers.insert(
+            "openai".to_string(),
+            crate::config::ModelProvider {
+                provider_type: Some("openai".to_string()),
+                base_url: "https://api.openai.com".to_string(),
+                api_key: "sk-old".to_string(),
+                models: Vec::new(),
+            },
+        );
+        let mut curr = prev.clone();
+        curr.model_providers
+            .get_mut("openai")
+            .unwrap()
+            .api_key = "sk-new".to_string();
+
+        super::apply_config_changes(&tx, &curr, &prev).await;
+
+        let evt = rx.try_recv().expect("expected credentials event");
+        assert!(
+            matches!(evt, Event::TransientMessage { ref content, .. } if content.contains("Credentials updated")),
+            "got {evt:?}"
+        );
     }
 }

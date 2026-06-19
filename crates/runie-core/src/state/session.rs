@@ -34,12 +34,19 @@ impl Default for SessionState {
     }
 }
 
+/// Why the active provider/model is what it is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModelSource {
+    /// Loaded from config defaults (explicit provider/model or first configured).
+    ConfigDefault,
+    /// Explicitly chosen by the user this session; /reload should not revert it.
+    UserOverride,
+}
+
 #[derive(Clone)]
 pub struct ConfigState {
     pub current_provider: String,
     pub current_model: String,
-    pub config_provider: String,
-    pub config_model: String,
     pub keybindings: std::collections::HashMap<String, String>,
     pub theme_name: String,
     pub thinking_level: ThinkingLevel,
@@ -56,10 +63,10 @@ pub struct ConfigState {
     pub recent_models: Vec<String>,
     /// Telemetry/analytics tracking.
     pub telemetry: crate::telemetry::Telemetry,
-    /// Execution mode: Solo (default) or Team (orchestrator).
-    pub execution_mode: crate::orchestrator::ExecutionMode,
     /// Per-session command usage tracking for palette ranking.
     pub command_usage: std::collections::HashMap<String, CommandUsage>,
+    /// Why the current provider/model is active.
+    pub model_source: ModelSource,
 }
 
 impl Default for ConfigState {
@@ -79,10 +86,8 @@ impl Default for ConfigState {
             (String::new(), String::new())
         };
         Self {
-            current_provider: provider.clone(),
-            current_model: model.clone(),
-            config_provider: provider,
-            config_model: model,
+            current_provider: provider,
+            current_model: model,
             keybindings: default_keybindings(),
             theme_name: "runie".into(),
             thinking_level: ThinkingLevel::Off,
@@ -95,8 +100,8 @@ impl Default for ConfigState {
             follow_up_mode: crate::model::DeliveryMode::default(),
             recent_models: Vec::new(),
             telemetry: crate::telemetry::Telemetry::new(false),
-            execution_mode: crate::orchestrator::ExecutionMode::default(),
             command_usage: std::collections::HashMap::new(),
+            model_source: ModelSource::ConfigDefault,
         }
     }
 }

@@ -1,6 +1,6 @@
 //! Shared tool execution helpers for agent turn and headless runners.
 
-use crate::parser::ParsedToolCall;
+use runie_core::tool_parser::ParsedToolCall;
 use crate::PermissionGate;
 use runie_core::message::{ChatMessage, Part};
 use runie_core::permissions::{PermissionAction, PermissionContext};

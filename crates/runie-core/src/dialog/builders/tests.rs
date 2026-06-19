@@ -1,10 +1,9 @@
 use crate::dialog::builders::{
     command_palette, file_picker, model_selector, scoped_models, session_list, session_tree,
-    settings, theme_picker, SessionRow, SettingsRow,
+    settings, theme_picker, SessionRow,
 };
 use crate::dialog::{PanelItem, PanelStack};
 use crate::event::ControlEvent;
-use crate::settings::SettingValue;
 use crate::Event;
 
 fn dummy_evt() -> Event {
@@ -62,24 +61,20 @@ fn settings_builds_with_categories() {
     let stack = settings(vec![
         (
             "Models".into(),
-            vec![SettingsRow {
+            vec![PanelItem::Select {
                 label: "Provider".into(),
+                current: "mock".into(),
+                options: vec!["mock".into(), "openai".into()],
                 key: "provider".into(),
-                kind: SettingValue::Cycle {
-                    current: "mock".into(),
-                    options: vec!["mock".into(), "openai".into()],
-                },
             }],
         ),
         (
             "Appearance".into(),
-            vec![SettingsRow {
+            vec![PanelItem::Select {
                 label: "Theme".into(),
+                current: "runie".into(),
+                options: vec!["runie".into(), "dracula".into()],
                 key: "theme".into(),
-                kind: SettingValue::Cycle {
-                    current: "runie".into(),
-                    options: vec!["runie".into(), "dracula".into()],
-                },
             }],
         ),
     ]);

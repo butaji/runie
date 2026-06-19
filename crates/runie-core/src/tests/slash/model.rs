@@ -145,110 +145,11 @@ fn provider_dialog_shows_edit_models_action() {
 }
 
 #[test]
-fn provider_edit_models_opens_editor_for_provider() {
-    crate::login_config::set_test_config_with_providers(&[(
-        "openai".into(),
-        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
-    )]);
-    let mut state = fresh_state();
-    state.update(DialogEvent::ProviderEditModels {
-        provider: "openai".into(),
-    });
-
-    let dialog = state.open_dialog.expect("dialog should be open");
-    let stack = dialog.panel_stack().expect("panel stack");
-    let panel = stack.current().expect("panel");
-    assert_eq!(panel.id, "provider-model-editor");
-    assert!(panel.title.contains("OpenAI"));
-}
-
-#[test]
-fn provider_edit_models_save_persists_selection() {
-    crate::login_config::set_test_config_with_providers(&[(
-        "openai".into(),
-        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
-    )]);
-    let mut state = fresh_state();
-    state.config.current_provider = "openai".into();
-    state.config.current_model = "gpt-4o".into();
-    state.update(DialogEvent::ProviderEditModels {
-        provider: "openai".into(),
-    });
-
-    // Flip the second toggle off by directly mutating the panel item and then
-    // submitting the save action.
-    let dialog = state.open_dialog.as_mut().expect("dialog");
-    let stack = dialog.panel_stack_mut().expect("stack");
-    let panel = stack.current_mut().expect("panel");
-    let gpt4o_mini_item = panel
-        .items
-        .iter_mut()
-        .find(|i| i.label() == Some("gpt-4o-mini"))
-        .expect("gpt-4o-mini toggle");
-    if let crate::dialog::PanelItem::Toggle { value, .. } = gpt4o_mini_item {
-        *value = false;
-    }
-    // Select the Save action (navigable index, not raw item index) and submit.
-    panel.selected = panel
-        .items
-        .iter()
-        .enumerate()
-        .filter(|(_, i)| i.is_navigable())
-        .position(|(_, i)| i.label() == Some("_Save"))
-        .expect("save action");
-    state.update(Event::submit());
-
-    let saved = crate::login_config::list_configured_providers();
-    let (_, _, models) = saved.iter().find(|(p, _, _)| p == "openai").expect("openai");
-    assert_eq!(models, &["gpt-4o"]);
-    assert_eq!(state.config.current_model, "gpt-4o");
-}
-
-#[test]
-fn provider_edit_models_cancel_does_not_persist() {
-    crate::login_config::set_test_config_with_providers(&[(
-        "openai".into(),
-        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
-    )]);
-    let mut state = fresh_state();
-    state.config.current_provider = "openai".into();
-    state.config.current_model = "gpt-4o".into();
-    state.update(DialogEvent::ProviderEditModels {
-        provider: "openai".into(),
-    });
-
-    let dialog = state.open_dialog.as_mut().expect("dialog");
-    let stack = dialog.panel_stack_mut().expect("stack");
-    let panel = stack.current_mut().expect("panel");
-    let gpt4o_mini_item = panel
-        .items
-        .iter_mut()
-        .find(|i| i.label() == Some("gpt-4o-mini"))
-        .expect("gpt-4o-mini toggle");
-    if let crate::dialog::PanelItem::Toggle { value, .. } = gpt4o_mini_item {
-        *value = false;
-    }
-    panel.selected = panel
-        .items
-        .iter()
-        .enumerate()
-        .filter(|(_, i)| i.is_navigable())
-        .position(|(_, i)| i.label() == Some("_Cancel"))
-        .expect("cancel action");
-    state.update(Event::submit());
-
-    let saved = crate::login_config::list_configured_providers();
-    let (_, _, models) = saved.iter().find(|(p, _, _)| p == "openai").expect("openai");
-    assert_eq!(models, &["gpt-4o", "gpt-4o-mini"]);
-    assert!(state.open_dialog.is_none());
-}
-
-#[test]
 fn save_creates_session_file() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
+    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf());
 
     let mut state = fresh_state();
     type_str(&mut state, "hello world");
@@ -256,7 +157,7 @@ fn save_creates_session_file() {
     exec(&mut state, "/save mysession"); // Opens form with pre-filled name
     state.update(Event::submit()); // Submits the form
 
-    let redb_path = crate::session_store::SessionStore::new(store.dir.clone()).path("mysession");
+    let redb_path = crate::session_store::SessionStore::new(store.dir().to_path_buf()).path("mysession");
     assert!(redb_path.exists(), "session file created");
 
     let sys_msgs: Vec<_> = state
@@ -276,7 +177,7 @@ fn save_preserves_messages_provider_model() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
+    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf());
 
     let mut state = fresh_state();
     state.config.current_provider = "openai".to_string();
@@ -286,7 +187,7 @@ fn save_preserves_messages_provider_model() {
     exec(&mut state, "/save preserved"); // Opens form with pre-filled name
     state.update(Event::submit()); // Submits the form
 
-    let redb_store = crate::session_store::SessionStore::new(store.dir.clone());
+    let redb_store = crate::session_store::SessionStore::new(store.dir().to_path_buf());
     let events = redb_store.load_events("preserved").unwrap();
     let mut loaded = crate::model::AppState::default();
     crate::session_replay::replay_events(&mut loaded, &events);

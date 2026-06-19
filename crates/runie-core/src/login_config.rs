@@ -1,4 +1,8 @@
 //! Login config persistence — read/write provider credentials in config.toml.
+//!
+//! This module is now a thin wrapper around the canonical [`crate::config::Config`]
+//! type. Provider credentials (including the per-provider model list) live under
+//! `[model_providers.<name>]` and are loaded/saved through `Config::load`/`save`.
 
 use std::path::PathBuf;
 
@@ -21,6 +25,21 @@ pub fn config_path() -> PathBuf {
     })
 }
 
+/// Load the canonical config from [`config_path`].
+fn load() -> crate::config::Config {
+    crate::config::Config::load(Some(&config_path()))
+}
+
+/// Save the canonical config to [`config_path`].
+fn save(config: &crate::config::Config) -> anyhow::Result<()> {
+    let path = config_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&path, toml::to_string_pretty(config)?)?;
+    Ok(())
+}
+
 /// Save a provider configuration to `~/.runie/config.toml`.
 /// Creates the file and parent directories if needed.
 pub fn save_provider_config(
@@ -29,78 +48,47 @@ pub fn save_provider_config(
     api_key: &str,
     models: &[String],
 ) -> anyhow::Result<()> {
-    let path = config_path();
-    let content = std::fs::read_to_string(&path).unwrap_or_default();
-    let mut doc = parse_config_doc(&content)?;
-    let providers = get_or_create_providers_table(&mut doc)?;
-    providers.insert(name.into(), build_provider_value(base_url, api_key, models));
-    write_config_doc(&path, &doc)
-}
-
-fn parse_config_doc(content: &str) -> anyhow::Result<toml::Value> {
-    if content.trim().is_empty() {
-        Ok(toml::Value::Table(toml::map::Map::new()))
-    } else {
-        content.parse().map_err(|e| anyhow::anyhow!("{}", e))
-    }
-}
-
-fn get_or_create_providers_table(
-    doc: &mut toml::Value,
-) -> anyhow::Result<&mut toml::map::Map<String, toml::Value>> {
-    let table = doc
-        .as_table_mut()
-        .ok_or_else(|| anyhow::anyhow!("Invalid config structure"))?;
-    table
-        .entry("model_providers")
-        .or_insert_with(|| toml::Value::Table(toml::map::Map::new()))
-        .as_table_mut()
-        .ok_or_else(|| anyhow::anyhow!("Invalid model_providers structure"))
-}
-
-fn build_provider_value(base_url: &str, api_key: &str, models: &[String]) -> toml::Value {
-    let mut provider = toml::map::Map::new();
-    provider.insert("base_url".into(), toml::Value::String(base_url.into()));
-    provider.insert("api_key".into(), toml::Value::String(api_key.into()));
-    if !models.is_empty() {
-        let arr: Vec<toml::Value> = models
-            .iter()
-            .map(|m| toml::Value::String(m.clone()))
-            .collect();
-        provider.insert("models".into(), toml::Value::Array(arr));
-    }
-    toml::Value::Table(provider)
-}
-
-fn write_config_doc(path: &std::path::Path, doc: &toml::Value) -> anyhow::Result<()> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    std::fs::write(path, toml::to_string_pretty(doc)?)?;
-    Ok(())
+    let mut config = load();
+    let provider_type = config
+        .model_providers
+        .get(name)
+        .and_then(|p| p.provider_type.clone());
+    config.model_providers.insert(
+        name.into(),
+        crate::config::ModelProvider {
+            provider_type,
+            base_url: base_url.into(),
+            api_key: api_key.into(),
+            models: models.into(),
+        },
+    );
+    save(&config)
 }
 
 /// Remove a provider configuration from `~/.runie/config.toml`.
 pub fn remove_provider_config(name: &str) -> anyhow::Result<()> {
-    let path = config_path();
-    let content = match std::fs::read_to_string(&path) {
-        Ok(c) => c,
-        Err(_) => return Ok(()),
-    };
-    let mut doc: toml::Value = content.parse()?;
+    let mut config = load();
+    config.model_providers.remove(name);
+    save(&config)
+}
 
-    let table = doc
-        .as_table_mut()
-        .ok_or_else(|| anyhow::anyhow!("Invalid config structure"))?;
-    if let Some(providers) = table
-        .get_mut("model_providers")
-        .and_then(|v| v.as_table_mut())
-    {
-        providers.remove(name);
-    }
+/// Get the full configuration for a single provider, including API key.
+pub fn get_provider_config(name: &str) -> Option<(String, String, Vec<String>)> {
+    let config = load();
+    let p = config.model_providers.get(name)?;
+    Some((p.base_url.clone(), p.api_key.clone(), p.models.clone()))
+}
 
-    std::fs::write(&path, toml::to_string_pretty(&doc)?)?;
-    Ok(())
+/// List providers that have configurations in `~/.runie/config.toml`.
+pub fn list_configured_providers() -> Vec<(String, String, Vec<String>)> {
+    let config = load();
+    let mut result: Vec<_> = config
+        .model_providers
+        .iter()
+        .map(|(name, p)| (name.clone(), p.base_url.clone(), p.models.clone()))
+        .collect();
+    result.sort_by(|a, b| a.0.cmp(&b.0));
+    result
 }
 
 /// Configure providers for the current thread's tests.
@@ -125,69 +113,6 @@ pub fn set_test_config_with_providers(providers: &[(String, Vec<String>)]) {
         let _ = save_provider_config(name, "http://test", "key", models);
     }
 }
-
-/// Get the full configuration for a single provider, including API key.
-pub fn get_provider_config(name: &str) -> Option<(String, String, Vec<String>)> {
-    let path = config_path();
-    let content = std::fs::read_to_string(&path).ok()?;
-    let doc: toml::Value = content.parse().ok()?;
-    let providers = doc.get("model_providers")?.as_table()?;
-    let val = providers.get(name)?;
-    let base_url = val
-        .get("base_url")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .to_string();
-    let api_key = val
-        .get("api_key")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .to_string();
-    let models = val
-        .get("models")
-        .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|m| m.as_str().map(String::from)).collect())
-        .unwrap_or_default();
-    Some((base_url, api_key, models))
-}
-
-/// List providers that have configurations in `~/.runie/config.toml`.
-pub fn list_configured_providers() -> Vec<(String, String, Vec<String>)> {
-    let path = config_path();
-    let content = match std::fs::read_to_string(&path) {
-        Ok(c) => c,
-        Err(_) => return Vec::new(),
-    };
-    let doc: toml::Value = match content.parse() {
-        Ok(v) => v,
-        Err(_) => return Vec::new(),
-    };
-
-    let mut result = Vec::new();
-    if let Some(providers) = doc.get("model_providers").and_then(|v| v.as_table()) {
-        for (name, val) in providers {
-            let base_url = val
-                .get("base_url")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            let models = val
-                .get("models")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|m| m.as_str().map(String::from))
-                        .collect()
-                })
-                .unwrap_or_default();
-            result.push((name.clone(), base_url, models));
-        }
-    }
-    result.sort_by(|a, b| a.0.cmp(&b.0));
-    result
-}
-
-// ============================================================================
 
 #[cfg(test)]
 mod tests;

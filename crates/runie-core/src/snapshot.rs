@@ -70,8 +70,6 @@ pub struct Snapshot {
     pub turn_elapsed_secs: Option<f64>,
     pub provider: String,
     pub model: String,
-    /// Current execution mode (Solo or Team).
-    pub execution_mode: crate::orchestrator::ExecutionMode,
     /// Active theme name for the render actor
     pub theme_name: String,
     /// Current thinking level for status display
@@ -105,6 +103,8 @@ pub struct Snapshot {
     pub session_tree_items: Arc<[(usize, String)]>,
     /// Base64 image attachments pending in the input field.
     pub image_attachments: Vec<String>,
+    /// Active permission approval prompt for modal rendering.
+    pub permission_request: Option<crate::model::PermissionRequestState>,
     /// Authenticated providers for status display.
     pub auth_providers: Arc<[String]>,
     /// Transient notification message shown in hints line.
@@ -151,12 +151,7 @@ pub struct Snapshot {
     pub hovered_element: Option<usize>,
     /// Last known mouse position in terminal coordinates.
     pub mouse_position: Option<(u16, u16)>,
-    /// Sidebar data for Team mode — which agents are visible and which is focused.
-    pub sidebar: SidebarData,
-    /// Current orchestrator state for Team mode status bar display.
-    pub orchestrator_state: Option<crate::orchestrator_actor::OrchestratorState>,
-    /// Input box title: `provider/model · mode suffixes`.
-    /// Mode suffixes (Team, read-only) are shown only when not the default state.
+    /// Input box title: `provider/model · read-only` when read-only.
     pub input_title: String,
     /// True when a provider and model are connected.
     pub has_models: bool,
@@ -218,72 +213,62 @@ pub fn compute_current_bottom_element(
     Some(line_counts.len().saturating_sub(1))
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sidebar data for Team mode
-// ─────────────────────────────────────────────────────────────────────────────
-
-use crate::state::{AgentEntry, AgentFocus};
-
-/// Flat data snapshot of the sidebar — clone-friendly, no internal mutability.
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct SidebarData {
-    /// Whether the sidebar is currently visible.
-    pub visible: bool,
-    /// Which agent feed is in focus.
-    pub focus: AgentFocus,
-    /// Ordered list of agents shown in the sidebar.
-    pub agents: Vec<AgentEntry>,
-}
-
-impl From<&crate::state::SidebarState> for SidebarData {
-    fn from(state: &crate::state::SidebarState) -> Self {
-        Self {
-            visible: state.visible,
-            focus: state.focus.clone(),
-            agents: state.agents.clone(),
-        }
-    }
-}
-
 impl Snapshot {
     pub fn element_count(&self) -> usize {
         self.elements.len()
     }
 
     pub fn visible(&self, skip: usize, take: usize) -> &[Element] {
-        let start = skip.min(self.elements.len());
-        let end = (start + take).min(self.elements.len());
-        &self.elements[start..end]
+        visible_slice(&self.elements, skip, take)
     }
 
     pub fn scroll_offset(&self, visible_height: usize) -> u16 {
-        let max_scroll = self.total_lines.saturating_sub(visible_height);
-        let scroll = self.scroll.min(max_scroll);
-        max_scroll.saturating_sub(scroll).min(u16::MAX as usize) as u16
+        scroll_offset(self.total_lines, self.scroll, visible_height)
     }
 
     pub fn scrollbar_metrics(&self, visible_height: usize) -> (usize, usize) {
-        let total = self.total_lines;
-        if total <= visible_height || visible_height == 0 {
-            return (0, 0);
-        }
-        let max_scroll = total.saturating_sub(visible_height);
-        let scroll = self.scroll.min(max_scroll);
-        let position = max_scroll.saturating_sub(scroll);
-        let track = visible_height as f64;
-        // Match ratatui's rounding formula exactly:
-        // thumb_start = round(position * track / total)
-        // thumb_end   = round((position + visible_height) * track / total)
-        let track_f = track;
-        let thumb_start = (position as f64 * track_f / total as f64)
-            .round()
-            .clamp(0.0, track_f - 1.0) as usize;
-        let thumb_end = ((position + visible_height) as f64 * track_f / total as f64)
-            .round()
-            .clamp(0.0, track_f) as usize;
-        let thumb = thumb_end.saturating_sub(thumb_start).max(1);
-        (thumb, thumb_start)
+        scrollbar_metrics(self.total_lines, self.scroll, visible_height)
     }
+}
+
+/// Shared slice helper used by `AppState::visible` and `Snapshot::visible`.
+pub fn visible_slice<T>(elements: &[T], skip: usize, take: usize) -> &[T] {
+    let start = skip.min(elements.len());
+    let end = (start + take).min(elements.len());
+    &elements[start..end]
+}
+
+/// Shared scroll-offset helper used by `AppState` and `Snapshot`.
+pub fn scroll_offset(total_lines: usize, scroll: usize, visible_height: usize) -> u16 {
+    let max_scroll = total_lines.saturating_sub(visible_height);
+    let scroll = scroll.min(max_scroll);
+    max_scroll.saturating_sub(scroll).min(u16::MAX as usize) as u16
+}
+
+/// Shared scrollbar metrics helper used by `AppState` and `Snapshot`.
+pub fn scrollbar_metrics(
+    total_lines: usize,
+    scroll: usize,
+    visible_height: usize,
+) -> (usize, usize) {
+    if total_lines <= visible_height || visible_height == 0 {
+        return (0, 0);
+    }
+    let max_scroll = total_lines.saturating_sub(visible_height);
+    let scroll = scroll.min(max_scroll);
+    let position = max_scroll.saturating_sub(scroll);
+    let track = visible_height as f64;
+    // Match ratatui's rounding formula exactly:
+    // thumb_start = round(position * track / total)
+    // thumb_end   = round((position + visible_height) * track / total)
+    let thumb_start = (position as f64 * track / total_lines as f64)
+        .round()
+        .clamp(0.0, track - 1.0) as usize;
+    let thumb_end = ((position + visible_height) as f64 * track / total_lines as f64)
+        .round()
+        .clamp(0.0, track) as usize;
+    let thumb = thumb_end.saturating_sub(thumb_start).max(1);
+    (thumb, thumb_start)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

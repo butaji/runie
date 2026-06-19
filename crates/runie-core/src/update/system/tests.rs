@@ -1,7 +1,6 @@
-use super::*;
-
 #[test]
 fn reload_all_reloads_skills() {
+    let _guard = crate::tests::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let dir = tempfile::tempdir().unwrap();
     std::env::set_var("HOME", dir.path());
     let mut state = crate::model::AppState {
@@ -54,6 +53,58 @@ fn toggle_vim_mode_marks_dirty() {
 }
 
 #[test]
+fn reload_all_switches_active_model_when_not_overridden() {
+    let _guard = crate::tests::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let dir = tempfile::tempdir().unwrap();
+    std::env::set_var("HOME", dir.path());
+    let runie_dir = dir.path().join(".runie");
+    std::fs::create_dir_all(&runie_dir).unwrap();
+    std::fs::write(
+        runie_dir.join("config.toml"),
+        r#"provider = "anthropic"
+model = "claude-3"
+"#,
+    )
+    .unwrap();
+
+    let mut state = crate::model::AppState::default();
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4o".into();
+
+    state.reload_all();
+
+    assert_eq!(state.config.current_provider, "anthropic");
+    assert_eq!(state.config.current_model, "claude-3");
+}
+
+#[test]
+fn reload_all_keeps_active_model_when_overridden() {
+    let _guard = crate::tests::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let dir = tempfile::tempdir().unwrap();
+    std::env::set_var("HOME", dir.path());
+    let runie_dir = dir.path().join(".runie");
+    std::fs::create_dir_all(&runie_dir).unwrap();
+    std::fs::write(
+        runie_dir.join("config.toml"),
+        r#"provider = "anthropic"
+model = "claude-3"
+"#,
+    )
+    .unwrap();
+
+    let mut state = crate::model::AppState::default();
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4o".into();
+    state.config.model_source = crate::state::ModelSource::UserOverride;
+
+    state.reload_all();
+
+    assert_eq!(state.config.current_provider, "openai");
+    assert_eq!(state.config.current_model, "gpt-4o");
+    assert_eq!(state.config.model_source, crate::state::ModelSource::UserOverride);
+}
+
+#[test]
 fn set_provider_uses_configured_model_for_custom_provider() {
     crate::login_config::set_test_config_with_providers(&[(
         "custom".into(),
@@ -67,4 +118,47 @@ fn set_provider_uses_configured_model_for_custom_provider() {
 
     assert_eq!(state.config.current_provider, "custom");
     assert_eq!(state.config.current_model, "custom-model");
+}
+
+#[test]
+fn reload_all_falls_back_to_first_configured_provider_when_no_default() {
+    let _guard = crate::tests::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let dir = tempfile::tempdir().unwrap();
+    std::env::set_var("HOME", dir.path());
+    crate::login_config::set_test_config_with_providers(&[(
+        "custom".into(),
+        vec!["custom-model".into()],
+    )]);
+
+    let mut state = crate::model::AppState::default();
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4o".into();
+
+    state.reload_all();
+
+    assert_eq!(state.config.current_provider, "custom");
+    assert_eq!(state.config.current_model, "custom-model");
+    assert_eq!(state.config.model_source, crate::state::ModelSource::ConfigDefault);
+}
+
+#[test]
+fn reload_all_keeps_override_when_no_default() {
+    let _guard = crate::tests::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let dir = tempfile::tempdir().unwrap();
+    std::env::set_var("HOME", dir.path());
+    crate::login_config::set_test_config_with_providers(&[(
+        "custom".into(),
+        vec!["custom-model".into()],
+    )]);
+
+    let mut state = crate::model::AppState::default();
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4o".into();
+    state.config.model_source = crate::state::ModelSource::UserOverride;
+
+    state.reload_all();
+
+    assert_eq!(state.config.current_provider, "openai");
+    assert_eq!(state.config.current_model, "gpt-4o");
+    assert_eq!(state.config.model_source, crate::state::ModelSource::UserOverride);
 }

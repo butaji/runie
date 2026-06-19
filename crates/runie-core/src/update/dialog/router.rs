@@ -86,17 +86,6 @@ pub fn push_dialog_to_back_stack(state: &mut AppState, dialog: DialogState) {
     state.push_dialog_to_back_stack(dialog);
 }
 
-/// Toggle a dialog open/closed.
-#[allow(dead_code)]
-pub fn toggle_dialog(state: &mut AppState, is_same: bool, open: fn(&mut AppState)) {
-    if is_same {
-        state.open_dialog = None;
-        state.mark_dirty();
-    } else {
-        open(state);
-    }
-}
-
 /// Process the result of executing a command.
 pub fn process_command_result(state: &mut AppState, result: CommandResult) {
     use crate::commands::CommandResult as CR;

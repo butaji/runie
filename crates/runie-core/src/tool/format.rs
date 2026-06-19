@@ -14,12 +14,7 @@ pub fn which_tool(name: &str) -> Option<String> {
 
 /// Resolve a path relative to `working_dir` if it is not already absolute.
 pub fn resolve_path(path: &str, working_dir: &std::path::Path) -> std::path::PathBuf {
-    let p = std::path::Path::new(path);
-    if p.is_absolute() {
-        p.to_path_buf()
-    } else {
-        working_dir.join(p)
-    }
+    crate::path::resolve_path_in(path, working_dir)
 }
 
 /// Build a standard error (or warning) [`ToolOutput`].

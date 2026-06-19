@@ -47,6 +47,7 @@ pub fn model_selector(
             let evt = ModelConfigEvent::SwitchModel {
                 provider: provider.into(),
                 model: model_name.into(),
+                explicit: true,
             };
             let label = if model == current {
                 format!("★ {}", model)
@@ -99,6 +100,7 @@ mod tests {
             crate::Event::from(ModelConfigEvent::SwitchModel {
                 provider: "minimax".into(),
                 model: "M3".into(),
+                explicit: true,
             })
         );
     }

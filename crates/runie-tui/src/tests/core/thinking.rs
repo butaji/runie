@@ -1,6 +1,8 @@
 use runie_core::event::{DialogEvent, ModelConfigEvent};
 use runie_core::model::ThinkingLevel;
-use runie_core::session::{Session, Store};
+use runie_core::session::Session;
+use runie_core::session_replay::{replay_events, state_to_durable_events};
+use runie_core::session_store::SessionStore;
 use runie_core::{AppState, Event};
 
 #[test]
@@ -60,7 +62,7 @@ fn from_str_parses_levels() {
 fn session_persists_thinking_level() {
     let dir = std::env::temp_dir().join(format!("runie_think_test_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    let store = Store::new(dir);
+    let store = SessionStore::new(dir);
 
     let session = Session {
         name: "think_test".to_string(),
@@ -76,9 +78,15 @@ fn session_persists_thinking_level() {
         session_tree: None,
     };
 
-    store.save("think_test", &session).unwrap();
-    let loaded = store.load("think_test").unwrap();
-    assert_eq!(loaded.thinking_level, ThinkingLevel::Medium);
+    let mut seeded = AppState::default();
+    seeded.restore_session(&session);
+    let events = state_to_durable_events(&seeded);
+    store.append_batch("think_test", &events).unwrap();
+
+    let loaded_events = store.load_events("think_test").unwrap();
+    let mut state = AppState::default();
+    replay_events(&mut state, &loaded_events);
+    assert_eq!(state.config.thinking_level, ThinkingLevel::Medium);
 }
 
 #[test]

@@ -9,11 +9,11 @@ A message emitted to the bus that represents something that happened. Events are
 _Avoid_: message (overloaded), signal, notification
 
 **CoreEvent**:
-The top-level event type carried by the `EventBus`. Split into durable events (persisted to JSONL) and transient events (UI-only).
+The top-level event type carried by the `EventBus`. Split into durable events (persisted by the Session Store) and transient events (UI-only).
 _Avoid_: Event (overloaded; legacy name), message
 
 **Durable Event**:
-An event that is appended to the session JSONL file and replayed on resume. Examples: `MessageSent`, `ToolCalled`, `ToolResult`, `ModelSwitched`.
+An event that is appended to the Session Store and replayed on resume. Examples: `MessageSent`, `ToolCalled`, `ToolResult`, `ModelSwitched`.
 _Avoid_: persisted message, log entry
 
 **Transient Event**:
@@ -21,7 +21,7 @@ An event that is not persisted. Used for streaming deltas, animation ticks, curs
 _Avoid_: ephemeral event, UI-only message
 
 **EventBus**:
-A typed `tokio::sync::broadcast` channel with a bounded replay buffer. All actors publish and subscribe through it.
+A typed `tokio::sync::broadcast` channel with replay-capable subscribers. All actors publish and subscribe through it.
 _Avoid_: channel (too generic), dispatcher
 
 **Actor**:
@@ -32,16 +32,12 @@ _Avoid_: agent (overloaded), worker, task
 The component that designs and executes Team workflows. In design mode it invokes an LLM to emit an Orchestrator-Harness Protocol plan; in execution mode it manages the Task board, resolves Roles to models, monitors subagent progress, and aggregates results.
 _Avoid_: coordinator, manager, supervisor
 
-**ToolActor**:
-An actor representing a single tool invocation. Self-describes via ToolRegistered, executes asynchronously, emits ToolEnd with results.
-_Avoid_: tool instance, worker, executor
-
 **Snapshot**:
-Immutable frame description — the UI's view of the world at a point in time. Produced by UIAgent as a projection from the event stream.
+Immutable frame description — the UI's view of the world at a point in time. Produced by the UI layer as a projection from the event stream.
 _Avoid_: frame, state dump
 
 **Projection**:
-A derived view of state accumulated from events. UIActor projects domain events into view state (Snapshot). SessionActor projects into JSONL. TelemetryAgent projects into usage stats.
+A derived view of state accumulated from events. UIActor projects domain events into view state (Snapshot). SessionActor projects into durable events. TelemetryAgent projects into usage stats.
 _Avoid_: view, derived state, cache
 
 **Batching**:
@@ -49,15 +45,15 @@ Collecting user messages that arrive while an agent is processing, then deliveri
 _Avoid_: queue (ambiguous — queue holds pending, batch holds for delivery)
 
 **Session**:
-A persisted sequence of domain events. Loaded by replaying events into actors. Stored as append-only JSONL.
+A persisted sequence of domain events. Loaded by replaying events into actors. Stored append-only by the Session Store.
 _Avoid_: history, conversation, context
 
 **Session Store**:
-The JSONL persistence layer. Owns file paths, advisory locking, atomic writes, and session replay.
+The append-only persistence layer for durable Session events. Owns file paths, advisory locking, atomic writes, and session replay.
 _Avoid_: database, repository
 
 **Skill**:
-A self-describing interceptor on the event bus. Subscribes to events, can inject context, modify tool calls, preprocess input, or implement harness-level middleware such as verification loops and loop detection. Skills are default-on, configurable via `~/.runie/config.toml`, and can be disabled.
+A hook-based extension that can preprocess input, modify tool calls, run verification loops, or implement other harness-level middleware. Skills are default-on, configurable via the Config File, and can be disabled.
 _Avoid_: plugin, extension, module
 
 **AgentLoop**:
@@ -92,14 +88,6 @@ _Avoid_: workflow DSL, plan format
 A provider-agnostic event emitted by the provider layer: `TextDelta`, `ThinkingDelta`, `ToolCallStart`, `ToolCallInputDelta`, `ToolCallEnd`, `Error`, `Usage`, `Finish`.
 _Avoid_: ResponseChunk (legacy), provider event
 
-**CommandAgent**:
-Actor that parses slash commands and key shortcuts, emits corresponding events to the Orchestrator or other actors.
-_Avoid_: command handler, keybinder
-
-**ConfigAgent**:
-Actor that owns configuration state. Loads TOML at startup, watches for changes, emits ConfigChanged events.
-_Avoid_: settings manager
-
 **Config File**:
 The single TOML file at `~/.runie/config.toml` that holds all user settings: provider, model, theme, UI flags, truncation, prompts, telemetry, and keybindings.
 _Avoid_: config.toml (ambiguous without path), settings file, preferences
@@ -115,3 +103,35 @@ _Avoid_: tool manager, tool list
 **PermissionSet**:
 A list of wildcard rules evaluated last-match to decide `Allow`, `Ask`, or `Deny` for a tool call.
 _Avoid_: trust rules, allowlist
+
+**Slash Command**:
+A user instruction starting with `/` that triggers a command handler, opens a Dialog, or updates harness state.
+_Avoid_: command, prompt
+
+**Dialog**:
+A transient, navigable panel stack overlaid on the main TUI for forms, palettes, and settings.
+_Avoid_: popup, modal, window
+
+**Form**:
+A Dialog panel composed of editable fields, hidden values, and a submit action.
+_Avoid_: input panel, wizard
+
+**Onboarding**:
+The first-run flow that collects provider credentials and selects a default model.
+_Avoid_: setup, login
+
+**Login Flow**:
+The Dialog flow for adding or reconnecting a provider; a subset of Onboarding.
+_Avoid_: login dialog, auth flow
+
+**Permission Policy**:
+A rule set evaluated before a tool runs, yielding `Allow`, `Ask`, or `Deny`.
+_Avoid_: trust rule, approval rule
+
+**Approval Flow**:
+The interactive path taken when a Permission Policy returns `Ask`, presented as a blocking modal dialog that resumes the agent turn once the user chooses Allow, Deny, or Always allow.
+_Avoid_: permission dialog, approval prompt
+
+**Explicit Model Override**:
+A state indicating the user explicitly chose the active provider/model this session, so a later config reload should not revert it to the saved default.
+_Avoid_: manual model, sticky model

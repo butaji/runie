@@ -40,12 +40,6 @@ macro_rules! ctor {
     (Command::$v:ident) => {
         || Event::$v
     };
-    (Sidebar::$v:ident) => {
-        || Event::$v
-    };
-    (Orchestrator::$v:ident) => {
-        || Event::$v
-    };
     (ModelConfig::$v:ident) => {
         || Event::$v
     };
@@ -156,6 +150,5 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("ToggleReadOnly", ctor!(System::ToggleReadOnly)),
     ("TrustProject", ctor!(System::TrustProject)),
     ("UntrustProject", ctor!(System::UntrustProject)),
-    ("OpenAgentsManager", ctor!(System::OpenAgentsManager)),
     ("ClearTransient", ctor!(System::ClearTransient)),
 ];

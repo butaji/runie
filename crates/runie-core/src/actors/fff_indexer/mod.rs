@@ -25,8 +25,12 @@ mod tests;
 
 /// Process-wide registry of FFF shared state.
 ///
-/// Initialised once by the `FffIndexerActor` when it starts up.
-/// Tools and the TUI read from this registry to perform searches.
+/// This is an intentional service-locator for the long-lived FFF indexer. The
+/// actor initializes it once at startup; after that it is read-mostly and all
+/// mutations flow through the thread-safe `SharedFilePicker` / `SharedFrecency`
+/// handles it contains. A fully actorised request/reply design would require
+/// threading a sender through every tool, so this locator keeps the 80 % case
+/// simple while the actor still owns the underlying shared handles.
 static FFF_STATE: std::sync::OnceLock<Arc<RwLock<Option<FffSearchStateInner>>>> =
     std::sync::OnceLock::new();
 

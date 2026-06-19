@@ -93,6 +93,7 @@ fn all_sub_enums_have_variants() {
     let _ = Event::SwitchModel {
         provider: "openai".into(),
         model: "gpt-4".into(),
+        explicit: false,
     };
     let _ = Event::ToggleCommandPalette;
     let _ = Event::PendingEdit {
@@ -242,9 +243,6 @@ fn dispatcher_handles_all_variants() {
             | Event::Reset
             | Event::Abort
             | Event::FollowUp
-            | Event::SpawnAgent { .. }
-            | Event::SteerAgent { .. }
-            | Event::CancelAgent { .. }
             | Event::ToggleExpand
             | Event::Dequeue
             | Event::OpenExternalEditor
@@ -320,14 +318,6 @@ fn dispatcher_handles_all_variants() {
             | Event::ProvidersSelectModel { .. }
             | Event::ProvidersDisconnect { .. }
             | Event::ProvidersAdd
-            | Event::ProviderEditModels { .. }
-            | Event::ProviderEditModelsToggle { .. }
-            | Event::ProviderEditModelsSave { .. }
-            | Event::ProviderEditModelsClose
-            | Event::OpenAgentsManager
-            | Event::AgentsManagerSetField { .. }
-            | Event::AgentsManagerSave { .. }
-            | Event::AgentsManagerDelete { .. }
             | Event::CopyToClipboard(_)
             | Event::CopySelectedBlock
             | Event::CopyBlockMetadata
@@ -372,36 +362,11 @@ fn dispatcher_handles_all_variants() {
             Event::Start
             | Event::SelectProvider { .. }
             | Event::SubmitKey { .. }
-            | Event::ValidationDone { .. }
             | Event::ValidationFailed { .. }
             | Event::ModelsFetched { .. }
             | Event::ToggleModel { .. }
             | Event::Save
             | Event::Cancel => Event::Cancel,
-
-            // Sidebar
-            Event::Show
-            | Event::Hide
-            | Event::FocusOrchestrator
-            | Event::FocusSubagent(_)
-            | Event::UpdateStatus { .. }
-            | Event::SetSubagents(_)
-            | Event::SetOrchestratorStatus(_) => Event::Hide,
-
-            // Orchestrator
-            Event::StateChanged { .. }
-            | Event::PlanStarted
-            | Event::PlanningStarted
-            | Event::PlanGenerated { .. }
-            | Event::PlanningFailed { .. }
-            | Event::SubagentDispatched { .. }
-            | Event::SubagentStatusChanged { .. }
-            | Event::SubagentCompleted { .. }
-            | Event::SubagentFailed { .. }
-            | Event::SynthesisStarted
-            | Event::SynthesisComplete { .. }
-            | Event::Finished { .. }
-            | Event::Cancelled => Event::Cancelled,
 
             // Permissions
             Event::PermissionRequest { .. } => Event::PermissionRequest {

@@ -106,9 +106,4 @@ impl AppState {
             .find(|p| p.start <= bottom && bottom < p.end)
             .map(|p| p.index)
     }
-
-    #[allow(dead_code)]
-    fn handle_vim_nav_event_input(&mut self, _event: &InputEvent) -> Option<bool> {
-        None
-    }
 }

@@ -212,33 +212,10 @@ pub fn control_event(state: &mut AppState, event: ControlEvent) {
             // Close welcome and open session tree
             crate::update::dialog::open_session_tree_dialog(state);
         }
-        ControlEvent::SteerAgent { agent_id, message } => {
-            handle_steer_agent(state, agent_id, message)
-        }
-        ControlEvent::CancelAgent { agent_id } => handle_cancel_agent(state, agent_id),
-        ControlEvent::SpawnAgent { .. }
-        | ControlEvent::Suspend
+        ControlEvent::Suspend
         | ControlEvent::ShareSession
         | ControlEvent::OpenExternalEditor => {}
         _ => {}
-    }
-}
-
-fn handle_steer_agent(state: &mut AppState, agent_id: String, message: String) {
-    if let Err(e) = state.multi_agent.send(agent_id, message) {
-        state.notify(
-            format!("steer failed: {e}"),
-            crate::event::TransientLevel::Error,
-        );
-    }
-}
-
-fn handle_cancel_agent(state: &mut AppState, agent_id: String) {
-    if let Err(e) = state.multi_agent.close(agent_id) {
-        state.notify(
-            format!("cancel failed: {e}"),
-            crate::event::TransientLevel::Error,
-        );
     }
 }
 
@@ -297,11 +274,22 @@ fn handle_editor_done(state: &mut AppState, content: String) {
 impl AppState {
     pub(crate) fn reload_all(&mut self) {
         let config = crate::config_reload::Config::load(Some(&crate::config_reload::config_path()));
-        if let Some(provider) = &config.provider {
-            self.config.config_provider = provider.clone();
-        }
-        if let Some(model) = config.default_model() {
-            self.config.config_model = model.to_string();
+        let (default_provider, default_model) = config.resolve_default_model();
+        let (default_provider, default_model) = if default_provider.is_empty() {
+            crate::login_config::list_configured_providers()
+                .into_iter()
+                .next()
+                .map(|(p, _, models)| (p, models.into_iter().next().unwrap_or_default()))
+                .unwrap_or_default()
+        } else {
+            (default_provider, default_model)
+        };
+        if self.config.model_source != crate::state::ModelSource::UserOverride {
+            self.set_active_model(
+                default_provider,
+                default_model,
+                crate::state::ModelSource::ConfigDefault,
+            );
         }
         if let Some(theme) = &config.theme {
             self.config.theme_name = theme.clone();
@@ -396,12 +384,6 @@ pub(super) fn handle_system_event(state: &mut AppState, event: SystemEvent) {
         SystemEvent::ToggleReadOnly => state.toggle_read_only(),
         SystemEvent::TrustProject => state.trust_project(),
         SystemEvent::UntrustProject => state.untrust_project(),
-        SystemEvent::OpenAgentsManager => {
-            state.set_transient(
-                "Agents manager not yet implemented".into(),
-                crate::event::TransientLevel::Info,
-            );
-        }
         _ => {}
     }
 }

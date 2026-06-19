@@ -19,13 +19,20 @@ pub use scroll::{element_jump_down, element_jump_up, scroll_event};
 pub use support::{
     at_suggestion_hints, empty_input_hints, find_word_boundary_left, find_word_boundary_right,
     input_active_hints, is_quit_command, modal_hints, next_grapheme_boundary,
-    prev_grapheme_boundary, team_mode_hints, vim_nav_hints,
+    prev_grapheme_boundary, vim_nav_hints,
 };
 
 #[cfg(test)]
 pub use support::feed_focused_hints;
 
 pub fn input_event(state: &mut AppState, event: InputEvent) {
+    if state.permission_request.is_some() {
+        return permission_input_event(state, event);
+    }
+    apply_input_event(state, event);
+}
+
+fn apply_input_event(state: &mut AppState, event: InputEvent) {
     match event {
         InputEvent::Input(c) => state.push_input(c),
         InputEvent::Backspace => state.pop_input(),
@@ -57,11 +64,41 @@ pub fn input_event(state: &mut AppState, event: InputEvent) {
         InputEvent::MouseClick { row, col, button } => {
             handle_mouse_click_event(state, row, col, &button);
         }
-        InputEvent::MouseMove { row, col } => {
-            state.view.mouse_position = Some((row, col));
+        InputEvent::MouseMove { row, col } => handle_mouse_move(state, row, col),
+        InputEvent::TerminalSize { width, height } => {
+            handle_terminal_resize(state, width, height);
         }
         _ => {}
     }
+}
+
+fn handle_mouse_move(state: &mut AppState, row: u16, col: u16) {
+    state.view.mouse_position = Some((row, col));
+}
+
+fn handle_terminal_resize(state: &mut AppState, width: u16, height: u16) {
+    state.set_last_content_width(width);
+    // Approximate message viewport height: full terminal minus input box,
+    // status bar, and margins. This matches the legacy `view()` heuristic.
+    let viewport_height = height.saturating_sub(8).max(3);
+    state.set_last_visible_height(viewport_height);
+}
+
+fn permission_input_event(state: &mut AppState, event: InputEvent) {
+    use crate::permissions::PermissionAction;
+
+    let Some(req) = state.permission_request.take() else {
+        return;
+    };
+    let action = match event {
+        InputEvent::Input('y') | InputEvent::Input('Y') => PermissionAction::Allow,
+        InputEvent::Input('a') | InputEvent::Input('A') => PermissionAction::Allow,
+        _ => PermissionAction::Deny,
+    };
+    if let Ok(registry) = state.approval_registry.lock() {
+        registry.resolve(&req.request_id, action);
+    }
+    state.mark_dirty();
 }
 
 fn handle_mouse_click_event(state: &mut AppState, row: u16, col: u16, button: &str) {
@@ -154,3 +191,6 @@ fn handle_mouse_click(state: &mut AppState, row: u16, col: u16, button: &str) {
     // Middle-click and right-click are intentionally ignored here;
     // middle-click paste is future work.
 }
+
+#[cfg(test)]
+mod tests;

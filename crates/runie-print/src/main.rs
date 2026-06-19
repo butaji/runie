@@ -1,9 +1,8 @@
 //! runie-print — Non-interactive CLI for single-turn LLM execution.
 
 use anyhow::Result;
-use runie_agent::{
-    build_provider_with_warning_with_config, run_headless_turn, HeadlessOptions, PermissionGate,
-};
+use runie_agent::{run_headless_turn, HeadlessOptions, PermissionGate};
+use runie_provider::DynProvider;
 use runie_core::permissions::{DenyAllSink, PermissionManager};
 use runie_core::{config_reload, message::ChatMessage, provider::Provider};
 
@@ -27,7 +26,7 @@ async fn run_print(prompt: &str) -> Result<()> {
     let config = config_reload::Config::load(Some(&config_reload::config_path()));
     let provider_name = config.provider.as_deref().unwrap_or("mock");
     let model = config.default_model().unwrap_or("echo");
-    let provider = build_provider_with_warning_with_config(provider_name, model, &config)
+    let provider = DynProvider::new_with_config(provider_name, model, &config)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
     run_print_with(prompt, &provider).await?;
     println!();

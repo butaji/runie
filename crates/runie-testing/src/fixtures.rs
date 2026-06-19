@@ -27,7 +27,8 @@ pub fn load_default_config_for_test(test_home: &TempDir) -> Config {
 /// Return a mock provider suitable for deterministic tests.
 pub fn mock_provider() -> runie_provider::DynProvider {
     std::env::set_var("RUNIE_MOCK", "1");
-    runie_provider::DynProvider::new("mock", "echo").expect("mock provider available")
+    runie_provider::DynProvider::new_with_config("mock", "echo", &runie_core::config::Config::default())
+        .expect("mock provider available")
 }
 
 /// Build a session store inside the temp home.

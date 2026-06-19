@@ -1,6 +1,6 @@
 //! Command Builder
 
-use super::{CommandCategory, CommandFlow, CommandResult, DialogType};
+use super::{CommandCategory, CommandFlow, CommandResult};
 use crate::dialog::dsl::{form, FormPanel};
 use crate::dialog::PanelStack as CoreStack;
 use crate::model::AppState;
@@ -61,21 +61,6 @@ impl CommandDef {
         self.with_flow(CommandFlow::Message(msg))
     }
 
-    /// Show a dynamic message
-    pub fn msgf(self, f: fn(&AppState, &str) -> String) -> Self {
-        self.with_flow(CommandFlow::Dynamic(f))
-    }
-
-    /// Show message or fallback if result is None
-    pub fn or_msg(self, f: fn(&AppState, &str) -> CommandResult, fallback: &'static str) -> Self {
-        self.with_flow(CommandFlow::OrMessage(f, fallback))
-    }
-
-    /// Open a dialog
-    pub fn dialog(self, d: DialogType) -> Self {
-        self.with_flow(CommandFlow::Dialog(d)).apply_sub()
-    }
-
     /// Open a panel stack produced at runtime
     pub fn panel<F>(self, f: F) -> Self
     where
@@ -91,19 +76,6 @@ impl CommandDef {
     /// Esc returns to the previous dialog; only at the absolute root
     /// does Esc close the bar. Android-like navigation for every
     /// menu bar item.
-    ///
-    /// # Example
-    /// ```ignore
-    /// crate::cmd!("settings")
-    ///     .desc("Open settings")
-    ///     .sub()
-    ///     .dialog(DialogType::Settings)
-    ///
-    /// crate::cmd!("login")
-    ///     .desc("Login to a provider")
-    ///     .sub()
-    ///     .panel(|_state, _args| crate::commands::dsl::handlers::agents::build_root_panel())
-    /// ```
     pub fn sub(mut self) -> Self {
         self.is_sub = true;
         self
@@ -134,16 +106,6 @@ impl CommandDef {
     /// Custom handler
     pub fn handler(self, f: fn(&mut AppState, &str) -> CommandResult) -> Self {
         self.with_flow(CommandFlow::Handler(f)).apply_sub()
-    }
-
-    /// Chain multiple flows
-    pub fn chain(self, flows: Vec<CommandFlow>) -> Self {
-        self.with_flow(CommandFlow::Chain(flows))
-    }
-
-    /// Conditional flow
-    pub fn when(self, predicate: fn(&AppState) -> bool, flow: CommandFlow) -> Self {
-        self.with_flow(CommandFlow::When(predicate, Box::new(flow)))
     }
 
     fn with_flow(mut self, flow: CommandFlow) -> Self {
@@ -213,17 +175,6 @@ mod tests {
         assert_eq!(cmd.desc, "Test command");
         assert_eq!(cmd.aliases, vec!["t", "tt", "ttt"]);
         assert_eq!(cmd.category, CommandCategory::System);
-    }
-
-    #[test]
-    fn test_sub_wraps_flow() {
-        use super::super::{CommandFlow, DialogType};
-        let cmd = crate::cmd!("settings")
-            .desc("Open settings")
-            .category(CommandCategory::System)
-            .sub()
-            .dialog(DialogType::Settings);
-        assert!(matches!(cmd.flow, CommandFlow::Sub(_)));
     }
 
     #[test]

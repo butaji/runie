@@ -326,4 +326,30 @@ mod tests {
         }
         assert_replayed_state(&state);
     }
+
+    #[tokio::test]
+    async fn session_actor_replays_after_subscriber_ready() {
+        let h = make_harness();
+        let session_id = "replay_order_test";
+        h.store
+            .append_batch(session_id, &replay_events_fixture())
+            .unwrap();
+
+        // Correct production order: UiActor subscribes first, then SessionActor replays live.
+        let mut sub = h.bus.subscribe();
+        let handle = spawn_replay_actor(&h, session_id);
+        let collected = tokio::time::timeout(
+            std::time::Duration::from_secs(1),
+            collect_replayed_events(&mut sub, 3),
+        )
+        .await
+        .expect("timed out waiting for replay");
+        handle.abort();
+
+        let mut state = crate::model::AppState::default();
+        for event in collected {
+            state.update(event);
+        }
+        assert_replayed_state(&state);
+    }
 }

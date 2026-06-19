@@ -70,7 +70,7 @@ pub async fn run_subagent_with_config(
     max_iterations: usize,
     config: &runie_core::config::Config,
 ) -> Result<String, SubagentError> {
-    let provider = crate::build_provider_with_warning_with_config(provider_key, model, config)
+    let provider = runie_provider::DynProvider::new_with_config(provider_key, model, config)
         .map_err(|e| SubagentError::Provider(e.to_string()))?;
 
     let cmd = build_subagent_command(

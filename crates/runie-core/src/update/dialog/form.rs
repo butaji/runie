@@ -12,9 +12,6 @@ use super::panel::toggle_selected_checkbox;
 pub enum FormAction {
     /// Keep the form open, persist the panel state.
     KeepOpen,
-    /// Close the form (no submit).
-    #[allow(dead_code)]
-    Close,
     /// Close the form and dispatch the submit event.
     Submit(Option<crate::Event>),
     /// Go back one step: if the stack is deeper than the root, pop the
@@ -145,9 +142,6 @@ fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
         state.set_transient("API key is required.".into(), TransientLevel::Warning);
         return A::KeepOpen;
     }
-    if let Some(action) = try_provider_edit_models_submit(panel) {
-        return action;
-    }
     match panel.selected_item().cloned() {
         Some(PanelItem::Action {
             action: ItemAction::Emit(evt),
@@ -171,39 +165,6 @@ fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
         }
         _ => A::Submit(form_build_submit(panel)),
     }
-}
-
-fn try_provider_edit_models_submit(panel: &Panel) -> Option<FormAction> {
-    use FormAction as A;
-    let selected = panel.selected_item()?;
-    let PanelItem::Action {
-        action: ItemAction::Emit(crate::Event::ProviderEditModelsSave { provider, .. }),
-        ..
-    } = selected
-    else {
-        return None;
-    };
-    if panel.id != "provider-model-editor" {
-        return None;
-    }
-    let models = collect_provider_edit_models_selection(panel);
-    Some(A::Submit(Some(crate::Event::ProviderEditModelsSave {
-        provider: provider.clone(),
-        models,
-    })))
-}
-
-fn collect_provider_edit_models_selection(panel: &Panel) -> Vec<String> {
-    panel
-        .items
-        .iter()
-        .filter_map(|item| match item {
-            PanelItem::Toggle {
-                label, value: true, ..
-            } => Some(label.clone()),
-            _ => None,
-        })
-        .collect()
 }
 
 fn key_field_empty(panel: &Panel) -> bool {
@@ -373,10 +334,6 @@ fn find_word_boundary_left(s: &str, pos: usize) -> usize {
 /// Apply a `FormAction` to the current dialog.
 pub fn apply_form_action(state: &mut AppState, action: FormAction) {
     match action {
-        FormAction::Close => {
-            state.open_dialog = None;
-            state.mark_dirty();
-        }
         FormAction::Submit(evt) => {
             state.open_dialog = None;
             state.mark_dirty();

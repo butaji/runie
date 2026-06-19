@@ -6,7 +6,7 @@
 #[cfg(test)]
 mod tests {
     use crate::event::{Event, LoginFlowEvent};
-    use crate::login_flow::state::{LoginFlowState, LoginStep};
+    use crate::login_flow::state::LoginStep;
     use crate::model::AppState;
 
     // -----------------------------------------------------------------------
@@ -357,34 +357,4 @@ mod tests {
         assert_transient_contains(&state, "API key is required");
     }
 
-    #[test]
-    fn submit_key_triggers_validation_hook() {
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        use std::sync::Arc;
-
-        let calls = Arc::new(AtomicUsize::new(0));
-        let captured = calls.clone();
-
-        let mut state = AppState::default();
-        state.set_login_validation_hook(Arc::new(move |provider: &str, key: &str| {
-            assert_eq!(provider, "minimax");
-            assert_eq!(key, "sk-test");
-            captured.fetch_add(1, Ordering::SeqCst);
-        }));
-
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
-            provider: "minimax".into(),
-        });
-        state.update(LoginFlowEvent::SubmitKey {
-            provider: "minimax".into(),
-            key: "sk-test".into(),
-        });
-
-        assert_eq!(
-            state.login_flow.as_ref().unwrap().step,
-            LoginStep::Validating
-        );
-        assert_eq!(calls.load(Ordering::SeqCst), 1);
-    }
 }

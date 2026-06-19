@@ -86,7 +86,7 @@ fn add_provider_via_providers_dialog_keeps_active_model_unchanged() {
     let mut state = AppState::default();
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
-    state.set_login_validation_hook(std::sync::Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(DialogEvent::ProvidersDialog);
     state.update(DialogEvent::ProvidersAdd);

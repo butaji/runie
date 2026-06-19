@@ -2,7 +2,8 @@
 
 pub use crate::message::{now, ChatMessage, Role};
 pub use crate::model::state::{
-    AppState, DeliveryMode, FffFileEntry, QueuedMessage, QueuedMessageKind, ThinkingLevel,
+    AppState, DeliveryMode, FffFileEntry, PermissionRequestState, QueuedMessage,
+    QueuedMessageKind, ThinkingLevel,
 };
 pub use crate::model_catalog::{
     build_model_selector_items, filter_models, model_catalog, ModelInfo,

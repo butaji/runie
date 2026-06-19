@@ -378,6 +378,8 @@ impl AppState {
             self.session.messages.push(error);
         }
         self.messages_changed();
+        self.deliver_queued();
+        self.maybe_end_streaming();
     }
 }
 

@@ -3,9 +3,6 @@
 //! Drives the provider-add flow through core events and verifies both the
 //! state transitions and the rendered UI, including the async validation hook.
 
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
-
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::event::{DialogEvent, InputEvent, LoginFlowEvent};
 use runie_core::login_flow::LoginStep;
@@ -38,17 +35,10 @@ fn render_content(state: &mut AppState) -> String {
 #[test]
 fn e2e_login_flow_shows_verifying_panel() {
     clean_config();
-    let calls = Arc::new(AtomicUsize::new(0));
-    let captured = calls.clone();
 
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(move |provider: &str, key: &str| {
-        assert_eq!(provider, "minimax");
-        assert_eq!(key, "sk-test");
-        captured.fetch_add(1, Ordering::SeqCst);
-    }));
 
     state.update(Event::from(LoginFlowEvent::Start));
     state.update(Event::from(LoginFlowEvent::SelectProvider {
@@ -63,7 +53,6 @@ fn e2e_login_flow_shows_verifying_panel() {
         state.login_flow.as_ref().unwrap().step,
         LoginStep::Validating
     );
-    assert_eq!(calls.load(Ordering::SeqCst), 1);
 
     let content = render_content(&mut state);
     assert!(
@@ -79,7 +68,7 @@ fn e2e_login_flow_reaches_model_selector() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(Event::from(LoginFlowEvent::Start));
     state.update(Event::from(LoginFlowEvent::SelectProvider {
@@ -116,7 +105,7 @@ fn e2e_login_flow_save_activates_first_model() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(Event::from(LoginFlowEvent::Start));
     state.update(Event::from(LoginFlowEvent::SelectProvider {
@@ -181,7 +170,7 @@ fn e2e_login_flow_title_has_exactly_one_space_padding() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(Event::from(LoginFlowEvent::Start));
     state.update(Event::from(LoginFlowEvent::SelectProvider {
@@ -211,7 +200,7 @@ fn e2e_providers_add_flow_save_renders_input_box() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(DialogEvent::ProvidersDialog);
     state.update(DialogEvent::ProvidersAdd);
@@ -251,7 +240,7 @@ fn e2e_login_flow_submit_save_button_renders_input_box() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(LoginFlowEvent::Start);
     state.update(LoginFlowEvent::SelectProvider {
@@ -292,7 +281,7 @@ fn e2e_login_flow_save_renders_input_box() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(Event::from(LoginFlowEvent::Start));
     state.update(Event::from(LoginFlowEvent::SelectProvider {
@@ -327,7 +316,7 @@ fn e2e_login_flow_submit_on_model_toggle_saves_and_connects() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(LoginFlowEvent::Start);
     state.update(LoginFlowEvent::SelectProvider {
@@ -367,7 +356,7 @@ fn e2e_login_flow_api_key_label_renders_fully() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(Event::from(LoginFlowEvent::Start));
     state.update(Event::from(LoginFlowEvent::SelectProvider {

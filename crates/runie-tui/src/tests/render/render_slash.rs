@@ -32,38 +32,35 @@ fn buffer_lines(terminal: &Terminal<TestBackend>) -> Vec<String> {
         .collect()
 }
 
-fn save_test_session(store: &runie_core::session::Store, name: &str) {
-    store
-        .save(
-            name,
-            &runie_core::Session {
-                name: name.to_string(),
-                created_at: 1.0,
-                updated_at: 1.0,
-                messages: vec![],
-                provider: "mock".into(),
-                model: "echo".into(),
-                theme_name: "runie".into(),
-                thinking_level: runie_core::model::ThinkingLevel::Off,
-                read_only: false,
-                display_name: None,
-                session_tree: None,
-            },
-        )
-        .unwrap();
+fn save_test_session(name: &str) {
+    let session = runie_core::Session {
+        name: name.to_string(),
+        created_at: 1.0,
+        updated_at: 1.0,
+        messages: vec![],
+        provider: "mock".into(),
+        model: "echo".into(),
+        theme_name: "runie".into(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: false,
+        display_name: None,
+        session_tree: None,
+    };
+    let mut state = AppState::default();
+    state.restore_session(&session);
+    runie_core::session_replay::save_session(name, &state).unwrap();
 }
 
 #[test]
 fn test_render_sessions_list_on_separate_lines() {
-    use runie_core::session::Store;
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
-    let store = Store::new(std::env::temp_dir().join("runie_render_sessions_test"));
-    let _ = std::fs::remove_dir_all(&store.dir);
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
+    let dir = std::env::temp_dir().join("runie_render_sessions_test");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::env::set_var("RUNIE_SESSIONS_DIR", dir);
 
-    save_test_session(&store, "alpha");
-    save_test_session(&store, "beta");
+    save_test_session("alpha");
+    save_test_session("beta");
 
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
@@ -191,12 +188,11 @@ fn test_render_model_m3_just_model_name() {
 #[test]
 #[ignore = "/load with args not dispatching to handler in current build"]
 fn test_render_load_missing_shows_user_friendly_error() {
-    use runie_core::session::Store;
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
-    let store = Store::new(std::env::temp_dir().join("runie_render_load_missing_test"));
-    let _ = std::fs::remove_dir_all(&store.dir);
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
+    let dir = std::env::temp_dir().join("runie_render_load_missing_test");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::env::set_var("RUNIE_SESSIONS_DIR", dir);
 
     // Test that /load opens a form, then submit to trigger the error
     let backend = TestBackend::new(60, 20);
@@ -232,12 +228,11 @@ fn test_render_load_missing_shows_user_friendly_error() {
 
 #[test]
 fn test_render_sessions_empty_shows_create_hint() {
-    use runie_core::session::Store;
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
-    let store = Store::new(std::env::temp_dir().join("runie_render_sessions_empty_test"));
-    let _ = std::fs::remove_dir_all(&store.dir);
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
+    let dir = std::env::temp_dir().join("runie_render_sessions_empty_test");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::env::set_var("RUNIE_SESSIONS_DIR", dir);
 
     let content = render_slash("/sessions");
     assert!(

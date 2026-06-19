@@ -12,7 +12,6 @@ pub use names::EVENT_NAMES;
 pub use variants::Event;
 
 // Re-export sub-enums for ergonomic external use
-pub use crate::orchestrator_actor::OrchestratorEvent;
 pub use agent::AgentEvent;
 pub use control::ControlEvent;
 pub use dialog_display::DialogEvent;
@@ -24,7 +23,6 @@ pub use login_flow::LoginFlowEvent;
 pub use model_config::ModelConfigEvent;
 pub use scroll::ScrollEvent;
 pub use session::SessionEvent;
-pub use sidebar::SidebarEvent;
 pub use system::SystemEvent;
 
 mod agent;
@@ -42,7 +40,6 @@ mod model_config;
 mod names;
 mod scroll;
 mod session;
-mod sidebar;
 mod system;
 mod variants;
 #[cfg(test)]

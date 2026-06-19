@@ -26,7 +26,7 @@ impl Event {
                 output: output.clone(),
                 success: true,
             }),
-            Event::SwitchModel { provider, model } => Some(DurableCoreEvent::ModelSwitched {
+            Event::SwitchModel { provider, model, .. } => Some(DurableCoreEvent::ModelSwitched {
                 provider: provider.clone(),
                 model: model.clone(),
             }),

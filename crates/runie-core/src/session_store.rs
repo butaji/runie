@@ -219,11 +219,12 @@ impl SessionStore {
     /// Delete a session's redb file.
     pub fn delete(&self, session_id: &str) -> anyhow::Result<()> {
         let path = self.path(session_id);
-        if path.exists() {
-            // Redb requires exclusive access — drop the file handle by dropping
-            // any existing db handles first (we open fresh each time)
-            fs::remove_file(&path)?;
+        if !path.exists() {
+            return Err(anyhow::anyhow!("Session '{}' not found", session_id));
         }
+        // Redb requires exclusive access — drop the file handle by dropping
+        // any existing db handles first (we open fresh each time)
+        fs::remove_file(&path)?;
         // Also clean up migrated JSONL backup
         let backup = path.with_extension("jsonl.migrated");
         fs::remove_file(&backup).ok();

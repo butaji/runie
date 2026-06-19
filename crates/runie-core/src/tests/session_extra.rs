@@ -1,6 +1,7 @@
 //! Extra session command tests — export, import, display name
 use crate::event::{DialogEvent, Event, InputEvent};
 use crate::model::{AppState, ChatMessage, Role};
+use crate::tests::slash::ENV_LOCK;
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -170,10 +171,11 @@ fn import_loads_file() {
 
 #[test]
 fn roundtrip_save_load_preserves_display_name() {
-    use crate::session::Store;
+    use crate::session_replay::{load_session, save_snapshot};
+    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let dir = std::env::temp_dir().join(format!("runie_roundtrip_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    let store = Store::new(dir.clone());
+    std::env::set_var("RUNIE_SESSIONS_DIR", &dir);
 
     let session = crate::session::Session {
         name: "roundtrip".to_string(),
@@ -188,8 +190,14 @@ fn roundtrip_save_load_preserves_display_name() {
         read_only: false,
         session_tree: None,
     };
-    store.save("roundtrip", &session).unwrap();
-    let loaded = store.load("roundtrip").unwrap();
-    assert_eq!(loaded.display_name, Some("Display Name".to_string()));
+    save_snapshot("roundtrip", &session).unwrap();
+
+    let mut state = crate::model::AppState::default();
+    load_session("roundtrip", &mut state).unwrap();
+    assert_eq!(
+        state.session.session_display_name,
+        Some("Display Name".to_string())
+    );
+    std::env::remove_var("RUNIE_SESSIONS_DIR");
     let _ = std::fs::remove_dir_all(&dir);
 }

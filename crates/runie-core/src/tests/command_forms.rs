@@ -5,93 +5,8 @@
 //!
 //! Commands with optional arguments can still accept inline args.
 
-use crate::event::ControlEvent;
-
 use crate::commands::CommandResult;
 use crate::model::AppState;
-
-// ============================================================================
-// /spawn — requires a prompt argument
-// ============================================================================
-
-#[test]
-fn spawn_without_args_opens_form() {
-    use crate::commands::dsl::handlers::subagent::handle_spawn;
-    let mut state = AppState::default();
-    let result = handle_spawn(&mut state, "");
-
-    // Must open a form panel, NOT return a "Usage:" message
-    match result {
-        CommandResult::OpenPanelStack(_) => {}
-        CommandResult::Message(msg) => panic!(
-            "spawn without args should open form, not show message: {}",
-            msg
-        ),
-        CommandResult::Warning(msg) => {
-            panic!("spawn without args should open form, not warn: {}", msg)
-        }
-        other => panic!("unexpected result: {:?}", other),
-    }
-}
-
-#[test]
-fn spawn_with_whitespace_only_opens_form() {
-    use crate::commands::dsl::handlers::subagent::handle_spawn;
-    let mut state = AppState::default();
-    let result = handle_spawn(&mut state, "   \t  ");
-    match result {
-        CommandResult::OpenPanelStack(_) => {}
-        other => panic!("expected form dialog, got {:?}", other),
-    }
-}
-
-#[test]
-fn spawn_with_args_emits_event() {
-    use crate::commands::dsl::handlers::subagent::handle_spawn;
-    let mut state = AppState::default();
-    let result = handle_spawn(&mut state, "list files in /tmp");
-    match result {
-        CommandResult::Event(ControlEvent::SpawnAgent { prompt }) => {
-            assert_eq!(prompt, "list files in /tmp");
-        }
-        other => panic!("expected SpawnAgent event, got {:?}", other),
-    }
-}
-
-#[test]
-fn spawn_trims_whitespace_from_args() {
-    use crate::commands::dsl::handlers::subagent::handle_spawn;
-    let mut state = AppState::default();
-    let result = handle_spawn(&mut state, "  hello world  ");
-    match result {
-        CommandResult::Event(ControlEvent::SpawnAgent { prompt }) => {
-            assert_eq!(prompt, "hello world");
-        }
-        other => panic!("expected event, got {:?}", other),
-    }
-}
-
-#[test]
-fn spawn_form_panel_has_prompt_field() {
-    use crate::commands::dsl::handlers::subagent::handle_spawn;
-    let mut state = AppState::default();
-    let result = handle_spawn(&mut state, "");
-    if let CommandResult::OpenPanelStack(stack) = result {
-        let panel = stack.current().unwrap();
-        // The form should have a field for the prompt
-        let has_prompt_field = panel.form_values.keys().any(|k| k == "prompt")
-            || panel.items.iter().any(|it| {
-                if let crate::dialog::PanelItem::FormField { key, .. } = it {
-                    key == "prompt"
-                } else {
-                    false
-                }
-            });
-        assert!(has_prompt_field, "spawn form should have 'prompt' field");
-    } else {
-        panic!("expected panel stack");
-    }
-}
 
 // ============================================================================
 // No command should return "Usage:" messages
@@ -130,9 +45,6 @@ fn no_command_returns_usage_message() {
 /// form) never return "Usage:" messages. The form-submit path is:
 ///   1. User types /load (no args)
 ///   2. Form opens
-///   3. User submits form with empty name
-///   4. handle_load is called with empty name
-///   5. handle_load must NOT return a "Usage:" message
 fn assert_no_usage(result: &CommandResult, handler_name: &str) {
     if let CommandResult::Message(msg) = result {
         assert!(
@@ -146,27 +58,41 @@ fn assert_no_usage(result: &CommandResult, handler_name: &str) {
 
 #[test]
 fn no_form_submit_handler_returns_usage_message() {
-    use crate::commands::dsl::handlers::session::io as session_io;
-
     let mut state = AppState::default();
 
-    assert_no_usage(&session_io::handle_load(&mut state, ""), "handle_load");
-    assert_no_usage(&session_io::handle_delete(&mut state, ""), "handle_delete");
-    assert_no_usage(&session_io::handle_import(&mut state, ""), "handle_import");
-    assert_no_usage(&session_io::handle_export(&mut state, ""), "handle_export");
+    assert_no_usage(
+        &state.handle_slash("/load").expect("load should return result"),
+        "handle_load",
+    );
+    assert_no_usage(
+        &state
+            .handle_slash("/delete")
+            .expect("delete should return result"),
+        "handle_delete",
+    );
+    assert_no_usage(
+        &state
+            .handle_slash("/import")
+            .expect("import should return result"),
+        "handle_import",
+    );
+    assert_no_usage(
+        &state
+            .handle_slash("/export")
+            .expect("export should return result"),
+        "handle_export",
+    );
 }
 
-/// Test the end-to-end flow: type /load, open form, submit empty
-/// (simulating user pressing Enter without typing).
+/// Test the end-to-end flow: type /load, open form.
 /// The result should NOT pollute the chat feed with a Usage message.
 #[test]
 fn load_form_submit_empty_does_not_show_usage() {
-    use crate::commands::dsl::handlers::session::io as session_io;
     let mut state = AppState::default();
     let initial_msg_count = state.session.messages.len();
 
-    // Simulate form submit with empty name
-    let result = session_io::handle_load(&mut state, "");
+    // Simulate typing /load with no args
+    let result = state.handle_slash("/load").expect("load should return result");
 
     // No "Usage:" message should be added to the feed
     if let CommandResult::Message(_) = &result {
@@ -183,11 +109,12 @@ fn load_form_submit_empty_does_not_show_usage() {
 
 #[test]
 fn delete_form_submit_empty_does_not_show_usage() {
-    use crate::commands::dsl::handlers::session::io as session_io;
     let mut state = AppState::default();
     let initial_msg_count = state.session.messages.len();
 
-    let result = session_io::handle_delete(&mut state, "");
+    let result = state
+        .handle_slash("/delete")
+        .expect("delete should return result");
     if let CommandResult::Message(_) = &result {
         panic!("handle_delete with empty arg returned Message");
     }
@@ -196,11 +123,12 @@ fn delete_form_submit_empty_does_not_show_usage() {
 
 #[test]
 fn import_form_submit_empty_does_not_show_usage() {
-    use crate::commands::dsl::handlers::session::io as session_io;
     let mut state = AppState::default();
     let initial_msg_count = state.session.messages.len();
 
-    let result = session_io::handle_import(&mut state, "");
+    let result = state
+        .handle_slash("/import")
+        .expect("import should return result");
     if let CommandResult::Message(_) = &result {
         panic!("handle_import with empty arg returned Message");
     }
@@ -209,11 +137,12 @@ fn import_form_submit_empty_does_not_show_usage() {
 
 #[test]
 fn export_form_submit_empty_does_not_show_usage() {
-    use crate::commands::dsl::handlers::session::io as session_io;
     let mut state = AppState::default();
     let initial_msg_count = state.session.messages.len();
 
-    let result = session_io::handle_export(&mut state, "");
+    let result = state
+        .handle_slash("/export")
+        .expect("export should return result");
     if let CommandResult::Message(_) = &result {
         panic!("handle_export with empty arg returned Message");
     }
@@ -249,7 +178,7 @@ fn no_command_returns_unknown_command_message() {
 #[test]
 fn required_arg_commands_open_forms_or_emit_events() {
     // Commands known to require arguments
-    let required_arg_commands = vec!["spawn", "save", "load", "delete", "name", "fork"];
+    let required_arg_commands = vec!["save", "load", "delete", "name", "fork"];
 
     for name in required_arg_commands {
         let reg = crate::commands::CommandRegistry::new();
@@ -290,47 +219,6 @@ fn no_command_with_required_args_shows_message() {
                 }
             }
         }
-    }
-}
-
-// ============================================================================
-// DialogState::PanelStack — the open_dialog from form commands
-// ============================================================================
-
-#[test]
-fn form_command_sets_open_dialog() {
-    use crate::commands::dsl::handlers::subagent::handle_spawn;
-    let mut state = AppState::default();
-    let result = handle_spawn(&mut state, "");
-
-    // After a form command, the state.open_dialog should be set
-    if let CommandResult::OpenPanelStack(stack) = result {
-        // The actual setting of open_dialog happens in handle_slash, not in the handler
-        // But the form panel should be properly built
-        assert!(!stack.panels.is_empty());
-        let panel = stack.current().unwrap();
-        assert!(!panel.title.is_empty());
-    } else {
-        panic!("expected panel stack");
-    }
-}
-
-#[test]
-fn form_panels_have_input_field() {
-    use crate::commands::dsl::handlers::subagent::handle_spawn;
-    let mut state = AppState::default();
-    let result = handle_spawn(&mut state, "");
-
-    if let CommandResult::OpenPanelStack(stack) = result {
-        let panel = stack.current().unwrap();
-        // Verify the panel has at least one form field
-        let has_field = panel
-            .items
-            .iter()
-            .any(|it| matches!(it, crate::dialog::PanelItem::FormField { .. }));
-        assert!(has_field, "spawn form should have at least one form field");
-    } else {
-        panic!("expected panel stack");
     }
 }
 

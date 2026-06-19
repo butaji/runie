@@ -4,8 +4,6 @@
 //! UI for each panel: provider picker, key input, validating, model selector,
 //! empty model list, and validation failure.
 
-use std::sync::Arc;
-
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::event::{InputEvent, LoginFlowEvent};
 use runie_core::{AppState, Event};
@@ -92,7 +90,7 @@ fn key_input_renders_provider_name_and_field() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(Event::from(LoginFlowEvent::Start));
     state.update(Event::from(LoginFlowEvent::SelectProvider {
@@ -127,7 +125,7 @@ fn typed_api_key_renders_in_input_box() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(Event::from(LoginFlowEvent::Start));
     state.update(Event::from(LoginFlowEvent::SelectProvider {
@@ -151,7 +149,7 @@ fn validating_panel_renders_provider() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(Event::from(LoginFlowEvent::Start));
     state.update(Event::from(LoginFlowEvent::SelectProvider {
@@ -176,7 +174,7 @@ fn model_selector_renders_toggles_save_cancel() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(Event::from(LoginFlowEvent::Start));
     state.update(Event::from(LoginFlowEvent::SelectProvider {
@@ -226,7 +224,7 @@ fn empty_model_list_renders_save_and_warning() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(Event::from(LoginFlowEvent::Start));
     state.update(Event::from(LoginFlowEvent::SelectProvider {
@@ -261,7 +259,7 @@ fn validation_failure_renders_error() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(Event::from(LoginFlowEvent::Start));
     state.update(Event::from(LoginFlowEvent::SelectProvider {
@@ -291,7 +289,7 @@ fn title_padding_exactly_one_space() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
+
 
     state.update(Event::from(LoginFlowEvent::Start));
     state.update(Event::from(LoginFlowEvent::SelectProvider {

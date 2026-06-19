@@ -17,10 +17,11 @@ pub use actors::{
     FffSearchState,
 };
 pub use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
-pub use model::{now, AppState, ChatMessage, FffFileEntry, Role};
+pub use model::{
+    now, AppState, ChatMessage, FffFileEntry, PermissionRequestState, Role,
+};
 pub mod actor;
 pub mod agent_phase;
-pub mod agent_profiles;
 pub mod auth;
 pub mod bash_safety;
 pub mod build_lint;
@@ -55,13 +56,9 @@ pub mod mcp;
 pub mod message;
 pub mod model;
 pub mod model_catalog;
-pub mod multi_agent;
-pub use multi_agent::{AgentRegistry, RetryPlan, SubagentConfig};
 pub mod harness_skills;
-pub mod model_scroll;
 pub mod notification;
-pub mod orchestrator;
-pub mod orchestrator_actor;
+pub mod path;
 pub mod path_complete;
 pub mod prompts;
 pub mod provider;
@@ -86,7 +83,7 @@ pub mod themes;
 pub mod tokens;
 pub mod tool;
 pub mod tool_markers;
-pub mod trait_resolver;
+pub mod tool_parser;
 pub use tool::{format_bytes, format_duration};
 pub mod permissions;
 pub mod trust;
@@ -111,7 +108,7 @@ pub use event::DialogEvent; // Re-export to avoid circular dependency with dialo
 pub use event::Event;
 pub use event::{
     AgentEvent, CommandEvent, ControlEvent, EditEvent, InputEvent, LoginFlowEvent,
-    ModelConfigEvent, OrchestratorEvent, ScrollEvent, SessionEvent, SidebarEvent, SystemEvent,
+    ModelConfigEvent, ScrollEvent, SessionEvent, SystemEvent,
 };
 pub use file_refs::{find_files, is_image_file, read_file_ref, FileRef};
 pub use harness_skills::{
@@ -147,14 +144,13 @@ pub use provider_registry::{
     display_name, find_provider, find_provider_by_env_var, is_known_provider, known_providers,
     ProviderMeta,
 };
-pub use session::{delete, format_as_markdown, list, load, save, Session};
+pub use session::{format_as_markdown, Session};
 pub use session_actor::SessionActor;
 pub use session_index::{SessionIndex, SessionMetadata};
 pub use session_store::SessionStore;
 pub use session_tree::{SessionTree, SessionTreeFilter, TreeNode};
 pub use skills::{build_skills_context, load_all, load_from_dir, Skill};
-pub use snapshot::{GitInfo, SidebarData, Snapshot};
-pub use state::{AgentEntry, AgentFocus, AgentStatus, SidebarState};
+pub use snapshot::{GitInfo, Snapshot};
 pub use telemetry::Telemetry;
 pub use tokens::{
     estimate_tokens, estimate_tokens_for_model, estimate_tokens_with_tokenizer, token_tracker_for,

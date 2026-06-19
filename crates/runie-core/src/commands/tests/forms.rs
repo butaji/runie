@@ -1,4 +1,3 @@
-use crate::commands::dsl::handlers::subagent::handle_spawn;
 use crate::commands::CommandResult;
 use crate::dialog::PanelItem;
 use crate::model::AppState;
@@ -6,7 +5,9 @@ use crate::model::AppState;
 #[test]
 fn form_command_sets_open_dialog() {
     let mut state = AppState::default();
-    let result = handle_spawn(&mut state, "");
+    let result = state
+        .handle_slash("/load")
+        .expect("load command should return a result");
 
     if let CommandResult::OpenPanelStack(stack) = result {
         assert!(!stack.panels.is_empty());
@@ -20,7 +21,9 @@ fn form_command_sets_open_dialog() {
 #[test]
 fn form_panels_have_input_field() {
     let mut state = AppState::default();
-    let result = handle_spawn(&mut state, "");
+    let result = state
+        .handle_slash("/load")
+        .expect("load command should return a result");
 
     if let CommandResult::OpenPanelStack(stack) = result {
         let panel = stack.current().unwrap();
@@ -28,7 +31,7 @@ fn form_panels_have_input_field() {
             .items
             .iter()
             .any(|it| matches!(it, PanelItem::FormField { .. }));
-        assert!(has_field, "spawn form should have at least one form field");
+        assert!(has_field, "load form should have at least one form field");
     } else {
         panic!("expected panel stack");
     }

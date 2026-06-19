@@ -61,6 +61,7 @@ fn config_round_trip() {
             provider_type: None,
             base_url: "http://localhost:11434/v1".to_string(),
             api_key: "ollama".to_string(),
+            models: Vec::new(),
         },
     );
     cfg.model_providers = providers;
@@ -114,7 +115,7 @@ fn dyn_provider_from_registry_key() {
     let saved_mock = std::env::var("RUNIE_MOCK").ok();
     std::env::remove_var("OPENAI_API_KEY");
     std::env::remove_var("RUNIE_MOCK");
-    let result = crate::build_provider_with_warning("openai", "gpt-4o");
+    let result = crate::DynProvider::new_with_config("openai", "gpt-4o", &Config::default());
     if let Some(v) = saved_key {
         std::env::set_var("OPENAI_API_KEY", v);
     }
@@ -128,7 +129,7 @@ fn dyn_provider_from_registry_key() {
 
 #[test]
 fn dyn_provider_unknown_key_returns_error() {
-    let result = crate::build_provider_with_warning("nonexistent-provider", "model-x");
+    let result = crate::DynProvider::new_with_config("nonexistent-provider", "model-x", &Config::default());
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(matches!(err, ProviderError::UnknownProvider(k) if k == "nonexistent-provider"));
@@ -144,13 +145,14 @@ fn dyn_provider_reads_api_key_from_config() {
             provider_type: None,
             base_url: "https://api.openai.com/v1".to_string(),
             api_key: "sk-from-config".to_string(),
+            models: Vec::new(),
         },
     );
 
     let saved_key = std::env::var("OPENAI_API_KEY").ok();
     std::env::remove_var("OPENAI_API_KEY");
 
-    let provider = crate::build_provider_with_warning_with_config("openai", "gpt-4o", &cfg)
+    let provider = crate::DynProvider::new_with_config("openai", "gpt-4o", &cfg)
         .expect("should build from config key");
     assert_eq!(provider.key(), "openai");
     assert_eq!(provider.model(), "gpt-4o");
@@ -170,13 +172,14 @@ fn dyn_provider_prefers_env_over_config() {
             provider_type: None,
             base_url: "https://api.openai.com/v1".to_string(),
             api_key: "sk-from-config".to_string(),
+            models: Vec::new(),
         },
     );
 
     let saved_key = std::env::var("OPENAI_API_KEY").ok();
     std::env::set_var("OPENAI_API_KEY", "sk-from-env");
 
-    let provider = crate::build_provider_with_warning_with_config("openai", "gpt-4o", &cfg)
+    let provider = crate::DynProvider::new_with_config("openai", "gpt-4o", &cfg)
         .expect("should build from env key");
     assert_eq!(provider.key(), "openai");
 
@@ -197,6 +200,7 @@ fn fallback_uses_config_api_key() {
             provider_type: None,
             base_url: "https://api.openai.com/v1".to_string(),
             api_key: "sk-fallback".to_string(),
+            models: Vec::new(),
         },
     );
 

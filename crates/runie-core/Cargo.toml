@@ -47,7 +47,6 @@ jsonschema = "0.29"
 tempfile = "3"
 criterion = "0.5"
 parking_lot.workspace = true
-runie-macros.workspace = true
 
 [[bench]]
 name = "snapshot"

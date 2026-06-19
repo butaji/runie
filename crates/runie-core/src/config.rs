@@ -29,12 +29,14 @@ pub struct ModelsSection {
 // ============================================================================
 
 /// A provider's configuration entry.
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize, schemars::JsonSchema)]
 pub struct ModelProvider {
     #[serde(rename = "type")]
     pub provider_type: Option<String>,
     pub base_url: String,
     pub api_key: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub models: Vec<String>,
 }
 
 // ============================================================================
@@ -315,6 +317,44 @@ impl Config {
         self.model_providers.get(prefix)
     }
 
+    /// Return the configured models for a provider.
+    pub fn models_for_provider(&self, provider: &str) -> Vec<String> {
+        self.model_providers
+            .get(provider)
+            .map(|p| p.models.clone())
+            .unwrap_or_default()
+    }
+
+    /// Return the first configured model for a provider, if any.
+    pub fn first_model_for_provider(&self, provider: &str) -> Option<String> {
+        self.models_for_provider(provider).into_iter().next()
+    }
+
+    /// Resolve the default provider/model pair from this config.
+    ///
+    /// Falls back through: explicit `provider` + saved models, first configured
+    /// provider's first model, and finally empty strings when nothing is set.
+    pub fn resolve_default_model(&self) -> (String, String) {
+        if crate::provider_registry::is_mock_enabled() {
+            return ("mock".into(), "echo".into());
+        }
+        if let Some(provider) = self.provider.as_deref().filter(|p| !p.is_empty()) {
+            let model = self
+                .first_model_for_provider(provider)
+                .or_else(|| self.default_model().map(String::from))
+                .unwrap_or_default();
+            return (provider.to_string(), model);
+        }
+        let mut providers: Vec<_> = self.model_providers.iter().collect();
+        providers.sort_by_key(|(k, _)| *k);
+        if let Some((provider, mp)) = providers.into_iter().next() {
+            if let Some(model) = mp.models.first() {
+                return (provider.clone(), model.clone());
+            }
+        }
+        (String::new(), String::new())
+    }
+
     /// Classify what changed between two configs.
     pub fn classify_change(&self, prev: &Config) -> Vec<ConfigChange> {
         let mut changes = Vec::new();
@@ -333,6 +373,9 @@ impl Config {
         if self.keybindings != prev.keybindings {
             changes.push(ConfigChange::Keybindings);
         }
+        if self.model_providers != prev.model_providers {
+            changes.push(ConfigChange::Credentials);
+        }
         changes
     }
 }
@@ -343,25 +386,13 @@ pub enum ConfigChange {
     Model { provider: String, model: String },
     Theme { name: String },
     Keybindings,
+    Credentials,
 }
 
 fn current_config_values(config: &Config) -> (String, String, String) {
-    let (default_provider, default_model) = default_provider_model();
-    let provider = config
-        .provider
-        .clone()
-        .unwrap_or_else(|| default_provider.to_string());
-    let model = config.default_model().unwrap_or(default_model).to_string();
+    let (provider, model) = config.resolve_default_model();
     let theme = config.theme.clone().unwrap_or_else(|| "runie".to_string());
     (provider, model, theme)
-}
-
-fn default_provider_model() -> (&'static str, &'static str) {
-    if crate::provider_registry::is_mock_enabled() {
-        ("mock", "echo")
-    } else {
-        ("", "")
-    }
 }
 
 /// Get the default config file path.

@@ -9,8 +9,6 @@ mod agent;
 #[cfg(test)]
 mod agent_error;
 #[cfg(test)]
-mod agents_manager_e2e;
-#[cfg(test)]
 mod appstate_structural;
 #[cfg(test)]
 mod autoscroll;
@@ -44,8 +42,6 @@ mod ghost_completion;
 mod harness_skills;
 #[cfg(test)]
 mod hashline_edit_apply;
-#[cfg(test)]
-mod hints;
 #[cfg(test)]
 mod input_cursor;
 #[cfg(test)]
@@ -98,8 +94,6 @@ mod snapshot_optimization;
 mod stack_navigation;
 #[cfg(test)]
 mod streaming_buffer;
-#[cfg(test)]
-mod subagent_cmd;
 #[cfg(test)]
 mod theme_slash;
 #[cfg(test)]

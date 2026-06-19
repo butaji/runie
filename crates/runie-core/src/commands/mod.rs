@@ -24,17 +24,12 @@
 //!     });
 //! ```
 
-pub mod agents_manager;
 pub mod dsl;
 mod registry;
 #[cfg(test)]
 mod tests;
-pub mod workflow;
 
-pub use dsl::{
-    build_cancel_form_panel, build_spawn_form_panel, build_steer_form_panel, CommandCategory,
-    CommandDef, CommandFlow, CommandResult, DialogType,
-};
+pub use dsl::{CommandCategory, CommandDef, CommandFlow, CommandResult, DialogType};
 pub use registry::{filter_commands, CommandRegistry, DialogState};
 
 /// Shorthand for creating commands

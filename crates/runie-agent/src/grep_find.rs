@@ -1,4 +1,4 @@
-use crate::parser::parse_tool_calls;
+use runie_core::tool_parser::parse_tool_calls;
 use runie_core::tool::{ToolContext, ToolStatus};
 use runie_engine::tool::builtin_registry;
 

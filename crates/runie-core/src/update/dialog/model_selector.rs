@@ -22,6 +22,7 @@ pub fn partition_model_items(
             let evt = crate::event::ModelConfigEvent::SwitchModel {
                 provider: provider.to_string(),
                 model: model.to_string(),
+                explicit: true,
             };
             current_group.push((name, evt));
         }
