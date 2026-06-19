@@ -6,12 +6,13 @@ use ratatui::{
     widgets::{Paragraph, Wrap},
     Frame,
 };
+use unicode_width::UnicodeWidthChar;
 use runie_core::dialog::{Panel, PanelItem};
 
 use crate::theme::{color_accent, style_hint, style_placeholder, style_thinking};
 use crate::ui::parse_hint_spans;
 
-use super::{pad_to_width, setup_popup, style_border, truncate};
+use super::{pad_to_width, setup_popup, style_border};
 
 pub(super) fn render_form(f: &mut Frame, panel: &Panel, root_closable: bool) {
     let inner = setup_popup(f, &panel.title);
@@ -130,6 +131,7 @@ fn push_form_field_body<'a>(
         label,
         value,
         placeholder,
+        cursor_pos,
         ..
     } = item
     {
@@ -141,6 +143,7 @@ fn push_form_field_body<'a>(
             label,
             value,
             placeholder,
+            *cursor_pos,
             *nav_idx == selected,
             inner_w,
         );
@@ -269,12 +272,14 @@ fn push_field<'a>(
     label: &'a str,
     value: &str,
     placeholder: &str,
+    cursor_pos: usize,
     is_active: bool,
     inner_w: usize,
 ) {
     lines.push(field_label_line(field_num, total, label, is_active));
 
-    let (top, mid_spans, bot) = build_input_box(value, placeholder, is_active, inner_w);
+    let (top, mid_spans, bot) =
+        build_input_box(value, placeholder, cursor_pos, is_active, inner_w);
     lines.push(Line::from(top).style(style_border()));
     lines.push(Line::from(mid_spans));
     lines.push(Line::from(bot).style(style_border()));
@@ -304,41 +309,123 @@ fn field_label_line<'a>(
 fn build_input_box<'a>(
     value: &str,
     placeholder: &str,
+    cursor_pos: usize,
     is_active: bool,
     inner_w: usize,
 ) -> (String, Vec<Span<'a>>, String) {
     let box_w = inner_w.saturating_sub(6).max(12);
     let inner_avail = box_w.saturating_sub(2);
-    let inner_text = input_display_text(value, placeholder, inner_avail, is_active);
-    let val_style = input_value_style(value, is_active);
+    let spans = input_display_spans(value, placeholder, cursor_pos, inner_avail, is_active);
     let top = format!("  ┌{}┐", "─".repeat(box_w - 2));
     let bot = format!("  └{}┘", "─".repeat(box_w - 2));
-    let spans = vec![
-        Span::styled("  │", style_border()),
-        Span::styled(inner_text, val_style),
-        Span::styled("│", style_border()),
-    ];
-    (top, spans, bot)
+    let mut all_spans = vec![Span::styled("  │", style_border())];
+    all_spans.extend(spans);
+    all_spans.push(Span::styled("│", style_border()));
+    (top, all_spans, bot)
 }
 
-fn input_display_text(value: &str, placeholder: &str, avail: usize, is_active: bool) -> String {
-    let display = if value.is_empty() {
-        placeholder.to_string()
+fn input_display_spans(
+    value: &str,
+    placeholder: &str,
+    cursor_pos: usize,
+    avail: usize,
+    is_active: bool,
+) -> Vec<Span<'static>> {
+    let val_style = input_value_style(value, is_active);
+    let cursor_style = if value.is_empty() {
+        style_placeholder()
     } else {
-        value.to_string()
+        val_style
     };
-    let (shown, overflow) = truncate(&display, avail.saturating_sub(1));
-    let text = if overflow {
-        format!("{}…", shown)
+
+    if value.is_empty() {
+        let text = if is_active {
+            format!("{}▏", placeholder)
+        } else {
+            placeholder.to_string()
+        };
+        return vec![Span::styled(pad_to_width(&text, avail), cursor_style)];
+    }
+
+    let cursor_pos = cursor_pos.min(value.len());
+    let before = &value[..cursor_pos];
+    let after = &value[cursor_pos..];
+    let before_w = runie_core::display_width::width(before) as usize;
+    let after_w = runie_core::display_width::width(after) as usize;
+    let scroll = compute_field_scroll(before_w, after_w, avail);
+
+    build_field_spans(before, after, before_w, scroll, avail, val_style, cursor_style)
+}
+
+fn compute_field_scroll(before_w: usize, after_w: usize, avail: usize) -> usize {
+    let total_w = before_w + 1 + after_w;
+    if total_w <= avail {
+        return 0;
+    }
+    let need = before_w + 1;
+    if need <= avail {
+        0
     } else {
-        shown
-    };
-    let text = if is_active {
-        format!("{}▏", text)
-    } else {
-        text
-    };
-    pad_to_width(&text, avail)
+        need - avail
+    }
+}
+
+fn build_field_spans(
+    before: &str,
+    after: &str,
+    before_w: usize,
+    scroll: usize,
+    avail: usize,
+    val_style: Style,
+    cursor_style: Style,
+) -> Vec<Span<'static>> {
+    let mut spans: Vec<Span<'static>> = Vec::new();
+    let mut used = 0usize;
+
+    if scroll > 0 {
+        spans.push(Span::styled("…", val_style));
+        used += 1;
+    }
+
+    let skip = scroll;
+    let (prefix, prefix_used) = visible_segment(before, skip, avail.saturating_sub(used));
+    spans.push(Span::styled(prefix, val_style));
+    used += prefix_used;
+
+    if used < avail && before_w + 1 > scroll {
+        spans.push(Span::styled("▏", cursor_style));
+        used += 1;
+    }
+
+    let remaining = avail.saturating_sub(used);
+    let (suffix, suffix_used) = visible_segment(after, 0, remaining);
+    spans.push(Span::styled(suffix, val_style));
+    used += suffix_used;
+
+    if used < avail {
+        spans.push(Span::styled(" ".repeat(avail - used), val_style));
+    }
+
+    spans
+}
+
+fn visible_segment(s: &str, skip_w: usize, max_w: usize) -> (String, usize) {
+    let mut result = String::new();
+    let mut skipped = 0usize;
+    let mut used = 0usize;
+    for ch in s.chars() {
+        let w = ch.width().unwrap_or(0);
+        if skipped + w <= skip_w {
+            skipped += w;
+            continue;
+        }
+        if used + w > max_w {
+            break;
+        }
+        result.push(ch);
+        used += w;
+    }
+    (result, used)
 }
 
 fn input_value_style(value: &str, is_active: bool) -> Style {

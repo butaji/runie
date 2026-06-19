@@ -115,15 +115,6 @@ pub(super) fn style_border() -> Style {
     Style::default().fg(crate::theme::color_border())
 }
 
-pub(super) fn truncate(s: &str, max: usize) -> (String, bool) {
-    if s.chars().count() <= max {
-        (s.to_string(), false)
-    } else {
-        let truncated: String = s.chars().take(max.saturating_sub(1)).collect();
-        (truncated, true)
-    }
-}
-
 pub(super) fn pad_to_width(s: &str, width: usize) -> String {
     let char_count = s.chars().count();
     if char_count >= width {

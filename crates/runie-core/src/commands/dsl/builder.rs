@@ -170,6 +170,7 @@ fn build_form_stack_from_template(template: FormPanel, args: &str) -> CoreStack 
                 placeholder,
                 key,
                 value,
+                ..
             } => {
                 let val = if arg_idx < args_list.len() {
                     args_list[arg_idx].to_string()

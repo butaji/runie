@@ -51,21 +51,41 @@ pub fn form_panel_action(state: &mut AppState, panel: &mut Panel, event: Event) 
         InputEvent::Input(c) => handle_form_input(state, panel, *c),
         InputEvent::Paste(text) => handle_form_paste(panel, text),
         DialogEvent::CommandFormBackspace | InputEvent::Backspace => {
-            form_panel_edit_char(panel, ' ', false);
+            form_panel_delete_before_cursor(panel);
             A::KeepOpen
         }
         DialogEvent::CommandFormSubmit
         | InputEvent::Submit
         | ModelConfigEvent::SettingsSelect
         | DialogEvent::PaletteSelect => handle_form_submit(state, panel),
-        _ => A::KeepOpen,
+        _ => form_panel_edit_action(panel, &event),
     }
+}
+
+fn form_panel_edit_action(panel: &mut Panel, event: &Event) -> FormAction {
+    use FormAction as A;
+    match event {
+        InputEvent::KillChar => form_panel_delete_at_cursor(panel),
+        InputEvent::DeleteWord => form_panel_delete_word_before(panel),
+        InputEvent::DeleteToEnd => form_panel_delete_to_end(panel),
+        InputEvent::DeleteToStart => form_panel_delete_to_start(panel),
+        InputEvent::CursorLeft => form_panel_move_cursor(panel, CursorDir::Left),
+        InputEvent::CursorRight => form_panel_move_cursor(panel, CursorDir::Right),
+        InputEvent::CursorStart | InputEvent::CursorWordLeft => {
+            form_panel_move_cursor(panel, CursorDir::Start)
+        }
+        InputEvent::CursorEnd | InputEvent::CursorWordRight => {
+            form_panel_move_cursor(panel, CursorDir::End)
+        }
+        _ => {}
+    }
+    A::KeepOpen
 }
 
 fn handle_form_input(state: &mut AppState, panel: &mut Panel, c: char) -> FormAction {
     use FormAction as A;
     if panel.selected_form_field().is_some() {
-        form_panel_edit_char(panel, c, true);
+        form_panel_edit_char(panel, c);
         return A::KeepOpen;
     }
     if let Some(ItemAction::Emit(evt)) = panel.find_button_by_accel(c) {
@@ -98,10 +118,17 @@ fn form_panel_paste(panel: &mut Panel, text: &str) {
     let Some(idx) = panel.selected_form_field() else {
         return;
     };
-    let PanelItem::FormField { value, key, .. } = &mut panel.items[idx] else {
+    let PanelItem::FormField {
+        value,
+        key,
+        cursor_pos,
+        ..
+    } = &mut panel.items[idx]
+    else {
         return;
     };
-    value.push_str(text);
+    value.insert_str(*cursor_pos, text);
+    *cursor_pos = (*cursor_pos + text.len()).min(value.len());
     panel.form_values.insert(key.clone(), value.clone());
 }
 
@@ -156,19 +183,160 @@ fn key_field_empty(panel: &Panel) -> bool {
         .unwrap_or(true)
 }
 
-fn form_panel_edit_char(panel: &mut Panel, c: char, push: bool) {
+fn form_panel_edit_char(panel: &mut Panel, c: char) {
     let Some(idx) = panel.selected_form_field() else {
         return;
     };
-    let PanelItem::FormField { value, key, .. } = &mut panel.items[idx] else {
+    let PanelItem::FormField {
+        value,
+        key,
+        cursor_pos,
+        ..
+    } = &mut panel.items[idx]
+    else {
         return;
     };
-    if push {
-        value.push(c);
-    } else {
-        value.pop();
-    }
+    value.insert(*cursor_pos, c);
+    *cursor_pos += c.len_utf8();
     panel.form_values.insert(key.clone(), value.clone());
+}
+
+fn form_panel_delete_before_cursor(panel: &mut Panel) {
+    let Some(idx) = panel.selected_form_field() else {
+        return;
+    };
+    let PanelItem::FormField {
+        value,
+        key,
+        cursor_pos,
+        ..
+    } = &mut panel.items[idx]
+    else {
+        return;
+    };
+    if *cursor_pos == 0 {
+        return;
+    }
+    let new_pos = prev_grapheme_boundary(value, *cursor_pos);
+    value.drain(new_pos..*cursor_pos);
+    *cursor_pos = new_pos;
+    panel.form_values.insert(key.clone(), value.clone());
+}
+
+fn form_panel_delete_at_cursor(panel: &mut Panel) {
+    let Some(idx) = panel.selected_form_field() else {
+        return;
+    };
+    let PanelItem::FormField {
+        value,
+        key,
+        cursor_pos,
+        ..
+    } = &mut panel.items[idx]
+    else {
+        return;
+    };
+    if *cursor_pos >= value.len() {
+        return;
+    }
+    let end = next_grapheme_boundary(value, *cursor_pos);
+    value.drain(*cursor_pos..end);
+    panel.form_values.insert(key.clone(), value.clone());
+}
+
+fn form_panel_delete_word_before(panel: &mut Panel) {
+    let Some(idx) = panel.selected_form_field() else {
+        return;
+    };
+    let PanelItem::FormField {
+        value,
+        key,
+        cursor_pos,
+        ..
+    } = &mut panel.items[idx]
+    else {
+        return;
+    };
+    if *cursor_pos == 0 {
+        return;
+    }
+    let start = find_word_boundary_left(value, *cursor_pos);
+    value.drain(start..*cursor_pos);
+    *cursor_pos = start;
+    panel.form_values.insert(key.clone(), value.clone());
+}
+
+fn form_panel_delete_to_end(panel: &mut Panel) {
+    let Some(idx) = panel.selected_form_field() else {
+        return;
+    };
+    let PanelItem::FormField {
+        value,
+        key,
+        cursor_pos,
+        ..
+    } = &mut panel.items[idx]
+    else {
+        return;
+    };
+    value.truncate(*cursor_pos);
+    panel.form_values.insert(key.clone(), value.clone());
+}
+
+fn form_panel_delete_to_start(panel: &mut Panel) {
+    let Some(idx) = panel.selected_form_field() else {
+        return;
+    };
+    let PanelItem::FormField {
+        value,
+        key,
+        cursor_pos,
+        ..
+    } = &mut panel.items[idx]
+    else {
+        return;
+    };
+    if *cursor_pos == 0 {
+        return;
+    }
+    value.drain(..*cursor_pos);
+    *cursor_pos = 0;
+    panel.form_values.insert(key.clone(), value.clone());
+}
+
+#[derive(Clone, Copy)]
+enum CursorDir {
+    Left,
+    Right,
+    Start,
+    End,
+}
+
+fn form_panel_move_cursor(panel: &mut Panel, dir: CursorDir) {
+    let Some(idx) = panel.selected_form_field() else {
+        return;
+    };
+    let PanelItem::FormField { value, cursor_pos, .. } = &mut panel.items[idx] else {
+        return;
+    };
+    *cursor_pos = match dir {
+        CursorDir::Start => 0,
+        CursorDir::End => value.len(),
+        CursorDir::Left => prev_grapheme_boundary(value, *cursor_pos),
+        CursorDir::Right => next_grapheme_boundary(value, *cursor_pos),
+    };
+}
+
+fn prev_grapheme_boundary(s: &str, pos: usize) -> usize {
+    crate::update::input::prev_grapheme_boundary(s, pos)
+}
+
+fn next_grapheme_boundary(s: &str, pos: usize) -> usize {
+    crate::update::input::next_grapheme_boundary(s, pos)
+}
+
+fn find_word_boundary_left(s: &str, pos: usize) -> usize {
+    crate::update::input::find_word_boundary_left(s, pos)
 }
 
 /// Apply a `FormAction` to the current dialog.
@@ -200,93 +368,5 @@ pub fn form_build_submit(panel: &mut Panel) -> Option<crate::Event> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::LoginFlowEvent;
-
-    fn key_panel() -> Panel {
-        Panel::new("login-key", "Login")
-            .form_field_value("API Key", "sk-...", "key", String::new())
-            .form_submit()
-    }
-
-    #[test]
-    fn paste_appends_to_selected_form_field() {
-        let mut state = AppState::default();
-        let mut panel = key_panel();
-        let action = form_panel_action(&mut state, &mut panel, Event::Paste("sk-pasted".into()));
-        assert!(matches!(action, FormAction::KeepOpen));
-        assert_eq!(panel.form_values.get("key"), Some(&"sk-pasted".to_string()));
-    }
-
-    #[test]
-    fn paste_ignores_paste_when_no_field_selected() {
-        let mut state = AppState::default();
-        let mut panel = key_panel();
-        // Move selection down to the Submit button.
-        panel.select_down();
-        let action = form_panel_action(&mut state, &mut panel, Event::Paste("sk-pasted".into()));
-        assert!(matches!(action, FormAction::KeepOpen));
-        assert!(!panel.form_values.contains_key("key"));
-    }
-
-    #[test]
-    fn submit_on_toggle_checkbox_keeps_form_open() {
-        let mut state = AppState::default();
-        state.config.read_only = false;
-        let mut panel = Panel::new("settings", "Settings").toggle(
-            "Read-Only",
-            false,
-            ItemAction::Toggle("read_only".into()),
-        );
-
-        let action = form_panel_action(&mut state, &mut panel, Event::Submit);
-
-        assert!(matches!(action, FormAction::KeepOpen));
-        assert!(state.config.read_only, "toggle setting should be applied");
-        assert!(
-            matches!(
-                panel.selected_item(),
-                Some(PanelItem::Toggle { value: true, .. })
-            ),
-            "checkbox value should flip"
-        );
-    }
-
-    #[test]
-    fn submit_on_emit_toggle_checkbox_updates_state_and_keeps_open() {
-        let mut state = AppState::default();
-        let mut flow = crate::login_flow::LoginFlowState::new()
-            .with_provider("minimax".into())
-            .with_key("sk".into())
-            .with_validation_success(vec!["m1".into()]);
-        flow.selected_models.clear();
-        state.login_flow = Some(flow);
-
-        let mut panel = Panel::new("models", "Models").toggle(
-            "m1",
-            false,
-            ItemAction::Emit(LoginFlowEvent::ToggleModel { model: "m1".into() }),
-        );
-
-        let action = form_panel_action(&mut state, &mut panel, Event::Submit);
-
-        assert!(matches!(action, FormAction::KeepOpen));
-        let flow = state.login_flow.as_ref().expect("login flow");
-        assert!(flow.selected_models.contains("m1"));
-    }
-
-    #[test]
-    fn submit_on_emit_action_dispatches_event() {
-        let mut state = AppState::default();
-        let mut panel =
-            Panel::new("models", "Models").item("_Save", ItemAction::Emit(LoginFlowEvent::Save));
-
-        let action = form_panel_action(&mut state, &mut panel, Event::Submit);
-
-        assert!(
-            matches!(action, FormAction::Submit(Some(crate::Event::Save))),
-            "Enter on an emit action should submit its event"
-        );
-    }
-}
+#[path = "form_tests.rs"]
+mod form_tests;

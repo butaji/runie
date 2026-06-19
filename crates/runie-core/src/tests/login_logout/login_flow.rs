@@ -5,6 +5,35 @@ use crate::model::AppState;
 use super::{clean_config, default_models_for_provider, validate_provider};
 
 #[test]
+fn providers_dialog_down_navigation_moves_selection() {
+    clean_config();
+    let mut state = AppState::default();
+    state.config.current_provider.clear();
+    state.config.current_model.clear();
+
+    state.update(DialogEvent::ProvidersDialog);
+    let stack = state
+        .open_dialog
+        .as_ref()
+        .and_then(|d| d.panel_stack())
+        .expect("providers dialog should be open");
+    let first_selected = stack.current().unwrap().selected;
+
+    state.update(InputEvent::HistoryNext);
+
+    let stack = state
+        .open_dialog
+        .as_ref()
+        .and_then(|d| d.panel_stack())
+        .expect("providers dialog should stay open");
+    assert_ne!(
+        stack.current().unwrap().selected,
+        first_selected,
+        "Down arrow should change selection in providers dialog"
+    );
+}
+
+#[test]
 fn login_flow_save_requires_validation() {
     clean_config();
     let mut state = AppState::default();

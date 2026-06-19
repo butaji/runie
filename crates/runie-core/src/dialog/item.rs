@@ -41,6 +41,10 @@ pub enum PanelItem {
         value: String,
         placeholder: String,
         key: String,
+        /// Cursor position in bytes within `value`. Forms support inline
+        /// editing: arrow keys move the cursor and text is inserted/deleted
+        /// at the cursor position.
+        cursor_pos: usize,
     },
     FormSubmit,
     Header(String),

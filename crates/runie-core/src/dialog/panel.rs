@@ -205,10 +205,10 @@ impl Panel {
             value: String::new(),
             placeholder: placeholder.into(),
             key: key.into(),
+            cursor_pos: 0,
         });
         self
     }
-
     /// Add a form field with a pre-filled value.
     pub fn form_field_value(
         mut self,
@@ -226,6 +226,7 @@ impl Panel {
             value: value_str.clone(),
             placeholder: placeholder.into(),
             key: key_str.clone(),
+            cursor_pos: value_str.len(),
         });
         if !value_str.is_empty() {
             self.form_values.insert(key_str, value_str);
@@ -433,8 +434,9 @@ impl Panel {
 
     /// Update the value of a form field by its index.
     pub fn set_form_value(&mut self, field_index: usize, value: String) {
-        if let Some(PanelItem::FormField { value: v, key, .. }) = self.items.get_mut(field_index) {
+        if let Some(PanelItem::FormField { value: v, key, cursor_pos, .. }) = self.items.get_mut(field_index) {
             *v = value.clone();
+            *cursor_pos = v.len();
             self.form_values.insert(key.clone(), value);
         }
     }
@@ -486,7 +488,6 @@ impl Panel {
         scored.into_iter().map(|(i, _)| i).collect()
     }
 }
-
 /// Normalize a panel title so it always has exactly one leading and one
 /// trailing space. Extra whitespace is trimmed; empty titles stay empty.
 fn normalize_title(title: impl Into<String>) -> String {

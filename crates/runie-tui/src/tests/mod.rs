@@ -37,6 +37,8 @@ mod terminal_setup;
 #[cfg(test)]
 mod login_flow_e2e;
 #[cfg(test)]
+mod login_flow_form;
+#[cfg(test)]
 mod model_cycle;
 #[cfg(test)]
 mod onboarding_e2e;

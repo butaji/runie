@@ -206,32 +206,6 @@ fn e2e_login_flow_title_has_exactly_one_space_padding() {
 }
 
 #[test]
-fn e2e_login_flow_paste_fills_api_key_field() {
-    clean_config();
-    let mut state = AppState::default();
-    state.config.current_provider.clear();
-    state.config.current_model.clear();
-    state.set_login_validation_hook(Arc::new(|_provider: &str, _key: &str| {}));
-
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
-        provider: "minimax".into(),
-    }));
-    state.update(Event::Paste("sk-pasted-from-clipboard".into()));
-
-    let stack = state
-        .open_dialog
-        .as_ref()
-        .and_then(|d| d.panel_stack())
-        .expect("key input panel should be open");
-    let panel = stack.current().expect("current panel");
-    assert_eq!(
-        panel.form_values.get("key"),
-        Some(&"sk-pasted-from-clipboard".to_string())
-    );
-}
-
-#[test]
 fn e2e_providers_add_flow_save_renders_input_box() {
     clean_config();
     let mut state = AppState::default();
