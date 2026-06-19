@@ -1,6 +1,6 @@
 //! Tests that global events (theme, model) pass through when dialogs are open.
 
-use runie_core::event::{ControlEvent, DialogEvent, ModelConfigEvent};
+use runie_core::event::{ControlEvent, DialogEvent, InputEvent, ModelConfigEvent};
 
 use runie_core::commands::DialogState;
 use runie_core::dialog::builders::theme_picker;
@@ -99,4 +99,60 @@ fn theme_picker_panel_keeps_open_for_preview() {
             }
         )
     }));
+}
+
+#[test]
+fn theme_picker_activation_switches_theme() {
+    let mut state = AppState::default();
+    state.update(DialogEvent::ToggleCommandPalette);
+    // Simulate selecting /theme from palette and opening the picker.
+    let stack = theme_picker(vec![
+        (
+            "runie".into(),
+            ModelConfigEvent::SwitchTheme {
+                name: "runie".into(),
+            },
+        ),
+        (
+            "dracula".into(),
+            ModelConfigEvent::SwitchTheme {
+                name: "dracula".into(),
+            },
+        ),
+    ]);
+    state.open_dialog = Some(DialogState::PanelStack(stack));
+    state.update(InputEvent::HistoryNext);
+    state.update(InputEvent::Submit);
+
+    assert_eq!(state.config.theme_name, "dracula");
+    assert!(
+        matches!(state.open_dialog, Some(DialogState::PanelStack(_))),
+        "Theme picker should stay open after applying theme"
+    );
+}
+
+#[test]
+fn theme_picker_filter_and_submit_switches_theme() {
+    let mut state = AppState::default();
+    let stack = theme_picker(vec![
+        (
+            "runie".into(),
+            ModelConfigEvent::SwitchTheme {
+                name: "runie".into(),
+            },
+        ),
+        (
+            "dracula".into(),
+            ModelConfigEvent::SwitchTheme {
+                name: "dracula".into(),
+            },
+        ),
+    ]);
+    state.open_dialog = Some(DialogState::PanelStack(stack));
+    for c in "dracula".chars() {
+        state.update(InputEvent::Input(c));
+    }
+    state.update(InputEvent::Submit);
+
+    assert_eq!(state.config.theme_name, "dracula");
 }

@@ -107,3 +107,28 @@ fn theme_persisted_in_session() {
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }
+
+#[test]
+fn theme_selector_switch_updates_state() {
+    let mut state = fresh_state();
+    palette_select(&mut state, "theme");
+    assert!(
+        state.open_dialog.is_some(),
+        "theme selector dialog should be open"
+    );
+
+    // Filter to dracula and submit to apply the theme while keeping dialog open.
+    for c in "dracula".chars() {
+        state.update(DialogEvent::PaletteFilter(c));
+    }
+    state.update(DialogEvent::PaletteSelect);
+
+    assert_eq!(
+        state.config.theme_name, "dracula",
+        "selecting dracula in theme picker should switch theme"
+    );
+    assert!(
+        state.open_dialog.is_some(),
+        "theme picker should stay open for live preview"
+    );
+}

@@ -34,8 +34,11 @@ pub const DEFAULT_THEME_NAME: &str = "runie";
 
 /// Set the active theme by name. Called by `draw_snapshot` at frame start.
 /// This is a no-op when the requested theme is already active.
+/// Uses the terminal capabilities last set by `set_current_theme_with_caps`,
+/// falling back to default (no truecolor) caps if none were set.
 pub fn set_current_theme(name: &str) {
-    set_current_theme_with_caps(name, crate::terminal::caps::TerminalCapabilities::default());
+    let caps = current_caps().unwrap_or_default();
+    set_current_theme_with_caps(name, caps);
 }
 
 /// Set the active theme by name, quantized to the given terminal capabilities.
@@ -63,6 +66,10 @@ pub fn current_theme_name() -> String {
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .clone()
+}
+
+fn current_caps() -> Option<crate::terminal::caps::TerminalCapabilities> {
+    CURRENT_CAPS.read().unwrap_or_else(|e| e.into_inner()).clone()
 }
 
 /// Get the currently active theme (falls back to default).

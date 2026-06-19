@@ -87,3 +87,53 @@ fn quantization_is_idempotent() {
     let second = current_theme();
     assert!(Arc::ptr_eq(&first, &second));
 }
+
+#[test]
+fn builtin_theme_names_load_from_opaline() {
+    let _lock = test_lock();
+    for name in runie_core::themes::BUILTIN_THEMES {
+        set_current_theme(name);
+        let theme = current_theme();
+        assert!(
+            !theme.token_names().is_empty(),
+            "theme {} should have tokens",
+            name
+        );
+    }
+    set_current_theme("runie");
+}
+
+#[test]
+fn builtin_themes_have_distinct_bg_base() {
+    let _lock = test_lock();
+    set_current_theme_with_caps("runie", truecolor_caps());
+    let runie_bg = current_theme().color("bg.base");
+
+    set_current_theme_with_caps("dracula", truecolor_caps());
+    let dracula_bg = current_theme().color("bg.base");
+    assert_ne!(
+        (runie_bg.r, runie_bg.g, runie_bg.b),
+        (dracula_bg.r, dracula_bg.g, dracula_bg.b),
+        "dracula bg.base should differ from runie"
+    );
+
+    set_current_theme_with_caps("nord", truecolor_caps());
+    let nord_bg = current_theme().color("bg.base");
+    assert_ne!(
+        (dracula_bg.r, dracula_bg.g, dracula_bg.b),
+        (nord_bg.r, nord_bg.g, nord_bg.b),
+        "nord bg.base should differ from dracula"
+    );
+
+    set_current_theme_with_caps("catppuccin-latte", truecolor_caps());
+    let latte_bg = current_theme().color("bg.base");
+    assert!(
+        latte_bg.r > 200 && latte_bg.g > 200 && latte_bg.b > 200,
+        "catppuccin-latte bg.base should be light, got rgb({},{},{})",
+        latte_bg.r,
+        latte_bg.g,
+        latte_bg.b
+    );
+
+    set_current_theme("runie");
+}
