@@ -3,7 +3,8 @@
 use std::sync::Arc;
 
 use crate::model::state::AppState;
-use crate::model::{build_model_selector_items, model_catalog, ModelSelectorItem};
+use crate::model::{build_model_selector_items, ModelSelectorItem};
+use crate::model_catalog::configured_models_catalog;
 use crate::snapshot::{
     compute_current_top_element, compute_hovered_element, compute_mouse_target, Snapshot,
 };
@@ -125,8 +126,10 @@ impl AppState {
         };
         if Some(&filter) != self.view.cached_model_filter.as_ref() {
             self.view.cached_model_filter = Some(filter.clone());
+            let configured = crate::login_config::list_configured_providers();
+            let models = configured_models_catalog(&configured);
             self.view.cached_model_items = build_model_selector_items(
-                &model_catalog(),
+                &models,
                 &self.config.recent_models,
                 &filter,
                 &self.config.current_provider,

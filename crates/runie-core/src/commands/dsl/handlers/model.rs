@@ -42,7 +42,7 @@ pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
     if rest.is_empty() {
         return if crate::login_config::list_configured_providers().is_empty() {
             CommandResult::Message(
-                "No connected providers. Use /login to add a provider first.".into(),
+                "No connected providers. Use /provider to add a provider first.".into(),
             )
         } else {
             CommandResult::OpenDialog(DialogType::ModelSelector)
@@ -65,7 +65,7 @@ pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
 fn switch_to_model(state: &mut AppState, provider: &str, model: &str) -> CommandResult {
     if !is_model_configured(provider, model) {
         return CommandResult::Warning(format!(
-            "Model {}/{} is not available. Connect the provider and choose models with /login.",
+            "Model {}/{} is not available. Connect the provider and choose models with /provider.",
             provider, model
         ));
     }
@@ -74,27 +74,12 @@ fn switch_to_model(state: &mut AppState, provider: &str, model: &str) -> Command
 }
 
 fn is_model_configured(provider: &str, model: &str) -> bool {
-    // Saved providers from config.toml.
-    let configured = crate::login_config::list_configured_providers()
+    // Only providers/models explicitly chosen in config.toml are usable.
+    // This keeps `/model` and `/provider` aligned: the allowed set is
+    // authored through `/provider`, and `/model` selects from that set.
+    crate::login_config::list_configured_providers()
         .iter()
-        .any(|(p, _, models)| p == provider && models.contains(&model.to_string()));
-    if configured {
-        return true;
-    }
-
-    // A known provider with its env var set can also run the requested model.
-    if let Some(meta) = crate::provider_registry::find_provider(provider) {
-        if !meta.env_var.is_empty()
-            && std::env::var(meta.env_var).is_ok_and(|v| !v.is_empty())
-            && crate::model_catalog::model_catalog()
-                .iter()
-                .any(|m| m.provider == provider && m.name == model)
-        {
-            return true;
-        }
-    }
-
-    false
+        .any(|(p, _, models)| p == provider && models.contains(&model.to_string()))
 }
 
 fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
@@ -138,7 +123,7 @@ fn open_thinking_panel(state: &mut AppState) -> CommandResult {
 fn handle_scoped_models(_state: &mut AppState, _: &str) -> CommandResult {
     if crate::login_config::list_configured_providers().is_empty() {
         return CommandResult::Message(
-            "No connected providers. Use /login to add a provider first.".into(),
+            "No connected providers. Use /provider to add a provider first.".into(),
         );
     }
     CommandResult::OpenDialog(DialogType::ScopedModels)

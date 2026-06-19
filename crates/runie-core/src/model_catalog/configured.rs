@@ -8,27 +8,23 @@ use super::{model_catalog, ModelInfo};
 /// do not are represented as synthetic entries. This guarantees the `/model`
 /// selector shows every configured model, even if the provider returned a
 /// model name that is not yet in the bundled registry.
+///
+/// A provider configured without an explicit model list contributes no models
+/// to the selector; the user must choose models via `/provider` before they
+/// appear in `/model`.
 pub fn configured_models_catalog(
     configured: &[(String, String, Vec<String>)],
 ) -> Vec<ModelInfo> {
     let catalog = model_catalog();
     let mut models = Vec::new();
     for (provider, _base_url, chosen) in configured {
-        let names: Vec<String> = if chosen.is_empty() {
-            // When a provider is configured without an explicit model list,
-            // fall back to the static catalog so the /model selector is usable.
-            catalog
-                .iter()
-                .filter(|m| m.provider == *provider)
-                .map(|m| m.name.clone())
-                .collect()
-        } else {
-            chosen.clone()
-        };
-        for name in names {
+        if chosen.is_empty() {
+            continue;
+        }
+        for name in chosen {
             if let Some(info) = catalog
                 .iter()
-                .find(|m| m.provider == *provider && m.name == name)
+                .find(|m| m.provider == *provider && m.name == *name)
             {
                 models.push(info.clone());
             } else {
@@ -77,16 +73,13 @@ mod tests {
     }
 
     #[test]
-    fn falls_back_to_static_catalog_when_no_models_configured() {
+    fn excludes_provider_when_no_models_configured() {
         let configured = vec![("minimax".into(), "http://test".into(), vec![])];
         let models = configured_models_catalog(&configured);
         assert!(
-            models.iter().any(|m| m.full() == "minimax/MiniMax-M3"),
-            "should include MiniMax-M3 from static catalog"
-        );
-        assert!(
-            models.iter().any(|m| m.full() == "minimax/MiniMax-M2.7"),
-            "should include MiniMax-M2.7 from static catalog"
+            models.is_empty(),
+            "provider without chosen models should contribute no models, got {:?}",
+            models
         );
     }
 }
