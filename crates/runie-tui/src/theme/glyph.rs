@@ -22,7 +22,7 @@ pub fn code_header_label(prefix: &str, lang: &str) -> String {
 }
 
 pub fn thinking_line(elapsed_secs: f64) -> String {
-    format!("Thinking... {:.1}s", elapsed_secs)
+    format!("{} {} {:.1}s", GLYPH_AGENT, GLYPH_THINKING, elapsed_secs)
 }
 
 pub fn tool_running_line(name: &str, elapsed_secs: f64) -> String {

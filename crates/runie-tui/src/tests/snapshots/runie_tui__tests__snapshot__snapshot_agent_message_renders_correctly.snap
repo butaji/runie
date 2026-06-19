@@ -1,6 +1,5 @@
 ---
 source: crates/runie-tui/src/tests/snapshot.rs
-assertion_line: 47
 expression: output
 ---
- Hello from the agent.
+ → Hello from the agent.          19:00

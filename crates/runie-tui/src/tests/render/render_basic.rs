@@ -17,13 +17,13 @@ fn test_view_renders_user_message_without_manual_ensure_fresh() {
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(
-        content.contains("Hi"),
-        "Chat must render user content. Got: {}",
+        content.contains("❯ Hi"),
+        "Chat must render '❯ Hi'. Got: {}",
         content
     );
     assert!(
-        !content.contains("❯ Hi"),
-        "User feed message should not repeat input prefix. Got: {}",
+        content.contains("Hi"),
+        "Chat must render content. Got: {}",
         content
     );
 }
@@ -50,13 +50,8 @@ fn test_view_renders_agent_message_without_manual_ensure_fresh() {
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(
-        content.contains("Hello"),
-        "Must render agent content. Got: {}",
-        content
-    );
-    assert!(
-        !content.contains("→ Hello"),
-        "Agent feed message should not have arrow prefix. Got: {}",
+        content.contains("→ Hello"),
+        "Must render '→ Hello'. Got: {}",
         content
     );
 }
@@ -89,16 +84,8 @@ fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
 
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(content.contains("A"), "Must show user content");
-    assert!(content.contains("Response 1"), "Must show agent content");
-    assert!(
-        !content.contains("❯ A"),
-        "User feed message should not repeat input prefix"
-    );
-    assert!(
-        !content.contains("→ Response 1"),
-        "Agent feed message should not have arrow prefix"
-    );
+    assert!(content.contains("❯ A"), "Must show user prefix");
+    assert!(content.contains("→ Response 1"), "Must show agent prefix");
 }
 
 #[test]
@@ -111,14 +98,7 @@ fn test_render_user_message() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(
-        content.contains("H"),
-        "User feed message must contain content"
-    );
-    assert!(
-        !content.contains("❯ H"),
-        "User feed message should not repeat input prefix"
-    );
+    assert!(content.contains("❯ H"));
 }
 
 #[test]
@@ -140,19 +120,15 @@ fn test_render_agent_response() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(content.contains("Hello"), "Agent feed message must contain content");
-    assert!(
-        !content.contains("→ Hello"),
-        "Agent feed message should not have arrow prefix"
-    );
+    assert!(content.contains("→ Hello"));
 }
 
 #[test]
-fn test_user_message_is_right_aligned_bubble() {
+fn test_user_message_is_left_aligned_with_chevron() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     let mut state = AppState::default();
-    state.input.input = "right aligned".to_string();
+    state.input.input = "left aligned".to_string();
     state.update(InputEvent::Submit);
     terminal.draw(|f| view(f, &mut state)).unwrap();
 
@@ -160,8 +136,8 @@ fn test_user_message_is_right_aligned_bubble() {
     let mut found_x: Option<u16> = None;
     for y in 0..buf.area().height {
         for x in 0..buf.area().width {
-            if buf[(x, y)].symbol() == "r" {
-                // First char of "right aligned".
+            if buf[(x, y)].symbol() == "l" {
+                // First char of "left aligned".
                 found_x = Some(x);
                 break;
             }
@@ -172,9 +148,15 @@ fn test_user_message_is_right_aligned_bubble() {
     }
     let x = found_x.expect("user content must be rendered");
     assert!(
-        x > 30,
-        "User message should be right of center in a Grok-style bubble, got x={}",
+        x < 10,
+        "User message should be left-aligned with chevron prefix, got x={}",
         x
+    );
+
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(
+        content.contains("❯ left aligned"),
+        "User message should render with chevron prefix"
     );
 }
 
@@ -224,13 +206,8 @@ fn test_render_thinking_indicator() {
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(
-        content.contains("Thinking..."),
-        "Thinking should show Grok-style text. Got: {}",
-        content
-    );
-    assert!(
-        !content.contains("◐"),
-        "Thinking should not show old spinner glyph. Got: {}",
+        content.contains("◐"),
+        "Thinking should show spinner ◐. Got: {}",
         content
     );
 }

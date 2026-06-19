@@ -38,7 +38,7 @@ fn user_post_in_feed_has_background_color() {
     state.ensure_fresh();
 
     let buf = draw(&mut state, 60, 12);
-    let bg = crate::theme::color_user_bg();
+    let bg = accent_bg();
     assert_ne!(
         bg,
         ratatui::style::Color::Reset,
@@ -59,7 +59,7 @@ fn user_post_in_feed_has_background_color() {
     }
     assert!(
         found,
-        "user message content should render on the user bubble background"
+        "user message content should render on the selected-post accent background"
     );
 }
 

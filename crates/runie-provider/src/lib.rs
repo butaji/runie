@@ -178,7 +178,11 @@ fn build_dyn_provider(
         return Err(ProviderError::MissingApiKey(meta.env_var.to_string()));
     }
 
-    Ok(build_openai_provider(key, model, api_key, base_url))
+    Ok(DynProvider {
+        inner: build_openai_provider(api_key, model, &base_url),
+        key: key.to_string(),
+        model: model.to_string(),
+    })
 }
 
 fn build_mock_provider(key: &str, model: &str) -> DynProvider {
@@ -194,23 +198,14 @@ fn build_mock_provider(key: &str, model: &str) -> DynProvider {
     }
 }
 
-fn build_openai_provider(
-    key: &str,
-    model: &str,
-    api_key: String,
-    base_url: String,
-) -> DynProvider {
-    let p = OpenAiProvider::new(api_key, model).with_base_url(&base_url);
+fn build_openai_provider(api_key: String, model: &str, base_url: &str) -> Box<dyn Provider> {
+    let p = OpenAiProvider::new(api_key, model).with_base_url(base_url);
     let p = if let Some(meta) = provider_registry::find_model(model) {
         p.with_model_meta(meta)
     } else {
         p
     };
-    DynProvider {
-        inner: Box::new(retry::RetryProvider::new(p)),
-        key: key.to_string(),
-        model: model.to_string(),
-    }
+    Box::new(retry::RetryProvider::new(p))
 }
 
 // ---------------------------------------------------------------------------

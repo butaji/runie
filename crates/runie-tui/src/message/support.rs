@@ -3,12 +3,13 @@
 use ratatui::text::{Line, Span};
 
 use crate::theme::{
-    style_agent, style_thinking, style_thought, style_tool_header, style_tool_output,
-    style_tool_running, style_tool_summary, style_turn_complete,
+    style_agent, style_thinking, style_thought, style_timestamp, style_tool_header,
+    style_tool_output, style_tool_running, style_tool_summary, style_turn_complete, GLYPH_AGENT,
 };
+use runie_core::display_width;
 use runie_core::tool::{format_bytes, format_duration, format_tool_label};
 
-use super::{add_lr_margins, add_lr_margins_to_lines, word_wrap};
+use super::{add_lr_margins, add_lr_margins_to_lines, word_wrap, GLYPH_INDENT};
 
 pub fn render_thought_marker(content: &str, content_width: u16) -> Vec<Line<'static>> {
     let inner_width = content_width.saturating_sub(2);
@@ -161,7 +162,9 @@ fn render_context_tool(elem: &runie_core::Element) -> Vec<Line<'static>> {
 
 pub fn render_blockquote_lines(text: &str) -> Vec<Line<'static>> {
     text.lines()
-        .map(|line| Line::from(format!("│ {}", line)).style(crate::theme::style_agent()))
+        .map(|line| {
+            Line::from(format!("{}│ {}", GLYPH_INDENT, line)).style(crate::theme::style_agent())
+        })
         .collect()
 }
 
@@ -169,19 +172,24 @@ pub fn render_list_item(
     item: &str,
     ordered: bool,
     idx: usize,
-    _is_first: bool,
-    _content_width: u16,
-    _ts_str: &str,
+    is_first: bool,
+    content_width: u16,
+    ts_str: &str,
 ) -> Line<'static> {
     let bullet = if ordered {
         format!("{}.", idx + 1)
     } else {
         "•".to_string()
     };
-    let first_line_prefix = format!("{} ", bullet);
-    let rest_prefix = "   ".to_string();
+    let first_line_prefix = if is_first {
+        format!("{} {}", GLYPH_AGENT, bullet)
+    } else {
+        format!("{} {}", GLYPH_INDENT, bullet)
+    };
+    let rest_prefix = format!("{}   ", GLYPH_INDENT);
     let lines: Vec<&str> = item.lines().collect();
     let mut result_spans: Vec<Span<'static>> = Vec::new();
+    let mut text_len = 0u16;
 
     for (j, line) in lines.iter().enumerate() {
         let prefix = if j == 0 {
@@ -194,7 +202,29 @@ pub fn render_list_item(
         }
         result_spans.push(Span::styled(prefix.clone(), style_agent()));
         result_spans.push(Span::styled(line.to_string(), style_agent()));
+        text_len = display_width::width(prefix) + display_width::width(line);
     }
 
+    push_list_timestamp(&mut result_spans, is_first, content_width, ts_str, text_len);
     Line::from(result_spans).style(style_agent())
+}
+
+fn push_list_timestamp(
+    spans: &mut Vec<Span<'static>>,
+    is_first: bool,
+    content_width: u16,
+    ts_str: &str,
+    text_len: u16,
+) {
+    if !is_first || content_width == 0 {
+        return;
+    }
+    let ts_width = ts_str.len() as u16 + 1;
+    let padding = content_width
+        .saturating_sub(text_len)
+        .saturating_sub(ts_width);
+    if padding > 0 {
+        spans.push(Span::raw(" ".repeat(padding as usize)));
+    }
+    spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
 }
