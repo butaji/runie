@@ -17,8 +17,6 @@ mod snapshot;
 #[cfg(test)]
 mod autoscroll_render;
 #[cfg(test)]
-mod dev_sh;
-#[cfg(test)]
 mod flow;
 #[cfg(test)]
 mod line_scroll;

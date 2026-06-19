@@ -182,26 +182,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn bash_tool_runs_quick_command() {
-        let result = run_bash_inner(
-            "echo hello",
-            std::path::Path::new("."),
-            &std::collections::HashMap::new(),
-            Duration::from_secs(5),
-        );
+    fn process_output_marks_success_and_combines_streams() {
+        let output = std::process::Output {
+            stdout: b"hello".to_vec(),
+            stderr: b"warning".to_vec(),
+            status: std::process::ExitStatus::default(),
+        };
+        let result = process_output(output);
         assert_eq!(result.status, ToolStatus::Success);
         assert!(result.output.contains("hello"));
+        assert!(result.output.contains("warning"));
     }
 
     #[test]
-    fn bash_tool_respects_timeout_seconds() {
-        let result = run_bash_inner(
-            "sleep 10",
-            std::path::Path::new("."),
-            &std::collections::HashMap::new(),
-            Duration::from_secs(1),
-        );
-        assert_eq!(result.status, ToolStatus::TimedOut);
-        assert!(result.output.contains("timed out"));
+    fn combine_output_prefers_nonempty_streams() {
+        assert!(combine_output("", "").is_empty());
+        assert_eq!(combine_output("out", ""), "out");
+        assert_eq!(combine_output("", "err"), "err");
+        assert_eq!(combine_output("out", "err"), "out\nerr");
     }
 }

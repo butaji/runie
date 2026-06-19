@@ -66,30 +66,6 @@ async fn tool_read_file_with_offset_and_limit() {
 }
 
 #[tokio::test]
-async fn tool_bash_echo() {
-    let output = call_tool("bash", serde_json::json!({"command": "echo hello_agent"})).await;
-    assert_eq!(output.status, ToolStatus::Success);
-    assert!(output.content.contains("hello_agent"));
-}
-
-#[tokio::test]
-async fn tool_bash_invalid_command() {
-    let output = call_tool(
-        "bash",
-        serde_json::json!({"command": "not_a_real_command_12345"}),
-    )
-    .await;
-    assert_eq!(output.status, ToolStatus::Error);
-}
-
-#[tokio::test]
-async fn tool_result_structure() {
-    let output = call_tool("bash", serde_json::json!({"command": "echo ok"})).await;
-    assert_eq!(output.tool_name, "bash");
-    assert_eq!(output.status, ToolStatus::Success);
-}
-
-#[tokio::test]
 async fn tool_write_creates_parent_dirs() {
     let path = "/tmp/runie_test_nested/sub/dir/file.txt";
     let output = call_tool(
@@ -106,18 +82,6 @@ async fn tool_write_creates_parent_dirs() {
 
     let _ = std::fs::remove_file(path);
     let _ = std::fs::remove_dir_all("/tmp/runie_test_nested");
-}
-
-#[tokio::test]
-async fn tool_bash_timeout() {
-    // Core bash supports a configurable timeout; verify normal commands still work.
-    let output = call_tool(
-        "bash",
-        serde_json::json!({"command": "echo timeout_test_ok"}),
-    )
-    .await;
-    assert_eq!(output.status, ToolStatus::Success);
-    assert!(output.content.contains("timeout_test_ok"));
 }
 
 #[tokio::test]

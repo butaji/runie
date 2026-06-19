@@ -1,15 +1,19 @@
-//! Replay captured MiniMax streams through the full agent turn.
+//! Replay captured MiniMax streams through the full agent turn with mocked IO.
 
 use anyhow::Result;
+use async_trait::async_trait;
 use futures::Stream;
-use runie_agent::{run_agent_turn, AgentCommand, PermissionGate};
+use runie_agent::{run_agent_turn_with_skills, AgentCommand, PermissionGate};
 use runie_core::event::AgentEvent;
+use runie_core::harness_skills::{
+    HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult,
+};
 use runie_core::llm_event::LLMEvent;
 use runie_core::message::ChatMessage;
 use runie_core::permissions::{AutoAllowSink, PermissionManager};
 use runie_provider::openai::stream::replay_sse;
-use runie_core::provider::Provider;
 use runie_provider::DynProvider;
+use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -55,7 +59,7 @@ impl ReplayProvider {
     }
 }
 
-impl Provider for ReplayProvider {
+impl runie_core::provider::Provider for ReplayProvider {
     fn generate(
         &self,
         _messages: Vec<ChatMessage>,
@@ -75,6 +79,49 @@ fn dyn_replay(fixtures: &[&str]) -> DynProvider {
     DynProvider::from_provider(Box::new(provider), "minimax", "MiniMax-M3")
 }
 
+struct MockToolSkill {
+    outputs: HashMap<String, String>,
+}
+
+impl MockToolSkill {
+    fn new(outputs: HashMap<String, String>) -> Self {
+        Self { outputs }
+    }
+}
+
+#[async_trait]
+impl HarnessSkill for MockToolSkill {
+    fn name(&self) -> &str {
+        "mock_tools"
+    }
+
+    fn on_tool_call(&self, ctx: &ToolCallCtx) -> ToolCallResult {
+        if ctx.phase != ToolCallPhase::Before {
+            return ToolCallResult::Continue;
+        }
+        self.outputs
+            .get(&ctx.tool_name)
+            .cloned()
+            .map(ToolCallResult::SkipWithOutput)
+            .unwrap_or(ToolCallResult::Continue)
+    }
+}
+
+fn mock_skills() -> SkillRegistry {
+    let mut registry = SkillRegistry::new();
+    let mut outputs = HashMap::new();
+    outputs.insert(
+        "list_dir".to_string(),
+        "Cargo.toml (file)\nREADME.md (file)\n".to_string(),
+    );
+    outputs.insert(
+        "read_file".to_string(),
+        "# Runie\n\nA terminal AI assistant.".to_string(),
+    );
+    registry.register(MockToolSkill::new(outputs));
+    registry
+}
+
 fn capture_events() -> (Arc<Mutex<Vec<AgentEvent>>>, runie_agent::stream_response::EmitFn) {
     let events: Arc<Mutex<Vec<AgentEvent>>> = Arc::new(Mutex::new(Vec::new()));
     let captured = events.clone();
@@ -88,9 +135,16 @@ fn capture_events() -> (Arc<Mutex<Vec<AgentEvent>>>, runie_agent::stream_respons
 async fn m3_list_files_turn_executes_list_dir() {
     let provider = dyn_replay(&["m3_list_files_call.sse", "m3_list_files_final.sse"]);
     let (events, emit) = capture_events();
-    run_agent_turn(&provider, &command("list files in the current directory"), emit, 5, allow_all_gate())
-        .await
-        .unwrap();
+    run_agent_turn_with_skills(
+        &provider,
+        &command("list files in the current directory"),
+        emit,
+        5,
+        Some(&mock_skills()),
+        allow_all_gate(),
+    )
+    .await
+    .unwrap();
 
     let events = events.lock().unwrap();
     assert!(events.iter().any(|e| matches!(
@@ -104,9 +158,16 @@ async fn m3_list_files_turn_executes_list_dir() {
 async fn m3_read_file_turn_executes_read_file() {
     let provider = dyn_replay(&["m3_read_file_call.sse", "m3_read_file_final.sse"]);
     let (events, emit) = capture_events();
-    run_agent_turn(&provider, &command("read /tmp/runie_minimax_notes_99892.txt"), emit, 5, allow_all_gate())
-        .await
-        .unwrap();
+    run_agent_turn_with_skills(
+        &provider,
+        &command("read README.md"),
+        emit,
+        5,
+        Some(&mock_skills()),
+        allow_all_gate(),
+    )
+    .await
+    .unwrap();
 
     let events = events.lock().unwrap();
     assert!(events.iter().any(|e| matches!(
@@ -123,9 +184,16 @@ async fn m3_multi_tool_turn_executes_list_dir_and_read_file() {
         "m3_multi_tool_readme.sse",
     ]);
     let (events, emit) = capture_events();
-    run_agent_turn(&provider, &command("list files and read README.md"), emit, 5, allow_all_gate())
-        .await
-        .unwrap();
+    run_agent_turn_with_skills(
+        &provider,
+        &command("list files and read README.md"),
+        emit,
+        5,
+        Some(&mock_skills()),
+        allow_all_gate(),
+    )
+    .await
+    .unwrap();
 
     let events = events.lock().unwrap();
     let tool_names: Vec<&str> = events
@@ -144,9 +212,16 @@ async fn m3_multi_tool_turn_executes_list_dir_and_read_file() {
 async fn m27_multi_tool_turn_executes_read_file() {
     let provider = dyn_replay(&["m27_multi_tool_readme.sse"]);
     let (events, emit) = capture_events();
-    run_agent_turn(&provider, &command("read README.md"), emit, 5, allow_all_gate())
-        .await
-        .unwrap();
+    run_agent_turn_with_skills(
+        &provider,
+        &command("read README.md"),
+        emit,
+        5,
+        Some(&mock_skills()),
+        allow_all_gate(),
+    )
+    .await
+    .unwrap();
 
     let events = events.lock().unwrap();
     assert!(events.iter().any(|e| matches!(

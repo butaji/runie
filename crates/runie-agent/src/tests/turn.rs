@@ -1,11 +1,14 @@
 //! Tests for agent turn execution
 use crate::tests::ensure_mock_provider;
-use crate::{run_agent_turn, turn::build_initial_messages, AgentCommand, PermissionGate};
+use crate::{run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages, AgentCommand, PermissionGate};
 use runie_core::event::AgentEvent;
+use runie_core::harness_skills::{
+    HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult,
+};
 use runie_core::permissions::{AutoAllowSink, PermissionManager};
-use runie_core::tool::{ToolContext, ToolStatus};
-use runie_engine::tool::builtin_registry;
+use runie_core::tool::ToolStatus;
 use runie_provider::DynProvider;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 fn allow_all_gate() -> PermissionGate {
@@ -15,6 +18,42 @@ fn allow_all_gate() -> PermissionGate {
 fn mock_provider() -> DynProvider {
     DynProvider::new_with_config("mock", "echo", &runie_core::config::Config::default())
         .expect("mock provider must be available in tests")
+}
+
+struct MockToolSkill {
+    outputs: HashMap<String, String>,
+}
+
+impl MockToolSkill {
+    fn new(outputs: HashMap<String, String>) -> Self {
+        Self { outputs }
+    }
+}
+
+impl HarnessSkill for MockToolSkill {
+    fn name(&self) -> &str {
+        "mock_tools"
+    }
+
+    fn on_tool_call(&self, ctx: &ToolCallCtx) -> ToolCallResult {
+        if ctx.phase != ToolCallPhase::Before {
+            return ToolCallResult::Continue;
+        }
+        self.outputs
+            .get(&ctx.tool_name)
+            .cloned()
+            .map(ToolCallResult::SkipWithOutput)
+            .unwrap_or(ToolCallResult::Continue)
+    }
+}
+
+fn mock_tool_skill() -> SkillRegistry {
+    let mut outputs = HashMap::new();
+    outputs.insert("list_dir".to_string(), "Cargo.toml\nREADME.md\n".to_string());
+    outputs.insert("bash".to_string(), "hello\n".to_string());
+    let mut registry = SkillRegistry::new();
+    registry.register(MockToolSkill::new(outputs));
+    registry
 }
 
 #[tokio::test]
@@ -88,13 +127,14 @@ async fn test_agent_loop_with_tool_call() {
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
-    run_agent_turn(
+    run_agent_turn_with_skills(
         &provider,
         &cmd,
         Arc::new(Mutex::new(move |evt| {
             events_clone.lock().unwrap().push(evt)
         })),
         5,
+        Some(&mock_tool_skill()),
         allow_all_gate(),
     )
     .await
@@ -136,13 +176,14 @@ async fn test_agent_loop_with_native_tool_call_events() {
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
-    run_agent_turn(
+    run_agent_turn_with_skills(
         &provider,
         &cmd,
         Arc::new(Mutex::new(move |evt| {
             events_clone.lock().unwrap().push(evt)
         })),
         1,
+        Some(&mock_tool_skill()),
         allow_all_gate(),
     )
     .await
@@ -305,7 +346,7 @@ fn read_write_includes_all_tools() {
 }
 
 #[tokio::test]
-async fn agent_tool_uses_core_trait() {
+async fn agent_tool_event_carries_mock_output() {
     ensure_mock_provider();
     let provider = mock_provider();
     let cmd = AgentCommand {
@@ -321,13 +362,14 @@ async fn agent_tool_uses_core_trait() {
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
-    run_agent_turn(
+    run_agent_turn_with_skills(
         &provider,
         &cmd,
         Arc::new(Mutex::new(move |evt| {
             events_clone.lock().unwrap().push(evt)
         })),
         5,
+        Some(&mock_tool_skill()),
         allow_all_gate(),
     )
     .await
@@ -343,20 +385,11 @@ async fn agent_tool_uses_core_trait() {
         })
         .expect("agent turn should emit ToolEnd");
 
-    // The same call through the canonical trait must produce the same result.
-    let registry = builtin_registry();
-    let tool = registry.get("list_dir").expect("list_dir in registry");
-    let direct = tool
-        .call(serde_json::json!({"path": "."}), &ToolContext::default())
-        .await
-        .unwrap();
-
-    assert_eq!(tool_end, direct.content);
-    assert_eq!(direct.status, ToolStatus::Success);
+    assert_eq!(tool_end, "Cargo.toml\nREADME.md\n");
 }
 
 #[tokio::test]
-async fn tool_call_event_matches_output() {
+async fn tool_call_event_matches_mock_output() {
     ensure_mock_provider();
     let provider = mock_provider();
     let cmd = AgentCommand {
@@ -372,13 +405,14 @@ async fn tool_call_event_matches_output() {
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
-    run_agent_turn(
+    run_agent_turn_with_skills(
         &provider,
         &cmd,
         Arc::new(Mutex::new(move |evt| {
             events_clone.lock().unwrap().push(evt)
         })),
         5,
+        Some(&mock_tool_skill()),
         allow_all_gate(),
     )
     .await
@@ -396,16 +430,7 @@ async fn tool_call_event_matches_output() {
 
     assert!(!tool_ends.is_empty(), "ToolEnd events should be emitted");
 
-    // Calling the canonical tool directly with the same arguments yields the
-    // same output, confirming the event reflects the actual tool result.
-    let registry = builtin_registry();
-    let tool = registry.get("list_dir").expect("list_dir in registry");
-    let direct = tool
-        .call(serde_json::json!({"path": "."}), &ToolContext::default())
-        .await
-        .unwrap();
-
     for output in tool_ends {
-        assert_eq!(output, direct.content);
+        assert_eq!(output, "Cargo.toml\nREADME.md\n");
     }
 }

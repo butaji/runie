@@ -18,7 +18,7 @@ pub use headless::{run_headless_turn, HeadlessOptions, HeadlessResult};
 pub use runie_core::tool_parser::{has_tool_calls, parse_tool_calls, ParsedToolCall};
 pub use permission_gate::PermissionGate;
 pub use runie_core::tool::ToolOutput;
-pub use turn::run_agent_turn;
+pub use turn::{run_agent_turn, run_agent_turn_with_skills};
 
 #[derive(Debug, Clone)]
 pub struct AgentCommand {
