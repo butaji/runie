@@ -17,13 +17,13 @@ fn test_view_renders_user_message_without_manual_ensure_fresh() {
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(
-        content.contains("❯ Hi"),
-        "Chat must render '❯ Hi'. Got: {}",
+        content.contains("Hi"),
+        "Chat must render user content. Got: {}",
         content
     );
     assert!(
-        content.contains("Hi"),
-        "Chat must render content. Got: {}",
+        !content.contains("❯ Hi"),
+        "User feed message should not repeat input prefix. Got: {}",
         content
     );
 }
@@ -50,8 +50,13 @@ fn test_view_renders_agent_message_without_manual_ensure_fresh() {
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(
-        content.contains("→ Hello"),
-        "Must render '→ Hello'. Got: {}",
+        content.contains("Hello"),
+        "Must render agent content. Got: {}",
+        content
+    );
+    assert!(
+        !content.contains("→ Hello"),
+        "Agent feed message should not have arrow prefix. Got: {}",
         content
     );
 }
@@ -84,8 +89,16 @@ fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
 
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(content.contains("❯ A"), "Must show user prefix");
-    assert!(content.contains("→ Response 1"), "Must show agent prefix");
+    assert!(content.contains("A"), "Must show user content");
+    assert!(content.contains("Response 1"), "Must show agent content");
+    assert!(
+        !content.contains("❯ A"),
+        "User feed message should not repeat input prefix"
+    );
+    assert!(
+        !content.contains("→ Response 1"),
+        "Agent feed message should not have arrow prefix"
+    );
 }
 
 #[test]
@@ -98,7 +111,14 @@ fn test_render_user_message() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(content.contains("❯ H"));
+    assert!(
+        content.contains("H"),
+        "User feed message must contain content"
+    );
+    assert!(
+        !content.contains("❯ H"),
+        "User feed message should not repeat input prefix"
+    );
 }
 
 #[test]
@@ -120,7 +140,11 @@ fn test_render_agent_response() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(content.contains("→ Hello"));
+    assert!(content.contains("Hello"), "Agent feed message must contain content");
+    assert!(
+        !content.contains("→ Hello"),
+        "Agent feed message should not have arrow prefix"
+    );
 }
 
 #[test]
@@ -136,8 +160,13 @@ fn test_render_thinking_indicator() {
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(
-        content.contains("◐"),
-        "Thinking should show spinner ◐. Got: {}",
+        content.contains("Thinking..."),
+        "Thinking should show Grok-style text. Got: {}",
+        content
+    );
+    assert!(
+        !content.contains("◐"),
+        "Thinking should not show old spinner glyph. Got: {}",
         content
     );
 }

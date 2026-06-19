@@ -198,12 +198,13 @@ fn scrolled_up_does_not_auto_scroll_during_streaming() {
 #[test]
 fn scroll_preserved_until_user_scrolls_down_during_streaming() {
     let mut state = AppState::default();
-    for i in 0..10 {
+    state.view.last_visible_height = 5;
+    for i in 0..15 {
         state.input.input = format!("msg{}", i);
         state.update(InputEvent::Submit);
     }
     state.ensure_fresh();
-    state.view.scroll = 5;
+    state.view.scroll = 10;
     state.agent.streaming = true;
 
     state.update(AgentEvent::Response {
@@ -215,12 +216,14 @@ fn scroll_preserved_until_user_scrolls_down_during_streaming() {
 
     state.update(AgentEvent::Response {
         id: "req.0".into(),
-        content: " second chunk that is long enough to wrap to additional lines".into(),
+        content: " second chunk that is long enough to wrap to additional lines and push the viewport further".into(),
     });
     state.ensure_fresh();
 
     assert!(
         state.view.scroll > first_scroll,
-        "Scroll should keep increasing while user stays scrolled up"
+        "Scroll should keep increasing while user stays scrolled up (first={}, second={})",
+        first_scroll,
+        state.view.scroll
     );
 }

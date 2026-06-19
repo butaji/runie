@@ -166,19 +166,8 @@ fn build_dyn_provider(
     model: &str,
     config: Option<&runie_core::config::Config>,
 ) -> Result<DynProvider, ProviderError> {
-    // Mock is always available in dev mode (RUNIE_MOCK=1 or RUNIE_MOCK_DELAY=1).
     if key == "mock" && provider_registry::is_mock_enabled() {
-        let provider: Box<dyn Provider> =
-            if std::env::var_os("RUNIE_MOCK_DELAY").is_some() {
-                Box::new(MockProvider::with_delay(300, 800))
-            } else {
-                Box::new(MockProvider::default())
-            };
-        return Ok(DynProvider {
-            inner: provider,
-            key: key.to_string(),
-            model: model.to_string(),
-        });
+        return Ok(build_mock_provider(key, model));
     }
 
     let meta = provider_registry::find_provider(key)
@@ -189,22 +178,39 @@ fn build_dyn_provider(
         return Err(ProviderError::MissingApiKey(meta.env_var.to_string()));
     }
 
-    // All registered providers use OpenAI-compatible API.
-    let provider: Box<dyn Provider> = {
-        let p = OpenAiProvider::new(api_key, model).with_base_url(&base_url);
-        let p = if let Some(meta) = provider_registry::find_model(model) {
-            p.with_model_meta(meta)
-        } else {
-            p
-        };
-        Box::new(retry::RetryProvider::new(p))
-    };
+    Ok(build_openai_provider(key, model, api_key, base_url))
+}
 
-    Ok(DynProvider {
+fn build_mock_provider(key: &str, model: &str) -> DynProvider {
+    let provider: Box<dyn Provider> = if std::env::var_os("RUNIE_MOCK_DELAY").is_some() {
+        Box::new(MockProvider::with_delay(300, 800))
+    } else {
+        Box::new(MockProvider::default())
+    };
+    DynProvider {
         inner: provider,
         key: key.to_string(),
         model: model.to_string(),
-    })
+    }
+}
+
+fn build_openai_provider(
+    key: &str,
+    model: &str,
+    api_key: String,
+    base_url: String,
+) -> DynProvider {
+    let p = OpenAiProvider::new(api_key, model).with_base_url(&base_url);
+    let p = if let Some(meta) = provider_registry::find_model(model) {
+        p.with_model_meta(meta)
+    } else {
+        p
+    };
+    DynProvider {
+        inner: Box::new(retry::RetryProvider::new(p)),
+        key: key.to_string(),
+        model: model.to_string(),
+    }
 }
 
 // ---------------------------------------------------------------------------

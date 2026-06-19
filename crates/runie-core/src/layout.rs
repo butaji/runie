@@ -4,17 +4,21 @@
 //! use them for scroll math while the TUI uses the same logic to produce
 //! actual rendered lines.
 
-use crate::display_width;
 use crate::markdown::{extract_code_blocks, CodeBlock};
 use crate::ui::elements::Element;
 use textwrap::wrap;
 
-/// User message prefix glyph (must match `runie_tui::theme::GLYPH_USER`).
+/// Input prompt glyph. Feed messages no longer render a prefix, but the
+/// input bar still uses this chevron.
 pub const GLYPH_USER: &str = "❯ ";
-/// Agent message prefix glyph (must match `runie_tui::theme::GLYPH_AGENT`).
+/// Legacy agent prefix glyph. Kept for callers that still reference it; feed
+/// agent messages now render without a prefix.
 pub const GLYPH_AGENT: &str = "→ ";
 /// Indented continuation glyph (must match `runie_tui::theme::GLYPH_INDENT`).
 pub const GLYPH_INDENT: &str = "  ";
+
+/// Horizontal padding inside a user message bubble (two cells on each side).
+const BUBBLE_H_PADDING: u16 = 4;
 
 /// Number of terminal rows an element renders to at the given viewport
 /// width. This uses the same wrapping rules as `runie_tui::ui::messages::to_lines`,
@@ -77,55 +81,33 @@ fn fallback_line_count(element: &Element) -> usize {
     }
 }
 
-fn user_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
+fn user_message_line_count(content: &str, _timestamp: f64, width: u16) -> usize {
     let inner_width = width.saturating_sub(2);
     if inner_width == 0 {
         return content.lines().count().max(1) + 2;
     }
 
-    let prefix_width = glyph_width(GLYPH_USER);
-    let indent_width = glyph_width(GLYPH_INDENT);
-    let ts_str = crate::labels::format_timestamp(timestamp);
-    let ts_width = ts_str.len() as u16 + 1;
-
-    let first_w = inner_width
-        .saturating_sub(prefix_width)
-        .saturating_sub(ts_width);
-    let rest_w = inner_width.saturating_sub(indent_width);
-
+    let text_width = inner_width.saturating_sub(BUBBLE_H_PADDING);
     let explicit_lines: Vec<&str> = content.lines().collect();
     let mut content_lines = 0usize;
-    for (i, line) in explicit_lines.iter().enumerate() {
-        let w = if i == 0 { first_w } else { rest_w };
-        content_lines += word_wrap(line, w, rest_w).len().max(1);
+    for line in &explicit_lines {
+        content_lines += word_wrap(line, text_width, text_width).len().max(1);
     }
 
     // Top and bottom margin lines, plus at least one content line.
     2 + content_lines.max(1)
 }
 
-fn agent_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
+fn agent_message_line_count(content: &str, _timestamp: f64, width: u16) -> usize {
     let inner_width = width.saturating_sub(2);
     if inner_width == 0 {
         return content.lines().count().max(1);
     }
 
-    let prefix_width = glyph_width(GLYPH_AGENT);
-    let indent_width = glyph_width(GLYPH_INDENT);
-    let ts_str = crate::labels::format_timestamp(timestamp);
-    let ts_width = ts_str.len() as u16 + 1;
-
     let mut total = 0usize;
     let mut is_first = true;
     for block in extract_code_blocks(content) {
-        total += markdown_block_line_count(
-            &block,
-            inner_width,
-            prefix_width,
-            indent_width,
-            ts_width,
-            &mut is_first,
-        );
+        total += markdown_block_line_count(&block, inner_width, &mut is_first);
     }
     total.max(1)
 }
@@ -133,20 +115,12 @@ fn agent_message_line_count(content: &str, timestamp: f64, width: u16) -> usize 
 fn markdown_block_line_count(
     block: &CodeBlock,
     inner_width: u16,
-    prefix_width: u16,
-    indent_width: u16,
-    ts_width: u16,
     is_first: &mut bool,
 ) -> usize {
     let lines = match block {
-        CodeBlock::Text { inlines, .. } => text_block_line_count(
-            &inlines_to_plain_text(inlines),
-            inner_width,
-            prefix_width,
-            indent_width,
-            ts_width,
-            *is_first,
-        ),
+        CodeBlock::Text { inlines, .. } => {
+            text_block_line_count(&inlines_to_plain_text(inlines), inner_width, *is_first)
+        }
         CodeBlock::Code { content, .. } => 1 + content.lines().count(),
         CodeBlock::List { items, .. } => items.len(),
         CodeBlock::Blockquote(text) => text.lines().count().max(1),
@@ -162,26 +136,10 @@ fn inlines_to_plain_text(inlines: &[crate::markdown::MdInline]) -> String {
         .collect()
 }
 
-fn text_block_line_count(
-    text: &str,
-    inner_width: u16,
-    prefix_width: u16,
-    indent_width: u16,
-    ts_width: u16,
-    is_first: bool,
-) -> usize {
-    let first_w = if is_first {
-        inner_width
-            .saturating_sub(prefix_width)
-            .saturating_sub(ts_width)
-    } else {
-        inner_width.saturating_sub(indent_width)
-    };
-    let rest_w = inner_width.saturating_sub(indent_width);
+fn text_block_line_count(text: &str, inner_width: u16, _is_first: bool) -> usize {
     let mut lines = 0usize;
-    for (i, line) in text.lines().enumerate() {
-        let w = if i == 0 { first_w } else { rest_w };
-        lines += word_wrap(line, w, rest_w).len().max(1);
+    for line in text.lines() {
+        lines += word_wrap(line, inner_width, inner_width).len().max(1);
     }
     lines
 }
@@ -209,10 +167,6 @@ fn tool_done_line_count(output: &str) -> usize {
     } else {
         1 + output.lines().count()
     }
-}
-
-fn glyph_width(s: &str) -> u16 {
-    display_width::width(s)
 }
 
 /// Word-wrap `text` into lines using display-cell width so wide characters

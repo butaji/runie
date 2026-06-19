@@ -37,9 +37,9 @@ pub fn thinking_with_time(seconds: f64) -> String {
     format!("◐ Thinking... {:.1}s", seconds)
 }
 
-/// tui1-style thought indicator
+/// Grok-style thought indicator: plain text, no diamond glyph.
 pub fn thought_with_time(seconds: f64) -> String {
-    format!("◆ Thought {:.1}s", seconds)
+    format!("Thought {:.1}s", seconds)
 }
 
 /// tui1-style tool running

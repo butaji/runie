@@ -54,9 +54,10 @@ fn snapshot_renders_user_message() {
     state.ensure_fresh();
     let snap = state.snapshot();
     let out = render_snapshot(&snap);
+    assert!(out.contains("Hi"), "Should render user message content in snapshot");
     assert!(
-        out.contains("❯ Hi"),
-        "Should render user message in snapshot"
+        !out.contains("❯ Hi"),
+        "Feed user message should not repeat input prefix"
     );
 }
 
@@ -75,11 +76,8 @@ fn snapshot_is_immutable_after_creation() {
 
     // Snapshot should still show old state
     let out = render_snapshot(&snap);
-    assert!(out.contains("❯ A"), "Snapshot should be immutable");
-    assert!(
-        !out.contains("❯ B"),
-        "Snapshot should not reflect later changes"
-    );
+    assert!(out.contains("A"), "Snapshot should be immutable");
+    assert!(!out.contains("B"), "Snapshot should not reflect later changes");
 }
 
 #[test]
@@ -130,9 +128,10 @@ fn render_actor_does_not_need_mutable_state() {
 
     let buf = terminal.backend().buffer();
     let out: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(out.contains("Hello"), "Render actor should draw agent content from immutable snapshot");
     assert!(
-        out.contains("→ Hello"),
-        "Render actor should draw from immutable snapshot"
+        !out.contains("→ Hello"),
+        "Agent feed message should not have arrow prefix"
     );
 }
 

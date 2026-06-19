@@ -1,6 +1,7 @@
 ---
 source: crates/runie-tui/src/tests/snapshot.rs
+assertion_line: 40
 expression: output
 ---
                                         
- ❯ Hello, world!                  19:00
+                        Hello, world!

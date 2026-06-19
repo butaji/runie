@@ -26,8 +26,13 @@ fn assert_tool_flow_renders(state: &mut AppState) {
     );
     assert!(content.contains("✓"), "Should contain '✓': {}", content);
     assert!(
-        content.contains("→"),
-        "Should contain agent arrow '→': {}",
+        content.contains("Here are the files:"),
+        "Should contain agent response text: {}",
+        content
+    );
+    assert!(
+        !content.contains("→ Here are the files:"),
+        "Agent response should not have arrow prefix: {}",
         content
     );
 }

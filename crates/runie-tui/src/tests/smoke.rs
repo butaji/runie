@@ -39,8 +39,11 @@ fn user_message_renders() {
     state.update(InputEvent::Input('i'));
     state.update(InputEvent::Submit);
     let content = draw_state(&mut state);
-    assert!(content.contains("❯ Hi"), "Should render user prefix");
-    assert!(content.contains("Hi"), "Should render message content");
+    assert!(content.contains("Hi"), "Should render user message content");
+    assert!(
+        !content.contains("❯ Hi"),
+        "Feed user message should not repeat input prefix"
+    );
 }
 
 #[test]
@@ -59,7 +62,11 @@ fn agent_response_renders() {
         content: "Hello".to_string(),
     });
     let content = draw_state(&mut state);
-    assert!(content.contains("→ Hello"), "Should render agent prefix");
+    assert!(content.contains("Hello"), "Should render agent content");
+    assert!(
+        !content.contains("→ Hello"),
+        "Agent feed message should not have arrow prefix"
+    );
 }
 
 #[test]

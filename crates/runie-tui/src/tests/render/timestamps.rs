@@ -18,7 +18,7 @@ fn user_message_has_border_bg_color() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let expected_bg = crate::theme::color_accent_bg();
+    let expected_bg = crate::theme::color_user_bg();
 
     let mut found = false;
     for y in 0..buf.area().height {
@@ -32,7 +32,7 @@ fn user_message_has_border_bg_color() {
 }
 
 #[test]
-fn timestamp_shown_once_per_message_element() {
+fn feed_messages_do_not_show_timestamps() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.session.messages.push(runie_core::ChatMessage {
@@ -57,47 +57,11 @@ fn timestamp_shown_once_per_message_element() {
             line.contains(&ts_str)
         })
         .count();
-    assert_eq!(count, 1);
+    assert_eq!(count, 0, "Grok-style feed hides message timestamps");
 }
 
 #[test]
-fn timestamp_right_aligned_on_first_line() {
-    let _lock = crate::theme::test_lock();
-    let mut state = AppState::default();
-    state.session.messages.push(runie_core::ChatMessage {
-        role: runie_core::Role::User,
-        content: "short".to_string(),
-        timestamp: 12345.0,
-        id: "msg.1".to_string(),
-        ..Default::default()
-    });
-    state.messages_changed();
-    let backend = TestBackend::new(80, 20);
-    let mut terminal = Terminal::new(backend).unwrap();
-    terminal.draw(|f| view(f, &mut state)).unwrap();
-    let buf = terminal.backend().buffer();
-
-    let ts_str = runie_core::format_timestamp(12345.0);
-    let mut found = false;
-    for y in 0..buf.area().height {
-        let line: String = (0..buf.area().width)
-            .map(|x| buf[(x, y)].symbol())
-            .collect();
-        if line.contains(&ts_str) {
-            let pos = line.find(&ts_str).unwrap();
-            assert!(
-                pos > 60,
-                "Timestamp should be right-aligned, got pos {}",
-                pos
-            );
-            found = true;
-        }
-    }
-    assert!(found);
-}
-
-#[test]
-fn agent_message_timestamp_appears_once() {
+fn agent_message_does_not_show_timestamp() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.session.messages.push(runie_core::ChatMessage {
@@ -123,46 +87,5 @@ fn agent_message_timestamp_appears_once() {
             line.contains(&ts_str)
         })
         .count();
-    assert_eq!(count, 1);
-}
-
-#[test]
-fn timestamp_never_wraps_even_when_content_is_very_long() {
-    let _lock = crate::theme::test_lock();
-    let mut state = AppState::default();
-    let long_content = "a".repeat(200);
-    state.session.messages.push(runie_core::ChatMessage {
-        role: runie_core::Role::User,
-        content: long_content,
-        timestamp: 12345.0,
-        id: "msg.1".to_string(),
-        ..Default::default()
-    });
-    state.messages_changed();
-    // Scroll to the top of the feed so the first (timestamp) line of the
-    // wrapped message is visible. The test asserts the timestamp never
-    // wraps to a second line, not that it is always in the bottom viewport.
-    state.view.scroll = usize::MAX;
-    let backend = TestBackend::new(40, 10);
-    let mut terminal = Terminal::new(backend).unwrap();
-    terminal.draw(|f| view(f, &mut state)).unwrap();
-    let buf = terminal.backend().buffer();
-
-    let ts_str = runie_core::format_timestamp(12345.0);
-    let mut found_y: Option<u16> = None;
-    for y in 0..buf.area().height {
-        let line: String = (0..buf.area().width)
-            .map(|x| buf[(x, y)].symbol())
-            .collect();
-        if line.contains(&ts_str) {
-            if let Some(prev_y) = found_y {
-                panic!(
-                    "Timestamp wrapped! Found on line {} and again on line {}",
-                    prev_y, y
-                );
-            }
-            found_y = Some(y);
-        }
-    }
-    assert!(found_y.is_some(), "Timestamp should be visible somewhere");
+    assert_eq!(count, 0, "Agent messages should not show timestamps");
 }
