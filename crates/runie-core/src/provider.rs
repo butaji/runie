@@ -72,7 +72,17 @@ impl std::fmt::Display for ProviderError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ProviderError::UnknownProvider(k) => write!(f, "Unknown provider: {}", k),
-            ProviderError::MissingApiKey(k) => write!(f, "Missing API key for: {}", k),
+            ProviderError::MissingApiKey(k) => {
+                let provider = k
+                    .strip_suffix("_API_KEY")
+                    .map(|p| p.to_lowercase())
+                    .unwrap_or_else(|| k.to_lowercase());
+                write!(
+                    f,
+                    "Missing API key for {}. Set {} or add [model_providers.{}] api_key to ~/.runie/config.toml",
+                    provider, k, provider
+                )
+            }
             ProviderError::Other(s) => write!(f, "Provider error: {}", s),
         }
     }
@@ -102,5 +112,19 @@ pub trait Provider: Send + Sync {
         _tools: Vec<serde_json::Value>,
     ) -> Pin<Box<dyn Stream<Item = Result<LLMEvent>> + Send + '_>> {
         self.generate(messages)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_api_key_display_names_provider_and_env_var() {
+        let err = ProviderError::MissingApiKey("MINIMAX_API_KEY".into());
+        let msg = err.to_string();
+        assert!(msg.contains("minimax"), "{msg}");
+        assert!(msg.contains("MINIMAX_API_KEY"), "{msg}");
+        assert!(msg.contains("[model_providers.minimax]"), "{msg}");
     }
 }
