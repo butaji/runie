@@ -10,6 +10,7 @@ use std::time::Duration;
 use runie_agent::{truncate::policy_from_section, AgentCommand};
 use runie_core::bus::{EventBus, ReplayReceiver};
 use runie_core::event::{ControlEvent, Event, InputEvent, ModelConfigEvent};
+use runie_core::login_flow::LoginStep;
 use runie_core::{AppState, Snapshot};
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -96,16 +97,37 @@ impl UiActor {
         let was_reload = matches!(evt, ModelConfigEvent::ReloadAll);
         let was_agent_done = matches!(evt, Event::Done { .. } | Event::Error { .. });
 
+        let old_login_step = self
+            .state
+            .login_flow
+            .as_ref()
+            .map(|f| f.step.clone());
+
         if let Some(cmd) = EffectCommand::try_from_event(&evt, &self.state, &self.caps) {
             self.state.update(evt);
             cmd.dispatch(
-                effect_tx,
+                effect_tx.clone(),
                 self.render_tx.clone(),
                 &mut self.state,
                 self.caps,
             );
         } else {
             self.state.update(evt);
+        }
+
+        if let Some(flow) = self.state.login_flow.as_ref() {
+            if flow.step == LoginStep::Validating && old_login_step != Some(LoginStep::Validating) {
+                EffectCommand::LoginFlowSubmitKey {
+                    provider: flow.provider.clone(),
+                    key: flow.key.clone(),
+                }
+                .dispatch(
+                    effect_tx,
+                    self.render_tx.clone(),
+                    &mut self.state,
+                    self.caps,
+                );
+            }
         }
 
         if self.state.should_quit {
@@ -272,5 +294,50 @@ mod tests {
 
         assert!(!state.agent.turn_active);
         assert_eq!(state.agent.inflight, 0);
+    }
+
+    #[tokio::test]
+    async fn login_key_submit_triggers_validation_effect() {
+        use runie_core::login_flow::{build_key_input, LoginFlowState};
+
+        let (render_tx, _render_rx) = watch::channel(Snapshot::default());
+        let (cmd_tx, _cmd_rx) = mpsc::channel(1);
+        let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
+        let (shutdown_tx, _shutdown_rx) = oneshot::channel();
+        let (effect_tx, mut effect_rx) = mpsc::channel::<Event>(16);
+
+        let mut actor = UiActor::new(
+            AppState::default(),
+            render_tx,
+            cmd_tx,
+            kb_tx,
+            EventBus::new(4),
+            shutdown_tx,
+            TerminalCapabilities::default(),
+        );
+
+        let mut flow = LoginFlowState::new().with_provider("test-unknown-provider".into());
+        flow.key = "sk-test".into();
+        let panel = build_key_input(&flow);
+        let stack = runie_core::dialog::PanelStack::new(panel);
+        actor.state.open_dialog =
+            Some(runie_core::commands::DialogState::PanelStack(stack));
+        actor.state.login_flow = Some(flow);
+
+        actor
+            .handle_event(Event::Submit, effect_tx.clone())
+            .await;
+
+        assert!(
+            matches!(actor.state.login_flow.as_ref().map(|f| f.step.clone()), Some(LoginStep::Validating)),
+            "login flow should reach validating step"
+        );
+
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        let result = tokio::time::timeout(std::time::Duration::from_secs(2), effect_rx.recv()).await;
+        assert!(
+            result.is_ok(),
+            "validation effect should produce a result event"
+        );
     }
 }
