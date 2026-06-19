@@ -63,6 +63,33 @@ fn test_parse_tool_calls_fallible_returns_errors() {
 }
 
 #[test]
+fn parse_minimax_m3_delimited_read_file() {
+    let text = r#"<think>
+Now let me read the README.md file.
+</think>
+
+]<]minimax[>[<tool_call>
+]<]minimax[>[<invoke name="read_file">]<]minimax[>[<path>README.md]<]minimax[>[</path>]<]minimax[>[</invoke>
+]<]minimax[>[</tool_call>"#;
+    let tools = parse_tool_calls(text);
+    assert_eq!(tools.len(), 1);
+    assert_eq!(tools[0].name, "read_file");
+    assert_eq!(tools[0].args["path"], "README.md");
+}
+
+#[test]
+fn parse_minimax_m2_parameter_tags() {
+    let text = r#"<minimax:tool_call>
+<invoke name="list_dir">
+<parameter name="path">.</parameter>
+</invoke>
+</minimax:tool_call>"#;
+    let tools = parse_tool_calls(text);
+    assert_eq!(tools.len(), 1);
+    assert_eq!(tools[0].args["path"], ".");
+}
+
+#[test]
 fn test_build_assistant_message_includes_tools() {
     let tools = vec![ParsedToolCall {
         name: "bash".into(),

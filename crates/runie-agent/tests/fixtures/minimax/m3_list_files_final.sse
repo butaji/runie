@@ -1,0 +1,15 @@
+data: {"id":"0684febfbdfe31cb3867d538ba75d175","choices":[{"index":0,"delta":{"content":"<think>\nThe user","role":"assistant","reasoning":"The user"}}],"created":1781910463,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684febfbdfe31cb3867d538ba75d175","choices":[{"index":0,"delta":{"content":" asked me to list files in the current directory. I've done that. Let me present the results in a clean format.","role":"assistant","reasoning":" asked me to list files in the current directory. I've done that. Let me present the results in a clean format."}}],"created":1781910463,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684febfbdfe31cb3867d538ba75d175","choices":[{"index":0,"delta":{"content":"\n</think>\n\nHere are the files and directories in the current directory:\n\n**Directories","role":"assistant"}}],"created":1781910463,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684febfbdfe31cb3867d538ba75d175","choices":[{"index":0,"delta":{"content":":**\n- `ui/`\n- `tasks/`\n- `crates/`\n- `bin/`\n- `target/`\n- `docs/`\n- `scripts/`\n- `.cargo/`\n- `.github/`\n- `.hermes/`\n- `.","role":"assistant"}}],"created":1781910463,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684febfbdfe31cb3867d538ba75d175","choices":[{"index":0,"delta":{"content":"git/`\n\n**Files:**\n- `Cargo.toml`\n- `Cargo.lock`\n- `bacon.toml`\n- `justfile`\n- `dev.sh`\n- `config.schema.json`\n- `tmux_login_logout_test.sh`\n- `tmux_collapse_expand_test.sh`\n- `run`\n- `README.md`\n- `","role":"assistant"}}],"created":1781910463,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684febfbdfe31cb3867d538ba75d175","choices":[{"index":0,"delta":{"content":"AGENTS.md`\n- `EXECUTE.md`\n- `EOF`\n- `.gitignore`\n\nThis looks like a Rust project (given `Cargo.toml`, `crates/`, and `target/`) with","role":"assistant"}}],"created":1781910463,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684febfbdfe31cb3867d538ba75d175","choices":[{"index":0,"delta":{"content":" some additional tooling and documentation. Let me know if you'd like to explore any of these in more detail.","role":"assistant"}}],"created":1781910463,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684febfbdfe31cb3867d538ba75d175","choices":[{"finish_reason":"stop","index":0,"delta":{"content":"","role":"assistant"}}],"created":1781910463,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}

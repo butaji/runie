@@ -69,7 +69,6 @@ fn openai_event_stream(
                 return;
             }
         };
-
         let mut stream = response.bytes_stream();
         let mut buffer = String::new();
         let mut state = StreamState::default();
@@ -127,14 +126,8 @@ fn parse_chunk(json: &serde_json::Value) -> Option<Chunk> {
 
 fn parse_usage(value: &serde_json::Value) -> Option<(usize, usize)> {
     Some((
-        value
-            .get("prompt_tokens")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0) as usize,
-        value
-            .get("completion_tokens")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0) as usize,
+        value.get("prompt_tokens").and_then(|v| v.as_u64())? as usize,
+        value.get("completion_tokens").and_then(|v| v.as_u64())? as usize,
     ))
 }
 
@@ -285,6 +278,26 @@ fn flush_tool_calls(state: &mut StreamState) -> Vec<LLMEvent> {
         state.ended.insert(acc.id.clone());
         events.push(LLMEvent::ToolCallEnd { id: acc.id.clone() });
     }
+    events
+}
+
+pub fn replay_sse(text: &str) -> Vec<LLMEvent> {
+    let mut state = StreamState::default();
+    let mut events = Vec::new();
+    for line in text.lines() {
+        match parse_sse_event(line.trim()) {
+            Some(SseEvent::Chunk(chunk)) => events.extend(process_chunk(chunk, &mut state)),
+            Some(SseEvent::Done) => {
+                events.extend(flush_tool_calls(&mut state));
+                events.push(LLMEvent::Finish {
+                    reason: StopReason::Stop,
+                });
+                break;
+            }
+            None => {}
+        }
+    }
+    events.extend(flush_tool_calls(&mut state));
     events
 }
 

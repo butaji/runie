@@ -2,7 +2,7 @@
 
 mod normalize;
 mod request;
-mod stream;
+pub mod stream;
 
 #[derive(Clone)]
 pub struct OpenAiProvider {

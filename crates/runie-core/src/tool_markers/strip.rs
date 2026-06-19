@@ -39,21 +39,37 @@ fn strip_tool_call_markup(content: &str) -> String {
 }
 
 fn strip_minimax_tool_calls(content: &str) -> String {
-    const OPEN: &str = "<minimax:tool_call>";
-    const CLOSE: &str = "</minimax:tool_call>";
+    const OPEN_M2: &str = "<minimax:tool_call>";
+    const CLOSE_M2: &str = "</minimax:tool_call>";
+    const OPEN_M3: &str = "<tool_call>";
+    const CLOSE_M3: &str = "</tool_call>";
+    let normalized = normalize_m3_delimiters(content);
     let mut result = String::new();
-    let mut rest = content;
-    while let Some(start) = rest.find(OPEN) {
+    let mut rest = normalized.as_str();
+    while let Some(start) = rest.find(OPEN_M2).or_else(|| rest.find(OPEN_M3)) {
         result.push_str(&rest[..start]);
-        let after_open = &rest[start + OPEN.len()..];
-        let Some(end) = after_open.find(CLOSE) else {
+        let after_open = &rest[start..];
+        let (open, close) = if after_open.starts_with(OPEN_M2) {
+            (OPEN_M2, CLOSE_M2)
+        } else {
+            (OPEN_M3, CLOSE_M3)
+        };
+        let after_open = &after_open[open.len()..];
+        let Some(end) = after_open.find(close) else {
             rest = "";
             break;
         };
-        rest = &after_open[end + CLOSE.len()..];
+        rest = &after_open[end + close.len()..];
     }
     result.push_str(rest);
     result
+}
+
+fn normalize_m3_delimiters(text: &str) -> String {
+    let mut out = text.to_string();
+    out = out.replace("]<]minimax[>[</", "</");
+    out = out.replace("]<]minimax[>[<", "<");
+    out
 }
 
 fn strip_inline_fenced_tools(content: &str) -> String {
@@ -299,6 +315,17 @@ mod tests {
         let input = r#"before [TOOL_CALL]{tool => "bash", args => {}} after"#;
         let result = strip_all(input);
         assert_eq!(result, "before ");
+    }
+
+    #[test]
+    fn test_strip_all_minimax_m3_delimiters() {
+        let input = r#"I'll read it.
+]<]minimax[>[<tool_call>
+]<]minimax[>[<invoke name="read_file">]<]minimax[>[<path>README.md]<]minimax[>[</path>]<]minimax[>[</invoke>
+]<]minimax[>[</tool_call>
+Done."#;
+        let result = strip_all(input);
+        assert_eq!(result, "I'll read it.\nDone.");
     }
 
     #[test]

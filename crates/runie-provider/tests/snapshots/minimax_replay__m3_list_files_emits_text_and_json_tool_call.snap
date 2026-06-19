@@ -1,0 +1,27 @@
+---
+source: crates/runie-provider/tests/minimax_replay.rs
+expression: events
+---
+[
+    TextDelta(
+        "<think>\nThe user wants to list files in the",
+    ),
+    ThinkingDelta(
+        "The user wants to list files in the",
+    ),
+    TextDelta(
+        " current directory. I'll use the list_dir tool.",
+    ),
+    ThinkingDelta(
+        " current directory. I'll use the list_dir tool.",
+    ),
+    TextDelta(
+        "\n</think>\n\n{\"name\": \"list_dir\", \"arguments\": {\"path\": \".\"}}",
+    ),
+    TextDelta(
+        "",
+    ),
+    Finish {
+        reason: Stop,
+    },
+]

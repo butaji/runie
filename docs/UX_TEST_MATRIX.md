@@ -50,10 +50,8 @@ Source areas audited:
 ### Collapse / Expand
 - `crates/runie-tui/src/tests/toggle_e2e.rs`, `crates/runie-core/src/tests/core/collapse*.rs` — global toggle collapses thoughts/tools, respects global flag for new items, running tools stay expanded.
 
-### Smoke (Scripts)
-- `scripts/smoke-tmux.sh` — `/help`, submit, resize stress, rapid submit, panic/timer checks.
-- `scripts/ux-audit.sh` — basic input, agent response, queue, scroll, collapse, dialogs, model cycling, resize, edge cases.
-- `scripts/ux-edge-cases.sh` — empty submit, abort during tool, rapid 10x, history multiline, word/line delete edge cases, collapse during streaming, palette during streaming, trust while thinking, footer status, scroll placeholder.
+### Smoke / Integration
+Smoke scripts have been removed; coverage now lives in fast Rust tests (Layer 1–3) and a small set of captured-provider replay tests.
 
 ---
 
@@ -61,7 +59,7 @@ Source areas audited:
 
 High-value missing coverage:
 
-1. **Onboarding tmux smoke** — no script drives the real first-run flow through tmux (select provider → type key → wait for validation → select model → save).
+1. **Onboarding end-to-end** — ensure the first-run flow (select provider → type key → wait for validation → select model → save) is covered by Rust L2/L3 tests.
 2. **Provider management end-to-end** — disconnect/reconnect flows, provider list rendering, model selection from `/providers` after disconnect.
 3. **Settings persistence & truncation** — changing truncation values, theme/provider in settings persists and renders.
 4. **Model selector edge cases** — opening with zero configured providers, selecting via slash arg with unconfigured model, Ctrl+M cycling smoke.
@@ -94,13 +92,13 @@ Priority: **P1** = high value / user-facing regression risk, **P2** = medium, **
 
 | Priority | Feature Area | User Action (step-by-step) | Expected Result | Suggested Layer | Suggested File Location |
 |----------|--------------|----------------------------|-----------------|-----------------|-------------------------|
-| P1 | Onboarding | 1. Start app with no providers. 2. Select provider. 3. Type API key. 4. Wait for validation. 5. Select model. 6. Save. | Input box shows `provider/model`; dialog closes; config persisted. | L4 (tmux) | `scripts/smoke-onboarding.sh` |
+| P1 | Onboarding | 1. Start app with no providers. 2. Select provider. 3. Type API key. 4. Wait for validation. 5. Select model. 6. Save. | Input box shows `provider/model`; dialog closes; config persisted. | L2 + L3 | `crates/runie-core/src/tests/onboarding*.rs` |
 | P1 | Onboarding | Type invalid API key → validation fails → error renders → retry with valid key → save. | Error message visible; retry succeeds; model connected. | L2 + L3 | `crates/runie-tui/src/tests/onboarding_e2e.rs` |
 | P1 | Provider management | Open `/providers` → disconnect active provider → dialog closes → footer shows fallback provider/model. | Active provider switches; no panic; render correct. | L2 + L3 | `crates/runie-tui/src/tests/providers_e2e.rs` |
 | P2 | Provider management | Open `/providers` → Add → complete login flow → return to providers list → new provider shown. | Providers list includes new provider; active model unchanged until selected. | L2 + L3 | `crates/runie-tui/src/tests/providers_e2e.rs` |
 | P2 | Onboarding | Paste a multi-line API key (bracketed paste) into key field. | Key field contains full pasted string; no accidental submit. | L2 | `crates/runie-tui/src/tests/onboarding_input.rs` |
 | P2 | Onboarding | At model select, uncheck all models → press Save. | Save rejected with transient error; dialog stays open. | L2 + L3 | `crates/runie-tui/src/tests/onboarding_e2e.rs` |
-| P3 | Onboarding | Cancel provider picker when no model connected → app stays on picker (cannot close). | Dialog remains open; no crash. | L4 (tmux) | `scripts/smoke-onboarding.sh` |
+| P3 | Onboarding | Cancel provider picker when no model connected → app stays on picker (cannot close). | Dialog remains open; no crash. | L2 + L3 | `crates/runie-core/src/tests/onboarding*.rs` |
 
 ### 3.2 Palette, Settings, Model Selector
 
@@ -153,7 +151,7 @@ Priority: **P1** = high value / user-facing regression risk, **P2** = medium, **
 |----------|--------------|----------------------------|-----------------|-----------------|-------------------------|
 | P1 | Tools | Agent calls tool that returns error → render shows ✗ icon and error text. | Tool done with error state visible. | L3 | `crates/runie-tui/src/tests/render/tools.rs` |
 | P1 | Tools | Tool returns >100KB output → output truncated in render with "…" indicator. | Large output truncated; no hang. | L3 | `crates/runie-tui/src/tests/render/tool_truncation.rs` |
-| P1 | Streaming | Start streaming response → press Escape → abort → submit new message → no stuck timer. | Turn aborted; new message processes. | L2 + L4 | `crates/runie-core/src/tests/queue.rs` + `scripts/ux-edge-cases.sh` |
+| P1 | Streaming | Start streaming response → press Escape → abort → submit new message → no stuck timer. | Turn aborted; new message processes. | L2 + L3 | `crates/runie-core/src/tests/queue.rs` |
 | P2 | Tools | Running tool visible → global collapse toggle → running tool still expanded; done tools collapse. | Running tool priority honored. | L3 | `crates/runie-tui/src/tests/toggle_e2e.rs` |
 | P2 | Streaming | Scroll up during streaming → new content does not auto-scroll while user scrolled up. | Scroll position preserved until user scrolls down. | L2 + L3 | `crates/runie-tui/src/tests/autoscroll_render.rs` |
 | P3 | Tools | Multiple tools in one turn → each renders with correct duration/order. | All tools visible; turn complete after last. | L3 | `crates/runie-tui/src/tests/render/tools.rs` |
@@ -177,16 +175,18 @@ Priority: **P1** = high value / user-facing regression risk, **P2** = medium, **
 | P1 | @ picker | Type `@src` → picker filtered to matching files → Tab cycles → Enter. | Filter applied; selection inserts path. | L2 + L3 | `crates/runie-tui/src/tests/core/tab_file_picker_filter.rs` |
 | P2 | @ picker | Esc closes picker without inserting anything. | Input unchanged; dialog closed. | L2 | `crates/runie-tui/src/tests/core/at_file_picker.rs` |
 
-### 3.8 Smoke / Tmux Regression
+### 3.8 Smoke / Integration Regression
+
+Smoke scripts have been removed. Coverage that previously required tmux is now implemented as Rust tests using `TestBackend` and captured-provider replays.
 
 | Priority | Feature Area | User Action (step-by-step) | Expected Result | Suggested Layer | Suggested File Location |
 |----------|--------------|----------------------------|-----------------|-----------------|-------------------------|
-| P1 | Smoke | Run binary in tmux with no config → complete onboarding → submit a message. | No panic; no stuck timer; model connected. | L4 | `scripts/smoke-onboarding.sh` |
-| P1 | Smoke | In tmux, submit while agent streaming, then Alt+Enter follow-up, then dequeue with Alt+Up. | No panic; queue behaves correctly. | L4 | `scripts/ux-edge-cases.sh` (extend) |
-| P2 | Smoke | In tmux, open `/model` → filter → select → verify footer changes. | Model switch visible; no panic. | L4 | `scripts/smoke-model-selector.sh` |
-| P2 | Smoke | In tmux, run `/save foo` → `/load foo` → `/delete foo`. | Persistence commands work end-to-end. | L4 | `scripts/smoke-session-io.sh` |
-| P2 | Smoke | Rapidly resize terminal while streaming and while palette open. | No panic; layout recovers. | L4 | `scripts/ux-audit.sh` (extend section 8) |
-| P3 | Smoke | Long-running session (~50 turns) with tools → check for stuck timers / memory growth. | No panic; timers reset each turn. | L4 | `scripts/smoke-long-session.sh` |
+| P1 | Smoke | Run binary with no config → complete onboarding → submit a message. | No panic; model connected. | L2 + L3 | `crates/runie-core/src/tests/onboarding*.rs` |
+| P1 | Smoke | Submit while agent streaming, then Alt+Enter follow-up, then dequeue with Alt+Up. | Queue behaves correctly. | L2 | `crates/runie-core/src/tests/queue.rs` |
+| P2 | Smoke | Open `/model` → filter → select → verify footer changes. | Model switch visible; no panic. | L2 + L3 | `crates/runie-core/src/commands/tests/model.rs` |
+| P2 | Smoke | Run `/save foo` → `/load foo` → `/delete foo`. | Persistence commands work end-to-end. | L2 | `crates/runie-core/src/tests/slash/session.rs` |
+| P2 | Smoke | Rapidly resize terminal while streaming and while palette open. | No panic; layout recovers. | L3 | `crates/runie-tui/src/tests/render/resize*.rs` |
+| P3 | Smoke | Long-running session (~50 turns) with tools → check for stuck timers / memory growth. | No panic; timers reset each turn. | L2 + L3 | `crates/runie-core/src/tests/rapid_submit.rs` |
 
 ### 3.9 Trust & Safety
 
@@ -200,8 +200,8 @@ Priority: **P1** = high value / user-facing regression risk, **P2** = medium, **
 ## 4. Implementation Notes
 
 - Prefer **Layer 2 (event handling)** for command behavior and **Layer 3 (rendering)** for visual confirmation; add **Layer 4 (tmux)** only for async / integration paths that lower layers cannot catch (onboarding validation, streaming abort, resize stress, long sessions).
-- Keep new tests fast — avoid real network calls or sleeps. Use validation hooks, mock providers, and `RUNIE_MOCK=1` for tmux smoke where possible.
-- For tmux scripts, follow the existing pattern in `scripts/smoke-tmux.sh`: use isolated tmux socket, trap cleanup, capture pane, assert no panic/stuck timer.
+- Keep new tests fast — avoid real network calls or sleeps. Use validation hooks, mock providers, and captured-provider replay fixtures for provider-specific behavior.
+- Avoid adding new tmux/bash smoke tests; prefer Layer 1–3 Rust tests.
 - When adding new slash command coverage, place Layer 1/2 tests in `crates/runie-core/src/tests/slash/` or `commands/tests/` and Layer 3 tests in `crates/runie-tui/src/tests/render/`.
 - Update `AGENTS.md` task list if implementing these as tracked tasks.
 

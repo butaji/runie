@@ -47,6 +47,16 @@ impl DynProvider {
         build_dyn_provider(key, model, Some(config))
     }
 
+    /// Wrap an arbitrary provider implementation.
+    #[doc(hidden)]
+    pub fn from_provider(provider: Box<dyn Provider>, key: &str, model: &str) -> Self {
+        Self {
+            inner: provider,
+            key: key.to_string(),
+            model: model.to_string(),
+        }
+    }
+
     /// Returns the registry key used to build this provider.
     pub fn key(&self) -> &str {
         &self.key

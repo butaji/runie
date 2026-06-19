@@ -26,3 +26,4 @@ similar = "3"
 [dev-dependencies]
 runie-provider.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }
+insta.workspace = true

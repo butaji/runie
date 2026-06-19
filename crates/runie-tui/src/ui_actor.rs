@@ -97,38 +97,10 @@ impl UiActor {
         let was_reload = matches!(evt, ModelConfigEvent::ReloadAll);
         let was_agent_done = matches!(evt, Event::Done { .. } | Event::Error { .. });
 
-        let old_login_step = self
-            .state
-            .login_flow
-            .as_ref()
-            .map(|f| f.step.clone());
+        let old_login_step = self.state.login_flow.as_ref().map(|f| f.step.clone());
 
-        if let Some(cmd) = EffectCommand::try_from_event(&evt, &self.state, &self.caps) {
-            self.state.update(evt);
-            cmd.dispatch(
-                effect_tx.clone(),
-                self.render_tx.clone(),
-                &mut self.state,
-                self.caps,
-            );
-        } else {
-            self.state.update(evt);
-        }
-
-        if let Some(flow) = self.state.login_flow.as_ref() {
-            if flow.step == LoginStep::Validating && old_login_step != Some(LoginStep::Validating) {
-                EffectCommand::LoginFlowSubmitKey {
-                    provider: flow.provider.clone(),
-                    key: flow.key.clone(),
-                }
-                .dispatch(
-                    effect_tx,
-                    self.render_tx.clone(),
-                    &mut self.state,
-                    self.caps,
-                );
-            }
-        }
+        self.apply_event(evt, effect_tx.clone());
+        self.dispatch_login_validation(effect_tx, old_login_step);
 
         if self.state.should_quit {
             return true;
@@ -143,6 +115,41 @@ impl UiActor {
 
         self.publish_snapshot();
         false
+    }
+
+    fn apply_event(&mut self, evt: Event, effect_tx: mpsc::Sender<Event>) {
+        if let Some(cmd) = EffectCommand::try_from_event(&evt, &self.state, &self.caps) {
+            self.state.update(evt);
+            cmd.dispatch(
+                effect_tx,
+                self.render_tx.clone(),
+                &mut self.state,
+                self.caps,
+            );
+        } else {
+            self.state.update(evt);
+        }
+    }
+
+    fn dispatch_login_validation(
+        &mut self,
+        effect_tx: mpsc::Sender<Event>,
+        old_login_step: Option<LoginStep>,
+    ) {
+        if let Some(flow) = self.state.login_flow.as_ref() {
+            if flow.step == LoginStep::Validating && old_login_step != Some(LoginStep::Validating) {
+                EffectCommand::LoginFlowSubmitKey {
+                    provider: flow.provider.clone(),
+                    key: flow.key.clone(),
+                }
+                .dispatch(
+                    effect_tx,
+                    self.render_tx.clone(),
+                    &mut self.state,
+                    self.caps,
+                );
+            }
+        }
     }
 
     fn publish_snapshot(&mut self) {

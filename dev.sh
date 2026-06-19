@@ -53,14 +53,8 @@ case "$mode" in
   test)
     cargo test --all
     ;;
-  smoke)
-    echo "[dev] Running smoke tests..."
-    cargo build --release -p runie-tui 2>&1 | tail -2
-    ./scripts/smoke-tmux.sh
-    echo "[dev] All smoke tests passed!"
-    ;;
   *)
-    echo "Usage: \$0 [run|run-delay|fast|fast-delay|test|smoke]"
+    echo "Usage: \$0 [run|run-delay|fast|fast-delay|test]"
     echo ""
     echo "Modes:"
     echo "  run        - release build, mock enabled, no streaming delays"
@@ -68,7 +62,6 @@ case "$mode" in
     echo "  fast       - debug build, mock enabled, no streaming delays"
     echo "  fast-delay - debug build, mock enabled, 0.5s-3s delays between chunks"
     echo "  test       - run all tests"
-    echo "  smoke      - release build + tmux smoke test"
     echo ""
     echo "Without dev.sh: production mode. No mock provider. The app requires"
     echo "a real provider configured or auto-opens the login dialog on startup."

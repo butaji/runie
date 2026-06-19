@@ -1,7 +1,10 @@
 //! Single source of truth for parsing tool-call markers from LLM text output.
 
+pub mod minimax;
+
 use crate::message::{ChatMessage, Part, ToolCall};
 use serde_json::{Map, Value};
+use minimax::is_known_tool;
 
 const TOOL_CALL_START: &str = "[TOOL_CALL]";
 const TOOL_CALL_END: &str = "[/TOOL_CALL]";
@@ -92,7 +95,7 @@ pub fn tool_parse_error_message(error: &ToolParseError, id: &str) -> ChatMessage
 /// Check if text contains tool call markers.
 pub fn has_tool_calls(text: &str) -> bool {
     text.contains(TOOL_CALL_START) && text.contains(TOOL_CALL_END)
-        || text.contains("<minimax:tool_call>")
+        || minimax::has_minimax_tool_calls(text)
         || text.lines().any(|line| {
             let line = line.trim();
             line.starts_with("TOOL:")
@@ -250,125 +253,7 @@ fn extract_tool_call_payload(line: &str) -> Option<&str> {
 }
 
 fn parse_minimax_tool_calls(text: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
-    const OPEN: &str = "<minimax:tool_call>";
-    const CLOSE: &str = "</minimax:tool_call>";
-    let mut results = Vec::new();
-    let mut rest = text;
-    while let Some(start) = rest.find(OPEN) {
-        let after_open = &rest[start + OPEN.len()..];
-        let Some(end) = after_open.find(CLOSE) else {
-            results.push(Err(ToolParseError {
-                raw: rest[start..].to_string(),
-                reason: "unclosed <minimax:tool_call> block".into(),
-            }));
-            break;
-        };
-        let block = &after_open[..end];
-        results.extend(parse_minimax_invokes(block));
-        rest = &after_open[end + CLOSE.len()..];
-    }
-    results
-}
-
-fn parse_minimax_invokes(block: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
-    let mut results = Vec::new();
-    let mut found_any = false;
-    let mut rest = block;
-    while let Some(start) = rest.find("<invoke") {
-        found_any = true;
-        let after_tag_open = &rest[start + "<invoke".len()..];
-        let Some(close) = after_tag_open.find('>') else {
-            results.push(Err(ToolParseError {
-                raw: rest[start..].to_string(),
-                reason: "unclosed <invoke> tag".into(),
-            }));
-            break;
-        };
-        let tag = &after_tag_open[..close];
-        let Some(name) = extract_minimax_name_attr(tag) else {
-            results.push(Err(ToolParseError {
-                raw: rest[start..].to_string(),
-                reason: "missing name attribute on <invoke>".into(),
-            }));
-            break;
-        };
-        let after_tag = &after_tag_open[close + 1..];
-        let Some(invoke_end) = after_tag.find("</invoke>") else {
-            results.push(Err(ToolParseError {
-                raw: rest[start..].to_string(),
-                reason: "missing </invoke> closing tag".into(),
-            }));
-            break;
-        };
-        let inner = &after_tag[..invoke_end];
-        rest = &after_tag[invoke_end + "</invoke>".len()..];
-        if !is_known_tool(&name) {
-            results.push(Err(ToolParseError {
-                raw: block.to_string(),
-                reason: format!("unknown tool '{}'", name),
-            }));
-            continue;
-        }
-        let args = parse_minimax_parameters(inner);
-        results.push(Ok(ParsedToolCall {
-            name,
-            args: Value::Object(args),
-            id: None,
-        }));
-    }
-    if !found_any {
-        results.push(Err(ToolParseError {
-            raw: block.to_string(),
-            reason: "no <invoke> blocks found in <minimax:tool_call>".into(),
-        }));
-    }
-    results
-}
-
-fn extract_minimax_name_attr(tag: &str) -> Option<String> {
-    extract_xml_attr(tag, "name")
-}
-
-fn extract_xml_attr(tag: &str, key: &str) -> Option<String> {
-    let pattern = format!("{}=", key);
-    let mut rest = tag;
-    while let Some(idx) = rest.find(&pattern) {
-        let after_key = &rest[idx + pattern.len()..];
-        let quote = after_key.chars().next()?;
-        if quote != '\'' && quote != '"' {
-            rest = &after_key[1..];
-            continue;
-        }
-        let after_quote = &after_key[1..];
-        let end = after_quote.find(quote)?;
-        return Some(after_quote[..end].to_string());
-    }
-    None
-}
-
-fn parse_minimax_parameters(inner: &str) -> serde_json::Map<String, Value> {
-    let mut args = serde_json::Map::new();
-    let mut rest = inner;
-    while let Some(start) = rest.find("<parameter") {
-        let after_open = &rest[start + "<parameter".len()..];
-        let Some(close) = after_open.find('>') else {
-            break;
-        };
-        let tag = &after_open[..close];
-        let Some(name) = extract_xml_attr(tag, "name") else {
-            rest = &after_open[close + 1..];
-            continue;
-        };
-        let after_tag = &after_open[close + 1..];
-        let Some(end) = after_tag.find("</parameter>") else {
-            break;
-        };
-        let value_str = after_tag[..end].trim();
-        let value = serde_json::from_str(value_str).unwrap_or(Value::String(value_str.to_string()));
-        args.insert(name, value);
-        rest = &after_tag[end + "</parameter>".len()..];
-    }
-    args
+    minimax::parse_minimax_tool_calls(text)
 }
 
 pub fn is_tool_call_value(value: &Value) -> bool {
@@ -378,30 +263,6 @@ pub fn is_tool_call_value(value: &Value) -> bool {
             .get("name")
             .and_then(|v| v.as_str())
             .is_some_and(is_known_tool)
-}
-
-fn is_known_tool(name: &str) -> bool {
-    const KNOWN: &[&str] = &[
-        "ask_user",
-        "bash",
-        "read_file",
-        "write_file",
-        "edit_file",
-        "list_dir",
-        "grep",
-        "find",
-        "fetch_docs",
-        "search",
-        "find_definitions",
-        "select_model",
-        "done",
-        "list_subagents",
-        "cancel_subagent",
-        "get_subagent_status",
-        "get_subagent_output",
-        "steer_subagent",
-    ];
-    KNOWN.contains(&name)
 }
 
 fn arrow_to_json(input: &str) -> String {

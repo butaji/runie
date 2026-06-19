@@ -1,0 +1,9 @@
+data: {"id":"0684ff0de50cbd58c3dfae84137b2d25","choices":[{"index":0,"delta":{"content":"<think>\nThe user wants me to list project","role":"assistant","reasoning":"The user wants me to list project"}}],"created":1781910541,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684ff0de50cbd58c3dfae84137b2d25","choices":[{"index":0,"delta":{"content":" files and read the README.md file. However, they haven't specified a directory path. I'll need to use list_dir first to see what's available, then","role":"assistant","reasoning":" files and read the README.md file. However, they haven't specified a directory path. I'll need to use list_dir first to see what's available, then"}}],"created":1781910541,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684ff0de50cbd58c3dfae84137b2d25","choices":[{"index":0,"delta":{"content":" read the README.md. Let me start with the current directory.","role":"assistant","reasoning":" read the README.md. Let me start with the current directory."}}],"created":1781910541,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684ff0de50cbd58c3dfae84137b2d25","choices":[{"index":0,"delta":{"content":"\n</think>\n\n{\"name\": \"list_dir\", \"arguments\": {\"path\": \".\"}}","role":"assistant"}}],"created":1781910541,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684ff0de50cbd58c3dfae84137b2d25","choices":[{"finish_reason":"stop","index":0,"delta":{"content":"","role":"assistant"}}],"created":1781910541,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
