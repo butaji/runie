@@ -125,19 +125,20 @@ fn provider_models_item(state: &AppState) -> SettingItem {
 }
 
 fn provider_model_lists(provider: &str) -> (Vec<String>, Vec<String>) {
-    let config = crate::async_io::block_in_place_if_runtime(|| crate::config::Config::load(None));
-    let saved = config.models_for_provider(provider);
-    let mut available = saved.clone();
-    if let Some(meta) = crate::provider_registry::find_provider(provider) {
-        for model in meta.models {
-            let name = model.name.to_string();
-            if !available.contains(&name) {
-                available.push(name);
+    crate::login_config::with_read_lock(|config| {
+        let saved = config.models_for_provider(provider);
+        let mut available = saved.clone();
+        if let Some(meta) = crate::provider_registry::find_provider(provider) {
+            for model in meta.models {
+                let name = model.name.to_string();
+                if !available.contains(&name) {
+                    available.push(name);
+                }
             }
         }
-    }
-    available.sort();
-    (saved, available)
+        available.sort();
+        (saved, available)
+    })
 }
 
 fn theme_item(state: &AppState) -> SettingItem {

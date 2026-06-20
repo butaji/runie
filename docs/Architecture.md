@@ -220,6 +220,19 @@ The TUI runs on a multi-threaded Tokio runtime. Synchronous file or process IO m
 
 New code should default to async or event-based actors; the helpers are a tactical bridge, not the preferred pattern.
 
+## Config durability
+
+`~/.runie/config.toml` is the single source of truth for provider credentials, default model, keybindings, and preferences. It is read from many places and written from several, so concurrency and durability matter.
+
+Rules:
+
+- All reads and writes to the config file go through `crates/runie-core/src/login_config.rs`.
+- A readers-writer lock serializes access so concurrent async tasks cannot corrupt the file.
+- Mutating helpers (`save_provider_config`, `remove_provider_config`, `toggle_provider_model`, `with_write_lock`) load, mutate, and save while holding the write lock.
+- Do not call `Config::load`/`save` directly from production code; use the locked helpers.
+- Do not nest `block_in_place` calls: a function that already runs on a blocking thread must not call `block_in_place_if_runtime` again.
+- Prefer atomic updates (load → mutate → save under one lock) over fire-and-forget background writes for durable state.
+
 ## Build guardrails
 
 `crates/runie-core/build.rs` enforces structural limits on production code:

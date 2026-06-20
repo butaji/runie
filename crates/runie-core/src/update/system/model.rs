@@ -121,24 +121,24 @@ impl AppState {
 
 #[cfg(not(test))]
 fn persist_model_to_config(provider: String, model: String) {
-    let mut config = crate::config::Config::load(None);
-    config.provider = Some(provider.clone());
-    config.model = None;
-    config.models.default = Some(model.clone());
-    let mp = config
-        .model_providers
-        .entry(provider.clone())
-        .or_insert_with(|| crate::config::ModelProvider {
-            provider_type: None,
-            base_url: String::new(),
-            api_key: String::new(),
-            models: Vec::new(),
-        });
-    if !mp.models.contains(&model) && !model.is_empty() {
-        mp.models.push(model);
-        mp.models.sort();
-    }
-    config.save_nonblocking();
+    let _ = crate::login_config::with_write_lock(|config| {
+        config.provider = Some(provider.clone());
+        config.model = None;
+        config.models.default = Some(model.clone());
+        let mp = config
+            .model_providers
+            .entry(provider.clone())
+            .or_insert_with(|| crate::config::ModelProvider {
+                provider_type: None,
+                base_url: String::new(),
+                api_key: String::new(),
+                models: Vec::new(),
+            });
+        if !mp.models.contains(&model) && !model.is_empty() {
+            mp.models.push(model);
+            mp.models.sort();
+        }
+    });
 }
 
 #[cfg(test)]

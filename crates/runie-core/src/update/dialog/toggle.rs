@@ -113,19 +113,17 @@ fn handle_providers_disconnect(state: &mut AppState, event: &DialogEvent) {
             return;
         }
         if state.config.current_provider == provider {
-            let fallback = crate::async_io::block_in_place_if_runtime(|| {
-                let config = crate::config::Config::load(Some(&crate::login_config::config_path()));
-                let (p, m) = config.resolve_default_model();
-                if p.is_empty() {
-                    crate::login_config::list_configured_providers()
-                        .into_iter()
-                        .next()
-                        .map(|(pr, _, models)| (pr, models.into_iter().next().unwrap_or_default()))
-                        .unwrap_or_default()
-                } else {
-                    (p, m)
-                }
-            });
+            let (p, m) =
+                crate::login_config::with_read_lock(|config| config.resolve_default_model());
+            let fallback = if p.is_empty() {
+                crate::login_config::list_configured_providers()
+                    .into_iter()
+                    .next()
+                    .map(|(pr, _, models)| (pr, models.into_iter().next().unwrap_or_default()))
+                    .unwrap_or_default()
+            } else {
+                (p, m)
+            };
             state.set_active_model(
                 fallback.0,
                 fallback.1,

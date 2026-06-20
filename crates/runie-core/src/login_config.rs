@@ -1,14 +1,16 @@
 //! Login config persistence — read/write provider credentials in config.toml.
 //!
-//! This module is now a thin wrapper around the canonical [`crate::config::Config`]
-//! type. Provider credentials (including the per-provider model list) live under
-//! `[model_providers.<name>]` and are loaded/saved through `Config::load`/`save`.
+//! All access to the config file is serialized through a readers-writer lock
+//! so concurrent async tasks cannot corrupt the file.
 
 use std::path::PathBuf;
+use std::sync::RwLock;
 
 thread_local! {
     static TEST_CONFIG_PATH: std::cell::RefCell<Option<PathBuf>> = const { std::cell::RefCell::new(None) };
 }
+
+static CONFIG_LOCK: RwLock<()> = RwLock::new(());
 
 /// Override the config file path for the current thread (tests only).
 pub fn set_test_config_path(path: PathBuf) {
@@ -25,12 +27,29 @@ pub fn config_path() -> PathBuf {
     })
 }
 
-/// Load the canonical config from [`config_path`].
-///
-/// Runs on a blocking thread when called from an async runtime so the UI never
-/// freezes waiting for the config file.
-fn load() -> crate::config::Config {
-    crate::async_io::block_in_place_if_runtime(|| crate::config::Config::load(Some(&config_path())))
+fn load_config() -> crate::config::Config {
+    crate::config::Config::load(Some(&config_path()))
+}
+
+/// Read the config file while holding the read lock.
+pub fn with_read_lock<F, T>(f: F) -> T
+where
+    F: FnOnce(&crate::config::Config) -> T,
+{
+    let _guard = CONFIG_LOCK.read().unwrap();
+    f(&load_config())
+}
+
+/// Mutate and save the config file while holding the write lock.
+pub fn with_write_lock<F, T>(f: F) -> anyhow::Result<T>
+where
+    F: FnOnce(&mut crate::config::Config) -> T,
+{
+    let _guard = CONFIG_LOCK.write().unwrap();
+    let mut config = load_config();
+    let result = f(&mut config);
+    config.save_to(&config_path())?;
+    Ok(result)
 }
 
 /// Save a provider configuration to `~/.runie/config.toml`.
@@ -41,49 +60,48 @@ pub fn save_provider_config(
     api_key: &str,
     models: &[String],
 ) -> anyhow::Result<()> {
-    let mut config = load();
-    let provider_type = config
-        .model_providers
-        .get(name)
-        .and_then(|p| p.provider_type.clone());
-    config.model_providers.insert(
-        name.into(),
-        crate::config::ModelProvider {
-            provider_type,
-            base_url: base_url.into(),
-            api_key: api_key.into(),
-            models: models.into(),
-        },
-    );
-    let path = config_path();
-    crate::async_io::block_in_place_if_runtime(|| config.save_to(&path))
+    with_write_lock(|config| {
+        let provider_type = config.model_providers.get(name).and_then(|p| p.provider_type.clone());
+        config.model_providers.insert(
+            name.into(),
+            crate::config::ModelProvider {
+                provider_type,
+                base_url: base_url.into(),
+                api_key: api_key.into(),
+                models: models.into(),
+            },
+        );
+    })
+    .map(|_| ())
 }
 
 /// Remove a provider configuration from `~/.runie/config.toml`.
 pub fn remove_provider_config(name: &str) -> anyhow::Result<()> {
-    let mut config = load();
-    config.model_providers.remove(name);
-    let path = config_path();
-    crate::async_io::block_in_place_if_runtime(|| config.save_to(&path))
+    with_write_lock(|config| {
+        config.model_providers.remove(name);
+    })
+    .map(|_| ())
 }
 
 /// Get the full configuration for a single provider, including API key.
 pub fn get_provider_config(name: &str) -> Option<(String, String, Vec<String>)> {
-    let config = load();
-    let p = config.model_providers.get(name)?;
-    Some((p.base_url.clone(), p.api_key.clone(), p.models.clone()))
+    with_read_lock(|config| {
+        let p = config.model_providers.get(name)?;
+        Some((p.base_url.clone(), p.api_key.clone(), p.models.clone()))
+    })
 }
 
 /// List providers that have configurations in `~/.runie/config.toml`.
 pub fn list_configured_providers() -> Vec<(String, String, Vec<String>)> {
-    let config = load();
-    let mut result: Vec<_> = config
-        .model_providers
-        .iter()
-        .map(|(name, p)| (name.clone(), p.base_url.clone(), p.models.clone()))
-        .collect();
-    result.sort_by(|a, b| a.0.cmp(&b.0));
-    result
+    with_read_lock(|config| {
+        let mut result: Vec<_> = config
+            .model_providers
+            .iter()
+            .map(|(name, p)| (name.clone(), p.base_url.clone(), p.models.clone()))
+            .collect();
+        result.sort_by(|a, b| a.0.cmp(&b.0));
+        result
+    })
 }
 
 /// Configure providers for the current thread's tests.

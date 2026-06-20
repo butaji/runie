@@ -212,9 +212,8 @@ async fn agent_loop(
 }
 
 async fn load_provider_config() -> runie_core::config::Config {
-    let path = runie_core::config_reload::config_path();
-    tokio::task::spawn_blocking(move || {
-        runie_core::config_reload::Config::load(Some(&path))
+    tokio::task::spawn_blocking(|| {
+        runie_core::login_config::with_read_lock(|config| config.clone())
     })
     .await
     .unwrap_or_default()

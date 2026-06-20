@@ -148,8 +148,8 @@ fn run_logout_command(state: &mut AppState, provider: &str) {
     match crate::login_config::remove_provider_config(provider) {
         Ok(()) => {
             if state.config.current_provider == provider {
-                let config = crate::async_io::block_in_place_if_runtime(|| crate::config::Config::load(None));
-                let (provider, model) = config.resolve_default_model();
+                let (provider, model) =
+                    crate::login_config::with_read_lock(|config| config.resolve_default_model());
                 state.set_active_model(
                     provider,
                     model,

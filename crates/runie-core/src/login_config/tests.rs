@@ -174,6 +174,60 @@ async fn save_provider_config_persists_under_runtime() {
 }
 
 #[test]
+fn concurrent_provider_saves_do_not_corrupt_config() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.toml");
+    super::set_test_config_path(path.clone());
+
+    std::thread::scope(|s| {
+        let path_a = path.clone();
+        s.spawn(move || {
+            super::set_test_config_path(path_a);
+            super::save_provider_config(
+                "openai",
+                "https://api.openai.com/v1",
+                "sk-openai",
+                &["gpt-4o".into()],
+            )
+            .unwrap();
+        });
+        let path_b = path.clone();
+        s.spawn(move || {
+            super::set_test_config_path(path_b);
+            super::save_provider_config(
+                "minimax",
+                "https://api.minimaxi.chat/v1",
+                "sk-minimax",
+                &["MiniMax-M3".into()],
+            )
+            .unwrap();
+        });
+    });
+
+    let providers = super::list_configured_providers();
+    let names: Vec<_> = providers.iter().map(|(n, _, _)| n.as_str()).collect();
+    assert_eq!(names, vec!["minimax", "openai"]);
+
+    let minimax = providers.iter().find(|(n, _, _)| n == "minimax").unwrap();
+    assert_eq!(minimax.1, "https://api.minimaxi.chat/v1");
+    assert_eq!(minimax.2, vec!["MiniMax-M3"]);
+
+    let openai = providers.iter().find(|(n, _, _)| n == "openai").unwrap();
+    assert_eq!(openai.1, "https://api.openai.com/v1");
+    assert_eq!(openai.2, vec!["gpt-4o"]);
+
+    let loaded = crate::config::Config::load(Some(&path));
+    assert_eq!(
+        loaded.model_providers.get("minimax").unwrap().api_key,
+        "sk-minimax"
+    );
+    assert_eq!(
+        loaded.model_providers.get("openai").unwrap().api_key,
+        "sk-openai"
+    );
+}
+
+#[test]
 fn list_configured_providers_sorted_alphabetically() {
     use super::list_configured_providers;
     let dir = tempdir().unwrap();
