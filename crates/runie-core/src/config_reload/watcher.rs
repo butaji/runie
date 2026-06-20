@@ -23,7 +23,7 @@ async fn run_watcher_loop(
     event_tx: mpsc::Sender<Event>,
     config_path: PathBuf,
 ) -> anyhow::Result<()> {
-    let mut last_config = Config::load(Some(&config_path));
+    let mut last_config = Config::load_async(Some(config_path.clone())).await;
     let (tx, rx) = std::sync::mpsc::channel();
     let mut debouncer = new_debouncer(std::time::Duration::from_millis(300), tx)
         .map_err(|e| anyhow::anyhow!("Failed to create watcher: {e:?}"))?;
@@ -37,7 +37,7 @@ async fn run_watcher_loop(
         if !should_handle_config_event(&events, &config_path) {
             continue;
         }
-        let config = Config::load(Some(&config_path));
+        let config = Config::load_async(Some(config_path.clone())).await;
         apply_config_changes(&event_tx, &config, &last_config).await;
         last_config = config;
     }

@@ -294,6 +294,44 @@ fn login_flow_save_blocked_after_validation_failure() {
     assert!(list_configured_providers().is_empty());
 }
 
+#[tokio::test]
+async fn login_flow_save_does_not_block_async_runtime() {
+    clean_config();
+    let mut state = AppState::default();
+    state.config.current_provider.clear();
+    state.config.current_model.clear();
+
+    state.update(DialogEvent::ProvidersDialog);
+    state.update(DialogEvent::ProvidersAdd);
+    state.update(LoginFlowEvent::SelectProvider {
+        provider: "minimax".into(),
+    });
+    state.update(LoginFlowEvent::SubmitKey {
+        provider: "minimax".into(),
+        key: "sk-test".into(),
+    });
+    validate_provider(&mut state, "minimax", "sk-test");
+
+    let start = std::time::Instant::now();
+    state.update(LoginFlowEvent::Save);
+    let elapsed = start.elapsed();
+    assert!(
+        elapsed < std::time::Duration::from_millis(100),
+        "save blocked the runtime for {elapsed:?}"
+    );
+
+    for _ in 0..50 {
+        if list_configured_providers().iter().any(|(n, _, _)| n == "minimax") {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    assert!(
+        list_configured_providers().iter().any(|(n, _, _)| n == "minimax"),
+        "provider should be saved in the background"
+    );
+}
+
 #[test]
 fn login_flow_panel_changes_mark_dirty() {
     clean_config();

@@ -46,24 +46,9 @@ impl AppState {
         {
             let provider = self.config.current_provider.clone();
             let model = self.config.current_model.clone();
-            let mut config = crate::config::Config::load(None);
-            config.provider = Some(provider.clone());
-            config.model = None;
-            config.models.default = Some(model.clone());
-            let mp = config
-                .model_providers
-                .entry(provider.clone())
-                .or_insert_with(|| crate::config::ModelProvider {
-                    provider_type: None,
-                    base_url: String::new(),
-                    api_key: String::new(),
-                    models: Vec::new(),
-                });
-            if !mp.models.contains(&model) && !model.is_empty() {
-                mp.models.push(model);
-                mp.models.sort();
-            }
-            let _ = config.save();
+            crate::async_io::run_blocking_if_runtime(move || {
+                persist_model_to_config(provider, model);
+            });
         }
     }
 
@@ -132,6 +117,28 @@ impl AppState {
             TransientLevel::Info,
         );
     }
+}
+
+#[cfg(not(test))]
+fn persist_model_to_config(provider: String, model: String) {
+    let mut config = crate::config::Config::load(None);
+    config.provider = Some(provider.clone());
+    config.model = None;
+    config.models.default = Some(model.clone());
+    let mp = config
+        .model_providers
+        .entry(provider.clone())
+        .or_insert_with(|| crate::config::ModelProvider {
+            provider_type: None,
+            base_url: String::new(),
+            api_key: String::new(),
+            models: Vec::new(),
+        });
+    if !mp.models.contains(&model) && !model.is_empty() {
+        mp.models.push(model);
+        mp.models.sort();
+    }
+    config.save_nonblocking();
 }
 
 #[cfg(test)]

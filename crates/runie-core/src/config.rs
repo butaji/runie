@@ -218,6 +218,13 @@ impl Config {
         }
     }
 
+    /// Load config asynchronously, moving blocking file IO off the runtime.
+    pub async fn load_async(path: Option<PathBuf>) -> Self {
+        tokio::task::spawn_blocking(move || Self::load(path.as_deref()))
+            .await
+            .unwrap_or_default()
+    }
+
     /// Load configuration from layered sources: defaults → global config →
     /// local project config → environment variables.
     pub fn load_layers() -> Self {
@@ -284,6 +291,32 @@ impl Config {
         }
         std::fs::write(&path, toml::to_string_pretty(self)?)?;
         Ok(())
+    }
+
+    /// Save config without blocking the async runtime.
+    /// Outside a runtime this behaves like [`save`].
+    pub fn save_nonblocking(&self) {
+        self.save_nonblocking_to(&config_path());
+    }
+
+    /// Save config to the given path without blocking the async runtime.
+    pub fn save_nonblocking_to(&self, path: &Path) {
+        let path = path.to_path_buf();
+        let text = match toml::to_string_pretty(self) {
+            Ok(t) => t,
+            Err(e) => {
+                tracing::error!("failed to serialize config: {e}");
+                return;
+            }
+        };
+        crate::async_io::run_blocking_if_runtime(move || {
+            if let Some(parent) = path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            if let Err(e) = std::fs::write(&path, text) {
+                tracing::error!("failed to write config: {e}");
+            }
+        });
     }
 
     /// Get the default model (from `[models].default` or legacy `model` field).

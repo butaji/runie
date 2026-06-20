@@ -30,16 +30,6 @@ fn load() -> crate::config::Config {
     crate::config::Config::load(Some(&config_path()))
 }
 
-/// Save the canonical config to [`config_path`].
-fn save(config: &crate::config::Config) -> anyhow::Result<()> {
-    let path = config_path();
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    std::fs::write(&path, toml::to_string_pretty(config)?)?;
-    Ok(())
-}
-
 /// Save a provider configuration to `~/.runie/config.toml`.
 /// Creates the file and parent directories if needed.
 pub fn save_provider_config(
@@ -62,14 +52,16 @@ pub fn save_provider_config(
             models: models.into(),
         },
     );
-    save(&config)
+    config.save_nonblocking_to(&config_path());
+    Ok(())
 }
 
 /// Remove a provider configuration from `~/.runie/config.toml`.
 pub fn remove_provider_config(name: &str) -> anyhow::Result<()> {
     let mut config = load();
     config.model_providers.remove(name);
-    save(&config)
+    config.save_nonblocking_to(&config_path());
+    Ok(())
 }
 
 /// Get the full configuration for a single provider, including API key.

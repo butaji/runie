@@ -1,7 +1,10 @@
 use super::*;
 use std::fs;
+use std::sync::Mutex;
 
 mod layered_tests;
+
+static HOME_LOCK: Mutex<()> = Mutex::new(());
 
 fn make_test_config(dir: &tempfile::TempDir, content: &str) -> std::path::PathBuf {
     let path = dir.path().join("config.toml");
@@ -283,4 +286,35 @@ fn layered_config_env_overrides_file() {
     fs::write(&local_path, "provider = \"anthropic\"\n").unwrap();
     let config = crate::config::layers::load_layers_from_paths(global_path, local_path);
     assert_eq!(config.provider, Some("anthropic".to_string()));
+}
+
+#[tokio::test]
+async fn load_async_reads_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = make_test_config(&dir, r#"provider = "openai""#);
+    let config = Config::load_async(Some(path)).await;
+    assert_eq!(config.provider.as_deref(), Some("openai"));
+}
+
+#[test]
+fn save_nonblocking_writes_file() {
+    let _guard = HOME_LOCK.lock().unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let original = std::env::var("HOME").ok();
+    std::env::set_var("HOME", dir.path());
+
+    let mut config = Config::default();
+    config.provider = Some("anthropic".to_string());
+    config.save_nonblocking();
+
+    let path = config_path();
+    assert!(path.exists(), "config file should be written");
+    let loaded = Config::load(Some(&path));
+    assert_eq!(loaded.provider.as_deref(), Some("anthropic"));
+
+    if let Some(home) = original {
+        std::env::set_var("HOME", home);
+    } else {
+        std::env::remove_var("HOME");
+    }
 }

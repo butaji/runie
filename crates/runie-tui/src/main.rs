@@ -211,8 +211,13 @@ async fn agent_loop(
     }
 }
 
-fn load_provider_config() -> runie_core::config::Config {
-    runie_core::config_reload::Config::load(Some(&runie_core::config_reload::config_path()))
+async fn load_provider_config() -> runie_core::config::Config {
+    let path = runie_core::config_reload::config_path();
+    tokio::task::spawn_blocking(move || {
+        runie_core::config_reload::Config::load(Some(&path))
+    })
+    .await
+    .unwrap_or_default()
 }
 
 async fn run_single_turn(
@@ -225,7 +230,7 @@ async fn run_single_turn(
 
     // Reload the saved config for every turn so API keys added during this
     // session (e.g. through the login flow) are visible immediately.
-    let config = load_provider_config();
+    let config = load_provider_config().await;
     let provider = match DynProvider::new_with_config(&cmd.provider, &cmd.model, &config) {
         Ok(p) => p,
         Err(e) => {
