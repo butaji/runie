@@ -89,7 +89,7 @@ fn provider_item(state: &AppState) -> SettingItem {
         "Provider",
         SettingValue::Cycle {
             current: state.config.current_provider.clone(),
-            options: provider_options(),
+            options: provider_options(state),
         },
         "LLM provider",
         SettingsCategory::Models,
@@ -102,7 +102,7 @@ fn model_item(state: &AppState) -> SettingItem {
         "Model",
         SettingValue::Cycle {
             current: state.config.current_model.clone(),
-            options: model_options(&state.config.current_provider),
+            options: model_options(state, &state.config.current_provider),
         },
         "Active model",
         SettingsCategory::Models,
@@ -111,7 +111,7 @@ fn model_item(state: &AppState) -> SettingItem {
 
 fn provider_models_item(state: &AppState) -> SettingItem {
     let provider = state.config.current_provider.clone();
-    let (saved, available) = provider_model_lists(&provider);
+    let (saved, available) = provider_model_lists(state, &provider);
     SettingItem::new(
         &provider,
         "Provider Models",
@@ -124,21 +124,23 @@ fn provider_models_item(state: &AppState) -> SettingItem {
     )
 }
 
-fn provider_model_lists(provider: &str) -> (Vec<String>, Vec<String>) {
-    crate::login_config::with_read_lock(|config| {
-        let saved = config.models_for_provider(provider);
-        let mut available = saved.clone();
-        if let Some(meta) = crate::provider_registry::find_provider(provider) {
-            for model in meta.models {
-                let name = model.name.to_string();
-                if !available.contains(&name) {
-                    available.push(name);
-                }
+fn provider_model_lists(state: &AppState, provider: &str) -> (Vec<String>, Vec<String>) {
+    let saved = state
+        .config_cache
+        .as_ref()
+        .map(|c| c.models_for_provider(provider))
+        .unwrap_or_default();
+    let mut available = saved.clone();
+    if let Some(meta) = crate::provider_registry::find_provider(provider) {
+        for model in meta.models {
+            let name = model.name.to_string();
+            if !available.contains(&name) {
+                available.push(name);
             }
         }
-        available.sort();
-        (saved, available)
-    })
+    }
+    available.sort();
+    (saved, available)
 }
 
 fn theme_item(state: &AppState) -> SettingItem {
@@ -256,8 +258,9 @@ fn truncation_max_bytes_item(state: &AppState) -> SettingItem {
     )
 }
 
-fn provider_options() -> Vec<String> {
-    let configured: Vec<String> = crate::login_config::list_configured_providers()
+fn provider_options(state: &AppState) -> Vec<String> {
+    let configured: Vec<String> = state
+        .configured_providers()
         .into_iter()
         .map(|(name, _, _)| name)
         .collect();
@@ -270,8 +273,9 @@ fn provider_options() -> Vec<String> {
         .collect()
 }
 
-fn model_options(provider: &str) -> Vec<String> {
-    let configured: Vec<String> = crate::login_config::list_configured_providers()
+fn model_options(state: &AppState, provider: &str) -> Vec<String> {
+    let configured: Vec<String> = state
+        .configured_providers()
         .into_iter()
         .filter(|(name, _, _)| name == provider)
         .flat_map(|(_, _, models)| models)

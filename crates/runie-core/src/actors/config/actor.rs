@@ -104,6 +104,19 @@ impl ConfigActor {
         }
     }
 
+    async fn set_provider_models(&mut self, name: &str, models: &[String], bus: &EventBus<Event>) {
+        let name = name.to_string();
+        let models = models.to_vec();
+        let path = self.path();
+        let result = tokio::task::spawn_blocking(move || {
+            set_provider_models_at_path(&path, &name, &models)
+        })
+        .await;
+        if result.is_ok() {
+            self.load_and_emit(bus).await;
+        }
+    }
+
     fn list_configured_providers(&self) -> Vec<(String, String, Vec<String>)> {
         let mut result: Vec<_> = self
             .config
@@ -157,6 +170,9 @@ impl ConfigActor {
             ConfigMsg::SetDefaultModel { provider, model } => {
                 self.set_default_model(&provider, &model, bus).await;
             }
+            ConfigMsg::SetProviderModels { name, models } => {
+                self.set_provider_models(&name, &models, bus).await;
+            }
             ConfigMsg::GetConfig(reply) => reply.send(self.config.clone()),
             ConfigMsg::GetConfiguredProviders(reply) => {
                 reply.send(self.list_configured_providers());
@@ -207,6 +223,14 @@ fn set_default_model_at_path(path: &Path, provider: &str, model: &str) -> anyhow
     if !mp.models.contains(&model.into()) && !model.is_empty() {
         mp.models.push(model.into());
         mp.models.sort();
+    }
+    config.save_to(path)
+}
+
+fn set_provider_models_at_path(path: &Path, name: &str, models: &[String]) -> anyhow::Result<()> {
+    let mut config = Config::load(Some(path));
+    if let Some(mp) = config.model_providers.get_mut(name) {
+        mp.models = models.to_vec();
     }
     config.save_to(path)
 }

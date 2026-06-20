@@ -77,6 +77,12 @@ pub fn configure_test_providers(providers: &[(String, Vec<String>)]) {
     }
 }
 
+/// Helper: load the current thread's test config into an `AppState` cache.
+pub fn apply_test_config_to_state(state: &mut runie_core::AppState) {
+    let path = runie_core::login_config::config_path();
+    state.config_cache = Some(runie_core::config::Config::load(Some(&path)));
+}
+
 /// Helper: simulate full tool flow
 pub fn simulate_list_files_flow(state: &mut AppState) {
     state.update(AgentEvent::Thinking {

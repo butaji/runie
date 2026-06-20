@@ -212,6 +212,85 @@ impl AppState {
         }
     }
 
+    /// List configured providers from the cached config.
+    pub fn configured_providers(&self) -> Vec<(String, String, Vec<String>)> {
+        if let Some(config) = self.config_cache.as_ref() {
+            return config.configured_providers();
+        }
+        #[cfg(test)]
+        {
+            return crate::login_config::list_configured_providers();
+        }
+        #[cfg(not(test))]
+        Vec::new()
+    }
+
+    /// Resolve the default provider/model pair from the cached config.
+    pub fn resolve_default_model(&self) -> (String, String) {
+        if let Some(config) = self.config_cache.as_ref() {
+            return config.resolve_default_model();
+        }
+        #[cfg(test)]
+        {
+            return crate::login_config::with_read_lock(|c| c.resolve_default_model());
+        }
+        #[cfg(not(test))]
+        (String::new(), String::new())
+    }
+
+    /// Look up a configured provider from the cached config.
+    pub fn provider_config(&self, name: &str) -> Option<crate::config::ModelProvider> {
+        if let Some(config) = self.config_cache.as_ref() {
+            return config.model_providers.get(name).cloned();
+        }
+        #[cfg(test)]
+        {
+            return crate::login_config::get_provider_config(name)
+                .map(|(base_url, api_key, models)| crate::config::ModelProvider {
+                    provider_type: None,
+                    base_url,
+                    api_key,
+                    models,
+                });
+        }
+        #[cfg(not(test))]
+        None
+    }
+
+    /// Fire-and-forget request to remove a provider via the ConfigActor.
+    pub fn remove_provider(&self, name: &str) {
+        self.send_config_msg(crate::actors::ConfigMsg::RemoveProvider {
+            name: name.to_string(),
+        });
+        #[cfg(test)]
+        {
+            let _ = crate::login_config::remove_provider_config(name);
+        }
+    }
+
+    /// Fire-and-forget request to update a provider's saved model list.
+    pub fn set_provider_models(&self, name: &str, models: Vec<String>) {
+        self.send_config_msg(crate::actors::ConfigMsg::SetProviderModels {
+            name: name.to_string(),
+            models: models.clone(),
+        });
+        #[cfg(test)]
+        {
+            if let Some((base_url, api_key, _)) = crate::login_config::get_provider_config(name) {
+                let _ = crate::login_config::save_provider_config(name, &base_url, &api_key, &models);
+            }
+        }
+    }
+
+    fn send_config_msg(&self, msg: crate::actors::ConfigMsg) {
+        if let Some(ref tx) = self.config_tx {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let tx = tx.clone();
+                tokio::spawn(async move { let _ = tx.send(msg).await; });
+            }
+        }
+    }
+
     /// Record the height of the message viewport. Called by the render
     /// actor on each draw. Used by vim nav mode for element-level jumps.
     pub fn set_last_visible_height(&mut self, height: u16) {

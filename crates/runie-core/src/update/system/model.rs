@@ -54,13 +54,14 @@ impl AppState {
             return;
         }
         let provider = provider.to_string();
-        let config = self
+        let model = self
             .config_cache
-            .clone()
-            .unwrap_or_else(|| crate::config::Config::load(None));
-        let model = config
-            .first_model_for_provider(&provider)
-            .or_else(|| config.default_model().map(String::from))
+            .as_ref()
+            .map(|c| {
+                c.first_model_for_provider(&provider)
+                    .or_else(|| c.default_model().map(String::from))
+                    .unwrap_or_else(|| self.config.current_model.clone())
+            })
             .unwrap_or_else(|| self.config.current_model.clone());
         self.switch_model(provider, model, true);
     }

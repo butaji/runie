@@ -75,10 +75,7 @@ fn handle_vim_mode_toggle(state: &mut AppState) {
 
 fn handle_providers_dialog(state: &mut AppState) {
     use crate::providers_dialog::build_providers_dialog;
-    state.open_dialog = Some(DialogState::PanelStack(build_providers_dialog(
-        &state.config.current_provider,
-        &state.config.current_model,
-    )));
+    state.open_dialog = Some(DialogState::PanelStack(build_providers_dialog(state)));
     state.mark_dirty();
 }
 
@@ -105,28 +102,12 @@ fn handle_providers_select_model(state: &mut AppState, event: &DialogEvent) {
 fn handle_providers_disconnect(state: &mut AppState, event: &DialogEvent) {
     if let DialogEvent::ProvidersDisconnect { provider } = event {
         let provider = provider.clone();
-        if let Err(e) = crate::login_config::remove_provider_config(&provider) {
-            state.set_transient(
-                format!("Failed to disconnect provider: {}", e),
-                crate::event::TransientLevel::Error,
-            );
-            return;
-        }
+        state.remove_provider(&provider);
         if state.config.current_provider == provider {
-            let (p, m) =
-                crate::login_config::with_read_lock(|config| config.resolve_default_model());
-            let fallback = if p.is_empty() {
-                crate::login_config::list_configured_providers()
-                    .into_iter()
-                    .next()
-                    .map(|(pr, _, models)| (pr, models.into_iter().next().unwrap_or_default()))
-                    .unwrap_or_default()
-            } else {
-                (p, m)
-            };
+            let (provider, model) = state.resolve_default_model();
             state.set_active_model(
-                fallback.0,
-                fallback.1,
+                provider,
+                model,
                 crate::state::ModelSource::ConfigDefault,
             );
         }

@@ -126,7 +126,7 @@ impl AppState {
         };
         if Some(&filter) != self.view.cached_model_filter.as_ref() {
             self.view.cached_model_filter = Some(filter.clone());
-            let configured = crate::login_config::list_configured_providers();
+            let configured = self.configured_providers();
             let models = configured_models_catalog(&configured);
             self.view.cached_model_items = build_model_selector_items(
                 &models,

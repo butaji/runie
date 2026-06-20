@@ -43,7 +43,7 @@ pub fn open_model_selector(state: &mut AppState) {
     } else {
         String::new()
     };
-    let configured = crate::login_config::list_configured_providers();
+    let configured = state.configured_providers();
     let models = crate::model_catalog::configured_models_catalog(&configured);
     let items = crate::model_catalog::build_model_selector_items(
         &models,
@@ -83,7 +83,7 @@ pub fn open_scoped_models_dialog(state: &mut AppState) {
 }
 
 fn sync_scoped_models_with_config(state: &mut AppState) {
-    let configured = crate::login_config::list_configured_providers();
+    let configured = state.configured_providers();
     if configured.is_empty() {
         return;
     }

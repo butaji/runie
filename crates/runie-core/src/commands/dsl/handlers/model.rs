@@ -40,7 +40,7 @@ pub fn register(registry: &mut CommandRegistry) {
 pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
     let rest = args.trim();
     if rest.is_empty() {
-        return if crate::login_config::list_configured_providers().is_empty() {
+        return if state.configured_providers().is_empty() {
             CommandResult::Message(
                 "No connected providers. Use /provider to add a provider first.".into(),
             )
@@ -63,7 +63,7 @@ pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
 }
 
 fn switch_to_model(state: &mut AppState, provider: &str, model: &str) -> CommandResult {
-    if !is_model_configured(provider, model) {
+    if !is_model_configured(state, provider, model) {
         return CommandResult::Warning(format!(
             "Model {}/{} is not available. Connect the provider and choose models with /provider.",
             provider, model
@@ -73,11 +73,12 @@ fn switch_to_model(state: &mut AppState, provider: &str, model: &str) -> Command
     CommandResult::Message(format!("Switched to {}/{}", provider, model))
 }
 
-fn is_model_configured(provider: &str, model: &str) -> bool {
+fn is_model_configured(state: &AppState, provider: &str, model: &str) -> bool {
     // Only providers/models explicitly chosen in config.toml are usable.
     // This keeps `/model` and `/provider` aligned: the allowed set is
     // authored through `/provider`, and `/model` selects from that set.
-    crate::login_config::list_configured_providers()
+    state
+        .configured_providers()
         .iter()
         .any(|(p, _, models)| p == provider && models.contains(&model.to_string()))
 }
@@ -120,8 +121,8 @@ fn open_thinking_panel(state: &mut AppState) -> CommandResult {
     CommandResult::OpenPanelStack(Box::new(PanelStack::new(panel)))
 }
 
-fn handle_scoped_models(_state: &mut AppState, _: &str) -> CommandResult {
-    if crate::login_config::list_configured_providers().is_empty() {
+fn handle_scoped_models(state: &mut AppState, _: &str) -> CommandResult {
+    if state.configured_providers().is_empty() {
         return CommandResult::Message(
             "No connected providers. Use /provider to add a provider first.".into(),
         );

@@ -7,7 +7,7 @@ use ratatui::{backend::TestBackend, Terminal};
 use runie_core::event::{DialogEvent, LoginFlowEvent};
 use runie_core::{AppState, Event};
 
-use crate::tests::{configure_test_providers, view};
+use crate::tests::{apply_test_config_to_state, configure_test_providers, view};
 
 fn clean_config() {
     let dir = std::env::temp_dir().join(format!(
@@ -49,6 +49,7 @@ fn disconnect_active_provider_switches_to_fallback() {
     ]);
 
     let mut state = AppState::default();
+    apply_test_config_to_state(&mut state);
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
 
@@ -84,6 +85,7 @@ fn add_provider_via_providers_dialog_keeps_active_model_unchanged() {
     configure_test_providers(&[("openai".into(), vec!["gpt-4o".into()])]);
 
     let mut state = AppState::default();
+    apply_test_config_to_state(&mut state);
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
 
@@ -127,6 +129,7 @@ fn add_provider_via_providers_dialog_keeps_active_model_unchanged() {
     );
 
     // Reopen providers dialog and verify both providers are listed.
+    apply_test_config_to_state(&mut state);
     state.update(DialogEvent::ProvidersDialog);
     let content = render_content(&mut state);
     assert!(

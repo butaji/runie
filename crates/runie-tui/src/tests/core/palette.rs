@@ -192,6 +192,7 @@ fn typing_in_model_selector_filters_models() {
     // the model selector's filter, not pop back to the command palette.
     super::super::configure_test_providers(&[("openai".into(), vec!["gpt-4o".into()])]);
     let mut state = AppState::default();
+    super::super::apply_test_config_to_state(&mut state);
     state.update(Event::toggle_command_palette());
     // Filter to and open the model selector.
     for c in "model".chars() {

@@ -145,33 +145,25 @@ fn run_logout_command(state: &mut AppState, provider: &str) {
         );
         return;
     }
-    match crate::login_config::remove_provider_config(provider) {
-        Ok(()) => {
-            if state.config.current_provider == provider {
-                let (provider, model) =
-                    crate::login_config::with_read_lock(|config| config.resolve_default_model());
-                state.set_active_model(
-                    provider,
-                    model,
-                    crate::state::ModelSource::ConfigDefault,
-                );
-            }
-            if !state.has_models() {
-                crate::update::login_flow::login_flow_start(state);
-            }
-            dialog::process_command_result(
-                state,
-                CommandResult::Message(format!(
-                    "Disconnected '{}'. Use /providers to manage providers.",
-                    provider
-                )),
-            );
-        }
-        Err(e) => dialog::process_command_result(
-            state,
-            CommandResult::Message(format!("Could not remove provider config: {}", e)),
-        ),
+    state.remove_provider(provider);
+    if state.config.current_provider == provider {
+        let (provider, model) = state.resolve_default_model();
+        state.set_active_model(
+            provider,
+            model,
+            crate::state::ModelSource::ConfigDefault,
+        );
     }
+    if !state.has_models() {
+        crate::update::login_flow::login_flow_start(state);
+    }
+    dialog::process_command_result(
+        state,
+        CommandResult::Message(format!(
+            "Disconnected '{}'. Use /providers to manage providers.",
+            provider
+        )),
+    );
 }
 
 fn run_palette_command(state: &mut AppState, name: &str, args: &str) {

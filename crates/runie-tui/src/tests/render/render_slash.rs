@@ -12,11 +12,15 @@ fn type_str(state: &mut AppState, text: &str) {
 }
 
 fn render_slash(input: &str) -> String {
+    let mut state = AppState::default();
+    render_slash_with_state(input, &mut state)
+}
+
+fn render_slash_with_state(input: &str, state: &mut AppState) -> String {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
-    let mut state = AppState::default();
-    type_str(&mut state, input);
-    terminal.draw(|f| view(f, &mut state)).expect("draw");
+    type_str(state, input);
+    terminal.draw(|f| view(f, state)).expect("draw");
     let buf = terminal.backend().buffer();
     buf.content.iter().map(|c| c.symbol()).collect()
 }
@@ -85,7 +89,9 @@ fn test_render_sessions_list_on_separate_lines() {
 #[test]
 fn test_render_model_no_args_opens_selector() {
     super::super::configure_test_providers(&[("openai".into(), vec!["gpt-4o".into()])]);
-    let content = render_slash("/model");
+    let mut state = AppState::default();
+    super::super::apply_test_config_to_state(&mut state);
+    let content = render_slash_with_state("/model", &mut state);
     assert!(
         content.contains("Select Model"),
         "Should open model selector dialog: {}",

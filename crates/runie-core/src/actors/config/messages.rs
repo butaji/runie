@@ -22,6 +22,8 @@ pub enum ConfigMsg {
     RemoveProvider { name: String },
     /// Persist the active provider/model as the default.
     SetDefaultModel { provider: String, model: String },
+    /// Update the saved model list for a provider.
+    SetProviderModels { name: String, models: Vec<String> },
     /// Request the current in-memory config.
     GetConfig(ConfigReply<Config>),
     /// Request the list of configured providers.
@@ -102,6 +104,14 @@ impl ConfigActorHandle {
         let _ = self
             .tx
             .send(ConfigMsg::SetDefaultModel { provider, model })
+            .await;
+    }
+
+    /// Update the saved model list for a provider.
+    pub async fn set_provider_models(&self, name: String, models: Vec<String>) {
+        let _ = self
+            .tx
+            .send(ConfigMsg::SetProviderModels { name, models })
             .await;
     }
 

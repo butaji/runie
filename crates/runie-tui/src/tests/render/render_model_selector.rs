@@ -9,6 +9,7 @@ fn render_selector() -> Vec<String> {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
+    super::super::apply_test_config_to_state(&mut state);
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
     state.update(DialogEvent::ToggleModelSelector);

@@ -362,6 +362,17 @@ impl Config {
         self.model_providers.get(prefix)
     }
 
+    /// List configured providers sorted by name.
+    pub fn configured_providers(&self) -> Vec<(String, String, Vec<String>)> {
+        let mut result: Vec<_> = self
+            .model_providers
+            .iter()
+            .map(|(name, p)| (name.clone(), p.base_url.clone(), p.models.clone()))
+            .collect();
+        result.sort_by(|a, b| a.0.cmp(&b.0));
+        result
+    }
+
     /// Return the configured models for a provider.
     pub fn models_for_provider(&self, provider: &str) -> Vec<String> {
         self.model_providers

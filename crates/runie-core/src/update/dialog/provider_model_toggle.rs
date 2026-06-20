@@ -14,24 +14,23 @@ pub fn parse_provider_model_toggle(key: &str) -> Option<(&str, &str)> {
 
 /// Toggle whether `model` is enabled for `provider` in the saved config.
 pub fn toggle_provider_model(state: &mut AppState, provider: &str, model: &str) {
-    let models = crate::login_config::with_write_lock(|config| {
-        let entry = config.model_providers.get_mut(provider)?;
-        let pos = entry.models.iter().position(|m| m == model);
-        if let Some(idx) = pos {
-            entry.models.remove(idx);
-        } else {
-            entry.models.push(model.into());
-            entry.models.sort();
-        }
-        Some(entry.models.clone())
-    });
-    let models = match models {
-        Ok(Some(m)) => m,
-        _ => return,
-    };
-    if provider == state.config.current_provider && !models.contains(&model.to_string()) {
+    let provider = provider.to_string();
+    let model = model.to_string();
+    let mut models = state
+        .provider_config(&provider)
+        .map(|p| p.models)
+        .unwrap_or_default();
+    let pos = models.iter().position(|m| m == &model);
+    if let Some(idx) = pos {
+        models.remove(idx);
+    } else {
+        models.push(model.clone());
+        models.sort();
+    }
+    state.set_provider_models(&provider, models.clone());
+    if provider == state.config.current_provider && !models.contains(&model) {
         if let Some(first) = models.first() {
-            state.switch_model(provider.into(), first.clone(), false);
+            state.switch_model(provider, first.clone(), false);
         }
     }
     state.view.cached_settings_valid = false;
