@@ -285,7 +285,11 @@ impl Config {
 
     /// Save config to the default path.
     pub fn save(&self) -> anyhow::Result<()> {
-        let path = config_path();
+        self.save_to(&config_path())
+    }
+
+    /// Save config to an explicit path.
+    pub fn save_to(&self, path: &Path) -> anyhow::Result<()> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }

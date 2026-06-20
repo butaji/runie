@@ -121,6 +121,39 @@ api_key = "sk-openai"
     assert_eq!(minimax.2, vec!["MiniMax-M3"]);
 }
 
+#[tokio::test]
+async fn save_provider_config_persists_under_runtime() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.toml");
+    super::set_test_config_path(path.clone());
+
+    super::save_provider_config(
+        "minimax",
+        "https://api.minimaxi.chat/v1",
+        "sk-test",
+        &["MiniMax-M3".into(), "MiniMax-M2.7".into()],
+    )
+    .unwrap();
+
+    // The save is spawned in the background; wait for it to land on disk.
+    for _ in 0..50 {
+        if path.exists() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    assert!(path.exists(), "config file should be written");
+
+    let providers = super::list_configured_providers();
+    assert_eq!(providers.len(), 1, "expected one configured provider");
+    assert_eq!(providers[0].0, "minimax");
+    assert_eq!(
+        providers[0].2,
+        vec!["MiniMax-M3", "MiniMax-M2.7"],
+        "saved models should be reflected in list_configured_providers"
+    );
+}
+
 #[test]
 fn list_configured_providers_sorted_alphabetically() {
     use super::list_configured_providers;

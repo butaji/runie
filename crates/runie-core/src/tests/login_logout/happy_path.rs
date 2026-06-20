@@ -109,6 +109,48 @@ fn start_with_existing_model_does_not_auto_open() {
     );
 }
 
+#[tokio::test]
+async fn model_selector_reflects_login_selected_models_under_runtime() {
+    clean_config();
+    let mut state = AppState::default();
+    state.config.current_provider.clear();
+    state.config.current_model.clear();
+
+    start_login_flow(&mut state);
+    select_provider(&mut state, "minimax");
+    submit_key(&mut state, "sk-test");
+    fetch_models(&mut state, &["MiniMax-M3".into(), "MiniMax-M2.7".into()]);
+    state.update(crate::event::LoginFlowEvent::ToggleModel {
+        model: "MiniMax-M2.7".into(),
+    });
+    save_login_flow(&mut state);
+
+    state.update(crate::event::DialogEvent::ToggleModelSelector);
+
+    let dialog = state.open_dialog.expect("model selector should be open");
+    let stack = dialog.panel_stack().expect("panel stack");
+    let panel = stack.current().expect("panel");
+    let model_labels: Vec<&str> = panel
+        .items
+        .iter()
+        .filter_map(|i| match i {
+            crate::dialog::PanelItem::Action { label, .. } => Some(label.as_str()),
+            _ => None,
+        })
+        .collect();
+
+    assert!(
+        model_labels.iter().any(|l| l.contains("MiniMax-M3")),
+        "selector should include chosen MiniMax-M3, got {:?}",
+        model_labels
+    );
+    assert!(
+        !model_labels.iter().any(|l| l.contains("MiniMax-M2.7")),
+        "selector should not include deselected MiniMax-M2.7, got {:?}",
+        model_labels
+    );
+}
+
 #[test]
 fn model_selector_reflects_login_selected_models() {
     clean_config();

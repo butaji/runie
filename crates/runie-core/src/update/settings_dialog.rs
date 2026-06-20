@@ -113,7 +113,7 @@ fn provider_models_item(state: &AppState) -> SettingItem {
     let provider = state.config.current_provider.clone();
     let (saved, available) = provider_model_lists(&provider);
     SettingItem::new(
-        "edit_provider",
+        &provider,
         "Provider Models",
         SettingValue::MultiSelect {
             current: saved,
@@ -316,12 +316,12 @@ mod tests {
         let items = build_setting_items(&state);
         let edit = items
             .iter()
-            .find(|i| i.key == "edit_provider")
-            .expect("edit_provider setting should exist");
-        assert_eq!(edit.label, "Provider Models");
+            .find(|i| i.label == "Provider Models")
+            .expect("Provider Models setting should exist");
+        assert_eq!(edit.key, "openai");
         assert!(
             matches!(edit.value, SettingValue::MultiSelect { .. }),
-            "edit_provider should be a multi-select, got {:?}",
+            "Provider Models should be a multi-select, got {:?}",
             edit.value
         );
     }

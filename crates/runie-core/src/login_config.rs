@@ -55,16 +55,16 @@ pub fn save_provider_config(
             models: models.into(),
         },
     );
-    config.save_nonblocking_to(&config_path());
-    Ok(())
+    let path = config_path();
+    crate::async_io::block_in_place_if_runtime(|| config.save_to(&path))
 }
 
 /// Remove a provider configuration from `~/.runie/config.toml`.
 pub fn remove_provider_config(name: &str) -> anyhow::Result<()> {
     let mut config = load();
     config.model_providers.remove(name);
-    config.save_nonblocking_to(&config_path());
-    Ok(())
+    let path = config_path();
+    crate::async_io::block_in_place_if_runtime(|| config.save_to(&path))
 }
 
 /// Get the full configuration for a single provider, including API key.
