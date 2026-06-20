@@ -125,46 +125,38 @@ fn quantize_opaline_color(
 
 /// Approximate an ANSI color index as an OpalineColor (for quantized theme tokens).
 fn indexed_to_opaline(i: u8) -> opaline::OpalineColor {
-    // ANSI 16-color palette approximations.
-    const ANSI16: [(u8, u8, u8); 16] = [
-        (0x00, 0x00, 0x00), // 0  black
-        (0xCD, 0x00, 0x00), // 1  red
-        (0x00, 0xCD, 0x00), // 2  green
-        (0xCD, 0xCD, 0x00), // 3  yellow
-        (0x00, 0x00, 0xEE), // 4  blue
-        (0xCD, 0x00, 0xCD), // 5  magenta
-        (0x00, 0xCD, 0xCD), // 6  cyan
-        (0xE5, 0xE5, 0xE5), // 7  white
-        (0x7F, 0x7F, 0x7F), // 8  bright black
-        (0xFF, 0x00, 0x00), // 9  bright red
-        (0x00, 0xFF, 0x00), // 10 bright green
-        (0xFF, 0xFF, 0x00), // 11 bright yellow
-        (0x00, 0x00, 0xFF), // 12 bright blue
-        (0xFF, 0x00, 0xFF), // 13 bright magenta
-        (0x00, 0xFF, 0xFF), // 14 bright cyan
-        (0xFF, 0xFF, 0xFF), // 15 bright white
-    ];
-    if (i as usize) < ANSI16.len() {
-        let (r, g, b) = ANSI16[i as usize];
-        return opaline::OpalineColor::new(r, g, b);
+    if i < 16 {
+        return ansi16_to_opaline(i);
     }
     if i < 232 {
-        // 6x6x6 color cube (indices 16..232).
-        let n = i - 16;
-        let r = (n / 36) as u8;
-        let g = ((n % 36) / 6) as u8;
-        let b = (n % 6) as u8;
-        let channel = |v: u8| {
-            if v == 0 {
-                0
-            } else {
-                95 + (v - 1) * 40
-            }
-        };
-        return opaline::OpalineColor::new(channel(r), channel(g), channel(b));
+        return ansi256_cube_to_opaline(i);
     }
-    // Grayscale ramp (indices 232..256).
-    let level = i - 232;
-    let gray = 8 + level * 10;
+    ansi256_gray_to_opaline(i)
+}
+
+fn ansi16_to_opaline(i: u8) -> opaline::OpalineColor {
+    const ANSI16: [(u8, u8, u8); 16] = [
+        (0x00, 0x00, 0x00), (0xCD, 0x00, 0x00), (0x00, 0xCD, 0x00),
+        (0xCD, 0xCD, 0x00), (0x00, 0x00, 0xEE), (0xCD, 0x00, 0xCD),
+        (0x00, 0xCD, 0xCD), (0xE5, 0xE5, 0xE5), (0x7F, 0x7F, 0x7F),
+        (0xFF, 0x00, 0x00), (0x00, 0xFF, 0x00), (0xFF, 0xFF, 0x00),
+        (0x00, 0x00, 0xFF), (0xFF, 0x00, 0xFF), (0x00, 0xFF, 0xFF),
+        (0xFF, 0xFF, 0xFF),
+    ];
+    let (r, g, b) = ANSI16[i as usize];
+    opaline::OpalineColor::new(r, g, b)
+}
+
+fn ansi256_cube_to_opaline(i: u8) -> opaline::OpalineColor {
+    let n = i - 16;
+    let r = (n / 36) as u8;
+    let g = ((n % 36) / 6) as u8;
+    let b = (n % 6) as u8;
+    let channel = |v: u8| if v == 0 { 0 } else { 95 + (v - 1) * 40 };
+    opaline::OpalineColor::new(channel(r), channel(g), channel(b))
+}
+
+fn ansi256_gray_to_opaline(i: u8) -> opaline::OpalineColor {
+    let gray = 8 + (i - 232) * 10;
     opaline::OpalineColor::new(gray, gray, gray)
 }
