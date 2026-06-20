@@ -291,6 +291,22 @@ fn extract_model_ids(json: &serde_json::Value) -> Vec<String> {
 /// Re-export so `runie_agent` can use it without a deep dependency.
 pub use runie_core::provider::ProviderError as UnknownProviderError;
 
+/// Spawn a production `HeadlessRuntime` using the default provider factory.
+///
+/// This is the shared entry point for all non-interactive binaries so they do
+/// not duplicate the runtime setup.
+pub async fn spawn_headless_runtime() -> runie_core::headless_runtime::HeadlessRuntime {
+    use runie_core::bus::EventBus;
+    use runie_core::event::Event;
+    use std::sync::Arc;
+
+    runie_core::headless_runtime::HeadlessRuntime::spawn(
+        EventBus::<Event>::new(10),
+        Arc::new(DynProviderFactory),
+    )
+    .await
+}
+
 #[cfg(test)]
 mod config_tests;
 #[cfg(test)]

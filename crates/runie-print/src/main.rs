@@ -2,8 +2,6 @@
 
 use anyhow::Result;
 use runie_agent::{run_headless_turn, HeadlessOptions, PermissionGate};
-use runie_core::bus::EventBus;
-use runie_core::headless_runtime::HeadlessRuntime;
 use runie_core::permissions::{DenyAllSink, PermissionManager};
 use runie_core::{message::ChatMessage, provider::Provider};
 use std::sync::Arc;
@@ -25,7 +23,7 @@ async fn main() {
 }
 
 async fn run_print(prompt: &str) -> Result<()> {
-    let runtime = HeadlessRuntime::spawn(EventBus::new(10), Arc::new(runie_provider::DynProviderFactory)).await;
+    let runtime = runie_provider::spawn_headless_runtime().await;
     let built = runtime.provider(None, None).await?;
     run_print_with(prompt, built.provider.as_ref()).await?;
     println!();

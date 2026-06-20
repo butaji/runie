@@ -25,8 +25,6 @@
 
 use anyhow::Result;
 use runie_agent::{run_headless_turn, HeadlessOptions};
-use runie_core::bus::EventBus;
-use runie_core::headless_runtime::HeadlessRuntime;
 use runie_core::message::ChatMessage;
 use runie_core::permissions::{AutoAllowSink, DenyAllSink};
 use std::sync::Arc;
@@ -83,7 +81,7 @@ async fn main() {
 
 async fn run_json(yolo: bool) -> Result<()> {
     let req = read_json_request().await?;
-    let runtime = HeadlessRuntime::spawn(EventBus::new(10), Arc::new(runie_provider::DynProviderFactory)).await;
+    let runtime = runie_provider::spawn_headless_runtime().await;
     let built = runtime.provider(req.provider.as_deref(), req.model.as_deref()).await?;
     let messages = build_json_messages(&req);
     let start = Instant::now();

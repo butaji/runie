@@ -1,0 +1,212 @@
+use crate::event::DurableCoreEvent;
+use crate::session_store::SessionStore;
+
+fn test_store() -> SessionStore {
+    let dir = tempfile::tempdir().unwrap();
+    SessionStore::new(dir.path().to_path_buf())
+}
+
+fn append_msg(store: &SessionStore, sid: &str, mid: &str, role: &str, content: &str, ts: f64) {
+    store
+        .append(
+            sid,
+            &DurableCoreEvent::MessageSent {
+                id: mid.into(),
+                role: role.into(),
+                content: content.into(),
+                timestamp: ts,
+                provider: String::new(),
+            },
+        )
+        .unwrap();
+}
+
+#[test]
+fn redb_appends_and_replays_events() {
+    let store = test_store();
+    let sid = "test-replay";
+
+    append_msg(&store, sid, "msg1", "user", "Hello", 1.0);
+    append_msg(&store, sid, "msg2", "assistant", "Hi there!", 2.0);
+    store
+        .append(
+            sid,
+            &DurableCoreEvent::ModelSwitched {
+                provider: "anthropic".into(),
+                model: "claude-3".into(),
+            },
+        )
+        .unwrap();
+
+    let events = store.load_events(sid).unwrap();
+    assert_eq!(events.len(), 3);
+    assert!(matches!(&events[0], DurableCoreEvent::MessageSent { id, .. } if id == "msg1"));
+    assert!(
+        matches!(&events[2], DurableCoreEvent::ModelSwitched { provider, .. } if provider == "anthropic")
+    );
+}
+
+#[test]
+fn redb_atomic_batch_survives_crash() {
+    let store = test_store();
+    let sid = "test-crash";
+
+    let batch = vec![
+        DurableCoreEvent::MessageSent {
+            id: "1".into(),
+            role: "user".into(),
+            content: "First".into(),
+            timestamp: 1.0,
+            provider: String::new(),
+        },
+        DurableCoreEvent::MessageSent {
+            id: "2".into(),
+            role: "user".into(),
+            content: "Second".into(),
+            timestamp: 2.0,
+            provider: String::new(),
+        },
+        DurableCoreEvent::MessageSent {
+            id: "3".into(),
+            role: "user".into(),
+            content: "Third".into(),
+            timestamp: 3.0,
+            provider: String::new(),
+        },
+    ];
+
+    store.append_batch(sid, &batch).unwrap();
+
+    // Verify all events persisted
+    let events = store.load_events(sid).unwrap();
+    assert_eq!(events.len(), 3);
+    assert!(events
+        .iter()
+        .all(|e| matches!(e, DurableCoreEvent::MessageSent { .. })));
+}
+
+#[test]
+fn redb_migrates_jsonl_session() {
+    let dir = tempfile::tempdir().unwrap();
+    let dir_path = dir.path().to_path_buf();
+
+    // Create a legacy JSONL file
+    let jsonl_path = dir_path.join("legacy-session.jsonl");
+    let jsonl_content = concat!(
+        r#"{"event":"messageSent","id":"m1","role":"user","content":"Hello","timestamp":1.0}"#,
+        "\n",
+        r#"{"event":"messageSent","id":"m2","role":"assistant","content":"Hi!","timestamp":2.0}"#,
+        "\n"
+    );
+    std::fs::write(&jsonl_path, jsonl_content).unwrap();
+
+    // Open via SessionStore — should trigger migration
+    let store = SessionStore::new(dir_path);
+    let events = store.load_events("legacy-session").unwrap();
+
+    assert_eq!(events.len(), 2);
+    assert!(matches!(&events[0], DurableCoreEvent::MessageSent { id, .. } if id == "m1"));
+    assert!(matches!(&events[1], DurableCoreEvent::MessageSent { id, .. } if id == "m2"));
+}
+
+#[test]
+fn redb_empty_when_no_file() {
+    let store = test_store();
+    let events = store.load_events("nonexistent").unwrap();
+    assert!(events.is_empty());
+}
+
+#[test]
+fn redb_delete() {
+    let store = test_store();
+    let sid = "test-delete";
+
+    append_msg(&store, sid, "msg1", "user", "Test", 1.0);
+    assert!(store.path(sid).exists());
+    store.delete(sid).unwrap();
+    assert!(!store.path(sid).exists());
+}
+
+#[test]
+fn redb_list() {
+    let store = test_store();
+
+    append_msg(&store, "session-a", "m1", "user", "A", 1.0);
+    append_msg(&store, "session-b", "m2", "user", "B", 2.0);
+
+    let list = store.list().unwrap();
+    assert!(list.contains(&"session-a".into()));
+    assert!(list.contains(&"session-b".into()));
+}
+
+#[test]
+fn redb_meta_round_trips() {
+    use crate::session_index::SessionMetadata;
+    use crate::session_store::{TABLE_EVENTS, TABLE_META};
+
+    let store = test_store();
+    let sid = "test-meta";
+
+    let meta = SessionMetadata {
+        id: sid.into(),
+        display_name: "My Session".into(),
+        created_at: 1000.0,
+        updated_at: 2000.0,
+        message_count: 5,
+        summary: Some("A summary".into()),
+        is_starred: true,
+        is_system: false,
+    };
+
+    store.update_index(&meta).unwrap();
+
+    // Reload via load_events path (meta is stored in redb, load it back)
+    let (db, _) = SessionStore::open_db(&store.path(sid)).unwrap();
+    let tx = db.begin_read().unwrap();
+    let table = tx.open_table(TABLE_META).unwrap();
+    let val = table.get(&u32::MAX).unwrap().unwrap();
+    let loaded: SessionMetadata = serde_json::from_str(val.value()).unwrap();
+    assert_eq!(loaded.display_name, "My Session");
+    assert_eq!(loaded.message_count, 5);
+    assert!(loaded.is_starred);
+}
+
+#[test]
+fn redb_multiple_sessions_isolated() {
+    let store = test_store();
+
+    store
+        .append(
+            "s1",
+            &DurableCoreEvent::MessageSent {
+                id: "1".into(),
+                role: "user".into(),
+                content: "S1".into(),
+                timestamp: 1.0,
+                provider: String::new(),
+            },
+        )
+        .unwrap();
+    store
+        .append(
+            "s2",
+            &DurableCoreEvent::MessageSent {
+                id: "2".into(),
+                role: "user".into(),
+                content: "S2".into(),
+                timestamp: 2.0,
+                provider: String::new(),
+            },
+        )
+        .unwrap();
+
+    let ev1 = store.load_events("s1").unwrap();
+    let ev2 = store.load_events("s2").unwrap();
+
+    assert_eq!(ev1.len(), 1);
+    assert_eq!(ev2.len(), 1);
+
+    let list = store.list().unwrap();
+    assert!(list.contains(&"s1".into()));
+    assert!(list.contains(&"s2".into()));
+}
