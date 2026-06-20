@@ -1,6 +1,10 @@
 //! Typed effect commands dispatched from the main event loop.
+//!
+//! Effect payload computation lives in `runie_core::effect_payload`; this module
+//! only translates self-contained payloads into terminal-side side effects.
 
-use runie_core::{AppState, ChatMessage, Event as CoreEvent, Snapshot};
+use runie_core::effect_payload::EffectPayload;
+use runie_core::{AppState, Event as CoreEvent, Snapshot};
 use tokio::sync::{mpsc, watch};
 
 use crate::terminal::caps::TerminalCapabilities;
@@ -12,23 +16,10 @@ mod share;
 mod suspend;
 
 pub enum EffectCommand {
-    OpenExternalEditor {
-        text: String,
-    },
-    CopyToClipboard {
-        text: String,
-    },
-    CopyLastResponse {
-        messages: Vec<ChatMessage>,
-    },
-    CopySelectedBlock {
-        text: String,
-    },
-    CopyBlockMetadata {
-        text: String,
-    },
+    OpenExternalEditor { text: String },
+    CopyToClipboard { text: String },
     ShareSession {
-        messages: Vec<ChatMessage>,
+        messages: Vec<runie_core::ChatMessage>,
         display_name: Option<String>,
     },
     Suspend {
@@ -47,30 +38,22 @@ impl EffectCommand {
         state: &AppState,
         caps: &TerminalCapabilities,
     ) -> Option<Self> {
-        match evt {
-            CoreEvent::OpenExternalEditor => Some(Self::OpenExternalEditor {
-                text: state.input.input.clone(),
-            }),
-            CoreEvent::CopyToClipboard(text) => Some(Self::CopyToClipboard { text: text.clone() }),
-            CoreEvent::CopyLastResponse => Some(Self::CopyLastResponse {
-                messages: state.session.messages.clone(),
-            }),
-            CoreEvent::CopySelectedBlock => state
-                .copy_selected_post_text()
-                .map(|text| Self::CopySelectedBlock { text }),
-            CoreEvent::CopyBlockMetadata => state
-                .copy_selected_post_metadata()
-                .map(|text| Self::CopyBlockMetadata { text }),
-            CoreEvent::ShareSession => Some(Self::ShareSession {
-                messages: state.session.messages.clone(),
-                display_name: state.session.session_display_name.clone(),
-            }),
-            CoreEvent::Suspend => Some(Self::Suspend {
-                terminal_caps: *caps,
-            }),
-            CoreEvent::SubmitKey { .. } => login_command(evt),
-            _ => None,
-        }
+        let payload = runie_core::effect_payload::extract(evt, state)?;
+        Some(match payload {
+            EffectPayload::OpenExternalEditor { text } => Self::OpenExternalEditor { text },
+            EffectPayload::CopyToClipboard { text } => Self::CopyToClipboard { text },
+            EffectPayload::ShareSession {
+                messages,
+                display_name,
+            } => Self::ShareSession {
+                messages,
+                display_name,
+            },
+            EffectPayload::LoginValidateKey { provider, key } => {
+                Self::LoginFlowSubmitKey { provider, key }
+            }
+            EffectPayload::Suspend => Self::Suspend { terminal_caps: *caps },
+        })
     }
 
     /// Run the side effect asynchronously, feeding results back via `tx`.
@@ -84,11 +67,6 @@ impl EffectCommand {
         match self {
             Self::OpenExternalEditor { text } => editor::run(text, tx),
             Self::CopyToClipboard { text } => clipboard::copy_to_clipboard(text, caps),
-            Self::CopyLastResponse { messages } => {
-                clipboard::copy_last_response(messages, caps);
-            }
-            Self::CopySelectedBlock { text } => clipboard::copy_to_clipboard(text, caps),
-            Self::CopyBlockMetadata { text } => clipboard::copy_to_clipboard(text, caps),
             Self::ShareSession {
                 messages,
                 display_name,
@@ -100,16 +78,5 @@ impl EffectCommand {
                 }
             }
         }
-    }
-}
-
-fn login_command(evt: &CoreEvent) -> Option<EffectCommand> {
-    if let CoreEvent::SubmitKey { provider, key } = evt {
-        Some(EffectCommand::LoginFlowSubmitKey {
-            provider: provider.clone(),
-            key: key.clone(),
-        })
-    } else {
-        None
     }
 }

@@ -35,6 +35,7 @@ pub mod config_reload;
 pub mod confirmation;
 pub mod dialog;
 pub mod diff;
+pub mod effect_payload;
 pub mod display_width;
 pub mod dry_run;
 pub mod dsl;

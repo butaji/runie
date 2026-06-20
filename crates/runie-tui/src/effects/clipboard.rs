@@ -1,30 +1,11 @@
 //! Clipboard effect handlers.
 
 use crate::terminal::{caps::TerminalCapabilities, clipboard as term_clipboard};
-use runie_core::model::Role;
-use runie_core::ChatMessage;
 
 /// Copy the given text to the terminal clipboard.
 /// Uses OSC 52 when the terminal supports it; otherwise falls back to
 /// a platform-specific command-line tool (pbcopy / wl-copy / xclip / clip).
 pub fn copy_to_clipboard(text: String, caps: TerminalCapabilities) {
-    if caps.clipboard && term_clipboard::copy_to_clipboard(&mut std::io::stdout(), &text).is_ok() {
-        return;
-    }
-    let _ = runie_core::async_io::run_blocking_if_runtime(move || platform_copy(&text));
-}
-
-/// Copy the last assistant response to the terminal clipboard.
-pub fn copy_last_response(messages: Vec<ChatMessage>, caps: TerminalCapabilities) {
-    let text = messages
-        .iter()
-        .rev()
-        .find(|m| m.role == Role::Assistant)
-        .map(|m| m.content.clone())
-        .unwrap_or_default();
-    if text.is_empty() {
-        return;
-    }
     if caps.clipboard && term_clipboard::copy_to_clipboard(&mut std::io::stdout(), &text).is_ok() {
         return;
     }
