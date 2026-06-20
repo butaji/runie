@@ -74,7 +74,6 @@ async fn main() -> io::Result<()> {
     let _actors = bootstrap.2;
 
     let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
-    theme::set_current_theme_with_caps_async(&state.config.theme_name, terminal_caps).await;
     init_terminal_state(&mut state);
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
@@ -168,7 +167,7 @@ fn spawn_background_tasks(
     let (kb_tx, kb_rx) = watch::channel(state.config.keybindings.clone());
 
     spawn_input_forwarder(input_rx, bus.clone());
-    spawn_agent_tasks(input_tx, kb_rx, terminal, render_rx, bus.clone());
+    spawn_agent_tasks(input_tx, kb_rx, terminal, render_rx, bus.clone(), caps);
     spawn_ui_actor(
         state,
         render_tx,
@@ -199,9 +198,10 @@ fn spawn_agent_tasks(
     terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
     render_rx: watch::Receiver<Snapshot>,
     _bus: EventBus<Event>,
+    caps: terminal::caps::TerminalCapabilities,
 ) {
     tokio::spawn(input_reader(input_tx, kb_rx));
-    tokio::spawn(render_task(terminal, render_rx));
+    tokio::spawn(render_task(terminal, render_rx, caps));
 }
 
 fn spawn_ui_actor(
@@ -236,6 +236,7 @@ fn spawn_ui_actor(
 async fn render_task(
     mut terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
     mut render_rx: watch::Receiver<Snapshot>,
+    caps: terminal::caps::TerminalCapabilities,
 ) {
     let mut last_size: Option<(u16, u16)> = None;
     loop {
@@ -248,6 +249,7 @@ async fn render_task(
             let _ = terminal.clear();
             last_size = Some(new_size);
         }
+        theme::set_current_theme_with_caps(&snap.theme_name, caps);
         let _ = terminal.draw(|f| ui::draw_snapshot(f, &snap));
         if render_rx.changed().await.is_err() {
             break;

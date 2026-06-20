@@ -17,7 +17,6 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::effects::EffectCommand;
 use crate::terminal::caps::TerminalCapabilities;
-use crate::theme;
 
 const ANIM_MS: u64 = 200;
 
@@ -120,7 +119,6 @@ impl UiActor {
 
         if was_config_loaded {
             let _ = self.kb_tx.send(self.state.config.keybindings.clone());
-            theme::set_current_theme_with_caps_async(&self.state.config.theme_name, self.caps).await;
         }
         if was_trust_loaded {
             runie_core::update::apply_initial_trust(&mut self.state);
