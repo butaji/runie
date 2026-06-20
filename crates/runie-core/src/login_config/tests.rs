@@ -135,14 +135,19 @@ async fn save_provider_config_persists_under_runtime() {
     )
     .unwrap();
 
-    // The save is spawned in the background; wait for it to land on disk.
-    for _ in 0..50 {
-        if path.exists() {
-            break;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    }
     assert!(path.exists(), "config file should be written");
+
+    let content = std::fs::read_to_string(&path).unwrap();
+    assert!(
+        content.contains("[model_providers.minimax]"),
+        "config should contain minimax provider section:\n{}",
+        content
+    );
+    assert!(
+        content.contains("api_key = \"sk-test\""),
+        "config should persist api_key:\n{}",
+        content
+    );
 
     let providers = super::list_configured_providers();
     assert_eq!(providers.len(), 1, "expected one configured provider");
@@ -151,6 +156,20 @@ async fn save_provider_config_persists_under_runtime() {
         providers[0].2,
         vec!["MiniMax-M3", "MiniMax-M2.7"],
         "saved models should be reflected in list_configured_providers"
+    );
+
+    // The provider used by agent turns loads config via Config::load.
+    let loaded = crate::config::Config::load(Some(&path));
+    let minimax = loaded.model_providers.get("minimax").expect("minimax entry");
+    assert_eq!(minimax.api_key, "sk-test");
+    assert_eq!(minimax.base_url, "https://api.minimaxi.chat/v1");
+
+    // Migration during load must not strip the saved credentials.
+    let content_after_load = std::fs::read_to_string(&path).unwrap();
+    assert!(
+        content_after_load.contains("api_key = \"sk-test\""),
+        "migration must preserve api_key:\n{}",
+        content_after_load
     );
 }
 
