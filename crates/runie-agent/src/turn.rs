@@ -12,13 +12,13 @@ use runie_core::harness_skills::{
     TurnStartCtx, TurnStartResult,
 };
 use runie_core::message::{ChatMessage, Role};
+use runie_core::provider::Provider;
 use runie_core::tool::{ToolContext, ToolOutput, ToolRegistry, ToolStatus};
-use runie_provider::DynProvider;
 use std::time::Instant;
 
 /// Run an agent turn with optional skill hooks.
 pub async fn run_agent_turn(
-    provider: &DynProvider,
+    provider: &dyn Provider,
     command: &AgentCommand,
     emit: EmitFn,
     max_iterations: usize,
@@ -29,7 +29,7 @@ pub async fn run_agent_turn(
 
 /// Run an agent turn with explicit skill registry.
 pub async fn run_agent_turn_with_skills(
-    provider: &DynProvider,
+    provider: &dyn Provider,
     command: &AgentCommand,
     emit: EmitFn,
     max_iterations: usize,
@@ -157,7 +157,7 @@ fn emit_error_and_done(emit: &EmitFn, id: &str, message: String) {
 }
 #[allow(clippy::too_many_arguments)]
 async fn run_iterations(
-    provider: &DynProvider,
+    provider: &dyn Provider,
     command: &AgentCommand,
     messages: &mut Vec<ChatMessage>,
     emit: EmitFn,
@@ -192,7 +192,7 @@ fn emit_now(emit: &EmitFn, event: Event) {
 }
 
 async fn run_agent_iteration(
-    provider: &DynProvider,
+    provider: &dyn Provider,
     command: &AgentCommand,
     messages: &mut Vec<ChatMessage>,
     emit: EmitFn,

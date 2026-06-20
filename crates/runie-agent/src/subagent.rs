@@ -8,71 +8,41 @@
 //! - Returns the final assistant response as a `String`
 //!
 //! Errors (network, parse, etc.) are returned as a structured `SubagentError`.
+//!
+//! The caller is responsible for building the provider (via `ProviderActor` in
+//! production) and passing it in. This module does no config I/O.
 
 use crate::{run_agent_turn, AgentCommand, PermissionGate};
 use runie_core::event::AgentEvent;
 use runie_core::model::ThinkingLevel;
 use runie_core::permissions::{AutoAllowSink, PermissionManager};
+use runie_core::provider::Provider;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum SubagentError {
-    #[error("provider error: {0}")]
-    Provider(String),
     #[error("agent turn failed: {0}")]
     Agent(String),
 }
 
 /// Run a subagent turn asynchronously. Returns the final assistant text.
 ///
-/// `prompt` is the user request. The subagent's message buffer is empty
-/// (no parent history leaks in), but it uses the same provider, model,
-/// and skills context as the parent.
-///
-/// This convenience wrapper loads the saved config to resolve API keys.
+/// `provider` and `provider_key`/`model` come from the caller (usually the
+/// `ProviderActor`). `prompt` is the user request. The subagent's message
+/// buffer is empty (no parent history leaks in).
 #[allow(clippy::too_many_arguments)]
 pub async fn run_subagent(
     prompt: &str,
     provider_key: &str,
     model: &str,
+    provider: &dyn Provider,
     thinking_level: ThinkingLevel,
     read_only: bool,
     skills_context: &str,
     system_prompt: &str,
     max_iterations: usize,
 ) -> Result<String, SubagentError> {
-    let config = runie_core::config::Config::load_async(None).await;
-    run_subagent_with_config(
-        prompt,
-        provider_key,
-        model,
-        thinking_level,
-        read_only,
-        skills_context,
-        system_prompt,
-        max_iterations,
-        &config,
-    )
-    .await
-}
-
-/// Run a subagent turn with an explicit config for resolving API keys.
-#[allow(clippy::too_many_arguments)]
-pub async fn run_subagent_with_config(
-    prompt: &str,
-    provider_key: &str,
-    model: &str,
-    thinking_level: ThinkingLevel,
-    read_only: bool,
-    skills_context: &str,
-    system_prompt: &str,
-    max_iterations: usize,
-    config: &runie_core::config::Config,
-) -> Result<String, SubagentError> {
-    let provider = runie_provider::DynProvider::new_with_config(provider_key, model, config)
-        .map_err(|e| SubagentError::Provider(e.to_string()))?;
-
     let cmd = build_subagent_command(
         prompt,
         provider_key,
@@ -82,8 +52,7 @@ pub async fn run_subagent_with_config(
         skills_context,
         system_prompt,
     );
-
-    run_subagent_turn(&provider, &cmd, max_iterations).await
+    run_subagent_turn(provider, &cmd, max_iterations).await
 }
 
 fn build_subagent_command(
@@ -109,7 +78,7 @@ fn build_subagent_command(
 }
 
 async fn run_subagent_turn(
-    provider: &runie_provider::DynProvider,
+    provider: &dyn Provider,
     cmd: &AgentCommand,
     max_iterations: usize,
 ) -> Result<String, SubagentError> {
@@ -174,6 +143,68 @@ fn finalize_subagent_result(state: Arc<SubagentState>) -> Result<String, Subagen
 #[cfg(test)]
 mod tests {
     use super::*;
+    use runie_core::model::ThinkingLevel;
+
+    fn mock_provider() -> runie_provider::MockProvider {
+        runie_provider::MockProvider::default()
+    }
+
+    #[tokio::test]
+    async fn subagent_returns_echo_of_prompt() {
+        let result = run_subagent(
+            "hello subagent",
+            "mock",
+            "echo",
+            &mock_provider(),
+            ThinkingLevel::Off,
+            false,
+            "",
+            "",
+            5,
+        )
+        .await;
+        let out = result.expect("subagent should succeed");
+        assert!(
+            out.contains("hello subagent"),
+            "expected echoed input in output, got: {:?}",
+            out
+        );
+    }
+
+    #[tokio::test]
+    async fn subagent_with_skill_context_uses_it() {
+        let result = run_subagent(
+            "ask about skill",
+            "mock",
+            "echo",
+            &mock_provider(),
+            ThinkingLevel::Off,
+            false,
+            "SKILL: test-skill",
+            "",
+            5,
+        )
+        .await;
+        let out = result.expect("subagent should succeed");
+        assert!(out.contains("ask about skill"));
+    }
+
+    #[tokio::test]
+    async fn subagent_empty_prompt_succeeds() {
+        let result = run_subagent(
+            "",
+            "mock",
+            "echo",
+            &mock_provider(),
+            ThinkingLevel::Off,
+            false,
+            "",
+            "",
+            5,
+        )
+        .await;
+        assert!(result.is_ok(), "{result:?}");
+    }
 
     #[test]
     fn finalize_recovers_from_poisoned_done_mutex() {

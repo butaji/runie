@@ -146,8 +146,25 @@ fn indexed_to_opaline(i: u8) -> opaline::OpalineColor {
     ];
     if (i as usize) < ANSI16.len() {
         let (r, g, b) = ANSI16[i as usize];
-        opaline::OpalineColor::new(r, g, b)
-    } else {
-        opaline::OpalineColor::FALLBACK
+        return opaline::OpalineColor::new(r, g, b);
     }
+    if i < 232 {
+        // 6x6x6 color cube (indices 16..232).
+        let n = i - 16;
+        let r = (n / 36) as u8;
+        let g = ((n % 36) / 6) as u8;
+        let b = (n % 6) as u8;
+        let channel = |v: u8| {
+            if v == 0 {
+                0
+            } else {
+                95 + (v - 1) * 40
+            }
+        };
+        return opaline::OpalineColor::new(channel(r), channel(g), channel(b));
+    }
+    // Grayscale ramp (indices 232..256).
+    let level = i - 232;
+    let gray = 8 + level * 10;
+    opaline::OpalineColor::new(gray, gray, gray)
 }

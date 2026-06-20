@@ -5,7 +5,6 @@ mod events;
 mod parser;
 mod permissions;
 mod safety;
-mod subagent_test;
 mod tools;
 mod turn;
 
