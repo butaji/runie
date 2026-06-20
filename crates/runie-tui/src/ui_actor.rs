@@ -122,7 +122,8 @@ impl UiActor {
             let _ = self.kb_tx.send(self.state.config.keybindings.clone());
         }
         if was_trust_loaded {
-            runie_core::update::apply_initial_trust(&mut self.state);
+            let cwd = std::env::current_dir().unwrap_or_default();
+            runie_core::update::apply_initial_trust(&mut self.state, &cwd);
         }
         handle_persistence_messages(self.persistence_handle.clone(), evt, submitted_text).await;
         if was_submit || was_followup || was_agent_done {

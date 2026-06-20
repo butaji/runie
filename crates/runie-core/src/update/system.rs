@@ -173,10 +173,9 @@ impl AppState {
     }
 }
 
-/// Apply the trust decision for the current directory after it has been loaded.
-pub fn apply_initial_trust(state: &mut AppState) {
-    let cwd = std::env::current_dir().unwrap_or_default();
-    match state.trust_decisions.get(&cwd).copied() {
+/// Apply the trust decision for the given directory after it has been loaded.
+pub fn apply_initial_trust(state: &mut AppState, cwd: &std::path::Path) {
+    match state.trust_decisions.get(cwd).copied() {
         Some(crate::trust::TrustDecision::Untrusted) => {
             state.config.read_only = true;
         }
