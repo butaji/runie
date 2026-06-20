@@ -20,16 +20,20 @@ impl AppState {
         }
     }
 
-    fn palette_items(&mut self) -> Arc<[(String, String, String)]> {
+    fn palette_items(&self) -> Arc<[(String, String, String)]> {
+        Arc::clone(&self.view.cached_palette_items)
+    }
+
+    fn refresh_palette_items(&mut self) {
         let filter = match self.palette_filter() {
             Some(f) => f,
             _ => {
                 self.view.cached_palette_filter = None;
                 if self.view.cached_palette_items.is_empty() {
-                    return Arc::clone(&self.view.cached_palette_items);
+                    return;
                 }
                 self.view.cached_palette_items = Arc::new([]);
-                return Arc::clone(&self.view.cached_palette_items);
+                return;
             }
         };
 
@@ -39,7 +43,6 @@ impl AppState {
             self.add_skill_palette_items(&filter, &mut items);
             self.view.cached_palette_items = items.into();
         }
-        Arc::clone(&self.view.cached_palette_items)
     }
 
     fn command_palette_items(&self, filter: &str) -> Vec<(String, String, String)> {
@@ -72,7 +75,11 @@ impl AppState {
         }
     }
 
-    fn session_tree_items(&mut self) -> Arc<[(usize, String)]> {
+    fn session_tree_items(&self) -> Arc<[(usize, String)]> {
+        Arc::clone(&self.view.cached_session_tree_items)
+    }
+
+    fn refresh_session_tree_items(&mut self) {
         let filter = match &self.open_dialog {
             Some(crate::commands::DialogState::SessionTree(_)) => {
                 crate::session_tree::SessionTreeFilter::All
@@ -80,10 +87,10 @@ impl AppState {
             _ => {
                 self.view.cached_session_tree_valid = false;
                 if self.view.cached_session_tree_items.is_empty() {
-                    return Arc::clone(&self.view.cached_session_tree_items);
+                    return;
                 }
                 self.view.cached_session_tree_items = Arc::new([]);
-                return Arc::clone(&self.view.cached_session_tree_items);
+                return;
             }
         };
         if !self.view.cached_session_tree_valid {
@@ -105,10 +112,13 @@ impl AppState {
             };
             self.view.cached_session_tree_valid = true;
         }
-        Arc::clone(&self.view.cached_session_tree_items)
     }
 
-    fn model_selector_items(&mut self) -> Arc<[ModelSelectorItem]> {
+    fn model_selector_items(&self) -> Arc<[ModelSelectorItem]> {
+        Arc::clone(&self.view.cached_model_items)
+    }
+
+    fn refresh_model_selector_items(&mut self) {
         let filter = match &self.open_dialog {
             Some(d) => d
                 .panel_stack()
@@ -118,10 +128,10 @@ impl AppState {
             _ => {
                 self.view.cached_model_filter = None;
                 if self.view.cached_model_items.is_empty() {
-                    return Arc::clone(&self.view.cached_model_items);
+                    return;
                 }
                 self.view.cached_model_items = Arc::new([]);
-                return Arc::clone(&self.view.cached_model_items);
+                return;
             }
         };
         if Some(&filter) != self.view.cached_model_filter.as_ref() {
@@ -137,36 +147,39 @@ impl AppState {
             )
             .into();
         }
-        Arc::clone(&self.view.cached_model_items)
     }
 
-    fn settings_items(&mut self) -> Arc<[crate::settings::SettingItem]> {
+    fn settings_items(&self) -> Arc<[crate::settings::SettingItem]> {
+        Arc::clone(&self.view.cached_settings_items)
+    }
+
+    fn refresh_settings_items(&mut self) {
         if !self.view.cached_settings_valid {
             self.view.cached_settings_items =
                 crate::update::settings_dialog::build_setting_items(self).into();
             self.view.cached_settings_valid = true;
         }
-        Arc::clone(&self.view.cached_settings_items)
     }
 
-    fn auth_providers(&mut self) -> Arc<[String]> {
-        if !self.view.cached_auth_valid {
-            let providers: Vec<String> = crate::async_io::block_in_place_if_runtime(crate::auth::AuthStorage::load)
-                .tokens
-                .keys()
-                .cloned()
-                .collect();
-            self.view.cached_auth_providers = providers.into();
-            self.view.cached_auth_valid = true;
-        }
+    fn auth_providers(&self) -> Arc<[String]> {
         Arc::clone(&self.view.cached_auth_providers)
     }
 
-    /// Rebuild cache only when messages changed — O(n) but gated
+    pub fn set_auth_providers(&mut self, providers: Vec<String>) {
+        self.view.cached_auth_providers = providers.into();
+    }
+
+    /// Rebuild caches when inputs changed — O(n) but gated.
     pub fn ensure_fresh(&mut self) {
         let prev_total_lines = self.view.total_lines;
         let was_streaming = self.agent.streaming;
         let prev_scroll = self.view.scroll;
+
+        self.refresh_palette_items();
+        self.refresh_model_selector_items();
+        self.refresh_session_tree_items();
+        self.refresh_settings_items();
+
         if self.view.dirty && self.view.message_gen != self.view.cached_gen {
             let feed = crate::ui::LazyCache::feed(self);
             self.view.element_count = feed.elements.len();
@@ -314,6 +327,7 @@ impl AppState {
 
     /// Build an immutable Snapshot for the render actor.
     pub fn snapshot(&mut self) -> Snapshot {
+        self.ensure_fresh();
         let mut s = self.snapshot_base();
         self.fill_snapshot_config(&mut s);
         self.fill_snapshot_dialog(&mut s);
@@ -394,7 +408,7 @@ impl AppState {
         );
     }
 
-    fn fill_snapshot_dialog(&mut self, s: &mut Snapshot) {
+    fn fill_snapshot_dialog(&self, s: &mut Snapshot) {
         s.dialog = self.open_dialog.clone();
         s.palette_items = self.palette_items();
         s.model_selector_items = self.model_selector_items();

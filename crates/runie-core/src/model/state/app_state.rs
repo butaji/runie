@@ -1,5 +1,6 @@
 //! `AppState` struct and its inherent methods.
-use super::helpers::{compute_ranking_score, element_metadata, element_text};
+use super::helpers::{element_metadata, element_text};
+use crate::model::state::ranking;
 use super::FffFileEntry;
 use crate::ui::elements::Element;
 
@@ -61,7 +62,6 @@ pub struct AppState {
 
 impl Default for AppState {
     fn default() -> Self {
-        let (git_info, cwd_name) = crate::model::init_git_and_cwd();
         Self {
             session: crate::state::SessionState::default(),
             input: crate::state::InputState::default(),
@@ -79,8 +79,8 @@ impl Default for AppState {
             transient_message: None,
             transient_until: None,
             transient_level: None,
-            git_info,
-            cwd_name,
+            git_info: None,
+            cwd_name: String::new(),
             fff_file_results: Vec::new(),
             fff_debounce: 0,
             permission_request: None,
@@ -144,12 +144,16 @@ impl AppState {
         let config_tx = self.config_tx.clone();
         let provider_tx = self.provider_tx.clone();
         let config_cache = self.config_cache.clone();
+        let git_info = self.git_info.clone();
+        let cwd_name = self.cwd_name.clone();
         *self = Self::default();
         self.config = config;
         self.approval_registry = registry;
         self.config_tx = config_tx;
         self.provider_tx = provider_tx;
         self.config_cache = config_cache;
+        self.git_info = git_info;
+        self.cwd_name = cwd_name;
     }
 
     /// Apply a loaded config to all config-driven state fields.
@@ -178,7 +182,7 @@ impl AppState {
 
     fn apply_active_model(&mut self, config: &crate::config::Config) {
         let (provider, model) = config.resolve_default_model();
-        if !provider.is_empty() && has_provider_credentials(config, &provider) {
+        if !provider.is_empty() && ranking::has_provider_credentials(config, &provider) {
             self.set_active_model(provider, model, crate::state::ModelSource::ConfigDefault);
         }
     }
@@ -388,9 +392,9 @@ impl AppState {
     ) -> Vec<(&crate::commands::CommandDef, i32)> {
         let all: Vec<_> = self.registry.list();
         if query.is_empty() {
-            rank_commands_empty_query(self, &all, limit)
+            ranking::rank_commands_empty_query(self, &all, limit)
         } else {
-            rank_commands_with_query(self, query, &all, limit)
+            ranking::rank_commands_with_query(self, query, &all, limit)
         }
     }
 
@@ -455,46 +459,4 @@ impl AppState {
     }
 }
 
-fn rank_commands_empty_query<'a>(
-    state: &'a AppState,
-    all: &[&'a crate::commands::CommandDef],
-    limit: usize,
-) -> Vec<(&'a crate::commands::CommandDef, i32)> {
-    let mut ranked: Vec<_> = all
-        .iter()
-        .map(|cmd| {
-            let usage = state.config.command_usage.get(&cmd.name);
-            let score = compute_ranking_score("", cmd, usage);
-            (*cmd, score)
-        })
-        .collect();
-    ranked.sort_by_key(|(cmd, score)| (std::cmp::Reverse(*score), &cmd.category, &cmd.name));
-    ranked.into_iter().take(limit).collect()
-}
 
-fn rank_commands_with_query<'a>(
-    state: &'a AppState,
-    query: &str,
-    all: &[&'a crate::commands::CommandDef],
-    limit: usize,
-) -> Vec<(&'a crate::commands::CommandDef, i32)> {
-    let mut ranked: Vec<_> = all
-        .iter()
-        .filter_map(|cmd| {
-            let base = crate::fuzzy::fuzzy_match(query, &cmd.name)
-                .or_else(|| crate::fuzzy::fuzzy_match(query, &cmd.desc))?;
-            let usage = state.config.command_usage.get(&cmd.name);
-            let score = compute_ranking_score(query, cmd, usage) + base * 100;
-            Some((*cmd, score))
-        })
-        .collect();
-    ranked.sort_by_key(|(_, score)| std::cmp::Reverse(*score));
-    ranked.into_iter().take(limit).collect()
-}
-fn has_provider_credentials(config: &crate::config::Config, provider: &str) -> bool {
-    config
-        .model_providers
-        .get(provider)
-        .map(|p| !p.api_key.is_empty())
-        .unwrap_or(false)
-}

@@ -60,6 +60,28 @@ pub fn set_current_theme_with_caps(name: &str, caps: crate::terminal::caps::Term
     *guard = Some(Arc::new(theme));
 }
 
+/// Async variant of `set_current_theme_with_caps`.
+/// Loads the theme file off the async runtime and then installs it.
+pub async fn set_current_theme_with_caps_async(
+    name: &str,
+    caps: crate::terminal::caps::TerminalCapabilities,
+) {
+    {
+        let mut current = CURRENT_CAPS.write().unwrap_or_else(|e| e.into_inner());
+        *current = Some(caps);
+    }
+    {
+        let mut current = CURRENT_THEME_NAME.lock().unwrap_or_else(|e| e.into_inner());
+        if current.as_str() == name {
+            return;
+        }
+        *current = name.to_string();
+    }
+    let theme = loader::load_theme_with_caps_async(name.to_string(), caps).await;
+    let mut guard = CURRENT_THEME.write().unwrap_or_else(|e| e.into_inner());
+    *guard = Some(Arc::new(theme));
+}
+
 /// Get the name of the currently active theme.
 pub fn current_theme_name() -> String {
     CURRENT_THEME_NAME

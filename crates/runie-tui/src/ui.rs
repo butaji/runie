@@ -14,7 +14,7 @@ use ratatui::{
 };
 use runie_core::Snapshot;
 
-use crate::theme::{color_bg, set_current_theme};
+use crate::theme::color_bg;
 
 mod hints;
 mod input;
@@ -33,7 +33,6 @@ pub(crate) use messages::estimate_element_tokens;
 
 /// Draw a Snapshot to the terminal. Pure function — no mutable state.
 pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
-    set_current_theme(&snap.theme_name);
     let full_area = f.area();
     f.buffer_mut()
         .set_style(full_area, Style::default().bg(color_bg()));

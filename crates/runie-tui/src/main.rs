@@ -67,17 +67,13 @@ async fn main() -> io::Result<()> {
     }
 
     let _cleanup = Cleanup;
-    let (terminal, terminal_caps) = setup_theme_and_terminal()?;
     let bus = EventBus::<Event>::new(100);
-    let (config_handle, config_actor) = ConfigActor::spawn(bus.clone(), None);
-    let (provider_handle, provider_actor) = spawn_provider_actor(&bus, &config_handle);
-    let mut state = AppState {
-        config_tx: Some(config_handle.tx().clone()),
-        provider_tx: Some(provider_handle.tx().clone()),
-        ..Default::default()
-    };
+    let (mut state, _config_handle, provider_handle, config_actor, provider_actor) =
+        bootstrap_app(bus.clone()).await;
+
+    let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
+    theme::set_current_theme_with_caps_async(&state.config.theme_name, terminal_caps).await;
     init_terminal_state(&mut state);
-    run_init_hooks(&mut state);
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
     spawn_background_tasks(
@@ -99,6 +95,26 @@ async fn main() -> io::Result<()> {
     Ok(())
 }
 
+async fn bootstrap_app(
+    bus: EventBus<Event>,
+) -> (
+    AppState,
+    runie_core::actors::ConfigActorHandle,
+    runie_core::actors::ProviderActorHandle,
+    runie_core::actor::ActorHandle,
+    runie_core::actor::ActorHandle,
+) {
+    let (config_handle, config_actor) = ConfigActor::spawn(bus.clone(), None);
+    let (provider_handle, provider_actor) = spawn_provider_actor(&bus, &config_handle);
+    let mut state = AppState {
+        config_tx: Some(config_handle.tx().clone()),
+        provider_tx: Some(provider_handle.tx().clone()),
+        ..Default::default()
+    };
+    app_init::bootstrap(&mut state).await;
+    (state, config_handle, provider_handle, config_actor, provider_actor)
+}
+
 fn spawn_provider_actor(
     bus: &EventBus<Event>,
     config_handle: &runie_core::actors::ConfigActorHandle,
@@ -113,25 +129,11 @@ fn spawn_provider_actor(
     )
 }
 
-fn setup_theme_and_terminal() -> io::Result<(
-    ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
-    terminal::caps::TerminalCapabilities,
-)> {
-    let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
-    theme::set_current_theme_with_caps(theme::DEFAULT_THEME_NAME, terminal_caps);
-    Ok((terminal, terminal_caps))
-}
-
 fn init_terminal_state(state: &mut AppState) {
     if let Ok((width, height)) = crossterm::terminal::size() {
         state.set_last_content_width(width);
         state.set_last_visible_height(height);
     }
-}
-
-fn run_init_hooks(state: &mut AppState) {
-    app_init::apply_trust_on_startup(state);
-    app_init::init_skills(state);
 }
 
 fn spawn_background_tasks(
