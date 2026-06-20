@@ -1,8 +1,11 @@
 //! Tests for runie-provider
 
-use crate::{DynProvider, MockProvider, MockStreamingProvider};
+use crate::{DynProvider, DynProviderFactory, MockProvider, MockStreamingProvider};
 use futures::StreamExt;
+use runie_core::actors::{ConfigActor, ProviderActor};
+use runie_core::bus::EventBus;
 use runie_core::config::Config;
+use runie_core::event::Event;
 use runie_core::llm_event::LLMEvent;
 use runie_core::message::ChatMessage;
 use runie_core::provider::{Provider, ProviderError};
@@ -387,4 +390,95 @@ async fn test_mock_streaming_provider_accumulates_content() {
 
     assert!(full_content.contains("test"));
     assert!(full_content.len() > 10);
+}
+
+// ============================================================================
+// ProviderActor integration tests using the real DynProviderFactory
+// ============================================================================
+
+#[tokio::test]
+async fn provider_actor_builds_mock_provider_with_runie_mock() {
+    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    std::env::set_var("RUNIE_MOCK", "1");
+
+    let bus = EventBus::<Event>::new(1);
+    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
+    let (provider_handle, _provider_actor) =
+        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory));
+
+    let built = provider_handle
+        .build("mock".into(), "echo".into())
+        .await
+        .expect("mock provider should build with RUNIE_MOCK");
+
+    assert_eq!(built.key, "mock");
+    assert_eq!(built.model, "echo");
+
+    std::env::remove_var("RUNIE_MOCK");
+}
+
+#[tokio::test]
+async fn provider_actor_rejects_unknown_provider_real_factory() {
+    let bus = EventBus::<Event>::new(1);
+    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
+    let (provider_handle, _provider_actor) =
+        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory));
+
+    let err = provider_handle
+        .build("ghost-provider".into(), "x".into())
+        .await
+        .unwrap_err();
+
+    assert_eq!(err, ProviderError::UnknownProvider("ghost-provider".into()));
+}
+
+#[tokio::test]
+async fn provider_actor_validates_key_against_mock_server() {
+    use std::io::{Read, Write};
+
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let mut buf = [0u8; 1024];
+        let n = stream.read(&mut buf).unwrap_or(0);
+        let request = String::from_utf8_lossy(&buf[..n]);
+        let auth = request
+            .lines()
+            .find(|l| l.to_lowercase().starts_with("authorization:"))
+            .unwrap_or("")
+            .to_string();
+        let body = r#"{"data":[{"id":"model-a"},{"id":"model-b"}]}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        let _ = stream.write_all(response.as_bytes());
+        auth
+    });
+
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("config.toml");
+    let config = format!(
+        r#"[model_providers.test]
+base_url = "http://127.0.0.1:{}/v1"
+api_key = "sk-test"
+"#,
+        port
+    );
+    std::fs::write(&config_path, config).unwrap();
+
+    let bus = EventBus::<Event>::new(1);
+    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), Some(config_path));
+    let (provider_handle, _provider_actor) =
+        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory));
+
+    let models = provider_handle
+        .validate_key("test".into(), "sk-test".into())
+        .await
+        .expect("validation should parse mock server response");
+
+    assert_eq!(models, vec!["model-a", "model-b"]);
 }

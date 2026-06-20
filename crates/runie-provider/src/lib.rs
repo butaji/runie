@@ -3,11 +3,13 @@
 //! Runie Provider - Concrete LLM provider implementations
 
 pub mod config;
+pub mod factory;
 pub mod mock;
 pub mod openai;
 pub mod retry;
 
 pub use config::Config;
+pub use factory::DynProviderFactory;
 pub use mock::{MockProvider, MockStreamingProvider};
 pub use openai::OpenAiProvider;
 

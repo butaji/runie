@@ -6,9 +6,13 @@
 
 mod config;
 mod fff_indexer;
+pub mod provider;
 
 pub use config::{ConfigActor, ConfigActorHandle, ConfigMsg, ConfigReply};
 pub use fff_indexer::{
     FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
     FffSearchState,
+};
+pub use provider::{
+    BuiltProvider, ProviderActor, ProviderActorHandle, ProviderFactory, ProviderMsg,
 };
