@@ -3110,6 +3110,105 @@
       "depends_on": ["consolidate-login-flow-handlers"],
       "blocks": [],
       "notes": "Classify 19 take()/mem::take sites. Extract with_dialog helper for the 9-site open_dialog cluster. Comment legitimate parser-buffer flushes."
+    },
+    {
+      "id": "finish-io-migration",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/finish-io-migration.md",
+      "depends_on": ["remove-login-config-test-shim"],
+      "blocks": ["delete-async-io-bridge"],
+      "notes": "Finding #1: runie-core (33k LOC) still has sync IO in model/mod.rs (git), auth.rs, session_store.rs. Move behind existing GitService/ConfigStore/SessionStore actor traits; empty the arch_guardrails legacy allow-list. Prerequisite to delete-async-io-bridge."
+    },
+    {
+      "id": "unify-persistence-actors",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/unify-persistence-actors.md",
+      "depends_on": [],
+      "blocks": ["simplify-actor-trait"],
+      "notes": "Finding #2: PersistenceActor + SessionStoreActor + SessionActor (687 LOC) all touch SessionStore/SessionIndex, duplicate SessionMetadata. Unify into one actors/session/ actor. ~400 LOC removed, 2 spawns dropped from TUI bootstrap."
+    },
+    {
+      "id": "remove-login-config-test-shim",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/remove-login-config-test-shim.md",
+      "depends_on": [],
+      "blocks": ["finish-io-migration", "consolidate-dual-path-modules"],
+      "notes": "Finding #4: 5 #[cfg(test)] branches in app_state.rs fall back to login_config:: for config reads/writes. Replace with injected ConfigStore mocks (trait already exists). Deletes login_config.rs (141 LOC) + ~15 test set_test_config_* call sites."
+    },
+    {
+      "id": "consolidate-settings-providers-dialog",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/consolidate-settings-providers-dialog.md",
+      "depends_on": ["unify-provider-modules"],
+      "blocks": [],
+      "notes": "Finding #5 (uncovered): settings.rs + providers_dialog.rs + update/settings_dialog.rs + update/dialog/provider_model_toggle.rs split across 3 dirs. Consolidate into settings/ dir. Login-flow portion owned by consolidate-login-flow-handlers; config-reload portion by delete-config-reload-shim."
+    },
+    {
+      "id": "rename-core-ui-to-view",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/rename-core-ui-to-view.md",
+      "depends_on": ["fold-state-into-model-state"],
+      "blocks": [],
+      "notes": "Finding #7: runie-core/src/ui/ (1041 LOC) is the view-model (Element/Feed/Transform), not UI. Actual rendering is runie-tui/src/ui/. Two ui/ dirs with different meanings is confusing. Rename core ui/ -> view/."
+    },
+    {
+      "id": "fold-protocol-into-core",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "file": "tasks/fold-protocol-into-core.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Finding #10: runie-protocol (557 LOC) has 2 consumers (runie-server + runie-core/src/ipc.rs). YAGNI separate crate. Fold into runie-core/src/proto/ (ipc.rs moves to proto/ipc.rs). Reversible if external IDE consumer appears."
+    },
+    {
+      "id": "delete-async-io-bridge",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/delete-async-io-bridge.md",
+      "depends_on": ["finish-io-migration"],
+      "blocks": [],
+      "notes": "Finding #11: async_io.rs run_blocking_if_runtime/block_in_place_if_runtime are documented tactical bridge for sync IO. Once finish-io-migration lands, zero callers. Delete the module; do not keep dead bridge code."
+    },
+    {
+      "id": "simplify-actor-trait",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "file": "tasks/simplify-actor-trait.md",
+      "depends_on": ["unify-persistence-actors"],
+      "blocks": [],
+      "notes": "Finding #13: Actor::run_body default is a no-op (every actor overrides it); spawn_actor generic helper is dead production code (every actor uses own spawn). Drop the default; pick one spawn pattern."
+    },
+    {
+      "id": "fold-testing-into-agent-tests",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P3",
+      "file": "tasks/fold-testing-into-agent-tests.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Finding #14: runie-testing (344 LOC) has 1 external consumer (runie-agent/src/tests/tool_runtime.rs). Fold into runie-agent tests as #[cfg(test)] modules. Cancel if a second consumer is planned."
     }
   ]
 }
