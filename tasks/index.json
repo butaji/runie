@@ -2641,16 +2641,17 @@
     },
     {
       "id": "simplify-event-vocabulary",
-      "status": "in_progress",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P0",
+      "completed_in": "current",
       "file": "tasks/simplify-event-vocabulary.md",
       "depends_on": [
         "remove-io-from-runie-core"
       ],
       "blocks": [],
-      "notes": "3a/3b done: duplicate events merged, dispatch simplified into category handlers. 3c (enum nesting) deferred to reduce serde/session risk; no longer blocks Phase 4."
+      "notes": "Phase 3c complete: flat Event enum nested into typed sub-enums (Input, Agent, Control, Dialog, System, Config, Session, Io, ConfigLoaded). DurableCoreEvent unchanged. Dispatchers and input/dialog helpers updated to typed sub-enums where feasible. All workspace tests pass."
     },
     {
       "id": "pure-snapshot-and-tool-runtime-trait",
@@ -2878,6 +2879,94 @@
       "depends_on": [],
       "blocks": [],
       "notes": "Archive 27 done task files, fix Architecture.md dead refs, clean .gitignore, sync verify-tests.sh count."
+    },
+    {
+      "id": "delete-dead-core-modules",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/delete-dead-core-modules.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Delete 5 zero-caller pub mods in runie-core: hooks (349), skill/singular (318), retry (233), location (195), utils (53). ~1,148 LOC of scaffolding-for-later or stale duplicates. mcp.rs excluded (owned by gate-or-implement-mcp-client)."
+    },
+    {
+      "id": "delete-tui-ipc-reexport-shim",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P0",
+      "file": "tasks/delete-tui-ipc-reexport-shim.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "5-line pub use runie_core::ipc::TuiIpc shim with zero callers. Same class as delete-path-utils-reexport and delete-config-reload-shim; missed in prior audit."
+    },
+    {
+      "id": "consolidate-dual-path-modules",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/consolidate-dual-path-modules.md",
+      "depends_on": [],
+      "blocks": ["group-session-modules-into-dir", "relocate-loose-tests-files", "flatten-update-login-flow-tests-dir"],
+      "notes": "Convert 6 foo.rs + foo/ dual-path pairs to foo/mod.rs style: tool_markers, tool_parser, provider_registry, model_catalog, login_config, message. ~3,036 LOC, mechanical git mv."
+    },
+    {
+      "id": "group-session-modules-into-dir",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Sessions",
+      "priority": "P1",
+      "file": "tasks/group-session-modules-into-dir.md",
+      "depends_on": ["consolidate-dual-path-modules"],
+      "blocks": [],
+      "notes": "Move 6 session_*.rs files (1,863 LOC) at runie-core src root into session/ dir. Drops root file count 60 -> 54. Touches runie-testing and arch_guardrails path strings."
+    },
+    {
+      "id": "simplify-event-module-layout",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/simplify-event-module-layout.md",
+      "depends_on": ["simplify-event-vocabulary"],
+      "blocks": [],
+      "notes": "Collapse 5 single-line event alias shim files (command/edit/login_flow/model_config/dialog, 21 LOC total) into one aliases.rs; move event/variants_tests.rs into event/variants/tests.rs. Complements simplify-event-vocabulary (which targets enum nesting, not file layout)."
+    },
+    {
+      "id": "inline-or-document-core-ui-shim",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/inline-or-document-core-ui-shim.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "8-line runie-tui/src/core_ui/mod.rs re-export of runie_core::ui types. Either inline 8 callers to use runie_core::ui directly or document a concrete orphan-rule blocker."
+    },
+    {
+      "id": "relocate-loose-tests-files",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/relocate-loose-tests-files.md",
+      "depends_on": ["consolidate-dual-path-modules"],
+      "blocks": [],
+      "notes": "Move 7 *_tests.rs loose files into module tests/ subdirs or inline. #[path] workarounds (tool_parser_tests, form_tests) drop after dual-path consolidation. event/variants_tests owned by simplify-event-module-layout."
+    },
+    {
+      "id": "flatten-update-login-flow-tests-dir",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/flatten-update-login-flow-tests-dir.md",
+      "depends_on": ["consolidate-dual-path-modules"],
+      "blocks": [],
+      "notes": "update/login_flow/ is a single-file directory containing only tests.rs. Collapses after dual-path consolidation converts login_flow.rs -> login_flow/mod.rs."
     }
   ]
 }
