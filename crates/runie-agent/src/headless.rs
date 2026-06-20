@@ -138,6 +138,7 @@ struct HeadlessStreamState<'a> {
     options: &'a mut HeadlessOptions,
     accumulators: HashMap<String, ToolCallAccumulator>,
     tool_calls: Vec<ParsedToolCall>,
+    error: Option<String>,
 }
 
 impl<'a> HeadlessStreamState<'a> {
@@ -148,6 +149,7 @@ impl<'a> HeadlessStreamState<'a> {
             options,
             accumulators: HashMap::new(),
             tool_calls: Vec::new(),
+            error: None,
         }
     }
 
@@ -167,7 +169,7 @@ impl<'a> HeadlessStreamState<'a> {
             LLMEvent::ToolCallEnd { id } => self.on_tool_end(id),
             LLMEvent::Finish { .. } => return ControlFlow::Break(()),
             LLMEvent::Error(e) => {
-                eprintln!("LLM error: {:?}", e);
+                self.error = Some(format!("{:?}", e));
                 return ControlFlow::Break(());
             }
             _ => {}
@@ -235,6 +237,10 @@ async fn stream_headless_response(
         if let ControlFlow::Break(()) = state.handle_event(event_result?) {
             break;
         }
+    }
+
+    if let Some(err) = state.error {
+        return Err(anyhow::anyhow!("LLM error: {err}"));
     }
 
     Ok(state.into_response())

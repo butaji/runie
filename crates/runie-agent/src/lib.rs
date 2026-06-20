@@ -1,8 +1,6 @@
 #![warn(clippy::all)]
 
 pub mod actor;
-pub mod context7;
-pub mod diff;
 pub mod emit_approval_sink;
 pub mod headless;
 pub mod inspector;
