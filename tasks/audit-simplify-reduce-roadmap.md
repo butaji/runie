@@ -10,7 +10,7 @@
 
 ## Description
 
-Master index of the 31 findings from the YAGNI/stdlib/OS-features architecture and code review. Each finding maps to either an existing task (status noted) or a new task created by this audit. Findings are ranked by impact (LOC/complexity removable for risk). Tiers 1–7 group work by nature; within a tier, order is recommended execution order.
+Master index of the findings from the YAGNI/stdlib/OS-features architecture and code review. Each finding maps to either an existing task (status noted) or a new task created by this audit. Findings are ranked by impact (LOC/complexity removable for risk). Tiers 1–7 group work by nature; within a tier, order is recommended execution order. The ranked-review pass added findings F32–F39 (Tier 8 + amendments) framed around the user's stated posture: YAGNI / stdlib / OS features / minimum code / event-based / actor / Async IO | Domain (pure) | UI (pure/MVU).
 
 ## Finding → task map
 
@@ -80,15 +80,34 @@ Master index of the 31 findings from the YAGNI/stdlib/OS-features architecture a
 | F30 | `effect_payload.rs` 2-step mapping to TUI | `collapse-effect-payload-indirection` | todo (new) |
 | F31 | `event/aliases.rs` 4 type aliases hide enum identity | `drop-event-aliases` | todo (new) |
 
+### Tier 8 — Layering enforcement at the crate boundary (ranked-review pass)
+
+The original audit treated symptoms (sync IO in core, duplicate modules, single-consumer deps) without naming the root cause: `runie-core` is a 51,524-line god-crate mixing IO + domain + UI DSL, so every binary transitively compiles every dep. These findings make the "IO | Domain (pure) | UI" posture true at the crate level.
+
+| # | Finding | Task | Status |
+|---|---------|------|--------|
+| F32 | `runie-core` mixes all 3 layers; split into `runie-domain` + `runie-io` | `split-runie-core-into-domain-and-io-crates` | todo (new) |
+| F33 | IO executes inside `runie-tui/src/effects/` (reqwest, tempfile, clipboard, login HTTP, suspend) — violates UI pure | `move-tui-effects-into-io-actor` | todo (new) |
+| F34 | Three near-identical headless binaries → one `runie-cli` with subcommands (supersedes F23 helper-only approach) | `collapse-headless-binaries-into-one-cli` | todo (new) |
+| F35 | Core carries TUI-only modules (dialog, login_flow, providers_dialog, themes, markdown render, ipc) every binary compiles | `gate-or-move-single-consumer-core-modules` | todo (new) |
+| F36 | Duplicate module names core↔tui: `markdown` + `theme`/`themes` (diff/ui/ipc covered by earlier tasks) | `unify-duplicate-module-names-core-tui` | todo (new) |
+| F37 | Seven config locations at core root → one `config/` dir (mirrors session consolidation) | `consolidate-config-modules-into-dir` | todo (new) |
+| F38 | `thiserror` (1 file) + `async-trait` (9+ files; edition 2021 supports native async-fn-in-trait) | `drop-thiserror-and-async-trait-deps` | todo (new) |
+| F39 | `model/cache.rs` + `model/cache/` dual-path missed by F7's list | amendment to `consolidate-dual-path-modules` | todo (amended) |
+
 ## Acceptance Criteria
 
-- [ ] Every finding F1–F31 has a task file (existing or new) listed above.
+- [ ] Every finding F1–F39 has a task file (existing, new, or amended) listed above.
 - [ ] All new tasks created by this audit are registered in `tasks/index.json`.
 - [ ] Recommended execution order is encoded in `depends_on` / `blocks` where applicable:
   - F1 before F6 (delete dead trait, then relocate the live one).
   - F26 before F14 (drop replay buffer, then `parking_lot` loses its last `bus.rs` site).
   - F3 before F4 (fold state trees, then consolidate `AppState` impls).
   - F11 before F9 (replace `git2`, then the duplicated formatter is the only remaining git-status code and can be unified).
+  - F32 (crate split) after finish-io-migration, delete-async-io-bridge, fold-state-into-model-state, rename-core-ui-to-view; F35/F36/F37 after F32.
+  - F33 (move TUI effects) before collapse-effect-payload-indirection (F30) — move IO first, then decide the enum fate.
+  - F34 supersedes F23 (extract-headless-cli-helper) — collapse to one CLI crate, not three crates sharing a helper.
+  - F38 independent; can run anytime but pairs naturally with F14/F15/F18/F20 (drop-small-stdlib-replaceable-deps).
 - [ ] `cargo check --workspace` succeeds (this task only edits `tasks/`).
 
 ## Tests
@@ -113,3 +132,5 @@ Master index of the 31 findings from the YAGNI/stdlib/OS-features architecture a
 ## Notes
 
 The audit was conducted against the YAGNI / stdlib / OS-features / event-based / actor / IO|Domain|UI posture stated by the user. Tier 4 dep drops are reversals of recently completed `adopt-*` tasks (all `done`); each reversal task must acknowledge the original adoption rationale and weigh it against the new YAGNI argument before deleting. Do not blanket-delete deps without reading the adoption task notes.
+
+The ranked-review pass (Tier 8) re-framed the audit around crate-boundary enforcement rather than symptom-level cleanup. The three highest-leverage moves are: (1) F32 split `runie-core` into domain + IO, (2) F33 move TUI effects into `IoActor`, (3) F34 collapse three headless binaries into one CLI. Together they cut ~2 crates, drop `reqwest`/`tempfile`/`arboard`/`png`/`tiktoken-rs`/`schemars`/`jsonschema` from most build graphs, and make the "Domain pure · UI pure-MVU · Async IO" claims true at the crate level rather than via a source-scan allow-list. F32 is the prerequisite that makes F35/F36/F37 (single-consumer modules, duplicate names, config sprawl) straightforward follow-ups.

@@ -727,6 +727,106 @@
       "depends_on": [],
       "blocks": [],
       "notes": "Finding F31: event/aliases.rs has 4 type aliases (CommandEvent, ModelConfigEvent -> ControlEvent; LoginFlowEvent -> DialogEvent; EditEvent -> IoEvent) used in ~5 update files. Hide enum identity. Drop and rename call sites, or document a real reason to keep."
+    },
+    {
+      "id": "split-runie-core-into-domain-and-io-crates",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/split-runie-core-into-domain-and-io-crates.md",
+      "depends_on": [
+        "finish-io-migration",
+        "delete-async-io-bridge",
+        "fold-state-into-model-state",
+        "rename-core-ui-to-view"
+      ],
+      "blocks": [
+        "gate-or-move-single-consumer-core-modules",
+        "unify-duplicate-module-names-core-tui",
+        "consolidate-config-modules-into-dir"
+      ],
+      "notes": "Finding F32 (ranked review #1): runie-core (51,524 LOC, 30+ deps) mixes IO + domain + UI DSL; every binary transitively compiles redb/git2/notify/arboard/png/tiktoken/schemars/jsonschema. Split into runie-domain (pure) + runie-io (actor impls). finish-io-migration explicitly deferred this; it is the root-cause task that makes F35/F36/F37 straightforward. Highest-leverage move in the audit."
+    },
+    {
+      "id": "move-tui-effects-into-io-actor",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/move-tui-effects-into-io-actor.md",
+      "depends_on": [
+        "finish-io-migration"
+      ],
+      "blocks": [
+        "collapse-effect-payload-indirection"
+      ],
+      "notes": "Finding F33 (ranked review #4): runie-tui/src/effects/ (339 LOC) executes IO directly in the rendering crate — share.rs uses reqwest (only reason TUI depends on reqwest), editor.rs uses tempfile, clipboard.rs/login.rs/suspend.rs do side effects. Move to IoActor messages emitting events. Distinct from collapse-effect-payload-indirection (which only addresses the enum, not the IO-in-UI violation). Drops reqwest+tempfile from TUI non-dev deps."
+    },
+    {
+      "id": "collapse-headless-binaries-into-one-cli",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/collapse-headless-binaries-into-one-cli.md",
+      "depends_on": [
+        "extract-headless-cli-helper"
+      ],
+      "blocks": [],
+      "notes": "Finding F34 (ranked review #2): runie-print (95 LOC) + runie-json (274 LOC) + runie-server (283 LOC) all do spawn_headless_runtime + run_headless_turn with only I/O framing varying. Supersedes extract-headless-cli-helper (which keeps 3 crates sharing a helper). Collapse into one runie-cli with print/json/server subcommands. Saves 2 manifests + 2 link steps + triplicated dep edges."
+    },
+    {
+      "id": "gate-or-move-single-consumer-core-modules",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/gate-or-move-single-consumer-core-modules.md",
+      "depends_on": [
+        "split-runie-core-into-domain-and-io-crates"
+      ],
+      "blocks": [],
+      "notes": "Finding F35 (ranked review #7): core carries TUI-only modules every binary compiles — ui/ (1040), dialog/ (~1300), login_flow/ (~1100), providers_dialog (~200), themes (43), markdown render helpers, ipc.rs (128). Move TUI-only into runie-tui; move ipc.rs into runie-cli server. Keep pure parts (markdown parsing) in domain. Cleanup pass after F32 crate split."
+    },
+    {
+      "id": "unify-duplicate-module-names-core-tui",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/unify-duplicate-module-names-core-tui.md",
+      "depends_on": [
+        "split-runie-core-into-domain-and-io-crates"
+      ],
+      "blocks": [],
+      "notes": "Finding F36 (ranked review #8): markdown (core 551 LOC parsing / tui 138 LOC render) + theme/themes (core 43 / tui 684) duplicate names across crates. diff/ui/ipc pairs already covered by merge-diff-modules, rename-core-ui-to-view, fold-protocol-into-core. This covers the markdown+theme remainder + adds a no-collision guardrail test."
+    },
+    {
+      "id": "consolidate-config-modules-into-dir",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/consolidate-config-modules-into-dir.md",
+      "depends_on": [
+        "delete-config-reload-shim",
+        "consolidate-login-flow-handlers",
+        "split-runie-core-into-domain-and-io-crates"
+      ],
+      "blocks": [],
+      "notes": "Finding F37 (ranked review #10): seven config locations at core root (config.rs, config/ dir, config_migrate.rs, config_reload/ dir, login_config.rs, login_config/ dir, login_flow/ dir). After delete-config-reload-shim + remove-login-config-test-shim + gate-or-move-single-consumer-core-modules, consolidate remaining config.rs + config_migrate.rs into config/ dir. Mirrors group-session-modules-into-dir."
+    },
+    {
+      "id": "drop-thiserror-and-async-trait-deps",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/drop-thiserror-and-async-trait-deps.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Finding F38 (ranked review #6 extras): thiserror (1 file, subagent.rs) -> anyhow or manual impl; async-trait (9+ files in runie-engine tool impls + agent sink) -> native async fn in traits (stable since Rust 1.75, edition 2021). Extends drop-small-stdlib-replaceable-deps. async-trait removal is the bigger win (proc-macro dep on every tool impl)."
     }
   ]
 }
