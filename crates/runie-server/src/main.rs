@@ -13,8 +13,10 @@
 
 use anyhow::Result;
 use runie_agent::{run_headless_turn, HeadlessOptions, PermissionGate};
+use runie_core::bus::EventBus;
+use runie_core::headless_runtime::HeadlessRuntime;
 use runie_core::permissions::{AutoAllowSink, DenyAllSink, PermissionManager};
-use runie_core::{config_reload, message::ChatMessage};
+use runie_core::message::ChatMessage;
 use runie_protocol::{Error, Message, Request, Response};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -37,10 +39,18 @@ async fn main() {
         eprintln!("warning: --yolo enabled; destructive tools will be auto-approved");
     }
 
+    let runtime = Arc::new(
+        HeadlessRuntime::spawn(
+            EventBus::new(10),
+            Arc::new(runie_provider::DynProviderFactory),
+        )
+        .await,
+    );
+
     let result = if use_stdio {
-        run_stdio_server().await
+        run_stdio_server(runtime).await
     } else {
-        run_tcp_server().await
+        run_tcp_server(runtime).await
     };
 
     if let Err(e) = result {
@@ -49,7 +59,7 @@ async fn main() {
     }
 }
 
-async fn run_tcp_server() -> Result<()> {
+async fn run_tcp_server(runtime: Arc<HeadlessRuntime>) -> Result<()> {
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     let port = listener.local_addr()?.port();
     println!("{}", port);
@@ -60,7 +70,7 @@ async fn run_tcp_server() -> Result<()> {
     loop {
         tokio::select! {
             Ok((stream, _)) = listener.accept() => {
-                tokio::spawn(handle_connection(stream));
+                tokio::spawn(handle_connection(runtime.clone(), stream));
             }
             _ = &mut shutdown => break,
         }
@@ -68,7 +78,7 @@ async fn run_tcp_server() -> Result<()> {
     Ok(())
 }
 
-async fn run_stdio_server() -> Result<()> {
+async fn run_stdio_server(runtime: Arc<HeadlessRuntime>) -> Result<()> {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
     let reader = BufReader::new(stdin);
@@ -79,12 +89,12 @@ async fn run_stdio_server() -> Result<()> {
         if line.trim().is_empty() {
             continue;
         }
-        write_response(&mut stdout, &process_request(&line).await).await?;
+        write_response(&mut stdout, &process_request(runtime.clone(), &line).await).await?;
     }
     Ok(())
 }
 
-async fn handle_connection(stream: TcpStream) {
+async fn handle_connection(runtime: Arc<HeadlessRuntime>, stream: TcpStream) {
     let (read_half, write_half) = stream.into_split();
     let reader = BufReader::new(read_half);
     let mut lines = reader.lines();
@@ -94,7 +104,7 @@ async fn handle_connection(stream: TcpStream) {
         if line.trim().is_empty() {
             continue;
         }
-        let _ = write_response(&mut writer, &process_request(&line).await).await;
+        let _ = write_response(&mut writer, &process_request(runtime.clone(), &line).await).await;
     }
 }
 
@@ -109,24 +119,30 @@ where
     Ok(())
 }
 
-async fn process_request(line: &str) -> Message {
+async fn process_request(runtime: Arc<HeadlessRuntime>, line: &str) -> Message {
     let req = match serde_json::from_str::<Request>(line) {
         Ok(r) => r,
         Err(e) => return Message::error(None, Error::parse(format!("Parse error: {e}"))),
     };
 
     let id = req.id.clone();
-    match dispatch_method(&req).await {
+    match dispatch_method(runtime, &req).await {
         Ok(result) => Message::Response(Response::ok(id, result.unwrap_or(Value::Null))),
         Err(e) => Message::Response(Response::err(id, e)),
     }
 }
 
-async fn dispatch_method(req: &Request) -> Result<Option<Value>, Error> {
+async fn dispatch_method(
+    runtime: Arc<HeadlessRuntime>,
+    req: &Request,
+) -> Result<Option<Value>, Error> {
     match req.method.as_str() {
         "initialize" => Ok(Some(initialize_result())),
-        "chat" => handle_chat(&req.params).await.map(Some).map_err(chat_error),
-        "complete" => handle_complete(&req.params)
+        "chat" => handle_chat(runtime, &req.params)
+            .await
+            .map(Some)
+            .map_err(chat_error),
+        "complete" => handle_complete(runtime, &req.params)
             .await
             .map(Some)
             .map_err(complete_error),
@@ -157,19 +173,6 @@ fn list_sessions_error(e: anyhow::Error) -> Error {
     Error::internal(format!("List sessions error: {e}"))
 }
 
-fn load_config() -> runie_core::config::Config {
-    config_reload::Config::load(Some(&config_reload::config_path()))
-}
-
-fn build_headless_provider(
-    config: &runie_core::config::Config,
-) -> Result<runie_provider::DynProvider, Error> {
-    let chain = config.provider_chain();
-    let model = config.default_model().unwrap_or("echo");
-    runie_provider::build_provider_with_fallback(&chain, model, config)
-        .map_err(|e| Error::internal(format!("{e}")))
-}
-
 fn headless_system_prompt() -> String {
     runie_core::prompts::build_system_prompt(
         runie_core::prompts::DEFAULT_PROMPT,
@@ -193,30 +196,28 @@ fn headless_options() -> HeadlessOptions {
     }
 }
 
-async fn handle_chat(params: &Value) -> Result<Value> {
+async fn handle_chat(runtime: Arc<HeadlessRuntime>, params: &Value) -> Result<Value> {
     let messages: Vec<ChatMessage> =
         serde_json::from_value(params.get("messages").cloned().unwrap_or_default())?;
-    let config = load_config();
-    let provider = build_headless_provider(&config)?;
+    let built = runtime.provider(None, None).await?;
 
     let mut msgs = vec![ChatMessage::system(headless_system_prompt())];
     msgs.extend(messages);
 
-    let result = run_headless_turn(msgs, &provider, headless_options()).await?;
+    let result = run_headless_turn(msgs, built.provider.as_ref(), headless_options()).await?;
     Ok(serde_json::json!({ "content": result.content }))
 }
 
-async fn handle_complete(params: &Value) -> Result<Value> {
+async fn handle_complete(runtime: Arc<HeadlessRuntime>, params: &Value) -> Result<Value> {
     let prompt = params.get("prompt").and_then(|v| v.as_str()).unwrap_or("");
-    let config = load_config();
-    let provider = build_headless_provider(&config)?;
+    let built = runtime.provider(None, None).await?;
 
     let msgs = vec![
         ChatMessage::system(headless_system_prompt()),
         ChatMessage::user(prompt.to_string()),
     ];
 
-    let result = run_headless_turn(msgs, &provider, headless_options()).await?;
+    let result = run_headless_turn(msgs, built.provider.as_ref(), headless_options()).await?;
     Ok(serde_json::json!({ "content": result.content }))
 }
 

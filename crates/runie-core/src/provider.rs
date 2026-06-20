@@ -64,6 +64,8 @@ pub enum ProviderError {
     UnknownProvider(String),
     /// The API key is missing or invalid for this provider.
     MissingApiKey(String),
+    /// Configuration has not been loaded yet.
+    ConfigNotLoaded,
     /// Some other error during construction or API call.
     Other(String),
 }
@@ -83,6 +85,7 @@ impl std::fmt::Display for ProviderError {
                     provider, k, provider
                 )
             }
+            ProviderError::ConfigNotLoaded => write!(f, "Configuration not loaded"),
             ProviderError::Other(s) => write!(f, "Provider error: {}", s),
         }
     }

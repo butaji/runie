@@ -42,6 +42,7 @@ pub mod edit_preview;
 pub mod event;
 pub mod file_refs;
 pub mod fuzzy;
+pub mod headless_runtime;
 pub mod hooks;
 pub mod input_history;
 pub mod ipc;

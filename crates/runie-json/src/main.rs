@@ -25,8 +25,8 @@
 
 use anyhow::Result;
 use runie_agent::{run_headless_turn, HeadlessOptions};
-use runie_provider::DynProvider;
-use runie_core::config_reload;
+use runie_core::bus::EventBus;
+use runie_core::headless_runtime::HeadlessRuntime;
 use runie_core::message::ChatMessage;
 use runie_core::permissions::{AutoAllowSink, DenyAllSink};
 use std::sync::Arc;
@@ -83,14 +83,12 @@ async fn main() {
 
 async fn run_json(yolo: bool) -> Result<()> {
     let req = read_json_request().await?;
-    let config = config_reload::Config::load(Some(&config_reload::config_path()));
-    let (provider_name, model) = resolve_provider_and_model(&req, &config);
+    let runtime = HeadlessRuntime::spawn(EventBus::new(10), Arc::new(runie_provider::DynProviderFactory)).await;
+    let built = runtime.provider(req.provider.as_deref(), req.model.as_deref()).await?;
     let messages = build_json_messages(&req);
-    let provider = DynProvider::new_with_config(&provider_name, &model, &config)
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
     let start = Instant::now();
 
-    let result = run_json_turn(messages, &provider, yolo).await?;
+    let result = run_json_turn(messages, built.provider.as_ref(), yolo).await?;
     let response = build_json_response(result, start.elapsed().as_millis() as u64);
     println!("{}", serde_json::to_string(&response)?);
     Ok(())
@@ -102,23 +100,6 @@ async fn read_json_request() -> Result<JsonRequest> {
     use tokio::io::AsyncReadExt;
     stdin.read_to_string(&mut buf).await?;
     serde_json::from_str(&buf).map_err(|e| anyhow::anyhow!("{}", e))
-}
-
-fn resolve_provider_and_model(
-    req: &JsonRequest,
-    config: &config_reload::Config,
-) -> (String, String) {
-    let provider_name = req
-        .provider
-        .clone()
-        .or_else(|| config.provider.clone())
-        .unwrap_or_else(|| "mock".to_string());
-    let model = req
-        .model
-        .clone()
-        .or_else(|| config.default_model().map(String::from))
-        .unwrap_or_else(|| "echo".to_string());
-    (provider_name, model)
 }
 
 fn build_json_messages(req: &JsonRequest) -> Vec<ChatMessage> {
