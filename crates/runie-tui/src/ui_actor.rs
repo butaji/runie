@@ -110,7 +110,8 @@ impl UiActor {
 
         let old_login_step = self.state.login_flow.as_ref().map(|f| f.step.clone());
 
-        self.apply_event(evt.clone(), effect_tx.clone());
+        self.apply_event(evt.clone());
+        self.dispatch_effect(&evt, effect_tx.clone());
         self.dispatch_login_validation(effect_tx, old_login_step);
 
         if self.state.should_quit {
@@ -132,17 +133,13 @@ impl UiActor {
         false
     }
 
-    fn apply_event(&mut self, evt: Event, effect_tx: mpsc::Sender<Event>) {
-        if let Some(cmd) = EffectCommand::try_from_event(&evt, &self.state, &self.caps) {
-            self.state.update(evt);
-            cmd.dispatch(
-                effect_tx,
-                self.render_tx.clone(),
-                &mut self.state,
-                self.caps,
-            );
-        } else {
-            self.state.update(evt);
+    fn apply_event(&mut self, evt: Event) {
+        self.state.update(evt);
+    }
+
+    fn dispatch_effect(&mut self, evt: &Event, effect_tx: mpsc::Sender<Event>) {
+        if let Some(cmd) = EffectCommand::try_from_event(evt, &self.state, &self.caps) {
+            cmd.dispatch(effect_tx, self.render_tx.clone(), &mut self.state, self.caps);
         }
     }
 
