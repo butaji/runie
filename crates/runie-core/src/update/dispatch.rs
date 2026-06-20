@@ -7,27 +7,7 @@ use crate::Event;
 /// Dispatch an event when no dialog is open and no special early-return
 /// handler has consumed it.
 pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
-    if let Event::MessageReplayed {
-        id,
-        role,
-        content,
-        timestamp,
-        provider,
-    } = &event
-    {
-        state.replay_message(
-            id.clone(),
-            role.clone(),
-            content.clone(),
-            *timestamp,
-            provider.clone(),
-        );
-        return;
-    }
-    if handle_persistence_events(state, &event) {
-        return;
-    }
-    if handle_session_store_events(state, &event) {
+    if try_handle_early_events(state, &event) {
         return;
     }
     match categorize(&event) {
@@ -45,6 +25,29 @@ pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
         EventCategory::Permission => super::permission::permission_event(state, event),
         EventCategory::Other => {}
     }
+}
+
+fn try_handle_early_events(state: &mut AppState, event: &Event) -> bool {
+    if let Event::MessageReplayed {
+        id,
+        role,
+        content,
+        timestamp,
+        provider,
+    } = event
+    {
+        state.replay_message(
+            id.clone(),
+            role.clone(),
+            content.clone(),
+            *timestamp,
+            provider.clone(),
+        );
+        return true;
+    }
+    handle_persistence_events(state, event)
+        || handle_session_store_events(state, event)
+        || handle_io_events(state, event)
 }
 
 fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
@@ -132,6 +135,27 @@ fn apply_session_list(state: &mut AppState, sessions: &Box<Vec<String>>) {
         format!("Saved sessions:\n{}", sessions.join("\n"))
     };
     state.notify(content, crate::event::TransientLevel::Info);
+}
+
+fn handle_io_events(state: &mut AppState, event: &Event) -> bool {
+    match event {
+        Event::BashOutput { command, output } => {
+            state.add_system_msg(format!("$ {}\n{}", command, output));
+            state.view.scroll = 0;
+            state.messages_changed();
+            true
+        }
+        Event::FilesWritten { count, errors } => {
+            let mut msg = format!("Applied {} edit(s).", count);
+            if !errors.is_empty() {
+                msg.push_str(" Errors: ");
+                msg.push_str(&errors.join(", "));
+            }
+            state.add_system_msg(msg);
+            true
+        }
+        _ => false,
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

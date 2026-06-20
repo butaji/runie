@@ -351,7 +351,9 @@ fn dispatcher_handles_all_variants() {
             | Event::SessionImported { .. }
             | Event::SessionExported { .. }
             | Event::SessionList { .. }
-            | Event::SessionOperationFailed { .. } => Event::HistoryAppend {
+            | Event::SessionOperationFailed { .. }
+            | Event::BashOutput { .. }
+            | Event::FilesWritten { .. } => Event::HistoryAppend {
                 entry: String::new(),
             },
 

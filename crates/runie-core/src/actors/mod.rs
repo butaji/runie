@@ -6,6 +6,7 @@
 
 mod config;
 mod fff_indexer;
+mod io;
 mod persistence;
 pub mod provider;
 mod session_store;
@@ -15,6 +16,7 @@ pub use fff_indexer::{
     FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
     FffSearchState,
 };
+pub use io::{IoActor, IoActorHandle, IoMsg};
 pub use persistence::{PersistenceActor, PersistenceActorHandle, PersistenceMsg};
 pub use provider::{
     BuiltProvider, ProviderActor, ProviderActorHandle, ProviderFactory, ProviderMsg,

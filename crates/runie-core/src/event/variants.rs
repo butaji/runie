@@ -318,6 +318,16 @@ pub enum Event {
         error: String,
     },
 
+    // IO effects
+    BashOutput {
+        command: String,
+        output: String,
+    },
+    FilesWritten {
+        count: usize,
+        errors: Vec<String>,
+    },
+
     // Session
     ForkSession {
         message_index: usize,

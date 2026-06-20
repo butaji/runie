@@ -412,6 +412,13 @@ impl AppState {
     }
 
     fn run_bash_command(&mut self, command: &str) {
+        if let Some(tx) = self.io_tx.clone() {
+            if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                let command = command.to_string();
+                let _ = handle.spawn(async move { tx.run_bash(command).await; });
+                return;
+            }
+        }
         let result = crate::update::tools::execute_bash(command);
         let output_msg = format!("$ {}\n{}", command, result);
         self.add_system_msg(output_msg);

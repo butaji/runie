@@ -135,12 +135,24 @@ impl AppState {
             self.add_system_msg("No pending edits to approve.".to_string());
             return;
         }
+        if let Some(tx) = self.io_tx.clone() {
+            if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                let edits: Vec<_> = self
+                    .session
+                    .pending_edits
+                    .drain(..)
+                    .map(|p| (p.path, p.proposed))
+                    .collect();
+                let _ = handle.spawn(async move { tx.write_files(edits).await; });
+                return;
+            }
+        }
         let mut applied = 0;
         let mut errors = Vec::new();
         for preview in self.session.pending_edits.drain(..) {
             let path = preview.path.clone();
             let content = preview.proposed.clone();
-            match crate::async_io::block_in_place_if_runtime(move || std::fs::write(&path, content)) {
+            match std::fs::write(&path, content) {
                 Ok(()) => applied += 1,
                 Err(e) => errors.push(format!("{}: {}", preview.path.display(), e)),
             }
