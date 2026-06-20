@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use runie_agent::{truncate::policy_from_section, AgentActorHandle, AgentCommand};
+use runie_agent::AgentActorHandle;
 use runie_core::actors::PersistenceActorHandle;
 use runie_core::bus::{EventBus, ReplayReceiver};
 use runie_core::event::{ControlEvent, Event, InputEvent};
@@ -127,7 +127,7 @@ impl UiActor {
         }
         handle_persistence_messages(self.persistence_handle.clone(), evt, submitted_text).await;
         if was_submit || was_followup || was_agent_done {
-            spawn_if_queued(&mut self.state, &self.agent_handle).await;
+            self.agent_handle.run_if_queued(&mut self.state).await;
         }
 
         self.publish_snapshot();
@@ -197,48 +197,6 @@ async fn handle_persistence_messages(
     }
 }
 
-/// Spawn an agent turn if the input queue has a pending message.
-pub async fn spawn_if_queued(state: &mut AppState, agent_handle: &AgentActorHandle) {
-    if state.agent.turn_active {
-        return;
-    }
-
-    let Some((content, id)) = state.peek_queue() else {
-        return;
-    };
-    let (content, id) = (content.clone(), id.clone());
-    state.pop_queue();
-
-    state.agent.turn_active = true;
-    state.agent.inflight += 1;
-    state.agent.streaming = true;
-
-    let skills_context = runie_core::skills::build_skills_context(&state.skills);
-    let system_prompt = state
-        .prompts
-        .iter()
-        .find(|p| p.name == state.input.current_prompt)
-        .map(|p| p.content.clone())
-        .unwrap_or_default();
-
-    agent_handle
-        .run(AgentCommand {
-            content,
-            id,
-            provider: state.config.current_provider.clone(),
-            model: state.config.current_model.clone(),
-            thinking_level: state.config.thinking_level,
-            read_only: state.config.read_only,
-            skills_context,
-            system_prompt,
-            truncation: policy_from_section(
-                state.config.truncation.max_lines,
-                state.config.truncation.max_bytes,
-            ),
-        })
-        .await;
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -300,53 +258,6 @@ mod tests {
         // The snapshot was rendered from an immutable reference.
         // Mutation would require a mutable borrow, which the draw closure does not take.
         assert_eq!(state.input.input, "hello");
-    }
-
-    #[tokio::test]
-    async fn spawn_if_queued_sets_turn_active_and_inflight() {
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<runie_agent::AgentMsg>(10);
-        let agent_handle = AgentActorHandle::new(tx);
-        let mut state = AppState::default();
-        state
-            .agent
-            .request_queue
-            .push_back(("hello".to_string(), "req.0".to_string()));
-
-        assert!(!state.agent.turn_active);
-        assert_eq!(state.agent.inflight, 0);
-
-        spawn_if_queued(&mut state, &agent_handle).await;
-
-        assert!(
-            state.agent.turn_active,
-            "spawn_if_queued must set turn_active"
-        );
-        assert_eq!(
-            state.agent.inflight, 1,
-            "spawn_if_queued must increment inflight"
-        );
-        assert!(
-            state.agent.request_queue.is_empty(),
-            "Message should be popped from request_queue"
-        );
-
-        let msg = rx.try_recv().expect("Command should be sent to agent");
-        let runie_agent::AgentMsg::Run { command } = msg;
-        assert_eq!(command.content, "hello");
-        assert_eq!(command.thinking_level, runie_core::model::ThinkingLevel::Off);
-        assert_eq!(command.system_prompt, "");
-    }
-
-    #[tokio::test]
-    async fn spawn_if_queued_noop_when_queue_empty() {
-        let (tx, _rx) = tokio::sync::mpsc::channel::<runie_agent::AgentMsg>(10);
-        let agent_handle = AgentActorHandle::new(tx);
-        let mut state = AppState::default();
-
-        spawn_if_queued(&mut state, &agent_handle).await;
-
-        assert!(!state.agent.turn_active);
-        assert_eq!(state.agent.inflight, 0);
     }
 
     #[tokio::test]

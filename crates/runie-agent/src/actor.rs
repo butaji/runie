@@ -10,6 +10,7 @@ use runie_core::actor::{spawn_actor, Actor, ActorHandle};
 use runie_core::actors::ProviderActorHandle;
 use runie_core::bus::EventBus;
 use runie_core::event::{AgentEvent, Event};
+use runie_core::AppState;
 use runie_core::permissions::{
     ApprovalRegistry, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
 };
@@ -19,6 +20,7 @@ use tokio::sync::mpsc;
 use crate::emit_approval_sink::EmitApprovalSink;
 use crate::permission_gate::PermissionGate;
 use crate::run_agent_turn;
+use crate::truncate::policy_from_section;
 use crate::AgentCommand;
 
 /// Messages accepted by `AgentActor`.
@@ -43,6 +45,46 @@ impl AgentActorHandle {
     /// Request that the actor run a turn.
     pub async fn run(&self, command: AgentCommand) {
         let _ = self.tx.send(AgentMsg::Run { command }).await;
+    }
+
+    /// Pop the next queued message and run a turn for it, if one is waiting.
+    pub async fn run_if_queued(&self, state: &mut AppState) {
+        if state.agent.turn_active {
+            return;
+        }
+        let Some((content, id)) = state.peek_queue() else {
+            return;
+        };
+        let (content, id) = (content.clone(), id.clone());
+        state.pop_queue();
+
+        state.agent.turn_active = true;
+        state.agent.inflight += 1;
+        state.agent.streaming = true;
+
+        let skills_context = runie_core::skills::build_skills_context(&state.skills);
+        let system_prompt = state
+            .prompts
+            .iter()
+            .find(|p| p.name == state.input.current_prompt)
+            .map(|p| p.content.clone())
+            .unwrap_or_default();
+
+        self.run(AgentCommand {
+            content,
+            id,
+            provider: state.config.current_provider.clone(),
+            model: state.config.current_model.clone(),
+            thinking_level: state.config.thinking_level,
+            read_only: state.config.read_only,
+            skills_context,
+            system_prompt,
+            truncation: policy_from_section(
+                state.config.truncation.max_lines,
+                state.config.truncation.max_bytes,
+            ),
+        })
+        .await;
     }
 }
 
@@ -179,5 +221,62 @@ mod tests {
         }
         assert!(saw_error, "expected Error event for unknown provider");
         assert!(saw_done, "expected Done event after error");
+    }
+
+    #[tokio::test]
+    async fn run_if_queued_sets_turn_active_and_inflight() {
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<AgentMsg>(10);
+        let agent_handle = AgentActorHandle::new(tx);
+        let mut state = AppState::default();
+        state
+            .agent
+            .request_queue
+            .push_back(("hello".to_string(), "req.0".to_string()));
+
+        assert!(!state.agent.turn_active);
+        assert_eq!(state.agent.inflight, 0);
+
+        agent_handle.run_if_queued(&mut state).await;
+
+        assert!(state.agent.turn_active, "must set turn_active");
+        assert_eq!(state.agent.inflight, 1, "must increment inflight");
+        assert!(
+            state.agent.request_queue.is_empty(),
+            "message should be popped from queue"
+        );
+
+        let msg = rx.try_recv().expect("command should be sent to agent");
+        let AgentMsg::Run { command } = msg;
+        assert_eq!(command.content, "hello");
+        assert_eq!(command.thinking_level, runie_core::model::ThinkingLevel::Off);
+        assert_eq!(command.system_prompt, "");
+    }
+
+    #[tokio::test]
+    async fn run_if_queued_noop_when_queue_empty() {
+        let (tx, _rx) = tokio::sync::mpsc::channel::<AgentMsg>(10);
+        let agent_handle = AgentActorHandle::new(tx);
+        let mut state = AppState::default();
+
+        agent_handle.run_if_queued(&mut state).await;
+
+        assert!(!state.agent.turn_active);
+        assert_eq!(state.agent.inflight, 0);
+    }
+
+    #[tokio::test]
+    async fn run_if_queued_noop_when_turn_active() {
+        let (tx, _rx) = tokio::sync::mpsc::channel::<AgentMsg>(10);
+        let agent_handle = AgentActorHandle::new(tx);
+        let mut state = AppState::default();
+        state.agent.turn_active = true;
+        state
+            .agent
+            .request_queue
+            .push_back(("hello".to_string(), "req.0".to_string()));
+
+        agent_handle.run_if_queued(&mut state).await;
+
+        assert_eq!(state.agent.request_queue.len(), 1);
     }
 }
