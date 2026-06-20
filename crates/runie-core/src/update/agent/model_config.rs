@@ -62,7 +62,8 @@ fn handle_scoped_events(state: &mut AppState, event: &ModelConfigEvent) -> bool 
             false
         }
         ModelConfigEvent::ReloadAll => {
-            state.reload_all();
+            // Reload is now owned by ConfigActor; this event is kept for
+            // backward compatibility with old session replays.
             false
         }
         ModelConfigEvent::ScopedModelToggle { provider, name } => {

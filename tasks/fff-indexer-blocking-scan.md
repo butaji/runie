@@ -1,6 +1,6 @@
 # Move FFF Indexer Initial Scan Off Async Runtime
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Architecture / Actors
 **Priority**: P1

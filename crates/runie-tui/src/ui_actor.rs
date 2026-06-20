@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use runie_agent::{truncate::policy_from_section, AgentCommand};
 use runie_core::bus::{EventBus, ReplayReceiver};
-use runie_core::event::{ControlEvent, Event, InputEvent, ModelConfigEvent};
+use runie_core::event::{ControlEvent, Event, InputEvent};
 use runie_core::login_flow::LoginStep;
 use runie_core::{AppState, Snapshot};
 use tokio::sync::{mpsc, oneshot, watch};
@@ -94,7 +94,7 @@ impl UiActor {
     async fn handle_event(&mut self, evt: Event, effect_tx: mpsc::Sender<Event>) -> bool {
         let was_submit = matches!(evt, InputEvent::Submit);
         let was_followup = matches!(evt, ControlEvent::FollowUp);
-        let was_reload = matches!(evt, ModelConfigEvent::ReloadAll);
+        let was_config_loaded = matches!(evt, Event::ConfigLoaded { .. });
         let was_agent_done = matches!(evt, Event::Done { .. } | Event::Error { .. });
 
         let old_login_step = self.state.login_flow.as_ref().map(|f| f.step.clone());
@@ -106,7 +106,7 @@ impl UiActor {
             return true;
         }
 
-        if was_reload {
+        if was_config_loaded {
             let _ = self.kb_tx.send(self.state.config.keybindings.clone());
         }
         if was_submit || was_followup || was_agent_done {
@@ -327,21 +327,22 @@ mod tests {
         flow.key = "sk-test".into();
         let panel = build_key_input(&flow);
         let stack = runie_core::dialog::PanelStack::new(panel);
-        actor.state.open_dialog =
-            Some(runie_core::commands::DialogState::PanelStack(stack));
+        actor.state.open_dialog = Some(runie_core::commands::DialogState::PanelStack(stack));
         actor.state.login_flow = Some(flow);
 
-        actor
-            .handle_event(Event::Submit, effect_tx.clone())
-            .await;
+        actor.handle_event(Event::Submit, effect_tx.clone()).await;
 
         assert!(
-            matches!(actor.state.login_flow.as_ref().map(|f| f.step.clone()), Some(LoginStep::Validating)),
+            matches!(
+                actor.state.login_flow.as_ref().map(|f| f.step.clone()),
+                Some(LoginStep::Validating)
+            ),
             "login flow should reach validating step"
         );
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        let result = tokio::time::timeout(std::time::Duration::from_secs(2), effect_rx.recv()).await;
+        let result =
+            tokio::time::timeout(std::time::Duration::from_secs(2), effect_rx.recv()).await;
         assert!(
             result.is_ok(),
             "validation effect should produce a result event"

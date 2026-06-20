@@ -1,6 +1,6 @@
 # Move SessionStore I/O Off Async Runtime
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Sessions
 **Priority**: P1

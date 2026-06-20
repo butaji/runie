@@ -52,6 +52,10 @@ pub struct AppState {
     /// request/response plumbing between the agent task and the UI task, not
     /// accidental global mutable state.
     pub approval_registry: std::sync::Arc<std::sync::Mutex<crate::permissions::ApprovalRegistry>>,
+    /// Sender to the `ConfigActor`. `None` in unit tests that do not spawn it.
+    pub config_tx: Option<tokio::sync::mpsc::Sender<crate::actors::ConfigMsg>>,
+    /// Last config applied to the state (read-only cache for sync lookups).
+    pub config_cache: Option<crate::config::Config>,
 }
 
 impl Default for AppState {
@@ -82,6 +86,8 @@ impl Default for AppState {
             approval_registry: std::sync::Arc::new(std::sync::Mutex::new(
                 crate::permissions::ApprovalRegistry::new(),
             )),
+            config_tx: None,
+            config_cache: None,
         }
     }
 }
@@ -133,9 +139,77 @@ impl AppState {
     pub fn reset_session(&mut self) {
         let config = self.config.clone();
         let registry = self.approval_registry.clone();
+        let config_tx = self.config_tx.clone();
+        let config_cache = self.config_cache.clone();
         *self = Self::default();
         self.config = config;
         self.approval_registry = registry;
+        self.config_tx = config_tx;
+        self.config_cache = config_cache;
+    }
+
+    /// Apply a loaded config to all config-driven state fields.
+    pub fn apply_config(&mut self, config: &crate::config::Config) {
+        self.config_cache = Some(config.clone());
+        if self.config.model_source != crate::state::ModelSource::UserOverride {
+            self.apply_active_model(config);
+        }
+        self.config.keybindings = crate::keybindings::load_keybindings(Some(config));
+        if let Some(theme) = &config.theme {
+            self.config.theme_name = theme.clone();
+        }
+        self.config.truncation = config.truncation.clone();
+        self.config.vim_mode = config.vim_mode();
+        self.config.telemetry = crate::telemetry::Telemetry::new(config.telemetry_enabled());
+        let prompts_section = config.prompts();
+        self.prompts = crate::prompts::load_prompts(
+            prompts_section.default.as_deref(),
+            prompts_section.custom.as_deref(),
+        );
+        self.apply_scoped_models(config);
+        if !self.has_models() && !crate::provider_registry::is_mock_enabled() {
+            self.update(crate::event::LoginFlowEvent::Start);
+        }
+    }
+
+    fn apply_active_model(&mut self, config: &crate::config::Config) {
+        let (provider, model) = config.resolve_default_model();
+        if !provider.is_empty() && has_provider_credentials(config, &provider) {
+            self.set_active_model(provider, model, crate::state::ModelSource::ConfigDefault);
+        }
+    }
+
+    fn apply_scoped_models(&mut self, config: &crate::config::Config) {
+        if let Some(scoped) = config.scoped_models() {
+            self.config.scoped_models = scoped.iter().map(|s| self.parse_scoped_model(s)).collect();
+        } else {
+            self.config.scoped_models = crate::model_catalog::model_catalog()
+                .iter()
+                .take(10)
+                .map(|m| crate::model::ScopedModel {
+                    provider: m.provider.clone(),
+                    name: m.name.clone(),
+                    enabled: true,
+                })
+                .collect();
+        }
+    }
+
+    fn parse_scoped_model(&self, s: &str) -> crate::model::ScopedModel {
+        let parts: Vec<&str> = s.split('/').collect();
+        if parts.len() == 2 {
+            crate::model::ScopedModel {
+                provider: parts[0].to_string(),
+                name: parts[1].to_string(),
+                enabled: true,
+            }
+        } else {
+            crate::model::ScopedModel {
+                provider: self.config.current_provider.clone(),
+                name: s.to_string(),
+                enabled: true,
+            }
+        }
     }
 
     /// Record the height of the message viewport. Called by the render
@@ -329,4 +403,12 @@ fn rank_commands_with_query<'a>(
         .collect();
     ranked.sort_by_key(|(_, score)| std::cmp::Reverse(*score));
     ranked.into_iter().take(limit).collect()
+}
+
+fn has_provider_credentials(config: &crate::config::Config, provider: &str) -> bool {
+    config
+        .model_providers
+        .get(provider)
+        .map(|p| !p.api_key.is_empty())
+        .unwrap_or(false)
 }

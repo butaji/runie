@@ -4,8 +4,10 @@
 //! receiving typed messages. This module contains the actors that live inside
 //! a running session.
 
+mod config;
 mod fff_indexer;
 
+pub use config::{ConfigActor, ConfigActorHandle, ConfigMsg, ConfigReply};
 pub use fff_indexer::{
     FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
     FffSearchState,

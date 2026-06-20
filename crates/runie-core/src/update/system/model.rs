@@ -22,12 +22,7 @@ impl AppState {
     }
 
     /// Update the active model fields, token tracker, and usage history.
-    pub fn set_active_model(
-        &mut self,
-        provider: String,
-        model: String,
-        source: ModelSource,
-    ) {
+    pub fn set_active_model(&mut self, provider: String, model: String, source: ModelSource) {
         self.config.current_provider = provider.clone();
         self.config.current_model = model.clone();
         self.config.model_source = source;
@@ -42,12 +37,14 @@ impl AppState {
     }
 
     fn persist_current_model(&self) {
-        #[cfg(not(test))]
-        {
-            let provider = self.config.current_provider.clone();
-            let model = self.config.current_model.clone();
-            crate::async_io::run_blocking_if_runtime(move || {
-                persist_model_to_config(provider, model);
+        if let Some(ref tx) = self.config_tx {
+            let msg = crate::actors::ConfigMsg::SetDefaultModel {
+                provider: self.config.current_provider.clone(),
+                model: self.config.current_model.clone(),
+            };
+            let tx = tx.clone();
+            tokio::spawn(async move {
+                let _ = tx.send(msg).await;
             });
         }
     }
@@ -57,13 +54,13 @@ impl AppState {
             return;
         }
         let provider = provider.to_string();
-        let config = crate::async_io::block_in_place_if_runtime(|| crate::config::Config::load(None));
+        let config = self
+            .config_cache
+            .clone()
+            .unwrap_or_else(|| crate::config::Config::load(None));
         let model = config
             .first_model_for_provider(&provider)
-            .or_else(|| {
-                crate::login_config::get_provider_config(&provider)
-                    .and_then(|(_, _, models)| models.into_iter().next())
-            })
+            .or_else(|| config.default_model().map(String::from))
             .unwrap_or_else(|| self.config.current_model.clone());
         self.switch_model(provider, model, true);
     }
@@ -117,28 +114,6 @@ impl AppState {
             TransientLevel::Info,
         );
     }
-}
-
-#[cfg(not(test))]
-fn persist_model_to_config(provider: String, model: String) {
-    let _ = crate::login_config::with_write_lock(|config| {
-        config.provider = Some(provider.clone());
-        config.model = None;
-        config.models.default = Some(model.clone());
-        let mp = config
-            .model_providers
-            .entry(provider.clone())
-            .or_insert_with(|| crate::config::ModelProvider {
-                provider_type: None,
-                base_url: String::new(),
-                api_key: String::new(),
-                models: Vec::new(),
-            });
-        if !mp.models.contains(&model) && !model.is_empty() {
-            mp.models.push(model);
-            mp.models.sort();
-        }
-    });
 }
 
 #[cfg(test)]

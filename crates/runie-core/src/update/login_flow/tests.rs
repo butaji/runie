@@ -17,21 +17,29 @@ fn temp_config_path() -> PathBuf {
     path
 }
 
+fn app_state_with_config(path: &std::path::Path) -> crate::model::AppState {
+    let mut state = crate::model::AppState::default();
+    state.config_cache = Some(crate::config::Config::load(Some(path)));
+    state
+}
+
 #[test]
 fn provider_base_url_uses_registry_default_for_new_provider() {
-    let _path = temp_config_path();
+    let path = temp_config_path();
 
     let default = crate::provider_registry::find_provider("openai")
         .map(|p| p.base_url.to_string())
         .expect("openai should be registered");
 
-    assert_eq!(provider_base_url("openai"), default);
+    let state = app_state_with_config(&path);
+    assert_eq!(provider_base_url(&state, "openai"), default);
 }
 
 #[test]
 fn provider_base_url_preserves_saved_custom_url() {
-    let _path = temp_config_path();
+    let path = temp_config_path();
     save_provider_config("openai", "http://proxy.local/v1", "key", &["gpt-4o".into()]).unwrap();
 
-    assert_eq!(provider_base_url("openai"), "http://proxy.local/v1");
+    let state = app_state_with_config(&path);
+    assert_eq!(provider_base_url(&state, "openai"), "http://proxy.local/v1");
 }

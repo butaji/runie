@@ -1,6 +1,6 @@
 # Handle Poisoned Mutex in EventBus::publish
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Core / State
 **Priority**: P3

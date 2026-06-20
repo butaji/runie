@@ -29,6 +29,10 @@ pub(crate) use crate::message::now;
 impl AppState {
     /// Main event dispatcher — merged from update() and dispatch_event().
     pub fn update(&mut self, event: Event) {
+        if let Event::ConfigLoaded { config } = event {
+            self.apply_config(&config);
+            return;
+        }
         if self.try_handle_dialog_event_input(&event) {
             return;
         }
@@ -74,4 +78,3 @@ fn is_providers_dialog_event(event: &DialogEvent) -> bool {
             | DialogEvent::ProvidersAdd
     )
 }
-

@@ -212,9 +212,7 @@ pub fn control_event(state: &mut AppState, event: ControlEvent) {
             // Close welcome and open session tree
             crate::update::dialog::open_session_tree_dialog(state);
         }
-        ControlEvent::Suspend
-        | ControlEvent::ShareSession
-        | ControlEvent::OpenExternalEditor => {}
+        ControlEvent::Suspend | ControlEvent::ShareSession | ControlEvent::OpenExternalEditor => {}
         _ => {}
     }
 }
@@ -271,79 +269,7 @@ fn handle_editor_done(state: &mut AppState, content: String) {
 
 // ── System actions (merged from system_actions.rs) ───────────────────────────
 
-fn default_provider_model(config: &crate::config::Config) -> (String, String) {
-    let (default_provider, default_model) = config.resolve_default_model();
-    if default_provider.is_empty() {
-        crate::login_config::list_configured_providers()
-            .into_iter()
-            .next()
-            .map(|(p, _, models)| (p, models.into_iter().next().unwrap_or_default()))
-            .unwrap_or_default()
-    } else {
-        (default_provider, default_model)
-    }
-}
-
 impl AppState {
-    pub(crate) fn reload_all(&mut self) {
-        let (config, skills, prompts) = crate::async_io::block_in_place_if_runtime(|| {
-            let config =
-                crate::config_reload::Config::load(Some(&crate::config_reload::config_path()));
-            let skills = crate::skills::load_all();
-            let prompts_section = config.prompts();
-            let prompts = crate::prompts::load_prompts(
-                prompts_section.default.as_deref(),
-                prompts_section.custom.as_deref(),
-            );
-            (config, skills, prompts)
-        });
-        let (default_provider, default_model) = default_provider_model(&config);
-        if self.config.model_source != crate::state::ModelSource::UserOverride {
-            self.set_active_model(
-                default_provider,
-                default_model,
-                crate::state::ModelSource::ConfigDefault,
-            );
-        }
-        if let Some(theme) = &config.theme {
-            self.config.theme_name = theme.clone();
-        }
-        self.config.vim_mode = config.vim_mode();
-        self.config.truncation = config.truncation.clone();
-        self.config.telemetry = crate::Telemetry::new(config.telemetry_enabled());
-        self.reload_scoped_models(&config);
-        self.skills = skills;
-        self.prompts = prompts;
-        self.add_system_msg(
-            "Reloaded config, keybindings, theme, skills, and prompts.".to_string(),
-        );
-    }
-
-    fn reload_scoped_models(&mut self, config: &crate::config::Config) {
-        let Some(scoped) = config.scoped_models() else {
-            return;
-        };
-        self.config.scoped_models = scoped
-            .iter()
-            .map(|s| {
-                let parts: Vec<&str> = s.split('/').collect();
-                if parts.len() == 2 {
-                    crate::model::ScopedModel {
-                        provider: parts[0].to_string(),
-                        name: parts[1].to_string(),
-                        enabled: true,
-                    }
-                } else {
-                    crate::model::ScopedModel {
-                        provider: self.config.current_provider.clone(),
-                        name: s.clone(),
-                        enabled: true,
-                    }
-                }
-            })
-            .collect();
-    }
-
     pub(crate) fn show_diagnostics(&mut self) {
         let mut lines = vec!["Diagnostics:".to_string()];
         let config_path = crate::config_reload::config_path();

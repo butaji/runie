@@ -15,7 +15,9 @@ pub mod schema;
 // ============================================================================
 
 /// Models configuration section.
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(
+    Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
+)]
 pub struct ModelsSection {
     /// The default model to use when no model is specified.
     pub default: Option<String>,
@@ -44,7 +46,7 @@ pub struct ModelProvider {
 // ============================================================================
 
 /// UI configuration section.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct UiSection {
     pub vim_mode: bool,
@@ -61,7 +63,7 @@ impl Default for UiSection {
 // ============================================================================
 
 /// Telemetry configuration section.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct TelemetrySection {
     pub enabled: bool,
@@ -78,7 +80,9 @@ impl Default for TelemetrySection {
 // ============================================================================
 
 /// Prompts configuration section.
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(
+    Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
+)]
 #[serde(default)]
 pub struct PromptsSection {
     pub default: Option<String>,
@@ -90,7 +94,7 @@ pub struct PromptsSection {
 // ============================================================================
 
 /// Truncation limits for tool output.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct TruncationSection {
     pub max_lines: usize,
@@ -111,7 +115,9 @@ impl Default for TruncationSection {
 // ============================================================================
 
 /// Hook configuration.
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(
+    Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
+)]
 #[serde(default)]
 pub struct HooksConfig {
     /// Map of hook event name to list of shell commands to run.
@@ -123,7 +129,7 @@ pub struct HooksConfig {
 // ============================================================================
 
 /// Permission policy configuration.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct PermissionsConfig {
     /// Global permission mode: yolo, manual, or auto.
@@ -143,7 +149,9 @@ impl Default for PermissionsConfig {
 // ============================================================================
 
 /// Canonical config type for `~/.runie/config.toml`.
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(
+    Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
+)]
 pub struct Config {
     /// Default provider name.
     pub provider: Option<String>,

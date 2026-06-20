@@ -135,9 +135,14 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 fn handle_reload(state: &mut AppState, _: &str) -> CommandResult {
-    let config = crate::async_io::block_in_place_if_runtime(|| crate::config::Config::load(None));
-    state.config.keybindings = crate::keybindings::load_keybindings(Some(&config));
-    CommandResult::Event(crate::event::ModelConfigEvent::ReloadAll)
+    if let Some(ref tx) = state.config_tx {
+        let tx = tx.clone();
+        tokio::spawn(async move {
+            let _ = tx.send(crate::actors::ConfigMsg::Reload).await;
+        });
+    }
+    state.skills = crate::skills::load_all();
+    CommandResult::Message("Reloaded config, keybindings, theme, skills, and prompts.".into())
 }
 
 fn handle_settings(state: &mut AppState, _: &str) -> CommandResult {

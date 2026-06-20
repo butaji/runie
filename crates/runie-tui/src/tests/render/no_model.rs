@@ -4,10 +4,8 @@ use ratatui::{backend::TestBackend, Terminal};
 use runie_core::AppState;
 
 fn clean_config() -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(format!(
-        "runie_no_model_{:?}",
-        std::thread::current().id()
-    ));
+    let dir =
+        std::env::temp_dir().join(format!("runie_no_model_{:?}", std::thread::current().id()));
     let _ = std::fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     let _ = std::fs::remove_file(&path);
@@ -92,7 +90,7 @@ fn input_box_and_status_bar_visible_after_model_connected() {
 }
 
 #[test]
-fn init_provider_model_ignores_stale_top_level_provider() {
+fn apply_config_ignores_stale_top_level_provider() {
     let _path = clean_config();
     let config = r#"provider = "openai"
 model = "gpt-4o"
@@ -103,7 +101,8 @@ model = "gpt-4o"
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-    crate::app_init::init_provider_model(&mut state);
+    let config = runie_core::config::Config::load(Some(&_path));
+    state.apply_config(&config);
 
     assert!(
         !state.has_models(),
@@ -114,7 +113,7 @@ model = "gpt-4o"
 }
 
 #[test]
-fn init_provider_model_ignores_stale_default_model_for_provider() {
+fn apply_config_ignores_stale_default_model_for_provider() {
     let _path = clean_config();
     let config = r#"provider = "openai"
 
@@ -132,7 +131,8 @@ models = ["gpt-4o"]
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-    crate::app_init::init_provider_model(&mut state);
+    let config = runie_core::config::Config::load(Some(&_path));
+    state.apply_config(&config);
 
     assert_eq!(state.config.current_provider, "openai");
     assert_eq!(

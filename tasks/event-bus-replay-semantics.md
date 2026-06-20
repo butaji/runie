@@ -1,6 +1,6 @@
 # EventBus Replay Buffer Semantics
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Core / State
 **Priority**: P0

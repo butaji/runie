@@ -1,6 +1,6 @@
 # Remove Nested Runtime from Subagent API
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P2

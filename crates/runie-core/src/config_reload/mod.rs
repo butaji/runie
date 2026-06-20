@@ -1,10 +1,7 @@
-//! Config file watcher for hot reload
+//! Config types re-exported from the canonical config module.
 //!
-//! Watches config.toml for changes and emits SwitchModel events
-//! when the provider or model configuration changes.
+//! The config file watcher has moved into `ConfigActor` in `crate::actors::config`.
 
-pub use types::{config_path, Config, TruncationSection};
-pub use watcher::spawn_config_watcher;
+pub use types::{config_path, Config, ConfigChange, TruncationSection};
 
 mod types;
-mod watcher;

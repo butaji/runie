@@ -1,6 +1,17 @@
 {
   "tasks": [
     {
+      "id": "unify-actor-architecture",
+      "status": "in_progress",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/unify-actor-architecture.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Extract ConfigActor, ProviderActor, AgentActor; move state into actors; unify init."
+    },
+    {
       "id": "r3-implementation-roadmap",
       "status": "done",
       "milestone": "R3",

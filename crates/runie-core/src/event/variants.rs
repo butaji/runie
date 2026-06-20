@@ -268,6 +268,11 @@ pub enum Event {
     ClearTransient,
     ShowDiagnostics,
 
+    // Config
+    ConfigLoaded {
+        config: Box<crate::config::Config>,
+    },
+
     // Session
     ForkSession {
         message_index: usize,
@@ -350,5 +355,4 @@ pub enum Event {
     },
     Save,
     Cancel,
-
 }

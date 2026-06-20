@@ -12,17 +12,20 @@
 //!   - SessionActor subscribes to bus, persists durable events to JSONL
 
 use futures::StreamExt;
-use runie_agent::{emit_approval_sink::EmitApprovalSink, run_agent_turn, AgentCommand, PermissionGate};
-use runie_provider::DynProvider;
+use runie_agent::{
+    emit_approval_sink::EmitApprovalSink, run_agent_turn, AgentCommand, PermissionGate,
+};
 use runie_core::actor::Actor;
+use runie_core::actors::ConfigActor;
 use runie_core::bus::EventBus;
+use runie_core::event::AgentEvent;
 use runie_core::event::Event;
-use runie_core::event::{AgentEvent, LoginFlowEvent};
 use runie_core::permissions::{
     DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
 };
 use runie_core::session_store::SessionStore;
-use runie_core::{config_reload, AppState, Snapshot};
+use runie_core::{AppState, Snapshot};
+use runie_provider::DynProvider;
 use runie_tui::{app_init, keymap, terminal, terminal_setup, theme, ui, ui_actor::UiActor};
 use std::{collections::HashMap, io, sync::Arc, sync::Mutex};
 use tokio::sync::{mpsc, oneshot, watch};
@@ -70,26 +73,35 @@ async fn main() -> io::Result<()> {
     }
 
     let _cleanup = Cleanup;
-    let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
-
-    // Wire terminal capabilities into the theme system before first render.
-    theme::set_current_theme_with_caps(theme::DEFAULT_THEME_NAME, terminal_caps);
-
-    let mut state = AppState::default();
+    let (terminal, terminal_caps) = setup_theme_and_terminal()?;
+    let bus = EventBus::<Event>::new(100);
+    let (config_handle, config_actor) = ConfigActor::spawn(bus.clone(), None);
+    let mut state = AppState {
+        config_tx: Some(config_handle.tx().clone()),
+        ..Default::default()
+    };
     init_terminal_state(&mut state);
     run_init_hooks(&mut state);
 
-    // Create EventBus for cross-component communication (SessionActor subscription)
-    let bus: EventBus<Event> = EventBus::new(100);
-
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
+    spawn_background_tasks(terminal, state, terminal_caps, bus, shutdown_tx);
 
-    spawn_background_tasks(terminal, state, terminal_caps, bus.clone(), shutdown_tx);
+    // Keep ConfigActor alive until shutdown. Dropping the handle aborts the actor.
+    let _config_actor = config_actor;
 
     shutdown_rx
         .await
         .map_err(|_| io::Error::other("shutdown signal dropped"))?;
     Ok(())
+}
+
+fn setup_theme_and_terminal() -> io::Result<(
+    ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
+    terminal::caps::TerminalCapabilities,
+)> {
+    let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
+    theme::set_current_theme_with_caps(theme::DEFAULT_THEME_NAME, terminal_caps);
+    Ok((terminal, terminal_caps))
 }
 
 fn init_terminal_state(state: &mut AppState) {
@@ -101,18 +113,7 @@ fn init_terminal_state(state: &mut AppState) {
 
 fn run_init_hooks(state: &mut AppState) {
     app_init::apply_trust_on_startup(state);
-    app_init::init_provider_model(state);
-    app_init::init_scoped_models(state);
     app_init::init_skills(state);
-    app_init::init_prompts(state);
-    app_init::init_telemetry(state);
-    app_init::init_truncation(state);
-    app_init::init_ui_config(state);
-
-    if state.config.current_provider.is_empty() && !runie_core::provider_registry::is_mock_enabled()
-    {
-        state.update(LoginFlowEvent::Start);
-    }
 }
 
 fn spawn_background_tasks(
@@ -122,38 +123,73 @@ fn spawn_background_tasks(
     bus: EventBus<Event>,
     shutdown_tx: oneshot::Sender<()>,
 ) {
-    let (input_tx, mut input_rx) = mpsc::channel::<Event>(100);
+    let (input_tx, input_rx) = mpsc::channel::<Event>(100);
     let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
     let (render_tx, render_rx) = watch::channel(state.snapshot());
     let (kb_tx, kb_rx) = watch::channel(state.config.keybindings.clone());
 
-    // Forward all input events (keyboard + config watcher) into the shared bus.
-    let bus_clone = bus.clone();
+    spawn_input_forwarder(input_rx, bus.clone());
+    spawn_agent_tasks(
+        cmd_rx,
+        input_tx,
+        kb_rx,
+        terminal,
+        render_rx,
+        bus.clone(),
+        state.approval_registry.clone(),
+    );
+    spawn_ui_actor(
+        state,
+        render_tx,
+        cmd_tx,
+        kb_tx,
+        bus.clone(),
+        shutdown_tx,
+        caps,
+    );
+    spawn_session_persistence(&bus);
+}
+
+fn spawn_input_forwarder(mut input_rx: mpsc::Receiver<Event>, bus: EventBus<Event>) {
     tokio::spawn(async move {
         while let Some(evt) = input_rx.recv().await {
-            bus_clone.publish(evt);
+            bus.publish(evt);
         }
     });
+}
 
+fn spawn_agent_tasks(
+    cmd_rx: mpsc::Receiver<AgentCommand>,
+    input_tx: mpsc::Sender<Event>,
+    kb_rx: watch::Receiver<HashMap<String, String>>,
+    terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
+    render_rx: watch::Receiver<Snapshot>,
+    bus: EventBus<Event>,
+    approval_registry: std::sync::Arc<std::sync::Mutex<runie_core::permissions::ApprovalRegistry>>,
+) {
     // Spawn agents that publish to EventBus. The loop reloads the saved config
     // before each turn so API keys from onboarding are visible immediately.
-    tokio::spawn(agent_loop(cmd_rx, bus.clone(), state.approval_registry.clone()));
-    tokio::spawn(input_reader(input_tx.clone(), kb_rx));
+    tokio::spawn(agent_loop(cmd_rx, bus.clone(), approval_registry));
+    tokio::spawn(input_reader(input_tx, kb_rx));
     tokio::spawn(render_task(terminal, render_rx));
-    tokio::spawn(config_reload::spawn_config_watcher(
-        input_tx.clone(),
-        config_reload::config_path(),
-    ));
+}
 
+fn spawn_ui_actor(
+    state: AppState,
+    render_tx: watch::Sender<Snapshot>,
+    cmd_tx: mpsc::Sender<AgentCommand>,
+    kb_tx: watch::Sender<HashMap<String, String>>,
+    bus: EventBus<Event>,
+    shutdown_tx: oneshot::Sender<()>,
+    caps: terminal::caps::TerminalCapabilities,
+) {
     // UiActor is the sole owner of AppState and the only runtime mutator.
     // Subscribe with replay so resuming a session restores prior messages.
     // UiActor MUST subscribe before SessionActor replays durable events.
     let ui_sub = bus.subscribe_with_replay();
-    tokio::spawn(UiActor::new(state, render_tx, cmd_tx, kb_tx, bus.clone(), shutdown_tx, caps).run(ui_sub));
-
-    // Spawn SessionActor to persist durable events to JSONL.
-    // This is done after UiActor subscribes so replayed events are received live.
-    let _session_tx = spawn_session_persistence(&bus);
+    tokio::spawn(
+        UiActor::new(state, render_tx, cmd_tx, kb_tx, bus, shutdown_tx, caps).run(ui_sub),
+    );
 }
 
 async fn render_task(

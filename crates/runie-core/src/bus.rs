@@ -263,6 +263,31 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn publish_from_spawned_task_is_received_by_recv() {
+        let bus = EventBus::<TestEvent>::new(10);
+        let mut sub = bus.subscribe();
+        let bus2 = bus.clone();
+        tokio::spawn(async move {
+            bus2.publish(TestEvent::Data(99));
+        });
+        let event = sub.recv().await.unwrap();
+        assert_eq!(event, TestEvent::Data(99));
+    }
+
+    #[tokio::test]
+    async fn publish_after_spawn_blocking_is_received_by_recv() {
+        let bus = EventBus::<TestEvent>::new(10);
+        let mut sub = bus.subscribe();
+        let bus2 = bus.clone();
+        tokio::spawn(async move {
+            let _ = tokio::task::spawn_blocking(|| 42).await;
+            bus2.publish(TestEvent::Data(99));
+        });
+        let event = sub.recv().await.unwrap();
+        assert_eq!(event, TestEvent::Data(99));
+    }
+
     fn drain<E: Clone + Send + 'static>(sub: &mut ReplayReceiver<E>) -> Vec<E> {
         let mut events = Vec::new();
         for _ in 0..100 {

@@ -17,7 +17,9 @@ pub fn login_flow_event(state: &mut crate::model::AppState, event: LoginFlowEven
         LoginFlowEvent::Start => login_flow_start(state),
         LoginFlowEvent::SelectProvider { provider } => login_flow_select_provider(state, provider),
         LoginFlowEvent::SubmitKey { provider, key } => login_flow_submit_key(state, provider, key),
-        LoginFlowEvent::ModelsFetched { models, .. } => login_flow_validation_success(state, models),
+        LoginFlowEvent::ModelsFetched { models, .. } => {
+            login_flow_validation_success(state, models)
+        }
         LoginFlowEvent::ValidationFailed { error, .. } => {
             login_flow_validation_failed(state, error)
         }
@@ -131,10 +133,13 @@ fn login_flow_toggle_model(state: &mut crate::model::AppState, model: String) {
     }
 }
 
-fn provider_base_url(provider: &str) -> String {
-    crate::login_config::get_provider_config(provider)
-        .filter(|(url, _, _)| !url.is_empty())
-        .map(|(url, _, _)| url)
+fn provider_base_url(state: &crate::model::AppState, provider: &str) -> String {
+    state
+        .config_cache
+        .as_ref()
+        .and_then(|c| c.model_providers.get(provider))
+        .filter(|p| !p.base_url.is_empty())
+        .map(|p| p.base_url.clone())
         .unwrap_or_else(|| {
             crate::provider_registry::find_provider(provider)
                 .map(|p| p.base_url.to_string())
@@ -144,34 +149,73 @@ fn provider_base_url(provider: &str) -> String {
 
 fn login_flow_save(state: &mut crate::model::AppState) {
     let Some(flow) = take_login_flow_if_ready(state) else {
-        // Save was rejected (e.g. no models selected). Reopen the login dialog
-        // at the current step so the user can correct the input.
-        if let Some(flow) = state.login_flow.as_ref() {
-            let panel = match flow.step {
-                LoginStep::KeyInput => build_key_input(flow),
-                LoginStep::ModelSelect => build_model_selector(flow),
-                _ => build_model_selector(flow),
-            };
-            replace_top_login_panel_with(state, panel);
-        }
+        reopen_login_panel_if_flow_present(state);
         return;
     };
 
-    let base_url = provider_base_url(&flow.provider);
-    let selected: Vec<String> = flow.selected_models.iter().cloned().collect();
-    if let Err(e) =
-        crate::login_config::save_provider_config(&flow.provider, &base_url, &flow.key, &selected)
-    {
-        state.add_system_msg(format!("Failed to save provider config: {}", e));
+    if !persist_login_flow(state, &flow) {
         return;
     }
 
+    activate_first_selected_model_if_none_active(state, &flow);
+    close_login_flow(state);
+}
+
+fn reopen_login_panel_if_flow_present(state: &mut crate::model::AppState) {
+    // Save was rejected (e.g. no models selected). Reopen the login dialog
+    // at the current step so the user can correct the input.
+    let Some(flow) = state.login_flow.as_ref() else {
+        return;
+    };
+    let panel = match flow.step {
+        LoginStep::KeyInput => build_key_input(flow),
+        LoginStep::ModelSelect => build_model_selector(flow),
+        _ => build_model_selector(flow),
+    };
+    replace_top_login_panel_with(state, panel);
+}
+
+fn persist_login_flow(
+    state: &mut crate::model::AppState,
+    flow: &crate::login_flow::LoginFlowState,
+) -> bool {
+    let base_url = provider_base_url(state, &flow.provider);
+    let selected: Vec<String> = flow.selected_models.iter().cloned().collect();
+    if let Some(ref tx) = state.config_tx {
+        let msg = crate::actors::ConfigMsg::SaveProvider {
+            name: flow.provider.clone(),
+            base_url,
+            api_key: flow.key.clone(),
+            models: selected,
+        };
+        let tx = tx.clone();
+        tokio::spawn(async move {
+            let _ = tx.send(msg).await;
+        });
+        true
+    } else if let Err(e) =
+        crate::login_config::save_provider_config(&flow.provider, &base_url, &flow.key, &selected)
+    {
+        state.add_system_msg(format!("Failed to save provider config: {}", e));
+        false
+    } else {
+        true
+    }
+}
+
+fn activate_first_selected_model_if_none_active(
+    state: &mut crate::model::AppState,
+    flow: &crate::login_flow::LoginFlowState,
+) {
     // Only switch to the newly saved provider when no provider/model is
     // currently active. This keeps the existing selection when the user is
     // adding another provider through the providers dialog.
     if !state.has_models() {
-        activate_first_selected_model(state, &flow);
+        activate_first_selected_model(state, flow);
     }
+}
+
+fn close_login_flow(state: &mut crate::model::AppState) {
     state.login_flow = None;
     state.dialog_back_stack.clear();
     state.open_dialog = None;

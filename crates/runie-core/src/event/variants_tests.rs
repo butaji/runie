@@ -334,6 +334,11 @@ fn dispatcher_handles_all_variants() {
             | Event::ClearTransient
             | Event::ShowDiagnostics => Event::ClearTransient,
 
+            // Config
+            Event::ConfigLoaded { .. } => Event::ConfigLoaded {
+                config: Box::new(crate::config::Config::default()),
+            },
+
             // Session
             Event::ForkSession { .. }
             | Event::CloneSession
