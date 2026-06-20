@@ -2,14 +2,14 @@
   "tasks": [
     {
       "id": "unify-actor-architecture",
-      "status": "in_progress",
+      "status": "superseded",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",
       "file": "tasks/unify-actor-architecture.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Extract ConfigActor, ProviderActor, AgentActor; move state into actors; unify init."
+      "notes": "Superseded by arch-guardrails-enforce-3-layers and its dependent tasks."
     },
     {
       "id": "r3-implementation-roadmap",
@@ -2591,6 +2591,293 @@
       "blocks": [],
       "notes": "Implement real subagent depth tracking.",
       "completed_in": "current"
+    },
+    {
+      "id": "arch-guardrails-enforce-3-layers",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/arch-guardrails-enforce-3-layers.md",
+      "depends_on": [],
+      "blocks": [
+        "centralize-app-state-ownership",
+        "remove-io-from-runie-core",
+        "simplify-event-vocabulary",
+        "pure-snapshot-and-tool-runtime-trait",
+        "consolidate-binary-setup"
+      ],
+      "notes": "Architectural tests and docs updated. Legacy allow-lists in place for Phases 1-2."
+    },
+    {
+      "id": "centralize-app-state-ownership",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/centralize-app-state-ownership.md",
+      "depends_on": [
+        "arch-guardrails-enforce-3-layers"
+      ],
+      "blocks": [
+        "remove-io-from-runie-core"
+      ],
+      "notes": "AgentActorHandle::run_if_queued removed; UiActor owns turn queue logic. Bootstrap and terminal init now emit events."
+    },
+    {
+      "id": "remove-io-from-runie-core",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/remove-io-from-runie-core.md",
+      "depends_on": [
+        "centralize-app-state-ownership"
+      ],
+      "blocks": [
+        "simplify-event-vocabulary"
+      ],
+      "notes": "Git, bash, clipboard, and config IO moved out of runie-core domain modules into actors with mockable interfaces. CONFIG_LOCK removed. Workspace tests pass."
+    },
+    {
+      "id": "simplify-event-vocabulary",
+      "status": "in_progress",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/simplify-event-vocabulary.md",
+      "depends_on": [
+        "remove-io-from-runie-core"
+      ],
+      "blocks": [],
+      "notes": "3a/3b done: duplicate events merged, dispatch simplified into category handlers. 3c (enum nesting) deferred to reduce serde/session risk; no longer blocks Phase 4."
+    },
+    {
+      "id": "pure-snapshot-and-tool-runtime-trait",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "file": "tasks/pure-snapshot-and-tool-runtime-trait.md",
+      "depends_on": [
+        "simplify-event-vocabulary"
+      ],
+      "blocks": [
+        "consolidate-binary-setup"
+      ],
+      "notes": "ToolRuntime trait defined in runie-core, injected into run_agent_turn/run_headless_turn/AgentActor. Production adapter EngineToolRuntime wraps builtin_registry; tests use MockToolRuntime. inspector.rs/ToolPipeline deleted."
+    },
+    {
+      "id": "consolidate-binary-setup",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/consolidate-binary-setup.md",
+      "depends_on": [
+        "pure-snapshot-and-tool-runtime-trait"
+      ],
+      "blocks": [],
+      "completed_in": "current",
+      "notes": "Created runie-core/src/turn_setup.rs with build_system_prompt/build_permission_gate; moved PermissionGate into runie-core; moved spawn_headless_runtime into runie-core::headless_runtime; updated runie-tui, runie-print, runie-json, runie-server, and runie-agent to use the shared helpers. Workspace tests pass."
+    },
+    {
+      "id": "fix-truncate-content-utf8-panic",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P0",
+      "file": "tasks/fix-truncate-content-utf8-panic.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "search/modes.rs truncate_content uses raw byte slice; panics on multi-byte UTF-8. Use runie_core::tool::format::truncate_output. Only correctness-bug finding."
+    },
+    {
+      "id": "cleanup-stray-root-artifacts",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/cleanup-stray-root-artifacts.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Delete bin/, ui/, scripts/watch-dspec.sh, .hermes/, strip bacon.toml, remove EOF/run/fix_into.py/refactor_events.py/__pycache__. ~190 tracked files from removed parity/dspec workflow."
+    },
+    {
+      "id": "delete-dead-tool-runtime-trait",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/delete-dead-tool-runtime-trait.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "tool/runtime.rs (183 LOC) duplicate ToolRuntime trait, zero external importers. Live one is tool_runtime.rs."
+    },
+    {
+      "id": "delete-dead-inspector-module",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/delete-dead-inspector-module.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "runie-agent/src/inspector.rs (315 LOC) unused; LatencyTracker impl is empty (always returns ZERO)."
+    },
+    {
+      "id": "decide-harness-skills-fate",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/decide-harness-skills-fate.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "harness_skills/ (885 LOC) never instantiated in prod; run_agent_turn hardcodes None. Wire or delete."
+    },
+    {
+      "id": "gate-or-implement-mcp-client",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/gate-or-implement-mcp-client.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "mcp.rs (482 LOC) mostly stub; call_tool returns not-implemented, JsonRpc/next_id dead_code. Gate behind feature or implement."
+    },
+    {
+      "id": "delete-crates-archive",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/delete-crates-archive.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "crates/_archive/harness/ (874 LOC) zero refs, no Cargo member. clean-archive task re-accumulated."
+    },
+    {
+      "id": "remove-unused-cargo-deps",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/remove-unused-cargo-deps.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "10 unused deps + 3 redundant dev-deps + rexpect workspace dep. Biggest: pulldown-cmark in TUI, reqwest in core."
+    },
+    {
+      "id": "dedupe-fresh-state-test-helper",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Testing",
+      "priority": "P2",
+      "file": "tasks/dedupe-fresh-state-test-helper.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "fresh_state() duplicated ~38x across test files; shared versions exist but unused."
+    },
+    {
+      "id": "extract-headless-cli-helper",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "file": "tasks/extract-headless-cli-helper.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "print/json/server mains repeat headless setup boilerplate 3x. Extend runie-core::headless_runtime."
+    },
+    {
+      "id": "delete-config-reload-shim",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/delete-config-reload-shim.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "config_reload/ 2-file re-export shim + 3 dead type aliases. 4 callers to rewrite."
+    },
+    {
+      "id": "dedupe-truncation-config",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/dedupe-truncation-config.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "TruncationSection (core) == TruncationConfig (agent) same fields/defaults + bridge fn. Single source of truth."
+    },
+    {
+      "id": "render-tui-diff-from-canonical-type",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "file": "tasks/render-tui-diff-from-canonical-type.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "runie-tui/src/diff.rs (466 LOC) parallel DiffLineType/ParsedDiff mirroring runie_core::diff. Render directly."
+    },
+    {
+      "id": "wire-or-remove-dead-config-fields",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Security",
+      "priority": "P2",
+      "file": "tasks/wire-or-remove-dead-config-fields.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "fallback_providers, permissions.mode parsed-then-discarded; 5 subagent tool names recognized but unimplemented."
+    },
+    {
+      "id": "delete-path-utils-reexport",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P3",
+      "file": "tasks/delete-path-utils-reexport.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "runie-agent/src/path_utils.rs 3-line re-export, zero users."
+    },
+    {
+      "id": "dedupe-test-gate-and-provider-helpers",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Testing",
+      "priority": "P3",
+      "file": "tasks/dedupe-test-gate-and-provider-helpers.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "allow_all_gate/mock_provider duplicated 3x each; promote into runie-testing."
+    },
+    {
+      "id": "inline-thin-abstractions",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P3",
+      "file": "tasks/inline-thin-abstractions.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "SessionActor unit-msg subscriber, NotificationExt single-impl trait, resolve_path 1-line forwarder."
+    },
+    {
+      "id": "fix-docs-and-config-hygiene",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P3",
+      "file": "tasks/fix-docs-and-config-hygiene.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Archive 27 done task files, fix Architecture.md dead refs, clean .gitignore, sync verify-tests.sh count."
     }
   ]
 }
