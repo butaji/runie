@@ -45,11 +45,18 @@ This document describes the high-level architecture. The code and tests are writ
 
 Actors are plain `tokio` tasks. They publish and subscribe to a typed `EventBus`. State is owned by the actors, not by a central loop.
 
+### Bootstrap and rendering rules
+
+- All startup file I/O (git detection, trust, skills, auth tokens, theme) is run with `spawn_blocking` or inside dedicated actors before the UI event loop starts.
+- `AppState::snapshot()` builds an immutable `Snapshot` from cached state; it never reads files or blocks.
+- The render actor is a pure function `draw_snapshot(&mut Frame, &Snapshot)` and never mutates state.
+
 - `InputActor` reads crossterm events and publishes `InputEvent`s.
 - `AgentActor` runs the LLM turn loop, publishes streaming deltas, tool calls, and turn lifecycle events.
 - `SessionActor` persists durable events append-only and replays them on load.
 - `UiActor` projects events into `AppState` and sends snapshots to the render actor over a `watch` channel.
-- `ConfigActor` watches `~/.runie/config.toml` and publishes reload events.
+- `ConfigActor` is the single owner of `~/.runie/config.toml`; it loads, saves, and publishes reload events.
+- `ProviderActor` is the single owner of `DynProvider` construction and API-key validation; it resolves credentials through the config actor.
 
 ## Core concepts
 
@@ -137,14 +144,16 @@ Provider-specific parsing (for example MiniMax XML tool-call delimiters) is isol
 ```
 crates/runie-core/src/
   event.rs          # CoreEvent enum and variants
-  state.rs          # AppState + sub-states
+  model/state/      # AppState + sub-states
   session.rs        # Session types
+  actors/           # ConfigActor, ProviderActor, SessionActor, actor trait
   commands/         # CommandRegistry and slash handlers
   dialog/           # Panel/Form DSL
   harness_skills/   # Skill trait and implementations
   update/           # Event dispatch
 
 crates/runie-agent/src/
+  actor.rs          # AgentActor (interactive turn executor)
   turn.rs           # Agent turn loop
   tools.rs          # Built-in registry assembly
   parser.rs         # Tool-call parsing
