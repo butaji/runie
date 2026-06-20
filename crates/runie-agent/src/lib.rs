@@ -1,5 +1,6 @@
 #![warn(clippy::all)]
 
+pub mod actor;
 pub mod context7;
 pub mod diff;
 pub mod emit_approval_sink;
@@ -14,6 +15,7 @@ pub mod tool_runner;
 pub mod truncate;
 pub mod turn;
 
+pub use actor::{AgentActor, AgentActorHandle, AgentMsg};
 pub use headless::{run_headless_turn, HeadlessOptions, HeadlessResult};
 pub use runie_core::tool_parser::{has_tool_calls, parse_tool_calls, ParsedToolCall};
 pub use permission_gate::PermissionGate;

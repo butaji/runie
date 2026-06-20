@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use runie_agent::{truncate::policy_from_section, AgentCommand};
+use runie_agent::{truncate::policy_from_section, AgentActorHandle, AgentCommand};
 use runie_core::bus::{EventBus, ReplayReceiver};
 use runie_core::event::{ControlEvent, Event, InputEvent};
 use runie_core::login_flow::LoginStep;
@@ -23,7 +23,7 @@ const ANIM_MS: u64 = 200;
 pub struct UiActor {
     state: AppState,
     render_tx: watch::Sender<Snapshot>,
-    cmd_tx: mpsc::Sender<AgentCommand>,
+    agent_handle: AgentActorHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: Option<oneshot::Sender<()>>,
@@ -35,7 +35,7 @@ impl UiActor {
     pub fn new(
         state: AppState,
         render_tx: watch::Sender<Snapshot>,
-        cmd_tx: mpsc::Sender<AgentCommand>,
+        agent_handle: AgentActorHandle,
         kb_tx: watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
         shutdown_tx: oneshot::Sender<()>,
@@ -44,7 +44,7 @@ impl UiActor {
         Self {
             state,
             render_tx,
-            cmd_tx,
+            agent_handle,
             kb_tx,
             bus,
             shutdown_tx: Some(shutdown_tx),
@@ -110,7 +110,7 @@ impl UiActor {
             let _ = self.kb_tx.send(self.state.config.keybindings.clone());
         }
         if was_submit || was_followup || was_agent_done {
-            spawn_if_queued(&mut self.state, &self.cmd_tx).await;
+            spawn_if_queued(&mut self.state, &self.agent_handle).await;
         }
 
         self.publish_snapshot();
@@ -159,7 +159,7 @@ impl UiActor {
 }
 
 /// Spawn an agent turn if the input queue has a pending message.
-pub async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentCommand>) {
+pub async fn spawn_if_queued(state: &mut AppState, agent_handle: &AgentActorHandle) {
     if state.agent.turn_active {
         return;
     }
@@ -182,8 +182,8 @@ pub async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentCo
         .map(|p| p.content.clone())
         .unwrap_or_default();
 
-    let _ = cmd_tx
-        .send(AgentCommand {
+    agent_handle
+        .run(AgentCommand {
             content,
             id,
             provider: state.config.current_provider.clone(),
@@ -209,7 +209,8 @@ mod tests {
         let state = AppState::default();
         let bus = EventBus::<Event>::new(10);
         let (render_tx, mut render_rx) = watch::channel(Snapshot::default());
-        let (cmd_tx, _cmd_rx) = mpsc::channel(1);
+        let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
+        let agent_handle = AgentActorHandle::new(agent_tx);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
 
@@ -218,7 +219,7 @@ mod tests {
             UiActor::new(
                 state,
                 render_tx,
-                cmd_tx,
+                agent_handle,
                 kb_tx,
                 bus.clone(),
                 shutdown_tx,
@@ -261,7 +262,8 @@ mod tests {
 
     #[tokio::test]
     async fn spawn_if_queued_sets_turn_active_and_inflight() {
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<AgentCommand>(10);
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<runie_agent::AgentMsg>(10);
+        let agent_handle = AgentActorHandle::new(tx);
         let mut state = AppState::default();
         state
             .agent
@@ -271,7 +273,7 @@ mod tests {
         assert!(!state.agent.turn_active);
         assert_eq!(state.agent.inflight, 0);
 
-        spawn_if_queued(&mut state, &tx).await;
+        spawn_if_queued(&mut state, &agent_handle).await;
 
         assert!(
             state.agent.turn_active,
@@ -286,18 +288,20 @@ mod tests {
             "Message should be popped from request_queue"
         );
 
-        let cmd = rx.try_recv().expect("Command should be sent to agent");
-        assert_eq!(cmd.content, "hello");
-        assert_eq!(cmd.thinking_level, runie_core::model::ThinkingLevel::Off);
-        assert_eq!(cmd.system_prompt, "");
+        let msg = rx.try_recv().expect("Command should be sent to agent");
+        let runie_agent::AgentMsg::Run { command } = msg;
+        assert_eq!(command.content, "hello");
+        assert_eq!(command.thinking_level, runie_core::model::ThinkingLevel::Off);
+        assert_eq!(command.system_prompt, "");
     }
 
     #[tokio::test]
     async fn spawn_if_queued_noop_when_queue_empty() {
-        let (tx, _rx) = tokio::sync::mpsc::channel::<AgentCommand>(10);
+        let (tx, _rx) = tokio::sync::mpsc::channel::<runie_agent::AgentMsg>(10);
+        let agent_handle = AgentActorHandle::new(tx);
         let mut state = AppState::default();
 
-        spawn_if_queued(&mut state, &tx).await;
+        spawn_if_queued(&mut state, &agent_handle).await;
 
         assert!(!state.agent.turn_active);
         assert_eq!(state.agent.inflight, 0);
@@ -309,7 +313,8 @@ mod tests {
         use runie_core::login_flow::{build_key_input, LoginFlowState};
 
         let (render_tx, _render_rx) = watch::channel(Snapshot::default());
-        let (cmd_tx, _cmd_rx) = mpsc::channel(1);
+        let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
+        let agent_handle = AgentActorHandle::new(agent_tx);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, mut effect_rx) = mpsc::channel::<Event>(16);
@@ -327,7 +332,7 @@ mod tests {
         let mut actor = UiActor::new(
             state,
             render_tx,
-            cmd_tx,
+            agent_handle,
             kb_tx,
             EventBus::new(4),
             shutdown_tx,

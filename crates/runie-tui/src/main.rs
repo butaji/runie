@@ -12,22 +12,16 @@
 //!   - SessionActor subscribes to bus, persists durable events to JSONL
 
 use futures::StreamExt;
-use runie_agent::{
-    emit_approval_sink::EmitApprovalSink, run_agent_turn, AgentCommand, PermissionGate,
-};
+use runie_agent::AgentActor;
 use runie_core::actor::Actor;
 use runie_core::actors::{ConfigActor, ProviderActor};
 use runie_core::bus::EventBus;
-use runie_core::event::AgentEvent;
 use runie_core::event::Event;
-use runie_core::permissions::{
-    DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
-};
 use runie_core::session_store::SessionStore;
 use runie_core::{AppState, Snapshot};
-use runie_provider::{DynProvider, DynProviderFactory};
+use runie_provider::DynProviderFactory;
 use runie_tui::{app_init, keymap, terminal, terminal_setup, theme, ui, ui_actor::UiActor};
-use std::{collections::HashMap, io, sync::Arc, sync::Mutex};
+use std::{collections::HashMap, io};
 use tokio::sync::{mpsc, oneshot, watch};
 
 struct Cleanup;
@@ -149,31 +143,35 @@ fn spawn_background_tasks(
     provider_handle: runie_core::actors::ProviderActorHandle,
 ) {
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
-    let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
+    let (agent_handle, agent_actor) = AgentActor::spawn(
+        bus.clone(),
+        provider_handle,
+        state.approval_registry.clone(),
+    );
     let (render_tx, render_rx) = watch::channel(state.snapshot());
     let (kb_tx, kb_rx) = watch::channel(state.config.keybindings.clone());
 
     spawn_input_forwarder(input_rx, bus.clone());
     spawn_agent_tasks(
-        cmd_rx,
         input_tx,
         kb_rx,
         terminal,
         render_rx,
         bus.clone(),
-        state.approval_registry.clone(),
-        provider_handle,
     );
     spawn_ui_actor(
         state,
         render_tx,
-        cmd_tx,
+        agent_handle,
         kb_tx,
         bus.clone(),
         shutdown_tx,
         caps,
     );
     spawn_session_persistence(&bus);
+
+    // Keep the agent actor alive until shutdown.
+    let _agent_actor = agent_actor;
 }
 
 fn spawn_input_forwarder(mut input_rx: mpsc::Receiver<Event>, bus: EventBus<Event>) {
@@ -184,25 +182,13 @@ fn spawn_input_forwarder(mut input_rx: mpsc::Receiver<Event>, bus: EventBus<Even
     });
 }
 
-#[allow(clippy::too_many_arguments)]
 fn spawn_agent_tasks(
-    cmd_rx: mpsc::Receiver<AgentCommand>,
     input_tx: mpsc::Sender<Event>,
     kb_rx: watch::Receiver<HashMap<String, String>>,
     terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
     render_rx: watch::Receiver<Snapshot>,
-    bus: EventBus<Event>,
-    approval_registry: std::sync::Arc<std::sync::Mutex<runie_core::permissions::ApprovalRegistry>>,
-    provider_handle: runie_core::actors::ProviderActorHandle,
+    _bus: EventBus<Event>,
 ) {
-    // Spawn agents that publish to EventBus. Provider construction is delegated
-    // to ProviderActor so the interactive path has a single builder.
-    tokio::spawn(agent_loop(
-        cmd_rx,
-        bus.clone(),
-        approval_registry,
-        provider_handle,
-    ));
     tokio::spawn(input_reader(input_tx, kb_rx));
     tokio::spawn(render_task(terminal, render_rx));
 }
@@ -210,7 +196,7 @@ fn spawn_agent_tasks(
 fn spawn_ui_actor(
     state: AppState,
     render_tx: watch::Sender<Snapshot>,
-    cmd_tx: mpsc::Sender<AgentCommand>,
+    agent_handle: runie_agent::AgentActorHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: oneshot::Sender<()>,
@@ -220,7 +206,9 @@ fn spawn_ui_actor(
     // Subscribe with replay so resuming a session restores prior messages.
     // UiActor MUST subscribe before SessionActor replays durable events.
     let ui_sub = bus.subscribe_with_replay();
-    tokio::spawn(UiActor::new(state, render_tx, cmd_tx, kb_tx, bus, shutdown_tx, caps).run(ui_sub));
+    tokio::spawn(
+        UiActor::new(state, render_tx, agent_handle, kb_tx, bus, shutdown_tx, caps).run(ui_sub),
+    );
 }
 
 async fn render_task(
@@ -267,67 +255,4 @@ async fn input_reader(
     }
 }
 
-/// Agent loop that publishes events to EventBus for SessionActor and UiActor.
-async fn agent_loop(
-    mut cmd_rx: mpsc::Receiver<AgentCommand>,
-    bus: EventBus<Event>,
-    approval_registry: std::sync::Arc<std::sync::Mutex<runie_core::permissions::ApprovalRegistry>>,
-    provider_handle: runie_core::actors::ProviderActorHandle,
-) {
-    while let Some(cmd) = cmd_rx.recv().await {
-        run_single_turn(
-            &cmd,
-            &bus,
-            approval_registry.clone(),
-            provider_handle.clone(),
-        )
-        .await;
-    }
-}
 
-async fn run_single_turn(
-    cmd: &AgentCommand,
-    bus: &EventBus<Event>,
-    approval_registry: std::sync::Arc<std::sync::Mutex<runie_core::permissions::ApprovalRegistry>>,
-    provider_handle: runie_core::actors::ProviderActorHandle,
-) {
-    let bus_clone = bus.clone();
-    let cmd_id = cmd.id.clone();
-
-    let built = match provider_handle
-        .build(cmd.provider.clone(), cmd.model.clone())
-        .await
-    {
-        Ok(built) => built,
-        Err(e) => {
-            emit_error_and_done(&bus_clone, &cmd_id, format!("Provider error: {}", e));
-            return;
-        }
-    };
-    let provider = DynProvider::from_provider(built.provider, &built.key, &built.model);
-
-    let emit = Arc::new(Mutex::new(move |evt: Event| {
-        bus_clone.publish(evt);
-    }));
-    let permissions = PermissionManager::default().with_policies(vec![
-        Box::new(DefaultToolApprove::new()),
-        Box::new(GitTrackedWriteApprove::new()),
-        Box::new(FileAccessAsk::new()),
-    ]);
-    let gate = PermissionGate::new(
-        permissions,
-        Arc::new(EmitApprovalSink::new(emit.clone(), approval_registry)),
-    );
-
-    if let Err(e) = run_agent_turn(&provider, cmd, emit, 5, gate).await {
-        emit_error_and_done(bus, &cmd_id, format!("Agent error: {}", e));
-    }
-}
-
-fn emit_error_and_done(bus: &EventBus<Event>, id: &str, message: String) {
-    bus.publish(AgentEvent::Error {
-        id: id.to_string(),
-        message,
-    });
-    bus.publish(AgentEvent::Done { id: id.to_string() });
-}
