@@ -6,7 +6,7 @@ use crate::model::ChatMessage;
 use serde::{Deserialize, Serialize};
 
 /// Session snapshot — serializable conversation state.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Session {
     pub name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]

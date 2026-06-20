@@ -43,8 +43,11 @@ pub(super) fn handle_command_event(state: &mut AppState, event: CommandEvent) {
 }
 
 fn run_load_command(state: &mut AppState, name: &str) {
+    if send_to_session_store(state, |tx, name| async move { tx.load(name).await }, name) {
+        return;
+    }
     use crate::commands::CommandResult;
-    let result = crate::async_io::block_in_place_if_runtime(|| crate::session_replay::load_session(name, state))
+    let result = crate::session_replay::load_session(name, state)
         .map(|_| CommandResult::Message(format!("Session '{}' loaded.", name)))
         .unwrap_or_else(|_| {
             CommandResult::Message(format!(
@@ -56,16 +59,27 @@ fn run_load_command(state: &mut AppState, name: &str) {
 }
 
 fn run_save_command(state: &mut AppState, name: &str) {
+    let name_owned = name.to_string();
+    let session = crate::session::Session::from_state(state, name_owned.clone());
+    if let Some(tx) = state.session_store_tx.clone() {
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            let _ = handle.spawn(async move { tx.save(name_owned, session).await; });
+            return;
+        }
+    }
     use crate::commands::CommandResult;
-    let result = crate::async_io::block_in_place_if_runtime(|| crate::session_replay::save_session(name, state))
+    let result = crate::session_replay::save_session(name, state)
         .map(|_| CommandResult::Message(format!("Session '{}' saved.", name)))
         .unwrap_or_else(|e| CommandResult::Message(format!("Could not save session: {}", e)));
     dialog::process_command_result(state, result);
 }
 
 fn run_delete_command(state: &mut AppState, name: &str) {
+    if send_to_session_store(state, |tx, name| async move { tx.delete(name).await }, name) {
+        return;
+    }
     use crate::commands::CommandResult;
-    let result = crate::async_io::block_in_place_if_runtime(|| crate::session_replay::delete_session(name))
+    let result = crate::session_replay::delete_session(name)
         .map(|_| CommandResult::Message(format!("Session '{}' deleted.", name)))
         .unwrap_or_else(|_| {
             CommandResult::Message(format!(
@@ -77,25 +91,43 @@ fn run_delete_command(state: &mut AppState, name: &str) {
 }
 
 fn run_import_command(state: &mut AppState, path: &str) {
+    if let Some(tx) = state.session_store_tx.clone() {
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            let path = std::path::PathBuf::from(path);
+            let _ = handle.spawn(async move { tx.import(path).await; });
+            return;
+        }
+    }
     use crate::commands::CommandResult;
     let path_buf = path.to_string();
-    let result = crate::async_io::block_in_place_if_runtime(move || {
-        std::fs::read_to_string(&path_buf)
-            .ok()
-            .and_then(|json| serde_json::from_str::<Session>(&json).ok())
-    })
-    .map(|session| {
-        let msg = format!("Session imported from '{}'", path);
-        state.restore_session(&session);
-        CommandResult::Message(msg)
-    })
-    .unwrap_or_else(|| {
-        CommandResult::Message(format!("Could not import session from '{}'", path))
-    });
+    let result = std::fs::read_to_string(&path_buf)
+        .ok()
+        .and_then(|json| serde_json::from_str::<Session>(&json).ok())
+        .map(|session| {
+            let msg = format!("Session imported from '{}'", path);
+            state.restore_session(&session);
+            CommandResult::Message(msg)
+        })
+        .unwrap_or_else(|| {
+            CommandResult::Message(format!("Could not import session from '{}'", path))
+        });
     dialog::process_command_result(state, result);
 }
 
 fn run_export_command(state: &mut AppState, path: &str) {
+    if let Some(tx) = state.session_store_tx.clone() {
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            let name = state
+                .session
+                .session_display_name
+                .clone()
+                .unwrap_or_else(|| "exported".into());
+            let session = Session::from_state(state, name);
+            let path = std::path::PathBuf::from(path);
+            let _ = handle.spawn(async move { tx.export(path, session).await; });
+            return;
+        }
+    }
     use crate::commands::CommandResult;
     let name = state
         .session
@@ -105,10 +137,25 @@ fn run_export_command(state: &mut AppState, path: &str) {
     let session = Session::from_state(state, name);
     let path_buf = path.to_string();
     let json = serde_json::to_string_pretty(&session).unwrap_or_default();
-    let result = crate::async_io::block_in_place_if_runtime(move || std::fs::write(&path_buf, json))
+    let result = std::fs::write(&path_buf, json)
         .map(|_| CommandResult::Message(format!("Session exported to '{}'", path)))
         .unwrap_or_else(|e| CommandResult::Message(format!("Could not export: {}", e)));
     dialog::process_command_result(state, result);
+}
+
+fn send_to_session_store<F, Fut>(state: &AppState, f: F, name: &str) -> bool
+where
+    F: FnOnce(crate::actors::SessionStoreActorHandle, String) -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = ()> + Send + 'static,
+{
+    if let Some(tx) = state.session_store_tx.clone() {
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            let name = name.to_string();
+            let _ = handle.spawn(async move { f(tx, name).await; });
+            return true;
+        }
+    }
+    false
 }
 
 fn run_skill_command(state: &mut AppState, name: &str) {

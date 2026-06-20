@@ -60,6 +60,8 @@ pub struct AppState {
     pub provider_tx: Option<tokio::sync::mpsc::Sender<crate::actors::ProviderMsg>>,
     /// Handle to the `PersistenceActor`. `None` in unit tests that do not spawn it.
     pub persistence_tx: Option<crate::actors::PersistenceActorHandle>,
+    /// Handle to the `SessionStoreActor`. `None` in unit tests that do not spawn it.
+    pub session_store_tx: Option<crate::actors::SessionStoreActorHandle>,
     /// Last config applied to the state (read-only cache for sync lookups).
     pub config_cache: Option<crate::config::Config>,
 }
@@ -95,6 +97,7 @@ impl Default for AppState {
             config_tx: None,
             provider_tx: None,
             persistence_tx: None,
+            session_store_tx: None,
             config_cache: None,
         }
     }
@@ -170,6 +173,7 @@ impl AppState {
         let config_tx = self.config_tx.clone();
         let provider_tx = self.provider_tx.clone();
         let persistence_tx = self.persistence_tx.clone();
+        let session_store_tx = self.session_store_tx.clone();
         let config_cache = self.config_cache.clone();
         let git_info = self.git_info.clone();
         let cwd_name = self.cwd_name.clone();
@@ -180,6 +184,7 @@ impl AppState {
         self.config_tx = config_tx;
         self.provider_tx = provider_tx;
         self.persistence_tx = persistence_tx;
+        self.session_store_tx = session_store_tx;
         self.config_cache = config_cache;
         self.git_info = git_info;
         self.cwd_name = cwd_name;

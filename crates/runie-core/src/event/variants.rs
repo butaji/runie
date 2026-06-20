@@ -292,6 +292,32 @@ pub enum Event {
         entry: String,
     },
 
+    // Session persistence results
+    SessionLoaded {
+        name: String,
+        events: Box<Vec<crate::event::DurableCoreEvent>>,
+        metadata: Option<Box<crate::session_index::SessionMetadata>>,
+    },
+    SessionSaved {
+        name: String,
+    },
+    SessionDeleted {
+        name: String,
+    },
+    SessionImported {
+        session: Box<crate::session::Session>,
+    },
+    SessionExported {
+        path: String,
+    },
+    SessionList {
+        sessions: Box<Vec<String>>,
+    },
+    SessionOperationFailed {
+        operation: String,
+        error: String,
+    },
+
     // Session
     ForkSession {
         message_index: usize,

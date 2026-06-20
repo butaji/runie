@@ -27,6 +27,9 @@ pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
     if handle_persistence_events(state, &event) {
         return;
     }
+    if handle_session_store_events(state, &event) {
+        return;
+    }
     match categorize(&event) {
         EventCategory::Input => super::input::input_event(state, event),
         EventCategory::Agent => super::agent::agent_event(state, event),
@@ -60,6 +63,75 @@ fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
         }
         _ => false,
     }
+}
+
+fn handle_session_store_events(state: &mut AppState, event: &Event) -> bool {
+    use crate::event::TransientLevel;
+    match event {
+        Event::SessionLoaded { name, events, metadata } => {
+            apply_session_loaded(state, name, events, metadata);
+            true
+        }
+        Event::SessionSaved { name } => {
+            state.notify(format!("Session '{}' saved.", name), TransientLevel::Info);
+            true
+        }
+        Event::SessionDeleted { name } => {
+            state.notify(format!("Session '{}' deleted.", name), TransientLevel::Info);
+            true
+        }
+        Event::SessionImported { session } => {
+            apply_session_imported(state, session);
+            true
+        }
+        Event::SessionExported { path } => {
+            state.notify(format!("Session exported to '{}'.", path), TransientLevel::Info);
+            true
+        }
+        Event::SessionList { sessions } => {
+            apply_session_list(state, sessions);
+            true
+        }
+        Event::SessionOperationFailed { operation, error } => {
+            state.notify(format!("{} failed: {}", operation, error), TransientLevel::Error);
+            true
+        }
+        _ => false,
+    }
+}
+
+fn apply_session_loaded(
+    state: &mut AppState,
+    name: &str,
+    events: &Box<Vec<crate::event::DurableCoreEvent>>,
+    metadata: &Option<Box<crate::session_index::SessionMetadata>>,
+) {
+    crate::session_replay::replay_events(state, events);
+    if let Some(meta) = metadata {
+        state.session.session_display_name = Some(meta.display_name.clone());
+        state.session.session_created_at = meta.created_at;
+        state.session.session_updated_at = meta.updated_at;
+    }
+    state.configure_token_tracker();
+    state.messages_changed();
+    state.notify(format!("Session '{}' loaded.", name), crate::event::TransientLevel::Info);
+}
+
+fn apply_session_imported(state: &mut AppState, session: &Box<crate::session::Session>) {
+    state.restore_session(session);
+    state.notify(
+        format!("Session imported from '{}'.", session.name),
+        crate::event::TransientLevel::Info,
+    );
+}
+
+fn apply_session_list(state: &mut AppState, sessions: &Box<Vec<String>>) {
+    let content = if sessions.is_empty() {
+        "No saved sessions. Use /save name to create one.".into()
+    } else {
+        format!("Saved sessions:\n{}", sessions.join("\n"))
+    };
+    state.notify(content, crate::event::TransientLevel::Info);
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

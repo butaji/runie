@@ -8,6 +8,7 @@ mod config;
 mod fff_indexer;
 mod persistence;
 pub mod provider;
+mod session_store;
 
 pub use config::{ConfigActor, ConfigActorHandle, ConfigMsg, ConfigReply};
 pub use fff_indexer::{
@@ -18,3 +19,4 @@ pub use persistence::{PersistenceActor, PersistenceActorHandle, PersistenceMsg};
 pub use provider::{
     BuiltProvider, ProviderActor, ProviderActorHandle, ProviderFactory, ProviderMsg,
 };
+pub use session_store::{SessionStoreActor, SessionStoreActorHandle, SessionStoreMsg};

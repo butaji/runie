@@ -91,22 +91,34 @@ pub fn replay_events(state: &mut AppState, events: &[DurableCoreEvent]) {
 
 /// Build durable events from current application state.
 pub fn state_to_durable_events(state: &AppState) -> Vec<DurableCoreEvent> {
+    session_to_durable_events(&crate::session::Session::from_state(
+        state,
+        state
+            .session
+            .session_display_name
+            .clone()
+            .unwrap_or_else(|| "session".into()),
+    ))
+}
+
+/// Build durable events from a session snapshot.
+pub fn session_to_durable_events(session: &crate::session::Session) -> Vec<DurableCoreEvent> {
     let mut events = Vec::new();
-    events.extend(messages_to_events(&state.session.messages));
+    events.extend(messages_to_events(&session.messages));
     events.push(DurableCoreEvent::ModelSwitched {
-        provider: state.config.current_provider.clone(),
-        model: state.config.current_model.clone(),
+        provider: session.provider.clone(),
+        model: session.model.clone(),
     });
     events.push(DurableCoreEvent::ThemeSwitched {
-        name: state.config.theme_name.clone(),
+        name: session.theme_name.clone(),
     });
     events.push(DurableCoreEvent::ThinkingLevelSet {
-        level: state.config.thinking_level,
+        level: session.thinking_level,
     });
-    if state.config.read_only {
+    if session.read_only {
         events.push(DurableCoreEvent::ReadOnlySet { read_only: true });
     }
-    if let Some(name) = &state.session.session_display_name {
+    if let Some(name) = &session.display_name {
         events.push(DurableCoreEvent::SessionRenamed { name: name.clone() });
     }
     events

@@ -1,8 +1,8 @@
 //! Session tree — branching conversation history.
 
 use crate::message::{ChatMessage, Role};
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
-use std::cell::RefCell;
 use std::collections::HashMap;
 
 /// A node in the session tree.
@@ -83,7 +83,7 @@ impl SessionTreeFilter {
 type FilterCache = Vec<(usize, Vec<usize>)>;
 
 /// The session tree holds the root and current branch path.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct SessionTree {
     pub root: TreeNode,
     pub current_branch: Vec<usize>,
@@ -94,12 +94,25 @@ pub struct SessionTree {
     #[serde(skip)]
     built_version: u64,
     #[serde(skip)]
-    cached_filter: RefCell<Option<(SessionTreeFilter, u64, FilterCache)>>,
+    cached_filter: Mutex<Option<(SessionTreeFilter, u64, FilterCache)>>,
 }
 
 impl PartialEq for SessionTree {
     fn eq(&self, other: &Self) -> bool {
         self.root == other.root && self.current_branch == other.current_branch
+    }
+}
+
+impl Clone for SessionTree {
+    fn clone(&self) -> Self {
+        Self {
+            root: self.root.clone(),
+            current_branch: self.current_branch.clone(),
+            node_index: self.node_index.clone(),
+            index_version: self.index_version,
+            built_version: self.built_version,
+            cached_filter: Mutex::new(None),
+        }
     }
 }
 
@@ -111,7 +124,7 @@ impl SessionTree {
             node_index: HashMap::new(),
             index_version: 1,
             built_version: 0,
-            cached_filter: RefCell::new(None),
+            cached_filter: Mutex::new(None),
         }
     }
 
@@ -276,7 +289,7 @@ impl SessionTree {
     /// Collect visible nodes given a filter, with caching.
     pub fn filtered_walk(&self, filter: SessionTreeFilter) -> Vec<(usize, &TreeNode)> {
         // Try cache first
-        if let Ok(cache) = self.cached_filter.try_borrow() {
+        if let Some(cache) = self.cached_filter.try_lock() {
             if let Some((cached_filter, cached_version, cached_paths)) = cache.as_ref() {
                 if *cached_filter == filter && *cached_version == self.index_version {
                     return cached_paths
@@ -301,7 +314,7 @@ impl SessionTree {
         let output: Vec<_> = result.into_iter().map(|(d, n, _)| (d, n)).collect();
 
         // Store in cache
-        if let Ok(mut cache) = self.cached_filter.try_borrow_mut() {
+        if let Some(mut cache) = self.cached_filter.try_lock() {
             *cache = Some((filter, self.index_version, paths));
         }
 
@@ -340,7 +353,7 @@ impl SessionTree {
         self.index_version = self.index_version.wrapping_add(1);
         self.built_version = self.index_version.wrapping_sub(1); // force rebuild
         self.node_index.clear();
-        if let Ok(mut cache) = self.cached_filter.try_borrow_mut() {
+        if let Some(mut cache) = self.cached_filter.try_lock() {
             *cache = None;
         }
     }

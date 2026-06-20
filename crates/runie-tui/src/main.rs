@@ -14,7 +14,7 @@
 use futures::StreamExt;
 use runie_agent::AgentActor;
 use runie_core::actor::Actor;
-use runie_core::actors::{ConfigActor, PersistenceActor, ProviderActor};
+use runie_core::actors::{ConfigActor, PersistenceActor, ProviderActor, SessionStoreActor};
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::session_store::SessionStore;
@@ -71,7 +71,7 @@ async fn main() -> io::Result<()> {
     let bootstrap = bootstrap_app(bus.clone()).await;
     let mut state = bootstrap.0;
     let provider_handle = bootstrap.2;
-    let _actors = (bootstrap.4, bootstrap.5, bootstrap.6);
+    let _actors = (bootstrap.5, bootstrap.6, bootstrap.7, bootstrap.8);
 
     let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
     theme::set_current_theme_with_caps_async(&state.config.theme_name, terminal_caps).await;
@@ -100,6 +100,8 @@ async fn bootstrap_app(
     runie_core::actors::ConfigActorHandle,
     runie_core::actors::ProviderActorHandle,
     runie_core::actors::PersistenceActorHandle,
+    runie_core::actors::SessionStoreActorHandle,
+    runie_core::actor::ActorHandle,
     runie_core::actor::ActorHandle,
     runie_core::actor::ActorHandle,
     runie_core::actor::ActorHandle,
@@ -107,10 +109,12 @@ async fn bootstrap_app(
     let (config_handle, config_actor) = ConfigActor::spawn(bus.clone(), None);
     let (provider_handle, provider_actor) = spawn_provider_actor(&bus, &config_handle);
     let (persistence_handle, persistence_actor) = PersistenceActor::spawn(bus.clone());
+    let (session_store_handle, session_store_actor) = SessionStoreActor::spawn(bus.clone());
     let mut state = AppState {
         config_tx: Some(config_handle.tx().clone()),
         provider_tx: Some(provider_handle.tx().clone()),
         persistence_tx: Some(persistence_handle.clone()),
+        session_store_tx: Some(session_store_handle.clone()),
         ..Default::default()
     };
     app_init::bootstrap(&mut state).await;
@@ -119,9 +123,11 @@ async fn bootstrap_app(
         config_handle,
         provider_handle,
         persistence_handle,
+        session_store_handle,
         config_actor,
         provider_actor,
         persistence_actor,
+        session_store_actor,
     )
 }
 

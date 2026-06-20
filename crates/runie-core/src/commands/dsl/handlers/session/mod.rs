@@ -237,7 +237,13 @@ pub fn register(registry: &mut CommandRegistry) {
 
 // ── Command handlers ──────────────────────────────────────────────────────────
 
-fn handle_sessions(_: &mut AppState, _: &str) -> CommandResult {
+fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
+    if let Some(tx) = state.session_store_tx.clone() {
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            let _ = handle.spawn(async move { tx.list().await; });
+            return CommandResult::None;
+        }
+    }
     match crate::session_replay::list_sessions() {
         Ok(sessions) if sessions.is_empty() => {
             CommandResult::Message("No saved sessions. Use /save name to create one.".into())

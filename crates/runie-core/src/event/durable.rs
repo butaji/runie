@@ -7,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Events that are persisted to the session store.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "event", rename_all = "camelCase")]
 pub enum DurableCoreEvent {
     /// A message sent by the user or the assistant.

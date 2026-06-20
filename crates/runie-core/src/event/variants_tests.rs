@@ -344,7 +344,14 @@ fn dispatcher_handles_all_variants() {
             | Event::TrustChanged { .. }
             | Event::TrustSet { .. }
             | Event::HistoryLoaded { .. }
-            | Event::HistoryAppend { .. } => Event::HistoryAppend {
+            | Event::HistoryAppend { .. }
+            | Event::SessionLoaded { .. }
+            | Event::SessionSaved { .. }
+            | Event::SessionDeleted { .. }
+            | Event::SessionImported { .. }
+            | Event::SessionExported { .. }
+            | Event::SessionList { .. }
+            | Event::SessionOperationFailed { .. } => Event::HistoryAppend {
                 entry: String::new(),
             },
 
