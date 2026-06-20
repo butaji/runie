@@ -1,6 +1,6 @@
 # Simplify event module aliases and variants layout
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P1

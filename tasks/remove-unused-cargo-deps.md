@@ -1,6 +1,6 @@
 # Remove unused cargo dependencies
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2

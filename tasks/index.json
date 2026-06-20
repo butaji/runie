@@ -2761,14 +2761,15 @@
     },
     {
       "id": "remove-unused-cargo-deps",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P2",
+      "completed_in": "current",
       "file": "tasks/remove-unused-cargo-deps.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "10 unused deps + 3 redundant dev-deps + rexpect workspace dep. Biggest: pulldown-cmark in TUI, reqwest in core."
+      "notes": "Removed 13 unused deps: pulldown-cmark (runie-tui), reqwest (runie-core), strum (runie-core), dirs (runie-provider), serde (runie-server), futures (runie-server), futures (runie-print), serde_json (runie-testing), regex/libc/rexpect (runie-tui dev), insta (runie-agent dev), rexpect (workspace). All workspace tests pass."
     },
     {
       "id": "dedupe-fresh-state-test-helper",
@@ -2779,7 +2780,7 @@
       "file": "tasks/dedupe-fresh-state-test-helper.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "fresh_state() duplicated ~38x across test files; shared versions exist but unused. AMENDED: now covers all shared test helpers (fresh_state, type_str, exec, tmp_store, minimal_session, write_skill, ENV_LOCK). Tests are 63% of core LOC — single biggest dedup win."
+      "notes": "fresh_state() duplicated ~38x across test files; shared versions exist but unused. AMENDED: now covers all shared test helpers (fresh_state, type_str, exec, tmp_store, minimal_session, write_skill, ENV_LOCK). Tests are 63% of core LOC \u2014 single biggest dedup win."
     },
     {
       "id": "extract-headless-cli-helper",
@@ -2882,14 +2883,15 @@
     },
     {
       "id": "delete-dead-core-modules",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P0",
+      "completed_in": "current",
       "file": "tasks/delete-dead-core-modules.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Delete 5 zero-caller pub mods in runie-core: hooks (349), skill/singular (318), retry (233), location (195), utils (53). ~1,148 LOC of scaffolding-for-later or stale duplicates. mcp.rs excluded (owned by gate-or-implement-mcp-client)."
+      "notes": "Deleted 5 zero-caller pub mods in runie-core: hooks.rs (349 LOC), skill/ dir (318 LOC), retry.rs (233 LOC), location.rs (195 LOC), utils.rs (53 LOC). ~1,148 LOC of dead scaffolding removed. All acceptance criteria pass: workspace builds, 681 tests pass, zero dead references remain."
     },
     {
       "id": "delete-tui-ipc-reexport-shim",
@@ -2910,7 +2912,11 @@
       "priority": "P1",
       "file": "tasks/consolidate-dual-path-modules.md",
       "depends_on": [],
-      "blocks": ["group-session-modules-into-dir", "relocate-loose-tests-files", "flatten-update-login-flow-tests-dir"],
+      "blocks": [
+        "group-session-modules-into-dir",
+        "relocate-loose-tests-files",
+        "flatten-update-login-flow-tests-dir"
+      ],
       "notes": "Convert 6 foo.rs + foo/ dual-path pairs to foo/mod.rs style: tool_markers, tool_parser, provider_registry, model_catalog, login_config, message. ~3,036 LOC, mechanical git mv."
     },
     {
@@ -2920,18 +2926,22 @@
       "category": "Sessions",
       "priority": "P1",
       "file": "tasks/group-session-modules-into-dir.md",
-      "depends_on": ["consolidate-dual-path-modules"],
+      "depends_on": [
+        "consolidate-dual-path-modules"
+      ],
       "blocks": [],
       "notes": "Move 6 session_*.rs files (1,863 LOC) at runie-core src root into session/ dir. Drops root file count 60 -> 54. Touches runie-testing and arch_guardrails path strings."
     },
     {
       "id": "simplify-event-module-layout",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
       "file": "tasks/simplify-event-module-layout.md",
-      "depends_on": ["simplify-event-vocabulary"],
+      "depends_on": [
+        "simplify-event-vocabulary"
+      ],
       "blocks": [],
       "notes": "Collapse 5 single-line event alias shim files (command/edit/login_flow/model_config/dialog, 21 LOC total) into one aliases.rs; move event/variants_tests.rs into event/variants/tests.rs. Complements simplify-event-vocabulary (which targets enum nesting, not file layout)."
     },
@@ -2953,7 +2963,9 @@
       "category": "Configuration",
       "priority": "P2",
       "file": "tasks/relocate-loose-tests-files.md",
-      "depends_on": ["consolidate-dual-path-modules"],
+      "depends_on": [
+        "consolidate-dual-path-modules"
+      ],
       "blocks": [],
       "notes": "Move 7 *_tests.rs loose files into module tests/ subdirs or inline. #[path] workarounds (tool_parser_tests, form_tests) drop after dual-path consolidation. event/variants_tests owned by simplify-event-module-layout."
     },
@@ -2964,7 +2976,9 @@
       "category": "Configuration",
       "priority": "P2",
       "file": "tasks/flatten-update-login-flow-tests-dir.md",
-      "depends_on": ["consolidate-dual-path-modules"],
+      "depends_on": [
+        "consolidate-dual-path-modules"
+      ],
       "blocks": [],
       "notes": "update/login_flow/ is a single-file directory containing only tests.rs. Collapses after dual-path consolidation converts login_flow.rs -> login_flow/mod.rs."
     },
@@ -3063,7 +3077,10 @@
       "category": "Core / State",
       "priority": "P2",
       "file": "tasks/sweep-allow-suppressions.md",
-      "depends_on": ["gate-or-implement-mcp-client", "delete-config-reload-shim"],
+      "depends_on": [
+        "gate-or-implement-mcp-client",
+        "delete-config-reload-shim"
+      ],
       "blocks": [],
       "notes": "Resolve 18 #[allow(...)] markers: delete 8 dead_code allows, refactor or document 6 too_many_arguments, keep 4 niche-lint allows with comment. 80/20 of dead code shipping in prod."
     },
@@ -3085,7 +3102,9 @@
       "category": "Architecture / Refactoring",
       "priority": "P2",
       "file": "tasks/consolidate-update-dialog-files.md",
-      "depends_on": ["rename-update-dialog-panel"],
+      "depends_on": [
+        "rename-update-dialog-panel"
+      ],
       "blocks": [],
       "notes": "Merge toggle-family (toggle+provider_model_toggle+model_selector -> toggles.rs) and file-picker-family (fff+file_picker -> file_pickers.rs). 11 files -> 9. update/dialog is 29% of update/."
     },
@@ -3096,7 +3115,9 @@
       "category": "Architecture / Testing",
       "priority": "P3",
       "file": "tasks/consolidate-login-logout-tests.md",
-      "depends_on": ["consolidate-login-flow-handlers"],
+      "depends_on": [
+        "consolidate-login-flow-handlers"
+      ],
       "blocks": [],
       "notes": "Fold 4 thin test slivers (multiple 32, edge_cases 34, model_select 47, core 49) into parents. 14 files -> 10. tests/login_logout is 12% of core tests."
     },
@@ -3107,7 +3128,9 @@
       "category": "Core / State",
       "priority": "P3",
       "file": "tasks/audit-borrow-workarounds.md",
-      "depends_on": ["consolidate-login-flow-handlers"],
+      "depends_on": [
+        "consolidate-login-flow-handlers"
+      ],
       "blocks": [],
       "notes": "Classify 19 take()/mem::take sites. Extract with_dialog helper for the 9-site open_dialog cluster. Comment legitimate parser-buffer flushes."
     },
@@ -3118,8 +3141,12 @@
       "category": "Architecture / Actors",
       "priority": "P0",
       "file": "tasks/finish-io-migration.md",
-      "depends_on": ["remove-login-config-test-shim"],
-      "blocks": ["delete-async-io-bridge"],
+      "depends_on": [
+        "remove-login-config-test-shim"
+      ],
+      "blocks": [
+        "delete-async-io-bridge"
+      ],
       "notes": "Finding #1: runie-core (33k LOC) still has sync IO in model/mod.rs (git), auth.rs, session_store.rs. Move behind existing GitService/ConfigStore/SessionStore actor traits; empty the arch_guardrails legacy allow-list. Prerequisite to delete-async-io-bridge."
     },
     {
@@ -3130,7 +3157,9 @@
       "priority": "P0",
       "file": "tasks/unify-persistence-actors.md",
       "depends_on": [],
-      "blocks": ["simplify-actor-trait"],
+      "blocks": [
+        "simplify-actor-trait"
+      ],
       "notes": "Finding #2: PersistenceActor + SessionStoreActor + SessionActor (687 LOC) all touch SessionStore/SessionIndex, duplicate SessionMetadata. Unify into one actors/session/ actor. ~400 LOC removed, 2 spawns dropped from TUI bootstrap."
     },
     {
@@ -3141,7 +3170,10 @@
       "priority": "P0",
       "file": "tasks/remove-login-config-test-shim.md",
       "depends_on": [],
-      "blocks": ["finish-io-migration", "consolidate-dual-path-modules"],
+      "blocks": [
+        "finish-io-migration",
+        "consolidate-dual-path-modules"
+      ],
       "notes": "Finding #4: 5 #[cfg(test)] branches in app_state.rs fall back to login_config:: for config reads/writes. Replace with injected ConfigStore mocks (trait already exists). Deletes login_config.rs (141 LOC) + ~15 test set_test_config_* call sites."
     },
     {
@@ -3151,7 +3183,9 @@
       "category": "Configuration",
       "priority": "P1",
       "file": "tasks/consolidate-settings-providers-dialog.md",
-      "depends_on": ["unify-provider-modules"],
+      "depends_on": [
+        "unify-provider-modules"
+      ],
       "blocks": [],
       "notes": "Finding #5 (uncovered): settings.rs + providers_dialog.rs + update/settings_dialog.rs + update/dialog/provider_model_toggle.rs split across 3 dirs. Consolidate into settings/ dir. Login-flow portion owned by consolidate-login-flow-handlers; config-reload portion by delete-config-reload-shim."
     },
@@ -3162,7 +3196,9 @@
       "category": "Architecture / Actors",
       "priority": "P1",
       "file": "tasks/rename-core-ui-to-view.md",
-      "depends_on": ["fold-state-into-model-state"],
+      "depends_on": [
+        "fold-state-into-model-state"
+      ],
       "blocks": [],
       "notes": "Finding #7: runie-core/src/ui/ (1041 LOC) is the view-model (Element/Feed/Transform), not UI. Actual rendering is runie-tui/src/ui/. Two ui/ dirs with different meanings is confusing. Rename core ui/ -> view/."
     },
@@ -3184,7 +3220,9 @@
       "category": "Architecture / Actors",
       "priority": "P1",
       "file": "tasks/delete-async-io-bridge.md",
-      "depends_on": ["finish-io-migration"],
+      "depends_on": [
+        "finish-io-migration"
+      ],
       "blocks": [],
       "notes": "Finding #11: async_io.rs run_blocking_if_runtime/block_in_place_if_runtime are documented tactical bridge for sync IO. Once finish-io-migration lands, zero callers. Delete the module; do not keep dead bridge code."
     },
@@ -3195,7 +3233,9 @@
       "category": "Architecture / Actors",
       "priority": "P2",
       "file": "tasks/simplify-actor-trait.md",
-      "depends_on": ["unify-persistence-actors"],
+      "depends_on": [
+        "unify-persistence-actors"
+      ],
       "blocks": [],
       "notes": "Finding #13: Actor::run_body default is a no-op (every actor overrides it); spawn_actor generic helper is dead production code (every actor uses own spawn). Drop the default; pick one spawn pattern."
     },
@@ -3209,6 +3249,192 @@
       "depends_on": [],
       "blocks": [],
       "notes": "Finding #14: runie-testing (344 LOC) has 1 external consumer (runie-agent/src/tests/tool_runtime.rs). Fold into runie-agent tests as #[cfg(test)] modules. Cancel if a second consumer is planned."
+    },
+    {
+      "id": "audit-simplify-reduce-roadmap",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/audit-simplify-reduce-roadmap.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Master index of 31 findings from the YAGNI/stdlib/OS-features audit. Maps each finding (F1-F31) to an existing task or a new task created by this audit. Tiers 1-7 group by nature; within tier, ordered by recommended execution."
+    },
+    {
+      "id": "relocate-stray-tool-parser-tests",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/relocate-stray-tool-parser-tests.md",
+      "depends_on": [
+        "consolidate-dual-path-modules"
+      ],
+      "blocks": [],
+      "notes": "Finding F7: tool_parser_tests.rs (106 LOC) is a stray top-level file; convention is foo/tests.rs. Run after consolidate-dual-path-modules."
+    },
+    {
+      "id": "inline-tui-ipc-reexport",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/inline-tui-ipc-reexport.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Finding F8: runie-tui/src/ipc.rs is a 5-line re-export of runie_core::ipc::TuiIpc. Inline callers; delete the shim. Same pattern as inline-or-document-core-ui-shim."
+    },
+    {
+      "id": "dedupe-git-status-formatter",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P2",
+      "file": "tasks/dedupe-git-status-formatter.md",
+      "depends_on": [
+        "replace-git2-with-cli"
+      ],
+      "blocks": [],
+      "notes": "Finding F9: format_fff_git_status (update/dialog/fff.rs:85) and format_git_status_str (actors/fff_indexer/search.rs:127) are the same STATUS_LABELS table + loop. Unify after git2 is replaced."
+    },
+    {
+      "id": "collapse-tool-runtime-traits",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/collapse-tool-runtime-traits.md",
+      "depends_on": [
+        "delete-dead-tool-runtime-trait"
+      ],
+      "blocks": [],
+      "notes": "Finding F10: after the dead rich trait is deleted, tool::Tool + tool_runtime::ToolRuntime + EngineToolRuntime adapter remain. One trait is enough if tests use Tool fakes. Supersedes the 'kept both' outcome of done pure-snapshot-and-tool-runtime-trait."
+    },
+    {
+      "id": "reconsider-redb-session-store",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Sessions",
+      "priority": "P2",
+      "file": "tasks/reconsider-redb-session-store.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Finding F12: redb adopted in done adopt-redb-session-store. Reversal proposal: append-only JSONL log + atomic-rename index is stdlib-sufficient. Either revert with one-time .redb -> .jsonl migration, or document a concrete workload needing redb."
+    },
+    {
+      "id": "reconsider-notify-config-watcher",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/reconsider-notify-config-watcher.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Finding F13: notify + notify-debouncer-mini adopted in done adopt-notify-config-watcher. Single consumer (ConfigActor). 1s stat-poll is stdlib + tokio, no platform-specific failure modes."
+    },
+    {
+      "id": "drop-small-stdlib-replaceable-deps",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/drop-small-stdlib-replaceable-deps.md",
+      "depends_on": [
+        "drop-event-bus-replay-buffer"
+      ],
+      "blocks": [],
+      "notes": "Findings F14+F15+F18+F20 bundled: parking_lot (3 sites) -> std Mutex; chrono (1 site) -> stdlib HH:MM; nucleo-matcher (1 site) -> subsequence scorer; glob (2 sites) -> read_dir recursion. Run after drop-event-bus-replay-buffer so parking_lot loses its bus.rs site."
+    },
+    {
+      "id": "reconsider-clipboard-image-deps",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/reconsider-clipboard-image-deps.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Finding F16: arboard + png adopted in done adopt-arboard-clipboard. Single consumer (clipboard_image.rs). Either feature-gate behind clipboard-image, drop, or document usage. Third option: shell out via IoActor for image bytes (OS tools)."
+    },
+    {
+      "id": "reconsider-schemars-jsonschema",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/reconsider-schemars-jsonschema.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Finding F17: schemars + jsonschema adopted in done adopt-layered-config. Schema generation belongs in dev/example; runtime validation of small known-shape TOML can be hand-written. Move schemars to dev-deps, drop jsonschema, or feature-gate."
+    },
+    {
+      "id": "reconsider-tiktoken-rs",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/reconsider-tiktoken-rs.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Finding F19: tiktoken-rs adopted in done adopt-tiktoken-rs. Heuristic estimate_tokens path already exists; provider usage field is authoritative for billing. Most accuracy-sensitive drop in the audit."
+    },
+    {
+      "id": "fix-duplicate-cargo-toml-keys",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/fix-duplicate-cargo-toml-keys.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Findings F21+F22: runie-agent Cargo.toml has duplicate runie-provider + tokio lines; runie-server has duplicate tokio line. Cargo unions features silently; last declaration drops features. Zero-risk merge to feature union."
+    },
+    {
+      "id": "drop-event-bus-replay-buffer",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "file": "tasks/drop-event-bus-replay-buffer.md",
+      "depends_on": [],
+      "blocks": [
+        "drop-small-stdlib-replaceable-deps"
+      ],
+      "notes": "Finding F26: EventBus wraps tokio::broadcast AND adds own ReplayBuffer (parking_lot Mutex<VecDeque>). SessionActor disk-replay already covers startup. Drop in-memory replay; bus.rs becomes thin broadcast wrapper; unblocks parking_lot removal."
+    },
+    {
+      "id": "remove-appstate-cfg-test-branches",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/remove-appstate-cfg-test-branches.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Finding F29: AppState has 5 Option<Sender> actor handles + #[cfg(test)] direct-call branches in 5 accessors (configured_providers, resolve_default_model, provider_config, remove_provider, set_provider_models). Either always spawn actors in tests, or route reads through config_cache only. Coordinate with remove-login-config-test-shim."
+    },
+    {
+      "id": "collapse-effect-payload-indirection",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "file": "tasks/collapse-effect-payload-indirection.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Finding F30: effect_payload.rs (98 LOC, core) computes EffectPayload from Event+State; tui/effects/mod.rs maps EffectPayload -> EffectCommand. Two-step mapping with one consumer. Weigh against IO|Domain|UI posture (pure extraction may belong in domain)."
+    },
+    {
+      "id": "drop-event-aliases",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "file": "tasks/drop-event-aliases.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Finding F31: event/aliases.rs has 4 type aliases (CommandEvent, ModelConfigEvent -> ControlEvent; LoginFlowEvent -> DialogEvent; EditEvent -> IoEvent) used in ~5 update files. Hide enum identity. Drop and rename call sites, or document a real reason to keep."
     }
   ]
 }

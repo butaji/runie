@@ -1,6 +1,6 @@
 # Delete 5 dead modules in runie-core
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P0
@@ -24,18 +24,18 @@ Five `pub mod X;` modules in `crates/runie-core/src/lib.rs` have zero external c
 
 ## Acceptance Criteria
 
-- [ ] `crates/runie-core/src/hooks.rs` deleted; `pub mod hooks;` removed from `lib.rs:47`.
-- [ ] `crates/runie-core/src/skill/` directory deleted; `pub mod skill;` removed from `lib.rs:79`.
-- [ ] `crates/runie-core/src/retry.rs` deleted; `pub mod retry;` removed from `lib.rs:70`.
-- [ ] `crates/runie-core/src/location.rs` deleted; `pub mod location;` removed from `lib.rs:54`.
-- [ ] `crates/runie-core/src/utils.rs` deleted; `pub mod utils;` removed from `lib.rs:95`.
-- [ ] `rg "crate::hooks|runie_core::hooks|HookEvent|HookRegistry" crates/` returns zero hits.
-- [ ] `rg "crate::skill::|runie_core::skill::|SkillSummary" crates/` returns zero hits (the plural `crate::skills::` must still resolve).
-- [ ] `rg "crate::retry|runie_core::retry" crates/runie-core/` returns zero hits (the `runie-provider/src/retry.rs` stays).
-- [ ] `rg "crate::location|runie_core::location|parse_location" crates/` returns zero hits.
-- [ ] `rg "crate::utils::|runie_core::utils::|utils::truncate|utils::join_optional" crates/` returns zero hits.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `crates/runie-core/src/hooks.rs` deleted; `pub mod hooks;` removed from `lib.rs`.
+- [x] `crates/runie-core/src/skill/` directory deleted; `pub mod skill;` removed from `lib.rs`.
+- [x] `crates/runie-core/src/retry.rs` deleted; `pub mod retry;` removed from `lib.rs`.
+- [x] `crates/runie-core/src/location.rs` deleted; `pub mod location;` removed from `lib.rs`.
+- [x] `crates/runie-core/src/utils.rs` deleted; `pub mod utils;` removed from `lib.rs`.
+- [x] `rg "crate::hooks|runie_core::hooks|HookEvent|HookRegistry" crates/` returns zero hits.
+- [x] `rg "crate::skill::|runie_core::skill::|SkillSummary" crates/` returns zero hits (the plural `crate::skills::` must still resolve).
+- [x] `rg "crate::retry|runie_core::retry" crates/runie-core/` returns zero hits (the `runie-provider/src/retry.rs` stays).
+- [x] `rg "crate::location|runie_core::location|parse_location" crates/` returns zero hits.
+- [x] `rg "crate::utils::|runie_core::utils::|utils::truncate|utils::join_optional" crates/` returns zero hits.
+- [x] `cargo check --workspace` succeeds with no new warnings.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
@@ -49,8 +49,8 @@ Five `pub mod X;` modules in `crates/runie-core/src/lib.rs` have zero external c
 - N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `smoke_workspace_builds_after_dead_module_purge` — `cargo check --workspace` green after the 5 deletions.
-- [ ] `smoke_skills_module_still_loads` — `crate::skills::load_all` still compiles and returns the expected skill list (the plural module is untouched).
+- [x] `smoke_workspace_builds_after_dead_module_purge` — `cargo check --workspace` green after the 5 deletions.
+- [x] `smoke_skills_module_still_loads` — `crate::skills::load_all` still compiles and returns the expected skill list (the plural module is untouched).
 
 ## Files touched
 
