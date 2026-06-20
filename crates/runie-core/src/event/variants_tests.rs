@@ -339,6 +339,15 @@ fn dispatcher_handles_all_variants() {
                 config: Box::new(crate::config::Config::default()),
             },
 
+            // Persistence
+            Event::TrustLoaded { .. }
+            | Event::TrustChanged { .. }
+            | Event::TrustSet { .. }
+            | Event::HistoryLoaded { .. }
+            | Event::HistoryAppend { .. } => Event::HistoryAppend {
+                entry: String::new(),
+            },
+
             // Session
             Event::ForkSession { .. }
             | Event::CloneSession

@@ -54,11 +54,11 @@ fn handle_main_events(state: &mut AppState, event: &ModelConfigEvent) -> bool {
 fn handle_scoped_events(state: &mut AppState, event: &ModelConfigEvent) -> bool {
     match event {
         ModelConfigEvent::TrustProject => {
-            state.trust_project();
+            state.apply_trust_project();
             false
         }
         ModelConfigEvent::UntrustProject => {
-            state.untrust_project();
+            state.apply_untrust_project();
             false
         }
         ModelConfigEvent::ReloadAll => {

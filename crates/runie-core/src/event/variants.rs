@@ -273,6 +273,25 @@ pub enum Event {
         config: Box<crate::config::Config>,
     },
 
+    // Persistence
+    TrustLoaded {
+        decisions: std::collections::HashMap<std::path::PathBuf, crate::trust::TrustDecision>,
+    },
+    TrustChanged {
+        path: std::path::PathBuf,
+        decision: crate::trust::TrustDecision,
+    },
+    TrustSet {
+        path: std::path::PathBuf,
+        decision: crate::trust::TrustDecision,
+    },
+    HistoryLoaded {
+        entries: Vec<String>,
+    },
+    HistoryAppend {
+        entry: String,
+    },
+
     // Session
     ForkSession {
         message_index: usize,

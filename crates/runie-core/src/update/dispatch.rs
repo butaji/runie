@@ -24,6 +24,9 @@ pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
         );
         return;
     }
+    if handle_persistence_events(state, &event) {
+        return;
+    }
     match categorize(&event) {
         EventCategory::Input => super::input::input_event(state, event),
         EventCategory::Agent => super::agent::agent_event(state, event),
@@ -38,6 +41,24 @@ pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
         EventCategory::LoginFlow => super::login_flow::login_flow_event(state, event),
         EventCategory::Permission => super::permission::permission_event(state, event),
         EventCategory::Other => {}
+    }
+}
+
+fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
+    match event {
+        Event::TrustLoaded { decisions } => {
+            state.trust_decisions = decisions.clone();
+            true
+        }
+        Event::TrustChanged { path, decision } => {
+            state.set_trust_decision(path.clone(), *decision);
+            true
+        }
+        Event::HistoryLoaded { entries } => {
+            state.input.input_history = entries.clone();
+            true
+        }
+        _ => false,
     }
 }
 

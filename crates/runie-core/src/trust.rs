@@ -65,7 +65,15 @@ impl TrustManager {
         matches!(self.decision_for(path), Some(TrustDecision::Untrusted))
     }
 
+    /// Return a copy of all stored decisions.
+    pub fn decisions(&self) -> std::collections::HashMap<PathBuf, TrustDecision> {
+        self.decisions.clone()
+    }
+
     fn load_path() -> Option<PathBuf> {
+        if let Ok(dir) = std::env::var("RUNIE_TEST_CONFIG_DIR") {
+            return Some(PathBuf::from(dir).join("trust.json"));
+        }
         dirs::config_dir().map(|d| d.join("runie").join("trust.json"))
     }
 }

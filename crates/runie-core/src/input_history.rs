@@ -15,14 +15,21 @@ use anyhow::{Context, Result};
 
 /// Default history file path: ~/.runie/history.jsonl
 pub fn default_history_path() -> Option<PathBuf> {
+    if let Ok(dir) = std::env::var("RUNIE_TEST_DATA_DIR") {
+        return Some(PathBuf::from(dir).join("history.jsonl"));
+    }
     dirs::data_dir().map(|d| d.join("runie").join("history.jsonl"))
 }
 
 /// Ensure history directory exists.
 fn ensure_history_dir() -> Result<PathBuf> {
-    let dir = dirs::data_dir()
-        .map(|d| d.join("runie"))
-        .context("no data directory")?;
+    let dir = if let Ok(dir) = std::env::var("RUNIE_TEST_DATA_DIR") {
+        PathBuf::from(dir)
+    } else {
+        dirs::data_dir()
+            .map(|d| d.join("runie"))
+            .context("no data directory")?
+    };
     std::fs::create_dir_all(&dir)?;
     Ok(dir)
 }
@@ -132,36 +139,6 @@ pub fn search_history(entries: &[String], query: &str) -> Vec<String> {
         .into_iter()
         .rev() // Reverse to show most recent first
         .collect()
-}
-
-// ---------------------------------------------------------------------------
-// AppState integration helpers
-// ---------------------------------------------------------------------------
-
-impl super::model::AppState {
-    /// Load history from disk into AppState.
-    pub fn load_input_history(&mut self) {
-        if let Ok(entries) = crate::async_io::block_in_place_if_runtime(load_history) {
-            self.input.input_history = entries;
-        }
-    }
-
-    /// Save current history to disk.
-    pub fn save_input_history(&self) {
-        let entries = self.input.input_history.clone();
-        if let Err(e) = crate::async_io::block_in_place_if_runtime(move || save_history(&entries)) {
-            eprintln!("Failed to save input history: {}", e);
-        }
-    }
-
-    /// Append current entry and save to disk.
-    /// Call this when adding a new history entry.
-    pub fn add_to_input_history(&mut self, entry: String) {
-        // Avoid duplicates: remove if already exists
-        self.input.input_history.retain(|h| h != &entry);
-        self.input.input_history.push(entry);
-        self.save_input_history();
-    }
 }
 
 // ---------------------------------------------------------------------------

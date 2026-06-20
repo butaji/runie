@@ -20,6 +20,8 @@ mod session;
 mod system;
 mod tools;
 
+pub use system::apply_initial_trust;
+
 // These are still separate (not merged):
 mod path_complete;
 pub mod settings_dialog;

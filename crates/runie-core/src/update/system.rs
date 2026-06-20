@@ -130,11 +130,8 @@ impl AppState {
         );
     }
 
-    pub(crate) fn trust_project(&mut self) {
+    pub(crate) fn apply_trust_project(&mut self) {
         let cwd = std::env::current_dir().unwrap_or_default();
-        let mut tm = crate::async_io::block_in_place_if_runtime(crate::trust::TrustManager::load);
-        tm.set(&cwd, crate::trust::TrustDecision::Trusted);
-        let _ = crate::async_io::block_in_place_if_runtime(|| tm.save());
         self.config.read_only = false;
         self.session.messages.retain(|m| m.id != "trust_welcome");
         self.messages_changed();
@@ -144,11 +141,8 @@ impl AppState {
         );
     }
 
-    pub(crate) fn untrust_project(&mut self) {
+    pub(crate) fn apply_untrust_project(&mut self) {
         let cwd = std::env::current_dir().unwrap_or_default();
-        let mut tm = crate::async_io::block_in_place_if_runtime(crate::trust::TrustManager::load);
-        tm.set(&cwd, crate::trust::TrustDecision::Untrusted);
-        let _ = crate::async_io::block_in_place_if_runtime(|| tm.save());
         self.config.read_only = true;
         self.notify(
             format!("Project '{}' untrusted. Read-only enabled.", cwd.display()),
@@ -176,6 +170,37 @@ impl AppState {
         }
         self.input.cursor_pos = self.input.input.len();
         self.mark_dirty();
+    }
+}
+
+/// Apply the trust decision for the current directory after it has been loaded.
+pub fn apply_initial_trust(state: &mut AppState) {
+    let cwd = std::env::current_dir().unwrap_or_default();
+    match state.trust_decisions.get(&cwd).copied() {
+        Some(crate::trust::TrustDecision::Untrusted) => {
+            state.config.read_only = true;
+        }
+        Some(crate::trust::TrustDecision::Trusted) => {
+            state.config.read_only = false;
+        }
+        None => {
+            state.config.read_only = false;
+            state.session.messages.push(crate::ChatMessage {
+                role: crate::Role::System,
+                content: format!(
+                    "Welcome to runie in {}.\n\nThis project is not yet trusted. \
+                    Run /trust to enable write tools, or /untrust to enforce read-only mode.",
+                    cwd.display()
+                ),
+                timestamp: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs_f64())
+                    .unwrap_or(0.0),
+                id: "trust_welcome".to_string(),
+                ..Default::default()
+            });
+            state.messages_changed();
+        }
     }
 }
 
@@ -318,8 +343,8 @@ pub(super) fn handle_system_event(state: &mut AppState, event: SystemEvent) {
         SystemEvent::ClearTransient => state.clear_transient(),
         SystemEvent::ShowDiagnostics => state.show_diagnostics(),
         SystemEvent::ToggleReadOnly => state.toggle_read_only(),
-        SystemEvent::TrustProject => state.trust_project(),
-        SystemEvent::UntrustProject => state.untrust_project(),
+        SystemEvent::TrustProject => state.apply_trust_project(),
+        SystemEvent::UntrustProject => state.apply_untrust_project(),
         _ => {}
     }
 }
