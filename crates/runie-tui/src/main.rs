@@ -14,7 +14,7 @@
 use futures::StreamExt;
 use runie_agent::AgentActor;
 use runie_core::actor::Actor;
-use runie_core::actors::{ConfigActor, ProviderActor};
+use runie_core::actors::{ConfigActor, PersistenceActor, ProviderActor};
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::session_store::SessionStore;
@@ -68,8 +68,10 @@ async fn main() -> io::Result<()> {
 
     let _cleanup = Cleanup;
     let bus = EventBus::<Event>::new(100);
-    let (mut state, _config_handle, provider_handle, config_actor, provider_actor) =
-        bootstrap_app(bus.clone()).await;
+    let bootstrap = bootstrap_app(bus.clone()).await;
+    let mut state = bootstrap.0;
+    let provider_handle = bootstrap.2;
+    let _actors = (bootstrap.4, bootstrap.5, bootstrap.6);
 
     let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
     theme::set_current_theme_with_caps_async(&state.config.theme_name, terminal_caps).await;
@@ -85,10 +87,6 @@ async fn main() -> io::Result<()> {
         provider_handle,
     );
 
-    // Keep actors alive until shutdown. Dropping the handle aborts the actor.
-    let _config_actor = config_actor;
-    let _provider_actor = provider_actor;
-
     shutdown_rx
         .await
         .map_err(|_| io::Error::other("shutdown signal dropped"))?;
@@ -101,18 +99,30 @@ async fn bootstrap_app(
     AppState,
     runie_core::actors::ConfigActorHandle,
     runie_core::actors::ProviderActorHandle,
+    runie_core::actors::PersistenceActorHandle,
+    runie_core::actor::ActorHandle,
     runie_core::actor::ActorHandle,
     runie_core::actor::ActorHandle,
 ) {
     let (config_handle, config_actor) = ConfigActor::spawn(bus.clone(), None);
     let (provider_handle, provider_actor) = spawn_provider_actor(&bus, &config_handle);
+    let (persistence_handle, persistence_actor) = PersistenceActor::spawn(bus.clone());
     let mut state = AppState {
         config_tx: Some(config_handle.tx().clone()),
         provider_tx: Some(provider_handle.tx().clone()),
+        persistence_tx: Some(persistence_handle.clone()),
         ..Default::default()
     };
     app_init::bootstrap(&mut state).await;
-    (state, config_handle, provider_handle, config_actor, provider_actor)
+    (
+        state,
+        config_handle,
+        provider_handle,
+        persistence_handle,
+        config_actor,
+        provider_actor,
+        persistence_actor,
+    )
 }
 
 fn spawn_provider_actor(
@@ -144,6 +154,10 @@ fn spawn_background_tasks(
     shutdown_tx: oneshot::Sender<()>,
     provider_handle: runie_core::actors::ProviderActorHandle,
 ) {
+    let persistence_handle = state
+        .persistence_tx
+        .clone()
+        .expect("PersistenceActor must be spawned before UI");
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
     let (agent_handle, agent_actor) = AgentActor::spawn(
         bus.clone(),
@@ -154,17 +168,12 @@ fn spawn_background_tasks(
     let (kb_tx, kb_rx) = watch::channel(state.config.keybindings.clone());
 
     spawn_input_forwarder(input_rx, bus.clone());
-    spawn_agent_tasks(
-        input_tx,
-        kb_rx,
-        terminal,
-        render_rx,
-        bus.clone(),
-    );
+    spawn_agent_tasks(input_tx, kb_rx, terminal, render_rx, bus.clone());
     spawn_ui_actor(
         state,
         render_tx,
         agent_handle,
+        persistence_handle,
         kb_tx,
         bus.clone(),
         shutdown_tx,
@@ -199,6 +208,7 @@ fn spawn_ui_actor(
     state: AppState,
     render_tx: watch::Sender<Snapshot>,
     agent_handle: runie_agent::AgentActorHandle,
+    persistence_handle: runie_core::actors::PersistenceActorHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: oneshot::Sender<()>,
@@ -209,7 +219,17 @@ fn spawn_ui_actor(
     // UiActor MUST subscribe before SessionActor replays durable events.
     let ui_sub = bus.subscribe_with_replay();
     tokio::spawn(
-        UiActor::new(state, render_tx, agent_handle, kb_tx, bus, shutdown_tx, caps).run(ui_sub),
+        UiActor::new(
+            state,
+            render_tx,
+            agent_handle,
+            persistence_handle,
+            kb_tx,
+            bus,
+            shutdown_tx,
+            caps,
+        )
+        .run(ui_sub),
     );
 }
 

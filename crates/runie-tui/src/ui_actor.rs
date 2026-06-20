@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use runie_agent::{truncate::policy_from_section, AgentActorHandle, AgentCommand};
+use runie_core::actors::PersistenceActorHandle;
 use runie_core::bus::{EventBus, ReplayReceiver};
 use runie_core::event::{ControlEvent, Event, InputEvent};
 use runie_core::login_flow::LoginStep;
@@ -25,6 +26,7 @@ pub struct UiActor {
     state: AppState,
     render_tx: watch::Sender<Snapshot>,
     agent_handle: AgentActorHandle,
+    persistence_handle: PersistenceActorHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: Option<oneshot::Sender<()>>,
@@ -37,6 +39,7 @@ impl UiActor {
         state: AppState,
         render_tx: watch::Sender<Snapshot>,
         agent_handle: AgentActorHandle,
+        persistence_handle: PersistenceActorHandle,
         kb_tx: watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
         shutdown_tx: oneshot::Sender<()>,
@@ -46,6 +49,7 @@ impl UiActor {
             state,
             render_tx,
             agent_handle,
+            persistence_handle,
             kb_tx,
             bus,
             shutdown_tx: Some(shutdown_tx),
@@ -97,10 +101,17 @@ impl UiActor {
         let was_followup = matches!(evt, ControlEvent::FollowUp);
         let was_config_loaded = matches!(evt, Event::ConfigLoaded { .. });
         let was_agent_done = matches!(evt, Event::Done { .. } | Event::Error { .. });
+        let was_trust_loaded = matches!(evt, Event::TrustLoaded { .. });
+
+        let submitted_text = if was_submit {
+            Some(self.state.input.input.clone())
+        } else {
+            None
+        };
 
         let old_login_step = self.state.login_flow.as_ref().map(|f| f.step.clone());
 
-        self.apply_event(evt, effect_tx.clone());
+        self.apply_event(evt.clone(), effect_tx.clone());
         self.dispatch_login_validation(effect_tx, old_login_step);
 
         if self.state.should_quit {
@@ -111,6 +122,10 @@ impl UiActor {
             let _ = self.kb_tx.send(self.state.config.keybindings.clone());
             theme::set_current_theme_with_caps_async(&self.state.config.theme_name, self.caps).await;
         }
+        if was_trust_loaded {
+            runie_core::update::apply_initial_trust(&mut self.state);
+        }
+        handle_persistence_messages(self.persistence_handle.clone(), evt, submitted_text).await;
         if was_submit || was_followup || was_agent_done {
             spawn_if_queued(&mut self.state, &self.agent_handle).await;
         }
@@ -157,6 +172,28 @@ impl UiActor {
     fn publish_snapshot(&mut self) {
         self.state.ensure_fresh();
         let _ = self.render_tx.send(self.state.snapshot());
+    }
+}
+
+async fn handle_persistence_messages(
+    handle: PersistenceActorHandle,
+    evt: Event,
+    submitted_text: Option<String>,
+) {
+    if let Some(entry) = submitted_text {
+        if !entry.trim().is_empty() {
+            handle.append_history(entry.trim().to_string()).await;
+        }
+    }
+    let cwd = std::env::current_dir().unwrap_or_default();
+    match evt {
+        Event::TrustProject => {
+            handle.set_trust(cwd, runie_core::trust::TrustDecision::Trusted).await;
+        }
+        Event::UntrustProject => {
+            handle.set_trust(cwd, runie_core::trust::TrustDecision::Untrusted).await;
+        }
+        _ => {}
     }
 }
 
@@ -213,6 +250,8 @@ mod tests {
         let (render_tx, mut render_rx) = watch::channel(Snapshot::default());
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
         let agent_handle = AgentActorHandle::new(agent_tx);
+        let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::PersistenceMsg>(1);
+        let persistence_handle = PersistenceActorHandle::new(persist_tx);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
 
@@ -222,6 +261,7 @@ mod tests {
                 state,
                 render_tx,
                 agent_handle,
+                persistence_handle,
                 kb_tx,
                 bus.clone(),
                 shutdown_tx,
@@ -317,6 +357,8 @@ mod tests {
         let (render_tx, _render_rx) = watch::channel(Snapshot::default());
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
         let agent_handle = AgentActorHandle::new(agent_tx);
+        let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::PersistenceMsg>(1);
+        let persistence_handle = PersistenceActorHandle::new(persist_tx);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, mut effect_rx) = mpsc::channel::<Event>(16);
@@ -335,6 +377,7 @@ mod tests {
             state,
             render_tx,
             agent_handle,
+            persistence_handle,
             kb_tx,
             EventBus::new(4),
             shutdown_tx,
