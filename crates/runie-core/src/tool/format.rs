@@ -12,6 +12,17 @@ pub fn which_tool(name: &str) -> Option<String> {
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
 }
 
+/// Async version of [`which_tool`].
+pub async fn which_tool_async(name: &str) -> Option<String> {
+    tokio::process::Command::new("which")
+        .arg(name)
+        .output()
+        .await
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+}
+
 /// Resolve a path relative to `working_dir` if it is not already absolute.
 pub fn resolve_path(path: &str, working_dir: &std::path::Path) -> std::path::PathBuf {
     crate::path::resolve_path_in(path, working_dir)

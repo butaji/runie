@@ -1,11 +1,12 @@
 //! Find tool — searches for files matching a pattern.
 
-use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
+use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus, which_tool_async};
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::tool::resolve_path;
 use serde_json::Value;
 use std::time::Instant;
+use tokio::process::Command;
 
 pub struct FindTool;
 
@@ -53,6 +54,7 @@ impl Tool for FindTool {
         let (pattern, path, limit) = parse_find_input(&input)?;
         let full_path = resolve_path(&path, &ctx.working_dir);
         let content = run_find(&pattern, &full_path, limit)
+            .await
             .unwrap_or_else(|e| format!("Error running find: {}", e));
         let status = determine_find_status(&content);
         Ok(ToolOutput {
@@ -76,11 +78,15 @@ fn parse_find_input(input: &Value) -> Result<(String, String, usize)> {
     Ok((pattern, path, limit))
 }
 
-fn run_find(pattern: &str, path: &std::path::Path, limit: usize) -> Result<String, std::io::Error> {
-    if crate::tool::which_tool("fd").is_some() {
-        run_fd(pattern, path, limit)
+async fn run_find(
+    pattern: &str,
+    path: &std::path::Path,
+    limit: usize,
+) -> Result<String, std::io::Error> {
+    if which_tool_async("fd").await.is_some() {
+        run_fd(pattern, path, limit).await
     } else {
-        run_find_fallback(pattern, path, limit)
+        run_find_fallback(pattern, path, limit).await
     }
 }
 
@@ -92,8 +98,12 @@ fn determine_find_status(content: &str) -> ToolStatus {
     }
 }
 
-fn run_fd(pattern: &str, path: &std::path::Path, limit: usize) -> Result<String, std::io::Error> {
-    let output = std::process::Command::new("fd")
+async fn run_fd(
+    pattern: &str,
+    path: &std::path::Path,
+    limit: usize,
+) -> Result<String, std::io::Error> {
+    let output = Command::new("fd")
         .args([
             "--glob",
             "--color=never",
@@ -104,7 +114,8 @@ fn run_fd(pattern: &str, path: &std::path::Path, limit: usize) -> Result<String,
             pattern,
             path.to_str().unwrap_or("."),
         ])
-        .output()?;
+        .output()
+        .await?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     if stdout.trim().is_empty() {
@@ -113,22 +124,24 @@ fn run_fd(pattern: &str, path: &std::path::Path, limit: usize) -> Result<String,
     Ok(stdout.trim_end().to_string())
 }
 
-fn run_find_fallback(
+async fn run_find_fallback(
     pattern: &str,
     path: &std::path::Path,
     limit: usize,
 ) -> Result<String, std::io::Error> {
     let path_str = path.to_str().unwrap_or(".");
     let output = if pattern.contains('/') {
-        std::process::Command::new("find")
+        Command::new("find")
             .arg(path_str)
             .args(["-maxdepth", "10", "-path", &format!("*/{}", pattern)])
-            .output()?
+            .output()
+            .await?
     } else {
-        std::process::Command::new("find")
+        Command::new("find")
             .arg(path_str)
             .args(["-maxdepth", "10", "-name", pattern])
-            .output()?
+            .output()
+            .await?
     };
     let stdout = String::from_utf8_lossy(&output.stdout);
     if stdout.trim().is_empty() {

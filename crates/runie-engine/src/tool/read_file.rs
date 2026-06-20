@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use runie_core::tool::resolve_path;
 use serde_json::Value;
 use std::time::Instant;
+use tokio::fs;
 
 /// Update frecency when a file is successfully read.
 fn record_file_access(path: &std::path::Path) {
@@ -64,7 +65,7 @@ impl Tool for ReadFileTool {
         let limit = input["limit"].as_u64().map(|v| v as usize);
 
         let full_path = resolve_path(path, &ctx.working_dir);
-        let content = match std::fs::read_to_string(&full_path) {
+        let content = match fs::read_to_string(&full_path).await {
             Ok(c) => {
                 record_file_access(&full_path);
                 c

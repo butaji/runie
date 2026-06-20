@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use runie_core::tool::{resolve_path, tool_error};
 use serde_json::Value;
 use std::time::Instant;
+use tokio::fs;
 
 pub struct EditFileTool;
 
@@ -52,7 +53,7 @@ impl Tool for EditFileTool {
         let start = Instant::now();
         let (path, search, replace) = parse_input(&input)?;
         let full_path = resolve_path(&path, &ctx.working_dir);
-        edit_file_impl(&full_path, &search, &replace, start)
+        edit_file_impl(&full_path, &search, &replace, start).await
     }
 }
 
@@ -72,7 +73,7 @@ fn parse_input(input: &Value) -> Result<(String, String, String)> {
     Ok((path, search, replace))
 }
 
-fn edit_file_impl(
+async fn edit_file_impl(
     path: &std::path::Path,
     search: &str,
     replace: &str,
@@ -86,7 +87,7 @@ fn edit_file_impl(
             false,
         ));
     }
-    let content = match read_file(path) {
+    let content = match read_file(path).await {
         Ok(c) => c,
         Err(e) => {
             return Ok(tool_error(
@@ -101,21 +102,21 @@ fn edit_file_impl(
         return Ok(tool_error("edit_file", &err, start, false));
     }
     let new_content = content.replacen(search, replace, 1);
-    write_edited_file(path, search, replace, &new_content, start)
+    write_edited_file(path, search, replace, &new_content, start).await
 }
 
-fn read_file(path: &std::path::Path) -> Result<String, std::io::Error> {
-    std::fs::read_to_string(path)
+async fn read_file(path: &std::path::Path) -> Result<String, std::io::Error> {
+    fs::read_to_string(path).await
 }
 
-fn write_edited_file(
+async fn write_edited_file(
     path: &std::path::Path,
     search: &str,
     replace: &str,
     new_content: &str,
     start: Instant,
 ) -> Result<ToolOutput> {
-    match std::fs::write(path, new_content) {
+    match fs::write(path, new_content).await {
         Ok(()) => Ok(build_edit_output(path, search, replace, new_content, start)),
         Err(e) => Ok(tool_error(
             "edit_file",

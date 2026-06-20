@@ -15,7 +15,7 @@ mod tests;
 pub use context::{ToolContext, ToolOutput, ToolStatus};
 pub use format::{
     compact_json_args, format_bytes, format_duration, format_tool_label, resolve_path, tool_error,
-    tool_status_line, truncate_output, which_tool,
+    tool_status_line, truncate_output, which_tool, which_tool_async,
 };
 pub use registry::{Tool, ToolRegistry};
 pub use runtime::{

@@ -1,11 +1,12 @@
 //! Grep tool — searches for patterns in files.
 
-use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
+use crate::tool::{which_tool_async, Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::tool::{resolve_path, tool_error};
 use serde_json::Value;
 use std::time::Instant;
+use tokio::process::Command;
 
 pub struct GrepTool;
 
@@ -73,6 +74,7 @@ impl Tool for GrepTool {
             limit,
             start,
         )
+        .await
     }
 }
 
@@ -92,7 +94,7 @@ fn parse_grep_input(input: &Value) -> Result<(String, String, Option<String>, bo
     Ok((pattern, path, glob, ignore_case, literal, limit))
 }
 
-fn run_grep_impl(
+async fn run_grep_impl(
     pattern: &str,
     path: &std::path::Path,
     glob: Option<String>,
@@ -101,9 +103,9 @@ fn run_grep_impl(
     limit: usize,
     start: Instant,
 ) -> Result<ToolOutput> {
-    let tool = select_grep_tool();
+    let tool = select_grep_tool().await;
     let args = build_grep_args(pattern, path, glob.as_deref(), ignore_case, literal, limit);
-    let output = match run_grep_command(tool, &args) {
+    let output = match run_grep_command(tool, &args).await {
         Ok(o) => o,
         Err(e) => {
             return Ok(tool_error(
@@ -127,16 +129,19 @@ fn run_grep_impl(
     ))
 }
 
-fn select_grep_tool() -> &'static str {
-    if crate::tool::which_tool("rg").is_some() {
+async fn select_grep_tool() -> &'static str {
+    if which_tool_async("rg").await.is_some() {
         "rg"
     } else {
         "grep"
     }
 }
 
-fn run_grep_command(tool: &str, args: &[String]) -> Result<std::process::Output, std::io::Error> {
-    std::process::Command::new(tool).args(args).output()
+async fn run_grep_command(
+    tool: &str,
+    args: &[String],
+) -> Result<std::process::Output, std::io::Error> {
+    Command::new(tool).args(args).output().await
 }
 
 fn build_grep_output(

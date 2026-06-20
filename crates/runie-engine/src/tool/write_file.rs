@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use runie_core::tool::resolve_path;
 use serde_json::Value;
 use std::time::Instant;
+use tokio::fs;
 
 pub struct WriteFileTool;
 
@@ -54,7 +55,7 @@ impl Tool for WriteFileTool {
             .ok_or_else(|| anyhow::anyhow!("content is required"))?;
         let full_path = resolve_path(path, &ctx.working_dir);
 
-        if let Err(e) = ensure_parent_dirs(&full_path) {
+        if let Err(e) = ensure_parent_dirs(&full_path).await {
             return Ok(output_error(
                 "write_file",
                 path,
@@ -63,26 +64,26 @@ impl Tool for WriteFileTool {
             ));
         }
 
-        write_and_return(path, &full_path, content, start)
+        write_and_return(path, &full_path, content, start).await
     }
 }
 
-fn ensure_parent_dirs(full_path: &std::path::Path) -> Result<()> {
+async fn ensure_parent_dirs(full_path: &std::path::Path) -> Result<()> {
     if let Some(parent) = full_path.parent() {
         if !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent)?;
+            fs::create_dir_all(parent).await?;
         }
     }
     Ok(())
 }
 
-fn write_and_return(
+async fn write_and_return(
     path: &str,
     full_path: &std::path::Path,
     content: &str,
     start: Instant,
 ) -> Result<ToolOutput> {
-    match std::fs::write(full_path, content) {
+    match fs::write(full_path, content).await {
         Ok(()) => Ok(ToolOutput {
             tool_name: "write_file".to_string(),
             tool_args: serde_json::json!({ "path": path, "content": "<redacted>" }),
