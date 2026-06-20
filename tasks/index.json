@@ -2779,7 +2779,7 @@
       "file": "tasks/dedupe-fresh-state-test-helper.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "fresh_state() duplicated ~38x across test files; shared versions exist but unused."
+      "notes": "fresh_state() duplicated ~38x across test files; shared versions exist but unused. AMENDED: now covers all shared test helpers (fresh_state, type_str, exec, tmp_store, minimal_session, write_skill, ENV_LOCK). Tests are 63% of core LOC — single biggest dedup win."
     },
     {
       "id": "extract-headless-cli-helper",
@@ -2967,6 +2967,149 @@
       "depends_on": ["consolidate-dual-path-modules"],
       "blocks": [],
       "notes": "update/login_flow/ is a single-file directory containing only tests.rs. Collapses after dual-path consolidation converts login_flow.rs -> login_flow/mod.rs."
+    },
+    {
+      "id": "unify-provider-modules",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/unify-provider-modules.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Consolidate provider.rs + provider_registry.rs + provider_registry/data.rs + providers_dialog.rs into single provider/ dir. Supersedes provider_registry portion of consolidate-dual-path-modules."
+    },
+    {
+      "id": "consolidate-login-flow-handlers",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/consolidate-login-flow-handlers.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Move update/login_flow.rs handlers into login_flow/handlers.rs. Absorbs flatten-update-login-flow-tests-dir. AMENDED: also reduce state.clone()/flow.clone() sites (5x) by extracting fields before mutable borrows."
+    },
+    {
+      "id": "fold-state-into-model-state",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/fold-state-into-model-state.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Merge state/ (AgentState, CommandUsage, InputState, SessionState, ViewState) into model/state/. One state namespace."
+    },
+    {
+      "id": "consolidate-mark-dirty-calls",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/consolidate-mark-dirty-calls.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Replace ~100 per-handler mark_dirty() calls with single dirty flag checked at dispatcher. Biggest boilerplate reduction."
+    },
+    {
+      "id": "extract-appstate-helpers",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P3",
+      "file": "tasks/extract-appstate-helpers.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Add AppState::active_provider() and AppState::warn() helpers to dedupe login_flow/system handler boilerplate."
+    },
+    {
+      "id": "remove-empty-match-arms",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P3",
+      "file": "tasks/remove-empty-match-arms.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Replace ~20 _ => {} arms with explicit comments or exhaustive variant lists. Readability/correctness task."
+    },
+    {
+      "id": "rename-update-dialog-panel",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P3",
+      "file": "tasks/rename-update-dialog-panel.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Rename update/dialog/panel.rs -> panel_handler.rs to disambiguate from dialog/panel.rs."
+    },
+    {
+      "id": "split-files-at-limit-round-2",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Refactoring",
+      "priority": "P2",
+      "file": "tasks/split-files-at-limit-round-2.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Split 4 files at/near 500-line limit: update/input/text.rs, model/state/app_state.rs, dialog/panel.rs, config.rs. Round 2 of split-large-files."
+    },
+    {
+      "id": "sweep-allow-suppressions",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/sweep-allow-suppressions.md",
+      "depends_on": ["gate-or-implement-mcp-client", "delete-config-reload-shim"],
+      "blocks": [],
+      "notes": "Resolve 18 #[allow(...)] markers: delete 8 dead_code allows, refactor or document 6 too_many_arguments, keep 4 niche-lint allows with comment. 80/20 of dead code shipping in prod."
+    },
+    {
+      "id": "sweep-to-string-allocs",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P3",
+      "file": "tasks/sweep-to-string-allocs.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "680 .to_string() vs 2 .to_owned(). Remove String.to_string() redundant clones, convert &str.to_string() to .into()/.to_owned(). Mechanical."
+    },
+    {
+      "id": "consolidate-update-dialog-files",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Refactoring",
+      "priority": "P2",
+      "file": "tasks/consolidate-update-dialog-files.md",
+      "depends_on": ["rename-update-dialog-panel"],
+      "blocks": [],
+      "notes": "Merge toggle-family (toggle+provider_model_toggle+model_selector -> toggles.rs) and file-picker-family (fff+file_picker -> file_pickers.rs). 11 files -> 9. update/dialog is 29% of update/."
+    },
+    {
+      "id": "consolidate-login-logout-tests",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Testing",
+      "priority": "P3",
+      "file": "tasks/consolidate-login-logout-tests.md",
+      "depends_on": ["consolidate-login-flow-handlers"],
+      "blocks": [],
+      "notes": "Fold 4 thin test slivers (multiple 32, edge_cases 34, model_select 47, core 49) into parents. 14 files -> 10. tests/login_logout is 12% of core tests."
+    },
+    {
+      "id": "audit-borrow-workarounds",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P3",
+      "file": "tasks/audit-borrow-workarounds.md",
+      "depends_on": ["consolidate-login-flow-handlers"],
+      "blocks": [],
+      "notes": "Classify 19 take()/mem::take sites. Extract with_dialog helper for the 9-site open_dialog cluster. Comment legitimate parser-buffer flushes."
     }
   ]
 }
