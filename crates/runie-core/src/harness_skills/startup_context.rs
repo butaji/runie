@@ -83,7 +83,7 @@ impl StartupContextSkill {
                 return c.clone();
             }
         }
-        let ctx = self.discover();
+        let ctx = crate::async_io::block_in_place_if_runtime(|| self.discover());
         if let Ok(mut g) = self.cache.write() {
             *g = Some(ctx.clone());
         }

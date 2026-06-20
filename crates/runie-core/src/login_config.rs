@@ -26,8 +26,11 @@ pub fn config_path() -> PathBuf {
 }
 
 /// Load the canonical config from [`config_path`].
+///
+/// Runs on a blocking thread when called from an async runtime so the UI never
+/// freezes waiting for the config file.
 fn load() -> crate::config::Config {
-    crate::config::Config::load(Some(&config_path()))
+    crate::async_io::block_in_place_if_runtime(|| crate::config::Config::load(Some(&config_path())))
 }
 
 /// Save a provider configuration to `~/.runie/config.toml`.

@@ -141,14 +141,15 @@ pub fn search_history(entries: &[String], query: &str) -> Vec<String> {
 impl super::model::AppState {
     /// Load history from disk into AppState.
     pub fn load_input_history(&mut self) {
-        if let Ok(entries) = load_history() {
+        if let Ok(entries) = crate::async_io::block_in_place_if_runtime(load_history) {
             self.input.input_history = entries;
         }
     }
 
     /// Save current history to disk.
     pub fn save_input_history(&self) {
-        if let Err(e) = save_history(&self.input.input_history) {
+        let entries = self.input.input_history.clone();
+        if let Err(e) = crate::async_io::block_in_place_if_runtime(move || save_history(&entries)) {
             eprintln!("Failed to save input history: {}", e);
         }
     }

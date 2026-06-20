@@ -11,7 +11,7 @@ pub fn copy_to_clipboard(text: String, caps: TerminalCapabilities) {
     if caps.clipboard && term_clipboard::copy_to_clipboard(&mut std::io::stdout(), &text).is_ok() {
         return;
     }
-    let _ = platform_copy(&text);
+    let _ = runie_core::async_io::run_blocking_if_runtime(move || platform_copy(&text));
 }
 
 /// Copy the last assistant response to the terminal clipboard.
@@ -28,7 +28,7 @@ pub fn copy_last_response(messages: Vec<ChatMessage>, caps: TerminalCapabilities
     if caps.clipboard && term_clipboard::copy_to_clipboard(&mut std::io::stdout(), &text).is_ok() {
         return;
     }
-    let _ = platform_copy(&text);
+    let _ = runie_core::async_io::run_blocking_if_runtime(move || platform_copy(&text));
 }
 
 /// Write text to the system clipboard using a platform-specific command.

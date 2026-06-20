@@ -53,12 +53,15 @@ fn is_enter_like(code: KeyCode) -> bool {
 fn log_key_event(event: &Event) {
     if let Event::Key(key) = event {
         if std::env::var("RUNIE_DEBUG").is_ok() {
-            use std::io::Write;
-            let _ = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open("/tmp/runie_keys.log")
-                .and_then(|mut f| writeln!(f, "{:?}", key));
+            let key = *key;
+            let _ = runie_core::async_io::run_blocking_if_runtime(move || {
+                use std::io::Write;
+                let _ = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open("/tmp/runie_keys.log")
+                    .and_then(|mut f| writeln!(f, "{:?}", key));
+            });
         }
     }
 }

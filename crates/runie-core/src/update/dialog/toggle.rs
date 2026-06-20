@@ -104,19 +104,26 @@ fn handle_providers_select_model(state: &mut AppState, event: &DialogEvent) {
 
 fn handle_providers_disconnect(state: &mut AppState, event: &DialogEvent) {
     if let DialogEvent::ProvidersDisconnect { provider } = event {
-        let _ = crate::login_config::remove_provider_config(provider);
-        if state.config.current_provider == *provider {
+        let provider = provider.clone();
+        let fallback = crate::async_io::block_in_place_if_runtime(|| {
+            let _ = crate::login_config::remove_provider_config(&provider);
+            if state.config.current_provider != provider {
+                return None;
+            }
             let config = crate::config::Config::load(Some(&crate::login_config::config_path()));
-            let (provider, model) = config.resolve_default_model();
-            let (provider, model) = if provider.is_empty() {
+            let (p, m) = config.resolve_default_model();
+            let (p, m) = if p.is_empty() {
                 crate::login_config::list_configured_providers()
                     .into_iter()
                     .next()
-                    .map(|(p, _, models)| (p, models.into_iter().next().unwrap_or_default()))
+                    .map(|(pr, _, models)| (pr, models.into_iter().next().unwrap_or_default()))
                     .unwrap_or_default()
             } else {
-                (provider, model)
+                (p, m)
             };
+            Some((p, m))
+        });
+        if let Some((provider, model)) = fallback {
             state.set_active_model(
                 provider,
                 model,

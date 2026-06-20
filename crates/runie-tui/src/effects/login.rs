@@ -10,7 +10,7 @@ pub fn run(provider: String, key: String, tx: mpsc::Sender<CoreEvent>) {
     }
 
     tokio::spawn(async move {
-        let config = runie_core::config::Config::load(None);
+        let config = runie_core::config::Config::load_async(None).await;
         let result = validate_provider(&provider, &key, &config).await;
 
         match result {

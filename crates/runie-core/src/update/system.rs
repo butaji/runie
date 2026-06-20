@@ -132,9 +132,9 @@ impl AppState {
 
     pub(crate) fn trust_project(&mut self) {
         let cwd = std::env::current_dir().unwrap_or_default();
-        let mut tm = crate::trust::TrustManager::load();
+        let mut tm = crate::async_io::block_in_place_if_runtime(crate::trust::TrustManager::load);
         tm.set(&cwd, crate::trust::TrustDecision::Trusted);
-        let _ = tm.save();
+        let _ = crate::async_io::block_in_place_if_runtime(|| tm.save());
         self.config.read_only = false;
         self.session.messages.retain(|m| m.id != "trust_welcome");
         self.messages_changed();
@@ -146,9 +146,9 @@ impl AppState {
 
     pub(crate) fn untrust_project(&mut self) {
         let cwd = std::env::current_dir().unwrap_or_default();
-        let mut tm = crate::trust::TrustManager::load();
+        let mut tm = crate::async_io::block_in_place_if_runtime(crate::trust::TrustManager::load);
         tm.set(&cwd, crate::trust::TrustDecision::Untrusted);
-        let _ = tm.save();
+        let _ = crate::async_io::block_in_place_if_runtime(|| tm.save());
         self.config.read_only = true;
         self.notify(
             format!("Project '{}' untrusted. Read-only enabled.", cwd.display()),
@@ -271,19 +271,33 @@ fn handle_editor_done(state: &mut AppState, content: String) {
 
 // ── System actions (merged from system_actions.rs) ───────────────────────────
 
+fn default_provider_model(config: &crate::config::Config) -> (String, String) {
+    let (default_provider, default_model) = config.resolve_default_model();
+    if default_provider.is_empty() {
+        crate::login_config::list_configured_providers()
+            .into_iter()
+            .next()
+            .map(|(p, _, models)| (p, models.into_iter().next().unwrap_or_default()))
+            .unwrap_or_default()
+    } else {
+        (default_provider, default_model)
+    }
+}
+
 impl AppState {
     pub(crate) fn reload_all(&mut self) {
-        let config = crate::config_reload::Config::load(Some(&crate::config_reload::config_path()));
-        let (default_provider, default_model) = config.resolve_default_model();
-        let (default_provider, default_model) = if default_provider.is_empty() {
-            crate::login_config::list_configured_providers()
-                .into_iter()
-                .next()
-                .map(|(p, _, models)| (p, models.into_iter().next().unwrap_or_default()))
-                .unwrap_or_default()
-        } else {
-            (default_provider, default_model)
-        };
+        let (config, skills, prompts) = crate::async_io::block_in_place_if_runtime(|| {
+            let config =
+                crate::config_reload::Config::load(Some(&crate::config_reload::config_path()));
+            let skills = crate::skills::load_all();
+            let prompts_section = config.prompts();
+            let prompts = crate::prompts::load_prompts(
+                prompts_section.default.as_deref(),
+                prompts_section.custom.as_deref(),
+            );
+            (config, skills, prompts)
+        });
+        let (default_provider, default_model) = default_provider_model(&config);
         if self.config.model_source != crate::state::ModelSource::UserOverride {
             self.set_active_model(
                 default_provider,
@@ -298,12 +312,8 @@ impl AppState {
         self.config.truncation = config.truncation.clone();
         self.config.telemetry = crate::Telemetry::new(config.telemetry_enabled());
         self.reload_scoped_models(&config);
-        self.skills = crate::skills::load_all();
-        let prompts_section = config.prompts();
-        self.prompts = crate::prompts::load_prompts(
-            prompts_section.default.as_deref(),
-            prompts_section.custom.as_deref(),
-        );
+        self.skills = skills;
+        self.prompts = prompts;
         self.add_system_msg(
             "Reloaded config, keybindings, theme, skills, and prompts.".to_string(),
         );

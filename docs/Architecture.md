@@ -207,6 +207,19 @@ max_bytes = 51200
 enabled = false
 ```
 
+## Async IO discipline
+
+The TUI runs on a multi-threaded Tokio runtime. Synchronous file or process IO must never run directly on an async task.
+
+- Prefer native async APIs: `tokio::fs` for files, `tokio::process` for subprocesses, async `reqwest` for HTTP.
+- Long-lived storage belongs in its own actor (for example `FffIndexerActor` and `SessionActor`).
+- Legacy call sites that cannot be fully async yet must wrap blocking work with the helpers in `crates/runie-core/src/async_io.rs`:
+  - `run_blocking_if_runtime` — fire-and-forget blocking work on a Tokio blocking thread.
+  - `block_in_place_if_runtime` — run a short blocking closure off the async runtime and return the result.
+- These helpers fall back to synchronous execution when no runtime is present, which keeps unit tests fast and deterministic.
+
+New code should default to async or event-based actors; the helpers are a tactical bridge, not the preferred pattern.
+
 ## Build guardrails
 
 `crates/runie-core/build.rs` enforces structural limits on production code:

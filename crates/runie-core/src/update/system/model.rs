@@ -57,7 +57,7 @@ impl AppState {
             return;
         }
         let provider = provider.to_string();
-        let config = crate::config::Config::load(None);
+        let config = crate::async_io::block_in_place_if_runtime(|| crate::config::Config::load(None));
         let model = config
             .first_model_for_provider(&provider)
             .or_else(|| {

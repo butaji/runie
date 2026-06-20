@@ -42,7 +42,7 @@ pub async fn run_subagent(
     system_prompt: &str,
     max_iterations: usize,
 ) -> Result<String, SubagentError> {
-    let config = runie_core::config::Config::load(None);
+    let config = runie_core::config::Config::load_async(None).await;
     run_subagent_with_config(
         prompt,
         provider_key,

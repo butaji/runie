@@ -13,7 +13,7 @@ pub fn parse_provider_model_toggle(key: &str) -> Option<(&str, &str)> {
 
 /// Toggle whether `model` is enabled for `provider` in the saved config.
 pub fn toggle_provider_model(state: &mut AppState, provider: &str, model: &str) {
-    let mut config = crate::config::Config::load(None);
+    let mut config = crate::async_io::block_in_place_if_runtime(|| crate::config::Config::load(None));
     let Some(entry) = config.model_providers.get_mut(provider) else {
         return;
     };
@@ -25,7 +25,7 @@ pub fn toggle_provider_model(state: &mut AppState, provider: &str, model: &str) 
         entry.models.sort();
     }
     let models = entry.models.clone();
-    let _ = config.save();
+    let _ = crate::async_io::block_in_place_if_runtime(|| config.save());
     if provider == state.config.current_provider && !models.contains(&model.to_string()) {
         if let Some(first) = models.first() {
             state.switch_model(provider.into(), first.clone(), false);

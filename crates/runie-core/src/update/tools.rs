@@ -2,8 +2,15 @@
 
 use std::process::{Command, Stdio};
 
-/// Execute a bash command and return output string
+/// Execute a bash command and return output string.
+///
+/// Runs the subprocess off the async runtime so the UI cannot freeze.
 pub fn execute_bash(command: &str) -> String {
+    let command = command.to_string();
+    crate::async_io::block_in_place_if_runtime(move || execute_bash_sync(&command))
+}
+
+fn execute_bash_sync(command: &str) -> String {
     let output = match Command::new("sh")
         .arg("-c")
         .arg(command)
@@ -131,7 +138,9 @@ impl AppState {
         let mut applied = 0;
         let mut errors = Vec::new();
         for preview in self.session.pending_edits.drain(..) {
-            match std::fs::write(&preview.path, &preview.proposed) {
+            let path = preview.path.clone();
+            let content = preview.proposed.clone();
+            match crate::async_io::block_in_place_if_runtime(move || std::fs::write(&path, content)) {
                 Ok(()) => applied += 1,
                 Err(e) => errors.push(format!("{}: {}", preview.path.display(), e)),
             }

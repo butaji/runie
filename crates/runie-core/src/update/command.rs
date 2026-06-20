@@ -44,7 +44,7 @@ pub(super) fn handle_command_event(state: &mut AppState, event: CommandEvent) {
 
 fn run_load_command(state: &mut AppState, name: &str) {
     use crate::commands::CommandResult;
-    let result = crate::session_replay::load_session(name, state)
+    let result = crate::async_io::block_in_place_if_runtime(|| crate::session_replay::load_session(name, state))
         .map(|_| CommandResult::Message(format!("Session '{}' loaded.", name)))
         .unwrap_or_else(|_| {
             CommandResult::Message(format!(
@@ -57,7 +57,7 @@ fn run_load_command(state: &mut AppState, name: &str) {
 
 fn run_save_command(state: &mut AppState, name: &str) {
     use crate::commands::CommandResult;
-    let result = crate::session_replay::save_session(name, state)
+    let result = crate::async_io::block_in_place_if_runtime(|| crate::session_replay::save_session(name, state))
         .map(|_| CommandResult::Message(format!("Session '{}' saved.", name)))
         .unwrap_or_else(|e| CommandResult::Message(format!("Could not save session: {}", e)));
     dialog::process_command_result(state, result);
@@ -65,7 +65,7 @@ fn run_save_command(state: &mut AppState, name: &str) {
 
 fn run_delete_command(state: &mut AppState, name: &str) {
     use crate::commands::CommandResult;
-    let result = crate::session_replay::delete_session(name)
+    let result = crate::async_io::block_in_place_if_runtime(|| crate::session_replay::delete_session(name))
         .map(|_| CommandResult::Message(format!("Session '{}' deleted.", name)))
         .unwrap_or_else(|_| {
             CommandResult::Message(format!(
@@ -78,17 +78,20 @@ fn run_delete_command(state: &mut AppState, name: &str) {
 
 fn run_import_command(state: &mut AppState, path: &str) {
     use crate::commands::CommandResult;
-    let result = std::fs::read_to_string(path)
-        .ok()
-        .and_then(|json| serde_json::from_str::<Session>(&json).ok())
-        .map(|session| {
-            let msg = format!("Session imported from '{}'", path);
-            state.restore_session(&session);
-            CommandResult::Message(msg)
-        })
-        .unwrap_or_else(|| {
-            CommandResult::Message(format!("Could not import session from '{}'", path))
-        });
+    let path_buf = path.to_string();
+    let result = crate::async_io::block_in_place_if_runtime(move || {
+        std::fs::read_to_string(&path_buf)
+            .ok()
+            .and_then(|json| serde_json::from_str::<Session>(&json).ok())
+    })
+    .map(|session| {
+        let msg = format!("Session imported from '{}'", path);
+        state.restore_session(&session);
+        CommandResult::Message(msg)
+    })
+    .unwrap_or_else(|| {
+        CommandResult::Message(format!("Could not import session from '{}'", path))
+    });
     dialog::process_command_result(state, result);
 }
 
@@ -100,12 +103,11 @@ fn run_export_command(state: &mut AppState, path: &str) {
         .clone()
         .unwrap_or_else(|| "exported".into());
     let session = Session::from_state(state, name);
-    let result = std::fs::write(
-        path,
-        serde_json::to_string_pretty(&session).unwrap_or_default(),
-    )
-    .map(|_| CommandResult::Message(format!("Session exported to '{}'", path)))
-    .unwrap_or_else(|e| CommandResult::Message(format!("Could not export: {}", e)));
+    let path_buf = path.to_string();
+    let json = serde_json::to_string_pretty(&session).unwrap_or_default();
+    let result = crate::async_io::block_in_place_if_runtime(move || std::fs::write(&path_buf, json))
+        .map(|_| CommandResult::Message(format!("Session exported to '{}'", path)))
+        .unwrap_or_else(|e| CommandResult::Message(format!("Could not export: {}", e)));
     dialog::process_command_result(state, result);
 }
 
@@ -146,7 +148,7 @@ fn run_logout_command(state: &mut AppState, provider: &str) {
     match crate::login_config::remove_provider_config(provider) {
         Ok(()) => {
             if state.config.current_provider == provider {
-                let config = crate::config::Config::load(None);
+                let config = crate::async_io::block_in_place_if_runtime(|| crate::config::Config::load(None));
                 let (provider, model) = config.resolve_default_model();
                 state.set_active_model(
                     provider,

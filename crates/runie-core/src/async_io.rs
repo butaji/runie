@@ -22,9 +22,27 @@ where
     }
 }
 
+/// Run a blocking closure without blocking the async runtime.
+///
+/// Uses `tokio::task::block_in_place` when a runtime is present; otherwise
+/// runs synchronously. This is for short, unavoidable synchronous calls (file
+/// reads, config lookups) that are invoked from code paths that may be reached
+/// from an async actor but cannot easily be made async themselves.
+pub fn block_in_place_if_runtime<F, T>(f: F) -> T
+where
+    F: FnOnce() -> T,
+{
+    if let Ok(handle) = Handle::try_current() {
+        if handle.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread {
+            return tokio::task::block_in_place(f);
+        }
+    }
+    f()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::run_blocking_if_runtime;
+    use super::{block_in_place_if_runtime, run_blocking_if_runtime};
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
 
@@ -52,5 +70,17 @@ mod tests {
         let value = handle.unwrap().await.expect("task completed");
         assert_eq!(value, 42);
         assert_eq!(ran.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn block_in_place_runs_synchronously_without_runtime() {
+        let value = block_in_place_if_runtime(|| 7);
+        assert_eq!(value, 7);
+    }
+
+    #[tokio::test]
+    async fn block_in_place_runs_with_runtime() {
+        let value = block_in_place_if_runtime(|| 7);
+        assert_eq!(value, 7);
     }
 }

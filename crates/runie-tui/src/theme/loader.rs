@@ -21,7 +21,9 @@ pub(crate) fn load_theme_raw(name: &str) -> opaline::Theme {
         .join(".runie")
         .join("themes")
         .join(format!("{}.toml", name));
-    if let Ok(theme) = opaline::load_from_file(&custom_path) {
+    if let Ok(theme) =
+        runie_core::async_io::block_in_place_if_runtime(|| opaline::load_from_file(&custom_path))
+    {
         return theme;
     }
     default_theme()

@@ -151,7 +151,7 @@ impl AppState {
 
     fn auth_providers(&mut self) -> Arc<[String]> {
         if !self.view.cached_auth_valid {
-            let providers: Vec<String> = crate::auth::AuthStorage::load()
+            let providers: Vec<String> = crate::async_io::block_in_place_if_runtime(crate::auth::AuthStorage::load)
                 .tokens
                 .keys()
                 .cloned()

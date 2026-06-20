@@ -135,7 +135,7 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 fn handle_reload(state: &mut AppState, _: &str) -> CommandResult {
-    let config = crate::config::Config::load(None);
+    let config = crate::async_io::block_in_place_if_runtime(|| crate::config::Config::load(None));
     state.config.keybindings = crate::keybindings::load_keybindings(Some(&config));
     CommandResult::Event(crate::event::ModelConfigEvent::ReloadAll)
 }
