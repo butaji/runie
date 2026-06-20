@@ -1,17 +1,23 @@
 //! Login API-key validation effect handler.
 
+use runie_core::actors::provider::ProviderReply;
+use runie_core::actors::ProviderMsg;
 use runie_core::Event as CoreEvent;
 use tokio::sync::mpsc;
 
 /// Validate the API key asynchronously and emit the result.
-pub fn run(provider: String, key: String, tx: mpsc::Sender<CoreEvent>) {
+pub fn run(
+    provider: String,
+    key: String,
+    tx: mpsc::Sender<CoreEvent>,
+    provider_tx: mpsc::Sender<ProviderMsg>,
+) {
     if provider.is_empty() || key.is_empty() {
         return;
     }
 
     tokio::spawn(async move {
-        let config = runie_core::config::Config::load_async(None).await;
-        let result = validate_provider(&provider, &key, &config).await;
+        let result = validate_provider_key(provider_tx, &provider, &key).await;
 
         match result {
             Ok(models) => {
@@ -36,28 +42,22 @@ pub fn run(provider: String, key: String, tx: mpsc::Sender<CoreEvent>) {
     });
 }
 
-async fn validate_provider(
+async fn validate_provider_key(
+    provider_tx: mpsc::Sender<ProviderMsg>,
     provider: &str,
     key: &str,
-    config: &runie_core::config::Config,
 ) -> anyhow::Result<Vec<String>> {
-    use runie_core::provider_registry::find_provider;
-    use runie_provider::validate_api_key;
-
-    let meta = find_provider(provider)
-        .ok_or_else(|| anyhow::anyhow!("Unknown provider: {}", provider))?;
-    let base_url = validation_base_url(provider, config)
-        .unwrap_or_else(|| meta.base_url.to_string());
-    validate_api_key(&base_url, key).await
+    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+    provider_tx
+        .send(ProviderMsg::ValidateKey {
+            provider: provider.into(),
+            api_key: key.into(),
+            reply: ProviderReply::new(reply_tx),
+        })
+        .await
+        .map_err(|_| anyhow::anyhow!("provider actor unavailable"))?;
+    reply_rx
+        .await
+        .map_err(|_| anyhow::anyhow!("provider actor dropped"))?
 }
 
-fn validation_base_url(
-    provider: &str,
-    config: &runie_core::config::Config,
-) -> Option<String> {
-    let resolver = runie_provider::config::ProviderConfigResolver::from_config(config);
-    resolver.resolve_base_url(provider)
-}
-
-#[cfg(test)]
-mod tests;

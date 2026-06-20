@@ -305,6 +305,7 @@ mod tests {
 
     #[tokio::test]
     async fn login_key_submit_triggers_validation_effect() {
+        use runie_core::actors::ProviderMsg;
         use runie_core::login_flow::{build_key_input, LoginFlowState};
 
         let (render_tx, _render_rx) = watch::channel(Snapshot::default());
@@ -312,9 +313,19 @@ mod tests {
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, mut effect_rx) = mpsc::channel::<Event>(16);
+        let (provider_tx, mut provider_rx) = mpsc::channel::<ProviderMsg>(1);
+
+        tokio::spawn(async move {
+            if let Some(ProviderMsg::ValidateKey { reply, .. }) = provider_rx.recv().await {
+                reply.send(Ok(vec!["model".into()]));
+            }
+        });
+
+        let mut state = AppState::default();
+        state.provider_tx = Some(provider_tx);
 
         let mut actor = UiActor::new(
-            AppState::default(),
+            state,
             render_tx,
             cmd_tx,
             kb_tx,

@@ -94,7 +94,11 @@ impl EffectCommand {
                 display_name,
             } => share::run(messages, display_name, tx),
             Self::Suspend { terminal_caps } => suspend::run(terminal_caps, render_tx, state),
-            Self::LoginFlowSubmitKey { provider, key } => login::run(provider, key, tx),
+            Self::LoginFlowSubmitKey { provider, key } => {
+                if let Some(ref provider_tx) = state.provider_tx {
+                    login::run(provider, key, tx, provider_tx.clone());
+                }
+            }
         }
     }
 }

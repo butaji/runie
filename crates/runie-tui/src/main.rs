@@ -16,7 +16,7 @@ use runie_agent::{
     emit_approval_sink::EmitApprovalSink, run_agent_turn, AgentCommand, PermissionGate,
 };
 use runie_core::actor::Actor;
-use runie_core::actors::ConfigActor;
+use runie_core::actors::{ConfigActor, ProviderActor};
 use runie_core::bus::EventBus;
 use runie_core::event::AgentEvent;
 use runie_core::event::Event;
@@ -25,7 +25,7 @@ use runie_core::permissions::{
 };
 use runie_core::session_store::SessionStore;
 use runie_core::{AppState, Snapshot};
-use runie_provider::DynProvider;
+use runie_provider::{DynProvider, DynProviderFactory};
 use runie_tui::{app_init, keymap, terminal, terminal_setup, theme, ui, ui_actor::UiActor};
 use std::{collections::HashMap, io, sync::Arc, sync::Mutex};
 use tokio::sync::{mpsc, oneshot, watch};
@@ -76,23 +76,47 @@ async fn main() -> io::Result<()> {
     let (terminal, terminal_caps) = setup_theme_and_terminal()?;
     let bus = EventBus::<Event>::new(100);
     let (config_handle, config_actor) = ConfigActor::spawn(bus.clone(), None);
+    let (provider_handle, provider_actor) = spawn_provider_actor(&bus, &config_handle);
     let mut state = AppState {
         config_tx: Some(config_handle.tx().clone()),
+        provider_tx: Some(provider_handle.tx().clone()),
         ..Default::default()
     };
     init_terminal_state(&mut state);
     run_init_hooks(&mut state);
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
-    spawn_background_tasks(terminal, state, terminal_caps, bus, shutdown_tx);
+    spawn_background_tasks(
+        terminal,
+        state,
+        terminal_caps,
+        bus,
+        shutdown_tx,
+        provider_handle,
+    );
 
-    // Keep ConfigActor alive until shutdown. Dropping the handle aborts the actor.
+    // Keep actors alive until shutdown. Dropping the handle aborts the actor.
     let _config_actor = config_actor;
+    let _provider_actor = provider_actor;
 
     shutdown_rx
         .await
         .map_err(|_| io::Error::other("shutdown signal dropped"))?;
     Ok(())
+}
+
+fn spawn_provider_actor(
+    bus: &EventBus<Event>,
+    config_handle: &runie_core::actors::ConfigActorHandle,
+) -> (
+    runie_core::actors::ProviderActorHandle,
+    runie_core::actor::ActorHandle,
+) {
+    ProviderActor::spawn(
+        bus.clone(),
+        config_handle.clone(),
+        std::sync::Arc::new(DynProviderFactory),
+    )
 }
 
 fn setup_theme_and_terminal() -> io::Result<(
@@ -122,6 +146,7 @@ fn spawn_background_tasks(
     caps: terminal::caps::TerminalCapabilities,
     bus: EventBus<Event>,
     shutdown_tx: oneshot::Sender<()>,
+    provider_handle: runie_core::actors::ProviderActorHandle,
 ) {
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
     let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
@@ -137,6 +162,7 @@ fn spawn_background_tasks(
         render_rx,
         bus.clone(),
         state.approval_registry.clone(),
+        provider_handle,
     );
     spawn_ui_actor(
         state,
@@ -158,6 +184,7 @@ fn spawn_input_forwarder(mut input_rx: mpsc::Receiver<Event>, bus: EventBus<Even
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_agent_tasks(
     cmd_rx: mpsc::Receiver<AgentCommand>,
     input_tx: mpsc::Sender<Event>,
@@ -166,10 +193,16 @@ fn spawn_agent_tasks(
     render_rx: watch::Receiver<Snapshot>,
     bus: EventBus<Event>,
     approval_registry: std::sync::Arc<std::sync::Mutex<runie_core::permissions::ApprovalRegistry>>,
+    provider_handle: runie_core::actors::ProviderActorHandle,
 ) {
-    // Spawn agents that publish to EventBus. The loop reloads the saved config
-    // before each turn so API keys from onboarding are visible immediately.
-    tokio::spawn(agent_loop(cmd_rx, bus.clone(), approval_registry));
+    // Spawn agents that publish to EventBus. Provider construction is delegated
+    // to ProviderActor so the interactive path has a single builder.
+    tokio::spawn(agent_loop(
+        cmd_rx,
+        bus.clone(),
+        approval_registry,
+        provider_handle,
+    ));
     tokio::spawn(input_reader(input_tx, kb_rx));
     tokio::spawn(render_task(terminal, render_rx));
 }
@@ -187,9 +220,7 @@ fn spawn_ui_actor(
     // Subscribe with replay so resuming a session restores prior messages.
     // UiActor MUST subscribe before SessionActor replays durable events.
     let ui_sub = bus.subscribe_with_replay();
-    tokio::spawn(
-        UiActor::new(state, render_tx, cmd_tx, kb_tx, bus, shutdown_tx, caps).run(ui_sub),
-    );
+    tokio::spawn(UiActor::new(state, render_tx, cmd_tx, kb_tx, bus, shutdown_tx, caps).run(ui_sub));
 }
 
 async fn render_task(
@@ -241,38 +272,39 @@ async fn agent_loop(
     mut cmd_rx: mpsc::Receiver<AgentCommand>,
     bus: EventBus<Event>,
     approval_registry: std::sync::Arc<std::sync::Mutex<runie_core::permissions::ApprovalRegistry>>,
+    provider_handle: runie_core::actors::ProviderActorHandle,
 ) {
     while let Some(cmd) = cmd_rx.recv().await {
-        run_single_turn(&cmd, &bus, approval_registry.clone()).await;
+        run_single_turn(
+            &cmd,
+            &bus,
+            approval_registry.clone(),
+            provider_handle.clone(),
+        )
+        .await;
     }
-}
-
-async fn load_provider_config() -> runie_core::config::Config {
-    tokio::task::spawn_blocking(|| {
-        runie_core::login_config::with_read_lock(|config| config.clone())
-    })
-    .await
-    .unwrap_or_default()
 }
 
 async fn run_single_turn(
     cmd: &AgentCommand,
     bus: &EventBus<Event>,
     approval_registry: std::sync::Arc<std::sync::Mutex<runie_core::permissions::ApprovalRegistry>>,
+    provider_handle: runie_core::actors::ProviderActorHandle,
 ) {
     let bus_clone = bus.clone();
     let cmd_id = cmd.id.clone();
 
-    // Reload the saved config for every turn so API keys added during this
-    // session (e.g. through the login flow) are visible immediately.
-    let config = load_provider_config().await;
-    let provider = match DynProvider::new_with_config(&cmd.provider, &cmd.model, &config) {
-        Ok(p) => p,
+    let built = match provider_handle
+        .build(cmd.provider.clone(), cmd.model.clone())
+        .await
+    {
+        Ok(built) => built,
         Err(e) => {
             emit_error_and_done(&bus_clone, &cmd_id, format!("Provider error: {}", e));
             return;
         }
     };
+    let provider = DynProvider::from_provider(built.provider, &built.key, &built.model);
 
     let emit = Arc::new(Mutex::new(move |evt: Event| {
         bus_clone.publish(evt);

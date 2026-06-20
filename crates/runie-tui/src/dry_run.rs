@@ -4,6 +4,10 @@ use runie_core::{run_dry_run, Config, DryRunReport};
 
 /// If the argument list requests a dry run, load config and return a preview
 /// report without starting the terminal UI.
+///
+/// This is a non-production synchronous fallback: it validates configuration
+/// without making API calls and without spawning actors. In the interactive
+/// path, provider construction is handled exclusively by `ProviderActor`.
 pub fn run_from_args(args: &[String]) -> Option<DryRunReport> {
     let dry = args.iter().any(|a| a == "--dry-run" || a == "--preview");
     if !dry {

@@ -1,5 +1,4 @@
 //! `AppState` struct and its inherent methods.
-
 use super::helpers::{compute_ranking_score, element_metadata, element_text};
 use super::FffFileEntry;
 use crate::ui::elements::Element;
@@ -54,6 +53,8 @@ pub struct AppState {
     pub approval_registry: std::sync::Arc<std::sync::Mutex<crate::permissions::ApprovalRegistry>>,
     /// Sender to the `ConfigActor`. `None` in unit tests that do not spawn it.
     pub config_tx: Option<tokio::sync::mpsc::Sender<crate::actors::ConfigMsg>>,
+    /// Sender to the `ProviderActor`. `None` in unit tests that do not spawn it.
+    pub provider_tx: Option<tokio::sync::mpsc::Sender<crate::actors::ProviderMsg>>,
     /// Last config applied to the state (read-only cache for sync lookups).
     pub config_cache: Option<crate::config::Config>,
 }
@@ -87,6 +88,7 @@ impl Default for AppState {
                 crate::permissions::ApprovalRegistry::new(),
             )),
             config_tx: None,
+            provider_tx: None,
             config_cache: None,
         }
     }
@@ -140,11 +142,13 @@ impl AppState {
         let config = self.config.clone();
         let registry = self.approval_registry.clone();
         let config_tx = self.config_tx.clone();
+        let provider_tx = self.provider_tx.clone();
         let config_cache = self.config_cache.clone();
         *self = Self::default();
         self.config = config;
         self.approval_registry = registry;
         self.config_tx = config_tx;
+        self.provider_tx = provider_tx;
         self.config_cache = config_cache;
     }
 
@@ -245,13 +249,14 @@ impl AppState {
         }
         #[cfg(test)]
         {
-            return crate::login_config::get_provider_config(name)
-                .map(|(base_url, api_key, models)| crate::config::ModelProvider {
+            return crate::login_config::get_provider_config(name).map(
+                |(base_url, api_key, models)| crate::config::ModelProvider {
                     provider_type: None,
                     base_url,
                     api_key,
                     models,
-                });
+                },
+            );
         }
         #[cfg(not(test))]
         None
@@ -277,7 +282,8 @@ impl AppState {
         #[cfg(test)]
         {
             if let Some((base_url, api_key, _)) = crate::login_config::get_provider_config(name) {
-                let _ = crate::login_config::save_provider_config(name, &base_url, &api_key, &models);
+                let _ =
+                    crate::login_config::save_provider_config(name, &base_url, &api_key, &models);
             }
         }
     }
@@ -286,7 +292,9 @@ impl AppState {
         if let Some(ref tx) = self.config_tx {
             if tokio::runtime::Handle::try_current().is_ok() {
                 let tx = tx.clone();
-                tokio::spawn(async move { let _ = tx.send(msg).await; });
+                tokio::spawn(async move {
+                    let _ = tx.send(msg).await;
+                });
             }
         }
     }
@@ -483,7 +491,6 @@ fn rank_commands_with_query<'a>(
     ranked.sort_by_key(|(_, score)| std::cmp::Reverse(*score));
     ranked.into_iter().take(limit).collect()
 }
-
 fn has_provider_credentials(config: &crate::config::Config, provider: &str) -> bool {
     config
         .model_providers
