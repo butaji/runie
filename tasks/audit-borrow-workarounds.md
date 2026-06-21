@@ -48,7 +48,7 @@
 - `crates/runie-core/src/update/input/mod.rs` — 1 take() site (permission_request)
 - `crates/runie-core/src/markdown/blocks.rs` — 6 mem::take sites (classify + comment)
 - `crates/runie-core/src/commands/dsl/flow.rs:46` — 1 take() site (open_dialog)
-- `crates/runie-core/src/ui/transform.rs:142` — 1 mem::take site (parser buffer)
+- `crates/runie-core/src/ui/transform.rs` (formerly line 142) — 1 mem::take site (parser buffer). File path may have moved during the actor/view refactor; verify with `rg 'mem::take' crates/runie-core/src/ui/` before editing.
 - `crates/runie-core/src/diff.rs:161` — 1 mem::take site (parser buffer)
 - `crates/runie-core/src/model/state/app_state.rs` — possibly add `with_dialog` helper
 

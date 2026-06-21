@@ -10,7 +10,7 @@
 
 ## Description
 
-`crates/runie-engine/src/tool/search/modes.rs:145` defines `truncate_content` using `&content[..max_len]` — a raw byte slice that panics on multi-byte UTF-8 boundaries (any emoji/CJK in a matched search line). A char-boundary-safe version already exists at `crates/runie-core/src/tool/format.rs:159` (`truncate_to_bytes` with `while !s.is_char_boundary(end)` loop). This is a latent correctness bug masquerading as duplication.
+`crates/runie-engine/src/tool/search/` (formerly `modes.rs:145`) defines `truncate_content` using `&content[..max_len]` — a raw byte slice that panics on multi-byte UTF-8 boundaries (any emoji/CJK in a matched search line). A char-boundary-safe version already exists at `crates/runie-core/src/tool/format.rs:159` (`truncate_to_bytes` with `while !s.is_char_boundary(end)` loop). This is a latent correctness bug masquerading as duplication. File path may have moved during the runie-engine refactor; locate via `rg 'fn truncate_content' crates/runie-engine/` before editing.
 
 ## Acceptance Criteria
 
