@@ -1236,18 +1236,7 @@
       "file": "tasks/arch-review-2026-06.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Master tracking task for the 2026-06 architecture review. Tracking tasks are NOT in the dep graph \u2014 children are independent tasks each with their own priority. This task is done only when every per-finding fixup listed in its body lands (delete-dead-actor-reply-reexport, delete-dead-theme-async-loaders, delete-dead-tuple-actor-handles-fields, delete-dead-history-action-vimnav, fix-permission-gate-rename-in-testing, add-engine-tool-tests, consolidate-slash-command-handlers, tighten-build-lint-complexity-heuristic, unify-markdown-rendering, plus the P0 promotion of rename-core-ui-to-view)."
-    },
-    {
-      "id": "delete-dead-actor-reply-reexport",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
-      "file": "tasks/delete-dead-actor-reply-reexport.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "actors/mod.rs:50 has `pub use self::Reply;` colliding with the local definition at line 27. Fails cargo test compile. Same class as delete-tui-ipc-reexport-shim and delete-config-reload-shim."
+      "notes": "Master tracking task for the 2026-06 architecture review. Tracking tasks are NOT in the dep graph \u2014 children are independent tasks each with their own priority. This task is done only when every per-finding fixup listed in its body lands (delete-dead-theme-async-loaders, delete-dead-tuple-actor-handles-fields, delete-dead-history-action-vimnav, fix-permission-gate-rename-in-testing, add-engine-tool-tests, consolidate-slash-command-handlers, tighten-build-lint-complexity-heuristic, unify-markdown-rendering, plus the P0 promotion of rename-core-ui-to-view)."
     },
     {
       "id": "delete-dead-theme-async-loaders",

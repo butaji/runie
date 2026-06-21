@@ -20,7 +20,7 @@ This is a tracking task — the real work lives in the per-finding tasks. Mark t
 
 1. **Half-completed `crate::ui` → `crate::view` rename.** `lib.rs` declares `pub mod view;` and re-exports `view::{Element, Feed, LazyCache}`, but 18 files (4 production, 14 test files) still reference `crate::ui::...`. Library compiles, but `cargo test --workspace` is fully broken. Tracked as `rename-core-ui-to-view` (P1, R4). **Recommendation: promote to P0 and prioritize above the rest of the R4 backlog.** 108 references across 18 files.
 2. **`update/agent/mod.rs::dispatch` is 41 lines (lint ceiling 40).** Build script halts the build. Tracked by `split-files-at-limit-round-2` but the function is small enough to fix in isolation.
-3. **Duplicate `Reply` re-export** in `crates/runie-core/src/actors/mod.rs:50` — `pub use self::Reply;` collides with the local definition at line 27. New task: `delete-dead-actor-reply-reexport`.
+3. **~~Duplicate `Reply` re-export~~** (resolved 2026-06-21). The issue described in earlier revisions of this task no longer exists — `actors/mod.rs` now has a single `pub use crate::actor::Reply;` re-export at line 14 with no local definition to collide with. No fixup task needed.
 
 ### P1 — Dead code and orphan imports
 
@@ -85,7 +85,6 @@ After all children land:
 
 - `tasks/index.json` (add entries for new tasks).
 - New task files under `tasks/`:
-  - `delete-dead-actor-reply-reexport.md`
   - `delete-dead-theme-async-loaders.md`
   - `delete-dead-tuple-actor-handles-fields.md`
   - `delete-dead-history-action-vimnav.md`
