@@ -761,7 +761,7 @@
       "blocks": [
         "collapse-effect-payload-indirection"
       ],
-      "notes": "Finding F33 (ranked review #4): runie-tui/src/effects/ (339 LOC) executes IO directly in the rendering crate — share.rs uses reqwest (only reason TUI depends on reqwest), editor.rs uses tempfile, clipboard.rs/login.rs/suspend.rs do side effects. Move to IoActor messages emitting events. Distinct from collapse-effect-payload-indirection (which only addresses the enum, not the IO-in-UI violation). Drops reqwest+tempfile from TUI non-dev deps."
+      "notes": "Finding F33 (ranked review #4): runie-tui/src/effects/ (339 LOC) executes IO directly in the rendering crate \u2014 share.rs uses reqwest (only reason TUI depends on reqwest), editor.rs uses tempfile, clipboard.rs/login.rs/suspend.rs do side effects. Move to IoActor messages emitting events. Distinct from collapse-effect-payload-indirection (which only addresses the enum, not the IO-in-UI violation). Drops reqwest+tempfile from TUI non-dev deps."
     },
     {
       "id": "collapse-headless-binaries-into-one-cli",
@@ -787,7 +787,7 @@
         "split-runie-core-into-domain-and-io-crates"
       ],
       "blocks": [],
-      "notes": "Finding F35 (ranked review #7): core carries TUI-only modules every binary compiles — ui/ (1040), dialog/ (~1300), login_flow/ (~1100), providers_dialog (~200), themes (43), markdown render helpers, ipc.rs (128). Move TUI-only into runie-tui; move ipc.rs into runie-cli server. Keep pure parts (markdown parsing) in domain. Cleanup pass after F32 crate split."
+      "notes": "Finding F35 (ranked review #7): core carries TUI-only modules every binary compiles \u2014 ui/ (1040), dialog/ (~1300), login_flow/ (~1100), providers_dialog (~200), themes (43), markdown render helpers, ipc.rs (128). Move TUI-only into runie-tui; move ipc.rs into runie-cli server. Keep pure parts (markdown parsing) in domain. Cleanup pass after F32 crate split."
     },
     {
       "id": "unify-duplicate-module-names-core-tui",
@@ -827,6 +827,405 @@
       "depends_on": [],
       "blocks": [],
       "notes": "Finding F38 (ranked review #6 extras): thiserror (1 file, subagent.rs) -> anyhow or manual impl; async-trait (9+ files in runie-engine tool impls + agent sink) -> native async fn in traits (stable since Rust 1.75, edition 2021). Extends drop-small-stdlib-replaceable-deps. async-trait removal is the bigger win (proc-macro dep on every tool impl)."
+    },
+    {
+      "id": "unify-permission-gate",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Security",
+      "priority": "P0",
+      "file": "tasks/unify-permission-gate.md",
+      "depends_on": [],
+      "blocks": [
+        "unify-approval-decision",
+        "derive-confirmation-from-permissions"
+      ],
+      "notes": "PermissionGate is byte-for-byte duplicated in runie-core/src/permissions/gate.rs and runie-agent/src/permission_gate.rs. Keep core version only and re-export from agent."
+    },
+    {
+      "id": "centralize-test-verification",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Testing",
+      "priority": "P0",
+      "file": "tasks/centralize-test-verification.md",
+      "depends_on": [],
+      "blocks": [
+        "extract-ci-setup-action"
+      ],
+      "notes": "Test-count verification logic duplicated between .github/workflows/ci.yml (EXPECTED_TOTAL_TESTS=1806) and scripts/verify-tests.sh (EXPECTED_TOTAL=2271). Make script the single source of truth."
+    },
+    {
+      "id": "share-minimax-sse-fixtures",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Testing",
+      "priority": "P1",
+      "file": "tasks/share-minimax-sse-fixtures.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Seven MiniMax SSE fixture files are byte-identical in runie-agent and runie-provider test fixtures. Move to a single shared location."
+    },
+    {
+      "id": "canonicalize-chat-message",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/canonicalize-chat-message.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Multiple overlapping Message/chat-message types in provider.rs, message/mod.rs, proto/messages.rs, and runie-protocol. Canonicalize on ChatMessage."
+    },
+    {
+      "id": "unify-event-vocabulary",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/unify-event-vocabulary.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "LLMEvent, AgentEvent, DurableCoreEvent, proto::EventMsg, and EffectCommand describe overlapping streaming lifecycles. Use one core Event with provider/durable views."
+    },
+    {
+      "id": "canonicalize-tool-call",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/canonicalize-tool-call.md",
+      "depends_on": [],
+      "blocks": [
+        "extract-streaming-tool-parser"
+      ],
+      "notes": "Tool-call concept represented by message::ToolCall, tool_runtime::ToolCall, tool_parser::ParsedToolCall, Part::ToolCall, provider ToolCallDelta, and accumulators. Define one canonical type."
+    },
+    {
+      "id": "collapse-provider-wrappers",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/collapse-provider-wrappers.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Provider abstraction sandwich: Provider trait -> ProviderFactory -> DynProvider -> DynProviderFactory -> BuiltProvider -> retry wrapper. Collapse into one handle."
+    },
+    {
+      "id": "extract-streaming-tool-parser",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/extract-streaming-tool-parser.md",
+      "depends_on": [
+        "canonicalize-tool-call"
+      ],
+      "blocks": [
+        "dedupe-tool-execution-loop"
+      ],
+      "notes": "stream_response.rs and headless.rs duplicate ToolCallAccumulator and streaming state machines. Extract a shared StreamingToolParser parameterized by observer."
+    },
+    {
+      "id": "dedupe-tool-execution-loop",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/dedupe-tool-execution-loop.md",
+      "depends_on": [
+        "extract-streaming-tool-parser"
+      ],
+      "blocks": [],
+      "notes": "turn.rs execute_tools and headless.rs execute_headless_tools share permission gate, registry lookup, and result-message formatting. Route both through one helper."
+    },
+    {
+      "id": "introduce-tool-definition-macro",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/introduce-tool-definition-macro.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Every tool in runie-engine/src/tool/*.rs hand-writes input_schema, name, is_read_only, and requires_approval. Introduce a declarative macro or builder."
+    },
+    {
+      "id": "add-tool-output-constructors",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/add-tool-output-constructors.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "ToolOutput struct literals repeated in every tool success/error/lock path. Add success/error/json_success/json_error constructors."
+    },
+    {
+      "id": "share-fff-error-helpers",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/share-fff-error-helpers.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "search/core.rs and find_definitions.rs duplicate FFF not-indexed/picker-not-initialized output builders and lock handling. Move to shared helpers."
+    },
+    {
+      "id": "generic-actor-reply",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/generic-actor-reply.md",
+      "depends_on": [],
+      "blocks": [
+        "reduce-actor-handle-boilerplate"
+      ],
+      "notes": "ConfigReply<T> and ProviderReply<T> are identical Arc<Mutex<Option<oneshot::Sender<T>>>> wrappers. Introduce generic actor::Reply<T>."
+    },
+    {
+      "id": "reduce-actor-handle-boilerplate",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/reduce-actor-handle-boilerplate.md",
+      "depends_on": [
+        "generic-actor-reply"
+      ],
+      "blocks": [],
+      "notes": "Every actor repeats enum XxxMsg, struct XxxActorHandle { tx }, new, tx, and async request methods. Use generic ActorHandle<Msg> or #[actor] macro."
+    },
+    {
+      "id": "unify-approval-decision",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Security",
+      "priority": "P1",
+      "file": "tasks/unify-approval-decision.md",
+      "depends_on": [
+        "unify-permission-gate"
+      ],
+      "blocks": [],
+      "notes": "ApprovalDecision {Approve, Reject} in proto/op.rs and PermissionAction {Allow, Ask, Deny} in permissions/mod.rs overlap. Use PermissionAction as canonical."
+    },
+    {
+      "id": "hoist-cargo-workspace-deps",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/hoist-cargo-workspace-deps.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "serde, async-trait, base64, tempfile, and tokio feature sets are repeated inline across crate manifests. Promote to workspace deps."
+    },
+    {
+      "id": "extract-ci-setup-action",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/extract-ci-setup-action.md",
+      "depends_on": [
+        "centralize-test-verification"
+      ],
+      "blocks": [],
+      "notes": "checkout, rust-toolchain, and cache steps are copy-pasted across CI jobs. Extract a composite GitHub Action."
+    },
+    {
+      "id": "single-source-testing-docs",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/single-source-testing-docs.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "4-layer testing strategy and config example are duplicated across AGENTS.md, Architecture.md, UI_UX.md, and README.md. Link instead of duplicating."
+    },
+    {
+      "id": "generate-config-schema-from-code",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/generate-config-schema-from-code.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "config.schema.json mirrors defaults declared in config.rs. Generate from schemars and add CI check."
+    },
+    {
+      "id": "unify-build-system-prompt",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/unify-build-system-prompt.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "prompts.rs and turn_setup.rs both define build_system_prompt. Merge to one public entry point or rename the turn-setup helper."
+    },
+    {
+      "id": "rename-test-submission-id",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Testing",
+      "priority": "P2",
+      "file": "tasks/rename-test-submission-id.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "SubmissionId is a u64 in proto/op.rs and a String alias in runie-testing/runner.rs. Rename the test alias."
+    },
+    {
+      "id": "merge-tool-status-state",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/merge-tool-status-state.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "ToolCallState and ToolStatus describe overlapping tool execution lifecycles. Merge or define a clear conversion."
+    },
+    {
+      "id": "derive-confirmation-from-permissions",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Security",
+      "priority": "P2",
+      "file": "tasks/derive-confirmation-from-permissions.md",
+      "depends_on": [
+        "unify-permission-gate"
+      ],
+      "blocks": [],
+      "notes": "ConfirmationKind/ConfirmationRouter classify tools separately from permission policies. Drive confirmation UI from permission result."
+    },
+    {
+      "id": "centralize-error-type",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/centralize-error-type.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "ProviderError, LLMError, ToolError, ToolParseError, SubagentError, proto::Error, and anyhow::Error overlap. Centralize or standardize on anyhow."
+    },
+    {
+      "id": "dedupe-update-input-history",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Input / Commands",
+      "priority": "P2",
+      "file": "tasks/dedupe-update-input-history.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "handle_history_prev and handle_history_next in update/input/mod.rs are mirror images. Extract a helper that returns the navigation action."
+    },
+    {
+      "id": "dedupe-scoped-model-toggle",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/dedupe-scoped-model-toggle.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "handle_scoped_model_enable_all and handle_scoped_model_disable_all differ only by true/false. Replace with set_scoped_models_enabled(enabled: bool)."
+    },
+    {
+      "id": "dedupe-config-actor-mutations",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "file": "tasks/dedupe-config-actor-mutations.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "ConfigActor save_provider/remove_provider/set_default_model/set_provider_models repeat spawn_blocking + load_and_emit. Extract mutate_config helper."
+    },
+    {
+      "id": "dedupe-yolo-sink-setup",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "file": "tasks/dedupe-yolo-sink-setup.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "runie-json and runie-server duplicate --yolo parsing, warning, and AutoAllowSink/DenyAllSink construction. Extract build_sink helper."
+    },
+    {
+      "id": "theme-color-accessor-macro",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P3",
+      "file": "tasks/theme-color-accessor-macro.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "runie-tui/src/theme/colors.rs has ~15 near-identical accessor functions. Generate with theme_color! macro."
+    },
+    {
+      "id": "dedupe-messages-changed-ensure-fresh",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Testing",
+      "priority": "P3",
+      "file": "tasks/dedupe-messages-changed-ensure-fresh.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "state.messages_changed(); state.ensure_fresh(); appears 174 times across tests. Add AppState::refresh_after_message_change helper."
+    },
+    {
+      "id": "dedupe-turn-complete-last-calls",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/dedupe-turn-complete-last-calls.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "ensure_turn_complete_last() is called in 6 of 9 match arms in update/agent/mod.rs. Wrap dispatch so the invariant is enforced automatically."
+    },
+    {
+      "id": "use-workspace-deps-in-runie-testing",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P3",
+      "file": "tasks/use-workspace-deps-in-runie-testing.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "runie-testing/Cargo.toml uses explicit path dependencies for internal crates instead of workspace = true."
+    },
+    {
+      "id": "single-source-dev-commands",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P3",
+      "file": "tasks/single-source-dev-commands.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "cargo test/clippy/fmt commands are repeated in dev.sh, bacon.toml, README.md, and CI. Centralize in justfile recipes."
+    },
+    {
+      "id": "generate-ui-elements-from-model",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "file": "tasks/generate-ui-elements-from-model.md",
+      "depends_on": [
+        "rename-core-ui-to-view"
+      ],
+      "blocks": [],
+      "notes": "core/src/ui/elements.rs defines Element variants that mirror ChatMessage/Role/Part/ToolOutput/AgentEvent. Generate from model instead of maintaining parallel hierarchy."
     }
   ]
 }
