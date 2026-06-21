@@ -20,7 +20,7 @@
       "file": "tasks/fix-truncate-content-utf8-panic.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "search/modes.rs truncate_content uses raw byte slice; panics on multi-byte UTF-8. Use runie_core::tool::format::truncate_output. Only correctness-bug finding."
+      "notes": "search/modes.rs truncate_content uses raw byte slice; panics on multi-byte UTF-8. Use runie_core::tool::format::truncate_output. Only correctness-bug finding. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "cleanup-stray-root-artifacts",
@@ -31,7 +31,7 @@
       "file": "tasks/cleanup-stray-root-artifacts.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Delete bin/, ui/, scripts/watch-dspec.sh, .hermes/, strip bacon.toml, remove EOF/run/fix_into.py/refactor_events.py/__pycache__. ~190 tracked files from removed parity/dspec workflow."
+      "notes": "Delete bin/, ui/, scripts/watch-dspec.sh, .hermes/, strip bacon.toml, remove EOF/run/fix_into.py/refactor_events.py/__pycache__. ~190 tracked files from removed parity/dspec workflow. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "delete-dead-tool-runtime-trait",
@@ -42,7 +42,7 @@
       "file": "tasks/delete-dead-tool-runtime-trait.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "tool/runtime.rs (183 LOC) duplicate ToolRuntime trait, zero external importers. Live one is tool_runtime.rs."
+      "notes": "tool/runtime.rs (183 LOC) duplicate ToolRuntime trait, zero external importers. Live one is tool_runtime.rs. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "delete-dead-inspector-module",
@@ -53,7 +53,7 @@
       "file": "tasks/delete-dead-inspector-module.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "runie-agent/src/inspector.rs (315 LOC) unused; LatencyTracker impl is empty (always returns ZERO)."
+      "notes": "runie-agent/src/inspector.rs (315 LOC) unused; LatencyTracker impl is empty (always returns ZERO). Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "decide-harness-skills-fate",
@@ -64,7 +64,7 @@
       "file": "tasks/decide-harness-skills-fate.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "harness_skills/ (885 LOC) never instantiated in prod; run_agent_turn hardcodes None. Wire or delete."
+      "notes": "harness_skills/ (885 LOC) never instantiated in prod; run_agent_turn hardcodes None. Wire or delete. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "gate-or-implement-mcp-client",
@@ -86,7 +86,7 @@
       "file": "tasks/delete-crates-archive.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "crates/_archive/harness/ (874 LOC) zero refs, no Cargo member. clean-archive task re-accumulated."
+      "notes": "crates/_archive/harness/ (874 LOC) zero refs, no Cargo member. clean-archive task re-accumulated. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "dedupe-fresh-state-test-helper",
@@ -119,7 +119,7 @@
       "file": "tasks/delete-config-reload-shim.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "config_reload/ 2-file re-export shim + 3 dead type aliases. 4 callers to rewrite."
+      "notes": "config_reload/ 2-file re-export shim + 3 dead type aliases. 4 callers to rewrite. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "dedupe-truncation-config",
@@ -163,7 +163,7 @@
       "file": "tasks/delete-path-utils-reexport.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "runie-agent/src/path_utils.rs 3-line re-export, zero users."
+      "notes": "runie-agent/src/path_utils.rs 3-line re-export, zero users. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "dedupe-test-gate-and-provider-helpers",
@@ -207,7 +207,7 @@
       "file": "tasks/delete-tui-ipc-reexport-shim.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "5-line pub use runie_core::ipc::TuiIpc shim with zero callers. Same class as delete-path-utils-reexport and delete-config-reload-shim; missed in prior audit."
+      "notes": "5-line pub use runie_core::ipc::TuiIpc shim with zero callers. Same class as delete-path-utils-reexport and delete-config-reload-shim; missed in prior audit. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "consolidate-dual-path-modules",
@@ -222,7 +222,7 @@
         "relocate-loose-tests-files",
         "flatten-update-login-flow-tests-dir"
       ],
-      "notes": "Convert 6 foo.rs + foo/ dual-path pairs to foo/mod.rs style: tool_markers, tool_parser, provider_registry, model_catalog, login_config, message. ~3,036 LOC, mechanical git mv."
+      "notes": "Convert 6 foo.rs + foo/ dual-path pairs to foo/mod.rs style: tool_markers, tool_parser, provider_registry, model_catalog, login_config, message. ~3,036 LOC, mechanical git mv. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "group-session-modules-into-dir",
@@ -338,7 +338,7 @@
       "file": "tasks/remove-empty-match-arms.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Replace ~20 _ => {} arms with explicit comments or exhaustive variant lists. Readability/correctness task."
+      "notes": "Replace ~20 _ => {} arms with explicit comments or exhaustive variant lists. Readability/correctness task. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "rename-update-dialog-panel",
@@ -349,7 +349,7 @@
       "file": "tasks/rename-update-dialog-panel.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Rename update/dialog/panel.rs -> panel_handler.rs to disambiguate from dialog/panel.rs."
+      "notes": "Rename update/dialog/panel.rs -> panel_handler.rs to disambiguate from dialog/panel.rs. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "split-files-at-limit-round-2",
@@ -374,7 +374,7 @@
         "delete-config-reload-shim"
       ],
       "blocks": [],
-      "notes": "Resolve 18 #[allow(...)] markers: delete 8 dead_code allows, refactor or document 6 too_many_arguments, keep 4 niche-lint allows with comment. 80/20 of dead code shipping in prod."
+      "notes": "Resolve 18 #[allow(...)] markers: delete 8 dead_code allows, refactor or document 6 too_many_arguments, keep 4 niche-lint allows with comment. 80/20 of dead code shipping in prod. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "sweep-to-string-allocs",
@@ -385,7 +385,7 @@
       "file": "tasks/sweep-to-string-allocs.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "680 .to_string() vs 2 .to_owned(). Remove String.to_string() redundant clones, convert &str.to_string() to .into()/.to_owned(). Mechanical."
+      "notes": "680 .to_string() vs 2 .to_owned(). Remove String.to_string() redundant clones, convert &str.to_string() to .into()/.to_owned(). Mechanical. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "consolidate-update-dialog-files",
@@ -461,12 +461,13 @@
       "category": "Architecture / Actors",
       "priority": "P0",
       "file": "tasks/remove-login-config-test-shim.md",
-      "depends_on": [],
-      "blocks": [
-        "finish-io-migration",
+      "depends_on": [
         "consolidate-dual-path-modules"
       ],
-      "notes": "Finding #4: 5 #[cfg(test)] branches in app_state.rs fall back to login_config:: for config reads/writes. Replace with injected ConfigStore mocks (trait already exists). Deletes login_config.rs (141 LOC) + ~15 test set_test_config_* call sites."
+      "blocks": [
+        "finish-io-migration"
+      ],
+      "notes": "Finding #4: 5 #[cfg(test)] branches in app_state.rs fall back to login_config:: for config reads/writes. Replace with injected ConfigStore mocks (trait already exists). Deletes login_config.rs (141 LOC) + ~15 test set_test_config_* call sites. Originally listed consolidate-dual-path-modules under blocks; corrected to depends_on since this task deletes the file consolidate-dual-path-modules would otherwise migrate."
     },
     {
       "id": "consolidate-settings-providers-dialog",
@@ -564,7 +565,7 @@
         "consolidate-dual-path-modules"
       ],
       "blocks": [],
-      "notes": "Finding F7: tool_parser_tests.rs (106 LOC) is a stray top-level file; convention is foo/tests.rs. Run after consolidate-dual-path-modules."
+      "notes": "Finding F7: tool_parser_tests.rs (106 LOC) is a stray top-level file; convention is foo/tests.rs. Run after consolidate-dual-path-modules. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "inline-tui-ipc-reexport",
@@ -680,7 +681,7 @@
       "file": "tasks/fix-duplicate-cargo-toml-keys.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Findings F21+F22: runie-agent Cargo.toml has duplicate runie-provider + tokio lines; runie-server has duplicate tokio line. Cargo unions features silently; last declaration drops features. Zero-risk merge to feature union."
+      "notes": "Findings F21+F22: runie-agent Cargo.toml has duplicate runie-provider + tokio lines; runie-server has duplicate tokio line. Cargo unions features silently; last declaration drops features. Zero-risk merge to feature union. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "drop-event-bus-replay-buffer",
@@ -756,12 +757,11 @@
       "priority": "P0",
       "file": "tasks/move-tui-effects-into-io-actor.md",
       "depends_on": [
-        "finish-io-migration"
-      ],
-      "blocks": [
+        "finish-io-migration",
         "collapse-effect-payload-indirection"
       ],
-      "notes": "Finding F33 (ranked review #4): runie-tui/src/effects/ (339 LOC) executes IO directly in the rendering crate \u2014 share.rs uses reqwest (only reason TUI depends on reqwest), editor.rs uses tempfile, clipboard.rs/login.rs/suspend.rs do side effects. Move to IoActor messages emitting events. Distinct from collapse-effect-payload-indirection (which only addresses the enum, not the IO-in-UI violation). Drops reqwest+tempfile from TUI non-dev deps."
+      "blocks": [],
+      "notes": "Finding F33 (ranked review #4): runie-tui/src/effects/ (339 LOC) executes IO directly in the rendering crate \u2014 share.rs uses reqwest (only reason TUI depends on reqwest), editor.rs uses tempfile, clipboard.rs/login.rs/suspend.rs do side effects. Move to IoActor messages emitting events. Body says distinct from collapse-effect-payload-indirection; treated here as a prerequisite (collapse the enum indirection first, then move the IO). Drops reqwest+tempfile from TUI non-dev deps."
     },
     {
       "id": "collapse-headless-binaries-into-one-cli",
@@ -840,7 +840,7 @@
         "unify-approval-decision",
         "derive-confirmation-from-permissions"
       ],
-      "notes": "PermissionGate is byte-for-byte duplicated in runie-core/src/permissions/gate.rs and runie-agent/src/permission_gate.rs. Keep core version only and re-export from agent."
+      "notes": "PermissionGate is byte-for-byte duplicated in runie-core/src/permissions/gate.rs and runie-agent/src/permission_gate.rs. Keep core version only and re-export from agent. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "centralize-test-verification",
@@ -960,7 +960,7 @@
       "file": "tasks/add-tool-output-constructors.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "ToolOutput struct literals repeated in every tool success/error/lock path. Add success/error/json_success/json_error constructors."
+      "notes": "ToolOutput struct literals repeated in every tool success/error/lock path. Add success/error/json_success/json_error constructors. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
     },
     {
       "id": "share-fff-error-helpers",
@@ -1235,18 +1235,8 @@
       "priority": "P2",
       "file": "tasks/arch-review-2026-06.md",
       "depends_on": [],
-      "blocks": [
-        "delete-dead-actor-reply-reexport",
-        "delete-dead-theme-async-loaders",
-        "delete-dead-tuple-actor-handles-fields",
-        "delete-dead-history-action-vimnav",
-        "fix-permission-gate-rename-in-testing",
-        "add-engine-tool-tests",
-        "consolidate-slash-command-handlers",
-        "tighten-build-lint-complexity-heuristic",
-        "unify-markdown-rendering"
-      ],
-      "notes": "Master tracking task for the 2026-06 architecture review. Promote rename-core-ui-to-view to P0 (cargo test --workspace is broken). Per-finding fixup tasks filed separately; this task is done only when all linked fixups land."
+      "blocks": [],
+      "notes": "Master tracking task for the 2026-06 architecture review. Tracking tasks are NOT in the dep graph \u2014 children are independent tasks each with their own priority. This task is done only when every per-finding fixup listed in its body lands (delete-dead-actor-reply-reexport, delete-dead-theme-async-loaders, delete-dead-tuple-actor-handles-fields, delete-dead-history-action-vimnav, fix-permission-gate-rename-in-testing, add-engine-tool-tests, consolidate-slash-command-handlers, tighten-build-lint-complexity-heuristic, unify-markdown-rendering, plus the P0 promotion of rename-core-ui-to-view)."
     },
     {
       "id": "delete-dead-actor-reply-reexport",
@@ -1365,7 +1355,9 @@
       "category": "Core / State",
       "priority": "P1",
       "file": "tasks/consolidate-login-flow-all-files.md",
-      "depends_on": ["consolidate-login-flow-handlers"],
+      "depends_on": [
+        "consolidate-login-flow-handlers"
+      ],
       "blocks": [],
       "notes": "11 login-flow files in 5 module roots (login_flow.rs + login_flow/ + login_config.rs + login_config/ + state/login_flow). Group into single login_flow/ dir."
     },
@@ -1387,9 +1379,11 @@
       "category": "Architecture / Actors",
       "priority": "P0",
       "file": "tasks/decouple-appstate-from-view-cache.md",
-      "depends_on": ["fold-state-into-model-state"],
-      "blocks": ["rename-core-ui-to-view"],
-      "notes": "AppState holds LazyCache<Element> (view AST inside domain). Move cache to UiActor; domain exposes raw posts. Required before crate split (split-runie-core-into-domain-and-io-crates)."
+      "depends_on": [
+        "fold-state-into-model-state"
+      ],
+      "blocks": [],
+      "notes": "AppState holds LazyCache<Element> (view AST inside domain). Move cache to UiActor; domain exposes raw posts. Required before crate split (split-runie-core-into-domain-and-io-crates). Body explicitly notes it is distinct from rename-core-ui-to-view (both share fold-state-into-model-state but are otherwise independent). Original 'blocks: rename-core-ui-to-view' was a direction error and has been removed."
     },
     {
       "id": "fold-runie-engine-into-agent",
@@ -1431,7 +1425,9 @@
       "category": "Architecture / Actors",
       "priority": "P0",
       "file": "tasks/move-provider-catalog-to-provider-crate.md",
-      "depends_on": ["unify-provider-modules"],
+      "depends_on": [
+        "unify-provider-modules"
+      ],
       "blocks": [],
       "notes": "~840 LOC of provider knowledge (provider_registry.rs 435 + model_catalog.rs 405) belongs in runie-provider. Domain crate is the wrong home."
     },
@@ -1453,7 +1449,9 @@
       "category": "Architecture / Actors",
       "priority": "P1",
       "file": "tasks/replace-git2-with-cli.md",
-      "depends_on": ["finish-io-migration"],
+      "depends_on": [
+        "finish-io-migration"
+      ],
       "blocks": [],
       "notes": "git2 (vendored-libgit2) used in 6 files for branch/worktree/status. Replace with git CLI via IoActor/GitService. Drops C toolchain from build."
     },
@@ -1486,7 +1484,9 @@
       "category": "Configuration",
       "priority": "P2",
       "file": "tasks/standardize-test-layout-inline.md",
-      "depends_on": ["relocate-loose-tests-files"],
+      "depends_on": [
+        "relocate-loose-tests-files"
+      ],
       "blocks": [],
       "notes": "Three layouts coexist: inline mod tests (125), sibling *_tests.rs (29), tests/ dirs (9). Standardize on inline mod tests. Subsumes relocate-loose-tests-files."
     }
