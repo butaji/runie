@@ -1226,6 +1226,126 @@
       ],
       "blocks": [],
       "notes": "core/src/ui/elements.rs defines Element variants that mirror ChatMessage/Role/Part/ToolOutput/AgentEvent. Generate from model instead of maintaining parallel hierarchy."
+    },
+    {
+      "id": "arch-review-2026-06",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "file": "tasks/arch-review-2026-06.md",
+      "depends_on": [],
+      "blocks": [
+        "delete-dead-actor-reply-reexport",
+        "delete-dead-theme-async-loaders",
+        "delete-dead-tuple-actor-handles-fields",
+        "delete-dead-history-action-vimnav",
+        "fix-permission-gate-rename-in-testing",
+        "add-engine-tool-tests",
+        "consolidate-slash-command-handlers",
+        "tighten-build-lint-complexity-heuristic",
+        "unify-markdown-rendering"
+      ],
+      "notes": "Master tracking task for the 2026-06 architecture review. Promote rename-core-ui-to-view to P0 (cargo test --workspace is broken). Per-finding fixup tasks filed separately; this task is done only when all linked fixups land."
+    },
+    {
+      "id": "delete-dead-actor-reply-reexport",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/delete-dead-actor-reply-reexport.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "actors/mod.rs:50 has `pub use self::Reply;` colliding with the local definition at line 27. Fails cargo test compile. Same class as delete-tui-ipc-reexport-shim and delete-config-reload-shim."
+    },
+    {
+      "id": "delete-dead-theme-async-loaders",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/delete-dead-theme-async-loaders.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "runie-tui/src/theme/loader.rs has 3 unused async fns flagged dead_code: load_theme_raw_async, load_theme_async, load_theme_with_caps_async. Wire into bootstrap or delete."
+    },
+    {
+      "id": "delete-dead-tuple-actor-handles-fields",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/delete-dead-tuple-actor-handles-fields.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "runie-tui/src/main.rs:96 ActorHandles tuple fields 0..4 are never read. Struct only kept alive to drop the actor tasks. Rename to _0.._4 or add allow(dead_code) with comment."
+    },
+    {
+      "id": "delete-dead-history-action-vimnav",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/delete-dead-history-action-vimnav.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "update/input/mod.rs:116 HistoryAction::VimNav(bool) is never constructed; navigate_history takes `dir: Direction` and never uses it. Wire dir into a Direction-carrying HistoryAction or delete both."
+    },
+    {
+      "id": "fix-permission-gate-rename-in-testing",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Testing",
+      "priority": "P1",
+      "file": "tasks/fix-permission-gate-rename-in-testing.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "runie-testing/src/fixtures.rs:6 imports PermissionGate which was renamed to PermissionMode. Trivial cargo fix. Coordinate with unify-permission-gate (P0) which will consolidate back to one type."
+    },
+    {
+      "id": "add-engine-tool-tests",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/add-engine-tool-tests.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "runie-engine (2466 LOC built-in tools) ships zero tests. Add Layer 1 + Layer 2 coverage per tool: read_file, list_dir, write_file, edit_file, bash, grep, find, find_definitions, fetch_docs. Coordinate with introduce-tool-definition-macro."
+    },
+    {
+      "id": "consolidate-slash-command-handlers",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Input / Commands",
+      "priority": "P2",
+      "file": "tasks/consolidate-slash-command-handlers.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "RunXCommand dispatcher in update/command.rs duplicates flows that also exist in update/dialog/. Each slash command requires 3 places of code (registry, dispatcher, dialog form). Consolidate into one canonical handler per command."
+    },
+    {
+      "id": "tighten-build-lint-complexity-heuristic",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Refactoring",
+      "priority": "P3",
+      "file": "tasks/tighten-build-lint-complexity-heuristic.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "build_lint.rs count_complexity excludes loop/break/continue/return. Nested match arms slip through (update/agent/mod.rs::dispatch is 41 lines). Add match-arm counter or arm-length cap."
+    },
+    {
+      "id": "unify-markdown-rendering",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P3",
+      "file": "tasks/unify-markdown-rendering.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Markdown split between runie-core/src/markdown/ (parsing) and runie-tui/src/markdown.rs (rendering). Core should only expose ParsedDoc; tui owns the Span rendering. Prerequisite for split-runie-core-into-domain-and-io-crates."
     }
   ]
 }
