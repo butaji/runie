@@ -1346,6 +1346,149 @@
       "depends_on": [],
       "blocks": [],
       "notes": "Markdown split between runie-core/src/markdown/ (parsing) and runie-tui/src/markdown.rs (rendering). Core should only expose ParsedDoc; tui owns the Span rendering. Prerequisite for split-runie-core-into-domain-and-io-crates."
+    },
+    {
+      "id": "aggressive-event-consolidation",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/aggressive-event-consolidation.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "22 files in event/ for a 109-variant Event. Group per-domain sub-enums into 4 dirs (input/agent/io/dialog) or fold into variants.rs. File body references simplify-event-vocabulary / simplify-event-module-layout as superseded prior tasks; both have been archived and this task subsumes them. Orphaned from index by prior archive sweep."
+    },
+    {
+      "id": "consolidate-login-flow-all-files",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/consolidate-login-flow-all-files.md",
+      "depends_on": ["consolidate-login-flow-handlers"],
+      "blocks": [],
+      "notes": "11 login-flow files in 5 module roots (login_flow.rs + login_flow/ + login_config.rs + login_config/ + state/login_flow). Group into single login_flow/ dir."
+    },
+    {
+      "id": "consolidate-tiny-binary-crates",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "file": "tasks/consolidate-tiny-binary-crates.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "runie-print (97 LOC) + runie-json (274) + runie-server (283) as separate workspace members. Fold print+json into runie-tui subcommands. consolidate-binary-setup (done) already moved shared setup into headless_runtime. Stale 'depends on consolidate-binary-setup' removed."
+    },
+    {
+      "id": "decouple-appstate-from-view-cache",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/decouple-appstate-from-view-cache.md",
+      "depends_on": ["fold-state-into-model-state"],
+      "blocks": ["rename-core-ui-to-view"],
+      "notes": "AppState holds LazyCache<Element> (view AST inside domain). Move cache to UiActor; domain exposes raw posts. Required before crate split (split-runie-core-into-domain-and-io-crates)."
+    },
+    {
+      "id": "fold-runie-engine-into-agent",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "file": "tasks/fold-runie-engine-into-agent.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "runie-engine (2234 LOC, 17 files, 1 consumer) adds no independence. Fold into runie-agent/src/tool/. Coordinate with add-engine-tool-tests for test placement."
+    },
+    {
+      "id": "merge-diff-modules",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "file": "tasks/merge-diff-modules.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Two diff.rs files: runie-core/src/diff.rs (domain) and runie-tui/src/diff.rs (466 LOC, render-flavored). Render tui/diff from canonical runie_core::diff::Diff type."
+    },
+    {
+      "id": "move-actor-trait-into-actors-dir",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/move-actor-trait-into-actors-dir.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "actor.rs (singular, 222 LOC) holds the trait; actors/ (plural) holds the impls. Grep-ambiguous. Fold trait into actors/trait.rs."
+    },
+    {
+      "id": "move-provider-catalog-to-provider-crate",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/move-provider-catalog-to-provider-crate.md",
+      "depends_on": ["unify-provider-modules"],
+      "blocks": [],
+      "notes": "~840 LOC of provider knowledge (provider_registry.rs 435 + model_catalog.rs 405) belongs in runie-provider. Domain crate is the wrong home."
+    },
+    {
+      "id": "rename-model-snapshot-to-compaction",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/rename-model-snapshot-to-compaction.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "model/snapshot.rs (76 LOC) is not the UI Snapshot (in snapshot.rs). It does token accounting + compaction. Rename to model/compaction.rs."
+    },
+    {
+      "id": "replace-git2-with-cli",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/replace-git2-with-cli.md",
+      "depends_on": ["finish-io-migration"],
+      "blocks": [],
+      "notes": "git2 (vendored-libgit2) used in 6 files for branch/worktree/status. Replace with git CLI via IoActor/GitService. Drops C toolchain from build."
+    },
+    {
+      "id": "replace-single-use-deps-with-stdlib",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/replace-single-use-deps-with-stdlib.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "parking_lot (3 sites) -> std Mutex; palette (2 sites) -> std RGB math; serde_yaml (1 site) -> toml/hand parser. remove-unused-cargo-deps (done) covered the truly-unused case; this targets underused. Stale 'depends on remove-unused-cargo-deps' removed."
+    },
+    {
+      "id": "shrink-tasks-planning-debt",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/shrink-tasks-planning-debt.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "tasks/ has 127 .md files; only 113 active in index. Archive done/superseded tasks/ files; close stale todos; keep root to active work + TEMPLATE + index.json."
+    },
+    {
+      "id": "standardize-test-layout-inline",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/standardize-test-layout-inline.md",
+      "depends_on": ["relocate-loose-tests-files"],
+      "blocks": [],
+      "notes": "Three layouts coexist: inline mod tests (125), sibling *_tests.rs (29), tests/ dirs (9). Standardize on inline mod tests. Subsumes relocate-loose-tests-files."
     }
   ]
 }

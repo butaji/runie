@@ -1,12 +1,12 @@
 # Unify architecture around event-based actors
 
-**Status**: in_progress  
-**Milestone**: R4  
-**Category**: Architecture / Actors  
-**Priority**: P0  
+**Status**: superseded
+**Milestone**: R4
+**Category**: Architecture / Actors
+**Priority**: P0
 
-**Depends on**: none  
-**Blocks**: none  
+**Depends on**: none
+**Blocks**: none 
 
 ## Description
 

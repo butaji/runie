@@ -62,10 +62,23 @@ This is a tracking task — the real work lives in the per-finding tasks. Mark t
 
 ## Tests
 
-Not a code task — it tracks a sequence of fixups. Layer coverage is described in each child task. After all children land:
+This is a tracking task — the real test surface lives in each child task. The four-layer philosophy from `AGENTS.md` is mirrored below to keep this entry consistent with the rest of `tasks/`.
 
-- `cargo test --workspace` passes.
-- `cargo build --workspace` passes with the build-script lint active.
+### Layer 1 — State/Logic
+- [ ] `master_index_reflects_every_fixup` — after every child task lands, `jq '.[].id' tasks/index.json` includes the child's id and `jq '.. | objects | select(.id == \"<child>\")' tasks/index.json` returns one entry.
+
+### Layer 2 — Event Handling
+- N/A — this task does not drive events; it tracks them.
+
+### Layer 3 — Rendering
+- N/A.
+
+### Layer 4 — Smoke / Crash
+- [ ] `cargo test --workspace` passes end-to-end (proves the P0 ui→view rename is complete and the duplicate `Reply` import is removed).
+- [ ] `cargo build --workspace` passes with the build-script lint active (proves the `dispatch` function-length violation is fixed).
+- [ ] `cargo check --workspace --all-targets` reports zero new `dead_code` warnings (proves the P1 cleanup tasks landed).
+
+After all children land:
 - `cargo clippy --workspace --all-targets -- -D warnings` (eventually) passes.
 
 ## Files touched

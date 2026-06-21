@@ -5,7 +5,7 @@
 **Category**: Configuration
 **Priority**: P2
 
-**Depends on**: remove-unused-cargo-deps
+**Depends on**: none
 **Blocks**: none
 
 ## Description

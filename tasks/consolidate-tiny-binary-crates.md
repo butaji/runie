@@ -5,7 +5,7 @@
 **Category**: Architecture / Actors
 **Priority**: P2
 
-**Depends on**: consolidate-binary-setup
+**Depends on**: none
 **Blocks**: none
 
 ## Description
