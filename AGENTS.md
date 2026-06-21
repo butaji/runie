@@ -1,13 +1,44 @@
 # Agent Guidelines
 
-Track tasks in tasks/index.json, details per each in tasks/xxx.md
+Track tasks in `tasks/index.json`, details per each in `tasks/<id>.md`.
 
-All features, fixes, and improvements must be implemented with coverage of automatic tests that are lightweight and run fast: unit and e2e.
-No artificail delays in automatic tests!
+All features, fixes, and improvements must be implemented with coverage of automatic tests that are lightweight and run fast: **unit and e2e in Rust**. No shell or tmux tests. Rendering tests use `insta` snapshots over hand-written `Buffer` assertions when possible.
+
+No artificial delays in automatic tests!
 
 Each implementation must be live tested to make sure everything is working as expected.
 
+## Core Principles
+
+### YAGNI — You Aren't Gonna Need It
+Do not add abstraction, configuration, or dependency surface area before a concrete, current requirement exists. Prefer deleting over generalizing. If a module has zero callers, remove it. If a feature is planned for "someday," it is not today.
+
+### DRY — Don't Repeat Yourself
+Every concept, type, helper, and decision must have a single source of truth. Before adding new code, search for an existing place that already owns the idea. Duplication ranks higher than local convenience: extract shared helpers, merge parallel enums, and reuse types across crate boundaries rather than copy-paste-adapting them.
+
+### Pareto (80/20)
+Every change must target the 20% of effort that removes 80% of duplication, complexity, or dependency weight. Avoid gold-plating. Prefer a small, testable extraction that eliminates a whole class of bugs over a perfect but unbounded refactor. If a task can be split into "make it work / make it clean / make it fast," ship the first two and file the third.
+
+### Prefer stdlib, OS features, and crates you already use
+Reach for the Rust standard library and the host OS before adding a new dependency. Prefer dependencies that are already transitive or that solve a problem stdlib cannot. Adding a new crate requires a concrete justification; "nice to have" is not enough.
+
+## Architecture
+
+The codebase is split into three layers. Keep them separate.
+
+| Layer | Responsibility | Rules |
+|-------|---------------|-------|
+| **IO** | Async side effects: files, network, processes, clipboard, git, config writes | All IO lives behind actors. No sync IO in domain or UI code. |
+| **Domain** | Pure business logic, state machines, event translation, tool semantics | No `ratatui`, no `tokio::fs`, no `reqwest`, no `std::process`. Imports from `runie-core` only. |
+| **UI** | Pure Model-View-Update over events | UI is a pure projection of domain state. Widgets receive events, produce buffers, and emit user intents back into the event bus. No direct IO in the UI crate. |
+
+**Everything is event-based. State lives in actors.** Actors own their own state, receive messages, and emit events on the event bus. The domain layer computes transitions from events. The UI layer renders from a read-only view model.
+
+**Very clean separation of crates and dependencies.** A crate should not depend on another crate just because it is convenient. Domain crates must not import IO or rendering crates. IO crates implement domain traits. UI crates consume domain events and project them.
+
 ## Testing Strategy (4 Layers)
+
+All tests are written in Rust. No shell scripts, no tmux, no manual QA.
 
 ### Layer 1: State/Logic (Pure Functions)
 Test business rules and state transitions without any Ratatui imports.
@@ -37,7 +68,7 @@ fn q_quits() {
 ```
 
 ### Layer 3: Rendering
-Use TestBackend + Buffer assertions for widget tests.
+Use `insta` snapshots for widget tests. Hand-written `TestBackend` + `Buffer` assertions are acceptable only when a snapshot would be unstable.
 
 ```rust
 use ratatui::{backend::TestBackend, Terminal, widgets::Paragraph};
@@ -51,8 +82,7 @@ fn renders_hello() {
         f.render_widget(widget, f.area());
     }).unwrap();
 
-    let expected = Buffer::with_lines(vec!["hello     ", "          ", "          "]);
-    terminal.backend().assert_eq(&expected);
+    insta::assert_snapshot!(terminal.backend());
 }
 ```
 
@@ -87,6 +117,11 @@ async fn minimax_m3_multi_tool_turn() {
 | Use `sleep()` in tests | Non-deterministic |
 | Test widget internals | Test output, not structure |
 | Mix state + rendering in one test | Hard to debug |
+| Add a dependency for a one-liner | Prefer stdlib or a small internal helper |
+| Copy-paste instead of extracting | Creates drift and doubles bug fixes |
+| Build "just in case" abstractions | YAGNI — remove or do not add |
+| Put IO in domain or UI crates | Breaks actor/event architecture |
+| Depend on UI/IO crates from domain | Inverts the architecture |
 
 ## File Structure
 
@@ -143,7 +178,5 @@ Rust syntax, so it may miss nested closures, `try` blocks, match guards, and
 similar constructs. It is used as a coarse guardrail, not a precise metric.
 
 Any production-code violation fails `cargo build`. There are no allow-lists.
-
-Current violations: 0
 
 **Breaking the rules is not acceptable.** If your change introduces a violation, you must fix it before committing.
