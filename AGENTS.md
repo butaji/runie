@@ -2,11 +2,11 @@
 
 Track tasks in `tasks/index.json`, details per each in `tasks/<id>.md`.
 
-All features, fixes, and improvements must be implemented with coverage of automatic tests that are lightweight and run fast: **unit and e2e in Rust**. No shell or tmux tests. Rendering tests use `insta` snapshots over hand-written `Buffer` assertions when possible.
+All features, fixes, and improvements must be implemented with coverage of automatic tests that are lightweight and run fast: **unit and e2e in Rust**. No shell or tmux tests in the automated suite. Rendering tests use `insta` snapshots over hand-written `Buffer` assertions when possible.
 
 No artificial delays in automatic tests!
 
-Each implementation must be live tested to make sure everything is working as expected.
+Each implementation must also be **live tested with tmux** to make sure everything is working as expected in a real terminal. Automated tests prove correctness; live tmux validation proves it actually runs for a human.
 
 ## Core Principles
 
@@ -38,7 +38,7 @@ The codebase is split into three layers. Keep them separate.
 
 ## Testing Strategy (4 Layers)
 
-All tests are written in Rust. No shell scripts, no tmux, no manual QA.
+All automated tests are written in Rust. No shell scripts, no tmux, no manual QA in `cargo test`.
 
 ### Layer 1: State/Logic (Pure Functions)
 Test business rules and state transitions without any Ratatui imports.
@@ -109,11 +109,20 @@ async fn minimax_m3_multi_tool_turn() {
 **When to run:** Before every push, in CI, or when changing async/event logic.
 **What they catch:** Event reordering, stale indices, inflight leaks, TurnComplete duplication, stuck timers, and provider-specific parser regressions.
 
+## Live Validation
+
+Automated tests are mandatory, but they are not enough. Every change that affects the TUI, input handling, session lifecycle, or IO must be exercised inside a real tmux session before it is considered done.
+
+- Run the binary (or `cargo run`) inside tmux.
+- Exercise the feature manually: key sequences, resizes, multi-step flows, errors.
+- Confirm the screen renders correctly, input is processed, and no panic or hang occurs.
+- Live tmux validation is not a test file and does not belong in CI; it is a human sanity check before marking a task complete.
+
 ## Anti-Patterns (Never Do These)
 
 | Don't | Why |
 |-------|-----|
-| Use shell or tmux tests | Prefer deterministic Rust tests with mock IO |
+| Use shell or tmux in automated tests | Prefer deterministic Rust tests with mock IO; use tmux only for live validation |
 | Use `sleep()` in tests | Non-deterministic |
 | Test widget internals | Test output, not structure |
 | Mix state + rendering in one test | Hard to debug |
