@@ -1,9 +1,9 @@
 //! runie-print — Non-interactive CLI for single-turn LLM execution.
 
 use anyhow::Result;
-use runie_agent::{run_headless_turn, HeadlessOptions, PermissionGate};
-use runie_core::permissions::{DenyAllSink, PermissionManager};
-use runie_core::{message::ChatMessage, provider::Provider};
+use runie_agent::{run_headless_cli, HeadlessCliOptions};
+use runie_core::permissions::DenyAllSink;
+use runie_core::message::ChatMessage;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -23,57 +23,40 @@ async fn main() {
 }
 
 async fn run_print(prompt: &str) -> Result<()> {
-    let runtime = runie_provider::spawn_headless_runtime().await;
-    let built = runtime.provider(None, None).await?;
-    run_print_with(prompt, built.provider.as_ref()).await?;
-    println!();
-    Ok(())
-}
-
-async fn run_print_with(prompt: &str, provider: &dyn Provider) -> Result<()> {
     let system = runie_core::prompts::build_system_prompt(
         runie_core::prompts::DEFAULT_PROMPT,
         runie_core::prompts::DEFAULT_TOOLS,
         false,
         "",
     );
-
     let messages = vec![
         ChatMessage::system(system),
         ChatMessage::user(prompt.to_string()),
     ];
-
-    let options = HeadlessOptions {
+    let sink: Arc<dyn runie_core::permissions::ApprovalSink> = Arc::new(DenyAllSink);
+    let opts = HeadlessCliOptions {
         execute_tools: true,
         max_tool_rounds: 5,
         on_chunk: Some(Box::new(|chunk: &str| {
             print!("{}", chunk);
             let _ = std::io::Write::flush(&mut std::io::stdout());
         })),
-        permission_gate: PermissionGate::new(
-            PermissionManager::default(),
-            std::sync::Arc::new(DenyAllSink),
-        ),
     };
-
-    run_headless_turn(messages, provider, options).await?;
+    run_headless_cli(None, None, messages, sink, opts).await?;
+    println!();
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runie_core::config_reload;
+    use runie_core::config;
 
     #[tokio::test]
     async fn print_mode_streams_output() {
-        let provider = runie_provider::MockProvider::default();
-        let output = run_print_with("Hello", &provider).await;
-        // run_print_with writes to stdout; we just verify it doesn't panic
-        assert!(
-            output.is_ok(),
-            "print mode should not error on mock provider"
-        );
+        // run_print writes to stdout; we just verify it doesn't panic.
+        let output = run_print("Hello").await;
+        assert!(output.is_ok(), "print mode should not error");
     }
 
     #[tokio::test]
@@ -90,7 +73,7 @@ model = "gpt-4o"
         )
         .unwrap();
 
-        let config = config_reload::Config::load(Some(&path));
+        let config = config::Config::load(Some(&path));
         assert_eq!(config.provider, Some("openai".to_string()));
         assert_eq!(config.default_model(), Some("gpt-4o"));
     }
