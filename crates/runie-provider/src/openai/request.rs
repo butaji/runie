@@ -164,7 +164,7 @@ fn tool_call_to_openai(call: &ToolCall) -> OpenAiToolCall {
         call_type: "function".to_string(),
         function: OpenAiFunction {
             name: call.name.clone(),
-            arguments: call.arguments.clone(),
+            arguments: call.args.to_string(),
         },
     }
 }

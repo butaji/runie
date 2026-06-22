@@ -4,14 +4,6 @@
   "description": "Canonical config type for `~/.runie/config.toml`.",
   "type": "object",
   "properties": {
-    "fallback_providers": {
-      "description": "Fallback provider chain used when the primary provider is unavailable.",
-      "default": [],
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
     "hooks": {
       "description": "Hook commands registered by event name.",
       "default": {
@@ -55,17 +47,6 @@
       "allOf": [
         {
           "$ref": "#/definitions/ModelsSection"
-        }
-      ]
-    },
-    "permissions": {
-      "description": "Permission policy configuration.",
-      "default": {
-        "mode": "auto"
-      },
-      "allOf": [
-        {
-          "$ref": "#/definitions/PermissionsConfig"
         }
       ]
     },
@@ -191,47 +172,6 @@
           "items": {
             "type": "string"
           }
-        }
-      }
-    },
-    "PermissionMode": {
-      "description": "Global permission mode.",
-      "oneOf": [
-        {
-          "description": "Auto-approve everything.",
-          "type": "string",
-          "enum": [
-            "yolo"
-          ]
-        },
-        {
-          "description": "Always ask.",
-          "type": "string",
-          "enum": [
-            "manual"
-          ]
-        },
-        {
-          "description": "Use the policy chain.",
-          "type": "string",
-          "enum": [
-            "auto"
-          ]
-        }
-      ]
-    },
-    "PermissionsConfig": {
-      "description": "Permission policy configuration.",
-      "type": "object",
-      "properties": {
-        "mode": {
-          "description": "Global permission mode: yolo, manual, or auto.",
-          "default": "auto",
-          "allOf": [
-            {
-              "$ref": "#/definitions/PermissionMode"
-            }
-          ]
         }
       }
     },
