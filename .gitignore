@@ -1,7 +1,3 @@
 target/
-/SuperAGI
-/autogen
-/crewAI
-.ralph/
-typescript
+__pycache__/
 *.rlib

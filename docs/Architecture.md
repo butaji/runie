@@ -143,7 +143,7 @@ Provider-specific parsing (for example MiniMax XML tool-call delimiters) is isol
 
 ```
 crates/runie-core/src/
-  event.rs          # CoreEvent enum and variants
+  event/            # CoreEvent enum and variants
   model/state/      # AppState + sub-states
   session.rs        # Session types
   actors/           # ConfigActor, ProviderActor, SessionActor, actor trait
@@ -155,8 +155,6 @@ crates/runie-core/src/
 crates/runie-agent/src/
   actor.rs          # AgentActor (interactive turn executor)
   turn.rs           # Agent turn loop
-  tools.rs          # Built-in registry assembly
-  parser.rs         # Tool-call parsing
   subagent.rs       # Subagent runner
 
 crates/runie-engine/src/
@@ -166,13 +164,12 @@ crates/runie-tui/src/
   main.rs           # Entry point and event loop
   ui.rs             # draw_snapshot
   popups/           # Dialog rendering
-  theme.rs          # Theme tokens
+  theme/            # Theme tokens
 
 crates/runie-provider/src/
-  openai.rs         # OpenAI-compatible providers
-  anthropic.rs      # Anthropic
-  minimax.rs        # MiniMax-specific streaming
-  model.rs          # Model catalog and traits
+  openai/           # OpenAI-compatible providers
+  factory.rs        # Provider construction
+  mock.rs           # Mock provider for tests
 ```
 
 ## Crate decisions
