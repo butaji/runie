@@ -1,6 +1,6 @@
 # HashlineEditSkill Should Apply Validated Edits
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Tools
 **Priority**: P2
@@ -14,19 +14,19 @@
 
 ## Acceptance Criteria
 
-- [ ] After validation, the skill applies the edits.
-- [ ] The skill returns `SkipWithOutput` with the diff or final content.
-- [ ] The legacy edit tool is not re-executed for hashline calls.
-- [ ] `cargo test --workspace` succeeds.
+- [x] After validation, the skill applies the edits.
+- [x] The skill returns `SkipWithOutput` with the diff or final content.
+- [x] The legacy edit tool is not re-executed for hashline calls.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `hashline_edit_applies_valid_edits` — valid hashline edits modify the file.
-- [ ] `hashline_edit_skips_legacy_path` — legacy search/replace is bypassed.
+- [x] `hashline_edit_applies_valid_edits` — valid hashline edits modify the file.
+- [x] `hashline_edit_skips_legacy_path` — legacy search/replace is bypassed.
 
 ### Layer 2 — Event Handling
-- [ ] `hashline_edit_emits_tool_result_event` — result event contains the applied diff.
+- [x] `hashline_edit_emits_tool_result_event` — result event contains the applied diff.
 
 ### Layer 3 — Rendering
 N/A.

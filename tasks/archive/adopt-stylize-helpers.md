@@ -1,6 +1,6 @@
 # Adopt Stylize Extension Trait for TUI
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P2
@@ -25,22 +25,22 @@ Reference: `~/Code/agents/codex-rs/tui/src/stylize.rs` and ratatui's `Stylize` t
 
 ## Acceptance Criteria
 
-- [ ] `Stylize` trait added with `red()`, `green()`, `blue()`, `dim()`, `bold()`, `underlined()`.
-- [ ] Returns `Styled<std::string::String>` compatible with ratatui's `Display` impl.
-- [ ] All existing styling calls refactored to use `Stylize`.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `Stylize` trait added with `red()`, `green()`, `blue()`, `dim()`, `bold()`, `underlined()`.
+- [x] Returns `Styled<std::string::String>` compatible with ratatui's `Display` impl.
+- [x] All existing styling calls refactored to use `Stylize`.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `stylize_red_returns_redstyled` — output is red.
-- [ ] `stylize_chain_works` — multiple styles chain correctly.
+- [x] `stylize_red_returns_redstyled` — output is red.
+- [x] `stylize_chain_works` — multiple styles chain correctly.
 
 ### Layer 2 — Event Handling
 N/A.
 
 ### Layer 3 — Rendering
-- [ ] `styled_text_renders_in_terminal` — styled output visible in TestBackend.
+- [x] `styled_text_renders_in_terminal` — styled output visible in TestBackend.
 
 ### Layer 4 — Smoke / Crash
 N/A.

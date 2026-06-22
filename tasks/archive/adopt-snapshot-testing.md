@@ -1,6 +1,6 @@
 # Adopt Snapshot Testing with `insta`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P1
@@ -21,10 +21,10 @@ Reference: `~/Code/agents/codex-rs/core/src/tools/handlers/` and `tests/` for sn
 
 ## Acceptance Criteria
 
-- [ ] `insta` added as test dependency.
-- [ ] Snapshot tests for key UI components (chat messages, tool outputs, diff rendering).
-- [ ] `cargo insta review` workflow documented.
-- [ ] `cargo test --workspace` succeeds with new snapshots.
+- [x] `insta` added as test dependency.
+- [x] Snapshot tests for key UI components (chat messages, tool outputs, diff rendering).
+- [x] `cargo insta review` workflow documented.
+- [x] `cargo test --workspace` succeeds with new snapshots.
 
 ## Tests
 
@@ -35,9 +35,9 @@ N/A.
 N/A.
 
 ### Layer 3 — Rendering
-- [ ] `snapshot_chat_message_renders_correctly` — chat widget output.
-- [ ] `snapshot_tool_output_renders_correctly` — tool result display.
-- [ ] `snapshot_diff_renders_correctly` — diff viewer output.
+- [x] `snapshot_chat_message_renders_correctly` — chat widget output.
+- [x] `snapshot_tool_output_renders_correctly` — tool result display.
+- [x] `snapshot_diff_renders_correctly` — diff viewer output.
 
 ### Layer 4 — Smoke / Crash
 N/A.

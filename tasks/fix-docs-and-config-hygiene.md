@@ -1,6 +1,6 @@
 # Fix docs and config hygiene
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P3

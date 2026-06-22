@@ -1,6 +1,6 @@
 # Make MockProvider Delays Deterministic
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Testing
 **Priority**: P2
@@ -14,14 +14,14 @@
 
 ## Acceptance Criteria
 
-- [ ] Accept a seed or use a deterministic RNG for test delays.
-- [ ] Tests using `MockProvider::with_delay` produce consistent timing.
-- [ ] `cargo test --workspace` succeeds.
+- [x] Accept a seed or use a deterministic RNG for test delays.
+- [x] Tests using `MockProvider::with_delay` produce consistent timing.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `mock_provider_delay_is_deterministic` — same seed yields same delay sequence.
+- [x] `mock_provider_delay_is_deterministic` — same seed yields same delay sequence.
 
 ### Layer 2 — Event Handling
 N/A.

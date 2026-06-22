@@ -1,6 +1,6 @@
 # Make Verification Loop Skill Asynchronous
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Tools
 **Priority**: P2
@@ -14,19 +14,19 @@
 
 ## Acceptance Criteria
 
-- [ ] Verification runs asynchronously.
-- [ ] Verification has a configurable timeout.
-- [ ] `unwrap` is removed; errors are converted to tool results.
-- [ ] `cargo test --workspace` succeeds.
+- [x] Verification runs asynchronously.
+- [x] Verification has a configurable timeout.
+- [x] `unwrap` is removed; errors are converted to tool results.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `verification_timeout_returns_error` — timeout produces a graceful error.
-- [ ] `verification_failure_returns_result` — command failure does not panic.
+- [x] `verification_timeout_returns_error` — timeout produces a graceful error.
+- [x] `verification_failure_returns_result` — command failure does not panic.
 
 ### Layer 2 — Event Handling
-- [ ] `verification_emits_result_event` — async completion emits the result event.
+- [x] `verification_emits_result_event` — async completion emits the result event.
 
 ### Layer 3 — Rendering
 N/A.

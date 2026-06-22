@@ -1,6 +1,6 @@
 # Define Approval Defaults for Headless/Server Modes
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Security
 **Priority**: P3
@@ -14,15 +14,15 @@ Headless/server modes execute tools without any approval mechanism, consistent w
 
 ## Acceptance Criteria
 
-- [ ] Non-interactive modes deny destructive tools by default.
-- [ ] Provide an explicit `--yolo` or similar flag to auto-approve (with logging).
-- [ ] `cargo test --workspace` succeeds.
+- [x] Non-interactive modes deny destructive tools by default.
+- [x] Provide an explicit `--yolo` or similar flag to auto-approve (with logging).
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `headless_default_denies_destructive_tool` — write_file denied without `--yolo`.
-- [ ] `headless_yolo_allows_destructive_tool` — flag restores auto-approval.
+- [x] `headless_default_denies_destructive_tool` — write_file denied without `--yolo`.
+- [x] `headless_yolo_allows_destructive_tool` — flag restores auto-approval.
 
 ### Layer 2 — Event Handling
 N/A.

@@ -1,6 +1,6 @@
 # Adopt Hooks Registry System
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P1
@@ -31,22 +31,22 @@ Reference: `~/Code/agents/codex-rs/core/src/hooks/`
 
 ## Acceptance Criteria
 
-- [ ] `HookRegistry` with `register(event, handler)` and `emit(event, payload)`.
-- [ ] Hooks can modify tool input/output.
-- [ ] Hooks can deny/allow actions.
-- [ ] Config loading from `hooks` section of config.
-- [ ] Built-in hooks: logging, permission, compaction.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `HookRegistry` with `register(event, handler)` and `emit(event, payload)`.
+- [x] Hooks can modify tool input/output.
+- [x] Hooks can deny/allow actions.
+- [x] Config loading from `hooks` section of config.
+- [x] Built-in hooks: logging, permission, compaction.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `hook_registry_calls_handler_on_event` — event triggers handler.
-- [ ] `hook_can_modify_input` — handler transforms payload.
-- [ ] `hook_can_deny_action` — deny decision returned correctly.
+- [x] `hook_registry_calls_handler_on_event` — event triggers handler.
+- [x] `hook_can_modify_input` — handler transforms payload.
+- [x] `hook_can_deny_action` — deny decision returned correctly.
 
 ### Layer 2 — Event Handling
-- [ ] `pre_tool_hook_intercepts_tool_call` — hook called before tool execution.
+- [x] `pre_tool_hook_intercepts_tool_call` — hook called before tool execution.
 
 ### Layer 3 — Rendering
 N/A.

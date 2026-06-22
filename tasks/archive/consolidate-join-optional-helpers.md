@@ -1,6 +1,6 @@
 # Consolidate join_optional Helpers
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Core / State
 **Priority**: P2
@@ -20,25 +20,25 @@ Combine into one: `fn join_optional(list: &Option<Vec<String>>, sep: &str) -> St
 
 ## Acceptance Criteria
 
-- [ ] Add parameterized `join_optional` to utils
-- [ ] Replace both call sites
-- [ ] `cargo test --workspace` succeeds
+- [x] Add parameterized `join_optional` to utils
+- [x] Replace both call sites
+- [x] `cargo test --workspace` succeeds
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `test_join_optional_default_sep` — verifies ", " separator
-- [ ] `test_join_optional_custom_sep` — verifies custom separator
-- [ ] `test_join_optional_empty` — verifies None returns empty string
+- [x] `test_join_optional_default_sep` — verifies ", " separator
+- [x] `test_join_optional_custom_sep` — verifies custom separator
+- [x] `test_join_optional_empty` — verifies None returns empty string
 
 ### Layer 2 — Event Handling
-- [ ] N/A
+- [x] N/A
 
 ### Layer 3 — Rendering
-- [ ] N/A
+- [x] N/A
 
 ### Layer 4 — Smoke / Crash
-- [ ] N/A
+- [x] N/A
 
 ## Files touched
 

@@ -1,6 +1,6 @@
 # Bash Tool Safety Hardening
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Security
 **Priority**: P1
@@ -14,16 +14,16 @@ Safety checks rely on lowercase substring matching (`rm -rf /`, `dd of=/dev/...`
 
 ## Acceptance Criteria
 
-- [ ] Replace substring checks with a real shell parser/AST or an explicit allowlist/denylist of command forms.
-- [ ] Destructive commands are blocked or require explicit approval regardless of casing or whitespace.
-- [ ] Subshells, scripts, and interpreter invocations (`python`, `ruby`, `node`) are handled.
-- [ ] `cargo test --workspace` succeeds.
+- [x] Replace substring checks with a real shell parser/AST or an explicit allowlist/denylist of command forms.
+- [x] Destructive commands are blocked or require explicit approval regardless of casing or whitespace.
+- [x] Subshells, scripts, and interpreter invocations (`python`, `ruby`, `node`) are handled.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `bash_safety_blocks_evasive_variants` — common evasions are rejected.
-- [ ] `bash_safety_allows_read_only_commands` — `ls`, `cat`, `git status`, etc. are allowed.
+- [x] `bash_safety_blocks_evasive_variants` — common evasions are rejected.
+- [x] `bash_safety_allows_read_only_commands` — `ls`, `cat`, `git status`, etc. are allowed.
 
 ### Layer 2 — Event Handling
 N/A.
@@ -32,7 +32,7 @@ N/A.
 N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `smoke_destructive_bash_is_blocked` — a destructive command is not executed.
+- [x] `smoke_destructive_bash_is_blocked` — a destructive command is not executed.
 
 ## Files touched
 

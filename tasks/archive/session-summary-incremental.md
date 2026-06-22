@@ -1,6 +1,6 @@
 # Update Session Summary Incrementally
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Sessions
 **Priority**: P2
@@ -14,17 +14,17 @@ On every `MessageSent` durable event, `SessionActor` calls `store.load_events(&s
 
 ## Acceptance Criteria
 
-- [ ] Summary state is tracked incrementally in memory.
-- [ ] Updates use only the new event content, not a full reload.
-- [ ] `cargo test --workspace` succeeds.
+- [x] Summary state is tracked incrementally in memory.
+- [x] Updates use only the new event content, not a full reload.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `summary_updated_without_reloading_events` — summary changes after appending an event without calling `load_events`.
+- [x] `summary_updated_without_reloading_events` — summary changes after appending an event without calling `load_events`.
 
 ### Layer 2 — Event Handling
-- [ ] `message_sent_updates_summary` — summary updates on `MessageSent`.
+- [x] `message_sent_updates_summary` — summary updates on `MessageSent`.
 
 ### Layer 3 — Rendering
 N/A.

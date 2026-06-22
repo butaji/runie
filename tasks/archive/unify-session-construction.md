@@ -1,6 +1,6 @@
 # Unify Session Construction
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Sessions
 **Priority**: P2
@@ -16,18 +16,18 @@ Extract to `Session::from_state(state: &AppState, name: String)`.
 
 ## Acceptance Criteria
 
-- [ ] Add `Session::from_state(&AppState, String) -> Self`
-- [ ] Replace both save and export call sites
-- [ ] `cargo test --workspace` succeeds
-- [ ] ~30 LOC reduced
+- [x] Add `Session::from_state(&AppState, String) -> Self`
+- [x] Replace both save and export call sites
+- [x] `cargo test --workspace` succeeds
+- [x] ~30 LOC reduced
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] Existing session save/export tests pass
+- [x] Existing session save/export tests pass
 
 ### Layer 2 — Event Handling
-- [ ] Save/export command tests pass
+- [x] Save/export command tests pass
 
 ### Layer 3 — Rendering
 - [ ] N/A
@@ -37,8 +37,8 @@ Extract to `Session::from_state(state: &AppState, name: String)`.
 
 ## Files touched
 
-- `crates/runie-core/src/session/mod.rs` (add impl)
-- `crates/runie-core/src/commands/dsl/handlers/session/io.rs`
+- `crates/runie-core/src/session.rs` (impl already existed)
+- `crates/runie-core/src/update/command.rs` (uses Session::from_state)
 
 ## Notes
 

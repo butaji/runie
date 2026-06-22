@@ -1,6 +1,6 @@
 # WriteFileTool Parent Directory Error Handling
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Tools
 **Priority**: P0
@@ -14,16 +14,16 @@
 
 ## Acceptance Criteria
 
-- [ ] `ensure_parent_dirs` returns a plain `Result<(), ToolOutput>` or `Result<()>`.
-- [ ] Directory-creation failure aborts the write and surfaces the error to the caller/LLM.
-- [ ] Success still proceeds to `write_and_return`.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `ensure_parent_dirs` returns a plain `Result<(), ToolOutput>` or `Result<()>`.
+- [x] Directory-creation failure aborts the write and surfaces the error to the caller/LLM.
+- [x] Success still proceeds to `write_and_return`.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `write_file_fails_when_parent_dir_creation_fails` — mock or restrict perms to force `create_dir_all` failure and assert error output.
-- [ ] `write_file_succeeds_when_parent_dirs_exist` — existing path still writes.
+- [x] `write_file_fails_when_parent_dir_creation_fails` — mock or restrict perms to force `create_dir_all` failure and assert error output.
+- [x] `write_file_succeeds_when_parent_dirs_exist` — existing path still writes.
 
 ### Layer 2 — Event Handling
 N/A — pure tool logic.
