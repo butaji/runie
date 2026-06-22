@@ -14,12 +14,8 @@
 //! notification::error("Connection failed", &mut state);
 //!
 //! // With duration (seconds)
-//! <() as notification::NotificationExt>::success("Saved")
-//!     .duration(3.0)
-//!     .show(&mut state);
-//! <() as notification::NotificationExt>::error("Failed")
-//!     .persistent()
-//!     .show(&mut state); // shown until dismissed
+//! notification::success_with_duration("Saved", 3.0).show(&mut state);
+//! notification::error_persistent("Failed").show(&mut state); // shown until dismissed
 //! ```
 
 use crate::event::TransientLevel;
@@ -47,12 +43,6 @@ impl Notification {
 
     /// Show this notification on the given state.
     pub fn show(self, state: &mut AppState) {
-        self.show_impl(state);
-    }
-}
-
-impl Notification {
-    fn show_impl(self, state: &mut AppState) {
         state.transient_message = Some(self.message);
         state.transient_level = Some(self.level);
         state.transient_until = self
@@ -62,62 +52,44 @@ impl Notification {
     }
 }
 
-/// Show a notification chain. Call `.show(state)` or `.duration(n).show(state)`.
-pub trait NotificationExt {
-    fn success(msg: impl Into<String>) -> Notification;
-    fn warn(msg: impl Into<String>) -> Notification;
-    fn error(msg: impl Into<String>) -> Notification;
-}
+// ─── Notification constructors ─────────────────────────────────────────────
 
-impl NotificationExt for () {
-    fn success(msg: impl Into<String>) -> Notification {
-        Notification {
-            message: msg.into(),
-            level: TransientLevel::Success,
-            duration_secs: None,
-        }
-    }
-    fn warn(msg: impl Into<String>) -> Notification {
-        Notification {
-            message: msg.into(),
-            level: TransientLevel::Warning,
-            duration_secs: None,
-        }
-    }
-    fn error(msg: impl Into<String>) -> Notification {
-        Notification {
-            message: msg.into(),
-            level: TransientLevel::Error,
-            duration_secs: None,
-        }
+fn make_notification(msg: impl Into<String>, level: TransientLevel) -> Notification {
+    Notification {
+        message: msg.into(),
+        level,
+        duration_secs: None,
     }
 }
-
-// ─── Convenience one-liners ──────────────────────────────────────────────
 
 /// Show a success notification (green, {ok} badge).
 pub fn success(msg: impl Into<String>, state: &mut AppState) {
-    <() as NotificationExt>::success(msg).show(state);
+    make_notification(msg, TransientLevel::Success).show(state);
 }
 
 /// Show a warning notification (amber, {warn} badge).
 pub fn warn(msg: impl Into<String>, state: &mut AppState) {
-    <() as NotificationExt>::warn(msg).show(state);
+    make_notification(msg, TransientLevel::Warning).show(state);
 }
 
 /// Show an error notification (red, {error} badge).
 pub fn error(msg: impl Into<String>, state: &mut AppState) {
-    <() as NotificationExt>::error(msg).show(state);
+    make_notification(msg, TransientLevel::Error).show(state);
 }
 
 /// Show a neutral notification (panel bg, no badge).
 pub fn info(msg: impl Into<String>, state: &mut AppState) {
-    let n = Notification {
-        message: msg.into(),
-        level: TransientLevel::Info,
-        duration_secs: None,
-    };
-    n.show(state);
+    make_notification(msg, TransientLevel::Info).show(state);
+}
+
+/// Create a success notification for fluent API usage.
+pub fn success_with_duration(msg: impl Into<String>, secs: f64) -> Notification {
+    make_notification(msg, TransientLevel::Success).duration(secs)
+}
+
+/// Create an error notification for fluent API usage.
+pub fn error_persistent(msg: impl Into<String>) -> Notification {
+    make_notification(msg, TransientLevel::Error).persistent()
 }
 
 /// Dismiss any active notification.
@@ -166,17 +138,14 @@ mod tests {
     #[test]
     fn notification_with_duration_sets_until() {
         let mut state = AppState::default();
-        let n = <() as NotificationExt>::success("Saved");
-        n.duration(5.0).show(&mut state);
+        success_with_duration("Saved", 5.0).show(&mut state);
         assert!(state.transient_until.is_some());
     }
 
     #[test]
     fn fluent_api_chain() {
         let mut state = AppState::default();
-        <() as NotificationExt>::success("Saved")
-            .duration(2.0)
-            .show(&mut state);
+        success_with_duration("Saved", 2.0).show(&mut state);
         assert_eq!(state.transient_message, Some("Saved".to_string()));
     }
 }

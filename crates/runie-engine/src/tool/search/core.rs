@@ -7,7 +7,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use fff_search::{FilePicker, QueryTracker};
 use runie_core::actors::FffSearchState;
-use runie_core::tool::resolve_path;
+use runie_core::path::resolve_path_in;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -91,7 +91,7 @@ pub(crate) fn parse_input(
         .unwrap_or_default();
     let path = input["path"].as_str().unwrap_or(".");
     let limit = input["limit"].as_u64().unwrap_or(DEFAULT_LIMIT as u64) as usize;
-    let full_path = resolve_path(path, &ctx.working_dir);
+    let full_path = resolve_path_in(path, &ctx.working_dir);
     Ok((query, mode, full_path, limit))
 }
 

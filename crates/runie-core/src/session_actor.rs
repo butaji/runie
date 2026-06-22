@@ -1,16 +1,18 @@
 //! SessionActor — subscribes to the event bus, filters durable events,
 //! and appends them to a JSONL session file. Also maintains a session
 //! metadata index for browsing.
+//!
+//! Unlike other actors, this is a pure event-bus subscriber with no incoming
+//! messages. A plain `tokio::spawn` subscriber loop replaces the `Actor` trait
+//! machinery (no unit channel needed).
 
-use crate::actor::Actor;
 use crate::bus::EventBus;
 use crate::event::DurableCoreEvent;
 use crate::session_replay::durable_to_event;
 use crate::session_store::SessionStore;
 use crate::Event;
-use tokio::sync::mpsc;
 
-/// Actor that persists durable events to a JSONL session file.
+/// Session persistence actor state.
 pub struct SessionActor {
     session_id: String,
     display_name: String,
@@ -32,6 +34,14 @@ impl SessionActor {
             summary: None,
             summary_buffer: String::new(),
             started_at: now,
+        }
+    }
+
+    /// Spawn the subscriber loop. Call with `tokio::spawn`.
+    pub fn run_loop(self, bus: EventBus<Event>) -> impl std::future::Future<Output = ()> + Send + 'static {
+        async move {
+            self.replay_existing_events(&bus).await;
+            self.subscriber_loop(bus).await;
         }
     }
 
@@ -65,19 +75,7 @@ impl SessionActor {
             self.summary_buffer.push_str(msg);
         }
     }
-}
 
-impl Actor for SessionActor {
-    type Msg = ();
-    type Event = Event;
-
-    async fn run_body(self, _rx: mpsc::Receiver<Self::Msg>, bus: EventBus<Self::Event>) {
-        self.replay_existing_events(&bus).await;
-        self.run_loop(_rx, bus).await;
-    }
-}
-
-impl SessionActor {
     async fn replay_existing_events(&self, bus: &EventBus<Event>) {
         let events = match self.load_events().await {
             Ok(events) => events,
@@ -90,7 +88,7 @@ impl SessionActor {
         }
     }
 
-    async fn run_loop(mut self, _rx: mpsc::Receiver<()>, bus: EventBus<Event>) {
+    async fn subscriber_loop(mut self, bus: EventBus<Event>) {
         let mut sub = bus.subscribe();
         loop {
             match sub.recv().await {
@@ -159,7 +157,6 @@ impl SessionActor {
 mod tests {
     use super::*;
     use crate::event::{AgentEvent, DurableCoreEvent, InputEvent, ScrollEvent};
-    use crate::Event;
     use tempfile::TempDir;
 
     struct TestHarness {
@@ -184,7 +181,6 @@ mod tests {
         let h = make_harness();
         let session_id = "filter_test";
 
-        // Directly test filtering: publish events and check store directly
         let events = vec![
             AgentEvent::Response {
                 id: "resp.1".into(),
@@ -205,14 +201,12 @@ mod tests {
             ScrollEvent::Up,
         ];
 
-        // Manually filter and persist (simulating SessionActor logic)
         for event in &events {
             if let Some(durable) = event.to_durable() {
                 h.store.append(session_id, &durable).unwrap();
             }
         }
 
-        // Verify only durable events were persisted
         let persisted = h.store.load_events(session_id).unwrap();
         assert_eq!(persisted.len(), 3);
         for event in &persisted {
@@ -252,10 +246,9 @@ mod tests {
         ]
     }
 
-    fn spawn_replay_actor(h: &TestHarness, session_id: &str) -> crate::actor::ActorHandle {
+    fn spawn_replay_actor(h: &TestHarness, session_id: &str) -> tokio::task::JoinHandle<()> {
         let actor = SessionActor::new(session_id.into(), "Replay".into(), h.store.clone());
-        let (_tx, handle) = crate::actor::spawn_actor(actor, h.bus.clone());
-        handle
+        tokio::spawn(actor.run_loop(h.bus.clone()))
     }
 
     async fn collect_replayed_events(
@@ -309,7 +302,6 @@ mod tests {
             .append_batch(session_id, &replay_events_fixture())
             .unwrap();
 
-        // Spawn actor first (production order), then subscribe — replay must still be available.
         let handle = spawn_replay_actor(&h, session_id);
         let mut sub = h.bus.subscribe_with_replay();
         let collected = tokio::time::timeout(
@@ -335,7 +327,6 @@ mod tests {
             .append_batch(session_id, &replay_events_fixture())
             .unwrap();
 
-        // Correct production order: UiActor subscribes first, then SessionActor replays live.
         let mut sub = h.bus.subscribe();
         let handle = spawn_replay_actor(&h, session_id);
         let collected = tokio::time::timeout(
