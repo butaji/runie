@@ -1,9 +1,10 @@
 //! MCP (Model Context Protocol) server configuration and status management.
 
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use serde::{Deserialize, Serialize};
 
 /// MCP server configuration from `~/.runie/mcp.toml`.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
