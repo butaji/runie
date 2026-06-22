@@ -3,7 +3,8 @@
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
-use runie_core::tool::{resolve_path, tool_error};
+use runie_core::path::resolve_path_in;
+use runie_core::tool::tool_error;
 use serde_json::Value;
 use std::time::Instant;
 use tokio::fs;
@@ -52,7 +53,7 @@ impl Tool for EditFileTool {
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
         let (path, search, replace) = parse_input(&input)?;
-        let full_path = resolve_path(&path, &ctx.working_dir);
+        let full_path = resolve_path_in(&path, &ctx.working_dir);
         edit_file_impl(&full_path, &search, &replace, start).await
     }
 }

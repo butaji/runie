@@ -3,7 +3,7 @@
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
-use runie_core::tool::resolve_path;
+use runie_core::path::resolve_path_in;
 use serde_json::Value;
 use std::time::Instant;
 use tokio::fs;
@@ -53,7 +53,7 @@ impl Tool for WriteFileTool {
         let content = input["content"]
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("content is required"))?;
-        let full_path = resolve_path(path, &ctx.working_dir);
+        let full_path = resolve_path_in(path, &ctx.working_dir);
 
         if let Err(e) = ensure_parent_dirs(&full_path).await {
             return Ok(output_error(
