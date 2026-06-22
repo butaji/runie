@@ -2726,7 +2726,7 @@
     },
     {
       "id": "dedupe-truncation-config",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P2",
@@ -2738,14 +2738,15 @@
     },
     {
       "id": "render-tui-diff-from-canonical-type",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "TUI / Rendering",
       "priority": "P2",
       "file": "tasks/render-tui-diff-from-canonical-type.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "runie-tui/src/diff.rs (466 LOC) parallel DiffLineType/ParsedDiff mirroring runie_core::diff. Render directly."
+      "completed_in": "current",
+      "notes": "TUI now renders directly from runie_core::diff::Diff/DiffLine. Deleted DiffLineType, ParsedDiff, ParsedDiffLine, canonical_to_parsed (reduced diff.rs from 466 to ~440 LOC). Added line_number to DiffLine enum variants. parse_diff returns canonical Diff type. All 2014 affected tests pass."
     },
     {
       "id": "wire-or-remove-dead-config-fields",

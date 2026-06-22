@@ -1,6 +1,6 @@
 # Render TUI diff from canonical core type
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P2
@@ -14,11 +14,11 @@
 
 ## Acceptance Criteria
 
-- [ ] TUI renders directly from `runie_core::diff::Diff`/`DiffLine`.
-- [ ] `DiffLineType`, `ParsedDiff`, `ParsedDiffLine`, `canonical_to_parsed` deleted.
-- [ ] Only the patch-text parser (`parse_diff`) retained for raw tool output.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
-- [ ] `cargo test --workspace` succeeds.
+- [x] TUI renders directly from `runie_core::diff::Diff`/`DiffLine`.
+- [x] `DiffLineType`, `ParsedDiff`, `ParsedDiffLine`, `canonical_to_parsed` deleted.
+- [x] Only the patch-text parser (`parse_diff`) retained for raw tool output.
+- [x] `cargo check --workspace` succeeds with no new warnings.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
@@ -29,8 +29,8 @@
 - N/A.
 
 ### Layer 3 — Rendering
-- [ ] `render_canonical_diff_unchanged` — TestBackend buffer for a canonical diff is byte-identical before/after refactor.
-- [ ] `parse_diff_still_parses_unified_diff` — raw patch text still parses.
+- [x] `render_canonical_diff_unchanged` — TestBackend buffer for a canonical diff is byte-identical before/after refactor.
+- [x] `parse_diff_still_parses_unified_diff` — raw patch text still parses.
 
 ### Layer 4 — Smoke / Crash
 - N/A.
