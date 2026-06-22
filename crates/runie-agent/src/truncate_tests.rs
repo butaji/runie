@@ -1,50 +1,27 @@
 use crate::truncate::{truncate_head, truncate_tail, TruncationPolicy};
 
 #[test]
-fn policy_from_toml() {
-    // Configurable from config.toml. This is the parse-side of the new feature.
-    #[derive(serde::Deserialize)]
-    struct Wrap {
-        truncation: crate::truncate::TruncationConfig,
-    }
-    let toml = r#"
-[truncation]
-max_lines = 500
-max_bytes = 10000
-"#;
-    let parsed: Wrap = toml::from_str(toml).unwrap();
-    assert_eq!(parsed.truncation.max_lines, 500);
-    assert_eq!(parsed.truncation.max_bytes, 10000);
-}
-
-#[test]
-fn policy_from_toml_defaults() {
-    // No [truncation] section — fields fall back to defaults.
-    #[derive(serde::Deserialize)]
-    struct Wrap {
-        #[serde(default)]
-        truncation: crate::truncate::TruncationConfig,
-    }
-    let parsed: Wrap = toml::from_str("").unwrap();
-    assert_eq!(parsed.truncation.max_lines, 2000);
-    assert_eq!(parsed.truncation.max_bytes, 50 * 1024);
-}
-
-#[test]
-fn policy_from_section_honors_values() {
-    // The term-crate wiring path: take the parsed TruncationSection
-    // (max_lines, max_bytes) and build a TruncationPolicy.
-    let p = crate::truncate::policy_from_section(500, 10_000);
+fn truncation_policy_from_config() {
+    // TruncationPolicy builds from a TruncationSection with custom values.
+    let section = runie_core::config::TruncationSection {
+        max_lines: 500,
+        max_bytes: 10_000,
+    };
+    let p = crate::truncate::policy_from_section(&section);
     assert_eq!(p.max_lines, 500);
     assert_eq!(p.max_bytes, 10_000);
 }
 
 #[test]
-fn policy_from_section_zero_means_default() {
-    // 0 is the TOML default for missing fields; it should mean "use default".
-    let p = crate::truncate::policy_from_section(0, 0);
-    assert_eq!(p.max_lines, crate::truncate::DEFAULT_MAX_LINES);
-    assert_eq!(p.max_bytes, crate::truncate::DEFAULT_MAX_BYTES);
+fn truncation_defaults_match() {
+    // Defaults still 2000 lines / 50*1024 bytes.
+    let section = runie_core::config::TruncationSection::default();
+    assert_eq!(section.max_lines, 2000);
+    assert_eq!(section.max_bytes, 50 * 1024);
+
+    let p = crate::truncate::policy_from_section(&section);
+    assert_eq!(p.max_lines, 2000);
+    assert_eq!(p.max_bytes, 50 * 1024);
 }
 
 fn policy(lines: usize, bytes: usize) -> TruncationPolicy {

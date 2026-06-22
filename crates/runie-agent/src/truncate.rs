@@ -9,62 +9,31 @@ pub struct TruncationPolicy {
 
 impl Default for TruncationPolicy {
     fn default() -> Self {
-        Self::from(&TruncationConfig::default())
+        Self::from(&runie_core::config::TruncationSection::default())
     }
 }
 
-impl From<&TruncationConfig> for TruncationPolicy {
-    fn from(c: &TruncationConfig) -> Self {
+impl From<&runie_core::config::TruncationSection> for TruncationPolicy {
+    fn from(section: &runie_core::config::TruncationSection) -> Self {
         Self {
-            max_lines: if c.max_lines == 0 {
+            max_lines: if section.max_lines == 0 {
                 DEFAULT_MAX_LINES
             } else {
-                c.max_lines
+                section.max_lines
             },
-            max_bytes: if c.max_bytes == 0 {
+            max_bytes: if section.max_bytes == 0 {
                 DEFAULT_MAX_BYTES
             } else {
-                c.max_bytes
+                section.max_bytes
             },
         }
     }
 }
 
-/// Truncation settings, parsed from the `[truncation]` section of
-/// `config.toml`. Missing fields fall back to the documented defaults.
-#[derive(Debug, Clone, serde::Deserialize)]
-#[serde(default)]
-pub struct TruncationConfig {
-    pub max_lines: usize,
-    pub max_bytes: usize,
-}
-
-impl Default for TruncationConfig {
-    fn default() -> Self {
-        Self {
-            max_lines: DEFAULT_MAX_LINES,
-            max_bytes: DEFAULT_MAX_BYTES,
-        }
-    }
-}
-
-/// Construct a `TruncationPolicy` from the core `TruncationSection` (the
-/// type used by `runie-core::config_reload::TruncationSection`). This lets
-/// the binary wire the parsed config into the agent without a circular
-/// dependency between `runie-core` and `runie-agent`.
-pub fn policy_from_section(max_lines: usize, max_bytes: usize) -> TruncationPolicy {
-    TruncationPolicy {
-        max_lines: if max_lines == 0 {
-            DEFAULT_MAX_LINES
-        } else {
-            max_lines
-        },
-        max_bytes: if max_bytes == 0 {
-            DEFAULT_MAX_BYTES
-        } else {
-            max_bytes
-        },
-    }
+/// Construct a `TruncationPolicy` from the core `TruncationSection`.
+/// Zero values fall back to documented defaults.
+pub fn policy_from_section(section: &runie_core::config::TruncationSection) -> TruncationPolicy {
+    TruncationPolicy::from(section)
 }
 
 #[derive(Debug, Clone)]

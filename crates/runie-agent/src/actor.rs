@@ -79,10 +79,7 @@ impl AgentActorHandle {
             read_only: state.config.read_only,
             skills_context,
             system_prompt,
-            truncation: policy_from_section(
-                state.config.truncation.max_lines,
-                state.config.truncation.max_bytes,
-            ),
+            truncation: policy_from_section(&state.config.truncation),
         })
         .await;
     }
@@ -187,7 +184,10 @@ mod tests {
             read_only: true,
             skills_context: String::new(),
             system_prompt: String::new(),
-            truncation: crate::truncate::policy_from_section(2000, 50_000),
+            truncation: crate::truncate::policy_from_section(&runie_core::config::TruncationSection {
+                max_lines: 2000,
+                max_bytes: 50_000,
+            }),
         }
     }
 
