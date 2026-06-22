@@ -1,3 +1,0 @@
-=== 02_idle.cast - Terminal Titles (UI State) ===
-
-1. grok

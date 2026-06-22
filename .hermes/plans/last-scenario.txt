@@ -1,1 +1,0 @@
-ui/dumps/scenarios/03_chat_simple.jsonl
