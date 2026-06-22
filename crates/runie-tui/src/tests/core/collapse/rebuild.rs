@@ -4,9 +4,7 @@ use runie_core::event::{AgentEvent, ControlEvent};
 use runie_core::model::{AppState, ChatMessage, Role};
 use runie_core::ui::elements::Element;
 use runie_core::ui::LazyCache;
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 #[test]
 fn toggle_expand_affects_all_items() {

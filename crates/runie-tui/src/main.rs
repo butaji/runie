@@ -13,7 +13,6 @@
 
 use futures::StreamExt;
 use runie_agent::AgentActor;
-use runie_core::actor::Actor;
 use runie_core::actors::{ConfigActor, IoActor, PersistenceActor, ProviderActor, SessionStoreActor};
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
@@ -38,7 +37,7 @@ impl Drop for Cleanup {
     }
 }
 
-fn spawn_session_persistence(bus: &EventBus<Event>) -> mpsc::Sender<()> {
+fn spawn_session_persistence(bus: &EventBus<Event>) {
     let session_id = format!(
         "session_{}",
         std::time::SystemTime::now()
@@ -52,10 +51,8 @@ fn spawn_session_persistence(bus: &EventBus<Event>) -> mpsc::Sender<()> {
             .join("runie")
             .join("sessions"),
     );
-    let session_actor = runie_core::SessionActor::new(session_id, "main".into(), store);
-    let (session_tx, session_rx) = mpsc::channel(1);
-    tokio::spawn(session_actor.run(session_rx, bus.clone()));
-    session_tx
+    let actor = runie_core::SessionActor::new(session_id, "main".into(), store);
+    tokio::spawn(actor.run_loop(bus.clone()));
 }
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
