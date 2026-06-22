@@ -14,7 +14,7 @@
 
 Remove unused `_plan` parameter from `SubagentContext::from_task`.
 
-**Location:** `crates/runie-core/src/actors/subagent.rs:47`
+**Location:** `crates/runie-core/src/actors/subagent.rs` (formerly line 47 at the time of writing)
 
 ```rust
 pub fn from_task(task: &SubagentTask, _plan: &OrchestratorPlan) -> Self {

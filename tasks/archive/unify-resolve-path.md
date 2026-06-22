@@ -27,13 +27,13 @@ fn resolve_path(path: &str, working_dir: &std::path::Path) -> std::path::PathBuf
 ```
 
 **Files with duplication:**
-- `crates/runie-core/src/tool/read_file.rs:96`
-- `crates/runie-core/src/tool/write_file.rs:101`
-- `crates/runie-core/src/tool/list_dir.rs:97`
-- `crates/runie-core/src/tool/edit_file.rs:136`
-- `crates/runie-core/src/tool/grep.rs:140`
-- `crates/runie-core/src/tool/find.rs:90`
-- `crates/runie-core/src/tool/search.rs:150`
+- `crates/runie-core/src/tool/read_file.rs` (formerly this line)
+- `crates/runie-core/src/tool/write_file.rs` (formerly this line)
+- `crates/runie-core/src/tool/list_dir.rs` (formerly this line)
+- `crates/runie-core/src/tool/edit_file.rs` (formerly this line)
+- `crates/runie-core/src/tool/grep.rs` (formerly this line)
+- `crates/runie-core/src/tool/find.rs` (formerly this line)
+- `crates/runie-core/src/tool/search.rs` (formerly this line)
 
 ## Acceptance Criteria
 

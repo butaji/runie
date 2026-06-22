@@ -9,7 +9,7 @@
 ## Original Description
 
 Three call sites referenced `build_login_stack` which did not exist.
-The function in `crates/runie-core/src/login_flow.rs:200` is named
+The function in `crates/runie-core/src/login_flow.rs` (formerly line 200 at the time of writing) is named
 `build_login_root`. Plus a docstring example with a stale signature.
 
 ## Resolution

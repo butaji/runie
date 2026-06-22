@@ -9,7 +9,7 @@
 
 ## Description
 
-`crates/runie-core/src/event.rs:309` defines an `Event` enum with
+`crates/runie-core/src/event.rs` (formerly line 309 at the time of writing) defines an `Event` enum with
 **80+ variants** (76 unit variants + 7 struct/tuple variants).
 This contributes to the god-object pattern and forces the
 dispatcher in `update/mod.rs:60-220` to be a 12-arm match each

@@ -8,7 +8,7 @@
 
 ## Description
 
-`crates/runie-core/src/commands/handlers/session.rs:11` has a
+`crates/runie-core/src/commands/handlers/session.rs` (formerly line 11 at the time of writing) has a
 `pub fn register(registry: &mut CommandRegistry)` function that is
 **185 lines long** (4.6x the 40-line build.rs cap, 2.3x the
 relaxed 80-line cap). It is purely declarative: it calls
