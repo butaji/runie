@@ -2831,6 +2831,83 @@
       "blocks": [],
       "notes": "Moved 22 done/superseded tasks to tasks/archive/ (5 of 27 listed in description did not exist). Fixed dead refs in docs/Architecture.md: event.rs->event/, theme.rs->theme/, openai.rs->openai/, removed nonexistent anthropic/minimax/model. Cleaned .gitignore (removed /SuperAGI,/autogen,/crewAI,.ralph/,typescript, added __pycache__/). Reconciled scripts/verify-tests.sh EXPECTED_TOTAL from 2271 to 1806 to match CI. Fixed lint violation in diff.rs (extracted patch_to_canonical helper).",
       "completed_in": "current"
+    },
+    {
+      "id": "fix-runie-tui-dead-code-warnings",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "file": "tasks/fix-runie-tui-dead-code-warnings.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Removes 4 dead_code warnings emitted by cargo check: load_theme_raw_async/load_theme_async/load_theme_with_caps_async in runie-tui/src/theme/loader.rs and ActorHandles tuple in runie-tui/src/main.rs. Pure deletions, ~60 LOC, zero risk."
+    },
+    {
+      "id": "delete-runie-core-utils",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/delete-runie-core-utils.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "crates/runie-core/src/utils.rs (53 LOC) exports truncate/join_optional with zero callers. textwrap::truncate (already a workspace dep used by core/layout.rs) covers any future need."
+    },
+    {
+      "id": "delete-runie-core-skill-module",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/delete-runie-core-skill-module.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "crates/runie-core/src/skill/ (singular, 318 LOC) is a dead progressive-disclosure remnant. Live module is crates/runie-core/src/skills/ (plural). Name collision misleads readers. Distinct from harness_skills/ (different concept)."
+    },
+    {
+      "id": "delete-runie-core-confirmation",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/delete-runie-core-confirmation.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "crates/runie-core/src/confirmation.rs (217 LOC) defines ConfirmationKind + ConfirmationRouter with zero external callers. Live approval flow is PermissionGate + PermissionAction + EditPreview in permissions/ and edit_preview.rs."
+    },
+    {
+      "id": "collapse-event-variants-subdir",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/collapse-event-variants-subdir.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "event/variants/{constructors.rs,name.rs,to_durable.rs} (316 LOC) are impl-Event blocks in three sub-files. constructors and name are test-only; only to_durable has a production caller (session_actor.rs). Flatten: move test helpers into variants_tests.rs, keep to_durable as a flat sibling."
+    },
+    {
+      "id": "collapse-event-aliases",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/collapse-event-aliases.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "11 single-type alias files in event/ (agent.rs, command.rs, control.rs, dialog.rs, dialog_display.rs, edit.rs, input.rs, login_flow.rs, model_config.rs, scroll.rs, session.rs, system.rs) total ~55 LOC of file overhead. Collapse to one event/aliases.rs."
+    },
+    {
+      "id": "delete-provider-message-enum",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/delete-provider-message-enum.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "crates/runie-core/src/provider.rs defines pub enum Message {System,User,Assistant,ToolResult} (26 LOC). Its only producer is ChatMessage::to_provider_message, used only in tests. Provider::generate takes Vec<ChatMessage> directly, so production never sees provider::Message."
     }
   ]
 }
