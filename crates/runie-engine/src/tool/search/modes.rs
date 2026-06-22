@@ -4,6 +4,7 @@ use crate::tool::search::types::{
     build_search_item, SearchItem, SearchResult, DEFAULT_MAX_MATCHES,
 };
 use crate::tool::{ToolOutput, ToolStatus};
+use runie_core::tool::truncate_output;
 use fff_search::{
     FilePicker, FuzzySearchOptions, GrepMatch, GrepMode, GrepResult, GrepSearchOptions,
     PaginationArgs, QueryParser, QueryTracker,
@@ -136,19 +137,12 @@ fn map_content_match(picker: &FilePicker, results: &GrepResult<'_>, m: &GrepMatc
         path,
         line: Some(m.line_number),
         col: Some(m.col),
-        content: Some(truncate_content(&m.line_content, 200)),
+        content: Some(truncate_output(&m.line_content, 200, 1)),
         score: m.fuzzy_score.unwrap_or(0) as f64,
         git_status: None,
     }
 }
 
-fn truncate_content(content: &str, max_len: usize) -> String {
-    if content.len() > max_len {
-        format!("{}…", &content[..max_len])
-    } else {
-        content.to_string()
-    }
-}
 
 fn build_search_output(
     query: &str,

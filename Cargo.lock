@@ -421,12 +421,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "comma"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55b672471b4e9f9e95499ea597ff64941a309b2cdbffcc46f2cc5e2d971fd335"
-
-[[package]]
 name = "compact_str"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1782,6 +1776,7 @@ checksum = "86f0f8fee8c926415c58d6ae43a08523a26faccb2323f5e6b644fe7dd4ef6b82"
 dependencies = [
  "console",
  "once_cell",
+ "serde",
  "similar 2.7.0",
  "tempfile",
 ]
@@ -3262,19 +3257,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rexpect"
-version = "0.6.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a0ac16ec311879f32b8b1963eb6b81792f30c6bede86d8ce83ad5adfca4698d"
-dependencies = [
- "comma",
- "nix 0.31.3",
- "regex",
- "tempfile",
- "thiserror 2.0.18",
-]
-
-[[package]]
 name = "ring"
 version = "0.17.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3295,10 +3277,10 @@ dependencies = [
  "anyhow",
  "async-trait",
  "futures",
- "insta",
  "runie-core",
  "runie-engine",
  "runie-provider",
+ "runie-testing",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -3329,7 +3311,6 @@ dependencies = [
  "png 0.17.16",
  "pulldown-cmark",
  "redb",
- "reqwest",
  "runie-protocol",
  "schemars",
  "serde",
@@ -3383,7 +3364,6 @@ name = "runie-print"
 version = "0.2.16"
 dependencies = [
  "anyhow",
- "futures",
  "runie-agent",
  "runie-core",
  "runie-provider",
@@ -3405,7 +3385,6 @@ version = "0.2.16"
 dependencies = [
  "anyhow",
  "async-stream",
- "dirs",
  "futures",
  "insta",
  "rand",
@@ -3423,12 +3402,10 @@ name = "runie-server"
 version = "0.2.16"
 dependencies = [
  "anyhow",
- "futures",
  "runie-agent",
  "runie-core",
  "runie-protocol",
  "runie-provider",
- "serde",
  "serde_json",
  "tokio",
 ]
@@ -3441,7 +3418,6 @@ dependencies = [
  "runie-agent",
  "runie-core",
  "runie-provider",
- "serde_json",
  "tempfile",
  "tokio",
 ]
@@ -3456,19 +3432,16 @@ dependencies = [
  "dirs",
  "futures",
  "insta",
- "libc",
  "nix 0.31.3",
  "opaline",
  "palette",
  "patch",
- "pulldown-cmark",
  "ratatui",
- "regex",
  "reqwest",
- "rexpect",
  "runie-agent",
  "runie-core",
  "runie-provider",
+ "runie-testing",
  "serde_json",
  "syntect",
  "tempfile",
