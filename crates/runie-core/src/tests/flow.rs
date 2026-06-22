@@ -1,10 +1,7 @@
 use crate::event::Event;
 use crate::event::{AgentEvent, InputEvent};
 use crate::model::{AppState, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::tests::fresh_state;
 
 fn user_count(state: &AppState) -> usize {
     state

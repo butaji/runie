@@ -2,10 +2,7 @@ use runie_core::event::AgentEvent;
 use runie_core::event::Event;
 use runie_core::layout::element_line_count;
 use runie_core::model::{AppState, ChatMessage, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 /// The exact bug: after large content arrives, visible region must include
 /// the LATEST (bottom-most) lines, not leave them below the fold.

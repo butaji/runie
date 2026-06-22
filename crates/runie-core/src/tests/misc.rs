@@ -1,10 +1,7 @@
 use crate::event::Event;
 use crate::event::{AgentEvent, ControlEvent, DialogEvent, InputEvent, ScrollEvent};
 use crate::model::{AppState, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::tests::fresh_state;
 
 /// Set input buffer directly and submit — bypasses the command palette.
 fn exec(state: &mut AppState, text: &str) {

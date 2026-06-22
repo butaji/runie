@@ -1,9 +1,10 @@
 //! Theme slash command tests
 
-use super::slash::{exec, fresh_state, tmp_store, ENV_LOCK};
+use super::slash::{exec, tmp_store, ENV_LOCK};
 use crate::event::Event;
 use crate::event::{DialogEvent, InputEvent};
 use crate::model::Role;
+use crate::tests::fresh_state;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {

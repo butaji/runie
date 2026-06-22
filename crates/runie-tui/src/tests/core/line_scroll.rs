@@ -1,9 +1,6 @@
 use runie_core::model::{AppState, ChatMessage, Role};
 use runie_core::ui::Element;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 // Helper: build a thought with N lines of reasoning
 fn thought_msg(id: &str, n_lines: usize) -> ChatMessage {

@@ -1,9 +1,6 @@
 use runie_core::event::AgentEvent;
 use runie_core::model::AppState;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 fn big_output() -> String {
     (1..=20)

@@ -1,8 +1,5 @@
 use runie_core::model::{AppState, ChatMessage, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 #[test]
 fn scroll_offset_zero_when_at_bottom() {

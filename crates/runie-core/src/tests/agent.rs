@@ -1,10 +1,7 @@
 use crate::dsl::AppStateDsl;
 use crate::event::AgentEvent;
-use crate::model::{AppState, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::model::Role;
+use crate::tests::fresh_state;
 
 #[test]
 fn test_agent_thinking_sets_streaming() {

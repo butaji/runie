@@ -1,10 +1,7 @@
 use crate::dsl::AppStateDsl;
 use crate::model::AppState;
 use crate::ui::LazyCache;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::tests::fresh_state;
 
 fn element_kinds(state: &AppState) -> Vec<String> {
     let feed = LazyCache::feed(state);

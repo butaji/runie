@@ -1,10 +1,7 @@
 use runie_core::event::Event;
 use runie_core::event::{AgentEvent, ControlEvent, DialogEvent, InputEvent};
 use runie_core::model::AppState;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 fn push_user_msg(state: &mut AppState, content: &str, id: &str) {
     state.session.messages.push(runie_core::model::ChatMessage {

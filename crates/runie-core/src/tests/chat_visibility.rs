@@ -4,10 +4,7 @@ use crate::event::{
     ModelConfigEvent, ScrollEvent, SessionEvent, SystemEvent,
 };
 use crate::model::{AppState, ChatMessage, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::tests::fresh_state;
 
 /// Helper: get element kinds in visible region (no spacer)
 fn visible_kinds(state: &AppState, height: usize) -> Vec<String> {

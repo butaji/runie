@@ -6,20 +6,11 @@
 
 use crate::event::{DialogEvent, InputEvent};
 use crate::model::{AppState, ChatMessage};
+use crate::tests::{fresh_state, type_str};
 use std::sync::Mutex;
 
 /// Serializes tests that touch shared env/state.
 static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
-
-fn type_str(state: &mut AppState, s: &str) {
-    for c in s.chars() {
-        state.update(InputEvent::Input(c));
-    }
-}
 
 #[test]
 fn copy_with_no_assistant_message_shows_error() {

@@ -1,9 +1,6 @@
 use crate::dsl::AppStateDsl;
 use crate::model::{AppState, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::tests::fresh_state;
 
 fn run_turn_with_tool(state: &mut AppState, id: &str, tool_name: &str) {
     state

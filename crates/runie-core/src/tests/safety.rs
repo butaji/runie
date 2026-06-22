@@ -2,16 +2,7 @@
 use super::slash::exec;
 use crate::event::{DialogEvent, InputEvent, ModelConfigEvent};
 use crate::model::AppState;
-
-pub fn fresh_state() -> AppState {
-    AppState::default()
-}
-
-pub fn type_str(state: &mut AppState, text: &str) {
-    for c in text.chars() {
-        state.update(InputEvent::Input(c));
-    }
-}
+use crate::tests::{fresh_state, type_str};
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {

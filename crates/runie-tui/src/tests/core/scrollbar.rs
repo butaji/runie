@@ -1,9 +1,6 @@
 use runie_core::event::ScrollEvent;
 use runie_core::model::AppState;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 #[test]
 fn scrollbar_no_scrollbar_when_content_fits() {

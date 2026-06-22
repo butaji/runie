@@ -1,10 +1,6 @@
 //! Ghost completion tests — tab shows rest of filename in gray.
 
-use crate::model::AppState;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::tests::fresh_state;
 
 #[test]
 fn ghost_is_set_directly() {

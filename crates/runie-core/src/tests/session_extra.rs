@@ -2,16 +2,7 @@
 use crate::event::{DialogEvent, Event, InputEvent};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tests::slash::ENV_LOCK;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
-
-fn type_str(state: &mut AppState, text: &str) {
-    for c in text.chars() {
-        state.update(InputEvent::Input(c));
-    }
-}
+use crate::tests::{fresh_state, type_str};
 
 /// Set input buffer directly and submit — bypasses the command palette.
 fn exec(state: &mut AppState, text: &str) {

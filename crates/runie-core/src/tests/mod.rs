@@ -4,6 +4,27 @@ use std::sync::Mutex;
 #[cfg(test)]
 pub static ENV_LOCK: Mutex<()> = Mutex::new(());
 
+// ── Shared test helpers ─────────────────────────────────────────────────────────
+
+#[cfg(test)]
+use crate::event::InputEvent;
+#[cfg(test)]
+use crate::model::AppState;
+
+#[cfg(test)]
+/// Returns a fresh `AppState` with default values.
+pub fn fresh_state() -> AppState {
+    AppState::default()
+}
+
+#[cfg(test)]
+/// Simulates typing `text` into the input buffer of `state`.
+pub fn type_str(state: &mut AppState, text: &str) {
+    for c in text.chars() {
+        state.update(InputEvent::Input(c));
+    }
+}
+
 #[cfg(test)]
 mod agent;
 #[cfg(test)]

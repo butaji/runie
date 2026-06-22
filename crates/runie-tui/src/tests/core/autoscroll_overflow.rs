@@ -3,10 +3,7 @@
 use runie_core::event::AgentEvent;
 use runie_core::event::Event;
 use runie_core::model::{AppState, ChatMessage, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 /// Simulates the exact user flow: submit, agent thinking + tool + large output
 #[test]

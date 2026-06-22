@@ -2,10 +2,7 @@
 
 use crate::event::{ControlEvent, DialogEvent, InputEvent};
 use crate::model::{AppState, ChatMessage, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::tests::fresh_state;
 
 #[test]
 fn vim_mode_is_enabled_by_default() {

@@ -2,10 +2,7 @@ use runie_core::event::AgentEvent;
 use runie_core::event::Event;
 use runie_core::model::AppState;
 use runie_core::ui::LazyCache;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 fn has_agent_message(state: &AppState) -> bool {
     let feed = LazyCache::feed(state);

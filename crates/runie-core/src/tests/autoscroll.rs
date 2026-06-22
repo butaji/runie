@@ -4,10 +4,7 @@ use crate::event::{
     ModelConfigEvent, ScrollEvent, SessionEvent, SystemEvent,
 };
 use crate::model::{AppState, ChatMessage, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::tests::fresh_state;
 
 fn add_messages(state: &mut AppState, count: usize) {
     for i in 0..count {

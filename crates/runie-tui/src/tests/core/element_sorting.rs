@@ -5,10 +5,7 @@ use runie_core::event::Event;
 use runie_core::event::{AgentEvent, InputEvent};
 use runie_core::model::{AppState, ChatMessage, Role};
 use runie_core::ui::LazyCache;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 fn dispatch(state: &mut AppState, events: &[Event]) {
     for e in events {

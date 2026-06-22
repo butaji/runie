@@ -1,21 +1,11 @@
 //! Slash command tests — ensure all /commands work as users expect
 
-use crate::event::{Event, InputEvent};
+use crate::event::Event;
 use crate::model::AppState;
 use crate::session_store::SessionStore;
 use std::sync::Mutex;
 
 pub static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-pub fn fresh_state() -> AppState {
-    AppState::default()
-}
-
-pub fn type_str(state: &mut AppState, text: &str) {
-    for c in text.chars() {
-        state.update(InputEvent::Input(c));
-    }
-}
 
 /// Set input buffer directly and submit — bypasses the command palette.
 /// Use for slash commands that need arguments.

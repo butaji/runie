@@ -6,12 +6,9 @@ use runie_core::event::{AgentEvent, InputEvent};
 use runie_core::layout::element_line_count;
 use runie_core::model::AppState;
 use runie_core::ui::LazyCache;
+use runie_testing::fresh_state;
 
 const TEST_WIDTH: u16 = 80;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
 
 fn _feed_lines(state: &AppState) -> usize {
     let feed = LazyCache::feed(state);

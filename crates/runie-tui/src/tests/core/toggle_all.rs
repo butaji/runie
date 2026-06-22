@@ -1,9 +1,6 @@
 use runie_core::event::{AgentEvent, ControlEvent};
 use runie_core::model::{AppState, ChatMessage, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 #[test]
 fn collapse_all_when_some_expanded() {

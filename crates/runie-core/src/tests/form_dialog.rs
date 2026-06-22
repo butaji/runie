@@ -1,27 +1,15 @@
 //! Tests for command form dialogs.
 
+use crate::dialog::dsl::get_field;
 use crate::event::{ControlEvent, DialogEvent, InputEvent};
 
 use crate::commands::DialogState;
-use crate::model::AppState;
 use crate::tests::slash::ENV_LOCK;
 use crate::Event;
-
-fn fresh_state() -> AppState {
-    let mut state = AppState::default();
-    state.input.input.clear();
-    state.input.cursor_pos = 0;
-    state
-}
-
-fn type_str(state: &mut AppState, s: &str) {
-    for c in s.chars() {
-        state.update(InputEvent::Input(c));
-    }
-}
+use crate::tests::{fresh_state, type_str};
 
 /// Open palette and select a command by name
-fn palette_select(state: &mut AppState, cmd: &str) {
+fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
     // Open palette with '/'
     state.update(InputEvent::Input('/'));
     // Filter to the command
@@ -420,7 +408,7 @@ fn form_submit_button_uses_factory() {
     let mut panel = Panel::new("save", "Save")
         .form_field("Name", "my-session", "name")
         .form_submit_with(|values| crate::event::CommandEvent::RunSaveCommand {
-            name: values.get("name").cloned().unwrap_or_default(),
+            name: get_field(values, "name"),
         });
     panel.form_values.insert("name".into(), "myses".into());
     // Move selection from the field to the FormSubmit button.
