@@ -3,16 +3,16 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::Stream;
-use runie_agent::{run_agent_turn_with_skills, AgentCommand, PermissionGate};
+use runie_agent::{run_agent_turn_with_skills, AgentCommand};
 use runie_core::event::AgentEvent;
 use runie_core::harness_skills::{
     HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult,
 };
 use runie_core::llm_event::LLMEvent;
 use runie_core::message::ChatMessage;
-use runie_core::permissions::{AutoAllowSink, PermissionManager};
 use runie_provider::openai::stream::replay_sse;
 use runie_provider::DynProvider;
+use runie_testing::allow_all_gate;
 use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -25,10 +25,6 @@ fn fixture(name: &str) -> String {
         name
     ))
     .unwrap()
-}
-
-fn allow_all_gate() -> PermissionGate {
-    PermissionGate::new(PermissionManager::default(), Arc::new(AutoAllowSink))
 }
 
 fn command(content: &str) -> AgentCommand {

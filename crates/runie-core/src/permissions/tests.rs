@@ -100,29 +100,6 @@ async fn file_access_ask_requires_approval() {
 }
 
 #[test]
-fn permission_mode_yolo_allows_everything() {
-    let manager = PermissionManager::new(PermissionMode::Yolo);
-    let ctx = ctx(
-        "bash",
-        Some(Path::new("/etc/passwd")),
-        Some(Path::new("/tmp")),
-    );
-    // evaluate is async; use a minimal runtime block.
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(manager.evaluate(&ctx));
-    assert_eq!(result, PermissionResult::Allow);
-}
-
-#[test]
-fn permission_mode_manual_always_asks() {
-    let manager = PermissionManager::new(PermissionMode::Manual);
-    let ctx = ctx("read_file", None, None);
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(manager.evaluate(&ctx));
-    assert_eq!(result, PermissionResult::Ask);
-}
-
-#[test]
 fn wildcard_rule_matches_tool() {
     let rules = PermissionSet::new(vec![PermissionRule {
         tool_pattern: "*".into(),

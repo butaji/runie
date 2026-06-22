@@ -1,8 +1,9 @@
 //! /compact slash command tests.
 
-use super::{exec, fresh_state};
+use super::exec;
 use crate::event::Event;
 use crate::model::{ChatMessage, Role};
+use crate::tests::fresh_state;
 
 fn add_messages(state: &mut crate::model::AppState, count: usize) {
     for i in 0..count {

@@ -1,9 +1,10 @@
 //! /prompt slash command tests.
 
-use super::{exec, fresh_state};
+use super::exec;
 use crate::event::Event;
 use crate::model::Role;
 use crate::prompts::{PromptSource, PromptTemplate};
+use crate::tests::fresh_state;
 
 fn state_with_prompts() -> crate::model::AppState {
     crate::model::AppState {

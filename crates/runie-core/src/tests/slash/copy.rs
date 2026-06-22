@@ -1,8 +1,9 @@
 //! /copy slash command tests.
 
-use super::{exec, fresh_state};
+use super::exec;
 use crate::event::DialogEvent;
 use crate::model::{AppState, ChatMessage, Role};
+use crate::tests::fresh_state;
 
 #[test]
 fn copy_with_no_assistant_message_warns() {

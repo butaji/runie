@@ -1,24 +1,13 @@
 //! Tests for agent turn execution
 use crate::tests::ensure_mock_provider;
-use crate::{run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages, AgentCommand, PermissionGate};
+use crate::{run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages, AgentCommand};
 use runie_core::event::AgentEvent;
 use runie_core::harness_skills::{
     HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult,
 };
-use runie_core::permissions::{AutoAllowSink, PermissionManager};
-use runie_core::tool::ToolStatus;
-use runie_provider::DynProvider;
+use runie_testing::{allow_all_gate, mock_provider};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-
-fn allow_all_gate() -> PermissionGate {
-    PermissionGate::new(PermissionManager::default(), Arc::new(AutoAllowSink))
-}
-
-fn mock_provider() -> DynProvider {
-    DynProvider::new_with_config("mock", "echo", &runie_core::config::Config::default())
-        .expect("mock provider must be available in tests")
-}
 
 struct MockToolSkill {
     outputs: HashMap<String, String>,

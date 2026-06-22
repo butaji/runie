@@ -4,9 +4,7 @@ use crate::event::Event;
 
 use crate::event::AgentEvent;
 use crate::model::AppState;
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::tests::fresh_state;
 
 // =============================================================================
 // Layer 1: Token counting logic
