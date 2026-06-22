@@ -43,4 +43,4 @@ These helpers were early scaffolding that got superseded by `textwrap::wrap()` (
 
 ## Notes
 
-If a `truncate` helper is needed later, `textwrap::truncate` (already a workspace dep, used by `core/layout.rs`) covers the same case. No behavioural risk.
+If a `truncate` helper is needed later, `textwrap::truncate` (already a workspace dep, though only `textwrap::wrap` is currently used in `core/layout.rs`) covers the same case. No behavioural risk.

@@ -10,14 +10,14 @@
 
 ## Description
 
-`crates/runie-core/src/event/` contains 11 single-purpose files that each declare one `pub type Foo = Event;` alias, totalling ~55 LOC across 11 directories worth of file overhead:
+`crates/runie-core/src/event/` contains 12 single-purpose files: 11 that each declare one `pub type Foo = Event;` alias, plus `dialog.rs` which is a 1-LOC doc-only stub that contributes no code (the actual `DialogEvent` alias lives in `dialog_display.rs` and is re-exported by `event/mod.rs:17`). Total ~56 LOC across 12 directories worth of file overhead:
 
 | File | LOC | Content |
 |------|-----|---------|
 | `event/agent.rs` | 5 | `pub type AgentEvent = Event;` |
 | `event/command.rs` | 5 | `pub type CommandEvent = Event;` |
 | `event/control.rs` | 5 | `pub type ControlEvent = Event;` |
-| `event/dialog.rs` | 1 | doc-only re-export |
+| `event/dialog.rs` | 1 | doc-only stub; the `DialogEvent` alias is in `dialog_display.rs` |
 | `event/dialog_display.rs` | 5 | `pub type DialogEvent = Event;` |
 | `event/edit.rs` | 5 | `pub type EditEvent = Event;` |
 | `event/input.rs` | 5 | `pub type InputEvent = Event;` |

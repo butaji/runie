@@ -19,7 +19,7 @@ warning: function `load_theme_with_caps_async` is never used
 warning: fields `0`, `1`, `2`, `3`, and `4` are never read
 ```
 
-The three async theme loaders in `crates/runie-tui/src/theme/loader.rs:31,43,61` were a planned offload-the-runtime variant that never got adopted; the synchronous `load_theme_raw` / `load_theme` / `load_theme_with_caps` paths are the only ones called. The `ActorHandles` tuple struct at `crates/runie-tui/src/main.rs:92-98` is bound to `let _actors = bootstrap.2;` and never read — only the third tuple element (`ProviderActorHandle`) is destructured into a used variable.
+The three async theme loaders in `crates/runie-tui/src/theme/loader.rs:31,43,61` were a planned offload-the-runtime variant that never got adopted; the synchronous `load_theme_raw` (line 13) / `load_theme` (line 38) / `load_theme_with_caps` (line 49) paths are the only ones called (e.g. `theme/mod.rs:63`). The `ActorHandles` tuple struct at `crates/runie-tui/src/main.rs:92-98` is bound to `let _actors = bootstrap.2;` (line 71) and never read — only the first two tuple elements (`AppState` and `ProviderActorHandle`) are extracted into used variables; the third (`ActorHandles`) is discarded.
 
 These are pure deletions with no test fallout.
 
@@ -27,7 +27,7 @@ These are pure deletions with no test fallout.
 
 - [ ] `load_theme_raw_async`, `load_theme_async`, `load_theme_with_caps_async` deleted from `crates/runie-tui/src/theme/loader.rs`.
 - [ ] `ActorHandles` struct deleted from `crates/runie-tui/src/main.rs`.
-- [ ] `bootstrap_app` return type updated to drop `ActorHandles`; `let _actors = bootstrap.2;` replaced with destructuring of the provider handle.
+- [ ] `bootstrap_app` return type updated to drop `ActorHandles`; `let _actors = bootstrap.2;` (line 71) deleted (no replacement needed — `state` and `provider_handle` are already extracted at lines 69–70).
 - [ ] `cargo check --workspace` succeeds with zero new warnings (the 4 listed above are gone; pre-existing warnings, if any, are out of scope).
 - [ ] `cargo test --workspace` succeeds.
 
