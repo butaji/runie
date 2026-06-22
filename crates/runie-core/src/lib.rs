@@ -31,7 +31,6 @@ pub mod clipboard_image;
 pub mod commands;
 pub mod config;
 pub mod config_migrate;
-pub mod config_reload;
 pub mod confirmation;
 pub mod dialog;
 pub mod diff;
@@ -55,6 +54,7 @@ pub mod location;
 pub mod login_config;
 pub mod login_flow;
 pub mod markdown;
+#[cfg(feature = "mcp")]
 pub mod mcp;
 pub mod message;
 pub mod model;
@@ -137,7 +137,7 @@ pub use login_flow::{
 pub use model_catalog::{filter_models, model_catalog, ModelCapabilities, ModelInfo};
 pub use permissions::{
     is_read_only_tool, is_sensitive_path, ApprovalSink, AutoAllowSink, PermissionAction,
-    PermissionRule, PermissionSet, ScriptedSink, TuiApprovalSink,
+    PermissionGate, PermissionRule, PermissionSet, ScriptedSink, TuiApprovalSink,
 };
 pub use prompts::{
     build_system_prompt, load_prompts, PromptSource, PromptTemplate, DEFAULT_PROMPT, DEFAULT_TOOLS,
