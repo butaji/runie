@@ -12,23 +12,58 @@ pub fn now() -> f64 {
 
 /// A first-class tool invocation carried by an assistant message.
 ///
-/// `arguments` is the JSON-encoded argument object, matching the OpenAI
-/// `function.arguments` wire format. Providers that need structured input
-/// can deserialize it; providers that use plain-text tool markers can ignore
-/// it and rely on `ChatMessage.content` instead.
+/// `args` is the structured argument object. Use `arguments_string()` to get
+/// the JSON-encoded wire format expected by OpenAI-compatible APIs.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ToolCall {
     pub id: String,
     pub name: String,
-    pub arguments: String,
+    /// Structured arguments. Serializes to JSON string for OpenAI wire format.
+    #[serde(default)]
+    pub args: serde_json::Value,
 }
 
 impl ToolCall {
-    pub fn new(id: impl Into<String>, name: impl Into<String>, arguments: String) -> Self {
+    pub fn new(id: impl Into<String>, name: impl Into<String>, args: serde_json::Value) -> Self {
         Self {
             id: id.into(),
             name: name.into(),
-            arguments,
+            args,
+        }
+    }
+
+    /// Construct a ToolCall from a JSON string for the arguments field.
+    pub fn with_json_args(
+        id: impl Into<String>,
+        name: impl Into<String>,
+        arguments: impl AsRef<str>,
+    ) -> Self {
+        let args: serde_json::Value =
+            serde_json::from_str(arguments.as_ref()).unwrap_or(serde_json::Value::Null);
+        Self::new(id, name, args)
+    }
+
+    /// Serialize arguments to a JSON string for the OpenAI wire format.
+    pub fn arguments_string(&self) -> String {
+        serde_json::to_string(&self.args).unwrap_or_else(|_| "{}".to_string())
+    }
+}
+
+impl From<crate::message::Part> for ToolCall {
+    fn from(part: crate::message::Part) -> Self {
+        match part {
+            crate::message::Part::ToolCall { id, name, args } => ToolCall { id, name, args },
+            _ => ToolCall::new(String::new(), String::new(), serde_json::Value::Null),
+        }
+    }
+}
+
+impl From<crate::tool_parser::ParsedToolCall> for ToolCall {
+    fn from(call: crate::tool_parser::ParsedToolCall) -> Self {
+        ToolCall {
+            id: call.id.unwrap_or_default(),
+            name: call.name,
+            args: call.args,
         }
     }
 }
@@ -250,7 +285,7 @@ mod tests {
             tool_calls: vec![ToolCall::new(
                 "call_1",
                 "read_file",
-                r#"{"path":"Cargo.toml"}"#.to_string(),
+                serde_json::json!({"path": "Cargo.toml"}),
             )],
             tool_call_id: None,
             provider_metadata: None,

@@ -296,7 +296,7 @@ fn handle_editor_done(state: &mut AppState, content: String) {
 impl AppState {
     pub(crate) fn show_diagnostics(&mut self) {
         let mut lines = vec!["Diagnostics:".to_string()];
-        let config_path = crate::config_reload::config_path();
+        let config_path = crate::config::config_path();
         lines.push(format!(
             "  Config: {}",
             if config_path.exists() {

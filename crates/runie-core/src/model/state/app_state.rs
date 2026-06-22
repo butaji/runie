@@ -477,7 +477,6 @@ impl AppState {
             Some(parts.join(" "))
         }
     }
-
     /// Restore application state from a JSON session snapshot.
     pub fn restore_session(&mut self, session: &crate::session::Session) {
         self.session.messages = session.messages.clone();
@@ -494,6 +493,7 @@ impl AppState {
         self.session.session_created_at = session.created_at;
         self.session.session_updated_at = session.updated_at;
         self.session.session_tree = session.session_tree.clone();
+        self.configure_token_tracker();
         self.messages_changed();
     }
 }
