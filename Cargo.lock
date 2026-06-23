@@ -3386,6 +3386,7 @@ version = "0.2.16"
 dependencies = [
  "anyhow",
  "async-stream",
+ "bytes",
  "futures",
  "insta",
  "rand",
