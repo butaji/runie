@@ -4,7 +4,6 @@
 //! base URLs, API type, environment variable, and the models each provider supports.
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::OnceLock;
 
 static MOCK_ENABLED: AtomicBool = AtomicBool::new(false);
 
@@ -231,42 +230,43 @@ const MOCK_PROVIDER: ProviderMeta = ProviderMeta::new(
     &[ModelMeta::new("echo")],
 );
 
-/// Cached combined list (real + mock when enabled). The mock entry is
-/// appended on first access if dev flags are set.
-fn providers() -> &'static [ProviderMeta] {
-    static CACHE: OnceLock<Vec<ProviderMeta>> = OnceLock::new();
-    CACHE.get_or_init(|| {
-        let mut v: Vec<ProviderMeta> = KNOWN_PROVIDERS.to_vec();
-        if is_mock_enabled() {
-            v.push(MOCK_PROVIDER);
-        }
-        v
-    })
-}
-
 /// All known providers. In production (no `RUNIE_MOCK`), this is the
 /// real provider list only. With dev flags, the mock provider is
 /// appended at the end.
-pub fn known_providers() -> &'static [ProviderMeta] {
-    providers()
+pub fn known_providers() -> Vec<&'static ProviderMeta> {
+    let mut providers: Vec<&'static ProviderMeta> = KNOWN_PROVIDERS.iter().collect();
+    if is_mock_enabled() {
+        providers.push(&MOCK_PROVIDER);
+    }
+    providers
 }
 
 /// Find a provider by its key (e.g. "minimax").
 pub fn find_provider(key: &str) -> Option<&'static ProviderMeta> {
-    known_providers().iter().find(|p| p.key == key)
+    if key == "mock" && is_mock_enabled() {
+        return Some(&MOCK_PROVIDER);
+    }
+    KNOWN_PROVIDERS.iter().find(|p| p.key == key)
 }
 
 /// Find a provider by its environment variable name.
 pub fn find_provider_by_env_var(env_var: &str) -> Option<&'static ProviderMeta> {
-    known_providers().iter().find(|p| p.env_var == env_var)
+    KNOWN_PROVIDERS.iter().find(|p| p.env_var == env_var)
 }
 
 /// Find a model across all known providers by its canonical model name.
 pub fn find_model(model: &str) -> Option<&'static ModelMeta> {
-    known_providers()
+    KNOWN_PROVIDERS
         .iter()
         .flat_map(|p| p.models.iter())
         .find(|m| m.name == model)
+        .or_else(|| {
+            if is_mock_enabled() {
+                MOCK_PROVIDER.models.iter().find(|m| m.name == model)
+            } else {
+                None
+            }
+        })
 }
 
 /// Check if a provider key is known.

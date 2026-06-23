@@ -163,11 +163,14 @@ fn test_render_delete_no_args_opens_form() {
 }
 
 #[test]
-#[ignore = "/model with args not dispatching to handler in current build"]
 fn test_render_model_m3_just_model_name() {
+    super::super::configure_test_providers(&[("mock".into(), vec!["m3".into()])]);
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
+    super::super::apply_test_config_to_state(&mut state);
+    state.config.current_provider = "mock".into();
+    state.config.current_model = "m1".into();
 
     for c in "/model m3".chars() {
         state.update(InputEvent::Input(c));
@@ -190,7 +193,6 @@ fn test_render_model_m3_just_model_name() {
 }
 
 #[test]
-#[ignore = "/load with args not dispatching to handler in current build"]
 fn test_render_load_missing_shows_user_friendly_error() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 

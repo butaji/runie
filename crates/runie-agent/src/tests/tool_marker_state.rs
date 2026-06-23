@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 
 #[tokio::test]
 async fn agent_turn_state_no_raw_tool_markers() {
-    ensure_mock_provider();
+    let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
     let cmd = AgentCommand {
         content: "list files".to_string(),

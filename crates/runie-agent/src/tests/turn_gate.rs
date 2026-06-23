@@ -13,7 +13,7 @@ use std::sync::{Arc, Mutex};
 /// are auto-approved and rendered as ToolStart/ToolEnd events.
 #[tokio::test]
 async fn test_agent_loop_with_tui_gate_allows_read_only_tool() {
-    ensure_mock_provider();
+    let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
     let cmd = AgentCommand {
         content: "list files".to_string(),

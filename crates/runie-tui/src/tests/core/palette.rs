@@ -302,3 +302,37 @@ fn palette_model_with_zero_providers_renders_message() {
         content
     );
 }
+
+#[test]
+fn palette_model_with_args_switches_model() {
+    super::super::configure_test_providers(&[
+        ("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()]),
+    ]);
+    let mut state = AppState::default();
+    super::super::apply_test_config_to_state(&mut state);
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4o".into();
+
+    state.update(Event::toggle_command_palette());
+    for c in "model gpt-4o-mini".chars() {
+        state.update(Event::palette_filter(c));
+    }
+    state.update(Event::submit());
+
+    assert!(
+        state.open_dialog.is_none(),
+        "palette should close after /model with args"
+    );
+    assert_eq!(state.config.current_model, "gpt-4o-mini");
+    let msgs: Vec<String> = state
+        .session
+        .messages
+        .iter()
+        .map(|m| m.content())
+        .collect();
+    assert!(
+        msgs.iter().any(|m| m.contains("Switched to openai/gpt-4o-mini")),
+        "expected switch message, got messages: {:?}",
+        msgs
+    );
+}

@@ -352,7 +352,7 @@ mod tests {
 
     #[tokio::test]
     async fn headless_runner_executes_tool_and_returns_output() {
-        ensure_mock_provider();
+        let _mock_guard = ensure_mock_provider().await;
         let provider = MockProvider::default();
         let messages = vec![
             ChatMessage::system("You are helpful."),
@@ -376,7 +376,7 @@ mod tests {
 
     #[tokio::test]
     async fn headless_runner_with_execute_tools_enabled() {
-        ensure_mock_provider();
+        let _mock_guard = ensure_mock_provider().await;
         let provider = MockProvider::default();
         let messages = vec![
             ChatMessage::system("You are helpful."),
@@ -396,7 +396,7 @@ mod tests {
 
     #[tokio::test]
     async fn headless_runner_feeds_parse_errors_back_to_model() {
-        ensure_mock_provider();
+        let _mock_guard = ensure_mock_provider().await;
         let provider = MockProvider::default();
         let messages = vec![
             ChatMessage::system("You are helpful."),
@@ -424,7 +424,7 @@ mod tests {
 
     #[tokio::test]
     async fn headless_runner_executes_tool_call_markup() {
-        ensure_mock_provider();
+        let _mock_guard = ensure_mock_provider().await;
         let provider = MockProvider::default();
         let messages = vec![
             ChatMessage::system("You are helpful."),
@@ -463,7 +463,7 @@ mod tests {
     // Layer 4 — Smoke: run_headless_cli still works with a mock provider.
     #[tokio::test]
     async fn headless_cli_smoke_with_mock() {
-        crate::tests::ensure_mock_provider();
+        let _mock_guard = crate::tests::ensure_mock_provider().await;
         let sink: Arc<dyn runie_core::permissions::ApprovalSink> =
             Arc::new(AutoAllowSink);
         let messages = vec![

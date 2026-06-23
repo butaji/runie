@@ -198,6 +198,7 @@ mod tests {
 
     #[tokio::test]
     async fn actor_publishes_error_when_provider_unknown() {
+        let _lock = crate::tests::MOCK_STATE_LOCK.lock().await;
         let was_mock = runie_core::provider_registry::is_mock_enabled();
         runie_core::provider_registry::set_mock_enabled(false);
         let bus = EventBus::<Event>::new(10);

@@ -47,7 +47,7 @@ pub(crate) fn mock_tool_skill() -> SkillRegistry {
 
 #[tokio::test]
 async fn test_agent_loop_simple_response() {
-    ensure_mock_provider();
+    let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
     let cmd = AgentCommand {
         content: "Hello World".to_string(),
@@ -101,7 +101,7 @@ async fn test_agent_loop_simple_response() {
 
 #[tokio::test]
 async fn test_agent_loop_with_tool_call() {
-    ensure_mock_provider();
+    let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
     let cmd = AgentCommand {
         content: "list files".to_string(),
@@ -150,7 +150,7 @@ async fn test_agent_loop_with_tool_call() {
 
 #[tokio::test]
 async fn test_agent_loop_with_native_tool_call_events() {
-    ensure_mock_provider();
+    let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
     let cmd = AgentCommand {
         content: "run native tool".to_string(),
@@ -199,7 +199,7 @@ async fn test_agent_loop_with_native_tool_call_events() {
 
 #[tokio::test]
 async fn test_agent_loop_respects_max_iterations() {
-    ensure_mock_provider();
+    let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
     let cmd = AgentCommand {
         content: "loop".to_string(),
@@ -230,7 +230,7 @@ async fn test_agent_loop_respects_max_iterations() {
 
 #[tokio::test]
 async fn test_agent_loop_events_have_correct_id() {
-    ensure_mock_provider();
+    let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
     let cmd = AgentCommand {
         content: "test".to_string(),
@@ -336,7 +336,7 @@ fn read_write_includes_all_tools() {
 
 #[tokio::test]
 async fn agent_tool_event_carries_mock_output() {
-    ensure_mock_provider();
+    let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
     let cmd = AgentCommand {
         content: "list files".to_string(),
@@ -379,7 +379,7 @@ async fn agent_tool_event_carries_mock_output() {
 
 #[tokio::test]
 async fn tool_call_event_matches_mock_output() {
-    ensure_mock_provider();
+    let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
     let cmd = AgentCommand {
         content: "list files".to_string(),

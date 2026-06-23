@@ -1,7 +1,7 @@
 //! Panel state and builder methods.
 
 use super::item::parse_accel;
-use super::score::match_score;
+use super::score::item_match_score;
 use super::{ItemAction, PanelItem};
 use crate::Event;
 
@@ -479,8 +479,7 @@ impl Panel {
             .enumerate()
             .filter(|(_, i)| i.is_navigable())
             .filter_map(|(i, item)| {
-                let label = item.label()?;
-                let score = match_score(label, &q)?;
+                let score = super::score::item_match_score(item, &q)?;
                 Some((i, score))
             })
             .collect();
