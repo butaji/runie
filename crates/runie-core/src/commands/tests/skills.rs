@@ -145,8 +145,8 @@ fn palette_select_skill_emits_message() {
         .last()
         .expect("should have a message");
     assert!(
-        last.content.contains("rust"),
+        last.content().contains("rust"),
         "Selecting skill should emit info message: {}",
-        last.content
+        last.content()
     );
 }

@@ -5,6 +5,7 @@ pub use crate::model::state::{
     AppState, DeliveryMode, FffFileEntry, PermissionRequestState, QueuedMessage,
     QueuedMessageKind, ThinkingLevel,
 };
+pub use crate::model::state::types::InputReceiver;
 pub use crate::model_catalog::{
     build_model_selector_items, filter_models, model_catalog, ModelInfo,
 };
@@ -126,4 +127,4 @@ pub fn init_git_and_cwd() -> (Option<crate::snapshot::GitInfo>, String) {
 
 mod cache;
 mod snapshot;
-mod state;
+pub(crate) mod state;

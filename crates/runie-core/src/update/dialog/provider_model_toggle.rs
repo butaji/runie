@@ -16,10 +16,17 @@ pub fn parse_provider_model_toggle(key: &str) -> Option<(&str, &str)> {
 pub fn toggle_provider_model(state: &mut AppState, provider: &str, model: &str) {
     let provider = provider.to_string();
     let model = model.to_string();
-    let mut models = state
+    // Read current models: first from config_cache, then from file as fallback.
+    // config_cache may be stale after save_provider_config is called externally.
+    let current_models: Vec<String> = state
         .provider_config(&provider)
         .map(|p| p.models)
+        .or_else(|| {
+            crate::login_config::get_provider_config(&provider)
+                .map(|(_, _, m)| m)
+        })
         .unwrap_or_default();
+    let mut models = current_models;
     let pos = models.iter().position(|m| m == &model);
     if let Some(idx) = pos {
         models.remove(idx);
@@ -27,13 +34,49 @@ pub fn toggle_provider_model(state: &mut AppState, provider: &str, model: &str) 
         models.push(model.clone());
         models.sort();
     }
+    // Update config_cache synchronously and persist to file.
+    sync_provider_models(state, &provider, &models);
     state.set_provider_models(&provider, models.clone());
     if provider == state.config.current_provider && !models.contains(&model) {
         if let Some(first) = models.first() {
-            state.switch_model(provider, first.clone(), false);
+            state.switch_model(provider.clone(), first.clone(), false);
         }
     }
     state.view.cached_settings_valid = false;
+}
+
+fn sync_provider_models(state: &mut AppState, provider: &str, models: &[String]) {
+    // Read current provider config from file (bypasses stale config_cache).
+    let current_from_file = crate::login_config::get_provider_config(provider);
+    let (base_url, api_key) = current_from_file
+        .map(|(b, k, _)| (b, k))
+        .unwrap_or_else(|| {
+            (
+                crate::provider_registry::find_provider(provider)
+                    .map(|p| p.base_url.to_string())
+                    .unwrap_or_default(),
+                String::new(),
+            )
+        });
+    // Persist to file.
+    if let Err(e) = crate::login_config::save_provider_config(provider, &base_url, &api_key, models)
+    {
+        tracing::warn!("failed to persist provider models: {}", e);
+        return;
+    }
+    // Sync config_cache.
+    if let Some(ref mut cache) = state.config_cache {
+        cache
+            .model_providers
+            .entry(provider.into())
+            .or_insert_with(|| crate::config::ModelProvider {
+                provider_type: None,
+                base_url: base_url.clone(),
+                api_key: api_key.clone(),
+                models: vec![],
+            })
+            .models = models.into();
+    }
 }
 
 #[cfg(test)]

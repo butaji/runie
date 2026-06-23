@@ -3,7 +3,7 @@
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::event::{DialogEvent, InputEvent};
-use runie_core::{AppState, ChatMessage, Role};
+use runie_core::{AppState, ChatMessage, Part, Role};
 
 pub(crate) fn accent() -> ratatui::style::Color {
     crate::theme::color_accent()
@@ -38,7 +38,7 @@ pub(crate) fn add_message(
 ) {
     state.session.messages.push(ChatMessage {
         role,
-        content: content.to_string(),
+        parts: vec![Part::Text { content: content.to_string() }],
         timestamp,
         id: id.to_string(),
         ..Default::default()
@@ -98,9 +98,11 @@ pub(crate) fn state_with_wrapped_welcome() -> AppState {
     state.config.vim_mode = true;
     state.session.messages.push(ChatMessage {
         role: Role::System,
-        content: "Welcome to runie in someproject.\n\nThis project is not yet trusted. \
+        parts: vec![Part::Text {
+            content: "Welcome to runie in someproject.\n\nThis project is not yet trusted. \
                   Run /trust to enable write tools, or /untrust to enforce read-only mode."
-            .to_string(),
+                .to_string(),
+        }],
         timestamp: 0.0,
         id: "trust_welcome".to_string(),
         ..Default::default()
@@ -120,14 +122,14 @@ pub(crate) fn state_with_selected_post() -> AppState {
     state.config.vim_mode = true;
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "hello".to_string(),
+        parts: vec![Part::Text { content: "hello".into() }],
         timestamp: 0.0,
         id: "req.0".to_string(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        content: "world".to_string(),
+        parts: vec![Part::Text { content: "world".into() }],
         timestamp: 1.0,
         id: "resp.0".to_string(),
         provider: "mock".to_string(),

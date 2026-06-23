@@ -6,11 +6,8 @@ use crate::event::{
 };
 
 use crate::event::Event;
-use crate::model::{AppState, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::model::Role;
+use crate::tests::fresh_state;
 
 #[test]
 fn transient_message_sets_content_and_expiry() {

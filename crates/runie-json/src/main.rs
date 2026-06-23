@@ -24,7 +24,7 @@
 //! ```
 
 use anyhow::Result;
-use runie_agent::{run_headless_turn, HeadlessOptions};
+use runie_agent::{run_headless_cli, HeadlessCliOptions, HeadlessResult};
 use runie_core::message::ChatMessage;
 use runie_core::permissions::{AutoAllowSink, DenyAllSink};
 use std::sync::Arc;
@@ -81,12 +81,11 @@ async fn main() {
 
 async fn run_json(yolo: bool) -> Result<()> {
     let req = read_json_request().await?;
-    let runtime = runie_provider::spawn_headless_runtime().await;
-    let built = runtime.provider(req.provider.as_deref(), req.model.as_deref()).await?;
     let messages = build_json_messages(&req);
     let start = Instant::now();
 
-    let result = run_json_turn(messages, built.provider.as_ref(), yolo).await?;
+    let result = run_json_turn(req.provider.as_deref(), req.model.as_deref(), messages, yolo)
+        .await?;
     let response = build_json_response(result, start.elapsed().as_millis() as u64);
     println!("{}", serde_json::to_string(&response)?);
     Ok(())
@@ -121,16 +120,17 @@ fn build_json_messages(req: &JsonRequest) -> Vec<ChatMessage> {
 }
 
 async fn run_json_turn(
+    provider_name: Option<&str>,
+    model: Option<&str>,
     messages: Vec<ChatMessage>,
-    provider: &dyn runie_core::provider::Provider,
     yolo: bool,
-) -> Result<runie_agent::HeadlessResult> {
+) -> Result<HeadlessResult> {
     let sink: Arc<dyn runie_core::permissions::ApprovalSink> = if yolo {
         Arc::new(AutoAllowSink)
     } else {
         Arc::new(DenyAllSink)
     };
-    let options = HeadlessOptions {
+    let opts = HeadlessCliOptions {
         execute_tools: true,
         max_tool_rounds: 5,
         on_chunk: Some(Box::new(|chunk: &str| {
@@ -140,13 +140,9 @@ async fn run_json_turn(
             .unwrap_or_default();
             println!("{}", line);
         })),
-        permission_gate: runie_agent::PermissionGate::new(
-            runie_core::permissions::PermissionManager::default(),
-            sink,
-        ),
     };
 
-    run_headless_turn(messages, provider, options).await
+    run_headless_cli(provider_name, model, messages, sink, opts).await
 }
 
 fn build_json_response(result: runie_agent::HeadlessResult, duration_ms: u64) -> JsonResponse {
@@ -225,17 +221,19 @@ mod tests {
     #[tokio::test]
     async fn headless_default_denies_destructive_tool() {
         let _guard = CWD_LOCK.lock().unwrap();
+        // Set RUNIE_MOCK before spawning the runtime so the "mock" provider resolves.
+        std::env::set_var("RUNIE_MOCK", "1");
         let dir = tempfile::tempdir().unwrap();
         let original = std::env::current_dir().unwrap();
         std::env::set_current_dir(&dir).unwrap();
 
-        let provider = runie_provider::MockProvider::default();
         let messages = vec![
             ChatMessage::system("You are helpful."),
             ChatMessage::user("write something".to_string()),
         ];
-        let result = run_json_turn(messages, &provider, false).await.unwrap();
+        let result = run_json_turn(Some("mock"), None, messages, false).await.unwrap();
 
+        std::env::remove_var("RUNIE_MOCK");
         std::env::set_current_dir(original).unwrap();
 
         let write_output = result
@@ -250,17 +248,18 @@ mod tests {
     #[tokio::test]
     async fn headless_yolo_allows_destructive_tool() {
         let _guard = CWD_LOCK.lock().unwrap();
+        std::env::set_var("RUNIE_MOCK", "1");
         let dir = tempfile::tempdir().unwrap();
         let original = std::env::current_dir().unwrap();
         std::env::set_current_dir(&dir).unwrap();
 
-        let provider = runie_provider::MockProvider::default();
         let messages = vec![
             ChatMessage::system("You are helpful."),
             ChatMessage::user("write something".to_string()),
         ];
-        let result = run_json_turn(messages, &provider, true).await.unwrap();
+        let result = run_json_turn(Some("mock"), None, messages, true).await.unwrap();
 
+        std::env::remove_var("RUNIE_MOCK");
         std::env::set_current_dir(original).unwrap();
 
         let write_output = result

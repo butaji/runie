@@ -3,6 +3,7 @@
 //! runtime save/load use `crate::session_store::SessionStore`.
 
 use crate::model::ChatMessage;
+use crate::message::Part;
 use serde::{Deserialize, Serialize};
 
 /// Session snapshot — serializable conversation state.
@@ -58,7 +59,7 @@ pub fn format_as_markdown(messages: &[ChatMessage], display_name: Option<&str>) 
             crate::model::Role::TurnComplete => continue,
         };
         lines.push(format!("## {}\n", role_label));
-        lines.push(msg.content.clone());
+        lines.push(msg.content());
         lines.push(String::new());
     }
 
@@ -79,16 +80,16 @@ mod tests {
             messages: vec![
                 ChatMessage {
                     role: Role::User,
-                    content: "hi".into(),
                     timestamp: 1.0,
                     id: "req.0".into(),
+                    parts: vec![Part::Text { content: "hi".into() }],
                     ..Default::default()
                 },
                 ChatMessage {
                     role: Role::Assistant,
-                    content: "hello".into(),
                     timestamp: 2.0,
                     id: "resp.0".into(),
+                    parts: vec![Part::Text { content: "hello".into() }],
                     ..Default::default()
                 },
             ],
@@ -113,15 +114,15 @@ mod tests {
     fn serialize_chat_message_roundtrip() {
         let msg = ChatMessage {
             role: Role::User,
-            content: "test".into(),
             timestamp: 1.5,
             id: "req.1".into(),
+            parts: vec![Part::Text { content: "test".into() }],
             ..Default::default()
         };
         let json = serde_json::to_string(&msg).unwrap();
         let decoded: ChatMessage = serde_json::from_str(&json).unwrap();
         assert_eq!(msg.role, decoded.role);
-        assert_eq!(msg.content, decoded.content);
+        assert_eq!(msg.content(), decoded.content());
         assert_eq!(msg.timestamp, decoded.timestamp);
         assert_eq!(msg.id, decoded.id);
     }
@@ -166,7 +167,7 @@ mod tests {
         let mut session = sample_session("md_test");
         session.messages.push(ChatMessage {
             role: Role::TurnComplete,
-            content: String::new(),
+            parts: vec![crate::message::Part::Text { content: String::new() }],
             timestamp: 3.0,
             id: "tc".into(),
             ..Default::default()

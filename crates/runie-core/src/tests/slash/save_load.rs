@@ -1,9 +1,11 @@
-use super::{exec, fresh_state, minimal_session, tmp_store, ENV_LOCK};
+use super::{exec, minimal_session, tmp_store, ENV_LOCK};
 use crate::event::Event;
 use crate::event::{DialogEvent, InputEvent};
+use crate::message::Part;
 use crate::model::{ChatMessage, Role};
 use crate::session::Session;
 use crate::session_replay::save_snapshot;
+use crate::tests::fresh_state;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
@@ -22,16 +24,16 @@ fn restored_session() -> Session {
     session.messages = vec![
         ChatMessage {
             role: Role::User,
-            content: "hi".into(),
             timestamp: 1.0,
             id: "req.0".into(),
+            parts: vec![Part::Text { content: "hi".into() }],
             ..Default::default()
         },
         ChatMessage {
             role: Role::Assistant,
-            content: "hello there".into(),
             timestamp: 2.0,
             id: "resp.0".into(),
+            parts: vec![Part::Text { content: "hello there".into() }],
             ..Default::default()
         },
     ];
@@ -61,13 +63,13 @@ fn load_restores_conversation() {
     state.update(Event::submit());
 
     assert_eq!(state.session.messages.len(), 3);
-    assert_eq!(state.session.messages[0].content, "hi");
-    assert_eq!(state.session.messages[1].content, "hello there");
+    assert_eq!(state.session.messages[0].content(), "hi");
+    assert_eq!(state.session.messages[1].content(), "hello there");
     assert_eq!(state.config.current_provider, "anthropic");
     assert_eq!(state.config.current_model, "claude-3");
     assert!(system_messages(&state)
         .iter()
-        .any(|m| m.content.contains("loaded")));
+        .any(|m| m.content().contains("loaded")));
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }
@@ -91,14 +93,14 @@ fn load_missing_session_shows_error() {
         .collect();
     let last = sys_msgs.last().expect("system msg");
     assert!(
-        last.content.contains("not found"),
+        last.content().contains("not found"),
         "user-friendly not-found: {}",
-        last.content
+        last.content()
     );
     assert!(
-        last.content.contains("/sessions"),
+        last.content().contains("/sessions"),
         "should suggest /sessions: {}",
-        last.content
+        last.content()
     );
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
@@ -140,14 +142,14 @@ fn sessions_lists_saved_sessions() {
         .collect();
     let last = sys_msgs.last().expect("system msg");
     assert!(
-        last.content.contains("alpha"),
+        last.content().contains("alpha"),
         "lists alpha: {}",
-        last.content
+        last.content()
     );
     assert!(
-        last.content.contains("beta"),
+        last.content().contains("beta"),
         "lists beta: {}",
-        last.content
+        last.content()
     );
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
@@ -171,9 +173,9 @@ fn sessions_empty_shows_no_sessions() {
         .collect();
     let last = sys_msgs.last().expect("system msg");
     assert!(
-        last.content.contains("No saved sessions"),
+        last.content().contains("No saved sessions"),
         "empty message: {}",
-        last.content
+        last.content()
     );
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
@@ -202,9 +204,9 @@ fn delete_removes_session_file() {
         .collect();
     let last = sys_msgs.last().expect("system msg");
     assert!(
-        last.content.contains("deleted"),
+        last.content().contains("deleted"),
         "confirmation shown: {}",
-        last.content
+        last.content()
     );
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
@@ -229,14 +231,14 @@ fn delete_missing_session_shows_error() {
         .collect();
     let last = sys_msgs.last().expect("system msg");
     assert!(
-        last.content.contains("not found"),
+        last.content().contains("not found"),
         "user-friendly not-found: {}",
-        last.content
+        last.content()
     );
     assert!(
-        last.content.contains("/sessions"),
+        last.content().contains("/sessions"),
         "should suggest /sessions: {}",
-        last.content
+        last.content()
     );
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");

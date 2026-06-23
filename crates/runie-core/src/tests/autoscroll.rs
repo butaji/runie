@@ -3,17 +3,15 @@ use crate::event::{
     AgentEvent, CommandEvent, ControlEvent, DialogEvent, DurableCoreEvent, EditEvent, InputEvent,
     ModelConfigEvent, ScrollEvent, SessionEvent, SystemEvent,
 };
+use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::tests::fresh_state;
 
 fn add_messages(state: &mut AppState, count: usize) {
     for i in 0..count {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -255,7 +253,8 @@ fn single_message_visible() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "hello".into(),
+        parts: vec![crate::message::Part::Text { content: "hello".into() }],
+
         timestamp: 0.0,
         id: "u1".into(),
         ..Default::default()

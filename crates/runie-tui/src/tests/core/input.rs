@@ -1,15 +1,13 @@
+use runie_core::Part;
 use runie_core::event::Event;
 use runie_core::event::{AgentEvent, ControlEvent, DialogEvent, InputEvent};
 use runie_core::model::AppState;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 fn push_user_msg(state: &mut AppState, content: &str, id: &str) {
     state.session.messages.push(runie_core::model::ChatMessage {
         role: runie_core::model::Role::User,
-        content: content.into(),
+        parts: vec![Part::Text { content: content.to_string() }],
         timestamp: 0.0,
         id: id.into(),
         ..Default::default()
@@ -76,9 +74,9 @@ fn test_submit_reset_command() {
 
     assert_eq!(state.session.messages.len(), 1);
     assert!(
-        state.session.messages[0].content.contains("State cleared"),
+        state.session.messages[0].content().contains("State cleared"),
         "reset confirmation: {}",
-        state.session.messages[0].content
+        state.session.messages[0].content()
     );
     assert_eq!(state.input.input, "");
 }
@@ -101,7 +99,7 @@ fn input_change_marks_dirty_but_does_not_bump_cache_gen() {
     let mut state = fresh_state();
     state.session.messages.push(runie_core::model::ChatMessage {
         role: runie_core::model::Role::User,
-        content: "hi".into(),
+        parts: vec![Part::Text { content: "hi".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -140,7 +138,7 @@ fn ensure_fresh_skips_rebuild_when_only_input_changed() {
     let mut state = fresh_state();
     state.session.messages.push(runie_core::model::ChatMessage {
         role: runie_core::model::Role::User,
-        content: "hi".into(),
+        parts: vec![Part::Text { content: "hi".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -162,7 +160,7 @@ fn thinking_element_stores_instant_not_elapsed() {
     let mut state = fresh_state();
     state.session.messages.push(runie_core::model::ChatMessage {
         role: runie_core::model::Role::User,
-        content: "hi".into(),
+        parts: vec![Part::Text { content: "hi".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -197,7 +195,7 @@ fn tool_running_element_stores_instant_not_elapsed() {
     let mut state = fresh_state();
     state.session.messages.push(runie_core::model::ChatMessage {
         role: runie_core::model::Role::Tool,
-        content: "⠋ Running list_files...".into(),
+        parts: vec![Part::Text { content: "⠋ Running list_files...".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()

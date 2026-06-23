@@ -1,5 +1,5 @@
 use crate::event::DurableCoreEvent;
-use crate::session_store::SessionStore;
+use crate::session_store::{SessionStore, TABLE_EVENTS};
 
 fn test_store() -> SessionStore {
     let dir = tempfile::tempdir().unwrap();
@@ -209,4 +209,40 @@ fn redb_multiple_sessions_isolated() {
     let list = store.list().unwrap();
     assert!(list.contains(&"s1".into()));
     assert!(list.contains(&"s2".into()));
+}
+
+#[test]
+fn load_events_returns_ordered_events() {
+    let store = test_store();
+    let sid = "test-order";
+    append_msg(&store, sid, "a", "user", "first", 1.0);
+    append_msg(&store, sid, "b", "user", "second", 2.0);
+    let events = store.load_events(sid).unwrap();
+    assert_eq!(events.len(), 2);
+    assert!(matches!(&events[0], DurableCoreEvent::MessageSent { id, .. } if id == "a"));
+    assert!(matches!(&events[1], DurableCoreEvent::MessageSent { id, .. } if id == "b"));
+}
+
+#[test]
+fn load_events_rejects_misaligned_entries() {
+    let store = test_store();
+    let sid = "test-misalign";
+    append_msg(&store, sid, "good", "user", "valid", 1.0);
+
+    // Manually corrupt the second row with invalid JSON.
+    let path = store.path(sid);
+    let (db, _) = SessionStore::open_db(&path).unwrap();
+    let tx = db.begin_write().unwrap();
+    {
+        let mut table = tx.open_table(TABLE_EVENTS).unwrap();
+        table.insert(&1u32, "not json at all").unwrap();
+    }
+    tx.commit().unwrap();
+    drop(db); // Release handle before load_events opens the same file.
+
+    // load_events should return an error instead of silently dropping/offsetting.
+    let result = store.load_events(sid);
+    assert!(result.is_err(), "parse failure should be an error, not silent drop: {:?}", result);
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("unparseable"), "error message should mention unparseable, got: {}", err);
 }

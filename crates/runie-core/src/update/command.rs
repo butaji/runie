@@ -100,17 +100,19 @@ fn run_import_command(state: &mut AppState, path: &str) {
     }
     use crate::commands::CommandResult;
     let path_buf = path.to_string();
-    let result = std::fs::read_to_string(&path_buf)
-        .ok()
-        .and_then(|json| serde_json::from_str::<Session>(&json).ok())
-        .map(|session| {
-            let msg = format!("Session imported from '{}'", path);
-            state.restore_session(&session);
-            CommandResult::Message(msg)
-        })
-        .unwrap_or_else(|| {
-            CommandResult::Message(format!("Could not import session from '{}'", path))
-        });
+    let result = crate::async_io::block_in_place_if_runtime(|| {
+        std::fs::read_to_string(&path_buf)
+            .ok()
+            .and_then(|json| serde_json::from_str::<Session>(&json).ok())
+    })
+    .map(|session| {
+        let msg = format!("Session imported from '{}'", path);
+        state.restore_session(&session);
+        CommandResult::Message(msg)
+    })
+    .unwrap_or_else(|| {
+        CommandResult::Message(format!("Could not import session from '{}'", path))
+    });
     dialog::process_command_result(state, result);
 }
 
@@ -137,7 +139,7 @@ fn run_export_command(state: &mut AppState, path: &str) {
     let session = Session::from_state(state, name);
     let path_buf = path.to_string();
     let json = serde_json::to_string_pretty(&session).unwrap_or_default();
-    let result = std::fs::write(&path_buf, json)
+    let result = crate::async_io::block_in_place_if_runtime(|| std::fs::write(&path_buf, json))
         .map(|_| CommandResult::Message(format!("Session exported to '{}'", path)))
         .unwrap_or_else(|e| CommandResult::Message(format!("Could not export: {}", e)));
     dialog::process_command_result(state, result);

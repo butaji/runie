@@ -1,10 +1,7 @@
 use runie_core::event::Event;
 use runie_core::event::InputEvent;
 use runie_core::model::AppState;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 // =============================================================================
 // LAYER 1: State/Logic Tests — Pure function behavior

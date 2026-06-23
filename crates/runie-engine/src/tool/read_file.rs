@@ -3,7 +3,7 @@
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
-use runie_core::tool::resolve_path;
+use runie_core::path::resolve_path_in;
 use serde_json::Value;
 use std::time::Instant;
 use tokio::fs;
@@ -64,7 +64,7 @@ impl Tool for ReadFileTool {
         let offset = input["offset"].as_u64().map(|v| v as usize);
         let limit = input["limit"].as_u64().map(|v| v as usize);
 
-        let full_path = resolve_path(path, &ctx.working_dir);
+        let full_path = resolve_path_in(path, &ctx.working_dir);
         let content = match fs::read_to_string(&full_path).await {
             Ok(c) => {
                 record_file_access(&full_path);

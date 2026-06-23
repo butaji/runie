@@ -14,12 +14,12 @@ fn ctrl_o_converts_to_toggle_expand() {
 
 #[test]
 fn ctrl_o_toggles_expand_state() {
-    use runie_core::{AppState, ChatMessage, Role};
+    use runie_core::{AppState, ChatMessage, Part, Role};
 
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        content: "deep reasoning\nsecond line".to_string(),
+        parts: vec![Part::Text { content: "deep reasoning\nsecond line".into() }],
         timestamp: 1.0,
         id: "t1".to_string(),
         ..Default::default()

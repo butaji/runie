@@ -1,15 +1,13 @@
 use runie_core::model::{AppState, ChatMessage, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_core::Part;
+use runie_testing::fresh_state;
 
 #[test]
 fn scroll_offset_zero_when_at_bottom() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "hello".into(),
+        parts: vec![Part::Text { content: "hello".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -30,7 +28,7 @@ fn scroll_offset_max_when_fully_scrolled() {
     for i in 0..10 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -52,7 +50,7 @@ fn scroll_offset_shows_bottom_when_zero() {
     for i in 0..10 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -74,7 +72,7 @@ fn scroll_offset_halfway() {
     for i in 0..10 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -100,7 +98,7 @@ fn scrollbar_state_has_viewport_content_length() {
     for i in 0..10 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()

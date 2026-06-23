@@ -12,6 +12,7 @@ fn handler_model_switches() {
         "openai".into(),
         vec!["gpt-4o".into()],
     )]);
+    state.populate_cache_from_login_config();
     let result = exec_handler(&mut state, "model", "gpt-4o");
     assert_eq!(state.config.current_model, "gpt-4o");
     assert!(matches!(result, CommandResult::Message(_)));

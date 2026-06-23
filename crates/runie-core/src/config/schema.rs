@@ -38,6 +38,5 @@ mod tests {
         let props = value["properties"].as_object().unwrap();
         assert!(props.contains_key("provider"));
         assert!(props.contains_key("model"));
-        assert!(props.contains_key("fallback_providers"));
     }
 }

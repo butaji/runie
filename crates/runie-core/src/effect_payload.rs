@@ -67,7 +67,7 @@ fn last_assistant_text(messages: &[ChatMessage]) -> String {
         .iter()
         .rev()
         .find(|m| m.role == Role::Assistant)
-        .map(|m| m.content.clone())
+        .map(|m| m.content().clone())
         .unwrap_or_default()
 }
 

@@ -18,8 +18,10 @@ fn buffer_holds_incomplete_code_fence() {
     let mut buf = StreamingBuffer::new();
     buf.push_delta("Some text.\n```python\nprint('hello')");
     let flushed = buf.force_flush();
-    assert_eq!(flushed, vec!["Some text."]);
-    assert_eq!(buf.tail(), "```python\nprint('hello')");
+    // force_flush heals the tail before returning it; tail is now empty
+    assert_eq!(flushed, vec!["Some text.", "```python\nprint('hello')"]);
+    assert!(buf.tail().is_empty());
+    // Fence is still open (never closed), so buffer is not fully stable
     assert!(!buf.is_stable());
 }
 

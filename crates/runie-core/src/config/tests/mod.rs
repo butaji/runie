@@ -268,15 +268,6 @@ fn config_validation_rejects_invalid_json() {
 }
 
 #[test]
-fn provider_chain_includes_fallbacks() {
-    let mut config = Config::default();
-    config.provider = Some("openai".to_string());
-    config.fallback_providers = vec!["anthropic".to_string()];
-    let chain = config.provider_chain();
-    assert_eq!(chain, vec!["openai", "anthropic"]);
-}
-
-#[test]
 fn layered_config_env_overrides_file() {
     let global = tempfile::tempdir().unwrap();
     let local = tempfile::tempdir().unwrap();

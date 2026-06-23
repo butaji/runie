@@ -1,12 +1,10 @@
 use runie_core::event::Event;
 use runie_core::event::{AgentEvent, ControlEvent};
-use runie_core::model::{AppState, ChatMessage, Role};
+use runie_core::model::{AppState, ChatMessage,  Role};
+use runie_core::Part;
 use runie_core::ui::elements::Element;
 use runie_core::ui::LazyCache;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 fn dispatch(state: &mut AppState, events: &[Event]) {
     for e in events {
@@ -230,7 +228,7 @@ fn expand_then_collapse_then_expand_same_state() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        content: "◆ Thought 1.2s\nline1\nline2".into(),
+        parts: vec![Part::Text { content: "◆ Thought 1.2s\nline1\nline2".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -295,7 +293,7 @@ fn reset_clears_global_collapse() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        content: "Thought".into(),
+        parts: vec![Part::Text { content: "Thought".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -314,14 +312,14 @@ fn global_toggle_does_not_affect_user_or_assistant_messages() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "Hello".into(),
+        parts: vec![Part::Text { content: "Hello".into() }],
         timestamp: 0.0,
         id: "u1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        content: "Hi".into(),
+        parts: vec![Part::Text { content: "Hi".into() }],
         timestamp: 0.0,
         id: "a1".into(),
         ..Default::default()
@@ -345,7 +343,7 @@ fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
 
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        content: "Done".into(),
+        parts: vec![Part::Text { content: "Done".into() }],
         timestamp: 2.0,
         id: "a1".into(),
         ..Default::default()
@@ -359,14 +357,14 @@ fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
 fn add_thought_and_tool(state: &mut AppState) {
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        content: "◆ Thought 1.0s\nReasoning".into(),
+        parts: vec![Part::Text { content: "◆ Thought 1.0s\nReasoning".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran ls 0.5s\nfile1".into(),
+        parts: vec![Part::Text { content: "◆ Ran ls 0.5s\nfile1".into() }],
         timestamp: 1.0,
         id: "x1".into(),
         ..Default::default()

@@ -30,12 +30,12 @@ fn tool_output_truncated_to_max_lines() {
         .find(|m| m.role == crate::model::Role::Tool)
         .expect("tool message should exist");
     assert!(
-        tool_msg.content.contains('…'),
+        tool_msg.content().contains('…'),
         "Tool output should be truncated: {}",
-        tool_msg.content
+        tool_msg.content()
     );
     assert!(
-        !tool_msg.content.contains("line 9"),
+        !tool_msg.content().contains("line 9"),
         "Truncated output should not contain late lines"
     );
 }
@@ -64,8 +64,8 @@ fn tool_output_truncated_to_max_bytes() {
         .find(|m| m.role == crate::model::Role::Tool)
         .expect("tool message should exist");
     assert!(
-        tool_msg.content.contains('…'),
+        tool_msg.content().contains('…'),
         "Tool output should be truncated by bytes: {}",
-        tool_msg.content
+        tool_msg.content()
     );
 }

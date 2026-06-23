@@ -2,10 +2,7 @@ use crate::event::AgentEvent;
 use crate::event::Event;
 use crate::model::{AppState, Role};
 use crate::ui::LazyCache;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::tests::fresh_state;
 
 fn dispatch(state: &mut AppState, events: &[Event]) {
     for e in events {

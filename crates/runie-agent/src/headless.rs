@@ -4,22 +4,64 @@
 //! executes any parsed tool calls, and continues the conversation for up to
 //! `max_tool_rounds` rounds. The server mode sets `execute_tools: false` and
 //! simply returns the streamed content.
+//!
+//! `run_headless_cli` is a higher-level helper that encapsulates the common
+//! `spawn_headless_runtime → provider → PermissionGate → run_headless_turn`
+//! pattern shared by `runie-print`, `runie-json`, and `runie-server`.
 
-use runie_core::tool_parser::{
-    assign_tool_call_ids, build_assistant_message, parse_tool_calls_fallible,
-    tool_parse_error_message, ParsedToolCall, ToolParseError,
-};
 use crate::tool_runner::{execute_tool_call, tool_result_message};
 use crate::PermissionGate;
 use anyhow::Result;
 use futures::StreamExt;
 use runie_core::llm_event::LLMEvent;
 use runie_core::message::ChatMessage;
+use runie_core::permissions::PermissionManager;
 use runie_core::provider::Provider;
+use runie_core::tool_parser::{
+    assign_tool_call_ids, build_assistant_message, parse_tool_calls_fallible,
+    tool_parse_error_message, ParsedToolCall, ToolParseError,
+};
 use runie_core::tool::{ToolContext, ToolOutput, ToolRegistry};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::ops::ControlFlow;
+use std::sync::Arc;
+
+/// Run a headless turn with a fresh runtime, a PermissionGate, and an ApprovalSink.
+///
+/// This is the shared helper used by `runie-print`, `runie-json`, and `runie-server`.
+pub async fn run_headless_cli(
+    provider_name: Option<&str>,
+    provider_model: Option<&str>,
+    messages: Vec<ChatMessage>,
+    sink: Arc<dyn runie_core::permissions::ApprovalSink>,
+    options: HeadlessCliOptions,
+) -> Result<HeadlessResult> {
+    let runtime = runie_provider::spawn_headless_runtime().await;
+    let built = runtime.provider(provider_name, provider_model).await?;
+    let opts = build_headless_options(sink, options);
+    run_headless_turn(messages, built.provider.as_ref(), opts).await
+}
+
+/// Options for `run_headless_cli` (subset of `HeadlessOptions` that varies per caller).
+#[derive(Default)]
+pub struct HeadlessCliOptions {
+    pub execute_tools: bool,
+    pub max_tool_rounds: usize,
+    pub on_chunk: Option<Box<dyn FnMut(&str) + Send>>,
+}
+
+fn build_headless_options(
+    sink: Arc<dyn runie_core::permissions::ApprovalSink>,
+    opts: HeadlessCliOptions,
+) -> HeadlessOptions {
+    HeadlessOptions {
+        execute_tools: opts.execute_tools,
+        max_tool_rounds: opts.max_tool_rounds,
+        on_chunk: opts.on_chunk,
+        permission_gate: PermissionGate::new(PermissionManager::default(), sink),
+    }
+}
 
 /// Result of a headless turn.
 #[derive(Debug, Clone)]
@@ -286,11 +328,7 @@ mod tests {
     use runie_core::message::Role;
     use runie_core::permissions::{AutoAllowSink, PermissionManager};
     use runie_provider::MockProvider;
-    use std::sync::Arc;
-
-    fn allow_all_gate() -> PermissionGate {
-        PermissionGate::new(PermissionManager::default(), Arc::new(AutoAllowSink))
-    }
+    use runie_testing::allow_all_gate;
 
     #[tokio::test]
     async fn headless_runner_with_mock_returns_content() {
@@ -379,7 +417,7 @@ mod tests {
             "malformed tool should not be executed"
         );
         let has_parse_error = result.messages.iter().any(|m| {
-            m.role == Role::Tool && m.content.contains("Could not parse tool call")
+            m.role == Role::Tool && m.content().contains("Could not parse tool call")
         });
         assert!(has_parse_error, "parse error should be added to messages");
     }
@@ -406,5 +444,40 @@ mod tests {
         assert_eq!(result.tool_outputs[0].tool_name, "list_dir");
         assert!(result.tool_outputs[0].tool_args.get("path").is_some());
         assert!(result.content.contains("[TOOL_CALL]"));
+    }
+
+    // Layer 1 — State/Logic: helper constructs a PermissionGate with the supplied sink.
+    #[tokio::test]
+    async fn headless_cli_helper_builds_gate() {
+        let sink: Arc<dyn runie_core::permissions::ApprovalSink> =
+            Arc::new(AutoAllowSink);
+        let opts = HeadlessCliOptions {
+            execute_tools: true,
+            max_tool_rounds: 5,
+            on_chunk: None,
+        };
+        let gate = PermissionGate::new(PermissionManager::default(), sink.clone());
+        assert!(Arc::ptr_eq(gate.sink_ref(), &sink));
+    }
+
+    // Layer 4 — Smoke: run_headless_cli still works with a mock provider.
+    #[tokio::test]
+    async fn headless_cli_smoke_with_mock() {
+        crate::tests::ensure_mock_provider();
+        let sink: Arc<dyn runie_core::permissions::ApprovalSink> =
+            Arc::new(AutoAllowSink);
+        let messages = vec![
+            ChatMessage::system("You are helpful."),
+            ChatMessage::user("hello"),
+        ];
+        let opts = HeadlessCliOptions {
+            execute_tools: false,
+            max_tool_rounds: 5,
+            on_chunk: None,
+        };
+        let result = run_headless_cli(Some("mock"), Some("echo"), messages, sink, opts)
+            .await
+            .unwrap();
+        assert!(!result.content.is_empty());
     }
 }

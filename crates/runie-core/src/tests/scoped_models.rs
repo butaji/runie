@@ -12,8 +12,9 @@ fn sm(provider: &str, name: &str, enabled: bool) -> ScopedModel {
     }
 }
 
-fn configure(providers: &[(String, Vec<String>)]) {
+fn configure(state: &mut AppState, providers: &[(String, Vec<String>)]) {
     crate::login_config::set_test_config_with_providers(providers);
+    state.populate_cache_from_login_config();
 }
 
 /// Open palette and select a command by name
@@ -103,11 +104,11 @@ fn scoped_selected(state: &AppState) -> Option<usize> {
 
 #[test]
 fn slash_scoped_models_opens_dialog() {
-    configure(&[
+    let mut state = AppState::default();
+    configure(&mut state, &[
         ("mock".into(), vec!["echo".into()]),
         ("openai".into(), vec!["gpt-4o".into()]),
     ]);
-    let mut state = AppState::default();
 
     palette_select(&mut state, "scoped-models");
 
@@ -120,12 +121,12 @@ fn slash_scoped_models_opens_dialog() {
 
 #[test]
 fn scoped_models_dialog_navigates_up() {
-    configure(&[
+    let mut state = AppState::default();
+    configure(&mut state, &[
         ("mock".into(), vec!["echo".into()]),
         ("openai".into(), vec!["gpt-4o".into()]),
         ("anthropic".into(), vec!["claude-3".into()]),
     ]);
-    let mut state = AppState::default();
     state.update(ModelConfigEvent::ToggleScopedModelsDialog);
 
     state.update(InputEvent::HistoryPrev);
@@ -139,12 +140,12 @@ fn scoped_models_dialog_navigates_up() {
 
 #[test]
 fn scoped_models_dialog_navigates_down() {
-    configure(&[
+    let mut state = AppState::default();
+    configure(&mut state, &[
         ("mock".into(), vec!["echo".into()]),
         ("openai".into(), vec!["gpt-4o".into()]),
         ("anthropic".into(), vec!["claude-3".into()]),
     ]);
-    let mut state = AppState::default();
     state.update(ModelConfigEvent::ToggleScopedModelsDialog);
     state.update(InputEvent::HistoryNext);
     state.update(InputEvent::HistoryNext);
@@ -159,11 +160,11 @@ fn scoped_models_dialog_navigates_down() {
 
 #[test]
 fn scoped_models_dialog_submit_toggles() {
-    configure(&[
+    let mut state = AppState::default();
+    configure(&mut state, &[
         ("mock".into(), vec!["echo".into()]),
         ("openai".into(), vec!["gpt-4o".into()]),
     ]);
-    let mut state = AppState::default();
     state.update(ModelConfigEvent::ToggleScopedModelsDialog);
     state.update(InputEvent::HistoryNext);
 
@@ -175,8 +176,8 @@ fn scoped_models_dialog_submit_toggles() {
 
 #[test]
 fn scoped_models_dialog_esc_closes() {
-    configure(&[("mock".into(), vec!["echo".into()])]);
     let mut state = AppState::default();
+    configure(&mut state, &[("mock".into(), vec!["echo".into()])]);
     state.update(ModelConfigEvent::ToggleScopedModelsDialog);
 
     state.update(ControlEvent::Abort);
@@ -211,6 +212,7 @@ fn scoped_models_dialog_populates_from_configured_providers() {
         vec!["MiniMax-M3".into(), "MiniMax-M2.7".into()],
     )]);
     let mut state = AppState::default();
+    state.populate_cache_from_login_config();
     state.config.scoped_models.clear();
 
     state.update(ModelConfigEvent::ToggleScopedModelsDialog);

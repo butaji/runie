@@ -1,5 +1,6 @@
 //! Login flow panel builders.
 
+use crate::dialog::dsl::get_field;
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::event::LoginFlowEvent;
 use crate::provider_registry::{display_name, known_providers};
@@ -43,8 +44,8 @@ pub fn build_key_input(state: &LoginFlowState) -> Panel {
 
 fn login_key_submit(values: &std::collections::HashMap<String, String>) -> crate::event::Event {
     crate::event::Event::SubmitKey {
-        provider: values.get("provider").cloned().unwrap_or_default(),
-        key: values.get("key").cloned().unwrap_or_default(),
+        provider: get_field(values, "provider"),
+        key: get_field(values, "key"),
     }
 }
 

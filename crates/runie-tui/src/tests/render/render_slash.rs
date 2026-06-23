@@ -1,14 +1,12 @@
 use super::super::*;
-use runie_core::event::{DialogEvent, InputEvent};
+use runie_core::event::DialogEvent;
 use std::sync::Mutex;
 
 static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 fn type_str(state: &mut AppState, text: &str) {
-    for c in text.chars() {
-        state.update(InputEvent::Input(c));
-    }
-    state.update(InputEvent::Submit);
+    runie_testing::type_str(state, text);
+    state.update(runie_core::event::InputEvent::Submit);
 }
 
 fn render_slash(input: &str) -> String {

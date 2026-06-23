@@ -1,4 +1,0 @@
-# Scenario: 01_welcome
-# Mirrors ui/dumps/grok/01_welcome.txt — empty app, home screen visible.
-# Default state has home_screen.visible=true and mode=HomeScreen, so no
-# events are needed for this scenario.

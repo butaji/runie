@@ -47,7 +47,7 @@ impl Panel {
     pub fn new(id: impl Into<String>, title: impl Into<String>) -> Self {
         Self {
             id: id.into(),
-            title: normalize_title(title),
+            title: Self::normalize_title(title),
             items: Vec::new(),
             selected: 0,
             filter: String::new(),
@@ -78,7 +78,7 @@ impl Panel {
     /// Set the panel title, normalizing it to exactly one leading and
     /// trailing space.
     pub fn with_title(mut self, title: impl Into<String>) -> Self {
-        self.title = normalize_title(title);
+        self.title = Self::normalize_title(title);
         self
     }
 
@@ -260,11 +260,6 @@ impl Panel {
         self
     }
 
-    /// Enable fuzzy filtering. Alias for `with_filter()`.
-    pub fn searchable(self) -> Self {
-        self.with_filter()
-    }
-
     /// Explicitly enable or disable fuzzy filtering for this panel.
     pub fn filterable(mut self, enabled: bool) -> Self {
         self.filterable = enabled;
@@ -406,10 +401,15 @@ impl Panel {
         self.filter.push(c);
         self.selected = 0;
     }
-
     /// Backspace in filter.
     pub fn pop_filter(&mut self) {
         self.filter.pop();
+        self.selected = 0;
+    }
+    /// Set filter and reset selection to 0.
+    pub fn set_filter(&mut self, filter: &str) {
+        self.filter.clear();
+        self.filter.push_str(filter);
         self.selected = 0;
     }
 
@@ -487,14 +487,14 @@ impl Panel {
         scored.sort_by_key(|b| std::cmp::Reverse(b.1));
         scored.into_iter().map(|(i, _)| i).collect()
     }
-}
-/// Normalize a panel title so it always has exactly one leading and one
-/// trailing space. Extra whitespace is trimmed; empty titles stay empty.
-fn normalize_title(title: impl Into<String>) -> String {
-    let trimmed = title.into().trim().to_string();
-    if trimmed.is_empty() {
-        trimmed
-    } else {
-        format!(" {} ", trimmed)
+
+    /// Normalize title: one leading/trailing space, trimmed empty titles stay empty.
+    pub(crate) fn normalize_title(title: impl Into<String>) -> String {
+        let trimmed = title.into().trim().to_string();
+        if trimmed.is_empty() {
+            trimmed
+        } else {
+            format!(" {} ", trimmed)
+        }
     }
 }

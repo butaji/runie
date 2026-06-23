@@ -27,11 +27,11 @@ pub mod auth;
 pub mod bash_safety;
 pub mod build_lint;
 pub mod bus;
+pub mod channels;
 pub mod clipboard_image;
 pub mod commands;
 pub mod config;
 pub mod config_migrate;
-pub mod config_reload;
 pub mod confirmation;
 pub mod dialog;
 pub mod diff;
@@ -50,13 +50,16 @@ pub mod ipc;
 pub mod keybindings;
 pub mod labels;
 pub mod layout;
+pub mod lifecycle;
 pub mod llm_event;
 pub mod location;
 pub mod login_config;
 pub mod login_flow;
 pub mod markdown;
+#[cfg(feature = "mcp")]
 pub mod mcp;
 pub mod message;
+pub use message::Part;
 pub mod model;
 pub mod model_catalog;
 pub mod harness_skills;
@@ -74,6 +77,7 @@ pub mod session_actor;
 pub mod session_index;
 pub mod session_replay;
 pub mod session_store;
+pub mod sanitize;
 pub mod session_tree;
 pub mod settings;
 pub mod skill;
@@ -126,6 +130,7 @@ pub use keybindings::{
 };
 pub use labels::{format_timestamp, thinking_with_time, thought_with_time, THINKING_LOADING};
 pub use llm_event::{LLMError, LLMEvent, StopReason};
+pub use lifecycle::LifecycleState;
 pub use login_config::{
     config_path as login_config_path, list_configured_providers, remove_provider_config,
     save_provider_config,
@@ -137,7 +142,7 @@ pub use login_flow::{
 pub use model_catalog::{filter_models, model_catalog, ModelCapabilities, ModelInfo};
 pub use permissions::{
     is_read_only_tool, is_sensitive_path, ApprovalSink, AutoAllowSink, PermissionAction,
-    PermissionRule, PermissionSet, ScriptedSink, TuiApprovalSink,
+    PermissionGate, PermissionRule, PermissionSet, ScriptedSink, TuiApprovalSink,
 };
 pub use prompts::{
     build_system_prompt, load_prompts, PromptSource, PromptTemplate, DEFAULT_PROMPT, DEFAULT_TOOLS,

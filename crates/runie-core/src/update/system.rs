@@ -35,9 +35,9 @@ impl AppState {
     pub(crate) fn add_system_msg(&mut self, content: String) {
         self.session.messages.push(ChatMessage {
             role: Role::System,
-            content,
             timestamp: crate::update::now(),
             id: "system".to_string(),
+            parts: vec![runie_core::message::Part::Text { content }],
             ..Default::default()
         });
         self.messages_changed();
@@ -186,16 +186,16 @@ pub fn apply_initial_trust(state: &mut AppState, cwd: &std::path::Path) {
             state.config.read_only = false;
             state.session.messages.push(crate::ChatMessage {
                 role: crate::Role::System,
-                content: format!(
-                    "Welcome to runie in {}.\n\nThis project is not yet trusted. \
-                    Run /trust to enable write tools, or /untrust to enforce read-only mode.",
-                    cwd.display()
-                ),
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .map(|d| d.as_secs_f64())
                     .unwrap_or(0.0),
                 id: "trust_welcome".to_string(),
+                parts: vec![runie_core::message::Part::Text { content: format!(
+                    "Welcome to runie in {}.\n\nThis project is not yet trusted. \
+                    Run /trust to enable write tools, or /untrust to enforce read-only mode.",
+                    cwd.display()
+                ) }],
                 ..Default::default()
             });
             state.messages_changed();
@@ -228,6 +228,7 @@ pub fn control_event(state: &mut AppState, event: ControlEvent) {
                 Some(crate::commands::DialogState::Welcome)
             ) {
                 state.open_dialog = None;
+                state.view.input_receiver = crate::model::InputReceiver::ChatInput;
             }
             // Ready for user input — welcome is gone
             state.mark_dirty();
@@ -277,6 +278,7 @@ fn handle_abort(state: &mut AppState) {
     if state.open_dialog.is_some() && crate::update::dialog::root_closable(state) {
         // Close dialog when open
         state.open_dialog = None;
+        state.view.input_receiver = crate::model::InputReceiver::ChatInput;
         state.mark_dirty();
     } else if state.agent.turn_active {
         state.stop_turn();
@@ -296,7 +298,7 @@ fn handle_editor_done(state: &mut AppState, content: String) {
 impl AppState {
     pub(crate) fn show_diagnostics(&mut self) {
         let mut lines = vec!["Diagnostics:".to_string()];
-        let config_path = crate::config_reload::config_path();
+        let config_path = crate::config::config_path();
         lines.push(format!(
             "  Config: {}",
             if config_path.exists() {

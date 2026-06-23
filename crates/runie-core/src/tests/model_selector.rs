@@ -33,8 +33,9 @@ fn sample_catalog() -> Vec<ModelInfo> {
     ]
 }
 
-fn configure(providers: &[(String, Vec<String>)]) {
+fn configure(state: &mut AppState, providers: &[(String, Vec<String>)]) {
     crate::login_config::set_test_config_with_providers(providers);
+    state.populate_cache_from_login_config();
 }
 
 fn reset_config() {
@@ -111,8 +112,8 @@ fn recent_only_shows_known_models() {
 
 #[test]
 fn select_emits_switch_model() {
-    configure(&[("openai".into(), vec!["gpt-4o".into()])]);
     let mut state = AppState::default();
+    configure(&mut state, &[("openai".into(), vec!["gpt-4o".into()])]);
     state.update(DialogEvent::ToggleModelSelector);
     assert!(selector_state(&state).is_some());
     state.update(DialogEvent::ModelSelectorSelect);
@@ -183,8 +184,8 @@ fn ctrl_l_opens_selector() {
 
 #[test]
 fn slash_model_no_args_opens_selector() {
-    configure(&[("openai".into(), vec!["gpt-4o".into()])]);
     let mut state = AppState::default();
+    configure(&mut state, &[("openai".into(), vec!["gpt-4o".into()])]);
     palette_select(&mut state, "model");
     assert!(selector_state(&state).is_some());
 }
@@ -240,8 +241,8 @@ fn filter_narrows_selector() {
 
 #[test]
 fn up_down_navigates_selector() {
-    configure(&[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
     let mut state = AppState::default();
+    configure(&mut state, &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
     state.update(DialogEvent::ToggleModelSelector);
     state.update(DialogEvent::ModelSelectorDown);
     let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
@@ -253,8 +254,8 @@ fn up_down_navigates_selector() {
 
 #[test]
 fn selector_wraps_up() {
-    configure(&[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
     let mut state = AppState::default();
+    configure(&mut state, &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
     state.update(DialogEvent::ToggleModelSelector);
     state.update(DialogEvent::ModelSelectorUp);
     let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
@@ -267,8 +268,8 @@ fn selector_wraps_up() {
 
 #[test]
 fn selector_wraps_down() {
-    configure(&[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
     let mut state = AppState::default();
+    configure(&mut state, &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
     state.update(DialogEvent::ToggleModelSelector);
     let count = match &state.open_dialog {
         Some(DialogState::ModelSelector(stack)) => {

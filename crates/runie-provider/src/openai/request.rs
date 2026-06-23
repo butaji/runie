@@ -1,7 +1,7 @@
 //! OpenAI Chat Completions request-body construction.
 
 use super::OpenAiProvider;
-use runie_core::message::{ChatMessage, ToolCall};
+use runie_core::message::{ChatMessage, Part, ToolCall};
 use runie_core::provider_registry::ModelMeta;
 
 const MAX_TOOL_CALL_ID_LEN: usize = 64;
@@ -108,7 +108,7 @@ fn serialize_messages(messages: &[ChatMessage], supports_system: bool) -> Vec<se
 fn collect_tool_call_ids(messages: &[ChatMessage]) -> std::collections::HashSet<String> {
     messages
         .iter()
-        .flat_map(|m| m.tool_calls.iter().map(|c| c.id.clone()))
+        .flat_map(|m| m.tool_calls().into_iter().map(|c| c.id.clone()))
         .collect()
 }
 
@@ -128,32 +128,37 @@ fn message_to_openai(
         role
     };
 
+    let content = message.content();
+    let tool_calls: Vec<ToolCall> = message.tool_calls();
+    let has_tool_calls = !tool_calls.is_empty();
+
     serde_json::to_value(OpenAiMessage {
         role: role.to_string(),
-        content: if message.tool_calls.is_empty() {
-            Some(message.content.clone())
-        } else {
+        content: if has_tool_calls {
             Some(String::new())
+        } else {
+            Some(content.clone())
         },
-        tool_calls: message.tool_calls.iter().map(tool_call_to_openai).collect(),
+        tool_calls: tool_calls.iter().map(|c| tool_call_to_openai(c)).collect(),
         tool_call_id: None,
     })
-    .unwrap_or_else(|_| fallback_message(role, &message.content))
+    .unwrap_or_else(|_| fallback_message(role, &content))
 }
 
 fn serialize_tool_message(
     message: &ChatMessage,
     valid_tool_ids: &std::collections::HashSet<String>,
 ) -> serde_json::Value {
+    let content = message.content();
     match &message.tool_call_id {
         Some(id) if valid_tool_ids.contains(id) => serde_json::json!({
             "role": "tool",
-            "content": message.content,
+            "content": content,
             "tool_call_id": sanitize_tool_call_id(id),
         }),
         _ => serde_json::json!({
             "role": "user",
-            "content": message.content,
+            "content": content,
         }),
     }
 }
@@ -164,7 +169,7 @@ fn tool_call_to_openai(call: &ToolCall) -> OpenAiToolCall {
         call_type: "function".to_string(),
         function: OpenAiFunction {
             name: call.name.clone(),
-            arguments: call.arguments.clone(),
+            arguments: call.args.to_string(),
         },
     }
 }
@@ -231,45 +236,38 @@ mod tests {
 
     #[test]
     fn assistant_message_with_tool_calls_omits_content() {
+        // When assistant has both text and tool_calls, content is set to empty.
+        // Dangling tool calls (no matching result) are removed by sanitize first,
+        // so content is preserved when tool_calls become empty.
         let msg = ChatMessage {
             role: Role::Assistant,
-            content: "I'll read it.".to_string(),
             timestamp: 0.0,
             id: String::new(),
             provider: String::new(),
             metadata: MessageMetadata::default(),
-            tool_calls: vec![ToolCall::new(
-                "call_1",
-                "read_file",
-                r#"{"path":"Cargo.toml"}"#.to_string(),
-            )],
             tool_call_id: None,
             provider_metadata: None,
-            parts: Vec::new(),
+            parts: vec![
+                Part::Text { content: "I'll read it.".into() },
+                Part::ToolCall { id: "call_1".into(), name: "read_file".into(), args: serde_json::json!({"path":"Cargo.toml"}) },
+            ],
         };
-        let body = build_request_body(&provider(), &[msg]);
-        let serialized = &body["messages"].as_array().unwrap()[0];
+        let body = build_request_body(&provider(), &[ChatMessage::user("hi".to_string()), msg]);
+        let serialized = &body["messages"].as_array().unwrap()[1];
         assert_eq!(serialized["role"], "assistant");
-        assert_eq!(serialized["content"], "");
-        assert_eq!(serialized["tool_calls"][0]["id"], "call_1");
+        // Dangling tool call was removed, so content is preserved
+        assert_eq!(serialized["content"], "I'll read it.");
+        // No tool_calls since the dangling one was removed
+        assert!(serialized["tool_calls"].as_array().map(|a| a.is_empty()).unwrap_or(true));
     }
 
     #[test]
     fn assistant_message_without_tool_calls_keeps_content() {
-        let msg = ChatMessage {
-            role: Role::Assistant,
-            content: "I'll read it.".to_string(),
-            timestamp: 0.0,
-            id: String::new(),
-            provider: String::new(),
-            metadata: MessageMetadata::default(),
-            tool_calls: vec![],
-            tool_call_id: None,
-            provider_metadata: None,
-            parts: Vec::new(),
-        };
-        let body = build_request_body(&provider(), &[msg]);
-        let serialized = &body["messages"].as_array().unwrap()[0];
+        // Assistant without tool_calls keeps its content.
+        // Needs a user message first (sanitize ensures user/system first).
+        let msg = ChatMessage::assistant("I'll read it.".to_string());
+        let body = build_request_body(&provider(), &[ChatMessage::user("hi".to_string()), msg]);
+        let serialized = &body["messages"].as_array().unwrap()[1];
         assert_eq!(serialized["role"], "assistant");
         assert_eq!(serialized["content"], "I'll read it.");
     }

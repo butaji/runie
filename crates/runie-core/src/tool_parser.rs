@@ -331,7 +331,7 @@ pub fn build_assistant_message(
             ToolCall::new(
                 t.id.clone().unwrap_or_default(),
                 &t.name,
-                t.args.to_string(),
+                t.args.clone(),
             )
         })
         .collect();

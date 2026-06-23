@@ -165,6 +165,9 @@ fn pop_dialog_or_close(state: &mut AppState, root_closable: bool) -> bool {
         false
     } else {
         state.open_dialog = None;
+        // NOTE: Do NOT reset input_receiver here. handle_vim_dialog_back()
+        // checks input_receiver == Dialog to know a dialog was closed and
+        // should NOT trigger vim-nav. It will reset input_receiver itself.
         state.mark_dirty();
         true
     }
@@ -230,6 +233,7 @@ fn handle_panel_action(state: &mut AppState, action: ItemAction, stack: &mut Pan
         }
         ItemAction::Close => {
             state.open_dialog = None;
+            state.view.input_receiver = crate::model::InputReceiver::ChatInput;
             state.mark_dirty();
             true
         }
@@ -245,6 +249,18 @@ fn handle_panel_action(state: &mut AppState, action: ItemAction, stack: &mut Pan
     }
 }
 
+/// Extract args from panel filter for RunPaletteCommand.
+fn extract_palette_args(name: &str, filter: &str) -> String {
+    let filter = filter.trim();
+    if filter == name {
+        String::new()
+    } else if let Some(rest) = filter.strip_prefix(name) {
+        rest.trim().to_string()
+    } else {
+        filter.to_string()
+    }
+}
+
 fn handle_emit_action(state: &mut AppState, stack: &mut PanelStack, evt: crate::Event) -> bool {
     let keep_open = stack
         .current()
@@ -252,8 +268,27 @@ fn handle_emit_action(state: &mut AppState, stack: &mut PanelStack, evt: crate::
         .unwrap_or(false);
     if !keep_open {
         state.open_dialog = None;
+        state.view.input_receiver = crate::model::InputReceiver::ChatInput;
     }
     state.mark_dirty();
+    // For RunPaletteCommand, pass the panel filter as args
+    let evt = if let crate::Event::RunPaletteCommand { name, args } = &evt {
+        if args.is_empty() {
+            if let Some(panel) = stack.current() {
+                let filter_args = extract_palette_args(name, &panel.filter);
+                crate::Event::RunPaletteCommand {
+                    name: name.clone(),
+                    args: filter_args,
+                }
+            } else {
+                evt.clone()
+            }
+        } else {
+            evt.clone()
+        }
+    } else {
+        evt
+    };
     state.update(evt);
     !keep_open
 }
@@ -265,6 +300,7 @@ fn close_panel_on_activate(state: &mut AppState, stack: &mut PanelStack) -> bool
         .unwrap_or(false);
     if !keep_open {
         state.open_dialog = None;
+        state.view.input_receiver = crate::model::InputReceiver::ChatInput;
         state.mark_dirty();
     }
     !keep_open

@@ -252,7 +252,7 @@ fn parse_error_message_includes_raw_input() {
     };
     let msg = tool_parse_error_message(&error, "parse_0");
     assert_eq!(msg.role, Role::Tool);
-    assert!(msg.content.contains("{bad json"));
+    assert!(msg.content().contains("{bad json"));
     assert_eq!(msg.tool_call_id, Some("parse_0".into()));
 }
 

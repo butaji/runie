@@ -12,9 +12,8 @@
 //! - `listSessions` → `{}` → `{ "sessions": [...] }`
 
 use anyhow::Result;
-use runie_agent::{run_headless_turn, HeadlessOptions, PermissionGate};
-use runie_core::headless_runtime::HeadlessRuntime;
-use runie_core::permissions::{AutoAllowSink, DenyAllSink, PermissionManager};
+use runie_agent::{run_headless_cli, HeadlessCliOptions};
+use runie_core::permissions::{AutoAllowSink, DenyAllSink};
 use runie_core::message::ChatMessage;
 use runie_protocol::{Error, Message, Request, Response};
 use serde_json::Value;
@@ -34,12 +33,10 @@ async fn main() {
         eprintln!("warning: --yolo enabled; destructive tools will be auto-approved");
     }
 
-    let runtime = Arc::new(runie_provider::spawn_headless_runtime().await);
-
     let result = if use_stdio {
-        run_stdio_server(runtime, yolo).await
+        run_stdio_server(yolo).await
     } else {
-        run_tcp_server(runtime, yolo).await
+        run_tcp_server(yolo).await
     };
 
     if let Err(e) = result {
@@ -48,7 +45,7 @@ async fn main() {
     }
 }
 
-async fn run_tcp_server(runtime: Arc<HeadlessRuntime>, yolo: bool) -> Result<()> {
+async fn run_tcp_server(yolo: bool) -> Result<()> {
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     let port = listener.local_addr()?.port();
     println!("{}", port);
@@ -59,7 +56,7 @@ async fn run_tcp_server(runtime: Arc<HeadlessRuntime>, yolo: bool) -> Result<()>
     loop {
         tokio::select! {
             Ok((stream, _)) = listener.accept() => {
-                tokio::spawn(handle_connection(runtime.clone(), stream, yolo));
+                tokio::spawn(handle_connection(stream, yolo));
             }
             _ = &mut shutdown => break,
         }
@@ -67,7 +64,7 @@ async fn run_tcp_server(runtime: Arc<HeadlessRuntime>, yolo: bool) -> Result<()>
     Ok(())
 }
 
-async fn run_stdio_server(runtime: Arc<HeadlessRuntime>, yolo: bool) -> Result<()> {
+async fn run_stdio_server(yolo: bool) -> Result<()> {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
     let reader = BufReader::new(stdin);
@@ -78,12 +75,12 @@ async fn run_stdio_server(runtime: Arc<HeadlessRuntime>, yolo: bool) -> Result<(
         if line.trim().is_empty() {
             continue;
         }
-        write_response(&mut stdout, &process_request(runtime.clone(), &line, yolo).await).await?;
+        write_response(&mut stdout, &process_request(&line, yolo).await).await?;
     }
     Ok(())
 }
 
-async fn handle_connection(runtime: Arc<HeadlessRuntime>, stream: TcpStream, yolo: bool) {
+async fn handle_connection(stream: TcpStream, yolo: bool) {
     let (read_half, write_half) = stream.into_split();
     let reader = BufReader::new(read_half);
     let mut lines = reader.lines();
@@ -95,7 +92,7 @@ async fn handle_connection(runtime: Arc<HeadlessRuntime>, stream: TcpStream, yol
         }
         let _ = write_response(
             &mut writer,
-            &process_request(runtime.clone(), &line, yolo).await,
+            &process_request(&line, yolo).await,
         )
         .await;
     }
@@ -112,31 +109,27 @@ where
     Ok(())
 }
 
-async fn process_request(runtime: Arc<HeadlessRuntime>, line: &str, yolo: bool) -> Message {
+async fn process_request(line: &str, yolo: bool) -> Message {
     let req = match serde_json::from_str::<Request>(line) {
         Ok(r) => r,
         Err(e) => return Message::error(None, Error::parse(format!("Parse error: {e}"))),
     };
 
     let id = req.id.clone();
-    match dispatch_method(runtime, &req, yolo).await {
+    match dispatch_method(&req, yolo).await {
         Ok(result) => Message::Response(Response::ok(id, result.unwrap_or(Value::Null))),
         Err(e) => Message::Response(Response::err(id, e)),
     }
 }
 
-async fn dispatch_method(
-    runtime: Arc<HeadlessRuntime>,
-    req: &Request,
-    yolo: bool,
-) -> Result<Option<Value>, Error> {
+async fn dispatch_method(req: &Request, yolo: bool) -> Result<Option<Value>, Error> {
     match req.method.as_str() {
         "initialize" => Ok(Some(initialize_result())),
-        "chat" => handle_chat(runtime, &req.params, yolo)
+        "chat" => handle_chat(&req.params, yolo)
             .await
             .map(Some)
             .map_err(chat_error),
-        "complete" => handle_complete(runtime, &req.params, yolo)
+        "complete" => handle_complete(&req.params, yolo)
             .await
             .map(Some)
             .map_err(complete_error),
@@ -177,50 +170,46 @@ fn headless_system_prompt() -> String {
     )
 }
 
-fn headless_options(yolo: bool) -> HeadlessOptions {
-    let sink: Arc<dyn runie_core::permissions::ApprovalSink> = if yolo {
-        Arc::new(AutoAllowSink)
-    } else {
-        Arc::new(DenyAllSink)
-    };
-    HeadlessOptions {
+fn headless_options(_yolo: bool) -> HeadlessCliOptions {
+    HeadlessCliOptions {
         execute_tools: false,
         max_tool_rounds: 1,
         on_chunk: None,
-        permission_gate: PermissionGate::new(PermissionManager::default(), sink),
     }
 }
 
-async fn handle_chat(
-    runtime: Arc<HeadlessRuntime>,
-    params: &Value,
-    yolo: bool,
-) -> Result<Value> {
+fn headless_sink(yolo: bool) -> Arc<dyn runie_core::permissions::ApprovalSink> {
+    if yolo {
+        Arc::new(AutoAllowSink)
+    } else {
+        Arc::new(DenyAllSink)
+    }
+}
+
+async fn handle_chat(params: &Value, yolo: bool) -> Result<Value> {
     let messages: Vec<ChatMessage> =
         serde_json::from_value(params.get("messages").cloned().unwrap_or_default())?;
-    let built = runtime.provider(None, None).await?;
 
     let mut msgs = vec![ChatMessage::system(headless_system_prompt())];
     msgs.extend(messages);
 
-    let result = run_headless_turn(msgs, built.provider.as_ref(), headless_options(yolo)).await?;
+    let sink = headless_sink(yolo);
+    let opts = headless_options(yolo);
+    let result = run_headless_cli(None, None, msgs, sink, opts).await?;
     Ok(serde_json::json!({ "content": result.content }))
 }
 
-async fn handle_complete(
-    runtime: Arc<HeadlessRuntime>,
-    params: &Value,
-    yolo: bool,
-) -> Result<Value> {
+async fn handle_complete(params: &Value, yolo: bool) -> Result<Value> {
     let prompt = params.get("prompt").and_then(|v| v.as_str()).unwrap_or("");
-    let built = runtime.provider(None, None).await?;
 
     let msgs = vec![
         ChatMessage::system(headless_system_prompt()),
         ChatMessage::user(prompt.to_string()),
     ];
 
-    let result = run_headless_turn(msgs, built.provider.as_ref(), headless_options(yolo)).await?;
+    let sink = headless_sink(yolo);
+    let opts = headless_options(yolo);
+    let result = run_headless_cli(None, None, msgs, sink, opts).await?;
     Ok(serde_json::json!({ "content": result.content }))
 }
 

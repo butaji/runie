@@ -1,7 +1,9 @@
-use super::{exec, fresh_state, minimal_session, tmp_store, type_str, ENV_LOCK};
+use super::{exec, minimal_session, tmp_store, ENV_LOCK};
 use crate::event::Event;
 use crate::event::{DialogEvent, InputEvent};
+use crate::message::Part;
 use crate::model::Role;
+use crate::tests::{fresh_state, type_str};
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
@@ -49,7 +51,7 @@ fn unknown_slash_returns_error() {
         .filter(|m| m.role == Role::System)
         .collect();
     assert_eq!(sys_msgs.len(), 1);
-    assert!(sys_msgs[0].content.contains("Unknown command"));
+    assert!(sys_msgs[0].content().contains("Unknown command"));
 }
 
 #[test]
@@ -124,7 +126,7 @@ fn new_clears_session_keeps_provider_model() {
         .filter(|m| m.role == Role::System)
         .collect();
     assert!(
-        sys.iter().any(|m| m.content.contains("New session")),
+        sys.iter().any(|m| m.content().contains("New session")),
         "confirmation: {:?}",
         sys.last()
     );
@@ -172,19 +174,19 @@ fn history_lists_recent_inputs() {
         .collect();
     let last = sys.last().expect("system message");
     assert!(
-        last.content.contains("first question"),
+        last.content().contains("first question"),
         "lists first: {}",
-        last.content
+        last.content()
     );
     assert!(
-        last.content.contains("second question"),
+        last.content().contains("second question"),
         "lists second: {}",
-        last.content
+        last.content()
     );
     assert!(
-        last.content.contains("total"),
+        last.content().contains("total"),
         "shows count: {}",
-        last.content
+        last.content()
     );
 }
 
@@ -201,9 +203,9 @@ fn resume_loads_most_recent_session() {
     older.config.current_model = "claude-3".into();
     older.session.messages.push(crate::model::ChatMessage {
         role: Role::User,
-        content: "older".into(),
         timestamp: 1.0,
         id: "u.older".into(),
+        parts: vec![Part::Text { content: "older".into() }],
         ..Default::default()
     });
     crate::session_replay::save_session("older", &older).unwrap();
@@ -214,9 +216,9 @@ fn resume_loads_most_recent_session() {
     newer.config.current_model = "gpt-4o".into();
     newer.session.messages.push(crate::model::ChatMessage {
         role: Role::User,
-        content: "newer".into(),
         timestamp: 2.0,
         id: "u.newer".into(),
+        parts: vec![Part::Text { content: "newer".into() }],
         ..Default::default()
     });
     crate::session_replay::save_session("newer", &newer).unwrap();
@@ -230,11 +232,11 @@ fn resume_loads_most_recent_session() {
     );
     assert_eq!(state.config.current_model, "gpt-4o", "loads newer model");
     assert!(
-        state.session.messages.iter().any(|m| m.content == "newer"),
+        state.session.messages.iter().any(|m| m.content() == "newer"),
         "newer message loaded"
     );
     assert!(
-        !state.session.messages.iter().any(|m| m.content == "older"),
+        !state.session.messages.iter().any(|m| m.content() == "older"),
         "older message not loaded"
     );
 

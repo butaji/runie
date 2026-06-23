@@ -10,13 +10,21 @@ use serde::{Deserialize, Serialize};
 ///
 /// All providers emit the same event vocabulary regardless of their
 /// underlying API shape.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data", rename_all = "camelCase")]
 pub enum LLMEvent {
+    /// An assistant text block has started.
+    TextStart { id: String },
     /// A delta of text content from the assistant.
     TextDelta(String),
+    /// An assistant text block has ended.
+    TextEnd { id: String },
     /// A delta of thinking/reasoning content (if supported).
     ThinkingDelta(String),
+    /// Thinking/reasoning block started (used by ThinkFilter for inline tags).
+    ThinkingStart { id: String },
+    /// Thinking/reasoning block ended (used by ThinkFilter for inline tags).
+    ThinkingEnd { id: String },
     /// An LLM started invoking a tool.
     ToolCallStart { id: String, name: String },
     /// A delta of tool input content.
@@ -66,7 +74,7 @@ impl StopReason {
 }
 
 /// LLM-specific errors (distinct from ProviderError).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "message", rename_all = "camelCase")]
 pub enum LLMError {
     /// LLM returned invalid JSON.

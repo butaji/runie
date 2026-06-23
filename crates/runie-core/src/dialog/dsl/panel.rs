@@ -54,7 +54,7 @@ mod tests {
     #[test]
     fn test_panel_filter() {
         let mut p = panel("test", "Test")
-            .searchable()
+            .with_filter()
             .action("alpha", ItemAction::Close)
             .action("beta", ItemAction::Close)
             .action("gamma", ItemAction::Close);

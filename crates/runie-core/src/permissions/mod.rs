@@ -14,6 +14,7 @@ use serde_json::Value;
 pub mod approval_registry;
 pub mod default_tool_approve;
 pub mod file_access_ask;
+pub mod gate;
 pub mod git_tracked_write;
 mod rules;
 mod sink;
@@ -21,6 +22,7 @@ mod sink;
 pub use approval_registry::ApprovalRegistry;
 pub use default_tool_approve::DefaultToolApprove;
 pub use file_access_ask::FileAccessAsk;
+pub use gate::PermissionGate;
 pub use git_tracked_write::GitTrackedWriteApprove;
 pub use rules::{PermissionRule, PermissionSet};
 pub use sink::{ApprovalSink, AutoAllowSink, DenyAllSink, ScriptedSink, TuiApprovalSink};
@@ -60,10 +62,6 @@ impl From<PermissionResult> for PermissionAction {
 )]
 #[serde(rename_all = "snake_case")]
 pub enum PermissionMode {
-    /// Auto-approve everything.
-    Yolo,
-    /// Always ask.
-    Manual,
     /// Use the policy chain.
     #[default]
     Auto,
@@ -90,14 +88,12 @@ pub trait PermissionPolicy: Send + Sync {
 #[derive(Default)]
 pub struct PermissionManager {
     policies: Vec<Box<dyn PermissionPolicy>>,
-    mode: PermissionMode,
 }
 
 impl PermissionManager {
-    pub fn new(mode: PermissionMode) -> Self {
+    pub fn new(_mode: PermissionMode) -> Self {
         Self {
             policies: Vec::new(),
-            mode,
         }
     }
 
@@ -110,21 +106,8 @@ impl PermissionManager {
         self.policies.push(policy);
     }
 
-    pub fn mode(&self) -> PermissionMode {
-        self.mode
-    }
-
-    pub fn set_mode(&mut self, mode: PermissionMode) {
-        self.mode = mode;
-    }
-
     /// Evaluate the context against the policy chain.
     pub async fn evaluate(&self, ctx: &PermissionContext<'_>) -> PermissionResult {
-        match self.mode {
-            PermissionMode::Yolo => return PermissionResult::Allow,
-            PermissionMode::Manual => return PermissionResult::Ask,
-            PermissionMode::Auto => {}
-        }
         for policy in &self.policies {
             if policy.matches(ctx) {
                 if let Some(result) = policy.evaluate(ctx).await {

@@ -1,17 +1,9 @@
 //! Extra session command tests — export, import, display name
 use crate::event::{DialogEvent, Event, InputEvent};
 use crate::model::{AppState, ChatMessage, Role};
+use crate::message::Part;
 use crate::tests::slash::ENV_LOCK;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
-
-fn type_str(state: &mut AppState, text: &str) {
-    for c in text.chars() {
-        state.update(InputEvent::Input(c));
-    }
-}
+use crate::tests::{fresh_state, type_str};
 
 /// Set input buffer directly and submit — bypasses the command palette.
 fn exec(state: &mut AppState, text: &str) {
@@ -37,9 +29,9 @@ fn imported_session() -> crate::session::Session {
         updated_at: 2.0,
         messages: vec![ChatMessage {
             role: Role::Assistant,
-            content: "imported msg".into(),
             timestamp: 0.0,
             id: "resp.0".into(),
+            parts: vec![Part::Text { content: "imported msg".into() }],
             ..Default::default()
         }],
         provider: "openai".into(),
@@ -99,9 +91,9 @@ fn name_shows_current_when_no_args() {
         .collect();
     let last = sys_msgs.last().expect("system msg");
     assert!(
-        last.content.contains("existing"),
+        last.content().contains("existing"),
         "shows current name: {}",
-        last.content
+        last.content()
     );
 }
 
@@ -123,9 +115,9 @@ fn export_creates_file() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "hello".into(),
         timestamp: 0.0,
         id: "req.0".into(),
+        parts: vec![Part::Text { content: "hello".into() }],
         ..Default::default()
     });
     let tmp = std::env::temp_dir().join(format!("runie_export_{}.json", std::process::id()));
@@ -136,7 +128,7 @@ fn export_creates_file() {
     let json = std::fs::read_to_string(&tmp).unwrap();
     let session: crate::session::Session = serde_json::from_str(&json).unwrap();
     assert_eq!(session.messages.len(), 1);
-    assert_eq!(session.messages[0].content, "hello");
+    assert_eq!(session.messages[0].content(), "hello");
     let _ = std::fs::remove_file(&tmp);
 }
 
@@ -153,7 +145,7 @@ fn import_loads_file() {
     exec(&mut state, &format!("/import {}", path)); // Opens form with pre-filled path
     state.update(Event::submit()); // Submits the form
     assert_eq!(state.session.messages.len(), 2); // imported + system confirmation
-    assert_eq!(state.session.messages[0].content, "imported msg");
+    assert_eq!(state.session.messages[0].content(), "imported msg");
     assert_eq!(state.config.current_provider, "openai");
     assert_eq!(state.config.current_model, "gpt-4o");
     assert_eq!(state.config.theme_name, "tokyo-night");

@@ -1,9 +1,6 @@
 use crate::dsl::AppStateDsl;
 use crate::model::{AppState, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::tests::fresh_state;
 
 fn run_turn_with_tool(state: &mut AppState, id: &str, tool_name: &str) {
     state
@@ -183,9 +180,9 @@ fn end_tool_updates_content() {
         .find(|m| m.role == Role::Tool)
         .unwrap();
     assert!(
-        tool.content.contains("✓"),
+        tool.content().contains("✓"),
         "Tool should be done: {}",
-        tool.content
+        tool.content()
     );
 }
 
@@ -204,9 +201,9 @@ fn two_turns_with_tools_no_stuck_timer() {
         .filter(|m| m.role == Role::Tool)
     {
         assert!(
-            !tool.content.contains("⠋ Running"),
+            !tool.content().contains("⠋ Running"),
             "Tool should be done: {}",
-            tool.content
+            tool.content()
         );
     }
 }

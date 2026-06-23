@@ -144,18 +144,16 @@ fn finalize_subagent_result(state: Arc<SubagentState>) -> Result<String, Subagen
 mod tests {
     use super::*;
     use runie_core::model::ThinkingLevel;
-
-    fn mock_provider() -> runie_provider::MockProvider {
-        runie_provider::MockProvider::default()
-    }
+    use runie_testing::mock_provider;
 
     #[tokio::test]
     async fn subagent_returns_echo_of_prompt() {
+        let provider = mock_provider();
         let result = run_subagent(
             "hello subagent",
             "mock",
             "echo",
-            &mock_provider(),
+            &provider,
             ThinkingLevel::Off,
             false,
             "",
@@ -173,11 +171,12 @@ mod tests {
 
     #[tokio::test]
     async fn subagent_with_skill_context_uses_it() {
+        let provider = mock_provider();
         let result = run_subagent(
             "ask about skill",
             "mock",
             "echo",
-            &mock_provider(),
+            &provider,
             ThinkingLevel::Off,
             false,
             "SKILL: test-skill",
@@ -191,11 +190,12 @@ mod tests {
 
     #[tokio::test]
     async fn subagent_empty_prompt_succeeds() {
+        let provider = mock_provider();
         let result = run_subagent(
             "",
             "mock",
             "echo",
-            &mock_provider(),
+            &provider,
             ThinkingLevel::Off,
             false,
             "",

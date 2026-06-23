@@ -2,16 +2,7 @@
 use super::slash::exec;
 use crate::event::{DialogEvent, InputEvent, ModelConfigEvent};
 use crate::model::AppState;
-
-pub fn fresh_state() -> AppState {
-    AppState::default()
-}
-
-pub fn type_str(state: &mut AppState, text: &str) {
-    for c in text.chars() {
-        state.update(InputEvent::Input(c));
-    }
-}
+use crate::tests::{fresh_state, type_str};
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
@@ -162,8 +153,8 @@ fn slash_approve_without_edits_warns() {
         .collect();
     let last = sys.last().expect("system message");
     assert!(
-        last.content.contains("No pending edits"),
+        last.content().contains("No pending edits"),
         "expected warning: {}",
-        last.content
+        last.content()
     );
 }

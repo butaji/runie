@@ -14,8 +14,8 @@ pub mod toggle;
 
 pub use form_handler::{handle_form_dialog, insert_at_ref};
 pub use open::{
-    open_at_file_picker, open_at_file_picker_all, open_command_palette, open_model_selector,
-    open_scoped_models_dialog, open_session_tree_dialog, open_settings_dialog,
+    open_at_file_picker, open_at_file_picker_all, open_command_palette, open_command_palette_with_filter,
+    open_model_selector, open_scoped_models_dialog, open_session_tree_dialog, open_settings_dialog,
 };
 pub(crate) use panel::root_closable;
 pub use router::{process_command_result, update_dialog};

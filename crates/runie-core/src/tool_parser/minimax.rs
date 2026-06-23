@@ -175,11 +175,6 @@ pub(crate) fn is_known_tool(name: &str) -> bool {
         "find_definitions",
         "select_model",
         "done",
-        "list_subagents",
-        "cancel_subagent",
-        "get_subagent_status",
-        "get_subagent_output",
-        "steer_subagent",
     ];
     KNOWN.contains(&name)
 }

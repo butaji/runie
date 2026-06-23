@@ -102,7 +102,7 @@ impl AppState {
                         let preview = format!(
                             "[{}] {}",
                             node.message.role.as_str(),
-                            node.message.content.chars().take(60).collect::<String>()
+                            node.message.content().chars().take(60).collect::<String>()
                         );
                         (depth, preview)
                     })

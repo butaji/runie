@@ -115,3 +115,14 @@ pub struct PermissionRequestState {
     pub tool: String,
     pub input: serde_json::Value,
 }
+
+/// Identifies which component is currently receiving keyboard input.
+/// Used to determine how Esc should behave (e.g., close dialog vs enter vim-nav).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum InputReceiver {
+    /// The main chat input field is active
+    #[default]
+    ChatInput,
+    /// A dialog/overlay is open and receiving input
+    Dialog,
+}

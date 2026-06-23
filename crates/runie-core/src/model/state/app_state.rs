@@ -261,48 +261,25 @@ impl AppState {
 
     /// List configured providers from the cached config.
     pub fn configured_providers(&self) -> Vec<(String, String, Vec<String>)> {
-        if let Some(config) = self.config_cache.as_ref() {
-            return config.configured_providers();
-        }
-        #[cfg(test)]
-        {
-            return crate::login_config::list_configured_providers();
-        }
-        #[cfg(not(test))]
-        Vec::new()
+        self.config_cache
+            .as_ref()
+            .map(|c| c.configured_providers())
+            .unwrap_or_default()
     }
 
     /// Resolve the default provider/model pair from the cached config.
     pub fn resolve_default_model(&self) -> (String, String) {
-        if let Some(config) = self.config_cache.as_ref() {
-            return config.resolve_default_model();
-        }
-        #[cfg(test)]
-        {
-            return crate::login_config::with_read_lock(|c| c.resolve_default_model());
-        }
-        #[cfg(not(test))]
-        (String::new(), String::new())
+        self.config_cache
+            .as_ref()
+            .map(|c| c.resolve_default_model())
+            .unwrap_or_default()
     }
 
     /// Look up a configured provider from the cached config.
     pub fn provider_config(&self, name: &str) -> Option<crate::config::ModelProvider> {
-        if let Some(config) = self.config_cache.as_ref() {
-            return config.model_providers.get(name).cloned();
-        }
-        #[cfg(test)]
-        {
-            return crate::login_config::get_provider_config(name).map(
-                |(base_url, api_key, models)| crate::config::ModelProvider {
-                    provider_type: None,
-                    base_url,
-                    api_key,
-                    models,
-                },
-            );
-        }
-        #[cfg(not(test))]
-        None
+        self.config_cache
+            .as_ref()
+            .and_then(|c| c.model_providers.get(name).cloned())
     }
 
     /// Fire-and-forget request to remove a provider via the ConfigActor.
@@ -310,25 +287,14 @@ impl AppState {
         self.send_config_msg(crate::actors::ConfigMsg::RemoveProvider {
             name: name.to_string(),
         });
-        #[cfg(test)]
-        {
-            let _ = crate::login_config::remove_provider_config(name);
-        }
     }
 
     /// Fire-and-forget request to update a provider's saved model list.
     pub fn set_provider_models(&self, name: &str, models: Vec<String>) {
         self.send_config_msg(crate::actors::ConfigMsg::SetProviderModels {
             name: name.to_string(),
-            models: models.clone(),
+            models,
         });
-        #[cfg(test)]
-        {
-            if let Some((base_url, api_key, _)) = crate::login_config::get_provider_config(name) {
-                let _ =
-                    crate::login_config::save_provider_config(name, &base_url, &api_key, &models);
-            }
-        }
     }
 
     fn send_config_msg(&self, msg: crate::actors::ConfigMsg) {
@@ -477,7 +443,6 @@ impl AppState {
             Some(parts.join(" "))
         }
     }
-
     /// Restore application state from a JSON session snapshot.
     pub fn restore_session(&mut self, session: &crate::session::Session) {
         self.session.messages = session.messages.clone();
@@ -494,7 +459,36 @@ impl AppState {
         self.session.session_created_at = session.created_at;
         self.session.session_updated_at = session.updated_at;
         self.session.session_tree = session.session_tree.clone();
+        self.configure_token_tracker();
         self.messages_changed();
+    }
+
+    /// Populate `config_cache` from `login_config` — used by tests that call
+    /// `login_config::set_test_config_with_providers` before creating AppState.
+    /// Sets config_cache directly without calling apply_config (which would
+    /// trigger apply_scoped_models and populate scoped_models from the catalog).
+    #[cfg(test)]
+    pub fn populate_cache_from_login_config(&mut self) {
+        use crate::login_config;
+        let providers = login_config::list_configured_providers();
+        let mut cfg = crate::config::Config::default();
+        for (name, base_url, models) in providers {
+            let api_key = login_config::get_provider_config(&name)
+                .map(|(_, k, _)| k)
+                .unwrap_or_default();
+            cfg.model_providers.insert(
+                name.clone(),
+                crate::config::ModelProvider {
+                    provider_type: None,
+                    base_url,
+                    api_key,
+                    models,
+                },
+            );
+        }
+        if !cfg.model_providers.is_empty() {
+            self.config_cache = Some(cfg);
+        }
     }
 }
 

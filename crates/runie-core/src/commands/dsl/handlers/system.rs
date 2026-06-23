@@ -126,7 +126,7 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
         .iter()
         .rev()
         .find(|m| m.role == crate::model::Role::Assistant)
-        .map(|m| m.content.clone())
+        .map(|m| m.content().clone())
         .unwrap_or_default();
     if text.is_empty() {
         return CommandResult::Message("No assistant response to copy".into());
@@ -141,7 +141,7 @@ fn handle_reload(state: &mut AppState, _: &str) -> CommandResult {
             let _ = tx.send(crate::actors::ConfigMsg::Reload).await;
         });
     }
-    state.skills = crate::skills::load_all();
+    state.skills = crate::async_io::block_in_place_if_runtime(crate::skills::load_all);
     CommandResult::Message("Reloaded config, keybindings, theme, skills, and prompts.".into())
 }
 

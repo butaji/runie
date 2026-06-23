@@ -42,6 +42,30 @@ impl ConfigActor {
         self.path.clone()
     }
 
+    async fn handle_write_result(
+        &mut self,
+        result: Result<anyhow::Result<()>, tokio::task::JoinError>,
+        bus: &EventBus<Event>,
+    ) {
+        match result {
+            Ok(Ok(())) => self.load_and_emit(bus).await,
+            Ok(Err(e)) => {
+                tracing::error!("config write failed: {e:?}");
+                bus.publish(Event::Error {
+                    id: "config".to_string(),
+                    message: format!("Config write failed: {e}"),
+                });
+            }
+            Err(e) => {
+                tracing::error!("config write task panicked: {e:?}");
+                bus.publish(Event::Error {
+                    id: "config".to_string(),
+                    message: format!("Config write task panicked: {e}"),
+                });
+            }
+        }
+    }
+
     async fn load_and_emit(&mut self, bus: &EventBus<Event>) {
         self.config = Config::load_async(Some(self.path())).await;
         bus.publish(Event::ConfigLoaded {
@@ -76,9 +100,7 @@ impl ConfigActor {
             save_provider_to_path(&path, &name, &base_url, &api_key, &models)
         })
         .await;
-        if result.is_ok() {
-            self.load_and_emit(bus).await;
-        }
+        self.handle_write_result(result, bus).await;
     }
 
     async fn remove_provider(&mut self, name: &str, bus: &EventBus<Event>) {
@@ -86,9 +108,7 @@ impl ConfigActor {
         let path = self.path();
         let result =
             tokio::task::spawn_blocking(move || remove_provider_from_path(&path, &name)).await;
-        if result.is_ok() {
-            self.load_and_emit(bus).await;
-        }
+        self.handle_write_result(result, bus).await;
     }
 
     async fn set_default_model(&mut self, provider: &str, model: &str, bus: &EventBus<Event>) {
@@ -99,9 +119,7 @@ impl ConfigActor {
             set_default_model_at_path(&path, &provider, &model)
         })
         .await;
-        if result.is_ok() {
-            self.load_and_emit(bus).await;
-        }
+        self.handle_write_result(result, bus).await;
     }
 
     async fn set_provider_models(&mut self, name: &str, models: &[String], bus: &EventBus<Event>) {
@@ -112,9 +130,7 @@ impl ConfigActor {
             set_provider_models_at_path(&path, &name, &models)
         })
         .await;
-        if result.is_ok() {
-            self.load_and_emit(bus).await;
-        }
+        self.handle_write_result(result, bus).await;
     }
 
     fn list_configured_providers(&self) -> Vec<(String, String, Vec<String>)> {

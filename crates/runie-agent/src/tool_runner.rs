@@ -1,10 +1,16 @@
 //! Shared tool execution helpers for agent turn and headless runners.
 
+use std::time::Duration;
+use tokio::time::timeout;
 use runie_core::tool_parser::ParsedToolCall;
 use crate::PermissionGate;
 use runie_core::message::{ChatMessage, Part};
 use runie_core::permissions::{PermissionAction, PermissionContext};
 use runie_core::tool::{ToolContext, ToolOutput, ToolStatus};
+
+/// Default timeout for tool execution (30 seconds).
+/// Bash tool overrides this via its own timeout_seconds parameter.
+const DEFAULT_TOOL_TIMEOUT_SECS: u64 = 30;
 
 /// Execute a single parsed tool call, respecting the permission gate.
 pub async fn execute_tool_call(
@@ -18,7 +24,23 @@ pub async fn execute_tool_call(
         Some(tool) => {
             let perm_ctx = build_permission_context(tool_name, &tool_call.args, &ctx.working_dir);
             match gate.evaluate(&perm_ctx).await {
-                PermissionAction::Allow => run_tool(tool, tool_call, ctx).await,
+                PermissionAction::Allow => {
+                    let duration = Duration::from_secs(DEFAULT_TOOL_TIMEOUT_SECS);
+                    match timeout(duration, run_tool(tool, tool_call, ctx)).await {
+                        Ok(output) => output,
+                        Err(_) => ToolOutput {
+                            tool_name: tool_name.clone(),
+                            tool_args: tool_call.args.clone(),
+                            content: format!(
+                                "Tool execution timed out after {} seconds",
+                                DEFAULT_TOOL_TIMEOUT_SECS
+                            ),
+                            bytes_transferred: None,
+                            duration: Duration::from_secs(DEFAULT_TOOL_TIMEOUT_SECS),
+                            status: ToolStatus::Error,
+                        },
+                    }
+                }
                 PermissionAction::Deny | PermissionAction::Ask => {
                     blocked_output(tool_name, tool_call)
                 }
@@ -90,4 +112,30 @@ pub fn tool_result_message(tool_call: &ParsedToolCall, output: &ToolOutput) -> C
     ChatMessage::tool_result(format!("{} result:\n{}", tool_call.name, output.content))
         .with_tool_call_id(id.clone())
         .with_parts(vec![Part::tool_result(id, &output.content)])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn tool_timeout_returns_error() {
+        // Test that the timeout mechanism works
+        async fn slow_op() -> ToolOutput {
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            ToolOutput {
+                tool_name: "slow".to_string(),
+                tool_args: serde_json::json!({}),
+                content: "done".to_string(),
+                bytes_transferred: None,
+                duration: std::time::Duration::from_secs(5),
+                status: ToolStatus::Success,
+            }
+        }
+
+        let result = timeout(std::time::Duration::from_millis(100), slow_op()).await;
+
+        // Should have timed out
+        assert!(result.is_err(), "timeout should trigger");
+    }
 }

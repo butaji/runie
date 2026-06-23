@@ -1,11 +1,9 @@
 //! Tests for opt-in vim navigation mode.
 
 use crate::event::{ControlEvent, DialogEvent, InputEvent};
+use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::tests::fresh_state;
 
 #[test]
 fn vim_mode_is_enabled_by_default() {
@@ -27,14 +25,14 @@ fn state_with_vim_and_messages() -> AppState {
     for i in 0..20 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg {}", i),
+            parts: vec![Part::Text { content: format!("msg {}", i) }],
             timestamp: i as f64,
             id: format!("req.{}", i),
             ..Default::default()
         });
         state.session.messages.push(ChatMessage {
             role: Role::Assistant,
-            content: format!("reply {}", i),
+            parts: vec![Part::Text { content: format!("reply {}", i) }],
             timestamp: i as f64 + 0.5,
             id: format!("resp.{}", i),
             ..Default::default()
@@ -50,14 +48,14 @@ fn state_with_messages() -> AppState {
     for i in 0..20 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg {}", i),
+            parts: vec![Part::Text { content: format!("msg {}", i) }],
             timestamp: i as f64,
             id: format!("req.{}", i),
             ..Default::default()
         });
         state.session.messages.push(ChatMessage {
             role: Role::Assistant,
-            content: format!("reply {}", i),
+            parts: vec![Part::Text { content: format!("reply {}", i) }],
             timestamp: i as f64 + 0.5,
             id: format!("resp.{}", i),
             ..Default::default()
@@ -423,16 +421,16 @@ fn state_for_nav_copy() -> AppState {
     let mut state = state_with_vim();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "hello".into(),
         timestamp: 1.0,
         id: "req.0".into(),
+        parts: vec![Part::Text { content: "hello".into() }],
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        content: "the answer is 42".into(),
         timestamp: 2.0,
         id: "resp.0".into(),
+        parts: vec![Part::Text { content: "the answer is 42".into() }],
         ..Default::default()
     });
     state.messages_changed();

@@ -11,9 +11,41 @@ const DIFF_DEADLINE_SECS: u64 = 5;
 /// A line within a hunk.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum DiffLine {
-    Added(String),
-    Removed(String),
+    Added(String, #[serde(skip_serializing_if = "Option::is_none")] Option<u32>),
+    Removed(String, #[serde(skip_serializing_if = "Option::is_none")] Option<u32>),
     Context(String),
+}
+
+impl DiffLine {
+    /// Create an added line without line number (canonical generation).
+    pub fn added(content: impl Into<String>) -> Self {
+        DiffLine::Added(content.into(), None)
+    }
+
+    /// Create a removed line without line number (canonical generation).
+    pub fn removed(content: impl Into<String>) -> Self {
+        DiffLine::Removed(content.into(), None)
+    }
+
+    /// Create a context line.
+    pub fn context(content: impl Into<String>) -> Self {
+        DiffLine::Context(content.into())
+    }
+
+    /// Get the content string from this line.
+    pub fn content(&self) -> &str {
+        match self {
+            DiffLine::Added(s, _) | DiffLine::Removed(s, _) | DiffLine::Context(s) => s,
+        }
+    }
+
+    /// Get the line number if present.
+    pub fn line_number(&self) -> Option<u32> {
+        match self {
+            DiffLine::Added(_, n) | DiffLine::Removed(_, n) => *n,
+            DiffLine::Context(_) => None,
+        }
+    }
 }
 
 /// A hunk within a diff (with header and lines).
@@ -72,8 +104,8 @@ impl Diff {
             for line in &hunk.lines {
                 match line {
                     DiffLine::Context(s) => output.push(format!(" {s}")),
-                    DiffLine::Added(s) => output.push(format!("+{s}")),
-                    DiffLine::Removed(s) => output.push(format!("-{s}")),
+                    DiffLine::Added(s, _) => output.push(format!("+{s}")),
+                    DiffLine::Removed(s, _) => output.push(format!("-{s}")),
                 }
             }
         }
@@ -129,7 +161,7 @@ impl HunkBuilder {
     fn apply_delete(&mut self, value: &str) {
         self.start_hunk_if_needed();
         self.current
-            .push(DiffLine::Removed(trim_end(value).to_string()));
+            .push(DiffLine::removed(trim_end(value)));
         self.old_len += 1;
         self.old_line += 1;
     }
@@ -137,7 +169,7 @@ impl HunkBuilder {
     fn apply_insert(&mut self, value: &str) {
         self.start_hunk_if_needed();
         self.current
-            .push(DiffLine::Added(trim_end(value).to_string()));
+            .push(DiffLine::added(trim_end(value)));
         self.new_len += 1;
         self.new_line += 1;
     }
@@ -192,7 +224,7 @@ mod tests {
             .hunks
             .iter()
             .flat_map(|h| &h.lines)
-            .any(|l| matches!(l, DiffLine::Added(s) if s == "line3"));
+            .any(|l| matches!(l, DiffLine::Added(s, _) if s == "line3"));
         assert!(has_added, "Should have added line3");
     }
 
@@ -207,7 +239,7 @@ mod tests {
             .hunks
             .iter()
             .flat_map(|h| &h.lines)
-            .any(|l| matches!(l, DiffLine::Removed(s) if s == "line2"));
+            .any(|l| matches!(l, DiffLine::Removed(s, _) if s == "line2"));
         assert!(has_removed, "Should have removed line2");
     }
 
@@ -222,12 +254,12 @@ mod tests {
             .hunks
             .iter()
             .flat_map(|h| &h.lines)
-            .any(|l| matches!(l, DiffLine::Removed(s) if s == "old_line"));
+            .any(|l| matches!(l, DiffLine::Removed(s, _) if s == "old_line"));
         let has_added = diff
             .hunks
             .iter()
             .flat_map(|h| &h.lines)
-            .any(|l| matches!(l, DiffLine::Added(s) if s == "new_line"));
+            .any(|l| matches!(l, DiffLine::Added(s, _) if s == "new_line"));
 
         assert!(has_removed, "Should have removed old_line");
         assert!(has_added, "Should have added new_line");

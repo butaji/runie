@@ -1,23 +1,21 @@
 use runie_core::event::{AgentEvent, ControlEvent};
-use runie_core::model::{AppState, ChatMessage, Role};
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_core::model::{AppState, ChatMessage,  Role};
+use runie_core::Part;
+use runie_testing::fresh_state;
 
 #[test]
 fn collapse_all_when_some_expanded() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        content: "◆ Thought 1.0s\nreasoning".into(),
+        parts: vec![Part::Text { content: "◆ Thought 1.0s\nreasoning".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran ls 0.5s\noutput".into(),
+        parts: vec![Part::Text { content: "◆ Ran ls 0.5s\noutput".into() }],
         timestamp: 1.0,
         id: "x1".into(),
         ..Default::default()
@@ -36,14 +34,14 @@ fn expand_all_when_all_collapsed() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        content: "◆ Thought 1.0s\nreasoning".into(),
+        parts: vec![Part::Text { content: "◆ Thought 1.0s\nreasoning".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran ls 0.5s\noutput".into(),
+        parts: vec![Part::Text { content: "◆ Ran ls 0.5s\noutput".into() }],
         timestamp: 1.0,
         id: "x1".into(),
         ..Default::default()
@@ -62,14 +60,14 @@ fn running_tools_always_expanded_regardless_of_global_flag() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        content: "◆ Thought 1.0s".into(),
+        parts: vec![Part::Text { content: "◆ Thought 1.0s".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "⠋ Running ls...".into(),
+        parts: vec![Part::Text { content: "⠋ Running ls...".into() }],
         timestamp: 1.0,
         id: "x1".into(),
         ..Default::default()
@@ -95,7 +93,7 @@ fn toggle_all_twice_restores_expanded() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        content: "◆ Thought 1.0s".into(),
+        parts: vec![Part::Text { content: "◆ Thought 1.0s".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -117,7 +115,7 @@ fn toggle_all_with_many_items() {
     for i in 0..5 {
         state.session.messages.push(ChatMessage {
             role: Role::Thought,
-            content: format!("◆ Thought {}", i),
+            parts: vec![Part::Text { content: format!("◆ Thought {}", i) }],
             timestamp: i as f64,
             id: format!("t{}", i),
             ..Default::default()

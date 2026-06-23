@@ -2,11 +2,30 @@
 //! providers and the provider's chosen model list.
 
 use crate::commands::{CommandResult, DialogType};
+use crate::config::{Config, ModelProvider};
 use crate::model::AppState;
 use crate::update::dialog::process_command_result;
 
-fn configure(providers: &[(String, Vec<String>)]) {
-    crate::login_config::set_test_config_with_providers(providers);
+/// Build a Config with the given provider/models.
+fn make_config(providers: &[(String, Vec<String>)]) -> Config {
+    let mut cfg = Config::default();
+    for (name, models) in providers {
+        cfg.model_providers.insert(
+            name.clone(),
+            ModelProvider {
+                provider_type: None,
+                base_url: format!("https://{}.example.com", name),
+                api_key: "test-key".into(),
+                models: models.clone(),
+            },
+        );
+    }
+    cfg
+}
+
+/// Set state.config_cache with the given provider/models.
+fn set_config(state: &mut AppState, providers: &[(String, Vec<String>)]) {
+    state.config_cache = Some(make_config(providers));
 }
 
 fn reset_config() {
@@ -34,8 +53,10 @@ fn model_no_configured_providers_shows_message() {
 
 #[test]
 fn model_unknown_provider_model_returns_warning() {
-    configure(&[("openai".into(), vec!["gpt-4o".into()])]);
     let mut state = AppState::default();
+    set_config(&mut state, &[("openai".into(), vec!["gpt-4o".into()])]);
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4o".into();
     let result = crate::commands::dsl::handlers::model::handle_model(
         &mut state,
         "anthropic/claude-3-sonnet",
@@ -49,8 +70,8 @@ fn model_unknown_provider_model_returns_warning() {
 
 #[test]
 fn model_known_model_switches() {
-    configure(&[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
     let mut state = AppState::default();
+    set_config(&mut state, &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
     let result = crate::commands::dsl::handlers::model::handle_model(&mut state, "gpt-4o-mini");
@@ -64,8 +85,8 @@ fn model_known_model_switches() {
 
 #[test]
 fn model_opens_selector_with_only_configured_models() {
-    configure(&[("openai".into(), vec!["gpt-4o".into()])]);
     let mut state = AppState::default();
+    set_config(&mut state, &[("openai".into(), vec!["gpt-4o".into()])]);
     let result = crate::commands::dsl::handlers::model::handle_model(&mut state, "");
     assert!(
         matches!(result, CommandResult::OpenDialog(DialogType::ModelSelector)),
@@ -102,8 +123,8 @@ fn model_opens_selector_with_only_configured_models() {
 
 #[test]
 fn model_unknown_model_name_for_configured_provider_returns_warning() {
-    configure(&[("openai".into(), vec!["gpt-4o".into()])]);
     let mut state = AppState::default();
+    set_config(&mut state, &[("openai".into(), vec!["gpt-4o".into()])]);
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
 
@@ -119,8 +140,8 @@ fn model_unknown_model_name_for_configured_provider_returns_warning() {
 
 #[test]
 fn model_unknown_model_name_without_provider_returns_warning() {
-    configure(&[("openai".into(), vec!["gpt-4o".into()])]);
     let mut state = AppState::default();
+    set_config(&mut state, &[("openai".into(), vec!["gpt-4o".into()])]);
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
 
@@ -136,12 +157,11 @@ fn model_unknown_model_name_without_provider_returns_warning() {
 
 #[test]
 fn model_selector_includes_unknown_configured_models() {
-    // Provider returns a model name that is not in the static catalog.
-    configure(&[(
+    let mut state = AppState::default();
+    set_config(&mut state, &[(
         "custom-provider".into(),
         vec!["custom-model".into(), "other-model".into()],
     )]);
-    let mut state = AppState::default();
     state.config.current_provider = "custom-provider".into();
     state.config.current_model = "custom-model".into();
 

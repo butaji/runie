@@ -23,7 +23,6 @@ opaline = "0.4"
 dirs.workspace = true
 serde_json.workspace = true
 syntect = "5"
-pulldown-cmark.workspace = true
 unicode-width.workspace = true
 patch = "0.7"
 base64 = "0.22"
@@ -35,9 +34,5 @@ reqwest.workspace = true
 nix.workspace = true
 
 [dev-dependencies]
-regex = "1"
 insta.workspace = true
-
-[target.'cfg(unix)'.dev-dependencies]
-libc = "0.2"
-rexpect.workspace = true
+runie-testing = { path = "../runie-testing" }

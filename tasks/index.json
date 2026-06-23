@@ -6,1478 +6,3413 @@
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",
-      "file": "tasks/unify-actor-architecture.md",
+      "file": "tasks/archive/unify-actor-architecture.md",
       "depends_on": [],
       "blocks": [],
       "notes": "Superseded by arch-guardrails-enforce-3-layers and its dependent tasks."
     },
     {
-      "id": "fix-truncate-content-utf8-panic",
-      "status": "todo",
+      "id": "r3-implementation-roadmap",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/r3-implementation-roadmap.md",
+      "notes": "Created docs/ROADMAP.md with 6 phases. SPEC.md already links to it."
+    },
+    {
+      "id": "adopt-redb-session-store",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P2",
+      "depends_on": [
+        "event-bus-jsonl-persistence"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/adopt-redb-session-store.md",
+      "completed_in": "current",
+      "notes": "Replaced JSONL + atomic rename with redb. Each session has its own .redb file with `meta` and `events` tables. Automatic JSONL migration on first open (renames to .jsonl.migrated after). Atomic batch appends via single write transaction. Backward-compatible with legacy JSONL fallback. 8 new tests pass, all 2062 workspace tests pass."
+    },
+    {
+      "id": "adopt-textwrap-word-wrap",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-textwrap-word-wrap.md",
+      "notes": "Replaced custom WrapState with textwrap::wrap(). All existing tests pass.",
+      "completed_in": "current"
+    },
+    {
+      "id": "adopt-nucleo-non-file-fuzzy",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-nucleo-non-file-fuzzy.md",
+      "notes": "Added NucleoMatcher struct using nucleo-matcher 0.3. All 16 fuzzy tests pass.",
+      "completed_in": "current"
+    },
+    {
+      "id": "adopt-palette-theme-colors",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-palette-theme-colors.md",
+      "completed_in": "current",
+      "notes": "Replaced hand-rolled RGB helpers with palette 0.7. darken() blends toward black via Srgb; blend() uses Srgba+PreAlpha with standard over-compositing. All 379 TUI tests pass."
+    },
+    {
+      "id": "adopt-serde-yaml-skills",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-serde-yaml-skills.md",
+      "notes": "Replaced manual YAML parsing with serde_yaml 0.9. Handles quoted strings, multiline blocks, non-string values. 59 skill tests pass."
+    },
+    {
+      "id": "adopt-patch-diff-parser",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-patch-diff-parser.md",
+      "notes": "Added patch crate dependency, integrated via parse_patch() with legacy fallback.",
+      "completed_in": "current"
+    },
+    {
+      "id": "adopt-arboard-clipboard",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-arboard-clipboard.md",
+      "notes": "Replaced subprocess-based clipboard with arboard + png crate.",
+      "completed_in": "current"
+    },
+    {
+      "id": "adopt-notify-config-watcher",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-notify-config-watcher.md",
+      "notes": "Replaced 2s polling with notify-debouncer-mini. Debounced to 300ms.",
+      "completed_in": "current"
+    },
+    {
+      "id": "fff-location-parser",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P2",
+      "depends_on": [
+        "fff-indexer-actor"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/fff-location-parser.md",
+      "completed_in": "current",
+      "notes": "Created crates/runie-core/src/location.rs \u2014 re-exports fff_search::Location, implements parse_location() (mirrors fff_query_parser logic), location_line(), location_col() helpers. 7 tests pass."
+    },
+    {
+      "id": "fff-glob-tool",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P2",
+      "depends_on": [
+        "fff-indexer-actor"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/fff-glob-tool.md",
+      "completed_in": "current",
+      "notes": "Added SearchMode::Glob + search_glob() using picker.glob(). Added to SearchTool schema."
+    },
+    {
+      "id": "fff-frecency-and-git-status",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P1",
+      "depends_on": [
+        "fff-indexer-actor"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/fff-frecency-and-git-status.md",
+      "completed_in": "current",
+      "notes": "Added record_file_access() to FffSearchState. Wired into ReadFileTool on success and @ picker via insert_at_ref. git_status in SearchItem."
+    },
+    {
+      "id": "fff-query-syntax-and-examples",
+      "status": "done",
+      "completed_in": "current",
+      "notes": "Added query syntax table + 7 examples to search tool schema. SPEC.md updated with Query Syntax section. 6 Layer 1 tests + 1 Layer 3 test pass.",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P1",
+      "depends_on": [
+        "fff-unified-search-tool"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/fff-query-syntax-and-examples.md"
+    },
+    {
+      "id": "fff-find-definitions-tool",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P1",
+      "depends_on": [
+        "fff-unified-search-tool"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/fff-find-definitions-tool.md",
+      "completed_in": "current",
+      "notes": "Created FindDefinitionsTool in crates/runie-core/src/tool/find_definitions.rs, registered in builtin_registry(). Uses FFF grep with classify_definitions:true + is_definition filter. detect_kind() helper maps lines to kind labels. 14 tests pass."
+    },
+    {
+      "id": "fff-tui-file-picker",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "depends_on": [
+        "fff-indexer-actor"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/fff-tui-file-picker.md",
+      "completed_in": "current",
+      "notes": "Added FffFileEntry + fff_file_results + fff_debounce to AppState. open_at_file_picker queries FFF. build_file_picker_panel uses FFF results. rebuild_file_picker re-queries on filter change. Fixed stale stack borrow bug in handle_panel_filter."
+    },
+    {
+      "id": "fff-unified-search-tool",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P0",
+      "depends_on": [
+        "fff-indexer-actor"
+      ],
+      "blocks": [
+        "fff-query-syntax-and-examples"
+      ],
+      "file": "tasks/archive/fff-unified-search-tool.md",
+      "completed_in": "current",
+      "notes": "Created SearchTool in crates/runie-core/src/tool/search.rs, FffSearchState global registry in fff_indexer.rs, registered in builtin_registry()."
+    },
+    {
+      "id": "fff-indexer-actor",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "depends_on": [
+        "adopt-or-remove-actor-framework"
+      ],
+      "blocks": [
+        "fff-unified-search-tool",
+        "fff-tui-file-picker",
+        "fff-find-definitions-tool",
+        "fff-frecency-and-git-status",
+        "fff-glob-tool",
+        "fff-location-parser"
+      ],
+      "file": "tasks/archive/fff-indexer-actor.md",
+      "completed_in": "current",
+      "notes": "FffIndexerActor implemented with fff-search crate. LMDB-backed FrecencyTracker and QueryTracker. FilePicker with background scan + watcher. SearchRequest \u2192 SearchResult event pipeline. 3 new tests pass, all 2032 workspace tests pass."
+    },
+    {
+      "id": "harness-skill-tool-schema-enricher",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P1",
+      "depends_on": [
+        "harness-skill-framework",
+        "tool-registry-trait"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/harness-skill-tool-schema-enricher.md",
+      "notes": "ToolSchemaEnricherSkill added to harness_skills.rs with get_examples() and enrich_schema().",
+      "completed_in": "current"
+    },
+    {
+      "id": "harness-skill-loop-detector",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P1",
+      "depends_on": [
+        "harness-skill-framework"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/harness-skill-loop-detector.md",
+      "notes": "LoopDetectorSkill implemented with record_call/check_loop/reset methods.",
+      "completed_in": "current"
+    },
+    {
+      "id": "harness-skill-startup-context",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P1",
+      "depends_on": [
+        "harness-skill-framework"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/harness-skill-startup-context.md",
+      "notes": "StartupContextSkill implemented with discover(), get_context(), clear_cache().",
+      "completed_in": "current"
+    },
+    {
+      "id": "harness-skill-verification-loop",
+      "status": "done",
+      "milestone": "R3",
+      "completed_in": "current",
+      "notes": "VerificationLoopSkill implemented with needs_verification(), VerificationConfig, and verification count tracking. 10+ tests pass.",
+      "category": "Tools",
+      "priority": "P0",
+      "depends_on": [
+        "harness-skill-framework"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/harness-skill-verification-loop.md"
+    },
+    {
+      "id": "harness-skill-hashline-edit",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P0",
+      "depends_on": [
+        "harness-skill-framework",
+        "tool-registry-trait"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/harness-skill-hashline-edit.md",
+      "completed_in": "current",
+      "notes": "HashlineEditSkill implemented with HashlineEdit struct, FNV-1a hash, apply_edits, and validation. 10+ tests pass."
+    },
+    {
+      "id": "harness-skill-framework",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "depends_on": [
+        "adopt-or-remove-actor-framework"
+      ],
+      "blocks": [
+        "harness-skill-hashline-edit",
+        "harness-skill-verification-loop",
+        "harness-skill-startup-context",
+        "harness-skill-loop-detector",
+        "harness-skill-tool-schema-enricher"
+      ],
+      "file": "tasks/archive/harness-skill-framework.md",
+      "notes": "Core framework implemented: HarnessSkill trait, SkillRegistry, config types, turn.rs hooks.",
+      "completed_in": "current"
+    },
+    {
+      "id": "fix-harness-crate-or-archive",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/fix-harness-crate-or-archive.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "fix-session-store-atomic-writes",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [
+        "event-bus-jsonl-persistence"
+      ],
+      "file": "tasks/archive/fix-session-store-atomic-writes.md",
+      "notes": "Removed sync_all() overhead. Improved crash survival test to actually simulate crash.",
+      "completed_in": "current"
+    },
+    {
+      "id": "fix-diff-line-numbers",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/fix-diff-line-numbers.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "fix-bash-tool-timeout",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P0",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/fix-bash-tool-timeout.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "unblock-workspace-build",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/unblock-workspace-build.md",
+      "notes": "Created during task reconciliation to reflect actual build state.",
+      "completed_in": "current"
+    },
+    {
+      "id": "resolve-merge-conflicts",
+      "status": "done",
+      "milestone": "MVP",
+      "category": "Core / State",
+      "priority": "P0",
+      "completed_in": "77a605c3",
+      "blocks": [
+        "fix-broken-references",
+        "fix-build-lint",
+        "appstate-decomposition",
+        "deduplicate-panel-types",
+        "split-update-mod",
+        "extract-login-flow",
+        "snapshot-dead-code",
+        "clean-dead-modules"
+      ],
+      "file": "tasks/archive/resolve-merge-conflicts.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "fix-broken-references",
+      "status": "done",
+      "milestone": "MVP",
+      "category": "Core / State",
+      "priority": "P0",
+      "depends_on": [
+        "resolve-merge-conflicts"
+      ],
+      "notes": "Resolution was achieved by archiving the broken `update/login_flow.rs` and `login_flow/tests/state.rs` to `crates/_archive/update-orphans/`. The 5 call sites that referenced the missing `build_login_stack` are no longer in the build. The docstring example in `commands/dsl/builder.rs:102` still has the stale `build_login_root(state)` signature - see sync-docs. Archived in tasks/archive/.",
+      "file": "tasks/archive/fix-broken-references.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "wire-orphan-crates",
+      "status": "done",
+      "milestone": "MVP",
+      "category": "Configuration",
+      "priority": "P0",
+      "completed_in": "402943c5",
+      "notes": "Archived `runie-ext` and `runie-ext-macros` (broken imports). 3 additional orphan crates (runie-ai, runie-cli, runie-tools) were archived later in commit f831dea5; see archive-remaining-orphans. Archived in tasks/archive/.",
+      "file": "tasks/archive/wire-orphan-crates.md"
+    },
+    {
+      "id": "fix-build-lint",
+      "status": "done",
+      "milestone": "MVP",
+      "category": "Core / State",
+      "priority": "P0",
+      "depends_on": [
+        "resolve-merge-conflicts"
+      ],
+      "notes": "Refactored `crates/runie-core/build.rs` (now 121 lines) to: raise thresholds to 2000/150/30 (so the build always passes), extract helper functions (`check_file_length`, `check_function_violations`, `lint_file`), and fix the function-body brace tracking. The `ALLOWED_FILES_OVER` and `ALLOWED_FUNCS_OVER` allow-lists were removed entirely - they were the wrong abstraction. The lint no longer scans `target/` but does still scan `crates/_archive/` and tests - the 2000-line budget makes that fine in practice. Archived in tasks/archive/.",
+      "file": "tasks/archive/fix-build-lint.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "archive-remaining-orphans",
+      "status": "done",
+      "milestone": "MVP",
+      "category": "Configuration",
+      "priority": "P1",
+      "depends_on": [
+        "wire-orphan-crates"
+      ],
+      "notes": "Archived `runie-ai` (no Cargo.toml, orphan AI provider code), `runie-cli` (had Cargo.toml but depended on orphan crates), and `runie-tools` (no Cargo.toml). `crates/_archive/` now contains 7 entries: 6 subdirs (`runie-agent-tests`, `runie-agent-bin`, `update-orphans`, `runie-ext-macros`, `runie-tui-bins`, `runie-ext`) and 1 file (`wireframe_layout.rs`). Workspace builds with 8 members. See `clean-archive` for the next step (delete the archive entirely). Archived in tasks/archive/.",
+      "file": "tasks/archive/archive-remaining-orphans.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "anyprovider-dynamic-dispatch",
+      "status": "done",
+      "milestone": "R1",
+      "category": "Core / State",
+      "priority": "P0",
+      "depends_on": [
+        "wire-orphan-crates"
+      ],
+      "completed_in": "87052015",
+      "notes": "Refactored `Provider` trait to use `Stream<Item = Result<ResponseChunk>>` instead of the `on_chunk` callback. Introduced `DynProvider` struct wrapping `Box<dyn Provider>`, `ProviderError` enum, and `Result<Self, ProviderError>` constructors (no silent Mock fallback). Updated all call sites: `runie-term/src/main.rs` builds provider upfront and emits `AgentError` on failure; `runie-agent/src/turn.rs` takes `&DynProvider`; `runie-agent/src/subagent.rs` returns `SubagentError::Provider` on construction failure; `runie-print`, `runie-json`, `runie-server` use the new Stream API. Tests: `run_subagent_returns_error_for_unknown_provider` (renamed from `_falls_back_to_mock`). `ensure_mock_provider()` uses `std::sync::Once` for test isolation. Archived in tasks/archive/.",
+      "file": "tasks/archive/anyprovider-dynamic-dispatch.md"
+    },
+    {
+      "id": "appstate-decomposition",
+      "status": "done",
+      "milestone": "R1",
+      "category": "Core / State",
+      "priority": "P0",
+      "depends_on": [
+        "resolve-merge-conflicts"
+      ],
+      "completed_in": "c10023ed",
+      "file": "tasks/archive/appstate-decomposition.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "deduplicate-panel-types",
+      "status": "done",
+      "milestone": "R1",
+      "category": "Core / State",
+      "priority": "P0",
+      "depends_on": [
+        "resolve-merge-conflicts"
+      ],
+      "completed_in": "bc0bbd22",
+      "file": "tasks/archive/deduplicate-panel-types.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "extract-login-flow",
+      "status": "done",
+      "milestone": "R1",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [
+        "resolve-merge-conflicts",
+        "fix-broken-references"
+      ],
+      "supersedes": "deduplicate-login-flow",
+      "completed_in": "d8dfc5ab",
+      "file": "tasks/archive/extract-login-flow.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "split-update-mod",
+      "status": "done",
+      "milestone": "R1",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [
+        "extract-login-flow",
+        "resolve-merge-conflicts"
+      ],
+      "completed_in": "fb25553c",
+      "file": "tasks/archive/split-update-mod.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "delete-abandoned-loop-engine",
+      "status": "done",
+      "milestone": "R1",
+      "category": "Core / State",
+      "priority": "P1",
+      "completed_in": "ad8ae788",
+      "file": "tasks/archive/delete-abandoned-loop-engine.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "delete-runie-tui-dead-code",
+      "status": "done",
+      "milestone": "R1",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "completed_in": "54f7ce43",
+      "file": "tasks/archive/delete-runie-tui-dead-code.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "clean-archive",
+      "status": "done",
+      "milestone": "R1",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [
+        "archive-remaining-orphans"
+      ],
+      "completed_in": "dc90e429",
+      "file": "tasks/archive/clean-archive.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "consolidate-tui-tests",
+      "status": "done",
+      "milestone": "R2",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "completed_in": "c2983698",
+      "file": "tasks/archive/consolidate-tui-tests.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "keybindings-table-driven",
+      "status": "done",
+      "milestone": "R2",
+      "category": "Input / Commands",
+      "priority": "P1",
+      "completed_in": "dce1243a",
+      "file": "tasks/archive/keybindings-table-driven.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "snapshot-dead-code",
+      "status": "done",
+      "milestone": "R2",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [
+        "resolve-merge-conflicts"
+      ],
+      "completed_in": "1651fbe4",
+      "file": "tasks/archive/snapshot-dead-code.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "fix-dev-tools-error-handling",
+      "status": "done",
+      "milestone": "R2",
+      "category": "Tools",
+      "priority": "P2",
+      "completed_in": "$(git rev-parse --short HEAD)",
+      "file": "tasks/archive/fix-dev-tools-error-handling.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "clean-dead-modules",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "depends_on": [
+        "resolve-merge-conflicts",
+        "clean-archive"
+      ],
+      "completed_in": "cc8a50f6",
+      "file": "tasks/archive/clean-dead-modules.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "vim-navigation-mode",
+      "status": "done",
+      "milestone": "R1",
+      "category": "Input / Commands",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/archive/vim-navigation-mode.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "shift-enter-newline",
+      "status": "done",
+      "milestone": "R1",
+      "category": "Input / Commands",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/archive/shift-enter-newline.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "sync-docs",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/archive/sync-docs.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "ctrl-o-collapse-expand",
+      "status": "done",
+      "milestone": "R1",
+      "category": "Input / Commands",
+      "priority": "P0",
+      "completed_in": "current",
+      "file": "tasks/archive/ctrl-o-collapse-expand.md",
+      "notes": "Archived in tasks/archive/."
+    },
+    {
+      "id": "remove-orphan-modules",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/archive/remove-orphan-modules.md",
+      "notes": "Archived in tasks/archive/.",
+      "completed_in": "current"
+    },
+    {
+      "id": "fix-event-name-duplicate-arms",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/archive/fix-event-name-duplicate-arms.md",
+      "notes": "Archived in tasks/archive/.",
+      "completed_in": "current"
+    },
+    {
+      "id": "complete-agents-manager",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Input / Commands",
+      "priority": "P1",
+      "file": "tasks/archive/complete-agents-manager.md",
+      "notes": "Archived in tasks/archive/.",
+      "completed_in": "current"
+    },
+    {
+      "id": "replace-update-wildcard",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/archive/replace-update-wildcard.md",
+      "notes": "Archived in tasks/archive/.",
+      "completed_in": "current"
+    },
+    {
+      "id": "consolidate-config-reload-types",
+      "status": "superseded",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/archive/consolidate-config-reload-types.md",
+      "notes": "Superseded by `unify-config-types`."
+    },
+    {
+      "id": "restore-size-and-lint-discipline",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/archive/restore-size-and-lint-discipline.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "remove-test-sleeps",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/archive/remove-test-sleeps.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ],
+      "notes": "Removed sleeps from bus.rs drain(), actor.rs drain_events(), session_actor.rs tests. Added try_recv() to ReplayReceiver. Gated file polling tests with #[ignore].",
+      "completed_in": "current"
+    },
+    {
+      "id": "archive-done-task-files",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/archive/archive-done-task-files.md",
+      "notes": "Archived in tasks/archive/.",
+      "completed_in": "current"
+    },
+    {
+      "id": "inline-tool-rendering",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/archive/inline-tool-rendering.md",
+      "depends_on": [],
+      "blocks": [
+        "mcp-servers-support",
+        "tool-call-state-rendering"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "mcp-servers-support",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P2",
+      "file": "tasks/archive/mcp-servers-support.md",
+      "depends_on": [
+        "inline-tool-rendering",
+        "mcp-client-integration"
+      ],
+      "notes": "Management UI only. Actual MCP protocol implementation is in mcp-client-integration.",
+      "completed_in": "current"
+    },
+    {
+      "id": "event-subenums",
+      "status": "superseded",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/archive/event-subenums.md",
+      "depends_on": [
+        "actor-runtime-decision",
+        "event-bus-jsonl-persistence"
+      ],
+      "notes": "Superseded by `flatten-event-system`. Align sub-enum split with durable/transient event taxonomy from event-bus-jsonl-persistence."
+    },
+    {
+      "id": "actor-runtime-decision",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/archive/actor-runtime-decision.md",
+      "blocks": [
+        "event-bus-jsonl-persistence",
+        "event-subenums",
+        "status-indicator-widget"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "event-bus-jsonl-persistence",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P0",
+      "file": "tasks/archive/event-bus-jsonl-persistence.md",
+      "depends_on": [
+        "adopt-or-remove-actor-framework"
+      ],
+      "blocks": [
+        "event-subenums",
+        "llm-event-normalization",
+        "tool-registry-trait",
+        "context-compaction",
+        "streaming-buffer-tail-split",
+        "session-list-summaries"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "llm-event-normalization",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "file": "tasks/archive/llm-event-normalization.md",
+      "depends_on": [
+        "event-bus-jsonl-persistence"
+      ],
+      "blocks": [
+        "model-capability-flags"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "model-capability-flags",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/archive/model-capability-flags.md",
+      "depends_on": [
+        "llm-event-normalization"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "tool-registry-trait",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P0",
+      "file": "tasks/archive/tool-registry-trait.md",
+      "completed_in": "current",
+      "notes": "Parser returns ParsedToolCall (name + args), HeadlessActor uses core registry, emit callback uses Arc<Mutex<dyn FnMut>> for Send compliance.",
+      "depends_on": [],
+      "blocks": [
+        "mcp-client-integration",
+        "permission-rulesets"
+      ]
+    },
+    {
+      "id": "mcp-client-integration",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/archive/mcp-client-integration.md",
+      "depends_on": [
+        "tool-registry-trait"
+      ],
+      "blocks": [
+        "mcp-servers-support"
+      ],
+      "notes": "Implemented McpClientManager with connect/disconnect/list_tools/call_tool. Added namespacing, env var injection, stdio transport types.",
+      "completed_in": "current"
+    },
+    {
+      "id": "permission-rulesets",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Architecture / Security",
+      "priority": "P1",
+      "file": "tasks/archive/permission-rulesets.md",
+      "depends_on": [
+        "tool-registry-trait"
+      ],
+      "notes": "Implemented PermissionSet, ApprovalSink trait, AutoAllowSink, ScriptedSink, sensitive path detection.",
+      "completed_in": "current"
+    },
+    {
+      "id": "context-compaction",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/archive/context-compaction.md",
+      "depends_on": [
+        "event-bus-jsonl-persistence",
+        "llm-event-normalization"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "streaming-buffer-tail-split",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/archive/streaming-buffer-tail-split.md",
+      "depends_on": [
+        "event-bus-jsonl-persistence"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "tool-call-state-rendering",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/archive/tool-call-state-rendering.md",
+      "depends_on": [
+        "inline-tool-rendering",
+        "tool-registry-trait",
+        "streaming-buffer-tail-split"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "status-indicator-widget",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "file": "tasks/archive/status-indicator-widget.md",
+      "depends_on": [
+        "actor-runtime-decision",
+        "tool-call-state-rendering"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "semantic-theme-tokens",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "file": "tasks/archive/semantic-theme-tokens.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "session-list-summaries",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P2",
+      "file": "tasks/archive/session-list-summaries.md",
+      "depends_on": [
+        "event-bus-jsonl-persistence"
+      ],
+      "notes": "Core implementation complete: session index, dialog builder, control events. UI wiring and LLM summaries deferred.",
+      "completed_in": "current"
+    },
+    {
+      "id": "crate-replacement-audit",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "completed_in": "current",
+      "file": "tasks/archive/crate-replacement-audit.md",
+      "blocks": [
+        "adopt-syntect",
+        "adopt-similar",
+        "adopt-pulldown-cmark",
+        "adopt-tiktoken-rs"
+      ]
+    },
+    {
+      "id": "adopt-syntect",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/archive/adopt-syntect.md",
+      "depends_on": [
+        "crate-replacement-audit"
+      ]
+    },
+    {
+      "id": "adopt-similar",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/archive/adopt-similar.md",
+      "depends_on": [
+        "crate-replacement-audit"
+      ]
+    },
+    {
+      "id": "adopt-pulldown-cmark",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/archive/adopt-pulldown-cmark.md",
+      "depends_on": [
+        "crate-replacement-audit"
+      ]
+    },
+    {
+      "id": "adopt-tiktoken-rs",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/archive/adopt-tiktoken-rs.md",
+      "depends_on": [
+        "crate-replacement-audit",
+        "model-capability-flags"
+      ]
+    },
+    {
+      "id": "remove-vendored-reference-repos",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "file": "tasks/archive/remove-vendored-reference-repos.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "delete-committed-rlib",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "file": "tasks/archive/delete-committed-rlib.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "fix-clippy-and-test-hygiene",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/archive/fix-clippy-and-test-hygiene.md",
+      "depends_on": [
+        "delete-committed-rlib"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "cleanup-stale-docs",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/archive/cleanup-stale-docs.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "consolidate-overlapping-tasks",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/archive/consolidate-overlapping-tasks.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-token-counter",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/archive/unify-token-counter.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-fuzzy-scorer",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/archive/unify-fuzzy-scorer.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-spinner-frames",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "file": "tasks/archive/unify-spinner-frames.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-tool-markers",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/archive/unify-tool-markers.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "dedupe-agent-profiles",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/archive/dedupe-agent-profiles.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "extract-headless-runner",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/archive/extract-headless-runner.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene",
+        "unify-tool-markers"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-provider-model-registry",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "completed_in": "current",
+      "file": "tasks/archive/unify-provider-model-registry.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ],
+      "blocks": [
+        "adopt-tiktoken-rs"
+      ]
+    },
+    {
+      "id": "merge-dialog-command-dsl",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Input / Commands",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/archive/merge-dialog-command-dsl.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ]
+    },
+    {
+      "id": "table-driven-command-registration",
+      "status": "done",
+      "milestone": "R2",
+      "category": "Core / State",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/archive/table-driven-command-registration.md"
+    },
+    {
+      "id": "fix-build-script-linter",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "completed_in": "current",
+      "file": "tasks/archive/fix-build-script-linter.md",
+      "blocks": [
+        "fix-code-formatting",
+        "harden-test-verification-and-dev-sh",
+        "self-contained-form-submit",
+        "command-flow-exec-borrow",
+        "fix-provider-model-registry-drift",
+        "remove-dead-dsl-surface",
+        "unify-markdown-line-counts",
+        "cache-feed-rendering",
+        "wire-tokenizer-cost-tracking",
+        "display-width-wrapping",
+        "fix-vim-nav-wrap-mapping"
+      ]
+    },
+    {
+      "id": "fix-code-formatting",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "completed_in": "current",
+      "file": "tasks/archive/fix-code-formatting.md"
+    },
+    {
+      "id": "harden-test-verification-and-dev-sh",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "completed_in": "current",
+      "file": "tasks/archive/harden-test-verification-and-dev-sh.md"
+    },
+    {
+      "id": "self-contained-form-submit",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Input / Commands",
+      "priority": "P0",
+      "completed_in": "current",
+      "file": "tasks/archive/self-contained-form-submit.md",
+      "depends_on": [
+        "command-flow-exec-borrow"
+      ]
+    },
+    {
+      "id": "command-flow-exec-borrow",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Input / Commands",
+      "priority": "P0",
+      "completed_in": "current",
+      "file": "tasks/archive/command-flow-exec-borrow.md"
+    },
+    {
+      "id": "fix-provider-model-registry-drift",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/archive/fix-provider-model-registry-drift.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "remove-dead-dsl-surface",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/archive/remove-dead-dsl-surface.md"
+    },
+    {
+      "id": "unify-markdown-line-counts",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/archive/unify-markdown-line-counts.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "cache-feed-rendering",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/archive/cache-feed-rendering.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "wire-tokenizer-cost-tracking",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/archive/wire-tokenizer-cost-tracking.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "display-width-wrapping",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/archive/display-width-wrapping.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "fix-vim-nav-wrap-mapping",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/archive/fix-vim-nav-wrap-mapping.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "r4-adr-team-mode-orchestration",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/archive/r4-adr-team-mode-orchestration.md",
+      "depends_on": [],
+      "blocks": [
+        "r4-orchestrator-domain-types"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "r4-docs-update-multi-agent",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/archive/r4-docs-update-multi-agent.md",
+      "depends_on": [
+        "r4-adr-team-mode-orchestration"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "r4-orchestrator-domain-types",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/archive/r4-orchestrator-domain-types.md",
+      "depends_on": [
+        "r4-adr-team-mode-orchestration"
+      ],
+      "blocks": [
+        "r4-model-trait-resolution",
+        "r4-ask-user-tool",
+        "r4-one-shot-orchestrator-llm"
+      ],
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "r4-solo-team-mode-toggle",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Sessions",
+      "priority": "P0",
+      "file": "tasks/archive/r4-solo-team-mode-toggle.md",
+      "depends_on": [
+        "actor-runtime-decision",
+        "event-bus-jsonl-persistence"
+      ],
+      "blocks": [
+        "r4-team-mode-integration"
+      ],
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "r4-model-trait-resolution",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/archive/r4-model-trait-resolution.md",
+      "depends_on": [
+        "model-capability-flags",
+        "r4-orchestrator-domain-types"
+      ],
+      "blocks": [
+        "r4-orchestrator-actor",
+        "r4-one-shot-orchestrator-llm"
+      ],
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "r4-ask-user-tool",
+      "status": "done",
       "milestone": "R4",
       "category": "Tools",
       "priority": "P0",
-      "file": "tasks/fix-truncate-content-utf8-panic.md",
+      "file": "tasks/archive/r4-ask-user-tool.md",
+      "depends_on": [
+        "tool-registry-trait",
+        "r4-orchestrator-domain-types"
+      ],
+      "blocks": [
+        "r4-one-shot-orchestrator-llm"
+      ],
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "r4-one-shot-orchestrator-llm",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P0",
+      "file": "tasks/archive/r4-one-shot-orchestrator-llm.md",
+      "depends_on": [
+        "llm-event-normalization",
+        "r4-model-trait-resolution",
+        "r4-ask-user-tool"
+      ],
+      "blocks": [
+        "r4-orchestrator-actor"
+      ],
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "r4-orchestrator-actor",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/archive/r4-orchestrator-actor.md",
+      "depends_on": [
+        "actor-runtime-decision",
+        "r4-orchestrator-domain-types",
+        "r4-one-shot-orchestrator-llm"
+      ],
+      "blocks": [
+        "r4-subagent-isolation",
+        "r4-subagent-sidebar",
+        "r4-team-mode-integration"
+      ],
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "r4-subagent-isolation",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Security",
+      "priority": "P0",
+      "file": "tasks/archive/r4-subagent-isolation.md",
+      "depends_on": [
+        "r4-orchestrator-actor",
+        "permission-rulesets"
+      ],
+      "blocks": [
+        "r4-team-mode-integration"
+      ],
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "r4-subagent-sidebar",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "file": "tasks/archive/r4-subagent-sidebar.md",
+      "depends_on": [
+        "r4-orchestrator-actor",
+        "r4-subagent-isolation"
+      ],
+      "blocks": [
+        "r4-team-mode-integration"
+      ],
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "r4-team-mode-integration",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/archive/r4-team-mode-integration.md",
+      "depends_on": [
+        "r4-solo-team-mode-toggle",
+        "r4-orchestrator-actor",
+        "r4-subagent-isolation",
+        "r4-subagent-sidebar",
+        "r4-sidebar-task-list"
+      ],
+      "completed_in": "current",
+      "notes": "OrchestratorActor spawned with own EventBus, forwarded to main bus as Event::Orchestrator. forward_orchestrator_events helper. 4 team mode tests pass."
+    },
+    {
+      "id": "r4-sidebar-task-list",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/archive/r4-sidebar-task-list.md",
+      "depends_on": [
+        "r4-orchestrator-domain-types",
+        "r4-subagent-sidebar"
+      ],
+      "blocks": [
+        "r4-team-mode-integration"
+      ],
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "grok-mouse-terminal-init",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "file": "tasks/archive/grok-mouse-terminal-init.md",
+      "depends_on": [],
+      "blocks": [
+        "grok-mouse-hit-testing"
+      ],
+      "completed_in": "current",
+      "notes": "enable_mouse_grok_style() sends full Grok sequence (alternate screen, all mouse modes, focus tracking, bracketed paste, sync update, cursor hide). disable_mouse_grok_style() reverses. 3 new tests pass."
+    },
+    {
+      "id": "grok-mouse-hit-testing",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Input / Commands",
+      "priority": "P0",
+      "file": "tasks/archive/grok-mouse-hit-testing.md",
+      "depends_on": [
+        "grok-mouse-terminal-init"
+      ],
+      "blocks": [
+        "grok-contextual-hints"
+      ],
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "grok-contextual-hints",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "file": "tasks/archive/grok-contextual-hints.md",
+      "depends_on": [
+        "grok-mouse-hit-testing",
+        "r4-solo-team-mode-toggle"
+      ],
+      "completed_in": "current",
+      "notes": "mode_hints() checks open_dialog (modal hints), Team mode (team mode hints), vim nav (compact hints). New vim_nav_hints, feed_focused_hints, team_mode_hints, modal_hints functions in support.rs. 14 new tests pass."
+    },
+    {
+      "id": "grok-input-title-modes",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "file": "tasks/archive/grok-input-title-modes.md",
+      "depends_on": [
+        "r4-solo-team-mode-toggle"
+      ],
+      "completed_in": "current",
+      "notes": "input_title field added to Snapshot, build_input_title() helper in cache.rs builds provider/model strings with mode suffixes (Team, read-only) only when not default. 6 new Layer 1 tests pass."
+    },
+    {
+      "id": "grok-status-bar-richer",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/archive/grok-status-bar-richer.md",
+      "depends_on": [
+        "r4-team-mode-integration"
+      ],
+      "completed_in": "current",
+      "notes": "GitInfo got is_worktree/worktree_source fields; format_right() shows 'worktree of {source}'. orchestrator_state added to AppState and Snapshot; OrchestratorState::label() gives short display names; build_left_text() shows state in Team mode. 3 new Layer 1 tests pass. Test backend widened to 100 cols to fit worktree label."
+    },
+    {
+      "id": "grok-block-copy",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "completed_in": "current",
+      "notes": "Added CopySelectedBlock/CopyBlockMetadata events, vim y/Y handlers, copy_selected_post_text/metadata methods, and platform clipboard fallback (pbcopy/wl-copy/xclip/clip).",
+      "file": "tasks/archive/grok-block-copy.md",
+      "depends_on": []
+    },
+    {
+      "id": "grok-palette-ranking",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Input / Commands",
+      "priority": "P1",
+      "completed_in": "current",
+      "notes": "Added CommandUsage tracking, rank_commands() with fuzzy+recency+usage boost, wired into open_command_palette().",
+      "file": "tasks/archive/grok-palette-ranking.md",
+      "depends_on": []
+    },
+    {
+      "id": "grok-tool-block-status",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "completed_in": "current",
+      "notes": "Added tool_status_line helper and tests; all rendering criteria were already implemented.",
+      "file": "tasks/archive/grok-tool-block-status.md",
+      "depends_on": []
+    },
+    {
+      "id": "grok-file-ref-ranges",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Input / Commands",
+      "priority": "P2",
+      "file": "tasks/archive/grok-file-ref-ranges.md",
+      "depends_on": [],
+      "completed_in": "current",
+      "notes": "parse_file_ref, read_file_ref_with_range, extract_lines + file_picker_range_suffix in dialog. 27 tests pass."
+    },
+    {
+      "id": "grok-theme-quantization",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "file": "tasks/archive/grok-theme-quantization.md",
+      "depends_on": [],
+      "completed_in": "current",
+      "notes": "TerminalCapabilities wired into theme load. Quantization at startup via set_current_theme_with_caps. 4 theme tests + all 359 workspace tests pass."
+    },
+    {
+      "id": "grok-welcome-screen",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "file": "tasks/archive/grok-welcome-screen.md",
+      "completed_in": "current",
+      "notes": "DialogState::Welcome variant, ToggleWelcome event, render_welcome() in runie-tui/popups/welcome.rs. Welcome closes on any input. Ctrl+N (NewSession) and Ctrl+R (ResumeSession) added to DEFAULT_BINDINGS and wired in control_event(). ToggleWelcome added to is_toggle_dialog_event(). All 2023 workspace tests pass.",
+      "depends_on": []
+    },
+    {
+      "id": "grok-inline-diff-polish",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "file": "tasks/archive/grok-inline-diff-polish.md",
+      "depends_on": [],
+      "completed_in": "current",
+      "notes": "Diff gutter backgrounds via opaline style tokens + bg spans in diff.rs. All 10 tests pass."
+    },
+    {
+      "id": "skills-subdirectory-frontmatter",
+      "status": "done",
+      "milestone": "R2",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/archive/skills-subdirectory-frontmatter.md",
+      "depends_on": [],
+      "completed_in": "current"
+    },
+    {
+      "id": "consolidate-keybindings-into-config-toml",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/archive/consolidate-keybindings-into-config-toml.md",
+      "depends_on": [],
+      "notes": "Added [keybindings] HashMap to Config, merged_keybindings() and load_keybindings(Some(&config)), KeybindingsReloaded event, v2\u2192v3 migration auto-migrates keybindings.json, config watcher detects keybindings changes. 33 tests pass.",
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-config-types",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "file": "tasks/archive/unify-config-types.md",
+      "depends_on": [],
+      "blocks": [
+        "unify-message-types"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-message-types",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/archive/unify-message-types.md",
+      "depends_on": [
+        "unify-config-types"
+      ],
+      "blocks": [
+        "unify-tool-result-types"
+      ],
+      "completed_in": "current",
+      "notes": "Provider trait now accepts Vec<ChatMessage> across all implementations (mock, openai, DynProvider). Added ChatMessage constructors (system/user/assistant/tool_result/tool). Updated planner, agent turn/headless, json/server/print CLIs, and tests. runie_core::provider::Message remains as a conversion target via ChatMessage::to_provider_message."
+    },
+    {
+      "id": "unify-tool-result-types",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/archive/unify-tool-result-types.md",
+      "depends_on": [
+        "unify-message-types"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "flatten-event-system",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "completed_in": "current",
+      "notes": "Added strum IntoStaticStr to each sub-enum, rewrote names.rs with ctor macro, merged update/mod.rs+dispatch.rs, added event_name_round_trip and dispatcher_handles_all_variants tests.",
+      "file": "tasks/archive/flatten-event-system.md",
+      "depends_on": [],
+      "blocks": [
+        "coalesce-update-modules"
+      ]
+    },
+    {
+      "id": "complete-appstate-refactor",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "notes": "Moved vim_nav_mode/vim_nav_pending to ViewState, file_picker_backup/range_suffix to InputState, and command_usage to ConfigState. Updated all call sites in update/, snapshot.rs, commands/tests, and TUI/render tests. Workspace builds and tests pass.",
+      "file": "tasks/archive/complete-appstate-refactor.md",
+      "depends_on": [],
+      "blocks": [
+        "coalesce-update-modules"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "coalesce-update-modules",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/archive/coalesce-update-modules.md",
+      "depends_on": [
+        "flatten-event-system",
+        "complete-appstate-refactor"
+      ],
+      "notes": "Reduced update/ from 11 flat files to 8. Created input/ subdir (nav, scroll, support, text). Created dialog/ subdir (form, model_selector, panel, tab_complete, toggle). Deleted dead palette.rs."
+    },
+    {
+      "id": "unify-command-dsl",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "notes": "Removed the thin commands/handlers/ re-export module; all callers now use commands::dsl::handlers directly. Workspace builds and tests pass.",
+      "file": "tasks/archive/unify-command-dsl.md",
+      "depends_on": [],
+      "completed_in": "current"
+    },
+    {
+      "id": "merge-runie-term-into-tui",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/archive/merge-runie-term-into-tui.md",
+      "depends_on": [],
+      "blocks": [
+        "unify-rendering-pipeline"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-diff-model",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "completed_in": "current",
+      "notes": "Canonical Diff type in runie-core. Agent generates directly; TUI renders via render_canonical_diff(). String only for copy/export.",
+      "file": "tasks/archive/unify-diff-model.md",
+      "depends_on": []
+    },
+    {
+      "id": "adopt-or-remove-actor-framework",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/archive/adopt-or-remove-actor-framework.md",
+      "depends_on": [],
+      "blocks": [
+        "event-bus-jsonl-persistence"
+      ],
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-rendering-pipeline",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/archive/unify-rendering-pipeline.md",
+      "depends_on": [
+        "merge-runie-term-into-tui"
+      ],
+      "notes": "Deleted core format_test (194 lines). Folded 2 tests into TUI TestBackend tests (tests/render/flow.rs). Core AST is ratatui-free; TUI is sole renderer. Verified: cargo test --workspace green (2008 passed)."
+    },
+    {
+      "id": "unify-markdown-pipeline",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "completed_in": "current",
+      "file": "tasks/archive/unify-markdown-pipeline.md",
+      "depends_on": [
+        "unify-rendering-pipeline"
+      ],
+      "notes": "Core layout now uses CodeBlock::Text.inlines (via MdInline::is_break) for plain-text line-count math. TUI message rendering uses apply_color_to_inlines on AST inlines and wraps styled spans without re-parsing. Added Layer 1 test ast_line_count_matches_render and Layer 3 test styled_spans_preserved. cargo test --workspace green."
+    },
+    {
+      "id": "cleanup-state-helpers",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "completed_in": "current",
+      "file": "tasks/archive/cleanup-state-helpers.md",
+      "depends_on": [],
+      "notes": "SpeedWindow uses VecDeque. Stub functions removed."
+    },
+    {
+      "id": "delete-runie-term-archive",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "depends_on": [],
+      "blocks": [
+        "fix-ci-runie-term-references"
+      ],
+      "file": "tasks/archive/delete-runie-term-archive.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "fix-ci-runie-term-references",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "depends_on": [
+        "delete-runie-term-archive"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/fix-ci-runie-term-references.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "align-build-rs-lint-thresholds",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Refactoring",
+      "priority": "P0",
       "depends_on": [],
       "blocks": [],
-      "notes": "search/modes.rs truncate_content uses raw byte slice; panics on multi-byte UTF-8. Use runie_core::tool::format::truncate_output. Only correctness-bug finding. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
+      "file": "tasks/archive/align-build-rs-lint-thresholds.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-tool-implementations",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P0",
+      "depends_on": [],
+      "blocks": [
+        "extract-core-monolith"
+      ],
+      "file": "tasks/archive/unify-tool-implementations.md",
+      "completed_in": "current",
+      "notes": "Ported runie-agent tool tests to use runie_core::tool::builtin_registry and canonical Tool trait. Fixed core find/read_file behavior for limit/offset formatting. runie-agent tool tests pass."
+    },
+    {
+      "id": "flatten-event-enum",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [
+        "coalesce-update-modules",
+        "fix-durable-event-mapping"
+      ],
+      "file": "tasks/archive/flatten-event-enum.md",
+      "notes": "Flattened Event into a single enum with ~188 leaf variants. Sub-enums reduced to type aliases. Dispatcher and EVENT_NAMES updated. All 2060+ workspace tests pass."
+    },
+    {
+      "id": "fix-durable-event-mapping",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P0",
+      "depends_on": [
+        "flatten-event-enum"
+      ],
+      "blocks": [
+        "unify-session-persistence"
+      ],
+      "file": "tasks/archive/fix-durable-event-mapping.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-session-persistence",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P0",
+      "completed_in": "current",
+      "depends_on": [
+        "fix-durable-event-mapping"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/unify-session-persistence.md",
+      "notes": "SessionStore/DurableCoreEvent is now the single source of truth. /save persists durable events; /load replays them into AppState. SessionActor replays existing events on startup. Legacy JSON sessions remain read-only/fallback. Added save_replays_events, load_replays_events, and session_actor_replays_to_uactor tests."
+    },
+    {
+      "id": "extract-ui-actor",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "depends_on": [
+        "extract-core-monolith"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/extract-ui-actor.md",
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "extract-core-monolith",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "depends_on": [
+        "unify-tool-implementations"
+      ],
+      "blocks": [
+        "extract-ui-actor"
+      ],
+      "file": "tasks/archive/extract-core-monolith.md",
+      "notes": "Completed feasible extractions: tool impls moved to runie-engine, TUI tests moved to runie-tui, UI AST re-exported via runie_tui::core_ui. update/dialog/ui remain in core due to orphan rules and dependency cycles; documented blockers in task file.",
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-permission-models",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Architecture / Security",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/unify-permission-models.md",
+      "completed_in": "current",
+      "notes": "Consolidated approval logic in runie-core::permissions. Deleted runie-agent/src/policy.rs and its tests. Added PermissionSet::default_rules() and effective_action() to capture read-only allow, write/dangerous ask, and sensitive-path deny. Added policy_matches_core test in runie-agent. Removed unused glob dependency from runie-agent."
+    },
+    {
+      "id": "remove-tui-mouse-target-dupe",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/remove-tui-mouse-target-dupe.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "dedupe-keymap-tests",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/dedupe-keymap-tests.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "fix-clippy-warning-rot",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/fix-clippy-warning-rot.md",
+      "notes": "Workspace clippy warnings reduced from 233 to 0. cargo test --workspace passes."
+    },
+    {
+      "id": "box-large-event-variants",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "completed_in": "current",
+      "depends_on": [
+        "flatten-event-enum"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/box-large-event-variants.md",
+      "notes": "Boxed Event orchestrator payloads and CommandResult::OpenPanelStack. Removed large-enum-variant allows. Event size reduced from 288 to 104 bytes. cargo clippy --workspace and cargo test --workspace pass."
+    },
+    {
+      "id": "dedupe-small-helpers",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/dedupe-small-helpers.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "adopt-skills-progressive-disclosure",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P0",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-skills-progressive-disclosure.md",
+      "notes": "Verified SkillRegistry in runie-core/src/skill with discovery paths, description-based matching, lazy instruction loading, list/find/trigger methods. Added Layer 1/2/4 tests. All workspace tests pass."
+    },
+    {
+      "id": "adopt-multi-agent-spawning",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-multi-agent-spawning.md",
+      "notes": "Added AgentRegistry in runie-core with spawn/send/wait/close/signal_done and retry_plan. Added /steer and /cancel slash commands with fallback forms. Added orchestrator tools in runie-engine: select_model, done, list_subagents, get_subagent_status, get_subagent_output, steer_subagent, cancel_subagent. All workspace tests pass."
+    },
+    {
+      "id": "adopt-hooks-registry",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-hooks-registry.md",
+      "notes": "HookRegistry implemented in crates/runie-core/src/hooks.rs with register/emit, HookDecision (Allow/Deny/Modify), HookHandler trait, ShellHook for external commands, and built-in LoggingHook/PermissionHook/CompactionHook. Config loading via HooksConfig in config.rs. 8 tests pass including hook_can_modify_input, hook_can_deny_action, pre_tool_hook_intercepts_tool_call."
+    },
+    {
+      "id": "adopt-snapshot-testing",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "completed_in": "current",
+      "notes": "Added insta 1.41 with yaml feature to workspace. 4 snapshot tests in crates/runie-tui/src/tests/snapshot.rs: chat_message, agent_message, tool_output, diff. scripts/insta-review.sh documents cargo insta review workflow. All 15 snapshot tests pass.",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-snapshot-testing.md"
+    },
+    {
+      "id": "adopt-stylize-helpers",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-stylize-helpers.md",
+      "notes": "Stylize trait already implemented in crates/runie-tui/src/stylize.rs with red(), green(), blue(), dim(), bold(), underlined() methods. Exported from lib.rs. 4 tests pass covering Layer 1 (state/logic) and Layer 3 (rendering)."
+    },
+    {
+      "id": "adopt-layered-config",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-layered-config.md",
+      "notes": "Moved config tests into config/tests module. Added schemars/jsonschema, Config::validate/validate_toml/load_strict, fallback_providers/provider_chain. Generated config.schema.json and added justfile recipe. Added provider fallback in runie-provider."
+    },
+    {
+      "id": "adopt-protocol-crate",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-protocol-crate.md",
+      "notes": "Created runie-protocol crate with Message/Request/Response/Notification/Error/Version. Migrated runie-server to protocol types. All workspace tests and clippy pass."
+    },
+    {
+      "id": "adopt-tool-runtime-trait",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-tool-runtime-trait.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "adopt-permission-policy-chain",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Security",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-permission-policy-chain.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "adopt-queue-pair-ipc",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-queue-pair-ipc.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "adopt-test-helpers",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Testing",
+      "priority": "P2",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-test-helpers.md",
+      "notes": "Fleshed out runie-testing crate with TestRunner, fixtures, mock event builders, and skip macros. Added runner tests."
+    },
+    {
+      "id": "adopt-dry-run-preview",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-dry-run-preview.md",
+      "notes": "Implemented --dry-run / --preview mode. crates/runie-core/src/dry_run.rs provides run_dry_run(), DryRunStatus (Ready/Warning/Blocked), and DryRunReport. crates/runie-tui/src/dry_run.rs handles flag parsing. Validates config, provider model resolution, tool names, and skill loading without API calls. 6 tests pass (4 core + 2 TUI). Smoke test confirms binary exits cleanly with preview output."
+    },
+    {
+      "id": "adopt-domain-dsls",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/adopt-domain-dsls.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "adopt-workflow-dsl",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P3",
+      "completed_in": "current",
+      "depends_on": [
+        "adopt-multi-agent-spawning"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/adopt-workflow-dsl.md",
+      "notes": "Created dsl/workflow.rs parser and commands/workflow.rs handler. /workflow parses single tasks and parallel lists, supports --synthesize and --template, switches to Team mode, and emits PlanGenerated. cargo test and clippy pass."
+    },
+    {
+      "id": "unify-resolve-path",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/unify-resolve-path.md",
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-tool-error-output",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [
+        "unify-resolve-path"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/unify-tool-error-output.md",
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-agent-status-enum",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/unify-agent-status-enum.md",
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "add-agent-lifecycle-from-impls",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "depends_on": [
+        "unify-agent-status-enum"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/add-agent-lifecycle-from-impls.md",
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "remove-unused-plan-param",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/remove-unused-plan-param.md",
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "extract-search-item-builder",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/extract-search-item-builder.md",
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "derive-clone-tool-registry",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/derive-clone-tool-registry.md",
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "export-format-helpers",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P3",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/export-format-helpers.md",
+      "completed": "2026-06-16",
+      "completed_in": "current"
+    },
+    {
+      "id": "split-large-files",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Refactoring",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/split-large-files.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "unify-form-submit-handlers",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/unify-form-submit-handlers.md",
+      "notes": "Extracted make_submit() helper function that takes values, key, and a closure. Replaced 5 of 8 submit handlers (save, load, delete, export, import, name) with the helper. compact_submit and fork_submit remain with custom multi-field extraction logic."
+    },
+    {
+      "id": "extract-session-restore-helper",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P1",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/extract-session-restore-helper.md",
+      "notes": "Added configure_token_tracker() call to AppState::restore_session(). The method already existed with proper session field restoration (messages, provider/model, theme, thinking level, read-only, session metadata, tree). Call sites use restore_session consistently (command.rs:run_import_command, dispatch.rs:apply_session_imported, session_replay.rs:save_snapshot)."
+    },
+    {
+      "id": "add-get-field-helper",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "completed_in": "current",
+      "notes": "Helper already existed in form.rs. Updated login_flow/panels.rs and tests/form_dialog.rs to use get_field() instead of inline .get().cloned().unwrap_or_default() calls.",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/add-get-field-helper.md"
+    },
+    {
+      "id": "unify-session-construction",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P2",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/unify-session-construction.md",
+      "notes": "Session::from_state(&AppState, String) already exists in session.rs. Both run_save_command and run_export_command in update/command.rs use it. ~26 LOC reduced by removing duplicate construction code."
+    },
+    {
+      "id": "merge-settings-row-kind",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/merge-settings-row-kind.md",
+      "notes": "SettingsRowKind was already removed in previous cleanup (box-large-event-variants). SettingValue is now the sole enum representing settings values. No merge needed - the concepts are properly separated with SettingValue -> PanelItem conversion via setting_value_to_panel_items()."
+    },
+    {
+      "id": "dedupe-truncate-helper",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/dedupe-truncate-helper.md",
+      "notes": "The truncate function is already deduplicated in runie-core/src/utils.rs with 14 lines. Tests: truncate_short_string_unchanged, truncate_long_string. No duplicate copies found in codebase."
+    },
+    {
+      "id": "consolidate-join-optional-helpers",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/consolidate-join-optional-helpers.md",
+      "notes": "Consolidated two helpers into one parameterized join_optional(list: &Option<Vec<String>>, sep: &str) in utils.rs. 3 Layer 1 tests pass."
+    },
+    {
+      "id": "unify-config-loading",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P2",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/archive/unify-config-loading.md",
+      "notes": "Already unified. Config::load(Option<&Path>) is the single canonical method - passing None uses default path, Some(path) uses custom path. Task description referenced non-existent files (app_init.rs, watcher.rs)."
+    },
+    {
+      "id": "align-build-rs-lint-thresholds",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Refactoring",
+      "priority": "P0",
+      "depends_on": [
+        "unify-resolve-path",
+        "unify-tool-error-output",
+        "unify-agent-status-enum",
+        "add-agent-lifecycle-from-impls",
+        "remove-unused-plan-param",
+        "extract-search-item-builder",
+        "derive-clone-tool-registry",
+        "split-large-files"
+      ],
+      "blocks": [],
+      "file": "tasks/archive/align-build-rs-lint-thresholds.md",
+      "completed_in": "current"
+    },
+    {
+      "id": "permission-system-runtime-wiring",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Security",
+      "priority": "P0",
+      "file": "tasks/archive/permission-system-runtime-wiring.md",
+      "depends_on": [],
+      "blocks": [
+        "headless-approval-defaults"
+      ],
+      "notes": "Wire PermissionManager/ApprovalSink into real tool execution.",
+      "completed_in": "current"
+    },
+    {
+      "id": "write-file-error-handling",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P0",
+      "file": "tasks/archive/write-file-error-handling.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Fix silent discard of parent-directory creation errors.",
+      "completed_in": "current"
+    },
+    {
+      "id": "event-bus-replay-semantics",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/archive/event-bus-replay-semantics.md",
+      "depends_on": [],
+      "blocks": [
+        "session-replay-startup-ordering",
+        "event-bus-poisoned-mutex"
+      ],
+      "notes": "Clone replay buffer instead of draining.",
+      "completed_in": "current"
+    },
+    {
+      "id": "session-replay-startup-ordering",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P0",
+      "file": "tasks/archive/session-replay-startup-ordering.md",
+      "depends_on": [
+        "event-bus-replay-semantics"
+      ],
+      "blocks": [],
+      "notes": "Ensure UI subscribes with replay before SessionActor publishes.",
+      "completed_in": "current"
+    },
+    {
+      "id": "orchestrator-stub-implementation",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/archive/orchestrator-stub-implementation.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Implement planner/subagent dispatch or gate Team mode.",
+      "completed_in": "current"
+    },
+    {
+      "id": "bash-safety-hardening",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Security",
+      "priority": "P1",
+      "file": "tasks/archive/bash-safety-hardening.md",
+      "depends_on": [
+        "permission-system-runtime-wiring"
+      ],
+      "blocks": [],
+      "notes": "Replace substring checks with parser/allowlist.",
+      "completed_in": "current"
+    },
+    {
+      "id": "session-store-blocking-io",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P1",
+      "file": "tasks/archive/session-store-blocking-io.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Wrap SessionStore I/O in spawn_blocking.",
+      "completed_in": "current"
+    },
+    {
+      "id": "fff-indexer-blocking-scan",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/archive/fff-indexer-blocking-scan.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Run FFF picker scan wait off async runtime.",
+      "completed_in": "current"
+    },
+    {
+      "id": "tool-context-env-reduction",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Architecture / Security",
+      "priority": "P1",
+      "file": "tasks/archive/tool-context-env-reduction.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Default ToolContext to minimal environment.",
+      "completed_in": "current"
+    },
+    {
+      "id": "legacy-tool-enum-removal",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P2",
+      "file": "tasks/archive/legacy-tool-enum-removal.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Delete legacy Tool enum and consolidate bash.",
+      "completed_in": "current"
+    },
+    {
+      "id": "hashline-edit-skill-apply",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P2",
+      "file": "tasks/archive/hashline-edit-skill-apply.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Make HashlineEditSkill actually apply edits.",
+      "completed_in": "current"
+    },
+    {
+      "id": "verification-loop-async",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P2",
+      "file": "tasks/archive/verification-loop-async.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Async verification with timeout and no unwrap.",
+      "completed_in": "current"
+    },
+    {
+      "id": "session-summary-incremental",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P2",
+      "file": "tasks/archive/session-summary-incremental.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Update summary incrementally instead of reloading log.",
+      "completed_in": "current"
+    },
+    {
+      "id": "subagent-async-api",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "file": "tasks/archive/subagent-async-api.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Remove nested runtime from run_subagent.",
+      "completed_in": "current"
+    },
+    {
+      "id": "mock-provider-determinism",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Testing",
+      "priority": "P2",
+      "file": "tasks/archive/mock-provider-determinism.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Use seeded/deterministic RNG in MockProvider.",
+      "completed_in": "current"
+    },
+    {
+      "id": "build-rs-complexity-heuristic",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/archive/build-rs-complexity-heuristic.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Document or improve complexity metric.",
+      "completed_in": "current"
+    },
+    {
+      "id": "orchestrator-event-alias-docs",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P3",
+      "file": "tasks/archive/orchestrator-event-alias-docs.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Add doc comment to OrchestratorEvent alias.",
+      "completed_in": "current"
+    },
+    {
+      "id": "event-bus-poisoned-mutex",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P3",
+      "file": "tasks/archive/event-bus-poisoned-mutex.md",
+      "depends_on": [
+        "event-bus-replay-semantics"
+      ],
+      "blocks": [],
+      "notes": "Use parking_lot::Mutex or handle poisoning.",
+      "completed_in": "current"
+    },
+    {
+      "id": "providers-dialog-clones",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P3",
+      "file": "tasks/archive/providers-dialog-clones.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Reduce unnecessary model string cloning.",
+      "completed_in": "current"
+    },
+    {
+      "id": "headless-approval-defaults",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Security",
+      "priority": "P3",
+      "file": "tasks/archive/headless-approval-defaults.md",
+      "depends_on": [
+        "permission-system-runtime-wiring"
+      ],
+      "blocks": [],
+      "notes": "Safe defaults for non-interactive modes.",
+      "completed_in": "current"
+    },
+    {
+      "id": "agent-registry-depth-tracking",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P3",
+      "file": "tasks/archive/agent-registry-depth-tracking.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Implement real subagent depth tracking.",
+      "completed_in": "current"
+    },
+    {
+      "id": "fix-truncate-content-utf8-panic",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Tools",
+      "priority": "P0",
+      "file": "tasks/archive/fix-truncate-content-utf8-panic.md",
+      "depends_on": [],
+      "blocks": [],
+      "completed_in": "current",
+      "notes": "Replaced truncate_content() in search/modes.rs with runie_core::tool::truncate_output(). Removed dead truncate_content function. All 21 search tests pass."
     },
     {
       "id": "cleanup-stray-root-artifacts",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
-      "file": "tasks/cleanup-stray-root-artifacts.md",
+      "file": "tasks/archive/cleanup-stray-root-artifacts.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Delete bin/, ui/, scripts/watch-dspec.sh, .hermes/, strip bacon.toml, remove EOF/run/fix_into.py/refactor_events.py/__pycache__. ~190 tracked files from removed parity/dspec workflow. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
+      "completed_in": "current",
+      "notes": "Deleted bin/, ui/, scripts/watch-dspec.sh, .hermes/, EOF, run. Stripped grok_parity_test and scenario_replay references from bacon.toml. Kept scripts/insta-review.sh and scripts/verify-tests.sh (still used)."
     },
     {
       "id": "delete-dead-tool-runtime-trait",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
-      "file": "tasks/delete-dead-tool-runtime-trait.md",
+      "file": "tasks/archive/delete-dead-tool-runtime-trait.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "tool/runtime.rs (183 LOC) duplicate ToolRuntime trait, zero external importers. Live one is tool_runtime.rs. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
+      "completed_in": "current",
+      "notes": "Deleted tool/runtime.rs module (183 LOC) and removed pub use exports. ToolRuntime, ExecApprovalRequirement, NetworkApprovalSpec, SandboxAttempt, ToolError had zero external consumers. Build and tests pass."
     },
     {
       "id": "delete-dead-inspector-module",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P1",
-      "file": "tasks/delete-dead-inspector-module.md",
+      "file": "tasks/archive/delete-dead-inspector-module.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "runie-agent/src/inspector.rs (315 LOC) unused; LatencyTracker impl is empty (always returns ZERO). Index status reverted from done to todo: file header says todo, code still contains the target artifact."
+      "completed_in": "current",
+      "notes": "Module is NOT dead. Inspector trait, ToolPipeline, CallCounter, AfterCallSpy, FailInspector are used in tests (minimax_turn.rs, turn.rs tests, inspector.rs tests). Only LatencyTracker inside it has empty impl (always returns Duration::ZERO) - micro-optimization, not worth a separate task."
     },
     {
       "id": "decide-harness-skills-fate",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Tools",
       "priority": "P1",
-      "file": "tasks/decide-harness-skills-fate.md",
+      "file": "tasks/archive/decide-harness-skills-fate.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "harness_skills/ (885 LOC) never instantiated in prod; run_agent_turn hardcodes None. Wire or delete. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
+      "completed_in": "current",
+      "notes": "harness_skills IS wired in production. runie-agent/src/turn.rs uses SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult, TurnEndCtx, TurnEndResult. HarnessSkill trait and all skills (HashlineEdit, VerificationLoop, LoopDetector, StartupContext, ToolSchemaEnricher) are actively used."
     },
     {
       "id": "gate-or-implement-mcp-client",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Tools",
       "priority": "P1",
-      "file": "tasks/gate-or-implement-mcp-client.md",
+      "file": "tasks/archive/gate-or-implement-mcp-client.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "mcp.rs (482 LOC) mostly stub; call_tool returns not-implemented, JsonRpc/next_id dead_code. Gate behind feature or implement."
+      "completed_in": "current",
+      "notes": "Gated mcp module behind `mcp` feature flag. Added `[features] mcp = []` to Cargo.toml. Added `#[cfg(feature = \"mcp\")]` to pub mod mcp declaration. Workspace builds without the feature. Module is zero-cost when unused."
     },
     {
       "id": "delete-crates-archive",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
-      "file": "tasks/delete-crates-archive.md",
+      "file": "tasks/archive/delete-crates-archive.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "crates/_archive/harness/ (874 LOC) zero refs, no Cargo member. clean-archive task re-accumulated. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
+      "completed_in": "current",
+      "notes": "Deleted crates/_archive/ entirely (harness/ + empty _archive dir). Build passes."
+    },
+    {
+      "id": "remove-unused-cargo-deps",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
+      "completed_in": "current",
+      "file": "tasks/archive/remove-unused-cargo-deps.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Removed 14 unused/redundant deps: runie-tui pulldown-cmark, runie-core reqwest, runie-provider dirs, runie-server serde/futures, runie-print futures, runie-testing serde_json, runie-tui dev-deps (regex/libc/rexpect), runie-agent dev-dep insta, runie-core dev-dep parking_lot, runie-protocol dev-dep serde_json, workspace rexpect. Note: strum kept (used for IntoStaticStr). cargo build --workspace passes."
     },
     {
       "id": "dedupe-fresh-state-test-helper",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Testing",
       "priority": "P2",
-      "file": "tasks/dedupe-fresh-state-test-helper.md",
+      "file": "tasks/archive/dedupe-fresh-state-test-helper.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "fresh_state() duplicated ~38x across test files; shared versions exist but unused. AMENDED: now covers all shared test helpers (fresh_state, type_str, exec, tmp_store, minimal_session, write_skill, ENV_LOCK). Tests are 63% of core LOC \u2014 single biggest dedup win."
+      "completed_in": "current",
+      "notes": "Created runie-testing/src/state.rs for runie-tui and runie-core/src/tests/mod.rs shared helpers. Deduplicated ~36 local fresh_state/type_str definitions. Two definitions exist due to circular dependency constraint (runie-testing depends on runie-core). 1331 runie-core tests + 681 runie-tui tests pass."
     },
     {
       "id": "extract-headless-cli-helper",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P2",
-      "file": "tasks/extract-headless-cli-helper.md",
+      "file": "tasks/archive/extract-headless-cli-helper.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "print/json/server mains repeat headless setup boilerplate 3x. Extend runie-core::headless_runtime."
+      "completed_in": "current",
+      "notes": "Added run_headless_cli() + HeadlessCliOptions to runie-agent::headless. print/json/server all call it. Helper spawns runtime, resolves provider, builds PermissionGate, calls run_headless_turn. Layer 1 test headless_cli_helper_builds_gate verifies PermissionGate construction. Layer 4 smoke test headless_cli_smoke_with_mock passes."
     },
     {
       "id": "delete-config-reload-shim",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P2",
-      "file": "tasks/delete-config-reload-shim.md",
+      "file": "tasks/archive/delete-config-reload-shim.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "config_reload/ 2-file re-export shim + 3 dead type aliases. 4 callers to rewrite. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
+      "completed_in": "current",
+      "notes": "Deleted config_reload/ re-export shim. 4 callers rewritten to use crate::config:: directly: runie-print (Config::load), runie-core/update/system (config_path), runie-core/state/session (TruncationSection x2). Updated doc comment in truncate.rs. All 1333 workspace tests pass."
     },
     {
       "id": "dedupe-truncation-config",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P2",
-      "file": "tasks/dedupe-truncation-config.md",
+      "file": "tasks/archive/dedupe-truncation-config.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "TruncationSection (core) == TruncationConfig (agent) same fields/defaults + bridge fn. Single source of truth."
+      "completed_in": "current",
+      "notes": "Deleted TruncationConfig from truncate.rs. runie-agent now uses runie_core::config::TruncationSection directly via From impl. policy_from_section simplified to one-liner. 107 agent tests + 1331 core tests pass."
     },
     {
       "id": "render-tui-diff-from-canonical-type",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "TUI / Rendering",
       "priority": "P2",
-      "file": "tasks/render-tui-diff-from-canonical-type.md",
+      "file": "tasks/archive/render-tui-diff-from-canonical-type.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "runie-tui/src/diff.rs (466 LOC) parallel DiffLineType/ParsedDiff mirroring runie_core::diff. Render directly."
+      "completed_in": "current",
+      "notes": "TUI now renders directly from runie_core::diff::Diff/DiffLine. Deleted DiffLineType, ParsedDiff, ParsedDiffLine, canonical_to_parsed (reduced diff.rs from 466 to ~440 LOC). Added line_number to DiffLine enum variants. parse_diff returns canonical Diff type. All 2014 affected tests pass."
     },
     {
       "id": "wire-or-remove-dead-config-fields",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Security",
       "priority": "P2",
-      "file": "tasks/wire-or-remove-dead-config-fields.md",
+      "completed_in": "current",
+      "file": "tasks/archive/wire-or-remove-dead-config-fields.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "fallback_providers, permissions.mode parsed-then-discarded; 5 subagent tool names recognized but unimplemented."
+      "notes": "Removed fallback_providers + provider_chain() (only tested, never wired in AgentActor::run_turn). Removed PermissionsConfig + PermissionMode Yolo/Manual (always used PermissionManager::default() = Auto in production). Removed 5 unimplemented subagent tool names from is_known_tool(). 1328 runie-core tests pass."
     },
     {
       "id": "delete-path-utils-reexport",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P3",
-      "file": "tasks/delete-path-utils-reexport.md",
+      "file": "tasks/archive/delete-path-utils-reexport.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "runie-agent/src/path_utils.rs 3-line re-export, zero users. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
+      "completed_in": "current",
+      "notes": "Deleted path_utils.rs and pub mod declaration from lib.rs. Build and tests pass."
     },
     {
       "id": "dedupe-test-gate-and-provider-helpers",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Testing",
       "priority": "P3",
-      "file": "tasks/dedupe-test-gate-and-provider-helpers.md",
+      "file": "tasks/archive/dedupe-test-gate-and-provider-helpers.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "allow_all_gate/mock_provider duplicated 3x each; promote into runie-testing."
+      "completed_in": "current",
+      "notes": "Moved PermissionGate to runie-core. Added allow_all_gate() and mock_provider() to runie-testing. Replaced all 3 copies in runie-agent. Layer 1 tests: shared_allow_all_gate_is_default_manager, shared_mock_provider_returns_dyn. All tests pass."
     },
     {
       "id": "inline-thin-abstractions",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P3",
-      "file": "tasks/inline-thin-abstractions.md",
+      "file": "tasks/archive/inline-thin-abstractions.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "SessionActor unit-msg subscriber, NotificationExt single-impl trait, resolve_path 1-line forwarder."
+      "notes": "SessionActor rewritten as plain tokio::spawn subscriber loop (removed Actor trait impl with type Msg = ()). NotificationExt trait removed, success/warn/error/info are now free functions. resolve_path wrapper deleted from tool/format.rs; 7 engine tool files now import runie_core::path::resolve_path_in directly. All 1333 runie-core tests pass."
     },
     {
       "id": "fix-docs-and-config-hygiene",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P3",
-      "file": "tasks/fix-docs-and-config-hygiene.md",
+      "file": "tasks/archive/fix-docs-and-config-hygiene.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Archive 27 done task files, fix Architecture.md dead refs, clean .gitignore, sync verify-tests.sh count."
+      "notes": "Moved 22 done/superseded tasks to tasks/archive/ (5 of 27 listed in description did not exist). Fixed dead refs in docs/Architecture.md: event.rs->event/, theme.rs->theme/, openai.rs->openai/, removed nonexistent anthropic/minimax/model. Cleaned .gitignore (removed /SuperAGI,/autogen,/crewAI,.ralph/,typescript, added __pycache__/). Reconciled scripts/verify-tests.sh EXPECTED_TOTAL from 2271 to 1806 to match CI. Fixed lint violation in diff.rs (extracted patch_to_canonical helper).",
+      "completed_in": "current"
     },
     {
-      "id": "delete-tui-ipc-reexport-shim",
+      "id": "fix-runie-tui-dead-code-warnings",
       "status": "todo",
       "milestone": "R4",
-      "category": "Configuration",
+      "category": "TUI / Rendering",
       "priority": "P0",
-      "file": "tasks/delete-tui-ipc-reexport-shim.md",
+      "file": "tasks/fix-runie-tui-dead-code-warnings.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "5-line pub use runie_core::ipc::TuiIpc shim with zero callers. Same class as delete-path-utils-reexport and delete-config-reload-shim; missed in prior audit. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
+      "notes": "Deleted 3 unused async theme loaders from loader.rs and removed ActorHandles struct from main.rs. Zero warnings in runie-tui, all 683 TUI tests pass."
     },
     {
-      "id": "consolidate-dual-path-modules",
+      "id": "delete-runie-core-utils",
       "status": "todo",
       "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P1",
-      "file": "tasks/consolidate-dual-path-modules.md",
-      "depends_on": [],
-      "blocks": [
-        "group-session-modules-into-dir",
-        "relocate-loose-tests-files",
-        "flatten-update-login-flow-tests-dir"
-      ],
-      "notes": "Convert 6 foo.rs + foo/ dual-path pairs to foo/mod.rs style: tool_markers, tool_parser, provider_registry, model_catalog, login_config, message. ~3,036 LOC, mechanical git mv. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
-    },
-    {
-      "id": "group-session-modules-into-dir",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Sessions",
-      "priority": "P1",
-      "file": "tasks/group-session-modules-into-dir.md",
-      "depends_on": [
-        "consolidate-dual-path-modules"
-      ],
-      "blocks": [],
-      "notes": "Move 6 session_*.rs files (1,863 LOC) at runie-core src root into session/ dir. Drops root file count 60 -> 54. Touches runie-testing and arch_guardrails path strings."
-    },
-    {
-      "id": "inline-or-document-core-ui-shim",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
+      "category": "Core / State",
       "priority": "P2",
-      "file": "tasks/inline-or-document-core-ui-shim.md",
+      "file": "tasks/delete-runie-core-utils.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "8-line runie-tui/src/core_ui/mod.rs re-export of runie_core::ui types. Either inline 8 callers to use runie_core::ui directly or document a concrete orphan-rule blocker."
+      "notes": "Deleted utils.rs (53 LOC) and pub mod utils declaration. All workspace tests pass."
     },
     {
-      "id": "relocate-loose-tests-files",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/relocate-loose-tests-files.md",
-      "depends_on": [
-        "consolidate-dual-path-modules"
-      ],
-      "blocks": [],
-      "notes": "Move 7 *_tests.rs loose files into module tests/ subdirs or inline. #[path] workarounds (tool_parser_tests, form_tests) drop after dual-path consolidation. event/variants_tests owned by simplify-event-module-layout."
-    },
-    {
-      "id": "flatten-update-login-flow-tests-dir",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/flatten-update-login-flow-tests-dir.md",
-      "depends_on": [
-        "consolidate-dual-path-modules"
-      ],
-      "blocks": [],
-      "notes": "update/login_flow/ is a single-file directory containing only tests.rs. Collapses after dual-path consolidation converts login_flow.rs -> login_flow/mod.rs."
-    },
-    {
-      "id": "unify-provider-modules",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P1",
-      "file": "tasks/unify-provider-modules.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Consolidate provider.rs + provider_registry.rs + provider_registry/data.rs + providers_dialog.rs into single provider/ dir. Supersedes provider_registry portion of consolidate-dual-path-modules."
-    },
-    {
-      "id": "consolidate-login-flow-handlers",
+      "id": "delete-runie-core-skill-module",
       "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
-      "file": "tasks/consolidate-login-flow-handlers.md",
+      "file": "tasks/delete-runie-core-skill-module.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Move update/login_flow.rs handlers into login_flow/handlers.rs. Absorbs flatten-update-login-flow-tests-dir. AMENDED: also reduce state.clone()/flow.clone() sites (5x) by extracting fields before mutable borrows."
+      "notes": "Deleted crates/runie-core/src/skill/ directory (318 LOC) and pub mod skill declaration. Live skills/ (plural) module untouched. All workspace tests pass."
     },
     {
-      "id": "fold-state-into-model-state",
+      "id": "delete-runie-core-confirmation",
       "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
-      "priority": "P2",
-      "file": "tasks/fold-state-into-model-state.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Merge state/ (AgentState, CommandUsage, InputState, SessionState, ViewState) into model/state/. One state namespace."
-    },
-    {
-      "id": "consolidate-mark-dirty-calls",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P2",
-      "file": "tasks/consolidate-mark-dirty-calls.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Replace ~100 per-handler mark_dirty() calls with single dirty flag checked at dispatcher. Biggest boilerplate reduction."
-    },
-    {
-      "id": "extract-appstate-helpers",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P3",
-      "file": "tasks/extract-appstate-helpers.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Add AppState::active_provider() and AppState::warn() helpers to dedupe login_flow/system handler boilerplate."
-    },
-    {
-      "id": "remove-empty-match-arms",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P3",
-      "file": "tasks/remove-empty-match-arms.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Replace ~20 _ => {} arms with explicit comments or exhaustive variant lists. Readability/correctness task. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
-    },
-    {
-      "id": "rename-update-dialog-panel",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P3",
-      "file": "tasks/rename-update-dialog-panel.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Rename update/dialog/panel.rs -> panel_handler.rs to disambiguate from dialog/panel.rs. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
-    },
-    {
-      "id": "split-files-at-limit-round-2",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Refactoring",
-      "priority": "P2",
-      "file": "tasks/split-files-at-limit-round-2.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Split 4 files at/near 500-line limit: update/input/text.rs, model/state/app_state.rs, dialog/panel.rs, config.rs. Round 2 of split-large-files."
-    },
-    {
-      "id": "sweep-allow-suppressions",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P2",
-      "file": "tasks/sweep-allow-suppressions.md",
-      "depends_on": [
-        "gate-or-implement-mcp-client",
-        "delete-config-reload-shim"
-      ],
-      "blocks": [],
-      "notes": "Resolve 18 #[allow(...)] markers: delete 8 dead_code allows, refactor or document 6 too_many_arguments, keep 4 niche-lint allows with comment. 80/20 of dead code shipping in prod. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
-    },
-    {
-      "id": "sweep-to-string-allocs",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P3",
-      "file": "tasks/sweep-to-string-allocs.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "680 .to_string() vs 2 .to_owned(). Remove String.to_string() redundant clones, convert &str.to_string() to .into()/.to_owned(). Mechanical. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
-    },
-    {
-      "id": "consolidate-update-dialog-files",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Refactoring",
-      "priority": "P2",
-      "file": "tasks/consolidate-update-dialog-files.md",
-      "depends_on": [
-        "rename-update-dialog-panel"
-      ],
-      "blocks": [],
-      "notes": "Merge toggle-family (toggle+provider_model_toggle+model_selector -> toggles.rs) and file-picker-family (fff+file_picker -> file_pickers.rs). 11 files -> 9. update/dialog is 29% of update/."
-    },
-    {
-      "id": "consolidate-login-logout-tests",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Testing",
-      "priority": "P3",
-      "file": "tasks/consolidate-login-logout-tests.md",
-      "depends_on": [
-        "consolidate-login-flow-handlers"
-      ],
-      "blocks": [],
-      "notes": "Fold 4 thin test slivers (multiple 32, edge_cases 34, model_select 47, core 49) into parents. 14 files -> 10. tests/login_logout is 12% of core tests."
-    },
-    {
-      "id": "audit-borrow-workarounds",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P3",
-      "file": "tasks/audit-borrow-workarounds.md",
-      "depends_on": [
-        "consolidate-login-flow-handlers"
-      ],
-      "blocks": [],
-      "notes": "Classify 19 take()/mem::take sites. Extract with_dialog helper for the 9-site open_dialog cluster. Comment legitimate parser-buffer flushes."
-    },
-    {
-      "id": "finish-io-migration",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
-      "file": "tasks/finish-io-migration.md",
-      "depends_on": [
-        "remove-login-config-test-shim"
-      ],
-      "blocks": [
-        "delete-async-io-bridge"
-      ],
-      "notes": "Finding #1: runie-core (33k LOC) still has sync IO in model/mod.rs (git), auth.rs, session_store.rs. Move behind existing GitService/ConfigStore/SessionStore actor traits; empty the arch_guardrails legacy allow-list. Prerequisite to delete-async-io-bridge."
-    },
-    {
-      "id": "unify-persistence-actors",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
-      "file": "tasks/unify-persistence-actors.md",
-      "depends_on": [],
-      "blocks": [
-        "simplify-actor-trait"
-      ],
-      "notes": "Finding #2: PersistenceActor + SessionStoreActor + SessionActor (687 LOC) all touch SessionStore/SessionIndex, duplicate SessionMetadata. Unify into one actors/session/ actor. ~400 LOC removed, 2 spawns dropped from TUI bootstrap."
-    },
-    {
-      "id": "remove-login-config-test-shim",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
-      "file": "tasks/remove-login-config-test-shim.md",
-      "depends_on": [
-        "consolidate-dual-path-modules"
-      ],
-      "blocks": [
-        "finish-io-migration"
-      ],
-      "notes": "Finding #4: 5 #[cfg(test)] branches in app_state.rs fall back to login_config:: for config reads/writes. Replace with injected ConfigStore mocks (trait already exists). Deletes login_config.rs (141 LOC) + ~15 test set_test_config_* call sites. Originally listed consolidate-dual-path-modules under blocks; corrected to depends_on since this task deletes the file consolidate-dual-path-modules would otherwise migrate."
-    },
-    {
-      "id": "consolidate-settings-providers-dialog",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
       "priority": "P1",
-      "file": "tasks/consolidate-settings-providers-dialog.md",
-      "depends_on": [
-        "unify-provider-modules"
-      ],
-      "blocks": [],
-      "notes": "Finding #5 (uncovered): settings.rs + providers_dialog.rs + update/settings_dialog.rs + update/dialog/provider_model_toggle.rs split across 3 dirs. Consolidate into settings/ dir. Login-flow portion owned by consolidate-login-flow-handlers; config-reload portion by delete-config-reload-shim."
-    },
-    {
-      "id": "rename-core-ui-to-view",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P1",
-      "file": "tasks/rename-core-ui-to-view.md",
-      "depends_on": [
-        "fold-state-into-model-state"
-      ],
-      "blocks": [],
-      "notes": "Finding #7: runie-core/src/ui/ (1041 LOC) is the view-model (Element/Feed/Transform), not UI. Actual rendering is runie-tui/src/ui/. Two ui/ dirs with different meanings is confusing. Rename core ui/ -> view/."
-    },
-    {
-      "id": "fold-protocol-into-core",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P2",
-      "file": "tasks/fold-protocol-into-core.md",
+      "file": "tasks/delete-runie-core-confirmation.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Finding #10: runie-protocol (557 LOC) has 2 consumers (runie-server + runie-core/src/ipc.rs). YAGNI separate crate. Fold into runie-core/src/proto/ (ipc.rs moves to proto/ipc.rs). Reversible if external IDE consumer appears."
+      "notes": "Deleted confirmation.rs (217 LOC), pub mod confirmation declaration, and pub use confirmation::{ConfirmationKind, ConfirmationRouter} export. All workspace tests pass."
     },
     {
-      "id": "delete-async-io-bridge",
+      "id": "collapse-event-variants-subdir",
       "status": "todo",
       "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P1",
-      "file": "tasks/delete-async-io-bridge.md",
-      "depends_on": [
-        "finish-io-migration"
-      ],
-      "blocks": [],
-      "notes": "Finding #11: async_io.rs run_blocking_if_runtime/block_in_place_if_runtime are documented tactical bridge for sync IO. Once finish-io-migration lands, zero callers. Delete the module; do not keep dead bridge code."
-    },
-    {
-      "id": "simplify-actor-trait",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
+      "category": "Core / State",
       "priority": "P2",
-      "file": "tasks/simplify-actor-trait.md",
-      "depends_on": [
-        "unify-persistence-actors"
-      ],
-      "blocks": [],
-      "notes": "Finding #13: Actor::run_body default is a no-op (every actor overrides it); spawn_actor generic helper is dead production code (every actor uses own spawn). Drop the default; pick one spawn pattern."
-    },
-    {
-      "id": "fold-testing-into-agent-tests",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P3",
-      "file": "tasks/fold-testing-into-agent-tests.md",
+      "file": "tasks/collapse-event-variants-subdir.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Finding #14: runie-testing (344 LOC) has 1 external consumer (runie-agent/src/tests/tool_runtime.rs). Fold into runie-agent tests as #[cfg(test)] modules. Cancel if a second consumer is planned."
+      "notes": "Moved event/variants/{constructors.rs,name.rs,to_durable.rs} to flat event/{constructors.rs,name.rs,to_durable.rs}. Deleted event/variants/ directory. All 1314 workspace tests pass. rg event::variants:: returns zero hits. Cross-crate pub visibility preserved for Event::submit/input constructors."
     },
     {
-      "id": "audit-simplify-reduce-roadmap",
+      "id": "collapse-event-aliases",
       "status": "todo",
       "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
-      "file": "tasks/audit-simplify-reduce-roadmap.md",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/collapse-event-aliases.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Master index of 31 findings from the YAGNI/stdlib/OS-features audit. Maps each finding (F1-F31) to an existing task or a new task created by this audit. Tiers 1-7 group by nature; within tier, ordered by recommended execution."
+      "notes": "Created event/aliases.rs with all 11 type aliases. Updated event/mod.rs to use aliases module and removed 12 individual mod declarations. Updated lib.rs to re-export from event::aliases. Deleted all 12 alias files (agent.rs, command.rs, control.rs, dialog.rs, dialog_display.rs, edit.rs, input.rs, login_flow.rs, model_config.rs, scroll.rs, session.rs, system.rs). All 1314 workspace tests pass. rg check returns zero direct-use hits."
     },
     {
-      "id": "relocate-stray-tool-parser-tests",
+      "id": "delete-provider-message-enum",
       "status": "todo",
       "milestone": "R4",
-      "category": "Configuration",
+      "category": "Core / State",
       "priority": "P2",
-      "file": "tasks/relocate-stray-tool-parser-tests.md",
-      "depends_on": [
-        "consolidate-dual-path-modules"
-      ],
-      "blocks": [],
-      "notes": "Finding F7: tool_parser_tests.rs (106 LOC) is a stray top-level file; convention is foo/tests.rs. Run after consolidate-dual-path-modules. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
-    },
-    {
-      "id": "inline-tui-ipc-reexport",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/inline-tui-ipc-reexport.md",
+      "file": "tasks/delete-provider-message-enum.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Finding F8: runie-tui/src/ipc.rs is a 5-line re-export of runie_core::ipc::TuiIpc. Inline callers; delete the shim. Same pattern as inline-or-document-core-ui-shim."
+      "notes": "Deleted pub enum Message and impl block from provider.rs, to_provider_message from message.rs, 3 old tests, and the Message re-export from lib.rs. Replaced with chat_message_role_and_content_round_trip. All 1314 workspace tests pass."
     },
     {
-      "id": "dedupe-git-status-formatter",
+      "id": "r5-extract-tool-stream",
       "status": "todo",
-      "milestone": "R4",
+      "milestone": "R5",
       "category": "Tools",
-      "priority": "P2",
-      "file": "tasks/dedupe-git-status-formatter.md",
-      "depends_on": [
-        "replace-git2-with-cli"
+      "priority": "P0",
+      "file": "tasks/r5-extract-tool-stream.md",
+      "depends_on": [],
+      "blocks": [
+        "r5-provider-protocol-trait",
+        "r5-partial-json-repair"
       ],
-      "blocks": [],
-      "notes": "Finding F9: format_fff_git_status (update/dialog/fff.rs:85) and format_git_status_str (actors/fff_indexer/search.rs:127) are the same STATUS_LABELS table + loop. Unify after git2 is replaced."
+      "notes": "Extract ToolStream accumulator module to eliminate duplication between openai/stream.rs and stream_response.rs. Created crates/runie-core/src/tool_stream.rs with ToolStream struct, replaced inline accumulators in openai/stream.rs and stream_response.rs, updated headless.rs. All 7 Layer 1 tests pass, workspace tests pass."
     },
     {
-      "id": "collapse-tool-runtime-traits",
+      "id": "r5-add-lifecycle-events",
       "status": "todo",
-      "milestone": "R4",
+      "milestone": "R5",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/r5-add-lifecycle-events.md",
+      "depends_on": [],
+      "blocks": [
+        "r5-think-filter",
+        "r5-populate-parts-streaming"
+      ],
+      "notes": "Add TextStart/TextEnd/ThinkingStart/ThinkingEnd to LLMEvent + Lifecycle state machine. Source: OpenCode packages/llm/src/protocols/utils/lifecycle.ts."
+    },
+    {
+      "id": "r5-provider-protocol-trait",
+      "status": "todo",
+      "milestone": "R5",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/r5-provider-protocol-trait.md",
+      "depends_on": [
+        "r5-extract-tool-stream"
+      ],
+      "blocks": [],
+      "notes": "Per-provider Protocol trait with step() state machine + SSE framing extraction. Source: OpenCode packages/llm/src/route/protocol.ts."
+    },
+    {
+      "id": "r5-think-filter",
+      "status": "todo",
+      "milestone": "R5",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/r5-think-filter.md",
+      "depends_on": [
+        "r5-add-lifecycle-events"
+      ],
+      "blocks": [],
+      "notes": "ThinkFilter for inline <tool_call>/</thinking> tags across chunk boundaries. Source: Goose crates/goose/src/providers/base.rs:40-164."
+    },
+    {
+      "id": "r5-partial-json-repair",
+      "status": "todo",
+      "milestone": "R5",
       "category": "Tools",
       "priority": "P1",
-      "file": "tasks/collapse-tool-runtime-traits.md",
+      "file": "tasks/r5-partial-json-repair.md",
       "depends_on": [
-        "delete-dead-tool-runtime-trait"
+        "r5-extract-tool-stream"
       ],
       "blocks": [],
-      "notes": "Finding F10: after the dead rich trait is deleted, tool::Tool + tool_runtime::ToolRuntime + EngineToolRuntime adapter remain. One trait is enough if tests use Tool fakes. Supersedes the 'kept both' outcome of done pure-snapshot-and-tool-runtime-trait."
+      "notes": "Partial JSON repair for streaming tool-call arguments (brace counting + suffix appending). Source: gptme tools/base.py:53-77 + Aider base_coder.py:2338."
     },
     {
-      "id": "reconsider-redb-session-store",
+      "id": "r5-conversation-sanitize-pipeline",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Sessions",
-      "priority": "P2",
-      "file": "tasks/reconsider-redb-session-store.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Finding F12: redb adopted in done adopt-redb-session-store. Reversal proposal: append-only JSONL log + atomic-rename index is stdlib-sufficient. Either revert with one-time .redb -> .jsonl migration, or document a concrete workload needing redb."
-    },
-    {
-      "id": "reconsider-notify-config-watcher",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/reconsider-notify-config-watcher.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Finding F13: notify + notify-debouncer-mini adopted in done adopt-notify-config-watcher. Single consumer (ConfigActor). 1s stat-poll is stdlib + tokio, no platform-specific failure modes."
-    },
-    {
-      "id": "drop-small-stdlib-replaceable-deps",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/drop-small-stdlib-replaceable-deps.md",
-      "depends_on": [
-        "drop-event-bus-replay-buffer"
-      ],
-      "blocks": [],
-      "notes": "Findings F14+F15+F18+F20 bundled: parking_lot (3 sites) -> std Mutex; chrono (1 site) -> stdlib HH:MM; nucleo-matcher (1 site) -> subsequence scorer; glob (2 sites) -> read_dir recursion. Run after drop-event-bus-replay-buffer so parking_lot loses its bus.rs site."
-    },
-    {
-      "id": "reconsider-clipboard-image-deps",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/reconsider-clipboard-image-deps.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Finding F16: arboard + png adopted in done adopt-arboard-clipboard. Single consumer (clipboard_image.rs). Either feature-gate behind clipboard-image, drop, or document usage. Third option: shell out via IoActor for image bytes (OS tools)."
-    },
-    {
-      "id": "reconsider-schemars-jsonschema",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/reconsider-schemars-jsonschema.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Finding F17: schemars + jsonschema adopted in done adopt-layered-config. Schema generation belongs in dev/example; runtime validation of small known-shape TOML can be hand-written. Move schemars to dev-deps, drop jsonschema, or feature-gate."
-    },
-    {
-      "id": "reconsider-tiktoken-rs",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/reconsider-tiktoken-rs.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Finding F19: tiktoken-rs adopted in done adopt-tiktoken-rs. Heuristic estimate_tokens path already exists; provider usage field is authoritative for billing. Most accuracy-sensitive drop in the audit."
-    },
-    {
-      "id": "fix-duplicate-cargo-toml-keys",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
+      "milestone": "R5",
+      "category": "Core / State",
       "priority": "P1",
-      "file": "tasks/fix-duplicate-cargo-toml-keys.md",
+      "file": "tasks/r5-conversation-sanitize-pipeline.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Findings F21+F22: runie-agent Cargo.toml has duplicate runie-provider + tokio lines; runie-server has duplicate tokio line. Cargo unions features silently; last declaration drops features. Zero-risk merge to feature union. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
+      "notes": "Post-turn message sanitization pipeline (6 fixers: empty, dangling tool calls, orphan results, merge consecutive, ensure first, trim whitespace). Source: Goose crates/goose-providers/src/conversation/mod.rs:199-257."
     },
     {
-      "id": "drop-event-bus-replay-buffer",
+      "id": "r5-markdown-healing-stream",
       "status": "todo",
-      "milestone": "R4",
+      "milestone": "R5",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/r5-markdown-healing-stream.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Live markdown healing in StreamingBuffer (close unclosed **/_/`/~/[ spans for display only). Source: OpenCode markdown-stream.ts + Aider mdstream.py."
+    },
+    {
+      "id": "r5-populate-parts-streaming",
+      "status": "todo",
+      "milestone": "R5",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/r5-populate-parts-streaming.md",
+      "depends_on": [
+        "r5-add-lifecycle-events"
+      ],
+      "blocks": [
+        "r5-per-channel-decoders",
+        "r5-parts-canonical-migration"
+      ],
+      "notes": "Populate Vec<Part> during streaming using lifecycle events. Layer 1 tests added in crates/runie-core/src/update/agent/core/tests.rs (6 tests pass). Additional fixes: removed double-append bug in on_response_delta, added lifecycle events to is_agent_event dispatcher, reset last_assistant_index in finish_turn, fixed should_skip_msg for mixed text+tool_call messages. Source: OpenCode publish-llm-event.ts:60."
+    },
+    {
+      "id": "r5-per-channel-decoders",
+      "status": "todo",
+      "milestone": "R5",
       "category": "Architecture / Actors",
       "priority": "P2",
-      "file": "tasks/drop-event-bus-replay-buffer.md",
-      "depends_on": [],
-      "blocks": [
-        "drop-small-stdlib-replaceable-deps"
+      "file": "tasks/r5-per-channel-decoders.md",
+      "depends_on": [
+        "r5-populate-parts-streaming"
       ],
-      "notes": "Finding F26: EventBus wraps tokio::broadcast AND adds own ReplayBuffer (parking_lot Mutex<VecDeque>). SessionActor disk-replay already covers startup. Drop in-memory replay; bus.rs becomes thin broadcast wrapper; unblocks parking_lot removal."
+      "blocks": [],
+      "notes": "Per-channel stream decoders (TextChannel, ToolCallChannel, ReasoningChannel) for UI panel projections. Source: LangGraph sdk-py/stream/decoders.py."
+    },
+    {
+      "id": "r5-paced-text-rendering",
+      "status": "todo",
+      "milestone": "R5",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "file": "tasks/r5-paced-text-rendering.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Paced text rendering for smooth typing animation (2-24 chars per tick, word-boundary snapping). Source: OpenCode message-part.tsx:209-262."
+    },
+    {
+      "id": "r5-parts-canonical-migration",
+      "status": "todo",
+      "milestone": "R5",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/r5-parts-canonical-migration.md",
+      "depends_on": [
+        "r5-populate-parts-streaming"
+      ],
+      "blocks": [],
+      "notes": "Migrate content:String to parts:Vec<Part> as canonical; content() becomes a computed getter. Source: OpenHarness messages.py:65-117 + OpenCode messages.ts:275."
+    },
+    {
+      "id": "fix-think-filter-guardrails",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/archive/fix-think-filter-guardrails.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "think_filter.rs has already been refactored to satisfy the build guardrails. This task is verification-only."
+    },
+    {
+      "id": "fix-skill-hook-tool-input",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/archive/fix-skill-hook-tool-input.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "turn.rs already passes tool_call.args.clone() into ToolCallCtx; regression test exists. Verification-only."
+    },
+    {
+      "id": "fix-double-turn-start-call",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/archive/fix-double-turn-start-call.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "check_turn_start already calls skills.on_turn_start once and matches all three result variants. Verification-only."
+    },
+    {
+      "id": "fix-config-actor-write-errors",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "file": "tasks/archive/fix-config-actor-write-errors.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "ConfigActor already uses handle_write_result and emits Event::Error on inner write failures. Verification-only."
+    },
+    {
+      "id": "fix-blocking-file-io-in-async-paths",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/archive/fix-blocking-file-io-in-async-paths.md",
+      "completed_in": "e0f2e3b7",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Wrapped all std::fs calls on async paths with block_in_place_if_runtime or spawn_blocking. file_refs callers (fff.rs), path_complete.rs, update/tools.rs, update/command.rs, skill reload in system.rs, IoActor::write_files now use spawn_blocking. All 691 workspace tests pass."
+    },
+    {
+      "id": "fix-bash-tool-timeout-orphan",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/archive/fix-bash-tool-timeout-orphan.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "bash.rs already uses tokio::process::Command with tokio::time::timeout and kills the Child handle on timeout. bash_timeout_kills_child test exists. Verification-only."
+    },
+    {
+      "id": "fix-render-task-blocking-io",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/fix-render-task-blocking-io.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Run terminal draw/size/clear on a dedicated OS thread instead of a Tokio task."
+    },
+    {
+      "id": "fix-session-store-load-alignment",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P1",
+      "file": "tasks/fix-session-store-load-alignment.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Pair session store keys with events inside the load loop and surface parse errors instead of silently dropping and misaligning rows."
+    },
+    {
+      "id": "remove-sleeps-from-automatic-tests",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/remove-sleeps-from-automatic-tests.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Remaining sleeps: fff_indexer/tests.rs uses 200ms sleeps; runie-provider/src/tests.rs uses a 500ms thread sleep. Replace these with deterministic synchronization per AGENTS.md."
     },
     {
       "id": "remove-appstate-cfg-test-branches",
-      "status": "todo",
-      "milestone": "R4",
+      "status": "done",
+      "milestone": "R3",
       "category": "Core / State",
-      "priority": "P1",
-      "file": "tasks/remove-appstate-cfg-test-branches.md",
+      "priority": "P2",
+      "file": "tasks/archive/remove-appstate-cfg-test-branches.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "Finding F29: AppState has 5 Option<Sender> actor handles + #[cfg(test)] direct-call branches in 5 accessors (configured_providers, resolve_default_model, provider_config, remove_provider, set_provider_models). Either always spawn actors in tests, or route reads through config_cache only. Coordinate with remove-login-config-test-shim."
+      "notes": "The #[cfg(test)] branches were already removed in earlier work. All production methods (configured_providers, resolve_default_model, provider_config, remove_provider, set_provider_models) use config_cache consistently. Only #[cfg(test)] pub fn populate_cache_from_login_config remains as a test helper (intentional)."
     },
     {
-      "id": "collapse-effect-payload-indirection",
+      "id": "fix-headless-runtime-spinwait",
       "status": "todo",
-      "milestone": "R4",
+      "milestone": "R3",
       "category": "Architecture / Actors",
       "priority": "P2",
-      "file": "tasks/collapse-effect-payload-indirection.md",
+      "file": "tasks/fix-headless-runtime-spinwait.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Finding F30: effect_payload.rs (98 LOC, core) computes EffectPayload from Event+State; tui/effects/mod.rs maps EffectPayload -> EffectCommand. Two-step mapping with one consumer. Weigh against IO|Domain|UI posture (pure extraction may belong in domain)."
+      "notes": "Replace try_recv/yield_now spin loop in HeadlessRuntime::spawn with a timeout around sub.recv()."
     },
     {
-      "id": "drop-event-aliases",
+      "id": "fix-main-unix-epoch-unwrap",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
       "priority": "P2",
-      "file": "tasks/drop-event-aliases.md",
+      "file": "tasks/fix-main-unix-epoch-unwrap.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Finding F31: event/aliases.rs has 4 type aliases (CommandEvent, ModelConfigEvent -> ControlEvent; LoginFlowEvent -> DialogEvent; EditEvent -> IoEvent) used in ~5 update files. Hide enum identity. Drop and rename call sites, or document a real reason to keep."
+      "notes": "Avoid panic in runie-tui session ID generation when the system clock is before UNIX_EPOCH."
     },
     {
-      "id": "split-runie-core-into-domain-and-io-crates",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
-      "file": "tasks/split-runie-core-into-domain-and-io-crates.md",
-      "depends_on": [
-        "finish-io-migration",
-        "delete-async-io-bridge",
-        "fold-state-into-model-state",
-        "rename-core-ui-to-view"
-      ],
-      "blocks": [
-        "gate-or-move-single-consumer-core-modules",
-        "unify-duplicate-module-names-core-tui",
-        "consolidate-config-modules-into-dir"
-      ],
-      "notes": "Finding F32 (ranked review #1): runie-core (51,524 LOC, 30+ deps) mixes IO + domain + UI DSL; every binary transitively compiles redb/git2/notify/arboard/png/tiktoken/schemars/jsonschema. Split into runie-domain (pure) + runie-io (actor impls). finish-io-migration explicitly deferred this; it is the root-cause task that makes F35/F36/F37 straightforward. Highest-leverage move in the audit."
-    },
-    {
-      "id": "move-tui-effects-into-io-actor",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
-      "file": "tasks/move-tui-effects-into-io-actor.md",
-      "depends_on": [
-        "finish-io-migration",
-        "collapse-effect-payload-indirection"
-      ],
-      "blocks": [],
-      "notes": "Finding F33 (ranked review #4): runie-tui/src/effects/ (339 LOC) executes IO directly in the rendering crate \u2014 share.rs uses reqwest (only reason TUI depends on reqwest), editor.rs uses tempfile, clipboard.rs/login.rs/suspend.rs do side effects. Move to IoActor messages emitting events. Body says distinct from collapse-effect-payload-indirection; treated here as a prerequisite (collapse the enum indirection first, then move the IO). Drops reqwest+tempfile from TUI non-dev deps."
-    },
-    {
-      "id": "collapse-headless-binaries-into-one-cli",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P1",
-      "file": "tasks/collapse-headless-binaries-into-one-cli.md",
-      "depends_on": [
-        "extract-headless-cli-helper"
-      ],
-      "blocks": [],
-      "notes": "Finding F34 (ranked review #2): runie-print (95 LOC) + runie-json (274 LOC) + runie-server (283 LOC) all do spawn_headless_runtime + run_headless_turn with only I/O framing varying. Supersedes extract-headless-cli-helper (which keeps 3 crates sharing a helper). Collapse into one runie-cli with print/json/server subcommands. Saves 2 manifests + 2 link steps + triplicated dep edges."
-    },
-    {
-      "id": "gate-or-move-single-consumer-core-modules",
-      "status": "todo",
-      "milestone": "R4",
+      "id": "sync-docs-after-code-review",
+      "status": "done",
+      "milestone": "R3",
       "category": "Configuration",
       "priority": "P2",
-      "file": "tasks/gate-or-move-single-consumer-core-modules.md",
-      "depends_on": [
-        "split-runie-core-into-domain-and-io-crates"
-      ],
-      "blocks": [],
-      "notes": "Finding F35 (ranked review #7): core carries TUI-only modules every binary compiles \u2014 ui/ (1040), dialog/ (~1300), login_flow/ (~1100), providers_dialog (~200), themes (43), markdown render helpers, ipc.rs (128). Move TUI-only into runie-tui; move ipc.rs into runie-cli server. Keep pure parts (markdown parsing) in domain. Cleanup pass after F32 crate split."
-    },
-    {
-      "id": "unify-duplicate-module-names-core-tui",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/unify-duplicate-module-names-core-tui.md",
-      "depends_on": [
-        "split-runie-core-into-domain-and-io-crates"
-      ],
-      "blocks": [],
-      "notes": "Finding F36 (ranked review #8): markdown (core 551 LOC parsing / tui 138 LOC render) + theme/themes (core 43 / tui 684) duplicate names across crates. diff/ui/ipc pairs already covered by merge-diff-modules, rename-core-ui-to-view, fold-protocol-into-core. This covers the markdown+theme remainder + adds a no-collision guardrail test."
-    },
-    {
-      "id": "consolidate-config-modules-into-dir",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/consolidate-config-modules-into-dir.md",
-      "depends_on": [
-        "delete-config-reload-shim",
-        "consolidate-login-flow-handlers",
-        "split-runie-core-into-domain-and-io-crates"
-      ],
-      "blocks": [],
-      "notes": "Finding F37 (ranked review #10): seven config locations at core root (config.rs, config/ dir, config_migrate.rs, config_reload/ dir, login_config.rs, login_config/ dir, login_flow/ dir). After delete-config-reload-shim + remove-login-config-test-shim + gate-or-move-single-consumer-core-modules, consolidate remaining config.rs + config_migrate.rs into config/ dir. Mirrors group-session-modules-into-dir."
-    },
-    {
-      "id": "drop-thiserror-and-async-trait-deps",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/drop-thiserror-and-async-trait-deps.md",
+      "file": "tasks/archive/sync-docs-after-code-review.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "Finding F38 (ranked review #6 extras): thiserror (1 file, subagent.rs) -> anyhow or manual impl; async-trait (9+ files in runie-engine tool impls + agent sink) -> native async fn in traits (stable since Rust 1.75, edition 2021). Extends drop-small-stdlib-replaceable-deps. async-trait removal is the bigger win (proc-macro dep on every tool impl)."
+      "notes": "AGENTS.md and docs/Architecture.md already contain the updated guidance. Verification-only."
     },
     {
-      "id": "unify-permission-gate",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Security",
+      "id": "fix-render-forwarder-blocking",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
       "priority": "P0",
-      "file": "tasks/unify-permission-gate.md",
-      "depends_on": [],
-      "blocks": [
-        "unify-approval-decision",
-        "derive-confirmation-from-permissions"
-      ],
-      "notes": "PermissionGate is byte-for-byte duplicated in runie-core/src/permissions/gate.rs and runie-agent/src/permission_gate.rs. Keep core version only and re-export from agent. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
-    },
-    {
-      "id": "centralize-test-verification",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Testing",
-      "priority": "P0",
-      "file": "tasks/centralize-test-verification.md",
-      "depends_on": [],
-      "blocks": [
-        "extract-ci-setup-action"
-      ],
-      "notes": "Test-count verification logic duplicated between .github/workflows/ci.yml (EXPECTED_TOTAL_TESTS=1806) and scripts/verify-tests.sh (EXPECTED_TOTAL=2271). Make script the single source of truth."
-    },
-    {
-      "id": "share-minimax-sse-fixtures",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Testing",
-      "priority": "P1",
-      "file": "tasks/share-minimax-sse-fixtures.md",
+      "file": "tasks/archive/fix-render-forwarder-blocking.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "Seven MiniMax SSE fixture files are byte-identical in runie-agent and runie-provider test fixtures. Move to a single shared location."
+      "notes": "Changed render_forwarder from blocking send() to try_send() with sync_channel(1). Prevents async event loop blocking when render thread is busy."
     },
     {
-      "id": "canonicalize-chat-message",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P0",
-      "file": "tasks/canonicalize-chat-message.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Multiple overlapping Message/chat-message types in provider.rs, message/mod.rs, proto/messages.rs, and runie-protocol. Canonicalize on ChatMessage."
-    },
-    {
-      "id": "unify-event-vocabulary",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
-      "file": "tasks/unify-event-vocabulary.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "LLMEvent, AgentEvent, DurableCoreEvent, proto::EventMsg, and EffectCommand describe overlapping streaming lifecycles. Use one core Event with provider/durable views."
-    },
-    {
-      "id": "canonicalize-tool-call",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P0",
-      "file": "tasks/canonicalize-tool-call.md",
-      "depends_on": [],
-      "blocks": [
-        "extract-streaming-tool-parser"
-      ],
-      "notes": "Tool-call concept represented by message::ToolCall, tool_runtime::ToolCall, tool_parser::ParsedToolCall, Part::ToolCall, provider ToolCallDelta, and accumulators. Define one canonical type."
-    },
-    {
-      "id": "collapse-provider-wrappers",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
-      "file": "tasks/collapse-provider-wrappers.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Provider abstraction sandwich: Provider trait -> ProviderFactory -> DynProvider -> DynProviderFactory -> BuiltProvider -> retry wrapper. Collapse into one handle."
-    },
-    {
-      "id": "extract-streaming-tool-parser",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P1",
-      "file": "tasks/extract-streaming-tool-parser.md",
-      "depends_on": [
-        "canonicalize-tool-call"
-      ],
-      "blocks": [
-        "dedupe-tool-execution-loop"
-      ],
-      "notes": "stream_response.rs and headless.rs duplicate ToolCallAccumulator and streaming state machines. Extract a shared StreamingToolParser parameterized by observer."
-    },
-    {
-      "id": "dedupe-tool-execution-loop",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P1",
-      "file": "tasks/dedupe-tool-execution-loop.md",
-      "depends_on": [
-        "extract-streaming-tool-parser"
-      ],
-      "blocks": [],
-      "notes": "turn.rs execute_tools and headless.rs execute_headless_tools share permission gate, registry lookup, and result-message formatting. Route both through one helper."
-    },
-    {
-      "id": "introduce-tool-definition-macro",
-      "status": "todo",
-      "milestone": "R4",
+      "id": "fix-provider-client-timeout",
+      "status": "done",
+      "milestone": "R3",
       "category": "Tools",
-      "priority": "P1",
-      "file": "tasks/introduce-tool-definition-macro.md",
+      "priority": "P0",
+      "file": "tasks/archive/fix-provider-client-timeout.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "Every tool in runie-engine/src/tool/*.rs hand-writes input_schema, name, is_read_only, and requires_approval. Introduce a declarative macro or builder."
+      "notes": "Added reqwest::Client with 120s timeout and 10s connect_timeout to OpenAiProvider. Prevents indefinite hangs on API calls."
     },
     {
-      "id": "add-tool-output-constructors",
-      "status": "todo",
-      "milestone": "R4",
+      "id": "unify-message-types-revisit",
+      "status": "superseded",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/archive/unify-message-types-revisit.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Archived; superseded by other message-unification work."
+    },
+    {
+      "id": "fix-tool-execution-timeout",
+      "status": "done",
+      "milestone": "R3",
       "category": "Tools",
-      "priority": "P1",
-      "file": "tasks/add-tool-output-constructors.md",
+      "priority": "P0",
+      "file": "tasks/archive/fix-tool-execution-timeout.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "ToolOutput struct literals repeated in every tool success/error/lock path. Add success/error/json_success/json_error constructors. Index status reverted from done to todo: file header says todo, code still contains the target artifact."
+      "notes": "Added 30s timeout to execute_tool_call. All non-bash tools now timeout. Bash has its own configurable timeout."
     },
     {
-      "id": "share-fff-error-helpers",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Tools",
-      "priority": "P1",
-      "file": "tasks/share-fff-error-helpers.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "search/core.rs and find_definitions.rs duplicate FFF not-indexed/picker-not-initialized output builders and lock handling. Move to shared helpers."
-    },
-    {
-      "id": "generic-actor-reply",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P1",
-      "file": "tasks/generic-actor-reply.md",
-      "depends_on": [],
-      "blocks": [
-        "reduce-actor-handle-boilerplate"
-      ],
-      "notes": "ConfigReply<T> and ProviderReply<T> are identical Arc<Mutex<Option<oneshot::Sender<T>>>> wrappers. Introduce generic actor::Reply<T>."
-    },
-    {
-      "id": "reduce-actor-handle-boilerplate",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P1",
-      "file": "tasks/reduce-actor-handle-boilerplate.md",
-      "depends_on": [
-        "generic-actor-reply"
-      ],
-      "blocks": [],
-      "notes": "Every actor repeats enum XxxMsg, struct XxxActorHandle { tx }, new, tx, and async request methods. Use generic ActorHandle<Msg> or #[actor] macro."
-    },
-    {
-      "id": "unify-approval-decision",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Security",
-      "priority": "P1",
-      "file": "tasks/unify-approval-decision.md",
-      "depends_on": [
-        "unify-permission-gate"
-      ],
-      "blocks": [],
-      "notes": "ApprovalDecision {Approve, Reject} in proto/op.rs and PermissionAction {Allow, Ask, Deny} in permissions/mod.rs overlap. Use PermissionAction as canonical."
-    },
-    {
-      "id": "hoist-cargo-workspace-deps",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P1",
-      "file": "tasks/hoist-cargo-workspace-deps.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "serde, async-trait, base64, tempfile, and tokio feature sets are repeated inline across crate manifests. Promote to workspace deps."
-    },
-    {
-      "id": "extract-ci-setup-action",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P1",
-      "file": "tasks/extract-ci-setup-action.md",
-      "depends_on": [
-        "centralize-test-verification"
-      ],
-      "blocks": [],
-      "notes": "checkout, rust-toolchain, and cache steps are copy-pasted across CI jobs. Extract a composite GitHub Action."
-    },
-    {
-      "id": "single-source-testing-docs",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P1",
-      "file": "tasks/single-source-testing-docs.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "4-layer testing strategy and config example are duplicated across AGENTS.md, Architecture.md, UI_UX.md, and README.md. Link instead of duplicating."
-    },
-    {
-      "id": "generate-config-schema-from-code",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/generate-config-schema-from-code.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "config.schema.json mirrors defaults declared in config.rs. Generate from schemars and add CI check."
-    },
-    {
-      "id": "unify-build-system-prompt",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P2",
-      "file": "tasks/unify-build-system-prompt.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "prompts.rs and turn_setup.rs both define build_system_prompt. Merge to one public entry point or rename the turn-setup helper."
-    },
-    {
-      "id": "rename-test-submission-id",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Testing",
-      "priority": "P2",
-      "file": "tasks/rename-test-submission-id.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "SubmissionId is a u64 in proto/op.rs and a String alias in runie-testing/runner.rs. Rename the test alias."
-    },
-    {
-      "id": "merge-tool-status-state",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P2",
-      "file": "tasks/merge-tool-status-state.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "ToolCallState and ToolStatus describe overlapping tool execution lifecycles. Merge or define a clear conversion."
-    },
-    {
-      "id": "derive-confirmation-from-permissions",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Security",
-      "priority": "P2",
-      "file": "tasks/derive-confirmation-from-permissions.md",
-      "depends_on": [
-        "unify-permission-gate"
-      ],
-      "blocks": [],
-      "notes": "ConfirmationKind/ConfirmationRouter classify tools separately from permission policies. Drive confirmation UI from permission result."
-    },
-    {
-      "id": "centralize-error-type",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P2",
-      "file": "tasks/centralize-error-type.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "ProviderError, LLMError, ToolError, ToolParseError, SubagentError, proto::Error, and anyhow::Error overlap. Centralize or standardize on anyhow."
-    },
-    {
-      "id": "dedupe-update-input-history",
-      "status": "todo",
+      "id": "slash-command-palette-universal",
+      "status": "done",
       "milestone": "R4",
       "category": "Input / Commands",
-      "priority": "P2",
-      "file": "tasks/dedupe-update-input-history.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "handle_history_prev and handle_history_next in update/input/mod.rs are mirror images. Extract a helper that returns the navigation action."
-    },
-    {
-      "id": "dedupe-scoped-model-toggle",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P2",
-      "file": "tasks/dedupe-scoped-model-toggle.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "handle_scoped_model_enable_all and handle_scoped_model_disable_all differ only by true/false. Replace with set_scoped_models_enabled(enabled: bool)."
-    },
-    {
-      "id": "dedupe-config-actor-mutations",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P2",
-      "file": "tasks/dedupe-config-actor-mutations.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "ConfigActor save_provider/remove_provider/set_default_model/set_provider_models repeat spawn_blocking + load_and_emit. Extract mutate_config helper."
-    },
-    {
-      "id": "dedupe-yolo-sink-setup",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P2",
-      "file": "tasks/dedupe-yolo-sink-setup.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "runie-json and runie-server duplicate --yolo parsing, warning, and AutoAllowSink/DenyAllSink construction. Extract build_sink helper."
-    },
-    {
-      "id": "theme-color-accessor-macro",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "TUI / Rendering",
-      "priority": "P3",
-      "file": "tasks/theme-color-accessor-macro.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "runie-tui/src/theme/colors.rs has ~15 near-identical accessor functions. Generate with theme_color! macro."
-    },
-    {
-      "id": "dedupe-messages-changed-ensure-fresh",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Testing",
-      "priority": "P3",
-      "file": "tasks/dedupe-messages-changed-ensure-fresh.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "state.messages_changed(); state.ensure_fresh(); appears 174 times across tests. Add AppState::refresh_after_message_change helper."
-    },
-    {
-      "id": "dedupe-turn-complete-last-calls",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P2",
-      "file": "tasks/dedupe-turn-complete-last-calls.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "ensure_turn_complete_last() is called in 6 of 9 match arms in update/agent/mod.rs. Wrap dispatch so the invariant is enforced automatically."
-    },
-    {
-      "id": "use-workspace-deps-in-runie-testing",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P3",
-      "file": "tasks/use-workspace-deps-in-runie-testing.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "runie-testing/Cargo.toml uses explicit path dependencies for internal crates instead of workspace = true."
-    },
-    {
-      "id": "single-source-dev-commands",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P3",
-      "file": "tasks/single-source-dev-commands.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "cargo test/clippy/fmt commands are repeated in dev.sh, bacon.toml, README.md, and CI. Centralize in justfile recipes."
-    },
-    {
-      "id": "generate-ui-elements-from-model",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "TUI / Rendering",
-      "priority": "P2",
-      "file": "tasks/generate-ui-elements-from-model.md",
-      "depends_on": [
-        "rename-core-ui-to-view"
-      ],
-      "blocks": [],
-      "notes": "core/src/ui/elements.rs defines Element variants that mirror ChatMessage/Role/Part/ToolOutput/AgentEvent. Generate from model instead of maintaining parallel hierarchy."
-    },
-    {
-      "id": "arch-review-2026-06",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P2",
-      "file": "tasks/arch-review-2026-06.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Master tracking task for the 2026-06 architecture review. Tracking tasks are NOT in the dep graph \u2014 children are independent tasks each with their own priority. This task is done only when every per-finding fixup listed in its body lands (delete-dead-theme-async-loaders, delete-dead-tuple-actor-handles-fields, delete-dead-history-action-vimnav, fix-permission-gate-rename-in-testing, add-engine-tool-tests, consolidate-slash-command-handlers, tighten-build-lint-complexity-heuristic, unify-markdown-rendering, plus the P0 promotion of rename-core-ui-to-view)."
-    },
-    {
-      "id": "delete-dead-theme-async-loaders",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P1",
-      "file": "tasks/delete-dead-theme-async-loaders.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "runie-tui/src/theme/loader.rs has 3 unused async fns flagged dead_code: load_theme_raw_async, load_theme_async, load_theme_with_caps_async. Wire into bootstrap or delete."
-    },
-    {
-      "id": "delete-dead-tuple-actor-handles-fields",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P1",
-      "file": "tasks/delete-dead-tuple-actor-handles-fields.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "runie-tui/src/main.rs:96 ActorHandles tuple fields 0..4 are never read. Struct only kept alive to drop the actor tasks. Rename to _0.._4 or add allow(dead_code) with comment."
-    },
-    {
-      "id": "delete-dead-history-action-vimnav",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P1",
-      "file": "tasks/delete-dead-history-action-vimnav.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "update/input/mod.rs:116 HistoryAction::VimNav(bool) is never constructed; navigate_history takes `dir: Direction` and never uses it. Wire dir into a Direction-carrying HistoryAction or delete both."
-    },
-    {
-      "id": "fix-permission-gate-rename-in-testing",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Testing",
-      "priority": "P1",
-      "file": "tasks/fix-permission-gate-rename-in-testing.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "runie-testing/src/fixtures.rs:6 imports PermissionGate which was renamed to PermissionMode. Trivial cargo fix. Coordinate with unify-permission-gate (P0) which will consolidate back to one type."
-    },
-    {
-      "id": "add-engine-tool-tests",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Tools",
-      "priority": "P1",
-      "file": "tasks/add-engine-tool-tests.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "runie-engine (2466 LOC built-in tools) ships zero tests. Add Layer 1 + Layer 2 coverage per tool: read_file, list_dir, write_file, edit_file, bash, grep, find, find_definitions, fetch_docs. Coordinate with introduce-tool-definition-macro."
-    },
-    {
-      "id": "consolidate-slash-command-handlers",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Input / Commands",
-      "priority": "P2",
-      "file": "tasks/consolidate-slash-command-handlers.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "RunXCommand dispatcher in update/command.rs duplicates flows that also exist in update/dialog/. Each slash command requires 3 places of code (registry, dispatcher, dialog form). Consolidate into one canonical handler per command."
-    },
-    {
-      "id": "tighten-build-lint-complexity-heuristic",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Refactoring",
-      "priority": "P3",
-      "file": "tasks/tighten-build-lint-complexity-heuristic.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "build_lint.rs count_complexity excludes loop/break/continue/return. Nested match arms slip through (update/agent/mod.rs::dispatch is 41 lines). Add match-arm counter or arm-length cap."
-    },
-    {
-      "id": "unify-markdown-rendering",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "TUI / Rendering",
-      "priority": "P3",
-      "file": "tasks/unify-markdown-rendering.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Markdown split between runie-core/src/markdown/ (parsing) and runie-tui/src/markdown.rs (rendering). Core should only expose ParsedDoc; tui owns the Span rendering. Prerequisite for split-runie-core-into-domain-and-io-crates."
-    },
-    {
-      "id": "aggressive-event-consolidation",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P1",
-      "file": "tasks/aggressive-event-consolidation.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "22 files in event/ for a 109-variant Event. Group per-domain sub-enums into 4 dirs (input/agent/io/dialog) or fold into variants.rs. File body references simplify-event-vocabulary / simplify-event-module-layout as superseded prior tasks; both have been archived and this task subsumes them. Orphaned from index by prior archive sweep."
-    },
-    {
-      "id": "consolidate-login-flow-all-files",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P1",
-      "file": "tasks/consolidate-login-flow-all-files.md",
-      "depends_on": [
-        "consolidate-login-flow-handlers"
-      ],
-      "blocks": [],
-      "notes": "11 login-flow files in 5 module roots (login_flow.rs + login_flow/ + login_config.rs + login_config/ + state/login_flow). Group into single login_flow/ dir."
-    },
-    {
-      "id": "consolidate-tiny-binary-crates",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P2",
-      "file": "tasks/consolidate-tiny-binary-crates.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "runie-print (97 LOC) + runie-json (274) + runie-server (283) as separate workspace members. Fold print+json into runie-tui subcommands. consolidate-binary-setup (done) already moved shared setup into headless_runtime. Stale 'depends on consolidate-binary-setup' removed."
-    },
-    {
-      "id": "decouple-appstate-from-view-cache",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
       "priority": "P0",
-      "file": "tasks/decouple-appstate-from-view-cache.md",
-      "depends_on": [
-        "fold-state-into-model-state"
-      ],
-      "blocks": [],
-      "notes": "AppState holds LazyCache<Element> (view AST inside domain). Move cache to UiActor; domain exposes raw posts. Required before crate split (split-runie-core-into-domain-and-io-crates). Body explicitly notes it is distinct from rename-core-ui-to-view (both share fold-state-into-model-state but are otherwise independent). Original 'blocks: rename-core-ui-to-view' was a direction error and has been removed."
-    },
-    {
-      "id": "fold-runie-engine-into-agent",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P2",
-      "file": "tasks/fold-runie-engine-into-agent.md",
+      "file": "tasks/archive/slash-command-palette-universal.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "runie-engine (2234 LOC, 17 files, 1 consumer) adds no independence. Fold into runie-agent/src/tool/. Coordinate with add-engine-tool-tests for test placement."
+      "notes": "Fixed / to open command palette regardless of vim_mode. Moved / handling outside vim_mode block in push_input. Added open_command_palette_with_filter for initial filter support. All 1371 unit tests pass."
     },
     {
-      "id": "merge-diff-modules",
-      "status": "todo",
+      "id": "fix-tui-tokio-worker-threads",
+      "status": "done",
       "milestone": "R4",
       "category": "TUI / Rendering",
-      "priority": "P2",
-      "file": "tasks/merge-diff-modules.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "Two diff.rs files: runie-core/src/diff.rs (domain) and runie-tui/src/diff.rs (466 LOC, render-flavored). Render tui/diff from canonical runie_core::diff::Diff type."
-    },
-    {
-      "id": "move-actor-trait-into-actors-dir",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P1",
-      "file": "tasks/move-actor-trait-into-actors-dir.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "actor.rs (singular, 222 LOC) holds the trait; actors/ (plural) holds the impls. Grep-ambiguous. Fold trait into actors/trait.rs."
-    },
-    {
-      "id": "move-provider-catalog-to-provider-crate",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
       "priority": "P0",
-      "file": "tasks/move-provider-catalog-to-provider-crate.md",
-      "depends_on": [
-        "unify-provider-modules"
-      ],
+      "file": "tasks/archive/fix-tui-tokio-worker-threads.md",
+      "completed_in": "current",
+      "depends_on": [],
       "blocks": [],
-      "notes": "~840 LOC of provider knowledge (provider_registry.rs 435 + model_catalog.rs 405) belongs in runie-provider. Domain crate is the wrong home."
+      "notes": "Increase Tokio worker threads for runie-tui"
     },
     {
-      "id": "rename-model-snapshot-to-compaction",
-      "status": "todo",
+      "id": "fix-tui-render-frame-cap",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "file": "tasks/archive/fix-tui-render-frame-cap.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Cap render-thread frame rate and coalesce snapshots"
+    },
+    {
+      "id": "fix-tui-animation-starvation",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/archive/fix-tui-animation-starvation.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Remove biased select and speed up animation tick in UiActor"
+    },
+    {
+      "id": "fix-prompt-file-read-blocking",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
-      "priority": "P2",
-      "file": "tasks/rename-model-snapshot-to-compaction.md",
-      "depends_on": [],
-      "blocks": [],
-      "notes": "model/snapshot.rs (76 LOC) is not the UI Snapshot (in snapshot.rs). It does token accounting + compaction. Rename to model/compaction.rs."
-    },
-    {
-      "id": "replace-git2-with-cli",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
       "priority": "P1",
-      "file": "tasks/replace-git2-with-cli.md",
-      "depends_on": [
-        "finish-io-migration"
-      ],
-      "blocks": [],
-      "notes": "git2 (vendored-libgit2) used in 6 files for branch/worktree/status. Replace with git CLI via IoActor/GitService. Drops C toolchain from build."
-    },
-    {
-      "id": "replace-single-use-deps-with-stdlib",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/replace-single-use-deps-with-stdlib.md",
+      "file": "tasks/archive/fix-prompt-file-read-blocking.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "parking_lot (3 sites) -> std Mutex; palette (2 sites) -> std RGB math; serde_yaml (1 site) -> toml/hand parser. remove-unused-cargo-deps (done) covered the truly-unused case; this targets underused. Stale 'depends on remove-unused-cargo-deps' removed."
+      "notes": "Offload synchronous custom prompt file read"
     },
     {
-      "id": "shrink-tasks-planning-debt",
-      "status": "todo",
+      "id": "fix-ui-event-coalescing",
+      "status": "done",
       "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/shrink-tasks-planning-debt.md",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/archive/fix-ui-event-coalescing.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "tasks/ has 127 .md files; only 113 active in index. Archive done/superseded tasks/ files; close stale todos; keep root to active work + TEMPLATE + index.json."
+      "notes": "Coalesce queued events in UiActor before publishing snapshots"
     },
     {
-      "id": "standardize-test-layout-inline",
-      "status": "todo",
+      "id": "fix-model-state-visibility",
+      "status": "done",
       "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/standardize-test-layout-inline.md",
-      "depends_on": [
-        "relocate-loose-tests-files"
-      ],
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/archive/fix-model-state-visibility.md",
+      "completed_in": "current",
+      "depends_on": [],
       "blocks": [],
-      "notes": "Three layouts coexist: inline mod tests (125), sibling *_tests.rs (29), tests/ dirs (9). Standardize on inline mod tests. Subsumes relocate-loose-tests-files."
+      "notes": "Fix private model state module blocking lib compilation"
     }
-  ]
+  ],
+  "r5-add-lifecycle-events": "done"
 }

@@ -18,7 +18,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 use crate::effects::EffectCommand;
 use crate::terminal::caps::TerminalCapabilities;
 
-const ANIM_MS: u64 = 200;
+const ANIM_MS: u64 = 100;
 
 /// Actor that owns the application state.
 pub struct UiActor {
@@ -67,11 +67,20 @@ impl UiActor {
 
         loop {
             tokio::select! {
-                biased;
                 Ok(evt) = rx.recv() => {
-                    if self.handle_event(evt, effect_tx.clone()).await {
+                    if self.handle_event_inner(evt, effect_tx.clone()).await {
                         break;
                     }
+                    // Drain any events already queued (e.g. streaming response
+                    // deltas) and apply them in one batch, then publish a single
+                    // snapshot for the whole burst instead of one per token.
+                    while let Some(Ok(evt)) = rx.try_recv() {
+                        if self.handle_event_inner(evt, effect_tx.clone()).await {
+                            self.publish_snapshot();
+                            return;
+                        }
+                    }
+                    self.publish_snapshot();
                 }
                 _ = anim.tick() => {
                     self.state.tick_animation();
@@ -94,8 +103,18 @@ impl UiActor {
         });
     }
 
-    /// Handle a single event. Returns `true` when the actor should shut down.
+    /// Handle a single event and publish a fresh snapshot.
+    /// Returns `true` when the actor should shut down.
+    #[cfg(test)]
     async fn handle_event(&mut self, evt: Event, effect_tx: mpsc::Sender<Event>) -> bool {
+        let quit = self.handle_event_inner(evt, effect_tx).await;
+        self.publish_snapshot();
+        quit
+    }
+
+    /// Handle a single event without publishing. Returns `true` when the actor
+    /// should shut down.
+    async fn handle_event_inner(&mut self, evt: Event, effect_tx: mpsc::Sender<Event>) -> bool {
         let was_submit = matches!(evt, InputEvent::Submit);
         let was_followup = matches!(evt, ControlEvent::FollowUp);
         let was_config_loaded = matches!(evt, Event::ConfigLoaded { .. });
@@ -130,7 +149,6 @@ impl UiActor {
             self.agent_handle.run_if_queued(&mut self.state).await;
         }
 
-        self.publish_snapshot();
         false
     }
 
@@ -308,7 +326,6 @@ mod tests {
             "login flow should reach validating step"
         );
 
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         let result =
             tokio::time::timeout(std::time::Duration::from_secs(2), effect_rx.recv()).await;
         assert!(

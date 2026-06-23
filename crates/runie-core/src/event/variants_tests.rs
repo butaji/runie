@@ -176,7 +176,7 @@ fn all_agent_events_dispatch() {
         content: "hello".into(),
     });
     let last = state.session.messages.last();
-    assert!(last.is_some_and(|m| m.role == Role::Assistant && m.content == "hello"));
+    assert!(last.is_some_and(|m| m.role == Role::Assistant && m.content() == "hello"));
 }
 
 /// Layer 1: the Event enum has an exhaustive match arm for every variant.
@@ -228,6 +228,12 @@ fn dispatcher_handles_all_variants() {
             | Event::ToolStart { .. }
             | Event::ToolEnd { .. }
             | Event::ResponseDelta { .. }
+            | Event::ThinkingDelta { .. }
+            | Event::TextStart { .. }
+            | Event::TextEnd { .. }
+            | Event::ThinkingStart { .. }
+            | Event::ThinkingEnd { .. }
+            | Event::AssistantMessageReady { .. }
             | Event::Response { .. }
             | Event::MessageReplayed { .. }
             | Event::TurnComplete { .. }

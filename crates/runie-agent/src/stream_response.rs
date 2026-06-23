@@ -17,6 +17,8 @@ use std::collections::HashMap;
 use std::ops::ControlFlow;
 use std::sync::{Arc, Mutex};
 
+use crate::think_filter::ThinkFilter;
+
 /// Emit type: Arc<Mutex<dyn FnMut(Event) + Send + Sync>>
 pub type EmitFn = Arc<Mutex<dyn FnMut(Event) + Send + Sync>>;
 
@@ -42,6 +44,7 @@ struct StreamState {
     tool_calls: Vec<ParsedToolCall>,
     command_id: String,
     emit: EmitFn,
+    think_filter: ThinkFilter,
 }
 
 impl StreamState {
@@ -53,7 +56,18 @@ impl StreamState {
             tool_calls: Vec::new(),
             command_id: command_id.to_string(),
             emit,
+            think_filter: ThinkFilter::new(),
         }
+    }
+
+    fn handle_flush(&mut self) -> Result<()> {
+        let flushed = self.think_filter.flush();
+        for ev in flushed {
+            if let ControlFlow::Break(r) = self.handle_event(ev) {
+                r?;
+            }
+        }
+        Ok(())
     }
 
     fn handle_event(&mut self, event: LLMEvent) -> ControlFlow<Result<()>> {
@@ -153,9 +167,18 @@ pub async fn stream_response(
     let mut state = StreamState::new(command_id, emit);
     let mut stream = provider.generate_with_tools(messages.to_vec(), tools);
 
-    while let Some(event_result) = stream.next().await {
-        if let ControlFlow::Break(result) = state.handle_event(event_result?) {
-            return result.map(|_| Ok(state.into_response()))?;
+    while let Some(raw) = stream.next().await {
+        let raw = raw?;
+        let is_finish = matches!(&raw, LLMEvent::Finish { .. });
+        let events = state.think_filter.feed(raw);
+        if events.is_empty() && is_finish {
+            state.handle_flush()?;
+            return Ok(state.into_response());
+        }
+        for ev in events {
+            if let ControlFlow::Break(result) = state.handle_event(ev) {
+                return result.map(|_| Ok(state.into_response()))?;
+            }
         }
     }
 
@@ -273,5 +296,158 @@ mod tests {
         assert_eq!(result.tool_calls.len(), 1);
         assert_eq!(result.tool_calls[0].name, "list_dir");
         assert_eq!(result.text, "Here's the current directory.");
+    }
+
+    // ========================================================================
+    // Layer 2 — ThinkFilter integration tests
+    // ========================================================================
+
+    /// Layer 2: ThinkFilter extracts inline <tool_call> tags as thinking.
+    #[tokio::test]
+    async fn think_filter_extracts_inline_tool_call() {
+        let provider = TestProvider {
+            events: vec![
+                LLMEvent::TextDelta("Let me ".into()),
+                LLMEvent::TextDelta("<tool_call>analyzing".into()),
+                LLMEvent::TextDelta("</tool_call>done".into()),
+                LLMEvent::Finish {
+                    reason: StopReason::Stop,
+                },
+            ],
+        };
+        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let result = stream_response(&provider, "cmd", &[], vec![], emit)
+            .await
+            .unwrap();
+
+        // "Let me " + "done" should be text, inline thinking stripped
+        assert!(result.text.contains("Let me"));
+        assert!(result.text.contains("done"));
+        assert!(!result.text.contains("analyzing"));
+    }
+
+    /// Layer 2: ThinkFilter handles partial tag at chunk boundary.
+    #[tokio::test]
+    async fn think_filter_partial_tag_boundary() {
+        let provider = TestProvider {
+            events: vec![
+                LLMEvent::TextDelta("<tool_call>think".into()),
+                LLMEvent::TextDelta("ing</tool_call>text".into()),
+                LLMEvent::Finish {
+                    reason: StopReason::Stop,
+                },
+            ],
+        };
+        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let result = stream_response(&provider, "cmd", &[], vec![], emit)
+            .await
+            .unwrap();
+
+        assert!(result.text.contains("text"));
+        assert!(!result.text.contains("thinking"));
+    }
+
+    /// Layer 2: ThinkFilter passthrough for structured ThinkingDelta.
+    #[tokio::test]
+    async fn think_filter_passthrough_thinking_delta() {
+        let provider = TestProvider {
+            events: vec![
+                LLMEvent::ThinkingStart { id: "test".into() },
+                LLMEvent::ThinkingDelta("reasoning".into()),
+                LLMEvent::ThinkingEnd { id: "test".into() },
+                LLMEvent::Finish {
+                    reason: StopReason::Stop,
+                },
+            ],
+        };
+        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let result = stream_response(&provider, "cmd", &[], vec![], emit)
+            .await
+            .unwrap();
+
+        // Structured thinking should not appear in text output
+        assert!(!result.text.contains("reasoning"));
+    }
+
+    /// Layer 2: ThinkFilter flush at stream end handles unclosed block.
+    #[tokio::test]
+    async fn think_filter_flush_unclosed_block() {
+        let provider = TestProvider {
+            events: vec![
+                LLMEvent::TextDelta("<thinking>unclosed".into()),
+                LLMEvent::Finish {
+                    reason: StopReason::Stop,
+                },
+            ],
+        };
+        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let result = stream_response(&provider, "cmd", &[], vec![], emit)
+            .await
+            .unwrap();
+
+        // Should complete without error; thinking stripped
+        assert!(!result.text.contains("unclosed"));
+    }
+
+    /// Layer 2: ThinkFilter no regression for plain text without tags.
+    #[tokio::test]
+    async fn think_filter_no_regression_plain_text() {
+        let provider = TestProvider {
+            events: vec![
+                LLMEvent::TextDelta("Hello ".into()),
+                LLMEvent::TextDelta("world!".into()),
+                LLMEvent::Finish {
+                    reason: StopReason::Stop,
+                },
+            ],
+        };
+        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let result = stream_response(&provider, "cmd", &[], vec![], emit)
+            .await
+            .unwrap();
+
+        assert_eq!(result.text, "Hello world!");
+    }
+
+    /// Layer 2: ThinkFilter handles nested <tool_call> tags.
+    #[tokio::test]
+    async fn think_filter_nested_tool_call_tags() {
+        let provider = TestProvider {
+            events: vec![
+                LLMEvent::TextDelta("<tool_call>first</tool_call><tool_call>second</tool_call>rest"
+                    .into()),
+                LLMEvent::Finish {
+                    reason: StopReason::Stop,
+                },
+            ],
+        };
+        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let result = stream_response(&provider, "cmd", &[], vec![], emit)
+            .await
+            .unwrap();
+
+        assert!(result.text.contains("rest"));
+        assert!(!result.text.contains("first"));
+        assert!(!result.text.contains("second"));
+    }
+
+    /// Layer 2: ThinkFilter with <thinking> tag variant.
+    #[tokio::test]
+    async fn think_filter_thinking_tag_variant() {
+        let provider = TestProvider {
+            events: vec![
+                LLMEvent::TextDelta("<thinking>reasoning</thinking>answer".into()),
+                LLMEvent::Finish {
+                    reason: StopReason::Stop,
+                },
+            ],
+        };
+        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let result = stream_response(&provider, "cmd", &[], vec![], emit)
+            .await
+            .unwrap();
+
+        assert!(result.text.contains("answer"));
+        assert!(!result.text.contains("reasoning"));
     }
 }

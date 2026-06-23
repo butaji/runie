@@ -9,6 +9,7 @@ pub mod core_ui;
 pub mod diff;
 pub mod markdown;
 pub mod message;
+pub mod pace;
 pub mod popups;
 pub mod quantize;
 pub mod semantic_tokens;

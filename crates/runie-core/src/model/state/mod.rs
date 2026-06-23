@@ -3,7 +3,7 @@
 mod app_state;
 mod helpers;
 mod ranking;
-mod types;
+pub mod types;
 
 pub use app_state::AppState;
 pub use types::{

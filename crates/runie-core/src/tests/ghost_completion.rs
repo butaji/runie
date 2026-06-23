@@ -1,10 +1,6 @@
 //! Ghost completion tests — tab shows rest of filename in gray.
 
-use crate::model::AppState;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use crate::tests::fresh_state;
 
 #[test]
 fn ghost_is_set_directly() {
@@ -45,7 +41,7 @@ fn submit_with_ghost_includes_full_filename() {
             .session
             .messages
             .iter()
-            .any(|m| m.content.contains("testfile.rs")),
+            .any(|m| m.content().contains("testfile.rs")),
         "Submit should include ghost completion"
     );
 }

@@ -128,22 +128,6 @@ pub struct HooksConfig {
 // Permissions Section
 // ============================================================================
 
-/// Permission policy configuration.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
-#[serde(default)]
-pub struct PermissionsConfig {
-    /// Global permission mode: yolo, manual, or auto.
-    pub mode: crate::permissions::PermissionMode,
-}
-
-impl Default for PermissionsConfig {
-    fn default() -> Self {
-        Self {
-            mode: crate::permissions::PermissionMode::Auto,
-        }
-    }
-}
-
 // ============================================================================
 // Main Config
 // ============================================================================
@@ -168,9 +152,6 @@ pub struct Config {
     /// Provider configurations.
     #[serde(default)]
     pub model_providers: HashMap<String, ModelProvider>,
-    /// Fallback provider chain used when the primary provider is unavailable.
-    #[serde(default)]
-    pub fallback_providers: Vec<String>,
     /// Telemetry settings.
     #[serde(default)]
     pub telemetry: TelemetrySection,
@@ -187,9 +168,6 @@ pub struct Config {
     /// Hook commands registered by event name.
     #[serde(default)]
     pub hooks: HooksConfig,
-    /// Permission policy configuration.
-    #[serde(default)]
-    pub permissions: PermissionsConfig,
 }
 
 impl Config {
@@ -279,16 +257,6 @@ impl Config {
         } else {
             Err(errors)
         }
-    }
-
-    /// Return the provider chain: primary provider followed by fallbacks.
-    pub fn provider_chain(&self) -> Vec<&str> {
-        let mut chain = Vec::new();
-        if let Some(p) = self.provider.as_deref() {
-            chain.push(p);
-        }
-        chain.extend(self.fallback_providers.iter().map(String::as_str));
-        chain
     }
 
     /// Save config to the default path.

@@ -134,7 +134,7 @@ fn message_to_event(message: &ChatMessage) -> Option<DurableCoreEvent> {
         _ => Some(DurableCoreEvent::MessageSent {
             id: message.id.clone(),
             role: message.role.as_str().to_string(),
-            content: message.content.clone(),
+            content: message.content().clone(),
             timestamp: message.timestamp,
             provider: message.provider.clone(),
         }),
@@ -238,14 +238,14 @@ mod tests {
         state.config.current_model = "claude-3".into();
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: "Hello".into(),
+            parts: vec![crate::message::Part::Text { content: "Hello".into() }],
             timestamp: 1.0,
             id: "msg.1".into(),
             ..Default::default()
         });
         state.session.messages.push(ChatMessage {
             role: Role::Assistant,
-            content: "Hi!".into(),
+            parts: vec![crate::message::Part::Text { content: "Hi!".into() }],
             timestamp: 2.0,
             id: "msg.2".into(),
             provider: "anthropic".into(),
@@ -271,7 +271,7 @@ mod tests {
         let mut loaded = AppState::default();
         replay_events(&mut loaded, &events);
         assert_eq!(loaded.session.messages.len(), 2);
-        assert_eq!(loaded.session.messages[0].content, "Hello");
+        assert_eq!(loaded.session.messages[0].content(), "Hello");
         assert_eq!(loaded.config.current_provider, "anthropic");
     }
 
@@ -307,8 +307,8 @@ mod tests {
         replay_events(&mut loaded, &loaded_events);
 
         assert_eq!(loaded.session.messages.len(), 2);
-        assert_eq!(loaded.session.messages[0].content, "Hello");
-        assert_eq!(loaded.session.messages[1].content, "Hi!");
+        assert_eq!(loaded.session.messages[0].content(), "Hello");
+        assert_eq!(loaded.session.messages[1].content(), "Hi!");
         assert_eq!(loaded.config.current_provider, "anthropic");
         assert_eq!(loaded.config.current_model, "claude-3");
     }

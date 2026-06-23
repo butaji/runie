@@ -1,9 +1,7 @@
-use runie_core::model::{AppState, ChatMessage, Role};
+use runie_core::model::{AppState, ChatMessage,  Role};
+use runie_core::Part;
 use runie_core::ui::Element;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 // Helper: build a thought with N lines of reasoning
 fn thought_msg(id: &str, n_lines: usize) -> ChatMessage {
@@ -13,7 +11,7 @@ fn thought_msg(id: &str, n_lines: usize) -> ChatMessage {
         .join("\n");
     ChatMessage {
         role: Role::Thought,
-        content,
+        parts: vec![Part::Text { content: content.into() }],
         timestamp: 1.0,
         id: id.to_string(),
         ..Default::default()
@@ -29,7 +27,7 @@ fn tool_msg(id: &str, n_output_lines: usize) -> ChatMessage {
     let content = format!("◆ Ran ls 0.5s\n{}", output);
     ChatMessage {
         role: Role::Tool,
-        content,
+        parts: vec![Part::Text { content: content.into() }],
         timestamp: 1.0,
         id: id.to_string(),
         ..Default::default()
@@ -42,7 +40,7 @@ fn tool_msg(id: &str, n_output_lines: usize) -> ChatMessage {
 fn user_message_is_one_line() {
     let msg = ChatMessage {
         role: Role::User,
-        content: "hello".into(),
+        parts: vec![Part::Text { content: "hello".into() }],
         timestamp: 0.0,
         id: "u".into(),
         ..Default::default()
@@ -98,7 +96,7 @@ fn visible_shows_latest_element_at_bottom() {
     for i in 0..3 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -124,7 +122,7 @@ fn visible_skips_lines_from_first_element_when_overflow() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "first".into(),
+        parts: vec![Part::Text { content: "first".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -132,7 +130,7 @@ fn visible_skips_lines_from_first_element_when_overflow() {
     state.session.messages.push(thought_msg("t1", 30)); // 31 lines of thought
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "latest".into(),
+        parts: vec![Part::Text { content: "latest".into() }],
         timestamp: 2.0,
         id: "u2".into(),
         ..Default::default()
@@ -167,7 +165,7 @@ fn scroll_up_shows_older_content() {
     for i in 0..5 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -202,7 +200,7 @@ fn scrollbar_no_scrollbar_when_lines_fit() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "hi".into(),
+        parts: vec![Part::Text { content: "hi".into() }],
         timestamp: 0.0,
         id: "u".into(),
         ..Default::default()
@@ -222,7 +220,7 @@ fn scrollbar_shows_when_lines_overflow() {
     for i in 0..20 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -244,7 +242,7 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
     for i in 0..20 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -267,7 +265,7 @@ fn scrollbar_thumb_at_top_when_fully_scrolled() {
     for i in 0..20 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -288,7 +286,7 @@ fn large_thought_overflows_viewport() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "before".into(),
+        parts: vec![Part::Text { content: "before".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -296,7 +294,7 @@ fn large_thought_overflows_viewport() {
     state.session.messages.push(thought_msg("t1", 30));
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "after".into(),
+        parts: vec![Part::Text { content: "after".into() }],
         timestamp: 2.0,
         id: "u2".into(),
         ..Default::default()
@@ -327,7 +325,7 @@ fn multi_line_tool_at_bottom_visible() {
     for i in 0..3 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -361,7 +359,7 @@ fn new_message_at_bottom_auto_shows() {
     for i in 0..10 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -374,7 +372,7 @@ fn new_message_at_bottom_auto_shows() {
     // Add new message — total lines increases, but we're at bottom
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "newest".into(),
+        parts: vec![Part::Text { content: "newest".into() }],
         timestamp: 100.0,
         id: "u99".into(),
         ..Default::default()
@@ -398,7 +396,7 @@ fn scroll_preserved_when_not_at_bottom() {
     for i in 0..10 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -410,7 +408,7 @@ fn scroll_preserved_when_not_at_bottom() {
 
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "newest".into(),
+        parts: vec![Part::Text { content: "newest".into() }],
         timestamp: 100.0,
         id: "u99".into(),
         ..Default::default()

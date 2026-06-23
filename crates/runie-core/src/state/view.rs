@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::model::InputReceiver;
 use crate::model::ModelSelectorItem;
 use crate::ui::elements::Element;
 
@@ -54,6 +55,9 @@ pub struct ViewState {
     /// When vim_mode Esc was used to abort a turn, the next Esc enters
     /// nav mode. Cleared once consumed or when a turn is no longer active.
     pub vim_nav_pending: bool,
+    /// Identifies which component is currently receiving keyboard input.
+    /// Used to determine how Esc should behave (e.g., close dialog vs enter vim-nav).
+    pub input_receiver: InputReceiver,
 }
 
 impl ViewState {
@@ -104,6 +108,7 @@ impl Default for ViewState {
             mouse_position: None,
             vim_nav_mode: false,
             vim_nav_pending: false,
+            input_receiver: InputReceiver::default(),
         }
     }
 }

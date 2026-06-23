@@ -3,12 +3,10 @@
 use runie_core::event::Event;
 
 use runie_core::event::{AgentEvent, InputEvent};
-use runie_core::model::{AppState, ChatMessage, Role};
+use runie_core::model::{AppState, ChatMessage,  Role};
+use runie_core::Part;
 use runie_core::ui::LazyCache;
-
-fn fresh_state() -> AppState {
-    AppState::default()
-}
+use runie_testing::fresh_state;
 
 fn dispatch(state: &mut AppState, events: &[Event]) {
     for e in events {
@@ -305,14 +303,14 @@ fn elements_sorted_by_timestamp_not_index() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "First".into(),
+        parts: vec![Part::Text { content: "First".into() }],
         timestamp: 3.0,
         id: "u1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "Second".into(),
+        parts: vec![Part::Text { content: "Second".into() }],
         timestamp: 1.0,
         id: "u2".into(),
         ..Default::default()

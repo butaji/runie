@@ -1,24 +1,13 @@
 //! Tests for agent turn execution
 use crate::tests::ensure_mock_provider;
-use crate::{run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages, AgentCommand, PermissionGate};
+use crate::{run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages, AgentCommand};
 use runie_core::event::AgentEvent;
 use runie_core::harness_skills::{
     HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult,
 };
-use runie_core::permissions::{AutoAllowSink, PermissionManager};
-use runie_core::tool::ToolStatus;
-use runie_provider::DynProvider;
+use runie_testing::{allow_all_gate, mock_provider};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-
-fn allow_all_gate() -> PermissionGate {
-    PermissionGate::new(PermissionManager::default(), Arc::new(AutoAllowSink))
-}
-
-fn mock_provider() -> DynProvider {
-    DynProvider::new_with_config("mock", "echo", &runie_core::config::Config::default())
-        .expect("mock provider must be available in tests")
-}
 
 struct MockToolSkill {
     outputs: HashMap<String, String>,
@@ -298,7 +287,7 @@ fn read_only_excludes_write_tools() {
     };
     let msgs = build_initial_messages(&cmd);
     let system = match &msgs[0].role {
-        runie_core::message::Role::System => msgs[0].content.clone(),
+        runie_core::message::Role::System => msgs[0].content().clone(),
         _ => panic!("expected system message"),
     };
     assert!(system.contains("read_file"), "read-only includes read_file");
@@ -331,7 +320,7 @@ fn read_write_includes_all_tools() {
     };
     let msgs = build_initial_messages(&cmd);
     let system = match &msgs[0].role {
-        runie_core::message::Role::System => msgs[0].content.clone(),
+        runie_core::message::Role::System => msgs[0].content().clone(),
         _ => panic!("expected system message"),
     };
     assert!(
@@ -433,4 +422,39 @@ async fn tool_call_event_matches_mock_output() {
     for output in tool_ends {
         assert_eq!(output, "Cargo.toml\nREADME.md\n");
     }
+}
+
+struct RecordingSkill {
+    ctx: Arc<Mutex<Option<ToolCallCtx>>>,
+}
+
+impl HarnessSkill for RecordingSkill {
+    fn name(&self) -> &str {
+        "recording"
+    }
+
+    fn on_tool_call(&self, ctx: &ToolCallCtx) -> ToolCallResult {
+        *self.ctx.lock().unwrap() = Some(ctx.clone());
+        ToolCallResult::Continue
+    }
+}
+
+#[test]
+fn tool_call_hook_receives_input() {
+    let recorded = Arc::new(Mutex::new(None));
+    let skill = RecordingSkill { ctx: recorded.clone() };
+    let mut registry = SkillRegistry::new();
+    registry.register(skill);
+
+    let input = serde_json::json!({"path": "src/main.rs"});
+    registry.on_tool_call(&ToolCallCtx {
+        tool_name: "read_file".into(),
+        tool_input: input.clone(),
+        phase: ToolCallPhase::Before,
+        tool_output: None,
+        success: None,
+    });
+
+    let ctx = recorded.lock().unwrap().take().unwrap();
+    assert_eq!(ctx.tool_input, input);
 }

@@ -96,7 +96,6 @@ async fn config_actor_watcher_reloads_on_external_change() {
     // Drain initial load.
     let _ = sub.recv().await;
 
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     std::fs::write(&path, r#"provider = "anthropic""#).unwrap();
 
     let event = tokio::time::timeout(std::time::Duration::from_secs(5), sub.recv())
@@ -104,4 +103,40 @@ async fn config_actor_watcher_reloads_on_external_change() {
         .unwrap()
         .unwrap();
     assert!(matches!(event, Event::ConfigLoaded { .. }));
+}
+
+#[tokio::test]
+async fn config_actor_emits_error_on_failed_save() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("config.toml");
+    // Make the directory read-only after creating the actor so initial load succeeds.
+    let readonly = tmp.path().to_path_buf();
+    let perms = std::fs::metadata(&readonly).unwrap().permissions();
+    let mut readonly_perms = perms.clone();
+    readonly_perms.set_readonly(true);
+
+    let bus = EventBus::<Event>::new(8);
+    let mut sub = bus.subscribe();
+    let (handle, _actor) = ConfigActor::spawn(bus.clone(), Some(path.clone()));
+
+    // Drain initial ConfigLoaded.
+    let _ = tokio::time::timeout(std::time::Duration::from_secs(2), sub.recv()).await;
+
+    std::fs::set_permissions(&readonly, readonly_perms).unwrap();
+    handle
+        .save_provider("openai".into(), "https://api.openai.com".into(), "sk-test".into(), vec!["gpt-4o".into()])
+        .await;
+
+    let mut saw_error = false;
+    for _ in 0..20 {
+        if let Ok(Ok(Event::Error { .. })) =
+            tokio::time::timeout(std::time::Duration::from_millis(50), sub.recv()).await
+        {
+            saw_error = true;
+            break;
+        }
+    }
+
+    std::fs::set_permissions(&readonly, perms).unwrap();
+    assert!(saw_error, "expected Event::Error after failed write");
 }

@@ -6,12 +6,16 @@
 //! or system message. This module repairs the most common issues.
 
 use runie_core::message::{ChatMessage, Role};
+use runie_core::sanitize::sanitize_messages;
 
 /// Normalize a message list for an OpenAI-compatible request.
+///
+/// Shared fixers (empty removal, consecutive merge, first-role guard,
+/// whitespace trim, tool-call integrity) are delegated to `sanitize_messages`.
 pub fn normalize_messages(messages: Vec<ChatMessage>) -> Vec<ChatMessage> {
-    let messages = strip_provider_metadata(messages);
-    let messages = merge_consecutive_same_role(messages);
-    ensure_user_or_system_first(messages)
+    let mut msgs = messages;
+    sanitize_messages(&mut msgs);
+    strip_provider_metadata(msgs)
 }
 
 fn strip_provider_metadata(messages: Vec<ChatMessage>) -> Vec<ChatMessage> {
@@ -22,37 +26,6 @@ fn strip_provider_metadata(messages: Vec<ChatMessage>) -> Vec<ChatMessage> {
             m
         })
         .collect()
-}
-
-fn merge_consecutive_same_role(messages: Vec<ChatMessage>) -> Vec<ChatMessage> {
-    let mut out: Vec<ChatMessage> = Vec::new();
-    for msg in messages {
-        if let Some(last) = out.last_mut() {
-            if last.role == msg.role && last.role != Role::Tool {
-                if !msg.content.is_empty() {
-                    last.content.push('\n');
-                    last.content.push_str(&msg.content);
-                }
-                last.tool_calls.extend(msg.tool_calls);
-                continue;
-            }
-        }
-        out.push(msg);
-    }
-    out
-}
-
-fn ensure_user_or_system_first(messages: Vec<ChatMessage>) -> Vec<ChatMessage> {
-    if messages
-        .first()
-        .map(|m| m.role != Role::Tool)
-        .unwrap_or(true)
-    {
-        return messages;
-    }
-    let mut out = vec![ChatMessage::user("[conversation start]".to_string())];
-    out.extend(messages);
-    out
 }
 
 #[cfg(test)]
@@ -70,43 +43,57 @@ mod tests {
     #[test]
     fn merges_consecutive_same_role_messages() {
         let messages = vec![
-            ChatMessage::assistant("part 1".to_string()),
-            ChatMessage::assistant("part 2".to_string()),
+            ChatMessage::user("part 1".to_string()),
+            ChatMessage::user("part 2".to_string()),
             ChatMessage::user("ok".to_string()),
         ];
         let out = normalize_messages(messages);
-        assert_eq!(out.len(), 2);
-        assert_eq!(out[0].content, "part 1\npart 2");
-        assert_eq!(out[1].content, "ok");
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].content(), "part 1\n\npart 2\n\nok");
     }
 
     #[test]
     fn does_not_merge_consecutive_tool_results() {
+        // Need an assistant message with matching tool calls for tool results to be preserved
+        let mut assistant = ChatMessage::assistant("call tools".to_string());
+        assistant.parts.push(runie_core::message::Part::ToolCall {
+            id: "call_1".into(),
+            name: "tool1".into(),
+            args: serde_json::json!({}),
+        });
+        assistant.parts.push(runie_core::message::Part::ToolCall {
+            id: "call_2".into(),
+            name: "tool2".into(),
+            args: serde_json::json!({}),
+        });
         let messages = vec![
-            ChatMessage::system("sys".to_string()),
+            ChatMessage::user("hi".to_string()),
+            assistant,
             ChatMessage::tool("result 1".to_string()).with_tool_call_id("call_1"),
             ChatMessage::tool("result 2".to_string()).with_tool_call_id("call_2"),
         ];
         let out = normalize_messages(messages);
-        assert_eq!(out.len(), 3);
-        assert_eq!(out[1].tool_call_id, Some("call_1".to_string()));
-        assert_eq!(out[2].tool_call_id, Some("call_2".to_string()));
+        // Both tool results should be preserved (have matching tool calls)
+        assert!(out.iter().any(|m| m.tool_call_id.as_deref() == Some("call_1")));
+        assert!(out.iter().any(|m| m.tool_call_id.as_deref() == Some("call_2")));
     }
 
     #[test]
-    fn injects_user_placeholder_when_history_starts_with_tool() {
+    fn injects_placeholder_when_first_is_tool() {
+        // Tool result without matching tool call is removed as orphan
         let messages = vec![ChatMessage::tool("result".to_string())];
         let out = normalize_messages(messages);
-        assert_eq!(out.len(), 2);
-        assert_eq!(out[0].role, Role::User);
-        assert_eq!(out[1].role, Role::Tool);
+        // Placeholder is added, orphan tool result is removed
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].role, Role::System);
     }
 
     #[test]
     fn does_not_inject_placeholder_for_assistant_first() {
         let messages = vec![ChatMessage::assistant("hi".to_string())];
         let out = normalize_messages(messages);
-        assert_eq!(out.len(), 1);
-        assert_eq!(out[0].role, Role::Assistant);
+        assert_eq!(out.len(), 2);
+        assert_eq!(out[0].role, Role::System);
+        assert_eq!(out[1].role, Role::Assistant);
     }
 }
