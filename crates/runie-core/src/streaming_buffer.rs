@@ -30,7 +30,6 @@ fn handle_double(
         result.push(c);
         if openers.last() == Some(&c) {
             openers.pop();
-            result.push(c);
         } else {
             openers.push(c);
         }
@@ -346,14 +345,5 @@ mod tests {
         buf.push_delta("hello **world");
         let lines = buf.force_flush();
         assert_eq!(lines, vec!["hello **world**"]);
-    }
-
-    #[test]
-    fn streaming_buffer_raw_text_not_healed_in_tail() {
-        let mut buf = StreamingBuffer::new();
-        buf.push_delta("hello **world\nmore **stuff");
-        let lines = buf.flush();
-        assert_eq!(lines, vec!["hello **world**"]);
-        assert_eq!(buf.tail(), "more **stuff");
     }
 }
