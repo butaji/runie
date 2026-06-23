@@ -3115,14 +3115,15 @@
     },
     {
       "id": "fix-bash-tool-timeout-orphan",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Tools",
       "priority": "P1",
-      "file": "tasks/fix-bash-tool-timeout-orphan.md",
+      "file": "tasks/archive/fix-bash-tool-timeout-orphan.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "Rewrite bash tool timeout path to use tokio::process::Command with timeout so the child is killed."
+      "notes": "Rewrote bash tool timeout path to use tokio::process::Command with timeout so the child is killed. Added bash_timeout_kills_child test. All 44 engine tests pass."
     },
     {
       "id": "fix-render-task-blocking-io",
