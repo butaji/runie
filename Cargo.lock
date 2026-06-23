@@ -3311,6 +3311,7 @@ dependencies = [
  "png 0.17.16",
  "pulldown-cmark",
  "redb",
+ "runie-macros",
  "runie-protocol",
  "schemars",
  "serde",
@@ -3358,6 +3359,15 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+]
+
+[[package]]
+name = "runie-macros"
+version = "0.2.16"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -3442,6 +3452,7 @@ dependencies = [
  "reqwest",
  "runie-agent",
  "runie-core",
+ "runie-protocol",
  "runie-provider",
  "runie-testing",
  "serde_json",

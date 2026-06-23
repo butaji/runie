@@ -10,11 +10,12 @@ pub mod response;
 pub mod version;
 
 pub use error::Error;
-pub use event::{ErrorCode, Event, EventMsg, W3cTraceContext};
+pub use event::{ErrorCode, Event, EventMsg};
 pub use messages::Message;
 pub use notification::Notification;
 pub use op::{
     ApprovalDecision, ApprovalId, Op, PromptOrigin, SessionConfig, Submission, SubmissionId,
+    W3cTraceContext,
 };
 pub use request::Request;
 pub use response::Response;

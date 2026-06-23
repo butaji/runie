@@ -1,112 +1,117 @@
-//! Event queue types for core → TUI IPC.
+//! Event Queue (EQ) types: Core → TUI.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::op::{ApprovalId, SubmissionId};
 
-/// W3C trace context propagated across the queue pair.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct W3cTraceContext {
-    pub traceparent: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tracestate: Option<String>,
-}
-
-/// Typed error codes emitted by the core.
+/// Error code carried by event-queue error messages.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ErrorCode {
+    /// Internal error.
     Internal,
+    /// Submission was invalid.
     InvalidSubmission,
-    Disconnected,
-    UserDenied,
+    /// Tool execution was rejected.
+    ToolRejected,
+    /// Session not found.
+    SessionNotFound,
 }
 
-/// A notification from core to TUI.
+/// Event message sent from the core to the TUI.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "msg", rename_all = "snake_case")]
 pub enum EventMsg {
+    /// A turn started.
     TurnStarted {
+        /// Turn id.
         turn_id: u64,
     },
+    /// A turn completed.
     TurnComplete {
+        /// Turn id.
         turn_id: u64,
+        /// Response id.
         response_id: String,
     },
+    /// An agent message chunk.
     AgentMessage {
+        /// Message content.
         content: String,
     },
+    /// Request approval for a tool execution.
     ExecApprovalRequest {
+        /// Approval request id.
         id: ApprovalId,
+        /// Tool name.
         tool: String,
+        /// Tool arguments.
         args: Value,
     },
+    /// Error event.
     Error {
+        /// Error code.
         code: ErrorCode,
+        /// Error message.
         message: String,
     },
 }
 
-/// Event on the core → TUI queue, optionally correlated to a submission.
+/// An event on the Event Queue.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Event {
+    /// Correlated submission id, if any.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<SubmissionId>,
+    /// Event payload.
     pub msg: EventMsg,
+}
+
+impl Event {
+    /// Create a new event with no correlation.
+    pub fn new(msg: EventMsg) -> Self {
+        Self { id: None, msg }
+    }
+
+    /// Create a new event correlated to a submission.
+    pub fn correlated(id: SubmissionId, msg: EventMsg) -> Self {
+        Self {
+            id: Some(id),
+            msg,
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::op::{
-        ApprovalDecision, ApprovalId, Op, PromptOrigin, SessionConfig, Submission, SubmissionId,
-    };
-
-    fn roundtrip<T>(value: &T) -> T
-    where
-        T: Serialize + serde::de::DeserializeOwned + PartialEq + std::fmt::Debug,
-    {
-        serde_json::from_value(serde_json::to_value(value).unwrap()).unwrap()
-    }
 
     #[test]
     fn event_variant_roundtrip() {
-        let events = vec![
+        let variants = vec![
             EventMsg::TurnStarted { turn_id: 1 },
             EventMsg::TurnComplete {
                 turn_id: 2,
-                response_id: "r3".into(),
+                response_id: "r1".into(),
             },
             EventMsg::AgentMessage {
                 content: "hi".into(),
             },
             EventMsg::ExecApprovalRequest {
-                id: ApprovalId(9),
-                tool: "write".into(),
-                args: serde_json::json!({"path": "/tmp/x"}),
+                id: ApprovalId::new("a1"),
+                tool: "read".into(),
+                args: serde_json::json!({"path": "/tmp"}),
             },
             EventMsg::Error {
                 code: ErrorCode::Internal,
-                message: "oops".into(),
+                message: "boom".into(),
             },
         ];
-        for msg in events {
-            assert_eq!(roundtrip(&msg), msg);
+        for msg in variants {
+            let json = serde_json::to_string(&msg).unwrap();
+            let parsed: EventMsg = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed, msg);
         }
-    }
-
-    #[test]
-    fn submission_id_correlates_event() {
-        let id = SubmissionId(42);
-        let submission = Submission {
-            id,
-            op: Op::Interrupt,
-            trace: None,
-        };
-        let event = Event {
-            id: Some(submission.id),
-            msg: EventMsg::TurnStarted { turn_id: 1 },
-        };
-        assert_eq!(event.id, Some(submission.id));
     }
 }
