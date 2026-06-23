@@ -3093,6 +3093,7 @@
     },
     {
       "id": "fix-config-actor-write-errors",
+      "status": "done",
       "status": "todo",
       "milestone": "R3",
       "category": "Configuration",
