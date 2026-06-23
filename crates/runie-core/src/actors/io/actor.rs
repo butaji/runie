@@ -52,7 +52,10 @@ impl IoActor {
     }
 
     async fn write_files(&self, edits: Vec<(PathBuf, String)>) {
-        let (count, errors) = write_files_sync(&edits);
+        let (count, errors) = match tokio::task::spawn_blocking(move || write_files_sync(&edits)).await {
+            Ok(res) => res,
+            Err(e) => (0, vec![format!("write task failed: {e}")]),
+        };
         self.emit(Event::FilesWritten { count, errors });
     }
 

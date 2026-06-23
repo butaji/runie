@@ -20,16 +20,18 @@ pub fn complete_path(partial: &str, cwd: &Path) -> Vec<PathCompletion> {
         cwd.join(partial)
     };
 
-    if partial.ends_with('/') || partial.is_empty() {
-        collect_completions(&base, "")
+    let (dir, prefix) = if partial.ends_with('/') || partial.is_empty() {
+        (base, String::new())
     } else {
         let parent = base.parent().unwrap_or(cwd).to_path_buf();
         let prefix = base
             .file_name()
             .map(|s| s.to_string_lossy().to_string())
             .unwrap_or_default();
-        collect_completions(&parent, &prefix)
-    }
+        (parent, prefix)
+    };
+
+    crate::async_io::block_in_place_if_runtime(|| collect_completions(&dir, &prefix))
 }
 
 fn collect_completions(dir: &Path, prefix: &str) -> Vec<PathCompletion> {

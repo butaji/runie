@@ -152,7 +152,7 @@ impl AppState {
         for preview in self.session.pending_edits.drain(..) {
             let path = preview.path.clone();
             let content = preview.proposed.clone();
-            match std::fs::write(&path, content) {
+            match crate::async_io::block_in_place_if_runtime(|| std::fs::write(&path, content)) {
                 Ok(()) => applied += 1,
                 Err(e) => errors.push(format!("{}: {}", preview.path.display(), e)),
             }

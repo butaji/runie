@@ -141,7 +141,7 @@ fn handle_reload(state: &mut AppState, _: &str) -> CommandResult {
             let _ = tx.send(crate::actors::ConfigMsg::Reload).await;
         });
     }
-    state.skills = crate::skills::load_all();
+    state.skills = crate::async_io::block_in_place_if_runtime(crate::skills::load_all);
     CommandResult::Message("Reloaded config, keybindings, theme, skills, and prompts.".into())
 }
 
