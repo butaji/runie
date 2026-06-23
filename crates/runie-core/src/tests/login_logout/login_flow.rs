@@ -324,7 +324,7 @@ async fn login_flow_save_does_not_block_async_runtime() {
         if list_configured_providers().iter().any(|(n, _, _)| n == "minimax") {
             break;
         }
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        tokio::task::yield_now().await;
     }
     assert!(
         list_configured_providers().iter().any(|(n, _, _)| n == "minimax"),
@@ -347,5 +347,42 @@ fn login_flow_panel_changes_mark_dirty() {
     assert!(
         state.view.dirty,
         "pushing a new login panel should mark the view dirty"
+    );
+}
+
+#[test]
+fn login_flow_save_updates_config_cache_for_immediate_model_switch() {
+    // Regression test: after saving a provider, model switching should work
+    // immediately without waiting for ConfigActor to publish ConfigLoaded.
+    clean_config();
+    let mut state = AppState::default();
+    state.config.current_provider.clear();
+    state.config.current_model.clear();
+
+    state.update(DialogEvent::ProvidersDialog);
+    state.update(DialogEvent::ProvidersAdd);
+    state.update(LoginFlowEvent::SelectProvider {
+        provider: "minimax".into(),
+    });
+    state.update(LoginFlowEvent::SubmitKey {
+        provider: "minimax".into(),
+        key: "sk-test".into(),
+    });
+    validate_provider(&mut state, "minimax", "sk-test");
+    state.update(LoginFlowEvent::Save);
+
+    // Verify config_cache contains the provider immediately
+    let configured = state.configured_providers();
+    assert!(
+        configured.iter().any(|(p, _, _)| p == "minimax"),
+        "config_cache should contain minimax provider immediately after save"
+    );
+
+    // Try to switch to a different model using the /model command
+    let result = crate::commands::dsl::handlers::model::handle_model(&mut state, "MiniMax-M3");
+    assert!(
+        matches!(result, crate::commands::CommandResult::Message(ref msg) if msg.contains("Switched")),
+        "model switch should succeed immediately after save, got {:?}",
+        result
     );
 }

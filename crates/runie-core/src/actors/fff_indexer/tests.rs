@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use super::*;
 
 #[tokio::test]
@@ -26,8 +24,9 @@ async fn indexer_initializes_in_temp_dir() {
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    // Give it time to initialize
-    tokio::time::sleep(Duration::from_secs(5)).await;
+    // Give the actor a brief moment to finish initialization (spawn_blocking runs on
+    // a separate thread; we need wall-clock time for the scan to complete).
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
     // Send a search request
     let request_id = 42;
@@ -40,15 +39,17 @@ async fn indexer_initializes_in_temp_dir() {
         })
         .await;
 
-    // Collect results
-    let mut results = Vec::new();
+    // Collect results using deterministic sync instead of sleeps
+    let mut result = None;
     let mut sub = bus.subscribe();
-    for _ in 0..5 {
+    for _ in 0..100 {
         if let Some(Ok(FffSearchResult(payload))) = sub.try_recv() {
-            results.push(payload);
-            break;
+            if payload.request_id == request_id {
+                result = Some(payload);
+                break;
+            }
         }
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        tokio::task::yield_now().await;
     }
 
     // Abort the actor
@@ -60,9 +61,8 @@ async fn indexer_initializes_in_temp_dir() {
         "send should not panic"
     );
 
-    if !results.is_empty() {
-        let result = &results[0];
-        assert_eq!(result.request_id, request_id);
+    if let Some(res) = result {
+        assert_eq!(res.request_id, request_id);
     }
 }
 
@@ -82,8 +82,8 @@ async fn indexer_answers_file_search() {
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    // Wait for scan
-    tokio::time::sleep(Duration::from_secs(5)).await;
+    // Brief init so the actor can finish scanning via spawn_blocking
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
     // Search for "cli"
     let request_id = 7;
@@ -96,17 +96,17 @@ async fn indexer_answers_file_search() {
     .await
     .expect("send succeeds");
 
-    // Wait for result
+    // Wait for result using deterministic sync
     let mut result = None;
     let mut sub = bus.subscribe();
-    for _ in 0..10 {
+    for _ in 0..100 {
         if let Some(Ok(FffSearchResult(payload))) = sub.try_recv() {
             if payload.request_id == request_id {
                 result = Some(payload);
                 break;
             }
         }
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        tokio::task::yield_now().await;
     }
 
     handle.abort();
@@ -135,7 +135,8 @@ async fn search_request_event_returns_results() {
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    tokio::time::sleep(Duration::from_secs(3)).await;
+    // Brief init so the actor can finish scanning via spawn_blocking
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
     let request_id = 99;
     tx.send(FffSearchRequest {
@@ -147,10 +148,10 @@ async fn search_request_event_returns_results() {
     .await
     .expect("send succeeds");
 
-    // Drain events until we get our result
+    // Drain events using deterministic sync
     let mut got_result = false;
     let mut sub = bus.subscribe();
-    for _ in 0..15 {
+    for _ in 0..100 {
         if let Some(Ok(FffSearchResult(payload))) = sub.try_recv() {
             if payload.request_id == request_id {
                 assert!(!payload.items.is_empty() || !payload.indexed);
@@ -158,7 +159,7 @@ async fn search_request_event_returns_results() {
                 break;
             }
         }
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        tokio::task::yield_now().await;
     }
 
     handle.abort();

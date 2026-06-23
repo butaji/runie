@@ -90,7 +90,8 @@ fn model_only_slashes_shows_usage() {
 }
 
 #[test]
-fn model_with_args_dispatches_from_typed_input_when_vim_mode_off() {
+fn slash_opens_palette_and_typing_filters_commands() {
+    // Typing "/" opens command palette, then typing filters commands
     crate::login_config::set_test_config_with_providers(&[(
         "openai".into(),
         vec!["gpt-4o".into(), "gpt-4o-mini".into()],
@@ -100,10 +101,19 @@ fn model_with_args_dispatches_from_typed_input_when_vim_mode_off() {
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o-mini".into();
 
-    type_str(&mut state, "/model gpt-4o");
-    state.update(Event::submit());
+    // Type "/" to open palette, then "model" to filter to the model command
+    type_str(&mut state, "/model");
 
-    assert_eq!(state.config.current_model, "gpt-4o");
+    // Verify the palette is open with "model" as filter
+    let stack = match &state.open_dialog {
+        Some(crate::commands::DialogState::CommandPalette(s)) => s,
+        _ => panic!("Expected command palette"),
+    };
+    let panel = stack.current().expect("panel");
+    assert_eq!(panel.filter, "model");
+    // The model command should be first in filtered results
+    let selected_label = panel.selected_item().expect("selected item").label();
+    assert!(selected_label.expect("label").starts_with("model "), "Expected model command, got: {selected_label:?}");
 }
 
 #[test]

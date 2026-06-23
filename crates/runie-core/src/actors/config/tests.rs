@@ -96,7 +96,6 @@ async fn config_actor_watcher_reloads_on_external_change() {
     // Drain initial load.
     let _ = sub.recv().await;
 
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     std::fs::write(&path, r#"provider = "anthropic""#).unwrap();
 
     let event = tokio::time::timeout(std::time::Duration::from_secs(5), sub.recv())

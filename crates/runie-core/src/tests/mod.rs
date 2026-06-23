@@ -12,9 +12,13 @@ use crate::event::InputEvent;
 use crate::model::AppState;
 
 #[cfg(test)]
-/// Returns a fresh `AppState` with default values.
+/// Returns a fresh `AppState` with config_cache populated from login_config.
+/// Tests that call `set_test_config_with_providers` before this will have
+/// the correct providers available.
 pub fn fresh_state() -> AppState {
-    AppState::default()
+    let mut state = AppState::default();
+    state.populate_cache_from_login_config();
+    state
 }
 
 #[cfg(test)]
@@ -71,6 +75,8 @@ mod input_flash;
 mod input_grapheme;
 #[cfg(test)]
 mod input_history;
+#[cfg(test)]
+mod input_receiver;
 #[cfg(test)]
 mod input_multiline;
 #[cfg(test)]

@@ -262,6 +262,7 @@ fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     state.configure_token_tracker();
     state.session.session_display_name = None;
     state.open_dialog = None;
+    state.view.input_receiver = crate::model::InputReceiver::ChatInput;
     state.dialog_back_stack.clear();
     state.login_flow = None;
     state.permission_request = None;
