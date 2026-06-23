@@ -2,12 +2,18 @@
 
 use crate::commands::DialogState;
 use crate::dialog::builders::{command_palette, model_selector, scoped_models, session_tree};
-use crate::model::AppState;
+use crate::model::{AppState, InputReceiver};
 
 use super::build_file_picker_panel;
 use crate::update::settings_dialog;
 
 pub fn open_command_palette(state: &mut AppState) {
+    open_command_palette_with_filter(state, "");
+}
+
+/// Opens the command palette with an optional initial filter.
+/// When typing `/` in the input, any existing text is passed as the initial filter.
+pub fn open_command_palette_with_filter(state: &mut AppState, initial_filter: &str) {
     let mut rows: Vec<crate::commands::CommandRow> = Vec::new();
     let ranked = state.rank_commands("", 100);
     for (cmd, _score) in ranked {
@@ -33,7 +39,15 @@ pub fn open_command_palette(state: &mut AppState) {
             ));
         }
     }
-    state.open_dialog = Some(DialogState::CommandPalette(command_palette(rows)));
+    let mut stack = command_palette(rows);
+    // Set initial filter if provided (e.g. when `/` is typed with existing text)
+    if !initial_filter.is_empty() {
+        if let Some(panel) = stack.current_mut() {
+            panel.set_filter(&initial_filter);
+        }
+    }
+    state.open_dialog = Some(DialogState::CommandPalette(stack));
+    state.view.input_receiver = InputReceiver::Dialog;
     state.mark_dirty();
 }
 
@@ -56,6 +70,7 @@ pub fn open_model_selector(state: &mut AppState) {
     state.open_dialog = Some(DialogState::ModelSelector(model_selector(
         recent, groups, &current,
     )));
+    state.view.input_receiver = InputReceiver::Dialog;
     state.mark_dirty();
 }
 
@@ -67,6 +82,7 @@ pub fn open_settings_dialog(state: &mut AppState) {
         .map(|(cat, items)| (cat.as_str().to_string(), items))
         .collect();
     state.open_dialog = Some(DialogState::Settings(settings(categories)));
+    state.view.input_receiver = InputReceiver::Dialog;
     state.mark_dirty();
 }
 
@@ -79,6 +95,7 @@ pub fn open_scoped_models_dialog(state: &mut AppState) {
         .map(|m| (m.provider.clone(), m.name.clone(), m.enabled))
         .collect();
     state.open_dialog = Some(DialogState::ScopedModels(scoped_models(models)));
+    state.view.input_receiver = InputReceiver::Dialog;
     state.mark_dirty();
 }
 
@@ -127,6 +144,7 @@ pub fn open_session_tree_dialog(state: &mut AppState) {
         None => Vec::new(),
     };
     state.open_dialog = Some(DialogState::SessionTree(session_tree(items)));
+    state.view.input_receiver = InputReceiver::Dialog;
     state.mark_dirty();
 }
 
@@ -170,6 +188,7 @@ pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
         build_file_picker_panel(panel, &entries, base_filter.as_deref())
     };
     state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
+    state.view.input_receiver = InputReceiver::Dialog;
     state.mark_dirty();
 }
 

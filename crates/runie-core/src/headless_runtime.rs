@@ -35,7 +35,7 @@ impl HeadlessRuntime {
     pub async fn spawn(
         bus: EventBus<Event>,
         factory: Arc<dyn ProviderFactory>,
-    ) -> Self {
+    ) -> anyhow::Result<Self> {
         let mut sub = bus.subscribe();
         let (config_handle, config_actor) = ConfigActor::spawn(bus.clone(), None);
         let (provider_handle, provider_actor) =
@@ -43,25 +43,24 @@ impl HeadlessRuntime {
 
         // Wait until the config actor has loaded (or failed to load) so callers
         // can resolve provider/model defaults immediately.
-        let _ = timeout(Duration::from_secs(2), async {
+        timeout(Duration::from_secs(2), async {
             loop {
-                if let Some(Ok(Event::ConfigLoaded { .. })) = sub.try_recv() {
-                    break;
+                match sub.recv().await {
+                    Ok(Event::ConfigLoaded { .. }) | Ok(Event::Error { .. }) => return Ok::<(), anyhow::Error>(()),
+                    Err(_) => return Ok::<(), anyhow::Error>(()),
+                    _ => {}
                 }
-                if let Some(Ok(Event::Error { .. })) = sub.try_recv() {
-                    break;
-                }
-                tokio::task::yield_now().await;
             }
         })
-        .await;
+        .await
+        .map_err(|_| anyhow::anyhow!("timed out waiting for config to load"))??;
 
-        Self {
+        Ok(Self {
             config_handle,
             provider_handle,
             _config_actor: config_actor,
             _provider_actor: provider_actor,
-        }
+        })
     }
 
     /// Current config, if loaded.

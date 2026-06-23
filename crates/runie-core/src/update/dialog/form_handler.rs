@@ -37,6 +37,7 @@ pub fn insert_at_ref(state: &mut AppState, path: &str) {
     state.input.input = build_insert_text(state, path);
     state.input.cursor_pos = state.input.input.len();
     state.open_dialog = None;
+    state.view.input_receiver = crate::model::InputReceiver::ChatInput;
     state.mark_dirty();
 }
 

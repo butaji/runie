@@ -77,6 +77,7 @@ pub mod session_actor;
 pub mod session_index;
 pub mod session_replay;
 pub mod session_store;
+pub mod sanitize;
 pub mod session_tree;
 pub mod settings;
 pub mod skill;

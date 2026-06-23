@@ -269,16 +269,14 @@ impl AppState {
         }
         let is_at_trigger_position = self.input.input.is_empty() || self.input.input.ends_with(' ');
         if is_at_trigger_position && self.completion.path_suggestions.is_none() {
-            if self.config.vim_mode {
-                if let Some(evt) = self.vim_motion_event(c) {
-                    self.update(evt);
-                    return;
-                }
-                if c == '/' {
-                    crate::update::dialog::open_command_palette(self);
-                    self.mark_dirty();
-                    return;
-                }
+            if c == '/' {
+                // Pass current input as initial filter, then clear input
+                let initial_filter = self.input.input.clone();
+                self.input.input.clear();
+                self.input.cursor_pos = 0;
+                crate::update::dialog::open_command_palette_with_filter(self, &initial_filter);
+                self.mark_dirty();
+                return;
             }
             if c == '@' {
                 let needs_brackets = false;
@@ -287,6 +285,12 @@ impl AppState {
                     Some((self.input.input.clone(), cursor, cursor, needs_brackets));
                 crate::update::dialog::open_at_file_picker_all(self);
                 return;
+            }
+            if self.config.vim_mode {
+                if let Some(evt) = self.vim_motion_event(c) {
+                    self.update(evt);
+                    return;
+                }
             }
         }
         self.insert_char(c);

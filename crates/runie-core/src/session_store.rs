@@ -166,7 +166,6 @@ impl SessionStore {
     pub fn load_events(&self, session_id: &str) -> anyhow::Result<Vec<DurableCoreEvent>> {
         let path = self.path(session_id);
         if !path.exists() {
-            // Fall back to JSONL for sessions created before migration
             return self.load_events_jsonl(session_id);
         }
 
@@ -174,24 +173,34 @@ impl SessionStore {
         let tx = db.begin_read()?;
         let table = tx.open_table(TABLE_EVENTS)?;
 
-        let mut events = Vec::new();
-        let mut keys: Vec<u32> = Vec::new();
-
+        let mut paired = Vec::new();
+        let mut parse_errors = Vec::new();
         for entry in table.iter()? {
             let (k, v) = entry?;
-            keys.push(k.value());
+            let key = k.value();
             let val = v.value();
-            if let Ok(event) = serde_json::from_str::<DurableCoreEvent>(val) {
-                events.push(event);
+            match serde_json::from_str::<DurableCoreEvent>(val) {
+                Ok(event) => paired.push((key, event)),
+                Err(e) => {
+                    tracing::warn!("failed to parse session event at key {}: {}", key, e);
+                    parse_errors.push(format!("key {}: {}", key, e));
+                }
             }
         }
+        drop(table);
+        drop(tx);
 
-        // Sort events by their sequence key
-        // Rebuild with original keys preserved
-        let mut paired: Vec<_> = keys.into_iter().zip(events).collect();
+        if !parse_errors.is_empty() {
+            return Err(anyhow::anyhow!(
+                "session {} contains {} unparseable event(s): {}",
+                session_id,
+                parse_errors.len(),
+                parse_errors.join("; ")
+            ));
+        }
+
         paired.sort_by_key(|(k, _)| *k);
-        events = paired.into_iter().map(|(_, e)| e).collect();
-
+        let events: Vec<_> = paired.into_iter().map(|(_, e)| e).collect();
         Ok(events)
     }
 
@@ -204,14 +213,24 @@ impl SessionStore {
         let file = fs::File::open(&path)?;
         let reader = BufReader::new(file);
         let mut events = Vec::new();
+        let mut parse_errors = Vec::new();
         for line in reader.lines() {
             let line = line?;
             if line.trim().is_empty() {
                 continue;
             }
-            if let Ok(event) = serde_json::from_str::<DurableCoreEvent>(&line) {
-                events.push(event);
+            match serde_json::from_str::<DurableCoreEvent>(&line) {
+                Ok(event) => events.push(event),
+                Err(e) => parse_errors.push(format!("{}", e)),
             }
+        }
+        if !parse_errors.is_empty() {
+            return Err(anyhow::anyhow!(
+                "session {} JSONL contains {} unparseable line(s): {}",
+                session_id,
+                parse_errors.len(),
+                parse_errors.join("; ")
+            ));
         }
         Ok(events)
     }

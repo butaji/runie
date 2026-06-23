@@ -1,5 +1,5 @@
 use crate::event::{DialogEvent, InputEvent};
-use crate::model::AppState;
+use crate::model::{AppState, InputReceiver};
 
 use super::dialog;
 
@@ -16,6 +16,7 @@ impl AppState {
             match event {
                 InputEvent::Input(_) | InputEvent::Submit => {
                     self.open_dialog = None;
+                    self.view.input_receiver = InputReceiver::ChatInput;
                     self.mark_dirty();
                     return false; // also pass to input handler
                 }
@@ -69,6 +70,13 @@ impl AppState {
     }
 
     pub(crate) fn handle_vim_dialog_back(&mut self) {
+        // If we just closed a dialog, Esc should NOT trigger vim-nav.
+        // Reset the input receiver and return.
+        if self.view.input_receiver == InputReceiver::Dialog {
+            self.view.input_receiver = InputReceiver::ChatInput;
+            self.mark_dirty();
+            return;
+        }
         if self.view.vim_nav_mode {
             self.view.vim_nav_mode = false;
             self.mark_dirty();

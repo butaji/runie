@@ -94,6 +94,7 @@ fn handle_providers_select_model(state: &mut AppState, event: &DialogEvent) {
         }
         state.switch_model(provider.clone(), model.clone(), true);
         state.open_dialog = None;
+        state.view.input_receiver = crate::model::InputReceiver::ChatInput;
         state.dialog_back_stack.clear();
         state.mark_dirty();
     }
@@ -102,7 +103,12 @@ fn handle_providers_select_model(state: &mut AppState, event: &DialogEvent) {
 fn handle_providers_disconnect(state: &mut AppState, event: &DialogEvent) {
     if let DialogEvent::ProvidersDisconnect { provider } = event {
         let provider = provider.clone();
+        // Fire-and-forget async removal (no-op in tests without ConfigActor).
         state.remove_provider(&provider);
+        // Also sync config_cache directly so tests and sync paths see the change immediately.
+        if let Some(ref mut cache) = state.config_cache {
+            cache.model_providers.remove(&provider);
+        }
         if state.config.current_provider == provider {
             let (provider, model) = state.resolve_default_model();
             state.set_active_model(
@@ -113,6 +119,7 @@ fn handle_providers_disconnect(state: &mut AppState, event: &DialogEvent) {
         }
         if state.has_models() {
             state.open_dialog = None;
+            state.view.input_receiver = crate::model::InputReceiver::ChatInput;
         } else {
             crate::update::login_flow::login_flow_start(state);
         }
@@ -138,6 +145,7 @@ fn handle_scoped_model_disable_all(state: &mut AppState) {
 fn do_toggle_dialog(state: &mut AppState, is_same: bool, open: fn(&mut AppState)) {
     if is_same {
         state.open_dialog = None;
+        state.view.input_receiver = crate::model::InputReceiver::ChatInput;
         state.mark_dirty();
     } else {
         open(state);

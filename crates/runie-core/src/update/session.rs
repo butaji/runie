@@ -8,6 +8,7 @@ impl AppState {
         use crate::commands::DialogState;
         if matches!(self.open_dialog, Some(DialogState::SessionTree(_))) {
             self.open_dialog = None;
+            self.view.input_receiver = crate::model::InputReceiver::ChatInput;
             self.mark_dirty();
         } else {
             self.view.cached_session_tree_valid = false;
@@ -67,6 +68,7 @@ impl AppState {
             .unwrap_or(false);
         if navigated {
             self.open_dialog = None;
+            self.view.input_receiver = crate::model::InputReceiver::ChatInput;
             self.add_system_msg("Switched to selected branch.".into());
         }
     }

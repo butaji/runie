@@ -50,6 +50,7 @@ fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
         }
         state.input.file_picker_range_suffix = None;
         state.open_dialog = None;
+        state.view.input_receiver = crate::model::InputReceiver::ChatInput;
         state.mark_dirty();
         return true;
     }

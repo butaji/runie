@@ -228,6 +228,7 @@ pub fn control_event(state: &mut AppState, event: ControlEvent) {
                 Some(crate::commands::DialogState::Welcome)
             ) {
                 state.open_dialog = None;
+                state.view.input_receiver = crate::model::InputReceiver::ChatInput;
             }
             // Ready for user input — welcome is gone
             state.mark_dirty();
@@ -277,6 +278,7 @@ fn handle_abort(state: &mut AppState) {
     if state.open_dialog.is_some() && crate::update::dialog::root_closable(state) {
         // Close dialog when open
         state.open_dialog = None;
+        state.view.input_receiver = crate::model::InputReceiver::ChatInput;
         state.mark_dirty();
     } else if state.agent.turn_active {
         state.stop_turn();

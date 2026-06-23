@@ -181,14 +181,16 @@ fn persist_login_flow(
 ) -> bool {
     let base_url = provider_base_url(state, &flow.provider);
     let selected: Vec<String> = flow.selected_models.iter().cloned().collect();
-    if let Some(ref tx) = state.config_tx {
+    if let Some(tx) = state.config_tx.clone() {
+        // Update config_cache immediately so downstream code (e.g. model selector,
+        // /model command) sees the new provider without waiting for ConfigActor.
+        sync_config_cache(state, &flow.provider, &base_url, &flow.key, &selected);
         let msg = crate::actors::ConfigMsg::SaveProvider {
             name: flow.provider.clone(),
             base_url,
             api_key: flow.key.clone(),
             models: selected,
         };
-        let tx = tx.clone();
         tokio::spawn(async move {
             let _ = tx.send(msg).await;
         });
@@ -199,8 +201,33 @@ fn persist_login_flow(
         state.add_system_msg(format!("Failed to save provider config: {}", e));
         false
     } else {
+        // Sync the saved provider into config_cache so downstream code
+        // (e.g. open_model_selector) sees it immediately without a reload.
+        sync_config_cache(state, &flow.provider, &base_url, &flow.key, &selected);
         true
     }
+}
+
+fn sync_config_cache(
+    state: &mut crate::model::AppState,
+    provider: &str,
+    base_url: &str,
+    api_key: &str,
+    models: &[String],
+) {
+    let cache = state.config_cache.get_or_insert_with(Default::default);
+    cache.model_providers.insert(
+        provider.into(),
+        crate::config::ModelProvider {
+            provider_type: cache
+                .model_providers
+                .get(provider)
+                .and_then(|p| p.provider_type.clone()),
+            base_url: base_url.into(),
+            api_key: api_key.into(),
+            models: models.into(),
+        },
+    );
 }
 
 fn activate_first_selected_model_if_none_active(
@@ -219,6 +246,7 @@ fn close_login_flow(state: &mut crate::model::AppState) {
     state.login_flow = None;
     state.dialog_back_stack.clear();
     state.open_dialog = None;
+    state.view.input_receiver = crate::model::InputReceiver::ChatInput;
     state.mark_dirty();
 }
 
@@ -290,6 +318,7 @@ fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
             state.mark_dirty();
         } else {
             state.open_dialog = None;
+            state.view.input_receiver = crate::model::InputReceiver::ChatInput;
             state.mark_dirty();
         }
     } else {
