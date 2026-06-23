@@ -1,6 +1,6 @@
 # Runie UI / UX
 
-Runie is a keyboard-driven terminal interface. Every interaction is expressed as events, so behavior is tested by feeding events and asserting on emitted events or rendered buffers.
+Runie is a keyboard-driven terminal interface. It follows a **Model-View-Update (MVU)** pattern at the UI layer: user actions become intents, actors update the model, and the view renders a pure projection of actor-emitted facts.
 
 ## Interaction model
 
@@ -10,16 +10,41 @@ Runie is a keyboard-driven terminal interface. Every interaction is expressed as
 - **Status bar** — current provider/model, thinking level, trust state, mode, and contextual hints.
 - **Vim navigation** — optional nav mode for scrolling, selecting blocks, and copying without leaving the keyboard.
 
-All user input produces `CoreEvent`s. The UI layer projects those events into a `Snapshot` and renders it.
+Every user action produces an **intent**. Actors own the authoritative model, apply intents, and publish **facts**. The UI layer projects those facts into a `Snapshot` and renders it. The render function is pure: `draw(&mut Frame, &Snapshot)`.
+
+## MVU flow
+
+```text
+User input
+    │
+    ▼
+Input handler (pure) ──► Intent event
+    │
+    ▼
+Owning actor ──► authoritative state update ──► Fact event
+    │
+    ▼
+UiActor projection (pure) ──► Snapshot
+    │
+    ▼
+RenderActor (pure) ──► Frame
+```
+
+Rules:
+
+- Handlers are pure builders of intents. They do not mutate `AppState`.
+- Actors are the only source of truth for their state slice.
+- Facts are the only way the UI learns about state changes.
+- Rendering is a pure function of the snapshot.
 
 ## Testing layers for UI
 
 | Layer | What | How |
 |-------|------|-----|
-| L1 | State / logic | Pure functions on `AppState` and dialog state |
-| L2 | Event handling | Feed `crossterm` events and assert emitted `CoreEvent`s |
-| L3 | Rendering | `ratatui::TestBackend` + `Buffer` assertions |
-| L4 | Mock-tool / replay E2E | Replay captured SSE streams and inject mock tool outputs; no shell or tmux |
+| L1 | State / logic | Pure functions on actor-owned state and projection helpers |
+| L2 | Event handling | Feed `crossterm` events, build intents, assert emitted facts |
+| L3 | Rendering | `ratatui::TestBackend` + `Buffer` assertions on `Snapshot` |
+| L4 | Mock-tool / replay E2E | Replay captured SSE streams and inject mock tool outputs via actors; no shell or tmux |
 
 There are no tmux or bash smoke tests. Layer 4 uses deterministic fixtures and fake IO.
 

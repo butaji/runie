@@ -5,7 +5,7 @@
 **Category**: Architecture / Actors
 **Priority**: P0
 
-**Depends on**: none
+**Depends on**: actor-owned-state-ssot, config-ssot-via-configactor
 **Blocks**: none
 
 ## Description

@@ -4,6 +4,36 @@ Runie is a terminal-native harness for LLM-powered coding agents. It is not a ch
 
 This document describes the high-level architecture. The code and tests are written as small, declarative DSLs so that the details stay self-explaining.
 
+## Layered architecture
+
+Runie is split into three layers:
+
+```text
+┌─────────────────────────────────────────┐
+│  UI layer (pure / MVU)                  │
+│  - RenderActor: Snapshot → Frame        │
+│  - UiActor: facts → Snapshot            │
+│  - Input handlers: user action → intent │
+├─────────────────────────────────────────┤
+│  Domain layer (pure + actors)           │
+│  - Actors own state and business rules  │
+│  - Intents trigger actor work           │
+│  - Facts broadcast state changes        │
+├─────────────────────────────────────────┤
+│  IO layer (async)                       │
+│  - Files, network, subprocesses, OS     │
+│  - Results arrive as events             │
+└─────────────────────────────────────────┘
+```
+
+Rules:
+
+- **IO is async and actor-owned.** Blocking or long-lived IO runs inside dedicated actors (`ConfigActor`, `SessionActor`, `FffIndexerActor`, `IoActor`, `EnvActor`). The rest of the app sees only events.
+- **Actors are the single source of truth.** Each mutable state slice lives in exactly one actor. No handler, command, or dialog mutates state directly.
+- **State synchronization is event-driven.** Handlers emit **intents** (requests). Actors consume intents, update their authoritative state, and publish **facts** (state changes). The UI layer projects facts into a read-only `Snapshot`/`AppState`.
+- **The UI layer is pure.** Rendering is a pure function `draw(&mut Frame, &Snapshot)`. View logic is a pure projection of facts.
+- **Complexity is hidden behind declarative DSLs.** Commands, keybindings, and dialog actions compose as small flows: `on(trigger).intent(...).then(...)`.
+
 ## Crate map
 
 | Crate | Role |
@@ -21,48 +51,59 @@ This document describes the high-level architecture. The code and tests are writ
 
 ## Runtime
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   EventBus<CoreEvent>                        │
-│      (tokio broadcast + bounded replay buffer)               │
-└─────────────────────────────────────────────────────────────┘
-       ▲      ▲        ▲           ▲              ▲
-       │      │        │           │              │
-┌──────┴──┐ ┌─┴───────┐ ┌────┴─────┐ ┌───────┴───┐ ┌───────┴──┐
-│ Input   │ │ Agent   │ │ Config   │ │ Session  │ │   UI     │
-│ Actor   │ │ Actor   │ │ Actor    │ │ Actor    │ │  Actor   │
-└─────────┘ └────┬────┘ └──────────┘ └───────────┘ └────┬─────┘
-                 │ spawns                                │
-                 ▼                                       │
-          ┌──────────────┐                         Snapshot
-          │ Subagents /  │                               │
-          │ Tool calls   │                               ▼
-          └──────────────┘                         ┌───────────┐
-                                                   │ Render    │
-                                                   │ Actor     │
-                                                   └───────────┘
+```text
+                    User input / crossterm
+                            │
+                            ▼
+              ┌─────────────────────────────┐
+              │   Input / command handlers  │  (pure: build intents)
+              └─────────────────────────────┘
+                            │
+              Intent events │ Facts
+              ─────────────►│◄─────────────
+                            │
+      ┌──────────┬──────────┼──────────┬──────────┬──────────┐
+      │          │          │          │          │          │
+   Config    Session     Turn       Input       View    Notification
+   Actor     Actor      Actor      Actor       Actor      Actor
+      │          │          │          │          │          │
+      └──────────┴──────────┴──────────┴──────────┴──────────┘
+                            │
+                            ▼
+              ┌─────────────────────────────┐
+              │  AppState projection (pure) │  reads facts only
+              └─────────────────────────────┘
+                            │
+                            ▼
+              ┌─────────────────────────────┐
+              │     RenderActor (pure)      │  draw(&mut Frame, &Snapshot)
+              └─────────────────────────────┘
 ```
 
-Actors are plain `tokio` tasks. They publish and subscribe to a typed `EventBus`. State is owned by the actors, not by a central loop.
+Actors are plain `tokio` tasks. Each actor owns a slice of authoritative state and communicates through typed intents and facts. There is no central mutable `AppState`; `AppState` is a read-only projection updated by facts.
 
 ### Bootstrap and rendering rules
 
-- All startup file I/O (git detection, trust, skills, auth tokens, theme) is run with `spawn_blocking` or inside dedicated actors before the UI event loop starts.
-- `AppState::snapshot()` builds an immutable `Snapshot` from cached state; it never reads files or blocks.
-- The render actor is a pure function `draw_snapshot(&mut Frame, &Snapshot)` and never mutates state.
-
-- `InputActor` reads crossterm events and publishes `InputEvent`s.
-- `AgentActor` runs the LLM turn loop, publishes streaming deltas, tool calls, and turn lifecycle events.
-- `SessionActor` persists durable events append-only and replays them on load.
-- `UiActor` projects events into `AppState` and sends snapshots to the render actor over a `watch` channel.
-- `ConfigActor` is the single owner of `~/.runie/config.toml`; it loads, saves, and publishes reload events.
+- All startup file I/O (git detection, trust, skills, auth tokens, theme, config) runs inside dedicated actors before the UI event loop starts.
+- `AppState` is built by applying facts. It never reads files, blocks, or mutates itself outside the projection path.
+- The render path is a pure function `draw(&mut Frame, &Snapshot)`. It never mutates state.
+- `InputActor` reads crossterm events and publishes typed input events. Handlers turn those into intents.
+- `TurnActor` owns the LLM turn lifecycle, scheduling queues, and token accounting. It consumes streaming events from `AgentActor`/`ProviderActor` and emits session/tool facts.
+- `SessionActor` owns the in-memory session and persists durable events append-only.
+- `ViewActor` owns derived view/cache state and invalidates the render path.
+- `ConfigActor` is the single owner of `~/.runie/config.toml`; it loads, saves, and publishes `ConfigLoaded` facts.
 - `ProviderActor` is the single owner of `DynProvider` construction and API-key validation; it resolves credentials through the config actor.
 
 ## Core concepts
 
 ### Events
 
-`CoreEvent` is the single vocabulary for state transitions. Events are immutable. Durable events are persisted to the session store; transient events are UI-only.
+`CoreEvent` is the single vocabulary for state transitions. Events are immutable and split into two families:
+
+- **Intents** — fire-and-forget requests to an actor. They describe *what the user or system wants*. Examples: `SetTheme`, `SubmitInput`, `AskPermission`, `RunTurn`.
+- **Facts** — broadcast state changes produced by actors. They describe *what changed*. Examples: `ConfigLoaded`, `SessionChanged`, `TurnProgress`, `PermissionResolved`.
+
+Handlers, commands, and keybindings emit intents. Actors consume intents, update their authoritative state, and emit facts. The UI layer projects facts into a read-only `Snapshot`. Durable facts are persisted to the session store; transient facts are UI-only.
 
 ### Sessions
 
@@ -233,16 +274,17 @@ New code should default to async or event-based actors; the helpers are a tactic
 
 ## Config durability
 
-`~/.runie/config.toml` is the single source of truth for provider credentials, default model, keybindings, and preferences. It is read from many places and written from several, so concurrency and durability matter.
+`~/.runie/config.toml` is the single source of truth for provider credentials, default model, keybindings, and preferences. `ConfigActor` is the only production code that reads or writes this file.
 
 Rules:
 
-- All reads and writes to the config file go through `crates/runie-core/src/login_config.rs`.
-- A readers-writer lock serializes access so concurrent async tasks cannot corrupt the file.
-- Mutating helpers (`save_provider_config`, `remove_provider_config`, `toggle_provider_model`, `with_write_lock`) load, mutate, and save while holding the write lock.
-- Do not call `Config::load`/`save` directly from production code; use the locked helpers.
+- All config mutations are sent to `ConfigActor` as intents (`ConfigMsg`).
+- `ConfigActor` performs atomic load → mutate → save under a write lock on a blocking thread, then publishes `ConfigLoaded`.
+- `AppState` updates its config projection only in response to `ConfigLoaded` facts.
+- No handler, command, dialog, or login flow writes the config file directly.
+- `login_config.rs` is being removed; its helpers are replaced by `ConfigActor` messages and a `ConfigStore` trait for tests.
 - Do not nest `block_in_place` calls: a function that already runs on a blocking thread must not call `block_in_place_if_runtime` again.
-- Prefer atomic updates (load → mutate → save under one lock) over fire-and-forget background writes for durable state.
+- Prefer atomic updates over fire-and-forget background writes for durable state.
 
 ## Build guardrails
 
@@ -260,9 +302,11 @@ Tests are exempt from function-length and complexity checks so they can stay com
 
 Tests are written as declarative DSLs rather than shell scripts.
 
-- **Layer 1 — State/logic**: pure functions on `AppState` and domain types.
-- **Layer 2 — Event handling**: feed `crossterm` events into handlers and assert events emitted.
-- **Layer 3 — Rendering**: `TestBackend` + `Buffer` assertions.
+- **Layer 1 — State/logic**: pure functions on actor-owned state and domain types.
+- **Layer 2 — Event handling**: feed `crossterm` events or intents into handlers and assert facts emitted.
+- **Layer 3 — Rendering**: `TestBackend` + `Buffer` assertions on the projected snapshot.
 - **Layer 4 — Provider replay / mock-tool E2E**: replay captured SSE streams and inject mock tool outputs so the agent turn runs without real network or shell IO.
+
+Because state is owned by actors, tests use a `TestActorHarness` to spawn lightweight actors, send intents, and observe facts. Direct mutation of `AppState` fields is reserved for the projection path only.
 
 There are no tmux or shell-based tests. Every feature must be verifiable with `cargo test`.

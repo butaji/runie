@@ -5,7 +5,7 @@
 **Category**: Configuration
 **Priority**: P1
 
-**Depends on**: unify-provider-modules
+**Depends on**: unify-provider-modules, actor-owned-state-ssot, config-ssot-via-configactor
 **Blocks**: none
 
 ## Description

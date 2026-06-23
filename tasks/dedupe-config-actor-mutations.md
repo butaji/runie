@@ -5,8 +5,8 @@
 **Category**: Architecture / Actors
 **Priority**: P2
 
-**Depends on**: none
-**Blocks**: none
+**Depends on**: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection
+**Blocks**: config-ssot-via-configactor
 
 ## Description
 
