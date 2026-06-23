@@ -7,7 +7,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 BINARY="$PROJECT_ROOT/target/release/runie"
-SESSION="runie-test-$$"
+SESSION="runie-test-tmux"
 PASS_COUNT=0
 FAIL_COUNT=0
 
@@ -42,7 +42,7 @@ echo "--- Starting runie in tmux ---"
 tmux new-session -d -s "$SESSION" "$BINARY" 2>&1 || true
 
 # Wait for startup (need longer wait for terminal to initialize)
-sleep 4
+sleep 5
 
 # Check if session is running
 if tmux has-session -t "$SESSION" 2>/dev/null; then
@@ -69,16 +69,16 @@ tmux capture-pane -t "$SESSION" -p 2>/dev/null | tail -15 || true
 echo ""
 echo "--- Verifying UI renders correctly ---"
 
-# Check that the provider picker is visible
+# Check that the input area is visible
 SCREEN_CONTENT=$(tmux capture-pane -t "$SESSION" -p 2>/dev/null)
-if echo "$SCREEN_CONTENT" | grep -q "OpenAI"; then
-    pass "Provider picker renders with OpenAI"
+if echo "$SCREEN_CONTENT" | grep -q "Type a message"; then
+    pass "Input area renders with placeholder"
 else
-    fail "Provider picker not visible"
+    fail "Input area not visible"
 fi
 
-if echo "$SCREEN_CONTENT" | grep -q "navigate"; then
-    pass "Help text renders correctly"
+if echo "$SCREEN_CONTENT" | grep -q "ctrl+o"; then
+    pass "Help text renders with keybindings"
 else
     fail "Help text not visible"
 fi
