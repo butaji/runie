@@ -53,29 +53,14 @@ impl Tool for BashTool {
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("command is required"))?;
         if let Some(reason) = check_bash_safety(command) {
-            return Ok(ToolOutput {
-                tool_name: "bash".to_string(),
-                tool_args: serde_json::json!({ "command": command }),
-                content: format!("Blocked: {}", reason),
-                bytes_transferred: None,
-                duration: start.elapsed(),
-                status: ToolStatus::Blocked,
-            });
+            return Ok(blocked_output(command, &reason, start.elapsed()));
         }
         let timeout_secs = input["timeout_seconds"]
             .as_u64()
             .unwrap_or(DEFAULT_TIMEOUT_SECS);
         let timeout = Duration::from_secs(timeout_secs);
 
-        // Run command in a blocking task
-        let result = tokio::task::spawn_blocking({
-            let command = command.to_string();
-            let working_dir = ctx.working_dir.clone();
-            let env = ctx.env.clone();
-            move || run_bash_inner(&command, &working_dir, &env, timeout)
-        })
-        .await
-        .map_err(|e| anyhow::anyhow!("task join error: {}", e))?;
+        let result = run_bash_inner(command, &ctx.working_dir, &ctx.env, timeout).await;
 
         Ok(ToolOutput {
             tool_name: "bash".to_string(),
@@ -94,37 +79,80 @@ struct BashResult {
     status: ToolStatus,
 }
 
-fn run_bash_inner(
+async fn run_bash_inner(
     command: &str,
     working_dir: &std::path::Path,
     env: &std::collections::HashMap<String, String>,
     timeout: Duration,
 ) -> BashResult {
-    use std::process::Command;
-    use std::sync::mpsc;
-    use std::thread;
+    let mut cmd = tokio::process::Command::new("bash");
+    cmd.arg("-c")
+        .arg(command)
+        .current_dir(working_dir)
+        .envs(env)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
 
-    let (tx, rx) = mpsc::channel();
-    let work_dir = working_dir.to_path_buf();
-    let cmd = command.to_string();
-    let env = env.clone();
+    let mut child = match cmd.spawn() {
+        Ok(c) => c,
+        Err(e) => return bash_error(&format!("Failed to spawn command: {}", e)),
+    };
 
-    thread::spawn(move || {
-        let result = Command::new("bash")
-            .args(["-c", &cmd])
-            .current_dir(&work_dir)
-            .envs(&env)
-            .output();
-        let _ = tx.send(result);
-    });
-
-    match rx.recv_timeout(timeout) {
-        Ok(Ok(output)) => process_output(output),
-        Ok(Err(e)) => bash_error(&format!("Error executing command: {}", e)),
-        Err(mpsc::RecvTimeoutError::Timeout) => bash_timeout(timeout),
-        Err(mpsc::RecvTimeoutError::Disconnected) => {
-            bash_error("Command channel disconnected unexpectedly")
+    match tokio::time::timeout(timeout, child.wait()).await {
+        Ok(Ok(status)) => {
+            let stdout = child.stdout.take();
+            let stderr = child.stderr.take();
+            collect_output(status, stdout, stderr).await
         }
+        Ok(Err(e)) => bash_error(&format!("Error waiting for command: {}", e)),
+        Err(_) => {
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            bash_timeout(timeout)
+        }
+    }
+}
+
+async fn collect_output(
+    status: std::process::ExitStatus,
+    stdout: Option<tokio::process::ChildStdout>,
+    stderr: Option<tokio::process::ChildStderr>,
+) -> BashResult {
+    use tokio::io::AsyncReadExt;
+
+    let mut stdout_buf = String::new();
+    let mut stderr_buf = String::new();
+
+    if let Some(mut s) = stdout {
+        let _ = s.read_to_string(&mut stdout_buf).await;
+    }
+    if let Some(mut s) = stderr {
+        let _ = s.read_to_string(&mut stderr_buf).await;
+    }
+
+    let combined = combine_output(&stdout_buf, &stderr_buf);
+    let bytes = stdout_buf.len() as u64 + stderr_buf.len() as u64;
+    let tool_status = if status.success() {
+        ToolStatus::Success
+    } else {
+        ToolStatus::Error
+    };
+
+    BashResult {
+        output: combined,
+        bytes_transferred: Some(bytes),
+        status: tool_status,
+    }
+}
+
+fn blocked_output(command: &str, reason: &str, duration: Duration) -> ToolOutput {
+    ToolOutput {
+        tool_name: "bash".to_string(),
+        tool_args: serde_json::json!({ "command": command }),
+        content: format!("Blocked: {}", reason),
+        bytes_transferred: None,
+        duration,
+        status: ToolStatus::Blocked,
     }
 }
 
@@ -144,23 +172,6 @@ fn bash_timeout(timeout: Duration) -> BashResult {
         ),
         bytes_transferred: None,
         status: ToolStatus::TimedOut,
-    }
-}
-
-fn process_output(output: std::process::Output) -> BashResult {
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let combined = combine_output(&stdout, &stderr);
-    let bytes = stdout.len() as u64 + stderr.len() as u64;
-    let status = if output.status.success() {
-        ToolStatus::Success
-    } else {
-        ToolStatus::Error
-    };
-    BashResult {
-        output: combined,
-        bytes_transferred: Some(bytes),
-        status,
     }
 }
 
@@ -188,7 +199,7 @@ mod tests {
             stderr: b"warning".to_vec(),
             status: std::process::ExitStatus::default(),
         };
-        let result = process_output(output);
+        let result = process_output_helper(output);
         assert_eq!(result.status, ToolStatus::Success);
         assert!(result.output.contains("hello"));
         assert!(result.output.contains("warning"));
@@ -200,5 +211,60 @@ mod tests {
         assert_eq!(combine_output("out", ""), "out");
         assert_eq!(combine_output("", "err"), "err");
         assert_eq!(combine_output("out", "err"), "out\nerr");
+    }
+
+    #[tokio::test]
+    async fn bash_timeout_kills_child() {
+        let tool = BashTool;
+        let input = serde_json::json!({
+            "command": "sleep 30",
+            "timeout_seconds": 1,
+        });
+        let ctx = ToolContext::default();
+        let output = tool.call(input, &ctx).await.unwrap();
+        assert_eq!(output.status, ToolStatus::TimedOut);
+        assert!(output.content.contains("timed out"));
+    }
+
+    #[tokio::test]
+    async fn bash_command_succeeds() {
+        let tool = BashTool;
+        let input = serde_json::json!({
+            "command": "echo hello",
+            "timeout_seconds": 5,
+        });
+        let ctx = ToolContext::default();
+        let output = tool.call(input, &ctx).await.unwrap();
+        assert_eq!(output.status, ToolStatus::Success);
+        assert!(output.content.contains("hello"));
+    }
+
+    #[tokio::test]
+    async fn bash_command_fails() {
+        let tool = BashTool;
+        let input = serde_json::json!({
+            "command": "exit 1",
+            "timeout_seconds": 5,
+        });
+        let ctx = ToolContext::default();
+        let output = tool.call(input, &ctx).await.unwrap();
+        assert_eq!(output.status, ToolStatus::Error);
+    }
+
+    fn process_output_helper(output: std::process::Output) -> BashResult {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let combined = combine_output(&stdout, &stderr);
+        let bytes = stdout.len() as u64 + stderr.len() as u64;
+        let status = if output.status.success() {
+            ToolStatus::Success
+        } else {
+            ToolStatus::Error
+        };
+        BashResult {
+            output: combined,
+            bytes_transferred: Some(bytes),
+            status,
+        }
     }
 }
