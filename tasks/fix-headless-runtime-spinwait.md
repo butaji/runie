@@ -10,7 +10,7 @@
 
 ## Description
 
-`crates/runie-core/src/headless_runtime.rs:46-57` busy-loops with `try_recv` and `tokio::task::yield_now()` while waiting for `ConfigLoaded` or `Error`. It also discards the timeout result. The fix is to await the first matching event with a timeout and return a clear error if config never loads.
+`crates/runie-core/src/headless_runtime.rs:46-57` wraps a busy loop of `try_recv` + `tokio::task::yield_now()` in a `timeout`. It discards the timeout result and wastes CPU while waiting for `ConfigLoaded` or `Error`. The fix is to await the first matching event with a timeout and return a clear error if config never loads.
 
 ## Acceptance Criteria
 
@@ -59,7 +59,7 @@ pub async fn spawn(
         loop {
             match sub.recv().await {
                 Ok(Event::ConfigLoaded { .. }) => break Ok(()),
-                Ok(Event::Error { message }) => break Err(anyhow::anyhow!(message)),
+                Ok(Event::Error { .. }) => break Ok(()),
                 _ => continue,
             }
         }
@@ -101,8 +101,6 @@ If callers currently expect `Self`, either propagate the `Result` or map it to a
 async fn headless_runtime_errors_when_config_actor_stalls() {
     let bus = EventBus::<Event>::new(4);
     let factory = Arc::new(FailingProviderFactory);
-    // Do not let ConfigActor load by pointing it at an invalid path? Simpler:
-    // spawn and expect timeout because no ConfigLoaded is emitted.
     let result = tokio::time::timeout(
         Duration::from_millis(500),
         HeadlessRuntime::spawn(bus, factory),

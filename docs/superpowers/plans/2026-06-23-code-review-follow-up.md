@@ -21,11 +21,11 @@
 
 | # | Task ID | Priority | Files | What to do |
 |---|---------|----------|-------|------------|
-| 1 | `fix-think-filter-guardrails` | P0 | `crates/runie-agent/src/think_filter.rs`, `crates/runie-agent/src/tests/think_filter.rs` | Split `feed_text` into helpers, move tests out, get under 500/40/10 limits. |
+| 1 | `fix-think-filter-guardrails` | P0 | `crates/runie-agent/src/think_filter.rs`, `crates/runie-agent/src/tests/think_filter.rs` | Already refactored; verify under 500/40/10 limits. |
 | 2 | `fix-skill-hook-tool-input` | P0 | `crates/runie-agent/src/turn.rs` | Pass `tool_call.args.clone()` into `ToolCallCtx`. |
 | 3 | `fix-double-turn-start-call` | P0 | `crates/runie-agent/src/turn.rs` | Call `on_turn_start` once and match the result. |
 | 4 | `fix-config-actor-write-errors` | P0 | `crates/runie-core/src/actors/config/actor.rs` | Match inner write `Result`; emit `Event::Error` on failure. |
-| 5 | `fix-blocking-file-io-in-async-paths` | P1 | `file_refs.rs`, `path_complete.rs`, `update/tools.rs`, `update/command.rs`, `commands/dsl/handlers/system.rs`, `harness_skills/hashline_edit.rs`, `actors/io/actor.rs` | Use `tokio::fs`, `spawn_blocking`, or `block_in_place_if_runtime`. |
+| 5 | `fix-blocking-file-io-in-async-paths` | P1 | `file_refs.rs`, `path_complete.rs`, `update/tools.rs`, `update/command.rs`, `commands/dsl/handlers/system.rs`, `actors/io/actor.rs` | Use `spawn_blocking` or `block_in_place_if_runtime`. |
 | 6 | `fix-bash-tool-timeout-orphan` | P1 | `crates/runie-engine/src/tool/bash.rs` | Use `tokio::process::Command` + timeout and kill the child. |
 | 7 | `fix-render-task-blocking-io` | P1 | `crates/runie-tui/src/main.rs` | Run terminal IO on a dedicated OS thread. |
 | 8 | `fix-session-store-load-alignment` | P1 | `crates/runie-core/src/session_store.rs` | Pair key/event in the loop and surface parse errors. |
