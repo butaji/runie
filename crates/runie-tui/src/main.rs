@@ -20,7 +20,7 @@ use runie_core::session_store::SessionStore;
 use runie_core::{AppState, Snapshot};
 use runie_provider::DynProviderFactory;
 use runie_tui::{app_init, keymap, terminal, terminal_setup, theme, ui, ui_actor::UiActor};
-use std::{collections::HashMap, io};
+use std::{collections::HashMap, io, time::Duration};
 use tokio::sync::{mpsc, oneshot, watch};
 
 struct Cleanup;
@@ -37,14 +37,16 @@ impl Drop for Cleanup {
     }
 }
 
+fn generate_session_id() -> String {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or_else(|e| e.duration().as_nanos());
+    format!("session_{}", nanos)
+}
+
 fn spawn_session_persistence(bus: &EventBus<Event>) {
-    let session_id = format!(
-        "session_{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    );
+    let session_id = generate_session_id();
     let store = SessionStore::new(
         dirs::data_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("."))
@@ -55,7 +57,7 @@ fn spawn_session_persistence(bus: &EventBus<Event>) {
     tokio::spawn(actor.run_loop(bus.clone()));
 }
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
     if let Some(report) = runie_tui::dry_run::run_from_args(&args) {
@@ -198,7 +200,65 @@ fn spawn_agent_tasks(
     caps: terminal::caps::TerminalCapabilities,
 ) {
     tokio::spawn(input_reader(input_tx, kb_rx));
-    tokio::spawn(render_task(terminal, render_rx, caps));
+    // Move terminal IO off the Tokio runtime — use a dedicated OS thread.
+    // Use sync_channel with buffer size 1 for non-blocking sends.
+    let (tx, rx) = std::sync::mpsc::sync_channel(1);
+    std::thread::spawn(move || render_loop(terminal, rx, caps));
+    tokio::spawn(render_forwarder(render_rx, tx));
+}
+
+fn render_forwarder(
+    mut render_rx: watch::Receiver<Snapshot>,
+    tx: std::sync::mpsc::SyncSender<Snapshot>,
+) -> impl std::future::Future<Output = ()> {
+    async move {
+        loop {
+            let snap = render_rx.borrow_and_update().clone();
+            // Use try_send to avoid blocking the async event loop.
+            // If the render thread is busy, skip this frame and process the next one.
+            if tx.try_send(snap).is_err() {
+                // Render thread is backed up — skip this frame, let it catch up.
+                // This prevents input latency when the render is slow.
+            }
+            if render_rx.changed().await.is_err() {
+                break;
+            }
+        }
+    }
+}
+
+fn render_loop(
+    mut terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
+    rx: std::sync::mpsc::Receiver<Snapshot>,
+    caps: terminal::caps::TerminalCapabilities,
+) {
+    const FRAME_TIME: Duration = Duration::from_millis(16);
+    let mut last_size: Option<(u16, u16)> = None;
+
+    loop {
+        // Wait for a snapshot, but no more than one frame period.
+        // This caps the render thread at ~60 FPS and prevents it from
+        // burning CPU redrawing on every tiny event burst.
+        let mut snap = match rx.recv_timeout(FRAME_TIME) {
+            Ok(s) => s,
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+        };
+
+        // Drain any newer snapshots that arrived while we were waiting and
+        // keep only the latest one. Older intermediate frames are dropped.
+        while let Ok(s) = rx.try_recv() {
+            snap = s;
+        }
+
+        let new_size = terminal.size().map(|r| (r.width, r.height)).unwrap_or((0, 0));
+        if last_size != Some(new_size) {
+            let _ = terminal.clear();
+            last_size = Some(new_size);
+        }
+        theme::set_current_theme_with_caps(&snap.theme_name, caps);
+        let _ = terminal.draw(|f| ui::draw_snapshot(f, &snap));
+    }
 }
 
 fn spawn_ui_actor(
@@ -228,30 +288,6 @@ fn spawn_ui_actor(
         )
         .run(ui_sub),
     );
-}
-
-async fn render_task(
-    mut terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
-    mut render_rx: watch::Receiver<Snapshot>,
-    caps: terminal::caps::TerminalCapabilities,
-) {
-    let mut last_size: Option<(u16, u16)> = None;
-    loop {
-        let snap = render_rx.borrow_and_update().clone();
-        let new_size = terminal
-            .size()
-            .map(|r| (r.width, r.height))
-            .unwrap_or((0, 0));
-        if last_size != Some(new_size) {
-            let _ = terminal.clear();
-            last_size = Some(new_size);
-        }
-        theme::set_current_theme_with_caps(&snap.theme_name, caps);
-        let _ = terminal.draw(|f| ui::draw_snapshot(f, &snap));
-        if render_rx.changed().await.is_err() {
-            break;
-        }
-    }
 }
 
 /// Input reader that sends mapped events to the shared bus via `input_tx`.

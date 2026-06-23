@@ -3316,6 +3316,102 @@
       "depends_on": [],
       "blocks": [],
       "notes": "Archived; superseded by other message-unification work."
+    },
+    {
+      "id": "fix-tool-execution-timeout",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P0",
+      "file": "tasks/archive/fix-tool-execution-timeout.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Added 30s timeout to execute_tool_call. All non-bash tools now timeout. Bash has its own configurable timeout."
+    },
+    {
+      "id": "slash-command-palette-universal",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Input / Commands",
+      "priority": "P0",
+      "file": "tasks/archive/slash-command-palette-universal.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Fixed / to open command palette regardless of vim_mode. Moved / handling outside vim_mode block in push_input. Added open_command_palette_with_filter for initial filter support. All 1371 unit tests pass."
+    },
+    {
+      "id": "fix-tui-tokio-worker-threads",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "file": "tasks/archive/fix-tui-tokio-worker-threads.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Increase Tokio worker threads for runie-tui"
+    },
+    {
+      "id": "fix-tui-render-frame-cap",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "file": "tasks/archive/fix-tui-render-frame-cap.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Cap render-thread frame rate and coalesce snapshots"
+    },
+    {
+      "id": "fix-tui-animation-starvation",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/archive/fix-tui-animation-starvation.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Remove biased select and speed up animation tick in UiActor"
+    },
+    {
+      "id": "fix-prompt-file-read-blocking",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/archive/fix-prompt-file-read-blocking.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Offload synchronous custom prompt file read"
+    },
+    {
+      "id": "fix-ui-event-coalescing",
+      "status": "done",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/archive/fix-ui-event-coalescing.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Coalesce queued events in UiActor before publishing snapshots"
+    },
+    {
+      "id": "fix-model-state-visibility",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/archive/fix-model-state-visibility.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Fix private model state module blocking lib compilation"
     }
   ],
   "r5-add-lifecycle-events": "done"
