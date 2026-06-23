@@ -50,6 +50,7 @@ pub mod ipc;
 pub mod keybindings;
 pub mod labels;
 pub mod layout;
+pub mod lifecycle;
 pub mod llm_event;
 pub mod location;
 pub mod login_config;
@@ -128,6 +129,7 @@ pub use keybindings::{
 };
 pub use labels::{format_timestamp, thinking_with_time, thought_with_time, THINKING_LOADING};
 pub use llm_event::{LLMError, LLMEvent, StopReason};
+pub use lifecycle::LifecycleState;
 pub use login_config::{
     config_path as login_config_path, list_configured_providers, remove_provider_config,
     save_provider_config,

@@ -3,12 +3,18 @@ source: crates/runie-provider/tests/minimax_replay.rs
 expression: events
 ---
 [
+    TextStart {
+        id: "text",
+    },
     TextDelta(
         "<think>\nThe user",
     ),
     TextDelta(
         " wants me to read the README.md file. Let me do that.\n</think>\n\n\n<minimax:tool_call>\n<invoke name=\"read_file\">\n<parameter name=\"path\">README.md</parameter>\n</invoke>\n</minimax:tool_call>",
     ),
+    TextEnd {
+        id: "text",
+    },
     Finish {
         reason: Stop,
     },

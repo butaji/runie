@@ -80,19 +80,21 @@ fn check_turn_start(
         skills_context: command.skills_context.clone(),
     };
 
-    if let TurnStartResult::SkipWithMessage(msg) = skills.on_turn_start(&ctx) {
-        emit_response_and_done(emit, &command.id, msg);
-        return Some(Ok(()));
+    match skills.on_turn_start(&ctx) {
+        TurnStartResult::SkipWithMessage(msg) => {
+            emit_response_and_done(emit, &command.id, msg);
+            Some(Ok(()))
+        }
+        TurnStartResult::Abort(reason) => {
+            emit_error_and_done(
+                emit,
+                &command.id,
+                format!("Turn aborted by skill: {}", reason),
+            );
+            Some(Ok(()))
+        }
+        TurnStartResult::Continue => None,
     }
-    if let TurnStartResult::Abort(reason) = skills.on_turn_start(&ctx) {
-        emit_error_and_done(
-            emit,
-            &command.id,
-            format!("Turn aborted by skill: {}", reason),
-        );
-        return Some(Ok(()));
-    }
-    None
 }
 /// Emit final turn end events including on_turn_end hook.
 async fn emit_turn_end(
@@ -364,7 +366,7 @@ fn fire_tool_after_hook(
     if let Some(skills) = skills {
         skills.on_tool_call(&ToolCallCtx {
             tool_name: tool_call.name.clone(),
-            tool_input: serde_json::json!({}),
+            tool_input: tool_call.args.clone(),
             phase: ToolCallPhase::After,
             tool_output: Some(output.content.clone()),
             success: Some(output.status == ToolStatus::Success),
@@ -380,7 +382,7 @@ fn check_tool_call_before_hook(
 
     let tool_ctx = ToolCallCtx {
         tool_name: tool_call.name.clone(),
-        tool_input: serde_json::json!({}),
+        tool_input: tool_call.args.clone(),
         phase: ToolCallPhase::Before,
         tool_output: None,
         success: None,
@@ -398,6 +400,7 @@ fn check_tool_call_before_hook(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use runie_core::harness_skills::HarnessSkill;
     use std::sync::{Arc, Mutex};
 
     #[test]
@@ -412,5 +415,54 @@ mod tests {
 
         // Should not panic despite the poisoned mutex.
         emit_now(&emit, Event::Abort);
+    }
+
+    /// Mock skill that counts on_turn_start calls.
+    struct CountingSkill {
+        count: Arc<Mutex<usize>>,
+    }
+
+    impl CountingSkill {
+        fn new(count: Arc<Mutex<usize>>) -> Self {
+            Self { count }
+        }
+    }
+
+    impl HarnessSkill for CountingSkill {
+        fn name(&self) -> &str {
+            "counting"
+        }
+
+        fn on_turn_start(&self, _ctx: &TurnStartCtx) -> TurnStartResult {
+            let mut count = self.count.lock().unwrap();
+            *count += 1;
+            TurnStartResult::Continue
+        }
+    }
+
+    #[test]
+    fn turn_start_hook_called_once() {
+        let count = Arc::new(Mutex::new(0));
+        let mut registry = SkillRegistry::new();
+        registry.register(CountingSkill::new(count.clone()));
+
+        let cmd = AgentCommand {
+            content: "test".to_string(),
+            id: "req.0".to_string(),
+            provider: "mock".to_string(),
+            model: "echo".to_string(),
+            thinking_level: runie_core::model::ThinkingLevel::Off,
+            read_only: false,
+            skills_context: String::new(),
+            system_prompt: String::new(),
+            truncation: crate::truncate::TruncationPolicy::default(),
+        };
+        let emit: EmitFn = Arc::new(Mutex::new(|_| {}));
+
+        let result = check_turn_start(&registry, &cmd, &emit);
+        assert!(result.is_none(), "check_turn_start should return None for Continue");
+
+        let call_count = *count.lock().unwrap();
+        assert_eq!(call_count, 1, "on_turn_start should be called exactly once");
     }
 }

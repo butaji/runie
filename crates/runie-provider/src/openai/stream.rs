@@ -4,6 +4,7 @@ use super::request::send_openai_request;
 use super::OpenAiProvider;
 use futures::StreamExt;
 use runie_core::llm_event::{LLMEvent, StopReason};
+use runie_core::lifecycle::LifecycleState;
 use runie_core::message::ChatMessage;
 use std::collections::{BTreeMap, HashSet};
 
@@ -47,6 +48,7 @@ struct StreamState {
     tools: BTreeMap<usize, Accumulator>,
     started: HashSet<String>,
     ended: HashSet<String>,
+    lifecycle: LifecycleState,
 }
 
 pub fn openai_stream(
@@ -172,9 +174,7 @@ fn drain_buffer(buffer: &mut String, state: &mut StreamState) -> Vec<LLMEvent> {
         match parse_sse_event(&line) {
             Some(SseEvent::Done) => {
                 events.extend(flush_tool_calls(state));
-                events.push(LLMEvent::Finish {
-                    reason: StopReason::Stop,
-                });
+                events.extend(state.lifecycle.finish(StopReason::Stop));
                 break;
             }
             Some(SseEvent::Chunk(chunk)) => {
@@ -190,10 +190,10 @@ fn process_chunk(chunk: Chunk, state: &mut StreamState) -> Vec<LLMEvent> {
     let mut events = Vec::new();
 
     if let Some(text) = chunk.delta.content {
-        events.push(LLMEvent::TextDelta(text));
+        events.extend(state.lifecycle.text_delta("text", &text));
     }
     if let Some(reasoning) = chunk.delta.reasoning {
-        events.push(LLMEvent::ThinkingDelta(reasoning));
+        events.extend(state.lifecycle.thinking_delta("reasoning", &reasoning));
     }
 
     for tool_delta in chunk.delta.tool_calls {
@@ -202,9 +202,9 @@ fn process_chunk(chunk: Chunk, state: &mut StreamState) -> Vec<LLMEvent> {
 
     if chunk.finish_reason.is_some() {
         events.extend(flush_tool_calls(state));
-        events.push(LLMEvent::Finish {
-            reason: map_finish_reason(chunk.finish_reason.as_deref()),
-        });
+        events.extend(state.lifecycle.finish(map_finish_reason(
+            chunk.finish_reason.as_deref(),
+        )));
     }
 
     if let Some((input, output)) = chunk.usage {
@@ -289,9 +289,7 @@ pub fn replay_sse(text: &str) -> Vec<LLMEvent> {
             Some(SseEvent::Chunk(chunk)) => events.extend(process_chunk(chunk, &mut state)),
             Some(SseEvent::Done) => {
                 events.extend(flush_tool_calls(&mut state));
-                events.push(LLMEvent::Finish {
-                    reason: StopReason::Stop,
-                });
+                events.extend(state.lifecycle.finish(StopReason::Stop));
                 break;
             }
             None => {}
@@ -324,14 +322,90 @@ pub mod tests {
                 Some(SseEvent::Chunk(chunk)) => all.extend(process_chunk(chunk, &mut state)),
                 Some(SseEvent::Done) => {
                     all.extend(flush_tool_calls(&mut state));
-                    all.push(LLMEvent::Finish {
-                        reason: StopReason::Stop,
-                    });
+                    all.extend(state.lifecycle.finish(StopReason::Stop));
                 }
                 None => {}
             }
         }
         all.extend(flush_tool_calls(&mut state));
         all
+    }
+
+    #[test]
+    fn text_stream_emits_text_start_before_first_delta() {
+        let lines = &[
+            "data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}",
+            "data: {\"choices\":[{\"delta\":{\"content\":\" World\"}}]}",
+            "data: [DONE]",
+        ];
+        let events = collect_events(lines);
+
+        // Find first TextDelta
+        let first_delta_idx = events
+            .iter()
+            .position(|e| matches!(e, LLMEvent::TextDelta(_)))
+            .expect("Should have TextDelta");
+
+        // First event should be TextStart
+        assert!(
+            matches!(&events[0], LLMEvent::TextStart { id } if id == "text"),
+            "First event should be TextStart"
+        );
+
+        // TextStart should come before first TextDelta
+        let start_idx = events
+            .iter()
+            .position(|e| matches!(e, LLMEvent::TextStart { .. }))
+            .expect("Should have TextStart");
+        assert!(start_idx < first_delta_idx);
+
+        // Should have exactly one TextStart for text
+        let text_starts: Vec<_> = events
+            .iter()
+            .filter(|e| matches!(e, LLMEvent::TextStart { id } if id == "text"))
+            .collect();
+        assert_eq!(text_starts.len(), 1);
+
+        // Should emit Finish
+        assert!(
+            events.iter().any(|e| matches!(e, LLMEvent::Finish { .. })),
+            "Should emit Finish"
+        );
+    }
+
+    #[test]
+    fn reasoning_stream_emits_thinking_start_before_first_delta() {
+        let lines = &[
+            "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"thinking\"}}]}",
+            "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\" more\"}}]}",
+            "data: [DONE]",
+        ];
+        let events = collect_events(lines);
+
+        // Find first ThinkingDelta
+        let first_delta_idx = events
+            .iter()
+            .position(|e| matches!(e, LLMEvent::ThinkingDelta(_)))
+            .expect("Should have ThinkingDelta");
+
+        // First event should be ThinkingStart
+        assert!(
+            matches!(&events[0], LLMEvent::ThinkingStart { id } if id == "reasoning"),
+            "First event should be ThinkingStart"
+        );
+
+        // ThinkingStart should come before first ThinkingDelta
+        let start_idx = events
+            .iter()
+            .position(|e| matches!(e, LLMEvent::ThinkingStart { .. }))
+            .expect("Should have ThinkingStart");
+        assert!(start_idx < first_delta_idx);
+
+        // Should have exactly one ThinkingStart for reasoning
+        let thinking_starts: Vec<_> = events
+            .iter()
+            .filter(|e| matches!(e, LLMEvent::ThinkingStart { id } if id == "reasoning"))
+            .collect();
+        assert_eq!(thinking_starts.len(), 1);
     }
 }

@@ -423,3 +423,38 @@ async fn tool_call_event_matches_mock_output() {
         assert_eq!(output, "Cargo.toml\nREADME.md\n");
     }
 }
+
+struct RecordingSkill {
+    ctx: Arc<Mutex<Option<ToolCallCtx>>>,
+}
+
+impl HarnessSkill for RecordingSkill {
+    fn name(&self) -> &str {
+        "recording"
+    }
+
+    fn on_tool_call(&self, ctx: &ToolCallCtx) -> ToolCallResult {
+        *self.ctx.lock().unwrap() = Some(ctx.clone());
+        ToolCallResult::Continue
+    }
+}
+
+#[test]
+fn tool_call_hook_receives_input() {
+    let recorded = Arc::new(Mutex::new(None));
+    let skill = RecordingSkill { ctx: recorded.clone() };
+    let mut registry = SkillRegistry::new();
+    registry.register(skill);
+
+    let input = serde_json::json!({"path": "src/main.rs"});
+    registry.on_tool_call(&ToolCallCtx {
+        tool_name: "read_file".into(),
+        tool_input: input.clone(),
+        phase: ToolCallPhase::Before,
+        tool_output: None,
+        success: None,
+    });
+
+    let ctx = recorded.lock().unwrap().take().unwrap();
+    assert_eq!(ctx.tool_input, input);
+}

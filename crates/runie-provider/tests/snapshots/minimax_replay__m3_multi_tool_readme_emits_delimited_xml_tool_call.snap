@@ -3,9 +3,15 @@ source: crates/runie-provider/tests/minimax_replay.rs
 expression: events
 ---
 [
+    TextStart {
+        id: "text",
+    },
     TextDelta(
         "<think>\nThe user wants me to list project",
     ),
+    ThinkingStart {
+        id: "reasoning",
+    },
     ThinkingDelta(
         "The user wants me to list project",
     ),
@@ -21,12 +27,24 @@ expression: events
     TextDelta(
         "",
     ),
+    TextEnd {
+        id: "text",
+    },
+    ThinkingEnd {
+        id: "reasoning",
+    },
     Finish {
         reason: Stop,
+    },
+    TextStart {
+        id: "text",
     },
     TextDelta(
         "",
     ),
+    TextEnd {
+        id: "text",
+    },
     Finish {
         reason: Stop,
     },
