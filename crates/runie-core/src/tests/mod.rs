@@ -34,6 +34,8 @@ mod agent;
 #[cfg(test)]
 mod agent_error;
 #[cfg(test)]
+mod agent_streaming_tool;
+#[cfg(test)]
 mod appstate_structural;
 #[cfg(test)]
 mod autoscroll;

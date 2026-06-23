@@ -3,7 +3,10 @@
 //! This module is the single source of truth for provider names, display names,
 //! base URLs, API type, environment variable, and the models each provider supports.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
+
+static MOCK_ENABLED: AtomicBool = AtomicBool::new(false);
 
 /// Returns true when dev flags enable the mock provider. Without this,
 /// the app is production-ready: no silent mock fallback, the mock provider
@@ -12,7 +15,15 @@ use std::sync::OnceLock;
 /// `dev.sh` sets `RUNIE_MOCK=1`. `RUNIE_MOCK_DELAY=1` is also accepted as
 /// a back-compat alias (it both enables the mock and adds streaming delays).
 pub fn is_mock_enabled() -> bool {
-    std::env::var_os("RUNIE_MOCK").is_some() || std::env::var_os("RUNIE_MOCK_DELAY").is_some()
+    MOCK_ENABLED.load(Ordering::Relaxed)
+        || std::env::var_os("RUNIE_MOCK").is_some()
+        || std::env::var_os("RUNIE_MOCK_DELAY").is_some()
+}
+
+/// Override the mock-enabled state without touching environment variables.
+/// Primarily useful in tests that need deterministic mock behavior.
+pub fn set_mock_enabled(enabled: bool) {
+    MOCK_ENABLED.store(enabled, Ordering::Relaxed);
 }
 
 /// Metadata for a model supported by a provider.

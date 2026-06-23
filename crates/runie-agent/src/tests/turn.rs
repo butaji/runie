@@ -36,7 +36,7 @@ impl HarnessSkill for MockToolSkill {
     }
 }
 
-fn mock_tool_skill() -> SkillRegistry {
+pub(crate) fn mock_tool_skill() -> SkillRegistry {
     let mut outputs = HashMap::new();
     outputs.insert("list_dir".to_string(), "Cargo.toml\nREADME.md\n".to_string());
     outputs.insert("bash".to_string(), "hello\n".to_string());

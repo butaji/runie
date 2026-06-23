@@ -284,6 +284,8 @@ impl AppState {
         } else if let Some(idx) = self.find_assistant_by_id(id) {
             self.agent.last_assistant_index = Some(idx);
             self.append_to_message(idx, &buffered);
+        } else {
+            self.create_assistant_message(id.to_string(), buffered);
         }
     }
     fn append_to_message(&mut self, idx: usize, content: &str) {

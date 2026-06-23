@@ -124,4 +124,24 @@ Done."#;
         let result = strip_tool_markers(input);
         assert_eq!(result, input);
     }
+
+    #[test]
+    fn test_has_tool_markers_inline_legacy() {
+        assert!(has_tool_markers("I'll list files.TOOL:list_dir:."));
+        assert!(has_tool_markers(" preamble TOOL:bash:echo hi tail"));
+    }
+
+    #[test]
+    fn test_strip_tool_markers_inline_legacy() {
+        let input = "I'll list files.TOOL:list_dir:.";
+        let result = strip_tool_markers(input);
+        assert_eq!(result, "I'll list files.");
+    }
+
+    #[test]
+    fn test_strip_tool_markers_preserves_inline_tool_mention() {
+        let input = "Use the TOOL: parameter to configure the tool.";
+        let result = strip_tool_markers(input);
+        assert_eq!(result, input);
+    }
 }

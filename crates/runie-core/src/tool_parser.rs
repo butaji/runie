@@ -78,6 +78,16 @@ pub fn parse_tool_calls_fallible(text: &str) -> Vec<Result<ParsedToolCall, ToolP
                     reason: "invalid [TOOL_CALL] markup or unknown tool name".into(),
                 })),
             }
+            continue;
+        }
+        // Inline legacy marker anywhere on the line (e.g. trailing TOOL:name:args).
+        for (idx, _) in line.match_indices("TOOL:") {
+            if idx == 0 {
+                continue;
+            }
+            if let Some(t) = parse_legacy_tool(&line[idx + 5..]) {
+                results.push(Ok(t));
+            }
         }
     }
     results
@@ -94,16 +104,27 @@ pub fn tool_parse_error_message(error: &ToolParseError, id: &str) -> ChatMessage
 
 /// Check if text contains tool call markers.
 pub fn has_tool_calls(text: &str) -> bool {
-    text.contains(TOOL_CALL_START) && text.contains(TOOL_CALL_END)
-        || minimax::has_minimax_tool_calls(text)
-        || text.lines().any(|line| {
-            let line = line.trim();
-            line.starts_with("TOOL:")
-                || (line.starts_with('{')
-                    && serde_json::from_str::<serde_json::Value>(line)
-                        .ok()
-                        .is_some_and(|v| is_tool_call_value(&v)))
+    if text.contains(TOOL_CALL_START) && text.contains(TOOL_CALL_END) {
+        return true;
+    }
+    if minimax::has_minimax_tool_calls(text) {
+        return true;
+    }
+    text.lines().any(|line| {
+        let trimmed = line.trim();
+        if trimmed.starts_with("TOOL:")
+            || (trimmed.starts_with('{')
+                && serde_json::from_str::<serde_json::Value>(trimmed)
+                    .ok()
+                    .is_some_and(|v| is_tool_call_value(&v)))
+        {
+            return true;
+        }
+        // Inline legacy marker (e.g. "...directory.TOOL:list_dir:.")
+        line.match_indices("TOOL:").any(|(idx, _)| {
+            parse_legacy_tool(&line[idx + 5..]).is_some()
         })
+    })
 }
 // Parsers
 

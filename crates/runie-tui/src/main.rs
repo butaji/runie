@@ -164,7 +164,6 @@ fn spawn_background_tasks(
     );
     let (render_tx, render_rx) = watch::channel(state.snapshot());
     let (kb_tx, kb_rx) = watch::channel(state.config.keybindings.clone());
-
     spawn_input_forwarder(input_rx, bus.clone());
     spawn_agent_tasks(input_tx, kb_rx, terminal, render_rx, bus.clone(), caps);
     spawn_ui_actor(
@@ -179,8 +178,10 @@ fn spawn_background_tasks(
     );
     spawn_session_persistence(&bus);
 
-    // Keep the agent actor alive until shutdown.
-    let _agent_actor = agent_actor;
+    // Keep the agent actor alive until shutdown; its handle aborts on Drop.
+    tokio::spawn(async move {
+        let _ = agent_actor.await;
+    });
 }
 
 fn spawn_input_forwarder(mut input_rx: mpsc::Receiver<Event>, bus: EventBus<Event>) {

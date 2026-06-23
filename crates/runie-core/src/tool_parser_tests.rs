@@ -104,3 +104,19 @@ fn test_build_assistant_message_includes_tools() {
     assert_eq!(msg.role, crate::message::Role::Assistant);
     assert_eq!(msg.tool_calls().len(), 1);
 }
+
+#[test]
+fn parse_tool_calls_extracts_inline_legacy_marker() {
+    let text = "I'll list files.TOOL:list_dir:.";
+    let tools = parse_tool_calls(text);
+    assert_eq!(tools.len(), 1);
+    assert_eq!(tools[0].name, "list_dir");
+    assert_eq!(tools[0].args["path"], ".");
+}
+
+#[test]
+fn parse_tool_calls_ignores_inline_tool_mention() {
+    let text = "Use the TOOL: parameter to configure the tool.";
+    let tools = parse_tool_calls(text);
+    assert!(tools.is_empty());
+}

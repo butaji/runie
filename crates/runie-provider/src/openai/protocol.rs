@@ -3,7 +3,6 @@
 //! Transforms OpenAI SSE frames (`OpenAiFrame`) into `LLMEvent`s.
 
 use super::stream::{Chunk, Delta, ToolCallDelta};
-use crate::framing::SseLine;
 use crate::protocol::ProviderProtocol;
 use runie_core::llm_event::{LLMEvent, StopReason};
 use runie_core::lifecycle::LifecycleState;
@@ -50,14 +49,17 @@ pub enum OpenAiFrame {
 
 impl OpenAiFrame {
     pub fn from_line(line: &str) -> Option<Self> {
-        match SseLine::parse(line) {
-            Some(SseLine::Data(json_str)) => {
-                let json: serde_json::Value = serde_json::from_str(&json_str).ok()?;
-                parse_chunk(&json).map(OpenAiFrame::Chunk)
+        // Accept both raw SSE lines ("data: {...}") and already-stripped JSON.
+        let json_str = if let Some(data) = line.strip_prefix("data: ") {
+            if data == "[DONE]" {
+                return Some(OpenAiFrame::Done);
             }
-            Some(SseLine::Done) => Some(OpenAiFrame::Done),
-            None => None,
-        }
+            data
+        } else {
+            line
+        };
+        let json: serde_json::Value = serde_json::from_str(json_str).ok()?;
+        parse_chunk(&json).map(OpenAiFrame::Chunk)
     }
 }
 

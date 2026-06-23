@@ -369,3 +369,42 @@ fn assistant_message_preserves_unicode_after_tool_strip() {
         .expect("assistant message");
     assert_eq!(msg.content(), "hello 😊 world");
 }
+
+/// A full tool-turn cycle should render the tool result and the final
+/// assistant response, not just a thought marker.
+#[test]
+fn tool_turn_renders_tool_result_and_final_response() {
+    use crate::ui::LazyCache;
+    let mut state = fresh_state();
+    state
+        .agent("req.0")
+        .think()
+        .respond("I'll list files.\nTOOL:list_dir:.")
+        .thought_done()
+        .tool("list_dir", "Cargo.toml\nsrc/")
+        .respond("Done.")
+        .done();
+
+    let feed = LazyCache::feed(&state);
+    let kinds: Vec<&str> = feed
+        .elements
+        .iter()
+        .map(|e| match e {
+            crate::ui::Element::ToolDone { .. } => "D",
+            crate::ui::Element::AgentMessage { .. } => "A",
+            crate::ui::Element::ThoughtMarker { .. } => "T",
+            _ => "?",
+        })
+        .collect();
+
+    assert!(
+        kinds.iter().any(|k| *k == "D"),
+        "tool result should render in feed, got kinds {:?}",
+        kinds
+    );
+    assert!(
+        kinds.iter().any(|k| *k == "A"),
+        "final assistant response should render in feed, got kinds {:?}",
+        kinds
+    );
+}

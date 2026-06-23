@@ -2,11 +2,14 @@
 //! Note: Some tests were archived due to dependencies on unbuilt crates.
 
 mod events;
+mod minimax_like;
 mod parser;
 mod permissions;
 mod safety;
 mod tools;
+mod tool_marker_state;
 mod turn;
+mod turn_gate;
 
 use std::sync::Once;
 
@@ -18,6 +21,6 @@ static ENABLE_MOCK: Once = Once::new();
 /// Call this at the start of each test that uses the "mock" provider.
 pub(crate) fn ensure_mock_provider() {
     ENABLE_MOCK.call_once(|| {
-        std::env::set_var("RUNIE_MOCK", "1");
+        runie_core::provider_registry::set_mock_enabled(true);
     });
 }

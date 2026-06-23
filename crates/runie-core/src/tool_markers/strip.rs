@@ -1,6 +1,7 @@
 //! Stripping helpers for tool-call artifacts.
 
 use super::{is_tool_call_value, TOOL_CALL_END, TOOL_CALL_START};
+use crate::tool_parser::minimax::is_known_tool;
 use serde_json::Value;
 
 /// Run the full stripping pipeline.
@@ -9,7 +10,8 @@ pub fn strip_all(content: &str) -> String {
     let without_minimax = strip_minimax_tool_calls(&without_markup);
     let without_inline = strip_inline_json_objects(&without_minimax);
     let without_fenced = strip_inline_fenced_tools(&without_inline);
-    let without_lines = strip_line_markers(&without_fenced);
+    let without_inline_legacy = strip_inline_legacy_tools(&without_fenced);
+    let without_lines = strip_line_markers(&without_inline_legacy);
     let without_empty_fences = strip_empty_code_fences(&without_lines);
     normalize_blank_lines(&without_empty_fences)
 }
@@ -169,6 +171,59 @@ fn find_object_end(bytes: &[u8], start: usize) -> Option<usize> {
         i += 1;
     }
     None
+}
+
+fn strip_inline_legacy_tools(content: &str) -> String {
+    let mut result = String::with_capacity(content.len());
+    let mut rest = content;
+    while let Some(idx) = rest.find("TOOL:") {
+        let is_line_start = idx == 0 || rest.as_bytes().get(idx - 1) == Some(&b'\n');
+        if !is_line_start {
+            let after = &rest[idx + 5..];
+            if let Some(len) = legacy_tool_marker_len(after) {
+                let end = idx + 5 + len;
+                if rest[end..].trim().is_empty() {
+                    result.push_str(&rest[..idx]);
+                    rest = "";
+                    continue;
+                }
+            }
+        }
+        result.push_str(&rest[..idx + 5]);
+        rest = &rest[idx + 5..];
+    }
+    result.push_str(rest);
+    result
+}
+
+fn legacy_tool_marker_len(after: &str) -> Option<usize> {
+    let trimmed = after.trim_start();
+    let leading = after.len() - trimmed.len();
+    let (name, consumed) = if trimmed.contains(':') {
+        let parts: Vec<&str> = trimmed.splitn(3, ':').collect();
+        let name = parts[0];
+        if name.is_empty() || !is_known_tool(name) {
+            return None;
+        }
+        let arg1 = parts.get(1).unwrap_or(&"");
+        let arg2 = parts.get(2).unwrap_or(&"");
+        let consumed = name.len() + 1 + arg1.len() + if arg2.is_empty() { 0 } else { 1 + arg2.len() };
+        (name, consumed)
+    } else {
+        let mut tokens = trimmed.split_whitespace();
+        let name = tokens.next()?;
+        if !is_known_tool(name) {
+            return None;
+        }
+        let first = tokens.next().unwrap_or("");
+        let rest = tokens.collect::<Vec<_>>().join(" ");
+        let consumed = name.len()
+            + if first.is_empty() { 0 } else { 1 + first.len() }
+            + if rest.is_empty() { 0 } else { 1 + rest.len() };
+        (name, consumed)
+    };
+    let _ = name;
+    Some(leading + consumed)
 }
 
 fn strip_line_markers(content: &str) -> String {
