@@ -2,6 +2,94 @@ use std::time::{Duration, Instant};
 
 const DEBOUNCE_MS: u64 = 50;
 
+fn close_remaining(openers: Vec<char>, result: &mut String) {
+    for opener in openers.into_iter().rev() {
+        match opener {
+            '`' => result.push('`'),
+            '*' => result.push_str("**"),
+            '_' => result.push('_'),
+            '~' => result.push_str("~~"),
+            '[' => result.push_str("]()"),
+            _ => {}
+        }
+    }
+}
+
+fn is_triple_backtick(chars: &std::iter::Peekable<std::str::Chars>) -> bool {
+    chars.clone().nth(1) == Some('`')
+}
+
+fn handle_double(
+    c: char,
+    chars: &mut std::iter::Peekable<std::str::Chars>,
+    result: &mut String,
+    openers: &mut Vec<char>,
+) {
+    if chars.peek() == Some(&c) {
+        chars.next();
+        result.push(c);
+        if openers.last() == Some(&c) {
+            openers.pop();
+            result.push(c);
+        } else {
+            openers.push(c);
+        }
+    }
+}
+
+fn handle_single(c: char, openers: &mut Vec<char>, blocker: Option<char>) {
+    if openers.last() == Some(&c) {
+        openers.pop();
+    } else if blocker.map_or(true, |b| openers.last() != Some(&b)) {
+        openers.push(c);
+    }
+}
+
+fn process_markdown_char(
+    c: char,
+    chars: &mut std::iter::Peekable<std::str::Chars>,
+    result: &mut String,
+    openers: &mut Vec<char>,
+) {
+    match c {
+        '*' => handle_double('*', chars, result, openers),
+        '`' => {
+            if !is_triple_backtick(chars) {
+                handle_single('`', openers, None);
+            }
+        }
+        '_' => handle_single('_', openers, Some('*')),
+        '~' => handle_double('~', chars, result, openers),
+        '[' => openers.push('['),
+        ']' => {
+            if openers.last() == Some(&'[') {
+                openers.pop();
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Heals incomplete inline markdown spans in text for display purposes only.
+/// Does NOT modify valid/closed syntax or plain text.
+/// Examples:
+///   "hello **world"  → "hello **world**"
+///   "use `rust"      → "use `rust`"
+///   "see [docs"      → "see [docs]()"
+pub fn heal_markdown(text: &str) -> String {
+    let mut openers: Vec<char> = Vec::new();
+    let mut result = String::with_capacity(text.len() + 32);
+    let mut chars = text.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        result.push(c);
+        process_markdown_char(c, &mut chars, &mut result, &mut openers);
+    }
+
+    close_remaining(openers, &mut result);
+    result
+}
+
 #[derive(Debug, Clone)]
 pub struct StreamingBuffer {
     stable: Vec<String>,
@@ -43,12 +131,17 @@ impl StreamingBuffer {
             }
         }
         self.last_flush = Some(Instant::now());
-        self.stable.drain(..).collect()
+        self.stable.drain(..).filter(|l| !l.is_empty()).map(|l| heal_markdown(&l)).collect()
     }
 
     pub fn force_flush(&mut self) -> Vec<String> {
         self.last_flush = Some(Instant::now());
-        self.stable.drain(..).collect()
+        let mut lines: Vec<String> = self.stable.drain(..).map(|l| heal_markdown(&l)).collect();
+        if !self.tail.is_empty() {
+            lines.push(heal_markdown(&self.tail));
+            self.tail.clear();
+        }
+        lines
     }
 
     pub fn tail(&self) -> &str {
@@ -59,7 +152,6 @@ impl StreamingBuffer {
         self.tail.is_empty() && self.open_fence.is_none() && !self.open_table
     }
 
-    /// Returns true if there's incomplete content being streamed (tail is non-empty).
     pub fn has_pending_content(&self) -> bool {
         !self.tail.is_empty() || self.open_fence.is_some() || self.open_table
     }
@@ -193,4 +285,75 @@ fn is_table_separator(line: &str) -> bool {
     inner
         .split('|')
         .all(|cell| cell.trim().chars().all(|c| c == '-' || c == ':'))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn heal_markdown_closes_unclosed_bold() {
+        assert_eq!(heal_markdown("hello **world"), "hello **world**");
+        assert_eq!(heal_markdown("**bold start"), "**bold start**");
+    }
+
+    #[test]
+    fn heal_markdown_closes_unclosed_italic() {
+        assert_eq!(heal_markdown("hello _world"), "hello _world_");
+        assert_eq!(heal_markdown("italic _start"), "italic _start_");
+    }
+
+    #[test]
+    fn heal_markdown_closes_unclosed_inline_code() {
+        assert_eq!(heal_markdown("use `rust"), "use `rust`");
+        assert_eq!(heal_markdown("code `snippet"), "code `snippet`");
+    }
+
+    #[test]
+    fn heal_markdown_closes_unclosed_link() {
+        assert_eq!(heal_markdown("see [docs"), "see [docs]()");
+        assert_eq!(heal_markdown("[link"), "[link]()");
+    }
+
+    #[test]
+    fn heal_markdown_leaves_closed_syntax_unchanged() {
+        assert_eq!(heal_markdown("hello **world** and `code`"), "hello **world** and `code`");
+        assert_eq!(heal_markdown("**bold** and _italic_ and `code`"), "**bold** and _italic_ and `code`");
+    }
+
+    #[test]
+    fn heal_markdown_leaves_plain_text_unchanged() {
+        assert_eq!(heal_markdown("just plain text"), "just plain text");
+        assert_eq!(heal_markdown(""), "");
+    }
+
+    #[test]
+    fn heal_markdown_handles_multiple_unclosed_spans() {
+        assert_eq!(heal_markdown("**bold and `code"), "**bold and `code`**");
+    }
+
+    #[test]
+    fn streaming_buffer_flush_heals_stable_lines() {
+        let mut buf = StreamingBuffer::new();
+        buf.push_delta("hello **world\n");
+        let lines = buf.flush();
+        assert_eq!(lines, vec!["hello **world**"]);
+    }
+
+    #[test]
+    fn streaming_buffer_force_flush_heals_tail() {
+        let mut buf = StreamingBuffer::new();
+        buf.push_delta("hello **world");
+        let lines = buf.force_flush();
+        assert_eq!(lines, vec!["hello **world**"]);
+    }
+
+    #[test]
+    fn streaming_buffer_raw_text_not_healed_in_tail() {
+        let mut buf = StreamingBuffer::new();
+        buf.push_delta("hello **world\nmore **stuff");
+        let lines = buf.flush();
+        assert_eq!(lines, vec!["hello **world**"]);
+        assert_eq!(buf.tail(), "more **stuff");
+    }
 }
