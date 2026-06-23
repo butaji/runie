@@ -3108,14 +3108,15 @@
     },
     {
       "id": "fix-blocking-file-io-in-async-paths",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Architecture / Actors",
       "priority": "P1",
-      "file": "tasks/fix-blocking-file-io-in-async-paths.md",
+      "file": "tasks/archive/fix-blocking-file-io-in-async-paths.md",
+      "completed_in": "e0f2e3b7",
       "depends_on": [],
       "blocks": [],
-      "notes": "Move std::fs calls in file_refs, path_complete, update/tools, update/command, skill reload, and IoActor off the async runtime. hashline_edit already wraps its IO."
+      "notes": "Wrapped all std::fs calls on async paths with block_in_place_if_runtime or spawn_blocking. file_refs callers (fff.rs), path_complete.rs, update/tools.rs, update/command.rs, skill reload in system.rs, IoActor::write_files now use spawn_blocking. All 691 workspace tests pass."
     },
     {
       "id": "fix-bash-tool-timeout-orphan",
