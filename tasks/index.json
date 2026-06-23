@@ -2834,80 +2834,371 @@
     },
     {
       "id": "fix-runie-tui-dead-code-warnings",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "TUI / Rendering",
       "priority": "P0",
       "file": "tasks/fix-runie-tui-dead-code-warnings.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Removes 4 dead_code warnings emitted by cargo check: load_theme_raw_async/load_theme_async/load_theme_with_caps_async in runie-tui/src/theme/loader.rs and ActorHandles tuple in runie-tui/src/main.rs. Pure deletions, ~60 LOC, zero risk."
+      "notes": "Deleted 3 unused async theme loaders from loader.rs and removed ActorHandles struct from main.rs. Zero warnings in runie-tui, all 683 TUI tests pass.",
+      "completed_in": "current"
     },
     {
       "id": "delete-runie-core-utils",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
       "file": "tasks/delete-runie-core-utils.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "crates/runie-core/src/utils.rs (53 LOC) exports truncate/join_optional with zero callers. textwrap::truncate (already a workspace dep used by core/layout.rs) covers any future need."
+      "notes": "Deleted utils.rs (53 LOC) and pub mod utils declaration. All workspace tests pass."
     },
     {
       "id": "delete-runie-core-skill-module",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
       "file": "tasks/delete-runie-core-skill-module.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "crates/runie-core/src/skill/ (singular, 318 LOC) is a dead progressive-disclosure remnant. Live module is crates/runie-core/src/skills/ (plural). Name collision misleads readers. Distinct from harness_skills/ (different concept)."
+      "notes": "Deleted crates/runie-core/src/skill/ directory (318 LOC) and pub mod skill declaration. Live skills/ (plural) module untouched. All workspace tests pass."
     },
     {
       "id": "delete-runie-core-confirmation",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
       "file": "tasks/delete-runie-core-confirmation.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "crates/runie-core/src/confirmation.rs (217 LOC) defines ConfirmationKind + ConfirmationRouter with zero external callers. Live approval flow is PermissionGate + PermissionAction + EditPreview in permissions/ and edit_preview.rs."
+      "notes": "Deleted confirmation.rs (217 LOC), pub mod confirmation declaration, and pub use confirmation::{ConfirmationKind, ConfirmationRouter} export. All workspace tests pass."
     },
     {
       "id": "collapse-event-variants-subdir",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
       "file": "tasks/collapse-event-variants-subdir.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "event/variants/{constructors.rs,name.rs,to_durable.rs} (316 LOC) are impl-Event blocks in three sub-files. constructors and name are test-only; only to_durable has a production caller (session_actor.rs). Flatten: move test helpers into variants_tests.rs, keep to_durable as a flat sibling."
+      "notes": "Moved event/variants/{constructors.rs,name.rs,to_durable.rs} to flat event/{constructors.rs,name.rs,to_durable.rs}. Deleted event/variants/ directory. All 1314 workspace tests pass. rg event::variants:: returns zero hits. Cross-crate pub visibility preserved for Event::submit/input constructors."
     },
     {
       "id": "collapse-event-aliases",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
       "file": "tasks/collapse-event-aliases.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "11 single-type alias files in event/ (agent.rs, command.rs, control.rs, dialog.rs, dialog_display.rs, edit.rs, input.rs, login_flow.rs, model_config.rs, scroll.rs, session.rs, system.rs) total ~55 LOC of file overhead. Collapse to one event/aliases.rs."
+      "notes": "Created event/aliases.rs with all 11 type aliases. Updated event/mod.rs to use aliases module and removed 12 individual mod declarations. Updated lib.rs to re-export from event::aliases. Deleted all 12 alias files (agent.rs, command.rs, control.rs, dialog.rs, dialog_display.rs, edit.rs, input.rs, login_flow.rs, model_config.rs, scroll.rs, session.rs, system.rs). All 1314 workspace tests pass. rg check returns zero direct-use hits."
     },
     {
       "id": "delete-provider-message-enum",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
       "file": "tasks/delete-provider-message-enum.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "crates/runie-core/src/provider.rs defines pub enum Message {System,User,Assistant,ToolResult} (26 LOC). Its only producer is ChatMessage::to_provider_message, used only in tests. Provider::generate takes Vec<ChatMessage> directly, so production never sees provider::Message."
+      "notes": "Deleted pub enum Message and impl block from provider.rs, to_provider_message from message.rs, 3 old tests, and the Message re-export from lib.rs. Replaced with chat_message_role_and_content_round_trip. All 1314 workspace tests pass."
+    },
+    {
+      "id": "r5-extract-tool-stream",
+      "status": "done",
+      "milestone": "R5",
+      "category": "Tools",
+      "priority": "P0",
+      "file": "tasks/r5-extract-tool-stream.md",
+      "depends_on": [],
+      "blocks": [
+        "r5-provider-protocol-trait",
+        "r5-partial-json-repair"
+      ],
+      "notes": "Extract ToolStream accumulator module to eliminate duplication between openai/stream.rs and stream_response.rs. Created crates/runie-core/src/tool_stream.rs with ToolStream struct, replaced inline accumulators in openai/stream.rs and stream_response.rs, updated headless.rs. All 7 Layer 1 tests pass, workspace tests pass."
+    },
+    {
+      "id": "r5-add-lifecycle-events",
+      "status": "todo",
+      "milestone": "R5",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/r5-add-lifecycle-events.md",
+      "depends_on": [],
+      "blocks": [
+        "r5-think-filter",
+        "r5-populate-parts-streaming"
+      ],
+      "notes": "Add TextStart/TextEnd/ThinkingStart/ThinkingEnd to LLMEvent + Lifecycle state machine. Source: OpenCode packages/llm/src/protocols/utils/lifecycle.ts."
+    },
+    {
+      "id": "r5-provider-protocol-trait",
+      "status": "todo",
+      "milestone": "R5",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/r5-provider-protocol-trait.md",
+      "depends_on": [
+        "r5-extract-tool-stream"
+      ],
+      "blocks": [],
+      "notes": "Per-provider Protocol trait with step() state machine + SSE framing extraction. Source: OpenCode packages/llm/src/route/protocol.ts."
+    },
+    {
+      "id": "r5-think-filter",
+      "status": "todo",
+      "milestone": "R5",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/r5-think-filter.md",
+      "depends_on": [
+        "r5-add-lifecycle-events"
+      ],
+      "blocks": [],
+      "notes": "ThinkFilter for inline <tool_call>/</thinking> tags across chunk boundaries. Source: Goose crates/goose/src/providers/base.rs:40-164."
+    },
+    {
+      "id": "r5-partial-json-repair",
+      "status": "done",
+      "milestone": "R5",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/r5-partial-json-repair.md",
+      "depends_on": [
+        "r5-extract-tool-stream"
+      ],
+      "blocks": [],
+      "notes": "Partial JSON repair for streaming tool-call arguments (brace counting + suffix appending). Source: gptme tools/base.py:53-77 + Aider base_coder.py:2338."
+    },
+    {
+      "id": "r5-conversation-sanitize-pipeline",
+      "status": "todo",
+      "milestone": "R5",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/r5-conversation-sanitize-pipeline.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Post-turn message sanitization pipeline (6 fixers: empty, dangling tool calls, orphan results, merge consecutive, ensure first, trim whitespace). Source: Goose crates/goose-providers/src/conversation/mod.rs:199-257."
+    },
+    {
+      "id": "r5-markdown-healing-stream",
+      "status": "todo",
+      "milestone": "R5",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/r5-markdown-healing-stream.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Live markdown healing in StreamingBuffer (close unclosed **/_/`/~/[ spans for display only). Source: OpenCode markdown-stream.ts + Aider mdstream.py."
+    },
+    {
+      "id": "r5-populate-parts-streaming",
+      "status": "todo",
+      "milestone": "R5",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/r5-populate-parts-streaming.md",
+      "depends_on": [
+        "r5-add-lifecycle-events"
+      ],
+      "blocks": [
+        "r5-per-channel-decoders",
+        "r5-parts-canonical-migration"
+      ],
+      "notes": "Populate Vec<Part> during streaming using lifecycle events. Source: OpenCode publish-llm-event.ts:60."
+    },
+    {
+      "id": "r5-per-channel-decoders",
+      "status": "todo",
+      "milestone": "R5",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "file": "tasks/r5-per-channel-decoders.md",
+      "depends_on": [
+        "r5-populate-parts-streaming"
+      ],
+      "blocks": [],
+      "notes": "Per-channel stream decoders (TextChannel, ToolCallChannel, ReasoningChannel) for UI panel projections. Source: LangGraph sdk-py/stream/decoders.py."
+    },
+    {
+      "id": "r5-paced-text-rendering",
+      "status": "todo",
+      "milestone": "R5",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "file": "tasks/r5-paced-text-rendering.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Paced text rendering for smooth typing animation (2-24 chars per tick, word-boundary snapping). Source: OpenCode message-part.tsx:209-262."
+    },
+    {
+      "id": "r5-parts-canonical-migration",
+      "status": "todo",
+      "milestone": "R5",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/r5-parts-canonical-migration.md",
+      "depends_on": [
+        "r5-populate-parts-streaming"
+      ],
+      "blocks": [],
+      "notes": "Migrate content:String to parts:Vec<Part> as canonical; content() becomes a computed getter. Source: OpenHarness messages.py:65-117 + OpenCode messages.ts:275."
+    },
+    {
+      "id": "fix-think-filter-guardrails",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "file": "tasks/fix-think-filter-guardrails.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Refactor crates/runie-agent/src/think_filter.rs to satisfy the 500-line file, 40-line function, and complexity-10 limits enforced by build.rs."
+    },
+    {
+      "id": "fix-skill-hook-tool-input",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/fix-skill-hook-tool-input.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Pass tool_call.args.clone() into ToolCallCtx in turn.rs before/after hooks so skills see actual tool input."
+    },
+    {
+      "id": "fix-double-turn-start-call",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/fix-double-turn-start-call.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Call skills.on_turn_start once per turn in check_turn_start and match the single result."
+    },
+    {
+      "id": "fix-config-actor-write-errors",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "file": "tasks/fix-config-actor-write-errors.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Propagate inner write errors from ConfigActor mutating helpers instead of reloading on JoinError only."
+    },
+    {
+      "id": "fix-blocking-file-io-in-async-paths",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "file": "tasks/fix-blocking-file-io-in-async-paths.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Move std::fs calls in file_refs, path_complete, update/tools, update/command, skill reload, hashline_edit, and IoActor off the async runtime."
+    },
+    {
+      "id": "fix-bash-tool-timeout-orphan",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/fix-bash-tool-timeout-orphan.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Rewrite bash tool timeout path to use tokio::process::Command with timeout so the child is killed."
+    },
+    {
+      "id": "fix-render-task-blocking-io",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/fix-render-task-blocking-io.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Run terminal draw/size/clear on a dedicated OS thread instead of a Tokio task."
+    },
+    {
+      "id": "fix-session-store-load-alignment",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P1",
+      "file": "tasks/fix-session-store-load-alignment.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Pair session store keys with events inside the load loop and surface parse errors instead of silently dropping and misaligning rows."
+    },
+    {
+      "id": "remove-sleeps-from-automatic-tests",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/remove-sleeps-from-automatic-tests.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Replace sleep calls in automatic tests with deterministic synchronization (timeouts, oneshots, tokio::time::pause)."
+    },
+    {
+      "id": "remove-appstate-cfg-test-branches",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "file": "tasks/remove-appstate-cfg-test-branches.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Remove #[cfg(test)] branches inside AppState production methods and update tests to use the normal config cache path."
+    },
+    {
+      "id": "fix-headless-runtime-spinwait",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Architecture / Actors",
+      "priority": "P2",
+      "file": "tasks/fix-headless-runtime-spinwait.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Replace try_recv/yield_now spin loop in HeadlessRuntime::spawn with a timeout around sub.recv()."
+    },
+    {
+      "id": "fix-main-unix-epoch-unwrap",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "file": "tasks/fix-main-unix-epoch-unwrap.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Avoid panic in runie-tui session ID generation when the system clock is before UNIX_EPOCH."
+    },
+    {
+      "id": "sync-docs-after-code-review",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/sync-docs-after-code-review.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Update AGENTS.md and docs/Architecture.md to remove stale violation claim and clarify async-IO remediation patterns."
     }
-  ]
+  ],
+  "r5-add-lifecycle-events": "done"
 }

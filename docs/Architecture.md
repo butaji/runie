@@ -224,6 +224,11 @@ The TUI runs on a multi-threaded Tokio runtime. Synchronous file or process IO m
   - `block_in_place_if_runtime` — run a short blocking closure off the async runtime and return the result.
 - These helpers fall back to synchronous execution when no runtime is present, which keeps unit tests fast and deterministic.
 
+Concrete remediation order:
+1. If the call site can be made `async`, use `tokio::fs` / `tokio::process`.
+2. If the caller is a sync function reached from an async actor (e.g., the update dispatcher or a sync skill hook), wrap the IO in `block_in_place_if_runtime`.
+3. If the work is fire-and-forget or long-running, use `spawn_blocking` or `run_blocking_if_runtime`.
+
 New code should default to async or event-based actors; the helpers are a tactical bridge, not the preferred pattern.
 
 ## Config durability

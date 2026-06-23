@@ -144,6 +144,6 @@ similar constructs. It is used as a coarse guardrail, not a precise metric.
 
 Any production-code violation fails `cargo build`. There are no allow-lists.
 
-Current violations: 0
+Violations are detected automatically by `cargo build`; always run `cargo build --workspace` before claiming the codebase is clean.
 
 **Breaking the rules is not acceptable.** If your change introduces a violation, you must fix it before committing.
