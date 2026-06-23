@@ -17,7 +17,7 @@ fn prompt_switch_updates() {
     });
     assert_eq!(state.input.current_prompt, "custom");
     let last = state.session.messages.last().expect("should have message");
-    assert!(last.content.contains("custom"));
+    assert!(last.content().contains("custom"));
 }
 
 #[test]
@@ -32,7 +32,7 @@ fn prompt_shows_current_when_no_args() {
     };
     state.update(CommandEvent::RunPromptCommand { name: "".into() });
     let last = state.session.messages.last().expect("should have message");
-    assert!(last.content.contains("default"), "got: {}", last.content);
+    assert!(last.content().contains("default"), "got: {}", last.content());
 }
 
 #[test]
@@ -42,5 +42,5 @@ fn prompt_unknown_returns_error() {
         name: "unknown".into(),
     });
     let last = state.session.messages.last().expect("should have message");
-    assert!(last.content.contains("not found"), "got: {}", last.content);
+    assert!(last.content().contains("not found"), "got: {}", last.content());
 }

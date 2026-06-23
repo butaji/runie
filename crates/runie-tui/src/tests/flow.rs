@@ -175,7 +175,7 @@ fn test_list_files_message_content() {
         .find(|m| m.role == Role::Assistant)
         .expect("assistant msg");
     assert!(
-        assistant.content.contains("src/main.rs"),
+        assistant.content().contains("src/main.rs"),
         "Should contain file list"
     );
 }
@@ -192,6 +192,6 @@ fn test_list_files_full_sequence() {
         .iter()
         .find(|m| m.role == Role::Assistant)
         .expect("assistant msg");
-    assert!(msg.content.contains("main.rs"));
+    assert!(msg.content().contains("main.rs"));
     assert_eq!(state.session.messages.len(), 5, "expected 5 messages");
 }

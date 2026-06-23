@@ -123,7 +123,7 @@ fn slash_thinking_sets() {
         .collect();
     assert!(sys_msgs
         .iter()
-        .any(|m| m.content.contains("Thinking level set to: high")));
+        .any(|m| m.content().contains("Thinking level set to: high")));
 }
 
 #[test]

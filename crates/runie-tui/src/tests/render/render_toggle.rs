@@ -1,5 +1,6 @@
 use super::super::*;
 use runie_core::event::ControlEvent;
+use runie_core::Part;
 
 #[test]
 fn test_toggle_expand_changes_rendered_output() {
@@ -9,7 +10,7 @@ fn test_toggle_expand_changes_rendered_output() {
 
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        content: "◆ Thought 1.2s\nI'll list the files.".into(),
+        parts: vec![Part::Text { content: "◆ Thought 1.2s\nI'll list the files.".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -18,7 +19,7 @@ fn test_toggle_expand_changes_rendered_output() {
     // Render expanded
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf_expanded = terminal.backend().buffer().clone();
-    let expanded_text: String = buf_expanded.content.iter().map(|c| c.symbol()).collect();
+    let expanded_text: String = buf_expanded.content().iter().map(|c| c.symbol()).collect();
     assert!(
         expanded_text.contains("I'll list the files"),
         "Expanded thought should show reasoning"
@@ -30,7 +31,7 @@ fn test_toggle_expand_changes_rendered_output() {
     // Render collapsed
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf_collapsed = terminal.backend().buffer().clone();
-    let collapsed_text: String = buf_collapsed.content.iter().map(|c| c.symbol()).collect();
+    let collapsed_text: String = buf_collapsed.content().iter().map(|c| c.symbol()).collect();
     assert!(
         collapsed_text.contains("[+]"),
         "Collapsed thought should show [+] indicator"
@@ -49,7 +50,7 @@ fn test_toggle_expand_changes_tool_render() {
 
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran list_files 0.5s\nfile1\nfile2".into(),
+        parts: vec![Part::Text { content: "◆ Ran list_files 0.5s\nfile1\nfile2".into() }],
         timestamp: 0.0,
         id: "x1".into(),
         ..Default::default()
@@ -58,7 +59,7 @@ fn test_toggle_expand_changes_tool_render() {
     // Render expanded
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf_expanded = terminal.backend().buffer().clone();
-    let expanded_text: String = buf_expanded.content.iter().map(|c| c.symbol()).collect();
+    let expanded_text: String = buf_expanded.content().iter().map(|c| c.symbol()).collect();
     assert!(
         expanded_text.contains("file1"),
         "Expanded tool should show output"
@@ -70,7 +71,7 @@ fn test_toggle_expand_changes_tool_render() {
     // Render collapsed
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf_collapsed = terminal.backend().buffer().clone();
-    let collapsed_text: String = buf_collapsed.content.iter().map(|c| c.symbol()).collect();
+    let collapsed_text: String = buf_collapsed.content().iter().map(|c| c.symbol()).collect();
     assert!(
         collapsed_text.contains("[+]"),
         "Collapsed tool should show [+] indicator"

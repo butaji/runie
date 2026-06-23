@@ -5,7 +5,7 @@ use crate::ui::{Element, LazyCache};
 fn tool_message(name: &str, output: &str, ts: f64) -> ChatMessage {
     ChatMessage {
         role: Role::Tool,
-        content: format!("✓ {} 0.5s\n{}", name, output),
+        parts: vec![Part::Text { content: format!("✓ {} 0.5s\n{}", name, output) }],
         timestamp: ts,
         id: format!("tool.{}.{}", name, ts),
         ..Default::default()
@@ -84,16 +84,11 @@ fn assistant_parts_render_into_elements() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        content: String::new(),
         timestamp: 1.0,
         id: "a1".into(),
         parts: vec![
-            Part::Text {
-                content: "Let me search.".into(),
-            },
-            Part::Reasoning {
-                content: "I need files first.".into(),
-            },
+            Part::Text { content: "Let me search.".into() },
+            Part::Reasoning { content: "I need files first.".into() },
             Part::ToolCall {
                 id: "call_1".into(),
                 name: "list_dir".into(),
@@ -113,24 +108,4 @@ fn assistant_parts_render_into_elements() {
     assert!(elems.iter().any(|e| matches!(e, Element::ThoughtMarker { content, .. } if content == "I need files first.")));
     assert!(elems.iter().any(|e| matches!(e, Element::ToolDone { name, .. } if name == "list_dir")));
     assert!(elems.iter().any(|e| matches!(e, Element::ToolDone { name, .. } if name == "tool")));
-}
-
-#[test]
-fn assistant_message_without_parts_falls_back_to_content() {
-    let mut state = AppState::default();
-    state.session.messages.push(ChatMessage {
-        role: Role::Assistant,
-        content: "plain response".into(),
-        timestamp: 1.0,
-        id: "a2".into(),
-        parts: vec![],
-        ..Default::default()
-    });
-    state.messages_changed();
-
-    let elems = LazyCache::rebuild(&state);
-    assert!(
-        elems.iter().any(|e| matches!(e, Element::AgentMessage { content, .. } if content == "plain response")),
-        "assistant message without parts should render from content"
-    );
 }

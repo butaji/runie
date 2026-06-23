@@ -178,7 +178,7 @@ mod tests {
                 .session
                 .messages
                 .iter()
-                .any(|m| m.content.contains("hello")),
+                .any(|m| m.content().contains("hello")),
             "Should have hello in output"
         );
     }

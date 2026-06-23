@@ -106,21 +106,57 @@ impl Role {
 }
 
 impl ChatMessage {
+    /// Returns the concatenated text content from all `Part::Text` variants.
+    pub fn content(&self) -> String {
+        self.parts
+            .iter()
+            .filter_map(|p| match p {
+                Part::Text { content } => Some(content.as_str()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("")
+    }
+
+    /// Returns tool calls extracted from `Part::ToolCall` variants.
+    pub fn tool_calls(&self) -> Vec<ToolCall> {
+        self.parts.iter().filter_map(|p| match p {
+            Part::ToolCall { id, name, args } => Some(ToolCall { id: id.clone(), name: name.clone(), args: args.clone() }),
+            _ => None,
+        }).collect()
+    }
+
+    /// Push a text part, or append to the last text part if one exists.
+    pub fn push_text_part(&mut self, content: &str) {
+        if content.is_empty() {
+            return;
+        }
+        if let Some(Part::Text { content: last }) = self.parts.last_mut() {
+            last.push_str(content);
+        } else {
+            self.parts.push(Part::Text { content: content.to_string() });
+        }
+    }
+
+    /// Set the last text part's content (or push a new text part).
+    pub fn set_text_part(&mut self, content: String) {
+        if let Some(Part::Text { content: last }) = self.parts.last_mut() {
+            *last = content;
+        } else {
+            self.parts.push(Part::Text { content });
+        }
+    }
+
     /// Convert to a provider-agnostic message (drops metadata).
     pub fn to_provider_message(&self) -> crate::provider::Message {
+        let content = self.content();
+        let tool_calls: Vec<ToolCall> = self.tool_calls();
         match self.role {
-            Role::System => crate::provider::Message::System {
-                content: self.content.clone(),
-            },
-            Role::User | Role::Thought => crate::provider::Message::User {
-                content: self.content.clone(),
-            },
-            Role::Assistant => crate::provider::Message::Assistant {
-                content: self.content.clone(),
-                tool_calls: self.tool_calls.clone(),
-            },
+            Role::System => crate::provider::Message::System { content },
+            Role::User | Role::Thought => crate::provider::Message::User { content },
+            Role::Assistant => crate::provider::Message::Assistant { content, tool_calls },
             Role::Tool | Role::TurnComplete => crate::provider::Message::ToolResult {
-                content: self.content.clone(),
+                content,
                 tool_call_id: self.tool_call_id.clone(),
             },
         }
@@ -147,16 +183,12 @@ pub struct MessageMetadata {
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct ChatMessage {
     pub role: Role,
-    pub content: String,
     pub timestamp: f64,
     pub id: String,
     #[serde(default)]
     pub provider: String,
     #[serde(default)]
     pub metadata: MessageMetadata,
-    /// Tool calls issued by the assistant in this message.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub tool_calls: Vec<ToolCall>,
     /// For `Role::Tool` messages, the id of the assistant tool call this
     /// result answers. Required by OpenAI-compatible APIs.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -190,13 +222,25 @@ impl ChatMessage {
         Self::new(Role::Tool, content)
     }
 
+    pub fn with_id(mut self, id: impl Into<String>) -> Self {
+        self.id = id.into();
+        self
+    }
+
+    pub fn with_timestamp(mut self, timestamp: f64) -> Self {
+        self.timestamp = timestamp;
+        self
+    }
+
     pub fn with_tool_call_id(mut self, id: impl Into<String>) -> Self {
         self.tool_call_id = Some(id.into());
         self
     }
 
     pub fn with_tool_calls(mut self, calls: Vec<ToolCall>) -> Self {
-        self.tool_calls = calls;
+        for tc in calls {
+            self.parts.push(Part::ToolCall { id: tc.id, name: tc.name, args: tc.args });
+        }
         self
     }
 
@@ -205,18 +249,21 @@ impl ChatMessage {
         self
     }
 
-    fn new(role: Role, content: impl Into<String>) -> Self {
+    pub fn new(role: Role, content: impl Into<String>) -> Self {
+        let content = content.into();
         Self {
             role,
-            content: content.into(),
             timestamp: now(),
             id: String::new(),
             provider: String::new(),
             metadata: MessageMetadata::default(),
-            tool_calls: Vec::new(),
             tool_call_id: None,
             provider_metadata: None,
-            parts: Vec::new(),
+            parts: if content.is_empty() {
+                Vec::new()
+            } else {
+                vec![Part::Text { content }]
+            },
         }
     }
 }
@@ -235,40 +282,70 @@ mod tests {
     }
 
     #[test]
+    fn chat_message_content_getter_concatenates_text_parts() {
+        let msg = ChatMessage {
+            parts: vec![
+                Part::Text { content: "a".into() },
+                Part::Reasoning { content: "r".into() },
+                Part::Text { content: "b".into() },
+            ],
+            ..Default::default()
+        };
+        assert_eq!(msg.content(), "ab");
+    }
+
+    #[test]
+    fn chat_message_tool_calls_getter_extracts_from_parts() {
+        let msg = ChatMessage {
+            parts: vec![
+                Part::Text { content: "hi".into() },
+                Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({}) },
+            ],
+            ..Default::default()
+        };
+        let tcs = msg.tool_calls();
+        assert_eq!(tcs.len(), 1);
+        assert_eq!(tcs[0].id, "c1");
+    }
+
+    #[test]
+    fn chat_message_new_creates_text_part() {
+        let msg = ChatMessage::new(Role::User, "hello");
+        assert_eq!(msg.content(), "hello");
+        assert!(matches!(msg.parts[..], [Part::Text { content: ref c }] if c == "hello"));
+    }
+
+    #[test]
+    fn chat_message_no_text_parts_returns_empty_content() {
+        let msg = ChatMessage {
+            parts: vec![Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({}) }],
+            ..Default::default()
+        };
+        assert_eq!(msg.content(), "");
+    }
+
+    #[test]
     fn chat_message_round_trip_json() {
         let msg = ChatMessage {
             role: Role::User,
-            content: "hello".to_string(),
             timestamp: 1234567890.0,
             id: "msg-1".to_string(),
             provider: "openai".to_string(),
             metadata: MessageMetadata::default(),
-            tool_calls: Vec::new(),
             tool_call_id: None,
             provider_metadata: None,
-            parts: Vec::new(),
+            parts: vec![Part::Text { content: "hello".into() }],
         };
         let json = serde_json::to_string(&msg).unwrap();
         let parsed: ChatMessage = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.role, Role::User);
-        assert_eq!(parsed.content, "hello");
+        assert_eq!(parsed.content(), "hello");
         assert_eq!(parsed.id, "msg-1");
     }
 
     #[test]
     fn chat_message_to_provider_message() {
-        let msg = ChatMessage {
-            role: Role::User,
-            content: "hello".to_string(),
-            timestamp: 0.0,
-            id: "1".to_string(),
-            provider: String::new(),
-            metadata: MessageMetadata::default(),
-            tool_calls: Vec::new(),
-            tool_call_id: None,
-            provider_metadata: None,
-            parts: Vec::new(),
-        };
+        let msg = ChatMessage::new(Role::User, "hello");
         let provider_msg = msg.to_provider_message();
         assert!(matches!(provider_msg, Message::User { content } if content == "hello"));
     }
@@ -277,19 +354,20 @@ mod tests {
     fn chat_message_to_provider_message_with_tool_call() {
         let msg = ChatMessage {
             role: Role::Assistant,
-            content: "".to_string(),
             timestamp: 0.0,
             id: "2".to_string(),
             provider: String::new(),
             metadata: MessageMetadata::default(),
-            tool_calls: vec![ToolCall::new(
-                "call_1",
-                "read_file",
-                serde_json::json!({"path": "Cargo.toml"}),
-            )],
             tool_call_id: None,
             provider_metadata: None,
-            parts: Vec::new(),
+            parts: vec![
+                Part::Text { content: String::new() },
+                Part::ToolCall {
+                    id: "call_1".into(),
+                    name: "read_file".into(),
+                    args: serde_json::json!({"path": "Cargo.toml"}),
+                },
+            ],
         };
         let provider_msg = msg.to_provider_message();
         match provider_msg {
@@ -310,15 +388,13 @@ mod tests {
     fn chat_message_to_provider_message_with_tool_result_id() {
         let msg = ChatMessage {
             role: Role::Tool,
-            content: "file contents".to_string(),
             timestamp: 0.0,
             id: "3".to_string(),
             provider: String::new(),
             metadata: MessageMetadata::default(),
-            tool_calls: Vec::new(),
             tool_call_id: Some("call_1".to_string()),
             provider_metadata: None,
-            parts: Vec::new(),
+            parts: vec![Part::Text { content: "file contents".into() }],
         };
         let provider_msg = msg.to_provider_message();
         match provider_msg {
@@ -344,10 +420,8 @@ mod tests {
 
     #[test]
     fn chat_message_with_parts_round_trips_json() {
-        use crate::message::Part;
         let msg = ChatMessage {
             role: Role::Assistant,
-            content: String::new(),
             timestamp: 1.0,
             id: "a1".into(),
             parts: vec![
@@ -369,9 +443,32 @@ mod tests {
 
     #[test]
     fn chat_message_without_parts_deserializes_empty_vec() {
+        // Old format with content field deserializes to empty parts
         let json = r#"{"role":"Assistant","content":"hi","timestamp":1.0,"id":"a1"}"#;
         let parsed: ChatMessage = serde_json::from_str(json).unwrap();
+        // Legacy format has no parts - content getter returns empty for backward compat
         assert!(parsed.parts.is_empty());
-        assert_eq!(parsed.content, "hi");
+        assert_eq!(parsed.content(), "");
+    }
+
+    #[test]
+    fn to_provider_message_serializes_from_parts() {
+        let msg = ChatMessage {
+            role: Role::Assistant,
+            parts: vec![
+                Part::Text { content: "hi".into() },
+                Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({"cmd": "ls"}) },
+            ],
+            ..Default::default()
+        };
+        let provider_msg = msg.to_provider_message();
+        match provider_msg {
+            Message::Assistant { content, tool_calls } => {
+                assert_eq!(content, "hi");
+                assert_eq!(tool_calls.len(), 1);
+                assert_eq!(tool_calls[0].name, "bash");
+            }
+            other => panic!("expected Assistant message, got {:?}", other),
+        }
     }
 }

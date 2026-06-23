@@ -174,9 +174,9 @@ impl SessionTree {
         // Create a placeholder child to mark the fork point
         let placeholder = ChatMessage {
             role: Role::System,
-            content: "[fork point]".to_string(),
             timestamp: crate::message::now(),
             id: format!("fork.{}", message_index),
+            parts: vec![crate::message::Part::Text { content: "[fork point]".to_string() }],
             ..Default::default()
         };
         target.add_child(TreeNode::new(placeholder));

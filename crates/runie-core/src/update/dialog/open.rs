@@ -116,7 +116,7 @@ pub fn open_session_tree_dialog(state: &mut AppState) {
                 let preview = format!(
                     "[{}] {}",
                     node.message.role.as_str(),
-                    node.message.content.chars().take(60).collect::<String>()
+                    node.message.content().chars().take(60).collect::<String>()
                 );
                 let evt = crate::event::SessionEvent::SessionTreeSelect {
                     id: node.message.id.clone(),

@@ -3,6 +3,7 @@
 use crate::event::Event;
 
 use crate::event::{AgentEvent, InputEvent};
+use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::snapshot::Snapshot;
 use std::sync::Arc;
@@ -14,9 +15,9 @@ fn test_snapshot_contains_expected_fields() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "hello".into(),
         timestamp: 1.0,
         id: "u1".into(),
+        parts: vec![Part::Text { content: "hello".into() }],
         ..Default::default()
     });
     state.messages_changed();
@@ -77,7 +78,7 @@ fn test_render_receives_valid_snapshot() {
     for i in 0..10 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -101,9 +102,9 @@ fn test_elements_uses_arc() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "hello".into(),
         timestamp: 1.0,
         id: "u1".into(),
+        parts: vec![Part::Text { content: "hello".into() }],
         ..Default::default()
     });
     state.messages_changed();
@@ -128,9 +129,9 @@ fn test_arc_pointer_stability_after_state_mutation() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "first".into(),
         timestamp: 1.0,
         id: "u1".into(),
+        parts: vec![Part::Text { content: "first".into() }],
         ..Default::default()
     });
     state.messages_changed();

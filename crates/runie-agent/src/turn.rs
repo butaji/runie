@@ -109,7 +109,7 @@ async fn emit_turn_end(
             .iter()
             .rev()
             .find(|m| m.role == Role::Assistant)
-            .map(|m| m.content.clone())
+            .map(|m| m.content().clone())
             .unwrap_or_default();
 
         let ctx = TurnEndCtx {

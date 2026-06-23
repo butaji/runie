@@ -38,7 +38,7 @@ fn prompt_custom_switches_prompt() {
         .filter(|m| m.role == Role::System)
         .collect();
     assert!(
-        sys.iter().any(|m| m.content.contains("custom")),
+        sys.iter().any(|m| m.content().contains("custom")),
         "switch confirmation: {:?}",
         sys.last()
     );
@@ -59,14 +59,14 @@ fn prompt_no_args_lists_current_and_available() {
         .collect();
     let last = sys.last().expect("system message");
     assert!(
-        last.content.contains("Current prompt: custom"),
+        last.content().contains("Current prompt: custom"),
         "shows current: {}",
-        last.content
+        last.content()
     );
     assert!(
-        last.content.contains("default") && last.content.contains("custom"),
+        last.content().contains("default") && last.content().contains("custom"),
         "lists available: {}",
-        last.content
+        last.content()
     );
 }
 
@@ -85,8 +85,8 @@ fn prompt_unknown_shows_error() {
         .collect();
     let last = sys.last().expect("system message");
     assert!(
-        last.content.contains("not found"),
+        last.content().contains("not found"),
         "expected not-found: {}",
-        last.content
+        last.content()
     );
 }

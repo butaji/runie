@@ -5,7 +5,7 @@
 //! messages with the same role, or histories that do not start with a user
 //! or system message. This module repairs the most common issues.
 
-use runie_core::message::{ChatMessage, Role};
+use runie_core::message::{ChatMessage, Part, Role};
 
 /// Normalize a message list for an OpenAI-compatible request.
 pub fn normalize_messages(messages: Vec<ChatMessage>) -> Vec<ChatMessage> {
@@ -26,14 +26,16 @@ fn strip_provider_metadata(messages: Vec<ChatMessage>) -> Vec<ChatMessage> {
 
 fn merge_consecutive_same_role(messages: Vec<ChatMessage>) -> Vec<ChatMessage> {
     let mut out: Vec<ChatMessage> = Vec::new();
-    for msg in messages {
+    for mut msg in messages {
         if let Some(last) = out.last_mut() {
             if last.role == msg.role && last.role != Role::Tool {
-                if !msg.content.is_empty() {
-                    last.content.push('\n');
-                    last.content.push_str(&msg.content);
+                let msg_content = msg.content();
+                if !msg_content.is_empty() {
+                    last.push_text_part(&msg_content);
                 }
-                last.tool_calls.extend(msg.tool_calls);
+                for tc in msg.tool_calls() {
+                    last.parts.push(Part::ToolCall { id: tc.id.clone(), name: tc.name.clone(), args: tc.args.clone() });
+                }
                 continue;
             }
         }
@@ -76,8 +78,8 @@ mod tests {
         ];
         let out = normalize_messages(messages);
         assert_eq!(out.len(), 2);
-        assert_eq!(out[0].content, "part 1\npart 2");
-        assert_eq!(out[1].content, "ok");
+        assert_eq!(out[0].content(), "part 1\npart 2");
+        assert_eq!(out[1].content(), "ok");
     }
 
     #[test]

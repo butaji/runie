@@ -34,7 +34,7 @@ fn submit_when_idle_sends_immediately() {
     assert!(state.agent.message_queue.is_empty());
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].role, Role::User);
-    assert_eq!(state.session.messages[0].content, "hi");
+    assert_eq!(state.session.messages[0].content(), "hi");
 }
 
 #[test]
@@ -65,7 +65,7 @@ fn deliver_queue_at_turn_end() {
     });
     assert!(state.agent.message_queue.is_empty());
     assert_eq!(state.session.messages.len(), 1);
-    assert_eq!(state.session.messages[0].content, "hi");
+    assert_eq!(state.session.messages[0].content(), "hi");
 }
 
 #[test]
@@ -120,7 +120,7 @@ fn steering_delivered_before_follow_up() {
         .filter(|m| m.role == Role::User)
         .collect();
     assert_eq!(user_msgs.len(), 1);
-    assert_eq!(user_msgs[0].content, "s");
+    assert_eq!(user_msgs[0].content(), "s");
 
     state.update(AgentEvent::Done {
         id: "req.1".to_string(),
@@ -132,7 +132,7 @@ fn steering_delivered_before_follow_up() {
         .filter(|m| m.role == Role::User)
         .collect();
     assert_eq!(user_msgs.len(), 2);
-    assert_eq!(user_msgs[1].content, "f");
+    assert_eq!(user_msgs[1].content(), "f");
 }
 
 // Delivery mode tests
@@ -463,7 +463,7 @@ fn abort_during_streaming_clears_turn_and_allows_new_submit() {
             .session
             .messages
             .iter()
-            .any(|m| m.content == "hi again"),
+            .any(|m| m.content() == "hi again"),
         "New submit should work after abort"
     );
 }

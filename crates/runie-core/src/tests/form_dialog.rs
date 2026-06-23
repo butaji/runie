@@ -4,6 +4,7 @@ use crate::dialog::dsl::get_field;
 use crate::event::{ControlEvent, DialogEvent, InputEvent};
 
 use crate::commands::DialogState;
+use crate::message::Part;
 use crate::tests::slash::ENV_LOCK;
 use crate::Event;
 use crate::tests::{fresh_state, type_str};
@@ -195,9 +196,9 @@ fn invalid_fork_index_shows_error_for_out_of_range() {
     let mut state = fresh_state();
     state.session.messages.push(crate::model::ChatMessage {
         role: Role::User,
-        content: "hi".into(),
         timestamp: 0.0,
         id: "u0".into(),
+        parts: vec![Part::Text { content: "hi".into() }],
         ..Default::default()
     });
     let mut panel = Panel::new("fork", "Fork Session").form_field("Message index", "0", "index");
@@ -218,9 +219,9 @@ fn invalid_fork_index_shows_error_for_out_of_range() {
         .collect();
     assert!(!sys.is_empty(), "expected a system error message");
     assert!(
-        sys.last().unwrap().content.contains("out of range"),
+        sys.last().unwrap().content().contains("out of range"),
         "expected out-of-range error, got: {:?}",
-        sys.last().unwrap().content
+        sys.last().unwrap().content()
     );
 }
 
@@ -254,7 +255,7 @@ fn compact_with_invalid_keep_shows_error() {
         .filter(|m| m.role == Role::System)
         .collect();
     assert!(!sys.is_empty(), "expected a system error message");
-    let last = sys.last().unwrap().content.clone();
+    let last = sys.last().unwrap().content().clone();
     assert!(
         last.contains("Invalid")
             || last.contains("invalid")

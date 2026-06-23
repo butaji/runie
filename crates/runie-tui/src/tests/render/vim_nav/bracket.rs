@@ -5,7 +5,7 @@ use super::helpers::{
     state_with_wrapped_welcome,
 };
 use runie_core::event::InputEvent;
-use runie_core::{AppState, ChatMessage, Role};
+use runie_core::{AppState, ChatMessage, Part, Role};
 
 #[test]
 fn vim_nav_mode_bracket_spans_post_elements() {
@@ -15,7 +15,7 @@ fn vim_nav_mode_bracket_spans_post_elements() {
 
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "hello".to_string(),
+        parts: vec![Part::Text { content: "hello".into() }],
         timestamp: 0.0,
         id: "req.0".to_string(),
         ..Default::default()
@@ -42,9 +42,11 @@ fn vim_nav_mode_bracket_around_long_system_welcome_post() {
 
     state.session.messages.push(ChatMessage {
         role: Role::System,
-        content: "Welcome to runie in someproject.\n\nThis project is not yet trusted. \
+        parts: vec![Part::Text {
+            content: "Welcome to runie in someproject.\n\nThis project is not yet trusted. \
                   Run /trust to enable write tools, or /untrust to enforce read-only mode."
-            .to_string(),
+                .to_string(),
+        }],
         timestamp: 0.0,
         id: "trust_welcome".to_string(),
         ..Default::default()
@@ -128,7 +130,7 @@ fn nav_mode_bracket_for_one_line_non_user_post_is_three_rows() {
     add_message(&mut state, Role::User, "hi", 0.0, "req.0");
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        content: "x".to_string(),
+        parts: vec![Part::Text { content: "x".into() }],
         timestamp: 1.0,
         id: "resp.0".to_string(),
         provider: "mock".to_string(),

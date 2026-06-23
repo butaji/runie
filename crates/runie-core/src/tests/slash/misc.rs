@@ -31,9 +31,9 @@ fn reset_clears_messages_and_input() {
         .collect();
     assert_eq!(sys_msgs.len(), 1, "reset adds confirmation");
     assert!(
-        sys_msgs[0].content.contains("State cleared"),
+        sys_msgs[0].content().contains("State cleared"),
         "reset confirmation: {}",
-        sys_msgs[0].content
+        sys_msgs[0].content()
     );
     assert!(state.input.input.is_empty(), "input cleared");
     assert!(!state.agent.streaming, "streaming cleared");
@@ -107,7 +107,7 @@ fn model_shows_confirmation_message() {
         .filter(|m| m.role == Role::System)
         .collect();
     assert_eq!(sys_msgs.len(), 1);
-    assert!(sys_msgs[0].content.contains("anthropic/claude-3-sonnet"));
+    assert!(sys_msgs[0].content().contains("anthropic/claude-3-sonnet"));
 }
 
 #[test]
@@ -132,9 +132,9 @@ fn model_just_model_name_keeps_provider() {
     assert_eq!(sys_msgs.len(), 1);
     assert!(
         sys_msgs[0]
-            .content
+            .content()
             .contains("Switched to openai/gpt-4o-mini"),
         "model without provider keeps current provider: {}",
-        sys_msgs[0].content
+        sys_msgs[0].content()
     );
 }

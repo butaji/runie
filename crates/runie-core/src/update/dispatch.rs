@@ -259,6 +259,11 @@ fn is_agent_event(event: &Event) -> bool {
             | Event::TurnComplete { .. }
             | Event::Done { .. }
             | Event::Error { .. }
+            | Event::TextStart { .. }
+            | Event::TextEnd { .. }
+            | Event::ThinkingStart { .. }
+            | Event::ThinkingDelta { .. }
+            | Event::ThinkingEnd { .. }
     )
 }
 

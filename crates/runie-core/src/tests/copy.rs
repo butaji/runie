@@ -6,6 +6,7 @@
 
 use crate::event::{DialogEvent, InputEvent};
 use crate::model::{AppState, ChatMessage};
+use crate::message::Part;
 use crate::tests::{fresh_state, type_str};
 use std::sync::Mutex;
 
@@ -35,11 +36,11 @@ fn copy_with_no_assistant_message_shows_error() {
     assert!(
         sys.last()
             .unwrap()
-            .content
+            .content()
             .to_lowercase()
             .contains("no assistant"),
         "expected 'no assistant' message, got: {:?}",
-        sys.last().unwrap().content
+        sys.last().unwrap().content()
     );
 }
 
@@ -47,13 +48,9 @@ fn copy_with_no_assistant_message_shows_error() {
 fn copy_emits_clipboard_event_with_last_assistant_text() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = fresh_state();
-    state.session.messages.push(crate::model::ChatMessage {
-        role: crate::model::Role::Assistant,
-        content: "the answer is 42".into(),
-        timestamp: 0.0,
-        id: "resp.0".into(),
-        ..Default::default()
-    });
+    state.session.messages.push(ChatMessage::assistant("the answer is 42")
+        .with_id("resp.0")
+        .with_timestamp(0.0));
 
     // Capture the event emitted by /copy. Since CopyToClipboard is
     // routed to control_event (which currently ignores it), we
@@ -70,20 +67,12 @@ fn copy_emits_clipboard_event_with_last_assistant_text() {
 fn copy_uses_most_recent_assistant_message() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = fresh_state();
-    state.session.messages.push(crate::model::ChatMessage {
-        role: crate::model::Role::Assistant,
-        content: "old response".into(),
-        timestamp: 0.0,
-        id: "resp.0".into(),
-        ..Default::default()
-    });
-    state.session.messages.push(crate::model::ChatMessage {
-        role: crate::model::Role::Assistant,
-        content: "newer response".into(),
-        timestamp: 1.0,
-        id: "resp.1".into(),
-        ..Default::default()
-    });
+    state.session.messages.push(ChatMessage::assistant("old response")
+        .with_id("resp.0")
+        .with_timestamp(0.0));
+    state.session.messages.push(ChatMessage::assistant("newer response")
+        .with_id("resp.1")
+        .with_timestamp(1.0));
 
     let result = state.handle_slash("/copy");
     assert!(
@@ -97,20 +86,12 @@ fn copy_uses_most_recent_assistant_message() {
 fn copy_event_payload_does_not_include_older_messages() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = fresh_state();
-    state.session.messages.push(crate::model::ChatMessage {
-        role: crate::model::Role::Assistant,
-        content: "old response".into(),
-        timestamp: 0.0,
-        id: "resp.0".into(),
-        ..Default::default()
-    });
-    state.session.messages.push(crate::model::ChatMessage {
-        role: crate::model::Role::Assistant,
-        content: "newer response".into(),
-        timestamp: 1.0,
-        id: "resp.1".into(),
-        ..Default::default()
-    });
+    state.session.messages.push(ChatMessage::assistant("old response")
+        .with_id("resp.0")
+        .with_timestamp(0.0));
+    state.session.messages.push(ChatMessage::assistant("newer response")
+        .with_id("resp.1")
+        .with_timestamp(1.0));
 
     let result = state.handle_slash("/copy");
     if let Some(crate::commands::CommandResult::Event(DialogEvent::CopyToClipboard(text))) = result
@@ -130,13 +111,9 @@ fn copy_event_payload_does_not_include_older_messages() {
 /// Build state with a single user message post selected.
 fn state_with_selected_post_user() -> AppState {
     let mut state = AppState::default();
-    state.session.messages.push(ChatMessage {
-        role: crate::model::Role::User,
-        content: "hello world".into(),
-        timestamp: 1.0,
-        id: "req.0".into(),
-        ..Default::default()
-    });
+    state.session.messages.push(ChatMessage::user("hello world")
+        .with_id("req.0")
+        .with_timestamp(1.0));
     state.messages_changed();
     state.ensure_fresh();
     state.view.selected_post = Some(0);
@@ -146,13 +123,9 @@ fn state_with_selected_post_user() -> AppState {
 /// Build state with a single agent message post selected.
 fn state_with_selected_post_agent() -> AppState {
     let mut state = AppState::default();
-    state.session.messages.push(ChatMessage {
-        role: crate::model::Role::Assistant,
-        content: "the answer is 42".into(),
-        timestamp: 1.0,
-        id: "resp.0".into(),
-        ..Default::default()
-    });
+    state.session.messages.push(ChatMessage::assistant("the answer is 42")
+        .with_id("resp.0")
+        .with_timestamp(1.0));
     state.messages_changed();
     state.ensure_fresh();
     state.view.selected_post = Some(0);
@@ -162,20 +135,12 @@ fn state_with_selected_post_agent() -> AppState {
 /// Build state with a tool-done element selected.
 fn state_with_selected_post_tool_done() -> AppState {
     let mut state = AppState::default();
-    state.session.messages.push(ChatMessage {
-        role: crate::model::Role::Assistant,
-        content: "running ls".into(),
-        timestamp: 1.0,
-        id: "resp.0".into(),
-        ..Default::default()
-    });
-    state.session.messages.push(ChatMessage {
-        role: crate::model::Role::Tool,
-        content: "x bash 0.5s\nfile1\nfile2".into(),
-        timestamp: 2.0,
-        id: "tool.0".into(),
-        ..Default::default()
-    });
+    state.session.messages.push(ChatMessage::assistant("running ls")
+        .with_id("resp.0")
+        .with_timestamp(1.0));
+    state.session.messages.push(ChatMessage::tool_result("x bash 0.5s\nfile1\nfile2")
+        .with_id("tool.0")
+        .with_timestamp(2.0));
     state.messages_changed();
     state.ensure_fresh();
     // Tool-done is post index 1

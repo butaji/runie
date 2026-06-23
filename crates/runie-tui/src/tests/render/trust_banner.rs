@@ -4,6 +4,7 @@ use ratatui::{backend::TestBackend, Terminal};
 
 use runie_core::event::InputEvent;
 use runie_core::model::{AppState, ChatMessage, Role};
+use runie_core::Part;
 
 fn render_state(state: &mut AppState, width: u16, height: u16) -> String {
     let backend = TestBackend::new(width, height);
@@ -24,9 +25,11 @@ fn add_trust_banner(state: &mut AppState) {
     state.config.current_model = "gpt-4o".into();
     state.session.messages.push(ChatMessage {
         role: Role::System,
-        content: "Welcome to runie in someproject.\n\nThis project is not yet trusted. \
+        parts: vec![Part::Text {
+            content: "Welcome to runie in someproject.\n\nThis project is not yet trusted. \
                   Run /trust to enable write tools, or /untrust to enforce read-only mode."
-            .into(),
+                .into(),
+        }],
         timestamp: 0.0,
         id: "trust_welcome".into(),
         ..Default::default()

@@ -113,7 +113,7 @@ fn test_turn_complete_event() {
     assert_eq!(state.session.messages.len(), 1);
     let msg = &state.session.messages[0];
     assert_eq!(msg.role, Role::TurnComplete);
-    assert!(msg.content.contains("5.1s"));
+    assert!(msg.content().contains("5.1s"));
 }
 
 #[test]
@@ -159,8 +159,8 @@ fn test_tool_done_event() {
     assert_eq!(state.session.messages.len(), 1);
     let msg = &state.session.messages[0];
     assert_eq!(msg.role, Role::Tool);
-    assert!(msg.content.contains("list_files"));
-    assert!(msg.content.contains("0.3s"));
+    assert!(msg.content().contains("list_files"));
+    assert!(msg.content().contains("0.3s"));
 }
 
 #[test]
@@ -256,7 +256,7 @@ fn test_save_and_load_session() {
         .session
         .messages
         .iter()
-        .any(|m| m.role == Role::System && m.content.contains("saved")));
+        .any(|m| m.role == Role::System && m.content().contains("saved")));
 
     let mut state2 = fresh_state();
     exec(&mut state2, "/load test_session"); // Opens form with pre-filled name
@@ -265,12 +265,12 @@ fn test_save_and_load_session() {
         .session
         .messages
         .iter()
-        .any(|m| m.role == Role::System && m.content.contains("loaded")));
+        .any(|m| m.role == Role::System && m.content().contains("loaded")));
     assert!(state2
         .session
         .messages
         .iter()
-        .any(|m| m.role == Role::User && m.content == "hi"));
+        .any(|m| m.role == Role::User && m.content() == "hi"));
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }

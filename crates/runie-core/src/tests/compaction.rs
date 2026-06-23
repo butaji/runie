@@ -1,4 +1,4 @@
-use crate::message::MessageMetadata;
+use crate::message::{MessageMetadata, Part};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tokens::estimate_tokens;
 
@@ -10,9 +10,9 @@ fn msg(
 ) -> ChatMessage {
     ChatMessage {
         role,
-        content: content.into(),
         timestamp,
         id: id.into(),
+        parts: vec![Part::Text { content: content.into() }],
         ..Default::default()
     }
 }
@@ -25,13 +25,13 @@ fn pinned_msg(
 ) -> ChatMessage {
     ChatMessage {
         role,
-        content: content.into(),
         timestamp,
         id: id.into(),
         metadata: MessageMetadata {
             pinned: true,
             ..Default::default()
         },
+        parts: vec![Part::Text { content: content.into() }],
         ..Default::default()
     }
 }
@@ -54,16 +54,16 @@ fn session_tokens_from_messages() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "Hello world test".to_string(),
         timestamp: 0.0,
         id: "u1".into(),
+        parts: vec![Part::Text { content: "Hello world test".to_string() }],
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        content: "Response here".to_string(),
         timestamp: 0.0,
         id: "a1".into(),
+        parts: vec![Part::Text { content: "Response here".to_string() }],
         ..Default::default()
     });
     let tokens = state.total_tokens();
@@ -80,14 +80,14 @@ fn compaction_creates_summary_entry() {
     for i in 0..10 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("Question {}", i),
+            parts: vec![Part::Text { content: format!("Question {}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
         });
         state.session.messages.push(ChatMessage {
             role: Role::Assistant,
-            content: format!("Answer {} with lots of text to make tokens", i),
+            parts: vec![Part::Text { content: format!("Answer {} with lots of text to make tokens", i) }],
             timestamp: i as f64 + 0.5,
             id: format!("a{}", i),
             ..Default::default()
@@ -111,7 +111,7 @@ fn compaction_keeps_recent_messages() {
     for i in 0..10 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("Q{}", i),
+            parts: vec![Part::Text { content: format!("Q{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -119,7 +119,7 @@ fn compaction_keeps_recent_messages() {
     }
     state.compact(20);
     let last = state.session.messages.last().unwrap();
-    assert_eq!(last.content, "Q9");
+    assert_eq!(last.content(), "Q9");
     assert_eq!(last.role, Role::User);
 }
 
@@ -202,7 +202,7 @@ fn compacted_message_has_compacted_flag() {
         first
     );
     assert!(
-        first.content.contains("Compacted"),
+        first.content().contains("Compacted"),
         "Summary should mention compaction"
     );
 }

@@ -173,8 +173,14 @@ impl LazyCache {
         if msg.role != Role::Assistant {
             return false;
         }
-        let is_tool_call_msg = !msg.tool_calls.is_empty()
-            || crate::update::content_has_tool_markers(&msg.content);
+        // Skip if message has only tool calls (no text or reasoning content)
+        let has_text_or_reasoning = msg.parts.iter().any(|p| {
+            matches!(p, Part::Text { content } if !content.is_empty())
+                || matches!(p, Part::Reasoning { content } if !content.is_empty())
+        });
+        let is_tool_only = !msg.tool_calls().is_empty() && !has_text_or_reasoning;
+        let has_tool_markers = crate::update::content_has_tool_markers(&msg.content());
+        let is_tool_call_msg = is_tool_only || has_tool_markers;
         is_tool_call_msg
             || (state.agent.thinking_started_at.is_some()
                 && state.agent.current_request_id.as_deref() == Some(&msg.id))
@@ -189,21 +195,21 @@ impl LazyCache {
     fn msg_to_elem(msg: &ChatMessage, state: &AppState) -> Vec<Element> {
         let ts = msg.timestamp;
         match msg.role {
-            Role::User => vec![Element::user(msg.content.clone()).at(ts)],
+            Role::User => vec![Element::user(msg.content()).at(ts)],
             Role::Thought => vec![Self::thought_elem(msg, state, ts)],
             Role::Assistant => Self::assistant_elems(msg, state, ts),
             Role::Tool => vec![Self::tool_elem(msg, state, ts)],
             Role::TurnComplete => {
-                vec![Element::turn_complete(Self::parse_dur(&msg.content)).at(ts)]
+                vec![Element::turn_complete(Self::parse_dur(&msg.content())).at(ts)]
             } // filtered in collect_entries
-            Role::System => vec![Element::thought(msg.content.clone()).at(ts)],
+            Role::System => vec![Element::thought(msg.content()).at(ts)],
         }
     }
 
     fn assistant_elems(msg: &ChatMessage, state: &AppState, ts: f64) -> Vec<Element> {
         if msg.parts.is_empty() {
             return vec![Element::AgentMessage {
-                content: crate::update::strip_tool_markers(&msg.content),
+                content: crate::update::strip_tool_markers(&msg.content()),
                 timestamp: ts,
                 provider: msg.provider.clone(),
             }];
@@ -256,16 +262,12 @@ impl LazyCache {
     }
 
     fn thought_elem(msg: &ChatMessage, state: &AppState, ts: f64) -> Element {
+        let content = msg.content();
         if state.view.all_collapsed {
-            let first_line = msg
-                .content
-                .lines()
-                .next()
-                .unwrap_or(&msg.content)
-                .to_string();
-            Element::thought_summary(first_line, Self::parse_thought_dur(&msg.content)).at(ts)
+            let first_line = content.lines().next().unwrap_or(&content).to_string();
+            Element::thought_summary(first_line, Self::parse_thought_dur(&content)).at(ts)
         } else {
-            Element::thought(msg.content.clone()).at(ts)
+            Element::thought(content).at(ts)
         }
     }
 
@@ -278,9 +280,9 @@ impl LazyCache {
     }
 
     fn tool_elem(msg: &ChatMessage, state: &AppState, ts: f64) -> Element {
-        if msg.content.contains("⠋ Running ") {
-            let name = msg
-                .content
+        let content = msg.content();
+        if content.contains("⠋ Running ") {
+            let name = content
                 .trim_start_matches("⠋ Running ")
                 .trim_end_matches("...");
             return Element::tool_running(
@@ -293,7 +295,7 @@ impl LazyCache {
             )
             .at(ts);
         }
-        let (name, dur, output) = Self::parse_tool_content(&msg.content);
+        let (name, dur, output) = Self::parse_tool_content(&content);
         if state.view.all_collapsed {
             Element::tool_summary(name, dur).at(ts)
         } else {

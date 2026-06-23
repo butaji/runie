@@ -41,7 +41,7 @@ fn submit_with_ghost_includes_full_filename() {
             .session
             .messages
             .iter()
-            .any(|m| m.content.contains("testfile.rs")),
+            .any(|m| m.content().contains("testfile.rs")),
         "Submit should include ghost completion"
     );
 }

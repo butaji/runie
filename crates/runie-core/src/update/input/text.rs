@@ -379,9 +379,9 @@ impl AppState {
         let id = self.next_id();
         self.session.messages.push(ChatMessage {
             role: Role::User,
-            content: content.clone(),
             timestamp: now(),
             id: id.clone(),
+            parts: vec![runie_core::message::Part::Text { content: content.clone() }],
             ..Default::default()
         });
         self.agent.request_queue.push_back((content, id));

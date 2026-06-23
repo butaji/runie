@@ -92,6 +92,16 @@ pub enum Event {
         id: String,
         content: String,
     },
+    /// A delta of thinking/reasoning content (from think filter).
+    ThinkingDelta {
+        id: String,
+        content: String,
+    },
+    // LLM lifecycle events (populated from LLMEvent via LifecycleState)
+    TextStart { id: String },
+    TextEnd { id: String },
+    ThinkingStart { id: String },
+    ThinkingEnd { id: String },
     Response {
         id: String,
         content: String,
@@ -115,6 +125,11 @@ pub enum Event {
     PermissionResponse {
         request_id: String,
         action: crate::permissions::PermissionAction,
+    },
+    /// Assistant message ready with full content (used by agent to update
+    /// AppState with the final message including tool calls after streaming).
+    AssistantMessageReady {
+        message: crate::message::ChatMessage,
     },
 
     // Replay

@@ -83,10 +83,10 @@ impl AppState {
         let role = crate::model::Role::parse(&role).unwrap_or(crate::model::Role::Assistant);
         self.session.messages.push(crate::model::ChatMessage {
             role,
-            content,
             timestamp,
             id,
             provider,
+            parts: vec![runie_core::message::Part::Text { content }],
             ..Default::default()
         });
         self.messages_changed();
@@ -185,9 +185,9 @@ impl AppState {
         let id = self.next_id();
         self.session.messages.push(ChatMessage {
             role: Role::User,
-            content: content.clone(),
             timestamp: now(),
             id: id.clone(),
+            parts: vec![runie_core::message::Part::Text { content: content.clone() }],
             ..Default::default()
         });
         self.agent.request_queue.push_back((content, id));

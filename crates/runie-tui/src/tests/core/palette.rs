@@ -265,11 +265,11 @@ fn palette_model_with_zero_providers_shows_message() {
         "model command with no providers should close palette, got {:?}",
         state.open_dialog
     );
-    let msgs: Vec<&str> = state
+    let msgs: Vec<String> = state
         .session
         .messages
         .iter()
-        .map(|m| m.content.as_str())
+        .map(|m| m.content())
         .collect();
     assert!(
         msgs.iter().any(|m| m.contains("No connected providers")),
@@ -295,7 +295,7 @@ fn palette_model_with_zero_providers_renders_message() {
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
-    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    let content: String = buf.content().iter().map(|c| c.symbol()).collect();
     assert!(
         content.contains("No connected providers"),
         "render should show no-providers message: {}",

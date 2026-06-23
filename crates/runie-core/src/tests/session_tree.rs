@@ -2,16 +2,16 @@
 
 use crate::event::Event;
 use crate::event::{DialogEvent, InputEvent, SessionEvent};
-use crate::message::{ChatMessage, Role};
+use crate::message::{ChatMessage, Part, Role};
 use crate::model::AppState;
 use crate::session_tree::{SessionTree, SessionTreeFilter};
 
 fn msg(role: Role, content: &str) -> ChatMessage {
     ChatMessage {
         role,
-        content: content.into(),
         timestamp: 0.0,
         id: "test".into(),
+        parts: vec![Part::Text { content: content.into() }],
         ..Default::default()
     }
 }
@@ -50,7 +50,7 @@ fn clone_duplicates_position() {
     ];
     let tree = SessionTree::from_messages(&messages);
     let cloned = tree.clone();
-    assert_eq!(cloned.root.message.content, "hello");
+    assert_eq!(cloned.root.message.content(), "hello");
     assert_eq!(cloned.current_branch, tree.current_branch);
 }
 
@@ -112,9 +112,9 @@ fn slash_fork_emits_event() {
         .collect();
     let last = sys_msgs.last().expect("system msg");
     assert!(
-        last.content.contains("Forked"),
+        last.content().contains("Forked"),
         "fork should emit event: {}",
-        last.content
+        last.content()
     );
     assert!(
         state.session.session_tree.is_some(),
@@ -305,23 +305,23 @@ fn tree_select_branch_switches_conversation() {
     state.session.session_tree = Some(SessionTree::from_messages(&[
         ChatMessage {
             role: Role::User,
-            content: "root".into(),
             timestamp: 0.0,
             id: "root".into(),
+            parts: vec![Part::Text { content: "root".into() }],
             ..Default::default()
         },
         ChatMessage {
             role: Role::Assistant,
-            content: "branch-a".into(),
             timestamp: 1.0,
             id: "branch-a".into(),
+            parts: vec![Part::Text { content: "branch-a".into() }],
             ..Default::default()
         },
         ChatMessage {
             role: Role::Assistant,
-            content: "branch-b".into(),
             timestamp: 2.0,
             id: "branch-b".into(),
+            parts: vec![Part::Text { content: "branch-b".into() }],
             ..Default::default()
         },
     ]));
@@ -346,7 +346,7 @@ fn tree_select_branch_switches_conversation() {
         .filter(|m| m.role == Role::System)
         .collect();
     assert!(
-        sys.iter().any(|m| m.content.contains("Switched")),
+        sys.iter().any(|m| m.content().contains("Switched")),
         "should confirm branch switch: {:?}",
         sys.last()
     );

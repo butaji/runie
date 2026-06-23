@@ -60,12 +60,14 @@ impl ConfigActor {
             Ok(Err(e)) => {
                 tracing::error!("config write failed: {e:?}");
                 bus.publish(Event::Error {
+                    id: "config".to_string(),
                     message: format!("Config write failed: {e}"),
                 });
             }
             Err(e) => {
                 tracing::error!("config write task panicked: {e:?}");
                 bus.publish(Event::Error {
+                    id: "config".to_string(),
                     message: format!("Config write task panicked: {e}"),
                 });
             }

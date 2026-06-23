@@ -3,6 +3,7 @@
 use crate::event::Event;
 
 use crate::event::AgentEvent;
+use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::LazyCache;
 use crate::tests::fresh_state;
@@ -265,9 +266,9 @@ fn turn_complete_before_next_turn_user_message() {
     dispatch(&mut state, &first_turn_with_tool_events());
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "Next turn".into(),
         timestamp: crate::model::now(),
         id: "u1".into(),
+        parts: vec![Part::Text { content: "Next turn".into() }],
         ..Default::default()
     });
     state.messages_changed();

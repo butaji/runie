@@ -268,8 +268,8 @@ mod tests {
 
     fn assert_replayed_state(state: &crate::model::AppState) {
         assert_eq!(state.session.messages.len(), 2);
-        assert_eq!(state.session.messages[0].content, "Hello");
-        assert_eq!(state.session.messages[1].content, "Hi!");
+        assert_eq!(state.session.messages[0].content(), "Hello");
+        assert_eq!(state.session.messages[1].content(), "Hi!");
         assert_eq!(state.config.current_provider, "anthropic");
         assert_eq!(state.config.current_model, "claude-3");
     }

@@ -7,45 +7,47 @@ mod model_config;
 mod scoped_models;
 mod thought;
 
+
+
 pub use model_config::model_config_event;
 
 pub fn agent_event(state: &mut AppState, event: AgentEvent) {
+    use AgentEvent as E;
     match event {
-        AgentEvent::Thinking { id } => {
+        E::Thinking { id } => {
             state.set_thinking(id);
             state.ensure_turn_complete_last();
         }
-        AgentEvent::ThoughtDone { id } => {
+        E::ThoughtDone { id } => {
             state.add_thought(id);
             state.ensure_turn_complete_last();
         }
-        AgentEvent::ToolStart { id, name, .. } => {
+        E::ToolStart { id, name, .. } => {
             state.start_tool(id, name);
             state.ensure_turn_complete_last();
         }
-        AgentEvent::ToolEnd {
-            duration_secs,
-            output,
-            ..
-        } => {
+        E::ToolEnd { duration_secs, output, .. } => {
             state.end_tool(duration_secs, output);
             state.ensure_turn_complete_last();
         }
-        AgentEvent::ResponseDelta { id, content } => {
-            state.append_response_delta(id, content);
-        }
-        AgentEvent::Response { id, content } => {
-            handle_agent_response(state, id, content);
-        }
-        AgentEvent::TurnComplete { id, duration_secs } => {
+        E::ResponseDelta { .. } => state.handle_llm_event(event),
+        E::Response { id, content } => handle_agent_response(state, id, content),
+        E::TurnComplete { id, duration_secs } => {
             state.complete_turn(id, duration_secs);
             state.ensure_turn_complete_last();
         }
-        AgentEvent::Done { id } => state.finish_turn(id),
-        AgentEvent::Error { id, message } => {
+        E::Done { id } => state.finish_turn(id),
+        E::Error { id, message } => {
             state.add_error(id, message);
             state.ensure_turn_complete_last();
         }
+        // LLM lifecycle events — populate parts during streaming
+        E::TextStart { .. }
+        | E::TextEnd { .. }
+        | E::ThinkingStart { .. }
+        | E::ThinkingEnd { .. }
+        | E::ThinkingDelta { .. }
+        | E::AssistantMessageReady { .. } => state.handle_llm_event(event),
         _ => {}
     }
 }

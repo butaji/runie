@@ -100,7 +100,7 @@ mod tests {
     use super::*;
     use request::build_request_body;
     use runie_core::llm_event::{LLMEvent, StopReason};
-    use runie_core::message::{ChatMessage, Role, ToolCall};
+    use runie_core::message::{ChatMessage, Part, Role, ToolCall};
     use stream::{parse_sse_event, SseEvent};
 
     fn test_provider() -> OpenAiProvider {
@@ -136,19 +136,17 @@ mod tests {
     fn assistant_tool_message_has_empty_content() {
         let assistant = ChatMessage {
             role: Role::Assistant,
-            content: "".to_string(),
             timestamp: 0.0,
             id: String::new(),
             provider: String::new(),
             metadata: Default::default(),
-            tool_calls: vec![ToolCall::new(
-                "call_1",
-                "read_file",
-                r#"{"path":"README.md"}"#.to_string(),
-            )],
             tool_call_id: None,
             provider_metadata: None,
-            parts: Vec::new(),
+            parts: vec![Part::ToolCall {
+                id: "call_1".into(),
+                name: "read_file".into(),
+                args: serde_json::json!({"path":"README.md"}),
+            }],
         };
         let body = build_request_body(&test_provider(), &[assistant]);
         let serialized = &body["messages"].as_array().unwrap()[0];
@@ -161,19 +159,17 @@ mod tests {
     fn serializes_tool_role_with_call_id_when_present() {
         let assistant = ChatMessage {
             role: Role::Assistant,
-            content: "".to_string(),
             timestamp: 0.0,
             id: String::new(),
             provider: String::new(),
             metadata: Default::default(),
-            tool_calls: vec![ToolCall::new(
-                "call_abc",
-                "read_file",
-                r#"{"path":"README.md"}"#.to_string(),
-            )],
             tool_call_id: None,
             provider_metadata: None,
-            parts: Vec::new(),
+            parts: vec![Part::ToolCall {
+                id: "call_abc".into(),
+                name: "read_file".into(),
+                args: serde_json::json!({"path":"README.md"}),
+            }],
         };
         let result =
             ChatMessage::tool("read_file result:\nhello".to_string()).with_tool_call_id("call_abc");
@@ -201,19 +197,17 @@ mod tests {
     fn serializes_assistant_tool_calls() {
         let messages = vec![ChatMessage {
             role: Role::Assistant,
-            content: "".to_string(),
             timestamp: 0.0,
             id: String::new(),
             provider: String::new(),
             metadata: Default::default(),
-            tool_calls: vec![ToolCall::new(
-                "call_1",
-                "read_file",
-                r#"{"path":"Cargo.toml"}"#.to_string(),
-            )],
             tool_call_id: None,
             provider_metadata: None,
-            parts: Vec::new(),
+            parts: vec![Part::ToolCall {
+                id: "call_1".into(),
+                name: "read_file".into(),
+                args: serde_json::json!({"path":"Cargo.toml"}),
+            }],
         }];
         let body = build_request_body(&test_provider(), &messages);
         let serialized = body["messages"].as_array().unwrap();

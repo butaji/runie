@@ -29,9 +29,9 @@ fn theme_switch_updates_state() {
         .collect();
     assert_eq!(sys_msgs.len(), 1);
     assert!(
-        sys_msgs[0].content.contains("Theme switched to 'dracula'"),
+        sys_msgs[0].content().contains("Theme switched to 'dracula'"),
         "should confirm theme switch: {}",
-        sys_msgs[0].content
+        sys_msgs[0].content()
     );
 }
 
@@ -49,14 +49,14 @@ fn theme_invalid_shows_fallback_warning() {
         .collect();
     assert_eq!(sys_msgs.len(), 1);
     assert!(
-        sys_msgs[0].content.contains("not found"),
+        sys_msgs[0].content().contains("not found"),
         "should warn about fallback: {}",
-        sys_msgs[0].content
+        sys_msgs[0].content()
     );
     assert!(
-        sys_msgs[0].content.contains("runie"),
+        sys_msgs[0].content().contains("runie"),
         "should mention fallback: {}",
-        sys_msgs[0].content
+        sys_msgs[0].content()
     );
 }
 

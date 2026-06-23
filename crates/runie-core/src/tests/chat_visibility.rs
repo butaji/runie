@@ -1,8 +1,9 @@
 use crate::event::Event;
 use crate::event::{
-    AgentEvent, CommandEvent, ControlEvent, DialogEvent, DurableCoreEvent, EditEvent, InputEvent,
+    AgentEvent, CommandEvent, ControlEvent, DialogEvent, EditEvent, InputEvent,
     ModelConfigEvent, ScrollEvent, SessionEvent, SystemEvent,
 };
+use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tests::fresh_state;
 
@@ -213,7 +214,7 @@ fn add_small_messages(state: &mut AppState) {
     for i in 0..3 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -229,7 +230,7 @@ fn add_huge_thought(state: &mut AppState) {
     }
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        content: huge,
+        parts: vec![Part::Text { content: huge }],
         timestamp: 10.0,
         id: "t1".into(),
         ..Default::default()
@@ -362,7 +363,7 @@ fn streaming_response_appends_not_replaces() {
         "Should have exactly one assistant message"
     );
     assert_eq!(
-        assistant_msgs[0].content, "Hello world",
+        assistant_msgs[0].content(), "Hello world",
         "Content should be appended"
     );
 }

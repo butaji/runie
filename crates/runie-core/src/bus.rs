@@ -5,7 +5,11 @@
 use parking_lot::Mutex;
 use std::collections::VecDeque;
 use std::sync::Arc;
+use std::thread;
 use tokio::sync::broadcast;
+
+use crate::channels::ChannelDecoder;
+use crate::event::Event;
 
 /// Typed event bus for actor communication.
 ///
@@ -296,5 +300,40 @@ mod tests {
             }
         }
         events
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Specialized impl for EventBus<Event> to support channel decoders
+// ─────────────────────────────────────────────────────────────────────────────
+
+impl EventBus<Event> {
+    /// Subscribe a channel decoder that processes events and forwards outputs.
+    ///
+    /// The decoder runs in a background thread, processing events and sending
+    /// outputs through the returned channel.
+    pub fn subscribe_channel<C: ChannelDecoder + 'static>(
+        &self,
+        mut decoder: C,
+        output_tx: std::sync::mpsc::Sender<C::Output>,
+    ) {
+        let mut rx = self.subscribe();
+        thread::spawn(move || {
+            loop {
+                match rx.try_recv() {
+                    Some(Ok(event)) => {
+                        if let Some(output) = decoder.process(&event) {
+                            if output_tx.send(output).is_err() {
+                                break;
+                            }
+                        }
+                    }
+                    Some(Err(_)) => break,
+                    None => {
+                        thread::sleep(std::time::Duration::from_millis(10));
+                    }
+                }
+            }
+        });
     }
 }

@@ -3017,14 +3017,15 @@
         "r5-per-channel-decoders",
         "r5-parts-canonical-migration"
       ],
-      "notes": "Populate Vec<Part> during streaming using lifecycle events. Source: OpenCode publish-llm-event.ts:60."
+      "notes": "Populate Vec<Part> during streaming using lifecycle events. Layer 1 tests added in crates/runie-core/src/update/agent/core/tests.rs (6 tests pass). Additional fixes: removed double-append bug in on_response_delta, added lifecycle events to is_agent_event dispatcher, reset last_assistant_index in finish_turn, fixed should_skip_msg for mixed text+tool_call messages. Source: OpenCode publish-llm-event.ts:60."
     },
     {
       "id": "r5-per-channel-decoders",
-      "status": "todo",
+      "status": "done",
       "milestone": "R5",
       "category": "Architecture / Actors",
       "priority": "P2",
+      "completed_in": "current",
       "file": "tasks/r5-per-channel-decoders.md",
       "depends_on": [
         "r5-populate-parts-streaming"
@@ -3034,10 +3035,11 @@
     },
     {
       "id": "r5-paced-text-rendering",
-      "status": "todo",
+      "status": "done",
       "milestone": "R5",
       "category": "TUI / Rendering",
       "priority": "P2",
+      "completed_in": "current",
       "file": "tasks/r5-paced-text-rendering.md",
       "depends_on": [],
       "blocks": [],
@@ -3058,14 +3060,14 @@
     },
     {
       "id": "fix-think-filter-guardrails",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P0",
       "file": "tasks/fix-think-filter-guardrails.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Refactor crates/runie-agent/src/think_filter.rs to satisfy the 500-line file, 40-line function, and complexity-10 limits enforced by build.rs."
+      "notes": "think_filter.rs has already been refactored to satisfy the build guardrails. This task is verification-only."
     },
     {
       "id": "fix-skill-hook-tool-input",

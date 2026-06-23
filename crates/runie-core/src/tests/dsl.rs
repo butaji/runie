@@ -8,7 +8,7 @@ fn dsl_type_text_and_submit() {
     state.type_text("hello").submit();
     assert_eq!(state.input.input, "");
     assert_eq!(state.session.messages.len(), 1);
-    assert_eq!(state.session.messages[0].content, "hello");
+    assert_eq!(state.session.messages[0].content(), "hello");
 }
 
 #[test]

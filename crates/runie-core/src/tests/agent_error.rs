@@ -53,7 +53,7 @@ fn agent_error_inserts_error_message() {
         .session
         .messages
         .iter()
-        .find(|m| m.content.contains("Error: Missing API key"));
+        .find(|m| m.content().contains("Error: Missing API key"));
     assert!(error_msg.is_some(), "error message should be recorded");
 }
 

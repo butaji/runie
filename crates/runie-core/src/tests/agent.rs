@@ -19,7 +19,7 @@ fn test_agent_response_creates_message() {
     state.agent("req.0").think().thought_done().respond("Hello");
     assert_eq!(state.session.messages.len(), 2);
     assert_eq!(state.session.messages[1].role, Role::Assistant);
-    assert_eq!(state.session.messages[1].content, "Hello");
+    assert_eq!(state.session.messages[1].content(), "Hello");
 }
 
 #[test]
@@ -32,7 +32,7 @@ fn test_agent_response_appends_to_existing() {
     assert_eq!(state.session.messages.len(), 2);
     assert_eq!(state.session.messages[0].role, Role::Thought);
     assert_eq!(state.session.messages[1].role, Role::Assistant);
-    assert_eq!(state.session.messages[1].content, "Hello World");
+    assert_eq!(state.session.messages[1].content(), "Hello World");
 }
 
 #[test]
@@ -53,7 +53,7 @@ fn test_agent_error_creates_error_message() {
     assert!(!state.agent.streaming);
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].role, Role::Assistant);
-    assert!(state.session.messages[0].content.contains("Error"));
+    assert!(state.session.messages[0].content().contains("Error"));
 }
 
 #[test]
@@ -64,7 +64,7 @@ fn agent_message_strips_tool_markers_on_done() {
         .session
         .messages
         .iter()
-        .any(|m| m.role == Role::Assistant && m.content.contains("TOOL:"));
+        .any(|m| m.role == Role::Assistant && m.content().contains("TOOL:"));
     assert!(!has_tool);
 }
 
@@ -81,7 +81,7 @@ fn agent_message_keeps_natural_language() {
         .iter()
         .find(|m| m.role == Role::Assistant)
         .unwrap();
-    assert_eq!(msg.content, "Let me check.");
+    assert_eq!(msg.content(), "Let me check.");
 }
 
 #[test]
@@ -144,7 +144,7 @@ fn agent_message_keeps_natural_language_around_tool_call_markup() {
         .iter()
         .find(|m| m.role == Role::Assistant)
         .unwrap();
-    assert_eq!(msg.content, "I will list files.\nDone.");
+    assert_eq!(msg.content(), "I will list files.\nDone.");
 }
 
 #[test]
@@ -267,7 +267,7 @@ fn streaming_tool_marker_stored_for_thought_capture() {
         .find(|m| m.role == Role::Assistant)
         .unwrap();
     assert!(
-        msg.content.contains("TOOL:"),
+        msg.content().contains("TOOL:"),
         "Tool markers stored for thought capture"
     );
     let feed = crate::ui::LazyCache::feed(&state);
@@ -293,9 +293,9 @@ fn streaming_mixed_text_and_tool_keeps_both_for_capture() {
         .iter()
         .find(|m| m.role == Role::Assistant)
         .unwrap();
-    assert!(msg.content.contains("Let me check files."));
+    assert!(msg.content().contains("Let me check files."));
     assert!(
-        msg.content.contains("TOOL:list_dir."),
+        msg.content().contains("TOOL:list_dir."),
         "Both stored for thought capture"
     );
 }
@@ -313,7 +313,7 @@ fn streaming_structured_tool_stored_for_capture() {
         .find(|m| m.role == Role::Assistant)
         .unwrap();
     assert!(
-        msg.content.contains("edit_file"),
+        msg.content().contains("edit_file"),
         "Structured tool stored for thought capture"
     );
     let feed = crate::ui::LazyCache::feed(&state);
@@ -367,5 +367,5 @@ fn assistant_message_preserves_unicode_after_tool_strip() {
         .iter()
         .find(|m| m.role == Role::Assistant)
         .expect("assistant message");
-    assert_eq!(msg.content, "hello 😊 world");
+    assert_eq!(msg.content(), "hello 😊 world");
 }

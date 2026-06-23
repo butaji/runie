@@ -287,7 +287,7 @@ fn read_only_excludes_write_tools() {
     };
     let msgs = build_initial_messages(&cmd);
     let system = match &msgs[0].role {
-        runie_core::message::Role::System => msgs[0].content.clone(),
+        runie_core::message::Role::System => msgs[0].content().clone(),
         _ => panic!("expected system message"),
     };
     assert!(system.contains("read_file"), "read-only includes read_file");
@@ -320,7 +320,7 @@ fn read_write_includes_all_tools() {
     };
     let msgs = build_initial_messages(&cmd);
     let system = match &msgs[0].role {
-        runie_core::message::Role::System => msgs[0].content.clone(),
+        runie_core::message::Role::System => msgs[0].content().clone(),
         _ => panic!("expected system message"),
     };
     assert!(

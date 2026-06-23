@@ -1,5 +1,6 @@
 use super::super::*;
 use runie_core::event::{AgentEvent, InputEvent};
+use runie_core::Part;
 use std::time::Instant;
 
 #[test]
@@ -15,7 +16,7 @@ fn test_view_renders_user_message_without_manual_ensure_fresh() {
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
     let buf = terminal.backend().buffer();
-    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    let content: String = buf.content().iter().map(|c| c.symbol()).collect();
     assert!(
         content.contains("❯ Hi"),
         "Chat must render '❯ Hi'. Got: {}",
@@ -48,7 +49,7 @@ fn test_view_renders_agent_message_without_manual_ensure_fresh() {
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
     let buf = terminal.backend().buffer();
-    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    let content: String = buf.content().iter().map(|c| c.symbol()).collect();
     assert!(
         content.contains("→ Hello"),
         "Must render '→ Hello'. Got: {}",
@@ -83,7 +84,7 @@ fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
     let buf = terminal.backend().buffer();
-    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    let content: String = buf.content().iter().map(|c| c.symbol()).collect();
     assert!(content.contains("❯ A"), "Must show user prefix");
     assert!(content.contains("→ Response 1"), "Must show agent prefix");
 }
@@ -97,7 +98,7 @@ fn test_render_user_message() {
     state.update(InputEvent::Submit);
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    let content: String = buf.content().iter().map(|c| c.symbol()).collect();
     assert!(content.contains("❯ H"));
 }
 
@@ -119,7 +120,7 @@ fn test_render_agent_response() {
     });
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    let content: String = buf.content().iter().map(|c| c.symbol()).collect();
     assert!(content.contains("→ Hello"));
 }
 
@@ -153,7 +154,7 @@ fn test_user_message_is_left_aligned_with_chevron() {
         x
     );
 
-    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    let content: String = buf.content().iter().map(|c| c.symbol()).collect();
     assert!(
         content.contains("❯ left aligned"),
         "User message should render with chevron prefix"
@@ -204,7 +205,7 @@ fn test_render_thinking_indicator() {
     });
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
-    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    let content: String = buf.content().iter().map(|c| c.symbol()).collect();
     assert!(
         content.contains("◐"),
         "Thinking should show spinner ◐. Got: {}",
@@ -220,14 +221,14 @@ fn test_render_performance_1000_messages() {
     for i in 0..200 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("Message {} from user with some content here", i),
+            parts: vec![Part::Text { content: format!("Message {} from user with some content here", i) }],
             timestamp: 0.0,
             id: format!("req.{}", i),
             ..Default::default()
         });
         state.session.messages.push(ChatMessage {
             role: Role::Assistant,
-            content: format!("Response {} from agent with detailed explanation", i),
+            parts: vec![Part::Text { content: format!("Response {} from agent with detailed explanation", i) }],
             timestamp: 0.0,
             id: format!("resp.{}", i),
             ..Default::default()
@@ -270,7 +271,7 @@ fn test_stress_many_tool_calls() {
     }
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
-    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    let content: String = buf.content().iter().map(|c| c.symbol()).collect();
     assert!(content.contains("Files for turn"));
     assert!(
         state.session.messages.len() >= 100,

@@ -2,6 +2,7 @@
 
 use super::exec;
 use crate::event::DialogEvent;
+use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tests::fresh_state;
 
@@ -18,9 +19,9 @@ fn copy_with_no_assistant_message_warns() {
         .collect();
     let last = sys.last().expect("system message");
     assert!(
-        last.content.to_lowercase().contains("no assistant"),
+        last.content().to_lowercase().contains("no assistant"),
         "expected 'no assistant' message: {}",
-        last.content
+        last.content()
     );
 }
 
@@ -29,9 +30,9 @@ fn copy_emits_clipboard_event_with_last_assistant_text() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        content: "the answer is 42".into(),
         timestamp: 0.0,
         id: "resp.0".into(),
+        parts: vec![Part::Text { content: "the answer is 42".into() }],
         ..Default::default()
     });
 
@@ -52,16 +53,16 @@ fn copy_uses_most_recent_assistant_message() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        content: "old response".into(),
         timestamp: 0.0,
         id: "resp.0".into(),
+        parts: vec![Part::Text { content: "old response".into() }],
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        content: "newer response".into(),
         timestamp: 1.0,
         id: "resp.1".into(),
+        parts: vec![Part::Text { content: "newer response".into() }],
         ..Default::default()
     });
 
@@ -82,9 +83,9 @@ fn copy_round_trips_without_panic() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        content: "hello".into(),
         timestamp: 0.0,
         id: "resp.0".into(),
+        parts: vec![Part::Text { content: "hello".into() }],
         ..Default::default()
     });
     exec(&mut state, "/copy");

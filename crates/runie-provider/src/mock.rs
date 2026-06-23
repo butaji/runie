@@ -160,7 +160,7 @@ fn response_chunks(last: Option<&ChatMessage>, user_input: &str) -> Vec<String> 
 fn last_user_content(messages: &[ChatMessage]) -> Option<String> {
     messages.iter().rev().find_map(|m| {
         if m.role == Role::User {
-            Some(m.content.clone())
+            Some(m.content().clone())
         } else {
             None
         }

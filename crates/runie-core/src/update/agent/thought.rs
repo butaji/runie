@@ -147,9 +147,9 @@ mod tests {
             .filter(|m| m.role == Role::Thought)
             .collect();
         assert_eq!(thoughts.len(), 1);
-        assert!(thoughts[0].content.contains("reasoning"));
-        assert!(!thoughts[0].content.contains("<think>"));
-        assert!(!thoughts[0].content.contains("</think>"));
+        assert!(thoughts[0].content().contains("reasoning"));
+        assert!(!thoughts[0].content().contains("<think>"));
+        assert!(!thoughts[0].content().contains("</think>"));
 
         let assistants: Vec<_> = state
             .session
@@ -158,6 +158,6 @@ mod tests {
             .filter(|m| m.role == Role::Assistant)
             .collect();
         assert_eq!(assistants.len(), 1);
-        assert_eq!(assistants[0].content, "answer");
+        assert_eq!(assistants[0].content(), "answer");
     }
 }

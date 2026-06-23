@@ -61,7 +61,7 @@ fn test_second_submit_while_turn_active_queues_message() {
     state.update(InputEvent::Input('A'));
     state.update(Event::submit());
     assert_eq!(state.session.messages.len(), 1);
-    assert_eq!(state.session.messages[0].content, "A");
+    assert_eq!(state.session.messages[0].content(), "A");
 
     // Simulate what spawn_if_queued should do: set turn_active
     state.agent.turn_active = true;
@@ -112,7 +112,7 @@ fn test_queued_message_appears_after_turn_completes() {
             .session
             .messages
             .iter()
-            .any(|m| m.role == Role::User && m.content == "B"),
+            .any(|m| m.role == Role::User && m.content() == "B"),
         "Message B should appear in chat after previous turn completes"
     );
 }
@@ -249,7 +249,7 @@ fn test_think_tags_split_into_thought_and_answer() {
         .filter(|m| m.role == Role::Thought)
         .collect();
     assert_eq!(thoughts.len(), 1);
-    assert!(thoughts[0].content.contains("reasoning"));
+    assert!(thoughts[0].content().contains("reasoning"));
     let assistants: Vec<_> = state
         .session
         .messages
@@ -257,7 +257,7 @@ fn test_think_tags_split_into_thought_and_answer() {
         .filter(|m| m.role == Role::Assistant)
         .collect();
     assert_eq!(assistants.len(), 1);
-    assert_eq!(assistants[0].content, "answer");
+    assert_eq!(assistants[0].content(), "answer");
     // Cached assistant index must point to the answer, not the thought.
     assert_eq!(state.agent.last_assistant_index, Some(1));
 }
@@ -305,7 +305,7 @@ fn test_unclosed_think_tag_hides_reasoning() {
         .filter(|m| m.role == Role::Assistant)
         .collect();
     assert_eq!(assistants.len(), 1);
-    assert_eq!(assistants[0].content, "visible");
+    assert_eq!(assistants[0].content(), "visible");
     let thoughts: Vec<_> = state
         .session
         .messages
@@ -313,7 +313,7 @@ fn test_unclosed_think_tag_hides_reasoning() {
         .filter(|m| m.role == Role::Thought)
         .collect();
     assert_eq!(thoughts.len(), 1);
-    assert!(thoughts[0].content.contains("still reasoning"));
+    assert!(thoughts[0].content().contains("still reasoning"));
 }
 
 #[test]
@@ -336,7 +336,7 @@ fn test_think_tags_update_cached_assistant_index_for_tail_flush() {
     let tail = state.agent.streaming_buffer.force_flush().join("");
     if !tail.is_empty() {
         if let Some(idx) = state.agent.last_assistant_index {
-            state.session.messages[idx].content.push_str(&tail);
+            state.session.messages[idx].push_text_part(&tail);
         }
     }
     let assistants: Vec<_> = state
@@ -345,7 +345,7 @@ fn test_think_tags_update_cached_assistant_index_for_tail_flush() {
         .iter()
         .filter(|m| m.role == Role::Assistant)
         .collect();
-    assert_eq!(assistants[0].content, "answer tail");
+    assert_eq!(assistants[0].content(), "answer tail");
     let thoughts: Vec<_> = state
         .session
         .messages
@@ -353,7 +353,7 @@ fn test_think_tags_update_cached_assistant_index_for_tail_flush() {
         .filter(|m| m.role == Role::Thought)
         .collect();
     assert!(
-        !thoughts[0].content.contains("tail"),
+        !thoughts[0].content().contains("tail"),
         "tail must not leak into thought"
     );
 }

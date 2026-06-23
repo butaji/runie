@@ -153,8 +153,8 @@ fn slash_approve_without_edits_warns() {
         .collect();
     let last = sys.last().expect("system message");
     assert!(
-        last.content.contains("No pending edits"),
+        last.content().contains("No pending edits"),
         "expected warning: {}",
-        last.content
+        last.content()
     );
 }

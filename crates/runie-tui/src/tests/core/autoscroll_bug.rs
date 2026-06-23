@@ -1,7 +1,8 @@
 use runie_core::event::AgentEvent;
 use runie_core::event::Event;
 use runie_core::layout::element_line_count;
-use runie_core::model::{AppState, ChatMessage, Role};
+use runie_core::model::{AppState, ChatMessage,  Role};
+use runie_core::Part;
 use runie_testing::fresh_state;
 
 /// The exact bug: after large content arrives, visible region must include
@@ -14,7 +15,7 @@ fn large_tool_output_bottom_lines_in_viewport() {
     // User message + spacer = 2 lines
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "list files".into(),
+        parts: vec![Part::Text { content: "list files".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -22,7 +23,7 @@ fn large_tool_output_bottom_lines_in_viewport() {
     // Tool with 20 output lines: header(1) + output(20) = 21 lines + spacer = 22
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran ls 0.5s\nfile1\nfile2\nfile3\nfile4\nfile5\nfile6\nfile7\nfile8\nfile9\nfile10\nfile11\nfile12\nfile13\nfile14\nfile15\nfile16\nfile17\nfile18\nfile19\nfile20".into(),
+        parts: vec![Part::Text { content: "◆ Ran ls 0.5s\nfile1\nfile2\nfile3\nfile4\nfile5\nfile6\nfile7\nfile8\nfile9\nfile10\nfile11\nfile12\nfile13\nfile14\nfile15\nfile16\nfile17\nfile18\nfile19\nfile20".into() }],
         timestamp: 1.0,
         id: "t1".into(),
         ..Default::default()
@@ -54,7 +55,7 @@ fn viewport_never_exceeds_height() {
 
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran ls 0.5s\nfile1\nfile2\nfile3\nfile4\nfile5".into(),
+        parts: vec![Part::Text { content: "◆ Ran ls 0.5s\nfile1\nfile2\nfile3\nfile4\nfile5".into() }],
         timestamp: 1.0,
         id: "t1".into(),
         ..Default::default()
@@ -103,7 +104,7 @@ fn last_element_lines_clipped_to_fit_viewport() {
 fn add_user_and_huge_thought(state: &mut AppState) {
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "hi".into(),
+        parts: vec![Part::Text { content: "hi".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -114,7 +115,7 @@ fn add_user_and_huge_thought(state: &mut AppState) {
     }
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        content: thought,
+        parts: vec![Part::Text { content: thought }],
         timestamp: 1.0,
         id: "t1".into(),
         ..Default::default()

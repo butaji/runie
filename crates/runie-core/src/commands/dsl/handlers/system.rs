@@ -126,7 +126,7 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
         .iter()
         .rev()
         .find(|m| m.role == crate::model::Role::Assistant)
-        .map(|m| m.content.clone())
+        .map(|m| m.content().clone())
         .unwrap_or_default();
     if text.is_empty() {
         return CommandResult::Message("No assistant response to copy".into());

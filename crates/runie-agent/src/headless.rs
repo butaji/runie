@@ -417,7 +417,7 @@ mod tests {
             "malformed tool should not be executed"
         );
         let has_parse_error = result.messages.iter().any(|m| {
-            m.role == Role::Tool && m.content.contains("Could not parse tool call")
+            m.role == Role::Tool && m.content().contains("Could not parse tool call")
         });
         assert!(has_parse_error, "parse error should be added to messages");
     }

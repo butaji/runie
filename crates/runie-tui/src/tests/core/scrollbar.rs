@@ -1,3 +1,4 @@
+use runie_core::Part;
 use runie_core::event::ScrollEvent;
 use runie_core::model::AppState;
 use runie_testing::fresh_state;
@@ -8,7 +9,7 @@ fn scrollbar_no_scrollbar_when_content_fits() {
     for i in 0..2 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: 0.0,
             id: format!("u{}", i),
             ..Default::default()
@@ -27,7 +28,7 @@ fn scrollbar_shows_when_content_overflows() {
     for i in 0..30 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -49,7 +50,7 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
     for i in 0..30 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -68,7 +69,7 @@ fn scrollbar_thumb_at_top_when_fully_scrolled() {
     for i in 0..30 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -87,7 +88,7 @@ fn scrollbar_thumb_in_middle_when_half_scrolled() {
     for i in 0..30 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -111,7 +112,7 @@ fn scroll_clamped_to_max() {
     for i in 0..30 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -130,7 +131,7 @@ fn visible_uses_scroll_offset() {
     for i in 0..10 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -156,7 +157,7 @@ fn scrollbar_thumb_never_exceeds_track() {
     for i in 0..30 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -190,7 +191,7 @@ fn scrollbar_consistent_between_offset_and_metrics() {
     for i in 0..30 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -218,7 +219,7 @@ fn compute_viewport_handles_partial_element_at_top() {
     for i in 0..5 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -237,7 +238,7 @@ fn pageup_scrolls_by_five_lines() {
     for i in 0..30 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -260,7 +261,7 @@ fn pagedown_scrolls_down_by_five_lines() {
     for i in 0..30 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -286,7 +287,7 @@ fn pagedown_stops_at_zero() {
     for i in 0..30 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -319,7 +320,7 @@ fn pagedown_flashes_at_bottom() {
     for i in 0..5 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -341,7 +342,7 @@ fn scrollbar_with_single_message() {
     let mut state = fresh_state();
     state.session.messages.push(runie_core::model::ChatMessage {
         role: runie_core::model::Role::User,
-        content: "only".into(),
+        parts: vec![Part::Text { content: "only".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -369,7 +370,7 @@ fn page_down_scrolls_by_rendered_lines() {
     for i in 0..10 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{} {}", i, "x".repeat(100)),
+            parts: vec![Part::Text { content: format!("msg{} {}", i, "x".repeat(100)) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -399,7 +400,7 @@ fn scrollbar_thumb_position_matches_line_count() {
     for i in 0..20 {
         state.session.messages.push(runie_core::model::ChatMessage {
             role: runie_core::model::Role::User,
-            content: format!("msg{} {}", i, "x".repeat(100)),
+            parts: vec![Part::Text { content: format!("msg{} {}", i, "x".repeat(100)) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()

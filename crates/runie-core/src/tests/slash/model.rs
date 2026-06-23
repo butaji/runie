@@ -34,9 +34,9 @@ fn model_gpt4o_just_model_name() {
         .collect();
     assert_eq!(sys_msgs.len(), 1);
     assert!(
-        sys_msgs[0].content.contains("Switched to openai/gpt-4o"),
+        sys_msgs[0].content().contains("Switched to openai/gpt-4o"),
         "/model gpt-4o should work: {}",
-        sys_msgs[0].content
+        sys_msgs[0].content()
     );
 }
 
@@ -63,10 +63,10 @@ fn model_leading_slash_ignored_for_model_name() {
     assert_eq!(sys_msgs.len(), 1);
     assert!(
         sys_msgs[0]
-            .content
+            .content()
             .contains("Switched to openai/gpt-4o-mini"),
         "leading slash ignored: {}",
-        sys_msgs[0].content
+        sys_msgs[0].content()
     );
 }
 
@@ -83,9 +83,9 @@ fn model_only_slashes_shows_usage() {
         .collect();
     assert_eq!(sys_msgs.len(), 1);
     assert!(
-        sys_msgs[0].content.contains("Current:"),
+        sys_msgs[0].content().contains("Current:"),
         "only slashes shows usage: {}",
-        sys_msgs[0].content
+        sys_msgs[0].content()
     );
 }
 
@@ -168,7 +168,7 @@ fn save_creates_session_file() {
         .filter(|m| m.role == Role::System)
         .collect();
     let last = sys_msgs.last().expect("system msg");
-    assert!(last.content.contains("saved"), "confirmation shown");
+    assert!(last.content().contains("saved"), "confirmation shown");
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }
@@ -195,7 +195,7 @@ fn save_preserves_messages_provider_model() {
     assert_eq!(loaded.config.current_provider, "openai");
     assert_eq!(loaded.config.current_model, "gpt-4o");
     assert_eq!(loaded.session.messages.len(), 1);
-    assert_eq!(loaded.session.messages[0].content, "test message");
+    assert_eq!(loaded.session.messages[0].content(), "test message");
     assert_eq!(loaded.session.messages[0].role, Role::User);
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");

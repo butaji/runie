@@ -27,7 +27,7 @@ fn shift_enter_then_enter_submits_multiline_message() {
 
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].role, Role::User);
-    assert_eq!(state.session.messages[0].content, "line one\nline two");
+    assert_eq!(state.session.messages[0].content(), "line one\nline two");
     assert!(state.input.input.is_empty());
 }
 
@@ -42,5 +42,5 @@ fn multiline_input_is_trimmed_on_submit() {
     state.update(Event::submit());
 
     assert_eq!(state.session.messages.len(), 1);
-    assert_eq!(state.session.messages[0].content, "content");
+    assert_eq!(state.session.messages[0].content(), "content");
 }

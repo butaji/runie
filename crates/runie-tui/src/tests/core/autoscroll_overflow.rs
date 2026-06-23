@@ -2,7 +2,8 @@
 
 use runie_core::event::AgentEvent;
 use runie_core::event::Event;
-use runie_core::model::{AppState, ChatMessage, Role};
+use runie_core::model::{AppState, ChatMessage,  Role};
+use runie_core::Part;
 use runie_testing::fresh_state;
 
 /// Simulates the exact user flow: submit, agent thinking + tool + large output
@@ -109,7 +110,7 @@ fn large_thought_bottom_lines_visible() {
     }
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        content: thought,
+        parts: vec![Part::Text { content: thought }],
         timestamp: 1.0,
         id: "t1".into(),
         ..Default::default()
@@ -146,7 +147,7 @@ fn viewport_never_empty_when_content_exists() {
     for i in 0..10 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -172,7 +173,7 @@ fn scroll_zero_always_shows_latest() {
     for i in 0..3 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()

@@ -310,7 +310,7 @@ fn session_token_count(state: &AppState) -> usize {
         .session
         .messages
         .iter()
-        .map(|m| state.agent.token_tracker.estimate_input(&m.content))
+        .map(|m| state.agent.token_tracker.estimate_input(&m.content()))
         .sum()
 }
 

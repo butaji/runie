@@ -156,3 +156,99 @@ git commit -m "fix(core): align session store keys with events and surface parse
 
 - Returning an error changes behavior from silent data loss to a hard failure. This is safer; if partial loading is desired, add a config flag in a follow-up task.
 - Ensure `tracing` is imported in `session_store.rs`.
+
+    }
+}
+
+if !parse_errors.is_empty() {
+    return Err(anyhow::anyhow!(
+        "session {} contains {} unparseable event(s): {}",
+        session_id,
+        parse_errors.len(),
+        parse_errors.join("; ")
+    ));
+}
+
+paired.sort_by_key(|(k, _)| *k);
+let events: Vec<_> = paired.into_iter().map(|(_, e)| e).collect();
+Ok(events)
+```
+
+### Step 2: Update JSONL fallback similarly
+
+In `load_events_jsonl`, also collect parse errors or at least log them. Currently it silently skips empty lines but not parse errors. For consistency, change the line loop to:
+
+```rust
+for line in reader.lines() {
+    let line = line?;
+    if line.trim().is_empty() {
+        continue;
+    }
+    match serde_json::from_str::<DurableCoreEvent>(&line) {
+        Ok(event) => events.push(event),
+        Err(e) => parse_errors.push(format!("line: {e}")),
+    }
+}
+```
+
+Return an error if `parse_errors` is non-empty.
+
+### Step 3: Add tests
+
+```rust
+#[test]
+fn load_events_returns_ordered_events() {
+    let tmp = tempfile::tempdir().unwrap();
+    let store = SessionStore::new(tmp.path().to_path_buf());
+    let events = vec![
+        DurableCoreEvent::MessageSent { id: "a".into(), content: "a".into() },
+        DurableCoreEvent::MessageSent { id: "b".into(), content: "b".into() },
+    ];
+    for e in &events {
+        store.append("s1", e).unwrap();
+    }
+    let loaded = store.load_events("s1").unwrap();
+    assert_eq!(loaded.len(), 2);
+    assert_eq!(loaded[0], events[0]);
+    assert_eq!(loaded[1], events[1]);
+}
+
+#[test]
+fn load_events_rejects_misaligned_entries() {
+    let tmp = tempfile::tempdir().unwrap();
+    let store = SessionStore::new(tmp.path().to_path_buf());
+    let good = DurableCoreEvent::MessageSent { id: "a".into(), content: "a".into() };
+    store.append("s1", &good).unwrap();
+
+    // Manually corrupt the second row.
+    let path = store.path("s1");
+    let (db, _) = SessionStore::open_db(&path).unwrap();
+    let tx = db.begin_write().unwrap();
+    {
+        let mut table = tx.open_table(TABLE_EVENTS).unwrap();
+        table.insert(&1, "not json").unwrap();
+    }
+    tx.commit().unwrap();
+
+    assert!(store.load_events("s1").is_err());
+}
+```
+
+### Step 4: Run tests
+
+```bash
+cargo test -p runie-core session_store
+cargo test --workspace
+```
+
+### Step 5: Commit
+
+```bash
+git add crates/runie-core/src/session_store.rs crates/runie-core/src/tests/session_store.rs tasks/fix-session-store-load-alignment.md tasks/index.json
+git commit -m "fix(core): align session store keys with events and surface parse errors"
+```
+
+## Notes
+
+- Returning an error changes behavior from silent data loss to a hard failure. This is safer; if partial loading is desired, add a config flag in a follow-up task.
+- Ensure `tracing` is imported in `session_store.rs`.

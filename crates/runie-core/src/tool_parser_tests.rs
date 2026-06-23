@@ -102,5 +102,5 @@ fn test_build_assistant_message_includes_tools() {
     }];
     let msg = build_assistant_message("hello", None, &tools);
     assert_eq!(msg.role, crate::message::Role::Assistant);
-    assert_eq!(msg.tool_calls.len(), 1);
+    assert_eq!(msg.tool_calls().len(), 1);
 }

@@ -27,6 +27,7 @@ pub mod auth;
 pub mod bash_safety;
 pub mod build_lint;
 pub mod bus;
+pub mod channels;
 pub mod clipboard_image;
 pub mod commands;
 pub mod config;
@@ -57,6 +58,7 @@ pub mod markdown;
 #[cfg(feature = "mcp")]
 pub mod mcp;
 pub mod message;
+pub use message::Part;
 pub mod model;
 pub mod model_catalog;
 pub mod harness_skills;

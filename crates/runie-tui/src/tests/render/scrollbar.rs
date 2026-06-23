@@ -1,6 +1,6 @@
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::{AppState, ChatMessage, Role};
+use runie_core::{AppState, ChatMessage, Part, Role};
 
 /// Scrollbar should render in the rightmost column when content overflows.
 #[test]
@@ -10,7 +10,7 @@ fn scrollbar_renders_in_rightmost_column() {
     for i in 0..30 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -47,7 +47,7 @@ fn content_uses_full_width_when_scrollbar_present() {
     for i in 0..20 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: "ABCDEFGHIJ".to_string(),
+            parts: vec![Part::Text { content: "ABCDEFGHIJ".into() }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -83,7 +83,7 @@ fn no_scrollbar_when_content_fits() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        content: "hello".into(),
+        parts: vec![Part::Text { content: "hello".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -114,7 +114,7 @@ fn scrollbar_thumb_uses_dimmed_style() {
     for i in 0..30 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -153,7 +153,7 @@ fn scrollbar_track_is_invisible() {
     for i in 0..30 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            content: format!("msg{}", i),
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
