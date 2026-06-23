@@ -1,3 +1,4 @@
+use runie_core::sanitize::sanitize_messages;
 use runie_core::tool_parser::{
     assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
 };
@@ -220,6 +221,7 @@ async fn run_agent_iteration(
         gate,
     )
     .await;
+    sanitize_messages(messages);
     Ok(true)
 }
 
@@ -464,5 +466,28 @@ mod tests {
 
         let call_count = *count.lock().unwrap();
         assert_eq!(call_count, 1, "on_turn_start should be called exactly once");
+    }
+
+    // ─── Layer 2 ──────────────────────────────────────────────────────────────
+    /// Verify sanitize_messages is called after tool execution: a dangling tool
+    /// call without a matching result must be removed.
+    #[tokio::test]
+    async fn agent_turn_calls_sanitize_after_tool_execution() {
+        let mut messages = vec![
+            ChatMessage::system("You are a helpful assistant."),
+            ChatMessage::user("list files"),
+            ChatMessage::assistant("").with_tool_calls(vec![runie_core::message::ToolCall {
+                id: "dangling_call".to_string(),
+                name: "list_dir".to_string(),
+                args: serde_json::json!({"path": "."}),
+            }]),
+        ];
+        // Simulate sanitize run after execute_tools (no result pushed).
+        sanitize_messages(&mut messages);
+        let assistant = messages.iter().find(|m| m.role == runie_core::message::Role::Assistant);
+        assert!(
+            assistant.map(|m| m.tool_calls().is_empty()).unwrap_or(false),
+            "Dangling tool call should be removed by sanitize_messages"
+        );
     }
 }

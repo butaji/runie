@@ -11,6 +11,7 @@ pub mod stream_response;
 pub mod subagent;
 pub mod tool_runner;
 pub mod truncate;
+pub mod think_filter;
 pub mod turn;
 
 pub use actor::{AgentActor, AgentActorHandle, AgentMsg};

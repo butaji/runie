@@ -210,7 +210,7 @@ mod tests {
             if saw_error && saw_done {
                 break;
             }
-            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            tokio::task::yield_now().await;
             while let Some(Ok(evt)) = sub.try_recv() {
                 match evt {
                     Event::Error { .. } => saw_error = true,

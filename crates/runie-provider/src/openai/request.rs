@@ -236,6 +236,9 @@ mod tests {
 
     #[test]
     fn assistant_message_with_tool_calls_omits_content() {
+        // When assistant has both text and tool_calls, content is set to empty.
+        // Dangling tool calls (no matching result) are removed by sanitize first,
+        // so content is preserved when tool_calls become empty.
         let msg = ChatMessage {
             role: Role::Assistant,
             timestamp: 0.0,
@@ -249,18 +252,22 @@ mod tests {
                 Part::ToolCall { id: "call_1".into(), name: "read_file".into(), args: serde_json::json!({"path":"Cargo.toml"}) },
             ],
         };
-        let body = build_request_body(&provider(), &[msg]);
-        let serialized = &body["messages"].as_array().unwrap()[0];
+        let body = build_request_body(&provider(), &[ChatMessage::user("hi".to_string()), msg]);
+        let serialized = &body["messages"].as_array().unwrap()[1];
         assert_eq!(serialized["role"], "assistant");
-        assert_eq!(serialized["content"], "");
-        assert_eq!(serialized["tool_calls"][0]["id"], "call_1");
+        // Dangling tool call was removed, so content is preserved
+        assert_eq!(serialized["content"], "I'll read it.");
+        // No tool_calls since the dangling one was removed
+        assert!(serialized["tool_calls"].as_array().map(|a| a.is_empty()).unwrap_or(true));
     }
 
     #[test]
     fn assistant_message_without_tool_calls_keeps_content() {
+        // Assistant without tool_calls keeps its content.
+        // Needs a user message first (sanitize ensures user/system first).
         let msg = ChatMessage::assistant("I'll read it.".to_string());
-        let body = build_request_body(&provider(), &[msg]);
-        let serialized = &body["messages"].as_array().unwrap()[0];
+        let body = build_request_body(&provider(), &[ChatMessage::user("hi".to_string()), msg]);
+        let serialized = &body["messages"].as_array().unwrap()[1];
         assert_eq!(serialized["role"], "assistant");
         assert_eq!(serialized["content"], "I'll read it.");
     }

@@ -463,6 +463,7 @@ mod tests {
     // Layer 4 — Smoke: run_headless_cli still works with a mock provider.
     #[tokio::test]
     async fn headless_cli_smoke_with_mock() {
+        crate::tests::ensure_mock_provider();
         let sink: Arc<dyn runie_core::permissions::ApprovalSink> =
             Arc::new(AutoAllowSink);
         let messages = vec![
@@ -474,7 +475,7 @@ mod tests {
             max_tool_rounds: 5,
             on_chunk: None,
         };
-        let result = run_headless_cli(None, None, messages, sink, opts)
+        let result = run_headless_cli(Some("mock"), Some("echo"), messages, sink, opts)
             .await
             .unwrap();
         assert!(!result.content.is_empty());

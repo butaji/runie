@@ -293,7 +293,8 @@ async fn test_validate_api_key_times_out_on_hanging_server() {
 
     std::thread::spawn(move || {
         let (_stream, _) = listener.accept().unwrap();
-        std::thread::sleep(Duration::from_secs(30));
+        // Hold the connection open briefly; the validation timeout will fire first.
+        std::thread::sleep(Duration::from_millis(500));
     });
 
     let start = std::time::Instant::now();

@@ -1,21 +1,36 @@
 //! OpenAI Chat Completions SSE streaming parser.
+//!
+//! Uses the `ProviderProtocol` trait to handle SSE frames.
 
+use super::protocol::{OpenAiFrame, OpenAiProtocol, OpenAiState};
 use super::request::send_openai_request;
 use super::OpenAiProvider;
+use crate::framing::sse_framing;
+use crate::protocol::ProviderProtocol;
 use futures::StreamExt;
-use runie_core::llm_event::{LLMEvent, StopReason};
-use runie_core::lifecycle::LifecycleState;
+use runie_core::llm_event::LLMEvent;
 use runie_core::message::ChatMessage;
-use std::collections::{BTreeMap, HashSet};
 
-#[derive(Debug, Default)]
+/// Re-export types for testing and external consumers.
+pub use super::protocol::ToolAccum;
+
+/// OpenAI SSE event types.
+#[derive(Debug, Clone)]
+pub enum SseEvent {
+    Chunk(Chunk),
+    Done,
+}
+
+/// A delta of content in an OpenAI chunk.
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Delta {
     pub content: Option<String>,
     pub reasoning: Option<String>,
     pub tool_calls: Vec<ToolCallDelta>,
 }
 
-#[derive(Debug, Default)]
+/// A delta for a tool call.
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct ToolCallDelta {
     pub index: usize,
     pub id: Option<String>,
@@ -23,32 +38,12 @@ pub struct ToolCallDelta {
     pub arguments: Option<String>,
 }
 
-#[derive(Debug, Default)]
+/// An OpenAI SSE chunk.
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Chunk {
     pub delta: Delta,
     pub finish_reason: Option<String>,
     pub usage: Option<(usize, usize)>,
-}
-
-#[derive(Debug)]
-pub enum SseEvent {
-    Chunk(Chunk),
-    Done,
-}
-
-#[derive(Debug, Default)]
-struct Accumulator {
-    id: String,
-    name: String,
-    arguments: String,
-}
-
-#[derive(Debug, Default)]
-struct StreamState {
-    tools: BTreeMap<usize, Accumulator>,
-    started: HashSet<String>,
-    ended: HashSet<String>,
-    lifecycle: LifecycleState,
 }
 
 pub fn openai_stream(
@@ -63,251 +58,74 @@ fn openai_event_stream(
     messages: Vec<ChatMessage>,
 ) -> impl futures::Stream<Item = anyhow::Result<LLMEvent>> + Send {
     async_stream::stream! {
-        let client = reqwest::Client::new();
-        let response = match send_openai_request(&client, &provider, &messages).await {
+        let response = match send_openai_request(&provider.client, &provider, &messages).await {
             Ok(r) => r,
-            Err(e) => {
-                yield Err(e);
-                return;
-            }
+            Err(e) => { yield Err(e); return; }
         };
-        let mut stream = response.bytes_stream();
-        let mut buffer = String::new();
-        let mut state = StreamState::default();
 
-        while let Some(chunk_result) = stream.next().await {
-            match chunk_result {
-                Ok(chunk) => {
-                    buffer.push_str(&String::from_utf8_lossy(&chunk));
-                    for event in drain_buffer(&mut buffer, &mut state) {
-                        yield Ok(event);
-                    }
-                }
-                Err(e) => {
-                    yield Err(anyhow::anyhow!("SSE stream error: {}", e));
-                    return;
-                }
-            }
+        let protocol = OpenAiProtocol::new();
+        let mut state = OpenAiState::default();
+        let mut stream = sse_framing(response.bytes_stream());
+
+        while let Some(result) = stream.next().await {
+            let line = match result {
+                Ok(l) => l,
+                Err(e) => { yield Err(anyhow::anyhow!("SSE framing error: {}", e)); break; }
+            };
+            let frame = match OpenAiFrame::from_line(&line) {
+                Some(f) => f, None => continue,
+            };
+            let is_terminal = protocol.terminal(&frame);
+            let (new_state, events) = protocol.step(state, frame);
+            state = new_state;
+            for event in events { yield Ok(event); }
+            if is_terminal { break; }
         }
 
-        for event in flush_tool_calls(&mut state) {
-            yield Ok(event);
-        }
+        for event in protocol.on_halt(state) { yield Ok(event); }
     }
 }
 
 pub fn parse_sse_event(line: &str) -> Option<SseEvent> {
-    let data = line.strip_prefix("data: ")?;
-    if data == "[DONE]" {
-        return Some(SseEvent::Done);
+    match OpenAiFrame::from_line(line) {
+        Some(OpenAiFrame::Chunk(c)) => Some(SseEvent::Chunk(Chunk {
+            delta: Delta {
+                content: c.delta.content,
+                reasoning: c.delta.reasoning,
+                tool_calls: c.delta.tool_calls.into_iter().map(|tc| ToolCallDelta {
+                    index: tc.index, id: tc.id, name: tc.name, arguments: tc.arguments,
+                }).collect(),
+            },
+            finish_reason: c.finish_reason,
+            usage: c.usage,
+        })),
+        Some(OpenAiFrame::Done) => Some(SseEvent::Done),
+        None => None,
     }
-    let json: serde_json::Value = serde_json::from_str(data).ok()?;
-    parse_chunk(&json).map(SseEvent::Chunk)
 }
 
-fn parse_chunk(json: &serde_json::Value) -> Option<Chunk> {
-    let choice = json.get("choices")?.get(0)?;
-    let delta = choice.get("delta")?;
-
-    Some(Chunk {
-        delta: Delta {
-            content: delta
-                .get("content")
-                .and_then(|v| v.as_str())
-                .map(String::from),
-            reasoning: extract_reasoning(delta),
-            tool_calls: parse_tool_call_deltas(delta),
-        },
-        finish_reason: choice
-            .get("finish_reason")
-            .and_then(|v| v.as_str())
-            .map(String::from),
-        usage: json.get("usage").and_then(parse_usage),
-    })
-}
-
-fn parse_usage(value: &serde_json::Value) -> Option<(usize, usize)> {
-    Some((
-        value.get("prompt_tokens").and_then(|v| v.as_u64())? as usize,
-        value.get("completion_tokens").and_then(|v| v.as_u64())? as usize,
-    ))
-}
-
-fn extract_reasoning(delta: &serde_json::Value) -> Option<String> {
-    delta
-        .get("reasoning_content")
-        .or_else(|| delta.get("reasoning"))
-        .and_then(|v| v.as_str())
-        .map(String::from)
-}
-
-fn parse_tool_call_deltas(delta: &serde_json::Value) -> Vec<ToolCallDelta> {
-    delta
-        .get("tool_calls")
-        .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(parse_tool_call_delta).collect())
-        .unwrap_or_default()
-}
-
-fn parse_tool_call_delta(value: &serde_json::Value) -> Option<ToolCallDelta> {
-    let index = value.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
-    let function = value.get("function").unwrap_or(value);
-    Some(ToolCallDelta {
-        index,
-        id: value.get("id").and_then(|v| v.as_str()).map(String::from),
-        name: function
-            .get("name")
-            .and_then(|v| v.as_str())
-            .map(String::from),
-        arguments: function
-            .get("arguments")
-            .and_then(|v| v.as_str())
-            .map(String::from),
-    })
-}
-
-fn drain_buffer(buffer: &mut String, state: &mut StreamState) -> Vec<LLMEvent> {
-    let mut events = Vec::new();
-    while let Some(pos) = buffer.find('\n') {
-        let line = buffer[..pos].trim().to_string();
-        *buffer = buffer[pos + 1..].to_string();
-        match parse_sse_event(&line) {
-            Some(SseEvent::Done) => {
-                events.extend(flush_tool_calls(state));
-                events.extend(state.lifecycle.finish(StopReason::Stop));
-                break;
-            }
-            Some(SseEvent::Chunk(chunk)) => {
-                events.extend(process_chunk(chunk, state));
-            }
-            None => {}
-        }
-    }
-    events
-}
-
-fn process_chunk(chunk: Chunk, state: &mut StreamState) -> Vec<LLMEvent> {
-    let mut events = Vec::new();
-
-    if let Some(text) = chunk.delta.content {
-        events.extend(state.lifecycle.text_delta("text", &text));
-    }
-    if let Some(reasoning) = chunk.delta.reasoning {
-        events.extend(state.lifecycle.thinking_delta("reasoning", &reasoning));
-    }
-
-    for tool_delta in chunk.delta.tool_calls {
-        events.extend(process_tool_call_delta(tool_delta, state));
-    }
-
-    if chunk.finish_reason.is_some() {
-        events.extend(flush_tool_calls(state));
-        events.extend(state.lifecycle.finish(map_finish_reason(
-            chunk.finish_reason.as_deref(),
-        )));
-    }
-
-    if let Some((input, output)) = chunk.usage {
-        events.push(LLMEvent::Usage {
-            input_tokens: input,
-            output_tokens: output,
-        });
-    }
-
-    events
-}
-
-fn process_tool_call_delta(delta: ToolCallDelta, state: &mut StreamState) -> Vec<LLMEvent> {
-    let mut events = Vec::new();
-    let acc = state.tools.entry(delta.index).or_default();
-
-    if let Some(id) = delta.id {
-        acc.id = id;
-    }
-    if let Some(name) = delta.name {
-        acc.name = name;
-    }
-    if let Some(args) = delta.arguments {
-        if acc.id.is_empty() || acc.name.is_empty() {
-            acc.arguments.push_str(&args);
-            return events;
-        }
-        if !state.started.contains(&acc.id) {
-            state.started.insert(acc.id.clone());
-            events.push(LLMEvent::ToolCallStart {
-                id: acc.id.clone(),
-                name: acc.name.clone(),
-            });
-            if !acc.arguments.is_empty() {
-                events.push(LLMEvent::ToolCallInputDelta {
-                    id: acc.id.clone(),
-                    delta: acc.arguments.clone(),
-                });
-                acc.arguments.clear();
-            }
-        }
-        acc.arguments.push_str(&args);
-        events.push(LLMEvent::ToolCallInputDelta {
-            id: acc.id.clone(),
-            delta: args,
-        });
-    }
-
-    events
-}
-
-fn flush_tool_calls(state: &mut StreamState) -> Vec<LLMEvent> {
-    let mut events = Vec::new();
-    for acc in state.tools.values() {
-        if acc.id.is_empty() || state.ended.contains(&acc.id) {
-            continue;
-        }
-        if !state.started.contains(&acc.id) {
-            state.started.insert(acc.id.clone());
-            events.push(LLMEvent::ToolCallStart {
-                id: acc.id.clone(),
-                name: acc.name.clone(),
-            });
-        }
-        if !acc.arguments.is_empty() {
-            events.push(LLMEvent::ToolCallInputDelta {
-                id: acc.id.clone(),
-                delta: acc.arguments.clone(),
-            });
-        }
-        state.ended.insert(acc.id.clone());
-        events.push(LLMEvent::ToolCallEnd { id: acc.id.clone() });
-    }
-    events
-}
-
+/// Replay SSE text and return accumulated events.
 pub fn replay_sse(text: &str) -> Vec<LLMEvent> {
-    let mut state = StreamState::default();
+    let protocol = OpenAiProtocol::new();
+    let mut state = OpenAiState::default();
     let mut events = Vec::new();
+
     for line in text.lines() {
-        match parse_sse_event(line.trim()) {
-            Some(SseEvent::Chunk(chunk)) => events.extend(process_chunk(chunk, &mut state)),
-            Some(SseEvent::Done) => {
-                events.extend(flush_tool_calls(&mut state));
-                events.extend(state.lifecycle.finish(StopReason::Stop));
-                break;
+        let trimmed = line.trim();
+        if trimmed.is_empty() { continue; }
+        match OpenAiFrame::from_line(trimmed) {
+            Some(frame) => {
+                if protocol.terminal(&frame) {
+                    let (_, new_events) = protocol.step(std::mem::take(&mut state), frame);
+                    events.extend(new_events); break;
+                }
+                let (new_state, new_events) = protocol.step(std::mem::take(&mut state), frame);
+                state = new_state; events.extend(new_events);
             }
             None => {}
         }
     }
-    events.extend(flush_tool_calls(&mut state));
-    events
-}
-
-fn map_finish_reason(reason: Option<&str>) -> StopReason {
-    match reason {
-        Some("stop") => StopReason::Stop,
-        Some("length") => StopReason::Length,
-        Some("content_filter") => StopReason::ContentFilter,
-        Some("tool_calls") => StopReason::ToolCalls,
-        Some("stop_sequence") => StopReason::StopSequence,
-        _ => StopReason::Stop,
-    }
+    events.extend(protocol.on_halt(state)); events
 }
 
 #[cfg(test)]
@@ -315,20 +133,25 @@ pub mod tests {
     use super::*;
 
     pub fn collect_events(lines: &[&str]) -> Vec<LLMEvent> {
-        let mut state = StreamState::default();
+        let protocol = OpenAiProtocol::new();
+        let mut state = OpenAiState::default();
         let mut all = Vec::new();
         for line in lines {
-            match parse_sse_event(line) {
-                Some(SseEvent::Chunk(chunk)) => all.extend(process_chunk(chunk, &mut state)),
-                Some(SseEvent::Done) => {
-                    all.extend(flush_tool_calls(&mut state));
-                    all.extend(state.lifecycle.finish(StopReason::Stop));
+            let trimmed = line.trim();
+            if trimmed.is_empty() { continue; }
+            match OpenAiFrame::from_line(trimmed) {
+                Some(frame) => {
+                    if protocol.terminal(&frame) {
+                        let (_, events) = protocol.step(std::mem::take(&mut state), frame);
+                        all.extend(events); break;
+                    }
+                    let (new_state, events) = protocol.step(std::mem::take(&mut state), frame);
+                    state = new_state; all.extend(events);
                 }
                 None => {}
             }
         }
-        all.extend(flush_tool_calls(&mut state));
-        all
+        all.extend(protocol.on_halt(state)); all
     }
 
     #[test]
@@ -339,38 +162,15 @@ pub mod tests {
             "data: [DONE]",
         ];
         let events = collect_events(lines);
-
-        // Find first TextDelta
-        let first_delta_idx = events
-            .iter()
-            .position(|e| matches!(e, LLMEvent::TextDelta(_)))
+        let first_delta_idx = events.iter().position(|e| matches!(e, LLMEvent::TextDelta(_)))
             .expect("Should have TextDelta");
-
-        // First event should be TextStart
-        assert!(
-            matches!(&events[0], LLMEvent::TextStart { id } if id == "text"),
-            "First event should be TextStart"
-        );
-
-        // TextStart should come before first TextDelta
-        let start_idx = events
-            .iter()
-            .position(|e| matches!(e, LLMEvent::TextStart { .. }))
+        assert!(matches!(&events[0], LLMEvent::TextStart { id } if id == "text"), "First event should be TextStart");
+        let start_idx = events.iter().position(|e| matches!(e, LLMEvent::TextStart { .. }))
             .expect("Should have TextStart");
         assert!(start_idx < first_delta_idx);
-
-        // Should have exactly one TextStart for text
-        let text_starts: Vec<_> = events
-            .iter()
-            .filter(|e| matches!(e, LLMEvent::TextStart { id } if id == "text"))
-            .collect();
+        let text_starts: Vec<_> = events.iter().filter(|e| matches!(e, LLMEvent::TextStart { id } if id == "text")).collect();
         assert_eq!(text_starts.len(), 1);
-
-        // Should emit Finish
-        assert!(
-            events.iter().any(|e| matches!(e, LLMEvent::Finish { .. })),
-            "Should emit Finish"
-        );
+        assert!(events.iter().any(|e| matches!(e, LLMEvent::Finish { .. })), "Should emit Finish");
     }
 
     #[test]
@@ -381,31 +181,13 @@ pub mod tests {
             "data: [DONE]",
         ];
         let events = collect_events(lines);
-
-        // Find first ThinkingDelta
-        let first_delta_idx = events
-            .iter()
-            .position(|e| matches!(e, LLMEvent::ThinkingDelta(_)))
+        let first_delta_idx = events.iter().position(|e| matches!(e, LLMEvent::ThinkingDelta(_)))
             .expect("Should have ThinkingDelta");
-
-        // First event should be ThinkingStart
-        assert!(
-            matches!(&events[0], LLMEvent::ThinkingStart { id } if id == "reasoning"),
-            "First event should be ThinkingStart"
-        );
-
-        // ThinkingStart should come before first ThinkingDelta
-        let start_idx = events
-            .iter()
-            .position(|e| matches!(e, LLMEvent::ThinkingStart { .. }))
+        assert!(matches!(&events[0], LLMEvent::ThinkingStart { id } if id == "reasoning"), "First event should be ThinkingStart");
+        let start_idx = events.iter().position(|e| matches!(e, LLMEvent::ThinkingStart { .. }))
             .expect("Should have ThinkingStart");
         assert!(start_idx < first_delta_idx);
-
-        // Should have exactly one ThinkingStart for reasoning
-        let thinking_starts: Vec<_> = events
-            .iter()
-            .filter(|e| matches!(e, LLMEvent::ThinkingStart { id } if id == "reasoning"))
-            .collect();
+        let thinking_starts: Vec<_> = events.iter().filter(|e| matches!(e, LLMEvent::ThinkingStart { id } if id == "reasoning")).collect();
         assert_eq!(thinking_starts.len(), 1);
     }
 }

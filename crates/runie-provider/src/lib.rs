@@ -4,8 +4,10 @@
 
 pub mod config;
 pub mod factory;
+pub mod framing;
 pub mod mock;
 pub mod openai;
+pub mod protocol;
 pub mod retry;
 
 pub use config::Config;
@@ -305,6 +307,7 @@ pub async fn spawn_headless_runtime() -> runie_core::headless_runtime::HeadlessR
         Arc::new(DynProviderFactory),
     )
     .await
+    .expect("config must load")
 }
 
 #[cfg(test)]
