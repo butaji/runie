@@ -3161,18 +3161,19 @@
       "file": "tasks/remove-sleeps-from-automatic-tests.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Replace sleep calls in automatic tests with deterministic synchronization (timeouts, oneshots, tokio::time::pause)."
+      "notes": "Remaining sleeps: fff_indexer/tests.rs uses 200ms sleeps; runie-provider/src/tests.rs uses a 500ms thread sleep. Replace these with deterministic synchronization per AGENTS.md."
     },
     {
       "id": "remove-appstate-cfg-test-branches",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P2",
-      "file": "tasks/remove-appstate-cfg-test-branches.md",
+      "file": "tasks/archive/remove-appstate-cfg-test-branches.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "Remove #[cfg(test)] branches inside AppState production methods and update tests to use the normal config cache path."
+      "notes": "The #[cfg(test)] branches were already removed in earlier work. All production methods (configured_providers, resolve_default_model, provider_config, remove_provider, set_provider_models) use config_cache consistently. Only #[cfg(test)] pub fn populate_cache_from_login_config remains as a test helper (intentional)."
     },
     {
       "id": "fix-headless-runtime-spinwait",

@@ -1,6 +1,6 @@
 # Fix synchronous file IO running directly on async tasks
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Architecture / Actors
 **Priority**: P1
