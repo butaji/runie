@@ -3071,7 +3071,7 @@
     },
     {
       "id": "fix-skill-hook-tool-input",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Architecture / Actors",
       "priority": "P0",
@@ -3094,7 +3094,6 @@
     {
       "id": "fix-config-actor-write-errors",
       "status": "done",
-      "status": "todo",
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P0",

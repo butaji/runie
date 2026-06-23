@@ -14,15 +14,15 @@ In `crates/runie-agent/src/turn.rs`, the `fire_tool_after_hook` and `check_tool_
 
 ## Acceptance Criteria
 
-- [ ] `ToolCallCtx.tool_input` in both hooks equals `tool_call.args`.
-- [ ] Existing skill tests still pass.
-- [ ] New Layer 1 test proves the hook receives the correct input.
-- [ ] `cargo test --workspace` passes.
+- [x] `ToolCallCtx.tool_input` in both hooks equals `tool_call.args`.
+- [x] Existing skill tests still pass.
+- [x] New Layer 1 test proves the hook receives the correct input.
+- [x] `cargo test --workspace` passes.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] Add `tool_call_hook_receives_input` in `crates/runie-agent/src/tests/turn.rs`:
+- [x] Add `tool_call_hook_receives_input` in `crates/runie-agent/src/tests/turn.rs`:
   - Create a `RecordingSkill` that stores the last `ToolCallCtx`.
   - Build a `SkillRegistry` with it.
   - Call `SkillRegistry::on_tool_call` with a `ToolCallCtx` that has `tool_input: json!({"path":"src/main.rs"})`.
