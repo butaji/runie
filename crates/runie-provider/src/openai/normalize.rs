@@ -31,6 +31,7 @@ fn merge_consecutive_same_role(messages: Vec<ChatMessage>) -> Vec<ChatMessage> {
             if last.role == msg.role && last.role != Role::Tool {
                 let msg_content = msg.content();
                 if !msg_content.is_empty() {
+                    last.push_text_part("\n");
                     last.push_text_part(&msg_content);
                 }
                 for tc in msg.tool_calls() {
