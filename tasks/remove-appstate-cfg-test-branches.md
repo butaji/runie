@@ -21,7 +21,12 @@
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] Update tests in `crates/runie-core/src/model/state/tests.rs` (or wherever `AppState` config tests live) to set `state.config_cache` instead of relying on `login_config` side effects.
+- [ ] Update tests that rely on the cfg(test) paths. Likely locations:
+  - `crates/runie-core/src/commands/tests/model.rs`
+  - `crates/runie-core/src/tests/login_logout/login_flow.rs`
+  - `crates/runie-core/src/tests/login_logout/model_select_edge_cases.rs`
+  - `crates/runie-core/src/login_config/tests.rs`
+- Set `state.config_cache` directly or capture the sent `ConfigMsg` instead of relying on `login_config` side effects.
 
 ### Layer 2 — Event Handling
 - [ ] If `remove_provider` / `set_provider_models` tests exist, verify the correct `ConfigMsg` is sent.
@@ -35,13 +40,15 @@
 ## Files touched
 
 - `crates/runie-core/src/model/state/app_state.rs`
-- `crates/runie-core/src/model/state/tests.rs` (or equivalent test file)
+- `crates/runie-core/src/commands/tests/model.rs`
+- `crates/runie-core/src/tests/login_logout/*.rs`
+- `crates/runie-core/src/login_config/tests.rs`
 
 ## Implementation
 
-### Step 1: Replace `#[cfg(test)]` fallback with a consistent default
+### Step 1: Replace `#[cfg(test)]` fallbacks with a consistent default
 
-For `configured_providers`:
+For `configured_providers` (lines 263–273):
 
 ```rust
 pub fn configured_providers(&self) -> Vec<(String, String, Vec<String>)> {
@@ -52,11 +59,30 @@ pub fn configured_providers(&self) -> Vec<(String, String, Vec<String>)> {
 }
 ```
 
-Do the same for `resolve_default_model` and `provider_config`.
+For `resolve_default_model` (lines 276–286):
+
+```rust
+pub fn resolve_default_model(&self) -> (String, String) {
+    self.config_cache
+        .as_ref()
+        .map(|c| c.resolve_default_model())
+        .unwrap_or_default()
+}
+```
+
+For `provider_config` (lines 289–306):
+
+```rust
+pub fn provider_config(&self, name: &str) -> Option<crate::config::ModelProvider> {
+    self.config_cache
+        .as_ref()
+        .and_then(|c| c.model_providers.get(name).cloned())
+}
+```
 
 ### Step 2: Remove test-only side effects from mutating methods
 
-For `remove_provider`:
+For `remove_provider` (lines 309–317):
 
 ```rust
 pub fn remove_provider(&self, name: &str) {
@@ -66,7 +92,7 @@ pub fn remove_provider(&self, name: &str) {
 }
 ```
 
-For `set_provider_models`:
+For `set_provider_models` (lines 320–332):
 
 ```rust
 pub fn set_provider_models(&self, name: &str, models: Vec<String>) {
@@ -103,7 +129,12 @@ cargo test --workspace
 ### Step 5: Commit
 
 ```bash
-git add crates/runie-core/src/model/state/app_state.rs crates/runie-core/src/model/state/tests.rs tasks/remove-appstate-cfg-test-branches.md tasks/index.json
+git add crates/runie-core/src/model/state/app_state.rs \
+  crates/runie-core/src/commands/tests/model.rs \
+  crates/runie-core/src/tests/login_logout/login_flow.rs \
+  crates/runie-core/src/tests/login_logout/model_select_edge_cases.rs \
+  crates/runie-core/src/login_config/tests.rs \
+  tasks/remove-appstate-cfg-test-branches.md tasks/index.json
 git commit -m "refactor(core): remove cfg(test) branches from AppState"
 ```
 

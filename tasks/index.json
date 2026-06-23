@@ -3064,7 +3064,8 @@
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P0",
-      "file": "tasks/fix-think-filter-guardrails.md",
+      "file": "tasks/archive/fix-think-filter-guardrails.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
       "notes": "think_filter.rs has already been refactored to satisfy the build guardrails. This task is verification-only."
@@ -3075,21 +3076,23 @@
       "milestone": "R3",
       "category": "Architecture / Actors",
       "priority": "P0",
-      "file": "tasks/fix-skill-hook-tool-input.md",
+      "file": "tasks/archive/fix-skill-hook-tool-input.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "Pass tool_call.args.clone() into ToolCallCtx in turn.rs before/after hooks so skills see actual tool input."
+      "notes": "turn.rs already passes tool_call.args.clone() into ToolCallCtx; regression test exists. Verification-only."
     },
     {
       "id": "fix-double-turn-start-call",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Architecture / Actors",
       "priority": "P0",
-      "file": "tasks/fix-double-turn-start-call.md",
+      "file": "tasks/archive/fix-double-turn-start-call.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "Call skills.on_turn_start once per turn in check_turn_start and match the single result."
+      "notes": "check_turn_start already calls skills.on_turn_start once and matches all three result variants. Verification-only."
     },
     {
       "id": "fix-config-actor-write-errors",
@@ -3097,10 +3100,11 @@
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P0",
-      "file": "tasks/fix-config-actor-write-errors.md",
+      "file": "tasks/archive/fix-config-actor-write-errors.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "Propagate inner write errors from ConfigActor mutating helpers instead of reloading on JoinError only."
+      "notes": "ConfigActor already uses handle_write_result and emits Event::Error on inner write failures. Verification-only."
     },
     {
       "id": "fix-blocking-file-io-in-async-paths",
@@ -3111,7 +3115,7 @@
       "file": "tasks/fix-blocking-file-io-in-async-paths.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Move std::fs calls in file_refs, path_complete, update/tools, update/command, skill reload, hashline_edit, and IoActor off the async runtime."
+      "notes": "Move std::fs calls in file_refs, path_complete, update/tools, update/command, skill reload, and IoActor off the async runtime. hashline_edit already wraps its IO."
     },
     {
       "id": "fix-bash-tool-timeout-orphan",
@@ -3123,7 +3127,7 @@
       "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "Rewrote bash tool timeout path to use tokio::process::Command with timeout so the child is killed. Added bash_timeout_kills_child test. All 44 engine tests pass."
+      "notes": "bash.rs already uses tokio::process::Command with tokio::time::timeout and kills the Child handle on timeout. bash_timeout_kills_child test exists. Verification-only."
     },
     {
       "id": "fix-render-task-blocking-io",
@@ -3193,14 +3197,15 @@
     },
     {
       "id": "sync-docs-after-code-review",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P2",
-      "file": "tasks/sync-docs-after-code-review.md",
+      "file": "tasks/archive/sync-docs-after-code-review.md",
+      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
-      "notes": "Update AGENTS.md and docs/Architecture.md to remove stale violation claim and clarify async-IO remediation patterns."
+      "notes": "AGENTS.md and docs/Architecture.md already contain the updated guidance. Verification-only."
     }
   ],
   "r5-add-lifecycle-events": "done"

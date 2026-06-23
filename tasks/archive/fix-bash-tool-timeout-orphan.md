@@ -1,4 +1,4 @@
-# Fix bash tool orphaning child processes on timeout
+# Verify bash tool kills child on timeout
 
 **Status**: done
 **Milestone**: R3
@@ -10,22 +10,17 @@
 
 ## Description
 
-`crates/runie-engine/src/tool/bash.rs` spawns a detached `std::thread` that runs `Command::output()` and then uses `mpsc::recv_timeout`. When the timeout fires, the function returns `TimedOut` but leaves the thread and child process running. The fix is to use `tokio::process::Command` with an explicit timeout future that kills the child.
+`crates/runie-engine/src/tool/bash.rs` previously spawned a detached `std::thread` and used `mpsc::recv_timeout`, which orphaned the child process on timeout. It now uses `tokio::process::Command` with `tokio::time::timeout` and kills the same `Child` handle on timeout.
 
 ## Acceptance Criteria
 
-- [x] A bash command that exceeds its timeout is killed.
-- [x] Output, error, and timeout status codes are still reported correctly.
-- [x] Existing bash tests pass.
-- [x] New test verifies timeout kills the process.
+- [ ] `cargo test -p runie-engine bash_timeout_kills_child` passes.
+- [ ] `cargo test --workspace` passes.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [x] Add `bash_timeout_kills_child` test in `crates/runie-engine/src/tool/bash.rs` (or a new `tests/` file):
-  - Start a `sleep 30` command with a 100 ms timeout.
-  - Assert status is `TimedOut`.
-  - Assert the process no longer appears in the process list (or use a sentinel temp file that the child removes only if killed).
+- Existing `bash_timeout_kills_child` covers this.
 
 ### Layer 2 — Event Handling
 - N/A.
@@ -38,94 +33,36 @@
 
 ## Files touched
 
-- `crates/runie-engine/src/tool/bash.rs`
+- `crates/runie-engine/src/tool/bash.rs` — verify only.
 
 ## Implementation
 
-### Step 1: Replace `run_bash_inner` with an async implementation
-
-Delete the `std::thread` / `mpsc` version. Replace `BashTool::call` with:
+No code changes needed. Verify the current implementation at lines 82–114:
 
 ```rust
-async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
-    let start = Instant::now();
-    let command = input["command"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("command is required"))?;
-    if let Some(reason) = check_bash_safety(command) {
-        return Ok(blocked_output(command, &reason, start.elapsed()));
-    }
-    let timeout_secs = input["timeout_seconds"].as_u64().unwrap_or(DEFAULT_TIMEOUT_SECS);
-    let timeout = Duration::from_secs(timeout_secs);
-
+async fn run_bash_inner(...) -> BashResult {
     let mut cmd = tokio::process::Command::new("bash");
-    cmd.arg("-c").arg(command)
-        .current_dir(&ctx.working_dir)
-        .envs(&ctx.env)
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped());
-
-    let result = match tokio::time::timeout(timeout, cmd.output()).await {
-        Ok(Ok(output)) => process_output(output),
-        Ok(Err(e)) => bash_error(&format!("Error executing command: {e}")),
-        Err(_) => bash_timeout(timeout),
-    };
-
-    Ok(ToolOutput {
-        tool_name: "bash".to_string(),
-        tool_args: serde_json::json!({ "command": command }),
-        content: result.output,
-        bytes_transferred: result.bytes_transferred,
-        duration: start.elapsed(),
-        status: result.status,
-    })
+    // ...
+    let mut child = cmd.spawn().expect(...);
+    match tokio::time::timeout(timeout, child.wait()).await {
+        Ok(Ok(status)) => collect_output(status, child.stdout.take(), child.stderr.take()).await,
+        Ok(Err(e)) => bash_error(...),
+        Err(_) => {
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            bash_timeout(timeout)
+        }
+    }
 }
 ```
 
-Because `BashTool::call` is inside an `#[async_trait]` impl, the async body is fine; remove the `spawn_blocking` wrapper.
-
-### Step 2: Remove `run_bash_inner`
-
-The helper becomes unused; delete it.
-
-### Step 3: Add timeout kill test
-
-```rust
-#[tokio::test]
-async fn bash_timeout_kills_child() {
-    let tool = BashTool;
-    let input = serde_json::json!({
-        "command": "sleep 30",
-        "timeout_seconds": 1,
-    });
-    let ctx = ToolContext {
-        working_dir: std::env::current_dir().unwrap(),
-        env: Default::default(),
-    };
-    let output = tool.call(input, &ctx).await.unwrap();
-    assert_eq!(output.status, ToolStatus::TimedOut);
-    assert!(output.content.contains("timed out"));
-}
-```
-
-(Use the actual `ToolContext` constructor from the codebase.)
-
-### Step 4: Run tests
+Run verification:
 
 ```bash
 cargo test -p runie-engine bash_timeout_kills_child
 cargo test --workspace
 ```
 
-### Step 5: Commit
-
-```bash
-git add crates/runie-engine/src/tool/bash.rs tasks/fix-bash-tool-timeout-orphan.md tasks/index.json
-git commit -m "fix(engine): kill bash child on timeout"
-```
-
 ## Notes
 
-- `tokio::process::Command` kills the child when the future is dropped, so the timeout future does the right thing.
-- Ensure `ToolContext` is `Clone` or construct it fresh in tests.
-- If the trait still requires `spawn_blocking` for other reasons, wrap the whole async snippet above in `spawn_blocking` and use `block_on` internally, but keep `tokio::process` so the timeout future can kill the child.
+- If the timeout path is refactored again, ensure the same `Child` handle is killed, not a new one.

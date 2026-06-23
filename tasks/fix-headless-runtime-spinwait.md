@@ -84,12 +84,18 @@ Search for `HeadlessRuntime::spawn(...).await`:
 grep -R "HeadlessRuntime::spawn" crates/
 ```
 
-Update each call site to handle the new `Result`:
+At least one caller exists in `crates/runie-provider/src/lib.rs:298` (`spawn_headless_runtime`). Update each call site to handle the new `Result`:
 
 ```rust
-let rt = HeadlessRuntime::spawn(bus, factory)
+pub async fn spawn_headless_runtime() -> runie_core::headless_runtime::HeadlessRuntime {
+    // ...
+    runie_core::headless_runtime::HeadlessRuntime::spawn(
+        EventBus::<Event>::new(10),
+        Arc::new(DynProviderFactory),
+    )
     .await
-    .expect("config must load");
+    .expect("config must load")
+}
 ```
 
 If callers currently expect `Self`, either propagate the `Result` or map it to a panic with context.

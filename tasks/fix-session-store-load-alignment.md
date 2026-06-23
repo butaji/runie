@@ -100,13 +100,23 @@ Return an error if `parse_errors` is non-empty.
 ### Step 3: Add tests
 
 ```rust
+fn sample_message(id: &str, content: &str) -> DurableCoreEvent {
+    DurableCoreEvent::MessageSent {
+        id: id.into(),
+        role: "user".into(),
+        content: content.into(),
+        timestamp: 0.0,
+        provider: "".into(),
+    }
+}
+
 #[test]
 fn load_events_returns_ordered_events() {
     let tmp = tempfile::tempdir().unwrap();
     let store = SessionStore::new(tmp.path().to_path_buf());
     let events = vec![
-        DurableCoreEvent::MessageSent { id: "a".into(), content: "a".into() },
-        DurableCoreEvent::MessageSent { id: "b".into(), content: "b".into() },
+        sample_message("a", "a"),
+        sample_message("b", "b"),
     ];
     for e in &events {
         store.append("s1", e).unwrap();
@@ -121,7 +131,7 @@ fn load_events_returns_ordered_events() {
 fn load_events_rejects_misaligned_entries() {
     let tmp = tempfile::tempdir().unwrap();
     let store = SessionStore::new(tmp.path().to_path_buf());
-    let good = DurableCoreEvent::MessageSent { id: "a".into(), content: "a".into() };
+    let good = sample_message("a", "a");
     store.append("s1", &good).unwrap();
 
     // Manually corrupt the second row.

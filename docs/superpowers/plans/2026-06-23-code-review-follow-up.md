@@ -19,30 +19,27 @@
 
 ## Task map
 
-| # | Task ID | Priority | Files | What to do |
-|---|---------|----------|-------|------------|
-| 1 | `fix-think-filter-guardrails` | P0 | `crates/runie-agent/src/think_filter.rs`, `crates/runie-agent/src/tests/think_filter.rs` | Already refactored; verify under 500/40/10 limits. |
-| 2 | `fix-skill-hook-tool-input` | P0 | `crates/runie-agent/src/turn.rs` | Pass `tool_call.args.clone()` into `ToolCallCtx`. |
-| 3 | `fix-double-turn-start-call` | P0 | `crates/runie-agent/src/turn.rs` | Call `on_turn_start` once and match the result. |
-| 4 | `fix-config-actor-write-errors` | P0 | `crates/runie-core/src/actors/config/actor.rs` | Match inner write `Result`; emit `Event::Error` on failure. |
-| 5 | `fix-blocking-file-io-in-async-paths` | P1 | `file_refs.rs`, `path_complete.rs`, `update/tools.rs`, `update/command.rs`, `commands/dsl/handlers/system.rs`, `actors/io/actor.rs` | Use `spawn_blocking` or `block_in_place_if_runtime`. |
-| 6 | `fix-bash-tool-timeout-orphan` | P1 | `crates/runie-engine/src/tool/bash.rs` | Use `tokio::process::Command` + timeout and kill the child. |
-| 7 | `fix-render-task-blocking-io` | P1 | `crates/runie-tui/src/main.rs` | Run terminal IO on a dedicated OS thread. |
-| 8 | `fix-session-store-load-alignment` | P1 | `crates/runie-core/src/session_store.rs` | Pair key/event in the loop and surface parse errors. |
-| 9 | `remove-sleeps-from-automatic-tests` | P1 | Multiple test files | Replace `sleep()` with deterministic sync. |
-| 10 | `remove-appstate-cfg-test-branches` | P2 | `crates/runie-core/src/model/state/app_state.rs` | Remove `#[cfg(test)]` branches; tests use normal cache path. |
-| 11 | `fix-headless-runtime-spinwait` | P2 | `crates/runie-core/src/headless_runtime.rs` | Await event with timeout instead of spin loop. |
-| 12 | `fix-main-unix-epoch-unwrap` | P2 | `crates/runie-tui/src/main.rs` | Non-panicking session ID generation. |
-| 13 | `sync-docs-after-code-review` | P2 | `AGENTS.md`, `docs/Architecture.md` | Doc clarifications. |
+| # | Task ID | Priority | Status | Files | What to do |
+|---|---------|----------|--------|-------|------------|
+| 1 | `fix-think-filter-guardrails` | P0 | done | `crates/runie-agent/src/think_filter.rs` | Already under 500/40/10 limits; verify only. |
+| 2 | `fix-skill-hook-tool-input` | P0 | done | `crates/runie-agent/src/turn.rs` | Already passes `tool_call.args.clone()`; verify only. |
+| 3 | `fix-double-turn-start-call` | P0 | done | `crates/runie-agent/src/turn.rs` | Already calls `on_turn_start` once; verify only. |
+| 4 | `fix-config-actor-write-errors` | P0 | done | `crates/runie-core/src/actors/config/actor.rs` | Already propagates inner errors; verify only. |
+| 5 | `fix-blocking-file-io-in-async-paths` | P1 | todo | `file_refs.rs`, `path_complete.rs`, `update/tools.rs`, `update/command.rs`, `commands/dsl/handlers/system.rs`, `actors/io/actor.rs` | Use `spawn_blocking` or `block_in_place_if_runtime`. |
+| 6 | `fix-bash-tool-timeout-orphan` | P1 | done | `crates/runie-engine/src/tool/bash.rs` | Already uses `tokio::process::Command` + timeout; verify only. |
+| 7 | `fix-render-task-blocking-io` | P1 | todo | `crates/runie-tui/src/main.rs` | Run terminal IO on a dedicated OS thread. |
+| 8 | `fix-session-store-load-alignment` | P1 | todo | `crates/runie-core/src/session_store.rs` | Pair key/event in the loop and surface parse errors. |
+| 9 | `remove-sleeps-from-automatic-tests` | P1 | todo | Multiple test files | Replace `sleep()` with deterministic sync. |
+| 10 | `remove-appstate-cfg-test-branches` | P2 | todo | `crates/runie-core/src/model/state/app_state.rs` | Remove `#[cfg(test)]` branches; tests use normal cache path. |
+| 11 | `fix-headless-runtime-spinwait` | P2 | todo | `crates/runie-core/src/headless_runtime.rs` | Await event with timeout instead of spin loop. |
+| 12 | `fix-main-unix-epoch-unwrap` | P2 | todo | `crates/runie-tui/src/main.rs` | Non-panicking session ID generation. |
+| 13 | `sync-docs-after-code-review` | P2 | done | `AGENTS.md`, `docs/Architecture.md` | Doc updates already applied; verify only. |
 
-## Execution order
+Done tasks are archived under `tasks/archive/`. Remaining open work:
 
-1. Start with **Task 1** (`fix-think-filter-guardrails`) because it unblocks `cargo build`.
-2. Implement **Tasks 2–4** in any order; they are independent correctness fixes.
-3. Implement **Tasks 5–8** in any order; they are independent but touch many files.
-4. Implement **Task 9** after the behavior fixes are stable so tests can be converted safely.
-5. Implement **Tasks 10–12** as cleanup.
-6. Finish with **Task 13** (docs).
+1. Implement **Tasks 5, 7, 8** in any order; they are independent but touch many files.
+2. Implement **Task 9** after the behavior fixes are stable so tests can be converted safely.
+3. Implement **Tasks 10–12** as cleanup.
 
 ## Verification
 
