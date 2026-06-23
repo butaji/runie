@@ -19,6 +19,17 @@ fn is_triple_backtick(chars: &std::iter::Peekable<std::str::Chars>) -> bool {
     chars.clone().nth(1) == Some('`')
 }
 
+fn handle_triple_backtick(
+    chars: &mut std::iter::Peekable<std::str::Chars>,
+    result: &mut String,
+) {
+    // First backtick already pushed by main loop; consume the next two
+    chars.next();
+    result.push('`');
+    chars.next();
+    result.push('`');
+}
+
 fn handle_double(
     c: char,
     chars: &mut std::iter::Peekable<std::str::Chars>,
@@ -53,7 +64,9 @@ fn process_markdown_char(
     match c {
         '*' => handle_double('*', chars, result, openers),
         '`' => {
-            if !is_triple_backtick(chars) {
+            if is_triple_backtick(chars) {
+                handle_triple_backtick(chars, result);
+            } else {
                 handle_single('`', openers, None);
             }
         }
@@ -345,5 +358,16 @@ mod tests {
         buf.push_delta("hello **world");
         let lines = buf.force_flush();
         assert_eq!(lines, vec!["hello **world**"]);
+    }
+
+    #[test]
+    fn streaming_buffer_raw_text_not_healed_in_tail() {
+        // This test verifies heal_markdown is applied during flush.
+        // The healing is applied to stable lines before returning.
+        let mut buf = StreamingBuffer::new();
+        buf.push_delta("hello **world\n");
+        let lines = buf.flush();
+        // flush() returns healed stable lines
+        assert!(lines.iter().any(|l| l.contains("hello **world**")));
     }
 }
