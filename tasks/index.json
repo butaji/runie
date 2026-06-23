@@ -46,7 +46,8 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/archive/adopt-textwrap-word-wrap.md",
-      "notes": "Replaced custom WrapState with textwrap::wrap(). All existing tests pass."
+      "notes": "Replaced custom WrapState with textwrap::wrap(). All existing tests pass.",
+      "completed_in": "current"
     },
     {
       "id": "adopt-nucleo-non-file-fuzzy",
@@ -57,7 +58,8 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/archive/adopt-nucleo-non-file-fuzzy.md",
-      "notes": "Added NucleoMatcher struct using nucleo-matcher 0.3. All 16 fuzzy tests pass."
+      "notes": "Added NucleoMatcher struct using nucleo-matcher 0.3. All 16 fuzzy tests pass.",
+      "completed_in": "current"
     },
     {
       "id": "adopt-palette-theme-colors",
@@ -92,7 +94,8 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/archive/adopt-patch-diff-parser.md",
-      "notes": "Added patch crate dependency, integrated via parse_patch() with legacy fallback."
+      "notes": "Added patch crate dependency, integrated via parse_patch() with legacy fallback.",
+      "completed_in": "current"
     },
     {
       "id": "adopt-arboard-clipboard",
@@ -103,7 +106,8 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/archive/adopt-arboard-clipboard.md",
-      "notes": "Replaced subprocess-based clipboard with arboard + png crate."
+      "notes": "Replaced subprocess-based clipboard with arboard + png crate.",
+      "completed_in": "current"
     },
     {
       "id": "adopt-notify-config-watcher",
@@ -114,7 +118,8 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/archive/adopt-notify-config-watcher.md",
-      "notes": "Replaced 2s polling with notify-debouncer-mini. Debounced to 300ms."
+      "notes": "Replaced 2s polling with notify-debouncer-mini. Debounced to 300ms.",
+      "completed_in": "current"
     },
     {
       "id": "fff-location-parser",
@@ -249,7 +254,8 @@
       ],
       "blocks": [],
       "file": "tasks/archive/harness-skill-tool-schema-enricher.md",
-      "notes": "ToolSchemaEnricherSkill added to harness_skills.rs with get_examples() and enrich_schema()."
+      "notes": "ToolSchemaEnricherSkill added to harness_skills.rs with get_examples() and enrich_schema().",
+      "completed_in": "current"
     },
     {
       "id": "harness-skill-loop-detector",
@@ -262,7 +268,8 @@
       ],
       "blocks": [],
       "file": "tasks/archive/harness-skill-loop-detector.md",
-      "notes": "LoopDetectorSkill implemented with record_call/check_loop/reset methods."
+      "notes": "LoopDetectorSkill implemented with record_call/check_loop/reset methods.",
+      "completed_in": "current"
     },
     {
       "id": "harness-skill-startup-context",
@@ -275,7 +282,8 @@
       ],
       "blocks": [],
       "file": "tasks/archive/harness-skill-startup-context.md",
-      "notes": "StartupContextSkill implemented with discover(), get_context(), clear_cache()."
+      "notes": "StartupContextSkill implemented with discover(), get_context(), clear_cache().",
+      "completed_in": "current"
     },
     {
       "id": "harness-skill-verification-loop",
@@ -323,7 +331,8 @@
         "harness-skill-tool-schema-enricher"
       ],
       "file": "tasks/archive/harness-skill-framework.md",
-      "notes": "Core framework implemented: HarnessSkill trait, SkillRegistry, config types, turn.rs hooks."
+      "notes": "Core framework implemented: HarnessSkill trait, SkillRegistry, config types, turn.rs hooks.",
+      "completed_in": "current"
     },
     {
       "id": "fix-harness-crate-or-archive",
@@ -333,7 +342,8 @@
       "priority": "P1",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/archive/fix-harness-crate-or-archive.md"
+      "file": "tasks/archive/fix-harness-crate-or-archive.md",
+      "completed_in": "current"
     },
     {
       "id": "fix-session-store-atomic-writes",
@@ -346,7 +356,8 @@
         "event-bus-jsonl-persistence"
       ],
       "file": "tasks/archive/fix-session-store-atomic-writes.md",
-      "notes": "Removed sync_all() overhead. Improved crash survival test to actually simulate crash."
+      "notes": "Removed sync_all() overhead. Improved crash survival test to actually simulate crash.",
+      "completed_in": "current"
     },
     {
       "id": "fix-diff-line-numbers",
@@ -356,7 +367,8 @@
       "priority": "P0",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/archive/fix-diff-line-numbers.md"
+      "file": "tasks/archive/fix-diff-line-numbers.md",
+      "completed_in": "current"
     },
     {
       "id": "fix-bash-tool-timeout",
@@ -366,7 +378,8 @@
       "priority": "P0",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/archive/fix-bash-tool-timeout.md"
+      "file": "tasks/archive/fix-bash-tool-timeout.md",
+      "completed_in": "current"
     },
     {
       "id": "unblock-workspace-build",
@@ -377,7 +390,8 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/archive/unblock-workspace-build.md",
-      "notes": "Created during task reconciliation to reflect actual build state."
+      "notes": "Created during task reconciliation to reflect actual build state.",
+      "completed_in": "current"
     },
     {
       "id": "resolve-merge-conflicts",
@@ -409,7 +423,8 @@
         "resolve-merge-conflicts"
       ],
       "notes": "Resolution was achieved by archiving the broken `update/login_flow.rs` and `login_flow/tests/state.rs` to `crates/_archive/update-orphans/`. The 5 call sites that referenced the missing `build_login_stack` are no longer in the build. The docstring example in `commands/dsl/builder.rs:102` still has the stale `build_login_root(state)` signature - see sync-docs. Archived in tasks/archive/.",
-      "file": "tasks/archive/fix-broken-references.md"
+      "file": "tasks/archive/fix-broken-references.md",
+      "completed_in": "current"
     },
     {
       "id": "wire-orphan-crates",
@@ -431,7 +446,8 @@
         "resolve-merge-conflicts"
       ],
       "notes": "Refactored `crates/runie-core/build.rs` (now 121 lines) to: raise thresholds to 2000/150/30 (so the build always passes), extract helper functions (`check_file_length`, `check_function_violations`, `lint_file`), and fix the function-body brace tracking. The `ALLOWED_FILES_OVER` and `ALLOWED_FUNCS_OVER` allow-lists were removed entirely - they were the wrong abstraction. The lint no longer scans `target/` but does still scan `crates/_archive/` and tests - the 2000-line budget makes that fine in practice. Archived in tasks/archive/.",
-      "file": "tasks/archive/fix-build-lint.md"
+      "file": "tasks/archive/fix-build-lint.md",
+      "completed_in": "current"
     },
     {
       "id": "archive-remaining-orphans",
@@ -443,7 +459,8 @@
         "wire-orphan-crates"
       ],
       "notes": "Archived `runie-ai` (no Cargo.toml, orphan AI provider code), `runie-cli` (had Cargo.toml but depended on orphan crates), and `runie-tools` (no Cargo.toml). `crates/_archive/` now contains 7 entries: 6 subdirs (`runie-agent-tests`, `runie-agent-bin`, `update-orphans`, `runie-ext-macros`, `runie-tui-bins`, `runie-ext`) and 1 file (`wireframe_layout.rs`). Workspace builds with 8 members. See `clean-archive` for the next step (delete the archive entirely). Archived in tasks/archive/.",
-      "file": "tasks/archive/archive-remaining-orphans.md"
+      "file": "tasks/archive/archive-remaining-orphans.md",
+      "completed_in": "current"
     },
     {
       "id": "anyprovider-dynamic-dispatch",
@@ -629,7 +646,8 @@
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P2",
-      "file": "tasks/archive/sync-docs.md"
+      "file": "tasks/archive/sync-docs.md",
+      "completed_in": "current"
     },
     {
       "id": "ctrl-o-collapse-expand",
@@ -648,7 +666,8 @@
       "category": "Core / State",
       "priority": "P0",
       "file": "tasks/archive/remove-orphan-modules.md",
-      "notes": "Archived in tasks/archive/."
+      "notes": "Archived in tasks/archive/.",
+      "completed_in": "current"
     },
     {
       "id": "fix-event-name-duplicate-arms",
@@ -657,7 +676,8 @@
       "category": "Core / State",
       "priority": "P0",
       "file": "tasks/archive/fix-event-name-duplicate-arms.md",
-      "notes": "Archived in tasks/archive/."
+      "notes": "Archived in tasks/archive/.",
+      "completed_in": "current"
     },
     {
       "id": "complete-agents-manager",
@@ -666,7 +686,8 @@
       "category": "Input / Commands",
       "priority": "P1",
       "file": "tasks/archive/complete-agents-manager.md",
-      "notes": "Archived in tasks/archive/."
+      "notes": "Archived in tasks/archive/.",
+      "completed_in": "current"
     },
     {
       "id": "replace-update-wildcard",
@@ -675,7 +696,8 @@
       "category": "Core / State",
       "priority": "P1",
       "file": "tasks/archive/replace-update-wildcard.md",
-      "notes": "Archived in tasks/archive/."
+      "notes": "Archived in tasks/archive/.",
+      "completed_in": "current"
     },
     {
       "id": "consolidate-config-reload-types",
@@ -692,7 +714,8 @@
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P2",
-      "file": "tasks/archive/restore-size-and-lint-discipline.md"
+      "file": "tasks/archive/restore-size-and-lint-discipline.md",
+      "completed_in": "current"
     },
     {
       "id": "remove-test-sleeps",
@@ -704,7 +727,8 @@
       "depends_on": [
         "fix-clippy-and-test-hygiene"
       ],
-      "notes": "Removed sleeps from bus.rs drain(), actor.rs drain_events(), session_actor.rs tests. Added try_recv() to ReplayReceiver. Gated file polling tests with #[ignore]."
+      "notes": "Removed sleeps from bus.rs drain(), actor.rs drain_events(), session_actor.rs tests. Added try_recv() to ReplayReceiver. Gated file polling tests with #[ignore].",
+      "completed_in": "current"
     },
     {
       "id": "archive-done-task-files",
@@ -713,7 +737,8 @@
       "category": "Configuration",
       "priority": "P2",
       "file": "tasks/archive/archive-done-task-files.md",
-      "notes": "Archived in tasks/archive/."
+      "notes": "Archived in tasks/archive/.",
+      "completed_in": "current"
     },
     {
       "id": "inline-tool-rendering",
@@ -726,7 +751,8 @@
       "blocks": [
         "mcp-servers-support",
         "tool-call-state-rendering"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "mcp-servers-support",
@@ -739,7 +765,8 @@
         "inline-tool-rendering",
         "mcp-client-integration"
       ],
-      "notes": "Management UI only. Actual MCP protocol implementation is in mcp-client-integration."
+      "notes": "Management UI only. Actual MCP protocol implementation is in mcp-client-integration.",
+      "completed_in": "current"
     },
     {
       "id": "event-subenums",
@@ -765,7 +792,8 @@
         "event-bus-jsonl-persistence",
         "event-subenums",
         "status-indicator-widget"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "event-bus-jsonl-persistence",
@@ -784,7 +812,8 @@
         "context-compaction",
         "streaming-buffer-tail-split",
         "session-list-summaries"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "llm-event-normalization",
@@ -798,7 +827,8 @@
       ],
       "blocks": [
         "model-capability-flags"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "model-capability-flags",
@@ -809,7 +839,8 @@
       "file": "tasks/archive/model-capability-flags.md",
       "depends_on": [
         "llm-event-normalization"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "tool-registry-trait",
@@ -839,7 +870,8 @@
       "blocks": [
         "mcp-servers-support"
       ],
-      "notes": "Implemented McpClientManager with connect/disconnect/list_tools/call_tool. Added namespacing, env var injection, stdio transport types."
+      "notes": "Implemented McpClientManager with connect/disconnect/list_tools/call_tool. Added namespacing, env var injection, stdio transport types.",
+      "completed_in": "current"
     },
     {
       "id": "permission-rulesets",
@@ -851,7 +883,8 @@
       "depends_on": [
         "tool-registry-trait"
       ],
-      "notes": "Implemented PermissionSet, ApprovalSink trait, AutoAllowSink, ScriptedSink, sensitive path detection."
+      "notes": "Implemented PermissionSet, ApprovalSink trait, AutoAllowSink, ScriptedSink, sensitive path detection.",
+      "completed_in": "current"
     },
     {
       "id": "context-compaction",
@@ -863,7 +896,8 @@
       "depends_on": [
         "event-bus-jsonl-persistence",
         "llm-event-normalization"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "streaming-buffer-tail-split",
@@ -874,7 +908,8 @@
       "file": "tasks/archive/streaming-buffer-tail-split.md",
       "depends_on": [
         "event-bus-jsonl-persistence"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "tool-call-state-rendering",
@@ -887,7 +922,8 @@
         "inline-tool-rendering",
         "tool-registry-trait",
         "streaming-buffer-tail-split"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "status-indicator-widget",
@@ -899,7 +935,8 @@
       "depends_on": [
         "actor-runtime-decision",
         "tool-call-state-rendering"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "semantic-theme-tokens",
@@ -907,7 +944,8 @@
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P2",
-      "file": "tasks/archive/semantic-theme-tokens.md"
+      "file": "tasks/archive/semantic-theme-tokens.md",
+      "completed_in": "current"
     },
     {
       "id": "session-list-summaries",
@@ -919,7 +957,8 @@
       "depends_on": [
         "event-bus-jsonl-persistence"
       ],
-      "notes": "Core implementation complete: session index, dialog builder, control events. UI wiring and LLM summaries deferred."
+      "notes": "Core implementation complete: session index, dialog builder, control events. UI wiring and LLM summaries deferred.",
+      "completed_in": "current"
     },
     {
       "id": "crate-replacement-audit",
@@ -991,7 +1030,8 @@
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P0",
-      "file": "tasks/archive/remove-vendored-reference-repos.md"
+      "file": "tasks/archive/remove-vendored-reference-repos.md",
+      "completed_in": "current"
     },
     {
       "id": "delete-committed-rlib",
@@ -999,7 +1039,8 @@
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P0",
-      "file": "tasks/archive/delete-committed-rlib.md"
+      "file": "tasks/archive/delete-committed-rlib.md",
+      "completed_in": "current"
     },
     {
       "id": "fix-clippy-and-test-hygiene",
@@ -1010,7 +1051,8 @@
       "file": "tasks/archive/fix-clippy-and-test-hygiene.md",
       "depends_on": [
         "delete-committed-rlib"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "cleanup-stale-docs",
@@ -1018,7 +1060,8 @@
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P1",
-      "file": "tasks/archive/cleanup-stale-docs.md"
+      "file": "tasks/archive/cleanup-stale-docs.md",
+      "completed_in": "current"
     },
     {
       "id": "consolidate-overlapping-tasks",
@@ -1026,7 +1069,8 @@
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P1",
-      "file": "tasks/archive/consolidate-overlapping-tasks.md"
+      "file": "tasks/archive/consolidate-overlapping-tasks.md",
+      "completed_in": "current"
     },
     {
       "id": "unify-token-counter",
@@ -1037,7 +1081,8 @@
       "file": "tasks/archive/unify-token-counter.md",
       "depends_on": [
         "fix-clippy-and-test-hygiene"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "unify-fuzzy-scorer",
@@ -1048,7 +1093,8 @@
       "file": "tasks/archive/unify-fuzzy-scorer.md",
       "depends_on": [
         "fix-clippy-and-test-hygiene"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "unify-spinner-frames",
@@ -1059,7 +1105,8 @@
       "file": "tasks/archive/unify-spinner-frames.md",
       "depends_on": [
         "fix-clippy-and-test-hygiene"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "unify-tool-markers",
@@ -1070,7 +1117,8 @@
       "file": "tasks/archive/unify-tool-markers.md",
       "depends_on": [
         "fix-clippy-and-test-hygiene"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "dedupe-agent-profiles",
@@ -1081,7 +1129,8 @@
       "file": "tasks/archive/dedupe-agent-profiles.md",
       "depends_on": [
         "fix-clippy-and-test-hygiene"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "extract-headless-runner",
@@ -1093,7 +1142,8 @@
       "depends_on": [
         "fix-clippy-and-test-hygiene",
         "unify-tool-markers"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "unify-provider-model-registry",
@@ -1198,7 +1248,8 @@
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P1",
-      "file": "tasks/archive/fix-provider-model-registry-drift.md"
+      "file": "tasks/archive/fix-provider-model-registry-drift.md",
+      "completed_in": "current"
     },
     {
       "id": "remove-dead-dsl-surface",
@@ -1215,7 +1266,8 @@
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P1",
-      "file": "tasks/archive/unify-markdown-line-counts.md"
+      "file": "tasks/archive/unify-markdown-line-counts.md",
+      "completed_in": "current"
     },
     {
       "id": "cache-feed-rendering",
@@ -1223,7 +1275,8 @@
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P1",
-      "file": "tasks/archive/cache-feed-rendering.md"
+      "file": "tasks/archive/cache-feed-rendering.md",
+      "completed_in": "current"
     },
     {
       "id": "wire-tokenizer-cost-tracking",
@@ -1231,7 +1284,8 @@
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P1",
-      "file": "tasks/archive/wire-tokenizer-cost-tracking.md"
+      "file": "tasks/archive/wire-tokenizer-cost-tracking.md",
+      "completed_in": "current"
     },
     {
       "id": "display-width-wrapping",
@@ -1239,7 +1293,8 @@
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P1",
-      "file": "tasks/archive/display-width-wrapping.md"
+      "file": "tasks/archive/display-width-wrapping.md",
+      "completed_in": "current"
     },
     {
       "id": "fix-vim-nav-wrap-mapping",
@@ -1247,7 +1302,8 @@
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P1",
-      "file": "tasks/archive/fix-vim-nav-wrap-mapping.md"
+      "file": "tasks/archive/fix-vim-nav-wrap-mapping.md",
+      "completed_in": "current"
     },
     {
       "id": "r4-adr-team-mode-orchestration",
@@ -1289,7 +1345,8 @@
         "r4-ask-user-tool",
         "r4-one-shot-orchestrator-llm"
       ],
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "r4-solo-team-mode-toggle",
@@ -1305,7 +1362,8 @@
       "blocks": [
         "r4-team-mode-integration"
       ],
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "r4-model-trait-resolution",
@@ -1322,7 +1380,8 @@
         "r4-orchestrator-actor",
         "r4-one-shot-orchestrator-llm"
       ],
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "r4-ask-user-tool",
@@ -1338,7 +1397,8 @@
       "blocks": [
         "r4-one-shot-orchestrator-llm"
       ],
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "r4-one-shot-orchestrator-llm",
@@ -1355,7 +1415,8 @@
       "blocks": [
         "r4-orchestrator-actor"
       ],
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "r4-orchestrator-actor",
@@ -1374,7 +1435,8 @@
         "r4-subagent-sidebar",
         "r4-team-mode-integration"
       ],
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "r4-subagent-isolation",
@@ -1390,7 +1452,8 @@
       "blocks": [
         "r4-team-mode-integration"
       ],
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "r4-subagent-sidebar",
@@ -1406,7 +1469,8 @@
       "blocks": [
         "r4-team-mode-integration"
       ],
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "r4-team-mode-integration",
@@ -1439,7 +1503,8 @@
       "blocks": [
         "r4-team-mode-integration"
       ],
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "grok-mouse-terminal-init",
@@ -1468,7 +1533,8 @@
       "blocks": [
         "grok-contextual-hints"
       ],
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "grok-contextual-hints",
@@ -1594,7 +1660,8 @@
       "category": "Configuration",
       "priority": "P1",
       "file": "tasks/archive/skills-subdirectory-frontmatter.md",
-      "depends_on": []
+      "depends_on": [],
+      "completed_in": "current"
     },
     {
       "id": "consolidate-keybindings-into-config-toml",
@@ -1604,7 +1671,8 @@
       "priority": "P1",
       "file": "tasks/archive/consolidate-keybindings-into-config-toml.md",
       "depends_on": [],
-      "notes": "Added [keybindings] HashMap to Config, merged_keybindings() and load_keybindings(Some(&config)), KeybindingsReloaded event, v2\u2192v3 migration auto-migrates keybindings.json, config watcher detects keybindings changes. 33 tests pass."
+      "notes": "Added [keybindings] HashMap to Config, merged_keybindings() and load_keybindings(Some(&config)), KeybindingsReloaded event, v2\u2192v3 migration auto-migrates keybindings.json, config watcher detects keybindings changes. 33 tests pass.",
+      "completed_in": "current"
     },
     {
       "id": "unify-config-types",
@@ -1616,7 +1684,8 @@
       "depends_on": [],
       "blocks": [
         "unify-message-types"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "unify-message-types",
@@ -1643,7 +1712,8 @@
       "file": "tasks/archive/unify-tool-result-types.md",
       "depends_on": [
         "unify-message-types"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "flatten-event-system",
@@ -1732,7 +1802,8 @@
       "depends_on": [],
       "blocks": [
         "event-bus-jsonl-persistence"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "unify-rendering-pipeline",
@@ -1877,7 +1948,8 @@
       ],
       "blocks": [],
       "file": "tasks/archive/extract-ui-actor.md",
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "extract-core-monolith",
@@ -2141,7 +2213,8 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/archive/unify-resolve-path.md",
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "unify-tool-error-output",
@@ -2154,7 +2227,8 @@
       ],
       "blocks": [],
       "file": "tasks/archive/unify-tool-error-output.md",
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "unify-agent-status-enum",
@@ -2165,7 +2239,8 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/archive/unify-agent-status-enum.md",
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "add-agent-lifecycle-from-impls",
@@ -2178,7 +2253,8 @@
       ],
       "blocks": [],
       "file": "tasks/archive/add-agent-lifecycle-from-impls.md",
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "remove-unused-plan-param",
@@ -2189,7 +2265,8 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/archive/remove-unused-plan-param.md",
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "extract-search-item-builder",
@@ -2200,7 +2277,8 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/archive/extract-search-item-builder.md",
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "derive-clone-tool-registry",
@@ -2211,7 +2289,8 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/archive/derive-clone-tool-registry.md",
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "export-format-helpers",
@@ -2222,7 +2301,8 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/archive/export-format-helpers.md",
-      "completed": "2026-06-16"
+      "completed": "2026-06-16",
+      "completed_in": "current"
     },
     {
       "id": "split-large-files",
@@ -2834,55 +2914,51 @@
     },
     {
       "id": "fix-runie-tui-dead-code-warnings",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "TUI / Rendering",
       "priority": "P0",
       "file": "tasks/fix-runie-tui-dead-code-warnings.md",
       "depends_on": [],
       "blocks": [],
-      "notes": "Deleted 3 unused async theme loaders from loader.rs and removed ActorHandles struct from main.rs. Zero warnings in runie-tui, all 683 TUI tests pass.",
-      "completed_in": "current"
+      "notes": "Deleted 3 unused async theme loaders from loader.rs and removed ActorHandles struct from main.rs. Zero warnings in runie-tui, all 683 TUI tests pass."
     },
     {
       "id": "delete-runie-core-utils",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
       "file": "tasks/delete-runie-core-utils.md",
-      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
       "notes": "Deleted utils.rs (53 LOC) and pub mod utils declaration. All workspace tests pass."
     },
     {
       "id": "delete-runie-core-skill-module",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
       "file": "tasks/delete-runie-core-skill-module.md",
-      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
       "notes": "Deleted crates/runie-core/src/skill/ directory (318 LOC) and pub mod skill declaration. Live skills/ (plural) module untouched. All workspace tests pass."
     },
     {
       "id": "delete-runie-core-confirmation",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
       "file": "tasks/delete-runie-core-confirmation.md",
-      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
       "notes": "Deleted confirmation.rs (217 LOC), pub mod confirmation declaration, and pub use confirmation::{ConfirmationKind, ConfirmationRouter} export. All workspace tests pass."
     },
     {
       "id": "collapse-event-variants-subdir",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
@@ -2893,19 +2969,18 @@
     },
     {
       "id": "collapse-event-aliases",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
       "file": "tasks/collapse-event-aliases.md",
-      "completed_in": "current",
       "depends_on": [],
       "blocks": [],
       "notes": "Created event/aliases.rs with all 11 type aliases. Updated event/mod.rs to use aliases module and removed 12 individual mod declarations. Updated lib.rs to re-export from event::aliases. Deleted all 12 alias files (agent.rs, command.rs, control.rs, dialog.rs, dialog_display.rs, edit.rs, input.rs, login_flow.rs, model_config.rs, scroll.rs, session.rs, system.rs). All 1314 workspace tests pass. rg check returns zero direct-use hits."
     },
     {
       "id": "delete-provider-message-enum",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
@@ -2916,7 +2991,7 @@
     },
     {
       "id": "r5-extract-tool-stream",
-      "status": "done",
+      "status": "todo",
       "milestone": "R5",
       "category": "Tools",
       "priority": "P0",
@@ -2970,7 +3045,7 @@
     },
     {
       "id": "r5-partial-json-repair",
-      "status": "done",
+      "status": "todo",
       "milestone": "R5",
       "category": "Tools",
       "priority": "P1",
@@ -3021,11 +3096,10 @@
     },
     {
       "id": "r5-per-channel-decoders",
-      "status": "done",
+      "status": "todo",
       "milestone": "R5",
       "category": "Architecture / Actors",
       "priority": "P2",
-      "completed_in": "current",
       "file": "tasks/r5-per-channel-decoders.md",
       "depends_on": [
         "r5-populate-parts-streaming"
@@ -3035,11 +3109,10 @@
     },
     {
       "id": "r5-paced-text-rendering",
-      "status": "done",
+      "status": "todo",
       "milestone": "R5",
       "category": "TUI / Rendering",
       "priority": "P2",
-      "completed_in": "current",
       "file": "tasks/r5-paced-text-rendering.md",
       "depends_on": [],
       "blocks": [],
@@ -3208,6 +3281,41 @@
       "depends_on": [],
       "blocks": [],
       "notes": "AGENTS.md and docs/Architecture.md already contain the updated guidance. Verification-only."
+    },
+    {
+      "id": "fix-render-forwarder-blocking",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "file": "tasks/archive/fix-render-forwarder-blocking.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Changed render_forwarder from blocking send() to try_send() with sync_channel(1). Prevents async event loop blocking when render thread is busy."
+    },
+    {
+      "id": "fix-provider-client-timeout",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P0",
+      "file": "tasks/archive/fix-provider-client-timeout.md",
+      "completed_in": "current",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Added reqwest::Client with 120s timeout and 10s connect_timeout to OpenAiProvider. Prevents indefinite hangs on API calls."
+    },
+    {
+      "id": "unify-message-types-revisit",
+      "status": "superseded",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P1",
+      "file": "tasks/archive/unify-message-types-revisit.md",
+      "depends_on": [],
+      "blocks": [],
+      "notes": "Archived; superseded by other message-unification work."
     }
   ],
   "r5-add-lifecycle-events": "done"
