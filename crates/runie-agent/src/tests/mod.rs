@@ -16,10 +16,18 @@ use tokio::sync::Mutex;
 /// Serializes tests that mutate the global mock-enabled state.
 pub(crate) static MOCK_STATE_LOCK: Mutex<()> = Mutex::const_new(());
 
-/// Guard that holds the mock-state lock for the duration of a test.
+/// Guard that holds the mock-state lock for the duration of a test and restores
+/// the previous mock state on drop.
 pub(crate) struct MockGuard {
+    prev: bool,
     #[allow(dead_code)]
     guard: tokio::sync::MutexGuard<'static, ()>,
+}
+
+impl Drop for MockGuard {
+    fn drop(&mut self) {
+        runie_core::provider_registry::set_mock_enabled(self.prev);
+    }
 }
 
 /// Enable mock provider for all tests. Without this, the "mock" provider key is
@@ -27,6 +35,7 @@ pub(crate) struct MockGuard {
 /// to return UnknownProvider error.
 pub(crate) async fn ensure_mock_provider() -> MockGuard {
     let guard = MOCK_STATE_LOCK.lock().await;
+    let prev = runie_core::provider_registry::is_mock_enabled();
     runie_core::provider_registry::set_mock_enabled(true);
-    MockGuard { guard }
+    MockGuard { prev, guard }
 }

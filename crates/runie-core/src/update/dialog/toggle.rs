@@ -26,6 +26,7 @@ pub fn dialog_toggle_event(state: &mut AppState, event: DialogEvent) {
         DialogEvent::ProvidersAdd => handle_providers_add(state),
         DialogEvent::ProvidersSelectModel { .. } => handle_providers_select_model(state, &event),
         DialogEvent::ProvidersDisconnect { .. } => handle_providers_disconnect(state, &event),
+        DialogEvent::ProvidersEditModels { .. } => handle_providers_edit_models(state, &event),
 
         DialogEvent::ToggleScopedModelsDialog => handle_scoped_models_toggle(state),
         DialogEvent::ScopedModelEnableAll => handle_scoped_model_enable_all(state),
@@ -96,6 +97,20 @@ fn handle_providers_select_model(state: &mut AppState, event: &DialogEvent) {
         state.open_dialog = None;
         state.view.input_receiver = crate::model::InputReceiver::ChatInput;
         state.dialog_back_stack.clear();
+        state.mark_dirty();
+    }
+}
+
+fn handle_providers_edit_models(state: &mut AppState, event: &DialogEvent) {
+    if let DialogEvent::ProvidersEditModels { provider } = event {
+        let stack = crate::providers_dialog::build_provider_models_editor(state, provider);
+        if let Some(DialogState::PanelStack(current)) = &mut state.open_dialog {
+            if let Some(panel) = stack.current() {
+                current.push(panel.clone());
+            }
+        } else {
+            state.open_dialog = Some(DialogState::PanelStack(stack));
+        }
         state.mark_dirty();
     }
 }

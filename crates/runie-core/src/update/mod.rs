@@ -78,5 +78,6 @@ fn is_providers_dialog_event(event: &DialogEvent) -> bool {
             | DialogEvent::ProvidersSelectModel { .. }
             | DialogEvent::ProvidersDisconnect { .. }
             | DialogEvent::ProvidersAdd
+            | DialogEvent::ProvidersEditModels { .. }
     )
 }

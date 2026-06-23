@@ -324,6 +324,7 @@ fn dispatcher_handles_all_variants() {
             | Event::ProvidersSelectModel { .. }
             | Event::ProvidersDisconnect { .. }
             | Event::ProvidersAdd
+            | Event::ProvidersEditModels { .. }
             | Event::CopyToClipboard(_)
             | Event::CopySelectedBlock
             | Event::CopyBlockMetadata

@@ -346,7 +346,7 @@ fn is_dialog_category_event(event: &Event) -> bool {
                 | Event::ProvidersDialog
                 | Event::ProvidersSelectModel { .. }
                 | Event::ProvidersDisconnect { .. }
-                | Event::ProvidersAdd
+                | Event::ProvidersAdd | Event::ProvidersEditModels { .. }
                 | Event::CopyToClipboard(_)
                 | Event::CopySelectedBlock
                 | Event::CopyBlockMetadata
@@ -477,7 +477,7 @@ fn is_toggle_dialog_event(event: &DialogEvent) -> bool {
                 | DialogEvent::AtFilePicker
                 | DialogEvent::ToggleVimMode
                 | DialogEvent::ProvidersDialog
-                | DialogEvent::ProvidersAdd
+                | DialogEvent::ProvidersAdd | DialogEvent::ProvidersEditModels { .. }
                 | DialogEvent::ProvidersSelectModel { .. }
                 | DialogEvent::ProvidersDisconnect { .. }
                 | DialogEvent::ToggleScopedModelsDialog

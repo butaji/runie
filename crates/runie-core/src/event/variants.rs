@@ -254,6 +254,9 @@ pub enum Event {
         provider: String,
     },
     ProvidersAdd,
+    ProvidersEditModels {
+        provider: String,
+    },
     CopyToClipboard(String),
     CopySelectedBlock,
     CopyBlockMetadata,

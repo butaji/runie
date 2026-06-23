@@ -124,7 +124,7 @@ fn provider_models_item(state: &AppState) -> SettingItem {
     )
 }
 
-fn provider_model_lists(state: &AppState, provider: &str) -> (Vec<String>, Vec<String>) {
+pub(crate) fn provider_model_lists(state: &AppState, provider: &str) -> (Vec<String>, Vec<String>) {
     let saved = state
         .config_cache
         .as_ref()
