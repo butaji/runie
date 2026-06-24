@@ -1,5 +1,5 @@
 use super::input_event;
-use crate::event::Event;
+use crate::event::{Event, InputEvent};
 use crate::model::{AppState, PermissionRequestState};
 use crate::permissions::PermissionAction;
 
@@ -56,4 +56,48 @@ fn any_other_key_denies_pending_permission_request() {
 
     assert!(state.permission_request.is_none());
     assert_eq!(rx.blocking_recv(), Ok(PermissionAction::Deny));
+}
+
+// ============================================================================
+// Layer 2 — Event Handling: history_prev_moves_up, history_next_moves_down
+// ============================================================================
+
+#[test]
+fn history_prev_moves_up() {
+    let mut state = AppState::default();
+    // Add some history
+    state.update(InputEvent::Input('a'));
+    state.update(Event::submit());
+    state.update(InputEvent::Input('b'));
+    state.update(Event::submit());
+
+    // Clear input then go back in history
+    state.update(InputEvent::Backspace);
+    state.update(InputEvent::HistoryPrev);
+    assert_eq!(state.input.input, "b");
+
+    state.update(InputEvent::HistoryPrev);
+    assert_eq!(state.input.input, "a");
+}
+
+#[test]
+fn history_next_moves_down() {
+    let mut state = AppState::default();
+    // Add some history
+    state.update(InputEvent::Input('a'));
+    state.update(Event::submit());
+    state.update(InputEvent::Input('b'));
+    state.update(Event::submit());
+
+    // Navigate back
+    state.update(InputEvent::HistoryPrev);
+    assert_eq!(state.input.input, "b");
+    state.update(InputEvent::HistoryPrev);
+    assert_eq!(state.input.input, "a");
+
+    // Navigate forward
+    state.update(InputEvent::HistoryNext);
+    assert_eq!(state.input.input, "b");
+    state.update(InputEvent::HistoryNext);
+    assert!(state.input.input.is_empty());
 }

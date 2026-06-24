@@ -5,8 +5,9 @@ use anyhow::Result;
 use async_trait::async_trait;
 use serde_json::{json, Value};
 
+use crate::path::resolve_path_in as resolve_path;
 use crate::tool::{
-    format_bytes, format_duration, format_tool_label, resolve_path, tool_error, tool_status_line,
+    format_bytes, format_duration, format_tool_label, tool_error, tool_status_line,
     Tool, ToolContext, ToolOutput, ToolRegistry, ToolStatus,
 };
 
