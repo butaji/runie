@@ -1,13 +1,5 @@
 use super::*;
 
-/// Wait for the actor's global state to be registered (indicating init has started).
-/// Uses a minimal sleep to allow the scheduler to run the actor task.
-async fn wait_for_actor_ready() {
-    // 50ms is sufficient for the scheduler to run the actor task while being much faster
-    // than the original 200ms sleep.
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-}
-
 #[tokio::test]
 async fn indexer_initializes_in_temp_dir() {
     let tmp = tempfile::tempdir().unwrap();
@@ -32,8 +24,9 @@ async fn indexer_initializes_in_temp_dir() {
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    // Wait for actor to be ready (minimal sleep for scheduler to run actor task)
-    wait_for_actor_ready().await;
+    // Give the actor a brief moment to finish initialization (spawn_blocking runs on
+    // a separate thread; we need wall-clock time for the scan to complete).
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
     // Send a search request
     let request_id = 42;
@@ -46,7 +39,7 @@ async fn indexer_initializes_in_temp_dir() {
         })
         .await;
 
-    // Collect results using deterministic sync
+    // Collect results using deterministic sync instead of sleeps
     let mut result = None;
     let mut sub = bus.subscribe();
     for _ in 0..100 {
@@ -89,8 +82,8 @@ async fn indexer_answers_file_search() {
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    // Wait for actor to be ready (minimal sleep for scheduler to run actor task)
-    wait_for_actor_ready().await;
+    // Brief init so the actor can finish scanning via spawn_blocking
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
     // Search for "cli"
     let request_id = 7;
@@ -142,8 +135,8 @@ async fn search_request_event_returns_results() {
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    // Wait for actor to be ready (minimal sleep for scheduler to run actor task)
-    wait_for_actor_ready().await;
+    // Brief init so the actor can finish scanning via spawn_blocking
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
     let request_id = 99;
     tx.send(FffSearchRequest {
