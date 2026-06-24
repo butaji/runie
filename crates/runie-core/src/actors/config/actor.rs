@@ -83,6 +83,16 @@ impl ConfigActor {
         }
     }
 
+    /// Generic helper that spawns a blocking task to mutate config, then reloads on success.
+    async fn mutate_config<F>(&mut self, bus: &EventBus<Event>, f: F)
+    where
+        F: FnOnce(std::path::PathBuf) -> anyhow::Result<()> + Send + 'static,
+    {
+        let path = self.path();
+        let result = tokio::task::spawn_blocking(move || f(path)).await;
+        self.handle_write_result(result, bus).await;
+    }
+
     async fn save_provider(
         &mut self,
         name: &str,
@@ -95,42 +105,34 @@ impl ConfigActor {
         let base_url = base_url.to_string();
         let api_key = api_key.to_string();
         let models = models.to_vec();
-        let path = self.path();
-        let result = tokio::task::spawn_blocking(move || {
+        self.mutate_config(bus, move |path| {
             save_provider_to_path(&path, &name, &base_url, &api_key, &models)
         })
         .await;
-        self.handle_write_result(result, bus).await;
     }
 
     async fn remove_provider(&mut self, name: &str, bus: &EventBus<Event>) {
         let name = name.to_string();
-        let path = self.path();
-        let result =
-            tokio::task::spawn_blocking(move || remove_provider_from_path(&path, &name)).await;
-        self.handle_write_result(result, bus).await;
+        self.mutate_config(bus, move |path| remove_provider_from_path(&path, &name))
+            .await;
     }
 
     async fn set_default_model(&mut self, provider: &str, model: &str, bus: &EventBus<Event>) {
         let provider = provider.to_string();
         let model = model.to_string();
-        let path = self.path();
-        let result = tokio::task::spawn_blocking(move || {
+        self.mutate_config(bus, move |path| {
             set_default_model_at_path(&path, &provider, &model)
         })
         .await;
-        self.handle_write_result(result, bus).await;
     }
 
     async fn set_provider_models(&mut self, name: &str, models: &[String], bus: &EventBus<Event>) {
         let name = name.to_string();
         let models = models.to_vec();
-        let path = self.path();
-        let result = tokio::task::spawn_blocking(move || {
+        self.mutate_config(bus, move |path| {
             set_provider_models_at_path(&path, &name, &models)
         })
         .await;
-        self.handle_write_result(result, bus).await;
     }
 
     fn list_configured_providers(&self) -> Vec<(String, String, Vec<String>)> {
