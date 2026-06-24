@@ -103,35 +103,25 @@ impl StreamState {
     }
 
     fn on_tool_start(&mut self, id: String, name: String) -> ControlFlow<Result<()>> {
-        self.accumulators.entry(id).or_default().name = name;
+        self.tool_stream.start(&id, &name);
         ControlFlow::Continue(())
     }
 
     fn on_tool_input(&mut self, id: String, delta: String) -> ControlFlow<Result<()>> {
-        self.accumulators
-            .entry(id)
-            .or_default()
-            .arguments
-            .push_str(&delta);
+        self.tool_stream.append(&id, &delta);
         ControlFlow::Continue(())
     }
 
     fn on_tool_end(&mut self, id: String) -> ControlFlow<Result<()>> {
-        if let Some(acc) = self.accumulators.remove(&id) {
-            if let Some(call) = finish_tool_call(id, acc) {
-                self.tool_calls.push(call);
-            }
+        if let Some(call) = self.tool_stream.finish(&id) {
+            self.tool_calls.push(call);
         }
         ControlFlow::Continue(())
     }
 
     fn finish_remaining_tools(&mut self) {
-        let remaining: Vec<(String, ToolCallAccumulator)> =
-            self.accumulators.drain().collect();
-        for (id, acc) in remaining {
-            if let Some(call) = finish_tool_call(id, acc) {
-                self.tool_calls.push(call);
-            }
+        for call in self.tool_stream.finish_all() {
+            self.tool_calls.push(call);
         }
     }
 
