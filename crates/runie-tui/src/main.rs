@@ -94,11 +94,11 @@ async fn main() -> io::Result<()> {
 async fn bootstrap_app(
     bus: EventBus<Event>,
 ) -> (AppState, runie_core::actors::ProviderActorHandle) {
-    let (config_handle, config_actor) = ConfigActor::spawn(bus.clone(), None);
-    let (provider_handle, provider_actor) = spawn_provider_actor(&bus, &config_handle);
-    let (persistence_handle, persistence_actor) = PersistenceActor::spawn(bus.clone());
-    let (session_store_handle, session_store_actor) = SessionStoreActor::spawn(bus.clone());
-    let (io_handle, io_actor) = IoActor::spawn(bus.clone());
+    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
+    let (provider_handle, _provider_actor) = spawn_provider_actor(&bus, &config_handle);
+    let (persistence_handle, _persistence_actor) = PersistenceActor::spawn(bus.clone());
+    let (session_store_handle, _session_store_actor) = SessionStoreActor::spawn(bus.clone());
+    let (io_handle, _io_actor) = IoActor::spawn(bus.clone());
     let mut state = AppState {
         config_tx: Some(config_handle.tx().clone()),
         provider_tx: Some(provider_handle.tx().clone()),
