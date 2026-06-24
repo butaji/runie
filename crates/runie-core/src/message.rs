@@ -146,6 +146,21 @@ impl ChatMessage {
             self.parts.push(Part::Text { content });
         }
     }
+
+    /// Convert to a provider-agnostic message (drops metadata).
+    pub fn to_provider_message(&self) -> crate::provider::Message {
+        let content = self.content();
+        let tool_calls = self.tool_calls();
+        match self.role {
+            Role::System => crate::provider::Message::System { content },
+            Role::User | Role::Thought => crate::provider::Message::User { content },
+            Role::Assistant => crate::provider::Message::Assistant { content, tool_calls },
+            Role::Tool | Role::TurnComplete => crate::provider::Message::ToolResult {
+                content,
+                tool_call_id: self.tool_call_id.clone(),
+            },
+        }
+    }
 }
 
 /// Metadata for chat messages (compaction and visibility control).
