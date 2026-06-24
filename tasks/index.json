@@ -900,7 +900,7 @@
     },
     {
       "id": "fix-render-task-blocking-io",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P1",

@@ -1,6 +1,6 @@
 # Fix render task blocking the Tokio runtime on terminal IO
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: TUI / Rendering
 **Priority**: P1
