@@ -15,7 +15,7 @@ fn push_user_msg(state: &mut AppState, content: &str, id: &str) {
 }
 
 fn thinking_started(state: &AppState) -> std::time::Instant {
-    use runie_core::ui::Element;
+    use runie_core::view::Element;
     state
         .view
         .elements_cache()
@@ -156,7 +156,7 @@ fn ensure_fresh_skips_rebuild_when_only_input_changed() {
 
 #[test]
 fn thinking_element_stores_instant_not_elapsed() {
-    use runie_core::ui::Element;
+    use runie_core::view::Element;
     let mut state = fresh_state();
     state.session.messages.push(runie_core::model::ChatMessage {
         role: runie_core::model::Role::User,
@@ -191,7 +191,7 @@ fn thinking_element_stores_instant_not_elapsed() {
 
 #[test]
 fn tool_running_element_stores_instant_not_elapsed() {
-    use runie_core::ui::Element;
+    use runie_core::view::Element;
     let mut state = fresh_state();
     state.session.messages.push(runie_core::model::ChatMessage {
         role: runie_core::model::Role::Tool,

@@ -191,6 +191,7 @@ crates/runie-core/src/
   commands/         # CommandRegistry and slash handlers
   dialog/           # Panel/Form DSL
   harness_skills/   # Skill trait and implementations
+  view/             # Element, Feed, LazyCache (domain projection)
   update/           # Event dispatch
 
 crates/runie-agent/src/
@@ -203,7 +204,8 @@ crates/runie-engine/src/
 
 crates/runie-tui/src/
   main.rs           # Entry point and event loop
-  ui.rs             # draw_snapshot
+  ui/               # Rendering (Ratatui widgets, draw_snapshot)
+  core_ui/          # Re-exports from runie-core::view
   popups/           # Dialog rendering
   theme/            # Theme tokens
 

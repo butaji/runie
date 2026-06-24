@@ -5,7 +5,7 @@ use runie_core::event::Event;
 use runie_core::event::{AgentEvent, InputEvent};
 use runie_core::model::{AppState, ChatMessage,  Role};
 use runie_core::Part;
-use runie_core::ui::LazyCache;
+use runie_core::view::LazyCache;
 use runie_testing::fresh_state;
 
 fn dispatch(state: &mut AppState, events: &[Event]) {
@@ -19,17 +19,17 @@ fn element_kinds(state: &AppState) -> Vec<String> {
     feed.elements
         .iter()
         .map(|e| match e {
-            runie_core::ui::Element::UserMessage { .. } => "User".to_string(),
-            runie_core::ui::Element::AgentMessage { .. } => "Agent".to_string(),
-            runie_core::ui::Element::Thinking { .. } => "Thinking".to_string(),
-            runie_core::ui::Element::ThoughtMarker { .. } => "Thought".to_string(),
-            runie_core::ui::Element::ThoughtSummary { .. } => "ThoughtSum".to_string(),
-            runie_core::ui::Element::ToolRunning { .. } => "ToolRun".to_string(),
-            runie_core::ui::Element::ToolDone { .. } => "ToolDone".to_string(),
-            runie_core::ui::Element::ToolSummary { .. } => "ToolSum".to_string(),
-            runie_core::ui::Element::ContextGroup { .. } => "Context".to_string(),
-            runie_core::ui::Element::TurnComplete { .. } => "Turn".to_string(),
-            runie_core::ui::Element::Spacer { .. } => "Spacer".to_string(),
+            runie_core::view::Element::UserMessage { .. } => "User".to_string(),
+            runie_core::view::Element::AgentMessage { .. } => "Agent".to_string(),
+            runie_core::view::Element::Thinking { .. } => "Thinking".to_string(),
+            runie_core::view::Element::ThoughtMarker { .. } => "Thought".to_string(),
+            runie_core::view::Element::ThoughtSummary { .. } => "ThoughtSum".to_string(),
+            runie_core::view::Element::ToolRunning { .. } => "ToolRun".to_string(),
+            runie_core::view::Element::ToolDone { .. } => "ToolDone".to_string(),
+            runie_core::view::Element::ToolSummary { .. } => "ToolSum".to_string(),
+            runie_core::view::Element::ContextGroup { .. } => "Context".to_string(),
+            runie_core::view::Element::TurnComplete { .. } => "Turn".to_string(),
+            runie_core::view::Element::Spacer { .. } => "Spacer".to_string(),
         })
         .collect()
 }
@@ -323,7 +323,7 @@ fn elements_sorted_by_timestamp_not_index() {
         .elements
         .iter()
         .filter_map(|e| match e {
-            runie_core::ui::Element::UserMessage { content, .. } => Some(content.as_str()),
+            runie_core::view::Element::UserMessage { content, .. } => Some(content.as_str()),
             _ => None,
         })
         .collect();

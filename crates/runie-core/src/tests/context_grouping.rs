@@ -1,6 +1,6 @@
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
-use crate::ui::{Element, LazyCache};
+use crate::view::{Element, LazyCache};
 
 fn tool_message(name: &str, output: &str, ts: f64) -> ChatMessage {
     ChatMessage {

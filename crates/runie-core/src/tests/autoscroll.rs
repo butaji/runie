@@ -122,7 +122,7 @@ fn at_bottom_shows_new_agent_response() {
     let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
     let last = visible.elements.last().unwrap();
     match last {
-        crate::ui::elements::Element::AgentMessage { content, .. } => {
+        crate::view::elements::Element::AgentMessage { content, .. } => {
             assert_eq!(
                 content, "hi",
                 "New agent response should be visible at bottom"
@@ -153,7 +153,7 @@ fn at_bottom_shows_new_thought() {
     let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
     let last = visible.elements.last().unwrap();
     assert!(
-        matches!(last, crate::ui::elements::Element::ThoughtMarker { .. }),
+        matches!(last, crate::view::elements::Element::ThoughtMarker { .. }),
         "New thought should be visible at bottom: {:?}",
         last
     );
@@ -180,7 +180,7 @@ fn at_bottom_shows_new_tool() {
     let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
     let last = visible.elements.last().unwrap();
     assert!(
-        matches!(last, crate::ui::elements::Element::ToolDone { .. }),
+        matches!(last, crate::view::elements::Element::ToolDone { .. }),
         "New tool should be visible at bottom: {:?}",
         last
     );

@@ -1,4 +1,4 @@
-use runie_core::ui::elements::Element;
+use runie_core::view::elements::Element;
 
 #[test]
 fn user_message_builder() {

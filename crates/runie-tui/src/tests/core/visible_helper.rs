@@ -1,7 +1,7 @@
 //! Test helper for computing the visible region of the element cache.
 
 use runie_core::model::AppState;
-use runie_core::ui::elements::Element;
+use runie_core::view::elements::Element;
 
 #[derive(Clone, Copy)]
 pub struct TestViewport<'a> {

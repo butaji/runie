@@ -2,7 +2,7 @@
 use super::helpers::{element_metadata, element_text};
 use crate::model::state::ranking;
 use super::FffFileEntry;
-use crate::ui::elements::Element;
+use crate::view::elements::Element;
 
 #[derive(Clone)]
 pub struct AppState {

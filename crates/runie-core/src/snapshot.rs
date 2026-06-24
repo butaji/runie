@@ -2,7 +2,7 @@
 //! The event loop builds snapshots; the render actor draws them.
 //! Zero blocking I/O in the event loop by design.
 
-use crate::ui::elements::Element;
+use crate::view::elements::Element;
 use std::sync::Arc;
 
 /// Git repository info detected from current working directory.
@@ -136,7 +136,7 @@ pub struct Snapshot {
     pub current_top_element: Option<usize>,
     /// Navigable posts in the feed. Each post groups a logical unit of
     /// content (e.g. a user message, a thought, a tool result).
-    pub posts: Arc<[crate::ui::elements::Post]>,
+    pub posts: Arc<[crate::view::elements::Post]>,
     /// Index of the post selected in vim nav mode. `None` when not in
     /// nav mode or when the feed is empty. Used by the renderer to draw
     /// the selection bracket around the selected post.
@@ -160,7 +160,7 @@ pub struct Snapshot {
 /// Compute the index of the element currently at the top of the
 /// message viewport. Returns None if the feed is empty.
 pub fn compute_current_top_element(
-    elements: &[crate::ui::elements::Element],
+    elements: &[crate::view::elements::Element],
     line_counts: &[usize],
     total_lines: usize,
     scroll: usize,
@@ -187,7 +187,7 @@ pub fn compute_current_top_element(
 /// Compute the index of the element currently at the bottom of the
 /// message viewport. Returns None if the feed is empty.
 pub fn compute_current_bottom_element(
-    elements: &[crate::ui::elements::Element],
+    elements: &[crate::view::elements::Element],
     line_counts: &[usize],
     total_lines: usize,
     scroll: usize,
@@ -350,7 +350,7 @@ pub fn compute_hovered_element(
     width: u16,
     height: u16,
     input: &str,
-    elements: &[crate::ui::elements::Element],
+    elements: &[crate::view::elements::Element],
     line_counts: &[usize],
     total_lines: usize,
     has_models: bool,

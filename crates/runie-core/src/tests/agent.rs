@@ -149,7 +149,7 @@ fn agent_message_keeps_natural_language_around_tool_call_markup() {
 
 #[test]
 fn feed_does_not_render_tool_call_markup() {
-    use crate::ui::LazyCache;
+    use crate::view::LazyCache;
     let mut state = fresh_state();
     state
         .agent("req.0")
@@ -157,7 +157,7 @@ fn feed_does_not_render_tool_call_markup() {
         .done();
     let feed = LazyCache::feed(&state);
     let has_tool = feed.elements.iter().any(|e| match e {
-        crate::ui::Element::AgentMessage { content, .. } => content.contains("[TOOL_CALL]"),
+        crate::view::Element::AgentMessage { content, .. } => content.contains("[TOOL_CALL]"),
         _ => false,
     });
     assert!(!has_tool, "Feed should never render [TOOL_CALL] markers");
@@ -213,7 +213,7 @@ fn thought_marker_comes_before_response_in_event_order() {
 
 #[test]
 fn thought_marker_ordered_by_timestamp_in_feed() {
-    use crate::ui::LazyCache;
+    use crate::view::LazyCache;
     let mut state = fresh_state();
     state.agent.streaming = true;
     state.agent("req.0").think().respond("Hello").thought_done();
@@ -222,10 +222,10 @@ fn thought_marker_ordered_by_timestamp_in_feed() {
         .elements
         .iter()
         .map(|e| match e {
-            crate::ui::Element::ThoughtMarker { .. }
-            | crate::ui::Element::ThoughtSummary { .. } => "T",
-            crate::ui::Element::AgentMessage { .. } => "A",
-            crate::ui::Element::Spacer { .. } => "S",
+            crate::view::Element::ThoughtMarker { .. }
+            | crate::view::Element::ThoughtSummary { .. } => "T",
+            crate::view::Element::AgentMessage { .. } => "A",
+            crate::view::Element::Spacer { .. } => "S",
             _ => "?",
         })
         .collect();
@@ -234,7 +234,7 @@ fn thought_marker_ordered_by_timestamp_in_feed() {
 
 #[test]
 fn thinking_indicator_ordered_by_timestamp() {
-    use crate::ui::LazyCache;
+    use crate::view::LazyCache;
     let mut state = fresh_state();
     state.agent.streaming = true;
     state.agent("req.0").think().respond("Hello");
@@ -243,9 +243,9 @@ fn thinking_indicator_ordered_by_timestamp() {
         .elements
         .iter()
         .map(|e| match e {
-            crate::ui::Element::Thinking { .. } => "I",
-            crate::ui::Element::AgentMessage { .. } => "A",
-            crate::ui::Element::Spacer { .. } => "S",
+            crate::view::Element::Thinking { .. } => "I",
+            crate::view::Element::AgentMessage { .. } => "A",
+            crate::view::Element::Spacer { .. } => "S",
             _ => "?",
         })
         .collect();
@@ -270,9 +270,9 @@ fn streaming_tool_marker_stored_for_thought_capture() {
         msg.content().contains("TOOL:"),
         "Tool markers stored for thought capture"
     );
-    let feed = crate::ui::LazyCache::feed(&state);
+    let feed = crate::view::LazyCache::feed(&state);
     let has_tool = feed.elements.iter().any(|e| match e {
-        crate::ui::Element::AgentMessage { content, .. } => content.contains("TOOL:"),
+        crate::view::Element::AgentMessage { content, .. } => content.contains("TOOL:"),
         _ => false,
     });
     assert!(
@@ -316,9 +316,9 @@ fn streaming_structured_tool_stored_for_capture() {
         msg.content().contains("edit_file"),
         "Structured tool stored for thought capture"
     );
-    let feed = crate::ui::LazyCache::feed(&state);
+    let feed = crate::view::LazyCache::feed(&state);
     let has_tool = feed.elements.iter().any(|e| match e {
-        crate::ui::Element::AgentMessage { content, .. } => content.contains("edit_file"),
+        crate::view::Element::AgentMessage { content, .. } => content.contains("edit_file"),
         _ => false,
     });
     assert!(
@@ -329,12 +329,12 @@ fn streaming_structured_tool_stored_for_capture() {
 
 #[test]
 fn feed_does_not_render_tool_markers() {
-    use crate::ui::LazyCache;
+    use crate::view::LazyCache;
     let mut state = fresh_state();
     state.agent("req.0").respond("TOOL:list_dir.");
     let feed = LazyCache::feed(&state);
     let has_tool = feed.elements.iter().any(|e| match e {
-        crate::ui::Element::AgentMessage { content, .. } => content.contains("TOOL:"),
+        crate::view::Element::AgentMessage { content, .. } => content.contains("TOOL:"),
         _ => false,
     });
     assert!(!has_tool, "Feed should never render TOOL: markers");
@@ -374,7 +374,7 @@ fn assistant_message_preserves_unicode_after_tool_strip() {
 /// assistant response, not just a thought marker.
 #[test]
 fn tool_turn_renders_tool_result_and_final_response() {
-    use crate::ui::LazyCache;
+    use crate::view::LazyCache;
     let mut state = fresh_state();
     state
         .agent("req.0")
@@ -390,9 +390,9 @@ fn tool_turn_renders_tool_result_and_final_response() {
         .elements
         .iter()
         .map(|e| match e {
-            crate::ui::Element::ToolDone { .. } => "D",
-            crate::ui::Element::AgentMessage { .. } => "A",
-            crate::ui::Element::ThoughtMarker { .. } => "T",
+            crate::view::Element::ToolDone { .. } => "D",
+            crate::view::Element::AgentMessage { .. } => "A",
+            crate::view::Element::ThoughtMarker { .. } => "T",
             _ => "?",
         })
         .collect();

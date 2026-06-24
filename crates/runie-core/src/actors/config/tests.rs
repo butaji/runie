@@ -140,3 +140,101 @@ async fn config_actor_emits_error_on_failed_save() {
     std::fs::set_permissions(&readonly, perms).unwrap();
     assert!(saw_error, "expected Event::Error after failed write");
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Layer 1 & 2: mutate_config helper behavior (verified through public interface)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Layer 1: Helper reloads config and emits event on success.
+#[tokio::test]
+async fn mutate_config_helper_emits_event_on_success() {
+    let (_dir, path) = temp_config_path();
+    let bus = EventBus::<Event>::new(10);
+    let mut sub = bus.subscribe();
+    let (handle, _actor) = ConfigActor::spawn(bus, Some(path));
+
+    // Drain initial load.
+    let _ = sub.recv().await;
+
+    handle
+        .set_default_model("test".into(), "model-x".into())
+        .await;
+
+    let event = tokio::time::timeout(std::time::Duration::from_secs(2), sub.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    let Event::ConfigLoaded { config } = event else {
+        panic!("expected ConfigLoaded after successful mutation");
+    };
+    assert_eq!(config.models.default, Some("model-x".into()));
+}
+
+/// Layer 1: Helper does not swallow I/O errors.
+#[tokio::test]
+async fn mutate_config_helper_reports_error() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("config.toml");
+    let readonly = tmp.path().to_path_buf();
+    let perms = std::fs::metadata(&readonly).unwrap().permissions();
+    let mut readonly_perms = perms.clone();
+    readonly_perms.set_readonly(true);
+
+    let bus = EventBus::<Event>::new(8);
+    let mut sub = bus.subscribe();
+    let (handle, _actor) = ConfigActor::spawn(bus.clone(), Some(path.clone()));
+
+    // Drain initial ConfigLoaded.
+    let _ = tokio::time::timeout(std::time::Duration::from_secs(2), sub.recv()).await;
+
+    std::fs::set_permissions(&readonly, readonly_perms).unwrap();
+    handle.remove_provider("nonexistent".into()).await;
+
+    let mut saw_error = false;
+    for _ in 0..20 {
+        if let Ok(Ok(Event::Error { id, .. })) =
+            tokio::time::timeout(std::time::Duration::from_millis(50), sub.recv()).await
+        {
+            if id == "config" {
+                saw_error = true;
+                break;
+            }
+        }
+    }
+
+    std::fs::set_permissions(&readonly, perms).unwrap();
+    assert!(saw_error, "expected Event::Error from config actor after failed write");
+}
+
+/// Layer 2: SaveProvider event still flows through the refactored helper.
+#[tokio::test]
+async fn save_provider_event_still_flows() {
+    let (_dir, path) = temp_config_path();
+    let bus = EventBus::<Event>::new(10);
+    let mut sub = bus.subscribe();
+    let (handle, _actor) = ConfigActor::spawn(bus, Some(path));
+
+    // Drain initial load.
+    let _ = sub.recv().await;
+
+    handle
+        .save_provider(
+            "claude".into(),
+            "https://api.anthropic.com".into(),
+            "sk-test-key".into(),
+            vec!["claude-3-5-sonnet".into()],
+        )
+        .await;
+
+    let event = tokio::time::timeout(std::time::Duration::from_secs(2), sub.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    let Event::ConfigLoaded { config } = event else {
+        panic!("expected ConfigLoaded after save_provider, got {event:?}");
+    };
+    assert!(config.model_providers.contains_key("claude"));
+    let provider = config.model_providers.get("claude").unwrap();
+    assert_eq!(provider.base_url, "https://api.anthropic.com");
+    assert_eq!(provider.models, vec!["claude-3-5-sonnet"]);
+}

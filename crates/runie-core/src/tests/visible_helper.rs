@@ -1,7 +1,7 @@
 //! Test helper for computing the visible region of the element cache.
 
 use crate::model::AppState;
-use crate::ui::elements::Element;
+use crate::view::elements::Element;
 
 #[derive(Clone, Copy)]
 pub struct TestViewport<'a> {

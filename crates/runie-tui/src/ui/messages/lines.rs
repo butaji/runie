@@ -80,7 +80,7 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
 mod tests {
     use crate::ui::render_lines::{element_line_count, to_lines_internal};
     use ratatui::widgets::Paragraph;
-    use runie_core::ui::elements::Element;
+    use runie_core::view::elements::Element;
 
     fn assert_count_matches(element: Element, width: u16) {
         let count = element_line_count(&element, width);

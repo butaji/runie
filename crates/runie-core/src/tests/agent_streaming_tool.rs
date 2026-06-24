@@ -3,7 +3,7 @@
 use crate::event::Event;
 use crate::model::{AppState, Role};
 use crate::tests::fresh_state;
-use crate::ui::LazyCache;
+use crate::view::LazyCache;
 
 /// Streaming deltas that carry a tool marker must still produce a visible
 /// tool result and final response after the thought is captured.
@@ -92,9 +92,9 @@ fn streaming_tool_turn_renders_tool_result_and_final_response() {
         .elements
         .iter()
         .map(|e| match e {
-            crate::ui::Element::ToolDone { .. } => "D",
-            crate::ui::Element::AgentMessage { .. } => "A",
-            crate::ui::Element::ThoughtMarker { .. } => "T",
+            crate::view::Element::ToolDone { .. } => "D",
+            crate::view::Element::AgentMessage { .. } => "A",
+            crate::view::Element::ThoughtMarker { .. } => "T",
             _ => "?",
         })
         .collect();

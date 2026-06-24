@@ -6,7 +6,7 @@
 
 use crate::display_width;
 use crate::markdown::{extract_code_blocks, CodeBlock};
-use crate::ui::elements::Element;
+use crate::view::elements::Element;
 use textwrap::wrap;
 
 /// User message prefix glyph (must match `runie_tui::theme::GLYPH_USER`).

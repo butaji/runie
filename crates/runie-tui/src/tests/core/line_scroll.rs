@@ -1,6 +1,6 @@
 use runie_core::model::{AppState, ChatMessage,  Role};
 use runie_core::Part;
-use runie_core::ui::Element;
+use runie_core::view::Element;
 use runie_testing::fresh_state;
 
 // Helper: build a thought with N lines of reasoning

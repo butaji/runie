@@ -1,24 +1,24 @@
 use runie_core::event::AgentEvent;
 use runie_core::model::{AppState, ChatMessage, Role};
 use runie_core::Part;
-use runie_core::ui::LazyCache;
+use runie_core::view::LazyCache;
 
 fn element_kinds(state: &AppState) -> Vec<String> {
     let feed = LazyCache::feed(state);
     feed.elements
         .iter()
         .map(|e| match e {
-            runie_core::ui::Element::UserMessage { .. } => "User".to_string(),
-            runie_core::ui::Element::AgentMessage { .. } => "Agent".to_string(),
-            runie_core::ui::Element::Thinking { .. } => "Thinking".to_string(),
-            runie_core::ui::Element::ThoughtMarker { .. } => "Thought".to_string(),
-            runie_core::ui::Element::ThoughtSummary { .. } => "ThoughtSum".to_string(),
-            runie_core::ui::Element::ToolRunning { .. } => "ToolRun".to_string(),
-            runie_core::ui::Element::ToolDone { .. } => "ToolDone".to_string(),
-            runie_core::ui::Element::ToolSummary { .. } => "ToolSum".to_string(),
-            runie_core::ui::Element::ContextGroup { .. } => "Context".to_string(),
-            runie_core::ui::Element::TurnComplete { .. } => "Turn".to_string(),
-            runie_core::ui::Element::Spacer { .. } => "Spacer".to_string(),
+            runie_core::view::Element::UserMessage { .. } => "User".to_string(),
+            runie_core::view::Element::AgentMessage { .. } => "Agent".to_string(),
+            runie_core::view::Element::Thinking { .. } => "Thinking".to_string(),
+            runie_core::view::Element::ThoughtMarker { .. } => "Thought".to_string(),
+            runie_core::view::Element::ThoughtSummary { .. } => "ThoughtSum".to_string(),
+            runie_core::view::Element::ToolRunning { .. } => "ToolRun".to_string(),
+            runie_core::view::Element::ToolDone { .. } => "ToolDone".to_string(),
+            runie_core::view::Element::ToolSummary { .. } => "ToolSum".to_string(),
+            runie_core::view::Element::ContextGroup { .. } => "Context".to_string(),
+            runie_core::view::Element::TurnComplete { .. } => "Turn".to_string(),
+            runie_core::view::Element::Spacer { .. } => "Spacer".to_string(),
         })
         .collect()
 }
@@ -216,7 +216,7 @@ fn multiple_tools_ordered_by_completion_time() {
         .elements
         .iter()
         .filter_map(|e| match e {
-            runie_core::ui::Element::ToolDone { name, .. } => Some(name.clone()),
+            runie_core::view::Element::ToolDone { name, .. } => Some(name.clone()),
             _ => None,
         })
         .collect();

@@ -2,8 +2,8 @@ use runie_core::event::Event;
 use runie_core::event::{AgentEvent, ControlEvent};
 use runie_core::model::{AppState, ChatMessage,  Role};
 use runie_core::Part;
-use runie_core::ui::elements::Element;
-use runie_core::ui::LazyCache;
+use runie_core::view::elements::Element;
+use runie_core::view::LazyCache;
 use runie_testing::fresh_state;
 
 fn dispatch(state: &mut AppState, events: &[Event]) {

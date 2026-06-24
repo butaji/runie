@@ -43,7 +43,7 @@ fn large_tool_output_bottom_lines_in_viewport() {
     let tool_elems: Vec<_> = region
         .elements
         .iter()
-        .filter(|e| matches!(e, runie_core::ui::Element::ToolDone { .. }))
+        .filter(|e| matches!(e, runie_core::view::Element::ToolDone { .. }))
         .collect();
     assert!(!tool_elems.is_empty(), "ToolDone must be in viewport");
 }
@@ -171,7 +171,7 @@ fn submit_then_large_response_stays_at_bottom() {
         .elements
         .iter()
         .filter_map(|e| match e {
-            runie_core::ui::Element::ToolDone { output, .. } => Some(output.clone()),
+            runie_core::view::Element::ToolDone { output, .. } => Some(output.clone()),
             _ => None,
         })
         .collect();

@@ -33,34 +33,34 @@ fn run_tool_turn(state: &mut AppState, response: &str, tool_output: &str) {
 }
 
 fn agent_pos(state: &AppState) -> Option<usize> {
-    runie_core::ui::LazyCache::feed(state)
+    runie_core::view::LazyCache::feed(state)
         .elements
         .iter()
-        .position(|e| matches!(e, runie_core::ui::Element::AgentMessage { .. }))
+        .position(|e| matches!(e, runie_core::view::Element::AgentMessage { .. }))
 }
 
 fn tool_pos(state: &AppState) -> Option<usize> {
-    runie_core::ui::LazyCache::feed(state)
+    runie_core::view::LazyCache::feed(state)
         .elements
         .iter()
-        .position(|e| matches!(e, runie_core::ui::Element::ToolDone { .. }))
+        .position(|e| matches!(e, runie_core::view::Element::ToolDone { .. }))
 }
 
 fn thought_pos(state: &AppState) -> Option<usize> {
-    runie_core::ui::LazyCache::feed(state)
+    runie_core::view::LazyCache::feed(state)
         .elements
         .iter()
-        .position(|e| matches!(e, runie_core::ui::Element::ThoughtMarker { .. }))
+        .position(|e| matches!(e, runie_core::view::Element::ThoughtMarker { .. }))
 }
 
 fn agent_turn_complete_kinds(state: &AppState) -> Vec<&'static str> {
-    runie_core::ui::LazyCache::feed(state)
+    runie_core::view::LazyCache::feed(state)
         .elements
         .iter()
         .map(|e| match e {
-            runie_core::ui::Element::AgentMessage { .. } => "A",
-            runie_core::ui::Element::TurnComplete { .. } => "T",
-            runie_core::ui::Element::Spacer { .. } => "S",
+            runie_core::view::Element::AgentMessage { .. } => "A",
+            runie_core::view::Element::TurnComplete { .. } => "T",
+            runie_core::view::Element::Spacer { .. } => "S",
             _ => "?",
         })
         .collect()
@@ -91,7 +91,7 @@ fn final_agent_visible_when_tool_overflows() {
     state.view.scroll = 0;
     let region = crate::tests::core::visible_helper::compute_viewport(&state, 5);
     let has_agent = region.elements.iter().any(
-        |e| matches!(e, runie_core::ui::Element::AgentMessage { content, .. } if content == "Done!"),
+        |e| matches!(e, runie_core::view::Element::AgentMessage { content, .. } if content == "Done!"),
     );
     assert!(has_agent, "Final agent 'Done!' must be visible at bottom");
 }

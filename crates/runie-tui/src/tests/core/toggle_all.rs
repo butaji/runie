@@ -152,11 +152,11 @@ fn new_thought_respects_global_collapse_when_true() {
     });
     state.ensure_fresh();
 
-    let feed = runie_core::ui::LazyCache::feed(&state);
+    let feed = runie_core::view::LazyCache::feed(&state);
     let has_summary = feed
         .elements
         .iter()
-        .any(|e| matches!(e, runie_core::ui::elements::Element::ThoughtSummary { .. }));
+        .any(|e| matches!(e, runie_core::view::elements::Element::ThoughtSummary { .. }));
     assert!(
         has_summary,
         "New thought should be collapsed when all_collapsed=true"
@@ -180,11 +180,11 @@ fn new_thought_respects_global_expand_when_false() {
     });
     state.ensure_fresh();
 
-    let feed = runie_core::ui::LazyCache::feed(&state);
+    let feed = runie_core::view::LazyCache::feed(&state);
     let has_marker = feed
         .elements
         .iter()
-        .any(|e| matches!(e, runie_core::ui::elements::Element::ThoughtMarker { .. }));
+        .any(|e| matches!(e, runie_core::view::elements::Element::ThoughtMarker { .. }));
     assert!(
         has_marker,
         "New thought should be expanded when all_collapsed=false"
@@ -208,11 +208,11 @@ fn new_tool_respects_global_collapse_when_true() {
     });
     state.ensure_fresh();
 
-    let feed = runie_core::ui::LazyCache::feed(&state);
+    let feed = runie_core::view::LazyCache::feed(&state);
     let has_summary = feed
         .elements
         .iter()
-        .any(|e| matches!(e, runie_core::ui::elements::Element::ToolSummary { .. }));
+        .any(|e| matches!(e, runie_core::view::elements::Element::ToolSummary { .. }));
     assert!(
         has_summary,
         "New tool should be collapsed when all_collapsed=true"
@@ -236,11 +236,11 @@ fn new_tool_respects_global_expand_when_false() {
     });
     state.ensure_fresh();
 
-    let feed = runie_core::ui::LazyCache::feed(&state);
+    let feed = runie_core::view::LazyCache::feed(&state);
     let has_done = feed
         .elements
         .iter()
-        .any(|e| matches!(e, runie_core::ui::elements::Element::ToolDone { .. }));
+        .any(|e| matches!(e, runie_core::view::elements::Element::ToolDone { .. }));
     assert!(
         has_done,
         "New tool should be expanded when all_collapsed=false"

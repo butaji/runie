@@ -25,7 +25,7 @@ fn verify_user_submit_visible(state: &mut AppState, height: usize) {
     state.view.scroll = 0;
 
     let region = crate::tests::core::visible_helper::compute_viewport(&state, height);
-    assert!(region.elements.iter().any(|e| matches!(e, runie_core::ui::Element::UserMessage { content, .. } if content == "list files")),
+    assert!(region.elements.iter().any(|e| matches!(e, runie_core::view::Element::UserMessage { content, .. } if content == "list files")),
         "User message must be visible after submit");
 }
 
@@ -45,7 +45,7 @@ fn verify_thought_visible(state: &mut AppState, height: usize) {
         region
             .elements
             .iter()
-            .any(|e| matches!(e, runie_core::ui::Element::ThoughtMarker { .. })),
+            .any(|e| matches!(e, runie_core::view::Element::ThoughtMarker { .. })),
         "Thought must be visible"
     );
 }
@@ -77,7 +77,7 @@ fn verify_tool_output_visible(state: &mut AppState, height: usize) {
         .elements
         .iter()
         .rev()
-        .find(|e| !matches!(e, runie_core::ui::Element::Spacer { .. }));
+        .find(|e| !matches!(e, runie_core::view::Element::Spacer { .. }));
     assert!(last_elem.is_some(), "Last visible element must exist");
 }
 
@@ -92,7 +92,7 @@ fn verify_final_done_visible(state: &mut AppState, height: usize) {
     let region = crate::tests::core::visible_helper::compute_viewport(&state, height);
     assert!(
         region.elements.iter().any(
-            |e| matches!(e, runie_core::ui::Element::AgentMessage { content, .. } if content == "Done!")
+            |e| matches!(e, runie_core::view::Element::AgentMessage { content, .. } if content == "Done!")
         ),
         "Final 'Done!' must be visible at bottom"
     );
@@ -130,7 +130,7 @@ fn large_thought_bottom_lines_visible() {
     let thought_elems: Vec<_> = region
         .elements
         .iter()
-        .filter(|e| matches!(e, runie_core::ui::Element::ThoughtMarker { .. }))
+        .filter(|e| matches!(e, runie_core::view::Element::ThoughtMarker { .. }))
         .collect();
     assert!(
         !thought_elems.is_empty(),
@@ -186,7 +186,7 @@ fn scroll_zero_always_shows_latest() {
     let region = crate::tests::core::visible_helper::compute_viewport(&state, height);
     // Latest message (msg2) should be visible
     let has_latest = region.elements.iter().any(
-        |e| matches!(e, runie_core::ui::Element::UserMessage { content, .. } if content == "msg2"),
+        |e| matches!(e, runie_core::view::Element::UserMessage { content, .. } if content == "msg2"),
     );
     assert!(has_latest, "Latest message must be visible when scroll=0");
 }
@@ -222,7 +222,7 @@ fn tool_output_exceeding_viewport_shows_latest_files() {
     let tool_elems: Vec<_> = region
         .elements
         .iter()
-        .filter(|e| matches!(e, runie_core::ui::Element::ToolDone { .. }))
+        .filter(|e| matches!(e, runie_core::view::Element::ToolDone { .. }))
         .collect();
     assert!(!tool_elems.is_empty(), "ToolDone must be in visible region");
 }

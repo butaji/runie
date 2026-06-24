@@ -1,7 +1,7 @@
 use crate::event::AgentEvent;
 use crate::event::Event;
 use crate::model::{AppState, Role};
-use crate::ui::LazyCache;
+use crate::view::LazyCache;
 use crate::tests::fresh_state;
 
 fn dispatch(state: &mut AppState, events: &[Event]) {
@@ -15,17 +15,17 @@ fn element_kinds_no_spacer(state: &AppState) -> Vec<String> {
     feed.elements
         .iter()
         .map(|e| match e {
-            crate::ui::Element::UserMessage { .. } => "User".to_string(),
-            crate::ui::Element::AgentMessage { .. } => "Agent".to_string(),
-            crate::ui::Element::Thinking { .. } => "Thinking".to_string(),
-            crate::ui::Element::ThoughtMarker { .. } => "Thought".to_string(),
-            crate::ui::Element::ThoughtSummary { .. } => "ThoughtSum".to_string(),
-            crate::ui::Element::ToolRunning { .. } => "ToolRun".to_string(),
-            crate::ui::Element::ToolDone { .. } => "ToolDone".to_string(),
-            crate::ui::Element::ToolSummary { .. } => "ToolSum".to_string(),
-            crate::ui::Element::ContextGroup { .. } => "Context".to_string(),
-            crate::ui::Element::TurnComplete { .. } => "Turn".to_string(),
-            crate::ui::Element::Spacer { .. } => "Spacer".to_string(),
+            crate::view::Element::UserMessage { .. } => "User".to_string(),
+            crate::view::Element::AgentMessage { .. } => "Agent".to_string(),
+            crate::view::Element::Thinking { .. } => "Thinking".to_string(),
+            crate::view::Element::ThoughtMarker { .. } => "Thought".to_string(),
+            crate::view::Element::ThoughtSummary { .. } => "ThoughtSum".to_string(),
+            crate::view::Element::ToolRunning { .. } => "ToolRun".to_string(),
+            crate::view::Element::ToolDone { .. } => "ToolDone".to_string(),
+            crate::view::Element::ToolSummary { .. } => "ToolSum".to_string(),
+            crate::view::Element::ContextGroup { .. } => "Context".to_string(),
+            crate::view::Element::TurnComplete { .. } => "Turn".to_string(),
+            crate::view::Element::Spacer { .. } => "Spacer".to_string(),
         })
         .filter(|k| k != "Spacer")
         .collect()
@@ -35,7 +35,7 @@ fn feed_has_turn_complete(state: &AppState) -> bool {
     let feed = LazyCache::feed(state);
     feed.elements
         .iter()
-        .any(|e| matches!(e, crate::ui::Element::TurnComplete { .. }))
+        .any(|e| matches!(e, crate::view::Element::TurnComplete { .. }))
 }
 
 #[test]

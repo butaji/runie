@@ -14,17 +14,17 @@ fn visible_kinds(state: &AppState, height: usize) -> Vec<String> {
         .elements
         .iter()
         .map(|e| match e {
-            crate::ui::Element::UserMessage { .. } => "User".to_string(),
-            crate::ui::Element::AgentMessage { .. } => "Agent".to_string(),
-            crate::ui::Element::Thinking { .. } => "Thinking".to_string(),
-            crate::ui::Element::ThoughtMarker { .. } => "Thought".to_string(),
-            crate::ui::Element::ThoughtSummary { .. } => "ThoughtSum".to_string(),
-            crate::ui::Element::ToolRunning { .. } => "ToolRun".to_string(),
-            crate::ui::Element::ToolDone { .. } => "ToolDone".to_string(),
-            crate::ui::Element::ToolSummary { .. } => "ToolSum".to_string(),
-            crate::ui::Element::ContextGroup { .. } => "Context".to_string(),
-            crate::ui::Element::TurnComplete { .. } => "Turn".to_string(),
-            crate::ui::Element::Spacer { .. } => "Spacer".to_string(),
+            crate::view::Element::UserMessage { .. } => "User".to_string(),
+            crate::view::Element::AgentMessage { .. } => "Agent".to_string(),
+            crate::view::Element::Thinking { .. } => "Thinking".to_string(),
+            crate::view::Element::ThoughtMarker { .. } => "Thought".to_string(),
+            crate::view::Element::ThoughtSummary { .. } => "ThoughtSum".to_string(),
+            crate::view::Element::ToolRunning { .. } => "ToolRun".to_string(),
+            crate::view::Element::ToolDone { .. } => "ToolDone".to_string(),
+            crate::view::Element::ToolSummary { .. } => "ToolSum".to_string(),
+            crate::view::Element::ContextGroup { .. } => "Context".to_string(),
+            crate::view::Element::TurnComplete { .. } => "Turn".to_string(),
+            crate::view::Element::Spacer { .. } => "Spacer".to_string(),
         })
         .filter(|k| k != "Spacer")
         .collect()
@@ -41,7 +41,7 @@ fn latest_is_visible(state: &AppState, height: usize) -> bool {
         .elements
         .iter()
         .rev()
-        .find(|e| !matches!(e, crate::ui::Element::Spacer { .. }));
+        .find(|e| !matches!(e, crate::view::Element::Spacer { .. }));
     last.is_some()
 }
 
@@ -174,7 +174,7 @@ fn large_tool_output_bottom_lines_visible() {
         .elements
         .iter()
         .filter_map(|e| match e {
-            crate::ui::Element::ToolDone { output, .. } => Some(output.clone()),
+            crate::view::Element::ToolDone { output, .. } => Some(output.clone()),
             _ => None,
         })
         .collect();
@@ -243,14 +243,14 @@ fn verify_thought_visible(state: &AppState, height: usize) {
     let has_thought = region
         .elements
         .iter()
-        .any(|e| matches!(e, crate::ui::Element::ThoughtMarker { .. }));
+        .any(|e| matches!(e, crate::view::Element::ThoughtMarker { .. }));
     assert!(has_thought, "Thought must be visible after overflow");
 
     let thought_texts: Vec<String> = region
         .elements
         .iter()
         .filter_map(|e| match e {
-            crate::ui::Element::ThoughtMarker { content, .. } => Some(content.clone()),
+            crate::view::Element::ThoughtMarker { content, .. } => Some(content.clone()),
             _ => None,
         })
         .collect();
@@ -331,7 +331,7 @@ fn user_message_visible_after_submit_clears_input() {
 
     let region = crate::tests::visible_helper::compute_viewport(&state, height);
     let has_user = region.elements.iter().any(|e| match e {
-        crate::ui::Element::UserMessage { content, .. } => content == "list files",
+        crate::view::Element::UserMessage { content, .. } => content == "list files",
         _ => false,
     });
     assert!(has_user, "Submitted user message must be visible");

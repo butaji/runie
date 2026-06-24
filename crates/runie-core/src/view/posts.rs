@@ -8,8 +8,8 @@
 //! Example:
 //!
 //! ```rust,ignore
-//! use runie_core::view::posts::{PostBuilder, PostKind};
-//! use runie_core::view::elements::Feed;
+//! use runie_core::ui::posts::{PostBuilder, PostKind};
+//! use runie_core::ui::elements::Feed;
 //!
 //! let mut feed = Feed::new();
 //! feed.push_post(

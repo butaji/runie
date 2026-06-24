@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::model::InputReceiver;
 use crate::model::ModelSelectorItem;
-use crate::ui::elements::Element;
+use crate::view::elements::Element;
 
 #[derive(Clone)]
 pub struct ViewState {
@@ -46,7 +46,7 @@ pub struct ViewState {
     pub(crate) cached_auth_providers: Arc<[String]>,
     pub(crate) cached_auth_valid: bool,
     /// Navigable posts in the feed. Rebuilt alongside `elements_cache`.
-    pub posts: Arc<[crate::ui::elements::Post]>,
+    pub posts: Arc<[crate::view::elements::Post]>,
     /// Last known mouse position from `MouseMove` events. Used by the TUI
     /// to compute `MouseTarget` for hover styling and click routing.
     pub mouse_position: Option<(u16, u16)>,

@@ -1,12 +1,12 @@
 #![warn(clippy::all)]
 
-//! Runie Core — State, Events, Update, UI Architecture
+//! Runie Core — State, Events, Update, View Architecture
 //!
 //! Architecture (three layers):
 //!   model     :: AppState, ChatMessage (source of truth)
 //!   event     :: Event enum (all possible state transitions)
 //!   update    :: State transitions (pure functions)
-//!   ui        :: Elements, Transform (view layer)
+//!   view      :: Elements, Transform (view layer — domain projection)
 //!   labels    :: Static text constants
 
 extern crate self as runie_core;
@@ -93,7 +93,7 @@ pub mod tool_parser;
 pub use tool::{format_bytes, format_duration};
 pub mod permissions;
 pub mod trust;
-pub mod ui;
+pub mod view;
 pub mod update;
 
 #[cfg(test)]
@@ -163,4 +163,4 @@ pub use tokens::{
     TokenTracker, Tokenizer,
 };
 pub use trust::{TrustDecision, TrustManager};
-pub use ui::{Element, Feed, LazyCache};
+pub use view::{Element, Feed, LazyCache};

@@ -181,7 +181,7 @@ impl AppState {
         self.refresh_settings_items();
 
         if self.view.dirty && self.view.message_gen != self.view.cached_gen {
-            let feed = crate::ui::LazyCache::feed(self);
+            let feed = crate::view::LazyCache::feed(self);
             self.view.element_count = feed.elements.len();
             let width = self.view.last_content_width.max(1);
             let line_counts: Vec<usize> = feed

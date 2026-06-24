@@ -143,12 +143,12 @@ fn visible_uses_scroll_offset() {
 
     // At scroll=0 (bottom), we see newest 5 lines worth of elements
     let visible_bottom = crate::tests::core::visible_helper::compute_viewport(&state, 5);
-    assert!(visible_bottom.elements.iter().any(|e| matches!(e, runie_core::ui::elements::Element::UserMessage { content, .. } if content == "msg9")), "Bottom should show latest");
+    assert!(visible_bottom.elements.iter().any(|e| matches!(e, runie_core::view::elements::Element::UserMessage { content, .. } if content == "msg9")), "Bottom should show latest");
 
     // At scroll=35 (top), we see oldest: first is msg0
     state.view.scroll = 35;
     let visible_top = crate::tests::core::visible_helper::compute_viewport(&state, 5);
-    assert!(visible_top.elements.iter().any(|e| matches!(e, runie_core::ui::elements::Element::UserMessage { content, .. } if content == "msg0")), "Top should show oldest");
+    assert!(visible_top.elements.iter().any(|e| matches!(e, runie_core::view::elements::Element::UserMessage { content, .. } if content == "msg0")), "Top should show oldest");
 }
 
 #[test]
