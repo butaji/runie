@@ -108,10 +108,6 @@ fn handle_mouse_click_event(state: &mut AppState, row: u16, col: u16, button: &s
 }
 
 fn handle_history_prev(state: &mut AppState) {
-    if state.view.vim_nav_mode {
-        state.vim_nav_up();
-        return;
-    }
     if state.completion.path_suggestions.is_some() {
         state.path_completion_up();
     } else if state.input.input.contains('\n') {
@@ -122,13 +118,6 @@ fn handle_history_prev(state: &mut AppState) {
 }
 
 fn handle_history_next(state: &mut AppState) {
-    if state.view.vim_nav_mode {
-        if !state.vim_nav_down() {
-            state.view.vim_nav_mode = false;
-            state.mark_dirty();
-        }
-        return;
-    }
     if state.completion.path_suggestions.is_some() {
         state.path_completion_down();
     } else if state.input.input.contains('\n') {

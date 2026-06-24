@@ -144,4 +144,6 @@ mod turn_complete_visibility;
 #[cfg(test)]
 mod vim_mode;
 #[cfg(test)]
+mod vim_nav_history;
+#[cfg(test)]
 pub(crate) mod visible_helper;

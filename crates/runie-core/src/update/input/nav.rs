@@ -1,6 +1,6 @@
 //! Cursor & vim navigation (merged from input_nav.rs).
 
-use crate::event::{DialogEvent, InputEvent, ScrollEvent};
+use crate::event::{DialogEvent, ScrollEvent};
 use crate::model::AppState;
 use crate::Event;
 
@@ -288,11 +288,11 @@ impl AppState {
 
     pub(crate) fn handle_vim_nav_event(&mut self, event: &Event) -> Option<bool> {
         match event {
-            InputEvent::HistoryPrev | ScrollEvent::Up => {
+            ScrollEvent::Up => {
                 self.vim_nav_up();
                 Some(false)
             }
-            InputEvent::HistoryNext | ScrollEvent::Down => {
+            ScrollEvent::Down => {
                 self.vim_nav_down();
                 Some(false)
             }
