@@ -1,15 +1,11 @@
 use super::*;
 
 /// Wait for the actor's global state to be registered (indicating init has started).
-/// Uses yield-based polling to be deterministic without arbitrary wall-clock waits.
+/// Uses a minimal sleep to allow the scheduler to run the actor task.
 async fn wait_for_actor_ready() {
-    for _ in 0..1000 {
-        if FffSearchState::get().is_some() {
-            return;
-        }
-        tokio::task::yield_now().await;
-    }
-    // Proceed anyway - actor may still be initializing
+    // 50ms is sufficient for the scheduler to run the actor task while being much faster
+    // than the original 200ms sleep.
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 }
 
 #[tokio::test]
@@ -36,7 +32,7 @@ async fn indexer_initializes_in_temp_dir() {
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    // Wait for actor to be ready (deterministic yield-based sync instead of sleep)
+    // Wait for actor to be ready (minimal sleep for scheduler to run actor task)
     wait_for_actor_ready().await;
 
     // Send a search request
@@ -50,10 +46,10 @@ async fn indexer_initializes_in_temp_dir() {
         })
         .await;
 
-    // Collect results using deterministic sync (extended polling for actor init)
+    // Collect results using deterministic sync
     let mut result = None;
     let mut sub = bus.subscribe();
-    for _ in 0..1000 {
+    for _ in 0..100 {
         if let Some(Ok(FffSearchResult(payload))) = sub.try_recv() {
             if payload.request_id == request_id {
                 result = Some(payload);
@@ -93,7 +89,7 @@ async fn indexer_answers_file_search() {
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    // Wait for actor to be ready (deterministic yield-based sync instead of sleep)
+    // Wait for actor to be ready (minimal sleep for scheduler to run actor task)
     wait_for_actor_ready().await;
 
     // Search for "cli"
@@ -107,10 +103,10 @@ async fn indexer_answers_file_search() {
     .await
     .expect("send succeeds");
 
-    // Wait for result using deterministic sync (extended polling for actor init)
+    // Wait for result using deterministic sync
     let mut result = None;
     let mut sub = bus.subscribe();
-    for _ in 0..1000 {
+    for _ in 0..100 {
         if let Some(Ok(FffSearchResult(payload))) = sub.try_recv() {
             if payload.request_id == request_id {
                 result = Some(payload);
@@ -146,7 +142,7 @@ async fn search_request_event_returns_results() {
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    // Wait for actor to be ready (deterministic yield-based sync instead of sleep)
+    // Wait for actor to be ready (minimal sleep for scheduler to run actor task)
     wait_for_actor_ready().await;
 
     let request_id = 99;
@@ -159,10 +155,10 @@ async fn search_request_event_returns_results() {
     .await
     .expect("send succeeds");
 
-    // Drain events using deterministic sync (extended polling for actor init)
+    // Drain events using deterministic sync
     let mut got_result = false;
     let mut sub = bus.subscribe();
-    for _ in 0..1000 {
+    for _ in 0..100 {
         if let Some(Ok(FffSearchResult(payload))) = sub.try_recv() {
             if payload.request_id == request_id {
                 assert!(!payload.items.is_empty() || !payload.indexed);
