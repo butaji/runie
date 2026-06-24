@@ -9,13 +9,13 @@ path = "src/lib.rs"
 [dependencies]
 runie-core.workspace = true
 anyhow.workspace = true
-serde = { version = "1.0", features = ["derive"] }
+serde.workspace = true
 serde_json.workspace = true
-async-trait = "0.1"
+async-trait.workspace = true
 tokio.workspace = true
 reqwest.workspace = true
 fff-search.workspace = true
 git2.workspace = true
 
 [dev-dependencies]
-tempfile = "3"
+tempfile.workspace = true

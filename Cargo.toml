@@ -21,6 +21,7 @@ toml = "0.8"
 dirs = "5.0"
 nix = { version = "0.31", features = ["signal"] }
 base64 = "0.22"
+async-trait = "0.1"
 pulldown-cmark = "0.13"
 redb = "2"
 fff-search = "0.9.5-nightly.ec57eb0"

@@ -12,16 +12,16 @@ default = []
 mcp = []
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
+serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
 runie-protocol.workspace = true
 anyhow.workspace = true
 similar.workspace = true
 dirs.workspace = true
-base64 = "0.22"
+base64.workspace = true
 unicode-segmentation = "1.10"
-toml = "0.8"
+toml.workspace = true
 tokio.workspace = true
 futures.workspace = true
 parking_lot.workspace = true
@@ -35,7 +35,7 @@ arboard = "3.6"
 png = "0.17"
 notify = "7.0"
 notify-debouncer-mini = "0.5"
-async-trait = "0.1"
+async-trait.workspace = true
 glob = "0.3"
 strum = { version = "0.26", features = ["derive"] }
 redb.workspace = true
@@ -48,7 +48,7 @@ uuid = { version = "1", features = ["v4"] }
 
 
 [dev-dependencies]
-tempfile = "3"
+tempfile.workspace = true
 criterion = "0.5"
 parking_lot.workspace = true
 runie-macros.workspace = true
