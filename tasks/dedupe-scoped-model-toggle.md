@@ -1,6 +1,6 @@
 # Dedupe scoped-model enable/disable handlers
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P2
@@ -14,25 +14,25 @@
 
 ## Acceptance Criteria
 
-- [ ] A single `set_scoped_models_enabled(state: &mut AppState, enabled: bool)` helper replaces the two handlers.
-- [ ] Both event handlers delegate to the helper.
-- [ ] `cargo test --workspace` succeeds.
+- [x] A single `set_scoped_models_enabled(state: &mut AppState, enabled: bool)` helper replaces the two handlers.
+- [x] Both event handlers delegate to the helper.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `set_scoped_models_enabled_all_true` — all models become enabled.
-- [ ] `set_scoped_models_enabled_all_false` — all models become disabled.
+- [x] `set_scoped_models_enabled_all_true` — all models become enabled.
+- [x] `set_scoped_models_enabled_all_false` — all models become disabled.
 
 ### Layer 2 — Event Handling
-- [ ] `enable_all_event_still_works` — existing event still enables all models.
-- [ ] `disable_all_event_still_works` — existing event still disables all models.
+- [x] `enable_all_event_still_works` — existing event still enables all models.
+- [x] `disable_all_event_still_works` — existing event still disables all models.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 

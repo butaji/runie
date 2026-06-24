@@ -35,6 +35,7 @@ impl AppState {
                 dialog::update_dialog(self, event.clone());
                 return true;
             }
+            // intentionally ignored: other input events fall through
             _ => {}
         }
         false

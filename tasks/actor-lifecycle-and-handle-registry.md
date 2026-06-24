@@ -10,14 +10,27 @@
 
 ## Description
 
-The new actors need a clear lifecycle: where they are spawned, how their handles reach `AppState`, and how the TUI/bootstrap wires them together. Today `AppState` carries loose `Option<Sender<Msg>>` fields. Replace this with a typed `ActorSystem` or handle registry that is initialized at startup and passed into `AppState`.
+The new actors need a clear lifecycle: where they are spawned, how their handles reach `AppState`, and how the TUI/bootstrap wires them together.
+
+Current reality (`runie-tui/src/main.rs`):
+- `bootstrap_app()` spawns `ConfigActor`, `ProviderActor`, `PersistenceActor`, `SessionStoreActor`, `IoActor` and injects their senders/handles into `AppState`.
+- `spawn_background_tasks()` spawns `AgentActor` and `UiActor`.
+- `spawn_session_persistence()` spawns the existing broadcast-subscriber `SessionActor` (durability logger).
+- `FffIndexerActor` is **not spawned in the runtime**; only in tests.
+
+`AppState` currently has `config_tx`, `provider_tx`, `persistence_tx`, `session_store_tx`, `io_tx` as loose `Option` fields. There is no `ActorSystem` or `ActorHandles` struct.
+
+This task introduces the registry in two phases:
+1. **Phase A** — create `ActorHandles` for the existing actors, normalize `config_tx`/`provider_tx` to typed handles, and spawn `FffIndexerActor` in the runtime.
+2. **Phase B** — add handles as new domain actors (`SessionState`, `Input`, `View`, `Completion`, `Turn`, `Permission`, `Notification`, `Trust`, `Env`, `UiControl`) are implemented.
 
 ## Acceptance criteria
 
-- [ ] A single `ActorSystem` struct (or `ActorHandles`) holds cloneable handles for all actors: `config`, `session`, `input`, `view`, `completion`, `turn`, `permission`, `notification`, `trust`, `env`, `fff_indexer`, `ui_control`.
-- [ ] `AppState` stores one `ActorSystem` instead of many `Option<Sender>` fields.
-- [ ] `ActorSystem` provides `send_*` helpers that are no-ops when running in a test context without the actor (or tests use a `TestActorSystem` that records messages).
-- [ ] TUI bootstrap (`runie-tui/src/main.rs` / `app_init.rs`) spawns all actors in dependency order and injects the registry into `AppState`.
+- [ ] `ActorHandles` struct exists in `crates/runie-core/src/actors/mod.rs` and holds cloneable handles for existing actors (`config`, `provider`, `persistence`, `session_store`, `io`, `fff_indexer`, `agent`, `ui`, session-log).
+- [ ] `AppState` stores one `ActorHandles` instead of loose `Option<Sender>` fields.
+- [ ] `config_tx` and `provider_tx` are wrapped in typed handles rather than raw `mpsc::Sender`.
+- [ ] `FffIndexerActor` is spawned in the runtime and its handle stored in `ActorHandles`.
+- [ ] `ActorHandles` provides `send_*` helpers; tests use a `TestActorHandles` recording variant (see `test-actor-harness`).
 - [ ] Actors that need to talk to other actors receive the target handle at construction time (dependency injection), not via `AppState`.
 - [ ] `cargo test --workspace` passes.
 
@@ -46,4 +59,5 @@ The new actors need a clear lifecycle: where they are spawned, how their handles
 ## Notes
 
 - This task is a prerequisite for all actor-implementation tasks because they all need a handle to send messages through.
+- The existing broadcast-subscriber `SessionActor` (durability logger) collides semantically with the planned conversation-state `SessionActor`. Rename the existing one to `SessionLogActor` or keep it as `SessionPersistenceActor`, and use `SessionStateActor` or `ChatSessionActor` for the new owner. Update the registry names accordingly.
 - Keep the registry minimal: one field per actor, no generic indirection unless it simplifies the DSL.

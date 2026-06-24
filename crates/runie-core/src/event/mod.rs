@@ -12,35 +12,24 @@ pub use names::EVENT_NAMES;
 pub use variants::Event;
 
 // Re-export sub-enums for ergonomic external use
-pub use agent::AgentEvent;
-pub use control::ControlEvent;
-pub use dialog_display::DialogEvent;
+pub use aliases::AgentEvent;
+pub use aliases::CommandEvent;
+pub use aliases::ControlEvent;
+pub use aliases::DialogEvent;
+pub use aliases::EditEvent;
+pub use aliases::InputEvent;
+pub use aliases::LoginFlowEvent;
+pub use aliases::ModelConfigEvent;
+pub use aliases::ScrollEvent;
+pub use aliases::SessionEvent;
+pub use aliases::SystemEvent;
 pub use durable::DurableCoreEvent;
-pub use edit::EditEvent;
-pub use input::InputEvent;
 pub use level::TransientLevel;
-pub use login_flow::LoginFlowEvent;
-pub use model_config::ModelConfigEvent;
-pub use scroll::ScrollEvent;
-pub use session::SessionEvent;
-pub use system::SystemEvent;
 
-mod agent;
-pub mod command;
-pub use command::CommandEvent;
-mod control;
-mod dialog;
-pub mod dialog_display;
+pub mod aliases;
 pub mod durable;
-mod edit;
-mod input;
 mod level;
-mod login_flow;
-mod model_config;
 mod names;
-mod scroll;
-mod session;
-mod system;
 mod variants;
 #[cfg(test)]
 mod variants_tests;

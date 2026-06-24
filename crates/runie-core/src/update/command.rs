@@ -38,6 +38,7 @@ pub(super) fn handle_command_event(state: &mut AppState, event: CommandEvent) {
         CommandEvent::RunPaletteCommand { name, args } => {
             run_palette_command(state, name, args);
         }
+        // intentionally ignored: other command events fall through
         _ => {}
     }
 }
@@ -204,7 +205,7 @@ fn run_logout_command(state: &mut AppState, provider: &str) {
         );
     }
     if !state.has_models() {
-        crate::update::login_flow::login_flow_start(state);
+        crate::login_flow::login_flow_start(state);
     }
     dialog::process_command_result(
         state,

@@ -10,14 +10,15 @@
 
 ## Description
 
-All `AppState.session` mutations are scattered across input handlers, agent handlers, system helpers, command handlers, and replay helpers. The existing `SessionActor` (`crates/runie-core/src/session_actor.rs`) only appends durable events; it does not own the in-memory `SessionState`. Promote it to the authoritative owner.
+All `AppState.session` mutations are scattered across input handlers, agent handlers, system helpers, command handlers, and replay helpers. The existing `SessionActor` (`crates/runie-core/src/session_actor.rs`) is **not** an mpsc actor today; it is a broadcast subscriber that replays durable events, persists durable events to JSONL, and maintains the session index/metadata. It does **not** own the in-memory `SessionState`. Promote it to the authoritative owner.
 
 Current violators:
 - `model/state/app_state.rs` — `messages_changed`, `reset_session`, `restore_session`.
 - `update/input/text.rs` — pushes images and user messages.
-- `update/system.rs` — adds system messages, reorders messages, removes trust welcome, applies initial trust.
+- `update/system.rs` — adds system messages (`add_system_msg`), reorders messages (`ensure_turn_complete_last`), removes trust welcome, applies initial trust (pushes trust welcome message).
 - `update/session.rs` — forks/clones/navigates session tree, replays messages, queues/delivers messages.
-- `update/agent/core.rs` — adds thoughts, tool messages, assistant deltas, turn-complete, errors; reorders messages.
+- `update/agent/core.rs` — adds thoughts, tool messages, assistant deltas, turn-complete, errors; reorders/inserts/removes messages (thought replacement, empty-assistant cleanup, compaction-like cleanup).
+- `update/agent/mod.rs` — dispatcher that routes `AgentEvent` to the lifecycle functions.
 - `update/tools.rs` — pending edit push/drain/clear.
 - `model/compaction.rs` and `model/snapshot.rs` — duplicate compaction logic.
 - `commands/dsl/handlers/session/*` — `/new`, `/reset`, name, fork.
@@ -27,7 +28,7 @@ Current violators:
 
 ## Acceptance criteria
 
-- [ ] `SessionActor` becomes an mpsc actor holding the authoritative `SessionState`.
+- [ ] `SessionActor` becomes an mpsc actor holding the authoritative `SessionState`. `SessionMsg` does not exist yet; create it from scratch.
 - [ ] `SessionMsg` enum covers every mutation: `AddUserMessage`, `AttachImage`, `AddSystemMessage`, `RemoveSystemMessage { id }`, `AppendAssistantText`, `SetAssistantMessage`, `InsertThought`, `AddToolMessage`, `UpdateToolMessage`, `CompleteTurn`, `FinishTurn`, `AddErrorMessage`, `PushPendingEdit`, `DrainPendingEdits`, `ClearPendingEdits`, `ForkAt { index }`, `CloneBranch`, `NavigateTo { path }`, `RenameSession { name }`, `CompactMessages { keep_tokens }`, `ResetSession`, `ReplayEvents { events }`, `ImportSession { session }`.
 - [ ] `AppState.session` is private; reads go through an immutable accessor.
 - [ ] `SessionActor` applies each message, updates `session_updated_at`, and emits `Event::SessionChanged` (or domain-specific facts such as `UserMessageAppended`).
@@ -74,4 +75,5 @@ Current violators:
 ## Notes
 
 - `SessionActor` should keep durable JSONL append behavior, but in-memory state and durable log stay in the same actor.
-- Coordinate with `turn-actor-owns-agent-turn-state`: `TurnActor` decides *when* to append; `SessionActor` decides *how* to append.
+- The existing broadcast-subscriber `SessionActor` is primarily a durability logger. Consider renaming it to `SessionLogActor` or `SessionPersistenceActor` before this task, or name the new authoritative actor `SessionStateActor` to avoid confusion. Update `actor-lifecycle-and-handle-registry` accordingly.
+- Coordinate with `turn-actor-owns-agent-turn-state`: `TurnActor` decides *when* to append user/steering messages; `SessionActor` decides *how* to store them. Assistant/tool/thought/turn-complete messages may be emitted by `TurnActor` as `SessionMsg` facts or produced directly by `SessionActor` depending on the final split.

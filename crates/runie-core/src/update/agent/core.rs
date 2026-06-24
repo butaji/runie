@@ -178,8 +178,9 @@ impl AppState {
             E::TextEnd { .. } => {}
             E::ThinkingStart { .. } => self.on_thinking_start(),
             E::ThinkingDelta { content, .. } => self.on_thinking_delta(content),
-            E::ThinkingEnd { .. } => {}
+            E::ThinkingEnd { .. } => {} // intentionally ignored: thinking content is accumulated
             E::AssistantMessageReady { message } => self.on_assistant_message_ready(message),
+            // intentionally ignored: other events fall through
             _ => {}
         }
     }

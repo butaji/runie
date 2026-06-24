@@ -5,7 +5,7 @@
 **Category**: Configuration
 **Priority**: P1
 
-**Depends on**: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection
+**Depends on**: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, actor-lifecycle-and-handle-registry
 **Blocks**: none
 
 ## Description
@@ -13,7 +13,7 @@
 `git_info` and `cwd_name` are set once during TUI bootstrap via blocking IO (`runie-tui/src/app_init.rs`). They never change after startup but they are still direct state mutations outside any actor. Move the detection into an actor and make the fields event-driven.
 
 Current violators:
-- `runie-tui/src/app_init.rs` — sets `state.git_info` and `state.cwd_name` directly.
+- `runie-tui/src/app_init.rs` — sets `state.git_info` and `state.cwd_name` directly (it also loads `skills` and auth providers synchronously; those may be config-derived and already handled by `ConfigActor`).
 - `model/state/app_state.rs` — initializes and preserves fields across reset.
 
 ## Acceptance criteria

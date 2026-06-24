@@ -14,7 +14,7 @@ pub(crate) mod dialog;
 pub(crate) mod dialog_input;
 mod dispatch;
 pub(crate) mod input;
-pub(crate) mod login_flow;
+
 mod permission;
 mod session;
 mod system;
@@ -57,7 +57,7 @@ impl AppState {
             return;
         }
         if self.login_flow.is_some() && matches!(event, DialogEvent::DialogBack) {
-            login_flow::login_flow_cancel(self);
+            crate::login_flow::login_flow_cancel(self);
             return;
         }
         if self.try_handle_dialog_event_dialog(event) {

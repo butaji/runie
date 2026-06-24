@@ -27,22 +27,9 @@ pub(crate) fn load_theme_raw(name: &str) -> opaline::Theme {
     default_theme()
 }
 
-/// Async variant of `load_theme_raw` — offloads file I/O from the async runtime.
-pub(crate) async fn load_theme_raw_async(name: String) -> opaline::Theme {
-    tokio::task::spawn_blocking(move || load_theme_raw(&name))
-        .await
-        .unwrap_or_else(|_| default_theme())
-}
-
 /// Load a theme by name: builtin → custom file → default fallback.
 pub(crate) fn load_theme(name: &str) -> opaline::Theme {
     crate::theme::styles::register_runie_styles(load_theme_raw(name))
-}
-
-/// Async variant of `load_theme`.
-pub(crate) async fn load_theme_async(name: String) -> opaline::Theme {
-    let raw = load_theme_raw_async(name).await;
-    crate::theme::styles::register_runie_styles(raw)
 }
 
 /// Load a theme and quantize its colors to the terminal's color depth.
@@ -55,18 +42,6 @@ pub(crate) fn load_theme_with_caps(
         return base; // No quantization needed
     }
     quantize_theme(base, caps, name)
-}
-
-/// Async variant of `load_theme_with_caps`.
-pub(crate) async fn load_theme_with_caps_async(
-    name: String,
-    caps: crate::terminal::caps::TerminalCapabilities,
-) -> opaline::Theme {
-    let base = load_theme_async(name.clone()).await;
-    if caps.truecolor {
-        return base;
-    }
-    quantize_theme(base, caps, &name)
 }
 
 /// Quantize all palette and token colors in a theme to the terminal's color depth.

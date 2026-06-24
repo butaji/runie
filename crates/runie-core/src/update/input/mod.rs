@@ -68,6 +68,7 @@ fn apply_input_event(state: &mut AppState, event: InputEvent) {
         InputEvent::TerminalSize { width, height } => {
             handle_terminal_resize(state, width, height);
         }
+        // intentionally ignored: other input events fall through
         _ => {}
     }
 }
@@ -185,6 +186,7 @@ fn handle_mouse_click(state: &mut AppState, row: u16, col: u16, button: &str) {
                 // Left-click in feed: toggle collapse-all (same as Ctrl+O).
                 state.toggle_expand_all();
             }
+            // intentionally ignored: other targets fall through
             _ => {}
         }
     }

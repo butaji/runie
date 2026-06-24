@@ -5,7 +5,7 @@
 **Category**: Tools
 **Priority**: P1
 
-**Depends on**: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection
+**Depends on**: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, actor-lifecycle-and-handle-registry
 **Blocks**: none
 
 ## Description
@@ -19,6 +19,7 @@ Current violators:
 
 ## Acceptance criteria
 
+- [ ] `FffIndexerActor` is spawned in the TUI runtime and its handle is stored in `ActorHandles` (see `actor-lifecycle-and-handle-registry`).
 - [ ] `FffIndexerActor` is the only producer of `fff_file_results`/`fff_debounce` updates.
 - [ ] `AppState.fff_file_results` and `fff_debounce` are private; reads go through immutable accessors.
 - [ ] File picker sends `FffMsg::Search { query, counter }` to `FffIndexerActor`.

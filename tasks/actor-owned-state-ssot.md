@@ -55,6 +55,7 @@ Commands / Dialogs / Input handlers
 | `transient_message*` | `NotificationActor` | `update/system.rs`, `update/dispatch.rs`, `update/dialog/router.rs`, `notification.rs`, `model/cache.rs` | `NotificationMsg::*` → `Event::TransientMessage` / `ClearTransient` |
 | `fff_file_results` + `fff_debounce` | `FffIndexerActor` | `update/dialog/open.rs`, `update/dialog/file_picker.rs` | already emits `Event::FffSearchResult`; consume it |
 | `git_info` + `cwd_name` | `EnvActor` (or reuse `IoActor`) | `runie-tui/src/app_init.rs` | `EnvMsg::Detect` → `Event::EnvDetected` |
+| `open_dialog`, `dialog_back_stack`, `login_flow`, `should_quit` | `UiControlActor` | `update/dialog/*.rs`, `login_flow/`, `commands/dsl/handlers/system.rs` | `UiControlMsg::*` → `DialogOpened` / `QuitRequested` |
 
 ### Event taxonomy
 
@@ -67,10 +68,11 @@ No handler consumes an intent and mutates state in the same breath. The only pla
 
 ### AppState contract
 
-- `AppState` fields `session`, `input`, `view`, `completion`, `agent` (turn flags subset), `config` become private to writes.
+- `AppState` fields `session`, `input`, `view`, `completion`, `agent`, `config`, `trust_decisions`, `transient_*`, `fff_*`, `git_info`, `cwd_name`, `permission_request`, `open_dialog`, `dialog_back_stack`, `login_flow`, `should_quit` become private to writes.
+- Inner state structs (`SessionState`, `InputState`, `ViewState`, `CompletionState`, `AgentState`, `ConfigState`) are also encapsulated.
 - Provide immutable accessors: `state.session()`, `state.input()`, `state.view()`, etc.
-- `AppState::update(event: Event)` dispatches facts to projection helpers; intents are illegal here and should panic in debug builds (or be statically typed away).
-- `AppState` keeps actor handles (`config_tx`, `session_tx`, `input_tx`, ...) and exposes thin helpers that just send a message.
+- `AppState::update(event: Fact)` dispatches facts to projection helpers; intents are illegal here and should be statically typed away (or panic in debug builds).
+- `AppState` stores one `ActorHandles` registry instead of loose `Option<Sender>` fields.
 
 ### DSL uniformity
 
@@ -82,13 +84,16 @@ All slash commands, palette items, and dialog actions produce the same kind of t
 
 ## Execution phases
 
-1. **Foundation**: define `Intent`/`Fact` split, add `ActorHandle` registry to `AppState`, make `AppState` fields private.
-2. **Config SSOT**: finish `ConfigActor` ownership (see `config-ssot-via-configactor`).
-3. **Session actor**: move all message/session-tree/pending-edit mutations into `SessionActor`.
-4. **Turn actor**: extract turn lifecycle and queues from `update/agent/core.rs` into `TurnActor`.
-5. **Input/View/Completion actors**: move input editing, view caches, and completion popups into their actors.
-6. **Cross-cutting actors**: `PermissionActor`, `NotificationActor`, `TrustActor`, `EnvActor`.
-7. **Cleanup**: delete `mark_dirty()` / `messages_changed()` helpers from `AppState`, remove direct field writes, run full test suite.
+1. **Foundation**: define `Intent`/`Fact` split (`event-taxonomy-for-actor-state-sync`), introduce `ActorHandles` registry (`actor-lifecycle-and-handle-registry`), add `TestActorHarness` (`test-actor-harness`).
+2. **Projection**: make `AppState` a read-only projection with private fields (`app-state-read-only-projection`). This is staged: lint first, fix incrementally, then `trybuild`.
+3. **Declarative DSL**: build the `on(...).intent(...)` DSL (`declarative-actor-dsl`).
+4. **Config SSOT**: finish `ConfigActor` ownership (`config-ssot-via-configactor`).
+5. **Session actor**: move all message/session-tree/pending-edit mutations into `SessionActor` (consider renaming existing durability logger to `SessionLogActor`).
+6. **Turn actor**: extract turn lifecycle and queues from `update/agent/core.rs` into `TurnActor`.
+7. **Input/View/Completion actors**: move input editing, view caches, and completion popups into their actors.
+8. **Cross-cutting actors**: `PermissionActor`, `NotificationActor`, `TrustActor`, `EnvActor`, `FffIndexerActor`, `UiControlActor`.
+9. **DSL cleanup**: rewrite all commands/dialogs using the declarative DSL (`unified-dsl-intents-for-state-mutations`).
+10. **Final sweep**: delete `mark_dirty()` / `messages_changed()` helpers, enforce the no-direct-mutation gate (`remove-direct-appstate-mutations`), run full test suite.
 
 ## Acceptance criteria
 

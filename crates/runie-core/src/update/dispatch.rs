@@ -21,7 +21,7 @@ pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
         EventCategory::System => super::system::handle_system_event(state, event),
         EventCategory::Session => super::session::handle_session_event(state, event),
         EventCategory::Command => super::command::handle_command_event(state, event),
-        EventCategory::LoginFlow => super::login_flow::login_flow_event(state, event),
+        EventCategory::LoginFlow => crate::login_flow::login_flow_event(state, event),
         EventCategory::Permission => super::permission::permission_event(state, event),
         EventCategory::Other => {}
     }

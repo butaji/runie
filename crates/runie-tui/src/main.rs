@@ -70,7 +70,7 @@ async fn main() -> io::Result<()> {
     let bootstrap = bootstrap_app(bus.clone()).await;
     let mut state = bootstrap.0;
     let provider_handle = bootstrap.1;
-    let _actors = bootstrap.2;
+
 
     let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
     init_terminal_state(&mut state);
@@ -91,17 +91,9 @@ async fn main() -> io::Result<()> {
     Ok(())
 }
 
-struct ActorHandles(
-    runie_core::actor::ActorHandle,
-    runie_core::actor::ActorHandle,
-    runie_core::actor::ActorHandle,
-    runie_core::actor::ActorHandle,
-    runie_core::actor::ActorHandle,
-);
-
 async fn bootstrap_app(
     bus: EventBus<Event>,
-) -> (AppState, runie_core::actors::ProviderActorHandle, ActorHandles) {
+) -> (AppState, runie_core::actors::ProviderActorHandle) {
     let (config_handle, config_actor) = ConfigActor::spawn(bus.clone(), None);
     let (provider_handle, provider_actor) = spawn_provider_actor(&bus, &config_handle);
     let (persistence_handle, persistence_actor) = PersistenceActor::spawn(bus.clone());
@@ -116,11 +108,7 @@ async fn bootstrap_app(
         ..Default::default()
     };
     app_init::bootstrap(&mut state).await;
-    (
-        state,
-        provider_handle,
-        ActorHandles(config_actor, provider_actor, persistence_actor, session_store_actor, io_actor),
-    )
+    (state, provider_handle)
 }
 
 fn spawn_provider_actor(

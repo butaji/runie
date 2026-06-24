@@ -120,6 +120,7 @@ mod tests {
                 match evt {
                     Event::TrustLoaded { .. } => saw_trust = true,
                     Event::HistoryLoaded { .. } => saw_history = true,
+                    // intentionally ignored: other events fall through
                     _ => {}
                 }
             }

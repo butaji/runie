@@ -90,6 +90,7 @@ impl BlockParser {
             Event::End(tag_end) => self.end_tag(tag_end),
             Event::Text(t) | Event::Code(t) => self.push_text(&t),
             Event::SoftBreak | Event::HardBreak => self.push_break(),
+            // intentionally ignored: other event types fall through
             _ => {}
         }
     }
@@ -118,6 +119,7 @@ impl BlockParser {
                     self.text_buf.push_str("~~");
                 }
             }
+            // intentionally ignored: other tags fall through
             _ => {}
         }
     }
@@ -185,6 +187,7 @@ impl BlockParser {
                         .retain(|m| !matches!(m, InlineMarker::Strike));
                 }
             }
+            // intentionally ignored: other tags fall through
             _ => {}
         }
     }

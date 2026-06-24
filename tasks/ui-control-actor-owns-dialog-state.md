@@ -22,10 +22,15 @@ These are not domain state, but they are mutable and shared. A `UiControlActor` 
 
 Current violators:
 - `update/dialog/*.rs` — openers, router, panel stack, toggle handlers set `open_dialog` and `dialog_back_stack`.
-- `update/login_flow.rs` — builds/replaces/pops login panels and sets `login_flow`.
+- `login_flow/handlers.rs` and `login_flow/panel_ops.rs` — build/replace/pop login panels and set `login_flow` (note: `update/login_flow.rs` was deleted; login flow now lives in `crates/runie-core/src/login_flow/`).
 - `commands/dsl/handlers/system.rs` and others — `/quit` sets `should_quit`.
 - `update/system.rs` — `handle_quit_event` sets `should_quit`.
-- `update/dialog/open.rs` — sets `view.input_receiver`.
+- `update/input/text.rs` — sets `should_quit`.
+- `update/session.rs` — resets `open_dialog`.
+- `update/dialog_input.rs` — resets `open_dialog`.
+- `commands/dsl/handlers/session/mod.rs` — clears `open_dialog`, `dialog_back_stack`, `login_flow`.
+- `state.view.input_receiver` is mutated by dialog openers, login flow, session reset, and system helpers; ownership is decided in `view-actor-owns-view-state`.
+- `permission_request` is another singleton overlay field in `AppState` that may also belong under `UiControlActor` or `PermissionActor`.
 
 ## Acceptance criteria
 
@@ -59,9 +64,13 @@ Current violators:
 - `crates/runie-core/src/actors/ui_control/` — new `mod.rs`, `messages.rs`, `actor.rs`.
 - `crates/runie-core/src/model/state/app_state.rs` — private control fields.
 - `crates/runie-core/src/update/dialog/*.rs` — emit `UiControlMsg`.
-- `crates/runie-core/src/update/login_flow.rs` — emit `UiControlMsg`.
+- `crates/runie-core/src/login_flow/handlers.rs` and `login_flow/panel_ops.rs` — emit `UiControlMsg`.
 - `crates/runie-core/src/update/system.rs` — quit handlers emit `UiControlMsg`.
+- `crates/runie-core/src/update/input/text.rs` — quit-on-empty-input emits `UiControlMsg`.
+- `crates/runie-core/src/update/session.rs` — session reset emits `UiControlMsg`.
+- `crates/runie-core/src/update/dialog_input.rs` — dialog back emits `UiControlMsg`.
 - `crates/runie-core/src/commands/dsl/handlers/system.rs` — `/quit` emits intent.
+- `crates/runie-core/src/commands/dsl/handlers/session/mod.rs` — `/new` clears dialogs.
 - `crates/runie-core/src/view_actor.rs` or `update/dialog/open.rs` — manage `input_receiver` via facts.
 
 ## Notes

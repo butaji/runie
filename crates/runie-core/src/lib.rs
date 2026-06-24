@@ -80,7 +80,6 @@ pub mod session_store;
 pub mod sanitize;
 pub mod session_tree;
 pub mod settings;
-pub mod skill;
 pub mod skills;
 pub mod snapshot;
 pub mod state;
@@ -96,7 +95,6 @@ pub mod permissions;
 pub mod trust;
 pub mod ui;
 pub mod update;
-pub mod utils;
 
 #[cfg(test)]
 mod file_refs_lookup_tests;

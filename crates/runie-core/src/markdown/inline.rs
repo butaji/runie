@@ -45,6 +45,7 @@ where
             Event::End(_) => {
                 style_stack.pop();
             }
+            // intentionally ignored: other events fall through
             _ => {}
         }
     }

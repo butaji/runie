@@ -1,11 +1,10 @@
 //! ReadFile tool — reads file contents with optional offset/limit.
 
-use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
+use crate::tool::{Tool, ToolContext, ToolOutput};
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::path::resolve_path_in;
 use serde_json::Value;
-use std::time::Instant;
 use tokio::fs;
 
 /// Update frecency when a file is successfully read.
@@ -57,12 +56,12 @@ impl Tool for ReadFileTool {
     }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
-        let start = Instant::now();
         let path = input["path"]
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("path is required"))?;
         let offset = input["offset"].as_u64().map(|v| v as usize);
         let limit = input["limit"].as_u64().map(|v| v as usize);
+        let tool_args = serde_json::json!({ "path": path });
 
         let full_path = resolve_path_in(path, &ctx.working_dir);
         let content = match fs::read_to_string(&full_path).await {
@@ -71,26 +70,22 @@ impl Tool for ReadFileTool {
                 c
             }
             Err(e) => {
-                return Ok(ToolOutput {
-                    tool_name: "read_file".to_string(),
-                    tool_args: serde_json::json!({ "path": path }),
-                    content: format!("Error reading {}: {}", full_path.display(), e),
-                    bytes_transferred: None,
-                    duration: start.elapsed(),
-                    status: ToolStatus::Error,
-                });
+                return Ok(ToolOutput::error(
+                    "read_file",
+                    tool_args,
+                    format!("Error reading {}: {}", full_path.display(), e),
+                ));
             }
         };
 
         let output = slice_content(&content, offset, limit);
-        Ok(ToolOutput {
-            tool_name: "read_file".to_string(),
-            tool_args: serde_json::json!({ "path": path, "offset": offset, "limit": limit }),
-            content: output,
-            bytes_transferred: Some(content.len() as u64),
-            duration: start.elapsed(),
-            status: ToolStatus::Success,
-        })
+        let tool_args = serde_json::json!({ "path": path, "offset": offset, "limit": limit });
+        Ok(ToolOutput::success_with_bytes(
+            "read_file",
+            tool_args,
+            output,
+            content.len() as u64,
+        ))
     }
 }
 

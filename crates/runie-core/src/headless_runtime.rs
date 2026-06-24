@@ -48,6 +48,7 @@ impl HeadlessRuntime {
                 match sub.recv().await {
                     Ok(Event::ConfigLoaded { .. }) | Ok(Event::Error { .. }) => return Ok::<(), anyhow::Error>(()),
                     Err(_) => return Ok::<(), anyhow::Error>(()),
+                    // intentionally ignored: other events loop back
                     _ => {}
                 }
             }

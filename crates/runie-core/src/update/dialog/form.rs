@@ -74,6 +74,7 @@ fn form_panel_edit_action(panel: &mut Panel, event: &Event) -> FormAction {
         InputEvent::CursorEnd | InputEvent::CursorWordRight => {
             form_panel_move_cursor(panel, CursorDir::End)
         }
+        // intentionally ignored: other input events fall through
         _ => {}
     }
     A::KeepOpen

@@ -10,6 +10,7 @@ fn close_remaining(openers: Vec<char>, result: &mut String) {
             '_' => result.push('_'),
             '~' => result.push_str("~~"),
             '[' => result.push_str("]()"),
+            // intentionally ignored: other characters pass through unchanged
             _ => {}
         }
     }
@@ -78,6 +79,7 @@ fn process_markdown_char(
                 openers.pop();
             }
         }
+        // intentionally ignored: other characters don't affect bracket stack
         _ => {}
     }
 }

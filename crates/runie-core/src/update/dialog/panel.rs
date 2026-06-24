@@ -69,6 +69,7 @@ fn handle_panel_close(state: &mut AppState, event: &Event, stack: &mut PanelStac
                 return pop_dialog_or_close(state, root_closable);
             }
         }
+        // intentionally ignored: PanelPop events are handled above in the specific arm
         _ => {}
     }
     false
@@ -98,6 +99,7 @@ fn handle_panel_navigation(_state: &mut AppState, event: &Event, stack: &mut Pan
             stack.select_down();
             return true;
         }
+        // intentionally ignored: other input events fall through
         _ => {}
     }
     false
@@ -122,6 +124,7 @@ fn handle_panel_activation(
                 }
             }
         }
+        // intentionally ignored: other events fall through
         _ => {}
     }
     None
@@ -149,6 +152,7 @@ fn handle_panel_filter(state: &mut AppState, event: &Event, stack: &mut PanelSta
                 super::rebuild_file_picker(state);
             }
         }
+        // intentionally ignored: other filter events are no-ops
         _ => {}
     }
 }
@@ -331,6 +335,7 @@ fn toggle_checkbox_item(state: &mut AppState, item: &mut PanelItem) -> bool {
             ItemAction::Emit(evt) => {
                 state.update(evt.clone());
             }
+            // intentionally ignored: other item actions are handled elsewhere
             _ => {}
         }
         state.mark_dirty();
@@ -370,6 +375,7 @@ fn apply_panel_setting(state: &mut AppState, stack: &mut PanelStack, key: &str) 
         "truncation_max_lines" | "truncation_max_bytes" => {
             apply_truncation_setting(state, stack, key);
         }
+        // intentionally ignored: other settings are handled by their specific handlers
         _ => {}
     }
 }
@@ -407,6 +413,7 @@ fn apply_select_setting(state: &mut AppState, stack: &mut PanelStack, key: &str)
                 state.set_thinking_level(level);
             }
         }
+        // intentionally ignored: other settings have specific handlers above
         _ => {}
     }
 }
