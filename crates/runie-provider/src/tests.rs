@@ -288,13 +288,12 @@ async fn test_mock_streaming_provider_no_delay() {
 async fn test_validate_api_key_times_out_on_hanging_server() {
     use std::time::Duration;
 
-    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
 
-    std::thread::spawn(move || {
-        let (_stream, _) = listener.accept().unwrap();
-        // Hold the connection open briefly; the validation timeout will fire first.
-        std::thread::sleep(Duration::from_millis(500));
+    // Spawn a task that accepts but never responds — validation will hit its timeout.
+    let handle = tokio::spawn(async move {
+        let _ = listener.accept().await; // never completes
     });
 
     let start = std::time::Instant::now();
@@ -306,6 +305,7 @@ async fn test_validate_api_key_times_out_on_hanging_server() {
     .await;
 
     let elapsed = start.elapsed();
+    handle.abort();
     assert!(result.is_err(), "hanging server should produce an error");
     assert!(
         elapsed < Duration::from_secs(2),

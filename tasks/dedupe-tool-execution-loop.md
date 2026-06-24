@@ -1,6 +1,6 @@
 # Unify interactive and headless tool execution loops
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P1
@@ -14,19 +14,19 @@
 
 ## Acceptance Criteria
 
-- [ ] One shared tool-execution helper handles both paths.
-- [ ] The helper accepts an optional observer callback for event emission.
-- [ ] Permission gate, registry lookup, error fallback, and result-message formatting live in one place.
-- [ ] `cargo test --workspace` succeeds.
+- [x] One shared tool-execution helper handles both paths.
+- [x] The helper accepts an optional observer callback for event emission.
+- [x] Permission gate, registry lookup, error fallback, and result-message formatting live in one place.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `execute_tool_call_builds_result_message` — shared helper produces correct `ChatMessage` for a tool result.
+- [x] `execute_tool_call_builds_result_message` — shared helper produces correct `ChatMessage` for a tool result.
 
 ### Layer 2 — Event Handling
-- [ ] `interactive_tool_execution_emits_events` — with an event observer, `ToolStart`/`ToolEnd` are emitted.
-- [ ] `headless_tool_execution_silent` — without observer, no events are emitted.
+- [x] `interactive_tool_execution_emits_events` — with an event observer, `ToolStart`/`ToolEnd` are emitted.
+- [x] `headless_tool_execution_silent` — without observer, no events are emitted.
 
 ### Layer 3 — Rendering
 - [ ] N/A.

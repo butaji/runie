@@ -252,16 +252,20 @@ mod tests {
         let output = ToolOutput {
             tool_name: "read_file".to_string(),
             tool_args: serde_json::json!({"path": "Cargo.toml"}),
-            content: "[package]\nname = \"runie\"".to_string(),
+            content: "[Lines 1-5]".to_string(),
             bytes_transferred: None,
             duration: Duration::from_millis(10),
             status: ToolStatus::Success,
         };
         let msg = tool_result_message(&tool_call, &output);
-        assert!(msg.content().contains("read_file result:"));
-        assert!(msg.content().contains("[package]"));
         assert_eq!(msg.role, Role::Tool);
-        assert_eq!(msg.tool_call_id(), Some("call_1".to_string()));
+        assert_eq!(msg.tool_call_id, Some("call_1".to_string()));
+        // Check that the message has a ToolResult part with the output
+        let has_tool_result = msg.parts.iter().any(|p| {
+            matches!(p, runie_core::message::Part::ToolResult { output, .. } 
+                if output.contains("[Lines"))
+        });
+        assert!(has_tool_result, "Expected ToolResult part with output content");
     }
 
     // Layer 2: with observer, ToolStart/ToolEnd are emitted.
