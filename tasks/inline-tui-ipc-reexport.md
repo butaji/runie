@@ -1,6 +1,6 @@
 # Inline runie-tui ipc.rs re-export shim
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2

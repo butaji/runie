@@ -1,6 +1,6 @@
 # Collapse 11 `event/<alias>.rs` shim files into one `event/aliases.rs`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P2

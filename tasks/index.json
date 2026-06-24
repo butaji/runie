@@ -217,7 +217,7 @@
     },
     {
       "id": "collapse-event-aliases",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
@@ -263,7 +263,7 @@
     },
     {
       "id": "collapse-tool-runtime-traits",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Tools",
       "priority": "P1",
@@ -671,7 +671,7 @@
     },
     {
       "id": "delete-tui-ipc-reexport-shim",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P0",
@@ -1075,7 +1075,7 @@
     },
     {
       "id": "inline-tui-ipc-reexport",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P2",
@@ -1464,7 +1464,7 @@
     },
     {
       "id": "remove-empty-match-arms",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P3",

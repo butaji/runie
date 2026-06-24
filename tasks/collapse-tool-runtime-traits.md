@@ -1,6 +1,6 @@
 # Collapse two ToolRuntime traits into one
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Tools
 **Priority**: P1

@@ -1,6 +1,6 @@
 # Delete runie-tui/src/ipc.rs re-export shim
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P0
