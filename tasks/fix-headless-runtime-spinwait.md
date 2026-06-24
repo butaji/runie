@@ -1,6 +1,6 @@
 # Fix `HeadlessRuntime` spin-waiting for config load
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Architecture / Actors
 **Priority**: P2

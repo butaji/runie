@@ -321,7 +321,7 @@
     },
     {
       "id": "consolidate-dual-path-modules",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
@@ -472,7 +472,7 @@
     },
     {
       "id": "dedupe-config-actor-mutations",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P2",
@@ -548,7 +548,7 @@
     },
     {
       "id": "dedupe-turn-complete-last-calls",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
@@ -638,7 +638,7 @@
     },
     {
       "id": "delete-runie-core-confirmation",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
@@ -856,7 +856,7 @@
     },
     {
       "id": "fix-duplicate-cargo-toml-keys",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
@@ -867,7 +867,7 @@
     },
     {
       "id": "fix-headless-runtime-spinwait",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Architecture / Actors",
       "priority": "P2",
@@ -878,7 +878,7 @@
     },
     {
       "id": "fix-main-unix-epoch-unwrap",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "TUI / Rendering",
       "priority": "P2",
@@ -911,7 +911,7 @@
     },
     {
       "id": "fix-runie-tui-dead-code-warnings",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "TUI / Rendering",
       "priority": "P0",
@@ -1053,7 +1053,7 @@
     },
     {
       "id": "hoist-cargo-workspace-deps",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
@@ -1231,7 +1231,7 @@
     },
     {
       "id": "r5-markdown-healing-stream",
-      "status": "todo",
+      "status": "done",
       "milestone": "R5",
       "category": "TUI / Rendering",
       "priority": "P1",
@@ -1266,7 +1266,7 @@
     },
     {
       "id": "r5-parts-canonical-migration",
-      "status": "todo",
+      "status": "done",
       "milestone": "R5",
       "category": "Core / State",
       "priority": "P2",
@@ -1489,7 +1489,7 @@
     },
     {
       "id": "remove-sleeps-from-automatic-tests",
-      "status": "done",
+      "status": "todo",
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P1",
@@ -1850,7 +1850,7 @@
     },
     {
       "id": "unify-build-system-prompt",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",

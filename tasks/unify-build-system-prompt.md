@@ -1,6 +1,6 @@
 # Unify build_system_prompt helpers
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P2

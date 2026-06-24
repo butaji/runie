@@ -1,6 +1,6 @@
 # Add live markdown healing to `StreamingBuffer`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: TUI / Rendering
 **Priority**: P1

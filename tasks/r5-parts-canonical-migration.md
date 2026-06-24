@@ -1,6 +1,6 @@
 # Migrate `content: String` to `parts: Vec<Part>` as canonical
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: Core / State
 **Priority**: P2
