@@ -228,7 +228,7 @@
     },
     {
       "id": "collapse-event-variants-subdir",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
