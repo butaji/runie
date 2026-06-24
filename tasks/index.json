@@ -217,7 +217,7 @@
     },
     {
       "id": "collapse-event-aliases",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
