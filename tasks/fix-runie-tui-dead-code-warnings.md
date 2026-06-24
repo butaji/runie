@@ -1,6 +1,6 @@
 # Fix runie-tui dead_code warnings
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P0
