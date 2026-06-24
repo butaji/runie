@@ -24,7 +24,6 @@ pub mod ui;
 pub mod app_init;
 pub mod dry_run;
 pub mod effects;
-pub mod ipc;
 pub mod keymap;
 pub mod share;
 pub mod terminal;
