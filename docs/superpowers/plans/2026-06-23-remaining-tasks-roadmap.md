@@ -1,7 +1,7 @@
 # Remaining Tasks Roadmap
 
 **Generated:** 2026-06-23
-**Total remaining tasks:** 140
+**Total remaining tasks:** 136
 **Completed tasks removed:** 3 root files + full `tasks/archive/` directory
 
 ## Notes on dependency cleanup
