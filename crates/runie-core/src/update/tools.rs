@@ -123,6 +123,7 @@ pub fn update(state: &mut AppState, event: EditEvent) {
         }
         EditEvent::ApproveEdit => state.approve_edits(),
         EditEvent::RejectEdit => state.reject_edits(),
+        // intentionally ignored: other edit events fall through
         _ => {}
     }
 }

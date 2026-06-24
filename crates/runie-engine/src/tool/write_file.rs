@@ -5,7 +5,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::path::resolve_path_in;
 use serde_json::Value;
-use std::time::Instant;
 use tokio::fs;
 
 pub struct WriteFileTool;
@@ -46,7 +45,6 @@ impl Tool for WriteFileTool {
     }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
-        let start = Instant::now();
         let path = input["path"]
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("path is required"))?;
@@ -54,17 +52,29 @@ impl Tool for WriteFileTool {
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("content is required"))?;
         let full_path = resolve_path_in(path, &ctx.working_dir);
+        let tool_args = serde_json::json!({ "path": path, "content": "<redacted>" });
 
         if let Err(e) = ensure_parent_dirs(&full_path).await {
-            return Ok(output_error(
+            return Ok(ToolOutput::error(
                 "write_file",
-                path,
-                &format!("Error creating parent directories: {}", e),
-                start,
+                tool_args,
+                format!("Error creating parent directories: {}", e),
             ));
         }
 
-        write_and_return(path, &full_path, content, start).await
+        match fs::write(&full_path, content).await {
+            Ok(()) => Ok(ToolOutput::success_with_bytes(
+                "write_file",
+                tool_args,
+                format!("Wrote {} bytes to {}", content.len(), full_path.display()),
+                content.len() as u64,
+            )),
+            Err(e) => Ok(ToolOutput::error(
+                "write_file",
+                tool_args,
+                format!("Error writing {}: {}", full_path.display(), e),
+            )),
+        }
     }
 }
 
@@ -75,41 +85,6 @@ async fn ensure_parent_dirs(full_path: &std::path::Path) -> Result<()> {
         }
     }
     Ok(())
-}
-
-async fn write_and_return(
-    path: &str,
-    full_path: &std::path::Path,
-    content: &str,
-    start: Instant,
-) -> Result<ToolOutput> {
-    match fs::write(full_path, content).await {
-        Ok(()) => Ok(ToolOutput {
-            tool_name: "write_file".to_string(),
-            tool_args: serde_json::json!({ "path": path, "content": "<redacted>" }),
-            content: format!("Wrote {} bytes to {}", content.len(), full_path.display()),
-            bytes_transferred: Some(content.len() as u64),
-            duration: start.elapsed(),
-            status: ToolStatus::Success,
-        }),
-        Err(e) => Ok(output_error(
-            "write_file",
-            path,
-            &format!("Error writing {}: {}", full_path.display(), e),
-            start,
-        )),
-    }
-}
-
-fn output_error(tool: &str, _path: &str, msg: &str, start: Instant) -> ToolOutput {
-    ToolOutput {
-        tool_name: tool.to_string(),
-        tool_args: serde_json::Value::Null,
-        content: msg.to_string(),
-        bytes_transferred: None,
-        duration: start.elapsed(),
-        status: ToolStatus::Error,
-    }
 }
 
 #[cfg(test)]

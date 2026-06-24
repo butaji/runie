@@ -52,8 +52,10 @@ impl Tool for BashTool {
         let command = input["command"]
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("command is required"))?;
+        let tool_args = serde_json::json!({ "command": command });
+
         if let Some(reason) = check_bash_safety(command) {
-            return Ok(blocked_output(command, &reason, start.elapsed()));
+            return Ok(ToolOutput::blocked("bash", tool_args, reason.to_string()));
         }
         let timeout_secs = input["timeout_seconds"]
             .as_u64()
@@ -64,7 +66,7 @@ impl Tool for BashTool {
 
         Ok(ToolOutput {
             tool_name: "bash".to_string(),
-            tool_args: serde_json::json!({ "command": command }),
+            tool_args,
             content: result.output,
             bytes_transferred: result.bytes_transferred,
             duration: start.elapsed(),
@@ -142,17 +144,6 @@ async fn collect_output(
         output: combined,
         bytes_transferred: Some(bytes),
         status: tool_status,
-    }
-}
-
-fn blocked_output(command: &str, reason: &str, duration: Duration) -> ToolOutput {
-    ToolOutput {
-        tool_name: "bash".to_string(),
-        tool_args: serde_json::json!({ "command": command }),
-        content: format!("Blocked: {}", reason),
-        bytes_transferred: None,
-        duration,
-        status: ToolStatus::Blocked,
     }
 }
 

@@ -286,6 +286,7 @@ pub(super) fn handle_session_event(state: &mut AppState, event: SessionEvent) {
         SessionEvent::SessionTreeSelect { id } => {
             state.session_tree_select(&id);
         }
+        // intentionally ignored: other session events fall through
         _ => {}
     }
 }

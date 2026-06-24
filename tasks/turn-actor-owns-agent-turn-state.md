@@ -26,8 +26,8 @@ Current violators:
 
 ## Acceptance criteria
 
-- [ ] `TurnActor` is an mpsc actor holding authoritative turn state: `turn_active`, `current_request_id`, `streaming`, `current_tool_name`, `current_action`, `inflight`, `turn_started_at`, `thinking_started_at`, `tool_started_at`, `intermediate_step_count`, `thought_seq`, `last_assistant_index`, `streaming_buffer`, `request_queue`, `message_queue`.
-- [ ] `TurnMsg` covers: `RunIfQueued`, `AbortTurn`, `SubmitUserMessage { content }`, `QueueSteering { content }`, `QueueFollowUp { content }`, `AbortQueue`, `ClearQueues`, `Thinking { request_id }`, `ToolStart { ... }`, `ToolEnd { ... }`, `ResponseDelta { ... }`, `Done`, `Error { ... }`, `SetModel { provider, model }`.
+- [ ] `TurnActor` is an mpsc actor holding authoritative turn state: `turn_active`, `current_request_id`, `streaming`, `current_tool_name`, `current_action`, `inflight`, `turn_started_at`, `thinking_started_at`, `tool_started_at`, `intermediate_step_count`, `thought_seq`, `last_assistant_index`, `streaming_buffer`, `request_queue`, `message_queue`, `next_id`, `token_tracker`, `turn_tokens_out`, `tokens_in`, `tokens_out`, `speed_tps`, `speed_window`, `last_speed_update`, `tokens_at_last_speed`.
+- [ ] `TurnMsg` covers: `RunIfQueued`, `AbortTurn`, `SubmitUserMessage { content }`, `QueueSteering { content }`, `QueueFollowUp { content }`, `AbortQueue`, `ClearQueues`, `Thinking { request_id }`, `ToolStart { ... }`, `ToolEnd { ... }`, `ResponseDelta { ... }`, `Done`, `Error { ... }`, `SetModel { provider, model }`, `UpdateSpeed`, `NextId`.
 - [ ] `AppState.agent` fields for turn lifecycle are private; reads go through immutable accessors.
 - [ ] `TurnActor` emits facts: `TurnStarted`, `TurnProgress`, `TurnCompleted`, `TurnAborted`, `TurnErrored`, `UserMessageAppended`, `SteeringDelivered`, `TokenStatsUpdated`.
 - [ ] `runie-agent/src/actor.rs::AgentActorHandle::run_if_queued` no longer mutates `AppState`; it sends `TurnMsg::RunIfQueued`.
@@ -57,6 +57,7 @@ Current violators:
 
 - `crates/runie-core/src/actors/turn/` — new `mod.rs`, `messages.rs`, `actor.rs`.
 - `crates/runie-core/src/model/state/app_state.rs` — private turn fields; remove queue helpers.
+- `crates/runie-core/src/update/agent/mod.rs` — dispatcher routes `AgentEvent` to `TurnActor`.
 - `crates/runie-core/src/update/agent/core.rs` — agent lifecycle becomes `TurnActor` message handlers.
 - `crates/runie-core/src/update/session.rs` — queue logic moves into `TurnActor`.
 - `crates/runie-core/src/update/system.rs` — `stop_turn` emits `TurnMsg::AbortTurn`.
@@ -70,4 +71,6 @@ Current violators:
 ## Notes
 
 - `TurnActor` decides *when* user/steering messages become part of the session; `SessionActor` decides *how* to store them.
+- Assistant/tool/thought/turn-complete/error messages currently mutate `session.messages` inside `update/agent/core.rs`. Decide during implementation whether `TurnActor` owns these insertions (sending `SessionMsg` to `SessionActor`) or whether `SessionActor` owns the full message lifecycle. Document the split.
+- `update_speed` in `model/cache.rs` currently mutates turn-state speed fields. Either move speed computation into `TurnActor` and have `ViewActor` read it, or keep speed as UI-derived state that reads public turn stats.
 - Keep `AgentActor` as the provider-turn executor; do not move provider logic into `runie-core`.

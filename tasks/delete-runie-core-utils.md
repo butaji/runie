@@ -1,6 +1,6 @@
 # Delete dead runie-core utils module
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P2
@@ -16,11 +16,11 @@ These helpers were early scaffolding that got superseded by `textwrap::wrap()` (
 
 ## Acceptance Criteria
 
-- [ ] `crates/runie-core/src/utils.rs` deleted.
-- [ ] `pub mod utils;` removed from `crates/runie-core/src/lib.rs`.
-- [ ] `rg "use crate::utils|runie_core::utils|crate::utils::|runie_core::utils::" crates/` returns zero hits.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `crates/runie-core/src/utils.rs` deleted.
+- [x] `pub mod utils;` removed from `crates/runie-core/src/lib.rs`.
+- [x] `rg "use crate::utils|runie_core::utils|crate::utils::|runie_core::utils::" crates/` returns zero hits.
+- [x] `cargo check --workspace` succeeds with no new warnings.
+- [x] `cargo test --workspace` succeeds. (Note: runie-provider has 1 pre-existing flaky env-dependent test)
 
 ## Tests
 
@@ -34,12 +34,12 @@ These helpers were early scaffolding that got superseded by `textwrap::wrap()` (
 - N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `smoke_utils_module_gone` — `ls crates/runie-core/src/utils.rs` fails; workspace builds.
+- [x] `smoke_utils_module_gone` — `ls crates/runie-core/src/utils.rs` fails; workspace builds.
 
 ## Files touched
 
-- `crates/runie-core/src/utils.rs`
-- `crates/runie-core/src/lib.rs`
+- `crates/runie-core/src/utils.rs` (deleted)
+- `crates/runie-core/src/lib.rs` (removed `pub mod utils;`)
 
 ## Notes
 

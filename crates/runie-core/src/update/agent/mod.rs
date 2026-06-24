@@ -37,10 +37,7 @@ pub fn agent_event(state: &mut AppState, event: AgentEvent) {
             state.ensure_turn_complete_last();
         }
         E::Done { id } => state.finish_turn(id),
-        E::Error { id, message } => {
-            state.add_error(id, message);
-            state.ensure_turn_complete_last();
-        }
+        E::Error { id, message } => handle_agent_error(state, id, message),
         // LLM lifecycle events — populate parts during streaming
         E::TextStart { .. }
         | E::TextEnd { .. }
@@ -48,11 +45,17 @@ pub fn agent_event(state: &mut AppState, event: AgentEvent) {
         | E::ThinkingEnd { .. }
         | E::ThinkingDelta { .. }
         | E::AssistantMessageReady { .. } => state.handle_llm_event(event),
+        // intentionally ignored: other agent events fall through
         _ => {}
     }
 }
 
 fn handle_agent_response(state: &mut AppState, id: String, content: String) {
     state.append_response(id, content);
+    state.ensure_turn_complete_last();
+}
+
+fn handle_agent_error(state: &mut AppState, id: String, message: String) {
+    state.add_error(id, message);
     state.ensure_turn_complete_last();
 }

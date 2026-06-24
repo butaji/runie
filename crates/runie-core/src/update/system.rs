@@ -237,7 +237,9 @@ pub fn control_event(state: &mut AppState, event: ControlEvent) {
             // Close welcome and open session tree
             crate::update::dialog::open_session_tree_dialog(state);
         }
+        // intentionally ignored: these events are handled elsewhere
         ControlEvent::Suspend | ControlEvent::ShareSession | ControlEvent::OpenExternalEditor => {}
+        // intentionally ignored: other ControlEvent variants fall through
         _ => {}
     }
 }
@@ -272,7 +274,7 @@ fn handle_abort(state: &mut AppState) {
         return;
     }
     if state.login_flow.is_some() {
-        crate::update::login_flow::login_flow_cancel(state);
+        crate::login_flow::login_flow_cancel(state);
         return;
     }
     if state.open_dialog.is_some() && crate::update::dialog::root_closable(state) {
@@ -346,6 +348,7 @@ pub(super) fn handle_system_event(state: &mut AppState, event: SystemEvent) {
         SystemEvent::ToggleReadOnly => state.toggle_read_only(),
         SystemEvent::TrustProject => state.apply_trust_project(),
         SystemEvent::UntrustProject => state.apply_untrust_project(),
+        // intentionally ignored: other SystemEvent variants fall through
         _ => {}
     }
 }

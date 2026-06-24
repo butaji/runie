@@ -31,6 +31,7 @@ pub fn dialog_toggle_event(state: &mut AppState, event: DialogEvent) {
         DialogEvent::ToggleScopedModelsDialog => handle_scoped_models_toggle(state),
         DialogEvent::ScopedModelEnableAll => handle_scoped_model_enable_all(state),
         DialogEvent::ScopedModelDisableAll => handle_scoped_model_disable_all(state),
+        // intentionally ignored: other DialogEvent variants fall through
         _ => {}
     }
 }
@@ -84,7 +85,7 @@ fn handle_providers_add(state: &mut AppState) {
     // Hand off to the login flow machinery, which pushes the current dialog to
     // the back stack and opens the provider picker. The root panel is marked
     // non-closable when no model is connected so the user cannot cancel out.
-    crate::update::login_flow::login_flow_start(state);
+    crate::login_flow::login_flow_start(state);
 }
 
 fn handle_providers_select_model(state: &mut AppState, event: &DialogEvent) {
@@ -136,7 +137,7 @@ fn handle_providers_disconnect(state: &mut AppState, event: &DialogEvent) {
             state.open_dialog = None;
             state.view.input_receiver = crate::model::InputReceiver::ChatInput;
         } else {
-            crate::update::login_flow::login_flow_start(state);
+            crate::login_flow::login_flow_start(state);
         }
         state.dialog_back_stack.clear();
         state.mark_dirty();
@@ -144,15 +145,16 @@ fn handle_providers_disconnect(state: &mut AppState, event: &DialogEvent) {
 }
 
 fn handle_scoped_model_enable_all(state: &mut AppState) {
-    for model in &mut state.config.scoped_models {
-        model.enabled = true;
-    }
-    state.mark_dirty();
+    set_scoped_models_enabled(state, true);
 }
 
 fn handle_scoped_model_disable_all(state: &mut AppState) {
+    set_scoped_models_enabled(state, false);
+}
+
+fn set_scoped_models_enabled(state: &mut AppState, enabled: bool) {
     for model in &mut state.config.scoped_models {
-        model.enabled = false;
+        model.enabled = enabled;
     }
     state.mark_dirty();
 }

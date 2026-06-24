@@ -143,6 +143,7 @@ fn build_form_stack_from_template(template: FormPanel, args: &str) -> CoreStack 
                 arg_idx += 1;
             }
             crate::dialog::PanelItem::FormSubmit => panel = panel.form_submit(),
+            // intentionally ignored: other panel items fall through
             _ => {}
         }
     }
