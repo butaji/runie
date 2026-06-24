@@ -321,7 +321,7 @@
     },
     {
       "id": "consolidate-dual-path-modules",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
@@ -472,7 +472,7 @@
     },
     {
       "id": "dedupe-config-actor-mutations",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P2",
@@ -535,7 +535,7 @@
     },
     {
       "id": "dedupe-tool-execution-loop",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
@@ -1489,7 +1489,7 @@
     },
     {
       "id": "remove-sleeps-from-automatic-tests",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P1",
@@ -1500,7 +1500,7 @@
     },
     {
       "id": "rename-core-ui-to-view",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P1",
