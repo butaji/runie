@@ -394,7 +394,7 @@ fn arrow_down_at_lowest_element_exits_nav_and_enables_input() {
     state.update(InputEvent::Input('G'));
     assert_eq!(state.view.scroll, 0);
     // ArrowDown at the bottom should also exit nav mode.
-    state.update(InputEvent::HistoryNext);
+    state.update(InputEvent::Down);
     assert!(
         !state.view.vim_nav_mode,
         "ArrowDown at the lowest element should exit nav mode"
