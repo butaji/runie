@@ -59,7 +59,7 @@
     },
     {
       "id": "add-engine-tool-tests",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Tools",
       "priority": "P1",
@@ -548,7 +548,7 @@
     },
     {
       "id": "dedupe-turn-complete-last-calls",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
@@ -594,7 +594,7 @@
     },
     {
       "id": "delete-dead-history-action-vimnav",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
@@ -638,7 +638,7 @@
     },
     {
       "id": "delete-runie-core-confirmation",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
@@ -856,7 +856,7 @@
     },
     {
       "id": "fix-duplicate-cargo-toml-keys",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
@@ -911,7 +911,7 @@
     },
     {
       "id": "fix-runie-tui-dead-code-warnings",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "TUI / Rendering",
       "priority": "P0",
@@ -1053,7 +1053,7 @@
     },
     {
       "id": "hoist-cargo-workspace-deps",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
