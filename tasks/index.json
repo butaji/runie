@@ -605,7 +605,7 @@
     },
     {
       "id": "delete-dead-theme-async-loaders",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
@@ -889,7 +889,7 @@
     },
     {
       "id": "fix-permission-gate-rename-in-testing",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Testing",
       "priority": "P1",
@@ -922,7 +922,7 @@
     },
     {
       "id": "fix-session-store-load-alignment",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Sessions",
       "priority": "P1",

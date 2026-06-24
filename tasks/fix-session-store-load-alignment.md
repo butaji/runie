@@ -1,6 +1,6 @@
 # Fix `SessionStore::load_events` misalignment and silent drops
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Sessions
 **Priority**: P1

@@ -1,6 +1,6 @@
 # Delete dead async theme loaders
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P1

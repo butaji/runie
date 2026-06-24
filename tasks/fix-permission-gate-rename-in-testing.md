@@ -1,6 +1,6 @@
 # Fix `PermissionGate` rename in `runie-testing`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Testing
 **Priority**: P1
