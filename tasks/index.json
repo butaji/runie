@@ -750,7 +750,8 @@
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync",
-        "app-state-read-only-projection"
+        "app-state-read-only-projection",
+        "actor-lifecycle-and-handle-registry"
       ],
       "blocks": [],
       "file": "tasks/env-actor-owns-git-cwd.md",
@@ -831,7 +832,8 @@
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync",
-        "app-state-read-only-projection"
+        "app-state-read-only-projection",
+        "actor-lifecycle-and-handle-registry"
       ],
       "blocks": [],
       "file": "tasks/fff-indexer-owns-file-picker-results.md",
@@ -1462,7 +1464,7 @@
     },
     {
       "id": "remove-empty-match-arms",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P3",
@@ -1950,7 +1952,8 @@
         "event-taxonomy-for-actor-state-sync",
         "app-state-read-only-projection",
         "session-actor-owns-session-state",
-        "input-actor-owns-input-state"
+        "input-actor-owns-input-state",
+        "ui-control-actor-owns-dialog-state"
       ],
       "blocks": [],
       "file": "tasks/view-actor-owns-view-state.md",

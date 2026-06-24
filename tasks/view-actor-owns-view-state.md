@@ -5,7 +5,7 @@
 **Category**: TUI / Rendering
 **Priority**: P0
 
-**Depends on**: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, session-actor-owns-session-state, input-actor-owns-input-state
+**Depends on**: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, session-actor-owns-session-state, input-actor-owns-input-state, ui-control-actor-owns-dialog-state
 **Blocks**: none
 
 ## Description
@@ -29,7 +29,7 @@ Current violators:
 ## Acceptance criteria
 
 - [ ] `ViewActor` is an mpsc actor holding the authoritative `ViewState`.
-- [ ] `ViewMsg` covers: `Invalidate`, `MessagesChanged`, `Scroll { direction }`, `PageUp`, `PageDown`, `GoToTop`, `GoToBottom`, `ElementJump { direction }`, `MouseMoved { row, col }`, `MouseClicked { ... }`, `TerminalSized { width, height }`, `DialogOpened`, `DialogClosed`, `VimNav { enabled, selected_post }`, `ToggleExpandAll`, `TurnEnded`, `TurnErrored`, `AnimationTick`.
+- [ ] `ViewMsg` covers: `Invalidate`, `MessagesChanged`, `Scroll { direction }`, `PageUp`, `PageDown`, `GoToTop`, `GoToBottom`, `ElementJump { direction }`, `MouseMoved { row, col }`, `MouseClicked { ... }`, `TerminalSized { width, height }`, `DialogOpened`, `DialogClosed`, `SetInputReceiver { receiver }`, `VimNav { enabled, selected_post }`, `ToggleExpandAll`, `TurnEnded`, `TurnErrored`, `AnimationTick`.
 - [ ] `AppState.view` is private; reads go through an immutable accessor.
 - [ ] `mark_dirty()` and `messages_changed()` helpers are removed from `AppState`.
 - [ ] `ensure_fresh` (feed cache rebuild) and `tick_animation` are internal `ViewActor` helpers triggered by `ViewMsg::MessagesChanged` / `ViewMsg::AnimationTick`.

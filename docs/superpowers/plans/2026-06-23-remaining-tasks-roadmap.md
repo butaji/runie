@@ -19,7 +19,7 @@ The following dependencies point to completed/removed tasks and are treated as s
 1. **Declarative DSL + actor foundation** — `actor-owned-state-ssot`, `declarative-actor-dsl`, `event-taxonomy-for-actor-state-sync`, `app-state-read-only-projection`, `actor-lifecycle-and-handle-registry`, `test-actor-harness`.
 2. **Config SSOT** — finish `config-ssot-via-configactor` and related UI consolidation.
 3. **Core domain actors** — `SessionActor`, `TurnActor`, `InputActor`, `ViewActor`, `CompletionActor`.
-4. **Cross-cutting actors** — `PermissionActor`, `NotificationActor`, `TrustActor`, `EnvActor`, `FffIndexerActor` file picker, `UiControlActor`.
+4. **Cross-cutting actors** — `PermissionActor`, `NotificationActor`, `TrustActor`, `EnvActor`, `FffIndexerActor`, `UiControlActor`.
 5. **DSL cleanup** — `unified-dsl-intents-for-state-mutations` rewrites all commands/dialogs using the declarative DSL.
 6. **Final sweep** — `remove-direct-appstate-mutations` and R5 features after architecture is stable.
 
@@ -144,7 +144,7 @@ The following dependencies point to completed/removed tasks and are treated as s
 ### Phase 2 — 24 tasks
 
 **Architecture / Actors**
-- `actor-lifecycle-and-handle-registry` — R4/P0 — The new actors need a clear lifecycle: where they are spawned, how their handles reach `AppState`, and how the TUI/bootstrap wires them together. Today `AppState` carries loose `Op (depends on: `actor-owned-state-ssot`)
+- `actor-lifecycle-and-handle-registry` — R4/P0 — The new actors need a clear lifecycle: where they are spawned, how their handles reach `AppState`, and how the TUI/bootstrap wires them together. Current reality (`runie-tui/src/ma (depends on: `actor-owned-state-ssot`)
 - `decouple-appstate-from-view-cache` — R4/P0 — `crates/runie-core/src/ui/` (`elements.rs`, `transform.rs`, `posts.rs`, `dsl_test.rs`) is the view-model: an `Element`/`Feed`/`Post` tree projected from `AppState` and cached via ` (depends on: `fold-state-into-model-state`)
 - `move-provider-catalog-to-provider-crate` — R4/P0 — The domain crate `runie-core` carries ~840 LOC of provider/model knowledge that belongs in `runie-provider`: | File | LOC | Content | |------|-----|---------| | `provider_registry. (depends on: `unify-provider-modules`)
 - `r5-per-channel-decoders` — R5/P2 — Currently all `Event`s flow through a single flat `EventBus` to the `UiActor`, which applies every event to `AppState` and publishes a full `Snapshot`. As the UI grows more complex (depends on: `r5-populate-parts-streaming`)
@@ -192,7 +192,7 @@ The following dependencies point to completed/removed tasks and are treated as s
 - `standardize-test-layout-inline` — R4/P2 — Three test layouts coexist in the workspace: | Layout | Count | Example | |--------|-------|---------| | Inline `#[cfg(test)] mod tests` | 125 | Idiomatic Rust | | Sibling `*_tests (depends on: `relocate-loose-tests-files`)
 
 **Core / State**
-- `app-state-read-only-projection` — R4/P0 — `AppState` is currently a bag of public mutable fields that anyone can write. Convert it into an immutable projection of actor-owned facts. Only the `update(event)` dispatcher and  (depends on: `actor-owned-state-ssot`, `event-taxonomy-for-actor-state-sync`)
+- `app-state-read-only-projection` — R4/P0 — `AppState` is currently a bag of public mutable fields that anyone can write. Every field in `AppState` and every field in the inner state structs (`SessionState`, `InputState`, `V (depends on: `actor-owned-state-ssot`, `event-taxonomy-for-actor-state-sync`)
 - `dedupe-tool-execution-loop` — R4/P1 — `crates/runie-agent/src/turn.rs` (`execute_tools`) and `crates/runie-agent/src/headless.rs` (`execute_headless_tools`) both iterate over parsed tool calls, build a `ToolContext`, g (depends on: `extract-streaming-tool-parser`)
 
 **TUI / Rendering**
@@ -213,7 +213,7 @@ The following dependencies point to completed/removed tasks and are treated as s
 
 **Configuration**
 - `config-ssot-via-configactor` — R4/P0 — `ConfigActor` is already intended to be the single writer of `~/.runie/config.toml`, but most of the app bypasses it. This task makes `ConfigActor` the true SSOT for all config-dri (depends on: `event-taxonomy-for-actor-state-sync`, `app-state-read-only-projection`)
-- `env-actor-owns-git-cwd` — R4/P1 — `git_info` and `cwd_name` are set once during TUI bootstrap via blocking IO (`runie-tui/src/app_init.rs`). They never change after startup but they are still direct state mutations (depends on: `actor-owned-state-ssot`, `event-taxonomy-for-actor-state-sync`, `app-state-read-only-projection`)
+- `env-actor-owns-git-cwd` — R4/P1 — `git_info` and `cwd_name` are set once during TUI bootstrap via blocking IO (`runie-tui/src/app_init.rs`). They never change after startup but they are still direct state mutations (depends on: `actor-owned-state-ssot`, `event-taxonomy-for-actor-state-sync`, `app-state-read-only-projection`, `actor-lifecycle-and-handle-registry`)
 
 **Core / State**
 - `notification-actor-owns-transient-messages` — R4/P1 — Transient notification state (`transient_message`, `transient_until`, `transient_level`) is mutated in at least six files, and expiration is currently triggered from the render-pat (depends on: `actor-owned-state-ssot`, `event-taxonomy-for-actor-state-sync`, `app-state-read-only-projection`)
@@ -224,7 +224,7 @@ The following dependencies point to completed/removed tasks and are treated as s
 - `unified-dsl-intents-for-state-mutations` — R4/P0 — Slash commands, palette commands, dialog actions, and keybindings currently mix direct state mutation with event emission. Standardize every user-facing action on a small set of ty (depends on: `actor-owned-state-ssot`, `event-taxonomy-for-actor-state-sync`, `declarative-actor-dsl`)
 
 **Tools**
-- `fff-indexer-owns-file-picker-results` — R4/P1 — `fff_file_results` and `fff_debounce` are mutated synchronously by dialog openers and file-picker input handlers. `FffIndexerActor` already exists and emits `Event::FffSearchResult (depends on: `actor-owned-state-ssot`, `event-taxonomy-for-actor-state-sync`, `app-state-read-only-projection`)
+- `fff-indexer-owns-file-picker-results` — R4/P1 — `fff_file_results` and `fff_debounce` are mutated synchronously by dialog openers and file-picker input handlers. `FffIndexerActor` already exists and emits `Event::FffSearchResult (depends on: `actor-owned-state-ssot`, `event-taxonomy-for-actor-state-sync`, `app-state-read-only-projection`, `actor-lifecycle-and-handle-registry`)
 
 ### Phase 5 — 5 tasks
 
@@ -239,7 +239,7 @@ The following dependencies point to completed/removed tasks and are treated as s
 - `completion-actor-owns-completion-state` — R4/P1 — Path completion, `@` mention suggestions, ghost text, and tab-completion state are mutated by dialog handlers and legacy at-refs code. There is no `CompletionActor`. Create one and (depends on: `actor-owned-state-ssot`, `event-taxonomy-for-actor-state-sync`, `app-state-read-only-projection`, `input-actor-owns-input-state`)
 
 **TUI / Rendering**
-- `view-actor-owns-view-state` — R4/P0 — `ViewState` and the derived feed cache (`elements_cache`, `posts`, `line_counts`, `total_lines`, etc.) are written from dozens of places. `mark_dirty()` and `messages_changed()` ar (depends on: `actor-owned-state-ssot`, `event-taxonomy-for-actor-state-sync`, `app-state-read-only-projection`, `session-actor-owns-session-state`, `input-actor-owns-input-state`)
+- `view-actor-owns-view-state` — R4/P0 — `ViewState` and the derived feed cache (`elements_cache`, `posts`, `line_counts`, `total_lines`, etc.) are written from dozens of places. `mark_dirty()` and `messages_changed()` ar (depends on: `actor-owned-state-ssot`, `event-taxonomy-for-actor-state-sync`, `app-state-read-only-projection`, `session-actor-owns-session-state`, `input-actor-owns-input-state`, `ui-control-actor-owns-dialog-state`)
 
 ### Phase 6 — 2 tasks
 
@@ -306,7 +306,7 @@ The following dependencies point to completed/removed tasks and are treated as s
 - `unify-event-vocabulary` — R4 P0 — [Architecture / Actors] — `tasks/unify-event-vocabulary.md`
 - `unify-permission-gate` — R4 P0 — [Architecture / Security] — `tasks/unify-permission-gate.md` | blocks: unify-approval-decision, derive-confirmation-from-permissions
 - `unify-persistence-actors` — R4 P0 — [Architecture / Actors] — `tasks/unify-persistence-actors.md`
-- `view-actor-owns-view-state` — R4 P0 — [TUI / Rendering] — `tasks/view-actor-owns-view-state.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, session-actor-owns-session-state, input-actor-owns-input-state
+- `view-actor-owns-view-state` — R4 P0 — [TUI / Rendering] — `tasks/view-actor-owns-view-state.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, session-actor-owns-session-state, input-actor-owns-input-state, ui-control-actor-owns-dialog-state
 - `add-engine-tool-tests` — R4 P1 — [Tools] — `tasks/add-engine-tool-tests.md`
 - `add-tool-output-constructors` — R4 P1 — [Tools] — `tasks/add-tool-output-constructors.md`
 - `aggressive-event-consolidation` — R4 P1 — [Core / State] — `tasks/aggressive-event-consolidation.md`
@@ -324,10 +324,10 @@ The following dependencies point to completed/removed tasks and are treated as s
 - `delete-dead-tuple-actor-handles-fields` — R4 P1 — [Architecture / Actors] — `tasks/delete-dead-tuple-actor-handles-fields.md`
 - `delete-runie-core-confirmation` — R4 P1 — [Core / State] — `tasks/delete-runie-core-confirmation.md`
 - `delete-runie-core-skill-module` — R4 P1 — [Core / State] — `tasks/delete-runie-core-skill-module.md`
-- `env-actor-owns-git-cwd` — R4 P1 — [Configuration] — `tasks/env-actor-owns-git-cwd.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection
+- `env-actor-owns-git-cwd` — R4 P1 — [Configuration] — `tasks/env-actor-owns-git-cwd.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, actor-lifecycle-and-handle-registry
 - `extract-ci-setup-action` — R4 P1 — [Configuration] — `tasks/extract-ci-setup-action.md` | depends: centralize-test-verification
 - `extract-streaming-tool-parser` — R4 P1 — [Core / State] — `tasks/extract-streaming-tool-parser.md` | depends: canonicalize-tool-call | blocks: dedupe-tool-execution-loop
-- `fff-indexer-owns-file-picker-results` — R4 P1 — [Tools] — `tasks/fff-indexer-owns-file-picker-results.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection
+- `fff-indexer-owns-file-picker-results` — R4 P1 — [Tools] — `tasks/fff-indexer-owns-file-picker-results.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, actor-lifecycle-and-handle-registry
 - `fix-duplicate-cargo-toml-keys` — R4 P1 — [Configuration] — `tasks/fix-duplicate-cargo-toml-keys.md`
 - `fix-permission-gate-rename-in-testing` — R4 P1 — [Architecture / Testing] — `tasks/fix-permission-gate-rename-in-testing.md`
 - `generic-actor-reply` — R4 P1 — [Architecture / Actors] — `tasks/generic-actor-reply.md` | blocks: reduce-actor-handle-boilerplate
