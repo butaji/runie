@@ -856,7 +856,7 @@
     },
     {
       "id": "fix-duplicate-cargo-toml-keys",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
@@ -1206,7 +1206,7 @@
     },
     {
       "id": "r5-conversation-sanitize-pipeline",
-      "status": "todo",
+      "status": "done",
       "milestone": "R5",
       "category": "Core / State",
       "priority": "P1",
@@ -1321,7 +1321,7 @@
     },
     {
       "id": "r5-think-filter",
-      "status": "todo",
+      "status": "done",
       "milestone": "R5",
       "category": "Core / State",
       "priority": "P1",
@@ -1428,7 +1428,7 @@
     },
     {
       "id": "remove-appstate-cfg-test-branches",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",

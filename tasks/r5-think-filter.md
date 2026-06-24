@@ -1,6 +1,6 @@
 # Add `ThinkFilter` for inline `<tool_call>`/`</thinking>` tag handling
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: Core / State
 **Priority**: P1

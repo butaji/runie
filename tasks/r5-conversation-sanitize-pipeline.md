@@ -1,6 +1,6 @@
 # Add post-turn conversation sanitization pipeline
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: Core / State
 **Priority**: P1
