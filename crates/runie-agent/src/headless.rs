@@ -451,4 +451,47 @@ mod tests {
             .unwrap();
         assert!(!result.content.is_empty());
     }
+
+    // Layer 4: provider error in a headless turn is still reported
+    #[tokio::test]
+    async fn headless_turn_error_propagates() {
+        use runie_core::provider_event::ModelError;
+
+        struct ErrorProvider;
+        impl Provider for ErrorProvider {
+            fn generate(
+                &self,
+                _messages: Vec<ChatMessage>,
+            ) -> std::pin::Pin<
+                Box<
+                    dyn futures::Stream<Item = anyhow::Result<ProviderEvent>>
+                        + Send
+                        + '_,
+                >,
+            > {
+                let events = vec![
+                    Ok(ProviderEvent::TextDelta("Before error. ".into())),
+                    Ok(ProviderEvent::Error(ModelError::RateLimit {
+                        retry_after_secs: Some(5),
+                    })),
+                ];
+                Box::pin(futures::stream::iter(events))
+            }
+        }
+
+        let messages = vec![
+            ChatMessage::system("You are helpful."),
+            ChatMessage::user("hello"),
+        ];
+        let options = HeadlessOptions {
+            execute_tools: false,
+            max_tool_rounds: 5,
+            on_chunk: None,
+            permission_gate: allow_all_gate(),
+        };
+
+        // The headless runner should propagate the error without panicking
+        let result = run_headless_turn(messages, &ErrorProvider, options).await;
+        assert!(result.is_err(), "expected error to propagate, got: {result:?}");
+    }
 }

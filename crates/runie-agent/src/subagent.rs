@@ -20,18 +20,24 @@ use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
 pub enum SubagentError {
-    Agent(String),
+    Source(anyhow::Error),
 }
 
 impl std::fmt::Display for SubagentError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SubagentError::Agent(msg) => write!(f, "agent turn failed: {msg}"),
+            SubagentError::Source(e) => write!(f, "agent turn failed: {e}"),
         }
     }
 }
 
 impl std::error::Error for SubagentError {}
+
+impl From<anyhow::Error> for SubagentError {
+    fn from(e: anyhow::Error) -> Self {
+        SubagentError::Source(e)
+    }
+}
 
 /// Run a subagent turn asynchronously. Returns the final assistant text.
 ///
@@ -96,7 +102,7 @@ async fn run_subagent_turn(
 
     run_agent_turn(provider, cmd, callback, max_iterations, gate)
         .await
-        .map_err(|e| SubagentError::Agent(e.to_string()))?;
+        .map_err(SubagentError::from)?;
 
     finalize_subagent_result(state)
 }
@@ -130,10 +136,10 @@ fn build_subagent_callback(
 
 fn finalize_subagent_result(state: Arc<SubagentState>) -> Result<String, SubagentError> {
     if let Some(msg) = state.error.lock().unwrap_or_else(|p| p.into_inner()).take() {
-        return Err(SubagentError::Agent(msg));
+        return Err(SubagentError::Source(anyhow::anyhow!(msg)));
     }
     if !*state.done.lock().unwrap_or_else(|p| p.into_inner()) {
-        return Err(SubagentError::Agent("subagent did not finish".into()));
+        return Err(SubagentError::Source(anyhow::anyhow!("subagent did not finish")));
     }
     Ok(state
         .responses
@@ -220,7 +226,7 @@ mod tests {
 
         let result = finalize_subagent_result(state);
         assert!(
-            matches!(result, Err(SubagentError::Agent(ref msg)) if msg == "subagent did not finish"),
+            matches!(result, Err(SubagentError::Source(ref e)) if e.to_string() == "subagent did not finish"),
             "expected 'did not finish' error, got {:?}",
             result
         );

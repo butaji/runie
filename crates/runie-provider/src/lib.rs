@@ -287,9 +287,6 @@ fn extract_model_ids(json: &serde_json::Value) -> Vec<String> {
 // Re-exports for consumers
 // ---------------------------------------------------------------------------
 
-/// Re-export so `runie_agent` can use it without a deep dependency.
-pub use runie_core::provider::ProviderError as UnknownProviderError;
-
 /// Spawn a production `HeadlessRuntime` using the default provider factory.
 ///
 /// This is the shared entry point for all non-interactive binaries so they do

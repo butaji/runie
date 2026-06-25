@@ -434,7 +434,7 @@ async fn provider_actor_rejects_unknown_provider_real_factory() {
         .await
         .unwrap_err();
 
-    assert_eq!(err, ProviderError::UnknownProvider("ghost-provider".into()));
+    assert!(matches!(err, ProviderError::UnknownProvider(ref k) if k == "ghost-provider"));
 }
 
 #[tokio::test]

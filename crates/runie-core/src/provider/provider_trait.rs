@@ -19,7 +19,7 @@ impl From<ResponseChunk> for ProviderEvent {
 }
 
 /// Error constructing or operating a provider.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum ProviderError {
     /// The provider key was not found in the registry.
     UnknownProvider(String),
@@ -27,8 +27,14 @@ pub enum ProviderError {
     MissingApiKey(String),
     /// Configuration has not been loaded yet.
     ConfigNotLoaded,
-    /// Some other error during construction or API call.
-    Other(String),
+    /// An underlying error from the provider or network layer.
+    Source(anyhow::Error),
+}
+
+impl From<anyhow::Error> for ProviderError {
+    fn from(e: anyhow::Error) -> Self {
+        ProviderError::Source(e)
+    }
 }
 
 impl std::fmt::Display for ProviderError {
@@ -47,7 +53,7 @@ impl std::fmt::Display for ProviderError {
                 )
             }
             ProviderError::ConfigNotLoaded => write!(f, "Configuration not loaded"),
-            ProviderError::Other(s) => write!(f, "Provider error: {}", s),
+            ProviderError::Source(e) => write!(f, "Provider error: {e}"),
         }
     }
 }
@@ -90,5 +96,47 @@ mod tests {
         assert!(msg.contains("minimax"), "{msg}");
         assert!(msg.contains("MINIMAX_API_KEY"), "{msg}");
         assert!(msg.contains("[model_providers.minimax]"), "{msg}");
+    }
+
+    // Layer 1: existing error display messages are preserved
+    #[test]
+    fn central_error_displays_preserve_messages() {
+        let cases = [
+            (
+                ProviderError::UnknownProvider("my-model".into()),
+                "Unknown provider: my-model",
+            ),
+            (
+                ProviderError::MissingApiKey("OPENAI_API_KEY".into()),
+                "Missing API key",
+            ),
+            (
+                ProviderError::ConfigNotLoaded,
+                "Configuration not loaded",
+            ),
+        ];
+        for (err, prefix) in cases {
+            let msg = err.to_string();
+            assert!(
+                msg.starts_with(prefix),
+                "expected message to start with '{prefix}', got: {msg}"
+            );
+        }
+    }
+
+    // Layer 1: provider errors are still identifiable by variant
+    #[test]
+    fn provider_error_source_round_trips() {
+        let anyhow_err = anyhow::anyhow!("network error: connection refused");
+        let err: ProviderError = anyhow_err.into();
+        let msg = err.to_string();
+        // The underlying error message is preserved in the display
+        assert!(msg.contains("network error"), "expected 'network error' in: {msg}");
+        assert!(msg.contains("connection refused"), "expected 'connection refused' in: {msg}");
+        // The variant is still Source
+        assert!(
+            matches!(err, ProviderError::Source(_)),
+            "expected Source variant, got: {err:?}"
+        );
     }
 }

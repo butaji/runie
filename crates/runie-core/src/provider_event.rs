@@ -86,8 +86,14 @@ pub enum ModelError {
     Refusal(String),
     /// Rate limit hit.
     RateLimit { retry_after_secs: Option<u32> },
-    /// Other model error.
+    /// An underlying error (network, parse, etc.).
     Other(String),
+}
+
+impl From<anyhow::Error> for ModelError {
+    fn from(e: anyhow::Error) -> Self {
+        ModelError::Other(e.to_string())
+    }
 }
 
 impl std::fmt::Display for ModelError {
@@ -113,6 +119,12 @@ impl std::fmt::Display for ModelError {
 impl From<ProviderError> for ModelError {
     fn from(e: ProviderError) -> Self {
         ModelError::Other(e.to_string())
+    }
+}
+
+impl From<&str> for ModelError {
+    fn from(s: &str) -> Self {
+        ModelError::Other(s.to_owned())
     }
 }
 
@@ -149,6 +161,13 @@ mod tests {
         let err = ProviderError::MissingApiKey("openai".into());
         let model_err: ModelError = err.into();
         assert!(matches!(model_err, ModelError::Other(s) if s.contains("openai")));
+    }
+
+    #[test]
+    fn model_error_from_anyhow() {
+        let anyhow_err = anyhow::anyhow!("network timeout");
+        let model_err: ModelError = anyhow_err.into();
+        assert!(matches!(model_err, ModelError::Other(s) if s.contains("network timeout")));
     }
 
     #[test]

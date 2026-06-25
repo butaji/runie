@@ -92,7 +92,7 @@ impl ProviderActorHandle {
             .await;
         reply_rx
             .await
-            .unwrap_or_else(|_| Err(ProviderError::Other("provider actor dropped".into())))
+            .unwrap_or_else(|_| Err(anyhow::anyhow!("provider actor dropped").into()))
     }
 
     /// Request API-key validation for a provider.

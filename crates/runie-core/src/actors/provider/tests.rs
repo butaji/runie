@@ -122,7 +122,7 @@ async fn provider_actor_rejects_unknown_provider() {
 
     let err = handle.build("ghost".into(), "x".into()).await.unwrap_err();
 
-    assert_eq!(err, ProviderError::UnknownProvider("ghost".into()));
+    assert!(matches!(err, ProviderError::UnknownProvider(ref k) if k == "ghost"));
 }
 
 #[tokio::test]

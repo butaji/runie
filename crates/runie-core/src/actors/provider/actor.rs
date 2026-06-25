@@ -98,6 +98,6 @@ impl ProviderActor {
         self.config_handle
             .get_config()
             .await
-            .ok_or_else(|| ProviderError::Other("config actor unavailable".into()))
+            .ok_or_else(|| anyhow::anyhow!("config actor unavailable").into())
     }
 }
