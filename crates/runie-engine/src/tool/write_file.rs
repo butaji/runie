@@ -1,7 +1,7 @@
 //! WriteFile tool — writes content to a file.
 
 use crate::define_tool;
-use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
+use crate::tool::{Tool, ToolContext, ToolOutput};
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::path::resolve_path_in;
@@ -71,6 +71,7 @@ async fn ensure_parent_dirs(full_path: &std::path::Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tool::ToolStatus;
 
     fn ctx() -> ToolContext {
         ToolContext {
