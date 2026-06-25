@@ -7,6 +7,8 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use crate::model::ThinkingLevel;
+
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 
@@ -166,6 +168,9 @@ pub struct Config {
     /// Truncation settings.
     #[serde(default)]
     pub truncation: TruncationSection,
+    /// Thinking level for reasoning-intensive tasks.
+    #[serde(default)]
+    pub thinking_level: ThinkingLevel,
     /// User-defined keybindings that override defaults.
     /// Parsed from `[keybindings]` table in `config.toml`.
     #[serde(default)]

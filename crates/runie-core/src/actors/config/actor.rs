@@ -159,6 +159,12 @@ impl ConfigActor {
             .await;
     }
 
+    async fn set_thinking_level(&mut self, level: crate::model::ThinkingLevel, bus: &EventBus<Event>) {
+        let level = level;
+        self.mutate_config(bus, move |path| set_thinking_level_at_path(&path, level))
+            .await;
+    }
+
     fn list_configured_providers(&self) -> Vec<(String, String, Vec<String>)> {
         let mut result: Vec<_> = self
             .config
@@ -219,6 +225,7 @@ impl ConfigActor {
             ConfigMsg::SetVimMode { enabled } => self.set_vim_mode(enabled, bus).await,
             ConfigMsg::SetTelemetry { enabled } => self.set_telemetry(enabled, bus).await,
             ConfigMsg::SetTruncation { limits } => self.set_truncation(limits, bus).await,
+            ConfigMsg::SetThinkingLevel { level } => self.set_thinking_level(level, bus).await,
             ConfigMsg::GetConfig(reply) => reply.send(self.config.clone()),
             ConfigMsg::GetConfiguredProviders(reply) => {
                 reply.send(self.list_configured_providers());
@@ -302,6 +309,12 @@ fn set_telemetry_at_path(path: &Path, enabled: bool) -> anyhow::Result<()> {
 fn set_truncation_at_path(path: &Path, limits: &crate::config::TruncationSection) -> anyhow::Result<()> {
     let mut config = Config::load(Some(path));
     config.truncation = limits.clone();
+    config.save_to(path)
+}
+
+fn set_thinking_level_at_path(path: &Path, level: crate::model::ThinkingLevel) -> anyhow::Result<()> {
+    let mut config = Config::load(Some(path));
+    config.thinking_level = level;
     config.save_to(path)
 }
 

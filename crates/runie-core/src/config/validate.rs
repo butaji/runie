@@ -12,7 +12,7 @@ pub fn validate(value: &Value) -> Vec<String> {
     validate_object(value, &[
         "provider", "model", "theme", "ui", "models",
         "model_providers", "telemetry", "prompts", "truncation",
-        "keybindings", "hooks",
+        "keybindings", "hooks", "thinking_level",
     ], "", &mut errors);
     errors
 }
@@ -41,6 +41,7 @@ fn validate_object(value: &Value, allowed_keys: &[&str], prefix: &str, errors: &
     validate_truncation(map, prefix, errors);
     validate_keybindings(map, prefix, errors);
     validate_hooks(map, prefix, errors);
+    validate_thinking_level(map, prefix, errors);
 }
 
 fn validate_provider(map: &serde_json::Map<String, Value>, prefix: &str, errors: &mut Vec<String>) {
@@ -215,5 +216,16 @@ fn validate_hook_command_list(val: &Value, name: &str, prefix: &str, errors: &mu
         }
         Value::Null => {}
         _ => errors.push(format!("{}hooks.commands.{} must be an array", prefix, name)),
+    }
+}
+
+fn validate_thinking_level(map: &serde_json::Map<String, Value>, prefix: &str, errors: &mut Vec<String>) {
+    let Some(tl_val) = map.get("thinking_level") else { return };
+    if let Value::String(s) = tl_val {
+        if !["Off", "Low", "Medium", "High"].contains(&s.as_str()) {
+            errors.push(format!("{}thinking_level must be one of: Off, Low, Medium, High", prefix));
+        }
+    } else if !tl_val.is_null() {
+        errors.push(format!("{}thinking_level must be a string", prefix));
     }
 }

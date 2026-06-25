@@ -169,6 +169,7 @@ impl AppState {
             self.config_mut().theme_name = theme.clone();
         }
         self.config_mut().truncation = config.truncation.clone();
+        self.config_mut().thinking_level = config.thinking_level;
         self.config_mut().vim_mode = config.vim_mode();
         self.config_mut().telemetry = crate::telemetry::Telemetry::new(config.telemetry_enabled());
         let prompts_section = config.prompts();
@@ -411,11 +412,21 @@ impl AppState {
     }
 
     /// Set the thinking level and update derived state.
+    /// Persists to config.toml via ConfigActor.
     pub(crate) fn set_thinking_level(&mut self, level: crate::model::ThinkingLevel) {
         if self.config().thinking_level == level {
             return;
         }
         self.config_mut().thinking_level = level;
+        let handles = self.actor_handles().cloned();
+        if let Some(h) = handles {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let h = h;
+                tokio::spawn(async move {
+                    h.send_set_thinking_level(level).await;
+                });
+            }
+        }
         self.notify(
             format!(
                 "Thinking level set to: {}",

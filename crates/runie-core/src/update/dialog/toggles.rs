@@ -220,32 +220,40 @@ pub fn toggle_provider_model(state: &mut AppState, provider: &str, model: &str) 
 }
 
 fn sync_provider_models(state: &mut AppState, provider: &str, models: &[String]) {
-    let current_from_file = crate::login_config::get_provider_config(provider);
-    let (base_url, api_key) = current_from_file
-        .map(|(b, k, _)| (b, k))
-        .unwrap_or_else(|| {
-            (
-                crate::provider::find_provider(provider)
-                    .map(|p| p.base_url.to_owned())
-                    .unwrap_or_default(),
-                String::new(),
-            )
-        });
-    if let Err(e) = crate::login_config::save_provider_config(provider, &base_url, &api_key, models) {
-        tracing::warn!("failed to persist provider models: {}", e);
-        return;
-    }
+    // Update local cache for immediate UI feedback
     if let Some(cache) = state.config_cache_mut() {
+        let (base_url, api_key) = crate::login_config::get_provider_config(provider)
+            .map(|(b, k, _)| (b, k))
+            .unwrap_or_else(|| {
+                (
+                    crate::provider::find_provider(provider)
+                        .map(|p| p.base_url.to_owned())
+                        .unwrap_or_default(),
+                    String::new(),
+                )
+            });
         cache
             .model_providers
             .entry(provider.into())
             .or_insert_with(|| crate::config::ModelProvider {
                 provider_type: None,
-                base_url: base_url.clone(),
-                api_key: api_key.clone(),
+                base_url,
+                api_key,
                 models: vec![],
             })
-            .models = models.into();
+            .models = models.to_vec();
+    }
+    // Persist to config.toml via ConfigActor
+    let handles = state.actor_handles().cloned();
+    if let Some(h) = handles {
+        let provider = provider.to_owned();
+        let models = models.to_vec();
+        if tokio::runtime::Handle::try_current().is_ok() {
+            let h = h;
+            tokio::spawn(async move {
+                h.send_set_provider_models(&provider, models).await;
+            });
+        }
     }
 }
 
@@ -286,89 +294,4 @@ pub fn partition_model_items(
         groups.push((last_header, current_group));
     }
     (recent, groups)
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-#[cfg(test)]
-mod provider_model_toggle_tests {
-    use super::*;
-    use std::path::PathBuf;
-
-    fn temp_config_path() -> PathBuf {
-        use std::sync::atomic::{AtomicU64, Ordering};
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-        PathBuf::from(format!(
-            "/tmp/runie_provider_toggle_test_{}_{}.toml",
-            std::process::id(),
-            n
-        ))
-    }
-
-    #[test]
-    fn parse_settings_toggle_key_extracts_provider_and_model() {
-        assert_eq!(
-            parse_provider_model_toggle("edit_provider:openai:gpt-4o"),
-            Some(("openai", "gpt-4o"))
-        );
-    }
-
-    #[test]
-    fn parse_settings_toggle_key_rejects_malformed_keys() {
-        assert!(parse_provider_model_toggle("edit_provider:gpt-4o").is_none());
-        assert!(parse_provider_model_toggle("other:openai:gpt-4o").is_none());
-    }
-
-    #[test]
-    fn toggle_provider_model_disables_model_and_switches_active() {
-        let path = temp_config_path();
-        crate::login_config::set_test_config_path(path);
-        crate::login_config::save_provider_config(
-            "openai",
-            "https://api.openai.com/v1",
-            "sk-test",
-            &["gpt-4o".into(), "gpt-4o-mini".into()],
-        )
-        .unwrap();
-
-        let mut state = AppState::default();
-        state.config_mut().current_provider = "openai".into();
-        state.config_mut().current_model = "gpt-4o-mini".into();
-
-        toggle_provider_model(&mut state, "openai", "gpt-4o-mini");
-
-        let models = crate::login_config::get_provider_config("openai")
-            .map(|(_, _, m)| m)
-            .unwrap_or_default();
-        assert_eq!(models, vec!["gpt-4o"]);
-        assert_eq!(state.config().current_model, "gpt-4o");
-    }
-
-    #[test]
-    fn toggle_provider_model_enables_missing_model() {
-        let path = temp_config_path();
-        crate::login_config::set_test_config_path(path);
-        crate::login_config::save_provider_config(
-            "openai",
-            "https://api.openai.com/v1",
-            "sk-test",
-            &["gpt-4o".into()],
-        )
-        .unwrap();
-
-        let mut state = AppState::default();
-        state.config_mut().current_provider = "openai".into();
-        state.config_mut().current_model = "gpt-4o".into();
-
-        toggle_provider_model(&mut state, "openai", "gpt-4o-mini");
-
-        let models = crate::login_config::get_provider_config("openai")
-            .map(|(_, _, m)| m)
-            .unwrap_or_default();
-        assert!(models.contains(&"gpt-4o".to_string()));
-        assert!(models.contains(&"gpt-4o-mini".to_string()));
-    }
 }

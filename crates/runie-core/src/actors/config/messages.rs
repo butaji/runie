@@ -4,6 +4,7 @@ use tokio::sync::mpsc;
 
 use crate::actors::Reply;
 use crate::config::{Config, TruncationSection};
+use crate::model::ThinkingLevel;
 
 /// Messages accepted by `ConfigActor`.
 #[derive(Debug, Clone)]
@@ -33,6 +34,8 @@ pub enum ConfigMsg {
     SetTelemetry { enabled: bool },
     /// Set truncation limits.
     SetTruncation { limits: TruncationSection },
+    /// Set thinking level.
+    SetThinkingLevel { level: ThinkingLevel },
     /// Request the current in-memory config.
     GetConfig(Reply<Config>),
     /// Request the list of configured providers.
@@ -144,5 +147,10 @@ impl ConfigActorHandle {
     /// Set truncation limits.
     pub async fn set_truncation(&self, limits: TruncationSection) {
         let _ = self.tx.send(ConfigMsg::SetTruncation { limits }).await;
+    }
+
+    /// Set thinking level.
+    pub async fn set_thinking_level(&self, level: ThinkingLevel) {
+        let _ = self.tx.send(ConfigMsg::SetThinkingLevel { level }).await;
     }
 }

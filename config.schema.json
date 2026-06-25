@@ -87,6 +87,15 @@
         "null"
       ]
     },
+    "thinking_level": {
+      "description": "Thinking level for reasoning-intensive tasks.",
+      "default": "Off",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ThinkingLevel"
+        }
+      ]
+    },
     "truncation": {
       "description": "Truncation settings.",
       "default": {
@@ -210,6 +219,16 @@
           "type": "boolean"
         }
       }
+    },
+    "ThinkingLevel": {
+      "description": "Thinking level for reasoning-intensive tasks.",
+      "type": "string",
+      "enum": [
+        "Off",
+        "Low",
+        "Medium",
+        "High"
+      ]
     },
     "TruncationSection": {
       "description": "Truncation limits for tool output.",

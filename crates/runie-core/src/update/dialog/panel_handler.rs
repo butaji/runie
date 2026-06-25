@@ -419,13 +419,32 @@ fn apply_select_setting(state: &mut AppState, stack: &mut PanelStack, key: &str)
 }
 
 fn toggle_vim_mode(state: &mut AppState) {
-    state.config_mut().vim_mode = !state.config_mut().vim_mode;
+    let new_value = !state.config().vim_mode;
+    state.config_mut().vim_mode = new_value;
+    let handles = state.actor_handles().cloned();
+    if let Some(h) = handles {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            let h = h;
+            tokio::spawn(async move {
+                h.send_set_vim_mode(new_value).await;
+            });
+        }
+    }
     state.view_mut().cached_settings_valid = false;
 }
 
 fn toggle_telemetry(state: &mut AppState) {
-    let new_enabled = !state.config_mut().telemetry.is_enabled();
+    let new_enabled = !state.config().telemetry.is_enabled();
     state.config_mut().telemetry = crate::telemetry::Telemetry::new(new_enabled);
+    let handles = state.actor_handles().cloned();
+    if let Some(h) = handles {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            let h = h;
+            tokio::spawn(async move {
+                h.send_set_telemetry(new_enabled).await;
+            });
+        }
+    }
     state.view_mut().cached_settings_valid = false;
 }
 
@@ -436,10 +455,21 @@ fn apply_truncation_setting(state: &mut AppState, stack: &mut PanelStack, key: &
     let Ok(n) = value.parse::<usize>() else {
         return;
     };
+    let mut truncation = state.config().truncation.clone();
     match key {
-        "truncation_max_lines" => state.config_mut().truncation.max_lines = n,
-        "truncation_max_bytes" => state.config_mut().truncation.max_bytes = n,
+        "truncation_max_lines" => truncation.max_lines = n,
+        "truncation_max_bytes" => truncation.max_bytes = n,
         _ => return,
+    }
+    state.config_mut().truncation = truncation.clone();
+    let handles = state.actor_handles().cloned();
+    if let Some(h) = handles {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            let h = h;
+            tokio::spawn(async move {
+                h.send_set_truncation(truncation).await;
+            });
+        }
     }
     state.view_mut().cached_settings_valid = false;
 }

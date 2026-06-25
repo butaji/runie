@@ -15,6 +15,7 @@ use crate::actors::{
     ConfigActorHandle, FffSearchRequest, IoActorHandle, ProviderActorHandle, SessionActorHandle,
 };
 use crate::config::TruncationSection;
+use crate::model::ThinkingLevel;
 use crate::session::Session;
 use crate::trust::TrustDecision;
 
@@ -129,6 +130,13 @@ impl ActorHandles {
     pub async fn send_set_truncation(&self, limits: TruncationSection) {
         if let Some(ref h) = self.config {
             h.set_truncation(limits).await;
+        }
+    }
+
+    /// Send `SetThinkingLevel` to `ConfigActor`.
+    pub async fn send_set_thinking_level(&self, level: ThinkingLevel) {
+        if let Some(ref h) = self.config {
+            h.set_thinking_level(level).await;
         }
     }
 

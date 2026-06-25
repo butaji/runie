@@ -9,6 +9,9 @@ mod router;
 mod tab_complete;
 pub mod toggles;
 
+#[cfg(test)]
+mod tests;
+
 pub use form_handler::{handle_form_dialog, insert_at_ref};
 pub use open::{
     open_at_file_picker, open_at_file_picker_all, open_command_palette,
