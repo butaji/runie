@@ -95,7 +95,7 @@
   },
   {
     "id": "consolidate-login-logout-tests",
-    "status": "todo",
+    "status": "done",
     "milestone": "?",
     "category": "?",
     "priority": "?",

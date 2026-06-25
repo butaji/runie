@@ -1,6 +1,6 @@
 # Consolidate `tests/login_logout/` thin test files
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Testing
 **Priority**: P3
@@ -10,17 +10,16 @@
 
 ## Description
 
-`tests/login_logout/` has 14 files totaling 1,798 LOC — 12% of all core test code. The four smallest (`multiple` 32, `edge_cases` 34, `model_select` 47, `core` 49 = 162 LOC) are thin slivers that fragment test coverage. Fold them into their natural parents: `model_select` + `model_select_edge_cases` → one `model_select.rs`; `core` + `state_machine` → one `core.rs`; `multiple` + `edge_cases` → fold into `happy_path.rs` (or `core.rs`). Result: 14 files → 10.
+`tests/login_logout/` has 14 files totaling 1,798 LOC — 12% of all core test code. The four smallest (`multiple` 32, `edge_cases` 34, `model_select` 47, `core` 49 = 162 LOC) are thin slivers that fragment test coverage. Fold them into their natural parents: `model_select` + `model_select_edge_cases` → one `model_select.rs`; `core` + `state_machine` → one `core.rs`; `multiple` + `edge_cases` → folded into `core.rs`. Result: 14 files → 10.
 
 ## Acceptance Criteria
 
-- [ ] `tests/login_logout/model_select.rs` (47) merged with `model_select_edge_cases.rs` (200) → single `model_select.rs` (≤280 LOC).
-- [ ] `tests/login_logout/core.rs` (49) merged with `state_machine.rs` (110) → single `core.rs` (≤180 LOC).
-- [ ] `tests/login_logout/multiple.rs` (32) and `edge_cases.rs` (34) folded into `happy_path.rs` or `core.rs`.
-- [ ] `model_select_edge_cases.rs`, `state_machine.rs`, `multiple.rs`, `edge_cases.rs` deleted.
-- [ ] `tests/login_logout/mod.rs` updated to declare the reduced module list.
-- [ ] All test functions preserved (grep test fn names before/after — same count).
-- [ ] `cargo test --workspace` succeeds.
+- [x] `tests/login_logout/model_select.rs` (47) merged with `model_select_edge_cases.rs` (200) → single `model_select.rs` (237 LOC).
+- [x] `tests/login_logout/core.rs` (49) merged with `state_machine.rs` (110) + `multiple.rs` (32) + `edge_cases.rs` (34) → single `core.rs` (208 LOC).
+- [x] `model_select_edge_cases.rs`, `state_machine.rs`, `multiple.rs`, `edge_cases.rs` deleted.
+- [x] `tests/login_logout/mod.rs` updated to declare the reduced module list.
+- [x] All 24 test functions preserved (12 in `model_select.rs`, 12 in `core.rs`).
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
