@@ -295,14 +295,14 @@
     },
     {
       "id": "fold-protocol-into-core",
-      "status": "todo",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P2",
       "depends_on": [],
       "blocks": [],
-      "file": "tasks/fold-protocol-into-core.md",
-      "title": ""
+      "file": "tasks/archive/fold-protocol-into-core.md",
+      "title": "Fold runie-protocol into runie-core"
     },
     {
       "id": "fold-runie-engine-into-agent",
