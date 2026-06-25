@@ -73,7 +73,18 @@ fn handle_settings_toggle(state: &mut AppState) {
 }
 
 fn handle_vim_mode_toggle(state: &mut AppState) {
-    state.config_mut().vim_mode = !state.config().vim_mode;
+    let new_value = !state.config().vim_mode;
+    state.config_mut().vim_mode = new_value;
+    // Persist to config.toml via ConfigActor (clone handles for async)
+    let handles = state.actor_handles().cloned();
+    if let Some(h) = handles {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            let h = h;
+            tokio::spawn(async move {
+                h.send_set_vim_mode(new_value).await;
+            });
+        }
+    }
     state.view_mut().cached_settings_valid = false;
 }
 

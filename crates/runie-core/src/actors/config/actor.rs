@@ -135,6 +135,30 @@ impl ConfigActor {
         .await;
     }
 
+    async fn set_theme(&mut self, name: String, bus: &EventBus<Event>) {
+        let name = name.to_owned();
+        self.mutate_config(bus, move |path| set_theme_at_path(&path, &name))
+            .await;
+    }
+
+    async fn set_vim_mode(&mut self, enabled: bool, bus: &EventBus<Event>) {
+        let enabled = enabled;
+        self.mutate_config(bus, move |path| set_vim_mode_at_path(&path, enabled))
+            .await;
+    }
+
+    async fn set_telemetry(&mut self, enabled: bool, bus: &EventBus<Event>) {
+        let enabled = enabled;
+        self.mutate_config(bus, move |path| set_telemetry_at_path(&path, enabled))
+            .await;
+    }
+
+    async fn set_truncation(&mut self, limits: crate::config::TruncationSection, bus: &EventBus<Event>) {
+        let limits = limits;
+        self.mutate_config(bus, move |path| set_truncation_at_path(&path, &limits))
+            .await;
+    }
+
     fn list_configured_providers(&self) -> Vec<(String, String, Vec<String>)> {
         let mut result: Vec<_> = self
             .config
@@ -191,6 +215,10 @@ impl ConfigActor {
             ConfigMsg::SetProviderModels { name, models } => {
                 self.set_provider_models(&name, &models, bus).await;
             }
+            ConfigMsg::SetTheme { name } => self.set_theme(name, bus).await,
+            ConfigMsg::SetVimMode { enabled } => self.set_vim_mode(enabled, bus).await,
+            ConfigMsg::SetTelemetry { enabled } => self.set_telemetry(enabled, bus).await,
+            ConfigMsg::SetTruncation { limits } => self.set_truncation(limits, bus).await,
             ConfigMsg::GetConfig(reply) => reply.send(self.config.clone()),
             ConfigMsg::GetConfiguredProviders(reply) => {
                 reply.send(self.list_configured_providers());
@@ -250,6 +278,30 @@ fn set_provider_models_at_path(path: &Path, name: &str, models: &[String]) -> an
     if let Some(mp) = config.model_providers.get_mut(name) {
         mp.models = models.to_vec();
     }
+    config.save_to(path)
+}
+
+fn set_theme_at_path(path: &Path, name: &str) -> anyhow::Result<()> {
+    let mut config = Config::load(Some(path));
+    config.theme = Some(name.to_owned());
+    config.save_to(path)
+}
+
+fn set_vim_mode_at_path(path: &Path, enabled: bool) -> anyhow::Result<()> {
+    let mut config = Config::load(Some(path));
+    config.ui.vim_mode = enabled;
+    config.save_to(path)
+}
+
+fn set_telemetry_at_path(path: &Path, enabled: bool) -> anyhow::Result<()> {
+    let mut config = Config::load(Some(path));
+    config.telemetry.enabled = enabled;
+    config.save_to(path)
+}
+
+fn set_truncation_at_path(path: &Path, limits: &crate::config::TruncationSection) -> anyhow::Result<()> {
+    let mut config = Config::load(Some(path));
+    config.truncation = limits.clone();
     config.save_to(path)
 }
 

@@ -120,6 +120,16 @@ impl AppState {
             return;
         }
         self.config_mut().theme_name = name.clone();
+        // Persist to config.toml via ConfigActor (clone handles for async)
+        let handles = self.actor_handles().cloned();
+        if let Some(h) = handles {
+            let name_clone = name.clone();
+            if tokio::runtime::Handle::try_current().is_ok() {
+                tokio::spawn(async move {
+                    h.send_set_theme(name_clone).await;
+                });
+            }
+        }
         self.notify(
             format!("Theme switched to '{}'", name),
             TransientLevel::Success,
@@ -236,23 +246,8 @@ pub fn control_event(state: &mut AppState, event: Event) {
         Event::ToggleExpand => state.toggle_expand_all(),
         Event::FollowUp => state.queue_follow_up(),
         Event::Dequeue => state.dequeue(),
-        Event::ToggleVimMode => {
-            state.config_mut().vim_mode = !state.config_mut().vim_mode;
-            state.view_mut().cached_settings_valid = false;
-            state.view_mut().dirty = true;
-        }
-        Event::NewSession => {
-            // Close welcome screen if open
-            if matches!(
-                state.open_dialog,
-                Some(crate::commands::DialogState::Welcome)
-            ) {
-                *state.open_dialog_mut() = None;
-                state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
-            }
-            // Ready for user input — welcome is gone
-            state.view_mut().dirty = true;
-        }
+        Event::ToggleVimMode => handle_toggle_vim_mode(state),
+        Event::NewSession => handle_new_session(state),
         Event::ResumeSession | Event::OpenSessionList => {
             // Close welcome and open session tree
             crate::update::dialog::open_session_tree_dialog(state);
@@ -262,6 +257,36 @@ pub fn control_event(state: &mut AppState, event: Event) {
         // intentionally ignored: other ControlEvent variants fall through
         _ => {}
     }
+}
+
+fn handle_toggle_vim_mode(state: &mut AppState) {
+    let new_value = !state.config().vim_mode;
+    state.config_mut().vim_mode = new_value;
+    // Persist to config.toml via ConfigActor (clone handles for async)
+    let handles = state.actor_handles().cloned();
+    if let Some(h) = handles {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            let h = h;
+            tokio::spawn(async move {
+                h.send_set_vim_mode(new_value).await;
+            });
+        }
+    }
+    state.view_mut().cached_settings_valid = false;
+    state.view_mut().dirty = true;
+}
+
+fn handle_new_session(state: &mut AppState) {
+    // Close welcome screen if open
+    if matches!(
+        state.open_dialog(),
+        Some(crate::commands::DialogState::Welcome)
+    ) {
+        *state.open_dialog_mut() = None;
+        state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+    }
+    // Ready for user input — welcome is gone
+    state.view_mut().dirty = true;
 }
 
 fn handle_quit_event(state: &mut AppState, event: Event) {

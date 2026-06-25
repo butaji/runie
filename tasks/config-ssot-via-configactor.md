@@ -1,6 +1,6 @@
 # Config SSOT via ConfigActor
 
-**Status**: todo
+**Status**: in_progress
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P0
@@ -11,6 +11,8 @@
 ## Description
 
 `ConfigActor` is already intended to be the single writer of `~/.runie/config.toml`, but most of the app bypasses it. This task makes `ConfigActor` the true SSOT for all config-driven state and removes every direct `AppState.config` mutation outside of the actor's `ConfigLoaded` projection path.
+
+**Partial implementation**: Added ConfigMsg variants and handlers for theme, vim_mode, telemetry, and truncation. Updated `switch_theme` and `ToggleVimMode` handlers to emit intents. Still remaining: settings dialog, providers dialog, and login flow violations.
 
 Current violators:
 - `commands/dsl/handlers/system.rs::handle_theme` writes `state.config.theme_name`.

@@ -3,7 +3,7 @@
 use tokio::sync::mpsc;
 
 use crate::actors::Reply;
-use crate::config::Config;
+use crate::config::{Config, TruncationSection};
 
 /// Messages accepted by `ConfigActor`.
 #[derive(Debug, Clone)]
@@ -25,6 +25,14 @@ pub enum ConfigMsg {
     SetDefaultModel { provider: String, model: String },
     /// Update the saved model list for a provider.
     SetProviderModels { name: String, models: Vec<String> },
+    /// Set the theme name.
+    SetTheme { name: String },
+    /// Set vim mode.
+    SetVimMode { enabled: bool },
+    /// Set telemetry enabled.
+    SetTelemetry { enabled: bool },
+    /// Set truncation limits.
+    SetTruncation { limits: TruncationSection },
     /// Request the current in-memory config.
     GetConfig(Reply<Config>),
     /// Request the list of configured providers.
@@ -116,5 +124,25 @@ impl ConfigActorHandle {
             .await
             .ok()?;
         rx.await.ok()
+    }
+
+    /// Set the theme name.
+    pub async fn set_theme(&self, name: String) {
+        let _ = self.tx.send(ConfigMsg::SetTheme { name }).await;
+    }
+
+    /// Set vim mode.
+    pub async fn set_vim_mode(&self, enabled: bool) {
+        let _ = self.tx.send(ConfigMsg::SetVimMode { enabled }).await;
+    }
+
+    /// Set telemetry enabled.
+    pub async fn set_telemetry(&self, enabled: bool) {
+        let _ = self.tx.send(ConfigMsg::SetTelemetry { enabled }).await;
+    }
+
+    /// Set truncation limits.
+    pub async fn set_truncation(&self, limits: TruncationSection) {
+        let _ = self.tx.send(ConfigMsg::SetTruncation { limits }).await;
     }
 }

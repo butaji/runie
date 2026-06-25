@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use crate::actors::{
     ConfigActorHandle, FffSearchRequest, IoActorHandle, ProviderActorHandle, SessionActorHandle,
 };
+use crate::config::TruncationSection;
 use crate::session::Session;
 use crate::trust::TrustDecision;
 
@@ -100,6 +101,34 @@ impl ActorHandles {
     pub async fn send_set_provider_models(&self, name: &str, models: Vec<String>) {
         if let Some(ref h) = self.config {
             h.set_provider_models(name.to_owned(), models).await;
+        }
+    }
+
+    /// Send `SetTheme` to `ConfigActor`.
+    pub async fn send_set_theme(&self, name: String) {
+        if let Some(ref h) = self.config {
+            h.set_theme(name).await;
+        }
+    }
+
+    /// Send `SetVimMode` to `ConfigActor`.
+    pub async fn send_set_vim_mode(&self, enabled: bool) {
+        if let Some(ref h) = self.config {
+            h.set_vim_mode(enabled).await;
+        }
+    }
+
+    /// Send `SetTelemetry` to `ConfigActor`.
+    pub async fn send_set_telemetry(&self, enabled: bool) {
+        if let Some(ref h) = self.config {
+            h.set_telemetry(enabled).await;
+        }
+    }
+
+    /// Send `SetTruncation` to `ConfigActor`.
+    pub async fn send_set_truncation(&self, limits: TruncationSection) {
+        if let Some(ref h) = self.config {
+            h.set_truncation(limits).await;
         }
     }
 
