@@ -39,14 +39,7 @@ Rules:
 
 ## Testing layers for UI
 
-| Layer | What | How |
-|-------|------|-----|
-| L1 | State / logic | Pure functions on actor-owned state and projection helpers |
-| L2 | Event handling | Feed `crossterm` events, build intents, assert emitted facts |
-| L3 | Rendering | `ratatui::TestBackend` + `Buffer` assertions on `Snapshot` |
-| L4 | Mock-tool / replay E2E | Replay captured SSE streams and inject mock tool outputs via actors; no shell or tmux |
-
-There are no tmux or bash smoke tests. Layer 4 uses deterministic fixtures and fake IO.
+See [AGENTS.md §Testing Strategy](../AGENTS.md#testing-strategy-4-layers) for the full 4-layer test taxonomy.
 
 ## Existing coverage by area
 

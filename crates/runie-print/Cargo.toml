@@ -12,7 +12,7 @@ runie-core.workspace = true
 runie-agent.workspace = true
 runie-provider.workspace = true
 anyhow.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tokio.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

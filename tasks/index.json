@@ -856,7 +856,7 @@
     },
     {
       "id": "fix-duplicate-cargo-toml-keys",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
@@ -1053,7 +1053,7 @@
     },
     {
       "id": "hoist-cargo-workspace-deps",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
@@ -1644,7 +1644,7 @@
     },
     {
       "id": "single-source-testing-docs",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",

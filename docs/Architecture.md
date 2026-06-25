@@ -302,13 +302,4 @@ Tests are exempt from function-length and complexity checks so they can stay com
 
 ## Testing philosophy
 
-Tests are written as declarative DSLs rather than shell scripts.
-
-- **Layer 1 — State/logic**: pure functions on actor-owned state and domain types.
-- **Layer 2 — Event handling**: feed `crossterm` events or intents into handlers and assert facts emitted.
-- **Layer 3 — Rendering**: `TestBackend` + `Buffer` assertions on the projected snapshot.
-- **Layer 4 — Provider replay / mock-tool E2E**: replay captured SSE streams and inject mock tool outputs so the agent turn runs without real network or shell IO.
-
-Because state is owned by actors, tests use a `TestActorHarness` to spawn lightweight actors, send intents, and observe facts. Direct mutation of `AppState` fields is reserved for the projection path only.
-
-There are no tmux or shell-based tests. Every feature must be verifiable with `cargo test`.
+See [AGENTS.md §Testing Strategy](../AGENTS.md#testing-strategy-4-layers) for the full 4-layer test taxonomy.

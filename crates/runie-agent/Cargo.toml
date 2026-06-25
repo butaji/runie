@@ -19,7 +19,5 @@ tokio = { workspace = true, features = ["rt", "macros", "rt-multi-thread"] }
 futures.workspace = true
 
 [dev-dependencies]
-runie-provider.workspace = true
 runie-testing.workspace = true
-tokio = { workspace = true, features = ["rt", "macros"] }
 toml.workspace = true

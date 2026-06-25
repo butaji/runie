@@ -17,4 +17,3 @@ anyhow.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "io-std", "io-util", "net", "signal"] }
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["rt", "macros"] }

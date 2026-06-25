@@ -188,7 +188,7 @@ Key differentiators:
 - **Persistent, forkable sessions** — conversations become reusable assets.
 - **Terminal-native workflow** — keyboard shortcuts, inline file references, fuzzy command palette.
 - **Team mode (R4)** — orchestrator designs workflows of specialized roles and routes them to the best models.
-- **Four layers of tests** — state logic, event handling, TestBackend rendering, and mock-tool/provider-replay E2E tests.
+- **Four layers of tests** — see [AGENTS.md §Testing Strategy](AGENTS.md#testing-strategy-4-layers) for the full taxonomy.
 
 Runie is built for developers who refuse to leave the terminal and want every model they pay for to pull its weight.
 </details>
