@@ -1,17 +1,6 @@
 {
   "tasks": [
     {
-      "id": "README",
-      "status": "todo",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/README.md",
-      "title": ""
-    },
-    {
       "id": "app-state-read-only-projection",
       "status": "todo",
       "milestone": "R4",
@@ -197,23 +186,6 @@
       "title": ""
     },
     {
-      "id": "dedupe-config-actor-mutations",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P2",
-      "depends_on": [
-        "actor-owned-state-ssot",
-        "event-taxonomy-for-actor-state-sync",
-        "app-state-read-only-projection"
-      ],
-      "blocks": [
-        "config-ssot-via-configactor"
-      ],
-      "file": "tasks/dedupe-config-actor-mutations.md",
-      "title": ""
-    },
-    {
       "id": "dedupe-fresh-state-test-helper",
       "status": "todo",
       "milestone": "R4",
@@ -259,32 +231,6 @@
       ],
       "blocks": [],
       "file": "tasks/delete-async-io-bridge.md",
-      "title": ""
-    },
-    {
-      "id": "derive-confirmation-from-permissions",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Security",
-      "priority": "P2",
-      "depends_on": [
-        "unify-permission-gate"
-      ],
-      "blocks": [],
-      "file": "tasks/derive-confirmation-from-permissions.md",
-      "title": ""
-    },
-    {
-      "id": "drop-event-bus-replay-buffer",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P2",
-      "depends_on": [],
-      "blocks": [
-        "drop-small-stdlib-replaceable-deps"
-      ],
-      "file": "tasks/drop-event-bus-replay-buffer.md",
       "title": ""
     },
     {
@@ -367,19 +313,6 @@
         "delete-async-io-bridge"
       ],
       "file": "tasks/finish-io-migration.md",
-      "title": ""
-    },
-    {
-      "id": "flatten-update-login-flow-tests-dir",
-      "status": "done",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "depends_on": [
-        "consolidate-dual-path-modules"
-      ],
-      "blocks": [],
-      "file": "tasks/flatten-update-login-flow-tests-dir.md",
       "title": ""
     },
     {
@@ -698,19 +631,6 @@
       "title": ""
     },
     {
-      "id": "relocate-stray-tool-parser-tests",
-      "status": "done",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
-      "depends_on": [
-        "consolidate-dual-path-modules"
-      ],
-      "blocks": [],
-      "file": "tasks/relocate-stray-tool-parser-tests.md",
-      "title": ""
-    },
-    {
       "id": "remove-direct-appstate-mutations",
       "status": "todo",
       "milestone": "R4",
@@ -823,17 +743,6 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/single-source-dev-commands.md",
-      "title": ""
-    },
-    {
-      "id": "split-files-at-limit-round-2",
-      "status": "done",
-      "milestone": "R4",
-      "category": "Architecture / Refactoring",
-      "priority": "P2",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/split-files-at-limit-round-2.md",
       "title": ""
     },
     {
@@ -1031,17 +940,6 @@
       ],
       "blocks": [],
       "file": "tasks/unify-duplicate-module-names-core-tui.md",
-      "title": ""
-    },
-    {
-      "id": "unify-markdown-rendering",
-      "status": "todo",
-      "milestone": "R4",
-      "category": "TUI / Rendering",
-      "priority": "P3",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/unify-markdown-rendering.md",
       "title": ""
     },
     {
