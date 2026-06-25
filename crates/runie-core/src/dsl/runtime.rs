@@ -219,11 +219,10 @@ impl Runtime for RealRuntime {
     }
 }
 
-/// Global static for the current RealRuntime.
-///
-/// Initialized once during app bootstrap and set to `Some`.
-/// Code that runs before the runtime is spawned (e.g. config loading)
-/// sees `None` and falls back to no-op.
+// Global static for the current RealRuntime.
+// Initialized once during app bootstrap and set to `Some`.
+// Code that runs before the runtime is spawned (e.g. config loading)
+// sees `None` and falls back to no-op.
 thread_local! {
     static CURRENT_RUNTIME: std::cell::RefCell<Option<RealRuntime>> = std::cell::RefCell::new(None);
 }

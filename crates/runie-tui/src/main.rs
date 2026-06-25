@@ -132,39 +132,41 @@ fn spawn_background_tasks(
     shutdown_tx: oneshot::Sender<()>,
     handles: ActorHandles,
 ) {
-    let persistence_handle = handles
-        .session
-        .clone()
-        .expect("SessionActor must be spawned");
-    let provider_handle = handles
-        .provider
-        .clone()
-        .expect("ProviderActor must be spawned");
+    let handles = setup_actor_channels(&handles, &mut state, &bus);
+    let (render_tx, render_rx) = watch::channel(state.snapshot());
+    let (kb_tx, kb_rx) = watch::channel(state.config().keybindings.clone());
+    spawn_input_forwarder(handles.input_rx, bus.clone());
+    spawn_agent_tasks(handles.input_tx, kb_rx, terminal, render_rx, bus.clone(), caps);
+    spawn_ui_actor(state, render_tx, handles.agent_handle, handles.persistence_handle, kb_tx, bus.clone(), shutdown_tx, caps);
+    tokio::spawn(handles.agent_actor);
+}
+
+struct ActorChannels {
+    input_tx: mpsc::Sender<Event>,
+    input_rx: mpsc::Receiver<Event>,
+    agent_handle: runie_agent::AgentActorHandle,
+    agent_actor: runie_core::actors::ActorHandle,
+    persistence_handle: runie_core::actors::SessionActorHandle,
+}
+
+fn setup_actor_channels(
+    handles: &ActorHandles,
+    state: &mut AppState,
+    bus: &EventBus<Event>,
+) -> ActorChannels {
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
     let (agent_handle, agent_actor) = AgentActor::spawn(
         bus.clone(),
-        provider_handle,
+        handles.provider.clone().expect("ProviderActor must be spawned"),
         state.approval_registry().clone(),
     );
-    let (render_tx, render_rx) = watch::channel(state.snapshot());
-    let (kb_tx, kb_rx) = watch::channel(state.config().keybindings.clone());
-    spawn_input_forwarder(input_rx, bus.clone());
-    spawn_agent_tasks(input_tx, kb_rx, terminal, render_rx, bus.clone(), caps);
-    spawn_ui_actor(
-        state,
-        render_tx,
+    ActorChannels {
+        input_tx,
+        input_rx,
         agent_handle,
-        persistence_handle,
-        kb_tx,
-        bus.clone(),
-        shutdown_tx,
-        caps,
-    );
-
-    // Keep the agent actor alive until shutdown; its handle aborts on Drop.
-    tokio::spawn(async move {
-        let _ = agent_actor.await;
-    });
+        agent_actor,
+        persistence_handle: handles.session.clone().expect("SessionActor must be spawned"),
+    }
 }
 
 fn spawn_input_forwarder(mut input_rx: mpsc::Receiver<Event>, bus: EventBus<Event>) {

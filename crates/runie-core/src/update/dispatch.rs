@@ -70,11 +70,7 @@ fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
 fn handle_session_store_events(state: &mut AppState, event: &Event) -> bool {
     use crate::event::TransientLevel;
     match event {
-        Event::SessionLoaded {
-            name,
-            events,
-            metadata,
-        } => {
+        Event::SessionLoaded { name, events, metadata } => {
             apply_session_loaded(state, name, events, metadata);
             true
         }
@@ -91,10 +87,7 @@ fn handle_session_store_events(state: &mut AppState, event: &Event) -> bool {
             true
         }
         Event::SessionExported { path } => {
-            state.notify(
-                format!("Session exported to '{}'.", path),
-                TransientLevel::Info,
-            );
+            state.notify(format!("Session exported to '{}'.", path), TransientLevel::Info);
             true
         }
         Event::SessionList { sessions } => {
@@ -102,10 +95,7 @@ fn handle_session_store_events(state: &mut AppState, event: &Event) -> bool {
             true
         }
         Event::SessionOperationFailed { operation, error } => {
-            state.notify(
-                format!("{} failed: {}", operation, error),
-                TransientLevel::Error,
-            );
+            state.notify(format!("{} failed: {}", operation, error), TransientLevel::Error);
             true
         }
         _ => false,
@@ -396,13 +386,7 @@ fn is_path_form_event(event: &Event) -> bool {
             | Event::PathCompletionDown
             | Event::PathCompletionSelect
             | Event::PathCompletionClose
-            | Event::CommandFormInput(_)
-            | Event::CommandFormBackspace
-            | Event::CommandFormUp
-            | Event::CommandFormDown
-            | Event::CommandFormSubmit
-            | Event::CommandFormClose
-    )
+    ) || is_form_dialog_event(event)
 }
 
 fn categorize_edit_system_session(event: &Event) -> Option<EventCategory> {

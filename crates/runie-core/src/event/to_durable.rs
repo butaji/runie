@@ -15,42 +15,48 @@ impl Event {
             | Event::ThinkingStart { .. }
             | Event::ThinkingDelta { .. }
             | Event::ThinkingEnd { .. } => None,
-            // Tool calls are durable
-            Event::ToolStart { id, name, input } => Some(DurableCoreEvent::ToolCalled {
-                id: id.clone(),
-                name: name.clone(),
-                input: input.clone(),
-            }),
-            Event::ToolEnd { id, output, .. } => Some(DurableCoreEvent::ToolResult {
-                id: id.clone(),
-                output: output.clone(),
-                success: true,
-            }),
-            // Terminal state changes
-            Event::Response { id, content } => Some(DurableCoreEvent::MessageSent {
-                id: id.clone(),
-                role: "assistant".into(),
-                content: content.clone(),
-                timestamp: crate::model::now(),
-                provider: String::new(),
-            }),
-            Event::SwitchModel {
-                provider, model, ..
-            } => Some(DurableCoreEvent::ModelSwitched {
-                provider: provider.clone(),
-                model: model.clone(),
-            }),
-            Event::RunNameCommand { name } => {
-                Some(DurableCoreEvent::SessionRenamed { name: name.clone() })
-            }
-            Event::SwitchTheme { name } => {
-                Some(DurableCoreEvent::ThemeSwitched { name: name.clone() })
-            }
-            Event::SetThinkingLevel(level) => {
-                Some(DurableCoreEvent::ThinkingLevelSet { level: *level })
-            }
+            Event::ToolStart { id, name, input } => Some(tool_called(id, name, input)),
+            Event::ToolEnd { id, output, .. } => Some(tool_result(id, output)),
+            Event::Response { id, content } => Some(message_sent(id, content)),
+            Event::SwitchModel { provider, model, .. } => Some(model_switched(provider, model)),
+            Event::RunNameCommand { name } => Some(DurableCoreEvent::SessionRenamed { name: name.clone() }),
+            Event::SwitchTheme { name } => Some(DurableCoreEvent::ThemeSwitched { name: name.clone() }),
+            Event::SetThinkingLevel(level) => Some(DurableCoreEvent::ThinkingLevelSet { level: *level }),
             _ => None,
         }
+    }
+}
+
+fn tool_called(id: &str, name: &str, input: &serde_json::Value) -> crate::event::DurableCoreEvent {
+    crate::event::DurableCoreEvent::ToolCalled {
+        id: id.to_string(),
+        name: name.to_string(),
+        input: input.clone(),
+    }
+}
+
+fn tool_result(id: &str, output: &str) -> crate::event::DurableCoreEvent {
+    crate::event::DurableCoreEvent::ToolResult {
+        id: id.to_string(),
+        output: output.to_string(),
+        success: true,
+    }
+}
+
+fn message_sent(id: &str, content: &str) -> crate::event::DurableCoreEvent {
+    crate::event::DurableCoreEvent::MessageSent {
+        id: id.to_string(),
+        role: "assistant".into(),
+        content: content.to_string(),
+        timestamp: crate::model::now(),
+        provider: String::new(),
+    }
+}
+
+fn model_switched(provider: &str, model: &str) -> crate::event::DurableCoreEvent {
+    crate::event::DurableCoreEvent::ModelSwitched {
+        provider: provider.to_string(),
+        model: model.to_string(),
     }
 }
 

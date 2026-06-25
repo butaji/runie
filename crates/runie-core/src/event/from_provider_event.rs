@@ -16,53 +16,44 @@ impl From<ProviderEvent> for Event {
     fn from(event: ProviderEvent) -> Self {
         use ProviderEvent as PE;
         match event {
-            // Text lifecycle
             PE::TextStart { id } => Event::TextStart { id },
-            PE::TextDelta(content) => Event::ResponseDelta {
-                id: String::new(), // id not carried in TextDelta
-                content,
-            },
+            PE::TextDelta(content) => text_delta(content),
             PE::TextEnd { id } => Event::TextEnd { id },
-            // Thinking lifecycle
             PE::ThinkingStart { id } => Event::ThinkingStart { id },
-            PE::ThinkingDelta(content) => Event::ThinkingDelta {
-                id: String::new(),
-                content,
-            },
+            PE::ThinkingDelta(content) => thinking_delta(content),
             PE::ThinkingEnd { id } => Event::ThinkingEnd { id },
-            // Tool lifecycle
-            PE::ToolCallStart { id, name } => Event::ToolStart {
-                id,
-                name,
-                input: Default::default(),
-            },
-            PE::ToolCallInputDelta { id, delta } => {
-                // Accumulated in StreamState; no direct Event equivalent
-                Event::ResponseDelta { id, content: delta }
-            }
-            PE::ToolCallEnd { id } => Event::ToolEnd {
-                id,
-                duration_secs: 0.0,
-                output: String::new(),
-            },
-            // LLM lifecycle
-            PE::Finish { reason: _ } => {
-                // Turn completion is signaled by Done event from agent turn code
-                Event::Done { id: String::new() }
-            }
-            PE::Error(e) => Event::Error {
-                id: String::new(),
-                message: e.to_string(),
-            },
-            PE::Usage { .. } => {
-                // Usage info is tracked internally; no UI event needed
-                Event::ResponseDelta {
-                    id: String::new(),
-                    content: String::new(),
-                }
-            }
+            PE::ToolCallStart { id, name } => tool_start(id, name),
+            PE::ToolCallInputDelta { id, delta } => tool_input_delta(id, delta),
+            PE::ToolCallEnd { id } => tool_end(id),
+            PE::Finish { reason: _ } => Event::Done { id: String::new() },
+            PE::Error(e) => Event::Error { id: String::new(), message: e.to_string() },
+            PE::Usage { .. } => usage_event(),
         }
     }
+}
+
+fn text_delta(content: String) -> Event {
+    Event::ResponseDelta { id: String::new(), content }
+}
+
+fn thinking_delta(content: String) -> Event {
+    Event::ThinkingDelta { id: String::new(), content }
+}
+
+fn tool_start(id: String, name: String) -> Event {
+    Event::ToolStart { id, name, input: Default::default() }
+}
+
+fn tool_input_delta(id: String, delta: String) -> Event {
+    Event::ResponseDelta { id, content: delta }
+}
+
+fn tool_end(id: String) -> Event {
+    Event::ToolEnd { id, duration_secs: 0.0, output: String::new() }
+}
+
+fn usage_event() -> Event {
+    Event::ResponseDelta { id: String::new(), content: String::new() }
 }
 
 #[cfg(test)]

@@ -232,21 +232,7 @@ impl AppState {
     }
 
     pub(crate) fn add_error(&mut self, id: String, message: String) {
-        self.agent_state_mut().streaming = false;
-        self.agent_state_mut().turn_active = false;
-        self.agent_state_mut().current_request_id = None;
-        self.agent_state_mut().inflight = 0;
-        self.agent_state_mut().turn_started_at = None;
-        self.agent_state_mut().thinking_started_at = None;
-        self.agent_state_mut().tool_started_at = None;
-        self.agent_state_mut().current_tool_name = None;
-        self.agent_state_mut().current_action = None;
-        self.agent_state_mut().turn_tokens_out = 0;
-        self.agent_state_mut().intermediate_step_count = 0;
-        self.agent_state_mut().thought_seq = 0;
-        self.agent_state_mut().last_assistant_index = None;
-        self.agent_state_mut().streaming_buffer.reset();
-        self.view_mut().vim_nav_pending = false;
+        self.reset_agent_state();
 
         let mut error = ChatMessage {
             role: Role::Assistant,
@@ -258,12 +244,7 @@ impl AppState {
             }],
             ..Default::default()
         };
-        if let Some(idx) = self
-            .session()
-            .messages
-            .iter()
-            .position(|m| m.role == Role::TurnComplete)
-        {
+        if let Some(idx) = self.session().messages.iter().position(|m| m.role == Role::TurnComplete) {
             error.timestamp = self.session_mut().messages[idx].timestamp;
             self.session_mut().messages.insert(idx, error);
         } else {
@@ -272,5 +253,24 @@ impl AppState {
         self.messages_changed();
         self.deliver_queued();
         self.maybe_end_streaming();
+    }
+
+    fn reset_agent_state(&mut self) {
+        let a = self.agent_state_mut();
+        a.streaming = false;
+        a.turn_active = false;
+        a.current_request_id = None;
+        a.inflight = 0;
+        a.turn_started_at = None;
+        a.thinking_started_at = None;
+        a.tool_started_at = None;
+        a.current_tool_name = None;
+        a.current_action = None;
+        a.turn_tokens_out = 0;
+        a.intermediate_step_count = 0;
+        a.thought_seq = 0;
+        a.last_assistant_index = None;
+        a.streaming_buffer.reset();
+        self.view_mut().vim_nav_pending = false;
     }
 }
