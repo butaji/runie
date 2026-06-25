@@ -1,6 +1,6 @@
+use super::*;
 use runie_core::Part;
-use runie_core::event::Event;
-use runie_core::event::{AgentEvent, ControlEvent, DialogEvent, InputEvent};
+use runie_core::Event;
 use runie_core::model::AppState;
 use runie_testing::fresh_state;
 
@@ -30,24 +30,24 @@ fn thinking_started(state: &AppState) -> std::time::Instant {
 #[test]
 fn test_input_adds_character() {
     let mut state = fresh_state();
-    state.update(InputEvent::Input('H'));
-    state.update(InputEvent::Input('i'));
+    state.update(Event::Input('H'));
+    state.update(Event::Input('i'));
     assert_eq!(state.input.input, "Hi");
 }
 
 #[test]
 fn test_backspace_removes_character() {
     let mut state = fresh_state();
-    state.update(InputEvent::Input('H'));
-    state.update(InputEvent::Input('i'));
-    state.update(InputEvent::Backspace);
+    state.update(Event::Input('H'));
+    state.update(Event::Input('i'));
+    state.update(Event::Backspace);
     assert_eq!(state.input.input, "H");
 }
 
 #[test]
 fn test_backspace_empty_input() {
     let mut state = fresh_state();
-    state.update(InputEvent::Backspace);
+    state.update(Event::Backspace);
     assert_eq!(state.input.input, "");
 }
 
@@ -62,15 +62,15 @@ fn test_submit_empty_input() {
 fn test_submit_reset_command() {
     let mut state = fresh_state();
     // Type '/' to open the command palette
-    state.update(InputEvent::Input('/'));
+    state.update(Event::Input('/'));
     // Filter the palette with 'reset' using PaletteFilter events
-    state.update(DialogEvent::PaletteFilter('r'));
-    state.update(DialogEvent::PaletteFilter('e'));
-    state.update(DialogEvent::PaletteFilter('s'));
-    state.update(DialogEvent::PaletteFilter('e'));
-    state.update(DialogEvent::PaletteFilter('t'));
+    state.update(Event::PaletteFilter('r'));
+    state.update(Event::PaletteFilter('e'));
+    state.update(Event::PaletteFilter('s'));
+    state.update(Event::PaletteFilter('e'));
+    state.update(Event::PaletteFilter('t'));
     // Select the reset command from the palette
-    state.update(DialogEvent::PaletteSelect);
+    state.update(Event::PaletteSelect);
 
     assert_eq!(state.session.messages.len(), 1);
     assert!(
@@ -85,7 +85,7 @@ fn test_submit_reset_command() {
 fn typing_without_at_does_not_open_dialog() {
     let mut state = fresh_state();
     for c in "hello".chars() {
-        state.update(InputEvent::Input(c));
+        state.update(Event::Input(c));
     }
     assert!(
         state.completion.at_suggestions.is_none(),
@@ -106,7 +106,7 @@ fn input_change_marks_dirty_but_does_not_bump_cache_gen() {
     });
     state.ensure_fresh();
     let gen_before = state.cache_generation();
-    state.update(InputEvent::Input('x'));
+    state.update(Event::Input('x'));
     assert!(
         state.is_dirty(),
         "Input change should mark dirty for render"
@@ -123,7 +123,7 @@ fn message_change_bumps_cache_gen() {
     let mut state = fresh_state();
     state.ensure_fresh();
     let gen_before = state.cache_generation();
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
     });
@@ -145,7 +145,7 @@ fn ensure_fresh_skips_rebuild_when_only_input_changed() {
     });
     state.ensure_fresh();
     let cache_before = state.view.elements_cache().len();
-    state.update(InputEvent::Input('x'));
+    state.update(Event::Input('x'));
     state.ensure_fresh();
     assert_eq!(
         state.view.elements_cache().len(),
@@ -256,7 +256,7 @@ fn timer_advances_without_cache_rebuild() {
 fn input_not_delayed_by_animation_when_idle() {
     let mut state = fresh_state();
     state.agent.turn_active = false;
-    state.update(InputEvent::Input('x'));
+    state.update(Event::Input('x'));
     assert!(state.is_dirty(), "Input must mark dirty immediately");
     assert!(
         !state.agent.turn_active,
@@ -268,7 +268,7 @@ fn input_not_delayed_by_animation_when_idle() {
 fn tick_animation_noop_when_not_turn_active() {
     let mut state = fresh_state();
     state.agent.turn_active = false;
-    state.update(InputEvent::Input('x'));
+    state.update(Event::Input('x'));
     state.ensure_fresh();
     let was_dirty = state.is_dirty();
 
@@ -283,13 +283,13 @@ fn tick_animation_noop_when_not_turn_active() {
 #[test]
 fn external_editor_done_updates_input() {
     let mut state = fresh_state();
-    state.update(InputEvent::Input('o'));
-    state.update(InputEvent::Input('l'));
-    state.update(InputEvent::Input('d'));
+    state.update(Event::Input('o'));
+    state.update(Event::Input('l'));
+    state.update(Event::Input('d'));
     assert_eq!(state.input.input, "old");
     assert_eq!(state.input.cursor_pos, 3);
 
-    state.update(ControlEvent::ExternalEditorDone {
+    state.update(Event::ExternalEditorDone {
         content: "new text".to_string(),
     });
     assert_eq!(state.input.input, "new text");
@@ -300,7 +300,7 @@ fn external_editor_done_updates_input() {
 fn submit_quit_command_quits_app() {
     let mut state = fresh_state();
     for c in "quit".chars() {
-        state.update(InputEvent::Input(c));
+        state.update(Event::Input(c));
     }
     state.update(Event::submit());
     assert!(
@@ -313,7 +313,7 @@ fn submit_quit_command_quits_app() {
 fn submit_exit_command_quits_app() {
     let mut state = fresh_state();
     for c in "exit".chars() {
-        state.update(InputEvent::Input(c));
+        state.update(Event::Input(c));
     }
     state.update(Event::submit());
     assert!(
@@ -326,7 +326,7 @@ fn submit_exit_command_quits_app() {
 fn submit_colon_q_command_quits_app() {
     let mut state = fresh_state();
     for c in ":q".chars() {
-        state.update(InputEvent::Input(c));
+        state.update(Event::Input(c));
     }
     state.update(Event::submit());
     assert!(
@@ -339,7 +339,7 @@ fn submit_colon_q_command_quits_app() {
 fn submit_quit_with_whitespace_trims_and_quits() {
     let mut state = fresh_state();
     for c in "  quit  ".chars() {
-        state.update(InputEvent::Input(c));
+        state.update(Event::Input(c));
     }
     state.update(Event::submit());
     assert!(
@@ -352,7 +352,7 @@ fn submit_quit_with_whitespace_trims_and_quits() {
 fn submit_quit_is_case_insensitive() {
     let mut state = fresh_state();
     for c in "QUIT".chars() {
-        state.update(InputEvent::Input(c));
+        state.update(Event::Input(c));
     }
     state.update(Event::submit());
     assert!(state.should_quit, "typing 'QUIT' should quit");
@@ -361,23 +361,23 @@ fn submit_quit_is_case_insensitive() {
 #[test]
 fn ctrl_q_event_quits_app() {
     let mut state = fresh_state();
-    state.update(ControlEvent::Quit);
+    state.update(Event::Quit);
     assert!(
         state.should_quit,
-        "ControlEvent::Quit should set should_quit"
+        "Event::Quit should set should_quit"
     );
 }
 
 #[test]
 fn ctrl_q_quits_even_when_input_is_not_empty() {
     let mut state = fresh_state();
-    state.update(InputEvent::Input('h'));
-    state.update(InputEvent::Input('i'));
+    state.update(Event::Input('h'));
+    state.update(Event::Input('i'));
     assert!(!state.input.input.is_empty());
-    state.update(ControlEvent::ForceQuit);
+    state.update(Event::ForceQuit);
     assert!(
         state.should_quit,
-        "ControlEvent::ForceQuit should quit even with text in the input box"
+        "Event::ForceQuit should quit even with text in the input box"
     );
 }
 
@@ -385,12 +385,12 @@ fn ctrl_q_quits_even_when_input_is_not_empty() {
 fn cursor_end_moves_to_end_of_input() {
     let mut state = fresh_state();
     for c in "hello".chars() {
-        state.update(InputEvent::Input(c));
+        state.update(Event::Input(c));
     }
-    state.update(InputEvent::CursorLeft);
-    state.update(InputEvent::CursorLeft);
+    state.update(Event::CursorLeft);
+    state.update(Event::CursorLeft);
     assert_eq!(state.input.cursor_pos, 3);
-    state.update(InputEvent::CursorEnd);
+    state.update(Event::CursorEnd);
     assert_eq!(state.input.cursor_pos, 5, "CursorEnd should move to end");
 }
 
@@ -398,11 +398,11 @@ fn cursor_end_moves_to_end_of_input() {
 fn ctrl_e_event_moves_cursor_to_end() {
     let mut state = fresh_state();
     for c in "abc".chars() {
-        state.update(InputEvent::Input(c));
+        state.update(Event::Input(c));
     }
-    state.update(InputEvent::CursorStart);
+    state.update(Event::CursorStart);
     assert_eq!(state.input.cursor_pos, 0);
-    state.update(InputEvent::CursorEnd);
+    state.update(Event::CursorEnd);
     assert_eq!(
         state.input.cursor_pos, 3,
         "Ctrl+E (CursorEnd) should move to end"

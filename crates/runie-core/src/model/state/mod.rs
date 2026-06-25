@@ -1,23 +1,26 @@
 //! Application state types.
 
 // Inner state structs (moved from src/state/)
-mod agent;
-mod input;
-mod session;
-mod view;
+pub mod agent;
+pub mod input;
+pub mod session;
+mod session_restore;
+pub mod view;
 
 // Original state module files
+mod accessors;
 mod app_state;
 mod helpers;
 mod ranking;
 pub mod types;
 
-pub use agent::{AgentState, SpeedWindow};
+// State types are crate-private — only re-exported within runie-core.
+pub(crate) use agent::AgentState;
 pub use app_state::AppState;
-pub use input::{CommandUsage, InputState};
+pub(crate) use input::{CommandUsage, InputState};
 pub use session::{CompletionState, ConfigState, ModelSource, SessionState};
-pub use types::{
+pub(crate) use types::{
     DeliveryMode, FffFileEntry, PermissionRequestState, QueuedMessage, QueuedMessageKind,
     ThinkingLevel,
 };
-pub use view::ViewState;
+pub(crate) use view::ViewState;

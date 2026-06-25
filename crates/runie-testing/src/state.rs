@@ -1,6 +1,5 @@
 //! Shared test helpers for AppState manipulation.
 
-use runie_core::event::InputEvent;
 use runie_core::model::AppState;
 
 /// Returns a fresh `AppState` with default values.
@@ -11,7 +10,7 @@ pub fn fresh_state() -> AppState {
 /// Simulates typing `text` into the input buffer of `state`.
 pub fn type_str(state: &mut AppState, text: &str) {
     for c in text.chars() {
-        state.update(InputEvent::Input(c));
+        state.update(runie_core::Event::Input(c));
     }
 }
 

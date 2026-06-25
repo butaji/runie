@@ -1,6 +1,7 @@
+use super::*;
 use super::super::*;
 use crate::tests::connect_model;
-use runie_core::event::ScrollEvent;
+use runie_core::Event;
 use runie_core::Part;
 
 fn make_messages(count: usize) -> Vec<ChatMessage> {
@@ -72,7 +73,7 @@ fn test_scrollbar_moves_when_scrolled_up() {
     let buf_bottom = terminal.backend().buffer().clone();
 
     for _ in 0..20 {
-        state.update(ScrollEvent::Up);
+        state.update(Event::Up);
     }
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");

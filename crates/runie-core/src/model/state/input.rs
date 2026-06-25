@@ -9,9 +9,9 @@ pub struct CommandUsage {
 pub struct InputState {
     pub input: String,
     pub cursor_pos: usize,
-    pub(crate) undo_stack: Vec<(String, usize)>,
-    pub(crate) redo_stack: Vec<(String, usize)>,
-    pub(crate) history_pos: Option<usize>,
+    pub undo_stack: Vec<(String, usize)>,
+    pub redo_stack: Vec<(String, usize)>,
+    pub history_pos: Option<usize>,
     pub input_flash: u8,
     pub placeholder: String,
     /// Ghost completion suffix shown in gray after the cursor.

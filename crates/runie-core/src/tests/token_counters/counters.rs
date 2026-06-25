@@ -106,7 +106,7 @@ fn speed_updates_on_tick_with_new_tokens() {
     state.agent.turn_started_at = Some(std::time::Instant::now());
 
     // Initialize rolling window with start event
-    state.agent.speed_window = crate::state::SpeedWindow::new(1000);
+    state.agent.speed_window = crate::model::SpeedWindow::new(1000);
     state.agent.speed_window.record(0); // Start at 0 tokens
     state.agent.tokens_at_last_speed = 0;
     // Set last_speed_update to past so elapsed >= 0.05

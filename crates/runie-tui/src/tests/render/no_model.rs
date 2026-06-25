@@ -1,3 +1,4 @@
+use super::*;
 use super::find_input_box_bounds;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};

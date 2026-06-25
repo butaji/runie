@@ -18,11 +18,13 @@ pub use actors::{
     FffSearchState,
 };
 pub use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
+// Inner state structs are pub(crate) — accessible within runie-core but not exported externally.
+// AppState itself remains pub so it can be used in public DSL signatures.
 pub use model::{
-    now, AgentState, AppState, ChatMessage, CommandUsage, CompletionState, ConfigState,
-    FffFileEntry, InputState, ModelSource, PermissionRequestState, Role, ScopedModel,
-    SessionState, SpeedWindow, ThinkingLevel, ViewState,
+    AppState, AgentState, CompletionState, ConfigState, DeliveryMode, InputState,
+    PermissionRequestState, ScopedModel, SessionState, ThinkingLevel, ViewState,
 };
+pub use message::{ChatMessage, Role};
 pub mod agent_phase;
 pub mod async_io;
 pub mod auth;

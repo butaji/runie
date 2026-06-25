@@ -1,7 +1,7 @@
 //! Agent turn tests that exercise the TUI-style permission gate.
 
 use crate::{run_agent_turn, AgentCommand};
-use runie_core::event::AgentEvent;
+use runie_core::Event;
 use runie_core::permissions::{
     ApprovalRegistry, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
 };
@@ -51,11 +51,11 @@ async fn test_agent_loop_with_tui_gate_allows_read_only_tool() {
     let events = events.lock().unwrap();
     let tool_starts = events
         .iter()
-        .filter(|e| matches!(e, AgentEvent::ToolStart { .. }))
+        .filter(|e| matches!(e, Event::ToolStart { .. }))
         .count();
     let tool_ends = events
         .iter()
-        .filter(|e| matches!(e, AgentEvent::ToolEnd { .. }))
+        .filter(|e| matches!(e, Event::ToolEnd { .. }))
         .count();
     assert!(tool_starts >= 1, "expected at least one ToolStart");
     assert_eq!(tool_starts, tool_ends, "ToolStart/ToolEnd mismatch");

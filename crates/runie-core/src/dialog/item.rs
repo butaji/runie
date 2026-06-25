@@ -1,6 +1,5 @@
 //! Panel item types and activation actions.
 
-use crate::event::{CommandEvent, ControlEvent, InputEvent};
 use crate::Event;
 
 /// A single row inside a panel.
@@ -112,16 +111,16 @@ impl ItemAction {
 impl Event {
     pub(crate) fn default_label(&self) -> String {
         match self {
-            ControlEvent::Quit => "Quit".into(),
-            InputEvent::Submit => "Submit".into(),
-            CommandEvent::RunSaveCommand { .. } => "Save".into(),
-            CommandEvent::RunLoadCommand { .. } => "Load".into(),
-            CommandEvent::RunDeleteCommand { .. } => "Delete".into(),
-            CommandEvent::RunExportCommand { .. } => "Export".into(),
-            CommandEvent::RunImportCommand { .. } => "Import".into(),
-            CommandEvent::RunLoginCommand { .. } => "Login".into(),
-            CommandEvent::RunLogoutCommand { .. } => "Logout".into(),
-            CommandEvent::RunSkillCommand { .. } => "Run Skill".into(),
+            crate::Event::Quit => "Quit".into(),
+            crate::Event::Submit => "Submit".into(),
+            crate::Event::RunSaveCommand { .. } => "Save".into(),
+            crate::Event::RunLoadCommand { .. } => "Load".into(),
+            crate::Event::RunDeleteCommand { .. } => "Delete".into(),
+            crate::Event::RunExportCommand { .. } => "Export".into(),
+            crate::Event::RunImportCommand { .. } => "Import".into(),
+            crate::Event::RunLoginCommand { .. } => "Login".into(),
+            crate::Event::RunLogoutCommand { .. } => "Logout".into(),
+            crate::Event::RunSkillCommand { .. } => "Run Skill".into(),
             _ => "Action".into(),
         }
     }

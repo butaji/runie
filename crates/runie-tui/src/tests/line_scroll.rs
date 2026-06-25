@@ -1,5 +1,5 @@
 use super::*;
-use runie_core::event::AgentEvent;
+use runie_core::Event;
 
 fn render_content(state: &mut AppState) -> String {
     render_with_height(state, 10)
@@ -17,7 +17,7 @@ fn render_with_height(state: &mut AppState, height: u16) -> String {
 fn latest_message_visible_at_bottom() {
     let mut state = AppState::default();
     for i in 0..8 {
-        state.update(AgentEvent::Response {
+        state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
         });
@@ -35,21 +35,21 @@ fn latest_message_visible_at_bottom() {
 #[test]
 fn large_thought_clipped_from_top_not_bottom() {
     let mut state = AppState::default();
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "before".into(),
     });
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(Event::Thinking { id: "req.0".into() });
     let mut thought = "◆ Thought 1.0s\n".to_string();
     for i in 1..=15 {
         thought.push_str(&format!("line{}\n", i));
     }
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: thought,
     });
-    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::Response {
+    state.update(Event::ThoughtDone { id: "req.0".into() });
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "after".into(),
     });
@@ -71,7 +71,7 @@ fn large_thought_clipped_from_top_not_bottom() {
 fn scroll_up_shows_older_content() {
     let mut state = AppState::default();
     for i in 0..20 {
-        state.update(AgentEvent::Response {
+        state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
         });
@@ -96,7 +96,7 @@ fn scroll_up_shows_older_content() {
 fn scrollbar_visible_when_content_overflows() {
     let mut state = AppState::default();
     for i in 0..20 {
-        state.update(AgentEvent::Response {
+        state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
         });
@@ -114,7 +114,7 @@ fn scrollbar_visible_when_content_overflows() {
 #[test]
 fn tool_output_latest_lines_visible() {
     let mut state = AppState::default();
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
@@ -123,7 +123,7 @@ fn tool_output_latest_lines_visible() {
         .map(|i| format!("file{}", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
@@ -143,7 +143,7 @@ fn tool_output_latest_lines_visible() {
 fn new_message_pushes_old_upward() {
     let mut state = AppState::default();
     for i in 0..5 {
-        state.update(AgentEvent::Response {
+        state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
         });
@@ -154,7 +154,7 @@ fn new_message_pushes_old_upward() {
 
     // Add more messages to overflow
     for i in 5..25 {
-        state.update(AgentEvent::Response {
+        state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
         });
@@ -171,7 +171,7 @@ fn new_message_pushes_old_upward() {
 #[test]
 fn partial_element_at_top_when_overflow() {
     let mut state = AppState::default();
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "first".into(),
     });
@@ -179,13 +179,13 @@ fn partial_element_at_top_when_overflow() {
     for i in 1..=20 {
         thought.push_str(&format!("line{}\n", i));
     }
-    state.update(AgentEvent::Thinking { id: "req.1".into() });
-    state.update(AgentEvent::Response {
+    state.update(Event::Thinking { id: "req.1".into() });
+    state.update(Event::Response {
         id: "req.1".into(),
         content: thought,
     });
-    state.update(AgentEvent::ThoughtDone { id: "req.1".into() });
-    state.update(AgentEvent::Response {
+    state.update(Event::ThoughtDone { id: "req.1".into() });
+    state.update(Event::Response {
         id: "req.2".into(),
         content: "last".into(),
     });
@@ -201,7 +201,7 @@ fn partial_element_at_top_when_overflow() {
 fn scroll_position_preserved_during_streaming() {
     let mut state = AppState::default();
     for i in 0..15 {
-        state.update(AgentEvent::Response {
+        state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
         });
@@ -210,7 +210,7 @@ fn scroll_position_preserved_during_streaming() {
     state.view.scroll = 8; // user scrolled up reading history
 
     // New streaming content arrives
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.99".into(),
         content: "new".into(),
     });
@@ -227,7 +227,7 @@ fn scroll_position_preserved_during_streaming() {
 fn at_bottom_auto_scrolls_to_show_new() {
     let mut state = AppState::default();
     for i in 0..15 {
-        state.update(AgentEvent::Response {
+        state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
         });
@@ -237,7 +237,7 @@ fn at_bottom_auto_scrolls_to_show_new() {
 
     // Submit a new message
     state.input.input = "hello".to_string();
-    state.update(runie_core::event::InputEvent::Submit);
+    state.update(runie_core::event::Event::Submit);
     state.ensure_fresh();
 
     let out = render_content(&mut state);

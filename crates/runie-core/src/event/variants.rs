@@ -1,7 +1,7 @@
 //! Flat `Event` enum — every leaf variant lives at the top level.
 //!
 //! Sub-enums are reduced to type aliases for backward compatibility, so old
-//! code such as `InputEvent::Submit` still resolves to `Event::Submit`.
+//! code such as `crate::Event::Submit` still resolves to `Event::Submit`.
 //!
 //! ## Event taxonomy
 //!

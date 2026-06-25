@@ -5,13 +5,13 @@ use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::model::AppState;
 
 fn toggle_readonly(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::event::ModelConfigEvent::ToggleReadOnly)
+    CommandResult::Event(crate::Event::ToggleReadOnly)
 }
 fn trust_project(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::event::ModelConfigEvent::TrustProject)
+    CommandResult::Event(crate::Event::TrustProject)
 }
 fn untrust_project(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::event::ModelConfigEvent::UntrustProject)
+    CommandResult::Event(crate::Event::UntrustProject)
 }
 
 static SAFETY_COMMANDS: &[CommandSpec] = &[

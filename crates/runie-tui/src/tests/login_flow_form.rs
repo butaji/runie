@@ -2,9 +2,9 @@
 //!
 //! Covers typing, pasting, and cursor navigation inside the API key form field.
 
+use super::*;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::event::{DialogEvent, InputEvent, LoginFlowEvent};
-use runie_core::{AppState, Event};
+use runie_core::Event;
 
 use crate::tests::view;
 
@@ -38,8 +38,8 @@ fn e2e_login_flow_paste_fills_api_key_field() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
     state.update(Event::Paste("sk-pasted-from-clipboard".into()));
@@ -64,12 +64,12 @@ fn e2e_login_flow_typing_renders_api_key_field() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
     for c in "sk-typed".chars() {
-        state.update(Event::from(InputEvent::Input(c)));
+        state.update(Event::from(Event::Input(c)));
     }
 
     let content = render_content(&mut state);
@@ -88,13 +88,13 @@ fn e2e_providers_add_flow_typing_renders_api_key_field() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(DialogEvent::ProvidersDialog));
-    state.update(Event::from(DialogEvent::ProvidersAdd));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::ProvidersDialog));
+    state.update(Event::from(Event::ProvidersAdd));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
     for c in "sk-from-providers".chars() {
-        state.update(Event::from(InputEvent::Input(c)));
+        state.update(Event::from(Event::Input(c)));
     }
 
     let content = render_content(&mut state);
@@ -113,16 +113,16 @@ fn e2e_login_flow_cursor_left_allows_inline_editing() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
     for c in "sk-tyed".chars() {
-        state.update(Event::from(InputEvent::Input(c)));
+        state.update(Event::from(Event::Input(c)));
     }
-    state.update(Event::from(InputEvent::CursorLeft));
-    state.update(Event::from(InputEvent::CursorLeft));
-    state.update(Event::from(InputEvent::Input('p')));
+    state.update(Event::from(Event::CursorLeft));
+    state.update(Event::from(Event::CursorLeft));
+    state.update(Event::from(Event::Input('p')));
 
     let content = render_content(&mut state).replace('▏', "");
     assert!(

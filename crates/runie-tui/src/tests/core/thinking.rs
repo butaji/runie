@@ -1,9 +1,9 @@
-use runie_core::event::{DialogEvent, ModelConfigEvent};
+use super::*;
+use runie_core::Event;
 use runie_core::model::ThinkingLevel;
 use runie_core::session::Session;
 use runie_core::session::replay::{replay_events, state_to_durable_events};
 use runie_core::session::store::SessionStore;
-use runie_core::{AppState, Event};
 
 #[test]
 fn cycle_rotates() {
@@ -94,16 +94,16 @@ fn shift_tab_cycles() {
     let mut state = AppState::default();
     assert_eq!(state.config.thinking_level, ThinkingLevel::Off);
 
-    state.update(ModelConfigEvent::CycleThinkingLevel);
+    state.update(Event::CycleThinkingLevel);
     assert_eq!(state.config.thinking_level, ThinkingLevel::Low);
 
-    state.update(ModelConfigEvent::CycleThinkingLevel);
+    state.update(Event::CycleThinkingLevel);
     assert_eq!(state.config.thinking_level, ThinkingLevel::Medium);
 
-    state.update(ModelConfigEvent::CycleThinkingLevel);
+    state.update(Event::CycleThinkingLevel);
     assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 
-    state.update(ModelConfigEvent::CycleThinkingLevel);
+    state.update(Event::CycleThinkingLevel);
     assert_eq!(state.config.thinking_level, ThinkingLevel::Off);
 }
 
@@ -112,7 +112,7 @@ fn slash_thinking_sets() {
     let mut state = AppState::default();
     state.input.input.push_str("/thinking high");
     state.update(Event::submit()); // Opens form with pre-filled level
-    state.update(DialogEvent::CommandFormSubmit); // Submits the form
+    state.update(Event::CommandFormSubmit); // Submits the form
     assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 
     let sys_msgs: Vec<_> = state
@@ -234,7 +234,7 @@ fn thinking_does_not_create_a_form_panel() {
 #[test]
 fn set_thinking_level_event_updates_state() {
     let mut state = AppState::default();
-    state.update(ModelConfigEvent::SetThinkingLevel(
+    state.update(Event::SetThinkingLevel(
         runie_core::model::ThinkingLevel::High,
     ));
     assert_eq!(state.config.thinking_level, ThinkingLevel::High);

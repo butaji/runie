@@ -1,7 +1,7 @@
 //! Session tree and session list dialog builders.
 
 use super::{ItemAction, Panel, PanelItem, PanelStack};
-use crate::event::ControlEvent;
+
 use crate::Event;
 
 /// A single session row for the session list dialog.
@@ -119,7 +119,7 @@ fn add_session_item(panel: &mut Panel, session: &SessionRow) {
     };
 
     let id = session.id.clone();
-    let evt = ControlEvent::SelectSession { id };
+    let evt = crate::Event::SelectSession { id };
     panel.items.push(PanelItem::Action {
         label,
         action: ItemAction::Emit(evt),

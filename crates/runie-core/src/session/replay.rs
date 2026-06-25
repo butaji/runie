@@ -4,7 +4,8 @@
 //! Import/export still uses the `Session` snapshot DTO in `crate::session`,
 //! but runtime persistence goes exclusively through `SessionStore`.
 
-use crate::event::{DurableCoreEvent, Event};
+use crate::Event;
+use crate::event::DurableCoreEvent;
 use crate::message::ChatMessage;
 use crate::model::{AppState, Role};
 use crate::session::index::SessionMetadata;

@@ -1,6 +1,6 @@
 use super::*;
 use crate::tests::connect_model;
-use runie_core::event::AgentEvent;
+use runie_core::Event;
 
 fn render_status(state: &mut AppState) -> String {
     let backend = TestBackend::new(60, 12);
@@ -89,7 +89,7 @@ fn status_line_hides_working_after_provider_error() {
     let out = render_status(&mut state);
     assert!(out.contains("Working"), "Setup should show Working");
 
-    state.update(AgentEvent::Error {
+    state.update(Event::Error {
         id: "req.0".to_string(),
         message: "Provider error: Missing API key".to_string(),
     });

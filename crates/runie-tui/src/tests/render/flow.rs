@@ -1,8 +1,9 @@
 //! Layer 3 rendering tests for full agent tool flows.
 //! Migrated from runie-core's `format_test` ASCII renderer → TUI TestBackend.
 
+use super::*;
 use super::super::*;
-use runie_core::event::AgentEvent;
+use runie_core::Event;
 use runie_core::Role;
 
 /// Helper: dispatch multiple events to simulate a tool flow
@@ -45,19 +46,19 @@ fn test_formatted_labels_short_names() {
     dispatch(
         &mut state,
         &[
-            AgentEvent::Thinking { id: "req.0".into() },
-            AgentEvent::ThoughtDone { id: "req.0".into() },
-            AgentEvent::ToolStart {
+            Event::Thinking { id: "req.0".into() },
+            Event::ThoughtDone { id: "req.0".into() },
+            Event::ToolStart {
                 id: "req.0".into(),
                 name: "list_files".into(),
                 input: serde_json::Value::Null,
             },
-            AgentEvent::ToolEnd {
+            Event::ToolEnd {
                 id: "".to_string(),
                 duration_secs: 0.3,
                 output: String::new(),
             },
-            AgentEvent::TurnComplete {
+            Event::TurnComplete {
                 id: "req.0".into(),
                 duration_secs: 5.1,
             },
@@ -83,25 +84,25 @@ fn test_formatted_labels_short_names() {
 
 fn full_tool_flow_events() -> Vec<Event> {
     vec![
-        AgentEvent::Thinking { id: "req.0".into() },
-        AgentEvent::ThoughtDone { id: "req.0".into() },
-        AgentEvent::ToolStart {
+        Event::Thinking { id: "req.0".into() },
+        Event::ThoughtDone { id: "req.0".into() },
+        Event::ToolStart {
             id: "req.0".into(),
             name: "list_files".into(),
             input: serde_json::Value::Null,
         },
-        AgentEvent::ToolEnd {
+        Event::ToolEnd {
             id: "".to_string(),
             duration_secs: 0.5,
             output: String::new(),
         },
-        AgentEvent::Thinking { id: "req.0".into() },
-        AgentEvent::ThoughtDone { id: "req.0".into() },
-        AgentEvent::Response {
+        Event::Thinking { id: "req.0".into() },
+        Event::ThoughtDone { id: "req.0".into() },
+        Event::Response {
             id: "req.0".into(),
             content: "Here are the files:".into(),
         },
-        AgentEvent::TurnComplete {
+        Event::TurnComplete {
             id: "req.0".into(),
             duration_secs: 5.1,
         },

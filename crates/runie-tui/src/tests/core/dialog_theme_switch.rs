@@ -1,6 +1,7 @@
 //! Tests that global events (theme, model) pass through when dialogs are open.
 
-use runie_core::event::{ControlEvent, DialogEvent, InputEvent, ModelConfigEvent};
+use super::*;
+use runie_core::Event;
 
 use runie_core::commands::DialogState;
 use runie_core::dialog::builders::theme_picker;
@@ -9,9 +10,9 @@ use runie_core::model::AppState;
 #[test]
 fn theme_switch_reaches_handler_while_settings_dialog_open() {
     let mut state = AppState::default();
-    state.update(ModelConfigEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
 
-    state.update(ModelConfigEvent::SwitchTheme {
+    state.update(Event::SwitchTheme {
         name: "dracula".into(),
     });
 
@@ -25,9 +26,9 @@ fn theme_switch_reaches_handler_while_settings_dialog_open() {
 #[test]
 fn theme_switch_reaches_handler_while_palette_open() {
     let mut state = AppState::default();
-    state.update(DialogEvent::ToggleCommandPalette);
+    state.update(Event::ToggleCommandPalette);
 
-    state.update(ModelConfigEvent::SwitchTheme {
+    state.update(Event::SwitchTheme {
         name: "nord".into(),
     });
 
@@ -41,9 +42,9 @@ fn theme_switch_reaches_handler_while_palette_open() {
 #[test]
 fn model_switch_reaches_handler_while_dialog_open() {
     let mut state = AppState::default();
-    state.update(ModelConfigEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
 
-    state.update(ModelConfigEvent::SwitchModel {
+    state.update(Event::SwitchModel {
         provider: "openai".into(),
         model: "gpt-4o".into(),
         explicit: true,
@@ -57,9 +58,9 @@ fn model_switch_reaches_handler_while_dialog_open() {
 #[test]
 fn quit_works_while_dialog_open() {
     let mut state = AppState::default();
-    state.update(DialogEvent::ToggleCommandPalette);
+    state.update(Event::ToggleCommandPalette);
 
-    state.update(ControlEvent::Quit);
+    state.update(Event::Quit);
 
     assert!(state.should_quit);
 }
@@ -71,13 +72,13 @@ fn theme_picker_panel_keeps_open_for_preview() {
     let stack = theme_picker(vec![
         (
             "runie".into(),
-            ModelConfigEvent::SwitchTheme {
+            Event::SwitchTheme {
                 name: "runie".into(),
             },
         ),
         (
             "dracula".into(),
-            ModelConfigEvent::SwitchTheme {
+            Event::SwitchTheme {
                 name: "dracula".into(),
             },
         ),
@@ -105,25 +106,25 @@ fn theme_picker_panel_keeps_open_for_preview() {
 #[test]
 fn theme_picker_activation_switches_theme() {
     let mut state = AppState::default();
-    state.update(DialogEvent::ToggleCommandPalette);
+    state.update(Event::ToggleCommandPalette);
     // Simulate selecting /theme from palette and opening the picker.
     let stack = theme_picker(vec![
         (
             "runie".into(),
-            ModelConfigEvent::SwitchTheme {
+            Event::SwitchTheme {
                 name: "runie".into(),
             },
         ),
         (
             "dracula".into(),
-            ModelConfigEvent::SwitchTheme {
+            Event::SwitchTheme {
                 name: "dracula".into(),
             },
         ),
     ]);
     state.open_dialog = Some(DialogState::PanelStack(stack));
-    state.update(InputEvent::HistoryNext);
-    state.update(InputEvent::Submit);
+    state.update(Event::HistoryNext);
+    state.update(Event::Submit);
 
     assert_eq!(state.config.theme_name, "dracula");
     assert!(
@@ -138,22 +139,22 @@ fn theme_picker_filter_and_submit_switches_theme() {
     let stack = theme_picker(vec![
         (
             "runie".into(),
-            ModelConfigEvent::SwitchTheme {
+            Event::SwitchTheme {
                 name: "runie".into(),
             },
         ),
         (
             "dracula".into(),
-            ModelConfigEvent::SwitchTheme {
+            Event::SwitchTheme {
                 name: "dracula".into(),
             },
         ),
     ]);
     state.open_dialog = Some(DialogState::PanelStack(stack));
     for c in "dracula".chars() {
-        state.update(InputEvent::Input(c));
+        state.update(Event::Input(c));
     }
-    state.update(InputEvent::Submit);
+    state.update(Event::Submit);
 
     assert_eq!(state.config.theme_name, "dracula");
 }

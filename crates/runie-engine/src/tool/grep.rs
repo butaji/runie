@@ -1,65 +1,35 @@
 //! Grep tool — searches for patterns in files.
 
-use crate::tool::{which_tool_async, Tool, ToolContext, ToolOutput, ToolStatus};
+use crate::define_tool;
+use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
+use runie_core::tool::tool_error;
+use crate::tool::which_tool_async;
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::path::resolve_path_in;
-use runie_core::tool::tool_error;
 use serde_json::Value;
 use std::time::Instant;
 use tokio::process::Command;
 
 pub struct GrepTool;
 
+#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for GrepTool {
-    fn name(&self) -> &str {
-        "grep"
-    }
-
-    fn description(&self) -> &str {
-        "Search for patterns in files using ripgrep (rg) or grep."
-    }
-
-    fn input_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "pattern": {
-                    "type": "string",
-                    "description": "Search pattern"
-                },
-                "path": {
-                    "type": "string",
-                    "description": "Directory or file path to search"
-                },
-                "glob": {
-                    "type": "string",
-                    "description": "File glob pattern (e.g., *.rs)"
-                },
-                "ignore_case": {
-                    "type": "boolean",
-                    "description": "Case-insensitive search"
-                },
-                "literal": {
-                    "type": "boolean",
-                    "description": "Treat pattern as literal string"
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Maximum number of matches (default: 100)"
-                }
-            },
-            "required": ["pattern", "path"]
-        })
-    }
-
-    fn is_read_only(&self) -> bool {
-        true
-    }
-
-    fn requires_approval(&self, _input: &Value) -> bool {
-        false
+    define_tool! {
+        name: "grep",
+        description: "Search for patterns in files using ripgrep (rg) or grep.",
+        read_only: true,
+        approval: false,
+        fields: {
+            "pattern": ("string", "Search pattern"),
+            "path": ("string", "Directory or file path to search"),
+            "glob": ("string", "File glob pattern (e.g., *.rs)"),
+            "ignore_case": ("boolean", "Case-insensitive search"),
+            "literal": ("boolean", "Treat pattern as literal string"),
+            "limit": ("integer", "Maximum number of matches (default: 100)")
+        },
+        required: ["pattern", "path"]
     }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {

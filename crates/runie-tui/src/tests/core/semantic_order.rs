@@ -1,4 +1,5 @@
-use runie_core::event::AgentEvent;
+use super::*;
+use runie_core::Event;
 use runie_core::model::AppState;
 use runie_testing::fresh_state;
 
@@ -10,25 +11,25 @@ fn big_output() -> String {
 }
 
 fn run_tool_turn(state: &mut AppState, response: &str, tool_output: &str) {
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: response.into(),
     });
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: tool_output.into(),
     });
-    state.update(AgentEvent::TurnComplete {
+    state.update(Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
     });
-    state.update(AgentEvent::Done { id: "req.0".into() });
+    state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
 }
 
@@ -100,16 +101,16 @@ fn final_agent_visible_when_tool_overflows() {
 fn agent_before_tool_preserved_during_turn() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
     });
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
@@ -123,27 +124,27 @@ fn no_reorder_when_no_tools() {
     let mut state = fresh_state();
     state.agent.streaming = true;
 
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
-    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::Thinking { id: "req.0".into() });
+    state.update(Event::ThoughtDone { id: "req.0".into() });
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
     });
-    state.update(AgentEvent::TurnComplete {
+    state.update(Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
     });
-    state.update(AgentEvent::Done { id: "req.0".into() });
+    state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     let kinds = agent_turn_complete_kinds(&state);
     assert!(
@@ -159,12 +160,12 @@ fn thought_stays_before_tool_after_reorder() {
     let mut state = fresh_state();
     state.agent.streaming = true;
 
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
-    state.update(AgentEvent::Response {
+    state.update(Event::Thinking { id: "req.0".into() });
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
     });
-    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(Event::ThoughtDone { id: "req.0".into() });
     run_tool_turn(&mut state, "Done!", "file1");
 
     let (t, o, a) = (thought_pos(&state), tool_pos(&state), agent_pos(&state));

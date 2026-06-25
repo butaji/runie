@@ -1,5 +1,5 @@
-use runie_core::event::AgentEvent;
-use runie_core::event::Event;
+use super::*;
+use runie_core::Event;
 use runie_core::model::AppState;
 use runie_core::view::LazyCache;
 use runie_testing::fresh_state;
@@ -27,7 +27,7 @@ fn agent_texts(state: &AppState) -> Vec<String> {
 #[test]
 fn assistant_with_tool_marker_not_rendered() {
     let mut state = fresh_state();
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "TOOL:list_dir.".into(),
     });
@@ -42,7 +42,7 @@ fn assistant_with_tool_marker_not_rendered() {
 #[test]
 fn assistant_with_mixed_text_and_tool_not_rendered() {
     let mut state = fresh_state();
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
     });
@@ -55,7 +55,7 @@ fn assistant_with_mixed_text_and_tool_not_rendered() {
 #[test]
 fn assistant_with_structured_tool_not_rendered() {
     let mut state = fresh_state();
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content:
             r#"{"name": "edit_file", "arguments": {"path": "x", "search": "a", "replace": "b"}}"#
@@ -74,7 +74,7 @@ fn assistant_with_structured_tool_not_rendered() {
 #[test]
 fn assistant_pure_text_renders_normally() {
     let mut state = fresh_state();
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "Hello world".into(),
     });
@@ -93,8 +93,8 @@ fn assistant_pure_text_renders_normally() {
 fn no_agent_during_thinking_phase() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
-    state.update(AgentEvent::Response {
+    state.update(Event::Thinking { id: "req.0".into() });
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "Let me think...".into(),
     });
@@ -110,8 +110,8 @@ fn no_agent_during_thinking_phase() {
 fn no_agent_during_thinking_even_with_tool() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
-    state.update(AgentEvent::Response {
+    state.update(Event::Thinking { id: "req.0".into() });
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
     });
@@ -129,12 +129,12 @@ fn no_agent_during_thinking_even_with_tool() {
 fn thought_renders_after_thought_done() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
-    state.update(AgentEvent::Response {
+    state.update(Event::Thinking { id: "req.0".into() });
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
     });
-    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(Event::ThoughtDone { id: "req.0".into() });
     state.ensure_fresh();
 
     let feed = LazyCache::feed(&state);
@@ -155,23 +155,23 @@ fn thought_renders_after_thought_done() {
 fn post_tool_assistant_renders() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
-    state.update(AgentEvent::Response {
+    state.update(Event::Thinking { id: "req.0".into() });
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
     });
-    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ThoughtDone { id: "req.0".into() });
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "list_dir".into(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "file1".into(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
     });
@@ -211,7 +211,7 @@ fn verify_no_agent_before_response(state: &mut AppState) {
 }
 
 fn verify_no_agent_during_thinking(state: &mut AppState) {
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(Event::Thinking { id: "req.0".into() });
     state.ensure_fresh();
     assert!(
         agent_texts(state).is_empty(),
@@ -220,7 +220,7 @@ fn verify_no_agent_during_thinking(state: &mut AppState) {
 }
 
 fn verify_no_agent_with_tool_response(state: &mut AppState) {
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list the files.\nTOOL:list_dir:.".into(),
     });
@@ -232,7 +232,7 @@ fn verify_no_agent_with_tool_response(state: &mut AppState) {
 }
 
 fn verify_no_agent_after_thought_done(state: &mut AppState) {
-    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
+    state.update(Event::ThoughtDone { id: "req.0".into() });
     state.ensure_fresh();
     assert!(
         agent_texts(state).is_empty(),
@@ -241,12 +241,12 @@ fn verify_no_agent_after_thought_done(state: &mut AppState) {
 }
 
 fn verify_no_agent_during_tool(state: &mut AppState) {
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "list_dir".into(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a\nb\nc".into(),
@@ -259,7 +259,7 @@ fn verify_no_agent_during_tool(state: &mut AppState) {
 }
 
 fn verify_final_response_shows(state: &mut AppState) {
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "Here are your files.".into(),
     });
@@ -272,11 +272,11 @@ fn verify_final_response_shows(state: &mut AppState) {
 }
 
 fn verify_response_persists_after_turn(state: &mut AppState) {
-    state.update(AgentEvent::TurnComplete {
+    state.update(Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 2.0,
     });
-    state.update(AgentEvent::Done { id: "req.0".into() });
+    state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert_eq!(
         agent_texts(state),
@@ -291,10 +291,10 @@ fn verify_response_persists_after_turn(state: &mut AppState) {
 fn streaming_chunks_no_flicker() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(Event::Thinking { id: "req.0".into() });
 
     // Chunk 1: natural language only
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "Let me ".into(),
     });
@@ -305,7 +305,7 @@ fn streaming_chunks_no_flicker() {
     );
 
     // Chunk 2: more natural language
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "check ".into(),
     });
@@ -316,7 +316,7 @@ fn streaming_chunks_no_flicker() {
     );
 
     // Chunk 3: tool marker arrives
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "TOOL:list_dir:.".into(),
     });
@@ -332,7 +332,7 @@ fn streaming_chunks_no_flicker() {
 #[test]
 fn error_message_renders_normally() {
     let mut state = fresh_state();
-    state.update(AgentEvent::Error {
+    state.update(Event::Error {
         id: "req.0".into(),
         message: "API timeout".into(),
     });

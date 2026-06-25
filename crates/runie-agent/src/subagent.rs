@@ -13,7 +13,6 @@
 //! production) and passing it in. This module does no config I/O.
 
 use crate::{run_agent_turn, AgentCommand, PermissionGate};
-use runie_core::event::AgentEvent;
 use runie_core::model::ThinkingLevel;
 use runie_core::permissions::{AutoAllowSink, PermissionManager};
 use runie_core::provider::Provider;
@@ -104,17 +103,17 @@ fn build_subagent_callback(
     state: Arc<SubagentState>,
 ) -> Arc<Mutex<dyn FnMut(runie_core::Event) + Send + Sync>> {
     Arc::new(Mutex::new(move |evt: runie_core::Event| match evt {
-        AgentEvent::ResponseDelta { content, .. } | AgentEvent::Response { content, .. } => {
+        runie_core::Event::ResponseDelta { content, .. } | runie_core::Event::Response { content, .. } => {
             state
                 .responses
                 .lock()
                 .unwrap_or_else(|p| p.into_inner())
                 .push(content)
         }
-        AgentEvent::Error { message, .. } => {
+        runie_core::Event::Error { message, .. } => {
             *state.error.lock().unwrap_or_else(|p| p.into_inner()) = Some(message)
         }
-        AgentEvent::Done { .. } => {
+        runie_core::Event::Done { .. } => {
             *state.done.lock().unwrap_or_else(|p| p.into_inner()) = true
         }
         _ => {}

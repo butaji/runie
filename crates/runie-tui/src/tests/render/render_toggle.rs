@@ -1,5 +1,6 @@
+use super::*;
 use super::super::*;
-use runie_core::event::ControlEvent;
+use runie_core::Event;
 use runie_core::Part;
 
 #[test]
@@ -26,7 +27,7 @@ fn test_toggle_expand_changes_rendered_output() {
     );
 
     // Toggle collapse
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
 
     // Render collapsed
     terminal.draw(|f| view(f, &mut state)).expect("draw");
@@ -66,7 +67,7 @@ fn test_toggle_expand_changes_tool_render() {
     );
 
     // Toggle collapse
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
 
     // Render collapsed
     terminal.draw(|f| view(f, &mut state)).expect("draw");

@@ -2,7 +2,6 @@
 
 use crate::dialog::dsl::get_field;
 use crate::dialog::{ItemAction, Panel, PanelStack};
-use crate::event::LoginFlowEvent;
 use crate::provider::{display_name, known_providers};
 
 use super::state::LoginFlowState;
@@ -15,7 +14,7 @@ pub fn build_provider_picker() -> Panel {
 
     for provider in known_providers() {
         let label = provider.display_name.to_string();
-        let evt = LoginFlowEvent::SelectProvider {
+        let evt = crate::Event::SelectProvider {
             provider: provider.key.to_string(),
         };
         panel = panel.item(&label, ItemAction::Emit(evt));
@@ -23,7 +22,7 @@ pub fn build_provider_picker() -> Panel {
 
     panel = panel.separator().item(
         "_Cancel",
-        ItemAction::Emit(crate::event::ControlEvent::Abort),
+        ItemAction::Emit(crate::Event::Abort),
     );
     panel
 }
@@ -38,12 +37,12 @@ pub fn build_key_input(state: &LoginFlowState) -> Panel {
         .form_submit_with(login_key_submit)
         .item(
             "_Cancel",
-            ItemAction::Emit(crate::event::ControlEvent::Abort),
+            ItemAction::Emit(crate::Event::Abort),
         )
 }
 
 fn login_key_submit(values: &std::collections::HashMap<String, String>) -> crate::event::Event {
-    crate::event::Event::SubmitKey {
+    crate::Event::SubmitKey {
         provider: get_field(values, "provider"),
         key: get_field(values, "key"),
     }
@@ -71,7 +70,7 @@ pub fn build_model_selector(state: &LoginFlowState) -> Panel {
 
     for model in &state.available_models {
         let enabled = state.selected_models.contains(model);
-        let evt = LoginFlowEvent::ToggleModel {
+        let evt = crate::Event::ToggleModel {
             model: model.clone(),
         };
         panel = panel.toggle(model, enabled, ItemAction::Emit(evt));
@@ -81,11 +80,11 @@ pub fn build_model_selector(state: &LoginFlowState) -> Panel {
         .separator()
         .item(
             "_Save",
-            ItemAction::Emit(crate::event::LoginFlowEvent::Save),
+            ItemAction::Emit(crate::Event::Save),
         )
         .item(
             "_Cancel",
-            ItemAction::Emit(crate::event::ControlEvent::Abort),
+            ItemAction::Emit(crate::Event::Abort),
         );
     panel
 }

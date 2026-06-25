@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use runie_core::actors::{spawn_actor, Actor, ActorHandle};
 use runie_core::actors::ProviderActorHandle;
 use runie_core::bus::EventBus;
-use runie_core::event::{AgentEvent, Event};
+use runie_core::event::{Event};
 use runie_core::AppState;
 use runie_core::permissions::{
     ApprovalRegistry, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
@@ -49,7 +49,7 @@ impl AgentActorHandle {
 
     /// Pop the next queued message and run a turn for it, if one is waiting.
     pub async fn run_if_queued(&self, state: &mut AppState) {
-        if state.agent.turn_active {
+        if state.turn_active() {
             return;
         }
         let Some((content, id)) = state.peek_queue() else {
@@ -58,28 +58,26 @@ impl AgentActorHandle {
         let (content, id) = (content.clone(), id.clone());
         state.pop_queue();
 
-        state.agent.turn_active = true;
-        state.agent.inflight += 1;
-        state.agent.streaming = true;
+        state.start_turn();
 
-        let skills_context = runie_core::skills::build_skills_context(&state.skills);
+        let skills_context = runie_core::skills::build_skills_context(state.skills());
         let system_prompt = state
-            .prompts
+            .prompts()
             .iter()
-            .find(|p| p.name == state.input.current_prompt)
+            .find(|p| p.name == state.current_prompt())
             .map(|p| p.content.clone())
             .unwrap_or_default();
 
         self.run(AgentCommand {
             content,
             id,
-            provider: state.config.current_provider.clone(),
-            model: state.config.current_model.clone(),
-            thinking_level: state.config.thinking_level,
-            read_only: state.config.read_only,
+            provider: state.current_provider().to_string(),
+            model: state.current_model().to_string(),
+            thinking_level: state.thinking_level(),
+            read_only: state.read_only(),
             skills_context,
             system_prompt,
-            truncation: policy_from_section(&state.config.truncation),
+            truncation: policy_from_section(state.truncation()),
         })
         .await;
     }
@@ -165,11 +163,11 @@ impl AgentActor {
     }
 
     fn emit_error_and_done(&self, id: &str, message: String) {
-        self.bus.publish(AgentEvent::Error {
+        self.bus.publish(runie_core::Event::Error {
             id: id.to_string(),
             message,
         });
-        self.bus.publish(AgentEvent::Done { id: id.to_string() });
+        self.bus.publish(runie_core::Event::Done { id: id.to_string() });
     }
 }
 

@@ -6,7 +6,7 @@ fn ctrl_o_converts_to_toggle_expand() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::ControlEvent::ToggleExpand)),
+        matches!(result, Some(runie_core::Event::ToggleExpand)),
         "Ctrl+O should map to ToggleExpand, got {:?}",
         result
     );
@@ -14,7 +14,7 @@ fn ctrl_o_converts_to_toggle_expand() {
 
 #[test]
 fn ctrl_o_toggles_expand_state() {
-    use runie_core::{AppState, ChatMessage, Part, Role};
+    use runie_core::{AppState, ChatMessage, Event, Part, Role};
 
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
@@ -34,7 +34,7 @@ fn ctrl_o_toggles_expand_state() {
     let core_event = crate::keymap::convert_event(&event, &default_bindings());
     assert!(matches!(
         core_event,
-        Some(runie_core::ControlEvent::ToggleExpand)
+        Some(runie_core::Event::ToggleExpand)
     ));
 
     state.update(core_event.unwrap());
@@ -50,7 +50,7 @@ fn ctrl_e_converts_to_cursor_end() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::InputEvent::CursorEnd)),
+        matches!(result, Some(runie_core::Event::CursorEnd)),
         "Ctrl+E should map to CursorEnd, got {:?}",
         result
     );
@@ -62,7 +62,7 @@ fn ctrl_c_converts_to_quit() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::ControlEvent::Quit)),
+        matches!(result, Some(runie_core::Event::Quit)),
         "Ctrl+C should map to Quit"
     );
 }
@@ -73,7 +73,7 @@ fn plain_e_not_converted() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::InputEvent::Input('e'))),
+        matches!(result, Some(runie_core::Event::Input('e'))),
         "Plain e should map to Input"
     );
 }
@@ -84,7 +84,7 @@ fn ctrl_e_does_not_conflict_with_quit() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        !matches!(result, Some(runie_core::ControlEvent::Quit)),
+        !matches!(result, Some(runie_core::Event::Quit)),
         "Ctrl+E should NOT map to Quit"
     );
 }
@@ -99,7 +99,7 @@ fn ctrl_e_on_repeat_kind_still_works() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::InputEvent::CursorEnd)),
+        matches!(result, Some(runie_core::Event::CursorEnd)),
         "Ctrl+E with Repeat kind should still map to CursorEnd, got {:?}",
         result
     );
@@ -111,7 +111,7 @@ fn ctrl_q_converts_to_force_quit() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::ControlEvent::ForceQuit)),
+        matches!(result, Some(runie_core::Event::ForceQuit)),
         "Ctrl+Q should map to ForceQuit, got {:?}",
         result
     );
@@ -123,7 +123,7 @@ fn ctrl_z_converts_to_suspend() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::ControlEvent::Suspend)),
+        matches!(result, Some(runie_core::Event::Suspend)),
         "Ctrl+Z should map to Suspend"
     );
 }
@@ -134,7 +134,7 @@ fn ctrl_y_converts_to_redo() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::InputEvent::Redo)),
+        matches!(result, Some(runie_core::Event::Redo)),
         "Ctrl+Y should map to Redo"
     );
 }
@@ -145,7 +145,7 @@ fn alt_b_converts_to_word_left() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::InputEvent::CursorWordLeft)),
+        matches!(result, Some(runie_core::Event::CursorWordLeft)),
         "Alt+B should map to CursorWordLeft"
     );
 }
@@ -156,7 +156,7 @@ fn alt_f_converts_to_word_right() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::InputEvent::CursorWordRight)),
+        matches!(result, Some(runie_core::Event::CursorWordRight)),
         "Alt+F should map to CursorWordRight"
     );
 }
@@ -166,8 +166,8 @@ fn bracketed_paste_converts_to_paste_event() {
     let event = crossterm::event::Event::Paste("hello world".to_string());
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::InputEvent::Paste(s)) if s == "hello world"),
-        "Paste event should map to CoreInputEvent::Paste"
+        matches!(result, Some(runie_core::Event::Paste(s)) if s == "hello world"),
+        "Paste event should map to CoreEvent::Paste"
     );
 }
 
@@ -179,7 +179,7 @@ fn custom_keybinding_overrides_default() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &bindings);
     assert!(
-        matches!(result, Some(runie_core::ControlEvent::Abort)),
+        matches!(result, Some(runie_core::Event::Abort)),
         "Custom keybinding should override default"
     );
 }
@@ -199,7 +199,7 @@ fn alt_up_emits_dequeue() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::ControlEvent::Dequeue)),
+        matches!(result, Some(runie_core::Event::Dequeue)),
         "Alt+Up should map to Dequeue, got {:?}",
         result
     );
@@ -211,7 +211,7 @@ fn ctrl_g_emits_open_external_editor() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::ControlEvent::OpenExternalEditor)),
+        matches!(result, Some(runie_core::Event::OpenExternalEditor)),
         "Ctrl+G should map to OpenExternalEditor, got {:?}",
         result
     );
@@ -223,7 +223,7 @@ fn ctrl_l_emits_toggle_model_selector() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::DialogEvent::ToggleModelSelector)),
+        matches!(result, Some(runie_core::Event::ToggleModelSelector)),
         "Ctrl+L should map to ToggleModelSelector, got {:?}",
         result
     );
@@ -235,7 +235,7 @@ fn ctrl_p_emits_toggle_command_palette() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::DialogEvent::ToggleCommandPalette)),
+        matches!(result, Some(runie_core::Event::ToggleCommandPalette)),
         "Ctrl+P should map to ToggleCommandPalette, got {:?}",
         result
     );
@@ -247,7 +247,7 @@ fn plain_escape_emits_dialog_back() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::DialogEvent::DialogBack)),
+        matches!(result, Some(runie_core::Event::DialogBack)),
         "Esc should map to DialogBack so the core can decide abort vs. vim nav"
     );
 }
@@ -258,8 +258,8 @@ fn plain_space_emits_input_space() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::InputEvent::Input(' '))),
-        "Space should map to Input(InputEvent::Input(' ')), got {:?}",
+        matches!(result, Some(runie_core::Event::Input(' '))),
+        "Space should map to Input(Event::Input(' ')), got {:?}",
         result
     );
 }
@@ -270,7 +270,7 @@ fn ctrl_j_converts_to_newline() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::InputEvent::Newline)),
+        matches!(result, Some(runie_core::Event::Newline)),
         "Ctrl+J should map to Newline, got {:?}",
         result
     );
@@ -282,7 +282,7 @@ fn ctrl_j_as_lf_converts_to_newline() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::InputEvent::Newline)),
+        matches!(result, Some(runie_core::Event::Newline)),
         "LF char should map to Newline, got {:?}",
         result
     );
@@ -307,7 +307,7 @@ fn ctrl_v_emits_paste_image() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::InputEvent::PasteImage)),
+        matches!(result, Some(runie_core::Event::PasteImage)),
         "Ctrl+V should map to PasteImage, got {:?}",
         result
     );
@@ -320,7 +320,7 @@ fn alt_v_emits_paste_image() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::InputEvent::PasteImage)),
+        matches!(result, Some(runie_core::Event::PasteImage)),
         "Alt+V should map to PasteImage, got {:?}",
         result
     );

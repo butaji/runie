@@ -4,7 +4,7 @@
 //! and that loose fields have been moved to appropriate inner structs.
 
 use crate::model::AppState;
-use crate::state::{AgentState, CompletionState, ConfigState, InputState, SessionState, ViewState};
+use crate::model::{AgentState, CompletionState, ConfigState, InputState, SessionState, ViewState};
 
 fn assert_singleton_defaults(state: &AppState) {
     assert!(!state.should_quit, "should_quit should be false by default");

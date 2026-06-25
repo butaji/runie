@@ -1,9 +1,9 @@
 //! Scoped models dialog rendering tests (Layer 3)
 
+use super::*;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::event::InputEvent;
-use runie_core::{model::ScopedModel, AppState, DialogEvent, Event};
+use runie_core::Event;
 
 fn sm(provider: &str, name: &str, enabled: bool) -> ScopedModel {
     ScopedModel {
@@ -75,7 +75,7 @@ fn hotkeys_visible_when_list_overflows() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.config.scoped_models = make_overflowing_models();
-    state.update(DialogEvent::ToggleScopedModelsDialog);
+    state.update(Event::ToggleScopedModelsDialog);
 
     let buf = render_dialog(&mut state);
     let popup_rect = popup_outer_rect();
@@ -96,7 +96,7 @@ fn hotkeys_pinned_to_bottom_of_popup() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.config.scoped_models = make_overflowing_models();
-    state.update(DialogEvent::ToggleScopedModelsDialog);
+    state.update(Event::ToggleScopedModelsDialog);
 
     let buf = render_dialog(&mut state);
     let bottom_rect = ratatui::layout::Rect {
@@ -118,7 +118,7 @@ fn hotkeys_use_styled_key_indicator() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.config.scoped_models = vec![sm("mock", "echo", true)];
-    state.update(DialogEvent::ToggleScopedModelsDialog);
+    state.update(Event::ToggleScopedModelsDialog);
 
     let buf = render_dialog(&mut state);
     let has_hint = (0..buf.area().height).any(|y| {
@@ -138,7 +138,7 @@ fn space_toggles_scoped_model_checkbox() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.config.scoped_models = vec![sm("openai", "gpt-4o", false)];
-    state.update(DialogEvent::ToggleScopedModelsDialog);
+    state.update(Event::ToggleScopedModelsDialog);
 
     let before = render_dialog(&mut state);
     assert!(
@@ -147,7 +147,7 @@ fn space_toggles_scoped_model_checkbox() {
         before
     );
 
-    state.update(Event::from(InputEvent::Input(' ')));
+    state.update(Event::from(Event::Input(' ')));
 
     let after = render_dialog(&mut state);
     assert!(

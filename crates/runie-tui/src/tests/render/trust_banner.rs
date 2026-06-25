@@ -1,8 +1,9 @@
 //! Layer 3 rendering tests for the trust banner.
 
+use super::*;
 use ratatui::{backend::TestBackend, Terminal};
 
-use runie_core::event::InputEvent;
+use runie_core::Event;
 use runie_core::model::{AppState, ChatMessage, Role};
 use runie_core::Part;
 
@@ -66,13 +67,13 @@ fn trust_command_removes_banner_and_read_only_indicator() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    state.update(InputEvent::Input('/'));
-    state.update(runie_core::event::DialogEvent::PaletteFilter('t'));
-    state.update(runie_core::event::DialogEvent::PaletteFilter('r'));
-    state.update(runie_core::event::DialogEvent::PaletteFilter('u'));
-    state.update(runie_core::event::DialogEvent::PaletteFilter('s'));
-    state.update(runie_core::event::DialogEvent::PaletteFilter('t'));
-    state.update(runie_core::event::DialogEvent::PaletteSelect);
+    state.update(Event::Input('/'));
+    state.update(runie_core::event::Event::PaletteFilter('t'));
+    state.update(runie_core::event::Event::PaletteFilter('r'));
+    state.update(runie_core::event::Event::PaletteFilter('u'));
+    state.update(runie_core::event::Event::PaletteFilter('s'));
+    state.update(runie_core::event::Event::PaletteFilter('t'));
+    state.update(runie_core::event::Event::PaletteSelect);
     state.ensure_fresh();
     state.view.scroll = 0;
 

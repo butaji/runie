@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::event::AgentEvent;
+    use crate::Event;
     use crate::message::Part;
     use crate::model::{AppState, ChatMessage, Role};
     use crate::view::elements::Element;
@@ -62,11 +62,11 @@ mod tests {
     #[test]
     fn test_feed_merges_consecutive_agent_messages() {
         let mut state = AppState::default();
-        state.update(AgentEvent::Response {
+        state.update(crate::Event::Response {
             id: "req.0".to_string(),
             content: "Hello ".to_string(),
         });
-        state.update(AgentEvent::Response {
+        state.update(crate::Event::Response {
             id: "req.0".to_string(),
             content: "World".to_string(),
         });

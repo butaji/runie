@@ -150,7 +150,7 @@ impl Submission {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::event::{Event, EventMsg};
+    use crate::{Event, EventMsg};
 
     #[test]
     fn submission_id_correlates_event() {

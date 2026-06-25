@@ -1,5 +1,10 @@
 //! TUI rendering tests — visuals, margins, styling
 
+// Re-export types used by child test modules so they can `use super::*;`
+pub use super::{AppState, ChatMessage, Element, Event, Part, PermissionRequestState, Role,
+    ScopedModel, Snapshot};
+use ratatui::{backend::TestBackend, Terminal};
+
 mod render_at;
 mod render_basic;
 mod render_model_selector;

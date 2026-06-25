@@ -1,11 +1,11 @@
 //! Tests for vim-nav bracket size and shape.
 
+use super::*;
 use super::helpers::{
     add_message, assert_bracket_one_cell_wide, bracket_rows, draw, enter_vim_nav,
     state_with_wrapped_welcome,
 };
-use runie_core::event::InputEvent;
-use runie_core::{AppState, ChatMessage, Part, Role};
+use runie_core::Event;
 
 #[test]
 fn vim_nav_mode_bracket_spans_post_elements() {
@@ -57,7 +57,7 @@ fn vim_nav_mode_bracket_around_long_system_welcome_post() {
     state.view.last_visible_height = 10;
 
     enter_vim_nav(&mut state);
-    state.update(InputEvent::Input('k'));
+    state.update(Event::Input('k'));
     assert_eq!(state.view.selected_post, Some(0));
 
     let buf = draw(&mut state, 60, 20);

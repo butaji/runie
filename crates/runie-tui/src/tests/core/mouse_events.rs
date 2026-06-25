@@ -1,6 +1,7 @@
 //! Tests for mouse event handling in the AppState.
 
-use runie_core::event::{InputEvent, ScrollEvent};
+use super::*;
+use runie_core::Event;
 use runie_core::AppState;
 
 /// Mouse click event should not crash the state.
@@ -9,7 +10,7 @@ fn mouse_click_event_handled() {
     let mut state = AppState::default();
 
     // Send a mouse click event
-    state.update(InputEvent::MouseClick {
+    state.update(Event::MouseClick {
         row: 5,
         col: 10,
         button: "left".to_string(),
@@ -24,7 +25,7 @@ fn mouse_click_event_handled() {
 fn mouse_release_event_handled() {
     let mut state = AppState::default();
 
-    state.update(InputEvent::MouseRelease {
+    state.update(Event::MouseRelease {
         row: 5,
         col: 10,
         button: "left".to_string(),
@@ -39,7 +40,7 @@ fn mouse_release_event_handled() {
 fn mouse_drag_event_handled() {
     let mut state = AppState::default();
 
-    state.update(InputEvent::MouseDrag {
+    state.update(Event::MouseDrag {
         row: 5,
         col: 10,
         button: "left".to_string(),
@@ -54,7 +55,7 @@ fn mouse_drag_event_handled() {
 fn mouse_move_event_handled() {
     let mut state = AppState::default();
 
-    state.update(InputEvent::MouseMove { row: 5, col: 10 });
+    state.update(Event::MouseMove { row: 5, col: 10 });
 
     // State should be valid
     assert!(state.open_dialog.is_none() || state.open_dialog.is_some());
@@ -65,17 +66,17 @@ fn mouse_move_event_handled() {
 fn multiple_mouse_events() {
     let mut state = AppState::default();
 
-    state.update(InputEvent::MouseClick {
+    state.update(Event::MouseClick {
         row: 1,
         col: 1,
         button: "left".to_string(),
     });
-    state.update(InputEvent::MouseDrag {
+    state.update(Event::MouseDrag {
         row: 2,
         col: 2,
         button: "left".to_string(),
     });
-    state.update(InputEvent::MouseRelease {
+    state.update(Event::MouseRelease {
         row: 3,
         col: 3,
         button: "left".to_string(),
@@ -90,17 +91,17 @@ fn multiple_mouse_events() {
 fn mouse_click_different_buttons() {
     let mut state = AppState::default();
 
-    state.update(InputEvent::MouseClick {
+    state.update(Event::MouseClick {
         row: 1,
         col: 1,
         button: "left".to_string(),
     });
-    state.update(InputEvent::MouseClick {
+    state.update(Event::MouseClick {
         row: 1,
         col: 1,
         button: "right".to_string(),
     });
-    state.update(InputEvent::MouseClick {
+    state.update(Event::MouseClick {
         row: 1,
         col: 1,
         button: "middle".to_string(),
@@ -115,7 +116,7 @@ fn mouse_click_different_buttons() {
 fn mouse_scroll_up_works() {
     let mut state = AppState::default();
 
-    state.update(ScrollEvent::Up);
+    state.update(Event::Up);
     // Should not panic
     let _ = state.view.scroll;
 }
@@ -125,7 +126,7 @@ fn mouse_scroll_up_works() {
 fn mouse_scroll_down_works() {
     let mut state = AppState::default();
 
-    state.update(ScrollEvent::Down);
+    state.update(Event::Down);
     // Should not panic
     let _ = state.view.scroll;
 }
@@ -134,13 +135,13 @@ fn mouse_scroll_down_works() {
 #[test]
 fn mouse_events_with_input() {
     let mut state = AppState::default();
-    state.update(InputEvent::Input('h'));
-    state.update(InputEvent::Input('i'));
+    state.update(Event::Input('h'));
+    state.update(Event::Input('i'));
 
     assert_eq!(state.input.input, "hi");
 
     // Mouse click should not affect input
-    state.update(InputEvent::MouseClick {
+    state.update(Event::MouseClick {
         row: 1,
         col: 1,
         button: "left".to_string(),

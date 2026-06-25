@@ -4,9 +4,9 @@
 //! UI for each panel: provider picker, key input, validating, model selector,
 //! empty model list, and validation failure.
 
+use super::*;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::event::{InputEvent, LoginFlowEvent};
-use runie_core::{AppState, Event};
+use runie_core::Event;
 
 use crate::tests::view;
 
@@ -41,7 +41,7 @@ fn provider_picker_renders_providers_and_cancel() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-    state.update(Event::from(LoginFlowEvent::Start));
+    state.update(Event::from(Event::Start));
 
     let top_content = render_content(&mut state);
     assert!(
@@ -58,7 +58,7 @@ fn provider_picker_renders_providers_and_cancel() {
     // Scroll down until MiniMax is visible; the list cannot show every provider
     // and the Cancel action at the same time in the 80x24 render area.
     for _ in 0..9 {
-        state.update(Event::from(InputEvent::HistoryNext));
+        state.update(Event::from(Event::HistoryNext));
     }
     let mid_content = render_content(&mut state);
     assert!(
@@ -74,7 +74,7 @@ fn provider_picker_renders_providers_and_cancel() {
 
     // Continue to the _Cancel action at the bottom of the list.
     for _ in 0..4 {
-        state.update(Event::from(InputEvent::HistoryNext));
+        state.update(Event::from(Event::HistoryNext));
     }
     let bottom_content = render_content(&mut state);
     assert!(
@@ -92,8 +92,8 @@ fn key_input_renders_provider_name_and_field() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
 
@@ -127,12 +127,12 @@ fn typed_api_key_renders_in_input_box() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
     for c in "sk-test".chars() {
-        state.update(Event::from(InputEvent::Input(c)));
+        state.update(Event::from(Event::Input(c)));
     }
 
     let content = render_content(&mut state);
@@ -151,11 +151,11 @@ fn validating_panel_renders_provider() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::SubmitKey {
+    state.update(Event::from(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     }));
@@ -176,15 +176,15 @@ fn model_selector_renders_toggles_save_cancel() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::SubmitKey {
+    state.update(Event::from(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::ModelsFetched {
+    state.update(Event::from(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into(), "MiniMax-M2".into()],
@@ -226,15 +226,15 @@ fn empty_model_list_renders_save_and_warning() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::SubmitKey {
+    state.update(Event::from(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::ModelsFetched {
+    state.update(Event::from(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec![],
@@ -261,15 +261,15 @@ fn validation_failure_renders_error() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::SubmitKey {
+    state.update(Event::from(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-bad".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::ValidationFailed {
+    state.update(Event::from(Event::ValidationFailed {
         provider: "minimax".into(),
         key: "sk-bad".into(),
         error: "bad".into(),
@@ -291,8 +291,8 @@ fn title_padding_exactly_one_space() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
 
@@ -307,11 +307,11 @@ fn title_padding_exactly_one_space() {
         "key input title should not have double space padding"
     );
 
-    state.update(Event::from(LoginFlowEvent::SubmitKey {
+    state.update(Event::from(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::ModelsFetched {
+    state.update(Event::from(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into()],

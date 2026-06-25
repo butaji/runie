@@ -3,7 +3,7 @@
 
 use crate::{run_agent_turn, AgentCommand};
 use futures::Stream;
-use runie_core::event::AgentEvent;
+use runie_core::Event;
 use runie_core::provider_event::{ProviderEvent, StopReason};
 use runie_core::message::{ChatMessage, Role};
 use runie_core::provider::Provider;

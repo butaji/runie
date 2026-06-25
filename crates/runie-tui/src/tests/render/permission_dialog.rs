@@ -1,5 +1,6 @@
+use super::*;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::{PermissionRequestState, Snapshot};
+use runie_core::Event;
 
 fn buffer_text(buf: &ratatui::buffer::Buffer) -> String {
     let area = buf.area();

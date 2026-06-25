@@ -33,7 +33,7 @@ pub fn build_providers_dialog(state: &AppState) -> PanelStack {
     panel = panel
         .item(
             "+ Add provider",
-            ItemAction::Emit(crate::event::DialogEvent::ProvidersAdd),
+            ItemAction::Emit(crate::Event::ProvidersAdd),
         )
         .item("Close", ItemAction::Close);
 
@@ -62,17 +62,17 @@ fn add_provider_section(
     let provider = provider_name.to_string();
     for model in models {
         let label = model_label(model, is_active, model == current_model);
-        let evt = crate::event::DialogEvent::ProvidersSelectModel {
+        let evt = crate::Event::ProvidersSelectModel {
             provider: provider.clone(),
             model: model.clone(),
         };
         panel = panel.item(label, ItemAction::Emit(evt));
     }
 
-    let edit_evt = crate::event::DialogEvent::ProvidersEditModels {
+    let edit_evt = crate::Event::ProvidersEditModels {
         provider: provider.clone(),
     };
-    let disconnect_evt = crate::event::DialogEvent::ProvidersDisconnect { provider };
+    let disconnect_evt = crate::Event::ProvidersDisconnect { provider };
     panel
         .item("  ✎ Edit models", ItemAction::Emit(edit_evt))
         .item("  ✕ Disconnect", ItemAction::Emit(disconnect_evt))

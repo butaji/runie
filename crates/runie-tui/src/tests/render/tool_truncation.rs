@@ -1,8 +1,9 @@
 //! Layer 3 rendering tests for tool output truncation.
 
+use super::*;
 use ratatui::{backend::TestBackend, Terminal};
 
-use runie_core::event::AgentEvent;
+use runie_core::Event;
 
 fn render_chat(state: &mut runie_core::AppState, width: u16, height: u16) -> String {
     let backend = TestBackend::new(width, height);
@@ -23,7 +24,7 @@ fn long_tool_output_truncated_with_ellipsis() {
     state.config.truncation.max_lines = 3;
     state.config.truncation.max_bytes = 10_000;
 
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "bash".into(),
         input: serde_json::Value::Null,
@@ -32,7 +33,7 @@ fn long_tool_output_truncated_with_ellipsis() {
         .map(|i| format!("line {}", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
@@ -54,12 +55,12 @@ fn truncated_tool_output_keeps_header() {
     state.config.truncation.max_lines = 2;
     state.config.truncation.max_bytes = 10_000;
 
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "list_files".into(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: (0..10)

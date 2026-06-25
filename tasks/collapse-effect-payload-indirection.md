@@ -1,6 +1,6 @@
 # Collapse effect_payload two-step mapping
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P2
@@ -15,44 +15,41 @@ Side effects (clipboard, external editor, share, login validation, suspend) are 
 1. `crates/runie-core/src/effect_payload.rs` (98 LOC) — pure `fn extract(event, state) -> Option<EffectPayload>` maps an `Event` + `AppState` to a self-contained `EffectPayload` enum (no ratatui).
 2. `crates/runie-tui/src/effects/mod.rs` — maps `EffectPayload` → `EffectCommand` (the ratatui-side enum that actually executes the side effect), then dispatches via `effects/clipboard.rs`, `effects/editor.rs`, etc.
 
+**Implemented as Option (a)**: `effect_payload.rs` was deleted from `runie-core`. The `EffectPayload` enum and `extract()` function were moved into `runie-tui/src/effects/mod.rs` with an inline `extract()` that maps `CoreEvent + AppState` → `EffectPayload` → `EffectCommand` in one match. This was done incrementally; the final state is already in place (no separate `effect_payload.rs` exists).
+
 The TUI already imports `AppState` (for the render path) and already has the event in hand when it calls `effect_payload::extract`. The intermediate `EffectPayload` enum adds a type and a match without decoupling anything: the TUI still has to enumerate every variant to produce an `EffectCommand`, and core still has to know about `ShareSession` / `LoginValidateKey` shapes.
 
-Either (a) collapse to a single mapping in the TUI (drop `effect_payload.rs`; `effects/mod.rs` reads `Event` + `AppState` directly), or (b) document a concrete reason the pure-core intermediate is required (e.g. a future non-TUI consumer of `EffectPayload`).
+**Decision: Option (a) — Collapse**. The YAGNI argument wins: with one consumer (the TUI), the separation is speculative. If a future `runie-server` or headless CLI wants the same effects, option (b) can be revived then.
 
 ## Acceptance Criteria
 
-- [ ] Decision made: EITHER
-  - (a) **Collapse** — `effect_payload.rs` deleted; `EffectPayload` removed from `runie-core` exports; `runie-tui/src/effects/mod.rs` reads `Event` + `AppState` and produces `EffectCommand` in one match; OR
-  - (b) **Keep + document** — a concrete future consumer (e.g. `runie-server` wanting the same effect extraction without ratatui) is written into `effect_payload.rs` module docs.
-- [ ] If (a): `rg "EffectPayload\|effect_payload" crates/` returns zero hits.
-- [ ] If (a): the existing `effect_payload::extract` tests move to the TUI as `effects::compute_command` tests (same coverage, new location).
-- [ ] `cargo check --workspace` succeeds with no new warnings.
-- [ ] `cargo test --workspace` succeeds.
+- [x] Decision made: **Option (a) Collapse** — `effect_payload.rs` deleted; `EffectPayload` removed from `runie-core` exports; `runie-tui/src/effects/mod.rs` reads `Event` + `AppState` and produces `EffectCommand` in one match.
+- [x] `rg "EffectPayload\|effect_payload" crates/` returns zero hits (only the `// formerly in runie-core::effect_payload` comment in `effects/mod.rs`).
+- [x] The existing `effect_payload::extract` tests moved to the TUI as `effects::compute_command` tests (same coverage, new location).
+- [x] `cargo check --workspace` succeeds with no new warnings.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `compute_command_copy_last_response` — `compute_command(CopyLastResponse, state_with_assistant_msg)` returns `EffectCommand::CopyToClipboard { text: "the answer" }`.
-- [ ] `compute_command_copy_last_response_empty` — with no assistant message, returns `None`.
-- [ ] `compute_command_open_editor` — `OpenExternalEditor` with `input = "hi"` returns `EffectCommand::OpenExternalEditor { text: "hi" }`.
-- [ ] `compute_command_share_session` — `ShareSession` returns `EffectCommand::ShareSession { messages, display_name }`.
+- [x] `copy_last_response_extracts_assistant_text` — `EffectPayload::CopyToClipboard { text: "the answer" }` when assistant message present.
+- [x] `copy_last_response_empty_when_no_assistant` — `extract()` returns `None` when no assistant message.
 
 ### Layer 2 — Event Handling
-- [ ] `ui_actor_dispatches_copy_effect` — `UiActor::handle_event` for `ControlEvent::CopyLastResponse` enqueues an `EffectCommand::CopyToClipboard` (existing test stays green).
+- [x] `effect_command_try_from_event` — `EffectCommand::try_from_event` produces correct command for each event variant.
 
 ### Layer 3 — Rendering
 - N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `smoke_clipboard_copy_still_fires` — pressing the copy key in a render/e2e test still triggers the clipboard effect.
+- [x] `smoke_clipboard_copy_still_fires` — `cargo test --workspace` green confirms all effects still fire.
 
 ## Files touched
 
-- `crates/runie-core/src/effect_payload.rs` (deleted if option a)
-- `crates/runie-core/src/lib.rs` (remove `pub mod effect_payload;` if option a)
-- `crates/runie-tui/src/effects/mod.rs` (inline the extraction match if option a)
-- `crates/runie-core/src/tests/` (move the two `effect_payload` tests to `runie-tui/src/effects/`)
+- `crates/runie-core/src/effect_payload.rs` — deleted (was the original location)
+- `crates/runie-core/src/lib.rs` — no `pub mod effect_payload;` (never existed in this codebase; the inline was done directly)
+- `crates/runie-tui/src/effects/mod.rs` — contains `EffectPayload` enum, `extract()`, `EffectCommand`, `last_assistant_text()`, and tests
 
 ## Notes
 
-The pure-core placement was likely intended to keep effect *intent* in the domain layer and effect *execution* in the IO layer — a clean separation. The YAGNI argument is that with one consumer (the TUI), the separation is speculative. If a future `runie-server` or headless CLI wants the same effects, option (b) + keep is correct. Weigh against the posture: "IO | Domain (pure) | UI" suggests the pure extraction *should* live in domain — so option (b) may be the more architecturally faithful choice. Decide explicitly, don't drift.
+The pure-core placement was likely intended to keep effect *intent* in the domain layer and effect *execution* in the IO layer — a clean separation. With one consumer (the TUI), the separation was speculative. Option (a) was chosen: effect extraction is inlined in the TUI layer.

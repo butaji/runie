@@ -1,9 +1,10 @@
 //! Basic vim-nav visibility tests.
 
+use super::*;
 use super::helpers::{
     accent, add_message, draw, enter_vim_nav_and_select_top, state_with_user_agent_pairs,
 };
-use runie_core::{AppState, Role};
+use runie_core::Event;
 
 #[test]
 fn vim_nav_mode_shows_orange_bracket_around_selected_post() {

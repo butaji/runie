@@ -4,8 +4,8 @@
 //! verify that typing, backspace, paste, toggles, and submit/cancel behave as
 //! expected.
 
-use runie_core::event::{InputEvent, LoginFlowEvent};
-use runie_core::{AppState, Event};
+use super::*;
+use runie_core::Event;
 
 fn clean_config() {
     let dir = std::env::temp_dir().join(format!(
@@ -27,19 +27,19 @@ fn current_panel(state: &AppState) -> Option<&runie_core::dialog::Panel> {
 }
 
 fn start_provider_select(state: &mut AppState, provider: &str) {
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: provider.into(),
     }));
 }
 
 fn reach_model_select(state: &mut AppState, models: &[String]) {
     start_provider_select(state, "minimax");
-    state.update(Event::from(LoginFlowEvent::SubmitKey {
+    state.update(Event::from(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::ModelsFetched {
+    state.update(Event::from(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: models.to_vec(),
@@ -56,7 +56,7 @@ fn type_api_key_appears_in_field() {
 
     start_provider_select(&mut state, "minimax");
     for c in "sk-test".chars() {
-        state.update(Event::from(InputEvent::Input(c)));
+        state.update(Event::from(Event::Input(c)));
     }
 
     let panel = current_panel(&state).expect("key input panel should be open");
@@ -78,9 +78,9 @@ fn backspace_removes_key_character() {
 
     start_provider_select(&mut state, "minimax");
     for c in "sk-test".chars() {
-        state.update(Event::from(InputEvent::Input(c)));
+        state.update(Event::from(Event::Input(c)));
     }
-    state.update(Event::from(InputEvent::Backspace));
+    state.update(Event::from(Event::Backspace));
 
     let panel = current_panel(&state).expect("key input panel should be open");
     assert_eq!(panel.id, "login-key");
@@ -121,7 +121,7 @@ fn space_toggles_model_checkbox_in_login_flow() {
 
     reach_model_select(&mut state, &["MiniMax-M3".into()]);
 
-    state.update(Event::from(InputEvent::Input(' ')));
+    state.update(Event::from(Event::Input(' ')));
 
     let flow = state
         .login_flow
@@ -146,8 +146,8 @@ fn enter_on_save_action_saves() {
 
     reach_model_select(&mut state, &["MiniMax-M3".into()]);
     // Move selection from the model toggle down to the _Save action.
-    state.update(Event::from(InputEvent::HistoryNext));
-    state.update(Event::from(InputEvent::Submit));
+    state.update(Event::from(Event::HistoryNext));
+    state.update(Event::from(Event::Submit));
 
     assert!(
         state.open_dialog.is_none(),
@@ -171,7 +171,7 @@ fn enter_on_unchecked_model_selects_and_saves() {
 
     reach_model_select(&mut state, &["MiniMax-M3".into(), "MiniMax-M2.7".into()]);
     // Uncheck the first model.
-    state.update(Event::from(InputEvent::Input(' ')));
+    state.update(Event::from(Event::Input(' ')));
     {
         let flow = state.login_flow.as_ref().unwrap();
         assert!(!flow.selected_models.contains("MiniMax-M3"));
@@ -179,7 +179,7 @@ fn enter_on_unchecked_model_selects_and_saves() {
     }
 
     // Press Enter on the unchecked first model to reselect it and save.
-    state.update(Event::from(InputEvent::Submit));
+    state.update(Event::from(Event::Submit));
 
     assert!(
         state.open_dialog.is_none(),
@@ -203,9 +203,9 @@ fn cancel_action_returns_to_previous_panel() {
 
     reach_model_select(&mut state, &["MiniMax-M3".into()]);
     // Move selection from the model toggle down to _Save, then to _Cancel.
-    state.update(Event::from(InputEvent::HistoryNext));
-    state.update(Event::from(InputEvent::HistoryNext));
-    state.update(Event::from(InputEvent::Submit));
+    state.update(Event::from(Event::HistoryNext));
+    state.update(Event::from(Event::HistoryNext));
+    state.update(Event::from(Event::Submit));
 
     let panel = current_panel(&state).expect("dialog should still be open after cancel");
     assert_eq!(

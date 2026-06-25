@@ -31,20 +31,20 @@ pub struct ViewState {
     /// the selected post and to drive post-level navigation.
     pub selected_post: Option<usize>,
     // Cached palette items (for command palette dialog)
-    pub(crate) cached_palette_items: Arc<[(String, String, String)]>,
-    pub(crate) cached_palette_filter: Option<String>,
+    pub cached_palette_items: Arc<[(String, String, String)]>,
+    pub cached_palette_filter: Option<String>,
     // Cached model selector items
-    pub(crate) cached_model_items: Arc<[ModelSelectorItem]>,
-    pub(crate) cached_model_filter: Option<String>,
+    pub cached_model_items: Arc<[ModelSelectorItem]>,
+    pub cached_model_filter: Option<String>,
     // Cached settings items
-    pub(crate) cached_settings_items: Arc<[crate::settings::SettingItem]>,
-    pub(crate) cached_settings_valid: bool,
+    pub cached_settings_items: Arc<[crate::settings::SettingItem]>,
+    pub cached_settings_valid: bool,
     // Cached session tree items
-    pub(crate) cached_session_tree_items: Arc<[(usize, String)]>,
-    pub(crate) cached_session_tree_valid: bool,
+    pub cached_session_tree_items: Arc<[(usize, String)]>,
+    pub cached_session_tree_valid: bool,
     // Cached auth provider names
-    pub(crate) cached_auth_providers: Arc<[String]>,
-    pub(crate) cached_auth_valid: bool,
+    pub cached_auth_providers: Arc<[String]>,
+    pub cached_auth_valid: bool,
     /// Navigable posts in the feed. Rebuilt alongside `elements_cache`.
     pub posts: Arc<[crate::view::elements::Post]>,
     /// Last known mouse position from `MouseMove` events. Used by the TUI

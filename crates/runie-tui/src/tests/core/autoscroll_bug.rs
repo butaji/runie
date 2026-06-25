@@ -1,5 +1,5 @@
-use runie_core::event::AgentEvent;
-use runie_core::event::Event;
+use super::*;
+use runie_core::Event;
 use runie_core::layout::element_line_count;
 use runie_core::model::{AppState, ChatMessage,  Role};
 use runie_core::Part;
@@ -148,7 +148,7 @@ fn submit_then_large_response_stays_at_bottom() {
     state.ensure_fresh();
     assert_eq!(state.view.scroll, 0, "Scroll must be 0 after submit");
     // Agent tool with large output
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
@@ -157,7 +157,7 @@ fn submit_then_large_response_stays_at_bottom() {
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
@@ -190,7 +190,7 @@ fn streaming_large_content_scroll_zero_shows_latest() {
 
     // Simulate streaming chunks that build up to >1 page
     for i in 0..10 {
-        state.update(AgentEvent::Response {
+        state.update(Event::Response {
             id: "req.0".into(),
             content: format!("line{}\n", i),
         });
@@ -203,7 +203,7 @@ fn streaming_large_content_scroll_zero_shows_latest() {
     for i in 0..20 {
         content.push_str(&format!("This is line {} of the response\n", i));
     }
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content,
     });

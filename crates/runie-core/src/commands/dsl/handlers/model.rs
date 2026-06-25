@@ -114,7 +114,7 @@ fn open_thinking_panel(state: &mut AppState) -> CommandResult {
         } else {
             level.as_str().to_string()
         };
-        let evt = crate::event::CommandEvent::RunThinkingCommand { level };
+        let evt = crate::Event::RunThinkingCommand { level };
         panel = panel.item(&label, ItemAction::Emit(evt));
     }
 

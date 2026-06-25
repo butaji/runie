@@ -1,5 +1,6 @@
 //! Layer 3 rendering tests for inline tool rendering.
 
+use super::*;
 use ratatui::{backend::TestBackend, widgets::Paragraph, Terminal};
 
 use crate::message::{render_tool_done, render_tool_running, render_tool_summary};

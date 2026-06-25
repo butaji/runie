@@ -1,5 +1,6 @@
+use super::*;
 use runie_core::Part;
-use runie_core::event::ScrollEvent;
+use runie_core::Event;
 use runie_core::model::AppState;
 use runie_testing::fresh_state;
 
@@ -248,10 +249,10 @@ fn pageup_scrolls_by_five_lines() {
     state.ensure_fresh();
     state.view.scroll = 0; // at bottom
 
-    state.update(ScrollEvent::PageUp);
+    state.update(Event::PageUp);
     assert_eq!(state.view.scroll, 5, "PageUp should scroll by 5 lines");
 
-    state.update(ScrollEvent::PageUp);
+    state.update(Event::PageUp);
     assert_eq!(state.view.scroll, 10, "PageUp should accumulate");
 }
 
@@ -271,13 +272,13 @@ fn pagedown_scrolls_down_by_five_lines() {
     state.ensure_fresh();
     state.view.scroll = 20;
 
-    state.update(ScrollEvent::PageDown);
+    state.update(Event::PageDown);
     assert_eq!(
         state.view.scroll, 15,
         "PageDown should scroll down by 5 lines"
     );
 
-    state.update(ScrollEvent::PageDown);
+    state.update(Event::PageDown);
     assert_eq!(state.view.scroll, 10, "PageDown should accumulate");
 }
 
@@ -297,17 +298,17 @@ fn pagedown_stops_at_zero() {
     state.ensure_fresh();
     state.view.scroll = 3;
 
-    state.update(ScrollEvent::PageDown);
+    state.update(Event::PageDown);
     assert_eq!(state.view.scroll, 0, "PageDown should clamp at 0");
 
-    state.update(ScrollEvent::PageDown);
+    state.update(Event::PageDown);
     assert_eq!(state.view.scroll, 0, "PageDown at 0 should stay 0");
 }
 
 #[test]
 fn pageup_flashes_when_empty() {
     let mut state = fresh_state();
-    state.update(ScrollEvent::PageUp);
+    state.update(Event::PageUp);
     assert!(
         state.input.input_flash > 0,
         "PageUp on empty feed should flash"
@@ -330,7 +331,7 @@ fn pagedown_flashes_at_bottom() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    state.update(ScrollEvent::PageDown);
+    state.update(Event::PageDown);
     assert!(
         state.input.input_flash > 0,
         "PageDown at bottom should flash"
@@ -384,7 +385,7 @@ fn page_down_scrolls_by_rendered_lines() {
     state.view.scroll = max_scroll;
 
     let before = state.view.scroll;
-    state.update(ScrollEvent::PageDown);
+    state.update(Event::PageDown);
     let after = state.view.scroll;
     // PageDown moves toward the bottom by PAGE_SIZE rendered lines.
     assert_eq!(

@@ -1,5 +1,6 @@
+use super::*;
 use runie_core::commands::DialogState;
-use runie_core::event::{ControlEvent, DialogEvent, Event, InputEvent};
+use runie_core::Event;
 use runie_core::model::AppState;
 
 use crate::tests::view;
@@ -27,7 +28,7 @@ fn slash_opens_command_palette_when_input_empty() {
     let mut state = AppState::default();
     assert!(state.open_dialog.is_none());
     assert!(state.input.input.is_empty());
-    state.update(InputEvent::Input('/'));
+    state.update(Event::Input('/'));
     assert!(
         palette_state(&state).is_some(),
         "Typing / with empty input should open command palette"
@@ -37,10 +38,10 @@ fn slash_opens_command_palette_when_input_empty() {
 #[test]
 fn slash_does_not_open_palette_when_input_not_empty() {
     let mut state = AppState::default();
-    state.update(InputEvent::Input('h'));
-    state.update(InputEvent::Input('i'));
+    state.update(Event::Input('h'));
+    state.update(Event::Input('i'));
     assert_eq!(state.input.input, "hi");
-    state.update(InputEvent::Input('/'));
+    state.update(Event::Input('/'));
     assert!(
         state.open_dialog.is_none(),
         "Typing / with non-empty input should NOT open palette"
@@ -162,7 +163,7 @@ fn close_pops_dialog() {
     let mut state = AppState::default();
     state.update(Event::toggle_command_palette());
     assert!(state.open_dialog.is_some());
-    state.update(DialogEvent::PaletteClose);
+    state.update(Event::PaletteClose);
     assert!(state.open_dialog.is_none());
 }
 
@@ -171,7 +172,7 @@ fn esc_closes_palette() {
     let mut state = AppState::default();
     state.update(Event::toggle_command_palette());
     assert!(state.open_dialog.is_some());
-    state.update(ControlEvent::Abort);
+    state.update(Event::Abort);
     assert!(state.open_dialog.is_none());
 }
 
@@ -180,7 +181,7 @@ fn filter_reduces_selection() {
     let mut state = AppState::default();
     state.update(Event::toggle_command_palette());
     // Type "q" to filter to quit
-    state.update(DialogEvent::PaletteFilter('q'));
+    state.update(Event::PaletteFilter('q'));
     let (filter, selected) = palette_state(&state).expect("Palette should be open");
     assert_eq!(filter, "q");
     assert_eq!(selected, 0, "Filter resets selection to 0");
@@ -206,7 +207,7 @@ fn typing_in_model_selector_filters_models() {
     );
 
     // Type in the model selector.
-    state.update(DialogEvent::ModelSelectorFilter('m'));
+    state.update(Event::ModelSelectorFilter('m'));
 
     assert!(
         model_selector_state(&state).is_some(),
@@ -227,7 +228,7 @@ fn esc_restores_palette_in_same_state() {
         state.update(Event::palette_filter(c));
     }
     // Move selection down once so it is non-zero.
-    state.update(DialogEvent::PaletteDown);
+    state.update(Event::PaletteDown);
     let (filter_before, selected_before) = palette_state(&state).expect("palette should be open");
     assert_eq!(filter_before, "thinking");
 

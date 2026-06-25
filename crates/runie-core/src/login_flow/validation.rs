@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::event::{Event, LoginFlowEvent};
+    use crate::Event;
     use crate::login_flow::state::LoginStep;
     use crate::model::AppState;
 
@@ -15,8 +15,8 @@ mod tests {
 
     fn drive_to_model_select(provider: &str) -> AppState {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
             provider: provider.into(),
         });
         let defaults: Vec<String> = crate::provider::find_provider(provider)
@@ -27,12 +27,12 @@ mod tests {
                     .collect()
             })
             .unwrap_or_default();
-        state.update(LoginFlowEvent::SubmitKey {
+        state.update(Event::SubmitKey {
             provider: provider.into(),
             key: "sk-test".into(),
         });
         assert_flow_step(&state, LoginStep::Validating);
-        state.update(LoginFlowEvent::ModelsFetched {
+        state.update(Event::ModelsFetched {
             provider: provider.into(),
             key: "sk-test".into(),
             models: defaults.clone(),
@@ -66,8 +66,8 @@ mod tests {
     #[test]
     fn key_input_esc_pops_to_provider_picker_not_close() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
             provider: "minimax".into(),
         });
         match &state.open_dialog {
@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn login_command_opens_provider_picker() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
+        state.update(Event::Start);
         assert!(state.open_dialog.is_some());
         assert!(state.login_flow.is_some());
         assert_flow_step(&state, LoginStep::ProviderPicker);
@@ -99,8 +99,8 @@ mod tests {
     #[test]
     fn login_select_provider_pushes_key_input() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
             provider: "minimax".into(),
         });
         assert_flow_step(&state, LoginStep::KeyInput);
@@ -110,11 +110,11 @@ mod tests {
     #[test]
     fn login_submit_key_goes_to_validating() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
             provider: "minimax".into(),
         });
-        state.update(LoginFlowEvent::SubmitKey {
+        state.update(Event::SubmitKey {
             provider: "minimax".into(),
             key: "sk-test".into(),
         });
@@ -130,16 +130,16 @@ mod tests {
     #[test]
     fn login_submit_key_preserves_provider_when_empty() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
             provider: "minimax".into(),
         });
-        state.update(LoginFlowEvent::SubmitKey {
+        state.update(Event::SubmitKey {
             provider: "".into(),
             key: "sk-test".into(),
         });
         assert_flow_step(&state, LoginStep::Validating);
-        state.update(LoginFlowEvent::ModelsFetched {
+        state.update(Event::ModelsFetched {
             provider: "minimax".into(),
             key: "sk-test".into(),
             models: vec!["MiniMax-M3".into()],
@@ -153,16 +153,16 @@ mod tests {
     #[test]
     fn login_validation_failure_returns_to_key_input() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
             provider: "minimax".into(),
         });
-        state.update(LoginFlowEvent::SubmitKey {
+        state.update(Event::SubmitKey {
             provider: "minimax".into(),
             key: "sk-bad".into(),
         });
         assert_flow_step(&state, LoginStep::Validating);
-        state.update(LoginFlowEvent::ValidationFailed {
+        state.update(Event::ValidationFailed {
             provider: "minimax".into(),
             key: "sk-bad".into(),
             error: "unauthorized".into(),
@@ -181,7 +181,7 @@ mod tests {
             .unwrap()
             .selected_models
             .contains(&first));
-        state.update(LoginFlowEvent::ToggleModel {
+        state.update(Event::ToggleModel {
             model: first.clone(),
         });
         assert!(!state
@@ -195,8 +195,8 @@ mod tests {
     #[test]
     fn login_cancel_closes_dialog() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::Cancel);
+        state.update(Event::Start);
+        state.update(Event::Cancel);
         assert!(state.open_dialog.is_none());
         assert!(state.login_flow.is_none());
     }
@@ -208,11 +208,11 @@ mod tests {
     #[test]
     fn s1_submit_key_shows_validating_panel() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
             provider: "minimax".into(),
         });
-        state.update(LoginFlowEvent::SubmitKey {
+        state.update(Event::SubmitKey {
             provider: "minimax".into(),
             key: "sk-test".into(),
         });
@@ -222,15 +222,15 @@ mod tests {
     #[test]
     fn s1_models_fetched_reaches_model_select() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
             provider: "minimax".into(),
         });
-        state.update(LoginFlowEvent::SubmitKey {
+        state.update(Event::SubmitKey {
             provider: "minimax".into(),
             key: "sk-test".into(),
         });
-        state.update(LoginFlowEvent::ModelsFetched {
+        state.update(Event::ModelsFetched {
             provider: "minimax".into(),
             key: "sk-test".into(),
             models: vec!["new-A".into(), "new-B".into()],
@@ -246,15 +246,15 @@ mod tests {
     #[test]
     fn s3_validation_failed_returns_to_key_input() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
             provider: "minimax".into(),
         });
-        state.update(LoginFlowEvent::SubmitKey {
+        state.update(Event::SubmitKey {
             provider: "minimax".into(),
             key: "sk-test".into(),
         });
-        state.update(LoginFlowEvent::ValidationFailed {
+        state.update(Event::ValidationFailed {
             provider: "minimax".into(),
             key: "sk-test".into(),
             error: "connection refused".into(),
@@ -266,15 +266,15 @@ mod tests {
     #[test]
     fn s4_invalid_key_shows_transient_not_error_panel() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
             provider: "minimax".into(),
         });
-        state.update(LoginFlowEvent::SubmitKey {
+        state.update(Event::SubmitKey {
             provider: "minimax".into(),
             key: "sk-test".into(),
         });
-        state.update(LoginFlowEvent::ValidationFailed {
+        state.update(Event::ValidationFailed {
             provider: "minimax".into(),
             key: "sk-test".into(),
             error: "API validation failed: 401 Unauthorized".into(),
@@ -286,16 +286,16 @@ mod tests {
     #[test]
     fn s6_save_before_validation_is_rejected() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
             provider: "minimax".into(),
         });
-        state.update(LoginFlowEvent::SubmitKey {
+        state.update(Event::SubmitKey {
             provider: "minimax".into(),
             key: "sk-test".into(),
         });
         assert_flow_step(&state, LoginStep::Validating);
-        state.update(LoginFlowEvent::Save);
+        state.update(Event::Save);
         assert!(
             state.login_flow.is_some(),
             "save should be rejected before validation"
@@ -306,15 +306,15 @@ mod tests {
     #[test]
     fn s8_empty_fetch_reaches_model_select_with_no_models() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
             provider: "minimax".into(),
         });
-        state.update(LoginFlowEvent::SubmitKey {
+        state.update(Event::SubmitKey {
             provider: "minimax".into(),
             key: "sk-test".into(),
         });
-        state.update(LoginFlowEvent::ModelsFetched {
+        state.update(Event::ModelsFetched {
             provider: "minimax".into(),
             key: "sk-test".into(),
             models: vec![],
@@ -328,11 +328,11 @@ mod tests {
     #[test]
     fn s9_unknown_provider_no_defaults() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
             provider: "ghost".into(),
         });
-        state.update(LoginFlowEvent::SubmitKey {
+        state.update(Event::SubmitKey {
             provider: "ghost".into(),
             key: "k".into(),
         });
@@ -344,11 +344,11 @@ mod tests {
     #[test]
     fn s13_empty_key_is_rejected() {
         let mut state = AppState::default();
-        state.update(LoginFlowEvent::Start);
-        state.update(LoginFlowEvent::SelectProvider {
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
             provider: "minimax".into(),
         });
-        state.update(LoginFlowEvent::SubmitKey {
+        state.update(Event::SubmitKey {
             provider: "minimax".into(),
             key: "".into(),
         });

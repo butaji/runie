@@ -1,7 +1,7 @@
 //! Scoped models dialog builder.
 
 use super::{ItemAction, Panel, PanelStack};
-use crate::event::ModelConfigEvent;
+use crate::Event;
 
 /// Build a scoped models panel with provider-grouped toggle items.
 pub fn scoped_models(
@@ -18,7 +18,7 @@ pub fn scoped_models(
             last_provider = provider.clone();
         }
         // Emit a toggle event for each model — the state will mutate.
-        let evt = ModelConfigEvent::ScopedModelToggle {
+        let evt = Event::ScopedModelToggle {
             provider: provider.clone(),
             name: name.clone(),
         };

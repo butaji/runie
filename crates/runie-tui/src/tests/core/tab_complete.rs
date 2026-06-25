@@ -1,5 +1,5 @@
-use runie_core::event::Event;
-use runie_core::event::InputEvent;
+use super::*;
+use runie_core::Event;
 use runie_core::model::AppState;
 use runie_testing::fresh_state;
 
@@ -15,7 +15,7 @@ fn tab_opens_file_picker_with_filter() {
     state.input.cursor_pos = 3;
 
     // Tab should open file picker
-    state.update(InputEvent::Input('\t'));
+    state.update(Event::Input('\t'));
 
     assert!(state.open_dialog.is_some(), "Tab should open file picker");
 }
@@ -26,7 +26,7 @@ fn tab_opens_file_picker_empty_input() {
     let mut state = fresh_state();
 
     // Tab should open file picker
-    state.update(InputEvent::Input('\t'));
+    state.update(Event::Input('\t'));
 
     assert!(
         state.open_dialog.is_some(),
@@ -40,11 +40,11 @@ fn tab_cycles_wraps_around() {
     let mut state = fresh_state();
 
     // Open file picker
-    state.update(InputEvent::Input('\t'));
+    state.update(Event::Input('\t'));
     assert!(state.open_dialog.is_some());
 
     // First Tab cycles to next
-    state.update(InputEvent::Input('\t'));
+    state.update(Event::Input('\t'));
 
     // Get selection
     let selection = get_panel_selection(&state);
@@ -54,7 +54,7 @@ fn tab_cycles_wraps_around() {
     );
 
     // Second Tab should wrap or continue
-    state.update(InputEvent::Input('\t'));
+    state.update(Event::Input('\t'));
 }
 
 /// Tab with no matches shows empty file picker
@@ -66,7 +66,7 @@ fn tab_with_no_matches_shows_empty_picker() {
     state.input.cursor_pos = text.len();
 
     // Tab opens file picker with non-matching filter
-    state.update(InputEvent::Input('\t'));
+    state.update(Event::Input('\t'));
     assert!(state.open_dialog.is_some());
 }
 
@@ -78,7 +78,7 @@ fn file_picker_replaces_typed_prefix() {
     state.input.cursor_pos = 3;
 
     // Tab opens file picker
-    state.update(InputEvent::Input('\t'));
+    state.update(Event::Input('\t'));
     assert!(state.open_dialog.is_some());
 
     // Enter selects

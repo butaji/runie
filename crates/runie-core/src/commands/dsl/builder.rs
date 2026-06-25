@@ -153,7 +153,6 @@ fn build_form_stack_from_template(template: FormPanel, args: &str) -> CoreStack 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::event::CommandEvent;
     use crate::Event;
 
     #[test]
@@ -197,7 +196,7 @@ mod tests {
     }
 
     fn save_submit(values: &std::collections::HashMap<String, String>) -> Event {
-        CommandEvent::RunSaveCommand {
+        crate::Event::RunSaveCommand {
             name: crate::dialog::dsl::get_field(values, "name"),
         }
     }

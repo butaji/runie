@@ -3,10 +3,10 @@
 //! Drives the first-run login flow and the providers-add flow through core
 //! events and verifies both state transitions and rendered UI.
 
+use super::*;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::event::InputEvent;
+use runie_core::Event;
 use runie_core::login_flow::LoginStep;
-use runie_core::{AppState, Event};
 
 use crate::tests::{configure_test_providers, view};
 
@@ -301,7 +301,7 @@ fn uncheck_all_models_rejects_save_with_transient_error() {
     );
 
     // Uncheck the only model.
-    state.update(Event::from(InputEvent::Input(' ')));
+    state.update(Event::from(Event::Input(' ')));
     assert!(
         !state
             .login_flow
@@ -313,8 +313,8 @@ fn uncheck_all_models_rejects_save_with_transient_error() {
     );
 
     // Move selection down to the _Save action and submit.
-    state.update(Event::from(InputEvent::HistoryNext));
-    state.update(Event::from(InputEvent::Submit));
+    state.update(Event::from(Event::HistoryNext));
+    state.update(Event::from(Event::Submit));
 
     assert!(
         state.open_dialog.is_some(),

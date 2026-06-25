@@ -3,9 +3,9 @@
 //! Drives the `/providers` dialog through core events and verifies state
 //! transitions and rendered UI for disconnect, fallback, and add flows.
 
+use super::*;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::event::{DialogEvent, LoginFlowEvent};
-use runie_core::{AppState, Event};
+use runie_core::Event;
 
 use crate::tests::{apply_test_config_to_state, configure_test_providers, view};
 
@@ -53,8 +53,8 @@ fn disconnect_active_provider_switches_to_fallback() {
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
 
-    state.update(DialogEvent::ProvidersDialog);
-    state.update(DialogEvent::ProvidersDisconnect {
+    state.update(Event::ProvidersDialog);
+    state.update(Event::ProvidersDisconnect {
         provider: "openai".into(),
     });
 
@@ -90,21 +90,21 @@ fn add_provider_via_providers_dialog_keeps_active_model_unchanged() {
     state.config.current_model = "gpt-4o".into();
 
 
-    state.update(DialogEvent::ProvidersDialog);
-    state.update(DialogEvent::ProvidersAdd);
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::ProvidersDialog);
+    state.update(Event::ProvidersAdd);
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::SubmitKey {
+    state.update(Event::from(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::ModelsFetched {
+    state.update(Event::from(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into()],
     }));
-    state.update(Event::from(LoginFlowEvent::Save));
+    state.update(Event::from(Event::Save));
 
     assert!(
         configured_provider_names().contains(&"openai".into()),
@@ -130,7 +130,7 @@ fn add_provider_via_providers_dialog_keeps_active_model_unchanged() {
 
     // Reopen providers dialog and verify both providers are listed.
     apply_test_config_to_state(&mut state);
-    state.update(DialogEvent::ProvidersDialog);
+    state.update(Event::ProvidersDialog);
     let content = render_content(&mut state);
     assert!(
         content.contains("openai"),

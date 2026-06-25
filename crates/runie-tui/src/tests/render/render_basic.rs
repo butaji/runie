@@ -1,5 +1,6 @@
+use super::*;
 use super::super::*;
-use runie_core::event::{AgentEvent, InputEvent};
+use runie_core::Event;
 use runie_core::Part;
 use std::time::Instant;
 
@@ -9,9 +10,9 @@ fn test_view_renders_user_message_without_manual_ensure_fresh() {
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
 
-    state.update(InputEvent::Input('H'));
-    state.update(InputEvent::Input('i'));
-    state.update(InputEvent::Submit);
+    state.update(Event::Input('H'));
+    state.update(Event::Input('i'));
+    state.update(Event::Submit);
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
@@ -35,13 +36,13 @@ fn test_view_renders_agent_message_without_manual_ensure_fresh() {
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
 
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
     });
@@ -63,23 +64,23 @@ fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
 
-    state.update(InputEvent::Input('A'));
-    state.update(InputEvent::Submit);
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Input('A'));
+    state.update(Event::Submit);
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Response 1".to_string(),
     });
-    state.update(AgentEvent::Done {
+    state.update(Event::Done {
         id: "req.0".to_string(),
     });
-    state.update(InputEvent::Input('B'));
-    state.update(InputEvent::Submit);
+    state.update(Event::Input('B'));
+    state.update(Event::Submit);
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
@@ -94,8 +95,8 @@ fn test_render_user_message() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     let mut state = AppState::default();
-    state.update(InputEvent::Input('H'));
-    state.update(InputEvent::Submit);
+    state.update(Event::Input('H'));
+    state.update(Event::Submit);
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = buf.content().iter().map(|c| c.symbol()).collect();
@@ -108,13 +109,13 @@ fn test_render_agent_response() {
     let mut terminal = Terminal::new(backend).unwrap();
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
     });
@@ -130,7 +131,7 @@ fn test_user_message_is_left_aligned_with_chevron() {
     let mut terminal = Terminal::new(backend).unwrap();
     let mut state = AppState::default();
     state.input.input = "left aligned".to_string();
-    state.update(InputEvent::Submit);
+    state.update(Event::Submit);
     terminal.draw(|f| view(f, &mut state)).unwrap();
 
     let buf = terminal.backend().buffer();
@@ -166,7 +167,7 @@ fn test_agent_message_is_left_aligned_plain_text() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     let mut state = AppState::default();
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "left side".to_string(),
     });
@@ -199,8 +200,8 @@ fn test_render_thinking_indicator() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
-    state.update(InputEvent::Submit);
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Submit);
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
     terminal.draw(|f| view(f, &mut state)).expect("draw");
@@ -258,11 +259,11 @@ fn test_stress_many_tool_calls() {
     let mut state = AppState::default();
     for i in 0..20 {
         simulate_tool_call(&mut state, i);
-        state.update(AgentEvent::TurnComplete {
+        state.update(Event::TurnComplete {
             id: format!("req.{}", i),
             duration_secs: 1.0,
         });
-        state.update(AgentEvent::Done {
+        state.update(Event::Done {
             id: format!("req.{}", i),
         });
         if i % 5 == 0 {

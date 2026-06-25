@@ -1,7 +1,7 @@
+use super::*;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::event::{DialogEvent, InputEvent};
-use runie_core::{AppState, ChatMessage, Part, Role};
+use runie_core::Event;
 
 /// Helper: check if the given text string appears anywhere in the rect.
 fn rect_contains_text(
@@ -38,7 +38,7 @@ fn command_palette_hides_underlying_messages() {
     state.messages_changed();
 
     // Open command palette
-    state.update(DialogEvent::ToggleCommandPalette);
+    state.update(Event::ToggleCommandPalette);
 
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -73,7 +73,7 @@ fn settings_dialog_hides_underlying_messages() {
     });
     state.messages_changed();
 
-    state.update(DialogEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
 
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -107,7 +107,7 @@ fn model_selector_hides_underlying_messages() {
     });
     state.messages_changed();
 
-    state.update(DialogEvent::ToggleModelSelector);
+    state.update(Event::ToggleModelSelector);
 
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -157,7 +157,7 @@ fn command_palette_uses_terminal_background() {
         ..Default::default()
     });
     state.messages_changed();
-    state.update(DialogEvent::ToggleCommandPalette);
+    state.update(Event::ToggleCommandPalette);
     let buf = draw_state_buffer(&mut state, 80, 24);
 
     assert_eq!(
@@ -192,7 +192,7 @@ fn panel_dialog_hides_underlying_messages() {
     state.messages_changed();
     state.input.input = "/theme".into();
     state.input.cursor_pos = 6;
-    state.update(InputEvent::Submit);
+    state.update(Event::Submit);
     assert!(
         matches!(
             state.open_dialog,

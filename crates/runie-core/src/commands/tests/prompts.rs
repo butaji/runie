@@ -1,4 +1,4 @@
-use crate::event::CommandEvent;
+use crate::Event;
 use crate::model::AppState;
 use crate::prompts::{PromptSource, PromptTemplate};
 
@@ -12,7 +12,7 @@ fn prompt_switch_updates() {
         }],
         ..Default::default()
     };
-    state.update(CommandEvent::RunPromptCommand {
+    state.update(crate::Event::RunPromptCommand {
         name: "custom".into(),
     });
     assert_eq!(state.input.current_prompt, "custom");
@@ -30,7 +30,7 @@ fn prompt_shows_current_when_no_args() {
         }],
         ..Default::default()
     };
-    state.update(CommandEvent::RunPromptCommand { name: "".into() });
+    state.update(crate::Event::RunPromptCommand { name: "".into() });
     let last = state.session.messages.last().expect("should have message");
     assert!(last.content().contains("default"), "got: {}", last.content());
 }
@@ -38,7 +38,7 @@ fn prompt_shows_current_when_no_args() {
 #[test]
 fn prompt_unknown_returns_error() {
     let mut state = AppState::default();
-    state.update(CommandEvent::RunPromptCommand {
+    state.update(crate::Event::RunPromptCommand {
         name: "unknown".into(),
     });
     let last = state.session.messages.last().expect("should have message");

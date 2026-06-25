@@ -1,7 +1,8 @@
 //! Settings dialog tests (Layer 2 + Layer 3)
 
+use super::*;
 use runie_core::commands::DialogState;
-use runie_core::event::{ControlEvent, DialogEvent, InputEvent, ModelConfigEvent};
+use runie_core::Event;
 use runie_core::model::{AppState, DeliveryMode};
 use runie_core::settings::{SettingValue, SettingsCategory};
 use runie_core::update::settings_dialog::build_setting_items;
@@ -22,11 +23,11 @@ fn settings_count(state: &AppState) -> usize {
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
-    state.update(InputEvent::Input('/'));
+    state.update(Event::Input('/'));
     for c in cmd.chars() {
-        state.update(DialogEvent::PaletteFilter(c));
+        state.update(Event::PaletteFilter(c));
     }
-    state.update(DialogEvent::PaletteSelect);
+    state.update(Event::PaletteSelect);
 }
 
 #[test]
@@ -43,8 +44,8 @@ fn settings_opens_dialog() {
 #[test]
 fn settings_navigates_up() {
     let mut state = AppState::default();
-    state.update(DialogEvent::ToggleSettingsDialog);
-    state.update(ModelConfigEvent::SettingsUp);
+    state.update(Event::ToggleSettingsDialog);
+    state.update(Event::SettingsUp);
     let selected = settings_selected(&state).expect("Dialog should still be open");
     assert_eq!(
         selected,
@@ -56,10 +57,10 @@ fn settings_navigates_up() {
 #[test]
 fn settings_navigates_down_wraps() {
     let mut state = AppState::default();
-    state.update(DialogEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
     let count = settings_count(&state);
     for _ in 0..count {
-        state.update(ModelConfigEvent::SettingsDown);
+        state.update(Event::SettingsDown);
     }
     let selected = settings_selected(&state).expect("Dialog should still be open");
     assert_eq!(selected, 0, "Down wraps to first");
@@ -69,7 +70,7 @@ fn settings_navigates_down_wraps() {
 fn settings_select_toggles_read_only() {
     let mut state = AppState::default();
     state.config.read_only = false;
-    state.update(DialogEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
     // Scan for the read-only toggle
     let count = settings_count(&state);
     for _ in 0..count {
@@ -83,10 +84,10 @@ fn settings_select_toggles_read_only() {
             false
         };
         if is_readonly {
-            state.update(ModelConfigEvent::SettingsSelect);
+            state.update(Event::SettingsSelect);
             break;
         }
-        state.update(ModelConfigEvent::SettingsDown);
+        state.update(Event::SettingsDown);
     }
     assert!(state.config.read_only);
 }
@@ -95,17 +96,17 @@ fn settings_select_toggles_read_only() {
 fn settings_space_toggles_read_only_and_keeps_dialog_open() {
     let mut state = AppState::default();
     state.config.read_only = false;
-    state.update(DialogEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
     navigate_to_setting(&mut state, "Read-Only");
 
-    state.update(InputEvent::Input(' '));
+    state.update(Event::Input(' '));
     assert!(state.config.read_only, "space should toggle read_only on");
     assert!(
         matches!(state.open_dialog, Some(DialogState::Settings(_))),
         "space toggle should keep the dialog open"
     );
 
-    state.update(InputEvent::Input(' '));
+    state.update(Event::Input(' '));
     assert!(
         !state.config.read_only,
         "second space should toggle read_only off"
@@ -115,15 +116,15 @@ fn settings_space_toggles_read_only_and_keeps_dialog_open() {
 #[test]
 fn settings_esc_closes() {
     let mut state = AppState::default();
-    state.update(DialogEvent::ToggleSettingsDialog);
-    state.update(ControlEvent::Abort);
+    state.update(Event::ToggleSettingsDialog);
+    state.update(Event::Abort);
     assert!(state.open_dialog.is_none());
 }
 
 #[test]
 fn settings_select_toggles_steering_mode() {
     let mut state = AppState::default();
-    state.update(DialogEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
     // Find steering mode row by scanning
     let count = settings_count(&state);
     assert!(matches!(
@@ -141,10 +142,10 @@ fn settings_select_toggles_steering_mode() {
             false
         };
         if is_steering {
-            state.update(ModelConfigEvent::SettingsSelect);
+            state.update(Event::SettingsSelect);
             break;
         }
-        state.update(ModelConfigEvent::SettingsDown);
+        state.update(Event::SettingsDown);
     }
     assert!(matches!(state.config.steering_mode, DeliveryMode::All));
 }
@@ -157,7 +158,7 @@ fn settings_select_cycles_provider() {
     ]);
     let mut state = AppState::default();
     state.config.current_provider = "anthropic".into();
-    state.update(DialogEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
     let count = settings_count(&state);
     for _ in 0..count {
         let is_provider = if let Some(DialogState::Settings(stack)) = &state.open_dialog {
@@ -170,10 +171,10 @@ fn settings_select_cycles_provider() {
             false
         };
         if is_provider {
-            state.update(ModelConfigEvent::SettingsSelect);
+            state.update(Event::SettingsSelect);
             break;
         }
-        state.update(ModelConfigEvent::SettingsDown);
+        state.update(Event::SettingsDown);
     }
     assert_eq!(state.config.current_provider, "openai");
 }
@@ -182,7 +183,7 @@ fn settings_select_cycles_provider() {
 fn settings_select_cycles_theme() {
     let mut state = AppState::default();
     state.config.theme_name = "runie".into();
-    state.update(DialogEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
     let count = settings_count(&state);
     for _ in 0..count {
         let is_theme = if let Some(DialogState::Settings(stack)) = &state.open_dialog {
@@ -195,10 +196,10 @@ fn settings_select_cycles_theme() {
             false
         };
         if is_theme {
-            state.update(ModelConfigEvent::SettingsSelect);
+            state.update(Event::SettingsSelect);
             break;
         }
-        state.update(ModelConfigEvent::SettingsDown);
+        state.update(Event::SettingsDown);
     }
     assert_ne!(state.config.theme_name, "runie");
 }
@@ -236,10 +237,10 @@ fn select_by_label(state: &mut AppState, label: &str) {
             false
         };
         if is_match {
-            state.update(ModelConfigEvent::SettingsSelect);
+            state.update(Event::SettingsSelect);
             return;
         }
-        state.update(ModelConfigEvent::SettingsDown);
+        state.update(Event::SettingsDown);
     }
     panic!("setting label {:?} not found", label);
 }
@@ -259,7 +260,7 @@ fn navigate_to_setting(state: &mut AppState, label: &str) {
         if is_match {
             return;
         }
-        state.update(ModelConfigEvent::SettingsDown);
+        state.update(Event::SettingsDown);
     }
     panic!("setting label {:?} not found", label);
 }
@@ -291,10 +292,10 @@ fn settings_vim_mode_default_is_true() {
 fn settings_select_toggles_vim_mode() {
     let mut state = AppState::default();
     assert!(state.config.vim_mode);
-    state.update(DialogEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
     select_by_label(&mut state, "Vim Navigation");
     assert!(!state.config.vim_mode, "select should turn vim_mode off");
-    state.update(DialogEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
     select_by_label(&mut state, "Vim Navigation");
     assert!(state.config.vim_mode, "select should turn vim_mode on");
 }
@@ -312,7 +313,7 @@ fn settings_includes_telemetry_toggle() {
 fn settings_select_toggles_telemetry() {
     let mut state = AppState::default();
     assert!(!state.config.telemetry.is_enabled());
-    state.update(DialogEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
     select_by_label(&mut state, "Telemetry");
     assert!(
         state.config.telemetry.is_enabled(),
@@ -374,9 +375,9 @@ fn settings_contains_every_runtime_tunable_config_key() {
 fn settings_select_changes_truncation_max_lines() {
     let mut state = AppState::default();
     let before = state.config.truncation.max_lines;
-    state.update(DialogEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
     navigate_to_setting(&mut state, "Truncation Max Lines");
-    state.update(ModelConfigEvent::SettingsSelect);
+    state.update(Event::SettingsSelect);
 
     assert_ne!(
         state.config.truncation.max_lines, before,
@@ -388,9 +389,9 @@ fn settings_select_changes_truncation_max_lines() {
 fn settings_select_changes_truncation_max_bytes() {
     let mut state = AppState::default();
     let before = state.config.truncation.max_bytes;
-    state.update(DialogEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
     navigate_to_setting(&mut state, "Truncation Max Bytes");
-    state.update(ModelConfigEvent::SettingsSelect);
+    state.update(Event::SettingsSelect);
 
     assert_ne!(
         state.config.truncation.max_bytes, before,
@@ -401,17 +402,17 @@ fn settings_select_changes_truncation_max_bytes() {
 #[test]
 fn settings_truncation_values_persist_after_close() {
     let mut state = AppState::default();
-    state.update(DialogEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
     navigate_to_setting(&mut state, "Truncation Max Lines");
-    state.update(ModelConfigEvent::SettingsSelect);
+    state.update(Event::SettingsSelect);
     let lines_after = state.config.truncation.max_lines;
 
-    state.update(DialogEvent::ToggleSettingsDialog);
+    state.update(Event::ToggleSettingsDialog);
     navigate_to_setting(&mut state, "Truncation Max Bytes");
-    state.update(ModelConfigEvent::SettingsSelect);
+    state.update(Event::SettingsSelect);
     let bytes_after = state.config.truncation.max_bytes;
 
-    state.update(ControlEvent::Abort);
+    state.update(Event::Abort);
     assert!(state.open_dialog.is_none());
     assert_eq!(state.config.truncation.max_lines, lines_after);
     assert_eq!(state.config.truncation.max_bytes, bytes_after);

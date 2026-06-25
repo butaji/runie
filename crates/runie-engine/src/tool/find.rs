@@ -1,5 +1,6 @@
 //! Find tool — searches for files matching a pattern.
 
+use crate::define_tool;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus, which_tool_async};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -10,43 +11,20 @@ use tokio::process::Command;
 
 pub struct FindTool;
 
+#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for FindTool {
-    fn name(&self) -> &str {
-        "find"
-    }
-
-    fn description(&self) -> &str {
-        "Find files matching a pattern using fd or find."
-    }
-
-    fn input_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "pattern": {
-                    "type": "string",
-                    "description": "File pattern to search for"
-                },
-                "path": {
-                    "type": "string",
-                    "description": "Root directory to search (default: current directory)"
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Maximum number of results (default: 100)"
-                }
-            },
-            "required": ["pattern"]
-        })
-    }
-
-    fn is_read_only(&self) -> bool {
-        true
-    }
-
-    fn requires_approval(&self, _input: &Value) -> bool {
-        false
+    define_tool! {
+        name: "find",
+        description: "Find files matching a pattern using fd or find.",
+        read_only: true,
+        approval: false,
+        fields: {
+            "pattern": ("string", "File pattern to search for"),
+            "path": ("string", "Root directory to search (default: current directory)"),
+            "limit": ("integer", "Maximum number of results (default: 100)")
+        },
+        required: ["pattern"]
     }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {

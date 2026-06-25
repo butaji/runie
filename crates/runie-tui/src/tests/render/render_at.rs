@@ -1,5 +1,6 @@
+use super::*;
 use super::super::*;
-use runie_core::event::InputEvent;
+use runie_core::Event;
 
 #[test]
 #[ignore = "@ file lookup tab-completion not wired up in current build"]
@@ -9,9 +10,9 @@ fn test_render_at_lookup_popup_shows_on_tab() {
     let mut state = AppState::default();
 
     for c in "@Car".chars() {
-        state.update(InputEvent::Input(c));
+        state.update(Event::Input(c));
     }
-    state.update(InputEvent::Input('\t'));
+    state.update(Event::Input('\t'));
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
@@ -34,7 +35,7 @@ fn test_render_at_lookup_popup_shows_immediately() {
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
 
-    state.update(InputEvent::Input('@'));
+    state.update(Event::Input('@'));
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
     let buf = terminal.backend().buffer();
@@ -54,11 +55,11 @@ fn test_render_at_lookup_tab_cycles_and_enter_inserts() {
     let mut state = AppState::default();
 
     for c in "@Car".chars() {
-        state.update(InputEvent::Input(c));
+        state.update(Event::Input(c));
     }
-    state.update(InputEvent::Input('\t'));
-    state.update(InputEvent::Input('\t'));
-    state.update(InputEvent::Submit);
+    state.update(Event::Input('\t'));
+    state.update(Event::Input('\t'));
+    state.update(Event::Submit);
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     assert!(

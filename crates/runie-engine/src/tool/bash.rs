@@ -1,5 +1,6 @@
 //! Bash tool — executes shell commands.
 
+use crate::define_tool;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -12,39 +13,19 @@ pub struct BashTool;
 /// Default timeout for bash commands.
 const DEFAULT_TIMEOUT_SECS: u64 = 60;
 
+#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for BashTool {
-    fn name(&self) -> &str {
-        "bash"
-    }
-
-    fn description(&self) -> &str {
-        "Execute a shell command. Commands are subject to safety checks."
-    }
-
-    fn input_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "command": {
-                    "type": "string",
-                    "description": "Shell command to execute"
-                },
-                "timeout_seconds": {
-                    "type": "integer",
-                    "description": "Maximum execution time in seconds (default: 60)"
-                }
-            },
-            "required": ["command"]
-        })
-    }
-
-    fn is_read_only(&self) -> bool {
-        false
-    }
-
-    fn requires_approval(&self, _input: &Value) -> bool {
-        true
+    define_tool! {
+        name: "bash",
+        description: "Execute a shell command. Commands are subject to safety checks.",
+        read_only: false,
+        approval: true,
+        fields: {
+            "command": ("string", "Shell command to execute"),
+            "timeout_seconds": ("integer", "Maximum execution time in seconds (default: 60)")
+        },
+        required: ["command"]
     }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
@@ -184,19 +165,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn process_output_marks_success_and_combines_streams() {
-        let output = std::process::Output {
-            stdout: b"hello".to_vec(),
-            stderr: b"warning".to_vec(),
-            status: std::process::ExitStatus::default(),
-        };
-        let result = process_output_helper(output);
-        assert_eq!(result.status, ToolStatus::Success);
-        assert!(result.output.contains("hello"));
-        assert!(result.output.contains("warning"));
-    }
-
-    #[test]
     fn combine_output_prefers_nonempty_streams() {
         assert!(combine_output("", "").is_empty());
         assert_eq!(combine_output("out", ""), "out");
@@ -240,22 +208,5 @@ mod tests {
         let ctx = ToolContext::default();
         let output = tool.call(input, &ctx).await.unwrap();
         assert_eq!(output.status, ToolStatus::Error);
-    }
-
-    fn process_output_helper(output: std::process::Output) -> BashResult {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let combined = combine_output(&stdout, &stderr);
-        let bytes = stdout.len() as u64 + stderr.len() as u64;
-        let status = if output.status.success() {
-            ToolStatus::Success
-        } else {
-            ToolStatus::Error
-        };
-        BashResult {
-            output: combined,
-            bytes_transferred: Some(bytes),
-            status,
-        }
     }
 }

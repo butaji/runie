@@ -1,5 +1,6 @@
+use super::*;
 use super::super::*;
-use runie_core::event::DialogEvent;
+use runie_core::Event;
 
 fn render_selector() -> Vec<String> {
     super::super::configure_test_providers(&[
@@ -12,7 +13,7 @@ fn render_selector() -> Vec<String> {
     super::super::apply_test_config_to_state(&mut state);
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
-    state.update(DialogEvent::ToggleModelSelector);
+    state.update(Event::ToggleModelSelector);
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     (0..buf.area().height)
@@ -73,10 +74,10 @@ fn filter_shows_matching_models() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
-    state.update(DialogEvent::ToggleModelSelector);
-    state.update(DialogEvent::ModelSelectorFilter('g'));
-    state.update(DialogEvent::ModelSelectorFilter('p'));
-    state.update(DialogEvent::ModelSelectorFilter('t'));
+    state.update(Event::ToggleModelSelector);
+    state.update(Event::ModelSelectorFilter('g'));
+    state.update(Event::ModelSelectorFilter('p'));
+    state.update(Event::ModelSelectorFilter('t'));
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let lines: Vec<String> = (0..buf.area().height)

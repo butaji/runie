@@ -45,7 +45,7 @@ fn reset_keeps_provider_and_model() {
     // Different default so we can detect if /reset accidentally reverts.
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
-    state.config.model_source = crate::state::ModelSource::UserOverride;
+    state.config.model_source = crate::model::ModelSource::UserOverride;
     palette_select(&mut state, "reset");
     // /reset must not change the current provider/model.
     assert_eq!(state.config.current_provider, "openai");

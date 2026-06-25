@@ -12,7 +12,8 @@ use tokio::sync::mpsc;
 
 use crate::actors::{spawn_actor, Actor, ActorHandle};
 use crate::bus::EventBus;
-use crate::event::{DurableCoreEvent, Event};
+use crate::Event;
+use crate::event::DurableCoreEvent;
 use crate::message::now;
 use crate::session::Session;
 use crate::session::index::{SessionIndex, SessionMetadata};

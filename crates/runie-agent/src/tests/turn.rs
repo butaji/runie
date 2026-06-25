@@ -1,7 +1,7 @@
 //! Tests for agent turn execution
 use crate::tests::ensure_mock_provider;
 use crate::{run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages, AgentCommand};
-use runie_core::event::AgentEvent;
+use runie_core::Event;
 use runie_core::harness_skills::{
     HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult,
 };
@@ -77,20 +77,20 @@ async fn test_agent_loop_simple_response() {
     let events = events.lock().unwrap();
     let thinking = events
         .iter()
-        .filter(|e| matches!(e, AgentEvent::Thinking { .. }))
+        .filter(|e| matches!(e, Event::Thinking { .. }))
         .count();
     let deltas = events
         .iter()
-        .filter(|e| matches!(e, AgentEvent::ResponseDelta { .. }))
+        .filter(|e| matches!(e, Event::ResponseDelta { .. }))
         .count();
     let done = events
         .iter()
-        .filter(|e| matches!(e, AgentEvent::Done { .. }))
+        .filter(|e| matches!(e, Event::Done { .. }))
         .count();
 
     let responses = events
         .iter()
-        .filter(|e| matches!(e, AgentEvent::Response { .. }))
+        .filter(|e| matches!(e, Event::Response { .. }))
         .count();
 
     assert_eq!(thinking, 1);
@@ -132,15 +132,15 @@ async fn test_agent_loop_with_tool_call() {
     let events = events.lock().unwrap();
     let tool_starts = events
         .iter()
-        .filter(|e| matches!(e, AgentEvent::ToolStart { .. }))
+        .filter(|e| matches!(e, Event::ToolStart { .. }))
         .count();
     let tool_ends = events
         .iter()
-        .filter(|e| matches!(e, AgentEvent::ToolEnd { .. }))
+        .filter(|e| matches!(e, Event::ToolEnd { .. }))
         .count();
     let completes = events
         .iter()
-        .filter(|e| matches!(e, AgentEvent::TurnComplete { .. }))
+        .filter(|e| matches!(e, Event::TurnComplete { .. }))
         .count();
 
     assert!(tool_starts >= 1);
@@ -181,15 +181,15 @@ async fn test_agent_loop_with_native_tool_call_events() {
     let events = events.lock().unwrap();
     let tool_starts = events
         .iter()
-        .filter(|e| matches!(e, AgentEvent::ToolStart { .. }))
+        .filter(|e| matches!(e, Event::ToolStart { .. }))
         .count();
     let tool_ends = events
         .iter()
-        .filter(|e| matches!(e, AgentEvent::ToolEnd { .. }))
+        .filter(|e| matches!(e, Event::ToolEnd { .. }))
         .count();
     let bash_calls = events
         .iter()
-        .filter(|e| matches!(e, AgentEvent::ToolStart { name, .. } if name == "bash"))
+        .filter(|e| matches!(e, Event::ToolStart { name, .. } if name == "bash"))
         .count();
 
     assert_eq!(tool_starts, 1, "expected one tool start");
@@ -259,13 +259,13 @@ async fn test_agent_loop_events_have_correct_id() {
 
     for evt in events.lock().unwrap().iter() {
         let evt_id = match evt {
-            AgentEvent::Thinking { id } => id.clone(),
-            AgentEvent::ThoughtDone { id } => id.clone(),
-            AgentEvent::ToolStart { id, .. } => id.clone(),
-            AgentEvent::Response { id, .. } => id.clone(),
-            AgentEvent::TurnComplete { id, .. } => id.clone(),
-            AgentEvent::Done { id } => id.clone(),
-            AgentEvent::Error { id, .. } => id.clone(),
+            Event::Thinking { id } => id.clone(),
+            Event::ThoughtDone { id } => id.clone(),
+            Event::ToolStart { id, .. } => id.clone(),
+            Event::Response { id, .. } => id.clone(),
+            Event::TurnComplete { id, .. } => id.clone(),
+            Event::Done { id } => id.clone(),
+            Event::Error { id, .. } => id.clone(),
             _ => continue,
         };
         assert_eq!(evt_id, "req.42");
@@ -369,7 +369,7 @@ async fn agent_tool_event_carries_mock_output() {
         .unwrap()
         .iter()
         .find_map(|e| match e {
-            AgentEvent::ToolEnd { output, .. } => Some(output.clone()),
+            Event::ToolEnd { output, .. } => Some(output.clone()),
             _ => None,
         })
         .expect("agent turn should emit ToolEnd");
@@ -412,7 +412,7 @@ async fn tool_call_event_matches_mock_output() {
         .unwrap()
         .iter()
         .filter_map(|e| match e {
-            AgentEvent::ToolEnd { output, .. } => Some(output.clone()),
+            Event::ToolEnd { output, .. } => Some(output.clone()),
             _ => None,
         })
         .collect();

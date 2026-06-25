@@ -1,5 +1,9 @@
 //! Core TUI integration tests moved from runie-core.
 
+// Re-export types used by child test modules so they can `use super::*;`
+pub use super::{AppState, ChatMessage, Element, Event, Part, PermissionRequestState, Role,
+    ScopedModel, Snapshot};
+
 #[cfg(test)]
 mod action_text;
 #[cfg(test)]

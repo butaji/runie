@@ -1,5 +1,5 @@
 use super::*;
-use runie_core::event::AgentEvent;
+use runie_core::Event;
 
 fn render(state: &mut AppState, width: u16, height: u16) -> String {
     let backend = TestBackend::new(width, height);
@@ -15,11 +15,11 @@ fn agent_response_visible_after_large_tool() {
     state.agent.streaming = true;
 
     // Simulate mock provider: agent response BEFORE tool
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
     });
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
@@ -28,16 +28,16 @@ fn agent_response_visible_after_large_tool() {
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
     });
-    state.update(AgentEvent::TurnComplete {
+    state.update(Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
     });
-    state.update(AgentEvent::Done { id: "req.0".into() });
+    state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -54,11 +54,11 @@ fn agent_at_bottom_tool_files_above() {
     let mut state = AppState::default();
     state.agent.streaming = true;
 
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "Here are the files.".into(),
     });
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
@@ -67,16 +67,16 @@ fn agent_at_bottom_tool_files_above() {
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
     });
-    state.update(AgentEvent::TurnComplete {
+    state.update(Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
     });
-    state.update(AgentEvent::Done { id: "req.0".into() });
+    state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -98,27 +98,27 @@ fn turn_complete_always_last_visible() {
     let mut state = AppState::default();
     state.agent.streaming = true;
 
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
-    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::Response {
+    state.update(Event::Thinking { id: "req.0".into() });
+    state.update(Event::ThoughtDone { id: "req.0".into() });
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
     });
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a\nb\nc".into(),
     });
-    state.update(AgentEvent::TurnComplete {
+    state.update(Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
     });
-    state.update(AgentEvent::Done { id: "req.0".into() });
+    state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     state.view.scroll = 0;
 

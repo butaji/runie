@@ -1,6 +1,7 @@
 //! toggle tests.
 
-use runie_core::event::{AgentEvent, ControlEvent};
+use super::*;
+use runie_core::Event;
 use runie_core::model::{AppState, ChatMessage,  Role};
 use runie_core::Part;
 use runie_core::view::elements::Element;
@@ -11,18 +12,18 @@ use runie_testing::fresh_state;
 fn thought_created_via_pipeline_is_expanded() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "I'll list files.\n".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "TOOL:list_dir:.".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
     assert!(
@@ -35,12 +36,12 @@ fn thought_created_via_pipeline_is_expanded() {
 fn tool_created_via_pipeline_is_expanded() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".to_string(),
         name: "list_dir".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "file1\nfile2".to_string(),
@@ -55,19 +56,19 @@ fn tool_created_via_pipeline_is_expanded() {
 fn toggle_expand_collapses_all_thoughts() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "I'll list files.".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
 
     assert!(!state.view.all_collapsed, "Should start expanded");
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "ToggleExpand should collapse all thoughts/tools"
@@ -78,19 +79,19 @@ fn toggle_expand_collapses_all_thoughts() {
 fn toggle_expand_collapses_all_tools() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".to_string(),
         name: "list_dir".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "file1".to_string(),
     });
 
     assert!(!state.view.all_collapsed, "Should start expanded");
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "ToggleExpand should collapse all thoughts/tools"
@@ -125,7 +126,7 @@ fn toggle_expand_hides_thought() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed, "Toggle should set all_collapsed");
 }
 
@@ -139,8 +140,8 @@ fn toggle_expand_restores_thought() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.update(ControlEvent::ToggleExpand);
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(!state.view.all_collapsed, "Second toggle should expand all");
 }
 
@@ -180,7 +181,7 @@ fn tool_collapsed_by_toggle() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed, "Toggle should set all_collapsed");
 }
 
@@ -194,8 +195,8 @@ fn toggle_expand_restores_tool() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.update(ControlEvent::ToggleExpand);
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(!state.view.all_collapsed, "Second toggle should expand all");
 }
 
@@ -229,7 +230,7 @@ fn collapsed_tool_renders_one_line_summary() {
 #[test]
 fn toggle_expand_noop_when_empty() {
     let mut state = fresh_state();
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "Toggle on empty state should still flip flag"

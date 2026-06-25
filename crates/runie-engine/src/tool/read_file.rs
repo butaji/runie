@@ -1,5 +1,6 @@
 //! ReadFile tool — reads file contents with optional offset/limit.
 
+use crate::define_tool;
 use crate::tool::{Tool, ToolContext, ToolOutput};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -16,43 +17,20 @@ fn record_file_access(path: &std::path::Path) {
 
 pub struct ReadFileTool;
 
+#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for ReadFileTool {
-    fn name(&self) -> &str {
-        "read_file"
-    }
-
-    fn description(&self) -> &str {
-        "Read the contents of a file from disk. Supports optional offset and limit."
-    }
-
-    fn input_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Path to the file to read"
-                },
-                "offset": {
-                    "type": "integer",
-                    "description": "Starting line number (0-based)"
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Maximum number of lines to read"
-                }
-            },
-            "required": ["path"]
-        })
-    }
-
-    fn is_read_only(&self) -> bool {
-        true
-    }
-
-    fn requires_approval(&self, _input: &Value) -> bool {
-        false
+    define_tool! {
+        name: "read_file",
+        description: "Read the contents of a file from disk. Supports optional offset and limit.",
+        read_only: true,
+        approval: false,
+        fields: {
+            "path": ("string", "Path to the file to read"),
+            "offset": ("integer", "Starting line number (0-based)"),
+            "limit": ("integer", "Maximum number of lines to read")
+        },
+        required: ["path"]
     }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {

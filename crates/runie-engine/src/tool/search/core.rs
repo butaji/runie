@@ -1,5 +1,6 @@
 //! Search tool — unified FFF-backed search for files and content.
 
+use crate::define_tool;
 use crate::tool::search::fff_helpers::with_picker;
 use crate::tool::search::fff_helpers::{build_error_json, build_error_json_with_instant};
 use crate::tool::search::modes::{search_content, search_files, search_glob};
@@ -17,59 +18,21 @@ use std::time::Instant;
 /// Search tool — queries the global FFF index.
 pub struct SearchTool;
 
+#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for SearchTool {
-    fn name(&self) -> &str {
-        "search"
-    }
-
-    fn description(&self) -> &str {
-        "Unified search for files and content using FFF. \
-         Supports fuzzy file search, content search (grep), glob patterns (*.rs, **/*.ts), \
-         git-status filters (git:modified, git:untracked), and location hints (file:42:5)."
-    }
-
-    fn input_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Search query. Supports: fuzzy text (e.g. 'mylib'), glob (*.rs, **/*.test.ts), negation (!test/), git status (git:modified, git:untracked, git:staged), and location (lib.rs:42 or lib.rs:42:5)",
-                    "examples": [
-                        "mylib",
-                        "*.rs",
-                        "**/*.test.ts",
-                        "config yaml !test/",
-                        "git:modified",
-                        "git:untracked",
-                        "src/main.rs:42"
-                    ]
-                },
-                "mode": {
-                    "type": "string",
-                    "enum": ["files", "content", "mixed", "glob"],
-                    "description": "Search mode: 'files' for fuzzy file search, 'content' for grep-style content search, 'mixed' for both, 'glob' for glob patterns like **/*.rs (default: files)"
-                },
-                "path": {
-                    "type": "string",
-                    "description": "Root directory to search (default: current directory)"
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Maximum number of results (default: 50)"
-                }
-            },
-            "required": ["query"]
-        })
-    }
-
-    fn is_read_only(&self) -> bool {
-        true
-    }
-
-    fn requires_approval(&self, _input: &Value) -> bool {
-        false
+    define_tool! {
+        name: "search",
+        description: "Unified search for files and content using FFF. Supports fuzzy file search, content search (grep), glob patterns (*.rs, **/*.ts), git-status filters (git:modified, git:untracked), and location hints (file:42:5).",
+        read_only: true,
+        approval: false,
+        fields: {
+            "query": ("string", "Search query. Supports: fuzzy text (e.g. 'mylib'), glob (*.rs, **/*.test.ts), negation (!test/), git status (git:modified, git:untracked), and location (lib.rs:42 or lib.rs:42:5)"),
+            "mode": ("string", "Search mode: 'files' for fuzzy file search, 'content' for grep-style content search, 'mixed' for both, 'glob' for glob patterns (default: files)"),
+            "path": ("string", "Root directory to search (default: current directory)"),
+            "limit": ("integer", "Maximum number of results (default: 50)")
+        },
+        required: ["query"]
     }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {

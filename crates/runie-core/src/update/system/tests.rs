@@ -74,7 +74,7 @@ fn apply_config_keeps_active_model_when_overridden() {
     let mut state = crate::model::AppState::default();
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
-    state.config.model_source = crate::state::ModelSource::UserOverride;
+    state.config.model_source = crate::model::ModelSource::UserOverride;
 
     let mut config = crate::config::Config::default();
     config.provider = Some("anthropic".into());
@@ -94,7 +94,7 @@ fn apply_config_keeps_active_model_when_overridden() {
     assert_eq!(state.config.current_model, "gpt-4o");
     assert_eq!(
         state.config.model_source,
-        crate::state::ModelSource::UserOverride
+        crate::model::ModelSource::UserOverride
     );
 }
 
@@ -144,7 +144,7 @@ fn apply_config_falls_back_to_first_configured_provider_when_no_default() {
     assert_eq!(state.config.current_model, "custom-model");
     assert_eq!(
         state.config.model_source,
-        crate::state::ModelSource::ConfigDefault
+        crate::model::ModelSource::ConfigDefault
     );
 }
 
@@ -153,7 +153,7 @@ fn apply_config_keeps_override_when_no_default() {
     let mut state = crate::model::AppState::default();
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
-    state.config.model_source = crate::state::ModelSource::UserOverride;
+    state.config.model_source = crate::model::ModelSource::UserOverride;
 
     let mut config = crate::config::Config::default();
     config.model_providers.insert(
@@ -171,6 +171,6 @@ fn apply_config_keeps_override_when_no_default() {
     assert_eq!(state.config.current_model, "gpt-4o");
     assert_eq!(
         state.config.model_source,
-        crate::state::ModelSource::UserOverride
+        crate::model::ModelSource::UserOverride
     );
 }

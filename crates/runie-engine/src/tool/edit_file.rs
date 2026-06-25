@@ -1,53 +1,31 @@
 //! EditFile tool — performs a single search-and-replace in a file.
 
+use crate::define_tool;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
+use runie_core::tool::tool_error;
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::path::resolve_path_in;
-use runie_core::tool::tool_error;
 use serde_json::Value;
 use std::time::Instant;
 use tokio::fs;
 
 pub struct EditFileTool;
 
+#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for EditFileTool {
-    fn name(&self) -> &str {
-        "edit_file"
-    }
-
-    fn description(&self) -> &str {
-        "Replace the first occurrence of search text with replace text in a file."
-    }
-
-    fn input_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Path to the file to edit"
-                },
-                "search": {
-                    "type": "string",
-                    "description": "Text to search for (must match exactly once)"
-                },
-                "replace": {
-                    "type": "string",
-                    "description": "Text to replace the search text with"
-                }
-            },
-            "required": ["path", "search", "replace"]
-        })
-    }
-
-    fn is_read_only(&self) -> bool {
-        false
-    }
-
-    fn requires_approval(&self, _input: &Value) -> bool {
-        true
+    define_tool! {
+        name: "edit_file",
+        description: "Replace the first occurrence of search text with replace text in a file.",
+        read_only: false,
+        approval: true,
+        fields: {
+            "path": ("string", "Path to the file to edit"),
+            "search": ("string", "Text to search for (must match exactly once)"),
+            "replace": ("string", "Text to replace the search text with")
+        },
+        required: ["path", "search", "replace"]
     }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {

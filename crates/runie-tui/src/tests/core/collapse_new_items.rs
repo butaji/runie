@@ -1,5 +1,5 @@
-use runie_core::event::Event;
-use runie_core::event::{AgentEvent, ControlEvent};
+use super::*;
+use runie_core::Event;
 use runie_core::model::{AppState, ChatMessage,  Role};
 use runie_core::Part;
 use runie_core::view::elements::Element;
@@ -16,19 +16,19 @@ fn dispatch(state: &mut AppState, events: &[Event]) {
 fn global_collapse_persists_after_agent_response() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "I'll list files.".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Here they are.".to_string(),
     });
@@ -54,12 +54,12 @@ fn global_collapse_persists_after_agent_response() {
 
 fn thought_events(id: &str, content: &str) -> Vec<Event> {
     vec![
-        AgentEvent::Thinking { id: id.into() },
-        AgentEvent::Response {
+        Event::Thinking { id: id.into() },
+        Event::Response {
             id: id.into(),
             content: content.into(),
         },
-        AgentEvent::ThoughtDone { id: id.into() },
+        Event::ThoughtDone { id: id.into() },
     ]
 }
 
@@ -68,7 +68,7 @@ fn global_collapse_persists_after_second_thought() {
     let mut state = fresh_state();
     state.agent.streaming = true;
     dispatch(&mut state, &thought_events("req.0", "A"));
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
     dispatch(&mut state, &thought_events("req.1", "B"));
     state.ensure_fresh();
@@ -95,24 +95,24 @@ fn global_collapse_persists_after_second_thought() {
 fn global_collapse_persists_after_second_tool() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".to_string(),
         name: "ls".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".to_string(),
     });
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.1".to_string(),
         name: "cat".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.3,
         output: "b".to_string(),
@@ -141,26 +141,26 @@ fn global_collapse_persists_after_second_tool() {
 fn new_thought_respects_global_collapse_flag() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.1".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.1".to_string(),
         content: "B".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.1".to_string(),
     });
     state.ensure_fresh();
@@ -182,28 +182,28 @@ fn new_tool_respects_global_collapse_flag() {
     let mut state = fresh_state();
     state.agent.streaming = true;
 
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".to_string(),
         name: "ls".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".to_string(),
     });
 
     // Collapse all
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
 
     // New tool arrives while globally collapsed
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.1".to_string(),
         name: "cat".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.3,
         output: "b".to_string(),
@@ -235,15 +235,15 @@ fn expand_then_collapse_then_expand_same_state() {
     });
 
     // Toggle 1: collapse all
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
 
     // Toggle 2: expand all
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(!state.view.all_collapsed);
 
     // Toggle 3: collapse all again
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
 
     state.ensure_fresh();
@@ -262,14 +262,14 @@ fn expand_then_collapse_then_expand_same_state() {
 fn running_tool_ignored_by_global_toggle() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".to_string(),
         name: "list_dir".to_string(),
         input: serde_json::Value::Null,
     });
 
     // Toggle while tool is still running
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "Toggle should still flip global flag"
@@ -300,7 +300,7 @@ fn reset_clears_global_collapse() {
     });
     state.view.all_collapsed = true;
 
-    state.update(ControlEvent::Reset);
+    state.update(Event::Reset);
     assert!(
         !state.view.all_collapsed,
         "Reset should clear global collapse flag"
@@ -325,7 +325,7 @@ fn global_toggle_does_not_affect_user_or_assistant_messages() {
         ..Default::default()
     });
 
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "Global flag should flip even with no thoughts/tools"
@@ -338,7 +338,7 @@ fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
     add_thought_and_tool(&mut state);
     state.ensure_fresh();
 
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
 
     state.session.messages.push(ChatMessage {

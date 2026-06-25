@@ -3,10 +3,10 @@
 //! Drives the provider-add flow through core events and verifies both the
 //! state transitions and the rendered UI, including the async validation hook.
 
+use super::*;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::event::{DialogEvent, InputEvent, LoginFlowEvent};
+use runie_core::Event;
 use runie_core::login_flow::LoginStep;
-use runie_core::{AppState, Event};
 
 use crate::tests::{connect_model, view};
 
@@ -40,11 +40,11 @@ fn e2e_login_flow_shows_verifying_panel() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::SubmitKey {
+    state.update(Event::from(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     }));
@@ -70,15 +70,15 @@ fn e2e_login_flow_reaches_model_selector() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::SubmitKey {
+    state.update(Event::from(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::ModelsFetched {
+    state.update(Event::from(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into(), "MiniMax-M2.7".into()],
@@ -107,20 +107,20 @@ fn e2e_login_flow_save_activates_first_model() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::SubmitKey {
+    state.update(Event::from(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::ModelsFetched {
+    state.update(Event::from(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into()],
     }));
-    state.update(Event::from(LoginFlowEvent::Save));
+    state.update(Event::from(Event::Save));
 
     assert!(state.login_flow.is_none(), "flow should close after save");
     assert_eq!(state.config.current_provider, "minimax");
@@ -142,8 +142,8 @@ fn e2e_providers_select_model_renders_input_box() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-    state.update(DialogEvent::ProvidersDialog);
-    state.update(DialogEvent::ProvidersSelectModel {
+    state.update(Event::ProvidersDialog);
+    state.update(Event::ProvidersSelectModel {
         provider: "minimax".into(),
         model: "MiniMax-M3".into(),
     });
@@ -172,8 +172,8 @@ fn e2e_login_flow_title_has_exactly_one_space_padding() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
 
@@ -202,21 +202,21 @@ fn e2e_providers_add_flow_save_renders_input_box() {
     state.config.current_model.clear();
 
 
-    state.update(DialogEvent::ProvidersDialog);
-    state.update(DialogEvent::ProvidersAdd);
-    state.update(LoginFlowEvent::SelectProvider {
+    state.update(Event::ProvidersDialog);
+    state.update(Event::ProvidersAdd);
+    state.update(Event::SelectProvider {
         provider: "minimax".into(),
     });
-    state.update(LoginFlowEvent::SubmitKey {
+    state.update(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     });
-    state.update(LoginFlowEvent::ModelsFetched {
+    state.update(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into()],
     });
-    state.update(LoginFlowEvent::Save);
+    state.update(Event::Save);
 
     assert!(
         state.has_models(),
@@ -242,22 +242,22 @@ fn e2e_login_flow_submit_save_button_renders_input_box() {
     state.config.current_model.clear();
 
 
-    state.update(LoginFlowEvent::Start);
-    state.update(LoginFlowEvent::SelectProvider {
+    state.update(Event::Start);
+    state.update(Event::SelectProvider {
         provider: "minimax".into(),
     });
-    state.update(LoginFlowEvent::SubmitKey {
+    state.update(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     });
-    state.update(LoginFlowEvent::ModelsFetched {
+    state.update(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into()],
     });
     // Move selection from the model toggle down to the _Save action.
-    state.update(InputEvent::HistoryNext);
-    state.update(InputEvent::Submit);
+    state.update(Event::HistoryNext);
+    state.update(Event::Submit);
 
     assert!(
         state.has_models(),
@@ -283,20 +283,20 @@ fn e2e_login_flow_save_renders_input_box() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::SubmitKey {
+    state.update(Event::from(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     }));
-    state.update(Event::from(LoginFlowEvent::ModelsFetched {
+    state.update(Event::from(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into()],
     }));
-    state.update(Event::from(LoginFlowEvent::Save));
+    state.update(Event::from(Event::Save));
 
     assert!(
         state.has_models(),
@@ -318,21 +318,21 @@ fn e2e_login_flow_submit_on_model_toggle_saves_and_connects() {
     state.config.current_model.clear();
 
 
-    state.update(LoginFlowEvent::Start);
-    state.update(LoginFlowEvent::SelectProvider {
+    state.update(Event::Start);
+    state.update(Event::SelectProvider {
         provider: "minimax".into(),
     });
-    state.update(LoginFlowEvent::SubmitKey {
+    state.update(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     });
-    state.update(LoginFlowEvent::ModelsFetched {
+    state.update(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into()],
     });
     // Press Enter while a model toggle is selected.
-    state.update(InputEvent::Submit);
+    state.update(Event::Submit);
 
     assert!(
         state.open_dialog.is_none(),
@@ -358,8 +358,8 @@ fn e2e_login_flow_api_key_label_renders_fully() {
     state.config.current_model.clear();
 
 
-    state.update(Event::from(LoginFlowEvent::Start));
-    state.update(Event::from(LoginFlowEvent::SelectProvider {
+    state.update(Event::from(Event::Start));
+    state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
     }));
 

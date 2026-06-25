@@ -1,8 +1,8 @@
 //! Tests for @ file picker functionality
 
-use runie_core::event::InputEvent;
+use super::*;
+use runie_core::Event;
 
-use runie_core::{AppState, Event};
 
 /// Typing @ at the beginning of input (empty input) opens the file picker.
 #[test]
@@ -10,7 +10,7 @@ fn at_opens_file_picker_when_input_empty() {
     let mut state = AppState::default();
     assert!(state.open_dialog.is_none());
 
-    state.update(InputEvent::Input('@'));
+    state.update(Event::Input('@'));
 
     assert!(
         state.open_dialog.is_some(),
@@ -26,7 +26,7 @@ fn at_opens_file_picker_after_space() {
     state.input.cursor_pos = 1;
 
     assert!(state.open_dialog.is_none());
-    state.update(InputEvent::Input('@'));
+    state.update(Event::Input('@'));
 
     assert!(
         state.open_dialog.is_some(),
@@ -41,7 +41,7 @@ fn at_does_not_open_file_picker_in_middle_of_text() {
     state.input.input = "Hello @".to_string();
     state.input.cursor_pos = 6;
 
-    state.update(InputEvent::Input('@'));
+    state.update(Event::Input('@'));
 
     // @ should be inserted as a character, not open file picker
     assert!(
@@ -72,7 +72,7 @@ fn tab_cycles_panel_selection_in_file_picker() {
     let mut state = AppState::default();
 
     // Open file picker
-    state.update(InputEvent::Input('@'));
+    state.update(Event::Input('@'));
 
     // Verify dialog is open
     assert!(state.open_dialog.is_some(), "File picker should be open");
@@ -82,7 +82,7 @@ fn tab_cycles_panel_selection_in_file_picker() {
     assert_eq!(initial_selection, 0, "Initial selection should be 0");
 
     // Tab should cycle to next
-    state.update(InputEvent::Input('\t'));
+    state.update(Event::Input('\t'));
 
     let after_tab = get_panel_selection(&state);
     assert_eq!(after_tab, 1, "Tab should cycle to next selection");
@@ -94,13 +94,13 @@ fn tab_wraps_around_panel_selection() {
     let mut state = AppState::default();
 
     // Open file picker
-    state.update(InputEvent::Input('@'));
+    state.update(Event::Input('@'));
 
     // Get panel to check number of items
     let items_count = get_panel_items_count(&state);
 
     // First Tab moves to the next item when there is one.
-    state.update(InputEvent::Input('\t'));
+    state.update(Event::Input('\t'));
     let first_tab = get_panel_selection(&state);
     if items_count >= 2 {
         assert_eq!(first_tab, 1, "First Tab should move to index 1");
@@ -108,7 +108,7 @@ fn tab_wraps_around_panel_selection() {
 
     // Second Tab stays within bounds. The exact index depends on the
     // asynchronously populated file list, so we only assert validity.
-    state.update(InputEvent::Input('\t'));
+    state.update(Event::Input('\t'));
     let second_tab = get_panel_selection(&state);
     assert!(
         second_tab < items_count.max(1),
@@ -124,12 +124,12 @@ fn submit_inserts_selected_file() {
     let mut state = AppState::default();
 
     // Open file picker
-    state.update(InputEvent::Input('@'));
+    state.update(Event::Input('@'));
 
     // Navigate to a specific item if there are files
     let items_count = get_panel_items_count(&state);
     if items_count > 1 {
-        state.update(InputEvent::HistoryNext);
+        state.update(Event::HistoryNext);
     }
 
     // Submit (Enter)

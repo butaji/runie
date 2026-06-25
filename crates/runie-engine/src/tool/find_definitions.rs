@@ -3,6 +3,8 @@
 //! Uses FFF's content search with `classify_definitions: true` to find
 //! `struct`, `fn`, `class`, `def`, `impl`, etc. definitions.
 
+
+use crate::define_tool;
 use crate::tool::search::fff_helpers::{build_error_json, build_error_json_with_instant, with_picker};
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
@@ -109,49 +111,21 @@ struct DefResult {
     content: String,
 }
 
+#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for FindDefinitionsTool {
-    fn name(&self) -> &str {
-        "find_definitions"
-    }
-
-    fn description(&self) -> &str {
-        "Find symbol definitions (struct, fn, class, def, impl, enum, trait, etc.) \
-         in the codebase using FFF's definition classifier. Returns file path, \
-         line number, column, kind, and the definition text."
-    }
-
-    fn input_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "symbol": {
-                    "type": "string",
-                    "description": "Symbol name or pattern to search for (e.g., 'MyStruct', 'handle_request')"
-                },
-                "glob": {
-                    "type": "string",
-                    "description": "Optional glob pattern to restrict to file types (e.g., '*.rs', '*.py', '**/*.go')"
-                },
-                "path": {
-                    "type": "string",
-                    "description": "Root directory to search (default: current directory)"
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Maximum number of results (default: 30)"
-                }
-            },
-            "required": ["symbol"]
-        })
-    }
-
-    fn is_read_only(&self) -> bool {
-        true
-    }
-
-    fn requires_approval(&self, _input: &Value) -> bool {
-        false
+    define_tool! {
+        name: "find_definitions",
+        description: "Find symbol definitions (struct, fn, class, def, impl, enum, trait, etc.) in the codebase using FFF's definition classifier.",
+        read_only: true,
+        approval: false,
+        fields: {
+            "symbol": ("string", "Symbol name or pattern to search for (e.g., 'MyStruct', 'handle_request')"),
+            "glob": ("string", "Optional glob pattern to restrict to file types (e.g., '*.rs', '*.py', '**/*.go')"),
+            "path": ("string", "Root directory to search (default: current directory)"),
+            "limit": ("integer", "Maximum number of results (default: 30)")
+        },
+        required: ["symbol"]
     }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {

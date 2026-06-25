@@ -7,7 +7,7 @@ use crate::stream_response::{stream_response, EmitFn, StreamedResponse};
 use crate::tool_runner::{execute_tool_call, tool_result_message};
 use crate::AgentCommand;
 use anyhow::Result;
-use runie_core::event::{AgentEvent, Event};
+use runie_core::Event;
 use runie_core::harness_skills::{
     SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult, TurnEndCtx, TurnEndResult,
     TurnStartCtx, TurnStartResult,
@@ -129,34 +129,34 @@ async fn emit_turn_end(
     if has_intermediate_steps {
         emit_now(
             emit,
-            AgentEvent::TurnComplete {
+            runie_core::Event::TurnComplete {
                 id: id.to_string(),
                 duration_secs: turn_start.elapsed().as_secs_f64(),
             },
         );
     }
-    emit_now(emit, AgentEvent::Done { id: id.to_string() });
+    emit_now(emit, runie_core::Event::Done { id: id.to_string() });
 }
 
 fn emit_response_and_done(emit: &EmitFn, id: &str, content: String) {
     emit_now(
         emit,
-        AgentEvent::Response {
+        runie_core::Event::Response {
             id: id.to_string(),
             content,
         },
     );
-    emit_now(emit, AgentEvent::Done { id: id.to_string() });
+    emit_now(emit, runie_core::Event::Done { id: id.to_string() });
 }
 fn emit_error_and_done(emit: &EmitFn, id: &str, message: String) {
     emit_now(
         emit,
-        AgentEvent::Error {
+        runie_core::Event::Error {
             id: id.to_string(),
             message,
         },
     );
-    emit_now(emit, AgentEvent::Done { id: id.to_string() });
+    emit_now(emit, runie_core::Event::Done { id: id.to_string() });
 }
 #[allow(clippy::too_many_arguments)]
 async fn run_iterations(
@@ -203,10 +203,10 @@ async fn run_agent_iteration(
     tool_call_count: &mut usize,
     gate: &PermissionGate,
 ) -> Result<bool> {
-    emit_now(&emit, AgentEvent::Thinking { id: command.id.clone() });
+    emit_now(&emit, runie_core::Event::Thinking { id: command.id.clone() });
     let tools = build_tool_registry(command.read_only).to_openai_functions();
     let response = stream_response(provider, &command.id, messages, tools, emit.clone()).await?;
-    emit_now(&emit, AgentEvent::ThoughtDone { id: command.id.clone() });
+    emit_now(&emit, runie_core::Event::ThoughtDone { id: command.id.clone() });
     if response.tool_calls.is_empty() {
         return Ok(false);
     }
@@ -304,7 +304,7 @@ async fn execute_tools(
 
         emit_now(
             &emit,
-            AgentEvent::ToolEnd {
+            runie_core::Event::ToolEnd {
                 id: cmd_id.to_string(),
                 duration_secs: output.duration.as_secs_f64(),
                 output: output.content.clone(),
@@ -338,7 +338,7 @@ async fn execute_single_tool(
 fn emit_tool_start(cmd_id: &str, tool_call: &ParsedToolCall, emit: &EmitFn) {
     emit_now(
         emit,
-        AgentEvent::ToolStart {
+        runie_core::Event::ToolStart {
             id: cmd_id.to_string(),
             name: tool_call.name.clone(),
             input: tool_call.args.clone(),

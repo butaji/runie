@@ -4,12 +4,13 @@
 //! high-contrast foreground for the command name, and a lower-contrast
 //! style for the description.
 
+use super::*;
 use ratatui::style::{Color, Modifier};
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::{
     commands::DialogState,
     dialog::{Panel, PanelStack},
-    event::InputEvent,
+    event::Event,
     AppState,
 };
 
@@ -307,7 +308,7 @@ fn space_toggles_checkbox_render_state() {
         line_before
     );
 
-    state.update(InputEvent::Input(' '));
+    state.update(Event::Input(' '));
 
     let after = render(&mut state);
     let line_after: String = (content_rect().x..content_rect().x + content_rect().width)

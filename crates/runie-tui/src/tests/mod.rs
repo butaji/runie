@@ -2,8 +2,10 @@
 
 pub use crate::ui::view;
 pub use ratatui::{backend::TestBackend, Terminal};
-use runie_core::event::{AgentEvent, InputEvent};
-pub use runie_core::{AppState, ChatMessage, Event, Role};
+pub use runie_core::{
+    AppState, ChatMessage, Element, Event, Part, PermissionRequestState, Role, ScopedModel,
+    Snapshot,
+};
 
 #[cfg(test)]
 mod core;
@@ -85,37 +87,37 @@ pub fn apply_test_config_to_state(state: &mut runie_core::AppState) {
 
 /// Helper: simulate full tool flow
 pub fn simulate_list_files_flow(state: &mut AppState) {
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".to_string(),
         name: "list_files".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 1.0,
         output: String::new(),
     });
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "src/main.rs\nlib.rs".to_string(),
     });
-    state.update(AgentEvent::TurnComplete {
+    state.update(Event::TurnComplete {
         id: "req.0".to_string(),
         duration_secs: 3.0,
     });
-    state.update(AgentEvent::Done {
+    state.update(Event::Done {
         id: "req.0".to_string(),
     });
 }
@@ -123,25 +125,25 @@ pub fn simulate_list_files_flow(state: &mut AppState) {
 /// Helper: simulate one tool call turn
 pub fn simulate_tool_call(state: &mut AppState, i: usize) {
     let id = format!("req.{}", i);
-    state.update(InputEvent::Input('l'));
-    state.update(InputEvent::Submit);
+    state.update(Event::Input('l'));
+    state.update(Event::Submit);
     state.pop_queue();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking { id: id.clone() });
-    state.update(AgentEvent::ThoughtDone { id: id.clone() });
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::Thinking { id: id.clone() });
+    state.update(Event::ThoughtDone { id: id.clone() });
+    state.update(Event::ToolStart {
         id: id.clone(),
         name: "list_files".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: String::new(),
     });
-    state.update(AgentEvent::Thinking { id: id.clone() });
-    state.update(AgentEvent::ThoughtDone { id: id.clone() });
-    state.update(AgentEvent::Response {
+    state.update(Event::Thinking { id: id.clone() });
+    state.update(Event::ThoughtDone { id: id.clone() });
+    state.update(Event::Response {
         id,
         content: format!("Files for turn {}\n", i),
     });

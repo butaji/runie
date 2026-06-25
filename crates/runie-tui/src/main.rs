@@ -13,7 +13,7 @@
 
 use futures::StreamExt;
 use runie_agent::AgentActor;
-use runie_core::actors::{ConfigActor, IoActor, ProviderActor, SessionActor};
+use runie_core::actors::{ActorHandles, ConfigActor, FffIndexerActor, FffIndexerHandle, IoActor, ProviderActor, SessionActor};
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::{AppState, Snapshot};
@@ -51,21 +51,13 @@ async fn main() -> io::Result<()> {
     let bus = EventBus::<Event>::new(100);
     let bootstrap = bootstrap_app(bus.clone()).await;
     let mut state = bootstrap.0;
-    let provider_handle = bootstrap.1;
-
+    let actor_handles = bootstrap.1;
 
     let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
     init_terminal_state(&mut state);
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
-    spawn_background_tasks(
-        terminal,
-        state,
-        terminal_caps,
-        bus,
-        shutdown_tx,
-        provider_handle,
-    );
+    spawn_background_tasks(terminal, state, terminal_caps, bus, shutdown_tx, actor_handles);
 
     shutdown_rx
         .await
@@ -75,21 +67,34 @@ async fn main() -> io::Result<()> {
 
 async fn bootstrap_app(
     bus: EventBus<Event>,
-) -> (AppState, runie_core::actors::ProviderActorHandle) {
+) -> (AppState, ActorHandles) {
     let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
     let (provider_handle, _provider_actor) = spawn_provider_actor(&bus, &config_handle);
     // Unified SessionActor: owns trust, history, session CRUD, and durable event append
     let (session_handle, _session_actor) = SessionActor::spawn(bus.clone());
     let (io_handle, _io_actor) = IoActor::spawn(bus.clone());
-    let mut state = AppState {
-        config_tx: Some(config_handle.tx().clone()),
-        provider_tx: Some(provider_handle.tx().clone()),
-        persistence_tx: Some(session_handle.clone()),
-        io_tx: Some(io_handle.clone()),
-        ..Default::default()
-    };
+    let mut state = AppState::default();
+    // Build the ActorHandles registry — this is the single source of truth
+    // for all actor senders. It replaces the old loose config_tx/provider_tx/... fields.
+    let mut handles = ActorHandles::default();
+    handles.config = Some(config_handle);
+    handles.provider = Some(provider_handle);
+    handles.session = Some(session_handle.clone());
+    handles.io = Some(io_handle);
+    state.set_actor_handles(handles.clone());
     app_init::bootstrap(&mut state).await;
-    (state, provider_handle)
+    // Spawn FffIndexerActor with the current working directory as the project root.
+    let project_root = std::env::current_dir().unwrap_or_default();
+    let data_dir = dirs::data_dir().unwrap_or_else(|| std::env::temp_dir());
+    if let Ok((tx, _actor_handle)) = FffIndexerActor::spawn(
+        project_root,
+        data_dir,
+        EventBus::new(16),
+    ) {
+        handles.fff_indexer = Some(FffIndexerHandle::new(tx));
+        state.set_actor_handles(handles.clone());
+    }
+    (state, handles)
 }
 
 fn spawn_provider_actor(
@@ -119,12 +124,10 @@ fn spawn_background_tasks(
     caps: terminal::caps::TerminalCapabilities,
     bus: EventBus<Event>,
     shutdown_tx: oneshot::Sender<()>,
-    provider_handle: runie_core::actors::ProviderActorHandle,
+    handles: ActorHandles,
 ) {
-    let persistence_handle = state
-        .persistence_tx
-        .clone()
-        .expect("SessionActor must be spawned before UI");
+    let persistence_handle = handles.session.clone().expect("SessionActor must be spawned");
+    let provider_handle = handles.provider.clone().expect("ProviderActor must be spawned");
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
     let (agent_handle, agent_actor) = AgentActor::spawn(
         bus.clone(),

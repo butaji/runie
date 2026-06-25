@@ -1,7 +1,7 @@
 //! Layer 2 + Layer 3 tests for Ctrl+M model cycling.
 
 use super::*;
-use runie_core::event::ModelConfigEvent;
+use runie_core::Event;
 use runie_core::model::{AppState, ScopedModel};
 
 fn scoped_model(provider: &str, name: &str) -> ScopedModel {
@@ -31,7 +31,7 @@ fn ctrl_m_cycles_to_next_scoped_model() {
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
 
-    state.update(ModelConfigEvent::CycleModelNext);
+    state.update(Event::CycleModelNext);
 
     assert_eq!(state.config.current_provider, "anthropic");
     assert_eq!(state.config.current_model, "claude-3-sonnet");
@@ -48,7 +48,7 @@ fn ctrl_m_wraps_to_first_model() {
     state.config.current_provider = "anthropic".into();
     state.config.current_model = "claude-3-sonnet".into();
 
-    state.update(ModelConfigEvent::CycleModelNext);
+    state.update(Event::CycleModelNext);
 
     assert_eq!(state.config.current_provider, "openai");
     assert_eq!(state.config.current_model, "gpt-4o");
@@ -72,7 +72,7 @@ fn ctrl_m_updates_footer_model_name() {
         "footer should show initial model: {before}"
     );
 
-    state.update(ModelConfigEvent::CycleModelNext);
+    state.update(Event::CycleModelNext);
     let after = footer_content(&mut state);
     assert!(
         after.contains("anthropic/claude-3-sonnet"),
@@ -92,7 +92,7 @@ fn ctrl_m_wraps_footer_back_to_first() {
     state.config.current_model = "claude-3-sonnet".into();
     state.cwd_name = "testdir".into();
 
-    state.update(ModelConfigEvent::CycleModelNext);
+    state.update(Event::CycleModelNext);
     let content = footer_content(&mut state);
     assert!(
         content.contains("openai/gpt-4o"),

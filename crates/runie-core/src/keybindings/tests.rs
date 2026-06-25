@@ -139,14 +139,14 @@ fn keybindings_load_default_when_file_missing() {
 
 #[test]
 fn event_from_name_quit() {
-    assert!(matches!(event_from_name("Quit"), Some(ControlEvent::Quit)));
+    assert!(matches!(event_from_name("Quit"), Some(crate::Event::Quit)));
 }
 
 #[test]
 fn event_from_name_submit() {
     assert!(matches!(
         event_from_name("Submit"),
-        Some(InputEvent::Submit)
+        Some(crate::Event::Submit)
     ));
 }
 
@@ -154,7 +154,7 @@ fn event_from_name_submit() {
 fn event_from_name_input_tab() {
     assert!(matches!(
         event_from_name("Input:\t"),
-        Some(InputEvent::Input('\t'))
+        Some(crate::Event::Input('\t'))
     ));
 }
 
@@ -162,7 +162,7 @@ fn event_from_name_input_tab() {
 fn event_from_name_input_char() {
     assert!(matches!(
         event_from_name("Input:a"),
-        Some(InputEvent::Input('a'))
+        Some(crate::Event::Input('a'))
     ));
 }
 
@@ -184,7 +184,7 @@ fn event_name_roundtrip() {
 #[test]
 fn mouse_events_have_no_name() {
     assert_eq!(
-        InputEvent::MouseClick {
+        crate::Event::MouseClick {
             row: 0,
             col: 0,
             button: "left".into()
@@ -193,7 +193,7 @@ fn mouse_events_have_no_name() {
         None
     );
     assert_eq!(
-        InputEvent::MouseRelease {
+        crate::Event::MouseRelease {
             row: 0,
             col: 0,
             button: "left".into()
@@ -202,7 +202,7 @@ fn mouse_events_have_no_name() {
         None
     );
     assert_eq!(
-        InputEvent::MouseDrag {
+        crate::Event::MouseDrag {
             row: 0,
             col: 0,
             button: "left".into()
@@ -210,7 +210,7 @@ fn mouse_events_have_no_name() {
         .name(),
         None
     );
-    assert_eq!(InputEvent::MouseMove { row: 0, col: 0 }.name(), None);
+    assert_eq!(crate::Event::MouseMove { row: 0, col: 0 }.name(), None);
 }
 
 #[test]

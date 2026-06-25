@@ -1,6 +1,7 @@
 //! rebuild tests.
 
-use runie_core::event::{AgentEvent, ControlEvent};
+use super::*;
+use runie_core::Event;
 use runie_core::model::{AppState, ChatMessage,  Role};
 use runie_core::Part;
 use runie_core::view::elements::Element;
@@ -24,7 +25,7 @@ fn toggle_expand_affects_all_items() {
         id: "new".into(),
         ..Default::default()
     });
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "Toggle should collapse ALL thoughts and tools globally"
@@ -47,7 +48,7 @@ fn toggle_thought_rebuilds_cache() {
         .iter()
         .any(|e| matches!(e, Element::ThoughtMarker { .. })));
 
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     state.ensure_fresh();
     let after = state.view.elements_cache().to_vec();
     assert!(
@@ -68,9 +69,9 @@ fn toggle_thought_twice_restores_cache() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     state.ensure_fresh();
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     state.ensure_fresh();
     let cache = state.view.elements_cache().to_vec();
     assert!(
@@ -95,7 +96,7 @@ fn toggle_tool_rebuilds_cache() {
     let before = state.view.elements_cache().to_vec();
     assert!(before.iter().any(|e| matches!(e, Element::ToolDone { .. })));
 
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     state.ensure_fresh();
     let after = state.view.elements_cache().to_vec();
     assert!(
@@ -116,9 +117,9 @@ fn toggle_tool_twice_restores_cache() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     state.ensure_fresh();
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     state.ensure_fresh();
     let cache = state.view.elements_cache().to_vec();
     assert!(
@@ -131,18 +132,18 @@ fn toggle_tool_twice_restores_cache() {
 fn thought_captures_assistant_reasoning() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "I'll list the files.\n".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "TOOL:list_dir:.".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
 
@@ -167,14 +168,14 @@ fn thought_captures_assistant_reasoning() {
 fn assistant_preserved_when_no_tools() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Here is the answer.".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
 
@@ -196,12 +197,12 @@ fn assistant_preserved_when_no_tools() {
 fn tool_stores_output() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".to_string(),
         name: "list_dir".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "file1\nfile2".to_string(),

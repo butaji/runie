@@ -23,12 +23,11 @@
         "fff-indexer-owns-file-picker-results",
         "ui-control-actor-owns-dialog-state"
       ],
-      "file": "tasks/actor-lifecycle-and-handle-registry.md",
-      "title": ""
+      "file": "tasks/actor-lifecycle-and-handle-registry.md"
     },
     {
       "id": "actor-owned-state-ssot",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",
@@ -54,8 +53,7 @@
         "unified-dsl-intents-for-state-mutations",
         "remove-direct-appstate-mutations"
       ],
-      "file": "tasks/actor-owned-state-ssot.md",
-      "title": ""
+      "file": "tasks/actor-owned-state-ssot.md"
     },
     {
       "id": "add-engine-tool-tests",
@@ -64,11 +62,8 @@
       "category": "Tools",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/add-engine-tool-tests.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/add-engine-tool-tests.md"
     },
     {
       "id": "add-tool-output-constructors",
@@ -77,26 +72,18 @@
       "category": "Tools",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/add-tool-output-constructors.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/add-tool-output-constructors.md"
     },
     {
       "id": "aggressive-event-consolidation",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
-      "depends_on": [
-        "simplify-event-vocabulary"
-      ],
-      "blocks": [
-        "simplify-event-module-layout"
-      ],
-      "file": "tasks/aggressive-event-consolidation.md",
-      "title": ""
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/aggressive-event-consolidation.md"
     },
     {
       "id": "app-state-read-only-projection",
@@ -120,8 +107,7 @@
         "env-actor-owns-git-cwd",
         "fff-indexer-owns-file-picker-results"
       ],
-      "file": "tasks/app-state-read-only-projection.md",
-      "title": ""
+      "file": "tasks/app-state-read-only-projection.md"
     },
     {
       "id": "arch-review-2026-06",
@@ -133,8 +119,7 @@
       "blocks": [
         "many individual fixup tasks created by this review"
       ],
-      "file": "tasks/arch-review-2026-06.md",
-      "title": ""
+      "file": "tasks/arch-review-2026-06.md"
     },
     {
       "id": "audit-borrow-workarounds",
@@ -145,41 +130,32 @@
       "depends_on": [
         "consolidate-login-flow-handlers"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/audit-borrow-workarounds.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/audit-borrow-workarounds.md"
     },
     {
       "id": "audit-simplify-reduce-roadmap",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/audit-simplify-reduce-roadmap.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/audit-simplify-reduce-roadmap.md"
     },
     {
       "id": "canonicalize-chat-message",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P0",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/canonicalize-chat-message.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/canonicalize-chat-message.md"
     },
     {
       "id": "canonicalize-tool-call",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P0",
@@ -187,8 +163,7 @@
       "blocks": [
         "extract-streaming-tool-parser"
       ],
-      "file": "tasks/canonicalize-tool-call.md",
-      "title": ""
+      "file": "tasks/canonicalize-tool-call.md"
     },
     {
       "id": "centralize-error-type",
@@ -197,11 +172,8 @@
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/centralize-error-type.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/centralize-error-type.md"
     },
     {
       "id": "centralize-test-verification",
@@ -213,21 +185,17 @@
       "blocks": [
         "extract-ci-setup-action"
       ],
-      "file": "tasks/centralize-test-verification.md",
-      "title": ""
+      "file": "tasks/centralize-test-verification.md"
     },
     {
       "id": "collapse-effect-payload-indirection",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/collapse-effect-payload-indirection.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/collapse-effect-payload-indirection.md"
     },
     {
       "id": "collapse-event-aliases",
@@ -236,11 +204,8 @@
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/collapse-event-aliases.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/collapse-event-aliases.md"
     },
     {
       "id": "collapse-event-variants-subdir",
@@ -249,11 +214,8 @@
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/collapse-event-variants-subdir.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/collapse-event-variants-subdir.md"
     },
     {
       "id": "collapse-headless-binaries-into-one-cli",
@@ -264,11 +226,8 @@
       "depends_on": [
         "extract-headless-cli-helper"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/collapse-headless-binaries-into-one-cli.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/collapse-headless-binaries-into-one-cli.md"
     },
     {
       "id": "collapse-provider-wrappers",
@@ -277,11 +236,8 @@
       "category": "Architecture / Actors",
       "priority": "P0",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/collapse-provider-wrappers.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/collapse-provider-wrappers.md"
     },
     {
       "id": "collapse-tool-runtime-traits",
@@ -292,11 +248,8 @@
       "depends_on": [
         "delete-dead-tool-runtime-trait"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/collapse-tool-runtime-traits.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/collapse-tool-runtime-traits.md"
     },
     {
       "id": "completion-actor-owns-completion-state",
@@ -310,11 +263,8 @@
         "app-state-read-only-projection",
         "input-actor-owns-input-state"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/completion-actor-owns-completion-state.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/completion-actor-owns-completion-state.md"
     },
     {
       "id": "config-ssot-via-configactor",
@@ -326,11 +276,8 @@
         "event-taxonomy-for-actor-state-sync",
         "app-state-read-only-projection"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/config-ssot-via-configactor.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/config-ssot-via-configactor.md"
     },
     {
       "id": "consolidate-config-modules-into-dir",
@@ -343,11 +290,8 @@
         "consolidate-login-flow-handlers",
         "split-runie-core-into-domain-and-io-crates"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/consolidate-config-modules-into-dir.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/consolidate-config-modules-into-dir.md"
     },
     {
       "id": "consolidate-dual-path-modules",
@@ -356,11 +300,8 @@
       "category": "Configuration",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/consolidate-dual-path-modules.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/consolidate-dual-path-modules.md"
     },
     {
       "id": "consolidate-login-flow-all-files",
@@ -371,11 +312,8 @@
       "depends_on": [
         "consolidate-login-flow-handlers"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/consolidate-login-flow-all-files.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/consolidate-login-flow-all-files.md"
     },
     {
       "id": "consolidate-login-flow-handlers",
@@ -384,11 +322,8 @@
       "category": "Core / State",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/consolidate-login-flow-handlers.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/consolidate-login-flow-handlers.md"
     },
     {
       "id": "consolidate-login-logout-tests",
@@ -399,11 +334,8 @@
       "depends_on": [
         "consolidate-login-flow-handlers"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/consolidate-login-logout-tests.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/consolidate-login-logout-tests.md"
     },
     {
       "id": "consolidate-mark-dirty-calls",
@@ -412,11 +344,8 @@
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/consolidate-mark-dirty-calls.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/consolidate-mark-dirty-calls.md"
     },
     {
       "id": "consolidate-settings-providers-dialog",
@@ -429,11 +358,8 @@
         "actor-owned-state-ssot",
         "config-ssot-via-configactor"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/consolidate-settings-providers-dialog.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/consolidate-settings-providers-dialog.md"
     },
     {
       "id": "consolidate-slash-command-handlers",
@@ -442,11 +368,8 @@
       "category": "Input / Commands",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/consolidate-slash-command-handlers.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/consolidate-slash-command-handlers.md"
     },
     {
       "id": "consolidate-tiny-binary-crates",
@@ -455,11 +378,8 @@
       "category": "Architecture / Actors",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/consolidate-tiny-binary-crates.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/consolidate-tiny-binary-crates.md"
     },
     {
       "id": "consolidate-update-dialog-files",
@@ -470,11 +390,8 @@
       "depends_on": [
         "rename-update-dialog-panel"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/consolidate-update-dialog-files.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/consolidate-update-dialog-files.md"
     },
     {
       "id": "declarative-actor-dsl",
@@ -500,8 +417,7 @@
         "fff-indexer-owns-file-picker-results",
         "unified-dsl-intents-for-state-mutations"
       ],
-      "file": "tasks/declarative-actor-dsl.md",
-      "title": ""
+      "file": "tasks/declarative-actor-dsl.md"
     },
     {
       "id": "decouple-appstate-from-view-cache",
@@ -515,8 +431,7 @@
       "blocks": [
         "rename-core-ui-to-view"
       ],
-      "file": "tasks/decouple-appstate-from-view-cache.md",
-      "title": ""
+      "file": "tasks/decouple-appstate-from-view-cache.md"
     },
     {
       "id": "dedupe-config-actor-mutations",
@@ -532,8 +447,7 @@
       "blocks": [
         "config-ssot-via-configactor"
       ],
-      "file": "tasks/dedupe-config-actor-mutations.md",
-      "title": ""
+      "file": "tasks/dedupe-config-actor-mutations.md"
     },
     {
       "id": "dedupe-fresh-state-test-helper",
@@ -542,11 +456,8 @@
       "category": "Architecture / Testing",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/dedupe-fresh-state-test-helper.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/dedupe-fresh-state-test-helper.md"
     },
     {
       "id": "dedupe-git-status-formatter",
@@ -557,11 +468,8 @@
       "depends_on": [
         "replace-git2-with-cli"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/dedupe-git-status-formatter.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/dedupe-git-status-formatter.md"
     },
     {
       "id": "dedupe-messages-changed-ensure-fresh",
@@ -570,11 +478,8 @@
       "category": "Architecture / Testing",
       "priority": "P3",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/dedupe-messages-changed-ensure-fresh.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/dedupe-messages-changed-ensure-fresh.md"
     },
     {
       "id": "dedupe-scoped-model-toggle",
@@ -583,11 +488,8 @@
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/dedupe-scoped-model-toggle.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/dedupe-scoped-model-toggle.md"
     },
     {
       "id": "dedupe-tool-execution-loop",
@@ -598,11 +500,8 @@
       "depends_on": [
         "extract-streaming-tool-parser"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/dedupe-tool-execution-loop.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/dedupe-tool-execution-loop.md"
     },
     {
       "id": "dedupe-turn-complete-last-calls",
@@ -611,11 +510,8 @@
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/dedupe-turn-complete-last-calls.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/dedupe-turn-complete-last-calls.md"
     },
     {
       "id": "dedupe-update-input-history",
@@ -624,11 +520,8 @@
       "category": "Input / Commands",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/dedupe-update-input-history.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/dedupe-update-input-history.md"
     },
     {
       "id": "dedupe-yolo-sink-setup",
@@ -637,11 +530,8 @@
       "category": "Architecture / Actors",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/dedupe-yolo-sink-setup.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/dedupe-yolo-sink-setup.md"
     },
     {
       "id": "delete-async-io-bridge",
@@ -652,11 +542,8 @@
       "depends_on": [
         "finish-io-migration"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/delete-async-io-bridge.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/delete-async-io-bridge.md"
     },
     {
       "id": "delete-dead-history-action-vimnav",
@@ -665,11 +552,8 @@
       "category": "Core / State",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/delete-dead-history-action-vimnav.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/delete-dead-history-action-vimnav.md"
     },
     {
       "id": "delete-dead-theme-async-loaders",
@@ -678,11 +562,8 @@
       "category": "Configuration",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/delete-dead-theme-async-loaders.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/delete-dead-theme-async-loaders.md"
     },
     {
       "id": "delete-dead-tuple-actor-handles-fields",
@@ -691,11 +572,8 @@
       "category": "Architecture / Actors",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/delete-dead-tuple-actor-handles-fields.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/delete-dead-tuple-actor-handles-fields.md"
     },
     {
       "id": "delete-provider-message-enum",
@@ -704,11 +582,8 @@
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/delete-provider-message-enum.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/delete-provider-message-enum.md"
     },
     {
       "id": "delete-runie-core-confirmation",
@@ -717,11 +592,8 @@
       "category": "Core / State",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/delete-runie-core-confirmation.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/delete-runie-core-confirmation.md"
     },
     {
       "id": "delete-runie-core-skill-module",
@@ -730,11 +602,8 @@
       "category": "Core / State",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/delete-runie-core-skill-module.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/delete-runie-core-skill-module.md"
     },
     {
       "id": "delete-runie-core-utils",
@@ -743,11 +612,8 @@
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/delete-runie-core-utils.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/delete-runie-core-utils.md"
     },
     {
       "id": "delete-tui-ipc-reexport-shim",
@@ -756,11 +622,8 @@
       "category": "Configuration",
       "priority": "P0",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/delete-tui-ipc-reexport-shim.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/delete-tui-ipc-reexport-shim.md"
     },
     {
       "id": "derive-confirmation-from-permissions",
@@ -771,24 +634,18 @@
       "depends_on": [
         "unify-permission-gate"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/derive-confirmation-from-permissions.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/derive-confirmation-from-permissions.md"
     },
     {
       "id": "drop-event-aliases",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/drop-event-aliases.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/drop-event-aliases.md"
     },
     {
       "id": "drop-event-bus-replay-buffer",
@@ -800,8 +657,7 @@
       "blocks": [
         "drop-small-stdlib-replaceable-deps"
       ],
-      "file": "tasks/drop-event-bus-replay-buffer.md",
-      "title": ""
+      "file": "tasks/drop-event-bus-replay-buffer.md"
     },
     {
       "id": "drop-small-stdlib-replaceable-deps",
@@ -812,11 +668,8 @@
       "depends_on": [
         "drop-event-bus-replay-buffer"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/drop-small-stdlib-replaceable-deps.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/drop-small-stdlib-replaceable-deps.md"
     },
     {
       "id": "drop-thiserror-and-async-trait-deps",
@@ -825,11 +678,8 @@
       "category": "Configuration",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/drop-thiserror-and-async-trait-deps.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/drop-thiserror-and-async-trait-deps.md"
     },
     {
       "id": "env-actor-owns-git-cwd",
@@ -843,11 +693,8 @@
         "app-state-read-only-projection",
         "actor-lifecycle-and-handle-registry"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/env-actor-owns-git-cwd.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/env-actor-owns-git-cwd.md"
     },
     {
       "id": "event-taxonomy-for-actor-state-sync",
@@ -873,8 +720,7 @@
         "unified-dsl-intents-for-state-mutations",
         "app-state-read-only-projection"
       ],
-      "file": "tasks/event-taxonomy-for-actor-state-sync.md",
-      "title": ""
+      "file": "tasks/event-taxonomy-for-actor-state-sync.md"
     },
     {
       "id": "extract-appstate-helpers",
@@ -883,11 +729,8 @@
       "category": "Core / State",
       "priority": "P3",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/extract-appstate-helpers.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/extract-appstate-helpers.md"
     },
     {
       "id": "extract-ci-setup-action",
@@ -898,11 +741,8 @@
       "depends_on": [
         "centralize-test-verification"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/extract-ci-setup-action.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/extract-ci-setup-action.md"
     },
     {
       "id": "extract-streaming-tool-parser",
@@ -916,8 +756,7 @@
       "blocks": [
         "dedupe-tool-execution-loop"
       ],
-      "file": "tasks/extract-streaming-tool-parser.md",
-      "title": ""
+      "file": "tasks/extract-streaming-tool-parser.md"
     },
     {
       "id": "fff-indexer-owns-file-picker-results",
@@ -931,11 +770,8 @@
         "app-state-read-only-projection",
         "actor-lifecycle-and-handle-registry"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/fff-indexer-owns-file-picker-results.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/fff-indexer-owns-file-picker-results.md"
     },
     {
       "id": "finish-io-migration",
@@ -949,21 +785,17 @@
       "blocks": [
         "delete-async-io-bridge"
       ],
-      "file": "tasks/finish-io-migration.md",
-      "title": ""
+      "file": "tasks/finish-io-migration.md"
     },
     {
       "id": "fix-duplicate-cargo-toml-keys",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/fix-duplicate-cargo-toml-keys.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/fix-duplicate-cargo-toml-keys.md"
     },
     {
       "id": "fix-headless-runtime-spinwait",
@@ -972,11 +804,8 @@
       "category": "Architecture / Actors",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/fix-headless-runtime-spinwait.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/fix-headless-runtime-spinwait.md"
     },
     {
       "id": "fix-main-unix-epoch-unwrap",
@@ -985,11 +814,8 @@
       "category": "TUI / Rendering",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/fix-main-unix-epoch-unwrap.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/fix-main-unix-epoch-unwrap.md"
     },
     {
       "id": "fix-permission-gate-rename-in-testing",
@@ -998,11 +824,8 @@
       "category": "Architecture / Testing",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/fix-permission-gate-rename-in-testing.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/fix-permission-gate-rename-in-testing.md"
     },
     {
       "id": "fix-render-task-blocking-io",
@@ -1011,11 +834,8 @@
       "category": "TUI / Rendering",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/fix-render-task-blocking-io.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/fix-render-task-blocking-io.md"
     },
     {
       "id": "fix-runie-tui-dead-code-warnings",
@@ -1024,11 +844,8 @@
       "category": "TUI / Rendering",
       "priority": "P0",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/fix-runie-tui-dead-code-warnings.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/fix-runie-tui-dead-code-warnings.md"
     },
     {
       "id": "fix-session-store-load-alignment",
@@ -1037,11 +854,8 @@
       "category": "Sessions",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/fix-session-store-load-alignment.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/fix-session-store-load-alignment.md"
     },
     {
       "id": "flatten-update-login-flow-tests-dir",
@@ -1052,11 +866,8 @@
       "depends_on": [
         "consolidate-dual-path-modules"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/flatten-update-login-flow-tests-dir.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/flatten-update-login-flow-tests-dir.md"
     },
     {
       "id": "fold-protocol-into-core",
@@ -1065,11 +876,8 @@
       "category": "Architecture / Actors",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/fold-protocol-into-core.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/fold-protocol-into-core.md"
     },
     {
       "id": "fold-runie-engine-into-agent",
@@ -1078,24 +886,18 @@
       "category": "Architecture / Actors",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/fold-runie-engine-into-agent.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/fold-runie-engine-into-agent.md"
     },
     {
       "id": "fold-state-into-model-state",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/fold-state-into-model-state.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/fold-state-into-model-state.md"
     },
     {
       "id": "fold-testing-into-agent-tests",
@@ -1104,11 +906,8 @@
       "category": "Configuration",
       "priority": "P3",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/fold-testing-into-agent-tests.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/fold-testing-into-agent-tests.md"
     },
     {
       "id": "gate-or-move-single-consumer-core-modules",
@@ -1119,11 +918,8 @@
       "depends_on": [
         "split-runie-core-into-domain-and-io-crates"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/gate-or-move-single-consumer-core-modules.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/gate-or-move-single-consumer-core-modules.md"
     },
     {
       "id": "generate-config-schema-from-code",
@@ -1132,11 +928,8 @@
       "category": "Configuration",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/generate-config-schema-from-code.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/generate-config-schema-from-code.md"
     },
     {
       "id": "generate-ui-elements-from-model",
@@ -1147,15 +940,12 @@
       "depends_on": [
         "rename-core-ui-to-view"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/generate-ui-elements-from-model.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/generate-ui-elements-from-model.md"
     },
     {
       "id": "generic-actor-reply",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P1",
@@ -1163,8 +953,7 @@
       "blocks": [
         "reduce-actor-handle-boilerplate"
       ],
-      "file": "tasks/generic-actor-reply.md",
-      "title": ""
+      "file": "tasks/generic-actor-reply.md"
     },
     {
       "id": "group-session-modules-into-dir",
@@ -1175,24 +964,18 @@
       "depends_on": [
         "consolidate-dual-path-modules"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/group-session-modules-into-dir.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/group-session-modules-into-dir.md"
     },
     {
       "id": "hoist-cargo-workspace-deps",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/hoist-cargo-workspace-deps.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/hoist-cargo-workspace-deps.md"
     },
     {
       "id": "inline-or-document-core-ui-shim",
@@ -1201,11 +984,8 @@
       "category": "Configuration",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/inline-or-document-core-ui-shim.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/inline-or-document-core-ui-shim.md"
     },
     {
       "id": "inline-tui-ipc-reexport",
@@ -1214,11 +994,8 @@
       "category": "Configuration",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/inline-tui-ipc-reexport.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/inline-tui-ipc-reexport.md"
     },
     {
       "id": "input-actor-owns-input-state",
@@ -1235,8 +1012,7 @@
         "turn-actor-owns-agent-turn-state",
         "completion-actor-owns-completion-state"
       ],
-      "file": "tasks/input-actor-owns-input-state.md",
-      "title": ""
+      "file": "tasks/input-actor-owns-input-state.md"
     },
     {
       "id": "introduce-tool-definition-macro",
@@ -1245,11 +1021,8 @@
       "category": "Tools",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/introduce-tool-definition-macro.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/introduce-tool-definition-macro.md"
     },
     {
       "id": "merge-diff-modules",
@@ -1258,11 +1031,8 @@
       "category": "TUI / Rendering",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/merge-diff-modules.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/merge-diff-modules.md"
     },
     {
       "id": "merge-tool-status-state",
@@ -1271,11 +1041,8 @@
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/merge-tool-status-state.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/merge-tool-status-state.md"
     },
     {
       "id": "move-actor-trait-into-actors-dir",
@@ -1284,11 +1051,8 @@
       "category": "Architecture / Actors",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/move-actor-trait-into-actors-dir.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/move-actor-trait-into-actors-dir.md"
     },
     {
       "id": "move-provider-catalog-to-provider-crate",
@@ -1299,11 +1063,8 @@
       "depends_on": [
         "unify-provider-modules"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/move-provider-catalog-to-provider-crate.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/move-provider-catalog-to-provider-crate.md"
     },
     {
       "id": "move-tui-effects-into-io-actor",
@@ -1317,8 +1078,7 @@
       "blocks": [
         "collapse-effect-payload-indirection"
       ],
-      "file": "tasks/move-tui-effects-into-io-actor.md",
-      "title": ""
+      "file": "tasks/move-tui-effects-into-io-actor.md"
     },
     {
       "id": "notification-actor-owns-transient-messages",
@@ -1331,11 +1091,8 @@
         "event-taxonomy-for-actor-state-sync",
         "app-state-read-only-projection"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/notification-actor-owns-transient-messages.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/notification-actor-owns-transient-messages.md"
     },
     {
       "id": "permission-actor-owns-approvals",
@@ -1348,11 +1105,8 @@
         "event-taxonomy-for-actor-state-sync",
         "app-state-read-only-projection"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/permission-actor-owns-approvals.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/permission-actor-owns-approvals.md"
     },
     {
       "id": "r5-conversation-sanitize-pipeline",
@@ -1361,11 +1115,8 @@
       "category": "Core / State",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/r5-conversation-sanitize-pipeline.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/r5-conversation-sanitize-pipeline.md"
     },
     {
       "id": "r5-extract-tool-stream",
@@ -1378,8 +1129,7 @@
         "r5-provider-protocol-trait",
         "r5-partial-json-repair"
       ],
-      "file": "tasks/r5-extract-tool-stream.md",
-      "title": ""
+      "file": "tasks/r5-extract-tool-stream.md"
     },
     {
       "id": "r5-markdown-healing-stream",
@@ -1388,11 +1138,8 @@
       "category": "TUI / Rendering",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/r5-markdown-healing-stream.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/r5-markdown-healing-stream.md"
     },
     {
       "id": "r5-paced-text-rendering",
@@ -1401,11 +1148,8 @@
       "category": "TUI / Rendering",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/r5-paced-text-rendering.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/r5-paced-text-rendering.md"
     },
     {
       "id": "r5-partial-json-repair",
@@ -1416,11 +1160,8 @@
       "depends_on": [
         "r5-extract-tool-stream"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/r5-partial-json-repair.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/r5-partial-json-repair.md"
     },
     {
       "id": "r5-parts-canonical-migration",
@@ -1431,11 +1172,8 @@
       "depends_on": [
         "r5-populate-parts-streaming"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/r5-parts-canonical-migration.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/r5-parts-canonical-migration.md"
     },
     {
       "id": "r5-per-channel-decoders",
@@ -1446,11 +1184,8 @@
       "depends_on": [
         "r5-populate-parts-streaming"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/r5-per-channel-decoders.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/r5-per-channel-decoders.md"
     },
     {
       "id": "r5-populate-parts-streaming",
@@ -1465,8 +1200,7 @@
         "r5-per-channel-decoders",
         "r5-parts-canonical-migration"
       ],
-      "file": "tasks/r5-populate-parts-streaming.md",
-      "title": ""
+      "file": "tasks/r5-populate-parts-streaming.md"
     },
     {
       "id": "r5-provider-protocol-trait",
@@ -1477,11 +1211,8 @@
       "depends_on": [
         "r5-extract-tool-stream"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/r5-provider-protocol-trait.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/r5-provider-protocol-trait.md"
     },
     {
       "id": "r5-think-filter",
@@ -1492,11 +1223,8 @@
       "depends_on": [
         "r5-add-lifecycle-events"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/r5-think-filter.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/r5-think-filter.md"
     },
     {
       "id": "reconsider-clipboard-image-deps",
@@ -1505,11 +1233,8 @@
       "category": "Configuration",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/reconsider-clipboard-image-deps.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/reconsider-clipboard-image-deps.md"
     },
     {
       "id": "reconsider-notify-config-watcher",
@@ -1518,11 +1243,8 @@
       "category": "Configuration",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/reconsider-notify-config-watcher.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/reconsider-notify-config-watcher.md"
     },
     {
       "id": "reconsider-redb-session-store",
@@ -1531,11 +1253,8 @@
       "category": "Sessions",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/reconsider-redb-session-store.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/reconsider-redb-session-store.md"
     },
     {
       "id": "reconsider-schemars-jsonschema",
@@ -1544,11 +1263,8 @@
       "category": "Configuration",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/reconsider-schemars-jsonschema.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/reconsider-schemars-jsonschema.md"
     },
     {
       "id": "reconsider-tiktoken-rs",
@@ -1557,11 +1273,8 @@
       "category": "Configuration",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/reconsider-tiktoken-rs.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/reconsider-tiktoken-rs.md"
     },
     {
       "id": "reduce-actor-handle-boilerplate",
@@ -1572,11 +1285,8 @@
       "depends_on": [
         "generic-actor-reply"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/reduce-actor-handle-boilerplate.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/reduce-actor-handle-boilerplate.md"
     },
     {
       "id": "relocate-loose-tests-files",
@@ -1587,11 +1297,8 @@
       "depends_on": [
         "consolidate-dual-path-modules"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/relocate-loose-tests-files.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/relocate-loose-tests-files.md"
     },
     {
       "id": "relocate-stray-tool-parser-tests",
@@ -1602,11 +1309,8 @@
       "depends_on": [
         "consolidate-dual-path-modules"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/relocate-stray-tool-parser-tests.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/relocate-stray-tool-parser-tests.md"
     },
     {
       "id": "remove-appstate-cfg-test-branches",
@@ -1615,11 +1319,8 @@
       "category": "Core / State",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/remove-appstate-cfg-test-branches.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/remove-appstate-cfg-test-branches.md"
     },
     {
       "id": "remove-direct-appstate-mutations",
@@ -1642,11 +1343,8 @@
         "config-ssot-via-configactor",
         "actor-lifecycle-and-handle-registry"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/remove-direct-appstate-mutations.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/remove-direct-appstate-mutations.md"
     },
     {
       "id": "remove-empty-match-arms",
@@ -1655,11 +1353,8 @@
       "category": "Core / State",
       "priority": "P3",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/remove-empty-match-arms.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/remove-empty-match-arms.md"
     },
     {
       "id": "remove-login-config-test-shim",
@@ -1671,11 +1366,8 @@
         "actor-owned-state-ssot",
         "config-ssot-via-configactor"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/remove-login-config-test-shim.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/remove-login-config-test-shim.md"
     },
     {
       "id": "remove-sleeps-from-automatic-tests",
@@ -1684,11 +1376,8 @@
       "category": "Core / State",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/remove-sleeps-from-automatic-tests.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/remove-sleeps-from-automatic-tests.md"
     },
     {
       "id": "rename-core-ui-to-view",
@@ -1699,24 +1388,18 @@
       "depends_on": [
         "fold-state-into-model-state"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/rename-core-ui-to-view.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/rename-core-ui-to-view.md"
     },
     {
       "id": "rename-model-snapshot-to-compaction",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/rename-model-snapshot-to-compaction.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/rename-model-snapshot-to-compaction.md"
     },
     {
       "id": "rename-test-submission-id",
@@ -1725,11 +1408,8 @@
       "category": "Architecture / Testing",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/rename-test-submission-id.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/rename-test-submission-id.md"
     },
     {
       "id": "rename-update-dialog-panel",
@@ -1738,11 +1418,8 @@
       "category": "Configuration",
       "priority": "P3",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/rename-update-dialog-panel.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/rename-update-dialog-panel.md"
     },
     {
       "id": "replace-git2-with-cli",
@@ -1753,11 +1430,8 @@
       "depends_on": [
         "finish-io-migration"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/replace-git2-with-cli.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/replace-git2-with-cli.md"
     },
     {
       "id": "replace-single-use-deps-with-stdlib",
@@ -1766,11 +1440,8 @@
       "category": "Configuration",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/replace-single-use-deps-with-stdlib.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/replace-single-use-deps-with-stdlib.md"
     },
     {
       "id": "session-actor-owns-session-state",
@@ -1786,8 +1457,7 @@
       "blocks": [
         "turn-actor-owns-agent-turn-state"
       ],
-      "file": "tasks/session-actor-owns-session-state.md",
-      "title": ""
+      "file": "tasks/session-actor-owns-session-state.md"
     },
     {
       "id": "share-fff-error-helpers",
@@ -1796,24 +1466,18 @@
       "category": "Tools",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/share-fff-error-helpers.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/share-fff-error-helpers.md"
     },
     {
       "id": "share-minimax-sse-fixtures",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Architecture / Testing",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/share-minimax-sse-fixtures.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/share-minimax-sse-fixtures.md"
     },
     {
       "id": "shrink-tasks-planning-debt",
@@ -1822,11 +1486,8 @@
       "category": "Configuration",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/shrink-tasks-planning-debt.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/shrink-tasks-planning-debt.md"
     },
     {
       "id": "simplify-actor-trait",
@@ -1837,11 +1498,8 @@
       "depends_on": [
         "unify-persistence-actors"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/simplify-actor-trait.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/simplify-actor-trait.md"
     },
     {
       "id": "single-source-dev-commands",
@@ -1850,11 +1508,8 @@
       "category": "Configuration",
       "priority": "P3",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/single-source-dev-commands.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/single-source-dev-commands.md"
     },
     {
       "id": "single-source-testing-docs",
@@ -1863,11 +1518,8 @@
       "category": "Configuration",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/single-source-testing-docs.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/single-source-testing-docs.md"
     },
     {
       "id": "split-files-at-limit-round-2",
@@ -1876,11 +1528,8 @@
       "category": "Architecture / Refactoring",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/split-files-at-limit-round-2.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/split-files-at-limit-round-2.md"
     },
     {
       "id": "split-runie-core-into-domain-and-io-crates",
@@ -1899,8 +1548,7 @@
         "unify-duplicate-module-names-core-tui",
         "consolidate-config-modules-into-dir"
       ],
-      "file": "tasks/split-runie-core-into-domain-and-io-crates.md",
-      "title": ""
+      "file": "tasks/split-runie-core-into-domain-and-io-crates.md"
     },
     {
       "id": "standardize-test-layout-inline",
@@ -1911,11 +1559,8 @@
       "depends_on": [
         "relocate-loose-tests-files"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/standardize-test-layout-inline.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/standardize-test-layout-inline.md"
     },
     {
       "id": "sweep-allow-suppressions",
@@ -1927,11 +1572,8 @@
         "gate-or-implement-mcp-client",
         "delete-config-reload-shim"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/sweep-allow-suppressions.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/sweep-allow-suppressions.md"
     },
     {
       "id": "sweep-to-string-allocs",
@@ -1940,11 +1582,8 @@
       "category": "Core / State",
       "priority": "P3",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/sweep-to-string-allocs.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/sweep-to-string-allocs.md"
     },
     {
       "id": "test-actor-harness",
@@ -1967,8 +1606,7 @@
         "notification-actor-owns-transient-messages",
         "trust-actor-owns-trust-decisions"
       ],
-      "file": "tasks/test-actor-harness.md",
-      "title": ""
+      "file": "tasks/test-actor-harness.md"
     },
     {
       "id": "theme-color-accessor-macro",
@@ -1977,11 +1615,8 @@
       "category": "TUI / Rendering",
       "priority": "P3",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/theme-color-accessor-macro.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/theme-color-accessor-macro.md"
     },
     {
       "id": "tighten-build-lint-complexity-heuristic",
@@ -1990,11 +1625,8 @@
       "category": "Architecture / Refactoring",
       "priority": "P3",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/tighten-build-lint-complexity-heuristic.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/tighten-build-lint-complexity-heuristic.md"
     },
     {
       "id": "trust-actor-owns-trust-decisions",
@@ -2007,11 +1639,8 @@
         "event-taxonomy-for-actor-state-sync",
         "app-state-read-only-projection"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/trust-actor-owns-trust-decisions.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/trust-actor-owns-trust-decisions.md"
     },
     {
       "id": "turn-actor-owns-agent-turn-state",
@@ -2026,11 +1655,8 @@
         "session-actor-owns-session-state",
         "input-actor-owns-input-state"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/turn-actor-owns-agent-turn-state.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/turn-actor-owns-agent-turn-state.md"
     },
     {
       "id": "ui-control-actor-owns-dialog-state",
@@ -2049,8 +1675,7 @@
         "turn-actor-owns-agent-turn-state",
         "remove-direct-appstate-mutations"
       ],
-      "file": "tasks/ui-control-actor-owns-dialog-state.md",
-      "title": ""
+      "file": "tasks/ui-control-actor-owns-dialog-state.md"
     },
     {
       "id": "unified-dsl-intents-for-state-mutations",
@@ -2063,11 +1688,8 @@
         "event-taxonomy-for-actor-state-sync",
         "declarative-actor-dsl"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/unified-dsl-intents-for-state-mutations.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/unified-dsl-intents-for-state-mutations.md"
     },
     {
       "id": "unify-approval-decision",
@@ -2078,11 +1700,8 @@
       "depends_on": [
         "unify-permission-gate"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/unify-approval-decision.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/unify-approval-decision.md"
     },
     {
       "id": "unify-build-system-prompt",
@@ -2091,11 +1710,8 @@
       "category": "Core / State",
       "priority": "P2",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/unify-build-system-prompt.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/unify-build-system-prompt.md"
     },
     {
       "id": "unify-duplicate-module-names-core-tui",
@@ -2106,11 +1722,8 @@
       "depends_on": [
         "split-runie-core-into-domain-and-io-crates"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/unify-duplicate-module-names-core-tui.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/unify-duplicate-module-names-core-tui.md"
     },
     {
       "id": "unify-event-vocabulary",
@@ -2119,11 +1732,8 @@
       "category": "Architecture / Actors",
       "priority": "P0",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/unify-event-vocabulary.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/unify-event-vocabulary.md"
     },
     {
       "id": "unify-markdown-rendering",
@@ -2132,11 +1742,8 @@
       "category": "TUI / Rendering",
       "priority": "P3",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/unify-markdown-rendering.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/unify-markdown-rendering.md"
     },
     {
       "id": "unify-permission-gate",
@@ -2149,21 +1756,17 @@
         "unify-approval-decision",
         "derive-confirmation-from-permissions"
       ],
-      "file": "tasks/unify-permission-gate.md",
-      "title": ""
+      "file": "tasks/unify-permission-gate.md"
     },
     {
       "id": "unify-persistence-actors",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/unify-persistence-actors.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/unify-persistence-actors.md"
     },
     {
       "id": "unify-provider-modules",
@@ -2172,11 +1775,8 @@
       "category": "Architecture / Actors",
       "priority": "P1",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/unify-provider-modules.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/unify-provider-modules.md"
     },
     {
       "id": "use-workspace-deps-in-runie-testing",
@@ -2185,11 +1785,8 @@
       "category": "Configuration",
       "priority": "P3",
       "depends_on": [],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/use-workspace-deps-in-runie-testing.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/use-workspace-deps-in-runie-testing.md"
     },
     {
       "id": "view-actor-owns-view-state",
@@ -2205,22 +1802,8 @@
         "input-actor-owns-input-state",
         "ui-control-actor-owns-dialog-state"
       ],
-      "blocks": [
-        "none"
-      ],
-      "file": "tasks/view-actor-owns-view-state.md",
-      "title": ""
+      "blocks": [],
+      "file": "tasks/view-actor-owns-view-state.md"
     }
-  ],
-  "id": "fold-state-into-model-state",
-  "status": "done",
-  "milestone": "R4",
-  "category": "Core / State",
-  "priority": "P2",
-  "depends_on": [],
-  "blocks": [
-    "none"
-  ],
-  "file": "tasks/fold-state-into-model-state.md",
-  "title": ""
+  ]
 }

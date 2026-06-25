@@ -2,7 +2,7 @@
 
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::event::{AgentEvent, ControlEvent, InputEvent};
+use runie_core::Event;
 use runie_core::AppState;
 
 use super::connect_model;
@@ -35,9 +35,9 @@ fn empty_state_renders_input_prompt() {
 fn user_message_renders() {
     let mut state = AppState::default();
     connect_model(&mut state);
-    state.update(InputEvent::Input('H'));
-    state.update(InputEvent::Input('i'));
-    state.update(InputEvent::Submit);
+    state.update(Event::Input('H'));
+    state.update(Event::Input('i'));
+    state.update(Event::Submit);
     let content = draw_state(&mut state);
     assert!(content.contains("❯ Hi"), "Should render user prefix");
     assert!(content.contains("Hi"), "Should render message content");
@@ -48,13 +48,13 @@ fn agent_response_renders() {
     let mut state = AppState::default();
     connect_model(&mut state);
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
     });
@@ -66,12 +66,12 @@ fn agent_response_renders() {
 fn tool_done_renders() {
     let mut state = AppState::default();
     connect_model(&mut state);
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".to_string(),
         name: "list_files".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: String::new(),
@@ -85,9 +85,9 @@ fn tool_done_renders() {
 fn reset_clears_messages() {
     let mut state = AppState::default();
     connect_model(&mut state);
-    state.update(InputEvent::Input('T'));
-    state.update(InputEvent::Submit);
-    state.update(ControlEvent::Reset);
+    state.update(Event::Input('T'));
+    state.update(Event::Submit);
+    state.update(Event::Reset);
     connect_model(&mut state);
     let content = draw_state(&mut state);
     let count = content.matches("❯ ").count();

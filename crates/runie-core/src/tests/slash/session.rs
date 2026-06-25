@@ -92,7 +92,7 @@ fn new_clears_session_keeps_provider_model() {
     // /new must keep the active model, not revert to the default.
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
-    state.config.model_source = crate::state::ModelSource::UserOverride;
+    state.config.model_source = crate::model::ModelSource::UserOverride;
     state.session.session_display_name = Some("my chat".into());
 
     type_str(&mut state, "hello");

@@ -1,92 +1,64 @@
 //! ListDir tool — lists directory contents.
 
-use crate::tool::define::build_schema;
+use crate::define_tool;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::path::resolve_path_in;
-use runie_core::tool::tool_error;
 use serde_json::Value;
 use std::time::Instant;
-use tokio::fs;
 
 pub struct ListDirTool;
 
-/// Schema definition for list_dir tool.
-fn list_dir_schema() -> Value {
-    build_schema(
-        &[("path", "string", "Directory path to list (default: current directory)")],
-        &[],
-    )
+impl ListDirTool {
+    async fn collect_entries(dir: tokio::fs::ReadDir) -> Vec<String> {
+        let mut names = Vec::new();
+        let mut entries = dir;
+        loop {
+            match entries.next_entry().await {
+                Ok(Some(entry)) => {
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    let suffix = entry.file_type().await.map(|ft| ft.is_dir()).unwrap_or(false);
+                    names.push(format!("{}{}", name, if suffix { "/" } else { "" }));
+                }
+                _ => break,
+            }
+        }
+        names.sort();
+        names
+    }
 }
 
+#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for ListDirTool {
-    fn name(&self) -> &str {
-        "list_dir"
-    }
-
-    fn description(&self) -> &str {
-        "List files and directories at a given path."
-    }
-
-    fn input_schema(&self) -> Value {
-        list_dir_schema()
-    }
-
-    fn is_read_only(&self) -> bool {
-        true
-    }
-
-    fn requires_approval(&self, _input: &Value) -> bool {
-        false
+    define_tool! {
+        name: "list_dir",
+        description: "List files and directories in a given path.",
+        read_only: true,
+        approval: false,
+        fields: {
+            "path": ("string", "Directory path to list (default: current directory)")
+        },
+        required: []
     }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
-        let path = input["path"].as_str().unwrap_or(".");
+        let path = input["path"].as_str().ok_or_else(|| anyhow::anyhow!("path is required"))?;
         let full_path = resolve_path_in(path, &ctx.working_dir);
-        list_dir_impl(&full_path, start).await
+        let tool_args = serde_json::json!({ "path": path });
+        let dir = match tokio::fs::read_dir(&full_path).await {
+            Ok(d) => d,
+            Err(e) => return Ok(ToolOutput {
+                tool_name: "list_dir".into(), tool_args,
+                content: format!("Error reading directory {}: {}", full_path.display(), e),
+                bytes_transferred: None, duration: start.elapsed(), status: ToolStatus::Error,
+            }),
+        };
+        let names = Self::collect_entries(dir).await;
+        let content = if names.is_empty() { "(empty directory)".into() } else { names.join("\n") };
+        Ok(ToolOutput { tool_name: "list_dir".into(), tool_args, content,
+            bytes_transferred: None, duration: start.elapsed(), status: ToolStatus::Success })
     }
-}
-
-async fn list_dir_impl(path: &std::path::Path, start: Instant) -> Result<ToolOutput> {
-    let mut entries = match fs::read_dir(path).await {
-        Ok(e) => e,
-        Err(e) => {
-            return Ok(tool_error(
-                "list_dir",
-                &format!("Error listing {}: {}", path.display(), e),
-                start,
-                false,
-            ))
-        }
-    };
-    let mut lines = Vec::new();
-    while let Ok(Some(entry)) = entries.next_entry().await {
-        lines.push(format_dir_entry(&entry).await);
-    }
-    let content = if lines.is_empty() {
-        "(empty directory)".to_string()
-    } else {
-        lines.join("\n")
-    };
-    Ok(ToolOutput {
-        tool_name: "list_dir".to_string(),
-        tool_args: serde_json::json!({ "path": path }),
-        content,
-        bytes_transferred: None,
-        duration: start.elapsed(),
-        status: ToolStatus::Success,
-    })
-}
-
-async fn format_dir_entry(entry: &tokio::fs::DirEntry) -> String {
-    let name = entry.file_name().to_string_lossy().to_string();
-    let typ = if entry.file_type().await.map(|t| t.is_dir()).unwrap_or(false) {
-        "dir"
-    } else {
-        "file"
-    };
-    format!("{} ({})", name, typ)
 }

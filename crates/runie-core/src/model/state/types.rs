@@ -2,12 +2,12 @@
 
 /// A file entry from the FFF indexer for the file picker.
 #[derive(Clone, Debug)]
-pub struct FffFileEntry {
-    pub name: String,
-    pub path: String,
-    pub is_dir: bool,
-    pub score: f64,
-    pub git_status: Option<String>,
+pub(crate) struct FffFileEntry {
+    pub(crate) name: String,
+    pub(crate) path: String,
+    pub(crate) is_dir: bool,
+    pub(crate) score: f64,
+    pub(crate) git_status: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

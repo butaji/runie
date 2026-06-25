@@ -1,5 +1,5 @@
 use super::*;
-use crate::event::InputEvent;
+use crate::Event;
 use crate::model::AppState;
 
 /// Type a slash command directly into the input and submit it.
@@ -8,7 +8,7 @@ use crate::model::AppState;
 pub(super) fn run_slash(state: &mut AppState, text: &str) {
     state.input.input = text.to_string();
     state.input.cursor_pos = text.len();
-    state.update(InputEvent::Submit);
+    state.update(crate::Event::Submit);
 }
 
 /// Execute the handler function inside a command's flow, ignoring any

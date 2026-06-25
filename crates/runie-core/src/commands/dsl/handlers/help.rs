@@ -7,7 +7,7 @@ use crate::model::AppState;
 use super::spec::{CommandKind, CommandSpec};
 
 fn quit(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::event::ControlEvent::Quit)
+    CommandResult::Event(crate::Event::Quit)
 }
 
 static CORE_COMMANDS: &[CommandSpec] = &[

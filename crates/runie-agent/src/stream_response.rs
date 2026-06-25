@@ -6,7 +6,7 @@
 
 use anyhow::Result;
 use futures::StreamExt;
-use runie_core::event::{AgentEvent, Event};
+use runie_core::event::{Event};
 use runie_core::provider_event::ProviderEvent;
 use runie_core::message::ChatMessage;
 use runie_core::provider::Provider;
@@ -81,7 +81,7 @@ impl StreamState {
         self.text.push_str(&delta);
         emit_now(
             &self.emit,
-            AgentEvent::ResponseDelta {
+            runie_core::Event::ResponseDelta {
                 id: self.command_id.clone(),
                 content: delta,
             },

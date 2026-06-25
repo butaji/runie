@@ -1,8 +1,8 @@
 //! Tests for empty line between elements in chat feed.
 
-use runie_core::event::Event;
+use super::*;
+use runie_core::Event;
 
-use runie_core::event::{AgentEvent, InputEvent};
 use runie_core::layout::element_line_count;
 use runie_core::model::AppState;
 use runie_core::view::LazyCache;
@@ -21,7 +21,7 @@ fn _feed_lines(state: &AppState) -> usize {
 #[test]
 fn spacer_contributes_one_line() {
     let mut state = fresh_state();
-    state.update(InputEvent::Input('H'));
+    state.update(Event::Input('H'));
     state.update(Event::submit());
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
@@ -43,8 +43,8 @@ fn spacer_contributes_one_line() {
 #[test]
 fn single_user_message_has_spacer_after() {
     let mut state = fresh_state();
-    state.update(InputEvent::Input('H'));
-    state.update(InputEvent::Input('i'));
+    state.update(Event::Input('H'));
+    state.update(Event::Input('i'));
     state.update(Event::submit());
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
@@ -59,14 +59,14 @@ fn single_user_message_has_spacer_after() {
 #[test]
 fn two_messages_have_spacer_between_and_after() {
     let mut state = fresh_state();
-    state.update(InputEvent::Input('A'));
+    state.update(Event::Input('A'));
     state.update(Event::submit());
     state.agent.streaming = true;
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "B".into(),
     });
-    state.update(AgentEvent::Done { id: "req.0".into() });
+    state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
     // Expected: UserMessage, Spacer, AgentMessage, Spacer
@@ -84,7 +84,7 @@ fn two_messages_have_spacer_between_and_after() {
 #[test]
 fn total_lines_includes_spacers() {
     let mut state = fresh_state();
-    state.update(InputEvent::Input('A'));
+    state.update(Event::Input('A'));
     state.update(Event::submit());
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);

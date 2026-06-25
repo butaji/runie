@@ -7,7 +7,7 @@ use ratatui::backend::TestBackend;
 use ratatui::buffer::Buffer;
 use ratatui::style::Style;
 use ratatui::Terminal;
-use runie_core::event::{DialogEvent, InputEvent};
+use runie_core::Event;
 
 fn state_with_vim_and_messages() -> AppState {
     let mut state = AppState::default();
@@ -65,7 +65,7 @@ fn nav_state() -> AppState {
     let mut state = AppState::default();
     connect_model(&mut state);
     state.config.vim_mode = true;
-    state.update(DialogEvent::DialogBack);
+    state.update(Event::DialogBack);
     assert!(state.view.vim_nav_mode);
     state
 }
@@ -88,9 +88,9 @@ fn vim_mode_scroll_renders_older_content() {
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).expect("terminal");
 
-    state.update(InputEvent::TerminalSize { width: 80, height: 24 });
+    state.update(Event::TerminalSize { width: 80, height: 24 });
     terminal.draw(|f| view(f, &mut state)).expect("draw");
-    state.update(InputEvent::Input('g'));
+    state.update(Event::Input('g'));
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
     let content: String = terminal
@@ -113,10 +113,10 @@ fn vim_mode_page_down_renders_newer_content() {
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).expect("terminal");
 
-    state.update(InputEvent::TerminalSize { width: 80, height: 24 });
+    state.update(Event::TerminalSize { width: 80, height: 24 });
     terminal.draw(|f| view(f, &mut state)).expect("draw");
-    state.update(InputEvent::Input('g'));
-    state.update(InputEvent::Input(' '));
+    state.update(Event::Input('g'));
+    state.update(Event::Input(' '));
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
     let content: String = terminal
@@ -181,12 +181,12 @@ fn nav_mode_highlights_selected_post_with_orange_bracket() {
     add_messages(&mut state, 4);
     state.messages_changed();
     state.ensure_fresh();
-    state.update(DialogEvent::DialogBack);
+    state.update(Event::DialogBack);
 
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).expect("terminal");
     terminal.draw(|f| view(f, &mut state)).expect("draw");
-    state.update(InputEvent::Input('g'));
+    state.update(Event::Input('g'));
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
     let buf = terminal.backend().buffer();
@@ -221,7 +221,7 @@ fn find_accent_bracket(buf: &Buffer, accent: ratatui::style::Color) -> bool {
 fn command_bar_open_renders_input_box_as_disabled() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
-    state.update(DialogEvent::ToggleCommandPalette);
+    state.update(Event::ToggleCommandPalette);
     assert!(state.open_dialog.is_some(), "palette should be open");
 
     let backend = TestBackend::new(80, 24);
@@ -260,7 +260,7 @@ fn nav_mode_and_command_bar_share_disabled_chevron_style() {
     let mut s2 = AppState::default();
     connect_model(&mut s2);
     s2.config.vim_mode = true;
-    s2.update(DialogEvent::DialogBack);
+    s2.update(Event::DialogBack);
     assert!(s2.view.vim_nav_mode);
     let cell_nav = chevron_cell(&s2).expect("nav chevron cell");
 
@@ -275,6 +275,6 @@ fn nav_mode_and_command_bar_share_disabled_chevron_style() {
     );
 
     let mut s3 = AppState::default();
-    s3.update(DialogEvent::ToggleCommandPalette);
+    s3.update(Event::ToggleCommandPalette);
     assert!(s3.open_dialog.is_some(), "palette should be open");
 }

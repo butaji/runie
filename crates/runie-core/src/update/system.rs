@@ -184,8 +184,8 @@ pub fn apply_initial_trust(state: &mut AppState, cwd: &std::path::Path) {
         }
         None => {
             state.config.read_only = false;
-            state.session.messages.push(crate::ChatMessage {
-                role: crate::Role::System,
+            state.session.messages.push(ChatMessage {
+                role: Role::System,
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .map(|d| d.as_secs_f64())

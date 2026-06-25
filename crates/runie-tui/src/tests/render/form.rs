@@ -3,6 +3,7 @@
 //! Verifies the form layout is distinct from a flat list — label above input,
 //! progress indicator, prominent submit, cursor in active field.
 
+use super::*;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::{

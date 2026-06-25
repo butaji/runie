@@ -1,5 +1,5 @@
 use super::*;
-use runie_core::event::{AgentEvent, InputEvent};
+use runie_core::Event;
 
 fn render_chat(state: &mut AppState, width: u16, height: u16) -> String {
     let backend = TestBackend::new(width, height);
@@ -13,7 +13,7 @@ fn render_chat(state: &mut AppState, width: u16, height: u16) -> String {
 fn latest_user_message_visible_after_submit() {
     let mut state = AppState::default();
     state.input.input = "list files".into();
-    state.update(InputEvent::Submit);
+    state.update(Event::Submit);
     state.ensure_fresh();
 
     let out = render_chat(&mut state, 40, 15);
@@ -27,7 +27,7 @@ fn latest_user_message_visible_after_submit() {
 fn large_tool_output_latest_visible_at_bottom() {
     let mut state = AppState::default();
 
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
@@ -36,7 +36,7 @@ fn large_tool_output_latest_visible_at_bottom() {
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
@@ -56,13 +56,13 @@ fn final_response_visible_after_full_turn() {
     let mut state = AppState::default();
     state.agent.streaming = true;
 
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
-    state.update(AgentEvent::Response {
+    state.update(Event::Thinking { id: "req.0".into() });
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
     });
-    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ThoughtDone { id: "req.0".into() });
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "list_dir".into(),
         input: serde_json::Value::Null,
@@ -71,20 +71,20 @@ fn final_response_visible_after_full_turn() {
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
     });
-    state.update(AgentEvent::TurnComplete {
+    state.update(Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 2.0,
     });
-    state.update(AgentEvent::Done { id: "req.0".into() });
+    state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -98,7 +98,7 @@ fn latest_message_pushes_older_off_screen() {
 
     for i in 0..15 {
         state.input.input = format!("msg{}", i);
-        state.update(InputEvent::Submit);
+        state.update(Event::Submit);
     }
     state.ensure_fresh();
     state.view.scroll = 0;
@@ -128,7 +128,7 @@ fn scroll_up_shows_older_content() {
     let mut state = AppState::default();
     for i in 0..15 {
         state.input.input = format!("msg{}", i);
-        state.update(InputEvent::Submit);
+        state.update(Event::Submit);
     }
     state.ensure_fresh();
     state.view.scroll = 100; // clamped to max
@@ -149,13 +149,13 @@ fn new_content_auto_shows_when_at_bottom() {
     let mut state = AppState::default();
     for i in 0..10 {
         state.input.input = format!("msg{}", i);
-        state.update(InputEvent::Submit);
+        state.update(Event::Submit);
     }
     state.ensure_fresh();
     state.view.scroll = 0;
 
     state.input.input = "NEWEST".into();
-    state.update(InputEvent::Submit);
+    state.update(Event::Submit);
     state.ensure_fresh();
 
     let out = render_chat(&mut state, 40, 15);
@@ -170,13 +170,13 @@ fn scrolled_up_does_not_auto_scroll_during_streaming() {
     let mut state = AppState::default();
     for i in 0..10 {
         state.input.input = format!("msg{}", i);
-        state.update(InputEvent::Submit);
+        state.update(Event::Submit);
     }
     state.ensure_fresh();
     state.view.scroll = 3;
     state.agent.streaming = true;
 
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "new streaming content".into(),
     });
@@ -200,20 +200,20 @@ fn scroll_preserved_until_user_scrolls_down_during_streaming() {
     let mut state = AppState::default();
     for i in 0..10 {
         state.input.input = format!("msg{}", i);
-        state.update(InputEvent::Submit);
+        state.update(Event::Submit);
     }
     state.ensure_fresh();
     state.view.scroll = 5;
     state.agent.streaming = true;
 
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "first chunk".into(),
     });
     state.ensure_fresh();
     let first_scroll = state.view.scroll;
 
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: " second chunk that is long enough to wrap to additional lines".into(),
     });

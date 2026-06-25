@@ -1,8 +1,9 @@
 //! Tests for vim-nav selection background and non-selection areas.
 
+use super::*;
 use super::helpers::{accent_bg, add_message, draw, state_with_selected_post};
 use crate::tests::connect_model;
-use runie_core::{AppState, Role};
+use runie_core::Event;
 
 #[test]
 fn nav_mode_selected_post_has_accent_background() {

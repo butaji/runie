@@ -1,8 +1,8 @@
 //! Tests for chat feed element sorting by last update time.
 
-use runie_core::event::Event;
+use super::*;
+use runie_core::Event;
 
-use runie_core::event::{AgentEvent, InputEvent};
 use runie_core::model::{AppState, ChatMessage,  Role};
 use runie_core::Part;
 use runie_core::view::LazyCache;
@@ -49,29 +49,29 @@ fn _timestamps_are_monotonic(state: &AppState) -> Result<(), String> {
 
 fn response_after_tool_events() -> Vec<Event> {
     vec![
-        AgentEvent::Response {
+        Event::Response {
             id: "req.0".into(),
             content: "Let me ".into(),
         },
-        AgentEvent::ToolStart {
+        Event::ToolStart {
             id: "req.0".into(),
             name: "ls".into(),
             input: serde_json::Value::Null,
         },
-        AgentEvent::ToolEnd {
+        Event::ToolEnd {
             id: "".to_string(),
             duration_secs: 0.5,
             output: "file.txt".into(),
         },
-        AgentEvent::Response {
+        Event::Response {
             id: "req.0".into(),
             content: "check files.".into(),
         },
-        AgentEvent::TurnComplete {
+        Event::TurnComplete {
             id: "req.0".into(),
             duration_secs: 2.0,
         },
-        AgentEvent::Done { id: "req.0".into() },
+        Event::Done { id: "req.0".into() },
     ]
 }
 
@@ -106,25 +106,25 @@ fn multiple_response_chunks_preserve_creation_order() {
     let mut state = fresh_state();
     state.agent.streaming = true;
     // First chunk creates assistant
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "Hello ".into(),
     });
     // Second chunk updates same assistant (bumps timestamp)
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "world".into(),
     });
     // Third chunk
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "!".into(),
     });
-    state.update(AgentEvent::TurnComplete {
+    state.update(Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
     });
-    state.update(AgentEvent::Done { id: "req.0".into() });
+    state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
 
     let kinds: Vec<_> = element_kinds(&state)
@@ -141,31 +141,31 @@ fn multiple_response_chunks_preserve_creation_order() {
 
 fn thought_before_agent_events() -> Vec<Event> {
     vec![
-        AgentEvent::Thinking { id: "req.0".into() },
-        AgentEvent::ThoughtDone { id: "req.0".into() },
-        AgentEvent::ToolStart {
+        Event::Thinking { id: "req.0".into() },
+        Event::ThoughtDone { id: "req.0".into() },
+        Event::ToolStart {
             id: "req.0".into(),
             name: "ls".into(),
             input: serde_json::Value::Null,
         },
-        AgentEvent::ToolEnd {
+        Event::ToolEnd {
             id: "".to_string(),
             duration_secs: 0.5,
             output: "a".into(),
         },
-        AgentEvent::Response {
+        Event::Response {
             id: "req.0".into(),
             content: "Result".into(),
         },
-        AgentEvent::Response {
+        Event::Response {
             id: "req.0".into(),
             content: " done".into(),
         },
-        AgentEvent::TurnComplete {
+        Event::TurnComplete {
             id: "req.0".into(),
             duration_secs: 1.0,
         },
-        AgentEvent::Done { id: "req.0".into() },
+        Event::Done { id: "req.0".into() },
     ]
 }
 
@@ -199,28 +199,28 @@ fn thought_appears_before_agent_even_when_agent_updated_later() {
 fn turn_complete_last_during_turn_despite_updates() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
-    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::Thinking { id: "req.0".into() });
+    state.update(Event::ThoughtDone { id: "req.0".into() });
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
     });
-    state.update(AgentEvent::TurnComplete {
+    state.update(Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
     });
     // Even after turn complete, delayed empty response bumps assistant
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "".into(),
     });
@@ -240,28 +240,28 @@ fn turn_complete_last_during_turn_despite_updates() {
 
 fn turn_then_user_events() -> Vec<Event> {
     vec![
-        AgentEvent::Thinking { id: "req.0".into() },
-        AgentEvent::ThoughtDone { id: "req.0".into() },
-        AgentEvent::ToolStart {
+        Event::Thinking { id: "req.0".into() },
+        Event::ThoughtDone { id: "req.0".into() },
+        Event::ToolStart {
             id: "req.0".into(),
             name: "ls".into(),
             input: serde_json::Value::Null,
         },
-        AgentEvent::ToolEnd {
+        Event::ToolEnd {
             id: "".to_string(),
             duration_secs: 0.5,
             output: "a".into(),
         },
-        AgentEvent::Response {
+        Event::Response {
             id: "req.0".into(),
             content: "T1".into(),
         },
-        AgentEvent::TurnComplete {
+        Event::TurnComplete {
             id: "req.0".into(),
             duration_secs: 1.0,
         },
-        AgentEvent::Done { id: "req.0".into() },
-        InputEvent::Input('H'),
+        Event::Done { id: "req.0".into() },
+        Event::Input('H'),
         Event::submit(),
     ]
 }

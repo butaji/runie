@@ -4,7 +4,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::Stream;
 use runie_agent::{run_agent_turn_with_skills, AgentCommand};
-use runie_core::event::AgentEvent;
+use runie_core::Event;
 use runie_core::harness_skills::{
     HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult,
 };
@@ -124,8 +124,8 @@ fn mock_skills() -> SkillRegistry {
     registry
 }
 
-fn capture_events() -> (Arc<Mutex<Vec<AgentEvent>>>, runie_agent::stream_response::EmitFn) {
-    let events: Arc<Mutex<Vec<AgentEvent>>> = Arc::new(Mutex::new(Vec::new()));
+fn capture_events() -> (Arc<Mutex<Vec<Event>>>, runie_agent::stream_response::EmitFn) {
+    let events: Arc<Mutex<Vec<Event>>> = Arc::new(Mutex::new(Vec::new()));
     let captured = events.clone();
     let emit: runie_agent::stream_response::EmitFn = Arc::new(Mutex::new(move |evt| {
         captured.lock().unwrap().push(evt);
@@ -151,9 +151,9 @@ async fn m3_list_files_turn_executes_list_dir() {
     let events = events.lock().unwrap();
     assert!(events.iter().any(|e| matches!(
         e,
-        AgentEvent::ToolStart { name, .. } if name == "list_dir"
+        crate::Event::ToolStart { name, .. } if name == "list_dir"
     )));
-    assert!(events.iter().any(|e| matches!(e, AgentEvent::Done { .. })));
+    assert!(events.iter().any(|e| matches!(e, crate::Event::Done { .. })));
 }
 
 #[tokio::test]
@@ -174,9 +174,9 @@ async fn m3_read_file_turn_executes_read_file() {
     let events = events.lock().unwrap();
     assert!(events.iter().any(|e| matches!(
         e,
-        AgentEvent::ToolStart { name, .. } if name == "read_file"
+        crate::Event::ToolStart { name, .. } if name == "read_file"
     )));
-    assert!(events.iter().any(|e| matches!(e, AgentEvent::Done { .. })));
+    assert!(events.iter().any(|e| matches!(e, crate::Event::Done { .. })));
 }
 
 #[tokio::test]
@@ -201,13 +201,13 @@ async fn m3_multi_tool_turn_executes_list_dir_and_read_file() {
     let tool_names: Vec<&str> = events
         .iter()
         .filter_map(|e| match e {
-            AgentEvent::ToolStart { name, .. } => Some(name.as_str()),
+            crate::Event::ToolStart { name, .. } => Some(name.as_str()),
             _ => None,
         })
         .collect();
     assert!(tool_names.contains(&"list_dir"));
     assert!(tool_names.contains(&"read_file"));
-    assert!(events.iter().any(|e| matches!(e, AgentEvent::Done { .. })));
+    assert!(events.iter().any(|e| matches!(e, crate::Event::Done { .. })));
 }
 
 #[tokio::test]
@@ -228,7 +228,7 @@ async fn m27_multi_tool_turn_executes_read_file() {
     let events = events.lock().unwrap();
     assert!(events.iter().any(|e| matches!(
         e,
-        AgentEvent::ToolStart { name, .. } if name == "read_file"
+        crate::Event::ToolStart { name, .. } if name == "read_file"
     )));
-    assert!(events.iter().any(|e| matches!(e, AgentEvent::Done { .. })));
+    assert!(events.iter().any(|e| matches!(e, crate::Event::Done { .. })));
 }

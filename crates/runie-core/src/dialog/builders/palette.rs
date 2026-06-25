@@ -1,7 +1,6 @@
 //! Command palette and model selector builders.
 
 use super::{ItemAction, Panel, PanelStack};
-use crate::event::ModelConfigEvent;
 use crate::Event;
 
 /// Build a command palette panel from structured command rows.
@@ -44,7 +43,7 @@ pub fn model_selector(
         panel = panel.header("Recent");
         for model in recent {
             let (provider, model_name) = model.split_once('/').unwrap_or(("", &model));
-            let evt = ModelConfigEvent::SwitchModel {
+            let evt = Event::SwitchModel {
                 provider: provider.into(),
                 model: model_name.into(),
                 explicit: true,
@@ -77,8 +76,6 @@ pub fn model_selector(
 mod tests {
     use super::*;
     use crate::dialog::PanelItem;
-    use crate::event::ModelConfigEvent;
-
     #[test]
     fn recent_model_event_splits_provider_and_model() {
         let stack = model_selector(vec!["minimax/M3".into()], vec![], "minimax/M3");
@@ -97,11 +94,11 @@ mod tests {
         };
         assert_eq!(
             evt,
-            crate::Event::from(ModelConfigEvent::SwitchModel {
+            Event::SwitchModel {
                 provider: "minimax".into(),
                 model: "M3".into(),
                 explicit: true,
-            })
+            },
         );
     }
 }

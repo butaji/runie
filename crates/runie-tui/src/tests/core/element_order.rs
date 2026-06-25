@@ -1,4 +1,5 @@
-use runie_core::event::AgentEvent;
+use super::*;
+use runie_core::Event;
 use runie_core::model::{AppState, ChatMessage, Role};
 use runie_core::Part;
 use runie_core::view::LazyCache;
@@ -287,22 +288,22 @@ fn agent_before_thought_when_agent_newer() {
 fn via_events_appended_assistant_found_anywhere_in_vec() {
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "hello ".into(),
     });
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "file1".into(),
     });
     // This next response should append to the SAME assistant message, not create a new one
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".into(),
         content: "world".into(),
     });

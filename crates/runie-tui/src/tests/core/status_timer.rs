@@ -1,3 +1,4 @@
+use super::*;
 use runie_core::model::AppState;
 
 #[test]

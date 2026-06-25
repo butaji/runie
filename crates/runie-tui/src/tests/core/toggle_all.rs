@@ -1,4 +1,5 @@
-use runie_core::event::{AgentEvent, ControlEvent};
+use super::*;
+use runie_core::Event;
 use runie_core::model::{AppState, ChatMessage,  Role};
 use runie_core::Part;
 use runie_testing::fresh_state;
@@ -22,7 +23,7 @@ fn collapse_all_when_some_expanded() {
     });
 
     assert!(!state.view.all_collapsed, "Should start expanded");
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "All expanded => collapse all globally"
@@ -48,7 +49,7 @@ fn expand_all_when_all_collapsed() {
     });
     state.view.all_collapsed = true;
 
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(
         !state.view.all_collapsed,
         "All collapsed => expand all globally"
@@ -73,7 +74,7 @@ fn running_tools_always_expanded_regardless_of_global_flag() {
         ..Default::default()
     });
 
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed, "Global flag should flip");
     // Running tool renders as ToolRunning regardless of global flag
 }
@@ -81,7 +82,7 @@ fn running_tools_always_expanded_regardless_of_global_flag() {
 #[test]
 fn toggle_all_empty_state_flips_flag() {
     let mut state = fresh_state();
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "Toggle on empty state should flip global flag"
@@ -99,13 +100,13 @@ fn toggle_all_twice_restores_expanded() {
         ..Default::default()
     });
 
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed, "Toggle 1: collapse all");
 
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(!state.view.all_collapsed, "Toggle 2: expand all");
 
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed, "Toggle 3: collapse all again");
 }
 
@@ -122,13 +123,13 @@ fn toggle_all_with_many_items() {
         });
     }
 
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(
         state.view.all_collapsed,
         "All thoughts should be collapsed globally"
     );
 
-    state.update(ControlEvent::ToggleExpand);
+    state.update(Event::ToggleExpand);
     assert!(
         !state.view.all_collapsed,
         "All thoughts should be expanded globally"
@@ -140,14 +141,14 @@ fn new_thought_respects_global_collapse_when_true() {
     let mut state = fresh_state();
     state.view.all_collapsed = true;
 
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Reasoning".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
     state.ensure_fresh();
@@ -168,14 +169,14 @@ fn new_thought_respects_global_expand_when_false() {
     let mut state = fresh_state();
     state.view.all_collapsed = false;
 
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Reasoning".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
     state.ensure_fresh();
@@ -196,12 +197,12 @@ fn new_tool_respects_global_collapse_when_true() {
     let mut state = fresh_state();
     state.view.all_collapsed = true;
 
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".to_string(),
         name: "ls".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".to_string(),
@@ -224,12 +225,12 @@ fn new_tool_respects_global_expand_when_false() {
     let mut state = fresh_state();
     state.view.all_collapsed = false;
 
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".to_string(),
         name: "ls".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".to_string(),

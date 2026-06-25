@@ -3,11 +3,10 @@ use crate::dialog::builders::{
     settings, theme_picker, SessionRow,
 };
 use crate::dialog::PanelItem;
-use crate::event::ControlEvent;
 use crate::Event;
 
 fn dummy_evt() -> Event {
-    ControlEvent::Abort
+    crate::Event::Abort
 }
 
 #[test]

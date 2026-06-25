@@ -120,7 +120,7 @@ fn snapshot_animated_values_initially_match_actual() {
 
 #[test]
 fn speed_window_new_is_empty() {
-    let window = crate::state::SpeedWindow::new(1000);
+    let window = crate::model::SpeedWindow::new(1000);
     assert!(window.is_empty());
     assert_eq!(window.len(), 0);
     assert_eq!(window.speed(), 0.0);
@@ -128,7 +128,7 @@ fn speed_window_new_is_empty() {
 
 #[test]
 fn speed_window_single_event_returns_zero() {
-    let mut window = crate::state::SpeedWindow::new(1000);
+    let mut window = crate::model::SpeedWindow::new(1000);
     window.record(10);
     assert!(!window.is_empty());
     assert_eq!(window.len(), 1);
@@ -138,7 +138,7 @@ fn speed_window_single_event_returns_zero() {
 
 #[test]
 fn speed_window_two_events_calculates_speed() {
-    let mut window = crate::state::SpeedWindow::new(1000);
+    let mut window = crate::model::SpeedWindow::new(1000);
     window.record(0);
     // Manually inject a second event in the past
     // Since record() uses Instant::now(), we need to test via actual timing
@@ -149,7 +149,7 @@ fn speed_window_two_events_calculates_speed() {
 
 #[test]
 fn speed_window_clear_resets() {
-    let mut window = crate::state::SpeedWindow::new(1000);
+    let mut window = crate::model::SpeedWindow::new(1000);
     window.record(10);
     window.record(20);
     assert!(!window.is_empty());
@@ -161,7 +161,7 @@ fn speed_window_clear_resets() {
 
 #[test]
 fn speed_window_respects_token_limit() {
-    let mut window = crate::state::SpeedWindow::new(10); // Only 10 tokens in window
+    let mut window = crate::model::SpeedWindow::new(10); // Only 10 tokens in window
     for i in (0..20).step_by(2) {
         window.record(i);
     }
@@ -219,7 +219,7 @@ fn speed_window_rolls_to_1k_tokens_across_turns() {
 
 #[test]
 fn speed_window_auto_evicts_to_1k_tokens() {
-    let mut window = crate::state::SpeedWindow::new(1000); // 1000 token window
+    let mut window = crate::model::SpeedWindow::new(1000); // 1000 token window
 
     // Record 2000 token events (window should keep last 1000)
     for i in 0..2000 {
@@ -237,7 +237,7 @@ fn speed_window_auto_evicts_to_1k_tokens() {
 
 #[test]
 fn speed_window_speed_calculation_uses_rolling_window() {
-    let mut window = crate::state::SpeedWindow::new(1000);
+    let mut window = crate::model::SpeedWindow::new(1000);
 
     // Record events with known timing
     window.record(0); // Start

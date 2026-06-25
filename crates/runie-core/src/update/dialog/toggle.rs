@@ -129,7 +129,7 @@ fn handle_providers_disconnect(state: &mut AppState, event: &crate::Event) {
             state.set_active_model(
                 provider,
                 model,
-                crate::state::ModelSource::ConfigDefault,
+                crate::model::ModelSource::ConfigDefault,
             );
         }
         if state.has_models() {

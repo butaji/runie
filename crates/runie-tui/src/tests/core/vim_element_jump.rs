@@ -6,7 +6,7 @@
 //! assistant response). This is element-level navigation, distinct
 //! from line-level scrolling.
 
-use runie_core::event::{DialogEvent, InputEvent};
+use runie_core::Event;
 use runie_core::model::{AppState, ChatMessage, Role};
 
 fn state_with_vim_and_messages() -> AppState {
@@ -35,7 +35,7 @@ fn state_with_vim_and_messages() -> AppState {
 }
 
 fn enter_nav(state: &mut AppState) {
-    state.update(DialogEvent::DialogBack);
+    state.update(Event::DialogBack);
     assert!(state.view.vim_nav_mode);
 }
 
@@ -44,13 +44,13 @@ fn k_in_nav_mode_jumps_up_at_least_one_post() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
-    state.update(InputEvent::Input('g')); // top
+    state.update(Event::Input('g')); // top
     let top = state.view.scroll;
-    state.update(InputEvent::Input('j')); // down a bit
+    state.update(Event::Input('j')); // down a bit
     let mid = state.view.scroll;
     assert!(mid < top, "j should move toward bottom (newer)");
 
-    state.update(InputEvent::Input('k')); // k = up (older)
+    state.update(Event::Input('k')); // k = up (older)
     let after_k = state.view.scroll;
     assert!(
         after_k > mid,
@@ -65,11 +65,11 @@ fn j_in_nav_mode_jumps_down_at_least_one_post() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
-    state.update(InputEvent::Input('g')); // to top (nav-mode motion)
+    state.update(Event::Input('g')); // to top (nav-mode motion)
     let top = state.view.scroll;
     assert!(top > 0);
 
-    state.update(InputEvent::Input('j')); // j = down (newer)
+    state.update(Event::Input('j')); // j = down (newer)
     let after_j = state.view.scroll;
     assert!(
         after_j < top,
@@ -84,17 +84,17 @@ fn j_then_k_round_trip() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
-    state.update(InputEvent::Input('g')); // top
+    state.update(Event::Input('g')); // top
     let top = state.view.scroll;
-    state.update(InputEvent::Input('j')); // down
+    state.update(Event::Input('j')); // down
     let mid = state.view.scroll;
     assert!(mid < top);
 
-    state.update(InputEvent::Input('k')); // up
+    state.update(Event::Input('k')); // up
     let after_k = state.view.scroll;
     assert!(after_k > mid, "k should move back up");
 
-    state.update(InputEvent::Input('j')); // down again
+    state.update(Event::Input('j')); // down again
     let after_j = state.view.scroll;
     assert!(after_j < after_k, "j should move back down toward newer");
 }
@@ -107,7 +107,7 @@ fn j_at_bottom_exits_nav_mode() {
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
     assert_eq!(state.view.scroll, 0);
-    state.update(InputEvent::Input('j'));
+    state.update(Event::Input('j'));
     assert!(!state.view.vim_nav_mode, "j at bottom should exit nav mode");
 }
 
@@ -116,14 +116,14 @@ fn k_at_top_flashes_and_does_not_overshoot() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
-    state.update(InputEvent::Input('g'));
+    state.update(Event::Input('g'));
     let max = state
         .view
         .total_lines
         .saturating_sub(state.view.last_visible_height as usize);
     assert_eq!(state.view.scroll, max);
     let prev_flash = state.input.input_flash;
-    state.update(InputEvent::Input('k'));
+    state.update(Event::Input('k'));
     assert!(state.view.scroll >= max, "k at top should not overshoot");
     assert!(
         state.input.input_flash > prev_flash,
@@ -137,7 +137,7 @@ fn g_goes_to_top_of_feed() {
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
 
-    state.update(InputEvent::Input('g'));
+    state.update(Event::Input('g'));
     assert!(state.view.scroll > 0, "g should scroll away from bottom");
     let max = state
         .view
@@ -155,9 +155,9 @@ fn capital_G_goes_to_bottom() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
-    state.update(InputEvent::Input('g'));
+    state.update(Event::Input('g'));
     assert!(state.view.scroll > 0);
-    state.update(InputEvent::Input('G'));
+    state.update(Event::Input('G'));
     assert_eq!(state.view.scroll, 0);
 }
 
@@ -168,9 +168,9 @@ fn line_j_k_when_not_in_nav_mode() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     assert!(!state.view.vim_nav_mode);
-    state.update(InputEvent::Input('j'));
+    state.update(Event::Input('j'));
     assert_eq!(state.view.scroll, 1, "line-level j: +1");
-    state.update(InputEvent::Input('k'));
+    state.update(Event::Input('k'));
     assert_eq!(state.view.scroll, 0, "line-level k: -1");
 }
 
@@ -184,9 +184,9 @@ fn arrow_down_in_nav_mode_moves_toward_newer() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
-    state.update(InputEvent::Input('g'));
+    state.update(Event::Input('g'));
     let top = state.view.scroll;
-    state.update(InputEvent::HistoryNext);
+    state.update(Event::HistoryNext);
     let after = state.view.scroll;
     assert!(after < top, "ArrowDown must move toward newer");
     assert!(top - after >= 2, "ArrowDown must jump at least 2 lines");
@@ -197,11 +197,11 @@ fn arrow_up_in_nav_mode_moves_toward_older() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
-    state.update(InputEvent::Input('g'));
+    state.update(Event::Input('g'));
     let _top = state.view.scroll;
-    state.update(InputEvent::Input('j'));
+    state.update(Event::Input('j'));
     let mid = state.view.scroll;
-    state.update(InputEvent::HistoryPrev);
+    state.update(Event::HistoryPrev);
     let after = state.view.scroll;
     assert!(after > mid, "ArrowUp must move toward older");
     assert!(after - mid >= 2, "ArrowUp must jump at least 2 lines");
@@ -212,7 +212,7 @@ fn arrow_down_at_bottom_exits_nav_mode() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
-    state.update(InputEvent::HistoryNext);
+    state.update(Event::HistoryNext);
     assert!(
         !state.view.vim_nav_mode,
         "ArrowDown at bottom should exit nav mode"
@@ -223,14 +223,14 @@ fn arrow_down_at_bottom_exits_nav_mode() {
 fn arrow_up_at_top_flashes_and_does_not_overshoot() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
-    state.update(InputEvent::Input('g'));
+    state.update(Event::Input('g'));
     let max = state
         .view
         .total_lines
         .saturating_sub(state.view.last_visible_height as usize);
     assert_eq!(state.view.scroll, max);
     let prev_flash = state.input.input_flash;
-    state.update(InputEvent::HistoryPrev);
+    state.update(Event::HistoryPrev);
     assert!(
         state.view.scroll >= max,
         "ArrowUp at top should not overshoot"
@@ -247,7 +247,7 @@ fn arrow_keys_outside_nav_mode_still_navigate_input_history() {
     state.view.last_visible_height = 10;
     assert!(!state.view.vim_nav_mode);
     let before = state.view.scroll;
-    state.update(InputEvent::HistoryPrev);
+    state.update(Event::HistoryPrev);
     assert_eq!(
         state.view.scroll, before,
         "ArrowUp outside nav must not scroll"
@@ -298,10 +298,10 @@ fn j_visits_every_post_from_top_to_bottom() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
-    state.update(InputEvent::Input('g'));
+    state.update(Event::Input('g'));
 
     let last_index = state.view.posts.len().saturating_sub(1);
-    let visited = collect_selections(state, |s| s.update(InputEvent::Input('j')));
+    let visited = collect_selections(state, |s| s.update(Event::Input('j')));
     assert_eq!(visited.first().copied(), Some(0));
     assert_eq!(
         visited.last().copied(),
@@ -318,10 +318,10 @@ fn k_visits_every_post_from_bottom_to_top() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
-    state.update(InputEvent::Input('G')); // start at the last post
+    state.update(Event::Input('G')); // start at the last post
 
     let last_index = state.view.posts.len().saturating_sub(1);
-    let visited = collect_selections(state, |s| s.update(InputEvent::Input('k')));
+    let visited = collect_selections(state, |s| s.update(Event::Input('k')));
     assert_eq!(visited.first().copied(), Some(last_index));
     assert_eq!(visited.last().copied(), Some(0));
     for window in visited.windows(2) {
@@ -334,10 +334,10 @@ fn arrow_down_visits_every_post_from_top_to_bottom() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
-    state.update(InputEvent::Input('g'));
+    state.update(Event::Input('g'));
 
     let last_index = state.view.posts.len().saturating_sub(1);
-    let visited = collect_selections(state, |s| s.update(InputEvent::HistoryNext));
+    let visited = collect_selections(state, |s| s.update(Event::HistoryNext));
     assert_eq!(visited.first().copied(), Some(0));
     assert_eq!(
         visited.last().copied(),
@@ -354,10 +354,10 @@ fn arrow_up_visits_every_post_from_bottom_to_top() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
-    state.update(InputEvent::Input('G')); // start at the last post
+    state.update(Event::Input('G')); // start at the last post
 
     let last_index = state.view.posts.len().saturating_sub(1);
-    let visited = collect_selections(state, |s| s.update(InputEvent::HistoryPrev));
+    let visited = collect_selections(state, |s| s.update(Event::HistoryPrev));
     assert_eq!(visited.first().copied(), Some(last_index));
     assert_eq!(visited.last().copied(), Some(0));
     for window in visited.windows(2) {
@@ -370,12 +370,12 @@ fn j_and_arrow_down_visit_identical_posts() {
     let mut state_j = state_with_vim_and_messages();
     state_j.view.last_visible_height = 10;
     enter_nav(&mut state_j);
-    state_j.update(InputEvent::Input('g'));
+    state_j.update(Event::Input('g'));
 
     let mut state_arrow = state_with_vim_and_messages();
     state_arrow.view.last_visible_height = 10;
     enter_nav(&mut state_arrow);
-    state_arrow.update(InputEvent::Input('g'));
+    state_arrow.update(Event::Input('g'));
 
     for _ in 0..state_j.view.posts.len() {
         assert_eq!(
@@ -383,8 +383,8 @@ fn j_and_arrow_down_visit_identical_posts() {
             selected_post(&mut state_arrow),
             "j and ArrowDown must select the same post"
         );
-        state_j.update(InputEvent::Input('j'));
-        state_arrow.update(InputEvent::HistoryNext);
+        state_j.update(Event::Input('j'));
+        state_arrow.update(Event::HistoryNext);
     }
 }
 
@@ -421,14 +421,14 @@ fn long_system_welcome_post_is_selectable() {
     enter_nav(&mut state);
     assert_eq!(state.view.selected_post, Some(1));
 
-    state.update(InputEvent::Input('k'));
+    state.update(Event::Input('k'));
     assert_eq!(
         state.view.selected_post,
         Some(0),
         "k should move selection to the long system welcome post"
     );
 
-    state.update(InputEvent::Input('j'));
+    state.update(Event::Input('j'));
     assert_eq!(
         state.view.selected_post,
         Some(1),
@@ -473,7 +473,7 @@ fn k_and_arrow_up_visit_identical_posts() {
             selected_post(&mut state_arrow),
             "k and ArrowUp must select the same post"
         );
-        state_k.update(InputEvent::Input('k'));
-        state_arrow.update(InputEvent::HistoryPrev);
+        state_k.update(Event::Input('k'));
+        state_arrow.update(Event::HistoryPrev);
     }
 }

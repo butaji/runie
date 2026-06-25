@@ -18,7 +18,7 @@ fn handle_main_events(state: &mut AppState, event: &crate::Event) -> bool {
             model,
             explicit,
         } => {
-            if *explicit || state.config.model_source != crate::state::ModelSource::UserOverride {
+            if *explicit || state.config.model_source != crate::model::ModelSource::UserOverride {
                 state.switch_model(provider.clone(), model.clone(), *explicit);
             }
             true

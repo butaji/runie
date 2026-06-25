@@ -1,6 +1,6 @@
 //! FetchDocs tool — fetches documentation from context7.com.
 
-use crate::tool::define::build_schema;
+use crate::define_tool;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -12,38 +12,18 @@ pub struct FetchDocsTool;
 const SEARCH_URL: &str = "https://context7.com/api/v2/libs/search";
 const DOC_BASE: &str = "https://context7.com";
 
-/// Schema definition for fetch_docs tool.
-fn fetch_docs_schema() -> Value {
-    build_schema(
-        &[(
-            "library",
-            "string",
-            "Library name to fetch docs for (e.g., 'ramda', 'lodash')",
-        )],
-        &["library"],
-    )
-}
-
+#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for FetchDocsTool {
-    fn name(&self) -> &str {
-        "fetch_docs"
-    }
-
-    fn description(&self) -> &str {
-        "Fetch documentation for a library from context7.com."
-    }
-
-    fn input_schema(&self) -> Value {
-        fetch_docs_schema()
-    }
-
-    fn is_read_only(&self) -> bool {
-        true
-    }
-
-    fn requires_approval(&self, _input: &Value) -> bool {
-        false
+    define_tool! {
+        name: "fetch_docs",
+        description: "Fetch documentation for a library from context7.com.",
+        read_only: true,
+        approval: false,
+        fields: {
+            "library": ("string", "Library name to fetch docs for (e.g., 'ramda', 'lodash')")
+        },
+        required: ["library"]
     }
 
     async fn call(&self, input: Value, _ctx: &ToolContext) -> Result<ToolOutput> {

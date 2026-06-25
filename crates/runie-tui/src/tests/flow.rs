@@ -1,12 +1,12 @@
 use super::*;
-use runie_core::event::{AgentEvent, InputEvent};
+use runie_core::Event;
 
 #[test]
 fn test_submit_adds_message_to_queue() {
     let mut state = AppState::default();
-    state.update(InputEvent::Input('H'));
-    state.update(InputEvent::Input('i'));
-    state.update(InputEvent::Submit);
+    state.update(Event::Input('H'));
+    state.update(Event::Input('i'));
+    state.update(Event::Submit);
     assert_eq!(state.input.input, "");
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].role, Role::User);
@@ -16,8 +16,8 @@ fn test_submit_adds_message_to_queue() {
 #[test]
 fn test_agent_thinking_sets_streaming() {
     let mut state = AppState::default();
-    state.update(InputEvent::Submit);
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Submit);
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
     assert!(state.agent.streaming);
@@ -28,13 +28,13 @@ fn test_agent_thinking_sets_streaming() {
 fn test_agent_response_creates_messages() {
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
     });
@@ -47,17 +47,17 @@ fn test_agent_response_creates_messages() {
 fn test_agent_done_clears_streaming() {
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hi".to_string(),
     });
-    state.update(AgentEvent::Done {
+    state.update(Event::Done {
         id: "req.0".to_string(),
     });
     assert!(!state.agent.streaming);
@@ -66,30 +66,30 @@ fn test_agent_done_clears_streaming() {
 #[test]
 fn test_sequential_fifo_a_then_b() {
     let mut state = AppState::default();
-    state.update(InputEvent::Input('A'));
-    state.update(InputEvent::Submit);
+    state.update(Event::Input('A'));
+    state.update(Event::Submit);
     state.pop_queue();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
     });
-    state.update(AgentEvent::Done {
+    state.update(Event::Done {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.1".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.1".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.1".to_string(),
         content: "B".to_string(),
     });
@@ -122,11 +122,11 @@ fn test_list_files_command_flow() {
     let mut state = AppState::default();
 
     for c in "list files".chars() {
-        state.update(InputEvent::Input(c));
+        state.update(Event::Input(c));
     }
     assert_eq!(state.input.input, "list files");
 
-    state.update(InputEvent::Submit);
+    state.update(Event::Submit);
     assert!(state.input.input.is_empty(), "Input cleared after submit");
 
     let (content, id) = state.peek_queue().expect("queued request");
@@ -141,29 +141,29 @@ fn test_list_files_command_flow() {
 fn test_list_files_message_content() {
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ToolStart {
+    state.update(Event::ToolStart {
         id: "req.0".to_string(),
         name: "list_files".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 1.0,
         output: String::new(),
     });
-    state.update(AgentEvent::Thinking {
+    state.update(Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(Event::Response {
         id: "req.0".to_string(),
         content: "\nsrc/main.rs".to_string(),
     });

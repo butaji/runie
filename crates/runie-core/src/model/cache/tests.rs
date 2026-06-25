@@ -1,4 +1,5 @@
 use super::*;
+use crate::Event;
 
 #[test]
 fn auth_providers_use_cached_list() {
@@ -19,7 +20,7 @@ fn snapshot_rebuilds_palette_cache_without_blocking_io() {
         user_invocable: true,
         file_path: std::path::PathBuf::new(),
     }];
-    state.update(crate::event::DialogEvent::ToggleCommandPalette);
+    state.update(Event::ToggleCommandPalette);
     let snap = state.snapshot();
     assert!(
         snap.palette_items.iter().any(|(n, _, c)| n == "rust" && c == "Skill"),

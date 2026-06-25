@@ -1,7 +1,8 @@
+use super::*;
 use crate::tests::connect_model;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::{AppState, DialogEvent};
+use runie_core::Event;
 
 #[test]
 fn input_chevron_is_orange_when_token_held() {
@@ -30,7 +31,7 @@ fn input_chevron_is_gray_when_token_released() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     connect_model(&mut state);
-    state.update(DialogEvent::ToggleCommandPalette);
+    state.update(Event::ToggleCommandPalette);
     let backend = TestBackend::new(60, 40);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -57,7 +58,7 @@ fn palette_filter_uses_chevron_glyph() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     connect_model(&mut state);
-    state.update(DialogEvent::ToggleCommandPalette);
+    state.update(Event::ToggleCommandPalette);
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -72,7 +73,7 @@ fn model_selector_filter_uses_chevron_glyph() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     connect_model(&mut state);
-    state.update(DialogEvent::ToggleModelSelector);
+    state.update(Event::ToggleModelSelector);
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -121,7 +122,7 @@ fn input_cursor_hidden_when_token_released() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     connect_model(&mut state);
-    state.update(DialogEvent::ToggleCommandPalette);
+    state.update(Event::ToggleCommandPalette);
     state.input.input = "hello".to_string();
     state.input.cursor_pos = 2;
     let backend = TestBackend::new(60, 40);

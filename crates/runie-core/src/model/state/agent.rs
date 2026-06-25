@@ -133,8 +133,8 @@ pub struct AgentState {
     pub next_id: u64,
     pub intermediate_step_count: usize,
     pub current_action: Option<String>,
-    pub(crate) thought_seq: u64,
-    pub(crate) last_assistant_index: Option<usize>,
+    pub thought_seq: u64,
+    pub last_assistant_index: Option<usize>,
     pub thinking_started_at: Option<std::time::Instant>,
     /// Buffer for streaming response deltas (stable content + mutable tail).
     pub streaming_buffer: StreamingBuffer,
