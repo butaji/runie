@@ -884,7 +884,7 @@
     },
     {
       "id": "use-workspace-deps-in-runie-testing",
-      "status": "todo",
+      "status": "done",
       "milestone": "?",
       "category": "?",
       "priority": "?",
