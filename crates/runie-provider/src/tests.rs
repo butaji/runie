@@ -6,7 +6,7 @@ use runie_core::actors::{ConfigActor, ProviderActor};
 use runie_core::bus::EventBus;
 use runie_core::config::Config;
 use runie_core::event::Event;
-use runie_core::llm_event::LLMEvent;
+use runie_core::provider_event::ProviderEvent;
 use runie_core::message::ChatMessage;
 use runie_core::provider::{Provider, ProviderError};
 use std::io::{Read, Write};
@@ -29,12 +29,12 @@ where
 
 /// Collect all text deltas from a stream.
 async fn collect_text(
-    stream: impl futures::Stream<Item = anyhow::Result<LLMEvent>> + Unpin,
+    stream: impl futures::Stream<Item = anyhow::Result<ProviderEvent>> + Unpin,
 ) -> Vec<String> {
     let mut texts = Vec::new();
     futures::pin_mut!(stream);
     while let Some(result) = stream.next().await {
-        if let Ok(LLMEvent::TextDelta(t)) = result {
+        if let Ok(ProviderEvent::TextDelta(t)) = result {
             texts.push(t);
         }
     }

@@ -41,10 +41,11 @@ pub fn durable_to_event(event: &DurableCoreEvent) -> Option<Event> {
             model: model.clone(),
             explicit: false,
         }),
-        DurableCoreEvent::SessionRenamed { .. } => None,
+        DurableCoreEvent::SessionRenamed { .. } => None, // handled directly in replay_event
         DurableCoreEvent::ThemeSwitched { name } => Some(Event::SwitchTheme { name: name.clone() }),
         DurableCoreEvent::ThinkingLevelSet { level } => Some(Event::SetThinkingLevel(*level)),
-        DurableCoreEvent::ReadOnlySet { .. } => Some(Event::ToggleReadOnly),
+        // ReadOnlySet is handled directly in replay_event to avoid lossy toggle conversion
+        DurableCoreEvent::ReadOnlySet { .. } => None,
     }
 }
 

@@ -80,7 +80,7 @@ impl runie_core::provider::Provider for OpenAiProvider {
         messages: Vec<runie_core::message::ChatMessage>,
     ) -> std::pin::Pin<
         Box<
-            dyn futures::Stream<Item = anyhow::Result<runie_core::llm_event::LLMEvent>> + Send + '_,
+            dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>> + Send + '_,
         >,
     > {
         stream::openai_stream(self.clone(), messages)
@@ -92,7 +92,7 @@ impl runie_core::provider::Provider for OpenAiProvider {
         tools: Vec<serde_json::Value>,
     ) -> std::pin::Pin<
         Box<
-            dyn futures::Stream<Item = anyhow::Result<runie_core::llm_event::LLMEvent>> + Send + '_,
+            dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>> + Send + '_,
         >,
     > {
         let provider = self
@@ -107,7 +107,7 @@ impl runie_core::provider::Provider for OpenAiProvider {
 mod tests {
     use super::*;
     use request::build_request_body;
-    use runie_core::llm_event::{LLMEvent, StopReason};
+    use runie_core::provider_event::{ProviderEvent, StopReason};
     use runie_core::message::{ChatMessage, Part, Role, ToolCall};
     use stream::{parse_sse_event, SseEvent};
 
@@ -279,13 +279,13 @@ mod tests {
 
         assert!(events
             .iter()
-            .any(|e| matches!(e, LLMEvent::TextDelta(t) if t == "Hello")));
+            .any(|e| matches!(e, ProviderEvent::TextDelta(t) if t == "Hello")));
         assert!(events
             .iter()
-            .any(|e| matches!(e, LLMEvent::TextDelta(t) if t == " world")));
+            .any(|e| matches!(e, ProviderEvent::TextDelta(t) if t == " world")));
         assert!(events.iter().any(|e| matches!(
             e,
-            LLMEvent::Finish {
+            ProviderEvent::Finish {
                 reason: StopReason::Stop
             }
         )));
@@ -300,7 +300,7 @@ mod tests {
 
         assert!(events.iter().any(|e| matches!(
             e,
-            LLMEvent::Finish {
+            ProviderEvent::Finish {
                 reason: StopReason::ToolCalls
             }
         )));
@@ -315,7 +315,7 @@ mod tests {
 
         assert!(events.iter().any(|e| matches!(
             e,
-            LLMEvent::Usage {
+            ProviderEvent::Usage {
                 input_tokens: 10,
                 output_tokens: 5
             }
@@ -334,15 +334,15 @@ mod tests {
 
         assert!(events.iter().any(|e| matches!(
             e,
-            LLMEvent::ToolCallStart { id, name } if id == "call_1" && name == "read_file"
+            ProviderEvent::ToolCallStart { id, name } if id == "call_1" && name == "read_file"
         )));
         assert!(events.iter().any(|e| matches!(
             e,
-            LLMEvent::ToolCallInputDelta { id, delta } if id == "call_1" && delta.contains("Cargo.toml")
+            ProviderEvent::ToolCallInputDelta { id, delta } if id == "call_1" && delta.contains("Cargo.toml")
         )));
         assert!(events.iter().any(|e| matches!(
             e,
-            LLMEvent::ToolCallEnd { id } if id == "call_1"
+            ProviderEvent::ToolCallEnd { id } if id == "call_1"
         )));
     }
 
@@ -357,15 +357,15 @@ mod tests {
 
         assert!(events.iter().any(|e| matches!(
             e,
-            LLMEvent::ToolCallStart { id, name } if id == "call_2" && name == "read_file"
+            ProviderEvent::ToolCallStart { id, name } if id == "call_2" && name == "read_file"
         )));
         assert!(events.iter().any(|e| matches!(
             e,
-            LLMEvent::ToolCallInputDelta { id, delta } if id == "call_2" && delta == "{\"path\":\"Cargo.toml\"}"
+            ProviderEvent::ToolCallInputDelta { id, delta } if id == "call_2" && delta == "{\"path\":\"Cargo.toml\"}"
         )));
         assert!(events.iter().any(|e| matches!(
             e,
-            LLMEvent::ToolCallEnd { id } if id == "call_2"
+            ProviderEvent::ToolCallEnd { id } if id == "call_2"
         )));
     }
 

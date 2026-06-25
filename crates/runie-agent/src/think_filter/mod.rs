@@ -2,7 +2,7 @@
 //! `</tool_call>` tags in `TextDelta` streams into structured thinking events.
 
 use std::mem;
-use runie_core::llm_event::LLMEvent;
+use runie_core::provider_event::ProviderEvent;
 
 /// Tags that open a thinking block.
 const OPENING_TAGS: [&str; 2] = ["<tool_call>", "<thinking>"];
@@ -33,19 +33,19 @@ pub struct ThinkFilter {
 impl ThinkFilter {
     pub fn new() -> Self { Self::default() }
 
-    /// Process a single `LLMEvent`. Returns zero or more transformed events.
-    pub fn feed(&mut self, event: LLMEvent) -> Vec<LLMEvent> {
+    /// Process a single `ProviderEvent`. Returns zero or more transformed events.
+    pub fn feed(&mut self, event: ProviderEvent) -> Vec<ProviderEvent> {
         match event {
-            LLMEvent::TextDelta(delta) => self.feed_text(delta),
-            LLMEvent::ThinkingDelta(delta) => vec![LLMEvent::ThinkingDelta(delta)],
+            ProviderEvent::TextDelta(delta) => self.feed_text(delta),
+            ProviderEvent::ThinkingDelta(delta) => vec![ProviderEvent::ThinkingDelta(delta)],
             other => { let mut out = self.flush_buffer(); out.push(other); out }
         }
     }
 
     /// Drain buffered state and emit final thinking close.
-    pub fn flush(&mut self) -> Vec<LLMEvent> { self.flush_buffer() }
+    pub fn flush(&mut self) -> Vec<ProviderEvent> { self.flush_buffer() }
 
-    fn feed_text(&mut self, delta: String) -> Vec<LLMEvent> {
+    fn feed_text(&mut self, delta: String) -> Vec<ProviderEvent> {
         if delta.is_empty() { return Vec::new(); }
         let text = prepend_buffer(mem::take(&mut self.buffer), delta);
         let mut out = Vec::new();
@@ -64,24 +64,24 @@ impl ThinkFilter {
         out
     }
 
-    fn flush_buffer(&mut self) -> Vec<LLMEvent> {
+    fn flush_buffer(&mut self) -> Vec<ProviderEvent> {
         let mut out = Vec::new();
         match self.state {
             ThinkState::Inside => {
                 if !self.buffer.is_empty() {
-                    out.push(LLMEvent::ThinkingDelta(self.buffer.clone()));
+                    out.push(ProviderEvent::ThinkingDelta(self.buffer.clone()));
                 }
-                out.push(LLMEvent::ThinkingEnd { id: "inline".into() });
+                out.push(ProviderEvent::ThinkingEnd { id: "inline".into() });
             }
             ThinkState::WaitingPartialOpen => {
                 emit_thinking_start(&mut out);
                 if !self.buffer.is_empty() {
-                    out.push(LLMEvent::ThinkingDelta(self.buffer.clone()));
+                    out.push(ProviderEvent::ThinkingDelta(self.buffer.clone()));
                 }
-                out.push(LLMEvent::ThinkingEnd { id: "inline".into() });
+                out.push(ProviderEvent::ThinkingEnd { id: "inline".into() });
             }
             _ if !self.buffer.is_empty() => {
-                out.push(LLMEvent::TextDelta(self.buffer.clone()));
+                out.push(ProviderEvent::TextDelta(self.buffer.clone()));
             }
             _ => {}
         }
@@ -94,7 +94,7 @@ impl ThinkFilter {
     // Post-thought: skip the duplicate </thinking> then return to outside
     // =========================================================================
 
-    fn consume_post_thought(&mut self, text: &str, pos: usize, out: &mut Vec<LLMEvent>) -> usize {
+    fn consume_post_thought(&mut self, text: &str, pos: usize, out: &mut Vec<ProviderEvent>) -> usize {
         self.state = ThinkState::Outside;
         let remaining = &text[pos..];
         let ws_len = remaining.chars().take_while(|c| c.is_whitespace()).count();
@@ -117,7 +117,7 @@ impl ThinkFilter {
     // Outside: find text or opening tag
     // =========================================================================
 
-    fn consume_outside(&mut self, text: &str, pos: usize, out: &mut Vec<LLMEvent>) -> usize {
+    fn consume_outside(&mut self, text: &str, pos: usize, out: &mut Vec<ProviderEvent>) -> usize {
         let remaining = &text[pos..];
         // Check for partial opening tag at start.
         if starts_with_opening_tag(remaining).is_none() {
@@ -159,7 +159,7 @@ impl ThinkFilter {
     // Inside: find closing tag or nested opening tag
     // =========================================================================
 
-    fn consume_inside(&mut self, text: &str, pos: usize, out: &mut Vec<LLMEvent>) -> usize {
+    fn consume_inside(&mut self, text: &str, pos: usize, out: &mut Vec<ProviderEvent>) -> usize {
         let remaining = &text[pos..];
         let next_open = find_next_opening_tag(remaining);
         let close_pos = find_earliest_close(remaining);
@@ -179,7 +179,7 @@ impl ThinkFilter {
         next_open: Option<(&str, usize)>,
         close_pos: usize,
         close_tag: &str,
-        out: &mut Vec<LLMEvent>,
+        out: &mut Vec<ProviderEvent>,
     ) -> usize {
         match next_open {
             None => self.emit_close_and_end(remaining, pos, close_pos, close_tag, out),
@@ -210,7 +210,7 @@ impl ThinkFilter {
         pos: usize,
         close_pos: usize,
         close_tag: &str,
-        out: &mut Vec<LLMEvent>,
+        out: &mut Vec<ProviderEvent>,
     ) -> usize {
         emit_thinking(out, remaining[..close_pos].to_string());
         let new_pos = pos + close_pos + close_tag.len();
@@ -229,20 +229,20 @@ impl ThinkFilter {
 // Emit helpers
 // ============================================================================
 
-fn emit_text(out: &mut Vec<LLMEvent>, text: String) {
-    if !text.is_empty() { out.push(LLMEvent::TextDelta(text)); }
+fn emit_text(out: &mut Vec<ProviderEvent>, text: String) {
+    if !text.is_empty() { out.push(ProviderEvent::TextDelta(text)); }
 }
 
-fn emit_thinking(out: &mut Vec<LLMEvent>, text: String) {
-    if !text.is_empty() { out.push(LLMEvent::ThinkingDelta(text)); }
+fn emit_thinking(out: &mut Vec<ProviderEvent>, text: String) {
+    if !text.is_empty() { out.push(ProviderEvent::ThinkingDelta(text)); }
 }
 
-fn emit_thinking_start(out: &mut Vec<LLMEvent>) {
-    out.push(LLMEvent::ThinkingStart { id: "inline".into() });
+fn emit_thinking_start(out: &mut Vec<ProviderEvent>) {
+    out.push(ProviderEvent::ThinkingStart { id: "inline".into() });
 }
 
-fn emit_thinking_end(out: &mut Vec<LLMEvent>) {
-    out.push(LLMEvent::ThinkingEnd { id: "inline".into() });
+fn emit_thinking_end(out: &mut Vec<ProviderEvent>) {
+    out.push(ProviderEvent::ThinkingEnd { id: "inline".into() });
 }
 
 // ============================================================================

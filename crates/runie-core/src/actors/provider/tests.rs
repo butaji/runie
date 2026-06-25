@@ -9,7 +9,7 @@ use crate::actors::provider::{BuiltProvider, ProviderActor, ProviderActorHandle,
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::event::Event;
-use crate::llm_event::LLMEvent;
+use crate::provider_event::ProviderEvent;
 use crate::message::ChatMessage;
 use crate::provider::{Provider, ProviderError};
 
@@ -19,7 +19,7 @@ impl Provider for DummyProvider {
     fn generate(
         &self,
         _messages: Vec<ChatMessage>,
-    ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>> {
+    ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
         Box::pin(futures::stream::empty())
     }
 }

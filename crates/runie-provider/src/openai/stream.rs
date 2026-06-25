@@ -8,7 +8,7 @@ use super::OpenAiProvider;
 use crate::framing::sse_framing;
 use crate::protocol::ProviderProtocol;
 use futures::StreamExt;
-use runie_core::llm_event::LLMEvent;
+use runie_core::provider_event::ProviderEvent;
 use runie_core::message::ChatMessage;
 
 /// Re-export types for testing and external consumers.
@@ -64,14 +64,14 @@ pub struct Chunk {
 pub fn openai_stream(
     provider: OpenAiProvider,
     messages: Vec<ChatMessage>,
-) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<LLMEvent>> + Send>> {
+) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send>> {
     Box::pin(openai_event_stream(provider, messages))
 }
 
 fn openai_event_stream(
     provider: OpenAiProvider,
     messages: Vec<ChatMessage>,
-) -> impl futures::Stream<Item = anyhow::Result<LLMEvent>> + Send {
+) -> impl futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send {
     async_stream::stream! {
         let response = match send_openai_request(&provider.client, &provider, &messages).await {
             Ok(r) => r,
@@ -120,7 +120,7 @@ pub fn parse_sse_event(line: &str) -> Option<SseEvent> {
 }
 
 /// Replay SSE text and return accumulated events.
-pub fn replay_sse(text: &str) -> Vec<LLMEvent> {
+pub fn replay_sse(text: &str) -> Vec<ProviderEvent> {
     let protocol = OpenAiProtocol::new();
     let mut state = OpenAiState::default();
     let mut events = Vec::new();
@@ -147,7 +147,7 @@ pub fn replay_sse(text: &str) -> Vec<LLMEvent> {
 pub mod tests {
     use super::*;
 
-    pub fn collect_events(lines: &[&str]) -> Vec<LLMEvent> {
+    pub fn collect_events(lines: &[&str]) -> Vec<ProviderEvent> {
         let protocol = OpenAiProtocol::new();
         let mut state = OpenAiState::default();
         let mut all = Vec::new();
@@ -177,15 +177,15 @@ pub mod tests {
             "data: [DONE]",
         ];
         let events = collect_events(lines);
-        let first_delta_idx = events.iter().position(|e| matches!(e, LLMEvent::TextDelta(_)))
+        let first_delta_idx = events.iter().position(|e| matches!(e, ProviderEvent::TextDelta(_)))
             .expect("Should have TextDelta");
-        assert!(matches!(&events[0], LLMEvent::TextStart { id } if id == "text"), "First event should be TextStart");
-        let start_idx = events.iter().position(|e| matches!(e, LLMEvent::TextStart { .. }))
+        assert!(matches!(&events[0], ProviderEvent::TextStart { id } if id == "text"), "First event should be TextStart");
+        let start_idx = events.iter().position(|e| matches!(e, ProviderEvent::TextStart { .. }))
             .expect("Should have TextStart");
         assert!(start_idx < first_delta_idx);
-        let text_starts: Vec<_> = events.iter().filter(|e| matches!(e, LLMEvent::TextStart { id } if id == "text")).collect();
+        let text_starts: Vec<_> = events.iter().filter(|e| matches!(e, ProviderEvent::TextStart { id } if id == "text")).collect();
         assert_eq!(text_starts.len(), 1);
-        assert!(events.iter().any(|e| matches!(e, LLMEvent::Finish { .. })), "Should emit Finish");
+        assert!(events.iter().any(|e| matches!(e, ProviderEvent::Finish { .. })), "Should emit Finish");
     }
 
     #[test]
@@ -196,13 +196,13 @@ pub mod tests {
             "data: [DONE]",
         ];
         let events = collect_events(lines);
-        let first_delta_idx = events.iter().position(|e| matches!(e, LLMEvent::ThinkingDelta(_)))
+        let first_delta_idx = events.iter().position(|e| matches!(e, ProviderEvent::ThinkingDelta(_)))
             .expect("Should have ThinkingDelta");
-        assert!(matches!(&events[0], LLMEvent::ThinkingStart { id } if id == "reasoning"), "First event should be ThinkingStart");
-        let start_idx = events.iter().position(|e| matches!(e, LLMEvent::ThinkingStart { .. }))
+        assert!(matches!(&events[0], ProviderEvent::ThinkingStart { id } if id == "reasoning"), "First event should be ThinkingStart");
+        let start_idx = events.iter().position(|e| matches!(e, ProviderEvent::ThinkingStart { .. }))
             .expect("Should have ThinkingStart");
         assert!(start_idx < first_delta_idx);
-        let thinking_starts: Vec<_> = events.iter().filter(|e| matches!(e, LLMEvent::ThinkingStart { id } if id == "reasoning")).collect();
+        let thinking_starts: Vec<_> = events.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { id } if id == "reasoning")).collect();
         assert_eq!(thinking_starts.len(), 1);
     }
 }

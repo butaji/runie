@@ -7,7 +7,7 @@
 use anyhow::Result;
 use futures::StreamExt;
 use runie_core::event::{AgentEvent, Event};
-use runie_core::llm_event::LLMEvent;
+use runie_core::provider_event::ProviderEvent;
 use runie_core::message::ChatMessage;
 use runie_core::provider::Provider;
 use runie_core::tool_markers::strip_tool_markers;
@@ -70,15 +70,15 @@ impl StreamState {
         Ok(())
     }
 
-    fn handle_event(&mut self, event: LLMEvent) -> ControlFlow<Result<()>> {
+    fn handle_event(&mut self, event: ProviderEvent) -> ControlFlow<Result<()>> {
         match event {
-            LLMEvent::TextDelta(delta) => self.on_text_delta(delta),
-            LLMEvent::ThinkingDelta(delta) => self.on_thinking_delta(delta),
-            LLMEvent::ToolCallStart { id, name } => self.on_tool_start(id, name),
-            LLMEvent::ToolCallInputDelta { id, delta } => self.on_tool_input(id, delta),
-            LLMEvent::ToolCallEnd { id } => self.on_tool_end(id),
-            LLMEvent::Finish { .. } => ControlFlow::Break(Ok(())),
-            LLMEvent::Error(e) => ControlFlow::Break(Err(anyhow::anyhow!("LLM error: {:?}", e))),
+            ProviderEvent::TextDelta(delta) => self.on_text_delta(delta),
+            ProviderEvent::ThinkingDelta(delta) => self.on_thinking_delta(delta),
+            ProviderEvent::ToolCallStart { id, name } => self.on_tool_start(id, name),
+            ProviderEvent::ToolCallInputDelta { id, delta } => self.on_tool_input(id, delta),
+            ProviderEvent::ToolCallEnd { id } => self.on_tool_end(id),
+            ProviderEvent::Finish { .. } => ControlFlow::Break(Ok(())),
+            ProviderEvent::Error(e) => ControlFlow::Break(Err(anyhow::anyhow!("Model error: {:?}", e))),
             _ => ControlFlow::Continue(()),
         }
     }
@@ -169,7 +169,7 @@ pub async fn stream_response(
 
     while let Some(raw) = stream.next().await {
         let raw = raw?;
-        let is_finish = matches!(&raw, LLMEvent::Finish { .. });
+        let is_finish = matches!(&raw, ProviderEvent::Finish { .. });
         let events = state.think_filter.feed(raw);
         if events.is_empty() && is_finish {
             state.handle_flush()?;
@@ -205,17 +205,17 @@ fn emit_now(emit: &EmitFn, event: Event) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runie_core::llm_event::StopReason;
+    use runie_core::provider_event::StopReason;
 
     struct TestProvider {
-        events: Vec<LLMEvent>,
+        events: Vec<ProviderEvent>,
     }
 
     impl Provider for TestProvider {
         fn generate(
             &self,
             _messages: Vec<ChatMessage>,
-        ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<LLMEvent>> + Send + '_>> {
+        ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<ProviderEvent>> + Send + '_>> {
             let events = self.events.clone();
             Box::pin(futures::stream::iter(events.into_iter().map(Ok)))
         }
@@ -225,18 +225,18 @@ mod tests {
     async fn accumulates_text_and_tool_calls() {
         let provider = TestProvider {
             events: vec![
-                LLMEvent::TextDelta("I'll ".into()),
-                LLMEvent::TextDelta("read.".into()),
-                LLMEvent::ToolCallStart {
+                ProviderEvent::TextDelta("I'll ".into()),
+                ProviderEvent::TextDelta("read.".into()),
+                ProviderEvent::ToolCallStart {
                     id: "call_1".into(),
                     name: "read_file".into(),
                 },
-                LLMEvent::ToolCallInputDelta {
+                ProviderEvent::ToolCallInputDelta {
                     id: "call_1".into(),
                     delta: "{\"path\":\"Cargo.toml\"}".into(),
                 },
-                LLMEvent::ToolCallEnd { id: "call_1".into() },
-                LLMEvent::Finish {
+                ProviderEvent::ToolCallEnd { id: "call_1".into() },
+                ProviderEvent::Finish {
                     reason: StopReason::ToolCalls,
                 },
             ],
@@ -257,8 +257,8 @@ mod tests {
     async fn falls_back_to_text_parsing_when_no_tool_events() {
         let provider = TestProvider {
             events: vec![
-                LLMEvent::TextDelta(r#"{"name":"bash","arguments":{"command":"ls"}}"#.into()),
-                LLMEvent::Finish {
+                ProviderEvent::TextDelta(r#"{"name":"bash","arguments":{"command":"ls"}}"#.into()),
+                ProviderEvent::Finish {
                     reason: StopReason::Stop,
                 },
             ],
@@ -278,12 +278,12 @@ mod tests {
     async fn strips_tool_artifacts_from_text() {
         let provider = TestProvider {
             events: vec![
-                LLMEvent::TextDelta(
+                ProviderEvent::TextDelta(
                     "→ ```json{\"name\":\"list_dir\",\"arguments\":{\"path\":\".\"}}"
                         .into(),
                 ),
-                LLMEvent::TextDelta("Here's the current directory.".into()),
-                LLMEvent::Finish {
+                ProviderEvent::TextDelta("Here's the current directory.".into()),
+                ProviderEvent::Finish {
                     reason: StopReason::Stop,
                 },
             ],
@@ -307,10 +307,10 @@ mod tests {
     async fn think_filter_extracts_inline_tool_call() {
         let provider = TestProvider {
             events: vec![
-                LLMEvent::TextDelta("Let me ".into()),
-                LLMEvent::TextDelta("<tool_call>analyzing".into()),
-                LLMEvent::TextDelta("</tool_call>done".into()),
-                LLMEvent::Finish {
+                ProviderEvent::TextDelta("Let me ".into()),
+                ProviderEvent::TextDelta("<tool_call>analyzing".into()),
+                ProviderEvent::TextDelta("</tool_call>done".into()),
+                ProviderEvent::Finish {
                     reason: StopReason::Stop,
                 },
             ],
@@ -331,9 +331,9 @@ mod tests {
     async fn think_filter_partial_tag_boundary() {
         let provider = TestProvider {
             events: vec![
-                LLMEvent::TextDelta("<tool_call>think".into()),
-                LLMEvent::TextDelta("ing</tool_call>text".into()),
-                LLMEvent::Finish {
+                ProviderEvent::TextDelta("<tool_call>think".into()),
+                ProviderEvent::TextDelta("ing</tool_call>text".into()),
+                ProviderEvent::Finish {
                     reason: StopReason::Stop,
                 },
             ],
@@ -352,10 +352,10 @@ mod tests {
     async fn think_filter_passthrough_thinking_delta() {
         let provider = TestProvider {
             events: vec![
-                LLMEvent::ThinkingStart { id: "test".into() },
-                LLMEvent::ThinkingDelta("reasoning".into()),
-                LLMEvent::ThinkingEnd { id: "test".into() },
-                LLMEvent::Finish {
+                ProviderEvent::ThinkingStart { id: "test".into() },
+                ProviderEvent::ThinkingDelta("reasoning".into()),
+                ProviderEvent::ThinkingEnd { id: "test".into() },
+                ProviderEvent::Finish {
                     reason: StopReason::Stop,
                 },
             ],
@@ -374,8 +374,8 @@ mod tests {
     async fn think_filter_flush_unclosed_block() {
         let provider = TestProvider {
             events: vec![
-                LLMEvent::TextDelta("<thinking>unclosed".into()),
-                LLMEvent::Finish {
+                ProviderEvent::TextDelta("<thinking>unclosed".into()),
+                ProviderEvent::Finish {
                     reason: StopReason::Stop,
                 },
             ],
@@ -394,9 +394,9 @@ mod tests {
     async fn think_filter_no_regression_plain_text() {
         let provider = TestProvider {
             events: vec![
-                LLMEvent::TextDelta("Hello ".into()),
-                LLMEvent::TextDelta("world!".into()),
-                LLMEvent::Finish {
+                ProviderEvent::TextDelta("Hello ".into()),
+                ProviderEvent::TextDelta("world!".into()),
+                ProviderEvent::Finish {
                     reason: StopReason::Stop,
                 },
             ],
@@ -414,9 +414,9 @@ mod tests {
     async fn think_filter_nested_tool_call_tags() {
         let provider = TestProvider {
             events: vec![
-                LLMEvent::TextDelta("<tool_call>first</tool_call><tool_call>second</tool_call>rest"
+                ProviderEvent::TextDelta("<tool_call>first</tool_call><tool_call>second</tool_call>rest"
                     .into()),
-                LLMEvent::Finish {
+                ProviderEvent::Finish {
                     reason: StopReason::Stop,
                 },
             ],
@@ -436,8 +436,8 @@ mod tests {
     async fn think_filter_thinking_tag_variant() {
         let provider = TestProvider {
             events: vec![
-                LLMEvent::TextDelta("<thinking>reasoning</thinking>answer".into()),
-                LLMEvent::Finish {
+                ProviderEvent::TextDelta("<thinking>reasoning</thinking>answer".into()),
+                ProviderEvent::Finish {
                     reason: StopReason::Stop,
                 },
             ],

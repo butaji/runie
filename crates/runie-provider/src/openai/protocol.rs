@@ -1,10 +1,10 @@
 //! OpenAI streaming protocol implementation.
 //!
-//! Transforms OpenAI SSE frames (`OpenAiFrame`) into `LLMEvent`s.
+//! Transforms OpenAI SSE frames (`OpenAiFrame`) into `ProviderEvent`s.
 
 use super::stream::{Chunk, Delta, ToolCallDelta};
 use crate::protocol::ProviderProtocol;
-use runie_core::llm_event::{LLMEvent, StopReason};
+use runie_core::provider_event::{ProviderEvent, StopReason};
 use runie_core::lifecycle::LifecycleState;
 use std::collections::{BTreeMap, HashSet};
 
@@ -80,7 +80,7 @@ impl ProviderProtocol for OpenAiProtocol {
     type Frame = OpenAiFrame;
     type State = OpenAiState;
 
-    fn step(&self, state: Self::State, frame: Self::Frame) -> (Self::State, Vec<LLMEvent>) {
+    fn step(&self, state: Self::State, frame: Self::Frame) -> (Self::State, Vec<ProviderEvent>) {
         match frame {
             OpenAiFrame::Chunk(chunk) => {
                 let mut new_state = state;
@@ -96,7 +96,7 @@ impl ProviderProtocol for OpenAiProtocol {
         }
     }
 
-    fn on_halt(&self, state: Self::State) -> Vec<LLMEvent> {
+    fn on_halt(&self, state: Self::State) -> Vec<ProviderEvent> {
         let mut new_state = state;
         flush_tool_calls(&mut new_state)
     }
@@ -167,7 +167,7 @@ fn parse_tool_call_delta(value: &serde_json::Value) -> Option<ToolCallDelta> {
     })
 }
 
-fn process_openai_chunk(chunk: Chunk, state: &mut OpenAiState) -> Vec<LLMEvent> {
+fn process_openai_chunk(chunk: Chunk, state: &mut OpenAiState) -> Vec<ProviderEvent> {
     let mut events = Vec::new();
 
     if let Some(text) = chunk.delta.content {
@@ -189,7 +189,7 @@ fn process_openai_chunk(chunk: Chunk, state: &mut OpenAiState) -> Vec<LLMEvent> 
     }
 
     if let Some((input, output)) = chunk.usage {
-        events.push(LLMEvent::Usage {
+        events.push(ProviderEvent::Usage {
             input_tokens: input,
             output_tokens: output,
         });
@@ -198,7 +198,7 @@ fn process_openai_chunk(chunk: Chunk, state: &mut OpenAiState) -> Vec<LLMEvent> 
     events
 }
 
-fn process_tool_call_delta(delta: ToolCallDelta, state: &mut OpenAiState) -> Vec<LLMEvent> {
+fn process_tool_call_delta(delta: ToolCallDelta, state: &mut OpenAiState) -> Vec<ProviderEvent> {
     let acc = state.tools.entry(delta.index).or_default();
     // Buffer id and name; only proceed when we have both
     if !update_tool_acc(acc, &delta) { return vec![]; }
@@ -212,9 +212,9 @@ fn process_tool_call_delta(delta: ToolCallDelta, state: &mut OpenAiState) -> Vec
     let id = acc.id.clone();
     let name = acc.name.clone();
     let args = std::mem::take(&mut acc.arguments);
-    let mut events = vec![LLMEvent::ToolCallStart { id: id.clone(), name: name.clone() }];
+    let mut events = vec![ProviderEvent::ToolCallStart { id: id.clone(), name: name.clone() }];
     if !args.is_empty() {
-        events.push(LLMEvent::ToolCallInputDelta { id, delta: args });
+        events.push(ProviderEvent::ToolCallInputDelta { id, delta: args });
     }
     events
 }
@@ -226,15 +226,15 @@ fn update_tool_acc(acc: &mut ToolAccum, delta: &ToolCallDelta) -> bool {
     !acc.id.is_empty() && !acc.name.is_empty()
 }
 
-fn emit_args_delta(acc: &mut ToolAccum) -> Vec<LLMEvent> {
+fn emit_args_delta(acc: &mut ToolAccum) -> Vec<ProviderEvent> {
     if acc.arguments.is_empty() { return vec![]; }
     let id = acc.id.clone();
     let delta_str = acc.arguments.clone();
     acc.arguments.clear();
-    vec![LLMEvent::ToolCallInputDelta { id, delta: delta_str }]
+    vec![ProviderEvent::ToolCallInputDelta { id, delta: delta_str }]
 }
 
-fn flush_tool_calls(state: &mut OpenAiState) -> Vec<LLMEvent> {
+fn flush_tool_calls(state: &mut OpenAiState) -> Vec<ProviderEvent> {
     let mut events = Vec::new();
     for acc in state.tools.values() {
         if acc.id.is_empty() || state.ended.contains(&acc.id) {
@@ -242,19 +242,19 @@ fn flush_tool_calls(state: &mut OpenAiState) -> Vec<LLMEvent> {
         }
         if !state.started.contains(&acc.id) {
             state.started.insert(acc.id.clone());
-            events.push(LLMEvent::ToolCallStart {
+            events.push(ProviderEvent::ToolCallStart {
                 id: acc.id.clone(),
                 name: acc.name.clone(),
             });
         }
         if !acc.arguments.is_empty() {
-            events.push(LLMEvent::ToolCallInputDelta {
+            events.push(ProviderEvent::ToolCallInputDelta {
                 id: acc.id.clone(),
                 delta: acc.arguments.clone(),
             });
         }
         state.ended.insert(acc.id.clone());
-        events.push(LLMEvent::ToolCallEnd { id: acc.id.clone() });
+        events.push(ProviderEvent::ToolCallEnd { id: acc.id.clone() });
     }
     events
 }
@@ -337,9 +337,9 @@ mod tests {
         let frame = chunk_with_content("hi");
         let (new_state, events) = protocol.step(state, frame);
 
-        assert!(events.iter().any(|e| matches!(e, LLMEvent::TextDelta(t) if t == "hi")));
+        assert!(events.iter().any(|e| matches!(e, ProviderEvent::TextDelta(t) if t == "hi")));
         // Verify lifecycle state was updated by checking for TextStart event
-        assert!(events.iter().any(|e| matches!(e, LLMEvent::TextStart { id } if id == "text")));
+        assert!(events.iter().any(|e| matches!(e, ProviderEvent::TextStart { id } if id == "text")));
     }
 
     #[test]
@@ -356,23 +356,23 @@ mod tests {
         // Second chunk: args arrive - tool starts with buffered args
         let (state, events) = protocol.step(state, chunk_with_tool_args(r#"{"path":"#));
         assert!(events.iter().any(|e| matches!(
-            e, LLMEvent::ToolCallStart { id, name } if id == "call_1" && name == "read_file"
+            e, ProviderEvent::ToolCallStart { id, name } if id == "call_1" && name == "read_file"
         )));
         assert!(state.started.contains("call_1"));
 
         // Third chunk: more args - emit as delta
         let (state, events) = protocol.step(state, chunk_with_tool_args(r#"Cargo.toml"}"#));
         assert!(events.iter().any(|e| matches!(
-            e, LLMEvent::ToolCallInputDelta { id, delta } if id == "call_1"
+            e, ProviderEvent::ToolCallInputDelta { id, delta } if id == "call_1"
         )));
 
         // Finish reason flushes remaining args and ends tool
         let (final_state, events) = protocol.step(state, chunk_with_finish("tool_calls"));
         assert!(events.iter().any(|e| matches!(
-            e, LLMEvent::ToolCallEnd { id } if id == "call_1"
+            e, ProviderEvent::ToolCallEnd { id } if id == "call_1"
         )));
         assert!(events.iter().any(|e| matches!(
-            e, LLMEvent::Finish { reason: StopReason::ToolCalls }
+            e, ProviderEvent::Finish { reason: StopReason::ToolCalls }
         )));
         assert!(final_state.ended.contains("call_1"));
     }
@@ -385,10 +385,10 @@ mod tests {
         let (new_state, events) = protocol.step(state, frame);
 
         assert!(events.iter().any(|e| matches!(
-            e, LLMEvent::ThinkingDelta(t) if t == "thinking..."
+            e, ProviderEvent::ThinkingDelta(t) if t == "thinking..."
         )));
         assert!(events.iter().any(|e| matches!(
-            e, LLMEvent::ThinkingStart { id } if id == "reasoning"
+            e, ProviderEvent::ThinkingStart { id } if id == "reasoning"
         )));
     }
 
@@ -406,7 +406,7 @@ mod tests {
         // on_halt should flush remaining args and end tool
         let events = protocol.on_halt(state);
         assert!(events.iter().any(|e| matches!(
-            e, LLMEvent::ToolCallEnd { id } if id == "call_1"
+            e, ProviderEvent::ToolCallEnd { id } if id == "call_1"
         )));
     }
 
@@ -453,11 +453,11 @@ mod tests {
         let (state, events) = protocol.step(state, chunk_with_tool_start("call_2", "read_file"));
         // Should emit ToolCallStart
         assert!(events.iter().any(|e| matches!(
-            e, LLMEvent::ToolCallStart { id, name } if id == "call_2"
+            e, ProviderEvent::ToolCallStart { id, name } if id == "call_2"
         )));
         // And buffered args as delta
         assert!(events.iter().any(|e| matches!(
-            e, LLMEvent::ToolCallInputDelta { id, delta } if id == "call_2" && delta.contains("path")
+            e, ProviderEvent::ToolCallInputDelta { id, delta } if id == "call_2" && delta.contains("path")
         )));
     }
 }

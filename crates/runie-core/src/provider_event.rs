@@ -1,18 +1,19 @@
-//! Provider-agnostic LLM event stream types.
+//! Canonical provider event vocabulary.
 //!
 //! Normalizes events from all providers (OpenAI, Anthropic, Ollama, etc.)
-//! into a unified vocabulary.
+//! into a unified vocabulary distinct from the internal `Event` type.
 
 use crate::provider::ProviderError;
 use serde::{Deserialize, Serialize};
 
-/// Unified LLM event stream type.
+/// Unified provider event stream type.
 ///
 /// All providers emit the same event vocabulary regardless of their
-/// underlying API shape.
+/// underlying API shape. This is the canonical type for the streaming
+/// pipeline; convert to `Event` at the TUI/headless boundary.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data", rename_all = "camelCase")]
-pub enum LLMEvent {
+pub enum ProviderEvent {
     /// An assistant text block has started.
     TextStart { id: String },
     /// A delta of text content from the assistant.
@@ -32,7 +33,7 @@ pub enum LLMEvent {
     /// An LLM finished a tool invocation.
     ToolCallEnd { id: String },
     /// An error occurred during generation.
-    Error(LLMError),
+    Error(ModelError),
     /// Token usage information.
     Usage {
         input_tokens: usize,
@@ -73,10 +74,10 @@ impl StopReason {
     }
 }
 
-/// LLM-specific errors (distinct from ProviderError).
+/// Model-specific errors (distinct from `ProviderError`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "message", rename_all = "camelCase")]
-pub enum LLMError {
+pub enum ModelError {
     /// LLM returned invalid JSON.
     JsonDecode(String),
     /// Token limit exceeded.
@@ -89,9 +90,29 @@ pub enum LLMError {
     Other(String),
 }
 
-impl From<ProviderError> for LLMError {
+impl std::fmt::Display for ModelError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ModelError::JsonDecode(msg) => write!(f, "JSON decode error: {msg}"),
+            ModelError::ContextLength { limit, used } => {
+                write!(f, "Context length exceeded: used {used}, limit {limit}")
+            }
+            ModelError::Refusal(msg) => write!(f, "Model refused: {msg}"),
+            ModelError::RateLimit { retry_after_secs } => {
+                if let Some(secs) = retry_after_secs {
+                    write!(f, "Rate limited, retry after {secs}s")
+                } else {
+                    write!(f, "Rate limited")
+                }
+            }
+            ModelError::Other(msg) => write!(f, "{msg}"),
+        }
+    }
+}
+
+impl From<ProviderError> for ModelError {
     fn from(e: ProviderError) -> Self {
-        LLMError::Other(e.to_string())
+        ModelError::Other(e.to_string())
     }
 }
 
@@ -104,30 +125,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn llm_event_serialize_deserialize() {
-        let event = LLMEvent::TextDelta("Hello, world!".into());
+    fn provider_event_serialize_deserialize() {
+        let event = ProviderEvent::TextDelta("Hello, world!".into());
         let json = serde_json::to_string(&event).unwrap();
-        let parsed: LLMEvent = serde_json::from_str(&json).unwrap();
-        assert!(matches!(parsed, LLMEvent::TextDelta(t) if t == "Hello, world!"));
+        let parsed: ProviderEvent = serde_json::from_str(&json).unwrap();
+        assert!(matches!(parsed, ProviderEvent::TextDelta(t) if t == "Hello, world!"));
     }
 
     #[test]
-    fn llm_event_tool_call_roundtrip() {
-        let event = LLMEvent::ToolCallStart {
+    fn provider_event_tool_call_roundtrip() {
+        let event = ProviderEvent::ToolCallStart {
             id: "call_abc".into(),
             name: "bash".into(),
         };
         let json = serde_json::to_string(&event).unwrap();
-        let parsed: LLMEvent = serde_json::from_str(&json).unwrap();
-        assert!(matches!(parsed, LLMEvent::ToolCallStart { id, name } 
+        let parsed: ProviderEvent = serde_json::from_str(&json).unwrap();
+        assert!(matches!(parsed, ProviderEvent::ToolCallStart { id, name }
             if id == "call_abc" && name == "bash"));
     }
 
     #[test]
-    fn llm_error_from_provider_error() {
+    fn model_error_from_provider_error() {
         let err = ProviderError::MissingApiKey("openai".into());
-        let llm_err: LLMError = err.into();
-        assert!(matches!(llm_err, LLMError::Other(s) if s.contains("openai")));
+        let model_err: ModelError = err.into();
+        assert!(matches!(model_err, ModelError::Other(s) if s.contains("openai")));
     }
 
     #[test]

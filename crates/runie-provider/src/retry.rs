@@ -6,7 +6,7 @@
 //! immediately so the UI is never duplicated or corrupted.
 
 use futures::{Stream, StreamExt};
-use runie_core::llm_event::LLMEvent;
+use runie_core::provider_event::ProviderEvent;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -49,7 +49,7 @@ enum RetryState<S> {
 impl<F, S> RetryStream<F, S>
 where
     F: FnMut() -> S + Send,
-    S: Stream<Item = anyhow::Result<LLMEvent>> + Send,
+    S: Stream<Item = anyhow::Result<ProviderEvent>> + Send,
 {
     pub fn new(factory: F, config: RetryConfig) -> Self {
         Self {
@@ -68,7 +68,7 @@ where
 impl<F, S> RetryStream<F, S>
 where
     F: FnMut() -> S + Send + Unpin,
-    S: Stream<Item = anyhow::Result<LLMEvent>> + Send + Unpin,
+    S: Stream<Item = anyhow::Result<ProviderEvent>> + Send + Unpin,
 {
     fn start_stream(&mut self) {
         let inner = (self.factory)();
@@ -126,9 +126,9 @@ where
 impl<F, S> Stream for RetryStream<F, S>
 where
     F: FnMut() -> S + Send + Unpin,
-    S: Stream<Item = anyhow::Result<LLMEvent>> + Send + Unpin,
+    S: Stream<Item = anyhow::Result<ProviderEvent>> + Send + Unpin,
 {
-    type Item = anyhow::Result<LLMEvent>;
+    type Item = anyhow::Result<ProviderEvent>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         loop {
@@ -172,7 +172,7 @@ where
         messages: Vec<runie_core::message::ChatMessage>,
     ) -> std::pin::Pin<
         Box<
-            dyn futures::Stream<Item = anyhow::Result<runie_core::llm_event::LLMEvent>> + Send + '_,
+            dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>> + Send + '_,
         >,
     > {
         let inner = &self.inner;
@@ -200,7 +200,7 @@ fn is_retryable(e: &anyhow::Error) -> bool {
 mod tests {
     use super::*;
     use futures::stream;
-    use runie_core::llm_event::StopReason;
+    use runie_core::provider_event::StopReason;
     use runie_core::message::ChatMessage;
     use runie_core::provider::Provider;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -218,9 +218,9 @@ mod tests {
                         stream::iter(vec![Err(anyhow::anyhow!("rate limit"))])
                     } else {
                         stream::iter(vec![
-                            Ok(LLMEvent::TextDelta("hi".to_string())),
-                            Ok(LLMEvent::Finish {
-                                reason: runie_core::llm_event::StopReason::Stop,
+                            Ok(ProviderEvent::TextDelta("hi".to_string())),
+                            Ok(ProviderEvent::Finish {
+                                reason: runie_core::provider_event::StopReason::Stop,
                             }),
                         ])
                     }
@@ -236,7 +236,7 @@ mod tests {
         assert_eq!(calls.load(Ordering::SeqCst), 2);
         assert!(events
             .iter()
-            .any(|e| matches!(e, Ok(LLMEvent::TextDelta(t)) if t == "hi")));
+            .any(|e| matches!(e, Ok(ProviderEvent::TextDelta(t)) if t == "hi")));
     }
 
     #[tokio::test]
@@ -248,7 +248,7 @@ mod tests {
                 move || {
                     calls.fetch_add(1, Ordering::SeqCst);
                     stream::iter(vec![
-                        Ok(LLMEvent::TextDelta("hi".to_string())),
+                        Ok(ProviderEvent::TextDelta("hi".to_string())),
                         Err(anyhow::anyhow!("boom")),
                     ])
                 }
@@ -319,14 +319,14 @@ mod tests {
         fn generate(
             &self,
             _messages: Vec<ChatMessage>,
-        ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>> {
+        ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
             let n = self.calls.fetch_add(1, Ordering::SeqCst);
             if n == 0 {
                 Box::pin(stream::iter(vec![Err(anyhow::anyhow!("timeout"))]))
             } else {
                 Box::pin(stream::iter(vec![
-                    Ok(LLMEvent::TextDelta("ok".to_string())),
-                    Ok(LLMEvent::Finish {
+                    Ok(ProviderEvent::TextDelta("ok".to_string())),
+                    Ok(ProviderEvent::Finish {
                         reason: StopReason::Stop,
                     }),
                 ]))
@@ -347,7 +347,7 @@ mod tests {
         let events: Vec<_> = stream.collect().await;
         assert!(events.iter().any(|e| matches!(
             e,
-            Ok(LLMEvent::TextDelta(t)) if t == "ok"
+            Ok(ProviderEvent::TextDelta(t)) if t == "ok"
         )));
     }
 }

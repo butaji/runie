@@ -13,7 +13,7 @@ use crate::tool_runner::{execute_tool_call, tool_result_message};
 use crate::PermissionGate;
 use anyhow::Result;
 use futures::StreamExt;
-use runie_core::llm_event::LLMEvent;
+use runie_core::provider_event::ProviderEvent;
 use runie_core::message::ChatMessage;
 use runie_core::permissions::PermissionManager;
 use runie_core::provider::Provider;
@@ -195,22 +195,22 @@ impl<'a> HeadlessStreamState<'a> {
         }
     }
 
-    fn handle_event(&mut self, event: LLMEvent) -> ControlFlow<()> {
+    fn handle_event(&mut self, event: ProviderEvent) -> ControlFlow<()> {
         match event {
-            LLMEvent::TextDelta(delta) => self.on_text_delta(delta),
-            LLMEvent::ToolCallStart { id, name } => {
+            ProviderEvent::TextDelta(delta) => self.on_text_delta(delta),
+            ProviderEvent::ToolCallStart { id, name } => {
                 self.accumulators.entry(id).or_default().name = name;
             }
-            LLMEvent::ToolCallInputDelta { id, delta } => {
+            ProviderEvent::ToolCallInputDelta { id, delta } => {
                 self.accumulators
                     .entry(id)
                     .or_default()
                     .arguments
                     .push_str(&delta);
             }
-            LLMEvent::ToolCallEnd { id } => self.on_tool_end(id),
-            LLMEvent::Finish { .. } => return ControlFlow::Break(()),
-            LLMEvent::Error(e) => {
+            ProviderEvent::ToolCallEnd { id } => self.on_tool_end(id),
+            ProviderEvent::Finish { .. } => return ControlFlow::Break(()),
+            ProviderEvent::Error(e) => {
                 self.error = Some(format!("{:?}", e));
                 return ControlFlow::Break(());
             }

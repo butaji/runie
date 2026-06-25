@@ -1,20 +1,20 @@
 //! Provider trait and types
 
-use crate::llm_event::LLMEvent;
+use crate::provider_event::ProviderEvent;
 use crate::message::ChatMessage;
 use anyhow::Result;
 use futures::Stream;
 use std::pin::Pin;
 
-/// A chunk of streaming response (legacy type, prefer LLMEvent).
+/// A chunk of streaming response (legacy type, prefer ProviderEvent).
 #[derive(Debug, Clone)]
 pub struct ResponseChunk {
     pub content: String,
 }
 
-impl From<ResponseChunk> for LLMEvent {
+impl From<ResponseChunk> for ProviderEvent {
     fn from(chunk: ResponseChunk) -> Self {
-        LLMEvent::TextDelta(chunk.content)
+        ProviderEvent::TextDelta(chunk.content)
     }
 }
 
@@ -55,7 +55,7 @@ impl std::fmt::Display for ProviderError {
 impl std::error::Error for ProviderError {}
 
 /// Provider trait — implemented by LLM backends.
-/// Returns a `Stream` of `LLMEvent`s.
+/// Returns a `Stream` of `ProviderEvent`s.
 ///
 /// This trait is dyn-compatible (no `async fn`, no generic parameters).
 pub trait Provider: Send + Sync {
@@ -63,7 +63,7 @@ pub trait Provider: Send + Sync {
     fn generate(
         &self,
         messages: Vec<ChatMessage>,
-    ) -> Pin<Box<dyn Stream<Item = Result<LLMEvent>> + Send + '_>>;
+    ) -> Pin<Box<dyn Stream<Item = Result<ProviderEvent>> + Send + '_>>;
 
     /// Generate with a set of tool definitions that the model may invoke.
     ///
@@ -74,7 +74,7 @@ pub trait Provider: Send + Sync {
         &self,
         messages: Vec<ChatMessage>,
         _tools: Vec<serde_json::Value>,
-    ) -> Pin<Box<dyn Stream<Item = Result<LLMEvent>> + Send + '_>> {
+    ) -> Pin<Box<dyn Stream<Item = Result<ProviderEvent>> + Send + '_>> {
         self.generate(messages)
     }
 }

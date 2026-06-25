@@ -1,28 +1,28 @@
 //! Tests for ThinkFilter.
 
 use super::*;
-use runie_core::llm_event::StopReason as SR;
+use runie_core::provider_event::StopReason as SR;
 
-fn ev(delta: &str) -> LLMEvent { LLMEvent::TextDelta(delta.into()) }
-fn td(delta: &str) -> LLMEvent { LLMEvent::ThinkingDelta(delta.into()) }
-fn fin() -> LLMEvent { LLMEvent::Finish { reason: SR::Stop } }
-fn ts() -> LLMEvent { LLMEvent::ThinkingStart { id: "inline".into() } }
-fn te() -> LLMEvent { LLMEvent::ThinkingEnd { id: "inline".into() } }
+fn ev(delta: &str) -> ProviderEvent { ProviderEvent::TextDelta(delta.into()) }
+fn td(delta: &str) -> ProviderEvent { ProviderEvent::ThinkingDelta(delta.into()) }
+fn fin() -> ProviderEvent { ProviderEvent::Finish { reason: SR::Stop } }
+fn ts() -> ProviderEvent { ProviderEvent::ThinkingStart { id: "inline".into() } }
+fn te() -> ProviderEvent { ProviderEvent::ThinkingEnd { id: "inline".into() } }
 
-fn has_ts(events: &[LLMEvent]) -> bool {
-    events.iter().any(|e| matches!(e, LLMEvent::ThinkingStart { .. }))
+fn has_ts(events: &[ProviderEvent]) -> bool {
+    events.iter().any(|e| matches!(e, ProviderEvent::ThinkingStart { .. }))
 }
-fn has_te(events: &[LLMEvent]) -> bool {
-    events.iter().any(|e| matches!(e, LLMEvent::ThinkingEnd { .. }))
+fn has_te(events: &[ProviderEvent]) -> bool {
+    events.iter().any(|e| matches!(e, ProviderEvent::ThinkingEnd { .. }))
 }
-fn has_td(events: &[LLMEvent]) -> bool {
-    events.iter().any(|e| matches!(e, LLMEvent::ThinkingDelta(_)))
+fn has_td(events: &[ProviderEvent]) -> bool {
+    events.iter().any(|e| matches!(e, ProviderEvent::ThinkingDelta(_)))
 }
-fn td_content(events: &[LLMEvent]) -> String {
-    events.iter().filter_map(|e| match e { LLMEvent::ThinkingDelta(s) => Some(s.as_str()), _ => None }).collect::<Vec<_>>().join("")
+fn td_content(events: &[ProviderEvent]) -> String {
+    events.iter().filter_map(|e| match e { ProviderEvent::ThinkingDelta(s) => Some(s.as_str()), _ => None }).collect::<Vec<_>>().join("")
 }
-fn text_content(events: &[LLMEvent]) -> String {
-    events.iter().filter_map(|e| match e { LLMEvent::TextDelta(s) => Some(s.as_str()), _ => None }).collect::<Vec<_>>().join("")
+fn text_content(events: &[ProviderEvent]) -> String {
+    events.iter().filter_map(|e| match e { ProviderEvent::TextDelta(s) => Some(s.as_str()), _ => None }).collect::<Vec<_>>().join("")
 }
 
 /// Layer 1: ThinkFilter passes plain text through unchanged.
@@ -98,8 +98,8 @@ fn flush_empty() {
 fn nested_opens() {
     let mut f = ThinkFilter::new();
     let out: Vec<_> = f.feed(ev("<thinking>first</thinking><tool_call>second</thinking>")).into_iter().collect();
-    assert_eq!(out.iter().filter(|e| matches!(e, LLMEvent::ThinkingStart { .. })).count(), 2);
-    assert_eq!(out.iter().filter(|e| matches!(e, LLMEvent::ThinkingEnd { .. })).count(), 2);
+    assert_eq!(out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. })).count(), 2);
+    assert_eq!(out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. })).count(), 2);
 }
 
 /// Layer 1: Empty thinking block emits TS + TE, no delta.
@@ -140,8 +140,8 @@ fn multiple_chunks() {
 fn adjacent_blocks() {
     let mut f = ThinkFilter::new();
     let out: Vec<_> = f.feed(ev("<thinking>a</thinking><thinking>b</thinking>")).into_iter().collect();
-    assert_eq!(out.iter().filter(|e| matches!(e, LLMEvent::ThinkingStart { .. })).count(), 2);
-    assert_eq!(out.iter().filter(|e| matches!(e, LLMEvent::ThinkingEnd { .. })).count(), 2);
+    assert_eq!(out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. })).count(), 2);
+    assert_eq!(out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. })).count(), 2);
 }
 
 /// Layer 1: Text before and after thinking block preserved.
@@ -161,9 +161,9 @@ fn flush_with_open() {
     f.feed(ev("<thinking>")).into_iter().collect::<Vec<_>>();
     let flushed: Vec<_> = f.flush().into_iter().collect();
     assert_eq!(flushed.len(), 3);
-    assert!(matches!(&flushed[0], LLMEvent::ThinkingStart { .. }));
-    assert!(matches!(&flushed[1], LLMEvent::ThinkingDelta(_)));
-    assert!(matches!(&flushed[2], LLMEvent::ThinkingEnd { .. }));
+    assert!(matches!(&flushed[0], ProviderEvent::ThinkingStart { .. }));
+    assert!(matches!(&flushed[1], ProviderEvent::ThinkingDelta(_)));
+    assert!(matches!(&flushed[2], ProviderEvent::ThinkingEnd { .. }));
 }
 
 /// Layer 1: Duplicate </thinking> after whitespace is skipped (only 1 block).
@@ -171,8 +171,8 @@ fn flush_with_open() {
 fn whitespace_between_closes() {
     let mut f = ThinkFilter::new();
     let out: Vec<_> = f.feed(ev("<thinking>a</thinking>   </thinking>b")).into_iter().collect();
-    assert_eq!(out.iter().filter(|e| matches!(e, LLMEvent::ThinkingStart { .. })).count(), 1);
-    assert_eq!(out.iter().filter(|e| matches!(e, LLMEvent::ThinkingEnd { .. })).count(), 1);
+    assert_eq!(out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. })).count(), 1);
+    assert_eq!(out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. })).count(), 1);
     assert!(text_content(&out).contains("b"));
 }
 

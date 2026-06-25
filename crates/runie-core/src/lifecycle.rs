@@ -6,7 +6,7 @@
 
 use std::collections::HashSet;
 
-use crate::llm_event::LLMEvent;
+use crate::provider_event::ProviderEvent;
 
 /// Tracks open content blocks and emits lifecycle events.
 #[derive(Debug, Default)]
@@ -24,51 +24,51 @@ impl LifecycleState {
     /// Process a text delta and emit lifecycle events.
     ///
     /// Returns `TextStart` on first delta for this `id`, then `TextDelta`.
-    pub fn text_delta(&mut self, id: &str, delta: &str) -> Vec<LLMEvent> {
+    pub fn text_delta(&mut self, id: &str, delta: &str) -> Vec<ProviderEvent> {
         let is_new = self.open_text_blocks.insert(id.to_string());
         let mut events = Vec::new();
         if is_new {
-            events.push(LLMEvent::TextStart { id: id.to_string() });
+            events.push(ProviderEvent::TextStart { id: id.to_string() });
         }
-        events.push(LLMEvent::TextDelta(delta.to_string()));
+        events.push(ProviderEvent::TextDelta(delta.to_string()));
         events
     }
 
     /// Explicitly close a text block and emit `TextEnd`.
-    pub fn text_end(&mut self, id: &str) -> Vec<LLMEvent> {
+    pub fn text_end(&mut self, id: &str) -> Vec<ProviderEvent> {
         self.open_text_blocks.remove(id);
-        vec![LLMEvent::TextEnd { id: id.to_string() }]
+        vec![ProviderEvent::TextEnd { id: id.to_string() }]
     }
 
     /// Process a thinking delta and emit lifecycle events.
     ///
     /// Returns `ThinkingStart` on first delta for this `id`, then `ThinkingDelta`.
-    pub fn thinking_delta(&mut self, id: &str, delta: &str) -> Vec<LLMEvent> {
+    pub fn thinking_delta(&mut self, id: &str, delta: &str) -> Vec<ProviderEvent> {
         let is_new = self.open_thinking_blocks.insert(id.to_string());
         let mut events = Vec::new();
         if is_new {
-            events.push(LLMEvent::ThinkingStart { id: id.to_string() });
+            events.push(ProviderEvent::ThinkingStart { id: id.to_string() });
         }
-        events.push(LLMEvent::ThinkingDelta(delta.to_string()));
+        events.push(ProviderEvent::ThinkingDelta(delta.to_string()));
         events
     }
 
     /// Explicitly close a thinking block and emit `ThinkingEnd`.
-    pub fn thinking_end(&mut self, id: &str) -> Vec<LLMEvent> {
+    pub fn thinking_end(&mut self, id: &str) -> Vec<ProviderEvent> {
         self.open_thinking_blocks.remove(id);
-        vec![LLMEvent::ThinkingEnd { id: id.to_string() }]
+        vec![ProviderEvent::ThinkingEnd { id: id.to_string() }]
     }
 
     /// Close all open blocks and emit their end events, plus `Finish`.
-    pub fn finish(&mut self, reason: crate::llm_event::StopReason) -> Vec<LLMEvent> {
+    pub fn finish(&mut self, reason: crate::provider_event::StopReason) -> Vec<ProviderEvent> {
         let mut events = Vec::new();
         for id in self.open_text_blocks.drain() {
-            events.push(LLMEvent::TextEnd { id });
+            events.push(ProviderEvent::TextEnd { id });
         }
         for id in self.open_thinking_blocks.drain() {
-            events.push(LLMEvent::ThinkingEnd { id });
+            events.push(ProviderEvent::ThinkingEnd { id });
         }
-        events.push(LLMEvent::Finish { reason });
+        events.push(ProviderEvent::Finish { reason });
         events
     }
 }
@@ -88,8 +88,8 @@ mod tests {
         assert_eq!(
             events,
             vec![
-                LLMEvent::TextStart { id: "b1".into() },
-                LLMEvent::TextDelta("hi".into())
+                ProviderEvent::TextStart { id: "b1".into() },
+                ProviderEvent::TextDelta("hi".into())
             ]
         );
     }
@@ -99,7 +99,7 @@ mod tests {
         let mut state = LifecycleState::new();
         state.text_delta("b1", "hi");
         let events = state.text_delta("b1", " world");
-        assert_eq!(events, vec![LLMEvent::TextDelta(" world".into())]);
+        assert_eq!(events, vec![ProviderEvent::TextDelta(" world".into())]);
     }
 
     #[test]
@@ -108,12 +108,12 @@ mod tests {
         state.text_delta("t1", "hello");
         state.text_delta("t2", "world");
         state.thinking_delta("r1", "thinking");
-        let events = state.finish(crate::llm_event::StopReason::Stop);
-        assert!(events.contains(&LLMEvent::TextEnd { id: "t1".into() }));
-        assert!(events.contains(&LLMEvent::TextEnd { id: "t2".into() }));
-        assert!(events.contains(&LLMEvent::ThinkingEnd { id: "r1".into() }));
-        assert!(events.contains(&LLMEvent::Finish {
-            reason: crate::llm_event::StopReason::Stop
+        let events = state.finish(crate::provider_event::StopReason::Stop);
+        assert!(events.contains(&ProviderEvent::TextEnd { id: "t1".into() }));
+        assert!(events.contains(&ProviderEvent::TextEnd { id: "t2".into() }));
+        assert!(events.contains(&ProviderEvent::ThinkingEnd { id: "r1".into() }));
+        assert!(events.contains(&ProviderEvent::Finish {
+            reason: crate::provider_event::StopReason::Stop
         }));
         assert_eq!(events.len(), 4); // 3 End + 1 Finish
     }
@@ -127,8 +127,8 @@ mod tests {
         assert_eq!(
             events,
             vec![
-                LLMEvent::TextStart { id: "b1".into() },
-                LLMEvent::TextDelta("x".into())
+                ProviderEvent::TextStart { id: "b1".into() },
+                ProviderEvent::TextDelta("x".into())
             ]
         );
     }
@@ -140,8 +140,8 @@ mod tests {
         assert_eq!(
             events,
             vec![
-                LLMEvent::ThinkingStart { id: "r1".into() },
-                LLMEvent::ThinkingDelta("reasoning".into())
+                ProviderEvent::ThinkingStart { id: "r1".into() },
+                ProviderEvent::ThinkingDelta("reasoning".into())
             ]
         );
     }
@@ -156,11 +156,11 @@ mod tests {
         assert_eq!(e2.len(), 2);
         // First event of each should be TextStart
         match &e1[0] {
-            LLMEvent::TextStart { id } => assert_eq!(id, "a"),
+            ProviderEvent::TextStart { id } => assert_eq!(id, "a"),
             _ => panic!("Expected TextStart"),
         }
         match &e2[0] {
-            LLMEvent::TextStart { id } => assert_eq!(id, "b"),
+            ProviderEvent::TextStart { id } => assert_eq!(id, "b"),
             _ => panic!("Expected TextStart"),
         }
     }

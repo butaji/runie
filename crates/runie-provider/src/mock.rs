@@ -1,5 +1,5 @@
 use futures::Stream;
-use runie_core::llm_event::{LLMEvent, StopReason};
+use runie_core::provider_event::{ProviderEvent, StopReason};
 use runie_core::message::{ChatMessage, Role};
 use runie_core::provider::Provider;
 use std::pin::Pin;
@@ -171,7 +171,7 @@ impl Provider for MockProvider {
     fn generate(
         &self,
         messages: Vec<ChatMessage>,
-    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>> {
+    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
         let delay_ms = self.random_delay();
         let last = messages.last();
         let user_input = last_user_content(&messages).unwrap_or_default();
@@ -182,9 +182,9 @@ impl Provider for MockProvider {
                 if let Some(d) = delay_ms {
                     tokio::time::sleep(d).await;
                 }
-                yield Ok(LLMEvent::TextDelta(chunk_text));
+                yield Ok(ProviderEvent::TextDelta(chunk_text));
             }
-            yield Ok(LLMEvent::Finish { reason: StopReason::Stop });
+            yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
         })
     }
 
@@ -192,7 +192,7 @@ impl Provider for MockProvider {
         &self,
         messages: Vec<ChatMessage>,
         _tools: Vec<serde_json::Value>,
-    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>> {
+    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
         let user_input = last_user_content(&messages).unwrap_or_default();
         if user_input.contains("native tool") {
             return Box::pin(native_tool_stream());
@@ -201,19 +201,19 @@ impl Provider for MockProvider {
     }
 }
 
-fn native_tool_stream() -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + 'static>> {
+fn native_tool_stream() -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + 'static>> {
     Box::pin(async_stream::stream! {
-        yield Ok(LLMEvent::TextDelta("I'll run a command.\n".into()));
-        yield Ok(LLMEvent::ToolCallStart {
+        yield Ok(ProviderEvent::TextDelta("I'll run a command.\n".into()));
+        yield Ok(ProviderEvent::ToolCallStart {
             id: "call_1".into(),
             name: "bash".into(),
         });
-        yield Ok(LLMEvent::ToolCallInputDelta {
+        yield Ok(ProviderEvent::ToolCallInputDelta {
             id: "call_1".into(),
             delta: "{\"command\":\"echo hi\"}".into(),
         });
-        yield Ok(LLMEvent::ToolCallEnd { id: "call_1".into() });
-        yield Ok(LLMEvent::Finish { reason: StopReason::ToolCalls });
+        yield Ok(ProviderEvent::ToolCallEnd { id: "call_1".into() });
+        yield Ok(ProviderEvent::Finish { reason: StopReason::ToolCalls });
     })
 }
 
@@ -267,7 +267,7 @@ impl Provider for MockStreamingProvider {
     fn generate(
         &self,
         messages: Vec<ChatMessage>,
-    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>> {
+    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
         let user_input = last_user_content(&messages)
             .unwrap_or_else(|| "This is a test response with multiple words.".to_string());
         let response = format!(
@@ -287,17 +287,17 @@ fn stream_response(
     chunk_size: usize,
     total_chunks: usize,
     delay_ms: u64,
-) -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + 'static>> {
+) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + 'static>> {
     Box::pin(async_stream::stream! {
         for i in 0..total_chunks {
             let start = i * chunk_size;
             let end = (start + chunk_size).min(response.len());
             let chunk = String::from_utf8_lossy(&response.as_bytes()[start..end]).to_string();
-            yield Ok(LLMEvent::TextDelta(chunk));
+            yield Ok(ProviderEvent::TextDelta(chunk));
             if i < total_chunks - 1 && delay_ms > 0 {
                 tokio::time::sleep(Duration::from_millis(delay_ms)).await;
             }
         }
-        yield Ok(LLMEvent::Finish { reason: StopReason::Stop });
+        yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
     })
 }

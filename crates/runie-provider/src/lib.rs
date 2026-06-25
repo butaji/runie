@@ -17,7 +17,7 @@ pub use openai::OpenAiProvider;
 
 use anyhow::Result;
 use runie_core::actors::provider::BuiltProvider;
-use runie_core::llm_event::LLMEvent;
+use runie_core::provider_event::ProviderEvent;
 use runie_core::message::ChatMessage;
 use runie_core::provider::{Provider, ProviderError};
 use runie_core::provider_registry;
@@ -76,7 +76,7 @@ impl Provider for DynProvider {
         &self,
         messages: Vec<ChatMessage>,
     ) -> std::pin::Pin<
-        Box<dyn futures::Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>,
+        Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>,
     > {
         self.inner.generate(messages)
     }
@@ -86,7 +86,7 @@ impl Provider for DynProvider {
         messages: Vec<ChatMessage>,
         tools: Vec<serde_json::Value>,
     ) -> std::pin::Pin<
-        Box<dyn futures::Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>,
+        Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>,
     > {
         self.inner.generate_with_tools(messages, tools)
     }

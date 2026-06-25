@@ -4,7 +4,7 @@
 //! provider-specific SSE frame parsing. New providers implement this trait
 //! to get transport and framing for free.
 
-use runie_core::llm_event::LLMEvent;
+use runie_core::provider_event::ProviderEvent;
 use std::collections::HashMap;
 
 /// Trait for provider-specific streaming protocol handling.
@@ -33,10 +33,10 @@ pub trait ProviderProtocol: Send + Sync {
         &self,
         state: Self::State,
         frame: Self::Frame,
-    ) -> (Self::State, Vec<LLMEvent>);
+    ) -> (Self::State, Vec<ProviderEvent>);
 
     /// Called when the stream halts (error or end). Flushes any pending state.
-    fn on_halt(&self, state: Self::State) -> Vec<LLMEvent> {
+    fn on_halt(&self, state: Self::State) -> Vec<ProviderEvent> {
         let _ = state;
         Vec::new()
     }

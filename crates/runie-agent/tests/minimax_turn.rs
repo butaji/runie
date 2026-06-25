@@ -8,7 +8,7 @@ use runie_core::event::AgentEvent;
 use runie_core::harness_skills::{
     HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult,
 };
-use runie_core::llm_event::LLMEvent;
+use runie_core::provider_event::ProviderEvent;
 use runie_core::message::ChatMessage;
 use runie_provider::openai::stream::replay_sse;
 use runie_provider::DynProvider;
@@ -59,7 +59,7 @@ impl runie_core::provider::Provider for ReplayProvider {
     fn generate(
         &self,
         _messages: Vec<ChatMessage>,
-    ) -> Pin<Box<dyn Stream<Item = Result<LLMEvent>> + Send + '_>> {
+    ) -> Pin<Box<dyn Stream<Item = Result<ProviderEvent>> + Send + '_>> {
         let idx = self.index.fetch_add(1, Ordering::SeqCst);
         let events = self
             .fixtures

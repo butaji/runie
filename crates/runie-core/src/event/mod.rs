@@ -34,5 +34,6 @@ pub mod name;
 mod names;
 pub mod to_durable;
 mod variants;
+pub mod from_provider_event;
 #[cfg(test)]
 mod variants_tests;

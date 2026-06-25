@@ -4,7 +4,7 @@
 use crate::{run_agent_turn, AgentCommand};
 use futures::Stream;
 use runie_core::event::AgentEvent;
-use runie_core::llm_event::{LLMEvent, StopReason};
+use runie_core::provider_event::{ProviderEvent, StopReason};
 use runie_core::message::{ChatMessage, Role};
 use runie_core::provider::Provider;
 use runie_testing::allow_all_gate;
@@ -17,24 +17,24 @@ impl Provider for MinimaxLikeProvider {
     fn generate(
         &self,
         _messages: Vec<ChatMessage>,
-    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>> {
+    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
         Box::pin(futures::stream::iter(vec![
-            Ok(LLMEvent::TextStart { id: "text".into() }),
-            Ok(LLMEvent::TextDelta("<think>\nThe user is asking".into())),
-            Ok(LLMEvent::ThinkingStart { id: "reasoning".into() }),
-            Ok(LLMEvent::ThinkingDelta("The user is asking".into())),
-            Ok(LLMEvent::TextDelta(
+            Ok(ProviderEvent::TextStart { id: "text".into() }),
+            Ok(ProviderEvent::TextDelta("<think>\nThe user is asking".into())),
+            Ok(ProviderEvent::ThinkingStart { id: "reasoning".into() }),
+            Ok(ProviderEvent::ThinkingDelta("The user is asking".into())),
+            Ok(ProviderEvent::TextDelta(
                 " me to say hi. I will respond with a friendly greeting.".into(),
             )),
-            Ok(LLMEvent::ThinkingDelta(
+            Ok(ProviderEvent::ThinkingDelta(
                 " me to say hi. I will respond with a friendly greeting.".into(),
             )),
-            Ok(LLMEvent::TextDelta(
+            Ok(ProviderEvent::TextDelta(
                 "\n</think>\n\nHi there! How can I help you today?".into(),
             )),
-            Ok(LLMEvent::TextEnd { id: "text".into() }),
-            Ok(LLMEvent::ThinkingEnd { id: "reasoning".into() }),
-            Ok(LLMEvent::Finish {
+            Ok(ProviderEvent::TextEnd { id: "text".into() }),
+            Ok(ProviderEvent::ThinkingEnd { id: "reasoning".into() }),
+            Ok(ProviderEvent::Finish {
                 reason: StopReason::Stop,
             }),
         ]))
@@ -44,7 +44,7 @@ impl Provider for MinimaxLikeProvider {
         &self,
         messages: Vec<ChatMessage>,
         _tools: Vec<serde_json::Value>,
-    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>> {
+    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
         self.generate(messages)
     }
 }

@@ -14,11 +14,11 @@ fn fixture(name: &str) -> String {
 #[test]
 fn m3_list_files_emits_text_and_json_tool_call() {
     let events = replay_sse(&fixture("m3_list_files_call.sse"));
-    assert!(events.iter().any(|e| matches!(e, runie_core::llm_event::LLMEvent::TextDelta(_))));
+    assert!(events.iter().any(|e| matches!(e, runie_core::provider_event::ProviderEvent::TextDelta(_))));
     assert!(events.iter().any(|e| matches!(
         e,
-        runie_core::llm_event::LLMEvent::Finish { reason }
-        if *reason == runie_core::llm_event::StopReason::Stop
+        runie_core::provider_event::ProviderEvent::Finish { reason }
+        if *reason == runie_core::provider_event::StopReason::Stop
     )));
     insta::assert_debug_snapshot!(events);
 }

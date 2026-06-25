@@ -30,7 +30,7 @@ use runie_core::permissions::{AutoAllowSink, DenyAllSink};
 use std::sync::Arc;
 
 #[cfg(test)]
-use runie_core::llm_event::LLMEvent;
+use runie_core::provider_event::ProviderEvent;
 
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
@@ -208,7 +208,7 @@ mod tests {
         let mut stream = provider.generate(messages);
         while let Some(r) = stream.next().await {
             match r.unwrap() {
-                LLMEvent::TextDelta(t) => response_text.push_str(&t),
+                ProviderEvent::TextDelta(t) => response_text.push_str(&t),
                 _ => {}
             }
         }

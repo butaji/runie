@@ -1,7 +1,7 @@
 //! Mock API event builders.
 
 use runie_core::event::Event;
-use runie_core::llm_event::{LLMEvent, StopReason};
+use runie_core::provider_event::{ProviderEvent, StopReason};
 
 /// Event emitted when a response stream starts.
 pub fn ev_response_created(id: impl Into<String>) -> Event {
@@ -32,14 +32,14 @@ pub fn ev_error(id: impl Into<String>, message: impl Into<String>) -> Event {
     }
 }
 
-/// Build an `LLMEvent::TextDelta`.
-pub fn llm_text_delta(text: impl Into<String>) -> LLMEvent {
-    LLMEvent::TextDelta(text.into())
+/// Build a `ProviderEvent::TextDelta`.
+pub fn llm_text_delta(text: impl Into<String>) -> ProviderEvent {
+    ProviderEvent::TextDelta(text.into())
 }
 
-/// Build an `LLMEvent::Finish`.
-pub fn llm_finish() -> LLMEvent {
-    LLMEvent::Finish {
+/// Build a `ProviderEvent::Finish`.
+pub fn llm_finish() -> ProviderEvent {
+    ProviderEvent::Finish {
         reason: StopReason::Stop,
     }
 }
