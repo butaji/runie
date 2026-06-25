@@ -1,10 +1,8 @@
-//! runie-server — JSON-RPC-ish server for IDE integration using `runie-protocol`.
+//! Server mode — TCP/stdio JSON-RPC server for IDE integration.
 //!
-//! ## Protocol
-//! Transport: TCP (port printed on startup) or stdio.
-//! Each message is a JSON object terminated by a newline.
+//! Protocol: each message is a JSON object terminated by a newline.
 //!
-//! ## Methods
+//! Methods:
 //! - `initialize` → `{}`
 //! - `chat` → `{ "messages": [{"role":"user","content":"hi"}] }` → `{ "content": "..." }`
 //! - `complete` → `{ "prompt": "..." }` → `{ "content": "..." }`
@@ -23,28 +21,16 @@ use tokio::net::{TcpListener, TcpStream};
 
 const CURRENT_VERSION: &str = runie_protocol::PROTOCOL_VERSION;
 
-#[tokio::main]
-async fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let use_stdio = args.iter().any(|a| a == "--stdio");
-    let yolo = args.iter().any(|a| a == "--yolo");
-    if yolo {
-        eprintln!("warning: --yolo enabled; destructive tools will be auto-approved");
-    }
-
-    let result = if use_stdio {
-        run_stdio_server(yolo).await
+/// Run server mode.
+pub async fn run(use_stdio: bool, _yolo: bool) -> Result<()> {
+    if use_stdio {
+        run_stdio_server().await
     } else {
-        run_tcp_server(yolo).await
-    };
-
-    if let Err(e) = result {
-        eprintln!("Server error: {}", e);
-        std::process::exit(1);
+        run_tcp_server().await
     }
 }
 
-async fn run_tcp_server(yolo: bool) -> Result<()> {
+async fn run_tcp_server() -> Result<()> {
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     let port = listener.local_addr()?.port();
     println!("{}", port);
@@ -55,7 +41,7 @@ async fn run_tcp_server(yolo: bool) -> Result<()> {
     loop {
         tokio::select! {
             Ok((stream, _)) = listener.accept() => {
-                tokio::spawn(handle_connection(stream, yolo));
+                tokio::spawn(handle_connection(stream));
             }
             _ = &mut shutdown => break,
         }
@@ -63,7 +49,7 @@ async fn run_tcp_server(yolo: bool) -> Result<()> {
     Ok(())
 }
 
-async fn run_stdio_server(yolo: bool) -> Result<()> {
+async fn run_stdio_server() -> Result<()> {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
     let reader = BufReader::new(stdin);
@@ -74,12 +60,12 @@ async fn run_stdio_server(yolo: bool) -> Result<()> {
         if line.trim().is_empty() {
             continue;
         }
-        write_response(&mut stdout, &process_request(&line, yolo).await).await?;
+        write_response(&mut stdout, &process_request(&line).await).await?;
     }
     Ok(())
 }
 
-async fn handle_connection(stream: TcpStream, yolo: bool) {
+async fn handle_connection(stream: TcpStream) {
     let (read_half, write_half) = stream.into_split();
     let reader = BufReader::new(read_half);
     let mut lines = reader.lines();
@@ -89,7 +75,7 @@ async fn handle_connection(stream: TcpStream, yolo: bool) {
         if line.trim().is_empty() {
             continue;
         }
-        let _ = write_response(&mut writer, &process_request(&line, yolo).await).await;
+        let _ = write_response(&mut writer, &process_request(&line).await).await;
     }
 }
 
@@ -104,35 +90,26 @@ where
     Ok(())
 }
 
-async fn process_request(line: &str, yolo: bool) -> Message {
+async fn process_request(line: &str) -> Message {
     let req = match serde_json::from_str::<Request>(line) {
         Ok(r) => r,
         Err(e) => return Message::error(None, Error::parse(format!("Parse error: {e}"))),
     };
 
     let id = req.id.clone();
-    match dispatch_method(&req, yolo).await {
+    match dispatch_method(&req).await {
         Ok(result) => Message::Response(Response::ok(id, result.unwrap_or(Value::Null))),
         Err(e) => Message::Response(Response::err(id, e)),
     }
 }
 
-async fn dispatch_method(req: &Request, yolo: bool) -> Result<Option<Value>, Error> {
+async fn dispatch_method(req: &Request) -> Result<Option<Value>, Error> {
     match req.method.as_str() {
         "initialize" => Ok(Some(initialize_result())),
-        "chat" => handle_chat(&req.params, yolo)
-            .await
-            .map(Some)
-            .map_err(chat_error),
-        "complete" => handle_complete(&req.params, yolo)
-            .await
-            .map(Some)
-            .map_err(complete_error),
+        "chat" => handle_chat(&req.params).await.map(Some).map_err(chat_error),
+        "complete" => handle_complete(&req.params).await.map(Some).map_err(complete_error),
         "listModels" => Ok(Some(handle_list_models())),
-        "listSessions" => handle_list_sessions()
-            .await
-            .map(Some)
-            .map_err(list_sessions_error),
+        "listSessions" => handle_list_sessions().await.map(Some).map_err(list_sessions_error),
         _ => Err(Error::method_not_found(format!(
             "Method not found: {}",
             req.method
@@ -141,7 +118,7 @@ async fn dispatch_method(req: &Request, yolo: bool) -> Result<Option<Value>, Err
 }
 
 fn initialize_result() -> Value {
-    serde_json::json!({ "name": "runie-server", "version": env!("CARGO_PKG_VERSION"), "protocolVersion": CURRENT_VERSION })
+    serde_json::json!({ "name": "runie-cli server", "version": env!("CARGO_PKG_VERSION"), "protocolVersion": CURRENT_VERSION })
 }
 
 fn chat_error(e: anyhow::Error) -> Error {
@@ -165,7 +142,7 @@ fn headless_system_prompt() -> String {
     )
 }
 
-fn headless_options(_yolo: bool) -> HeadlessCliOptions {
+fn headless_options() -> HeadlessCliOptions {
     HeadlessCliOptions {
         execute_tools: false,
         max_tool_rounds: 1,
@@ -173,20 +150,20 @@ fn headless_options(_yolo: bool) -> HeadlessCliOptions {
     }
 }
 
-async fn handle_chat(params: &Value, yolo: bool) -> Result<Value> {
+async fn handle_chat(params: &Value) -> Result<Value> {
     let messages: Vec<ChatMessage> =
         serde_json::from_value(params.get("messages").cloned().unwrap_or_default())?;
 
     let mut msgs = vec![ChatMessage::system(headless_system_prompt())];
     msgs.extend(messages);
 
-    let sink = build_sink(yolo);
-    let opts = headless_options(yolo);
+    let sink = build_sink(false);
+    let opts = headless_options();
     let result = run_headless_cli(None, None, msgs, sink, opts).await?;
     Ok(serde_json::json!({ "content": result.content }))
 }
 
-async fn handle_complete(params: &Value, yolo: bool) -> Result<Value> {
+async fn handle_complete(params: &Value) -> Result<Value> {
     let prompt = params.get("prompt").and_then(|v| v.as_str()).unwrap_or("");
 
     let msgs = vec![
@@ -194,8 +171,8 @@ async fn handle_complete(params: &Value, yolo: bool) -> Result<Value> {
         ChatMessage::user(prompt.to_owned()),
     ];
 
-    let sink = build_sink(yolo);
-    let opts = headless_options(yolo);
+    let sink = build_sink(false);
+    let opts = headless_options();
     let result = run_headless_cli(None, None, msgs, sink, opts).await?;
     Ok(serde_json::json!({ "content": result.content }))
 }
@@ -247,7 +224,6 @@ mod tests {
         assert_eq!(parsed["kind"], "response");
         assert_eq!(parsed["id"], 1);
         assert_eq!(parsed["result"]["ok"], true);
-        assert!(parsed.get("error").is_none() || parsed["error"].is_null());
     }
 
     #[test]

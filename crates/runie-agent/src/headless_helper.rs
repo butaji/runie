@@ -1,4 +1,4 @@
-//! Headless CLI helper — shared setup for runie-print, runie-json, runie-server.
+//! Headless CLI helper — shared setup for runie-cli modes (print, json, server).
 //!
 //! These functions extract the common runtime setup that all three headless
 //! binaries share: system-prompt construction, message-list building, and

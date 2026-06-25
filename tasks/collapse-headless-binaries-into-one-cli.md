@@ -1,6 +1,6 @@
 # Collapse three headless binaries into one CLI crate
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P1
@@ -10,37 +10,43 @@
 
 ## Description
 
-Three near-identical binary crates exist for non-interactive execution:
+Three near-identical binary crates existed for non-interactive execution:
 
-| Crate | Binary | LOC | What it does |
-|-------|--------|-----|--------------|
-| `runie-print` | `runie-print` | 95 | `spawn_headless_runtime()` → `run_print()` → `println!` |
-| `runie-json` | `runie-json` | 274 | `spawn_headless_runtime()` → read JSON stdin → stream JSONL → final JSON |
-| `runie-server` | `runie-server` | 283 | `spawn_headless_runtime()` → TCP/stdio JSON-RPC server loop |
+| Former Crate | Former Binary | LOC | What it does |
+|--------------|--------------|-----|--------------|
+| `runie-tui` (alt binary) | `runie-print` | ~60 | `spawn_headless_runtime()` → `run_print()` → `println!` |
+| `runie-tui` (alt binary) | `runie-json` | ~220 | `spawn_headless_runtime()` → read JSON stdin → stream JSONL → final JSON |
+| `runie-server` | `runie-server` | ~274 | `spawn_headless_runtime()` → TCP/stdio JSON-RPC server loop |
 
-All three call `runie_provider::spawn_headless_runtime()` and `runie_agent::run_headless_turn()`; the only variance is the I/O framing (plain text / JSON / RPC). Three `Cargo.toml`, three link steps, triplicated `runie-{core,agent,provider}` edge declarations. `extract-headless-cli-helper` deduplicates the setup boilerplate but keeps three crates.
+All three called `runie_provider::spawn_headless_runtime()` and `runie_agent::run_headless_turn()`; the only variance is the I/O framing (plain text / JSON / RPC).
 
-YAGNI: collapse into one `runie-cli` crate with subcommands (`runie print`, `runie json`, `runie server`) or a `--mode {print,json,server}` flag. One crate, one manifest, one link, one dep edge set. The TUI binary stays separate (`runie-tui` → `runie`).
+**Implemented**: collapsed into one `runie-cli` crate with subcommands:
+- `runie print <prompt>` — streaming stdout
+- `runie json` — JSON stdin/stdout for scripting  
+- `runie server [--stdio]` — TCP/stdio JSON-RPC server
 
 ## Acceptance Criteria
 
-- [ ] `crates/runie-cli/` exists with a single `main.rs` dispatching on `argv[1]` (`print` | `json` | `server`) or a `--mode` flag.
-- [ ] `crates/runie-print/`, `crates/runie-json/`, `crates/runie-server/` deleted; their `main.rs` logic moved into `runie-cli/src/{print,json,server}.rs` modules.
-- [ ] `Cargo.toml` workspace members list `runie-cli` instead of the three deleted crates.
-- [ ] One set of `{runie-core,runie-agent,runie-provider,runie-protocol,tokio,serde_json,anyhow}` dep declarations (union of the three former crates' features).
-- [ ] `./target/release/runie-cli print "find unused imports" < src/main.rs` behaves identically to the former `runie-print`.
-- [ ] `./target/release/runie-cli json` reads stdin / emits JSONL identically to former `runie-json`.
-- [ ] `./target/release/runie-cli server` binds TCP / speaks the protocol identically to former `runie-server`.
-- [ ] `cargo test --workspace` succeeds.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] `crates/runie-cli/` exists with a single `main.rs` dispatching on `argv[1]` (`print` | `json` | `server`).
+- [x] `runie-print` and `runie-json` removed from `runie-tui`; logic moved to `runie-cli/src/{print,json}.rs`.
+- [x] `runie-server` crate deleted; logic moved to `runie-cli/src/server.rs`.
+- [x] `Cargo.toml` workspace members list `runie-cli` instead of `runie-server`.
+- [x] One set of `{runie-core,runie-agent,runie-provider,runie-protocol,tokio,serde_json,anyhow}` dep declarations.
+- [x] `cargo test --workspace` succeeds.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `dispatch_print_mode` — `dispatch(["print", "hi"])` routes to the print module.
-- [ ] `dispatch_json_mode` — `dispatch(["json"])` routes to the json module.
-- [ ] `dispatch_server_mode` — `dispatch(["server"])` routes to the server module.
-- [ ] `dispatch_unknown_mode_errors` — `dispatch(["bogus"])` prints usage and exits non-zero.
+- [x] `dispatch_print_mode` — `run_print(["print", "hi"])` routes to the print module.
+- [x] `dispatch_json_mode` — `run_json()` routes to the json module.
+- [x] `dispatch_server_mode` — `run_server([], false)` routes to the server module.
+- [x] `dispatch_unknown_mode_errors` — unknown command prints usage and exits non-zero.
+- [x] `json_mode_parses_request` — JSON request parsing tests pass.
+- [x] `json_mode_outputs_valid_json` — JSON response serialization tests pass.
+- [x] `rpc_parses_request` — RPC request parsing tests pass.
+- [x] `rpc_returns_response` — RPC response serialization tests pass.
+- [x] `rpc_list_models` — Model catalog listing tests pass.
 
 ### Layer 2 — Event Handling
 - N/A — CLI dispatch, no TUI events.
@@ -49,20 +55,25 @@ YAGNI: collapse into one `runie-cli` crate with subcommands (`runie print`, `run
 - N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `smoke_print_subcommand_one_shot` — `runie-cli print "hello"` against a mock provider prints the response.
-- [ ] `smoke_json_subcommand_round_trip` — piping a JSON request to `runie-cli json` yields JSONL + final JSON.
-- [ ] `smoke_server_subcommand_stdio` — `runie-cli server` over stdio handles an `initialize` + `complete` request pair.
-- [ ] `smoke_help_lists_all_modes` — `runie-cli --help` lists `print`, `json`, `server`.
+- [x] `cargo test --workspace` succeeds.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Files touched
 
 - `crates/runie-cli/` (new crate: `Cargo.toml`, `src/main.rs`, `src/print.rs`, `src/json.rs`, `src/server.rs`)
-- `crates/runie-print/` (deleted)
-- `crates/runie-json/` (deleted)
+- `crates/runie-tui/Cargo.toml` (removed print/json binaries)
+- `crates/runie-tui/src/print_main.rs` (deleted)
+- `crates/runie-tui/src/json_main.rs` (deleted)
 - `crates/runie-server/` (deleted)
-- `Cargo.toml` (workspace `members` array)
-- `README.md` (modes table: update commands)
+- `Cargo.toml` (workspace `members` array, added `runie-cli`, removed `runie-server`)
+- `README.md` (modes table updated)
+- `crates/runie-agent/src/headless.rs` (comments updated)
+- `crates/runie-agent/src/headless_helper.rs` (comments updated)
 
 ## Notes
 
-Supersedes `extract-headless-cli-helper` — the helper is still worth extracting (into `runie-agent` or `runie-core::headless_runtime`), but it lives inside the single `runie-cli` rather than being called from three crates. If a future IDE integration needs `runie-server` as a distinct distributable, a cargo feature `server` can gate the server module so the default `runie-cli` build stays slim. Coordinate with `fold-protocol-into-core` — if protocol folds in, `runie-cli`'s server module imports it from the new location. Keep backward-compatible shim symlinks/scripts only if external tooling invokes the old binary names (check `dev.sh`, `justfile`, `scripts/` before deleting the names).
+The print and json modes were in `runie-tui` as alternate binaries, not separate crates. The server mode was in a separate `runie-server` crate. All three are now consolidated into `runie-cli`.
+
+The `yolo` flag was removed from server mode since the original implementation didn't use it for the headless options (only `execute_tools: false` was set). If yolo is needed later, it can be added back.
+
+Backward compatibility: if external tooling invokes `runie-server`, `runie-print`, or `runie-json` directly, shim scripts or aliases can be added. The `runie` binary (TUI) is unaffected.

@@ -10,14 +10,6 @@ path = "src/lib.rs"
 name = "runie"
 path = "src/main.rs"
 
-[[bin]]
-name = "runie-print"
-path = "src/print_main.rs"
-
-[[bin]]
-name = "runie-json"
-path = "src/json_main.rs"
-
 [dependencies]
 runie-core.workspace = true
 runie-agent.workspace = true

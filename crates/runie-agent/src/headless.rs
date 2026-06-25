@@ -7,7 +7,7 @@
 //!
 //! `run_headless_cli` is a higher-level helper that encapsulates the common
 //! `spawn_headless_runtime → provider → PermissionGate → run_headless_turn`
-//! pattern shared by `runie-print`, `runie-json`, and `runie-server`.
+//! pattern shared by `runie-cli print`, `runie-cli json`, and `runie-cli server`.
 
 use crate::tool_runner::{execute_tool_call, tool_result_message};
 use crate::PermissionGate;
@@ -28,7 +28,7 @@ use std::sync::Arc;
 
 /// Run a headless turn with a fresh runtime, a PermissionGate, and an ApprovalSink.
 ///
-/// This is the shared helper used by `runie-print`, `runie-json`, and `runie-server`.
+/// This is the shared helper used by `runie-cli print`, `runie-cli json`, and `runie-cli server`.
 pub async fn run_headless_cli(
     provider_name: Option<&str>,
     provider_model: Option<&str>,

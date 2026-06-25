@@ -2837,6 +2837,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "runie-cli"
+version = "0.2.16"
+dependencies = [
+ "anyhow",
+ "futures",
+ "runie-agent",
+ "runie-core",
+ "runie-protocol",
+ "runie-provider",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "runie-core"
 version = "0.2.16"
 dependencies = [
@@ -2908,19 +2923,6 @@ dependencies = [
  "tempfile",
  "tokio",
  "toml",
-]
-
-[[package]]
-name = "runie-server"
-version = "0.2.16"
-dependencies = [
- "anyhow",
- "runie-agent",
- "runie-core",
- "runie-protocol",
- "runie-provider",
- "serde_json",
- "tokio",
 ]
 
 [[package]]

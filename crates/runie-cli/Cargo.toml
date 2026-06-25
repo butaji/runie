@@ -1,0 +1,21 @@
+[package]
+name = "runie-cli"
+version.workspace = true
+edition.workspace = true
+description = "Headless CLI for Runie: print, json, server modes"
+default-run = "runie"
+
+[[bin]]
+name = "runie"
+path = "src/main.rs"
+
+[dependencies]
+runie-core.workspace = true
+runie-agent.workspace = true
+runie-provider.workspace = true
+runie-protocol.workspace = true
+tokio = { workspace = true, features = ["io-std", "signal"] }
+futures.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true

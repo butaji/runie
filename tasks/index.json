@@ -37,16 +37,16 @@
   },
   {
     "id": "collapse-headless-binaries-into-one-cli",
-    "status": "todo",
-    "milestone": "?",
-    "category": "?",
-    "priority": "?",
+    "status": "done",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P1",
     "depends_on": [
       "extract-headless-cli-helper"
     ],
     "blocks": [],
     "file": "tasks/collapse-headless-binaries-into-one-cli.md",
-    "title": ""
+    "title": "Collapse three headless binaries into one CLI crate"
   },
   {
     "id": "completion-actor-owns-completion-state",
@@ -203,6 +203,19 @@
     "blocks": [],
     "file": "tasks/env-actor-owns-git-cwd.md",
     "title": ""
+  },
+  {
+    "id": "extract-headless-cli-helper",
+    "status": "done",
+    "milestone": "R4",
+    "category": "Architecture / Refactoring",
+    "priority": "P1",
+    "depends_on": [],
+    "blocks": [
+      "collapse-headless-binaries-into-one-cli"
+    ],
+    "file": "tasks/extract-headless-cli-helper.md",
+    "title": "Extract headless CLI helper"
   },
   {
     "id": "fff-indexer-owns-file-picker-results",
