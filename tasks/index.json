@@ -1707,7 +1707,7 @@
     },
     {
       "id": "rename-model-snapshot-to-compaction",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
