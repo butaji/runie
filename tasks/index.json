@@ -148,7 +148,7 @@
     },
     {
       "id": "consolidate-tiny-binary-crates",
-      "status": "todo",
+      "status": "done",
       "milestone": "?",
       "category": "?",
       "priority": "?",

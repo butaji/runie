@@ -8,7 +8,7 @@ async fn main() {
     let prompt = match std::env::args().nth(1) {
         Some(p) => p,
         None => {
-            eprintln!("Usage: runie-print <prompt>");
+            eprintln!("Usage: runie print <prompt>");
             std::process::exit(1);
         }
     };

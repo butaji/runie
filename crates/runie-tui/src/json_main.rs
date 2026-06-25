@@ -28,10 +28,8 @@ use runie_agent::headless_helper::{build_options, build_sink};
 use runie_agent::{run_headless_cli, HeadlessResult};
 use runie_core::message::ChatMessage;
 
-#[cfg(test)]
-use runie_core::provider_event::ProviderEvent;
-
 use serde::{Deserialize, Serialize};
+use std::io::Read;
 use std::time::Instant;
 
 /// JSON request read from stdin.
@@ -79,7 +77,7 @@ async fn main() {
 }
 
 async fn run_json(yolo: bool) -> Result<()> {
-    let req = read_json_request().await?;
+    let req = read_json_request()?;
     let messages = build_json_messages(&req);
     let start = Instant::now();
 
@@ -90,11 +88,9 @@ async fn run_json(yolo: bool) -> Result<()> {
     Ok(())
 }
 
-async fn read_json_request() -> Result<JsonRequest> {
-    let mut stdin = tokio::io::stdin();
+fn read_json_request() -> Result<JsonRequest> {
     let mut buf = String::new();
-    use tokio::io::AsyncReadExt;
-    stdin.read_to_string(&mut buf).await?;
+    std::io::stdin().read_to_string(&mut buf)?;
     serde_json::from_str(&buf).map_err(|e| anyhow::anyhow!("{}", e))
 }
 
@@ -187,9 +183,9 @@ mod tests {
     #[tokio::test]
     async fn json_mode_returns_tool_calls() {
         use futures::StreamExt;
-        use runie_core::tool_parser::parse_tool_calls;
-        use runie_core::message::ChatMessage;
+        use runie_core::provider_event::ProviderEvent;
         use runie_core::provider::Provider;
+        use runie_core::tool_parser::parse_tool_calls;
         let provider = runie_provider::MockProvider::default();
         let messages = vec![
             ChatMessage::system("You are helpful."),

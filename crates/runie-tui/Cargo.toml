@@ -3,12 +3,20 @@ name = "runie-tui"
 version.workspace = true
 edition.workspace = true
 
+[lib]
+path = "src/lib.rs"
+
 [[bin]]
 name = "runie"
 path = "src/main.rs"
 
-[lib]
-path = "src/lib.rs"
+[[bin]]
+name = "runie-print"
+path = "src/print_main.rs"
+
+[[bin]]
+name = "runie-json"
+path = "src/json_main.rs"
 
 [dependencies]
 runie-core.workspace = true
@@ -22,6 +30,7 @@ futures.workspace = true
 anyhow.workspace = true
 opaline = "0.4"
 dirs.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 syntect = "5"
 unicode-width.workspace = true

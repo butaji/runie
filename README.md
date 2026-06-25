@@ -135,8 +135,8 @@ If you have credits there, Runie helps you use them.
 | Mode | Command |
 |---|---|
 | TUI | `./target/release/runie` |
-| Print | `./target/release/runie-print "..."` |
-| JSON | `./target/release/runie-json "..."` |
+| Print | `./target/release/runie print "..."` |
+| JSON | `./target/release/runie json "..."` |
 | Server | `./target/release/runie-server` |
 
 ## Development
