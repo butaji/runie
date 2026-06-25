@@ -10,7 +10,7 @@ pub struct OpenAiProvider {
     api_key: String,
     model: String,
     base_url: String,
-    model_meta: Option<&'static runie_core::provider::ModelMeta>,
+    model_meta: Option<&'static crate::ModelMeta>,
     tools: Vec<serde_json::Value>,
     tool_choice: Option<serde_json::Value>,
     client: reqwest::Client,
@@ -39,7 +39,7 @@ impl OpenAiProvider {
         self
     }
 
-    pub fn with_model_meta(mut self, meta: &'static runie_core::provider::ModelMeta) -> Self {
+    pub fn with_model_meta(mut self, meta: &'static crate::ModelMeta) -> Self {
         self.model_meta = Some(meta);
         self
     }
@@ -58,7 +58,7 @@ impl OpenAiProvider {
         &self.model
     }
 
-    pub fn model_meta(&self) -> Option<&runie_core::provider::ModelMeta> {
+    pub fn model_meta(&self) -> Option<&crate::ModelMeta> {
         self.model_meta
     }
 
@@ -71,7 +71,7 @@ impl OpenAiProvider {
     }
 }
 
-impl runie_core::provider::Provider for OpenAiProvider {
+impl crate::Provider for OpenAiProvider {
     fn generate(
         &self,
         messages: Vec<runie_core::message::ChatMessage>,
