@@ -1,8 +1,15 @@
-//! `AppState` struct and its inherent methods.
-use super::ranking;
-use super::{AgentState, CommandUsage, CompletionState, ConfigState, FffFileEntry, InputState, ModelSource, SessionState, ViewState};
-use crate::view::elements::Element;
-use crate::actors::ActorHandles;
+//! `AppState` — the read-only UI projection of actor-owned state.
+//!
+//! All fields are private. Use accessors in `accessors.rs` for reads and
+//! `pub(crate)` mutable accessors for internal mutations.
+//!
+//! The `take()` method supports `reset_session()` without requiring a full
+//! struct reassignment (which is illegal when fields are private).
+
+use super::{
+    AgentState, CompletionState, ConfigState, FffFileEntry, InputState,
+    SessionState, ViewState,
+};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -14,52 +21,28 @@ pub struct AppState {
     pub config: ConfigState,
     pub completion: CompletionState,
 
-    // Singleton UI/control flags (don't fit a single domain)
-    /// Quit flag read by the main event loop
+    // Singleton UI/control flags
     pub should_quit: bool,
-    /// Currently open overlay dialog (palette, model selector, etc.)
     pub open_dialog: Option<crate::commands::DialogState>,
-    /// Stack for nested dialog navigation (Esc pops, restoring parent)
     pub dialog_back_stack: Vec<crate::commands::DialogState>,
-    /// Active login/auth flow overlay
     pub login_flow: Option<crate::login_flow::LoginFlowState>,
-    /// Command registry (loaded once, immutable per session)
     pub registry: crate::commands::CommandRegistry,
-    /// Loaded skill definitions
     pub skills: Vec<crate::skills::Skill>,
-    /// Loaded prompt templates
     pub prompts: Vec<crate::prompts::PromptTemplate>,
-    /// Trust decisions by project path.
     pub trust_decisions: std::collections::HashMap<std::path::PathBuf, crate::trust::TrustDecision>,
-    /// Transient notification message (cleared after timeout)
     pub transient_message: Option<String>,
     pub transient_until: Option<std::time::Instant>,
     pub transient_level: Option<crate::event::TransientLevel>,
-    /// Git info detected at startup (repo name, branch)
     pub git_info: Option<crate::snapshot::GitInfo>,
-    /// Current working directory name (detected at startup)
     pub cwd_name: String,
-    /// FFF search results for the current file picker query.
-    /// Set when FFF indexer returns results (populated asynchronously).
     pub fff_file_results: Vec<FffFileEntry>,
-    /// Counter incremented each time the user types in the file picker.
-    /// Used to detect stale FFF results (result counter != current counter means ignore).
     pub fff_debounce: u32,
-    /// Active permission approval prompt (blocking modal dialog).
     pub permission_request: Option<crate::model::PermissionRequestState>,
-    /// Cross-actor coordination registry for in-flight permission approvals.
-    ///
-    /// The agent turn registers a oneshot here and blocks; the UI resolves it
-    /// when the user chooses an action. This shared registry is deliberate
-    /// request/response plumbing between the agent task and the UI task, not
-    /// accidental global mutable state.
     pub approval_registry: std::sync::Arc<std::sync::Mutex<crate::permissions::ApprovalRegistry>>,
-    /// Unified actor handle registry — single source for all actor senders.
-    /// `None` in unit tests that do not spawn actors.
-    pub actor_handles: Option<ActorHandles>,
-    /// Last config applied to the state (read-only cache for sync lookups).
+    pub actor_handles: Option<crate::actors::ActorHandles>,
     pub config_cache: Option<crate::config::Config>,
 }
+
 impl Default for AppState {
     fn default() -> Self {
         Self {
@@ -95,346 +78,11 @@ impl Default for AppState {
 }
 
 impl AppState {
-    // ── Domain helpers ───────────────────────────────────────────────────────
-
-    pub fn is_trusted(&self, path: &std::path::Path) -> bool {
-        match self.trust_decisions.get(path) {
-            Some(crate::trust::TrustDecision::Trusted) | None => true,
-            Some(crate::trust::TrustDecision::Untrusted) => false,
-        }
-    }
-
-    pub fn set_trust_decision(
-        &mut self,
-        path: std::path::PathBuf,
-        decision: crate::trust::TrustDecision,
-    ) {
-        self.trust_decisions.insert(path, decision);
-    }
-
-    /// Install a complete `ActorHandles` registry.
-    pub fn set_actor_handles(&mut self, handles: ActorHandles) {
-        self.actor_handles = Some(handles);
-    }
-
-    // ── Accessors for external crates ────────────────────────────────────────
-
-    /// Returns skills loaded at startup.
-    pub fn skills(&self) -> &[crate::skills::Skill] {
-        &self.skills
-    }
-
-    /// Returns prompt templates loaded at startup.
-    pub fn prompts(&self) -> &[crate::prompts::PromptTemplate] {
-        &self.prompts
-    }
-
-    /// Returns the current prompt name configured in the input state.
-    pub fn current_prompt(&self) -> &str {
-        &self.input.current_prompt
-    }
-
-    /// Returns the current provider ID.
-    pub fn current_provider(&self) -> &str {
-        &self.config.current_provider
-    }
-
-    /// Returns the current model name.
-    pub fn current_model(&self) -> &str {
-        &self.config.current_model
-    }
-
-    /// Returns the current thinking level setting.
-    pub fn thinking_level(&self) -> crate::model::ThinkingLevel {
-        self.config.thinking_level
-    }
-
-    /// Returns whether the app is in read-only mode.
-    pub fn read_only(&self) -> bool {
-        self.config.read_only
-    }
-
-    /// Returns the truncation configuration for tool output.
-    pub fn truncation(&self) -> &crate::config::TruncationSection {
-        &self.config.truncation
-    }
-
-    /// Returns whether a turn is currently active.
-    pub fn turn_active(&self) -> bool {
-        self.agent.turn_active
-    }
-
-    /// Start a new agent turn.
-    pub fn start_turn(&mut self) {
-        self.agent.turn_active = true;
-        self.agent.inflight += 1;
-        self.agent.streaming = true;
-    }
-
-    pub fn add_to_input_history(&mut self, entry: String) {
-        self.input.input_history.retain(|h| h != &entry);
-        self.input.input_history.push(entry);
-    }
-
-    pub fn thinking_elapsed_secs(&self) -> Option<f64> {
-        self.agent
-            .thinking_started_at
-            .map(|t| t.elapsed().as_secs_f64())
-    }
-
-    pub fn turn_elapsed_secs(&self) -> Option<f64> {
-        self.agent
-            .turn_started_at
-            .map(|t| t.elapsed().as_secs_f64())
-    }
-
-    pub fn tool_elapsed_secs(&self) -> Option<f64> {
-        self.agent
-            .tool_started_at
-            .map(|t| t.elapsed().as_secs_f64())
-    }
-
-    /// Braille spinner frame (12-frame cycle)
-    pub fn spinner_frame(&self) -> char {
-        const SPINNER_CHARS: &[char] =
-            &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
-        const SPINNER_FRAMES: u32 = 12;
-        SPINNER_CHARS[(self.view.animation_frame % SPINNER_FRAMES) as usize]
-    }
-
-    pub fn next_id(&mut self) -> String {
-        let id = format!("req.{}", self.agent.next_id);
-        self.agent.next_id += 1;
-        id
-    }
-
-    pub fn messages_changed(&mut self) {
-        self.view.message_gen = self.view.message_gen.wrapping_add(1);
-        self.session.session_updated_at = crate::message::now();
-        self.view.dirty = true;
-    }
-
-    /// Reset session/input/agent state without clearing the connected provider/model.
-    pub fn reset_session(&mut self) {
-        let config = self.config.clone();
-        let registry = self.approval_registry.clone();
-        let actor_handles = self.actor_handles.clone();
-        let config_cache = self.config_cache.clone();
-        let git_info = self.git_info.clone();
-        let cwd_name = self.cwd_name.clone();
-        let trust_decisions = self.trust_decisions.clone();
-        *self = Self::default();
-        self.config = config;
-        self.approval_registry = registry;
-        self.actor_handles = actor_handles;
-        self.config_cache = config_cache;
-        self.git_info = git_info;
-        self.cwd_name = cwd_name;
-        self.trust_decisions = trust_decisions;
-    }
-
-    /// Apply a loaded config to all config-driven state fields.
-    pub fn apply_config(&mut self, config: &crate::config::Config) {
-        self.config_cache = Some(config.clone());
-        if self.config.model_source != ModelSource::UserOverride {
-            self.apply_active_model(config);
-        }
-        self.config.keybindings = crate::keybindings::load_keybindings(Some(config));
-        if let Some(theme) = &config.theme {
-            self.config.theme_name = theme.clone();
-        }
-        self.config.truncation = config.truncation.clone();
-        self.config.vim_mode = config.vim_mode();
-        self.config.telemetry = crate::telemetry::Telemetry::new(config.telemetry_enabled());
-        let prompts_section = config.prompts();
-        self.prompts = crate::prompts::load_prompts(
-            prompts_section.default.as_deref(),
-            prompts_section.custom.as_deref(),
-        );
-        self.apply_scoped_models(config);
-        if !self.has_models() && !crate::provider::is_mock_enabled() {
-            self.update(crate::Event::Start);
-        }
-    }
-
-    fn apply_active_model(&mut self, config: &crate::config::Config) {
-        let (provider, model) = config.resolve_default_model();
-        if !provider.is_empty() && ranking::has_provider_credentials(config, &provider) {
-            self.set_active_model(provider, model, ModelSource::ConfigDefault);
-        }
-    }
-
-    fn apply_scoped_models(&mut self, config: &crate::config::Config) {
-        if let Some(scoped) = config.scoped_models() {
-            self.config.scoped_models = scoped.iter().map(|s| self.parse_scoped_model(s)).collect();
-        } else {
-            self.config.scoped_models = crate::model_catalog::model_catalog()
-                .iter()
-                .take(10)
-                .map(|m| crate::model::ScopedModel {
-                    provider: m.provider.clone(),
-                    name: m.name.clone(),
-                    enabled: true,
-                })
-                .collect();
-        }
-    }
-
-    fn parse_scoped_model(&self, s: &str) -> crate::model::ScopedModel {
-        let parts: Vec<&str> = s.split('/').collect();
-        if parts.len() == 2 {
-            crate::model::ScopedModel {
-                provider: parts[0].to_string(),
-                name: parts[1].to_string(),
-                enabled: true,
-            }
-        } else {
-            crate::model::ScopedModel {
-                provider: self.config.current_provider.clone(),
-                name: s.to_string(),
-                enabled: true,
-            }
-        }
-    }
-
-    /// List configured providers from the cached config.
-    pub fn configured_providers(&self) -> Vec<(String, String, Vec<String>)> {
-        self.config_cache
-            .as_ref()
-            .map(|c| c.configured_providers())
-            .unwrap_or_default()
-    }
-
-    /// Resolve the default provider/model pair from the cached config.
-    pub fn resolve_default_model(&self) -> (String, String) {
-        self.config_cache
-            .as_ref()
-            .map(|c| c.resolve_default_model())
-            .unwrap_or_default()
-    }
-
-    /// Look up a configured provider from the cached config.
-    pub fn provider_config(&self, name: &str) -> Option<crate::config::ModelProvider> {
-        self.config_cache
-            .as_ref()
-            .and_then(|c| c.model_providers.get(name).cloned())
-    }
-
-    /// Fire-and-forget request to remove a provider via ConfigActor.
-    pub fn remove_provider(&self, name: &str) {
-        let tx = self.actor_handles.as_ref()
-            .and_then(|h| h.config.as_ref())
-            .map(|h| h.tx().clone());
-        if let (Some(tx), Ok(_)) = (tx, tokio::runtime::Handle::try_current()) {
-            let msg = crate::actors::ConfigMsg::RemoveProvider { name: name.to_string() };
-            tokio::spawn(async move { let _ = tx.send(msg).await; });
-        }
-    }
-
-    /// Fire-and-forget request to update a provider's saved model list.
-    pub fn set_provider_models(&self, name: &str, models: Vec<String>) {
-        let tx = self.actor_handles.as_ref()
-            .and_then(|h| h.config.as_ref())
-            .map(|h| h.tx().clone());
-        if let (Some(tx), Ok(_)) = (tx, tokio::runtime::Handle::try_current()) {
-            let msg = crate::actors::ConfigMsg::SetProviderModels { name: name.to_string(), models };
-            tokio::spawn(async move { let _ = tx.send(msg).await; });
-        }
-    }
-
-    /// Record the height of the message viewport. Called by the render
-    /// actor on each draw. Used by vim nav mode for element-level jumps.
-    pub fn set_last_visible_height(&mut self, height: u16) {
-        self.view.last_visible_height = height;
-    }
-
-    /// Record the width of the message content area. Called by the render
-    /// actor on each draw. Used to keep core scroll math consistent with
-    /// the actual wrapped Ratatui output.
-    pub fn set_last_content_width(&mut self, width: u16) {
-        self.view.last_content_width = width;
-    }
-
-    /// Record a model selection in recent history (max 5, no duplicates).
-    pub fn record_model_usage(&mut self, provider: &str, model: &str) {
-        let full = format!("{}/{}", provider, model);
-        self.config.recent_models.retain(|m| m != &full);
-        self.config.recent_models.push(full);
-        if self.config.recent_models.len() > 5 {
-            self.config.recent_models.remove(0);
-        }
-    }
-
-    pub fn cache_generation(&self) -> u64 {
-        self.view.message_gen
-    }
-
-    /// True when a provider and model are active/connected.
-    pub fn has_models(&self) -> bool {
-        !self.config.current_provider.is_empty() && !self.config.current_model.is_empty()
-    }
-
-    /// Visible elements slice — O(1), zero allocation
-    pub fn visible(&self, skip: usize, take: usize) -> &[Element] {
-        crate::snapshot::visible_slice(&self.view.elements_cache, skip, take)
-    }
-
-    pub fn count(&self) -> usize {
-        self.view.element_count.max(self.view.elements_cache.len())
-    }
-
-    pub fn element_count(&self) -> usize {
-        self.view.element_count
-    }
-
-    pub fn total_lines(&self) -> usize {
-        self.view.total_lines
-    }
-
-    pub fn scroll_offset(&self, visible_height: usize) -> u16 {
-        crate::snapshot::scroll_offset(self.view.total_lines, self.view.scroll, visible_height)
-    }
-
-    pub fn scrollbar_metrics(&self, visible_height: usize) -> (usize, usize) {
-        crate::snapshot::scrollbar_metrics(self.view.total_lines, self.view.scroll, visible_height)
-    }
-
-    pub fn elements_cache(&self) -> &[Element] {
-        self.view.elements_cache.as_ref()
-    }
-
-    pub fn is_dirty(&self) -> bool {
-        self.view.dirty
-    }
-
-    /// Record that a command was invoked for palette ranking.
-    pub fn record_command_usage(&mut self, name: &str) {
-        let now = crate::update::now();
-        let entry = self
-            .config
-            .command_usage
-            .entry(name.to_string())
-            .or_insert_with(|| CommandUsage {
-                count: 0,
-                last_used: now,
-            });
-        entry.count += 1;
-        entry.last_used = now;
-    }
-
-    /// Rank commands by fuzzy match score, recency boost, and usage count.
-    /// Returns commands in ranked order, limited to `limit`.
-    pub fn rank_commands(
-        &self,
-        query: &str,
-        limit: usize,
-    ) -> Vec<(&crate::commands::CommandDef, i32)> {
-        let all: Vec<_> = self.registry.list();
-        if query.is_empty() {
-            ranking::rank_commands_empty_query(self, &all, limit)
-        } else {
-            ranking::rank_commands_with_query(self, query, &all, limit)
-        }
+    /// Swap out all fields to `Default`, returning the old values.
+    /// Used by `reset_session()` to preserve select fields.
+    pub(crate) fn take(&mut self) -> AppState {
+        let mut prev = AppState::default();
+        std::mem::swap(self, &mut prev);
+        prev
     }
 }
-

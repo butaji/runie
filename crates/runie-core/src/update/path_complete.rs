@@ -8,68 +8,81 @@ pub(crate) fn extract_path_prefix(input: &str, cursor: usize) -> String {
 
 impl AppState {
     pub(crate) fn toggle_path_completion(&mut self) {
-        let partial = extract_path_prefix(&self.input.input, self.input.cursor_pos);
+        let input = self.input_mut();
+        let partial = extract_path_prefix(&input.input, input.cursor_pos);
         let cwd = std::env::current_dir().unwrap_or_default();
         let suggestions = crate::path_complete::complete_path(&partial, &cwd);
         if suggestions.is_empty() {
-            self.input.input_flash = 3;
+            input.input_flash = 3;
             return;
         }
-        self.completion.path_suggestions = Some(suggestions);
-        self.completion.path_selected = Some(0);
-        self.view.dirty = true;
+        drop(input);
+        self.completion_mut().path_suggestions = Some(suggestions);
+        self.completion_mut().path_selected = Some(0);
+        self.view_mut().dirty = true;
     }
 
     pub(crate) fn path_completion_up(&mut self) {
-        if let Some(ref items) = self.completion.path_suggestions {
-            let sel = self.completion.path_selected.unwrap_or(0);
-            self.completion.path_selected = Some(if sel == 0 { items.len() - 1 } else { sel - 1 });
-            self.view.dirty = true;
+        let completion = self.completion_mut();
+        if let Some(ref items) = completion.path_suggestions {
+            let sel = completion.path_selected.unwrap_or(0);
+            completion.path_selected = Some(if sel == 0 { items.len() - 1 } else { sel - 1 });
+            self.view_mut().dirty = true;
         }
     }
 
     pub(crate) fn path_completion_down(&mut self) {
-        if let Some(ref items) = self.completion.path_suggestions {
-            let sel = self.completion.path_selected.unwrap_or(0);
-            self.completion.path_selected = Some((sel + 1) % items.len());
-            self.view.dirty = true;
+        let completion = self.completion_mut();
+        if let Some(ref items) = completion.path_suggestions {
+            let sel = completion.path_selected.unwrap_or(0);
+            completion.path_selected = Some((sel + 1) % items.len());
+            self.view_mut().dirty = true;
         }
     }
 
     pub(crate) fn path_completion_select(&mut self) {
-        let (path, is_dir) = match (
-            &self.completion.path_suggestions,
-            self.completion.path_selected,
-        ) {
-            (Some(items), Some(sel)) if sel < items.len() => {
-                (items[sel].path.clone(), items[sel].is_dir)
+        let (path, is_dir) = {
+            let completion = self.completion();
+            match (&completion.path_suggestions, completion.path_selected) {
+                (Some(items), Some(sel)) if sel < items.len() => {
+                    (items[sel].path.clone(), items[sel].is_dir)
+                }
+                _ => return,
             }
-            _ => return,
         };
-        let prefix = extract_path_prefix(&self.input.input, self.input.cursor_pos);
+        let prefix = {
+            let input = self.input();
+            extract_path_prefix(&input.input, input.cursor_pos)
+        };
         let replacement = if is_dir { format!("{}/", path) } else { path };
         self.replace_path_prefix(&prefix, &replacement);
-        self.completion.path_suggestions = None;
-        self.completion.path_selected = None;
-        self.view.dirty = true;
+        self.completion_mut().path_suggestions = None;
+        self.completion_mut().path_selected = None;
+        self.view_mut().dirty = true;
     }
 
     pub(super) fn path_completion_close(&mut self) {
-        self.completion.path_suggestions = None;
-        self.completion.path_selected = None;
-        self.view.dirty = true;
+        self.completion_mut().path_suggestions = None;
+        self.completion_mut().path_selected = None;
+        self.view_mut().dirty = true;
     }
 
     fn replace_path_prefix(&mut self, prefix: &str, replacement: &str) {
-        let before = &self.input.input[..self.input.cursor_pos];
+        let cursor_pos = self.input().cursor_pos;
+        let before = &self.input().input[..cursor_pos];
         if let Some(pos) = before.rfind(prefix) {
+            let input = self.input();
+            let input_len = input.input.len();
+            let input_str = input.input.clone();
+            drop(input);
+            let mut input_mut = self.input_mut();
             let mut new_input =
-                String::with_capacity(self.input.input.len() - prefix.len() + replacement.len());
-            new_input.push_str(&self.input.input[..pos]);
+                String::with_capacity(input_len - prefix.len() + replacement.len());
+            new_input.push_str(&input_str[..pos]);
             new_input.push_str(replacement);
-            new_input.push_str(&self.input.input[self.input.cursor_pos..]);
-            self.input.cursor_pos = pos + replacement.len();
-            self.input.input = new_input;
+            new_input.push_str(&input_str[cursor_pos..]);
+            input_mut.input = new_input;
+            input_mut.cursor_pos = pos + replacement.len();
         }
     }
 }

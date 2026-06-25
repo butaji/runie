@@ -3,11 +3,13 @@
 //!
 //!   - `support`  — free helper functions (grapheme, word boundaries, hints)
 //!   - `scroll`   — scroll event handler, page size, element jump
-//!   - `text`     — text editing (insert/delete/paste/submit/undo/redo) + history
+//!   - `text`     — text editing (insert/delete/paste/undo/redo)
+//!   - `submit`   — submit, command dispatch, and history navigation
 //!   - `nav`      — cursor move, vim nav mode, line nav, input scroll clamp
 
 mod nav;
 mod scroll;
+mod submit;
 mod support;
 mod text;
 
@@ -23,7 +25,7 @@ pub use support::{
 
 
 pub fn input_event(state: &mut AppState, event: crate::Event) {
-    if state.permission_request.is_some() {
+    if state.permission_request().is_some() {
         return permission_input_event(state, event);
     }
     apply_input_event(state, event);
@@ -71,7 +73,7 @@ fn apply_input_event(state: &mut AppState, event: crate::Event) {
 }
 
 fn handle_mouse_move(state: &mut AppState, row: u16, col: u16) {
-    state.view.mouse_position = Some((row, col));
+    state.view_mut().mouse_position = Some((row, col));
 }
 
 fn handle_terminal_resize(state: &mut AppState, width: u16, height: u16) {
@@ -85,7 +87,7 @@ fn handle_terminal_resize(state: &mut AppState, width: u16, height: u16) {
 fn permission_input_event(state: &mut AppState, event: crate::Event) {
     use crate::permissions::PermissionAction;
 
-    let Some(req) = state.permission_request.take() else {
+    let Some(req) = state.permission_request().take() else {
         return;
     };
     let action = match event {
@@ -93,14 +95,14 @@ fn permission_input_event(state: &mut AppState, event: crate::Event) {
         crate::Event::Input('a') | crate::Event::Input('A') => PermissionAction::Allow,
         _ => PermissionAction::Deny,
     };
-    if let Ok(registry) = state.approval_registry.lock() {
+    if let Ok(registry) = state.approval_registry().lock() {
         registry.resolve(&req.request_id, action);
     }
-    state.view.dirty = true;
+    state.view_mut().dirty = true;
 }
 
 fn handle_mouse_click_event(state: &mut AppState, row: u16, col: u16, button: &str) {
-    state.view.mouse_position = Some((row, col));
+    state.view_mut().mouse_position = Some((row, col));
     handle_mouse_click(state, row, col, button);
 }
 
@@ -120,10 +122,10 @@ pub(crate) enum HistoryNavMode {
 ///
 /// The logic is shared by both history-prev and history-next handlers;
 /// the caller maps the mode to up/down.
-pub(crate) fn get_history_nav_mode(state: &AppState) -> HistoryNavMode {
-    if state.completion.path_suggestions.is_some() {
+pub(crate) fn get_history_nav_mode(state: &mut AppState) -> HistoryNavMode {
+    if state.completion_mut().path_suggestions.is_some() {
         HistoryNavMode::PathComplete
-    } else if state.input.input.contains('\n') {
+    } else if state.input_mut().input.contains('\n') {
         HistoryNavMode::Cursor
     } else {
         HistoryNavMode::History
@@ -147,48 +149,53 @@ fn handle_history_next(state: &mut AppState) {
 }
 
 fn handle_escape(state: &mut AppState) {
-    if !state.config.vim_mode {
+    if !state.config_mut().vim_mode {
         return;
     }
-    if state.agent.turn_active {
+    if state.agent_state_mut().turn_active {
         state.stop_turn();
-        state.view.vim_nav_pending = true;
-        state.view.dirty = true;
+        state.view_mut().vim_nav_pending = true;
+        state.view_mut().dirty = true;
         return;
     }
-    if state.view.vim_nav_pending {
-        state.view.vim_nav_pending = false;
-        state.view.vim_nav_mode = true;
-        state.view.selected_post = state.current_bottom_post_index();
-        state.view.dirty = true;
+    if state.view_mut().vim_nav_pending {
+        state.view_mut().vim_nav_pending = false;
+        state.view_mut().vim_nav_mode = true;
+        state.view_mut().selected_post = state.current_bottom_post_index();
+        state.view_mut().dirty = true;
         return;
     }
-    if !state.view.vim_nav_mode {
-        state.view.vim_nav_mode = true;
-        state.view.selected_post = state.current_bottom_post_index();
-        state.view.dirty = true;
+    if !state.view_mut().vim_nav_mode {
+        state.view_mut().vim_nav_mode = true;
+        state.view_mut().selected_post = state.current_bottom_post_index();
+        state.view_mut().dirty = true;
     }
 }
 
 fn handle_mouse_click(state: &mut AppState, row: u16, col: u16, button: &str) {
     use crate::snapshot::compute_mouse_target;
 
+    let last_content_width = state.view().last_content_width;
+    let last_visible_height = state.view().last_visible_height;
+    let has_models = state.has_models();
+    let input = state.input().input.clone();
+
     let target = compute_mouse_target(
         Some((row, col)),
-        state.view.last_content_width,
-        state.view.last_visible_height,
-        &state.input.input,
-        state.has_models(),
+        last_content_width,
+        last_visible_height,
+        &input,
+        has_models,
     );
 
     if button == "left" {
         match target {
             crate::snapshot::MouseTarget::Input => {
                 // Left-click in input area: focus the prompt, exit vim nav mode.
-                if state.view.vim_nav_mode {
-                    state.view.vim_nav_mode = false;
+                if state.view_mut().vim_nav_mode {
+                    state.view_mut().vim_nav_mode = false;
                 }
-                state.view.dirty = true;
+                state.view_mut().dirty = true;
             }
             crate::snapshot::MouseTarget::Feed => {
                 // Left-click in feed: toggle collapse-all (same as Ctrl+O).

@@ -3,6 +3,7 @@
 pub mod actor;
 pub mod emit_approval_sink;
 pub mod headless;
+pub mod headless_helper;
 pub mod inspector;
 
 

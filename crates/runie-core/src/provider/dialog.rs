@@ -10,8 +10,8 @@ use crate::model::AppState;
 /// Build the root providers dialog panel.
 pub fn build_providers_dialog(state: &AppState) -> PanelStack {
     let configured = state.configured_providers();
-    let current_provider = &state.config.current_provider;
-    let current_model = &state.config.current_model;
+    let current_provider = &state.config().current_provider;
+    let current_model = &state.config().current_model;
     let has_providers = !configured.is_empty();
 
     let mut panel = Panel::new("providers", "Providers")

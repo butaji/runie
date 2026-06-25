@@ -1,6 +1,6 @@
 # Delete dead `runie_macros::define_tool!` proc macro
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P1
@@ -20,10 +20,10 @@ After deletion, verify `runie-engine` still compiles (it uses `crate::define_too
 
 ## Acceptance criteria
 
-- [ ] `crates/runie-macros/src/tool.rs` deleted.
-- [ ] `tool` module removed from `crates/runie-macros/src/lib.rs`.
-- [ ] `runie-engine` still compiles with `cargo check -p runie-engine`.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] `crates/runie-macros/src/tool.rs` deleted.
+- [x] `tool` module removed from `crates/runie-macros/src/lib.rs`.
+- [x] `runie-engine` still compiles with `cargo check -p runie-engine`.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
@@ -37,7 +37,7 @@ After deletion, verify `runie-engine` still compiles (it uses `crate::define_too
 - N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `runie_engine_still_builds` — `cargo check -p runie-engine` succeeds after deletion.
+- [x] `runie_engine_still_builds` — `cargo check -p runie-engine` succeeds after deletion.
 
 ## Files touched
 

@@ -135,7 +135,7 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 fn handle_reload(state: &mut AppState, _: &str) -> CommandResult {
-    if let Some(ref handles) = state.actor_handles {
+    if let Some(ref handles) = state.actor_handles() {
         if let Some(ref config) = handles.config {
             let tx = config.tx().clone();
             tokio::spawn(async move {
@@ -143,7 +143,7 @@ fn handle_reload(state: &mut AppState, _: &str) -> CommandResult {
             });
         }
     }
-    state.skills = crate::async_io::block_in_place_if_runtime(crate::skills::load_all);
+    *state.skills_mut() = crate::async_io::block_in_place_if_runtime(crate::skills::load_all);
     CommandResult::Message("Reloaded config, keybindings, theme, skills, and prompts.".into())
 }
 
@@ -157,11 +157,11 @@ fn handle_diagnostics(_: &mut AppState, _: &str) -> CommandResult {
 }
 
 fn handle_skills(state: &mut AppState, _: &str) -> CommandResult {
-    if state.skills.is_empty() {
+    if state.skills().is_empty() {
         return CommandResult::Warning("No skills loaded.".into());
     }
     let lines: Vec<_> = std::iter::once("Loaded skills:".into())
-        .chain(state.skills.iter().map(|s| format!("  {}", s.summary())))
+        .chain(state.skills().iter().map(|s| format!("  {}", s.summary())))
         .collect();
     CommandResult::Message(lines.join("\n"))
 }
@@ -178,7 +178,7 @@ fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
             .into_stack();
         return CommandResult::OpenPanelStack(Box::new(stack));
     }
-    match state.skills.iter().find(|s| s.name == name) {
+    match state.skills().iter().find(|s| s.name == name) {
         Some(skill) => {
             let mut lines = vec![format!("Skill: {}", skill.name)];
             if !skill.description.is_empty() {
@@ -199,7 +199,7 @@ fn handle_theme(state: &mut AppState, args: &str) -> CommandResult {
         open_theme_selector(state);
         return CommandResult::None;
     }
-    state.config.theme_name = name.to_string();
+    state.config_mut().theme_name = name.to_string();
     if crate::themes::BUILTIN_THEMES.contains(&name) {
         CommandResult::Message(format!("Theme switched to '{}'", name))
     } else {
@@ -222,10 +222,10 @@ fn open_theme_selector(state: &mut AppState) {
             }),
         );
     }
-    state.open_dialog = Some(crate::commands::DialogState::PanelStack(PanelStack::new(
+    *state.open_dialog_mut() = Some(crate::commands::DialogState::PanelStack(PanelStack::new(
         panel,
     )));
-    state.view.dirty = true;
+    state.view_mut().dirty = true;
 }
 
 fn handle_approve(_: &mut AppState, _: &str) -> CommandResult {
@@ -267,23 +267,23 @@ fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {
 pub fn run_prompt(state: &mut AppState, name: &str) {
     let name = name.trim();
     if name.is_empty() {
-        let current = if state.input.current_prompt.is_empty() {
+        let current = if state.input_mut().current_prompt.is_empty() {
             "default"
         } else {
-            &state.input.current_prompt
+            &state.input_mut().current_prompt
         };
         let mut lines = vec![format!("Current prompt: {}", current)];
-        if !state.prompts.is_empty() {
+        if !state.prompts().is_empty() {
             lines.push("Available prompts:".into());
-            for p in &state.prompts {
+            for p in state.prompts() {
                 lines.push(format!("  {}", p.summary()));
             }
         }
         state.add_system_msg(lines.join("\n"));
         return;
     }
-    if state.prompts.iter().any(|p| p.name == name) {
-        state.input.current_prompt = name.to_string();
+    if state.prompts().iter().any(|p| p.name == name) {
+        state.input_mut().current_prompt = name.to_string();
         state.add_system_msg(format!("Prompt switched to '{}'", name));
     } else {
         state.add_system_msg(format!("Prompt '{}' not found.", name));

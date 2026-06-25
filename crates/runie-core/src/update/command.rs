@@ -61,14 +61,17 @@ fn run_load_command(state: &mut AppState, name: &str) {
 fn run_save_command(state: &mut AppState, name: &str) {
     let name_owned = name.to_string();
     let session = crate::session::Session::from_state(state, name_owned.clone());
-    if let Some(ref handles) = state.actor_handles {
-        if tokio::runtime::Handle::try_current().is_ok() {
-            let handles = handles.clone();
-            tokio::spawn(async move {
-                handles.send_save_session(name_owned, session).await;
-            });
-            return;
-        }
+    // Extract handles before async work to avoid borrow conflicts.
+    let handles = state.actor_handles().cloned();
+    let can_spawn = handles.as_ref().is_some()
+        && tokio::runtime::Handle::try_current().is_ok();
+
+    if can_spawn {
+        let handles = handles.unwrap();
+        tokio::spawn(async move {
+            handles.send_save_session(name_owned, session).await;
+        });
+        return;
     }
     use crate::commands::CommandResult;
     let result = crate::session::replay::save_session(name, state)
@@ -94,15 +97,18 @@ fn run_delete_command(state: &mut AppState, name: &str) {
 }
 
 fn run_import_command(state: &mut AppState, path: &str) {
-    if let Some(ref handles) = state.actor_handles {
-        if tokio::runtime::Handle::try_current().is_ok() {
-            let handles = handles.clone();
-            let path = std::path::PathBuf::from(path);
-            tokio::spawn(async move {
-                handles.send_import_session(path).await;
-            });
-            return;
-        }
+    // Extract handles before async work to avoid borrow conflicts.
+    let handles = state.actor_handles().cloned();
+    let can_spawn = handles.as_ref().is_some()
+        && tokio::runtime::Handle::try_current().is_ok();
+
+    if can_spawn {
+        let handles = handles.unwrap();
+        let path_buf = std::path::PathBuf::from(path);
+        tokio::spawn(async move {
+            handles.send_import_session(path_buf).await;
+        });
+        return;
     }
     use crate::commands::CommandResult;
     let path_buf = path.to_string();
@@ -130,15 +136,17 @@ fn run_export_command(state: &mut AppState, path: &str) {
         .unwrap_or_else(|| "exported".into());
     let session = Session::from_state(state, name);
     let path_buf = std::path::PathBuf::from(path);
-    // Try actor-based async path first
-    if let Some(ref handles) = state.actor_handles {
-        if tokio::runtime::Handle::try_current().is_ok() {
-            let handles = handles.clone();
-            tokio::spawn(async move {
-                handles.send_export_session(path_buf.clone(), session).await;
-            });
-            return;
-        }
+    // Extract handles before async work to avoid borrow conflicts.
+    let handles = state.actor_handles().cloned();
+    let can_spawn = handles.as_ref().is_some()
+        && tokio::runtime::Handle::try_current().is_ok();
+
+    if can_spawn {
+        let handles = handles.unwrap();
+        tokio::spawn(async move {
+            handles.send_export_session(path_buf, session).await;
+        });
+        return;
     }
     use crate::commands::CommandResult;
     let json = serde_json::to_string_pretty(&session).unwrap_or_default();
@@ -153,7 +161,7 @@ where
     F: FnOnce(crate::actors::SessionActorHandle, String) -> Fut + Send + 'static,
     Fut: std::future::Future<Output = ()> + Send + 'static,
 {
-    if let Some(ref handles) = state.actor_handles {
+    if let Some(ref handles) = state.actor_handles() {
         if tokio::runtime::Handle::try_current().is_ok() {
             if let Some(ref session) = handles.session {
                 let name = name.to_string();
@@ -201,7 +209,7 @@ fn run_logout_command(state: &mut AppState, provider: &str) {
         return;
     }
     state.remove_provider(provider);
-    if state.config.current_provider == provider {
+    if state.config().current_provider == provider {
         let (provider, model) = state.resolve_default_model();
         state.set_active_model(
             provider,
@@ -223,7 +231,7 @@ fn run_logout_command(state: &mut AppState, provider: &str) {
 
 fn run_palette_command(state: &mut AppState, name: &str, args: &str) {
     use crate::commands::CommandResult;
-    let result = if let Some(cmd) = state.registry.get(name) {
+    let result = if let Some(cmd) = state.registry().get(name) {
         let cmd_name = cmd.name.clone();
         cmd.flow.clone().exec(state, &cmd_name, args)
     } else {

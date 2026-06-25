@@ -11,11 +11,11 @@ pub(crate) fn permission_event(state: &mut AppState, event: Event) {
         input,
     } = event
     {
-        state.permission_request = Some(PermissionRequestState {
+        *state.permission_request_mut() = Some(PermissionRequestState {
             request_id,
             tool,
             input,
         });
-        state.view.dirty = true;
+        state.view_mut().dirty = true;
     }
 }

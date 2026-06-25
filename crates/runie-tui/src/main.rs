@@ -132,10 +132,10 @@ fn spawn_background_tasks(
     let (agent_handle, agent_actor) = AgentActor::spawn(
         bus.clone(),
         provider_handle,
-        state.approval_registry.clone(),
+        state.approval_registry().clone(),
     );
     let (render_tx, render_rx) = watch::channel(state.snapshot());
-    let (kb_tx, kb_rx) = watch::channel(state.config.keybindings.clone());
+    let (kb_tx, kb_rx) = watch::channel(state.config().keybindings.clone());
     spawn_input_forwarder(input_rx, bus.clone());
     spawn_agent_tasks(input_tx, kb_rx, terminal, render_rx, bus.clone(), caps);
     spawn_ui_actor(

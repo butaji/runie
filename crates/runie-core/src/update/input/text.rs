@@ -1,6 +1,5 @@
-//! Text editing (merged from input_text.rs).
+//! Text editing (insert, delete, undo/redo, paste).
 
-use crate::message::{now, ChatMessage, Role};
 use crate::model::AppState;
 
 impl AppState {
@@ -12,29 +11,29 @@ impl AppState {
     }
 
     fn mode_hints(&self) -> Vec<String> {
-        if self.open_dialog.is_some() {
+        if self.open_dialog().is_some() {
             return crate::update::input::modal_hints();
         }
-        if self.view.vim_nav_mode {
+        if self.view().vim_nav_mode {
             return crate::update::input::vim_nav_hints();
         }
-        if self.completion.at_suggestions.is_some() {
+        if self.completion().at_suggestions.is_some() {
             return crate::update::input::at_suggestion_hints();
         }
-        if self.agent.turn_active {
+        if self.agent_state().turn_active {
             return self.active_turn_hints();
         }
-        if !self.input.input.is_empty() {
+        if !self.input().input.is_empty() {
             return crate::update::input::input_active_hints();
         }
-        if self.config.vim_mode {
+        if self.config().vim_mode {
             return vec!["esc nav".to_string()];
         }
         crate::update::input::empty_input_hints()
     }
 
     fn active_turn_hints(&self) -> Vec<String> {
-        let esc = if self.config.vim_mode {
+        let esc = if self.config().vim_mode {
             "esc abort·nav"
         } else {
             "esc abort"
@@ -48,30 +47,36 @@ impl AppState {
 
     pub(crate) fn insert_char(&mut self, c: char) {
         self.push_undo();
-        if self.input.cursor_pos == self.input.input.len() {
-            self.input.input.push(c);
+        let input = self.input_mut();
+        if input.cursor_pos == input.input.len() {
+            input.input.push(c);
         } else {
-            self.input.input.insert(self.input.cursor_pos, c);
+            input.input.insert(input.cursor_pos, c);
         }
-        self.input.cursor_pos += c.len_utf8();
+        input.cursor_pos += c.len_utf8();
         self.clear_redo();
         self.handle_at_trigger();
         self.clamp_input_scroll();
-        self.view.dirty = true;
+        self.view_mut().dirty = true;
     }
 
     pub(crate) fn delete_before_cursor(&mut self) {
-        if self.input.cursor_pos > 0 {
+        let input = self.input();
+        if input.cursor_pos > 0 {
+            drop(input);
             self.delete_before_cursor_with_content();
-        } else if self.input.cursor_pos == 0 && !self.input.input.is_empty() {
+        } else if input.cursor_pos == 0 && !input.input.is_empty() {
+            drop(input);
             self.delete_leading_newline();
         } else {
-            self.input.input_flash = 3;
+            self.input_mut().input_flash = 3;
         }
     }
 
     fn delete_before_cursor_with_content(&mut self) {
-        let char_before_cursor = self.input.input[..self.input.cursor_pos].chars().last();
+        let input = self.input();
+        let char_before_cursor = input.input[..input.cursor_pos].chars().last();
+        drop(input);
         if char_before_cursor == Some('\n') {
             self.remove_newline_before_cursor();
         } else {
@@ -81,133 +86,162 @@ impl AppState {
 
     fn remove_newline_before_cursor(&mut self) {
         self.push_undo();
-        let new_pos = self.input.cursor_pos - 1;
-        self.input.input.remove(self.input.cursor_pos - 1);
-        self.input.cursor_pos = new_pos;
+        let input = self.input_mut();
+        let new_pos = input.cursor_pos - 1;
+        input.input.remove(input.cursor_pos - 1);
+        input.cursor_pos = new_pos;
+        drop(input);
         self.clear_redo();
         self.handle_at_trigger();
         self.clamp_input_scroll();
-        self.view.dirty = true;
+        self.view_mut().dirty = true;
     }
 
     fn remove_grapheme_before_cursor(&mut self) {
         self.push_undo();
+        let input = self.input();
         let new_pos =
-            crate::update::input::prev_grapheme_boundary(&self.input.input, self.input.cursor_pos);
-        self.input.input.drain(new_pos..self.input.cursor_pos);
-        self.input.cursor_pos = new_pos;
+            crate::update::input::prev_grapheme_boundary(&input.input, input.cursor_pos);
+        drop(input);
+        let input = self.input_mut();
+        input.input.drain(new_pos..input.cursor_pos);
+        input.cursor_pos = new_pos;
+        drop(input);
         self.clear_redo();
         self.handle_at_trigger();
         self.clamp_input_scroll();
-        self.view.dirty = true;
+        self.view_mut().dirty = true;
     }
 
     fn delete_leading_newline(&mut self) {
-        if self.input.input.starts_with('\n') {
+        let input = self.input();
+        if input.input.starts_with('\n') {
+            drop(input);
             self.push_undo();
-            self.input.input.remove(0);
+            self.input_mut().input.remove(0);
             self.clear_redo();
             self.handle_at_trigger();
             self.clamp_input_scroll();
-            self.view.dirty = true;
+            self.view_mut().dirty = true;
         } else {
-            self.input.input_flash = 3;
+            drop(input);
+            self.input_mut().input_flash = 3;
         }
     }
 
     pub(crate) fn delete_word(&mut self) {
-        if self.input.cursor_pos == 0 {
-            self.input.input_flash = 3;
+        let input = self.input();
+        if input.cursor_pos == 0 {
+            drop(input);
+            self.input_mut().input_flash = 3;
             return;
         }
-        self.push_undo();
         let start =
-            crate::update::input::find_word_boundary_left(&self.input.input, self.input.cursor_pos);
-        self.input.input.drain(start..self.input.cursor_pos);
-        self.input.cursor_pos = start;
+            crate::update::input::find_word_boundary_left(&input.input, input.cursor_pos);
+        drop(input);
+        self.push_undo();
+        let input = self.input_mut();
+        input.input.drain(start..input.cursor_pos);
+        input.cursor_pos = start;
+        drop(input);
         self.clear_redo();
         self.handle_at_trigger();
         self.clamp_input_scroll();
-        self.view.dirty = true;
+        self.view_mut().dirty = true;
     }
 
     pub(crate) fn delete_to_end(&mut self) {
-        if self.input.cursor_pos < self.input.input.len() {
+        let cursor_pos = self.input().cursor_pos;
+        if cursor_pos < self.input().input.len() {
             self.push_undo();
-            self.input.input.truncate(self.input.cursor_pos);
+            self.input_mut().input.truncate(cursor_pos);
             self.clear_redo();
             self.handle_at_trigger();
             self.clamp_input_scroll();
-            self.view.dirty = true;
+            self.view_mut().dirty = true;
         } else {
-            self.input.input_flash = 3;
+            self.input_mut().input_flash = 3;
         }
     }
 
     pub(crate) fn delete_to_start(&mut self) {
-        if self.input.cursor_pos > 0 {
+        let input = self.input();
+        if input.cursor_pos > 0 {
+            drop(input);
             self.push_undo();
-            self.input.input.drain(..self.input.cursor_pos);
-            self.input.cursor_pos = 0;
+            let cursor = self.input().cursor_pos;
+            self.input_mut().input.drain(..cursor);
+            self.input_mut().cursor_pos = 0;
             self.clear_redo();
             self.handle_at_trigger();
             self.clamp_input_scroll();
-            self.view.dirty = true;
+            self.view_mut().dirty = true;
         } else {
-            self.input.input_flash = 3;
+            drop(input);
+            self.input_mut().input_flash = 3;
         }
     }
 
     pub(crate) fn kill_char(&mut self) {
-        if self.input.cursor_pos < self.input.input.len() {
-            self.push_undo();
+        let input = self.input();
+        if input.cursor_pos < input.input.len() {
             let end = crate::update::input::next_grapheme_boundary(
-                &self.input.input,
-                self.input.cursor_pos,
+                &input.input,
+                input.cursor_pos,
             );
-            self.input.input.drain(self.input.cursor_pos..end);
+            drop(input);
+            self.push_undo();
+            let input = self.input_mut();
+            input.input.drain(input.cursor_pos..end);
+            drop(input);
             self.clear_redo();
             self.handle_at_trigger();
             self.clamp_input_scroll();
-            self.view.dirty = true;
+            self.view_mut().dirty = true;
         } else {
-            self.input.input_flash = 3;
+            drop(input);
+            self.input_mut().input_flash = 3;
         }
     }
 
     fn push_undo(&mut self) {
-        self.input
-            .undo_stack
-            .push((self.input.input.clone(), self.input.cursor_pos));
+        let input = self.input_mut();
+        let input_clone = input.input.clone();
+        let cursor_clone = input.cursor_pos;
+        input.undo_stack.push((input_clone, cursor_clone));
     }
 
     fn clear_redo(&mut self) {
-        self.input.redo_stack.clear();
+        self.input_mut().redo_stack.clear();
     }
 
     pub(crate) fn undo(&mut self) {
-        if let Some((text, pos)) = self.input.undo_stack.pop() {
-            self.input
+        if let Some((text, pos)) = self.input_mut().undo_stack.pop() {
+            let input = self.input_mut();
+            input
                 .redo_stack
-                .push((self.input.input.clone(), self.input.cursor_pos));
-            self.input.input = text;
-            self.input.cursor_pos = pos;
+                .push((input.input.clone(), input.cursor_pos));
+            input.input = text;
+            input.cursor_pos = pos;
+            drop(input);
             self.handle_at_trigger();
             self.clamp_input_scroll();
-            self.view.dirty = true;
+            self.view_mut().dirty = true;
         }
     }
 
     pub(crate) fn redo(&mut self) {
-        if let Some((text, pos)) = self.input.redo_stack.pop() {
-            self.input
+        if let Some((text, pos)) = self.input_mut().redo_stack.pop() {
+            let input = self.input_mut();
+            input
                 .undo_stack
-                .push((self.input.input.clone(), self.input.cursor_pos));
-            self.input.input = text;
-            self.input.cursor_pos = pos;
+                .push((input.input.clone(), input.cursor_pos));
+            input.input = text;
+            input.cursor_pos = pos;
+            drop(input);
             self.handle_at_trigger();
             self.clamp_input_scroll();
-            self.view.dirty = true;
+            self.view_mut().dirty = true;
         }
     }
 
@@ -220,23 +254,24 @@ impl AppState {
             return;
         }
         self.push_undo();
-        self.input.input.insert_str(self.input.cursor_pos, &clean);
-        self.input.cursor_pos += clean.len();
+        let cursor = self.input().cursor_pos;
+        self.input_mut().input.insert_str(cursor, &clean);
+        self.input_mut().cursor_pos += clean.len();
         self.clear_redo();
         self.handle_at_trigger();
         self.clamp_input_scroll();
-        self.view.dirty = true;
+        self.view_mut().dirty = true;
     }
 
     pub(crate) fn paste_image(&mut self) {
         match crate::clipboard_image::read_clipboard_image() {
             Some(bytes) => {
                 let uri = crate::clipboard_image::to_data_uri(&bytes);
-                self.session.image_attachments.push(uri);
-                self.view.dirty = true;
+                self.session_mut().image_attachments.push(uri);
+                self.view_mut().dirty = true;
             }
             None => {
-                self.input.input_flash = 3;
+                self.input_mut().input_flash = 3;
             }
         }
     }
@@ -247,15 +282,17 @@ impl AppState {
 
     pub(crate) fn insert_newline(&mut self) {
         self.push_undo();
-        if self.input.cursor_pos == self.input.input.len() {
-            self.input.input.push('\n');
+        let input = self.input_mut();
+        if input.cursor_pos == input.input.len() {
+            input.input.push('\n');
         } else {
-            self.input.input.insert(self.input.cursor_pos, '\n');
+            input.input.insert(input.cursor_pos, '\n');
         }
-        self.input.cursor_pos += 1;
+        input.cursor_pos += 1;
+        drop(input);
         self.clear_redo();
         self.clamp_input_scroll();
-        self.view.dirty = true;
+        self.view_mut().dirty = true;
     }
 
     pub(crate) fn push_input(&mut self, c: char) {
@@ -263,30 +300,23 @@ impl AppState {
             self.tab_complete();
             return;
         }
-        if self.view.vim_nav_mode {
+        if self.view().vim_nav_mode {
             self.handle_vim_nav_char(c);
             return;
         }
-        let is_at_trigger_position = self.input.input.is_empty() || self.input.input.ends_with(' ');
-        if is_at_trigger_position && self.completion.path_suggestions.is_none() {
+        let input = self.input();
+        let is_at_trigger_position = input.input.is_empty() || input.input.ends_with(' ');
+        drop(input);
+        if is_at_trigger_position && self.completion().path_suggestions.is_none() {
             if c == '/' {
-                // Pass current input as initial filter, then clear input
-                let initial_filter = self.input.input.clone();
-                self.input.input.clear();
-                self.input.cursor_pos = 0;
-                crate::update::dialog::open_command_palette_with_filter(self, &initial_filter);
-                self.view.dirty = true;
+                self.open_command_palette_from_input();
                 return;
             }
             if c == '@' {
-                let needs_brackets = false;
-                let cursor = self.input.cursor_pos;
-                self.input.file_picker_backup =
-                    Some((self.input.input.clone(), cursor, cursor, needs_brackets));
-                crate::update::dialog::open_at_file_picker_all(self);
+                self.open_file_picker_from_input();
                 return;
             }
-            if self.config.vim_mode {
+            if self.config().vim_mode {
                 if let Some(evt) = self.vim_motion_event(c) {
                     self.update(evt);
                     return;
@@ -296,176 +326,24 @@ impl AppState {
         self.insert_char(c);
     }
 
-    pub(crate) fn submit(&mut self) {
-        if self.completion.at_suggestions.is_some() {
-            self.insert_at_suggestion();
-            return;
+    fn open_command_palette_from_input(&mut self) {
+        let initial_filter = self.input().input.clone();
+        {
+            let input = self.input_mut();
+            input.input.clear();
+            input.cursor_pos = 0;
         }
-        if self.completion.path_suggestions.is_some() {
-            self.path_completion_select();
-            return;
-        }
-        self.accept_ghost();
-        if self.open_dialog.is_some() {
-            return;
-        }
-        let Some(content) = self.take_submit_content() else {
-            return;
-        };
-
-        self.agent.tokens_in += self.agent.token_tracker.estimate_input(&content);
-
-        if let Some(stripped) = content.strip_prefix('!') {
-            let command = stripped.trim().to_string();
-            if !command.is_empty() {
-                self.run_bash_command(&command);
-            }
-            return;
-        }
-
-        self.add_to_input_history(content.clone());
-        self.dispatch_submit_content(content);
+        crate::update::dialog::open_command_palette_with_filter(self, &initial_filter);
+        self.view_mut().dirty = true;
     }
 
-    fn take_submit_content(&mut self) -> Option<String> {
-        if self.input.input.is_empty() {
-            self.input.input_flash = 3;
-            return None;
-        }
-        let content = std::mem::take(&mut self.input.input).trim().to_string();
-        self.input.cursor_pos = 0;
-        self.input.input_scroll = 0;
-        self.input.history_pos = None;
-        self.input.undo_stack.clear();
-        self.input.redo_stack.clear();
-        if crate::update::input::is_quit_command(&content) {
-            self.should_quit = true;
-            return None;
-        }
-        if content.is_empty() && self.session.image_attachments.is_empty() {
-            return None;
-        }
-        Some(self.build_content_with_attachments(content))
-    }
-
-    fn build_content_with_attachments(&mut self, content: String) -> String {
-        if self.session.image_attachments.is_empty() {
-            return content;
-        }
-        let mut full = content;
-        for uri in std::mem::take(&mut self.session.image_attachments) {
-            if !full.is_empty() {
-                full.push('\n');
-            }
-            full.push_str("![image](");
-            full.push_str(&uri);
-            full.push(')');
-        }
-        full
-    }
-
-    fn dispatch_submit_content(&mut self, content: String) {
-        if let Some(result) = self.handle_slash(&content) {
-            self.apply_command_result(result);
-            self.view.scroll = 0;
-            self.view.dirty = true;
-            return;
-        }
-        if self.agent.turn_active {
-            self.agent.message_queue.push(crate::model::QueuedMessage {
-                content,
-                kind: crate::model::QueuedMessageKind::Steering,
-            });
-            self.view.scroll = 0;
-            self.view.dirty = true;
-            return;
-        }
-        let id = self.next_id();
-        self.session.messages.push(ChatMessage {
-            role: Role::User,
-            timestamp: now(),
-            id: id.clone(),
-            parts: vec![runie_core::message::Part::Text { content: content.clone() }],
-            ..Default::default()
-        });
-        self.agent.request_queue.push_back((content, id));
-        self.view.scroll = 0;
-        self.messages_changed();
-    }
-
-    fn apply_command_result(&mut self, result: crate::commands::CommandResult) {
-        use crate::commands::DialogType;
-        match result {
-            crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),
-            crate::commands::CommandResult::Warning(msg) => {
-                self.notify(msg, crate::event::TransientLevel::Warning)
-            }
-            crate::commands::CommandResult::Event(evt) => self.update(evt),
-            crate::commands::CommandResult::OpenDialog(d) => match d {
-                DialogType::CommandPalette => crate::update::dialog::open_command_palette(self),
-                DialogType::ModelSelector => crate::update::dialog::open_model_selector(self),
-                DialogType::Settings => crate::update::dialog::open_settings_dialog(self),
-                DialogType::ScopedModels => crate::update::dialog::open_scoped_models_dialog(self),
-            },
-            crate::commands::CommandResult::OpenPanelStack(stack) => {
-                self.open_dialog = Some(crate::commands::DialogState::PanelStack(*stack));
-                self.view.dirty = true;
-            }
-            crate::commands::CommandResult::None => {}
-        }
-    }
-
-    fn run_bash_command(&mut self, command: &str) {
-        if let Some(ref handles) = self.actor_handles {
-            if tokio::runtime::Handle::try_current().is_ok() {
-                let command = command.to_string();
-                let handles = handles.clone();
-                tokio::spawn(async move { handles.run_bash(command).await; });
-                return;
-            }
-        }
-        let result = crate::update::tools::execute_bash(command);
-        let output_msg = format!("$ {}\n{}", command, result);
-        self.add_system_msg(output_msg);
-        self.view.scroll = 0;
-        self.messages_changed();
-    }
-
-    pub(crate) fn history_prev(&mut self) {
-        if self.input.input_history.is_empty() {
-            self.input.input_flash = 3;
-            return;
-        }
-        let pos = match self.input.history_pos {
-            Some(p) if p > 0 => p - 1,
-            Some(p) => p,
-            None => self.input.input_history.len() - 1,
-        };
-        self.input.history_pos = Some(pos);
-        self.input.input = self.input.input_history[pos].clone();
-        self.input.cursor_pos = self.input.input.len();
-        self.clamp_input_scroll();
-        self.view.dirty = true;
-    }
-
-    pub(crate) fn history_next(&mut self) {
-        let pos = match self.input.history_pos {
-            Some(p) => p + 1,
-            None => {
-                self.input.input_flash = 3;
-                return;
-            }
-        };
-        if pos >= self.input.input_history.len() {
-            self.input.history_pos = None;
-            self.input.input.clear();
-            self.input.cursor_pos = 0;
-        } else {
-            self.input.history_pos = Some(pos);
-            self.input.input = self.input.input_history[pos].clone();
-            self.input.cursor_pos = self.input.input.len();
-        }
-        self.clamp_input_scroll();
-        self.view.dirty = true;
+    fn open_file_picker_from_input(&mut self) {
+        let input = self.input();
+        let needs_brackets = false;
+        let cursor = input.cursor_pos;
+        let file_picker_backup = Some((input.input.clone(), cursor, cursor, needs_brackets));
+        drop(input);
+        self.input_mut().file_picker_backup = file_picker_backup;
+        crate::update::dialog::open_at_file_picker_all(self);
     }
 }

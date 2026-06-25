@@ -43,7 +43,7 @@ fn build_help_panel(state: &AppState) -> Panel {
         .header("Type to filter · Esc closes");
 
     let mut last_category: Option<CommandCategory> = None;
-    let mut items: Vec<_> = state.registry.list();
+    let mut items: Vec<_> = state.registry().list();
     items.sort_by_key(|d| (d.category, &d.name));
 
     for cmd in items {

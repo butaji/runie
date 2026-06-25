@@ -11,6 +11,77 @@ const MAX_FILE_LINES: usize = 500;
 const MAX_FUNCTION_LINES: usize = 40;
 const MAX_COMPLEXITY: usize = 10;
 
+// Private AppState fields — use accessors from accessors.rs.
+// Uses a trailing dot to match field access (state.session.xxx) but NOT
+// method calls (state.session(), state.session_mut()).
+const APPSTATE_PATTERNS: &[(&str, &str)] = &[
+    ("state.session.", "state.session()"),
+    ("state.input.", "state.input()"),
+    ("state.agent.", "state.agent_state()"),
+    ("state.view.", "state.view()"),
+    ("state.config.", "state.config()"),
+    ("state.completion.", "state.completion()"),
+    ("state.should_quit ", "state.should_quit_mut()"),
+    ("state.should_quit\n", "state.should_quit_mut()"),
+    ("state.should_quit{", "state.should_quit_mut()"),
+    ("state.open_dialog ", "state.open_dialog_mut()"),
+    ("state.open_dialog.", "state.open_dialog_mut()"),
+    ("state.dialog_back_stack.", "state.dialog_back_stack_mut()"),
+    ("state.login_flow ", "state.login_flow_mut()"),
+    ("state.login_flow.", "state.login_flow_mut()"),
+    ("state.transient_message ", "state.transient_message_mut()"),
+    ("state.transient_until ", "state.transient_until_mut()"),
+    ("state.transient_level ", "state.transient_level_mut()"),
+    ("state.fff_file_results.", "state.fff_file_results_mut()"),
+    ("state.fff_debounce ", "state.fff_debounce_mut()"),
+    ("state.permission_request ", "state.permission_request_mut()"),
+    ("state.cwd_name ", "state.cwd_name_mut()"),
+    ("state.git_info ", "state.git_info_mut()"),
+    ("state.git_info.", "state.git_info_mut()"),
+    ("state.skills ", "state.skills_mut()"),
+    ("state.prompts ", "state.prompts_mut()"),
+    ("state.trust_decisions ", "state.trust_decisions_mut()"),
+    ("state.trust_decisions.", "state.trust_decisions_mut()"),
+    ("state.config_cache ", "state.config_cache_mut()"),
+    ("state.actor_handles ", "state.actor_handles_mut()"),
+    ("state.approval_registry ", "state.approval_registry_mut()"),
+    ("state.registry ", "state.registry_mut()"),
+    ("state.registry.", "state.registry_mut()"),
+    // self.xxx patterns (same replacement, different prefix)
+    ("self.session.", "self.session()"),
+    ("self.input.", "self.input()"),
+    ("self.agent.", "self.agent_state()"),
+    ("self.view.", "self.view()"),
+    ("self.config.", "self.config()"),
+    ("self.completion.", "self.completion()"),
+    ("self.should_quit ", "self.should_quit_mut()"),
+    ("self.should_quit\n", "self.should_quit_mut()"),
+    ("self.should_quit{", "self.should_quit_mut()"),
+    ("self.open_dialog ", "self.open_dialog_mut()"),
+    ("self.open_dialog.", "self.open_dialog_mut()"),
+    ("self.dialog_back_stack.", "self.dialog_back_stack_mut()"),
+    ("self.login_flow ", "self.login_flow_mut()"),
+    ("self.login_flow.", "self.login_flow_mut()"),
+    ("self.transient_message ", "self.transient_message_mut()"),
+    ("self.transient_until ", "self.transient_until_mut()"),
+    ("self.transient_level ", "self.transient_level_mut()"),
+    ("self.fff_file_results.", "self.fff_file_results_mut()"),
+    ("self.fff_debounce ", "self.fff_debounce_mut()"),
+    ("self.permission_request ", "self.permission_request_mut()"),
+    ("self.cwd_name ", "self.cwd_name_mut()"),
+    ("self.git_info ", "self.git_info_mut()"),
+    ("self.git_info.", "self.git_info_mut()"),
+    ("self.skills ", "self.skills_mut()"),
+    ("self.prompts ", "self.prompts_mut()"),
+    ("self.trust_decisions ", "self.trust_decisions_mut()"),
+    ("self.trust_decisions.", "self.trust_decisions_mut()"),
+    ("self.config_cache ", "self.config_cache_mut()"),
+    ("self.actor_handles ", "self.actor_handles_mut()"),
+    ("self.approval_registry ", "self.approval_registry_mut()"),
+    ("self.registry ", "self.registry_mut()"),
+    ("self.registry.", "self.registry_mut()"),
+];
+
 fn find_rust_files(dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
     if let Ok(entries) = fs::read_dir(dir) {
@@ -34,7 +105,7 @@ fn relative_path(path: &Path, workspace_root: &Path) -> String {
 }
 
 fn is_test_file(rel_path: &str) -> bool {
-    rel_path.contains("/tests/") || rel_path.contains("/tests.rs")
+    rel_path.contains("/tests/") || rel_path.ends_with("/tests.rs") || rel_path.ends_with("_tests.rs") || rel_path.ends_with("_test.rs") || rel_path.contains("_tests.") || rel_path.contains("_test.")
 }
 
 fn is_test_function(lines: &[&str], fn_start: usize) -> bool {
@@ -199,12 +270,56 @@ fn check_function_violations(rel_path: &str, lines: &[&str], errors: &mut Vec<St
     }
 }
 
+fn check_appstate_field_access(rel_path: &str, lines: &[&str], errors: &mut Vec<String>) {
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*') {
+            continue;
+        }
+        for (pattern, suggestion) in APPSTATE_PATTERNS {
+            if line.contains(pattern) {
+                errors.push(format!(
+                    "{}:{}: direct AppState field access `{pattern}` — use {suggestion}",
+                    rel_path,
+                    i + 1
+                ));
+                break;
+            }
+        }
+    }
+}
+
 fn lint_file(path: &Path, workspace_root: &Path, errors: &mut Vec<String>) {
     let rel_path = relative_path(path, workspace_root);
+    // Skip tests, benches, and build.rs itself from AppState field lint
+    if needs_appstate_lint(&rel_path) {
+        let content = fs::read_to_string(path).unwrap();
+        let lines: Vec<_> = content.lines().collect();
+        check_appstate_field_access(&rel_path, &lines, errors);
+    }
     let content = fs::read_to_string(path).unwrap();
     let lines: Vec<_> = content.lines().collect();
     check_file_length(&rel_path, &lines, errors);
     check_function_violations(&rel_path, &lines, errors);
+}
+
+fn needs_appstate_lint(rel_path: &str) -> bool {
+    let exemptions = [
+        "build.rs",
+        "accessors.rs",
+        "domain_ops.rs",
+        "actors/config/actor.rs",
+        "update/input/text.rs",
+        "update/input/submit.rs",
+        "emit_approval_sink.rs",
+        "retry.rs",
+        "session/replay.rs",
+        "login_flow/validation.rs",
+    ];
+    !is_test_file(rel_path)
+        && !rel_path.contains("/benches/")
+        && !rel_path.contains("/harness_skills/")
+        && !exemptions.iter().any(|e| rel_path.ends_with(e))
 }
 
 fn main() {

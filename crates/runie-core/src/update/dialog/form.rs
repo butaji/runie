@@ -155,7 +155,7 @@ fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
         }) if panel.id == "login-models" => {
             // In the login model selector, Enter confirms the selection and
             // saves. Make sure the focused model is selected before saving.
-            if let Some(flow) = state.login_flow.as_mut() {
+            if let Some(flow) = state.login_flow_mut().as_mut() {
                 flow.selected_models.insert(model.clone());
             }
             A::Submit(Some(crate::Event::Save))
@@ -336,15 +336,15 @@ fn find_word_boundary_left(s: &str, pos: usize) -> usize {
 pub fn apply_form_action(state: &mut AppState, action: FormAction) {
     match action {
         FormAction::Submit(evt) => {
-            state.open_dialog = None;
-            state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-            state.view.dirty = true;
+            *state.open_dialog_mut() = None;
+            state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+            state.view_mut().dirty = true;
             if let Some(e) = evt {
                 state.update(e);
             }
         }
         FormAction::KeepOpen => {
-            state.view.dirty = true;
+            state.view_mut().dirty = true;
         }
         FormAction::Back => {}
     }

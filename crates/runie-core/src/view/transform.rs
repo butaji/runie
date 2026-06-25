@@ -15,7 +15,7 @@ impl LazyCache {
 
     fn build(state: &AppState) -> Feed {
         let entries = Self::collect_entries(state);
-        let mut entries = Self::group_context_tools(entries, state.view.all_collapsed);
+        let mut entries = Self::group_context_tools(entries, state.view().all_collapsed);
         entries.sort_by(|a, b| {
             a.timestamp()
                 .partial_cmp(&b.timestamp())
@@ -70,7 +70,7 @@ impl LazyCache {
 
     fn action_counts(state: &AppState) -> std::collections::HashMap<String, usize> {
         let mut counts = std::collections::HashMap::new();
-        for msg in state.session.messages.iter() {
+        for msg in state.session().messages.iter() {
             if let Some(turn_id) = Self::action_turn_id(msg) {
                 *counts.entry(turn_id).or_insert(0) += 1;
             }
@@ -91,7 +91,7 @@ impl LazyCache {
             .iter()
             .find(|m| m.role == Role::TurnComplete)
             .map(|m| m.timestamp);
-        let current = state.agent.current_request_id.as_ref().and_then(|id| {
+        let current = state.agent_state().current_request_id.as_ref().and_then(|id| {
             state
                 .session
                 .messages
@@ -108,7 +108,7 @@ impl LazyCache {
         let mut entries: Vec<Element> = Vec::new();
         let action_counts = Self::action_counts(state);
 
-        for msg in state.session.messages.iter() {
+        for msg in state.session().messages.iter() {
             if Self::should_skip_msg(msg, state) {
                 continue;
             }
@@ -121,7 +121,7 @@ impl LazyCache {
             entries.extend(Self::msg_to_elem(msg, state));
         }
 
-        if let Some(started) = state.agent.thinking_started_at {
+        if let Some(started) = state.agent_state().thinking_started_at {
             entries.push(Element::thinking(started).at(Self::thinking_timestamp(state)));
         }
 
@@ -182,8 +182,8 @@ impl LazyCache {
         let has_tool_markers = crate::update::content_has_tool_markers(&msg.content());
         let is_tool_call_msg = is_tool_only || has_tool_markers;
         is_tool_call_msg
-            || (state.agent.thinking_started_at.is_some()
-                && state.agent.current_request_id.as_deref() == Some(&msg.id))
+            || (state.agent_state().thinking_started_at.is_some()
+                && state.agent_state().current_request_id.as_deref() == Some(&msg.id))
     }
 
     pub fn visible(cache: &[Element], skip: usize, take: usize) -> &[Element] {
@@ -244,7 +244,7 @@ impl LazyCache {
     }
 
     fn reasoning_elem(content: &str, state: &AppState, ts: f64) -> Element {
-        if state.view.all_collapsed {
+        if state.view().all_collapsed {
             let first_line = content.lines().next().unwrap_or(content).to_string();
             Element::thought_summary(first_line, 0.0).at(ts)
         } else {
@@ -263,7 +263,7 @@ impl LazyCache {
 
     fn thought_elem(msg: &ChatMessage, state: &AppState, ts: f64) -> Element {
         let content = msg.content();
-        if state.view.all_collapsed {
+        if state.view().all_collapsed {
             let first_line = content.lines().next().unwrap_or(&content).to_string();
             Element::thought_summary(first_line, Self::parse_thought_dur(&content)).at(ts)
         } else {
@@ -296,7 +296,7 @@ impl LazyCache {
             .at(ts);
         }
         let (name, dur, output) = Self::parse_tool_content(&content);
-        if state.view.all_collapsed {
+        if state.view().all_collapsed {
             Element::tool_summary(name, dur).at(ts)
         } else {
             Element::tool_done(name, String::new(), dur, output, None, false).at(ts)

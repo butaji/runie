@@ -52,12 +52,12 @@ pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
     match parts.len() {
         2 => switch_to_model(state, parts[0], parts[1]),
         1 => {
-            let provider = state.config.current_provider.clone();
+            let provider = state.config_mut().current_provider.clone();
             switch_to_model(state, &provider, parts[0])
         }
         _ => CommandResult::Message(format!(
             "Current: {}/{}. Format: /model provider/model or /model model",
-            state.config.current_provider, state.config.current_model
+            state.config().current_provider, state.config().current_model
         )),
     }
 }
@@ -90,10 +90,10 @@ fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
     }
     match rest.parse::<crate::model::ThinkingLevel>() {
         Ok(level) => {
-            state.config.thinking_level = level;
+            state.config_mut().thinking_level = level;
             CommandResult::Message(format!(
                 "Thinking level set to: {}",
-                state.config.thinking_level.as_str()
+                state.config().thinking_level.as_str()
             ))
         }
         Err(e) => CommandResult::Message(format!("Error: {e}")),
@@ -102,7 +102,7 @@ fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
 
 fn open_thinking_panel(state: &mut AppState) -> CommandResult {
     use crate::model::ThinkingLevel;
-    let current = state.config.thinking_level;
+    let current = state.config().thinking_level;
 
     let mut panel = Panel::new("thinking", "Thinking Level")
         .header("Select thinking level")
@@ -133,9 +133,9 @@ fn handle_scoped_models(state: &mut AppState, _: &str) -> CommandResult {
 // ── Form-submit handlers ──────────────────────────────────────────────────────
 
 pub fn run_thinking(state: &mut AppState, level: crate::model::ThinkingLevel) {
-    state.config.thinking_level = level;
+    state.config_mut().thinking_level = level;
     state.add_system_msg(format!(
         "Thinking level set to: {}",
-        state.config.thinking_level.as_str()
+        state.config().thinking_level.as_str()
     ));
 }

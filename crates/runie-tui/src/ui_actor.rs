@@ -122,23 +122,23 @@ impl UiActor {
         let was_trust_loaded = matches!(evt, Event::TrustLoaded { .. });
 
         let submitted_text = if was_submit {
-            Some(self.state.input.input.clone())
+            Some(self.state.input().input.clone())
         } else {
             None
         };
 
-        let old_login_step = self.state.login_flow.as_ref().map(|f| f.step.clone());
+        let old_login_step = self.state.login_flow().as_ref().map(|f| f.step.clone());
 
         self.apply_event(evt.clone());
         self.dispatch_effect(&evt, effect_tx.clone());
         self.dispatch_login_validation(effect_tx, old_login_step);
 
-        if self.state.should_quit {
+        if *self.state.should_quit_mut() {
             return true;
         }
 
         if was_config_loaded {
-            let _ = self.kb_tx.send(self.state.config.keybindings.clone());
+            let _ = self.kb_tx.send(self.state.config().keybindings.clone());
         }
         if was_trust_loaded {
             let cwd = std::env::current_dir().unwrap_or_default();
@@ -157,7 +157,7 @@ impl UiActor {
     }
 
     fn dispatch_effect(&mut self, evt: &Event, effect_tx: mpsc::Sender<Event>) {
-        if let Some(cmd) = EffectCommand::try_from_event(evt, &self.state, &self.caps) {
+        if let Some(cmd) = EffectCommand::try_from_event(evt, &mut self.state, &self.caps) {
             cmd.dispatch(effect_tx, self.render_tx.clone(), &mut self.state, self.caps);
         }
     }
@@ -167,7 +167,7 @@ impl UiActor {
         effect_tx: mpsc::Sender<Event>,
         old_login_step: Option<LoginStep>,
     ) {
-        if let Some(flow) = self.state.login_flow.as_ref() {
+        if let Some(flow) = self.state.login_flow().as_ref() {
             if flow.step == LoginStep::Validating && old_login_step != Some(LoginStep::Validating) {
                 EffectCommand::LoginFlowSubmitKey {
                     provider: flow.provider.clone(),
@@ -267,12 +267,12 @@ mod tests {
         });
 
         let mut state = AppState::default();
-        state.input.input = "hello".to_string();
+        state.input_mut().input = "hello".to_string();
         render_tx.send(state.snapshot()).unwrap();
 
         // The snapshot was rendered from an immutable reference.
         // Mutation would require a mutable borrow, which the draw closure does not take.
-        assert_eq!(state.input.input, "hello");
+        assert_eq!(state.input().input, "hello");
     }
 
     #[tokio::test]
@@ -317,14 +317,14 @@ mod tests {
         flow.key = "sk-test".into();
         let panel = build_key_input(&flow);
         let stack = runie_core::dialog::PanelStack::new(panel);
-        actor.state.open_dialog = Some(runie_core::commands::DialogState::PanelStack(stack));
-        actor.state.login_flow = Some(flow);
+        *actor.state.open_dialog_mut() = Some(runie_core::commands::DialogState::PanelStack(stack));
+        *actor.state.login_flow_mut() = Some(flow);
 
         actor.handle_event(Event::Submit, effect_tx.clone()).await;
 
         assert!(
             matches!(
-                actor.state.login_flow.as_ref().map(|f| f.step.clone()),
+                actor.state.login_flow().as_ref().map(|f| f.step.clone()),
                 Some(LoginStep::Validating)
             ),
             "login flow should reach validating step"

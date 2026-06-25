@@ -37,16 +37,16 @@ pub enum EffectPayload {
 }
 
 /// Extract an effect payload from an event and the current state.
-fn extract(event: &CoreEvent, state: &AppState) -> Option<EffectPayload> {
+fn extract(event: &CoreEvent, state: &mut AppState) -> Option<EffectPayload> {
     match event {
         CoreEvent::OpenExternalEditor => Some(EffectPayload::OpenExternalEditor {
-            text: state.input.input.clone(),
+            text: state.input().input.clone(),
         }),
         CoreEvent::CopyToClipboard(text) => Some(EffectPayload::CopyToClipboard {
             text: text.clone(),
         }),
         CoreEvent::CopyLastResponse => {
-            let text = last_assistant_text(&state.session.messages);
+            let text = last_assistant_text(&state.session().messages);
             if text.is_empty() {
                 return None;
             }
@@ -59,8 +59,8 @@ fn extract(event: &CoreEvent, state: &AppState) -> Option<EffectPayload> {
             .copy_selected_post_metadata()
             .map(|text| EffectPayload::CopyToClipboard { text }),
         CoreEvent::ShareSession => Some(EffectPayload::ShareSession {
-            messages: state.session.messages.clone(),
-            display_name: state.session.session_display_name.clone(),
+            messages: state.session().messages.clone(),
+            display_name: state.session().session_display_name.clone(),
         }),
         CoreEvent::Suspend => Some(EffectPayload::Suspend),
         CoreEvent::SubmitKey { provider, key } => Some(EffectPayload::LoginValidateKey {
@@ -104,7 +104,7 @@ impl EffectCommand {
     /// Build an effect command from a core event, if the event is an effect.
     pub fn try_from_event(
         evt: &CoreEvent,
-        state: &AppState,
+        state: &mut AppState,
         caps: &TerminalCapabilities,
     ) -> Option<Self> {
         let payload = extract(evt, state)?;
@@ -142,7 +142,7 @@ impl EffectCommand {
             } => share::run(messages, display_name, tx),
             Self::Suspend { terminal_caps } => suspend::run(terminal_caps, render_tx, state),
             Self::LoginFlowSubmitKey { provider, key } => {
-                if let Some(ref handles) = state.actor_handles {
+                if let Some(ref handles) = state.actor_handles_mut() {
                     if let Some(ref provider_handle) = handles.provider {
                         login::run(provider.clone(), key, tx, provider_handle.tx().clone());
                     }
@@ -164,12 +164,12 @@ mod tests {
     #[test]
     fn copy_last_response_extracts_assistant_text() {
         let mut state = AppState::default();
-        state.session.messages.push(ChatMessage::system("sys".to_string()));
+        state.session_mut().messages.push(ChatMessage::system("sys".to_string()));
         state
             .session
             .messages
             .push(ChatMessage::assistant("the answer".to_string()));
-        let payload = extract(&CoreEvent::CopyLastResponse, &state);
+        let payload = extract(&CoreEvent::CopyLastResponse, &mut state);
         assert!(
             matches!(payload, Some(EffectPayload::CopyToClipboard { text }) if text == "the answer")
         );
@@ -177,7 +177,7 @@ mod tests {
 
     #[test]
     fn copy_last_response_empty_when_no_assistant() {
-        let state = AppState::default();
-        assert!(extract(&CoreEvent::CopyLastResponse, &state).is_none());
+        let mut state = AppState::default();
+        assert!(extract(&CoreEvent::CopyLastResponse, &mut state).is_none());
     }
 }

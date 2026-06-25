@@ -117,7 +117,7 @@ fn history_nav_mode_selects_path_complete_when_suggestions_open() {
     ]);
 
     // Both prev and next should use path completion when suggestions are open
-    let mode = get_history_nav_mode(&state);
+    let mode = get_history_nav_mode(&mut state);
     assert!(matches!(mode, HistoryNavMode::PathComplete));
 }
 
@@ -126,14 +126,14 @@ fn history_nav_mode_selects_cursor_when_multiline_input() {
     let mut state = AppState::default();
     state.input.input = "line1\nline2".to_string();
 
-    let mode = get_history_nav_mode(&state);
+    let mode = get_history_nav_mode(&mut state);
     assert!(matches!(mode, HistoryNavMode::Cursor));
 }
 
 #[test]
 fn history_nav_mode_selects_history_when_plain_input() {
-    let state = AppState::default();
+    let mut state = AppState::default();
 
-    let mode = get_history_nav_mode(&state);
+    let mode = get_history_nav_mode(&mut state);
     assert!(matches!(mode, HistoryNavMode::History));
 }

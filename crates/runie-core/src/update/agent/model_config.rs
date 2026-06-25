@@ -7,7 +7,7 @@ pub fn model_config_event(state: &mut AppState, event: crate::Event) {
         || handle_scoped_events(state, &event)
         || handle_settings_events(state, &event);
     if invalidate {
-        state.view.cached_settings_valid = false;
+        state.view_mut().cached_settings_valid = false;
     }
 }
 
@@ -18,7 +18,7 @@ fn handle_main_events(state: &mut AppState, event: &crate::Event) -> bool {
             model,
             explicit,
         } => {
-            if *explicit || state.config.model_source != crate::model::ModelSource::UserOverride {
+            if *explicit || state.config().model_source != crate::model::ModelSource::UserOverride {
                 state.switch_model(provider.clone(), model.clone(), *explicit);
             }
             true
@@ -107,7 +107,7 @@ fn handle_settings_events(state: &mut AppState, event: &crate::Event) -> bool {
         | crate::Event::SettingsUp
         | crate::Event::SettingsLeft
         | crate::Event::SettingsRight => {
-            if state.open_dialog.is_some() {
+            if state.open_dialog().is_some() {
                 crate::update::dialog::update_dialog(state, event.clone());
             }
             true

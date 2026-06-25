@@ -7,23 +7,23 @@ use super::form;
 
 /// Handle command form dialog events. Entry point for `CommandForm*` events.
 pub fn handle_form_dialog(state: &mut AppState, event: crate::Event) {
-    let Some(mut dialog) = state.open_dialog.take() else {
+    let Some(mut dialog) = state.open_dialog_mut().take() else {
         return;
     };
     let DialogState::PanelStack(ref mut stack) = dialog else {
-        state.open_dialog = Some(dialog);
+        *state.open_dialog_mut() = Some(dialog);
         return;
     };
     let Some(panel) = stack.current_mut() else {
-        state.open_dialog = Some(dialog);
+        *state.open_dialog_mut() = Some(dialog);
         return;
     };
     if !panel.is_form() {
-        state.open_dialog = Some(dialog);
+        *state.open_dialog_mut() = Some(dialog);
         return;
     }
     let action = form::form_panel_action(state, panel, event);
-    state.open_dialog = Some(dialog);
+    *state.open_dialog_mut() = Some(dialog);
     form::apply_form_action(state, action);
 }
 
@@ -33,15 +33,15 @@ pub fn insert_at_ref(state: &mut AppState, path: &str) {
     if let Some(fff_state) = crate::actors::FffSearchState::get() {
         fff_state.record_file_access(std::path::Path::new(path));
     }
-    state.input.input = build_insert_text(state, path);
-    state.input.cursor_pos = state.input.input.len();
-    state.open_dialog = None;
-    state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-    state.view.dirty = true;
+    state.input_mut().input = build_insert_text(state, path);
+    state.input_mut().cursor_pos = state.input_mut().input.len();
+    *state.open_dialog_mut() = None;
+    state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+    state.view_mut().dirty = true;
 }
 
 fn build_insert_text(state: &mut AppState, path: &str) -> String {
-    let Some((original_input, insert_pos, cursor, _)) = state.input.file_picker_backup.take()
+    let Some((original_input, insert_pos, cursor, _)) = state.input_mut().file_picker_backup.take()
     else {
         return path.to_string();
     };

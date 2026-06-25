@@ -1,6 +1,6 @@
 # Extract headless CLI helper module
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P1
@@ -29,17 +29,17 @@ After extraction, update `runie-print`, `runie-json`, and `runie-server` to impo
 
 ## Acceptance criteria
 
-- [ ] `crates/runie-agent/src/headless_helper.rs` created with shared helpers.
-- [ ] `runie-print` uses `headless_helper` for boilerplate.
-- [ ] `runie-json` uses `headless_helper` for boilerplate.
-- [ ] `runie-server` uses `headless_helper` for boilerplate.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] `crates/runie-agent/src/headless_helper.rs` created with shared helpers.
+- [x] `runie-print` uses `headless_helper` for boilerplate.
+- [x] `runie-json` uses `headless_helper` for boilerplate.
+- [x] `runie-server` uses `headless_helper` for boilerplate.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `helper_builds_system_prompt` — `headless_helper::build_system_prompt("hello")` returns a non-empty string.
-- [ ] `helper_builds_messages` — `headless_helper::build_messages("hello")` returns a vec with one user message.
+- [x] `helper_builds_system_prompt` — `headless_helper::build_system_prompt()` returns a non-empty string.
+- [x] `helper_builds_messages` — `headless_helper::build_messages("hello")` returns a vec with one user message.
 
 ### Layer 2 — Event Handling
 - N/A.
@@ -48,7 +48,7 @@ After extraction, update `runie-print`, `runie-json`, and `runie-server` to impo
 - N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `print_mode_still_works` — existing test in `runie-print/src/main.rs` still passes.
+- [x] `print_mode_still_works` — existing test in `runie-print/src/main.rs` still passes.
 
 ## Files touched
 

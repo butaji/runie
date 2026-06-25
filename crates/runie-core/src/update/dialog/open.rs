@@ -27,7 +27,7 @@ pub fn open_command_palette_with_filter(state: &mut AppState, initial_filter: &s
             },
         ));
     }
-    for skill in &state.skills {
+    for skill in state.skills() {
         if skill.user_invocable {
             rows.push(crate::commands::CommandRow::new(
                 "Skill",
@@ -46,14 +46,15 @@ pub fn open_command_palette_with_filter(state: &mut AppState, initial_filter: &s
             panel.set_filter(&initial_filter);
         }
     }
-    state.open_dialog = Some(DialogState::CommandPalette(stack));
-    state.view.input_receiver = InputReceiver::Dialog;
-    state.view.dirty = true;
+    let v = state.view_mut();
+    v.input_receiver = InputReceiver::Dialog;
+    v.dirty = true;
+    *state.open_dialog_mut() = Some(DialogState::CommandPalette(stack));
 }
 
 pub fn open_model_selector(state: &mut AppState) {
     let current = if state.has_models() {
-        format!("{}/{}", state.config.current_provider, state.config.current_model)
+        format!("{}/{}", state.config().current_provider, state.config().current_model)
     } else {
         String::new()
     };
@@ -61,17 +62,18 @@ pub fn open_model_selector(state: &mut AppState) {
     let models = crate::model_catalog::configured_models_catalog(&configured);
     let items = crate::model_catalog::build_model_selector_items(
         &models,
-        &state.config.recent_models,
+        state.config().recent_models.as_slice(),
         "",
-        &state.config.current_provider,
-        &state.config.current_model,
+        &state.config().current_provider,
+        &state.config().current_model,
     );
     let (recent, groups) = super::model_selector::partition_model_items(items);
-    state.open_dialog = Some(DialogState::ModelSelector(model_selector(
+    let v = state.view_mut();
+    v.input_receiver = InputReceiver::Dialog;
+    v.dirty = true;
+    *state.open_dialog_mut() = Some(DialogState::ModelSelector(model_selector(
         recent, groups, &current,
     )));
-    state.view.input_receiver = InputReceiver::Dialog;
-    state.view.dirty = true;
 }
 
 pub fn open_settings_dialog(state: &mut AppState) {
@@ -81,22 +83,24 @@ pub fn open_settings_dialog(state: &mut AppState) {
         .into_iter()
         .map(|(cat, items)| (cat.as_str().to_string(), items))
         .collect();
-    state.open_dialog = Some(DialogState::Settings(settings(categories)));
-    state.view.input_receiver = InputReceiver::Dialog;
-    state.view.dirty = true;
+    let v = state.view_mut();
+    v.input_receiver = InputReceiver::Dialog;
+    v.dirty = true;
+    *state.open_dialog_mut() = Some(DialogState::Settings(settings(categories)));
 }
 
 pub fn open_scoped_models_dialog(state: &mut AppState) {
     sync_scoped_models_with_config(state);
     let models: Vec<(String, String, bool)> = state
-        .config
+        .config()
         .scoped_models
         .iter()
         .map(|m| (m.provider.clone(), m.name.clone(), m.enabled))
         .collect();
-    state.open_dialog = Some(DialogState::ScopedModels(scoped_models(models)));
-    state.view.input_receiver = InputReceiver::Dialog;
-    state.view.dirty = true;
+    let v = state.view_mut();
+    v.input_receiver = InputReceiver::Dialog;
+    v.dirty = true;
+    *state.open_dialog_mut() = Some(DialogState::ScopedModels(scoped_models(models)));
 }
 
 fn sync_scoped_models_with_config(state: &mut AppState) {
@@ -109,12 +113,12 @@ fn sync_scoped_models_with_config(state: &mut AppState) {
     for (provider, _, models) in configured {
         for name in models {
             let already_present = state
-                .config
+                .config()
                 .scoped_models
                 .iter()
                 .any(|m| m.provider == provider && m.name == name);
             if !already_present {
-                state.config.scoped_models.push(crate::model::ScopedModel {
+                state.config_mut().scoped_models.push(crate::model::ScopedModel {
                     provider: provider.clone(),
                     name,
                     enabled: true,
@@ -125,7 +129,7 @@ fn sync_scoped_models_with_config(state: &mut AppState) {
 }
 
 pub fn open_session_tree_dialog(state: &mut AppState) {
-    let items: Vec<(usize, String, crate::Event)> = match state.session.session_tree.as_ref() {
+    let items: Vec<(usize, String, crate::Event)> = match state.session().session_tree.as_ref() {
         Some(tree) => tree
             .filtered_walk(crate::session::tree::SessionTreeFilter::All)
             .into_iter()
@@ -143,19 +147,14 @@ pub fn open_session_tree_dialog(state: &mut AppState) {
             .collect(),
         None => Vec::new(),
     };
-    state.open_dialog = Some(DialogState::SessionTree(session_tree(items)));
-    state.view.input_receiver = InputReceiver::Dialog;
-    state.view.dirty = true;
+    let v = state.view_mut();
+    v.input_receiver = InputReceiver::Dialog;
+    v.dirty = true;
+    *state.open_dialog_mut() = Some(DialogState::SessionTree(session_tree(items)));
 }
 
-/// Opens the file picker with an optional filter.
-/// If the filter contains a `:start-end` range suffix (e.g. `@src/main.rs:10-50`),
-/// the base path is used for filtering and the range suffix is appended on insertion.
-pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
-    use crate::dialog::{Panel, PanelStack};
-
-    // Strip the range suffix from the filter so the picker matches on the base path.
-    let (base_filter, range_suffix) = match filter {
+fn parse_filter(filter: Option<&str>) -> (Option<String>, Option<String>) {
+    match filter {
         Some(f) => {
             if let Some(parsed) = crate::file_refs::parse_file_ref(f) {
                 let suffix = parsed.range.map(|r| format!(":{}-{}", r.start(), r.end()));
@@ -165,31 +164,36 @@ pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
             }
         }
         None => (None, None),
-    };
+    }
+}
 
-    // Store the range suffix so `insert_at_ref` can append it after the selected file.
-    state.input.file_picker_range_suffix = range_suffix;
+/// Opens the file picker with an optional filter.
+/// If the filter contains a `:start-end` range suffix (e.g. `@src/main.rs:10-50`),
+/// the base path is used for filtering and the range suffix is appended on insertion.
+pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
+    use crate::dialog::{Panel, PanelStack};
 
-    // Query FFF for file results.
+    let (base_filter, range_suffix) = parse_filter(filter);
+    state.input_mut().file_picker_range_suffix = range_suffix;
+
     let query = base_filter.as_deref().unwrap_or("");
     let entries = super::fff::query_fff_files(query, 50);
-    state.fff_file_results = entries.clone();
-    state.fff_debounce = state.fff_debounce.wrapping_add(1);
+    *state.fff_file_results_mut() = entries.clone();
+    *state.fff_debounce_mut() = state.fff_debounce().wrapping_add(1);
 
     let mut panel = Panel::new("at-files", " Files ").with_filter();
-
     if let Some(ref f) = base_filter {
         panel.filter = f.clone();
     }
-
     panel = if entries.is_empty() {
         panel.header("No files found")
     } else {
         build_file_picker_panel(panel, &entries, base_filter.as_deref())
     };
-    state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
-    state.view.input_receiver = InputReceiver::Dialog;
-    state.view.dirty = true;
+    let v = state.view_mut();
+    v.input_receiver = InputReceiver::Dialog;
+    v.dirty = true;
+    *state.open_dialog_mut() = Some(DialogState::PanelStack(PanelStack::new(panel)));
 }
 
 /// Opens the file picker without any filter (shows all files).

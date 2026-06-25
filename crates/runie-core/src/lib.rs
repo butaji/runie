@@ -58,8 +58,6 @@ pub mod location;
 pub mod login_config;
 pub mod login_flow;
 pub mod markdown;
-#[cfg(feature = "mcp")]
-pub mod mcp;
 pub mod message;
 pub use message::Part;
 pub mod model;

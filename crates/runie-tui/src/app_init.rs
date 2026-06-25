@@ -12,13 +12,13 @@ pub async fn bootstrap(state: &mut AppState) {
         tokio::task::spawn_blocking(runie_core::model::init_git_and_cwd)
             .await
             .unwrap_or_default();
-    state.git_info = git_info;
-    state.cwd_name = cwd_name;
+    state.set_git_info(git_info);
+    state.set_cwd_name(cwd_name);
 
     let skills = tokio::task::spawn_blocking(runie_core::skills::load_all)
         .await
         .unwrap_or_default();
-    state.skills = skills;
+    state.set_skills(skills);
 
     let auth = tokio::task::spawn_blocking(runie_core::auth::AuthStorage::load)
         .await

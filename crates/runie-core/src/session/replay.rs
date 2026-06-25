@@ -69,7 +69,7 @@ pub fn replay_event(state: &mut AppState, event: &DurableCoreEvent) {
             );
         }
         DurableCoreEvent::SessionRenamed { name } => {
-            state.session.session_display_name = Some(name.clone());
+            state.session_mut().session_display_name = Some(name.clone());
         }
         DurableCoreEvent::ToolCalled { .. }
         | DurableCoreEvent::ToolResult { .. }
@@ -152,9 +152,9 @@ fn build_metadata(state: &AppState, name: &str) -> SessionMetadata {
             .session_display_name
             .clone()
             .unwrap_or_else(|| name.to_string()),
-        created_at: state.session.session_created_at,
+        created_at: state.session().session_created_at,
         updated_at: crate::message::now(),
-        message_count: state.session.messages.len(),
+        message_count: state.session().messages.len(),
         summary: None,
         is_starred: false,
         is_system: false,
@@ -190,9 +190,9 @@ fn restore_metadata(name: &str, state: &mut AppState, store: &SessionStore) -> a
     let data_dir = store.dir().parent().unwrap_or(store.dir()).to_path_buf();
     let index = crate::session::index::SessionIndex::load(&data_dir).unwrap_or_default();
     if let Some(meta) = index.get(name) {
-        state.session.session_display_name = Some(meta.display_name.clone());
-        state.session.session_created_at = meta.created_at;
-        state.session.session_updated_at = meta.updated_at;
+        state.session_mut().session_display_name = Some(meta.display_name.clone());
+        state.session_mut().session_created_at = meta.created_at;
+        state.session_mut().session_updated_at = meta.updated_at;
     }
     Ok(())
 }
@@ -319,7 +319,7 @@ mod tests {
     fn save_and_load_roundtrip() {
         let store = test_store();
         let mut state = sample_state();
-        state.session.session_display_name = Some("roundtrip".into());
+        state.session_mut().session_display_name = Some("roundtrip".into());
 
         let events = state_to_durable_events(&state);
         store.append_batch("roundtrip", &events).unwrap();

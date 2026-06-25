@@ -3,6 +3,7 @@ use crate::model::AppState;
 
 mod at_refs;
 mod core;
+mod core_messages;
 mod model_config;
 mod scoped_models;
 mod thought;

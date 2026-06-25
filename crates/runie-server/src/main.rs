@@ -12,13 +12,12 @@
 //! - `listSessions` → `{}` → `{ "sessions": [...] }`
 
 use anyhow::Result;
+use runie_agent::headless_helper::build_sink;
 use runie_agent::{run_headless_cli, HeadlessCliOptions};
-use runie_core::permissions::build_sink;
 use runie_core::message::ChatMessage;
 use runie_protocol::{Error, Message, Request, Response};
 use serde_json::Value;
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 
@@ -178,9 +177,6 @@ fn headless_options(_yolo: bool) -> HeadlessCliOptions {
     }
 }
 
-fn headless_sink(yolo: bool) -> Arc<dyn runie_core::permissions::ApprovalSink> {
-    build_sink(yolo)
-}
 
 async fn handle_chat(params: &Value, yolo: bool) -> Result<Value> {
     let messages: Vec<ChatMessage> =
@@ -189,7 +185,7 @@ async fn handle_chat(params: &Value, yolo: bool) -> Result<Value> {
     let mut msgs = vec![ChatMessage::system(headless_system_prompt())];
     msgs.extend(messages);
 
-    let sink = headless_sink(yolo);
+    let sink = build_sink(yolo);
     let opts = headless_options(yolo);
     let result = run_headless_cli(None, None, msgs, sink, opts).await?;
     Ok(serde_json::json!({ "content": result.content }))
@@ -203,7 +199,7 @@ async fn handle_complete(params: &Value, yolo: bool) -> Result<Value> {
         ChatMessage::user(prompt.to_string()),
     ];
 
-    let sink = headless_sink(yolo);
+    let sink = build_sink(yolo);
     let opts = headless_options(yolo);
     let result = run_headless_cli(None, None, msgs, sink, opts).await?;
     Ok(serde_json::json!({ "content": result.content }))

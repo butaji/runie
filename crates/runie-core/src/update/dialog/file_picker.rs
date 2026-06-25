@@ -52,7 +52,7 @@ fn file_picker_insert_name(entry: &FffFileEntry) -> String {
 /// Rebuild the file picker panel with the current FFF results and panel filter.
 /// Called when the user types in the file picker to update fuzzy results.
 pub(crate) fn rebuild_file_picker(state: &mut AppState) {
-    let Some(DialogState::PanelStack(ref stack)) = state.open_dialog else {
+    let Some(DialogState::PanelStack(ref stack)) = state.open_dialog() else {
         return;
     };
     let Some(panel) = stack.current() else {
@@ -64,7 +64,7 @@ pub(crate) fn rebuild_file_picker(state: &mut AppState) {
     let query = if filter.is_empty() { "" } else { &filter };
     let entries = query_fff_files(query, 50);
     state.fff_file_results = entries.clone();
-    state.fff_debounce = state.fff_debounce.wrapping_add(1);
+    *state.fff_debounce_mut() = state.fff_debounce().wrapping_add(1);
 
     let mut new_panel = Panel::new("at-files", " Files ").with_filter();
     new_panel.filter = filter.clone();
@@ -86,6 +86,6 @@ pub(crate) fn rebuild_file_picker(state: &mut AppState) {
         new_panel
     };
 
-    state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(new_panel)));
-    state.view.dirty = true;
+    *state.open_dialog_mut() = Some(DialogState::PanelStack(PanelStack::new(new_panel)));
+    state.view_mut().dirty = true;
 }

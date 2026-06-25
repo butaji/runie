@@ -1,9 +1,7 @@
 //! runie-print — Non-interactive CLI for single-turn LLM execution.
 
 use anyhow::Result;
-use runie_agent::{run_headless_cli, HeadlessCliOptions};
-use runie_core::permissions::build_sink;
-use runie_core::message::ChatMessage;
+use runie_agent::headless_helper::{build_messages, build_options, build_sink};
 
 #[tokio::main]
 async fn main() {
@@ -22,26 +20,13 @@ async fn main() {
 }
 
 async fn run_print(prompt: &str) -> Result<()> {
-    let system = runie_core::prompts::build_system_prompt(
-        runie_core::prompts::DEFAULT_PROMPT,
-        runie_core::prompts::DEFAULT_TOOLS,
-        false,
-        "",
-    );
-    let messages = vec![
-        ChatMessage::system(system),
-        ChatMessage::user(prompt.to_string()),
-    ];
+    let messages = build_messages(prompt);
     let sink = build_sink(false);
-    let opts = HeadlessCliOptions {
-        execute_tools: true,
-        max_tool_rounds: 5,
-        on_chunk: Some(Box::new(|chunk: &str| {
-            print!("{}", chunk);
-            let _ = std::io::Write::flush(&mut std::io::stdout());
-        })),
-    };
-    run_headless_cli(None, None, messages, sink, opts).await?;
+    let opts = build_options(Some(Box::new(|chunk: &str| {
+        print!("{}", chunk);
+        let _ = std::io::Write::flush(&mut std::io::stdout());
+    })));
+    runie_agent::run_headless_cli(None, None, messages, sink, opts).await?;
     println!();
     Ok(())
 }
@@ -53,14 +38,12 @@ mod tests {
 
     #[tokio::test]
     async fn print_mode_streams_output() {
-        // run_print writes to stdout; we just verify it doesn't panic.
         let output = run_print("Hello").await;
         assert!(output.is_ok(), "print mode should not error");
     }
 
     #[tokio::test]
     async fn print_mode_respects_config_provider() {
-        // Layer 1: verify that Config::load_from parses provider correctly
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.toml");
         std::fs::write(

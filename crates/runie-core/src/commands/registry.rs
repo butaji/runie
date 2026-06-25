@@ -125,7 +125,7 @@ impl AppState {
         let input = content.trim_start_matches('/');
         let (name, args) = input.split_once(' ').unwrap_or((input, ""));
 
-        match self.registry.get(name) {
+        match self.registry().get(name) {
             Some(cmd) => {
                 let (cmd_name, flow) = (cmd.name.clone(), cmd.flow.clone());
                 // Track usage for ranking

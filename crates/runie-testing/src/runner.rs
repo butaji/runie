@@ -40,6 +40,11 @@ impl TestRunner {
         }
     }
 
+    /// Immutable access to the test config.
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
     /// Run a single agent turn with the given input and provider.
     ///
     /// Returns the generated submission id.
@@ -52,8 +57,8 @@ impl TestRunner {
         let cmd = AgentCommand {
             content: input.to_string(),
             id: id.clone(),
-            provider: self.config.provider.clone().unwrap_or("mock".into()),
-            model: self.config.default_model().unwrap_or("echo").to_string(),
+            provider: self.config().provider.clone().unwrap_or("mock".into()),
+            model: self.config().default_model().unwrap_or("echo").to_string(),
             thinking_level: runie_core::model::ThinkingLevel::Off,
             read_only: false,
             skills_context: String::new(),

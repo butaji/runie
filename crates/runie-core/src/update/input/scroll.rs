@@ -18,7 +18,7 @@ pub fn scroll_event(state: &mut AppState, event: crate::Event) {
 }
 
 pub fn element_jump_up(state: &mut AppState) {
-    if state.view.posts.is_empty() {
+    if state.view_mut().posts.is_empty() {
         return;
     }
     let selected = state
@@ -26,39 +26,39 @@ pub fn element_jump_up(state: &mut AppState) {
         .selected_post
         .unwrap_or_else(|| current_top_post(state));
     if selected == 0 {
-        state.input.input_flash = 3;
+        state.input_mut().input_flash = 3;
         scroll_to_post(state, 0);
         return;
     }
     let target = selected - 1;
-    state.view.selected_post = Some(target);
+    state.view_mut().selected_post = Some(target);
     scroll_to_post(state, target);
 }
 
 pub fn element_jump_down(state: &mut AppState) {
-    if state.view.posts.is_empty() {
+    if state.view_mut().posts.is_empty() {
         return;
     }
     let selected = state
         .view
         .selected_post
         .unwrap_or_else(|| current_top_post(state));
-    let last = state.view.posts.len().saturating_sub(1);
+    let last = state.view_mut().posts.len().saturating_sub(1);
     if selected >= last {
-        state.view.selected_post = Some(last);
+        state.view_mut().selected_post = Some(last);
         scroll_to_post(state, last);
         return;
     }
     let target = selected + 1;
-    state.view.selected_post = Some(target);
+    state.view_mut().selected_post = Some(target);
     scroll_to_post(state, target);
 }
 
 fn scroll_to_post(state: &mut AppState, post_index: usize) {
-    let visible = state.view.last_visible_height.max(3) as usize;
-    let total = state.view.total_lines;
+    let visible = state.view_mut().last_visible_height.max(3) as usize;
+    let total = state.view_mut().total_lines;
     let max_scroll = total.saturating_sub(visible);
-    let cum = cumulative_line_counts(&state.view.line_counts);
+    let cum = cumulative_line_counts(&state.view_mut().line_counts);
     let first_element = state
         .view
         .posts
@@ -70,16 +70,17 @@ fn scroll_to_post(state: &mut AppState, post_index: usize) {
     } else {
         cum.get(first_element - 1).copied().unwrap_or(0)
     };
-    state.view.scroll = max_scroll.saturating_sub(target_top);
+    state.view_mut().scroll = max_scroll.saturating_sub(target_top);
 }
 
-fn current_top_post(state: &AppState) -> usize {
+fn current_top_post(state: &mut AppState) -> usize {
+    let view = state.view();
     crate::snapshot::compute_current_top_element(
-        &state.view.elements_cache,
-        &state.view.line_counts,
-        state.view.total_lines,
-        state.view.scroll,
-        state.view.last_visible_height,
+        &view.elements_cache,
+        &view.line_counts,
+        view.total_lines,
+        view.scroll,
+        view.last_visible_height,
     )
     .and_then(|elem| post_for_element(state, elem))
     .unwrap_or(0)
@@ -105,49 +106,49 @@ fn cumulative_line_counts(line_counts: &[usize]) -> Vec<usize> {
 }
 
 fn scroll_up(state: &mut AppState) {
-    if state.session.messages.is_empty() && !state.agent.turn_active {
-        state.input.input_flash = 3;
+    if state.session_mut().messages.is_empty() && !state.agent_state_mut().turn_active {
+        state.input_mut().input_flash = 3;
     }
-    state.view.scroll = state.view.scroll.saturating_add(1);
+    state.view_mut().scroll = state.view_mut().scroll.saturating_add(1);
 }
 
 fn scroll_down(state: &mut AppState) {
-    if state.view.scroll == 0 {
-        state.input.input_flash = 3;
+    if state.view_mut().scroll == 0 {
+        state.input_mut().input_flash = 3;
     }
-    state.view.scroll = state.view.scroll.saturating_sub(1);
+    state.view_mut().scroll = state.view_mut().scroll.saturating_sub(1);
 }
 
 fn page_up(state: &mut AppState) {
-    if state.session.messages.is_empty() && !state.agent.turn_active {
-        state.input.input_flash = 3;
+    if state.session_mut().messages.is_empty() && !state.agent_state_mut().turn_active {
+        state.input_mut().input_flash = 3;
     }
-    state.view.scroll = state.view.scroll.saturating_add(PAGE_SIZE);
+    state.view_mut().scroll = state.view_mut().scroll.saturating_add(PAGE_SIZE);
 }
 
 fn page_down(state: &mut AppState) {
-    if state.view.scroll == 0 {
-        state.input.input_flash = 3;
+    if state.view_mut().scroll == 0 {
+        state.input_mut().input_flash = 3;
     }
-    state.view.scroll = state.view.scroll.saturating_sub(PAGE_SIZE);
+    state.view_mut().scroll = state.view_mut().scroll.saturating_sub(PAGE_SIZE);
 }
 
 fn go_to_top(state: &mut AppState) {
-    if state.session.messages.is_empty() && !state.agent.turn_active {
-        state.input.input_flash = 3;
+    if state.session_mut().messages.is_empty() && !state.agent_state_mut().turn_active {
+        state.input_mut().input_flash = 3;
     }
-    let visible = state.view.last_visible_height.max(3) as usize;
-    let max_scroll = state.view.total_lines.saturating_sub(visible);
-    state.view.scroll = max_scroll;
-    if state.view.vim_nav_mode {
-        state.view.selected_post = Some(0);
+    let visible = state.view_mut().last_visible_height.max(3) as usize;
+    let max_scroll = state.view_mut().total_lines.saturating_sub(visible);
+    state.view_mut().scroll = max_scroll;
+    if state.view_mut().vim_nav_mode {
+        state.view_mut().selected_post = Some(0);
     }
 }
 
 fn go_to_bottom(state: &mut AppState) {
-    state.view.scroll = 0;
-    if state.view.vim_nav_mode {
-        let len = state.view.posts.len();
-        state.view.selected_post = len.checked_sub(1);
+    state.view_mut().scroll = 0;
+    if state.view_mut().vim_nav_mode {
+        let len = state.view_mut().posts.len();
+        state.view_mut().selected_post = len.checked_sub(1);
     }
 }

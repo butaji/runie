@@ -9,6 +9,7 @@ pub mod view;
 
 // Original state module files
 mod accessors;
+mod domain_ops;
 mod app_state;
 mod helpers;
 mod ranking;

@@ -119,7 +119,7 @@ pub fn update(state: &mut AppState, event: Event) {
                     original.clone(),
                     proposed.clone(),
                 ));
-            state.view.dirty = true;
+            state.view_mut().dirty = true;
         }
         Event::ApproveEdit => state.approve_edits(),
         Event::RejectEdit => state.reject_edits(),
@@ -133,9 +133,14 @@ pub fn update(state: &mut AppState, event: Event) {
 impl AppState {
     /// Try to spawn IO write via actor_handles, else fallback to sync.
     fn try_spawn_io_write(&mut self) -> bool {
-        if self.actor_handles.as_ref().map_or(false, |_| tokio::runtime::Handle::try_current().is_ok()) {
-            let edits: Vec<_> = self.session.pending_edits.drain(..).map(|p| (p.path, p.proposed)).collect();
-            let handles = self.actor_handles.as_ref().unwrap().clone();
+        // Extract handles before async work to avoid borrow conflicts.
+        let handles = self.actor_handles().cloned();
+        let can_spawn = handles.as_ref().is_some()
+            && tokio::runtime::Handle::try_current().is_ok();
+
+        if can_spawn {
+            let edits: Vec<_> = self.session_mut().pending_edits.drain(..).map(|p| (p.path, p.proposed)).collect();
+            let handles = handles.unwrap();
             tokio::spawn(async move { handles.write_files(edits).await; });
             return true;
         }
@@ -143,7 +148,7 @@ impl AppState {
     }
 
     pub(crate) fn approve_edits(&mut self) {
-        if self.session.pending_edits.is_empty() {
+        if self.session().pending_edits.is_empty() {
             self.add_system_msg("No pending edits to approve.".to_string());
             return;
         }
@@ -152,7 +157,7 @@ impl AppState {
         }
         let mut applied = 0;
         let mut errors = Vec::new();
-        for preview in self.session.pending_edits.drain(..) {
+        for preview in self.session_mut().pending_edits.drain(..) {
             let path = preview.path.clone();
             let content = preview.proposed.clone();
             match crate::async_io::block_in_place_if_runtime(|| std::fs::write(&path, content)) {
@@ -169,12 +174,12 @@ impl AppState {
     }
 
     pub(crate) fn reject_edits(&mut self) {
-        let count = self.session.pending_edits.len();
+        let count = self.session().pending_edits.len();
         if count == 0 {
             self.add_system_msg("No pending edits to reject.".to_string());
             return;
         }
-        self.session.pending_edits.clear();
+        self.session_mut().pending_edits.clear();
         self.add_system_msg(format!("Rejected {} edit(s).", count));
     }
 }

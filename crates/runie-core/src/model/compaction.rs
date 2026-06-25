@@ -10,7 +10,7 @@ impl AppState {
         self.session
             .messages
             .iter()
-            .map(|m| self.agent.token_tracker.estimate_input(&m.content()))
+            .map(|m| self.agent_state().token_tracker.estimate_input(&m.content()))
             .sum()
     }
 
@@ -28,12 +28,12 @@ impl AppState {
         }
 
         let removed_count = cut_idx;
-        self.session.messages.drain(..cut_idx);
+        self.session_mut().messages.drain(..cut_idx);
         let summary = format!(
             "[Compacted: {} earlier messages removed, keeping ~{} tokens]",
             removed_count, keep_recent_tokens
         );
-        self.session.messages.insert(
+        self.session_mut().messages.insert(
             0,
             ChatMessage {
                 role: Role::System,
@@ -54,19 +54,19 @@ impl AppState {
     fn find_compact_cut_index(&self, keep_recent_tokens: usize) -> usize {
         let mut accumulated = 0usize;
         let mut cut_idx = 0usize;
-        for (i, msg) in self.session.messages.iter().enumerate().rev() {
+        for (i, msg) in self.session().messages.iter().enumerate().rev() {
             // Skip pinned messages
             if msg.metadata.pinned {
                 continue;
             }
-            accumulated += self.agent.token_tracker.estimate_input(&msg.content());
+            accumulated += self.agent_state().token_tracker.estimate_input(&msg.content());
             if accumulated >= keep_recent_tokens {
                 cut_idx = i;
                 break;
             }
         }
-        while cut_idx < self.session.messages.len() {
-            match self.session.messages[cut_idx].role {
+        while cut_idx < self.session().messages.len() {
+            match self.session().messages[cut_idx].role {
                 Role::User | Role::Assistant => break,
                 _ => cut_idx += 1,
             }

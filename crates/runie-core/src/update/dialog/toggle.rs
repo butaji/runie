@@ -36,19 +36,19 @@ pub fn dialog_toggle_event(state: &mut AppState, event: crate::Event) {
 }
 
 fn handle_welcome_toggle(state: &mut AppState) {
-    let is_welcome = matches!(state.open_dialog, Some(DialogState::Welcome));
-    state.open_dialog = if is_welcome {
+    let is_welcome = matches!(state.open_dialog(), Some(&DialogState::Welcome));
+    *state.open_dialog_mut() = if is_welcome {
         None
     } else {
         Some(DialogState::Welcome)
     };
-    state.view.dirty = true;
+    state.view_mut().dirty = true;
 }
 
 fn handle_model_selector_toggle(state: &mut AppState) {
     do_toggle_dialog(
         state,
-        matches!(state.open_dialog, Some(DialogState::ModelSelector(_))),
+        matches!(state.open_dialog(), Some(&DialogState::ModelSelector(_))),
         open_model_selector,
     );
 }
@@ -56,7 +56,7 @@ fn handle_model_selector_toggle(state: &mut AppState) {
 fn handle_scoped_models_toggle(state: &mut AppState) {
     do_toggle_dialog(
         state,
-        matches!(state.open_dialog, Some(DialogState::ScopedModels(_))),
+        matches!(state.open_dialog(), Some(&DialogState::ScopedModels(_))),
         open_scoped_models_dialog,
     );
 }
@@ -64,20 +64,20 @@ fn handle_scoped_models_toggle(state: &mut AppState) {
 fn handle_settings_toggle(state: &mut AppState) {
     do_toggle_dialog(
         state,
-        matches!(state.open_dialog, Some(DialogState::Settings(_))),
+        matches!(state.open_dialog(), Some(&DialogState::Settings(_))),
         open_settings_dialog,
     );
 }
 
 fn handle_vim_mode_toggle(state: &mut AppState) {
-    state.config.vim_mode = !state.config.vim_mode;
-    state.view.cached_settings_valid = false;
+    state.config_mut().vim_mode = !state.config().vim_mode;
+    state.view_mut().cached_settings_valid = false;
 }
 
 fn handle_providers_dialog(state: &mut AppState) {
     use crate::provider::dialog::build_providers_dialog;
-    state.open_dialog = Some(DialogState::PanelStack(build_providers_dialog(state)));
-    state.view.dirty = true;
+    *state.open_dialog_mut() = Some(DialogState::PanelStack(build_providers_dialog(state)));
+    state.view_mut().dirty = true;
 }
 
 fn handle_providers_add(state: &mut AppState) {
@@ -89,29 +89,29 @@ fn handle_providers_add(state: &mut AppState) {
 
 fn handle_providers_select_model(state: &mut AppState, event: &crate::Event) {
     if let crate::Event::ProvidersSelectModel { provider, model } = event {
-        if let Some(mut flow) = state.login_flow.take() {
+        if let Some(mut flow) = state.login_flow_mut().take() {
             flow.selected_models.insert(model.clone());
-            state.login_flow = Some(flow);
+            *state.login_flow_mut() = Some(flow);
         }
         state.switch_model(provider.clone(), model.clone(), true);
-        state.open_dialog = None;
-        state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-        state.dialog_back_stack.clear();
-        state.view.dirty = true;
+        *state.open_dialog_mut() = None;
+        state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+        state.dialog_back_stack_mut().clear();
+        state.view_mut().dirty = true;
     }
 }
 
 fn handle_providers_edit_models(state: &mut AppState, event: &crate::Event) {
     if let crate::Event::ProvidersEditModels { provider } = event {
         let stack = crate::provider::dialog::build_provider_models_editor(state, provider);
-        if let Some(DialogState::PanelStack(current)) = &mut state.open_dialog {
+        if let Some(DialogState::PanelStack(current)) = state.open_dialog_mut().as_mut() {
             if let Some(panel) = stack.current() {
                 current.push(panel.clone());
             }
         } else {
-            state.open_dialog = Some(DialogState::PanelStack(stack));
+            *state.open_dialog_mut() = Some(DialogState::PanelStack(stack));
         }
-        state.view.dirty = true;
+        state.view_mut().dirty = true;
     }
 }
 
@@ -121,10 +121,10 @@ fn handle_providers_disconnect(state: &mut AppState, event: &crate::Event) {
         // Fire-and-forget async removal (no-op in tests without ConfigActor).
         state.remove_provider(&provider);
         // Also sync config_cache directly so tests and sync paths see the change immediately.
-        if let Some(ref mut cache) = state.config_cache {
+        if let Some(ref mut cache) = state.config_cache_mut() {
             cache.model_providers.remove(&provider);
         }
-        if state.config.current_provider == provider {
+        if state.config().current_provider == provider {
             let (provider, model) = state.resolve_default_model();
             state.set_active_model(
                 provider,
@@ -133,13 +133,13 @@ fn handle_providers_disconnect(state: &mut AppState, event: &crate::Event) {
             );
         }
         if state.has_models() {
-            state.open_dialog = None;
-            state.view.input_receiver = crate::model::InputReceiver::ChatInput;
+            *state.open_dialog_mut() = None;
+            state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
         } else {
             crate::login_flow::login_flow_start(state);
         }
-        state.dialog_back_stack.clear();
-        state.view.dirty = true;
+        state.dialog_back_stack_mut().clear();
+        state.view_mut().dirty = true;
     }
 }
 
@@ -152,17 +152,17 @@ fn handle_scoped_model_disable_all(state: &mut AppState) {
 }
 
 fn set_scoped_models_enabled(state: &mut AppState, enabled: bool) {
-    for model in &mut state.config.scoped_models {
+    for model in &mut state.config_mut().scoped_models {
         model.enabled = enabled;
     }
-    state.view.dirty = true;
+    state.view_mut().dirty = true;
 }
 
 fn do_toggle_dialog(state: &mut AppState, is_same: bool, open: fn(&mut AppState)) {
     if is_same {
-        state.open_dialog = None;
-        state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-        state.view.dirty = true;
+        *state.open_dialog_mut() = None;
+        state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+        state.view_mut().dirty = true;
     } else {
         open(state);
     }

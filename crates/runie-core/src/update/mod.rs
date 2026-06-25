@@ -55,7 +55,7 @@ impl AppState {
             dispatch::dispatch_event(self, event.clone());
             return;
         }
-        if self.login_flow.is_some() && matches!(event, Event::DialogBack) {
+        if self.login_flow().is_some() && matches!(event, Event::DialogBack) {
             crate::login_flow::login_flow_cancel(self);
             return;
         }

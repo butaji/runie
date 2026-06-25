@@ -24,6 +24,11 @@ impl IoActorHandle {
         Self { tx }
     }
 
+    /// Access the underlying sender (for routing intents from the DSL).
+    pub fn tx(&self) -> &mpsc::Sender<IoMsg> {
+        &self.tx
+    }
+
     /// Request running a bash command.
     pub async fn run_bash(&self, command: String) {
         let _ = self.tx.send(IoMsg::RunBash { command }).await;

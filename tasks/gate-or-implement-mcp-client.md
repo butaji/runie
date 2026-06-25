@@ -1,6 +1,6 @@
 # Gate or implement MCP client
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P1
@@ -21,10 +21,9 @@ Decision: **delete** (YAGNI — MCP client is not implemented; `mcp.rs` is scaff
 
 ## Acceptance criteria
 
-- [ ] Decision made and documented.
-- [ ] If delete: `crates/runie-core/src/mcp.rs` deleted; `#[cfg(feature = "mcp")]pub mod mcp;` removed from `lib.rs`.
-- [ ] If keep: documented why MCP is needed and a concrete plan to implement the client.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Decision made: **delete** (YAGNI — MCP client not implemented; mcp.rs was dead scaffolding behind a feature flag).
+- [x] `crates/runie-core/src/mcp.rs` deleted; `#[cfg(feature = "mcp")]pub mod mcp;` removed from `lib.rs`.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
@@ -38,7 +37,7 @@ Decision: **delete** (YAGNI — MCP client is not implemented; `mcp.rs` is scaff
 - N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `workspace_builds_after_mcp_decision` — `cargo check --workspace` succeeds.
+- [x] `workspace_builds_after_mcp_decision` — `cargo check --workspace` succeeds.
 
 ## Files touched
 

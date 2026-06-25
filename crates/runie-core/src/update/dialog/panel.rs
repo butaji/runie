@@ -51,7 +51,7 @@ pub fn update_panel_stack(
         return result;
     }
     handle_panel_filter(state, &event, stack);
-    state.view.dirty = true;
+    state.view_mut().dirty = true;
     PanelUpdateResult::Ignored
 }
 
@@ -159,19 +159,19 @@ fn handle_panel_filter(state: &mut AppState, event: &Event, stack: &mut PanelSta
 fn pop_dialog_or_close(state: &mut AppState, root_closable: bool) -> bool {
     if !root_closable {
         // The root panel has asked to stay open.
-        state.view.dirty = true;
+        state.view_mut().dirty = true;
         return false;
     }
-    if let Some(previous) = state.dialog_back_stack.pop() {
-        state.open_dialog = Some(previous);
-        state.view.dirty = true;
+    if let Some(previous) = state.dialog_back_stack_mut().pop() {
+        *state.open_dialog_mut() = Some(previous);
+        state.view_mut().dirty = true;
         false
     } else {
-        state.open_dialog = None;
+        *state.open_dialog_mut() = None;
         // NOTE: Do NOT reset input_receiver here. handle_vim_dialog_back()
         // checks input_receiver == Dialog to know a dialog was closed and
         // should NOT trigger vim-nav. It will reset input_receiver itself.
-        state.view.dirty = true;
+        state.view_mut().dirty = true;
         true
     }
 }
@@ -196,8 +196,8 @@ fn update_form_panel(
     }
 
     let keep_open = matches!(&action, FormAction::KeepOpen);
-    if keep_open && state.open_dialog.is_none() {
-        state.open_dialog = Some(DialogState::PanelStack(stack.clone()));
+    if keep_open && state.open_dialog().is_none() {
+        *state.open_dialog_mut() = Some(DialogState::PanelStack(stack.clone()));
     }
     super::form::apply_form_action(state, action);
     if keep_open {
@@ -210,7 +210,7 @@ fn update_form_panel(
 fn handle_back_action(state: &mut AppState, stack: &mut PanelStack) -> bool {
     if stack.len() > 1 {
         stack.pop();
-        state.open_dialog = Some(DialogState::PanelStack(stack.clone()));
+        *state.open_dialog_mut() = Some(DialogState::PanelStack(stack.clone()));
         false
     } else {
         let root_closable = stack.root().map(|p| p.closable).unwrap_or(true);
@@ -235,9 +235,9 @@ fn handle_panel_action(state: &mut AppState, action: ItemAction, stack: &mut Pan
             false
         }
         ItemAction::Close => {
-            state.open_dialog = None;
-            state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-            state.view.dirty = true;
+            *state.open_dialog_mut() = None;
+            state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+            state.view_mut().dirty = true;
             true
         }
         ItemAction::Emit(evt) => handle_emit_action(state, stack, evt),
@@ -270,10 +270,10 @@ fn handle_emit_action(state: &mut AppState, stack: &mut PanelStack, evt: crate::
         .map(|p| p.keep_open_on_activate)
         .unwrap_or(false);
     if !keep_open {
-        state.open_dialog = None;
-        state.view.input_receiver = crate::model::InputReceiver::ChatInput;
+        *state.open_dialog_mut() = None;
+        state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
     }
-    state.view.dirty = true;
+    state.view_mut().dirty = true;
     // For RunPaletteCommand, pass the panel filter as args
     let evt = if let crate::Event::RunPaletteCommand { name, args } = &evt {
         if args.is_empty() {
@@ -302,9 +302,9 @@ fn close_panel_on_activate(state: &mut AppState, stack: &mut PanelStack) -> bool
         .map(|p| p.keep_open_on_activate)
         .unwrap_or(false);
     if !keep_open {
-        state.open_dialog = None;
-        state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-        state.view.dirty = true;
+        *state.open_dialog_mut() = None;
+        state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+        state.view_mut().dirty = true;
     }
     !keep_open
 }
@@ -337,7 +337,7 @@ fn toggle_checkbox_item(state: &mut AppState, item: &mut PanelItem) -> bool {
             // intentionally ignored: other item actions are handled elsewhere
             _ => {}
         }
-        state.view.dirty = true;
+        state.view_mut().dirty = true;
         true
     } else {
         false
@@ -363,10 +363,10 @@ fn apply_panel_setting(state: &mut AppState, stack: &mut PanelStack, key: &str) 
     }
     match key {
         "steering_mode" => {
-            state.config.steering_mode = cycle_delivery_mode(state.config.steering_mode)
+            state.config_mut().steering_mode = cycle_delivery_mode(state.config_mut().steering_mode)
         }
         "follow_up_mode" => {
-            state.config.follow_up_mode = cycle_delivery_mode(state.config.follow_up_mode)
+            state.config_mut().follow_up_mode = cycle_delivery_mode(state.config_mut().follow_up_mode)
         }
         "provider" | "model" | "theme" | "thinking_level" => {
             apply_select_setting(state, stack, key);
@@ -400,11 +400,11 @@ fn apply_select_setting(state: &mut AppState, stack: &mut PanelStack, key: &str)
     match key {
         "provider" => {
             state.set_provider(&value);
-            state.view.cached_settings_valid = false;
+            state.view_mut().cached_settings_valid = false;
         }
         "model" => {
             state.set_model(&value);
-            state.view.cached_settings_valid = false;
+            state.view_mut().cached_settings_valid = false;
         }
         "theme" => state.switch_theme(value),
         "thinking_level" => {
@@ -418,14 +418,14 @@ fn apply_select_setting(state: &mut AppState, stack: &mut PanelStack, key: &str)
 }
 
 fn toggle_vim_mode(state: &mut AppState) {
-    state.config.vim_mode = !state.config.vim_mode;
-    state.view.cached_settings_valid = false;
+    state.config_mut().vim_mode = !state.config_mut().vim_mode;
+    state.view_mut().cached_settings_valid = false;
 }
 
 fn toggle_telemetry(state: &mut AppState) {
-    let new_enabled = !state.config.telemetry.is_enabled();
-    state.config.telemetry = crate::telemetry::Telemetry::new(new_enabled);
-    state.view.cached_settings_valid = false;
+    let new_enabled = !state.config_mut().telemetry.is_enabled();
+    state.config_mut().telemetry = crate::telemetry::Telemetry::new(new_enabled);
+    state.view_mut().cached_settings_valid = false;
 }
 
 fn apply_truncation_setting(state: &mut AppState, stack: &mut PanelStack, key: &str) {
@@ -436,11 +436,11 @@ fn apply_truncation_setting(state: &mut AppState, stack: &mut PanelStack, key: &
         return;
     };
     match key {
-        "truncation_max_lines" => state.config.truncation.max_lines = n,
-        "truncation_max_bytes" => state.config.truncation.max_bytes = n,
+        "truncation_max_lines" => state.config_mut().truncation.max_lines = n,
+        "truncation_max_bytes" => state.config_mut().truncation.max_bytes = n,
         _ => return,
     }
-    state.view.cached_settings_valid = false;
+    state.view_mut().cached_settings_valid = false;
 }
 
 fn cycle_delivery_mode(mode: crate::model::DeliveryMode) -> crate::model::DeliveryMode {

@@ -6,18 +6,11 @@ mod command;
 mod event;
 mod hook;
 mod policy;
-mod tool;
 
 /// Defines a serializable domain event struct.
 #[proc_macro]
 pub fn define_event(input: TokenStream) -> TokenStream {
     event::expand(input)
-}
-
-/// Defines a tool struct and a `ToolRuntime` implementation.
-#[proc_macro]
-pub fn define_tool(input: TokenStream) -> TokenStream {
-    tool::expand(input)
 }
 
 /// Defines a command and its handler.

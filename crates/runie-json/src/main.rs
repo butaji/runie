@@ -24,9 +24,9 @@
 //! ```
 
 use anyhow::Result;
-use runie_agent::{run_headless_cli, HeadlessCliOptions, HeadlessResult};
+use runie_agent::headless_helper::{build_options, build_sink, build_system_prompt};
+use runie_agent::{run_headless_cli, HeadlessResult};
 use runie_core::message::ChatMessage;
-use runie_core::permissions::build_sink;
 
 #[cfg(test)]
 use runie_core::provider_event::ProviderEvent;
@@ -125,22 +125,18 @@ async fn run_json_turn(
     yolo: bool,
 ) -> Result<HeadlessResult> {
     let sink = build_sink(yolo);
-    let opts = HeadlessCliOptions {
-        execute_tools: true,
-        max_tool_rounds: 5,
-        on_chunk: Some(Box::new(|chunk: &str| {
-            let line = serde_json::to_string(&StreamChunk {
-                chunk: chunk.to_string(),
-            })
-            .unwrap_or_default();
-            println!("{}", line);
-        })),
-    };
+    let opts = build_options(Some(Box::new(|chunk: &str| {
+        let line = serde_json::to_string(&StreamChunk {
+            chunk: chunk.to_string(),
+        })
+        .unwrap_or_default();
+        println!("{}", line);
+    })));
 
     run_headless_cli(provider_name, model, messages, sink, opts).await
 }
 
-fn build_json_response(result: runie_agent::HeadlessResult, duration_ms: u64) -> JsonResponse {
+fn build_json_response(result: HeadlessResult, duration_ms: u64) -> JsonResponse {
     let tool_calls: Vec<ToolCall> = result
         .tool_outputs
         .iter()
@@ -208,15 +204,12 @@ mod tests {
             }
         }
         let _tools = parse_tool_calls(&response_text);
-        // MockProvider returns deterministic response; may or may not have tools
-        // We just verify the pipeline works
         assert!(!response_text.is_empty());
     }
 
     #[tokio::test]
     async fn headless_default_denies_destructive_tool() {
         let _guard = CWD_LOCK.lock().unwrap();
-        // Set RUNIE_MOCK before spawning the runtime so the "mock" provider resolves.
         std::env::set_var("RUNIE_MOCK", "1");
         let dir = tempfile::tempdir().unwrap();
         let original = std::env::current_dir().unwrap();

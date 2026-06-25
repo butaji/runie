@@ -52,7 +52,7 @@ fn try_handle_early_events(state: &mut AppState, event: &Event) -> bool {
 fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
     match event {
         Event::TrustLoaded { decisions } => {
-            state.trust_decisions = decisions.clone();
+            *state.trust_decisions_mut() = decisions.clone();
             true
         }
         Event::TrustChanged { path, decision } => {
@@ -60,7 +60,7 @@ fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
             true
         }
         Event::HistoryLoaded { entries } => {
-            state.input.input_history = entries.clone();
+            state.input_mut().input_history = entries.clone();
             true
         }
         _ => false,
@@ -110,9 +110,9 @@ fn apply_session_loaded(
 ) {
     crate::session::replay::replay_events(state, events);
     if let Some(meta) = metadata {
-        state.session.session_display_name = Some(meta.display_name.clone());
-        state.session.session_created_at = meta.created_at;
-        state.session.session_updated_at = meta.updated_at;
+        state.session_mut().session_display_name = Some(meta.display_name.clone());
+        state.session_mut().session_created_at = meta.created_at;
+        state.session_mut().session_updated_at = meta.updated_at;
     }
     state.configure_token_tracker();
     state.messages_changed();
@@ -140,7 +140,7 @@ fn handle_io_events(state: &mut AppState, event: &Event) -> bool {
     match event {
         Event::BashOutput { command, output } => {
             state.add_system_msg(format!("$ {}\n{}", command, output));
-            state.view.scroll = 0;
+            state.view_mut().scroll = 0;
             state.messages_changed();
             true
         }
@@ -451,10 +451,10 @@ fn dispatch_dialog_event(state: &mut AppState, event: crate::Event) {
 }
 
 fn handle_dialog_back_no_dialog(state: &mut AppState) {
-    if state.open_dialog.is_none() && state.config.vim_mode {
-        state.view.vim_nav_mode = true;
-        state.view.selected_post = state.current_bottom_post_index();
-        state.view.dirty = true;
+    if state.open_dialog().is_none() && state.config_mut().vim_mode {
+        state.view_mut().vim_nav_mode = true;
+        state.view_mut().selected_post = state.current_bottom_post_index();
+        state.view_mut().dirty = true;
     }
 }
 

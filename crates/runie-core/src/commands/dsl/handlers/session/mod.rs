@@ -238,9 +238,8 @@ pub fn register(registry: &mut CommandRegistry) {
 // ── Command handlers ──────────────────────────────────────────────────────────
 
 fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
-    if let Some(ref handles) = state.actor_handles {
+    if let Some(handles) = state.actor_handles().cloned() {
         if tokio::runtime::Handle::try_current().is_ok() {
-            let handles = handles.clone();
             tokio::spawn(async move {
                 handles.send_list_sessions().await;
             });
@@ -257,21 +256,21 @@ fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
-    state.session.messages.clear();
-    state.input.input.clear();
-    state.input.cursor_pos = 0;
-    state.agent.message_queue.clear();
-    state.agent.request_queue.clear();
+    state.session_mut().messages.clear();
+    state.input_mut().input.clear();
+    state.input_mut().cursor_pos = 0;
+    state.agent_state_mut().message_queue.clear();
+    state.agent_state_mut().request_queue.clear();
     state.configure_token_tracker();
-    state.session.session_display_name = None;
-    state.open_dialog = None;
-    state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-    state.dialog_back_stack.clear();
-    state.login_flow = None;
-    state.permission_request = None;
+    state.session_mut().session_display_name = None;
+    *state.open_dialog_mut() = None;
+    state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+    state.dialog_back_stack_mut().clear();
+    *state.login_flow_mut() = None;
+    *state.permission_request_mut() = None;
     let now = crate::update::now();
-    state.session.session_created_at = now;
-    state.session.session_updated_at = now;
+    state.session_mut().session_created_at = now;
+    state.session_mut().session_updated_at = now;
     state.messages_changed();
     CommandResult::Message("New session started".into())
 }
@@ -282,10 +281,10 @@ fn handle_reset(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 fn handle_history(state: &mut AppState, _: &str) -> CommandResult {
-    if state.input.input_history.is_empty() {
+    if state.input().input_history.is_empty() {
         return CommandResult::Message("No history.".into());
     }
-    let count = state.input.input_history.len();
+    let count = state.input().input_history.len();
     let entries: Vec<_> = state
         .input
         .input_history
@@ -314,7 +313,7 @@ fn session_token_count(state: &AppState) -> usize {
         .session
         .messages
         .iter()
-        .map(|m| state.agent.token_tracker.estimate_input(&m.content()))
+        .map(|m| state.agent_state().token_tracker.estimate_input(&m.content()))
         .sum()
 }
 
@@ -340,29 +339,29 @@ fn build_session_info(
     tokens: usize,
     (user, assistant, tool): (usize, usize, usize),
 ) -> String {
-    let prompt = if state.input.current_prompt.is_empty() {
+    let prompt = if state.input().current_prompt.is_empty() {
         "default"
     } else {
-        &state.input.current_prompt
+        &state.input().current_prompt
     };
-    let read_only = if state.config.read_only { "on" } else { "off" };
+    let read_only = if state.config().read_only { "on" } else { "off" };
     let trust = project_trust_status(state);
     format!(
         "Session: {}\nMessages: {} ({} user, {} assistant, {} tool)\nTokens: {} estimated\nProvider: {}\nModel: {}\nPrompt: {}\nThinking: {}\nRead-only: {}\nTrust: {}\nCreated: {}\nUpdated: {}",
-        state.session.session_display_name.as_deref().unwrap_or("unnamed"),
-        state.session.messages.len(),
+        state.session().session_display_name.as_deref().unwrap_or("unnamed"),
+        state.session().messages.len(),
         user,
         assistant,
         tool,
         tokens,
-        state.config.current_provider,
-        state.config.current_model,
+        state.config().current_provider,
+        state.config().current_model,
         prompt,
-        state.config.thinking_level.as_str(),
+        state.config().thinking_level.as_str(),
         read_only,
         trust,
-        crate::labels::format_timestamp(state.session.session_created_at),
-        crate::labels::format_timestamp(state.session.session_updated_at),
+        crate::labels::format_timestamp(state.session().session_created_at),
+        crate::labels::format_timestamp(state.session().session_updated_at),
     )
 }
 

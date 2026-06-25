@@ -4,24 +4,22 @@ use super::dialog;
 
 impl AppState {
     pub(super) fn try_handle_dialog_event_input(&mut self, event: &crate::Event) -> bool {
-        if self.open_dialog.is_none() {
-            return false;
-        }
-        // Welcome dialog closes on any printable input or Submit
-        if matches!(
-            self.open_dialog,
-            Some(crate::commands::DialogState::Welcome)
-        ) {
+        // Use open_dialog_mut() for both the read check and the write.
+        // This avoids the immutable+mutable accessor borrow conflict.
+        let dialog = self.open_dialog_mut();
+        let is_welcome = matches!(dialog.as_ref(), Some(crate::commands::DialogState::Welcome));
+        if is_welcome {
             match event {
                 crate::Event::Input(_) | crate::Event::Submit => {
-                    self.open_dialog = None;
-                    self.view.input_receiver = InputReceiver::ChatInput;
-                    self.view.dirty = true;
+                    *dialog = None;
+                    self.view_mut().input_receiver = InputReceiver::ChatInput;
+                    self.view_mut().dirty = true;
                     return false; // also pass to input handler
                 }
                 _ => return false, // let other keys pass through to input
             }
         }
+        drop(dialog); // release mutable borrow before dialog::update_dialog
         match event {
             crate::Event::Input(_)
             | crate::Event::Submit
@@ -41,7 +39,7 @@ impl AppState {
     }
 
     pub(super) fn try_handle_vim_dialog_back_input(&mut self, event: &crate::Event) -> bool {
-        if *event != crate::Event::Backspace || !self.view.vim_nav_mode {
+        if *event != crate::Event::Backspace || !self.view_mut().vim_nav_mode {
             return false;
         }
         self.handle_vim_dialog_back();
@@ -49,7 +47,7 @@ impl AppState {
     }
 
     pub(super) fn try_handle_vim_nav_event_input(&mut self, event: &crate::Event) -> bool {
-        if !self.view.vim_nav_mode {
+        if !self.view_mut().vim_nav_mode {
             return false;
         }
         let Some(handled) = self.handle_vim_nav_event(event) else {
@@ -59,10 +57,10 @@ impl AppState {
     }
 
     pub(super) fn try_handle_dialog_event_dialog(&mut self, event: &crate::Event) -> bool {
-        if self.open_dialog.is_none() {
+        if self.open_dialog().is_none() {
             return false;
         }
-        if self.login_flow.is_some() && matches!(event, crate::Event::ProvidersAdd) {
+        if self.login_flow().is_some() && matches!(event, crate::Event::ProvidersAdd) {
             return false;
         }
         dialog::update_dialog(self, event.clone());
@@ -70,47 +68,51 @@ impl AppState {
     }
 
     pub(crate) fn handle_vim_dialog_back(&mut self) {
-        // If we just closed a dialog, Esc should NOT trigger vim-nav.
-        // Reset the input receiver and return.
-        if self.view.input_receiver == InputReceiver::Dialog {
-            self.view.input_receiver = InputReceiver::ChatInput;
-            self.view.dirty = true;
+        let view = self.view_mut();
+        if view.input_receiver == InputReceiver::Dialog {
+            view.input_receiver = InputReceiver::ChatInput;
+            view.dirty = true;
             return;
         }
-        if self.view.vim_nav_mode {
-            self.view.vim_nav_mode = false;
-            self.view.dirty = true;
+        if view.vim_nav_mode {
+            view.vim_nav_mode = false;
+            view.dirty = true;
             return;
         }
-        if self.view.vim_nav_pending {
-            self.view.vim_nav_pending = false;
-            self.view.vim_nav_mode = true;
-            self.view.dirty = true;
+        if view.vim_nav_pending {
+            view.vim_nav_pending = false;
+            view.vim_nav_mode = true;
+            drop(view);
+            self.view_mut().selected_post = self.current_bottom_post_index();
             return;
         }
-        if self.agent.turn_active {
-            self.agent.turn_active = false;
-            self.agent.inflight = 0;
-            self.view.vim_nav_pending = true;
-            self.view.dirty = true;
+        drop(view);
+        if self.agent_state_mut().turn_active {
+            self.agent_state_mut().turn_active = false;
+            self.agent_state_mut().inflight = 0;
+            self.view_mut().vim_nav_pending = true;
+            self.view_mut().dirty = true;
             return;
         }
-        self.view.vim_nav_mode = true;
-        self.view.selected_post = self.current_bottom_post_index();
-        self.view.dirty = true;
+        {
+            let view = self.view_mut();
+            view.vim_nav_mode = true;
+        }
+        self.view_mut().selected_post = self.current_bottom_post_index();
     }
 
-    pub(crate) fn current_bottom_post_index(&self) -> Option<usize> {
+    pub(crate) fn current_bottom_post_index(&mut self) -> Option<usize> {
+        let view = self.view_mut();
         let bottom = crate::snapshot::compute_current_bottom_element(
-            &self.view.elements_cache,
-            &self.view.line_counts,
-            self.view.total_lines,
-            self.view.scroll,
-            self.view.last_visible_height,
+            &view.elements_cache,
+            &view.line_counts,
+            view.total_lines,
+            view.scroll,
+            view.last_visible_height,
         )?;
-        self.view
-            .posts
-            .iter()
+        let posts = view.posts.clone();
+        drop(view);
+        posts.iter()
             .find(|p| p.start <= bottom && bottom < p.end)
             .map(|p| p.index)
     }

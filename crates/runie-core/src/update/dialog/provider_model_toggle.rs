@@ -37,12 +37,12 @@ pub fn toggle_provider_model(state: &mut AppState, provider: &str, model: &str) 
     // Update config_cache synchronously and persist to file.
     sync_provider_models(state, &provider, &models);
     state.set_provider_models(&provider, models.clone());
-    if provider == state.config.current_provider && !models.contains(&model) {
+    if provider == state.config().current_provider && !models.contains(&model) {
         if let Some(first) = models.first() {
             state.switch_model(provider.clone(), first.clone(), false);
         }
     }
-    state.view.cached_settings_valid = false;
+    state.view_mut().cached_settings_valid = false;
 }
 
 fn sync_provider_models(state: &mut AppState, provider: &str, models: &[String]) {
@@ -65,7 +65,7 @@ fn sync_provider_models(state: &mut AppState, provider: &str, models: &[String])
         return;
     }
     // Sync config_cache.
-    if let Some(ref mut cache) = state.config_cache {
+    if let Some(ref mut cache) = state.config_cache_mut() {
         cache
             .model_providers
             .entry(provider.into())
@@ -122,8 +122,8 @@ mod tests {
         .unwrap();
 
         let mut state = AppState::default();
-        state.config.current_provider = "openai".into();
-        state.config.current_model = "gpt-4o-mini".into();
+        state.config_mut().current_provider = "openai".into();
+        state.config_mut().current_model = "gpt-4o-mini".into();
 
         toggle_provider_model(&mut state, "openai", "gpt-4o-mini");
 
@@ -131,7 +131,7 @@ mod tests {
             .map(|(_, _, m)| m)
             .unwrap_or_default();
         assert_eq!(models, vec!["gpt-4o"]);
-        assert_eq!(state.config.current_model, "gpt-4o");
+        assert_eq!(state.config().current_model, "gpt-4o");
     }
 
     #[test]
@@ -147,8 +147,8 @@ mod tests {
         .unwrap();
 
         let mut state = AppState::default();
-        state.config.current_provider = "openai".into();
-        state.config.current_model = "gpt-4o".into();
+        state.config_mut().current_provider = "openai".into();
+        state.config_mut().current_model = "gpt-4o".into();
 
         toggle_provider_model(&mut state, "openai", "gpt-4o-mini");
 

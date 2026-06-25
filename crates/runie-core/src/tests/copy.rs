@@ -149,7 +149,7 @@ fn state_with_selected_post_tool_done() -> AppState {
 
 #[test]
 fn copy_selected_post_text_user_message() {
-    let state = state_with_selected_post_user();
+    let mut state = state_with_selected_post_user();
     assert_eq!(
         state.copy_selected_post_text(),
         Some("hello world".into()),
@@ -159,7 +159,7 @@ fn copy_selected_post_text_user_message() {
 
 #[test]
 fn copy_selected_post_text_agent_message() {
-    let state = state_with_selected_post_agent();
+    let mut state = state_with_selected_post_agent();
     assert_eq!(
         state.copy_selected_post_text(),
         Some("the answer is 42".into()),
@@ -169,7 +169,7 @@ fn copy_selected_post_text_agent_message() {
 
 #[test]
 fn copy_selected_post_text_tool_done() {
-    let state = state_with_selected_post_tool_done();
+    let mut state = state_with_selected_post_tool_done();
     let text = state.copy_selected_post_text();
     assert!(text.is_some(), "y on a tool-done post should return Some");
     let text = text.unwrap();
@@ -182,7 +182,7 @@ fn copy_selected_post_text_tool_done() {
 
 #[test]
 fn copy_selected_post_metadata_returns_timestamp() {
-    let state = state_with_selected_post_agent();
+    let mut state = state_with_selected_post_agent();
     let meta = state.copy_selected_post_metadata();
     assert!(
         meta.is_some(),
@@ -198,7 +198,7 @@ fn copy_selected_post_metadata_returns_timestamp() {
 
 #[test]
 fn copy_selected_post_text_no_selection_returns_none() {
-    let state = AppState::default();
+    let mut state = AppState::default();
     assert_eq!(state.copy_selected_post_text(), None);
 }
 

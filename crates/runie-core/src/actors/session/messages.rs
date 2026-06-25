@@ -97,6 +97,11 @@ impl SessionActorHandle {
         Self { tx }
     }
 
+    /// Access the underlying sender (for routing intents from the DSL).
+    pub fn tx(&self) -> &mpsc::Sender<SessionMsg> {
+        &self.tx
+    }
+
     /// Request a trust decision change.
     pub async fn set_trust(&self, path: PathBuf, decision: TrustDecision) {
         let _ = self.tx.send(SessionMsg::SetTrust { path, decision }).await;

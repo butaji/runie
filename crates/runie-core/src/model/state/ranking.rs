@@ -1,37 +1,38 @@
-use super::AppState;
 use super::helpers::compute_ranking_score;
+use std::collections::HashMap;
+use super::CommandUsage;
 
-pub fn rank_commands_empty_query<'a>(
-    state: &'a AppState,
-    all: &[&'a crate::commands::CommandDef],
+pub fn rank_commands_empty_query(
+    command_usage: &HashMap<String, CommandUsage>,
+    all: &[&crate::commands::CommandDef],
     limit: usize,
-) -> Vec<(&'a crate::commands::CommandDef, i32)> {
+) -> Vec<(String, i32)> {
     let mut ranked: Vec<_> = all
         .iter()
         .map(|cmd| {
-            let usage = state.config.command_usage.get(&cmd.name);
+            let usage = command_usage.get(&cmd.name);
             let score = compute_ranking_score("", cmd, usage);
-            (*cmd, score)
+            (cmd.name.clone(), score)
         })
         .collect();
-    ranked.sort_by_key(|(cmd, score)| (std::cmp::Reverse(*score), &cmd.category, &cmd.name));
+    ranked.sort_by_key(|(name, score)| (std::cmp::Reverse(*score), name.clone()));
     ranked.into_iter().take(limit).collect()
 }
 
-pub fn rank_commands_with_query<'a>(
-    state: &'a AppState,
+pub fn rank_commands_with_query(
+    command_usage: &HashMap<String, CommandUsage>,
     query: &str,
-    all: &[&'a crate::commands::CommandDef],
+    all: &[&crate::commands::CommandDef],
     limit: usize,
-) -> Vec<(&'a crate::commands::CommandDef, i32)> {
+) -> Vec<(String, i32)> {
     let mut ranked: Vec<_> = all
         .iter()
         .filter_map(|cmd| {
             let base = crate::fuzzy::fuzzy_match(query, &cmd.name)
                 .or_else(|| crate::fuzzy::fuzzy_match(query, &cmd.desc))?;
-            let usage = state.config.command_usage.get(&cmd.name);
+            let usage = command_usage.get(&cmd.name);
             let score = compute_ranking_score(query, cmd, usage) + base * 100;
-            Some((*cmd, score))
+            Some((cmd.name.clone(), score))
         })
         .collect();
     ranked.sort_by_key(|(_, score)| std::cmp::Reverse(*score));

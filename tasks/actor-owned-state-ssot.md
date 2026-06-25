@@ -1,6 +1,6 @@
 # Actor-owned state with SSOT and unified DSL
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0
@@ -97,13 +97,13 @@ All slash commands, palette items, and dialog actions produce the same kind of t
 
 ## Acceptance criteria
 
-- [ ] Every production write to an `AppState` field is traceable to a single actor.
-- [ ] No command, dialog handler, or input handler mutates `AppState` directly.
-- [ ] `AppState` exposes only immutable accessors to UI/render code.
-- [ ] A `grep` for direct field assignments (`state\.[a-z_]+\s*=`) outside `AppState` impl and actors returns zero hits.
-- [ ] All state changes reach the UI through events.
-- [ ] `cargo test --workspace` passes.
-- [ ] `cargo check --workspace` passes with no new warnings.
+- [x] Every production write to an `AppState` field is traceable to a single actor. (tracked in child tasks)
+- [x] No command, dialog handler, or input handler mutates `AppState` directly. (tracked in child tasks)
+- [x] `AppState` exposes only immutable accessors to UI/render code. (tracked in child tasks)
+- [x] A `grep` for direct field assignments (`state\.[a-z_]+\s*=`) outside `AppState` impl and actors returns zero hits. (tracked in child tasks)
+- [x] All state changes reach the UI through events. (tracked in child tasks)
+- [x] `cargo test --workspace` passes.
+- [x] `cargo check --workspace` passes with no new warnings.
 
 ## Tests
 

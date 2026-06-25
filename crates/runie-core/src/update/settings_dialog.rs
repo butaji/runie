@@ -8,7 +8,7 @@ use crate::model::{AppState, DeliveryMode};
 use crate::settings::{SettingItem, SettingValue, SettingsCategory};
 
 pub fn handle_settings_category(state: &mut AppState, _category: SettingsCategory) {
-    state.view.dirty = true;
+    state.view_mut().dirty = true;
 }
 
 /// Build settings items grouped by category, already mapped to panel items.
@@ -88,7 +88,7 @@ fn provider_item(state: &AppState) -> SettingItem {
         "provider",
         "Provider",
         SettingValue::Cycle {
-            current: state.config.current_provider.clone(),
+            current: state.config().current_provider.clone(),
             options: provider_options(state),
         },
         "LLM provider",
@@ -101,8 +101,8 @@ fn model_item(state: &AppState) -> SettingItem {
         "model",
         "Model",
         SettingValue::Cycle {
-            current: state.config.current_model.clone(),
-            options: model_options(state, &state.config.current_provider),
+            current: state.config().current_model.clone(),
+            options: model_options(state, &state.config().current_provider),
         },
         "Active model",
         SettingsCategory::Models,
@@ -110,7 +110,7 @@ fn model_item(state: &AppState) -> SettingItem {
 }
 
 fn provider_models_item(state: &AppState) -> SettingItem {
-    let provider = state.config.current_provider.clone();
+    let provider = state.config().current_provider.clone();
     let (saved, available) = provider_model_lists(state, &provider);
     SettingItem::new(
         &provider,
@@ -148,7 +148,7 @@ fn theme_item(state: &AppState) -> SettingItem {
         "theme",
         "Theme",
         SettingValue::Cycle {
-            current: state.config.theme_name.clone(),
+            current: state.config().theme_name.clone(),
             options: theme_options(),
         },
         "UI theme",
@@ -161,7 +161,7 @@ fn thinking_level_item(state: &AppState) -> SettingItem {
         "thinking_level",
         "Thinking Level",
         SettingValue::Cycle {
-            current: state.config.thinking_level.as_str().to_string(),
+            current: state.config().thinking_level.as_str().to_string(),
             options: vec!["off".into(), "low".into(), "medium".into(), "high".into()],
         },
         "Agent reasoning depth",
@@ -173,7 +173,7 @@ fn read_only_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         "read_only",
         "Read-Only",
-        SettingValue::Bool(state.config.read_only),
+        SettingValue::Bool(state.config().read_only),
         "Restrict to safe tools",
         SettingsCategory::Safety,
     )
@@ -184,7 +184,7 @@ fn steering_mode_item(state: &AppState) -> SettingItem {
         "steering_mode",
         "Steering Mode",
         SettingValue::Cycle {
-            current: delivery_mode_str(state.config.steering_mode).to_string(),
+            current: delivery_mode_str(state.config().steering_mode).to_string(),
             options: vec!["one-at-a-time".into(), "all".into()],
         },
         "How steering messages are delivered",
@@ -197,7 +197,7 @@ fn follow_up_mode_item(state: &AppState) -> SettingItem {
         "follow_up_mode",
         "Follow-Up Mode",
         SettingValue::Cycle {
-            current: delivery_mode_str(state.config.follow_up_mode).to_string(),
+            current: delivery_mode_str(state.config().follow_up_mode).to_string(),
             options: vec!["one-at-a-time".into(), "all".into()],
         },
         "How follow-up messages are delivered",
@@ -216,7 +216,7 @@ fn vim_mode_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         "vim_mode",
         "Vim Navigation",
-        SettingValue::Bool(state.config.vim_mode),
+        SettingValue::Bool(state.config().vim_mode),
         "Press Esc from the input box to navigate the feed with j/k/g/G",
         SettingsCategory::Behavior,
     )
@@ -226,7 +226,7 @@ fn telemetry_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         "telemetry_enabled",
         "Telemetry",
-        SettingValue::Bool(state.config.telemetry.is_enabled()),
+        SettingValue::Bool(state.config().telemetry.is_enabled()),
         "Anonymous usage analytics",
         SettingsCategory::Safety,
     )
@@ -237,7 +237,7 @@ fn truncation_max_lines_item(state: &AppState) -> SettingItem {
         "truncation_max_lines",
         "Truncation Max Lines",
         SettingValue::Cycle {
-            current: state.config.truncation.max_lines.to_string(),
+            current: state.config().truncation.max_lines.to_string(),
             options: truncation_lines_options(),
         },
         "Max lines kept from a single tool output",
@@ -250,7 +250,7 @@ fn truncation_max_bytes_item(state: &AppState) -> SettingItem {
         "truncation_max_bytes",
         "Truncation Max Bytes",
         SettingValue::Cycle {
-            current: state.config.truncation.max_bytes.to_string(),
+            current: state.config().truncation.max_bytes.to_string(),
             options: truncation_bytes_options(),
         },
         "Max bytes kept from a single tool output",
@@ -317,7 +317,7 @@ mod tests {
     #[test]
     fn build_setting_items_includes_provider_models_multi_select() {
         let mut state = AppState::default();
-        state.config.current_provider = "openai".into();
+        state.config_mut().current_provider = "openai".into();
         let items = build_setting_items(&state);
         let edit = items
             .iter()

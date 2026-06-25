@@ -138,33 +138,20 @@ fn route_intent(handles: &Option<crate::actors::ActorHandles>, intent: &Intent) 
     match intent {
         Intent::SetTheme { .. } | Intent::ReloadConfig => {
             if let Some(ref c) = h.config {
-                let _ = c.tx().try_send(crate::actors::ConfigMsg::Reload);
+                c.reload();
             }
         }
         Intent::SetTrust { path, decision } => {
-            if let Some(ref s) = h.session {
-                let _ = s.tx().try_send(crate::actors::SessionMsg::SetTrust {
-                    path: path.clone(),
-                    decision: *decision,
-                });
-            }
+            h.send_set_trust(path.clone(), *decision);
         }
         Intent::AppendHistory { entry } => {
-            if let Some(ref s) = h.session {
-                let _ = s.tx().try_send(crate::actors::SessionMsg::AppendHistory {
-                    entry: entry.clone(),
-                });
-            }
+            h.send_append_history(entry.clone());
         }
         Intent::RunBash { command } => {
-            if let Some(ref i) = h.io {
-                let _ = i.tx().try_send(crate::actors::IoMsg::RunBash { command: command.clone() });
-            }
+            h.run_bash(command.clone());
         }
         Intent::WriteFiles { edits } => {
-            if let Some(ref i) = h.io {
-                let _ = i.tx().try_send(crate::actors::IoMsg::WriteFiles { edits: edits.clone() });
-            }
+            h.write_files(edits.clone());
         }
         // TODO(r5): map remaining Intent variants to their owning actors
         _ => {}

@@ -75,14 +75,14 @@ fn unknown_command_does_not_record_usage() {
 
 #[test]
 fn rank_commands_empty_query_returns_all() {
-    let state = AppState::default();
+    let mut state = AppState::default();
     let ranked = state.rank_commands("", 50);
     assert!(ranked.len() >= 20, "empty query should return all commands");
 }
 
 #[test]
 fn rank_commands_with_query_filters() {
-    let state = AppState::default();
+    let mut state = AppState::default();
     let ranked = state.rank_commands("model", 10);
     // At least some results should be model-related (new commands may also appear).
     let model_hits: usize = ranked

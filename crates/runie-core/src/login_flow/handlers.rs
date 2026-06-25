@@ -12,6 +12,7 @@ use super::panels::{
     build_key_input, build_model_selector, build_validating_panel,
 };
 use super::state::{LoginFlowState, LoginStep};
+use crate::config::Config;
 use crate::Event;
 
 /// Top-level login flow dispatcher.
@@ -35,7 +36,7 @@ pub fn login_flow_event(state: &mut crate::model::AppState, event: Event) {
 }
 
 pub fn login_flow_start(state: &mut crate::model::AppState) {
-    state.login_flow = Some(LoginFlowState::new());
+    *state.login_flow_mut() = Some(LoginFlowState::new());
     rebuild_login_dialog(state);
 }
 
@@ -46,7 +47,7 @@ fn login_flow_select_provider(state: &mut crate::model::AppState, provider: Stri
         .map(|f| f.key.clone())
         .unwrap_or_default();
 
-    if let Some(ref mut flow) = state.login_flow {
+    if let Some(ref mut flow) = state.login_flow_mut() {
         *flow = LoginFlowState {
             step: LoginStep::KeyInput,
             provider: provider.clone(),
@@ -55,9 +56,9 @@ fn login_flow_select_provider(state: &mut crate::model::AppState, provider: Stri
             selected_models: std::mem::take(&mut flow.selected_models),
             validated: false,
         };
-        state.view.dirty = true;
+        state.view_mut().dirty = true;
     }
-    let panel = build_key_input(state.login_flow.as_ref().unwrap());
+    let panel = build_key_input(state.login_flow().as_ref().unwrap());
     push_login_panel(state, panel);
 }
 
@@ -87,7 +88,7 @@ fn reject_empty_key(
 
 fn login_flow_submit_key(state: &mut crate::model::AppState, provider: String, key: String) {
     if reject_empty_key(state, &provider, &key).is_some() {
-        let panel = build_key_input(state.login_flow.as_ref().unwrap());
+        let panel = build_key_input(state.login_flow().as_ref().unwrap());
         replace_top_login_panel_with(state, panel);
         return;
     }
@@ -113,7 +114,7 @@ fn login_flow_submit_key(state: &mut crate::model::AppState, provider: String, k
         .map(|f| std::mem::take(&mut f.selected_models))
         .unwrap_or_default();
 
-    if let Some(ref mut flow) = state.login_flow {
+    if let Some(ref mut flow) = state.login_flow_mut() {
         flow.provider = final_provider.clone();
         flow.key = key.clone();
         flow.step = LoginStep::Validating;
@@ -125,14 +126,14 @@ fn login_flow_submit_key(state: &mut crate::model::AppState, provider: String, k
 }
 
 fn login_flow_validation_success(state: &mut crate::model::AppState, models: Vec<String>) {
-    let current_step = state.login_flow.as_ref().map(|f| f.step.clone());
+    let current_step = state.login_flow().as_ref().map(|f| f.step.clone());
     if current_step.as_ref() != Some(&LoginStep::Validating) {
         return;
     }
 
     let selected_models: std::collections::HashSet<String> =
         models.iter().cloned().collect();
-    if let Some(ref mut flow) = state.login_flow {
+    if let Some(ref mut flow) = state.login_flow_mut() {
         flow.step = LoginStep::ModelSelect;
         flow.available_models = models;
         flow.selected_models = selected_models;
@@ -170,11 +171,11 @@ fn transition_to_model_selector(state: &mut crate::model::AppState) {
         validated: true,
     };
     replace_top_login_panel_with(state, build_model_selector(&updated));
-    state.view.dirty = true;
+    state.view_mut().dirty = true;
 }
 
 fn login_flow_validation_failed(state: &mut crate::model::AppState, error: String) {
-    let current_step = state.login_flow.as_ref().map(|f| f.step.clone());
+    let current_step = state.login_flow().as_ref().map(|f| f.step.clone());
     if current_step.as_ref() != Some(&LoginStep::Validating) {
         return;
     }
@@ -194,20 +195,20 @@ fn login_flow_validation_failed(state: &mut crate::model::AppState, error: Strin
         format!("Could not verify key: {}", error),
         crate::event::TransientLevel::Warning,
     );
-    if let Some(ref mut flow) = state.login_flow {
+    if let Some(ref mut flow) = state.login_flow_mut() {
         flow.step = LoginStep::KeyInput;
         flow.available_models = available_models;
         flow.selected_models = selected_models;
         flow.validated = false;
     }
     pop_login_panel(state);
-    state.view.dirty = true;
+    state.view_mut().dirty = true;
 }
 
 fn login_flow_toggle_model(state: &mut crate::model::AppState, model: String) {
-    if let Some(ref mut flow) = state.login_flow {
+    if let Some(ref mut flow) = state.login_flow_mut() {
         flow.toggle_model(&model);
-        state.view.dirty = true;
+        state.view_mut().dirty = true;
     }
 }
 
@@ -243,7 +244,7 @@ fn login_flow_save(state: &mut crate::model::AppState) {
 }
 
 fn validate_login_flow_ready(state: &mut crate::model::AppState) -> bool {
-    let validated = state.login_flow.as_ref().map(|f| f.validated).unwrap_or(false);
+    let validated = state.login_flow().as_ref().map(|f| f.validated).unwrap_or(false);
     let has_models = state
         .login_flow
         .as_ref()
@@ -300,18 +301,21 @@ fn persist_provider_config(
 ) {
     sync_config_cache(state, provider, base_url, key, selected);
 
-    if let Some(ref handles) = state.actor_handles {
-        if tokio::runtime::Handle::try_current().is_ok() {
-            let handles = handles.clone();
-            let provider = provider.to_string();
-            let base_url = base_url.to_string();
-            let key = key.to_string();
-            let selected = selected.to_vec();
-            tokio::spawn(async move {
-                handles.send_save_provider(&provider, &base_url, &key, selected).await;
-            });
-            return;
-        }
+    // Extract handles before any async work to avoid borrow conflicts.
+    let handles = state.actor_handles().cloned();
+    let can_spawn = handles.as_ref().is_some()
+        && tokio::runtime::Handle::try_current().is_ok();
+
+    if can_spawn {
+        let handles = handles.unwrap();
+        let provider = provider.to_string();
+        let base_url = base_url.to_string();
+        let key = key.to_string();
+        let selected = selected.to_vec();
+        tokio::spawn(async move {
+            handles.send_save_provider(&provider, &base_url, &key, selected).await;
+        });
+        return;
     }
     if let Err(e) =
         crate::login_config::save_provider_config(provider, base_url, key, selected)
@@ -342,7 +346,7 @@ fn sync_config_cache(
     api_key: &str,
     models: &[String],
 ) {
-    let cache = state.config_cache.get_or_insert_with(Default::default);
+    let cache = state.config_cache_mut().get_or_insert_with(Config::default);
     cache.model_providers.insert(
         provider.into(),
         crate::config::ModelProvider {
@@ -358,7 +362,7 @@ fn sync_config_cache(
 }
 
 fn reopen_login_panel_if_flow_present(state: &mut crate::model::AppState) {
-    let Some(flow) = state.login_flow.as_ref() else {
+    let Some(flow) = state.login_flow() else {
         return;
     };
     let panel = match flow.step {
@@ -370,14 +374,14 @@ fn reopen_login_panel_if_flow_present(state: &mut crate::model::AppState) {
 }
 
 pub fn login_flow_cancel(state: &mut crate::model::AppState) {
-    state.view.cached_auth_valid = false;
+    state.view_mut().cached_auth_valid = false;
     pop_login_panel_or_close(state);
 }
 
 fn close_login_flow(state: &mut crate::model::AppState) {
-    state.login_flow = None;
-    state.dialog_back_stack.clear();
-    state.open_dialog = None;
-    state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-    state.view.dirty = true;
+    *state.login_flow_mut() = None;
+    state.dialog_back_stack_mut().clear();
+    *state.open_dialog_mut() = None;
+    state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+    state.view_mut().dirty = true;
 }

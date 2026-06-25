@@ -15,12 +15,12 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
     if route_global_dialog_event(state, &event) {
         return;
     }
-    let Some(mut dialog) = state.open_dialog.take() else {
+    let Some(mut dialog) = state.open_dialog_mut().take() else {
         return;
     };
     // Welcome dialog has no panel stack — only close on specific events
     if matches!(dialog, crate::commands::DialogState::Welcome) {
-        state.open_dialog = Some(dialog);
+        *state.open_dialog_mut() = Some(dialog);
         return;
     }
     let is_dialog_back = matches!(&event, Event::DialogBack);
@@ -34,27 +34,27 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
     let result = update_panel_stack(state, event, stack);
     restore_or_pop_dialog(state, dialog, result, is_palette_activation);
 
-    if is_dialog_back && state.open_dialog.is_none() {
+    if is_dialog_back && state.open_dialog().is_none() {
         state.handle_vim_dialog_back();
     }
 
-    state.view.dirty = true;
+    state.view_mut().dirty = true;
 }
 
 fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
     if matches!(event, crate::Event::Abort) {
-        if let Some((input, _, _, _)) = state.input.file_picker_backup.take() {
-            state.input.input = input;
-            state.input.cursor_pos = state.input.input.len();
+        if let Some((input, _, _, _)) = state.input_mut().file_picker_backup.take() {
+            state.input_mut().input = input;
+            state.input_mut().cursor_pos = state.input().input.len();
         }
-        state.input.file_picker_range_suffix = None;
-        state.open_dialog = None;
-        state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-        state.view.dirty = true;
+        state.input_mut().file_picker_range_suffix = None;
+        *state.open_dialog_mut() = None;
+        state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+        state.view_mut().dirty = true;
         return true;
     }
     if matches!(event, crate::Event::Quit) {
-        state.should_quit = true;
+        *state.should_quit_mut() = true;
         return true;
     }
     false
@@ -71,11 +71,11 @@ fn restore_or_pop_dialog(
     result: PanelUpdateResult,
     is_palette_activation: bool,
 ) {
-    if result != PanelUpdateResult::Closed && state.open_dialog.is_none() {
+    if result != PanelUpdateResult::Closed && state.open_dialog().is_none() {
         if is_palette_activation {
-            state.dialog_back_stack.pop();
+            state.dialog_back_stack_mut().pop();
         } else {
-            state.open_dialog = Some(dialog);
+            *state.open_dialog_mut() = Some(dialog);
         }
     }
 }
@@ -93,7 +93,7 @@ pub fn process_command_result(state: &mut AppState, result: CommandResult) {
         CR::Warning(msg) => state.notify(msg, crate::event::TransientLevel::Warning),
         CR::Event(evt) => state.update(evt),
         CR::OpenDialog(d) => {
-            if let Some(current) = state.open_dialog.take() {
+            if let Some(current) = state.open_dialog_mut().take() {
                 push_dialog_to_back_stack(state, current);
             }
             match d {
@@ -104,11 +104,11 @@ pub fn process_command_result(state: &mut AppState, result: CommandResult) {
             }
         }
         CR::OpenPanelStack(stack) => {
-            if let Some(current) = state.open_dialog.take() {
+            if let Some(current) = state.open_dialog_mut().take() {
                 push_dialog_to_back_stack(state, current);
             }
-            state.open_dialog = Some(DialogState::PanelStack(*stack));
-            state.view.dirty = true;
+            state.view_mut().dirty = true;
+            *state.open_dialog_mut() = Some(DialogState::PanelStack(*stack));
         }
         CR::None => {}
     }

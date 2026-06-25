@@ -21,10 +21,10 @@ mod tests {
     #[test]
     fn shared_type_str_appends() {
         let mut state = fresh_state();
-        assert_eq!(state.input.input, "");
+        assert_eq!(state.input().input, "");
         type_str(&mut state, "hello");
-        assert_eq!(state.input.input, "hello");
+        assert_eq!(state.input().input, "hello");
         type_str(&mut state, " world");
-        assert_eq!(state.input.input, "hello world");
+        assert_eq!(state.input().input, "hello world");
     }
 }

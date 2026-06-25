@@ -37,7 +37,7 @@ mod tests {
             key: "sk-test".into(),
             models: defaults.clone(),
         });
-        let flow = state.login_flow.as_ref().unwrap();
+        let flow = state.login_flow().unwrap();
         assert_eq!(flow.step, LoginStep::ModelSelect);
         assert_eq!(flow.available_models, defaults);
         assert!(flow.selected_models.len() == defaults.len());
@@ -45,7 +45,7 @@ mod tests {
     }
 
     fn assert_flow_step(state: &AppState, step: LoginStep) {
-        assert_eq!(state.login_flow.as_ref().unwrap().step, step);
+        assert_eq!(state.login_flow().unwrap().step, step);
     }
 
     fn assert_transient_contains(state: &AppState, needle: &str) {
@@ -70,7 +70,7 @@ mod tests {
         state.update(Event::SelectProvider {
             provider: "minimax".into(),
         });
-        match &state.open_dialog {
+        match &state.open_dialog_mut() {
             Some(crate::commands::DialogState::PanelStack(s)) => {
                 assert_eq!(s.len(), 2, "stack should be [provider, key_input]");
                 assert_eq!(s.current().unwrap().id, "login-key");
@@ -78,7 +78,7 @@ mod tests {
             other => panic!("expected PanelStack, got {other:?}"),
         }
         state.update(Event::dialog_back());
-        match &state.open_dialog {
+        match &state.open_dialog_mut() {
             Some(crate::commands::DialogState::PanelStack(s)) => {
                 assert_eq!(s.len(), 1, "Esc must pop to root, not close");
                 assert_eq!(s.current().unwrap().id, "login-provider");
@@ -91,8 +91,8 @@ mod tests {
     fn login_command_opens_provider_picker() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        assert!(state.open_dialog.is_some());
-        assert!(state.login_flow.is_some());
+        assert!(state.open_dialog().is_some());
+        assert!(state.login_flow().is_some());
         assert_flow_step(&state, LoginStep::ProviderPicker);
     }
 
@@ -104,7 +104,7 @@ mod tests {
             provider: "minimax".into(),
         });
         assert_flow_step(&state, LoginStep::KeyInput);
-        assert_eq!(state.login_flow.as_ref().unwrap().provider, "minimax");
+        assert_eq!(state.login_flow().unwrap().provider, "minimax");
     }
 
     #[test]
@@ -119,7 +119,7 @@ mod tests {
             key: "sk-test".into(),
         });
         assert_flow_step(&state, LoginStep::Validating);
-        match &state.open_dialog {
+        match &state.open_dialog_mut() {
             Some(crate::commands::DialogState::PanelStack(s)) => {
                 assert_eq!(s.current().unwrap().id, "login-validating");
             }
@@ -144,7 +144,7 @@ mod tests {
             key: "sk-test".into(),
             models: vec!["MiniMax-M3".into()],
         });
-        let flow = state.login_flow.as_ref().unwrap();
+        let flow = state.login_flow().unwrap();
         assert_eq!(flow.step, LoginStep::ModelSelect);
         assert_eq!(flow.provider, "minimax");
         assert_eq!(flow.key, "sk-test");
@@ -174,7 +174,7 @@ mod tests {
     #[test]
     fn login_toggle_model_updates_selection() {
         let mut state = drive_to_model_select("minimax");
-        let first = state.login_flow.as_ref().unwrap().available_models[0].clone();
+        let first = state.login_flow().unwrap().available_models[0].clone();
         assert!(state
             .login_flow
             .as_ref()
@@ -197,8 +197,8 @@ mod tests {
         let mut state = AppState::default();
         state.update(Event::Start);
         state.update(Event::Cancel);
-        assert!(state.open_dialog.is_none());
-        assert!(state.login_flow.is_none());
+        assert!(state.open_dialog().is_none());
+        assert!(state.login_flow().is_none());
     }
 
     // -----------------------------------------------------------------------
@@ -235,7 +235,7 @@ mod tests {
             key: "sk-test".into(),
             models: vec!["new-A".into(), "new-B".into()],
         });
-        let flow = state.login_flow.as_ref().unwrap();
+        let flow = state.login_flow().unwrap();
         assert_eq!(flow.step, LoginStep::ModelSelect);
         assert_eq!(flow.available_models, vec!["new-A", "new-B"]);
         assert!(flow.selected_models.contains("new-A"));
@@ -280,7 +280,7 @@ mod tests {
             error: "API validation failed: 401 Unauthorized".into(),
         });
         assert_flow_step(&state, LoginStep::KeyInput);
-        assert!(state.transient_message.is_some());
+        assert!(state.transient_message().is_some());
     }
 
     #[test]
@@ -297,7 +297,7 @@ mod tests {
         assert_flow_step(&state, LoginStep::Validating);
         state.update(Event::Save);
         assert!(
-            state.login_flow.is_some(),
+            state.login_flow().is_some(),
             "save should be rejected before validation"
         );
         assert_transient_contains(&state, "validated");
@@ -319,7 +319,7 @@ mod tests {
             key: "sk-test".into(),
             models: vec![],
         });
-        let flow = state.login_flow.as_ref().unwrap();
+        let flow = state.login_flow().unwrap();
         assert_eq!(flow.step, LoginStep::ModelSelect);
         assert!(flow.available_models.is_empty());
         assert!(flow.selected_models.is_empty());
@@ -336,7 +336,8 @@ mod tests {
             provider: "ghost".into(),
             key: "k".into(),
         });
-        let flow = state.login_flow.as_ref().unwrap();
+        let login_flow = state.login_flow();
+        let flow = login_flow.as_ref().unwrap();
         assert_eq!(flow.step, LoginStep::Validating);
         assert!(flow.available_models.is_empty());
     }
@@ -352,7 +353,8 @@ mod tests {
             provider: "minimax".into(),
             key: "".into(),
         });
-        let flow = state.login_flow.as_ref().unwrap();
+        let login_flow = state.login_flow();
+        let flow = login_flow.as_ref().unwrap();
         assert_eq!(flow.step, LoginStep::KeyInput);
         assert_transient_contains(&state, "API key is required");
     }

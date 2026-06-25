@@ -240,15 +240,15 @@ mod tests {
             .request_queue
             .push_back(("hello".to_string(), "req.0".to_string()));
 
-        assert!(!state.agent.turn_active);
-        assert_eq!(state.agent.inflight, 0);
+        assert!(!state.agent_state().turn_active);
+        assert_eq!(state.agent_state().inflight, 0);
 
         agent_handle.run_if_queued(&mut state).await;
 
-        assert!(state.agent.turn_active, "must set turn_active");
-        assert_eq!(state.agent.inflight, 1, "must increment inflight");
+        assert!(state.agent_state().turn_active, "must set turn_active");
+        assert_eq!(state.agent_state().inflight, 1, "must increment inflight");
         assert!(
-            state.agent.request_queue.is_empty(),
+            state.agent_state().request_queue.is_empty(),
             "message should be popped from queue"
         );
 
@@ -267,8 +267,8 @@ mod tests {
 
         agent_handle.run_if_queued(&mut state).await;
 
-        assert!(!state.agent.turn_active);
-        assert_eq!(state.agent.inflight, 0);
+        assert!(!state.agent_state().turn_active);
+        assert_eq!(state.agent_state().inflight, 0);
     }
 
     #[tokio::test]
@@ -276,7 +276,7 @@ mod tests {
         let (tx, _rx) = tokio::sync::mpsc::channel::<AgentMsg>(10);
         let agent_handle = AgentActorHandle::new(tx);
         let mut state = AppState::default();
-        state.agent.turn_active = true;
+        state.agent_state_mut().turn_active = true;
         state
             .agent
             .request_queue
@@ -284,6 +284,6 @@ mod tests {
 
         agent_handle.run_if_queued(&mut state).await;
 
-        assert_eq!(state.agent.request_queue.len(), 1);
+        assert_eq!(state.agent_state().request_queue.len(), 1);
     }
 }

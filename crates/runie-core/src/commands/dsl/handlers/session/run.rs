@@ -19,7 +19,7 @@ pub fn run_name(state: &mut AppState, name: &str) {
     } else {
         name.to_string()
     };
-    state.session.session_display_name = Some(truncated.clone());
+    state.session_mut().session_display_name = Some(truncated.clone());
     state.add_system_msg(format!("Session name set to '{}'", truncated));
 }
 
@@ -51,21 +51,22 @@ pub fn run_fork(state: &mut AppState, index_raw: &str) {
             }
         }
     };
-    if message_index >= state.session.messages.len() {
+    let msg_count = state.session().messages.len();
+    if message_index >= msg_count {
         state.add_system_msg(format!(
             "Index {} out of range (0–{})",
             message_index,
-            state.session.messages.len().saturating_sub(1)
+            msg_count.saturating_sub(1)
         ));
         return;
     }
-    let mut tree = state.session.session_tree.take().unwrap_or_else(|| {
-        crate::session::tree::SessionTree::from_messages(&state.session.messages)
+    let mut tree = state.session_mut().session_tree.take().unwrap_or_else(|| {
+        crate::session::tree::SessionTree::from_messages(&state.session().messages)
     });
     match tree.fork_at(message_index) {
         Some(path) => {
             tree.navigate_to(&path);
-            state.session.session_tree = Some(tree);
+            state.session_mut().session_tree = Some(tree);
             state.add_system_msg(format!("Forked at message {}.", message_index));
         }
         None => state.add_system_msg("Could not fork.".into()),

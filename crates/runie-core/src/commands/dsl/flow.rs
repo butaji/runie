@@ -43,7 +43,7 @@ impl CommandFlow {
         cmd_name: &str,
         args: &str,
     ) -> CommandResult {
-        if let Some(current) = state.open_dialog.take() {
+        if let Some(current) = state.open_dialog_mut().take() {
             state.push_dialog_to_back_stack(current);
         }
         inner.exec(state, cmd_name, args)
