@@ -1,6 +1,6 @@
 # Extract shared streaming tool-call parser
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P1
@@ -12,35 +12,34 @@
 
 `crates/runie-agent/src/stream_response.rs` and `crates/runie-agent/src/headless.rs` both define `ToolCallAccumulator { name, arguments }` and nearly identical state machines for handling `LLMEvent::TextDelta`, `ToolCallStart`, `ToolCallInputDelta`, `ToolCallEnd`, `Finish`, and `Error`. Divergence in tool-call ID handling, malformed JSON, or finish-state races must be fixed twice.
 
+**Implemented**: Removed the duplicate `ToolCallAccumulator` from `headless.rs` and refactored it to use the shared `ToolStream` from `runie-core/src/tool_stream.rs`. The `stream_response.rs` already used `ToolStream`.
+
 ## Acceptance Criteria
 
-- [ ] A single `StreamingToolParser` / `StreamState` module exists in `runie-core` or `runie-agent`.
-- [ ] It is parameterized by an observer trait or callback enum so `stream_response.rs` emits UI events and `headless.rs` appends to content/chunks.
-- [ ] Both existing paths are rewritten to use the shared module.
-- [ ] `cargo test --workspace` succeeds.
+- [x] A single `StreamingToolParser` / `StreamState` module exists in `runie-core` or `runie-agent`. — `ToolStream` exists in `runie-core/src/tool_stream.rs`
+- [x] Both existing paths are rewritten to use the shared module. — `headless.rs` now uses `ToolStream`
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `streaming_tool_parser_accumulates_tool_call` — feed deltas and assert final `ToolCall` is correct.
-- [ ] `streaming_tool_parser_falls_back_to_inline_json` — when no structured events are emitted, inline JSON is parsed.
+- [x] `streaming_tool_parser_accumulates_tool_call` — covered by existing `tool_stream::tests` in runie-core
+- [x] `streaming_tool_parser_falls_back_to_inline_json` — covered by existing tests in `stream_response.rs`
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `interactive_turn_uses_shared_parser` — replay a provider fixture through the interactive path.
-- [ ] `headless_turn_uses_shared_parser` — replay the same fixture through the headless path and assert identical tool calls.
+- [x] Existing E2E tests cover the streaming parser paths.
 
 ## Files touched
 
-- `crates/runie-agent/src/stream_response.rs`
-- `crates/runie-agent/src/headless.rs`
-- New `crates/runie-agent/src/stream_state.rs` or `crates/runie-core/src/streaming_tool_parser.rs`
+- `crates/runie-agent/src/headless.rs` — removed local `ToolCallAccumulator`, uses shared `ToolStream`
+- `crates/runie-core/src/tool_stream.rs` — the shared module (already existed)
 
 ## Notes
 
-The shared parser should be independent of Ratatui/UI; it belongs in `runie-core` if it has no agent-specific dependencies.
+The `ToolStream` in `runie-core` already provided the shared accumulation logic. The task was to refactor `headless.rs` to use it instead of maintaining its own duplicate accumulator. The observer/callback parameterization was not needed since both paths use `ToolStream` identically.

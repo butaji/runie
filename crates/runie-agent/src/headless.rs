@@ -22,8 +22,7 @@ use runie_core::tool_parser::{
     tool_parse_error_message, ParsedToolCall, ToolParseError,
 };
 use runie_core::tool::{ToolContext, ToolOutput, ToolRegistry};
-use serde_json::Value;
-use std::collections::HashMap;
+use runie_core::tool_stream::ToolStream;
 use std::ops::ControlFlow;
 use std::sync::Arc;
 
@@ -168,17 +167,11 @@ impl HeadlessTurnState {
     }
 }
 
-#[derive(Debug, Default)]
-struct ToolCallAccumulator {
-    name: String,
-    arguments: String,
-}
-
 struct HeadlessStreamState<'a> {
     text: String,
     content: &'a mut String,
     options: &'a mut HeadlessOptions,
-    accumulators: HashMap<String, ToolCallAccumulator>,
+    tool_stream: ToolStream,
     tool_calls: Vec<ParsedToolCall>,
     error: Option<String>,
 }
@@ -189,7 +182,7 @@ impl<'a> HeadlessStreamState<'a> {
             text: String::new(),
             content,
             options,
-            accumulators: HashMap::new(),
+            tool_stream: ToolStream::new(),
             tool_calls: Vec::new(),
             error: None,
         }
@@ -199,14 +192,10 @@ impl<'a> HeadlessStreamState<'a> {
         match event {
             ProviderEvent::TextDelta(delta) => self.on_text_delta(delta),
             ProviderEvent::ToolCallStart { id, name } => {
-                self.accumulators.entry(id).or_default().name = name;
+                self.tool_stream.start(&id, &name);
             }
             ProviderEvent::ToolCallInputDelta { id, delta } => {
-                self.accumulators
-                    .entry(id)
-                    .or_default()
-                    .arguments
-                    .push_str(&delta);
+                self.tool_stream.append(&id, &delta);
             }
             ProviderEvent::ToolCallEnd { id } => self.on_tool_end(id),
             ProviderEvent::Finish { .. } => return ControlFlow::Break(()),
@@ -228,19 +217,13 @@ impl<'a> HeadlessStreamState<'a> {
     }
 
     fn on_tool_end(&mut self, id: String) {
-        if let Some(acc) = self.accumulators.remove(&id) {
-            if let Some(call) = finish_tool_call(id, acc) {
-                self.tool_calls.push(call);
-            }
+        if let Some(call) = self.tool_stream.finish(&id) {
+            self.tool_calls.push(call);
         }
     }
 
     fn into_response(mut self) -> HeadlessStreamedResponse {
-        for (id, acc) in self.accumulators.drain() {
-            if let Some(call) = finish_tool_call(id, acc) {
-                self.tool_calls.push(call);
-            }
-        }
+        self.tool_calls.extend(self.tool_stream.finish_all());
         let mut parse_errors = Vec::new();
         if self.tool_calls.is_empty() && !self.text.is_empty() {
             for result in parse_tool_calls_fallible(&self.text) {
@@ -286,18 +269,6 @@ async fn stream_headless_response(
     }
 
     Ok(state.into_response())
-}
-
-fn finish_tool_call(id: String, acc: ToolCallAccumulator) -> Option<ParsedToolCall> {
-    if acc.name.is_empty() {
-        return None;
-    }
-    let args: Value = serde_json::from_str(&acc.arguments).unwrap_or(Value::Null);
-    Some(ParsedToolCall {
-        name: acc.name,
-        args,
-        id: Some(id),
-    })
 }
 
 fn build_tool_registry() -> ToolRegistry {

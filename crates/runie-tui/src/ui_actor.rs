@@ -10,7 +10,7 @@ use std::time::Duration;
 use runie_agent::AgentActorHandle;
 use runie_core::actors::SessionActorHandle;
 use runie_core::bus::{EventBus, Receiver};
-use runie_core::event::{ControlEvent, Event, InputEvent};
+use runie_core::Event;
 use runie_core::login_flow::LoginStep;
 use runie_core::{AppState, Snapshot};
 use tokio::sync::{mpsc, oneshot, watch};
@@ -115,8 +115,8 @@ impl UiActor {
     /// Handle a single event without publishing. Returns `true` when the actor
     /// should shut down.
     async fn handle_event_inner(&mut self, evt: Event, effect_tx: mpsc::Sender<Event>) -> bool {
-        let was_submit = matches!(evt, InputEvent::Submit);
-        let was_followup = matches!(evt, ControlEvent::FollowUp);
+        let was_submit = matches!(evt, Event::Submit);
+        let was_followup = matches!(evt, Event::FollowUp);
         let was_config_loaded = matches!(evt, Event::ConfigLoaded { .. });
         let was_agent_done = matches!(evt, Event::Done { .. } | Event::Error { .. });
         let was_trust_loaded = matches!(evt, Event::TrustLoaded { .. });
@@ -214,6 +214,7 @@ async fn handle_persistence_messages(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use runie_core::actors::{ActorHandles, ProviderActorHandle};
 
     #[tokio::test]
     async fn ui_actor_updates_state_from_bus_event() {
@@ -296,7 +297,10 @@ mod tests {
         });
 
         let mut state = AppState::default();
-        state.provider_tx = Some(provider_tx);
+        // Set up actor_handles with provider handle so effects can route through it.
+        let mut handles = ActorHandles::default();
+        handles.provider = Some(ProviderActorHandle::new(provider_tx));
+        state.set_actor_handles(handles);
 
         let mut actor = UiActor::new(
             state,

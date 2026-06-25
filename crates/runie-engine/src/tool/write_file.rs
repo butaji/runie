@@ -1,6 +1,6 @@
 //! WriteFile tool — writes content to a file.
 
-#![allow(unused_imports)]
+use crate::define_tool;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -10,39 +10,19 @@ use tokio::fs;
 
 pub struct WriteFileTool;
 
+#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for WriteFileTool {
-    fn name(&self) -> &str {
-        "write_file"
-    }
-
-    fn description(&self) -> &str {
-        "Write content to a file, creating parent directories as needed."
-    }
-
-    fn input_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Path to the file to write"
-                },
-                "content": {
-                    "type": "string",
-                    "description": "Content to write to the file"
-                }
-            },
-            "required": ["path", "content"]
-        })
-    }
-
-    fn is_read_only(&self) -> bool {
-        false
-    }
-
-    fn requires_approval(&self, _input: &Value) -> bool {
-        true
+    define_tool! {
+        name: "write_file",
+        description: "Write content to a file, creating parent directories as needed.",
+        read_only: false,
+        approval: true,
+        fields: {
+            "path": ("string", "Path to the file to write"),
+            "content": ("string", "Content to write to the file")
+        },
+        required: ["path", "content"]
     }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {

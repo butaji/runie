@@ -1,25 +1,28 @@
-//! Tool definition macro — generates `name()`, `description()`, `input_schema()`,
-//! `is_read_only()`, and `requires_approval()` from a declarative struct.
+//! Tool definition helpers — generates `name()`, `description()`, `input_schema()`,
+//! `is_read_only()`, and `requires_approval()` from declarative structs.
+//!
+//! Use the [`define_tool!`] macro to define tools with less boilerplate.
 //!
 //! # Example
 //!
 //! ```ignore
-//! tool! {
+//! use crate::tool::define_tool;
+//!
+//! define_tool! {
 //!     name: "read_file",
-//!     description: "Read a file",
-//!     schema: {
-//!         "path": ("string", "Path to the file"),
-//!         "offset": ("integer", "Starting line"),
-//!     },
-//!     required: ["path"],
+//!     description: "Read a file from disk",
 //!     read_only: true,
 //!     approval: false,
+//!     fields: {
+//!         "path": (string, "Path to the file"),
+//!         "offset": (integer, "Starting line (0-based)"),
+//!         "limit": (integer, "Maximum lines to read"),
+//!     },
+//!     required: ["path"]
 //! }
 //! ```
-//!
-//! This expands to the five accessor methods on the implementing type.
 
-use serde_json::Value;
+use serde_json::{json, Value};
 
 /// Helper to build an input schema from field declarations.
 pub fn build_schema(
@@ -31,7 +34,7 @@ pub fn build_schema(
         .map(|(name, typ, desc)| {
             (
                 name.to_string(),
-                serde_json::json!({
+                json!({
                     "type": typ,
                     "description": desc,
                 }),
@@ -39,74 +42,73 @@ pub fn build_schema(
         })
         .collect::<serde_json::Map<_, _>>();
 
-    serde_json::json!({
+    json!({
         "type": "object",
         "properties": properties,
         "required": required,
     })
 }
 
-/// A single field declaration for the schema builder.
-pub struct Field {
-    pub name: &'static str,
-    pub typ: &'static str,
-    pub description: &'static str,
-}
+// =============================================================================
+// Declarative macro for tool definitions
+// =============================================================================
 
-/// Build a schema from a slice of field descriptors.
-pub fn schema_from_fields(fields: &[Field], required: &[&str]) -> Value {
-    let mut properties = serde_json::Map::new();
-    for field in fields {
-        properties.insert(
-            field.name.to_string(),
-            serde_json::json!({
-                "type": field.typ,
-                "description": field.description,
-            }),
-        );
-    }
-    serde_json::json!({
-        "type": "object",
-        "properties": properties,
-        "required": required,
-    })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn schema_includes_all_fields() {
-        let fields = [
-            Field {
-                name: "path",
-                typ: "string",
-                description: "File path",
-            },
-            Field {
-                name: "lines",
-                typ: "integer",
-                description: "Max lines",
-            },
-        ];
-        let schema = schema_from_fields(&fields, &["path"]);
-        let props = schema["properties"].as_object().unwrap();
-        assert!(props.contains_key("path"));
-        assert!(props.contains_key("lines"));
-        assert_eq!(schema["required"].as_array().unwrap().len(), 1);
-    }
-
-    #[test]
-    fn schema_with_all_required() {
-        let fields = [
-            Field {
-                name: "a",
-                typ: "string",
-                description: "A",
-            },
-        ];
-        let schema = schema_from_fields(&fields, &["a"]);
-        assert!(schema["required"].as_array().unwrap().contains(&serde_json::json!("a")));
-    }
+/// Declare a tool with its metadata.
+///
+/// # Example
+///
+/// ```ignore
+/// define_tool! {
+///     name: "read_file",
+///     description: "Read a file from disk",
+///     read_only: true,
+///     approval: false,
+///     fields: {
+///         "path": ("string", "Path to the file"),
+///     },
+///     required: ["path"]
+/// }
+/// ```
+///
+/// This expands to:
+///
+/// ```ignore
+/// fn name(&self) -> &str { "read_file" }
+/// fn description(&self) -> &str { "Read a file from disk" }
+/// fn input_schema(&self) -> Value { /* ... */ }
+/// fn is_read_only(&self) -> bool { true }
+/// fn requires_approval(&self, _input: &Value) -> bool { false }
+/// ```
+#[macro_export]
+macro_rules! define_tool {
+    (
+        name: $name:expr,
+        description: $desc:expr,
+        read_only: $ro:expr,
+        approval: $approval:expr,
+        fields: {
+            $($fname:literal: ($ftype:literal, $fdesc:literal)),* $(,)?
+        },
+        required: [$($req:literal),* $(,)?]
+    ) => {
+        fn name(&self) -> &str {
+            $name
+        }
+        fn description(&self) -> &str {
+            $desc
+        }
+        fn input_schema(&self) -> Value {
+            let fields = [
+                $(( $fname, $ftype, $fdesc )),*
+            ];
+            let required: &[&str] = &[$($req),*];
+            $crate::tool::define::build_schema(&fields, required)
+        }
+        fn is_read_only(&self) -> bool {
+            $ro
+        }
+        fn requires_approval(&self, _input: &Value) -> bool {
+            $approval
+        }
+    };
 }
