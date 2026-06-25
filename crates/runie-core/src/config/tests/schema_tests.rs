@@ -1,7 +1,5 @@
 //! Tests for JSON schema generation and verification.
 
-#![cfg(feature = "schema")]
-
 use std::path::Path;
 
 #[test]
@@ -25,7 +23,7 @@ fn generated_schema_matches_checked_in() {
     assert_eq!(
         generated, checked_in_content,
         "config.schema.json is out of date with Config type.\n\
-         Run: cargo run -p runie-core --example write_config_schema --features schema\n\
+         Run: cargo run -p runie-core --example write_config_schema\n\
          to regenerate the schema."
     );
 }

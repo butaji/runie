@@ -10,13 +10,14 @@ path = "src/lib.rs"
 [features]
 default = []
 mcp = []
-schema = ["dep:schemars"]
 # Enable migration from redb session files (can be disabled to reduce dependencies)
 redb-migration = ["dep:redb"]
 
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+rmcp.workspace = true
+schemars.workspace = true
 
 runie-protocol.workspace = true
 anyhow.workspace = true
@@ -40,7 +41,6 @@ strum = { version = "0.26", features = ["derive"] }
 fff-search.workspace = true
 git2.workspace = true
 tracing = "0.1"
-schemars = { version = "0.8", optional = true }
 uuid = { version = "1", features = ["v4"] }
 async-trait.workspace = true
 redb = { version = "2", optional = true }
@@ -57,4 +57,3 @@ harness = false
 
 [[example]]
 name = "write_config_schema"
-required-features = ["schema"]

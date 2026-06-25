@@ -27,7 +27,7 @@ pub enum DeliveryMode {
 
 /// Thinking level for reasoning-intensive tasks.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[derive(schemars::JsonSchema)]
 pub enum ThinkingLevel {
     #[default]
     Off,

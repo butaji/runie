@@ -5,8 +5,19 @@ use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::path::resolve_path_in;
+use schemars::JsonSchema;
+use serde::Deserialize;
+use serde::Serialize;
 use serde_json::Value;
 use std::time::Instant;
+
+/// Input parameters for list_dir tool (schema-derived).
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct ListDirInput {
+    /// Directory path to list (default: current directory)
+    #[serde(default)]
+    pub path: Option<String>,
+}
 
 pub struct ListDirTool;
 
@@ -26,6 +37,11 @@ impl ListDirTool {
         names.sort();
         names
     }
+
+    /// Generate JSON schema for this tool's input.
+    pub fn input_schema() -> Value {
+        runie_core::tool::generate_schema::<ListDirInput>()
+    }
 }
 
 #[async_trait]
@@ -43,11 +59,20 @@ impl Tool for ListDirTool {
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
-        let path = input["path"]
-            .as_str()
-            .ok_or_else(|| anyhow::anyhow!("path is required"))?;
-        let full_path = resolve_path_in(path, &ctx.working_dir);
-        let tool_args = serde_json::json!({ "path": path });
+
+        // Parse typed input, falling back to raw access for backward compat
+        let typed: Result<ListDirInput, _> = serde_json::from_value(input.clone());
+        let path_str = match typed {
+            Ok(inp) => inp.path.unwrap_or_else(|| ".".to_string()),
+            Err(_) => input["path"]
+                .as_str()
+                .map(String::from)
+                .unwrap_or_else(|| ".".to_string()),
+        };
+
+        let full_path = resolve_path_in(&path_str, &ctx.working_dir);
+        let tool_args = serde_json::json!({ "path": path_str });
+
         let dir = match tokio::fs::read_dir(&full_path).await {
             Ok(d) => d,
             Err(e) => {
@@ -75,5 +100,39 @@ impl Tool for ListDirTool {
             duration: start.elapsed(),
             status: ToolStatus::Success,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn input_deserializes_minimal() {
+        let json = serde_json::json!({});
+        let input: ListDirInput = serde_json::from_value(json).unwrap();
+        assert_eq!(input.path, None);
+    }
+
+    #[test]
+    fn input_deserializes_with_path() {
+        let json = serde_json::json!({ "path": "/tmp" });
+        let input: ListDirInput = serde_json::from_value(json).unwrap();
+        assert_eq!(input.path, Some("/tmp".into()));
+    }
+
+    #[test]
+    fn input_schema_generates() {
+        let schema = ListDirTool::input_schema();
+        assert!(schema.is_object());
+    }
+
+    #[tokio::test]
+    async fn tool_call_executes() {
+        let input = serde_json::json!({ "path": "." });
+        let ctx = ToolContext::default();
+        let tool = ListDirTool;
+        let result = tool.call(input, &ctx).await;
+        assert!(result.is_ok());
     }
 }
