@@ -4,7 +4,7 @@
     "status": "todo",
     "milestone": "?",
     "category": "?",
-    "priority": "?",
+    "priority": "P0",
     "depends_on": [
       "actor-owned-state-ssot",
       "event-taxonomy-for-actor-state-sync"
@@ -66,7 +66,7 @@
   },
   {
     "id": "config-ssot-via-configactor",
-    "status": "todo",
+    "status": "done",
     "milestone": "?",
     "category": "?",
     "priority": "?",
@@ -457,10 +457,10 @@
   },
   {
     "id": "reduce-actor-handle-boilerplate",
-    "status": "todo",
+    "status": "done",
     "milestone": "?",
     "category": "?",
-    "priority": "?",
+    "priority": "P2",
     "depends_on": [
       "generic-actor-reply"
     ],
@@ -511,7 +511,7 @@
     "status": "todo",
     "milestone": "?",
     "category": "?",
-    "priority": "?",
+    "priority": "P0",
     "depends_on": [
       "actor-owned-state-ssot",
       "config-ssot-via-configactor"
@@ -741,5 +741,242 @@
     "blocks": [],
     "file": "tasks/view-actor-owns-view-state.md",
     "title": ""
+  },
+  {
+    "id": "actor-owned-state-ssot",
+    "status": "done",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P0",
+    "depends_on": [],
+    "blocks": [
+      "app-state-read-only-projection",
+      "input-actor-owns-input-state",
+      "session-actor-owns-session-state",
+      "view-actor-owns-view-state",
+      "completion-actor-owns-completion-state",
+      "turn-actor-owns-agent-turn-state",
+      "permission-actor-owns-approvals",
+      "notification-actor-owns-transient-messages",
+      "trust-actor-owns-trust-decisions",
+      "env-actor-owns-git-cwd",
+      "fff-indexer-owns-file-picker-results",
+      "remove-login-config-test-shim",
+      "ui-control-actor-owns-dialog-state",
+      "consolidate-settings-providers-dialog",
+      "unified-dsl-intents-for-state-mutations"
+    ],
+    "file": "tasks/actor-owned-state-ssot.md",
+    "title": "Document actor ownership model for state slices"
+  },
+  {
+    "id": "event-taxonomy-for-actor-state-sync",
+    "status": "done",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P0",
+    "depends_on": [],
+    "blocks": [
+      "app-state-read-only-projection",
+      "input-actor-owns-input-state",
+      "session-actor-owns-session-state",
+      "view-actor-owns-view-state",
+      "completion-actor-owns-completion-state",
+      "turn-actor-owns-agent-turn-state",
+      "permission-actor-owns-approvals",
+      "notification-actor-owns-transient-messages",
+      "trust-actor-owns-trust-decisions",
+      "env-actor-owns-git-cwd",
+      "fff-indexer-owns-file-picker-results"
+    ],
+    "file": "tasks/event-taxonomy-for-actor-state-sync.md",
+    "title": "Document event taxonomy for state sync"
+  },
+  {
+    "id": "actor-lifecycle-and-handle-registry",
+    "status": "todo",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P1",
+    "depends_on": [
+      "actor-owned-state-ssot"
+    ],
+    "blocks": [
+      "test-actor-harness",
+      "env-actor-owns-git-cwd",
+      "fff-indexer-owns-file-picker-results",
+      "remove-direct-appstate-mutations"
+    ],
+    "file": "tasks/actor-lifecycle-and-handle-registry.md",
+    "title": "Document and implement actor lifecycle and handle registry"
+  },
+  {
+    "id": "fold-state-into-model-state",
+    "status": "todo",
+    "milestone": "R4",
+    "category": "Architecture / Refactoring",
+    "priority": "P2",
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "decouple-appstate-from-view-cache",
+      "split-runie-core-into-domain-and-io-crates"
+    ],
+    "file": "tasks/fold-state-into-model-state.md",
+    "title": "Move application state into model/state/ module"
+  },
+  {
+    "id": "rename-core-ui-to-view",
+    "status": "todo",
+    "milestone": "R4",
+    "category": "Architecture / Refactoring",
+    "priority": "P2",
+    "depends_on": [
+      "fold-state-into-model-state"
+    ],
+    "blocks": [
+      "generate-ui-elements-from-model",
+      "split-runie-core-into-domain-and-io-crates"
+    ],
+    "file": "tasks/rename-core-ui-to-view.md",
+    "title": "Rename core_ui module to view for consistency"
+  },
+  {
+    "id": "unify-provider-modules",
+    "status": "todo",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P1",
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "move-provider-catalog-to-provider-crate",
+      "consolidate-settings-providers-dialog"
+    ],
+    "file": "tasks/unify-provider-modules.md",
+    "title": "Consolidate scattered provider code into provider/ module"
+  },
+  {
+    "id": "consolidate-login-flow-handlers",
+    "status": "todo",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "consolidate-config-modules-into-dir"
+    ],
+    "file": "tasks/consolidate-login-flow-handlers.md",
+    "title": "Consolidate login/auth flow handlers"
+  },
+  {
+    "id": "delete-config-reload-shim",
+    "status": "todo",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
+    "depends_on": [
+      "config-ssot-via-configactor"
+    ],
+    "blocks": [
+      "consolidate-config-modules-into-dir"
+    ],
+    "file": "tasks/delete-config-reload-shim.md",
+    "title": "Remove config reload shim after ConfigActor SSOT"
+  },
+  {
+    "id": "consolidate-dual-path-modules",
+    "status": "todo",
+    "milestone": "R4",
+    "category": "Architecture / Refactoring",
+    "priority": "P2",
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "relocate-loose-tests-files"
+    ],
+    "file": "tasks/consolidate-dual-path-modules.md",
+    "title": "Consolidate modules that exist in both src/ and tests/"
+  },
+  {
+    "id": "drop-event-bus-replay-buffer",
+    "status": "todo",
+    "milestone": "R4",
+    "category": "Architecture / Refactoring",
+    "priority": "P3",
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "drop-small-stdlib-replaceable-deps"
+    ],
+    "file": "tasks/drop-event-bus-replay-buffer.md",
+    "title": "Remove event bus replay buffer"
+  },
+  {
+    "id": "generic-actor-reply",
+    "status": "done",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P2",
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "reduce-actor-handle-boilerplate"
+    ],
+    "file": "tasks/generic-actor-reply.md",
+    "title": "Standardize Reply type for actor request/response"
+  },
+  {
+    "id": "declarative-actor-dsl",
+    "status": "todo",
+    "milestone": "R5",
+    "category": "Architecture / Actors",
+    "priority": "P2",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "unified-dsl-intents-for-state-mutations"
+    ],
+    "file": "tasks/declarative-actor-dsl.md",
+    "title": "Define declarative DSL for actors"
+  },
+  {
+    "id": "unify-persistence-actors",
+    "status": "todo",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P2",
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "simplify-actor-trait"
+    ],
+    "file": "tasks/unify-persistence-actors.md",
+    "title": "Unify persistence actors under common pattern"
+  },
+  {
+    "id": "r5-populate-parts-streaming",
+    "status": "todo",
+    "milestone": "R5",
+    "category": "Core / State",
+    "priority": "P1",
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "r5-per-channel-decoders"
+    ],
+    "file": "tasks/r5-populate-parts-streaming.md",
+    "title": "Stream partial parts to UI as they arrive"
   }
 ]
