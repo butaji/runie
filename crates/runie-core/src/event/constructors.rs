@@ -1,7 +1,8 @@
 //! Convenience constructors for common `Event` variants.
 
-use crate::event::Event;
 use crate::model::ThinkingLevel;
+
+use super::Event;
 
 impl Event {
     pub fn input(c: char) -> Self {

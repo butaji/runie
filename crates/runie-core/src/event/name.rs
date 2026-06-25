@@ -1,6 +1,6 @@
 //! Canonical event name mapping for bindable variants.
 
-use crate::event::Event;
+use super::Event;
 use crate::event::EVENT_NAMES;
 
 impl Event {

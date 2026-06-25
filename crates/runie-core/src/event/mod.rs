@@ -27,9 +27,12 @@ pub use durable::DurableCoreEvent;
 pub use level::TransientLevel;
 
 pub mod aliases;
+pub mod constructors;
 pub mod durable;
 mod level;
+pub mod name;
 mod names;
+pub mod to_durable;
 mod variants;
 #[cfg(test)]
 mod variants_tests;

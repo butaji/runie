@@ -9,9 +9,7 @@ use strum::IntoStaticStr;
 use crate::model::ThinkingLevel;
 use crate::settings::SettingsCategory;
 
-mod constructors;
-mod name;
-mod to_durable;
+
 
 /// The top-level event type for the entire application.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, IntoStaticStr)]

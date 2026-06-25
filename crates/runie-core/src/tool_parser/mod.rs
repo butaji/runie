@@ -378,5 +378,4 @@ pub fn build_assistant_message(
 }
 
 #[cfg(test)]
-#[path = "tool_parser_tests.rs"]
 mod tests;

@@ -1,20 +1,19 @@
 //! Durable event conversion for JSONL persistence.
 
-use crate::event::DurableCoreEvent;
-use crate::event::Event;
-use crate::model;
+use super::Event;
 
 impl Event {
     /// Convert this event to a durable core event for JSONL persistence.
     /// Returns `None` for transient-only events (keystrokes, scroll, streaming deltas).
-    pub fn to_durable(&self) -> Option<DurableCoreEvent> {
+    pub fn to_durable(&self) -> Option<crate::event::DurableCoreEvent> {
+        use crate::event::DurableCoreEvent;
         match self {
             Event::ResponseDelta { .. } => None,
             Event::Response { id, content } => Some(DurableCoreEvent::MessageSent {
                 id: id.clone(),
                 role: "assistant".into(),
                 content: content.clone(),
-                timestamp: model::now(),
+                timestamp: crate::model::now(),
                 provider: String::new(),
             }),
             Event::ToolStart { id, name, input } => Some(DurableCoreEvent::ToolCalled {
