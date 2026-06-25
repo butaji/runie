@@ -125,7 +125,7 @@
     },
     {
       "id": "arch-review-2026-06",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P2",

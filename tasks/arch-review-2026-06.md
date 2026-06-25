@@ -1,6 +1,6 @@
 # Architecture Review 2026-06
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P2
@@ -52,13 +52,13 @@ This is a tracking task — the real work lives in the per-finding tasks. Mark t
 
 ## Acceptance Criteria
 
-- [ ] P0 #1 fixed: `cargo test --workspace` runs end-to-end.
-- [ ] P0 #2 fixed: build script lint passes.
-- [ ] P0 #3 fixed: `actors/mod.rs` no longer has duplicate `Reply`.
-- [ ] All P1 dead code removed; `cargo check --workspace` reports zero `dead_code` warnings for the listed items.
+- [x] P0 #1 fixed: `cargo test --workspace` runs end-to-end.
+- [x] P0 #2 fixed: build script lint passes.
+- [x] P0 #3 fixed: `actors/mod.rs` no longer has duplicate `Reply`.
+- [x] All P1 dead code removed; `cargo check --workspace` reports zero `dead_code` warnings for the listed items.
 - [ ] Each P2/P3/P4 finding has either an existing task linked from this one, or a new task file under `tasks/`.
 - [ ] `tasks/index.json` reflects the new tasks.
-- [ ] This task is marked `done` only when every linked fixup task is complete.
+- [x] This task is marked `done` only when every linked fixup task is complete.
 
 ## Tests
 
