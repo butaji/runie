@@ -21,8 +21,8 @@ pub fn type_str(state: &mut AppState, text: &str) {
 /// Set input buffer directly and submit — bypasses the command palette.
 /// Use for slash commands that need arguments.
 pub fn exec(state: &mut AppState, text: &str) {
-    state.input_mut().input = text.into();
-    state.input_mut().cursor_pos = text.len();
+    *state.input_mut().input_mut() = text.into();
+    *state.input_mut().cursor_pos_mut() = text.len();
     state.update(Event::Submit);
 }
 

@@ -9,8 +9,7 @@ use crate::session::tree::SessionTree;
 use super::CommandUsage;
 
 /// Session state — messages, tree, pending edits.
-/// Fields are public to allow test setup in dependent crates.
-/// Use `session_mut()` for production mutations.
+/// Fields are public for test setup; production code should use accessors.
 #[derive(Clone)]
 pub struct SessionState {
     pub messages: Vec<ChatMessage>,
@@ -37,6 +36,43 @@ impl Default for SessionState {
     }
 }
 
+impl SessionState {
+    /// Immutable access to messages.
+    pub fn messages(&self) -> &[ChatMessage] {
+        &self.messages
+    }
+
+    /// Mutable access to messages.
+    pub fn messages_mut(&mut self) -> &mut Vec<ChatMessage> {
+        &mut self.messages
+    }
+
+    /// Immutable access to session display name.
+    pub fn session_display_name(&self) -> Option<&str> {
+        self.session_display_name.as_deref()
+    }
+
+    /// Mutable access to session display name.
+    pub fn session_display_name_mut(&mut self) -> &mut Option<String> {
+        &mut self.session_display_name
+    }
+
+    /// Session creation timestamp.
+    pub fn session_created_at(&self) -> f64 {
+        self.session_created_at
+    }
+
+    /// Mutable access to session creation timestamp.
+    pub fn session_created_at_mut(&mut self) -> &mut f64 {
+        &mut self.session_created_at
+    }
+
+    /// Mutable access to session updated timestamp.
+    pub fn session_updated_at_mut(&mut self) -> &mut f64 {
+        &mut self.session_updated_at
+    }
+}
+
 /// Why the active provider/model is what it is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModelSource {
@@ -47,8 +83,7 @@ pub enum ModelSource {
 }
 
 /// Configuration state — provider, model, theme, keybindings.
-/// Fields are public to allow test setup in dependent crates.
-/// Use `config_mut()` for production mutations.
+/// Fields are public for test setup; production code should use accessors.
 #[derive(Clone)]
 pub struct ConfigState {
     pub current_provider: String,
@@ -112,8 +147,85 @@ impl Default for ConfigState {
     }
 }
 
+impl ConfigState {
+    /// Immutable access to keybindings.
+    pub fn keybindings(&self) -> &std::collections::HashMap<String, String> {
+        &self.keybindings
+    }
+
+    /// Mutable access to keybindings.
+    pub fn keybindings_mut(&mut self) -> &mut std::collections::HashMap<String, String> {
+        &mut self.keybindings
+    }
+
+    /// Current provider name.
+    pub fn current_provider(&self) -> &str {
+        &self.current_provider
+    }
+
+    /// Mutable access to current provider.
+    pub fn current_provider_mut(&mut self) -> &mut String {
+        &mut self.current_provider
+    }
+
+    /// Current model name.
+    pub fn current_model(&self) -> &str {
+        &self.current_model
+    }
+
+    /// Mutable access to current model.
+    pub fn current_model_mut(&mut self) -> &mut String {
+        &mut self.current_model
+    }
+
+    /// Whether read-only mode is active.
+    pub fn read_only(&self) -> bool {
+        self.read_only
+    }
+
+    /// Mutable access to read_only flag.
+    pub fn read_only_mut(&mut self) -> &mut bool {
+        &mut self.read_only
+    }
+
+    /// Current model source (why this provider/model is active).
+    pub fn model_source(&self) -> ModelSource {
+        self.model_source
+    }
+
+    /// Mutable access to model source.
+    pub fn model_source_mut(&mut self) -> &mut ModelSource {
+        &mut self.model_source
+    }
+
+    /// Vim mode enabled.
+    pub fn vim_mode(&self) -> bool {
+        self.vim_mode
+    }
+
+    /// Mutable access to vim_mode.
+    pub fn vim_mode_mut(&mut self) -> &mut bool {
+        &mut self.vim_mode
+    }
+
+    /// Mutable access to scoped_models.
+    pub fn scoped_models_mut(&mut self) -> &mut Vec<ScopedModel> {
+        &mut self.scoped_models
+    }
+
+    /// Mutable access to thinking_level.
+    pub fn thinking_level_mut(&mut self) -> &mut ThinkingLevel {
+        &mut self.thinking_level
+    }
+
+    /// Mutable access to truncation.
+    pub fn truncation_mut(&mut self) -> &mut crate::config::TruncationSection {
+        &mut self.truncation
+    }
+}
+
 /// Completion/suggestion state — path and @ mentions.
-/// Fields are public to allow test setup in dependent crates.
+/// Fields are public for test setup.
 #[derive(Clone, Default)]
 pub struct CompletionState {
     pub path_suggestions: Option<Vec<PathCompletion>>,
@@ -121,4 +233,11 @@ pub struct CompletionState {
     pub at_suggestions: Option<Vec<String>>,
     pub at_selected: Option<usize>,
     pub last_at_query: Option<String>,
+}
+
+impl CompletionState {
+    /// Mutable access to path_suggestions.
+    pub fn path_suggestions_mut(&mut self) -> &mut Option<Vec<PathCompletion>> {
+        &mut self.path_suggestions
+    }
 }

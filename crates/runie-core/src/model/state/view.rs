@@ -5,8 +5,7 @@ use crate::model::ModelSelectorItem;
 use crate::view::elements::Element;
 
 /// View/cache state — scroll, elements, animation.
-/// Fields are public to allow test setup in dependent crates.
-/// Use `view_mut()` for production mutations.
+/// Fields are public for test setup; production code should use accessors.
 #[derive(Clone)]
 pub struct ViewState {
     pub scroll: usize,
@@ -78,6 +77,27 @@ impl ViewState {
 
     pub fn element_count(&self) -> usize {
         self.element_count
+    }
+
+    // Mutable accessors for tests
+    pub fn scroll_mut(&mut self) -> &mut usize {
+        &mut self.scroll
+    }
+
+    pub fn dirty_mut(&mut self) -> &mut bool {
+        &mut self.dirty
+    }
+
+    pub fn all_collapsed_mut(&mut self) -> &mut bool {
+        &mut self.all_collapsed
+    }
+
+    pub fn last_visible_height_mut(&mut self) -> &mut u16 {
+        &mut self.last_visible_height
+    }
+
+    pub fn vim_nav_mode_mut(&mut self) -> &mut bool {
+        &mut self.vim_nav_mode
     }
 }
 

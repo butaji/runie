@@ -40,13 +40,13 @@ pub enum EffectPayload {
 fn extract(event: &CoreEvent, state: &mut AppState) -> Option<EffectPayload> {
     match event {
         CoreEvent::OpenExternalEditor => Some(EffectPayload::OpenExternalEditor {
-            text: state.input().input.clone(),
+            text: state.input().input().to_string(),
         }),
         CoreEvent::CopyToClipboard(text) => {
             Some(EffectPayload::CopyToClipboard { text: text.clone() })
         }
         CoreEvent::CopyLastResponse => {
-            let text = last_assistant_text(&state.session().messages);
+            let text = last_assistant_text(state.session().messages());
             if text.is_empty() {
                 return None;
             }
@@ -59,8 +59,8 @@ fn extract(event: &CoreEvent, state: &mut AppState) -> Option<EffectPayload> {
             .copy_selected_post_metadata()
             .map(|text| EffectPayload::CopyToClipboard { text }),
         CoreEvent::ShareSession => Some(EffectPayload::ShareSession {
-            messages: state.session().messages.clone(),
-            display_name: state.session().session_display_name.clone(),
+            messages: state.session().messages().to_vec(),
+            display_name: state.session().session_display_name().map(String::from),
         }),
         CoreEvent::Suspend => Some(EffectPayload::Suspend),
         CoreEvent::SubmitKey { provider, key } => Some(EffectPayload::LoginValidateKey {

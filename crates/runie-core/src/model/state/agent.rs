@@ -96,8 +96,7 @@ impl SpeedWindow {
 }
 
 /// Agent turn state — queues, tokens, streaming.
-/// Fields are public to allow test setup in dependent crates.
-/// Use `agent_state_mut()` for production mutations.
+/// Fields are public for test setup; production code should use accessors.
 #[derive(Clone, Default)]
 pub struct AgentState {
     pub request_queue: VecDeque<(String, String)>,
@@ -141,4 +140,27 @@ pub struct AgentState {
     pub thinking_started_at: Option<std::time::Instant>,
     /// Buffer for streaming response deltas (stable content + mutable tail).
     pub streaming_buffer: StreamingBuffer,
+}
+
+impl AgentState {
+    // Mutable accessors for tests
+    pub fn streaming_mut(&mut self) -> &mut bool {
+        &mut self.streaming
+    }
+
+    pub fn turn_active_mut(&mut self) -> &mut bool {
+        &mut self.turn_active
+    }
+
+    pub fn turn_started_at_mut(&mut self) -> &mut Option<std::time::Instant> {
+        &mut self.turn_started_at
+    }
+
+    pub fn current_request_id_mut(&mut self) -> &mut Option<String> {
+        &mut self.current_request_id
+    }
+
+    pub fn thinking_started_at_mut(&mut self) -> &mut Option<std::time::Instant> {
+        &mut self.thinking_started_at
+    }
 }

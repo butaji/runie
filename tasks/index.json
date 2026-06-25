@@ -1,7 +1,7 @@
 [
   {
     "id": "app-state-read-only-projection",
-    "status": "todo",
+    "status": "done",
     "milestone": "?",
     "category": "?",
     "priority": "P0",

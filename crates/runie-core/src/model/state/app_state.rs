@@ -1,8 +1,8 @@
 //! `AppState` — the read-only UI projection of actor-owned state.
 //!
-//! Fields are public to allow test setup in dependent crates.
+//! Fields are crate-visible to allow test setup within runie-core.
 //! Production code should use the accessors in `accessors.rs` for reads and
-//! mutable accessors for internal mutations.
+//! mutable accessors for mutations.
 //!
 //! The `take()` method supports `reset_session()` without requiring a full
 //! struct reassignment.
@@ -13,8 +13,9 @@ use super::{
 
 /// Application state — a read-only UI projection of actor-owned state.
 ///
-/// Fields are public to allow test setup in dependent crates.
-/// Production code should use the accessors in `accessors.rs`.
+/// Fields are public for test setup; production code should use accessors.
+/// Inner state structs (`session`, `input`, etc.) have private fields that
+/// require accessors to be added incrementally.
 #[derive(Clone)]
 pub struct AppState {
     // 6 inner state structs (factored domain state)

@@ -129,7 +129,7 @@ impl UiActor {
         let was_trust_loaded = matches!(&evt, Event::TrustLoaded { .. });
 
         let submitted_text = if was_submit {
-            Some(self.state.input().input.clone())
+            Some(self.state.input().input().to_string())
         } else {
             None
         };
@@ -144,7 +144,7 @@ impl UiActor {
             return true;
         }
         if was_config_loaded {
-            let _ = self.kb_tx.send(self.state.config().keybindings.clone());
+            let _ = self.kb_tx.send(self.state.config().keybindings().clone());
         }
         if was_trust_loaded {
             let cwd = std::env::current_dir().unwrap_or_default();

@@ -136,7 +136,7 @@ fn spawn_background_tasks(
 ) {
     let handles = setup_actor_channels(&handles, &mut state, &bus);
     let (render_tx, render_rx) = watch::channel(state.snapshot());
-    let (kb_tx, kb_rx) = watch::channel(state.config().keybindings.clone());
+    let (kb_tx, kb_rx) = watch::channel(state.config().keybindings().clone());
     spawn_input_forwarder(handles.input_rx, bus.clone());
     spawn_agent_tasks(handles.input_tx, kb_rx, terminal, render_rx, bus.clone(), caps);
     spawn_ui_actor(state, render_tx, handles.agent_handle, handles.persistence_handle, kb_tx, bus.clone(), shutdown_tx, caps);

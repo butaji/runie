@@ -6,8 +6,7 @@ pub struct CommandUsage {
 }
 
 /// Input state — text, cursor, history.
-/// Fields are public to allow test setup in dependent crates.
-/// Use `input_mut()` for production mutations.
+/// Fields are public for test setup; production code should use accessors.
 #[derive(Clone)]
 pub struct InputState {
     pub input: String,
@@ -56,5 +55,27 @@ impl Default for InputState {
             file_picker_backup: None,
             file_picker_range_suffix: None,
         }
+    }
+}
+
+impl InputState {
+    /// Immutable access to the input text.
+    pub fn input(&self) -> &str {
+        &self.input
+    }
+
+    /// Mutable access to the input text.
+    pub fn input_mut(&mut self) -> &mut String {
+        &mut self.input
+    }
+
+    /// Immutable access to cursor position.
+    pub fn cursor_pos(&self) -> usize {
+        self.cursor_pos
+    }
+
+    /// Mutable access to cursor position.
+    pub fn cursor_pos_mut(&mut self) -> &mut usize {
+        &mut self.cursor_pos
     }
 }
