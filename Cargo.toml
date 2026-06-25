@@ -27,6 +27,7 @@ unicode-width = "0.2"
 textwrap = { version = "0.16", features = ["unicode-linebreak"] }
 nucleo-matcher = "0.3"
 similar = "3"
+diffy = "0.5"
 tracing = "0.1"
 
 insta = { version = "1.41", features = ["yaml"] }

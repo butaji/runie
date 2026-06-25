@@ -125,55 +125,52 @@ impl Diff {
         first_line.starts_with("--- ") || first_line.starts_with("diff ")
     }
 
-    /// Parse unified diff format — tries patch crate first, falls back to legacy parser.
+    /// Parse unified diff format — tries diffy first, falls back to legacy parser.
     pub fn parse(text: &str) -> Diff {
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            patch::Patch::from_single(text)
-        }));
-        if let Ok(Ok(p)) = result {
-            return patch_to_canonical(p);
+        // Extract paths before parsing (diffy doesn't expose them).
+        let mut old_path = String::new();
+        let mut new_path = String::new();
+        for line in text.lines() {
+            if line.starts_with("--- ") && line.len() > 4 {
+                old_path = line[4..].to_string();
+            } else if line.starts_with("+++ ") && line.len() > 4 {
+                new_path = line[4..].to_string();
+            }
+            if !old_path.is_empty() && !new_path.is_empty() {
+                break;
+            }
         }
-        legacy_parse_diff(text)
+        let result = diffy::Patch::from_str(text);
+        match result {
+            Ok(p) => {
+                let mut diff = diffy_to_canonical(&p);
+                diff.old_path = old_path;
+                diff.new_path = new_path;
+                diff
+            }
+            Err(_) => legacy_parse_diff(text),
+        }
     }
 }
 
-fn patch_to_canonical(p: patch::Patch) -> Diff {
-    let hunks = p.hunks.iter().map(patch_hunk_to_diff_hunk).collect();
-    Diff {
-        old_path: p.old.path.to_string(),
-        new_path: p.new.path.to_string(),
-        hunks,
-    }
+fn diffy_to_canonical(p: &diffy::Patch<str>) -> Diff {
+    let hunks = p.hunks().iter().map(|h| {
+        let old_r = h.old_range();
+        let new_r = h.new_range();
+        let mut lines = Vec::new();
+        let mut ol = old_r.start() as u32;
+        let mut nl = new_r.start() as u32;
+        for l in h.lines() {
+            match l {
+                diffy::Line::Delete(s) => { let n = ol; ol += 1; lines.push(DiffLine::Removed((*s).to_string(), Some(n))); }
+                diffy::Line::Insert(s) => { let n = nl; nl += 1; lines.push(DiffLine::Added((*s).to_string(), Some(n))); }
+                diffy::Line::Context(s) => { ol += 1; nl += 1; lines.push(DiffLine::Context((*s).to_string())); }
+            }
+        }
+        DiffHunk { header: format!("@@ -{},{} +{},{} @@", old_r.start(), old_r.len(), new_r.start(), new_r.len()), lines }
+    }).collect();
+    Diff { old_path: "a".into(), new_path: "b".into(), hunks }
 }
-
-fn patch_hunk_to_diff_hunk(h: &patch::Hunk) -> DiffHunk {
-    let mut old_line = h.old_range.start as u32;
-    let mut new_line = h.new_range.start as u32;
-    let lines: Vec<DiffLine> = h
-        .lines
-        .iter()
-        .map(|l| match l {
-            patch::Line::Add(s) => {
-                let n = new_line;
-                new_line += 1;
-                DiffLine::Added(s.to_string(), Some(n))
-            }
-            patch::Line::Remove(s) => {
-                let n = old_line;
-                old_line += 1;
-                DiffLine::Removed(s.to_string(), Some(n))
-            }
-            patch::Line::Context(s) => {
-                old_line += 1;
-                new_line += 1;
-                DiffLine::Context(s.to_string())
-            }
-        })
-        .collect();
-    let header = h.hint().map(|h| h.to_owned()).unwrap_or_default();
-    DiffHunk { header, lines }
-}
-
 /// ── Legacy parser for imperfect agent output strings ─────────────────────────
 fn legacy_parse_diff(text: &str) -> Diff {
     let mut state = LegacyParseState::default();
