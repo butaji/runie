@@ -768,5 +768,57 @@
     "priority": "P1",
     "title": "Unify approval decision enums",
     "file": "tasks/unify-approval-decision.md"
+  },
+  {
+    "status": "todo",
+    "depends_on": [],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Provider",
+    "priority": "P0",
+    "title": "Unify provider stack with `rig-core`",
+    "file": "unify-provider-stack-with-rig-core.md"
+  },
+  {
+    "status": "todo",
+    "depends_on": [],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Tools",
+    "priority": "P0",
+    "title": "Adopt MCP and native tool calling",
+    "file": "adopt-mcp-native-tool-calling.md"
+  },
+  {
+    "status": "todo",
+    "depends_on": [
+      "actor-owned-state-ssot"
+    ],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P1",
+    "title": "Replace custom actor runtime with `ractor`",
+    "file": "replace-actor-runtime-with-ractor.md"
+  },
+  {
+    "status": "todo",
+    "depends_on": [],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
+    "title": "Externalize provider/model metadata as YAML",
+    "file": "externalize-model-metadata-as-yaml.md"
+  },
+  {
+    "status": "todo",
+    "depends_on": [],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Core / State",
+    "priority": "P2",
+    "title": "Frontmatter-based skills and command DSL",
+    "file": "frontmatter-based-skills-dsl.md"
   }
 ]
