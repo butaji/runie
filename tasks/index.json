@@ -158,7 +158,7 @@
     },
     {
       "id": "canonicalize-chat-message",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P0",
@@ -169,7 +169,7 @@
     },
     {
       "id": "canonicalize-tool-call",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P0",
