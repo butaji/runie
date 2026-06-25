@@ -57,6 +57,7 @@ pub mod builders;
 pub mod dsl;
 mod item;
 mod panel;
+mod panel_split;
 pub(crate) mod score;
 mod stack;
 
