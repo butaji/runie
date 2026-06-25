@@ -1,6 +1,6 @@
 # Replace custom markdown renderer with `tui-markdown`
 
-**Status**: done
+**Status**: todo
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P1
