@@ -81,7 +81,7 @@ pub fn key_event_to_combo(key: &KeyEvent) -> String {
     }
     let key_name = match key.code {
         KeyCode::Char('\t') => "tab".to_string(),
-        KeyCode::Char(c) => c.to_lowercase().to_string(),
+        KeyCode::Char(c) => c.to_lowercase().collect(),
         KeyCode::Enter => "enter".to_string(),
         KeyCode::Esc => "escape".to_string(),
         KeyCode::Backspace => "backspace".to_string(),

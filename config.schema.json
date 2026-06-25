@@ -143,6 +143,12 @@
         "base_url": {
           "type": "string"
         },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "type": {
           "type": [
             "string",

@@ -535,7 +535,7 @@
     },
     {
       "id": "reconsider-schemars-jsonschema",
-      "status": "todo",
+      "status": "done",
       "milestone": "?",
       "category": "?",
       "priority": "?",

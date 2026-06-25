@@ -1,4 +1,6 @@
 //! Generate `config.schema.json` from the canonical `Config` type.
+//!
+//! Run with: cargo run --example write_config_schema --features schema
 
 use std::path::PathBuf;
 

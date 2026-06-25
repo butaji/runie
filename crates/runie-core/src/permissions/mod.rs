@@ -57,9 +57,7 @@ impl From<PermissionResult> for PermissionAction {
 }
 
 /// Global permission mode.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PermissionMode {
     /// Use the policy chain.

@@ -7,7 +7,12 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "schema")]
+use schemars::JsonSchema;
+
 mod layers;
+mod validate;
+#[cfg(feature = "schema")]
 pub mod schema;
 
 // ============================================================================
@@ -15,9 +20,8 @@ pub mod schema;
 // ============================================================================
 
 /// Models configuration section.
-#[derive(
-    Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
-)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct ModelsSection {
     /// The default model to use when no model is specified.
     pub default: Option<String>,
@@ -31,7 +35,8 @@ pub struct ModelsSection {
 // ============================================================================
 
 /// A provider's configuration entry.
-#[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct ModelProvider {
     #[serde(rename = "type")]
     pub provider_type: Option<String>,
@@ -46,8 +51,9 @@ pub struct ModelProvider {
 // ============================================================================
 
 /// UI configuration section.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct UiSection {
     pub vim_mode: bool,
 }
@@ -63,8 +69,9 @@ impl Default for UiSection {
 // ============================================================================
 
 /// Telemetry configuration section.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct TelemetrySection {
     pub enabled: bool,
 }
@@ -80,10 +87,9 @@ impl Default for TelemetrySection {
 // ============================================================================
 
 /// Prompts configuration section.
-#[derive(
-    Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
-)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct PromptsSection {
     pub default: Option<String>,
     pub custom: Option<String>,
@@ -94,8 +100,9 @@ pub struct PromptsSection {
 // ============================================================================
 
 /// Truncation limits for tool output.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct TruncationSection {
     pub max_lines: usize,
     pub max_bytes: usize,
@@ -115,10 +122,9 @@ impl Default for TruncationSection {
 // ============================================================================
 
 /// Hook configuration.
-#[derive(
-    Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
-)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct HooksConfig {
     /// Map of hook event name to list of shell commands to run.
     pub commands: HashMap<String, Vec<String>>,
@@ -133,9 +139,8 @@ pub struct HooksConfig {
 // ============================================================================
 
 /// Canonical config type for `~/.runie/config.toml`.
-#[derive(
-    Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
-)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Config {
     /// Default provider name.
     pub provider: Option<String>,
@@ -245,13 +250,7 @@ impl Config {
     }
 
     fn validate_value(value: &serde_json::Value) -> Result<(), Vec<String>> {
-        let schema = schema::schema_value();
-        let validator =
-            jsonschema::validator_for(&schema).map_err(|e| vec![format!("invalid schema: {e}")])?;
-        let errors: Vec<String> = validator
-            .iter_errors(value)
-            .map(|e| e.to_string())
-            .collect();
+        let errors = validate::validate(value);
         if errors.is_empty() {
             Ok(())
         } else {
