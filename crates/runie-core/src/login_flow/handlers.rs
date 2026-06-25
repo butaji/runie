@@ -44,7 +44,7 @@ fn login_flow_select_provider(state: &mut crate::model::AppState, provider: Stri
     if let Some(flow) = state.login_flow_mut() {
         *flow = LoginFlowState {
             step: LoginStep::KeyInput,
-            provider: provider,
+            provider,
             key: current_key,
             available_models: std::mem::take(&mut flow.available_models),
             selected_models: std::mem::take(&mut flow.selected_models),

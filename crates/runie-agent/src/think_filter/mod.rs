@@ -139,13 +139,12 @@ impl ThinkFilter {
     fn consume_outside(&mut self, text: &str, pos: usize, out: &mut Vec<ProviderEvent>) -> usize {
         let remaining = &text[pos..];
         // Check for partial opening tag at start.
-        if starts_with_opening_tag(remaining).is_none() {
-            if starts_partial_opening_tag(remaining).is_some() {
+        if starts_with_opening_tag(remaining).is_none()
+            && starts_partial_opening_tag(remaining).is_some() {
                 self.buffer = remaining.to_owned();
                 self.state = ThinkState::WaitingPartialOpen;
                 return text.len();
             }
-        }
         let next_open = find_next_opening_tag(remaining);
         match next_open {
             None => {

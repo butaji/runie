@@ -220,7 +220,7 @@ fn process_tool_call_delta(delta: ToolCallDelta, state: &mut OpenAiState) -> Vec
     let args = std::mem::take(&mut acc.arguments);
     let mut events = vec![ProviderEvent::ToolCallStart {
         id: id.clone(),
-        name: name,
+        name,
     }];
     if !args.is_empty() {
         events.push(ProviderEvent::ToolCallInputDelta { id, delta: args });
