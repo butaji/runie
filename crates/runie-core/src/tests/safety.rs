@@ -1,25 +1,25 @@
 //! Safety command tests — read-only mode and trust system
 use super::slash::exec;
-use crate::event::{DialogEvent, InputEvent, ModelConfigEvent};
+use crate::Event;
 use crate::model::AppState;
 use crate::tests::fresh_state;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
-    state.update(InputEvent::Input('/'));
+    state.update(crate::Event::Input('/'));
     for c in cmd.chars() {
-        state.update(DialogEvent::PaletteFilter(c));
+        state.update(crate::Event::PaletteFilter(c));
     }
-    state.update(DialogEvent::PaletteSelect);
+    state.update(crate::Event::PaletteSelect);
 }
 
 #[test]
 fn toggle_flips_read_only() {
     let mut state = fresh_state();
     assert!(!state.config.read_only, "default is read-write");
-    state.update(ModelConfigEvent::ToggleReadOnly);
+    state.update(crate::Event::ToggleReadOnly);
     assert!(state.config.read_only, "toggled to read-only");
-    state.update(ModelConfigEvent::ToggleReadOnly);
+    state.update(crate::Event::ToggleReadOnly);
     assert!(!state.config.read_only, "toggled back to read-write");
 }
 

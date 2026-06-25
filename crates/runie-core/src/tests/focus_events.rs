@@ -1,6 +1,6 @@
 //! Tests for focus event handling in the AppState.
 
-use crate::event::InputEvent;
+use crate::Event;
 
 use crate::AppState;
 
@@ -8,7 +8,7 @@ use crate::AppState;
 #[test]
 fn focus_gained_event_handled() {
     let mut state = AppState::default();
-    state.update(InputEvent::FocusGained);
+    state.update(crate::Event::FocusGained);
     // State should be valid
     assert!(state.open_dialog.is_none() || state.open_dialog.is_some());
 }
@@ -17,7 +17,7 @@ fn focus_gained_event_handled() {
 #[test]
 fn focus_lost_event_handled() {
     let mut state = AppState::default();
-    state.update(InputEvent::FocusLost);
+    state.update(crate::Event::FocusLost);
     // State should be valid
     assert!(state.open_dialog.is_none() || state.open_dialog.is_some());
 }
@@ -26,9 +26,9 @@ fn focus_lost_event_handled() {
 #[test]
 fn focus_events_sequence() {
     let mut state = AppState::default();
-    state.update(InputEvent::FocusGained);
-    state.update(InputEvent::FocusLost);
-    state.update(InputEvent::FocusGained);
+    state.update(crate::Event::FocusGained);
+    state.update(crate::Event::FocusLost);
+    state.update(crate::Event::FocusGained);
     // State should be valid
     assert!(state.open_dialog.is_none() || state.open_dialog.is_some());
 }
@@ -37,15 +37,15 @@ fn focus_events_sequence() {
 #[test]
 fn focus_events_dont_affect_input() {
     let mut state = AppState::default();
-    state.update(InputEvent::Input('h'));
-    state.update(InputEvent::Input('e'));
-    state.update(InputEvent::Input('l'));
-    state.update(InputEvent::Input('l'));
-    state.update(InputEvent::Input('o'));
+    state.update(crate::Event::Input('h'));
+    state.update(crate::Event::Input('e'));
+    state.update(crate::Event::Input('l'));
+    state.update(crate::Event::Input('l'));
+    state.update(crate::Event::Input('o'));
     assert_eq!(state.input.input, "hello");
 
-    state.update(InputEvent::FocusLost);
-    state.update(InputEvent::FocusGained);
+    state.update(crate::Event::FocusLost);
+    state.update(crate::Event::FocusGained);
 
     // Input should be unchanged
     assert_eq!(state.input.input, "hello");

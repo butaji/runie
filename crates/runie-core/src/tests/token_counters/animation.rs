@@ -1,6 +1,6 @@
 //! Layer 1 + Layer 2 tests for token counters and animated speed
 
-use crate::event::AgentEvent;
+use crate::Event;
 use crate::tests::fresh_state;
 
 // =============================================================================
@@ -176,7 +176,7 @@ fn turn_start_records_in_speed_window() {
     // Default state has empty window
     assert!(state.agent.speed_window.is_empty());
 
-    state.update(AgentEvent::Thinking {
+    state.update(crate::Event::Thinking {
         id: "r1".to_string(),
     });
 
@@ -188,7 +188,7 @@ fn turn_start_records_in_speed_window() {
 #[test]
 fn speed_window_rolls_to_1k_tokens_across_turns() {
     let mut state = fresh_state();
-    state.update(AgentEvent::Thinking {
+    state.update(crate::Event::Thinking {
         id: "r1".to_string(),
     });
     let initial_len = state.agent.speed_window.len();
@@ -199,12 +199,12 @@ fn speed_window_rolls_to_1k_tokens_across_turns() {
     let after_streaming = state.agent.speed_window.len();
     assert!(after_streaming > initial_len);
     state.agent.current_request_id = Some("r1".to_string());
-    state.update(AgentEvent::Done {
+    state.update(crate::Event::Done {
         id: "r1".to_string(),
     });
     assert!(!state.agent.speed_window.is_empty());
     let after_turn1 = state.agent.speed_window.len();
-    state.update(AgentEvent::Thinking {
+    state.update(crate::Event::Thinking {
         id: "r2".to_string(),
     });
     let after_turn2_start = state.agent.speed_window.len();

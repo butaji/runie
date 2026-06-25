@@ -1,8 +1,7 @@
 //! Layer 1 + Layer 2 tests for token counters and animated speed
 
-use crate::event::Event;
 
-use crate::event::AgentEvent;
+use crate::Event;
 use crate::tests::fresh_state;
 
 // =============================================================================
@@ -34,7 +33,7 @@ fn submit_increments_tokens_in() {
 fn agent_response_increments_tokens_out() {
     let mut state = fresh_state();
     state.agent.turn_active = true;
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "r1".to_string(),
         content: "hello".to_string(),
     });
@@ -49,11 +48,11 @@ fn agent_response_increments_tokens_out() {
 fn multiple_responses_accumulate_tokens_out() {
     let mut state = fresh_state();
     state.agent.turn_active = true;
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "r1".to_string(),
         content: "hello".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "r1".to_string(),
         content: " world".to_string(),
     });
@@ -68,13 +67,13 @@ fn finish_turn_resets_turn_tokens() {
     let mut state = fresh_state();
     state.agent.turn_active = true;
     state.agent.current_request_id = Some("r1".to_string());
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "r1".to_string(),
         content: "hello world".to_string(),
     });
     assert_eq!(state.agent.turn_tokens_out, 3);
 
-    state.update(AgentEvent::Done {
+    state.update(crate::Event::Done {
         id: "r1".to_string(),
     });
     assert_eq!(
@@ -182,7 +181,7 @@ fn speed_clamps_to_zero_after_long_idle() {
 #[test]
 fn turn_start_initializes_speed_tracking() {
     let mut state = fresh_state();
-    state.update(AgentEvent::Thinking {
+    state.update(crate::Event::Thinking {
         id: "r1".to_string(),
     });
     assert!(
@@ -202,7 +201,7 @@ fn new_turn_resets_speed() {
 
     // Finish turn
     state.agent.current_request_id = Some("r1".to_string());
-    state.update(AgentEvent::Done {
+    state.update(crate::Event::Done {
         id: "r1".to_string(),
     });
 

@@ -1,7 +1,6 @@
 //! Dialog routing, command-result processing, and back-stack helpers.
 
 use crate::commands::{CommandResult, DialogState, DialogType};
-use crate::event::ControlEvent;
 use crate::model::AppState;
 use crate::Event;
 
@@ -24,7 +23,7 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
         state.open_dialog = Some(dialog);
         return;
     }
-    let is_dialog_back = matches!(&event, crate::event::DialogEvent::DialogBack);
+    let is_dialog_back = matches!(&event, Event::DialogBack);
     let is_palette_activation = is_palette_activation(&dialog, &event);
     if is_palette_activation {
         state.push_dialog_to_back_stack(dialog.clone());
@@ -43,7 +42,7 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
 }
 
 fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
-    if matches!(event, ControlEvent::Abort) {
+    if matches!(event, crate::Event::Abort) {
         if let Some((input, _, _, _)) = state.input.file_picker_backup.take() {
             state.input.input = input;
             state.input.cursor_pos = state.input.input.len();
@@ -54,7 +53,7 @@ fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
         state.view.dirty = true;
         return true;
     }
-    if matches!(event, ControlEvent::Quit) {
+    if matches!(event, crate::Event::Quit) {
         state.should_quit = true;
         return true;
     }
@@ -62,8 +61,7 @@ fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
 }
 
 fn is_palette_activation(dialog: &DialogState, event: &Event) -> bool {
-    use crate::event::{DialogEvent, InputEvent};
-    matches!(event, InputEvent::Submit | DialogEvent::PaletteSelect)
+    matches!(event, crate::Event::Submit | crate::Event::PaletteSelect)
         && matches!(dialog, DialogState::CommandPalette(_))
 }
 

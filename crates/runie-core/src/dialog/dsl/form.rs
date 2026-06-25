@@ -85,11 +85,10 @@ mod tests {
     use super::{form, get_field};
     use crate::dialog::dsl::panel;
     use crate::dialog::ItemAction;
-    use crate::event::CommandEvent;
     use crate::Event;
 
     fn save_submit(values: &std::collections::HashMap<String, String>) -> Event {
-        CommandEvent::RunSaveCommand {
+        crate::Event::RunSaveCommand {
             name: get_field(values, "name"),
         }
     }

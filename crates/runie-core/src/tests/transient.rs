@@ -1,6 +1,6 @@
 //! Transient message tests (Layer 1: state logic)
 
-use crate::event::SystemEvent;
+use crate::Event;
 
 use crate::model::Role;
 use crate::tests::fresh_state;
@@ -8,7 +8,7 @@ use crate::tests::fresh_state;
 #[test]
 fn transient_message_sets_content_and_expiry() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientMessage {
+    state.update(crate::Event::TransientMessage {
         content: "hello".to_string(),
         level: crate::event::TransientLevel::Info,
     });
@@ -22,7 +22,7 @@ fn transient_message_sets_content_and_expiry() {
 #[test]
 fn transient_error_sets_content_without_expiry() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientError {
+    state.update(crate::Event::TransientError {
         content: "err".to_string(),
     });
     assert_eq!(state.transient_message, Some("err".to_string()));
@@ -35,10 +35,10 @@ fn transient_error_sets_content_without_expiry() {
 #[test]
 fn clear_transient_unsets_message() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientError {
+    state.update(crate::Event::TransientError {
         content: "err".to_string(),
     });
-    state.update(SystemEvent::ClearTransient);
+    state.update(crate::Event::ClearTransient);
     assert!(state.transient_message.is_none());
     assert!(state.transient_until.is_none());
 }
@@ -46,11 +46,11 @@ fn clear_transient_unsets_message() {
 #[test]
 fn transient_message_overwrites_existing() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientMessage {
+    state.update(crate::Event::TransientMessage {
         content: "first".to_string(),
         level: crate::event::TransientLevel::Info,
     });
-    state.update(SystemEvent::TransientMessage {
+    state.update(crate::Event::TransientMessage {
         content: "second".to_string(),
         level: crate::event::TransientLevel::Info,
     });
@@ -60,7 +60,7 @@ fn transient_message_overwrites_existing() {
 #[test]
 fn transient_message_in_snapshot() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientMessage {
+    state.update(crate::Event::TransientMessage {
         content: "snap".to_string(),
         level: crate::event::TransientLevel::Info,
     });
@@ -76,7 +76,7 @@ fn transient_message_in_snapshot() {
 #[test]
 fn transient_success_has_expiry() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientMessage {
+    state.update(crate::Event::TransientMessage {
         content: "ok".to_string(),
         level: crate::event::TransientLevel::Success,
     });
@@ -89,7 +89,7 @@ fn transient_success_has_expiry() {
 #[test]
 fn transient_error_has_no_expiry() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientError {
+    state.update(crate::Event::TransientError {
         content: "error".to_string(),
     });
     assert!(
@@ -101,7 +101,7 @@ fn transient_error_has_no_expiry() {
 #[test]
 fn transient_system_message_has_expiry() {
     let mut state = fresh_state();
-    state.update(SystemEvent::SystemMessage {
+    state.update(crate::Event::SystemMessage {
         content: "info".to_string(),
     });
     assert!(
@@ -113,7 +113,7 @@ fn transient_system_message_has_expiry() {
 #[test]
 fn transient_message_does_not_add_to_feed() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientMessage {
+    state.update(crate::Event::TransientMessage {
         content: "notify".to_string(),
         level: crate::event::TransientLevel::Info,
     });
@@ -129,7 +129,7 @@ fn transient_message_does_not_add_to_feed() {
 #[test]
 fn transient_message_with_different_levels() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientMessage {
+    state.update(crate::Event::TransientMessage {
         content: "info".to_string(),
         level: crate::event::TransientLevel::Info,
     });
@@ -138,8 +138,8 @@ fn transient_message_with_different_levels() {
         Some(crate::event::TransientLevel::Info)
     );
 
-    state.update(SystemEvent::ClearTransient);
-    state.update(SystemEvent::TransientMessage {
+    state.update(crate::Event::ClearTransient);
+    state.update(crate::Event::TransientMessage {
         content: "warn".to_string(),
         level: crate::event::TransientLevel::Warning,
     });
@@ -152,7 +152,7 @@ fn transient_message_with_different_levels() {
 #[test]
 fn transient_expiry_time_is_reasonable() {
     let mut state = fresh_state();
-    state.update(SystemEvent::TransientMessage {
+    state.update(crate::Event::TransientMessage {
         content: "test".to_string(),
         level: crate::event::TransientLevel::Info,
     });

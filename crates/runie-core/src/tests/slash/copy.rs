@@ -1,7 +1,7 @@
 //! /copy slash command tests.
 
 use super::exec;
-use crate::event::DialogEvent;
+use crate::Event;
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tests::fresh_state;
@@ -40,7 +40,7 @@ fn copy_emits_clipboard_event_with_last_assistant_text() {
     assert!(
         matches!(
             result,
-            Some(crate::commands::CommandResult::Event(DialogEvent::CopyToClipboard(ref text)))
+            Some(crate::commands::CommandResult::Event(crate::Event::CopyToClipboard(ref text)))
             if text == "the answer is 42"
         ),
         "expected CopyToClipboard event with last assistant text, got {:?}",
@@ -70,7 +70,7 @@ fn copy_uses_most_recent_assistant_message() {
     assert!(
         matches!(
             result,
-            Some(crate::commands::CommandResult::Event(DialogEvent::CopyToClipboard(ref text)))
+            Some(crate::commands::CommandResult::Event(crate::Event::CopyToClipboard(ref text)))
             if text == "newer response"
         ),
         "should copy most recent assistant message, got {:?}",

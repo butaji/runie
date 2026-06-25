@@ -5,7 +5,6 @@
 //! ```
 //! use runie_core::commands::CommandCategory;
 //! use runie_core::Event;
-//! use runie_core::event::{CommandEvent, LoginFlowEvent};
 //!
 //! // Simple message command
 //! let _ = runie_core::cmd!("hello", "Hello!");
@@ -17,7 +16,7 @@
 //!     .category(CommandCategory::Session)
 //!     .form("Save", |f| {
 //!         f.field("Name", "session", "name").on_submit(|values| {
-//!             CommandEvent::RunSaveCommand {
+//!             Event::RunSaveCommand {
 //!                 name: values.get("name").cloned().unwrap_or_default(),
 //!             }
 //!         })

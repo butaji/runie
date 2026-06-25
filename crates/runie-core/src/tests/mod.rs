@@ -7,7 +7,7 @@ pub static ENV_LOCK: Mutex<()> = Mutex::new(());
 // ── Shared test helpers ─────────────────────────────────────────────────────────
 
 #[cfg(test)]
-use crate::event::InputEvent;
+use crate::Event;
 #[cfg(test)]
 use crate::model::AppState;
 
@@ -25,7 +25,7 @@ pub fn fresh_state() -> AppState {
 /// Simulates typing `text` into the input buffer of `state`.
 pub fn type_str(state: &mut AppState, text: &str) {
     for c in text.chars() {
-        state.update(InputEvent::Input(c));
+        state.update(crate::Event::Input(c));
     }
 }
 

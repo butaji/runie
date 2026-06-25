@@ -1,5 +1,5 @@
 use crate::dsl::AppStateDsl;
-use crate::event::AgentEvent;
+use crate::Event;
 use crate::model::Role;
 use crate::tests::fresh_state;
 
@@ -183,7 +183,7 @@ fn tool_end_updates_timestamp() {
     let mut state = fresh_state();
     state.agent("req.0").tool_start("list_files");
     let t1 = state.session.messages[0].timestamp;
-    state.update(AgentEvent::ToolEnd {
+    state.update(crate::Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: String::new(),

@@ -1,4 +1,4 @@
-use crate::event::{ControlEvent, DialogEvent, LoginFlowEvent};
+use crate::Event;
 use crate::model::AppState;
 
 use super::{clean_config, validate_provider};
@@ -14,10 +14,10 @@ fn disconnected_state() -> AppState {
 fn login_panel_abort_blocked_without_model() {
     clean_config();
     let mut state = disconnected_state();
-    state.update(LoginFlowEvent::Start);
+    state.update(crate::Event::Start);
     assert!(state.login_flow.is_some());
 
-    state.update(ControlEvent::Abort);
+    state.update(crate::Event::Abort);
 
     assert!(
         state.login_flow.is_some(),
@@ -30,10 +30,10 @@ fn login_panel_abort_blocked_without_model() {
 fn login_panel_dialog_back_blocked_without_model() {
     clean_config();
     let mut state = disconnected_state();
-    state.update(LoginFlowEvent::Start);
+    state.update(crate::Event::Start);
     assert!(state.login_flow.is_some());
 
-    state.update(DialogEvent::DialogBack);
+    state.update(crate::Event::DialogBack);
 
     assert!(
         state.login_flow.is_some(),
@@ -46,15 +46,15 @@ fn login_panel_dialog_back_blocked_without_model() {
 fn login_panel_quit_blocked_but_force_quit_allowed() {
     clean_config();
     let mut state = disconnected_state();
-    state.update(LoginFlowEvent::Start);
+    state.update(crate::Event::Start);
 
-    state.update(ControlEvent::Quit);
+    state.update(crate::Event::Quit);
     assert!(
         !state.should_quit,
         "Quit should be blocked when no model is connected"
     );
 
-    state.update(ControlEvent::ForceQuit);
+    state.update(crate::Event::ForceQuit);
     assert!(
         state.should_quit,
         "ForceQuit must quit the app even when no model is connected"
@@ -65,15 +65,15 @@ fn login_panel_quit_blocked_but_force_quit_allowed() {
 fn login_panel_cancel_navigates_sub_panels_but_does_not_close() {
     clean_config();
     let mut state = disconnected_state();
-    state.update(LoginFlowEvent::Start);
-    state.update(LoginFlowEvent::SelectProvider {
+    state.update(crate::Event::Start);
+    state.update(crate::Event::SelectProvider {
         provider: "minimax".into(),
     });
 
     let flow = state.login_flow.as_ref().unwrap();
     assert_eq!(flow.step, crate::login_flow::LoginStep::KeyInput);
 
-    state.update(ControlEvent::Abort);
+    state.update(crate::Event::Abort);
 
     let flow = state.login_flow.as_ref().unwrap();
     assert_eq!(
@@ -91,21 +91,21 @@ fn login_panel_cancel_navigates_sub_panels_but_does_not_close() {
 fn login_panel_close_allowed_once_model_connected() {
     clean_config();
     let mut state = disconnected_state();
-    state.update(LoginFlowEvent::Start);
-    state.update(LoginFlowEvent::SelectProvider {
+    state.update(crate::Event::Start);
+    state.update(crate::Event::SelectProvider {
         provider: "minimax".into(),
     });
-    state.update(LoginFlowEvent::SubmitKey {
+    state.update(crate::Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     });
     validate_provider(&mut state, "minimax", "sk-test");
-    state.update(LoginFlowEvent::Save);
+    state.update(crate::Event::Save);
 
     assert!(state.has_models());
 
-    state.update(LoginFlowEvent::Start);
-    state.update(ControlEvent::Abort);
+    state.update(crate::Event::Start);
+    state.update(crate::Event::Abort);
 
     assert!(
         state.login_flow.is_none(),

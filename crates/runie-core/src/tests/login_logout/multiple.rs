@@ -1,4 +1,4 @@
-use crate::event::DialogEvent;
+use crate::Event;
 use crate::model::AppState;
 
 use super::{add_provider_and_select_model, clean_config};
@@ -15,8 +15,8 @@ fn disconnect_active_provider_switches_to_another() {
 
     state.dialog_back_stack.clear();
 
-    state.update(DialogEvent::ProvidersDialog);
-    state.update(DialogEvent::ProvidersDisconnect {
+    state.update(crate::Event::ProvidersDialog);
+    state.update(crate::Event::ProvidersDisconnect {
         provider: "openai".into(),
     });
 

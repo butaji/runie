@@ -1,4 +1,4 @@
-use crate::event::LoginFlowEvent;
+use crate::Event;
 use crate::model::AppState;
 
 use super::clean_config;
@@ -8,7 +8,7 @@ fn login_flow_state_machine_provider_picker() {
     clean_config();
     let mut state = AppState::default();
 
-    state.update(LoginFlowEvent::Start);
+    state.update(crate::Event::Start);
 
     assert!(state.login_flow.is_some());
     let flow = state.login_flow.as_ref().unwrap();
@@ -20,8 +20,8 @@ fn login_flow_state_machine_key_input() {
     clean_config();
     let mut state = AppState::default();
 
-    state.update(LoginFlowEvent::Start);
-    state.update(LoginFlowEvent::SelectProvider {
+    state.update(crate::Event::Start);
+    state.update(crate::Event::SelectProvider {
         provider: "minimax".into(),
     });
 
@@ -35,11 +35,11 @@ fn login_flow_state_machine_validating() {
     clean_config();
     let mut state = AppState::default();
 
-    state.update(LoginFlowEvent::Start);
-    state.update(LoginFlowEvent::SelectProvider {
+    state.update(crate::Event::Start);
+    state.update(crate::Event::SelectProvider {
         provider: "minimax".into(),
     });
-    state.update(LoginFlowEvent::SubmitKey {
+    state.update(crate::Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     });
@@ -54,15 +54,15 @@ fn login_flow_state_machine_model_select_after_validation() {
     clean_config();
     let mut state = AppState::default();
 
-    state.update(LoginFlowEvent::Start);
-    state.update(LoginFlowEvent::SelectProvider {
+    state.update(crate::Event::Start);
+    state.update(crate::Event::SelectProvider {
         provider: "minimax".into(),
     });
-    state.update(LoginFlowEvent::SubmitKey {
+    state.update(crate::Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     });
-    state.update(LoginFlowEvent::ModelsFetched {
+    state.update(crate::Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into()],
@@ -78,15 +78,15 @@ fn login_flow_toggle_model() {
     clean_config();
     let mut state = AppState::default();
 
-    state.update(LoginFlowEvent::Start);
-    state.update(LoginFlowEvent::SelectProvider {
+    state.update(crate::Event::Start);
+    state.update(crate::Event::SelectProvider {
         provider: "minimax".into(),
     });
-    state.update(LoginFlowEvent::SubmitKey {
+    state.update(crate::Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
     });
-    state.update(LoginFlowEvent::ModelsFetched {
+    state.update(crate::Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into()],
@@ -96,7 +96,7 @@ fn login_flow_toggle_model() {
     let initial_model = flow.available_models[0].clone();
     let was_selected = flow.selected_models.contains(&initial_model);
 
-    state.update(LoginFlowEvent::ToggleModel {
+    state.update(crate::Event::ToggleModel {
         model: initial_model.clone(),
     });
 

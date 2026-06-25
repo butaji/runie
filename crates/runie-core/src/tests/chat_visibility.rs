@@ -1,5 +1,4 @@
-use crate::event::Event;
-use crate::event::AgentEvent;
+use crate::Event;
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tests::fresh_state;
@@ -68,7 +67,7 @@ fn verify_user_visible(state: &mut AppState, height: usize) {
 
 fn verify_thinking_visible(state: &mut AppState, height: usize) {
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(crate::Event::Thinking { id: "req.0".into() });
     state.ensure_fresh();
     assert!(
         latest_is_visible(state, height),
@@ -77,7 +76,7 @@ fn verify_thinking_visible(state: &mut AppState, height: usize) {
 }
 
 fn verify_agent_response_visible(state: &mut AppState, height: usize) {
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "I'll list the files.".into(),
     });
@@ -89,7 +88,7 @@ fn verify_agent_response_visible(state: &mut AppState, height: usize) {
 }
 
 fn verify_tool_output_visible(state: &mut AppState, height: usize) {
-    state.update(AgentEvent::ToolStart {
+    state.update(crate::Event::ToolStart {
         id: "req.0".into(),
         name: "list_dir".into(),
         input: serde_json::Value::Null,
@@ -103,7 +102,7 @@ fn verify_tool_output_visible(state: &mut AppState, height: usize) {
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(AgentEvent::ToolEnd {
+    state.update(crate::Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
@@ -118,7 +117,7 @@ fn verify_tool_output_visible(state: &mut AppState, height: usize) {
 }
 
 fn verify_final_response_visible(state: &mut AppState, height: usize) {
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
     });
@@ -132,11 +131,11 @@ fn verify_final_response_visible(state: &mut AppState, height: usize) {
 }
 
 fn verify_turn_complete_last(state: &mut AppState, height: usize) {
-    state.update(AgentEvent::TurnComplete {
+    state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 2.0,
     });
-    state.update(AgentEvent::Done { id: "req.0".into() });
+    state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(
         latest_is_visible(state, height),
@@ -149,7 +148,7 @@ fn large_tool_output_bottom_lines_visible() {
     let mut state = fresh_state();
     let height = 5;
 
-    state.update(AgentEvent::ToolStart {
+    state.update(crate::Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
@@ -158,7 +157,7 @@ fn large_tool_output_bottom_lines_visible() {
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(AgentEvent::ToolEnd {
+    state.update(crate::Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
@@ -268,7 +267,7 @@ fn scroll_zero_means_bottom_after_any_event() {
     state.view.scroll = 0;
 
     // Send a bunch of events
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "a".into(),
     });
@@ -279,7 +278,7 @@ fn scroll_zero_means_bottom_after_any_event() {
         "Visible region must not be empty after first response"
     );
 
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "b".into(),
     });
@@ -290,7 +289,7 @@ fn scroll_zero_means_bottom_after_any_event() {
         "Visible region must not be empty after second response"
     );
 
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "c".into(),
     });
@@ -303,7 +302,7 @@ fn scroll_zero_means_bottom_after_any_event() {
 
     // After many more
     for i in 0..20 {
-        state.update(AgentEvent::Response {
+        state.update(crate::Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
         });
@@ -338,11 +337,11 @@ fn user_message_visible_after_submit_clears_input() {
 fn streaming_response_appends_not_replaces() {
     let mut state = fresh_state();
 
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello ".into(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "world".into(),
     });
@@ -369,13 +368,13 @@ fn streaming_response_appends_not_replaces() {
 fn tool_end_does_not_duplicate_messages() {
     let mut state = fresh_state();
 
-    state.update(AgentEvent::ToolStart {
+    state.update(crate::Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
     });
     let before_count = state.session.messages.len();
-    state.update(AgentEvent::ToolEnd {
+    state.update(crate::Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
@@ -393,7 +392,7 @@ fn total_lines_increases_with_each_event() {
     let mut state = fresh_state();
 
     let t0 = state.view.total_lines();
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "a".into(),
     });
@@ -401,7 +400,7 @@ fn total_lines_increases_with_each_event() {
     let t1 = state.view.total_lines();
     assert!(t1 > t0, "total_lines should increase after response");
 
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "b".into(),
     });

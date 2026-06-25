@@ -1,4 +1,4 @@
-use crate::event::{ControlEvent, DialogEvent, Event, LoginFlowEvent};
+use crate::Event;
 use crate::login_flow::LoginStep;
 use crate::model::AppState;
 
@@ -22,7 +22,7 @@ fn cancel_at_key_input_returns_to_provider_picker() {
     select_provider(&mut state, "minimax");
     assert_step(&state, LoginStep::KeyInput);
 
-    state.update(Event::from(LoginFlowEvent::Cancel));
+    state.update(Event::from(crate::Event::Cancel));
 
     assert_step(&state, LoginStep::ProviderPicker);
     assert_panel_id(&state, "login-provider");
@@ -38,7 +38,7 @@ fn cancel_at_model_select_returns_to_key_input() {
     fetch_models(&mut state, &["MiniMax-M3".to_string()]);
     assert_step(&state, LoginStep::ModelSelect);
 
-    state.update(Event::from(LoginFlowEvent::Cancel));
+    state.update(Event::from(crate::Event::Cancel));
 
     assert_step(&state, LoginStep::KeyInput);
     assert_panel_id(&state, "login-key");
@@ -51,7 +51,7 @@ fn cancel_at_provider_picker_blocked_without_model() {
     start_login_flow(&mut state);
     assert!(state.login_flow.is_some());
 
-    state.update(Event::from(LoginFlowEvent::Cancel));
+    state.update(Event::from(crate::Event::Cancel));
 
     assert!(
         state.login_flow.is_some(),
@@ -69,7 +69,7 @@ fn cancel_at_provider_picker_allowed_with_model() {
     add_provider_and_select_model(&mut state, "minimax", "sk-test", "MiniMax-M3");
 
     start_login_flow(&mut state);
-    state.update(Event::from(LoginFlowEvent::Cancel));
+    state.update(Event::from(crate::Event::Cancel));
 
     assert!(state.login_flow.is_none(), "login flow should be closed");
     assert_ne!(
@@ -89,7 +89,7 @@ fn dialog_back_behaves_like_cancel() {
     fetch_models(&mut state, &["MiniMax-M3".to_string()]);
     assert_step(&state, LoginStep::ModelSelect);
 
-    state.update(Event::from(DialogEvent::DialogBack));
+    state.update(Event::from(crate::Event::DialogBack));
 
     assert_step(&state, LoginStep::KeyInput);
     assert_panel_id(&state, "login-key");
@@ -105,7 +105,7 @@ fn abort_behaves_like_cancel() {
     fetch_models(&mut state, &["MiniMax-M3".to_string()]);
     assert_step(&state, LoginStep::ModelSelect);
 
-    state.update(Event::from(ControlEvent::Abort));
+    state.update(Event::from(crate::Event::Abort));
 
     assert_step(&state, LoginStep::KeyInput);
     assert_panel_id(&state, "login-key");
@@ -118,7 +118,7 @@ fn force_quit_always_closes() {
     start_login_flow(&mut state);
     select_provider(&mut state, "minimax");
 
-    state.update(Event::from(ControlEvent::ForceQuit));
+    state.update(Event::from(crate::Event::ForceQuit));
 
     assert!(state.should_quit, "ForceQuit should set should_quit");
 }
@@ -130,7 +130,7 @@ fn esc_at_root_blocked_without_model() {
     start_login_flow(&mut state);
     assert!(state.login_flow.is_some());
 
-    state.update(Event::from(DialogEvent::DialogBack));
+    state.update(Event::from(crate::Event::DialogBack));
 
     assert!(
         state.login_flow.is_some(),

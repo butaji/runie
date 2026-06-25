@@ -1,13 +1,12 @@
 //! Command form dialog handling and @-ref insertion.
 
 use crate::commands::DialogState;
-use crate::event::DialogEvent;
 use crate::model::AppState;
 
 use super::form;
 
 /// Handle command form dialog events. Entry point for `CommandForm*` events.
-pub fn handle_form_dialog(state: &mut AppState, event: DialogEvent) {
+pub fn handle_form_dialog(state: &mut AppState, event: crate::Event) {
     let Some(mut dialog) = state.open_dialog.take() else {
         return;
     };

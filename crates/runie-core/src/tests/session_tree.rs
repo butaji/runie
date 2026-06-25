@@ -1,7 +1,6 @@
 //! Session tree tests — fork, clone, filter
 
-use crate::event::Event;
-use crate::event::{DialogEvent, InputEvent, SessionEvent};
+use crate::Event;
 use crate::message::{ChatMessage, Part, Role};
 use crate::model::AppState;
 use crate::session::tree::{SessionTree, SessionTreeFilter};
@@ -18,11 +17,11 @@ fn msg(role: Role, content: &str) -> ChatMessage {
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
-    state.update(InputEvent::Input('/'));
+    state.update(crate::Event::Input('/'));
     for c in cmd.chars() {
-        state.update(DialogEvent::PaletteFilter(c));
+        state.update(crate::Event::PaletteFilter(c));
     }
-    state.update(DialogEvent::PaletteSelect);
+    state.update(crate::Event::PaletteSelect);
 }
 
 // === Layer 1 — State/Logic ===
@@ -102,7 +101,7 @@ fn slash_fork_emits_event() {
     state.session.messages = vec![msg(Role::User, "hello"), msg(Role::Assistant, "hi")];
     state.input.input.push_str("/fork 1");
     state.update(Event::submit()); // Opens form with pre-filled index
-    state.update(DialogEvent::CommandFormSubmit); // Submits the form
+    state.update(crate::Event::CommandFormSubmit); // Submits the form
 
     let sys_msgs: Vec<_> = state
         .session
@@ -144,10 +143,10 @@ fn tree_navigates_up_down() {
         msg(Role::Assistant, "b"),
         msg(Role::User, "c"),
     ]));
-    state.update(SessionEvent::ToggleSessionTree);
+    state.update(crate::Event::ToggleSessionTree);
 
     // Up should decrement selected
-    state.update(InputEvent::HistoryPrev);
+    state.update(crate::Event::HistoryPrev);
     let selected = match &state.open_dialog {
         Some(crate::commands::DialogState::SessionTree(stack)) => {
             stack.current().map(|p| p.selected)
@@ -157,7 +156,7 @@ fn tree_navigates_up_down() {
     assert_eq!(selected, Some(2), "up at first wraps to last");
 
     // Down should increment selected
-    state.update(InputEvent::HistoryNext);
+    state.update(crate::Event::HistoryNext);
     let selected = match &state.open_dialog {
         Some(crate::commands::DialogState::SessionTree(stack)) => {
             stack.current().map(|p| p.selected)
@@ -176,9 +175,9 @@ fn tree_filter_cycle_event() {
         msg(Role::User, "a"),
         msg(Role::Assistant, "b"),
     ]));
-    state.update(SessionEvent::ToggleSessionTree);
+    state.update(crate::Event::ToggleSessionTree);
 
-    state.update(SessionEvent::SessionTreeFilterCycle);
+    state.update(crate::Event::SessionTreeFilterCycle);
     assert!(
         matches!(
             state.open_dialog,
@@ -325,7 +324,7 @@ fn tree_select_branch_switches_conversation() {
             ..Default::default()
         },
     ]));
-    state.update(SessionEvent::ToggleSessionTree);
+    state.update(crate::Event::ToggleSessionTree);
     assert!(
         matches!(
             state.open_dialog,
@@ -334,7 +333,7 @@ fn tree_select_branch_switches_conversation() {
         "tree dialog should be open"
     );
 
-    state.update(SessionEvent::SessionTreeSelect {
+    state.update(crate::Event::SessionTreeSelect {
         id: "branch-b".into(),
     });
 

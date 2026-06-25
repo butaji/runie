@@ -3,7 +3,7 @@
 //! These tests exercise the full update flow: a multi-panel stack, ESC
 //! events (SettingsClose / PaletteClose), and the open_dialog state.
 
-use crate::event::{ControlEvent, DialogEvent, LoginFlowEvent, ModelConfigEvent, SystemEvent};
+use crate::Event;
 
 use crate::commands::DialogState;
 use crate::dialog::{ItemAction, Panel, PanelStack};
@@ -19,7 +19,7 @@ fn open_settings_with_subpanel() -> AppState {
     child = child.item("Back", ItemAction::Pop);
     child = child.item(
         "Save",
-        ItemAction::Emit(SystemEvent::SystemMessage {
+        ItemAction::Emit(crate::Event::SystemMessage {
             content: "saved".into(),
         }),
     );
@@ -43,7 +43,7 @@ fn esc_at_root_closes_the_dialog() {
         Panel::new("settings", "Settings").item("Done", ItemAction::Close),
     )));
     assert!(state.open_dialog.is_some());
-    state.update(ModelConfigEvent::SettingsClose);
+    state.update(crate::Event::SettingsClose);
     assert!(
         state.open_dialog.is_none(),
         "ESC at root must close the dialog"
@@ -55,7 +55,7 @@ fn esc_in_subpanel_pops_and_keeps_dialog_open() {
     let mut state = open_settings_with_subpanel();
     // Stack depth = 2 (root + child).
     assert!(matches!(&state.open_dialog, Some(DialogState::Settings(s)) if s.len() == 2));
-    state.update(ModelConfigEvent::SettingsClose);
+    state.update(crate::Event::SettingsClose);
     // Stack should have popped to depth 1, dialog still open.
     match &state.open_dialog {
         Some(DialogState::Settings(stack)) => {
@@ -69,9 +69,9 @@ fn esc_in_subpanel_pops_and_keeps_dialog_open() {
 #[test]
 fn double_esc_pops_then_closes() {
     let mut state = open_settings_with_subpanel();
-    state.update(ModelConfigEvent::SettingsClose); // pop to root
+    state.update(crate::Event::SettingsClose); // pop to root
     assert!(matches!(&state.open_dialog, Some(DialogState::Settings(s)) if s.len() == 1));
-    state.update(ModelConfigEvent::SettingsClose); // close at root
+    state.update(crate::Event::SettingsClose); // close at root
     assert!(
         state.open_dialog.is_none(),
         "second ESC at root must close the dialog"
@@ -82,7 +82,7 @@ fn double_esc_pops_then_closes() {
 fn abort_force_closes_regardless_of_depth() {
     let mut state = open_settings_with_subpanel();
     // Abort is the force-close escape hatch, distinct from ESC stack nav.
-    state.update(ControlEvent::Abort);
+    state.update(crate::Event::Abort);
     assert!(
         state.open_dialog.is_none(),
         "Abort must force-close the dialog at any depth"
@@ -109,7 +109,7 @@ fn palette_close_pops_or_closes() {
     };
 
     // First Esc (in sub-panel): pop to root, bar still open.
-    state.update(DialogEvent::PaletteClose);
+    state.update(crate::Event::PaletteClose);
     match &state.open_dialog {
         Some(DialogState::CommandPalette(s)) => {
             assert_eq!(s.len(), 1, "Esc in sub-panel must pop, not close");
@@ -118,7 +118,7 @@ fn palette_close_pops_or_closes() {
         _ => panic!("popped palette should still be open"),
     }
     // Second Esc (on main menu / root): close the bar.
-    state.update(DialogEvent::PaletteClose);
+    state.update(crate::Event::PaletteClose);
     assert!(
         state.open_dialog.is_none(),
         "Esc on the main menu must close the command bar"
@@ -130,18 +130,18 @@ fn form_dialog_esc_pops_or_closes() {
     // Form dialogs (e.g. login form) also use stack nav. ESC pops the
     // current form panel; at root, closes the dialog.
     let mut root = Panel::new("login-key", "Login").form();
-    root = root.item("_Cancel", ItemAction::Emit(LoginFlowEvent::Cancel));
+    root = root.item("_Cancel", ItemAction::Emit(crate::Event::Cancel));
     let mut stack = PanelStack::new(root);
     // Push a child form panel to simulate a multi-step form.
     let mut child = Panel::new("login-models", "Models").form();
     child = child.toggle(
         "model-a",
         true,
-        ItemAction::Emit(LoginFlowEvent::ToggleModel {
+        ItemAction::Emit(crate::Event::ToggleModel {
             model: "model-a".into(),
         }),
     );
-    child = child.item("_Back", ItemAction::Emit(LoginFlowEvent::Cancel));
+    child = child.item("_Back", ItemAction::Emit(crate::Event::Cancel));
     stack.push(child);
 
     let mut state = AppState {
@@ -150,7 +150,7 @@ fn form_dialog_esc_pops_or_closes() {
     };
 
     // ESC in the child form: pop to root.
-    state.update(DialogEvent::CommandFormClose);
+    state.update(crate::Event::CommandFormClose);
     match &state.open_dialog {
         Some(DialogState::PanelStack(s)) => {
             assert_eq!(s.len(), 1);
@@ -160,7 +160,7 @@ fn form_dialog_esc_pops_or_closes() {
     }
 
     // ESC in the root form: close.
-    state.update(DialogEvent::CommandFormClose);
+    state.update(crate::Event::CommandFormClose);
     assert!(state.open_dialog.is_none(), "form root ESC should close");
 }
 
@@ -318,10 +318,10 @@ fn global_dialog_back_stack_palette_pushes_subdialog() {
         Some(DialogState::PanelStack(_))
     ));
 
-    state.update(DialogEvent::DialogBack);
+    state.update(crate::Event::DialogBack);
     assert_palette_restored(&state);
 
-    state.update(DialogEvent::DialogBack);
+    state.update(crate::Event::DialogBack);
     assert!(
         state.open_dialog.is_none(),
         "Esc on palette (root) must close the dialog"
@@ -342,10 +342,10 @@ fn palette_then_subdialog_esc_back_to_palette_then_esc_closes() {
         Some(DialogState::PanelStack(_))
     ));
 
-    state.update(DialogEvent::DialogBack);
+    state.update(crate::Event::DialogBack);
     assert_palette_restored(&state);
 
-    state.update(DialogEvent::DialogBack);
+    state.update(crate::Event::DialogBack);
     assert!(
         state.open_dialog.is_none(),
         "Esc on Main Menu must close the bar"

@@ -1,18 +1,17 @@
 //! Scroll event handler (from input_scroll.rs).
 
-use crate::event::ScrollEvent;
 use crate::model::AppState;
 
 pub const PAGE_SIZE: usize = super::nav::PAGE_SIZE;
 
-pub fn scroll_event(state: &mut AppState, event: ScrollEvent) {
+pub fn scroll_event(state: &mut AppState, event: crate::Event) {
     match event {
-        ScrollEvent::Up => scroll_up(state),
-        ScrollEvent::Down => scroll_down(state),
-        ScrollEvent::PageUp => page_up(state),
-        ScrollEvent::PageDown => page_down(state),
-        ScrollEvent::GoToTop => go_to_top(state),
-        ScrollEvent::GoToBottom => go_to_bottom(state),
+        crate::Event::Up => scroll_up(state),
+        crate::Event::Down => scroll_down(state),
+        crate::Event::PageUp => page_up(state),
+        crate::Event::PageDown => page_down(state),
+        crate::Event::GoToTop => go_to_top(state),
+        crate::Event::GoToBottom => go_to_bottom(state),
         // intentionally ignored: other scroll events fall through
         _ => {}
     }

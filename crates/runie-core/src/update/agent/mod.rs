@@ -1,4 +1,4 @@
-use crate::event::AgentEvent;
+use crate::Event;
 use crate::model::AppState;
 
 mod at_refs;
@@ -17,8 +17,8 @@ macro_rules! with_ordering {
     }};
 }
 
-pub fn agent_event(state: &mut AppState, event: AgentEvent) {
-    use AgentEvent as E;
+pub fn agent_event(state: &mut AppState, event: crate::Event) {
+    use Event as E;
     match event {
         E::Thinking { id } => with_ordering!(state, state.set_thinking(id)),
         E::ThoughtDone { id } => with_ordering!(state, state.add_thought(id)),
@@ -63,9 +63,9 @@ mod tests {
         state.apply_config(&config);
 
         // Start a turn with thinking
-        agent_event(&mut state, AgentEvent::TurnComplete { id: "1".into(), duration_secs: 1.0 });
-        agent_event(&mut state, AgentEvent::Thinking { id: "2".into() });
-        agent_event(&mut state, AgentEvent::ThoughtDone { id: "2".into() });
+        agent_event(&mut state, crate::Event::TurnComplete { id: "1".into(), duration_secs: 1.0 });
+        agent_event(&mut state, crate::Event::Thinking { id: "2".into() });
+        agent_event(&mut state, crate::Event::ThoughtDone { id: "2".into() });
 
         // Ensure no panic and turn complete is properly ordered
         state.ensure_turn_complete_last();
@@ -77,9 +77,9 @@ mod tests {
         let config = crate::config::Config::default();
         state.apply_config(&config);
 
-        agent_event(&mut state, AgentEvent::TurnComplete { id: "1".into(), duration_secs: 1.0 });
-        agent_event(&mut state, AgentEvent::ToolStart { id: "t1".into(), name: "bash".into(), input: Default::default() });
-        agent_event(&mut state, AgentEvent::ToolEnd { id: "t1".into(), duration_secs: 0.5, output: "done".into() });
+        agent_event(&mut state, crate::Event::TurnComplete { id: "1".into(), duration_secs: 1.0 });
+        agent_event(&mut state, crate::Event::ToolStart { id: "t1".into(), name: "bash".into(), input: Default::default() });
+        agent_event(&mut state, crate::Event::ToolEnd { id: "t1".into(), duration_secs: 0.5, output: "done".into() });
 
         state.ensure_turn_complete_last();
     }
@@ -90,8 +90,8 @@ mod tests {
         let config = crate::config::Config::default();
         state.apply_config(&config);
 
-        agent_event(&mut state, AgentEvent::TurnComplete { id: "1".into(), duration_secs: 1.0 });
-        agent_event(&mut state, AgentEvent::Response { id: "2".into(), content: "hello".into() });
+        agent_event(&mut state, crate::Event::TurnComplete { id: "1".into(), duration_secs: 1.0 });
+        agent_event(&mut state, crate::Event::Response { id: "2".into(), content: "hello".into() });
 
         state.ensure_turn_complete_last();
     }
@@ -102,8 +102,8 @@ mod tests {
         let config = crate::config::Config::default();
         state.apply_config(&config);
 
-        agent_event(&mut state, AgentEvent::TurnComplete { id: "1".into(), duration_secs: 1.0 });
-        agent_event(&mut state, AgentEvent::Error { id: "2".into(), message: "oops".into() });
+        agent_event(&mut state, crate::Event::TurnComplete { id: "1".into(), duration_secs: 1.0 });
+        agent_event(&mut state, crate::Event::Error { id: "2".into(), message: "oops".into() });
 
         state.ensure_turn_complete_last();
     }

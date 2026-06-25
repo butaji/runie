@@ -1,7 +1,6 @@
 //! Dialog Toggle Event Handler (merged from dialog_toggle.rs).
 
 use crate::commands::DialogState;
-use crate::event::DialogEvent;
 use crate::model::AppState;
 
 use super::{
@@ -9,29 +8,29 @@ use super::{
     open_settings_dialog,
 };
 
-pub fn dialog_toggle_event(state: &mut AppState, event: DialogEvent) {
+pub fn dialog_toggle_event(state: &mut AppState, event: crate::Event) {
     match &event {
-        DialogEvent::ToggleWelcome => handle_welcome_toggle(state),
-        DialogEvent::ToggleCommandPalette => open_command_palette(state),
-        DialogEvent::ToggleSettingsDialog => handle_settings_toggle(state),
-        DialogEvent::ToggleModelSelector => handle_model_selector_toggle(state),
-        DialogEvent::AtFilePicker => open_at_file_picker_all(state),
-        DialogEvent::ToggleVimMode => handle_vim_mode_toggle(state),
-        DialogEvent::TogglePathCompletion => state.toggle_path_completion(),
-        DialogEvent::PathCompletionUp => state.path_completion_up(),
-        DialogEvent::PathCompletionDown => state.path_completion_down(),
-        DialogEvent::PathCompletionSelect => state.path_completion_select(),
-        DialogEvent::PathCompletionClose => state.path_completion_close(),
-        DialogEvent::ProvidersDialog => handle_providers_dialog(state),
-        DialogEvent::ProvidersAdd => handle_providers_add(state),
-        DialogEvent::ProvidersSelectModel { .. } => handle_providers_select_model(state, &event),
-        DialogEvent::ProvidersDisconnect { .. } => handle_providers_disconnect(state, &event),
-        DialogEvent::ProvidersEditModels { .. } => handle_providers_edit_models(state, &event),
+        crate::Event::ToggleWelcome => handle_welcome_toggle(state),
+        crate::Event::ToggleCommandPalette => open_command_palette(state),
+        crate::Event::ToggleSettingsDialog => handle_settings_toggle(state),
+        crate::Event::ToggleModelSelector => handle_model_selector_toggle(state),
+        crate::Event::AtFilePicker => open_at_file_picker_all(state),
+        crate::Event::ToggleVimMode => handle_vim_mode_toggle(state),
+        crate::Event::TogglePathCompletion => state.toggle_path_completion(),
+        crate::Event::PathCompletionUp => state.path_completion_up(),
+        crate::Event::PathCompletionDown => state.path_completion_down(),
+        crate::Event::PathCompletionSelect => state.path_completion_select(),
+        crate::Event::PathCompletionClose => state.path_completion_close(),
+        crate::Event::ProvidersDialog => handle_providers_dialog(state),
+        crate::Event::ProvidersAdd => handle_providers_add(state),
+        crate::Event::ProvidersSelectModel { .. } => handle_providers_select_model(state, &event),
+        crate::Event::ProvidersDisconnect { .. } => handle_providers_disconnect(state, &event),
+        crate::Event::ProvidersEditModels { .. } => handle_providers_edit_models(state, &event),
 
-        DialogEvent::ToggleScopedModelsDialog => handle_scoped_models_toggle(state),
-        DialogEvent::ScopedModelEnableAll => handle_scoped_model_enable_all(state),
-        DialogEvent::ScopedModelDisableAll => handle_scoped_model_disable_all(state),
-        // intentionally ignored: other DialogEvent variants fall through
+        crate::Event::ToggleScopedModelsDialog => handle_scoped_models_toggle(state),
+        crate::Event::ScopedModelEnableAll => handle_scoped_model_enable_all(state),
+        crate::Event::ScopedModelDisableAll => handle_scoped_model_disable_all(state),
+        // intentionally ignored: other crate::Event variants fall through
         _ => {}
     }
 }
@@ -88,8 +87,8 @@ fn handle_providers_add(state: &mut AppState) {
     crate::login_flow::login_flow_start(state);
 }
 
-fn handle_providers_select_model(state: &mut AppState, event: &DialogEvent) {
-    if let DialogEvent::ProvidersSelectModel { provider, model } = event {
+fn handle_providers_select_model(state: &mut AppState, event: &crate::Event) {
+    if let crate::Event::ProvidersSelectModel { provider, model } = event {
         if let Some(mut flow) = state.login_flow.take() {
             flow.selected_models.insert(model.clone());
             state.login_flow = Some(flow);
@@ -102,8 +101,8 @@ fn handle_providers_select_model(state: &mut AppState, event: &DialogEvent) {
     }
 }
 
-fn handle_providers_edit_models(state: &mut AppState, event: &DialogEvent) {
-    if let DialogEvent::ProvidersEditModels { provider } = event {
+fn handle_providers_edit_models(state: &mut AppState, event: &crate::Event) {
+    if let crate::Event::ProvidersEditModels { provider } = event {
         let stack = crate::provider::dialog::build_provider_models_editor(state, provider);
         if let Some(DialogState::PanelStack(current)) = &mut state.open_dialog {
             if let Some(panel) = stack.current() {
@@ -116,8 +115,8 @@ fn handle_providers_edit_models(state: &mut AppState, event: &DialogEvent) {
     }
 }
 
-fn handle_providers_disconnect(state: &mut AppState, event: &DialogEvent) {
-    if let DialogEvent::ProvidersDisconnect { provider } = event {
+fn handle_providers_disconnect(state: &mut AppState, event: &crate::Event) {
+    if let crate::Event::ProvidersDisconnect { provider } = event {
         let provider = provider.clone();
         // Fire-and-forget async removal (no-op in tests without ConfigActor).
         state.remove_provider(&provider);

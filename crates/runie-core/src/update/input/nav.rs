@@ -1,6 +1,5 @@
 //! Cursor & vim navigation (merged from input_nav.rs).
 
-use crate::event::{DialogEvent, ScrollEvent};
 use crate::model::AppState;
 use crate::Event;
 
@@ -244,15 +243,15 @@ impl AppState {
             'j' => Some(self.handle_vim_jump_down(last)),
             'k' => Some(self.handle_vim_jump_up()),
             'g' => {
-                self.update(ScrollEvent::GoToTop);
+                self.update(crate::Event::GoToTop);
                 Some(true)
             }
             'G' => {
-                self.update(ScrollEvent::GoToBottom);
+                self.update(crate::Event::GoToBottom);
                 Some(true)
             }
-            'y' => Some(self.handle_vim_copy(DialogEvent::CopySelectedBlock)),
-            'Y' => Some(self.handle_vim_copy(DialogEvent::CopyBlockMetadata)),
+            'y' => Some(self.handle_vim_copy(crate::Event::CopySelectedBlock)),
+            'Y' => Some(self.handle_vim_copy(crate::Event::CopyBlockMetadata)),
             _ => None,
         }
     }
@@ -279,7 +278,7 @@ impl AppState {
         }
     }
 
-    fn handle_vim_copy(&mut self, evt: DialogEvent) -> bool {
+    fn handle_vim_copy(&mut self, evt: crate::Event) -> bool {
         self.update(evt);
         self.view.vim_nav_mode = false;
         self.view.dirty = true;
@@ -288,23 +287,23 @@ impl AppState {
 
     pub(crate) fn handle_vim_nav_event(&mut self, event: &Event) -> Option<bool> {
         match event {
-            ScrollEvent::Up => {
+            crate::Event::Up => {
                 self.vim_nav_up();
                 Some(false)
             }
-            ScrollEvent::Down => {
+            crate::Event::Down => {
                 self.vim_nav_down();
                 Some(false)
             }
-            ScrollEvent::PageUp
-            | ScrollEvent::PageDown
-            | ScrollEvent::GoToTop
-            | ScrollEvent::GoToBottom => {
+            crate::Event::PageUp
+            | crate::Event::PageDown
+            | crate::Event::GoToTop
+            | crate::Event::GoToBottom => {
                 crate::update::input::scroll_event(self, event.clone());
                 Some(false)
             }
-            DialogEvent::ToggleCommandPalette => {
-                crate::update::dialog::dialog_toggle_event(self, DialogEvent::ToggleCommandPalette);
+            crate::Event::ToggleCommandPalette => {
+                crate::update::dialog::dialog_toggle_event(self, crate::Event::ToggleCommandPalette);
                 Some(false)
             }
             _ => Some(true),
@@ -334,11 +333,11 @@ impl AppState {
 
     pub(crate) fn vim_motion_event(&self, c: char) -> Option<Event> {
         match c {
-            'j' => Some(ScrollEvent::Up),
-            'k' => Some(ScrollEvent::Down),
-            'g' => Some(ScrollEvent::GoToTop),
-            'G' => Some(ScrollEvent::GoToBottom),
-            '/' => Some(DialogEvent::ToggleCommandPalette),
+            'j' => Some(crate::Event::Up),
+            'k' => Some(crate::Event::Down),
+            'g' => Some(crate::Event::GoToTop),
+            'G' => Some(crate::Event::GoToBottom),
+            '/' => Some(crate::Event::ToggleCommandPalette),
             _ => None,
         }
     }

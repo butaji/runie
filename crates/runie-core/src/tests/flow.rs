@@ -1,5 +1,4 @@
-use crate::event::Event;
-use crate::event::{AgentEvent, InputEvent};
+use crate::Event;
 use crate::model::{AppState, Role};
 use crate::tests::fresh_state;
 
@@ -15,28 +14,28 @@ fn user_count(state: &AppState) -> usize {
 #[test]
 fn test_complete_agent_flow() {
     let mut state = fresh_state();
-    state.update(InputEvent::Input('H'));
+    state.update(crate::Event::Input('H'));
     state.update(Event::submit());
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].role, Role::User);
     assert!(!state.agent.streaming);
     state.pop_queue();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking {
+    state.update(crate::Event::Thinking {
         id: "req.0".to_string(),
     });
     assert!(state.agent.streaming);
-    state.update(AgentEvent::ThoughtDone {
+    state.update(crate::Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
     });
     assert_eq!(state.session.messages.len(), 3);
     assert_eq!(state.session.messages[1].role, Role::Thought);
     assert_eq!(state.session.messages[2].role, Role::Assistant);
-    state.update(AgentEvent::Done {
+    state.update(crate::Event::Done {
         id: "req.0".to_string(),
     });
     assert!(!state.agent.streaming);
@@ -45,9 +44,9 @@ fn test_complete_agent_flow() {
 #[test]
 fn test_queue_processing() {
     let mut state = fresh_state();
-    state.update(InputEvent::Input('A'));
+    state.update(crate::Event::Input('A'));
     state.update(Event::submit());
-    state.update(InputEvent::Input('B'));
+    state.update(crate::Event::Input('B'));
     state.update(Event::submit());
     assert_eq!(state.session.messages.len(), 2);
     assert_eq!(state.agent.request_queue.len(), 2);
@@ -58,7 +57,7 @@ fn test_queue_processing() {
 fn test_second_submit_while_turn_active_queues_message() {
     let mut state = fresh_state();
     // First message submitted and sent to agent
-    state.update(InputEvent::Input('A'));
+    state.update(crate::Event::Input('A'));
     state.update(Event::submit());
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].content(), "A");
@@ -67,7 +66,7 @@ fn test_second_submit_while_turn_active_queues_message() {
     state.agent.turn_active = true;
 
     // Second message while turn is active
-    state.update(InputEvent::Input('B'));
+    state.update(crate::Event::Input('B'));
     state.update(Event::submit());
 
     // Message B should NOT appear in chat yet — queued for next turn
@@ -88,12 +87,12 @@ fn test_second_submit_while_turn_active_queues_message() {
 fn test_queued_message_appears_after_turn_completes() {
     let mut state = fresh_state();
     // Submit first message and simulate agent start
-    state.update(InputEvent::Input('A'));
+    state.update(crate::Event::Input('A'));
     state.update(Event::submit());
     state.agent.turn_active = true;
 
     // Submit second message while agent is working
-    state.update(InputEvent::Input('B'));
+    state.update(crate::Event::Input('B'));
     state.update(Event::submit());
     assert_eq!(
         state.session.messages.len(),
@@ -102,7 +101,7 @@ fn test_queued_message_appears_after_turn_completes() {
     );
 
     // Agent finishes turn
-    state.update(AgentEvent::Done {
+    state.update(crate::Event::Done {
         id: "req.0".to_string(),
     });
 
@@ -118,7 +117,7 @@ fn test_queued_message_appears_after_turn_completes() {
 }
 
 fn submit_queued_message(state: &mut AppState, ch: char) {
-    state.update(InputEvent::Input(ch));
+    state.update(crate::Event::Input(ch));
     state.update(Event::submit());
 }
 
@@ -142,7 +141,7 @@ fn test_three_messages_one_at_a_time() {
         "Messages 2 and 3 queued"
     );
 
-    state.update(AgentEvent::Done { id: "req.0".into() });
+    state.update(crate::Event::Done { id: "req.0".into() });
     assert_eq!(
         user_count(&state),
         2,
@@ -150,7 +149,7 @@ fn test_three_messages_one_at_a_time() {
     );
     assert_eq!(state.agent.message_queue.len(), 1, "Message 3 still queued");
 
-    state.update(AgentEvent::Done { id: "req.1".into() });
+    state.update(crate::Event::Done { id: "req.1".into() });
     assert_eq!(
         user_count(&state),
         3,
@@ -165,7 +164,7 @@ fn test_three_messages_one_at_a_time() {
 #[test]
 fn test_submit_adds_message_to_queue() {
     let mut state = fresh_state();
-    state.update(InputEvent::Input('H'));
+    state.update(crate::Event::Input('H'));
     state.update(Event::submit());
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].role, Role::User);
@@ -175,7 +174,7 @@ fn test_submit_adds_message_to_queue() {
 #[test]
 fn test_messages_have_correlation_id() {
     let mut state = fresh_state();
-    state.update(InputEvent::Input('H'));
+    state.update(crate::Event::Input('H'));
     state.update(Event::submit());
     assert_eq!(state.session.messages.len(), 1);
     assert!(state.session.messages[0].id.starts_with("req."));
@@ -184,10 +183,10 @@ fn test_messages_have_correlation_id() {
 #[test]
 fn test_multiple_submits_increment_id() {
     let mut state = fresh_state();
-    state.update(InputEvent::Input('A'));
+    state.update(crate::Event::Input('A'));
     state.update(Event::submit());
     let first_id = state.session.messages[0].id.clone();
-    state.update(InputEvent::Input('B'));
+    state.update(crate::Event::Input('B'));
     state.update(Event::submit());
     let second_id = state.session.messages[1].id.clone();
     assert_ne!(first_id, second_id);
@@ -197,26 +196,26 @@ fn test_multiple_submits_increment_id() {
 fn test_multiple_thoughts_for_sequential_requests() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking {
+    state.update(crate::Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(crate::Event::ThoughtDone {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
     });
-    state.update(AgentEvent::Done {
+    state.update(crate::Event::Done {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Thinking {
+    state.update(crate::Event::Thinking {
         id: "req.1".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(crate::Event::ThoughtDone {
         id: "req.1".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.1".to_string(),
         content: "B".to_string(),
     });
@@ -232,14 +231,14 @@ fn test_multiple_thoughts_for_sequential_requests() {
 #[test]
 fn test_think_tags_split_into_thought_and_answer() {
     let mut state = fresh_state();
-    state.update(AgentEvent::Thinking {
+    state.update(crate::Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "<think>reasoning</think>answer".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(crate::Event::ThoughtDone {
         id: "req.0".to_string(),
     });
     let thoughts: Vec<_> = state
@@ -265,14 +264,14 @@ fn test_think_tags_split_into_thought_and_answer() {
 #[test]
 fn test_think_tags_only_reasoning_removes_assistant() {
     let mut state = fresh_state();
-    state.update(AgentEvent::Thinking {
+    state.update(crate::Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "<think>only reasoning</think>".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(crate::Event::ThoughtDone {
         id: "req.0".to_string(),
     });
     let assistants: Vec<_> = state
@@ -288,14 +287,14 @@ fn test_think_tags_only_reasoning_removes_assistant() {
 #[test]
 fn test_unclosed_think_tag_hides_reasoning() {
     let mut state = fresh_state();
-    state.update(AgentEvent::Thinking {
+    state.update(crate::Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "visible<think>still reasoning".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(crate::Event::ThoughtDone {
         id: "req.0".to_string(),
     });
     let assistants: Vec<_> = state
@@ -319,14 +318,14 @@ fn test_unclosed_think_tag_hides_reasoning() {
 #[test]
 fn test_think_tags_update_cached_assistant_index_for_tail_flush() {
     let mut state = fresh_state();
-    state.update(AgentEvent::Thinking {
+    state.update(crate::Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "<think>reasoning</think>answer".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(crate::Event::ThoughtDone {
         id: "req.0".to_string(),
     });
     assert_eq!(state.agent.last_assistant_index, Some(1));

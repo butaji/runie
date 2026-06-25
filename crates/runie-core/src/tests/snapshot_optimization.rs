@@ -1,8 +1,7 @@
 //! Snapshot optimization tests (Layer 1–3)
 
-use crate::event::Event;
 
-use crate::event::{AgentEvent, InputEvent};
+use crate::Event;
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::snapshot::Snapshot;
@@ -47,15 +46,15 @@ fn test_snapshot_is_send_sync() {
 #[test]
 fn test_event_triggers_snapshot_update() {
     let mut state = AppState::default();
-    state.update(InputEvent::Input('h'));
-    state.update(InputEvent::Input('i'));
+    state.update(crate::Event::Input('h'));
+    state.update(crate::Event::Input('i'));
     state.update(Event::submit());
     state.ensure_fresh();
 
     let snap1 = state.snapshot();
     let count1 = snap1.elements.len();
 
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello back".into(),
     });
@@ -141,7 +140,7 @@ fn test_arc_pointer_stability_after_state_mutation() {
     let ptr1 = Arc::as_ptr(&snap1.elements);
 
     // Mutate state but NOT messages (e.g., cursor move)
-    state.update(InputEvent::Input('x'));
+    state.update(crate::Event::Input('x'));
     state.ensure_fresh();
 
     let snap2 = state.snapshot();

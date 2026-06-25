@@ -1,41 +1,40 @@
-use crate::event::CommandEvent;
 use crate::model::AppState;
 use crate::session::Session;
 
 use super::dialog;
 
-pub(super) fn handle_command_event(state: &mut AppState, event: CommandEvent) {
+pub(super) fn handle_command_event(state: &mut AppState, event: crate::Event) {
     use crate::commands::CommandResult;
     match &event {
-        CommandEvent::RunLoadCommand { name } => run_load_command(state, name),
-        CommandEvent::RunSaveCommand { name } => run_save_command(state, name),
-        CommandEvent::RunDeleteCommand { name } => run_delete_command(state, name),
-        CommandEvent::RunImportCommand { path } => run_import_command(state, path),
-        CommandEvent::RunExportCommand { path } => run_export_command(state, path),
-        CommandEvent::RunSkillCommand { name } => run_skill_command(state, name),
-        CommandEvent::RunLoginCommand { .. } => {
+        crate::Event::RunLoadCommand { name } => run_load_command(state, name),
+        crate::Event::RunSaveCommand { name } => run_save_command(state, name),
+        crate::Event::RunDeleteCommand { name } => run_delete_command(state, name),
+        crate::Event::RunImportCommand { path } => run_import_command(state, path),
+        crate::Event::RunExportCommand { path } => run_export_command(state, path),
+        crate::Event::RunSkillCommand { name } => run_skill_command(state, name),
+        crate::Event::RunLoginCommand { .. } => {
             dialog::process_command_result(
                 state,
                 CommandResult::OpenDialog(crate::commands::DialogType::CommandPalette),
             );
         }
-        CommandEvent::RunLogoutCommand { provider } => run_logout_command(state, provider),
-        CommandEvent::RunNameCommand { name } => {
+        crate::Event::RunLogoutCommand { provider } => run_logout_command(state, provider),
+        crate::Event::RunNameCommand { name } => {
             crate::commands::dsl::handlers::session::run_name(state, name);
         }
-        CommandEvent::RunForkCommand { message_index } => {
+        crate::Event::RunForkCommand { message_index } => {
             crate::commands::dsl::handlers::session::run_fork(state, message_index);
         }
-        CommandEvent::RunCompactCommand { keep, focus } => {
+        crate::Event::RunCompactCommand { keep, focus } => {
             crate::commands::dsl::handlers::session::run_compact(state, keep, focus);
         }
-        CommandEvent::RunPromptCommand { name } => {
+        crate::Event::RunPromptCommand { name } => {
             crate::commands::dsl::handlers::system::run_prompt(state, name);
         }
-        CommandEvent::RunThinkingCommand { level } => {
+        crate::Event::RunThinkingCommand { level } => {
             crate::commands::dsl::handlers::model::run_thinking(state, *level);
         }
-        CommandEvent::RunPaletteCommand { name, args } => {
+        crate::Event::RunPaletteCommand { name, args } => {
             run_palette_command(state, name, args);
         }
         // intentionally ignored: other command events fall through

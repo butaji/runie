@@ -2,7 +2,6 @@
 
 use crate::commands::DialogState;
 use crate::dialog::{ItemAction, Panel, PanelItem, PanelStack};
-use crate::event::{DialogEvent, InputEvent, ModelConfigEvent};
 use crate::model::AppState;
 use crate::Event;
 
@@ -58,10 +57,10 @@ pub fn update_panel_stack(
 
 fn handle_panel_close(state: &mut AppState, event: &Event, stack: &mut PanelStack) -> bool {
     match event {
-        ModelConfigEvent::SettingsClose
-        | DialogEvent::PaletteClose
-        | DialogEvent::ModelSelectorClose
-        | DialogEvent::DialogBack => {
+        crate::Event::SettingsClose
+        | crate::Event::PaletteClose
+        | crate::Event::ModelSelectorClose
+        | crate::Event::DialogBack => {
             if stack.len() > 1 {
                 stack.pop();
             } else {
@@ -77,25 +76,25 @@ fn handle_panel_close(state: &mut AppState, event: &Event, stack: &mut PanelStac
 
 fn handle_panel_navigation(_state: &mut AppState, event: &Event, stack: &mut PanelStack) -> bool {
     match event {
-        InputEvent::HistoryPrev
-        | ModelConfigEvent::SettingsUp
-        | DialogEvent::PaletteUp
-        | DialogEvent::ModelSelectorUp => {
+        crate::Event::HistoryPrev
+        | crate::Event::SettingsUp
+        | crate::Event::PaletteUp
+        | crate::Event::ModelSelectorUp => {
             stack.select_up();
             return true;
         }
-        InputEvent::HistoryNext
-        | ModelConfigEvent::SettingsDown
-        | DialogEvent::PaletteDown
-        | DialogEvent::ModelSelectorDown => {
+        crate::Event::HistoryNext
+        | crate::Event::SettingsDown
+        | crate::Event::PaletteDown
+        | crate::Event::ModelSelectorDown => {
             stack.select_down();
             return true;
         }
-        InputEvent::CursorLeft | ModelConfigEvent::SettingsLeft => {
+        crate::Event::CursorLeft | crate::Event::SettingsLeft => {
             stack.pop();
             return true;
         }
-        InputEvent::Input('\t') => {
+        crate::Event::Input('\t') => {
             stack.select_down();
             return true;
         }
@@ -111,13 +110,13 @@ fn handle_panel_activation(
     stack: &mut PanelStack,
 ) -> Option<PanelUpdateResult> {
     match event {
-        InputEvent::Submit
-        | ModelConfigEvent::SettingsSelect
-        | DialogEvent::PaletteSelect
-        | DialogEvent::ModelSelectorSelect => {
+        crate::Event::Submit
+        | crate::Event::SettingsSelect
+        | crate::Event::PaletteSelect
+        | crate::Event::ModelSelectorSelect => {
             return Some(try_activate_panel(state, stack));
         }
-        InputEvent::Input(' ') => {
+        crate::Event::Input(' ') => {
             if let Some(panel) = stack.current_mut() {
                 if toggle_selected_checkbox(state, panel) {
                     return Some(PanelUpdateResult::Consumed);
@@ -132,9 +131,9 @@ fn handle_panel_activation(
 
 fn handle_panel_filter(state: &mut AppState, event: &Event, stack: &mut PanelStack) {
     match event {
-        DialogEvent::PaletteFilter(c) => stack.push_filter(*c),
-        DialogEvent::ModelSelectorFilter(c) => stack.push_filter(*c),
-        InputEvent::Input(c) => {
+        crate::Event::PaletteFilter(c) => stack.push_filter(*c),
+        crate::Event::ModelSelectorFilter(c) => stack.push_filter(*c),
+        crate::Event::Input(c) => {
             let is_file_picker = stack.current().is_some_and(|p| p.id == "at-files");
             stack.push_filter(*c);
             // If this is the file picker, re-query FFF with the new filter.
@@ -143,9 +142,9 @@ fn handle_panel_filter(state: &mut AppState, event: &Event, stack: &mut PanelSta
                 super::rebuild_file_picker(state);
             }
         }
-        DialogEvent::PaletteBackspace
-        | DialogEvent::ModelSelectorBackspace
-        | InputEvent::Backspace => {
+        crate::Event::PaletteBackspace
+        | crate::Event::ModelSelectorBackspace
+        | crate::Event::Backspace => {
             let is_file_picker = stack.current().is_some_and(|p| p.id == "at-files");
             stack.pop_filter();
             if is_file_picker {

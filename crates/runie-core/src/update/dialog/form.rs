@@ -1,7 +1,7 @@
 //! Form Action Types and panel form handling (merged from dialog_form.rs).
 
 use crate::dialog::{ItemAction, Panel, PanelItem};
-use crate::event::{DialogEvent, InputEvent, ModelConfigEvent, TransientLevel};
+use crate::event::TransientLevel;
 use crate::model::AppState;
 use crate::Event;
 
@@ -24,37 +24,37 @@ pub enum FormAction {
 pub fn form_panel_action(state: &mut AppState, panel: &mut Panel, event: Event) -> FormAction {
     use FormAction as A;
     match &event {
-        ModelConfigEvent::SettingsClose
-        | DialogEvent::CommandFormClose
-        | DialogEvent::DialogBack => A::Back,
-        DialogEvent::CommandFormUp
-        | InputEvent::HistoryPrev
-        | ModelConfigEvent::SettingsUp
-        | DialogEvent::PaletteUp
-        | DialogEvent::ModelSelectorUp => {
+        crate::Event::SettingsClose
+        | crate::Event::CommandFormClose
+        | crate::Event::DialogBack => A::Back,
+        crate::Event::CommandFormUp
+        | crate::Event::HistoryPrev
+        | crate::Event::SettingsUp
+        | crate::Event::PaletteUp
+        | crate::Event::ModelSelectorUp => {
             let _ = panel.select_up();
             A::KeepOpen
         }
-        DialogEvent::CommandFormDown
-        | InputEvent::HistoryNext
-        | ModelConfigEvent::SettingsDown
-        | DialogEvent::PaletteDown
-        | DialogEvent::ModelSelectorDown => {
+        crate::Event::CommandFormDown
+        | crate::Event::HistoryNext
+        | crate::Event::SettingsDown
+        | crate::Event::PaletteDown
+        | crate::Event::ModelSelectorDown => {
             let _ = panel.select_down();
             A::KeepOpen
         }
-        DialogEvent::CommandFormInput(c) => handle_form_input(state, panel, *c),
-        InputEvent::Input(' ') => handle_form_space(state, panel),
-        InputEvent::Input(c) => handle_form_input(state, panel, *c),
-        InputEvent::Paste(text) => handle_form_paste(panel, text),
-        DialogEvent::CommandFormBackspace | InputEvent::Backspace => {
+        crate::Event::CommandFormInput(c) => handle_form_input(state, panel, *c),
+        crate::Event::Input(' ') => handle_form_space(state, panel),
+        crate::Event::Input(c) => handle_form_input(state, panel, *c),
+        crate::Event::Paste(text) => handle_form_paste(panel, text),
+        crate::Event::CommandFormBackspace | crate::Event::Backspace => {
             form_panel_delete_before_cursor(panel);
             A::KeepOpen
         }
-        DialogEvent::CommandFormSubmit
-        | InputEvent::Submit
-        | ModelConfigEvent::SettingsSelect
-        | DialogEvent::PaletteSelect => handle_form_submit(state, panel),
+        crate::Event::CommandFormSubmit
+        | crate::Event::Submit
+        | crate::Event::SettingsSelect
+        | crate::Event::PaletteSelect => handle_form_submit(state, panel),
         _ => form_panel_edit_action(panel, &event),
     }
 }
@@ -62,16 +62,16 @@ pub fn form_panel_action(state: &mut AppState, panel: &mut Panel, event: Event) 
 fn form_panel_edit_action(panel: &mut Panel, event: &Event) -> FormAction {
     use FormAction as A;
     match event {
-        InputEvent::KillChar => form_panel_delete_at_cursor(panel),
-        InputEvent::DeleteWord => form_panel_delete_word_before(panel),
-        InputEvent::DeleteToEnd => form_panel_delete_to_end(panel),
-        InputEvent::DeleteToStart => form_panel_delete_to_start(panel),
-        InputEvent::CursorLeft => form_panel_move_cursor(panel, CursorDir::Left),
-        InputEvent::CursorRight => form_panel_move_cursor(panel, CursorDir::Right),
-        InputEvent::CursorStart | InputEvent::CursorWordLeft => {
+        crate::Event::KillChar => form_panel_delete_at_cursor(panel),
+        crate::Event::DeleteWord => form_panel_delete_word_before(panel),
+        crate::Event::DeleteToEnd => form_panel_delete_to_end(panel),
+        crate::Event::DeleteToStart => form_panel_delete_to_start(panel),
+        crate::Event::CursorLeft => form_panel_move_cursor(panel, CursorDir::Left),
+        crate::Event::CursorRight => form_panel_move_cursor(panel, CursorDir::Right),
+        crate::Event::CursorStart | crate::Event::CursorWordLeft => {
             form_panel_move_cursor(panel, CursorDir::Start)
         }
-        InputEvent::CursorEnd | InputEvent::CursorWordRight => {
+        crate::Event::CursorEnd | crate::Event::CursorWordRight => {
             form_panel_move_cursor(panel, CursorDir::End)
         }
         // intentionally ignored: other input events fall through

@@ -1,18 +1,17 @@
 //! Theme slash command tests
 
 use super::slash::{exec, tmp_store, ENV_LOCK};
-use crate::event::Event;
-use crate::event::{DialogEvent, InputEvent};
+use crate::Event;
 use crate::model::Role;
 use crate::tests::fresh_state;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
-    state.update(InputEvent::Input('/'));
+    state.update(crate::Event::Input('/'));
     for c in cmd.chars() {
-        state.update(DialogEvent::PaletteFilter(c));
+        state.update(crate::Event::PaletteFilter(c));
     }
-    state.update(DialogEvent::PaletteSelect);
+    state.update(crate::Event::PaletteSelect);
 }
 
 #[test]
@@ -120,9 +119,9 @@ fn theme_selector_switch_updates_state() {
 
     // Filter to dracula and submit to apply the theme while keeping dialog open.
     for c in "dracula".chars() {
-        state.update(DialogEvent::PaletteFilter(c));
+        state.update(crate::Event::PaletteFilter(c));
     }
-    state.update(DialogEvent::PaletteSelect);
+    state.update(crate::Event::PaletteSelect);
 
     assert_eq!(
         state.config.theme_name, "dracula",

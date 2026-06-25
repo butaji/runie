@@ -1,6 +1,6 @@
 //! Model selector tests (Layer 1 + Layer 2)
 
-use crate::event::{ControlEvent, DialogEvent, InputEvent};
+use crate::Event;
 
 use crate::commands::DialogState;
 use crate::model::{AppState, ScopedModel};
@@ -17,11 +17,11 @@ fn selector_state(state: &AppState) -> Option<(String, usize)> {
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
-    state.update(InputEvent::Input('/'));
+    state.update(crate::Event::Input('/'));
     for c in cmd.chars() {
-        state.update(DialogEvent::PaletteFilter(c));
+        state.update(crate::Event::PaletteFilter(c));
     }
-    state.update(DialogEvent::PaletteSelect);
+    state.update(crate::Event::PaletteSelect);
 }
 
 fn sample_catalog() -> Vec<ModelInfo> {
@@ -114,9 +114,9 @@ fn recent_only_shows_known_models() {
 fn select_emits_switch_model() {
     let mut state = AppState::default();
     configure(&mut state, &[("openai".into(), vec!["gpt-4o".into()])]);
-    state.update(DialogEvent::ToggleModelSelector);
+    state.update(crate::Event::ToggleModelSelector);
     assert!(selector_state(&state).is_some());
-    state.update(DialogEvent::ModelSelectorSelect);
+    state.update(crate::Event::ModelSelectorSelect);
     assert!(state.open_dialog.is_none());
     assert_eq!(state.config.current_provider, "openai");
     assert_eq!(state.config.current_model, "gpt-4o");
@@ -178,7 +178,7 @@ fn groups_by_provider() {
 fn ctrl_l_opens_selector() {
     let mut state = AppState::default();
     assert!(state.open_dialog.is_none());
-    state.update(DialogEvent::ToggleModelSelector);
+    state.update(crate::Event::ToggleModelSelector);
     assert!(selector_state(&state).is_some());
 }
 
@@ -193,9 +193,9 @@ fn slash_model_no_args_opens_selector() {
 #[test]
 fn esc_closes_selector() {
     let mut state = AppState::default();
-    state.update(DialogEvent::ToggleModelSelector);
+    state.update(crate::Event::ToggleModelSelector);
     assert!(state.open_dialog.is_some());
-    state.update(DialogEvent::ModelSelectorClose);
+    state.update(crate::Event::ModelSelectorClose);
     assert!(state.open_dialog.is_none());
 }
 
@@ -205,7 +205,7 @@ fn empty_current_marker_when_no_active_model() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.update(DialogEvent::ToggleModelSelector);
+    state.update(crate::Event::ToggleModelSelector);
 
     let items = match &state.open_dialog {
         Some(DialogState::ModelSelector(stack)) => {
@@ -222,19 +222,19 @@ fn empty_current_marker_when_no_active_model() {
 #[test]
 fn abort_closes_selector() {
     let mut state = AppState::default();
-    state.update(DialogEvent::ToggleModelSelector);
+    state.update(crate::Event::ToggleModelSelector);
     assert!(state.open_dialog.is_some());
-    state.update(ControlEvent::Abort);
+    state.update(crate::Event::Abort);
     assert!(state.open_dialog.is_none());
 }
 
 #[test]
 fn filter_narrows_selector() {
     let mut state = AppState::default();
-    state.update(DialogEvent::ToggleModelSelector);
-    state.update(DialogEvent::ModelSelectorFilter('g'));
-    state.update(DialogEvent::ModelSelectorFilter('p'));
-    state.update(DialogEvent::ModelSelectorFilter('t'));
+    state.update(crate::Event::ToggleModelSelector);
+    state.update(crate::Event::ModelSelectorFilter('g'));
+    state.update(crate::Event::ModelSelectorFilter('p'));
+    state.update(crate::Event::ModelSelectorFilter('t'));
     let (filter, _) = selector_state(&state).expect("ModelSelector should be open");
     assert_eq!(filter, "gpt");
 }
@@ -243,11 +243,11 @@ fn filter_narrows_selector() {
 fn up_down_navigates_selector() {
     let mut state = AppState::default();
     configure(&mut state, &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
-    state.update(DialogEvent::ToggleModelSelector);
-    state.update(DialogEvent::ModelSelectorDown);
+    state.update(crate::Event::ToggleModelSelector);
+    state.update(crate::Event::ModelSelectorDown);
     let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
     assert_eq!(selected, 1);
-    state.update(DialogEvent::ModelSelectorUp);
+    state.update(crate::Event::ModelSelectorUp);
     let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
     assert_eq!(selected, 0);
 }
@@ -256,8 +256,8 @@ fn up_down_navigates_selector() {
 fn selector_wraps_up() {
     let mut state = AppState::default();
     configure(&mut state, &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
-    state.update(DialogEvent::ToggleModelSelector);
-    state.update(DialogEvent::ModelSelectorUp);
+    state.update(crate::Event::ToggleModelSelector);
+    state.update(crate::Event::ModelSelectorUp);
     let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
     assert!(
         selected > 0,
@@ -270,7 +270,7 @@ fn selector_wraps_up() {
 fn selector_wraps_down() {
     let mut state = AppState::default();
     configure(&mut state, &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
-    state.update(DialogEvent::ToggleModelSelector);
+    state.update(crate::Event::ToggleModelSelector);
     let count = match &state.open_dialog {
         Some(DialogState::ModelSelector(stack)) => {
             stack.current().map(|p| p.navigable_count()).unwrap_or(0)
@@ -278,7 +278,7 @@ fn selector_wraps_down() {
         _ => 0,
     };
     for _ in 0..count {
-        state.update(DialogEvent::ModelSelectorDown);
+        state.update(crate::Event::ModelSelectorDown);
     }
     let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
     assert_eq!(selected, 0, "Down at last should wrap to first");

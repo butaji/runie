@@ -1,21 +1,21 @@
 //! Shared helpers for login/onboarding flow tests.
 
-use crate::event::LoginFlowEvent;
+use crate::Event;
 use crate::login_flow::LoginStep;
 use crate::model::AppState;
 
 pub fn start_login_flow(state: &mut AppState) {
-    state.update(LoginFlowEvent::Start);
+    state.update(crate::Event::Start);
 }
 
 pub fn select_provider(state: &mut AppState, provider: &str) {
-    state.update(LoginFlowEvent::SelectProvider {
+    state.update(crate::Event::SelectProvider {
         provider: provider.into(),
     });
 }
 
 pub fn submit_key(state: &mut AppState, key: &str) {
-    state.update(LoginFlowEvent::SubmitKey {
+    state.update(crate::Event::SubmitKey {
         provider: String::new(),
         key: key.into(),
     });
@@ -26,7 +26,7 @@ pub fn fetch_models(state: &mut AppState, models: &[String]) {
         .login_flow
         .as_ref()
         .expect("fetch_models requires an active login flow");
-    state.update(LoginFlowEvent::ModelsFetched {
+    state.update(crate::Event::ModelsFetched {
         provider: flow.provider.clone(),
         key: flow.key.clone(),
         models: models.to_vec(),
@@ -34,7 +34,7 @@ pub fn fetch_models(state: &mut AppState, models: &[String]) {
 }
 
 pub fn fetch_models_for(state: &mut AppState, provider: &str, key: &str, models: &[String]) {
-    state.update(LoginFlowEvent::ModelsFetched {
+    state.update(crate::Event::ModelsFetched {
         provider: provider.into(),
         key: key.into(),
         models: models.to_vec(),
@@ -42,7 +42,7 @@ pub fn fetch_models_for(state: &mut AppState, provider: &str, key: &str, models:
 }
 
 pub fn save_login_flow(state: &mut AppState) {
-    state.update(LoginFlowEvent::Save);
+    state.update(crate::Event::Save);
 }
 
 pub fn assert_step(state: &AppState, step: LoginStep) {

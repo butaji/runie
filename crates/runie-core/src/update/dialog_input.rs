@@ -1,10 +1,9 @@
-use crate::event::{DialogEvent, InputEvent};
 use crate::model::{AppState, InputReceiver};
 
 use super::dialog;
 
 impl AppState {
-    pub(super) fn try_handle_dialog_event_input(&mut self, event: &InputEvent) -> bool {
+    pub(super) fn try_handle_dialog_event_input(&mut self, event: &crate::Event) -> bool {
         if self.open_dialog.is_none() {
             return false;
         }
@@ -14,7 +13,7 @@ impl AppState {
             Some(crate::commands::DialogState::Welcome)
         ) {
             match event {
-                InputEvent::Input(_) | InputEvent::Submit => {
+                crate::Event::Input(_) | crate::Event::Submit => {
                     self.open_dialog = None;
                     self.view.input_receiver = InputReceiver::ChatInput;
                     self.view.dirty = true;
@@ -24,14 +23,14 @@ impl AppState {
             }
         }
         match event {
-            InputEvent::Input(_)
-            | InputEvent::Submit
-            | InputEvent::Backspace
-            | InputEvent::HistoryPrev
-            | InputEvent::HistoryNext
-            | InputEvent::CursorLeft
-            | InputEvent::CursorRight
-            | InputEvent::Paste(_) => {
+            crate::Event::Input(_)
+            | crate::Event::Submit
+            | crate::Event::Backspace
+            | crate::Event::HistoryPrev
+            | crate::Event::HistoryNext
+            | crate::Event::CursorLeft
+            | crate::Event::CursorRight
+            | crate::Event::Paste(_) => {
                 dialog::update_dialog(self, event.clone());
                 return true;
             }
@@ -41,15 +40,15 @@ impl AppState {
         false
     }
 
-    pub(super) fn try_handle_vim_dialog_back_input(&mut self, event: &InputEvent) -> bool {
-        if *event != InputEvent::Backspace || !self.view.vim_nav_mode {
+    pub(super) fn try_handle_vim_dialog_back_input(&mut self, event: &crate::Event) -> bool {
+        if *event != crate::Event::Backspace || !self.view.vim_nav_mode {
             return false;
         }
         self.handle_vim_dialog_back();
         true
     }
 
-    pub(super) fn try_handle_vim_nav_event_input(&mut self, event: &InputEvent) -> bool {
+    pub(super) fn try_handle_vim_nav_event_input(&mut self, event: &crate::Event) -> bool {
         if !self.view.vim_nav_mode {
             return false;
         }
@@ -63,7 +62,7 @@ impl AppState {
         if self.open_dialog.is_none() {
             return false;
         }
-        if self.login_flow.is_some() && matches!(event, DialogEvent::ProvidersAdd) {
+        if self.login_flow.is_some() && matches!(event, crate::Event::ProvidersAdd) {
             return false;
         }
         dialog::update_dialog(self, event.clone());

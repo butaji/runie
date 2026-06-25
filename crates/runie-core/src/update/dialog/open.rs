@@ -21,7 +21,7 @@ pub fn open_command_palette_with_filter(state: &mut AppState, initial_filter: &s
             cmd.category.as_str(),
             &cmd.name,
             &cmd.desc,
-            crate::event::CommandEvent::RunPaletteCommand {
+            crate::Event::RunPaletteCommand {
                 name: cmd.name.clone(),
                 args: String::new(),
             },
@@ -33,7 +33,7 @@ pub fn open_command_palette_with_filter(state: &mut AppState, initial_filter: &s
                 "Skill",
                 &skill.name,
                 &skill.description,
-                crate::event::CommandEvent::RunSkillCommand {
+                crate::Event::RunSkillCommand {
                     name: skill.name.clone(),
                 },
             ));
@@ -135,7 +135,7 @@ pub fn open_session_tree_dialog(state: &mut AppState) {
                     node.message.role.as_str(),
                     node.message.content().chars().take(60).collect::<String>()
                 );
-                let evt = crate::event::SessionEvent::SessionTreeSelect {
+                let evt = crate::Event::SessionTreeSelect {
                     id: node.message.id.clone(),
                 };
                 (depth, preview, evt)

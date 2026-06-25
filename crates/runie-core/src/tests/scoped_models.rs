@@ -1,7 +1,7 @@
 //! Scoped models tests (Layer 1 + Layer 2)
 
 use crate::commands::DialogState;
-use crate::event::{ControlEvent, DialogEvent, Event, InputEvent, ModelConfigEvent};
+use crate::Event;
 use crate::model::{AppState, ScopedModel};
 
 fn sm(provider: &str, name: &str, enabled: bool) -> ScopedModel {
@@ -19,11 +19,11 @@ fn configure(state: &mut AppState, providers: &[(String, Vec<String>)]) {
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
-    state.update(InputEvent::Input('/'));
+    state.update(crate::Event::Input('/'));
     for c in cmd.chars() {
-        state.update(DialogEvent::PaletteFilter(c));
+        state.update(crate::Event::PaletteFilter(c));
     }
-    state.update(DialogEvent::PaletteSelect);
+    state.update(crate::Event::PaletteSelect);
 }
 
 #[test]
@@ -31,7 +31,7 @@ fn toggle_model_excludes_from_cycle() {
     let mut state = AppState::default();
     state.config.scoped_models = vec![sm("mock", "echo", true), sm("openai", "gpt-4o", true)];
 
-    state.update(ModelConfigEvent::ScopedModelToggle {
+    state.update(crate::Event::ScopedModelToggle {
         provider: "openai".to_string(),
         name: "gpt-4o".to_string(),
     });
@@ -44,7 +44,7 @@ fn enable_all_includes_all() {
     let mut state = AppState::default();
     state.config.scoped_models = vec![sm("mock", "echo", false), sm("openai", "gpt-4o", false)];
 
-    state.update(ModelConfigEvent::ScopedModelEnableAll);
+    state.update(crate::Event::ScopedModelEnableAll);
 
     assert!(state.config.scoped_models.iter().all(|m| m.enabled));
 }
@@ -54,7 +54,7 @@ fn disable_all_excludes_all() {
     let mut state = AppState::default();
     state.config.scoped_models = vec![sm("mock", "echo", true), sm("openai", "gpt-4o", true)];
 
-    state.update(ModelConfigEvent::ScopedModelDisableAll);
+    state.update(crate::Event::ScopedModelDisableAll);
 
     assert!(state.config.scoped_models.iter().all(|m| !m.enabled));
 }
@@ -68,7 +68,7 @@ fn provider_toggle_affects_all() {
         sm("anthropic", "claude-3", true),
     ];
 
-    state.update(ModelConfigEvent::ScopedModelToggleProvider {
+    state.update(crate::Event::ScopedModelToggleProvider {
         provider: "openai".to_string(),
     });
 
@@ -86,7 +86,7 @@ fn provider_toggle_re_enables_all() {
         sm("anthropic", "claude-3", true),
     ];
 
-    state.update(ModelConfigEvent::ScopedModelToggleProvider {
+    state.update(crate::Event::ScopedModelToggleProvider {
         provider: "openai".to_string(),
     });
 
@@ -127,9 +127,9 @@ fn scoped_models_dialog_navigates_up() {
         ("openai".into(), vec!["gpt-4o".into()]),
         ("anthropic".into(), vec!["claude-3".into()]),
     ]);
-    state.update(ModelConfigEvent::ToggleScopedModelsDialog);
+    state.update(crate::Event::ToggleScopedModelsDialog);
 
-    state.update(InputEvent::HistoryPrev);
+    state.update(crate::Event::HistoryPrev);
 
     assert_eq!(
         scoped_selected(&state).unwrap(),
@@ -146,10 +146,10 @@ fn scoped_models_dialog_navigates_down() {
         ("openai".into(), vec!["gpt-4o".into()]),
         ("anthropic".into(), vec!["claude-3".into()]),
     ]);
-    state.update(ModelConfigEvent::ToggleScopedModelsDialog);
-    state.update(InputEvent::HistoryNext);
-    state.update(InputEvent::HistoryNext);
-    state.update(InputEvent::HistoryNext);
+    state.update(crate::Event::ToggleScopedModelsDialog);
+    state.update(crate::Event::HistoryNext);
+    state.update(crate::Event::HistoryNext);
+    state.update(crate::Event::HistoryNext);
 
     assert_eq!(
         scoped_selected(&state).unwrap(),
@@ -165,8 +165,8 @@ fn scoped_models_dialog_submit_toggles() {
         ("mock".into(), vec!["echo".into()]),
         ("openai".into(), vec!["gpt-4o".into()]),
     ]);
-    state.update(ModelConfigEvent::ToggleScopedModelsDialog);
-    state.update(InputEvent::HistoryNext);
+    state.update(crate::Event::ToggleScopedModelsDialog);
+    state.update(crate::Event::HistoryNext);
 
     state.update(Event::submit());
 
@@ -178,9 +178,9 @@ fn scoped_models_dialog_submit_toggles() {
 fn scoped_models_dialog_esc_closes() {
     let mut state = AppState::default();
     configure(&mut state, &[("mock".into(), vec!["echo".into()])]);
-    state.update(ModelConfigEvent::ToggleScopedModelsDialog);
+    state.update(crate::Event::ToggleScopedModelsDialog);
 
-    state.update(ControlEvent::Abort);
+    state.update(crate::Event::Abort);
 
     assert!(state.open_dialog.is_none());
 }
@@ -193,7 +193,7 @@ fn toggle_scoped_model_uses_provider_and_name() {
         sm("anthropic", "gpt-4o", true),
     ];
 
-    state.update(ModelConfigEvent::ScopedModelToggle {
+    state.update(crate::Event::ScopedModelToggle {
         provider: "anthropic".into(),
         name: "gpt-4o".into(),
     });
@@ -215,7 +215,7 @@ fn scoped_models_dialog_populates_from_configured_providers() {
     state.populate_cache_from_login_config();
     state.config.scoped_models.clear();
 
-    state.update(ModelConfigEvent::ToggleScopedModelsDialog);
+    state.update(crate::Event::ToggleScopedModelsDialog);
 
     let items = match &state.open_dialog {
         Some(DialogState::ScopedModels(stack)) => {

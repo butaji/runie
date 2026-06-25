@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::event::InputEvent;
+    use crate::Event;
     use crate::model::AppState;
 
     #[test]
@@ -27,7 +27,7 @@ mod tests {
     #[test]
     fn placeholder_cleared_after_typing() {
         let mut state = AppState::default();
-        state.update(InputEvent::Input('a'));
+        state.update(crate::Event::Input('a'));
         let _snap = state.snapshot();
         // Placeholder is still in state, but input is no longer empty
         assert_eq!(state.input.input, "a");
@@ -36,8 +36,8 @@ mod tests {
     #[test]
     fn placeholder_returns_after_clearing_input() {
         let mut state = AppState::default();
-        state.update(InputEvent::Input('a'));
-        state.update(InputEvent::Backspace);
+        state.update(crate::Event::Input('a'));
+        state.update(crate::Event::Backspace);
         assert!(state.input.input.is_empty());
         let snap = state.snapshot();
         assert!(!snap.placeholder.is_empty());

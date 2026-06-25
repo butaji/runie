@@ -4,7 +4,7 @@
 //! write the OSC 52 sequence directly to the terminal. These tests
 //! verify the event is emitted with the correct payload.
 
-use crate::event::{DialogEvent, InputEvent};
+use crate::Event;
 use crate::model::{AppState, ChatMessage};
 use crate::tests::fresh_state;
 use std::sync::Mutex;
@@ -16,14 +16,14 @@ static ENV_LOCK: Mutex<()> = Mutex::new(());
 fn copy_with_no_assistant_message_shows_error() {
     let mut state = fresh_state();
     // Open palette with '/'
-    state.update(InputEvent::Input('/'));
+    state.update(crate::Event::Input('/'));
     // Filter to 'copy' command
-    state.update(DialogEvent::PaletteFilter('c'));
-    state.update(DialogEvent::PaletteFilter('o'));
-    state.update(DialogEvent::PaletteFilter('p'));
-    state.update(DialogEvent::PaletteFilter('y'));
+    state.update(crate::Event::PaletteFilter('c'));
+    state.update(crate::Event::PaletteFilter('o'));
+    state.update(crate::Event::PaletteFilter('p'));
+    state.update(crate::Event::PaletteFilter('y'));
     // Select the copy command
-    state.update(DialogEvent::PaletteSelect);
+    state.update(crate::Event::PaletteSelect);
 
     let sys: Vec<_> = state
         .session
@@ -56,7 +56,7 @@ fn copy_emits_clipboard_event_with_last_assistant_text() {
     // observe it via the command handler directly.
     let result = state.handle_slash("/copy");
     assert!(
-        matches!(result, Some(crate::commands::CommandResult::Event(DialogEvent::CopyToClipboard(ref text))) if text == "the answer is 42"),
+        matches!(result, Some(crate::commands::CommandResult::Event(crate::Event::CopyToClipboard(ref text))) if text == "the answer is 42"),
         "expected CopyToClipboard event with last assistant text, got {:?}",
         result
     );
@@ -75,7 +75,7 @@ fn copy_uses_most_recent_assistant_message() {
 
     let result = state.handle_slash("/copy");
     assert!(
-        matches!(result, Some(crate::commands::CommandResult::Event(DialogEvent::CopyToClipboard(ref text))) if text == "newer response"),
+        matches!(result, Some(crate::commands::CommandResult::Event(crate::Event::CopyToClipboard(ref text))) if text == "newer response"),
         "should copy the most recent assistant message, got {:?}",
         result
     );
@@ -93,7 +93,7 @@ fn copy_event_payload_does_not_include_older_messages() {
         .with_timestamp(1.0));
 
     let result = state.handle_slash("/copy");
-    if let Some(crate::commands::CommandResult::Event(DialogEvent::CopyToClipboard(text))) = result
+    if let Some(crate::commands::CommandResult::Event(crate::Event::CopyToClipboard(text))) = result
     {
         assert!(
             !text.contains("old response"),

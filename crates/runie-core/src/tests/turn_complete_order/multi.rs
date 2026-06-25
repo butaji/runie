@@ -1,8 +1,7 @@
 //! multi tests.
 
-use crate::event::Event;
 
-use crate::event::AgentEvent;
+use crate::Event;
 use crate::model::{AppState, Role};
 use crate::view::LazyCache;
 use crate::tests::fresh_state;
@@ -36,31 +35,31 @@ fn element_kinds_no_spacer(state: &AppState) -> Vec<String> {
 
 fn duplicate_turn_complete_events() -> Vec<Event> {
     vec![
-        AgentEvent::Thinking { id: "req.0".into() },
-        AgentEvent::ThoughtDone { id: "req.0".into() },
-        AgentEvent::ToolStart {
+        crate::Event::Thinking { id: "req.0".into() },
+        crate::Event::ThoughtDone { id: "req.0".into() },
+        crate::Event::ToolStart {
             id: "req.0".into(),
             name: "ls".into(),
             input: serde_json::Value::Null,
         },
-        AgentEvent::ToolEnd {
+        crate::Event::ToolEnd {
             id: "".to_string(),
             duration_secs: 0.5,
             output: "a".into(),
         },
-        AgentEvent::Response {
+        crate::Event::Response {
             id: "req.0".into(),
             content: "Hello".into(),
         },
-        AgentEvent::TurnComplete {
+        crate::Event::TurnComplete {
             id: "req.0".into(),
             duration_secs: 1.0,
         },
-        AgentEvent::TurnComplete {
+        crate::Event::TurnComplete {
             id: "req.0".into(),
             duration_secs: 1.0,
         },
-        AgentEvent::Done { id: "req.0".into() },
+        crate::Event::Done { id: "req.0".into() },
     ]
 }
 
@@ -91,31 +90,31 @@ fn turn_complete_deduplicated_on_duplicate_events() {
 fn turn_complete_is_last_when_new_assistant_after_turn_complete() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
-    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart {
+    state.update(crate::Event::Thinking { id: "req.0".into() });
+    state.update(crate::Event::ThoughtDone { id: "req.0".into() });
+    state.update(crate::Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(crate::Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
     });
-    state.update(AgentEvent::TurnComplete {
+    state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.1".into(),
         content: "Delayed".into(),
     });
-    state.update(AgentEvent::Done { id: "req.0".into() });
+    state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
 
     let kinds = element_kinds_no_spacer(&state);
@@ -131,27 +130,27 @@ fn turn_complete_is_last_when_new_assistant_after_turn_complete() {
 fn turn_complete_is_last_when_error_after_turn_complete() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
-    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart {
+    state.update(crate::Event::Thinking { id: "req.0".into() });
+    state.update(crate::Event::ThoughtDone { id: "req.0".into() });
+    state.update(crate::Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(crate::Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
     });
-    state.update(AgentEvent::TurnComplete {
+    state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
     });
-    state.update(AgentEvent::Error {
+    state.update(crate::Event::Error {
         id: "req.0".into(),
         message: "Oops".into(),
     });
@@ -170,28 +169,28 @@ fn turn_complete_is_last_when_error_after_turn_complete() {
 fn turn_complete_is_last_when_response_after_done() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
-    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart {
+    state.update(crate::Event::Thinking { id: "req.0".into() });
+    state.update(crate::Event::ThoughtDone { id: "req.0".into() });
+    state.update(crate::Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(crate::Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
     });
-    state.update(AgentEvent::TurnComplete {
+    state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
     });
-    state.update(AgentEvent::Done { id: "req.0".into() });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Done { id: "req.0".into() });
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "world".into(),
     });
@@ -210,28 +209,28 @@ fn turn_complete_is_last_when_response_after_done() {
 fn turn_complete_is_last_when_thinking_after_done() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
-    state.update(AgentEvent::ThoughtDone { id: "req.0".into() });
-    state.update(AgentEvent::ToolStart {
+    state.update(crate::Event::Thinking { id: "req.0".into() });
+    state.update(crate::Event::ThoughtDone { id: "req.0".into() });
+    state.update(crate::Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(crate::Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
     });
-    state.update(AgentEvent::TurnComplete {
+    state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
     });
-    state.update(AgentEvent::Done { id: "req.0".into() });
-    state.update(AgentEvent::Thinking { id: "req.0".into() });
+    state.update(crate::Event::Done { id: "req.0".into() });
+    state.update(crate::Event::Thinking { id: "req.0".into() });
     state.ensure_fresh();
 
     let kinds = element_kinds_no_spacer(&state);
@@ -244,27 +243,27 @@ fn turn_complete_is_last_when_thinking_after_done() {
 }
 
 fn run_turn(state: &mut AppState, id: &str, tool_name: &str, agent_content: &str) {
-    state.update(AgentEvent::Thinking { id: id.into() });
-    state.update(AgentEvent::ThoughtDone { id: id.into() });
-    state.update(AgentEvent::ToolStart {
+    state.update(crate::Event::Thinking { id: id.into() });
+    state.update(crate::Event::ThoughtDone { id: id.into() });
+    state.update(crate::Event::ToolStart {
         id: id.into(),
         name: tool_name.into(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(crate::Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.3,
         output: "x".into(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: id.into(),
         content: agent_content.into(),
     });
-    state.update(AgentEvent::TurnComplete {
+    state.update(crate::Event::TurnComplete {
         id: id.into(),
         duration_secs: 1.0,
     });
-    state.update(AgentEvent::Done { id: id.into() });
+    state.update(crate::Event::Done { id: id.into() });
 }
 
 /// Bug: move_turn_complete_to_end() moved ANY TurnComplete, causing

@@ -1,8 +1,7 @@
 //! Layer 1 + Layer 3 tests for input box scrolling and cursor visibility
 
-use crate::event::Event;
 
-use crate::event::{ControlEvent, InputEvent};
+use crate::Event;
 use crate::model::AppState;
 
 // ── Layer 1: Pure logic tests ──────────────────────────────────────────────
@@ -18,7 +17,7 @@ fn newline_increases_input_scroll_to_keep_cursor_visible() {
     let mut state = AppState::default();
     // Fill input with 20 newlines (21 lines total)
     for _ in 0..20 {
-        state.update(InputEvent::Newline);
+        state.update(crate::Event::Newline);
     }
     // Cursor is on line 20, but visible height is ~8 (10 height - 2 borders)
     // Scroll should have adjusted to keep cursor visible
@@ -41,15 +40,15 @@ fn cursor_up_scrolls_up_when_above_visible_window() {
     let mut state = AppState::default();
     // Create 15 lines
     for _ in 0..14 {
-        state.update(InputEvent::Newline);
-        state.update(InputEvent::Input('x'));
+        state.update(crate::Event::Newline);
+        state.update(crate::Event::Input('x'));
     }
     // Now cursor is at end. Scroll should be > 0
     let scroll_before = state.input.input_scroll;
     assert!(scroll_before > 0, "Should have scrolled down");
     // Move cursor to start
     state.input.cursor_pos = 0;
-    state.update(InputEvent::CursorStart);
+    state.update(crate::Event::CursorStart);
     // Scroll should adjust up to show cursor at top
     assert_eq!(
         state.input.input_scroll, 0,
@@ -63,17 +62,17 @@ fn cursor_up_scrolls_up_when_above_visible_window() {
 fn ctrl_c_with_empty_input_quits() {
     let mut state = AppState::default();
     assert!(state.input.input.is_empty());
-    state.update(ControlEvent::Quit);
+    state.update(crate::Event::Quit);
     assert!(state.should_quit, "Ctrl+C with empty input should quit");
 }
 
 #[test]
 fn ctrl_c_with_non_empty_input_clears_input() {
     let mut state = AppState::default();
-    state.update(InputEvent::Input('h'));
-    state.update(InputEvent::Input('i'));
+    state.update(crate::Event::Input('h'));
+    state.update(crate::Event::Input('i'));
     assert_eq!(state.input.input, "hi");
-    state.update(ControlEvent::Quit);
+    state.update(crate::Event::Quit);
     assert!(
         !state.should_quit,
         "Ctrl+C with non-empty input should NOT quit"
@@ -85,10 +84,10 @@ fn ctrl_c_with_non_empty_input_clears_input() {
 #[test]
 fn ctrl_c_clears_undo_redo_stacks() {
     let mut state = AppState::default();
-    state.update(InputEvent::Input('a'));
-    state.update(InputEvent::Input('b'));
+    state.update(crate::Event::Input('a'));
+    state.update(crate::Event::Input('b'));
     assert!(!state.input.undo_stack.is_empty());
-    state.update(ControlEvent::Quit);
+    state.update(crate::Event::Quit);
     assert!(
         state.input.undo_stack.is_empty(),
         "Undo stack should be cleared"
@@ -104,11 +103,11 @@ fn slash_quit_still_works_when_input_has_quit_command() {
     let mut state = AppState::default();
     // Type /quit and submit — this is different from Ctrl+C
     // The submit handler processes the slash command and then input is cleared
-    state.update(InputEvent::Input('/'));
-    state.update(InputEvent::Input('q'));
-    state.update(InputEvent::Input('u'));
-    state.update(InputEvent::Input('i'));
-    state.update(InputEvent::Input('t'));
+    state.update(crate::Event::Input('/'));
+    state.update(crate::Event::Input('q'));
+    state.update(crate::Event::Input('u'));
+    state.update(crate::Event::Input('i'));
+    state.update(crate::Event::Input('t'));
     state.update(Event::submit());
     // After submit, input is empty, so Quit event should work
     assert!(state.should_quit, "/quit command should still quit app");

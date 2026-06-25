@@ -1,6 +1,6 @@
 //! Onboarding happy path tests.
 
-use crate::event::{ControlEvent, LoginFlowEvent};
+use crate::Event;
 use crate::login_flow::LoginStep;
 use crate::model::AppState;
 
@@ -75,7 +75,7 @@ fn validation_done_legacy_reaches_model_select() {
     start_login_flow(&mut state);
     select_provider(&mut state, "minimax");
     submit_key(&mut state, "sk-test");
-    state.update(LoginFlowEvent::ModelsFetched {
+    state.update(crate::Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into()],
@@ -102,7 +102,7 @@ fn start_with_existing_model_does_not_auto_open() {
     assert_step(&state, LoginStep::ProviderPicker);
     assert_panel_id(&state, "login-provider");
 
-    state.update(ControlEvent::Abort);
+    state.update(crate::Event::Abort);
     assert!(
         state.login_flow.is_none(),
         "picker should close because a model is already connected"
@@ -120,12 +120,12 @@ async fn model_selector_reflects_login_selected_models_under_runtime() {
     select_provider(&mut state, "minimax");
     submit_key(&mut state, "sk-test");
     fetch_models(&mut state, &["MiniMax-M3".into(), "MiniMax-M2.7".into()]);
-    state.update(crate::event::LoginFlowEvent::ToggleModel {
+    state.update(Event::ToggleModel {
         model: "MiniMax-M2.7".into(),
     });
     save_login_flow(&mut state);
 
-    state.update(crate::event::DialogEvent::ToggleModelSelector);
+    state.update(Event::ToggleModelSelector);
 
     let dialog = state.open_dialog.expect("model selector should be open");
     let stack = dialog.panel_stack().expect("panel stack");
@@ -164,13 +164,13 @@ fn model_selector_reflects_login_selected_models() {
     fetch_models(&mut state, &["MiniMax-M3".into(), "MiniMax-M2.7".into()]);
 
     // Deselect MiniMax-M2.7 so only MiniMax-M3 remains chosen.
-    state.update(LoginFlowEvent::ToggleModel {
+    state.update(crate::Event::ToggleModel {
         model: "MiniMax-M2.7".into(),
     });
     save_login_flow(&mut state);
 
     // Open the /model selector and inspect its items.
-    state.update(crate::event::DialogEvent::ToggleModelSelector);
+    state.update(Event::ToggleModelSelector);
 
     let dialog = state.open_dialog.expect("model selector should be open");
     let stack = dialog.panel_stack().expect("panel stack");
@@ -198,7 +198,7 @@ fn model_selector_reflects_login_selected_models() {
 
 #[test]
 fn model_selector_reflects_ui_toggled_login_models() {
-    use crate::event::{DialogEvent, InputEvent};
+    use crate::Event;
 
     clean_config();
     let mut state = AppState::default();
@@ -213,13 +213,13 @@ fn model_selector_reflects_ui_toggled_login_models() {
     // The model selector panel is a form. Navigate down to MiniMax-M2.7
     // (first item is MiniMax-M3, second is MiniMax-M2.7) and toggle it off
     // with Space, then move to _Save and submit.
-    state.update(DialogEvent::CommandFormDown);
-    state.update(InputEvent::Input(' ').into());
-    state.update(DialogEvent::CommandFormDown);
-    state.update(InputEvent::Submit.into());
+    state.update(crate::Event::CommandFormDown);
+    state.update(crate::Event::Input(' ').into());
+    state.update(crate::Event::CommandFormDown);
+    state.update(crate::Event::Submit.into());
 
     // Open the /model selector and inspect its items.
-    state.update(DialogEvent::ToggleModelSelector);
+    state.update(crate::Event::ToggleModelSelector);
 
     let dialog = state.open_dialog.expect("model selector should be open");
     let stack = dialog.panel_stack().expect("panel stack");

@@ -1,7 +1,4 @@
-use crate::event::Event;
-use crate::event::{
-    AgentEvent, ControlEvent, InputEvent, ScrollEvent,
-};
+use crate::Event;
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tests::fresh_state;
@@ -28,8 +25,8 @@ fn submit_resets_scroll_to_bottom() {
     add_messages(&mut state, 20);
     state.view.scroll = 10; // scrolled up
 
-    state.update(InputEvent::Input('h'));
-    state.update(InputEvent::Input('i'));
+    state.update(crate::Event::Input('h'));
+    state.update(crate::Event::Input('i'));
     state.update(Event::submit());
 
     assert_eq!(state.view.scroll, 0, "Submit must reset scroll to bottom");
@@ -41,11 +38,11 @@ fn submit_when_turn_active_resets_scroll() {
     state.agent.turn_active = true;
     state.view.scroll = 5;
 
-    state.update(InputEvent::Input('s'));
-    state.update(InputEvent::Input('t'));
-    state.update(InputEvent::Input('e'));
-    state.update(InputEvent::Input('e'));
-    state.update(InputEvent::Input('r'));
+    state.update(crate::Event::Input('s'));
+    state.update(crate::Event::Input('t'));
+    state.update(crate::Event::Input('e'));
+    state.update(crate::Event::Input('e'));
+    state.update(crate::Event::Input('r'));
     state.update(Event::submit());
 
     assert_eq!(
@@ -63,7 +60,7 @@ fn follow_up_resets_scroll_to_bottom() {
     state.view.scroll = 5;
     state.input.input = "follow".to_string();
 
-    state.update(ControlEvent::FollowUp);
+    state.update(crate::Event::FollowUp);
 
     assert_eq!(state.view.scroll, 0, "FollowUp must reset scroll to bottom");
 }
@@ -112,7 +109,7 @@ fn at_bottom_shows_new_agent_response() {
     add_messages(&mut state, 20);
     state.view.scroll = 0;
 
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "hi".to_string(),
     });
@@ -137,14 +134,14 @@ fn at_bottom_shows_new_thought() {
     add_messages(&mut state, 20);
     state.view.scroll = 0;
 
-    state.update(AgentEvent::Thinking {
+    state.update(crate::Event::Thinking {
         id: "req.0".to_string(),
     });
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "Thinking...".to_string(),
     });
-    state.update(AgentEvent::ThoughtDone {
+    state.update(crate::Event::ThoughtDone {
         id: "req.0".to_string(),
     });
     state.ensure_fresh();
@@ -164,12 +161,12 @@ fn at_bottom_shows_new_tool() {
     add_messages(&mut state, 20);
     state.view.scroll = 0;
 
-    state.update(AgentEvent::ToolStart {
+    state.update(crate::Event::ToolStart {
         id: "req.0".to_string(),
         name: "ls".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(crate::Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "file1".to_string(),
@@ -193,7 +190,7 @@ fn scrolled_up_stays_scrolled_up_on_agent_response() {
     add_messages(&mut state, 20);
     state.view.scroll = 10;
 
-    state.update(AgentEvent::Response {
+    state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "new".to_string(),
     });
@@ -211,14 +208,14 @@ fn scroll_up_and_down_returns_to_bottom() {
     add_messages(&mut state, 20);
     state.view.scroll = 0;
 
-    state.update(ScrollEvent::Up);
-    state.update(ScrollEvent::Up);
-    state.update(ScrollEvent::Up);
+    state.update(crate::Event::Up);
+    state.update(crate::Event::Up);
+    state.update(crate::Event::Up);
     assert_eq!(state.view.scroll, 3, "ScrollUp should increase scroll");
 
-    state.update(ScrollEvent::Down);
-    state.update(ScrollEvent::Down);
-    state.update(ScrollEvent::Down);
+    state.update(crate::Event::Down);
+    state.update(crate::Event::Down);
+    state.update(crate::Event::Down);
     assert_eq!(state.view.scroll, 0, "ScrollDown should return to bottom");
 }
 
@@ -226,8 +223,8 @@ fn scroll_up_and_down_returns_to_bottom() {
 fn scroll_down_cannot_go_below_zero() {
     let mut state = fresh_state();
     state.view.scroll = 0;
-    state.update(ScrollEvent::Down);
-    state.update(ScrollEvent::Down);
+    state.update(crate::Event::Down);
+    state.update(crate::Event::Down);
     assert_eq!(
         state.view.scroll, 0,
         "ScrollDown at bottom should stay at 0"
@@ -291,7 +288,7 @@ fn agent_done_keeps_bottom_when_already_there() {
     add_messages(&mut state, 10);
     state.view.scroll = 0;
 
-    state.update(AgentEvent::Done {
+    state.update(crate::Event::Done {
         id: "req.0".to_string(),
     });
     state.ensure_fresh();
@@ -308,7 +305,7 @@ fn agent_done_preserves_scroll_when_not_at_bottom() {
     add_messages(&mut state, 10);
     state.view.scroll = 5;
 
-    state.update(AgentEvent::Done {
+    state.update(crate::Event::Done {
         id: "req.0".to_string(),
     });
     state.ensure_fresh();

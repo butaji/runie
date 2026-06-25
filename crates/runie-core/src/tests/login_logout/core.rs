@@ -1,22 +1,22 @@
-use crate::event::{DialogEvent, InputEvent};
+use crate::Event;
 use crate::model::AppState;
 
 use super::clean_config;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
-    state.update(InputEvent::Input('/'));
+    state.update(crate::Event::Input('/'));
     for c in cmd.chars() {
-        state.update(DialogEvent::PaletteFilter(c));
+        state.update(crate::Event::PaletteFilter(c));
     }
-    state.update(DialogEvent::PaletteSelect);
+    state.update(crate::Event::PaletteSelect);
 }
 
 #[test]
 fn providers_command_opens_dialog() {
     clean_config();
     let mut state = AppState::default();
-    state.update(DialogEvent::ProvidersDialog);
+    state.update(crate::Event::ProvidersDialog);
     assert!(
         state.open_dialog.is_some(),
         "/providers must open the dialog"
@@ -58,8 +58,8 @@ fn edit_models_opens_dedicated_panel() {
     )
     .unwrap();
     let mut state = AppState::default();
-    state.update(DialogEvent::ProvidersDialog);
-    state.update(DialogEvent::ProvidersEditModels {
+    state.update(crate::Event::ProvidersDialog);
+    state.update(crate::Event::ProvidersEditModels {
         provider: "openai".into(),
     });
 

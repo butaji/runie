@@ -26,7 +26,6 @@
 //! ```
 //! use runie_core::dialog::dsl::{form, panel, ItemAction};
 //! use runie_core::Event;
-//! use runie_core::event::{CommandEvent, LoginFlowEvent};
 //!
 //! // List view (fuzzy-searchable by default)
 //! let _ = panel("settings", "Settings")
@@ -41,7 +40,7 @@
 //! // Form view (filtering disabled, fields editable)
 //! let _ = form("save", "Save Session")
 //!     .field("Name", "session", "name")
-//!     .on_submit(|values| CommandEvent::RunSaveCommand {
+//!     .on_submit(|values| Event::RunSaveCommand {
 //!         name: values.get("name").cloned().unwrap_or_default(),
 //!     })
 //!     .into_stack();
@@ -51,7 +50,7 @@
 //! let _ = panel("validating", "Validating...")
 //!     .form()
 //!     .header("Checking API key...")
-//!     .action("_Cancel", ItemAction::Emit(LoginFlowEvent::Cancel));
+//!     .action("_Cancel", ItemAction::Emit(Event::Cancel));
 //! ```
 //!
 pub mod builders;

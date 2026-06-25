@@ -1,8 +1,8 @@
-use crate::event::ModelConfigEvent;
+use crate::Event;
 use crate::model::AppState;
 use crate::update::dialog::dialog_toggle_event;
 
-pub fn model_config_event(state: &mut AppState, event: ModelConfigEvent) {
+pub fn model_config_event(state: &mut AppState, event: crate::Event) {
     let invalidate = handle_main_events(state, &event)
         || handle_scoped_events(state, &event)
         || handle_settings_events(state, &event);
@@ -11,9 +11,9 @@ pub fn model_config_event(state: &mut AppState, event: ModelConfigEvent) {
     }
 }
 
-fn handle_main_events(state: &mut AppState, event: &ModelConfigEvent) -> bool {
+fn handle_main_events(state: &mut AppState, event: &crate::Event) -> bool {
     match event {
-        ModelConfigEvent::SwitchModel {
+        crate::Event::SwitchModel {
             provider,
             model,
             explicit,
@@ -23,27 +23,27 @@ fn handle_main_events(state: &mut AppState, event: &ModelConfigEvent) -> bool {
             }
             true
         }
-        ModelConfigEvent::SwitchTheme { name } => {
+        crate::Event::SwitchTheme { name } => {
             state.switch_theme(name.clone());
             true
         }
-        ModelConfigEvent::CycleModelNext => {
+        crate::Event::CycleModelNext => {
             state.cycle_model(1);
             false
         }
-        ModelConfigEvent::CycleModelPrev => {
+        crate::Event::CycleModelPrev => {
             state.cycle_model(-1);
             false
         }
-        ModelConfigEvent::CycleThinkingLevel => {
+        crate::Event::CycleThinkingLevel => {
             state.cycle_thinking_level();
             true
         }
-        ModelConfigEvent::SetThinkingLevel(level) => {
+        crate::Event::SetThinkingLevel(level) => {
             state.set_thinking_level(*level);
             true
         }
-        ModelConfigEvent::ToggleReadOnly => {
+        crate::Event::ToggleReadOnly => {
             state.toggle_read_only();
             true
         }
@@ -51,34 +51,34 @@ fn handle_main_events(state: &mut AppState, event: &ModelConfigEvent) -> bool {
     }
 }
 
-fn handle_scoped_events(state: &mut AppState, event: &ModelConfigEvent) -> bool {
+fn handle_scoped_events(state: &mut AppState, event: &crate::Event) -> bool {
     match event {
-        ModelConfigEvent::TrustProject => {
+        crate::Event::TrustProject => {
             state.apply_trust_project();
             false
         }
-        ModelConfigEvent::UntrustProject => {
+        crate::Event::UntrustProject => {
             state.apply_untrust_project();
             false
         }
-        ModelConfigEvent::ReloadAll => {
+        crate::Event::ReloadAll => {
             // Reload is now owned by ConfigActor; this event is kept for
             // backward compatibility with old session replays.
             false
         }
-        ModelConfigEvent::ScopedModelToggle { provider, name } => {
+        crate::Event::ScopedModelToggle { provider, name } => {
             super::scoped_models::toggle_scoped_model(state, provider, name);
             false
         }
-        ModelConfigEvent::ScopedModelEnableAll => {
+        crate::Event::ScopedModelEnableAll => {
             super::scoped_models::enable_all(state);
             false
         }
-        ModelConfigEvent::ScopedModelDisableAll => {
+        crate::Event::ScopedModelDisableAll => {
             super::scoped_models::disable_all(state);
             false
         }
-        ModelConfigEvent::ScopedModelToggleProvider { provider } => {
+        crate::Event::ScopedModelToggleProvider { provider } => {
             super::scoped_models::toggle_provider(state, provider);
             false
         }
@@ -88,25 +88,25 @@ fn handle_scoped_events(state: &mut AppState, event: &ModelConfigEvent) -> bool 
 
 /// Handle settings dialog navigation and selection events.
 /// When a dialog is open, delegate to update_dialog for proper panel stack handling.
-fn handle_settings_events(state: &mut AppState, event: &ModelConfigEvent) -> bool {
+fn handle_settings_events(state: &mut AppState, event: &crate::Event) -> bool {
     match event {
-        ModelConfigEvent::ToggleSettingsDialog => {
-            dialog_toggle_event(state, crate::event::DialogEvent::ToggleSettingsDialog);
+        crate::Event::ToggleSettingsDialog => {
+            dialog_toggle_event(state, Event::ToggleSettingsDialog);
             true
         }
-        ModelConfigEvent::ToggleScopedModelsDialog => {
-            dialog_toggle_event(state, crate::event::DialogEvent::ToggleScopedModelsDialog);
+        crate::Event::ToggleScopedModelsDialog => {
+            dialog_toggle_event(state, Event::ToggleScopedModelsDialog);
             true
         }
-        ModelConfigEvent::SettingsClose => {
+        crate::Event::SettingsClose => {
             crate::update::dialog::update_dialog(state, event.clone());
             true
         }
-        ModelConfigEvent::SettingsSelect
-        | ModelConfigEvent::SettingsDown
-        | ModelConfigEvent::SettingsUp
-        | ModelConfigEvent::SettingsLeft
-        | ModelConfigEvent::SettingsRight => {
+        crate::Event::SettingsSelect
+        | crate::Event::SettingsDown
+        | crate::Event::SettingsUp
+        | crate::Event::SettingsLeft
+        | crate::Event::SettingsRight => {
             if state.open_dialog.is_some() {
                 crate::update::dialog::update_dialog(state, event.clone());
             }

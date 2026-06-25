@@ -18,7 +18,7 @@ pub(crate) fn build_file_picker_panel(
         let insert_name = file_picker_insert_name(entry);
         panel = panel.item(
             &label,
-            ItemAction::Emit(crate::event::DialogEvent::InsertAtRef(insert_name)),
+            ItemAction::Emit(crate::Event::InsertAtRef(insert_name)),
         );
     }
     panel
@@ -80,7 +80,7 @@ pub(crate) fn rebuild_file_picker(state: &mut AppState) {
             let insert_name = file_picker_insert_name(&entry);
             new_panel = new_panel.item(
                 &label,
-                ItemAction::Emit(crate::event::DialogEvent::InsertAtRef(insert_name)),
+                ItemAction::Emit(crate::Event::InsertAtRef(insert_name)),
             );
         }
         new_panel

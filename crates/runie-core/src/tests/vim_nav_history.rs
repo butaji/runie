@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::event::{DialogEvent, Event, InputEvent};
+    use crate::Event;
     use crate::model::AppState;
 
     /// Regression test: HistoryPrev/HistoryNext must NOT be consumed by vim_nav
@@ -12,13 +12,13 @@ mod tests {
         let mut state = AppState::default();
 
         // Populate input history with two submissions
-        state.update(InputEvent::Input('a'));
+        state.update(crate::Event::Input('a'));
         state.update(Event::submit());
-        state.update(InputEvent::Input('b'));
+        state.update(crate::Event::Input('b'));
         state.update(Event::submit());
 
         // Verify history works without vim_nav (baseline)
-        state.update(InputEvent::HistoryPrev);
+        state.update(crate::Event::HistoryPrev);
         assert_eq!(state.input.input, "b");
         assert!(!state.view.vim_nav_mode);
 
@@ -27,25 +27,25 @@ mod tests {
         assert_eq!(state.input.input.len(), 0);
 
         // Enter vim_nav mode
-        state.update(DialogEvent::DialogBack);
+        state.update(crate::Event::DialogBack);
         assert!(state.view.vim_nav_mode);
 
         // HistoryPrev while in vim_nav — must recall "b"
-        state.update(InputEvent::HistoryPrev);
+        state.update(crate::Event::HistoryPrev);
         assert_eq!(
             state.input.input, "b",
             "HistoryPrev must work in vim_nav mode (not consumed by vim nav handler)"
         );
 
         // HistoryPrev again — should recall "a"
-        state.update(InputEvent::HistoryPrev);
+        state.update(crate::Event::HistoryPrev);
         assert_eq!(
             state.input.input, "a",
             "second HistoryPrev must work in vim_nav mode"
         );
 
         // HistoryNext — should return to "b"
-        state.update(InputEvent::HistoryNext);
+        state.update(crate::Event::HistoryNext);
         assert_eq!(
             state.input.input, "b",
             "HistoryNext must work in vim_nav mode"

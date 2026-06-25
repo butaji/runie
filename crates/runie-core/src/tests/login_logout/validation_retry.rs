@@ -1,6 +1,6 @@
 //! Validation failure and retry scenarios for the login flow.
 
-use crate::event::LoginFlowEvent;
+use crate::Event;
 use crate::login_flow::LoginStep;
 use crate::model::AppState;
 
@@ -16,7 +16,7 @@ fn empty_key_rejected_stays_on_key_input() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-    state.update(LoginFlowEvent::Start);
+    state.update(crate::Event::Start);
     select_provider(&mut state, "minimax");
     submit_key(&mut state, "   ");
 
@@ -31,12 +31,12 @@ fn validation_failed_returns_to_key_input_with_error() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-    state.update(LoginFlowEvent::Start);
+    state.update(crate::Event::Start);
     select_provider(&mut state, "minimax");
     submit_key(&mut state, "sk-test");
     assert_step(&state, LoginStep::Validating);
 
-    state.update(LoginFlowEvent::ValidationFailed {
+    state.update(crate::Event::ValidationFailed {
         provider: "minimax".into(),
         key: "sk-test".into(),
         error: "bad key".into(),
@@ -53,10 +53,10 @@ fn retry_after_failure_succeeds() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-    state.update(LoginFlowEvent::Start);
+    state.update(crate::Event::Start);
     select_provider(&mut state, "minimax");
     submit_key(&mut state, "sk-test");
-    state.update(LoginFlowEvent::ValidationFailed {
+    state.update(crate::Event::ValidationFailed {
         provider: "minimax".into(),
         key: "sk-test".into(),
         error: "bad key".into(),
@@ -67,7 +67,7 @@ fn retry_after_failure_succeeds() {
     assert_step(&state, LoginStep::Validating);
 
     let models = default_models_for_provider("minimax");
-    state.update(LoginFlowEvent::ModelsFetched {
+    state.update(crate::Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test2".into(),
         models,
@@ -85,7 +85,7 @@ fn save_before_validation_rejected() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-    state.update(LoginFlowEvent::Start);
+    state.update(crate::Event::Start);
     select_provider(&mut state, "minimax");
     submit_key(&mut state, "sk-test");
     save_login_flow(&mut state);
@@ -101,10 +101,10 @@ fn unknown_provider_validation_failure() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-    state.update(LoginFlowEvent::Start);
+    state.update(crate::Event::Start);
     select_provider(&mut state, "not-a-real-provider");
     submit_key(&mut state, "sk-test");
-    state.update(LoginFlowEvent::ValidationFailed {
+    state.update(crate::Event::ValidationFailed {
         provider: "not-a-real-provider".into(),
         key: "sk-test".into(),
         error: "unknown provider".into(),
@@ -122,8 +122,8 @@ fn models_fetched_ignored_when_not_validating() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-    state.update(LoginFlowEvent::Start);
-    state.update(LoginFlowEvent::ModelsFetched {
+    state.update(crate::Event::Start);
+    state.update(crate::Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into()],
@@ -131,7 +131,7 @@ fn models_fetched_ignored_when_not_validating() {
     assert_step(&state, LoginStep::ProviderPicker);
 
     select_provider(&mut state, "minimax");
-    state.update(LoginFlowEvent::ModelsFetched {
+    state.update(crate::Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into()],

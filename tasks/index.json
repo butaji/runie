@@ -779,7 +779,7 @@
     },
     {
       "id": "drop-event-aliases",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P2",

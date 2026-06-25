@@ -101,12 +101,12 @@ mod tests {
 
 // ── Form-submit and edit-event handling (merged from edit.rs) ─────────────────
 
-use crate::event::EditEvent;
+use crate::Event;
 use crate::model::AppState;
 
-pub fn update(state: &mut AppState, event: EditEvent) {
+pub fn update(state: &mut AppState, event: Event) {
     match event {
-        EditEvent::PendingEdit {
+        Event::PendingEdit {
             path,
             original,
             proposed,
@@ -121,8 +121,8 @@ pub fn update(state: &mut AppState, event: EditEvent) {
                 ));
             state.view.dirty = true;
         }
-        EditEvent::ApproveEdit => state.approve_edits(),
-        EditEvent::RejectEdit => state.reject_edits(),
+        Event::ApproveEdit => state.approve_edits(),
+        Event::RejectEdit => state.reject_edits(),
         // intentionally ignored: other edit events fall through
         _ => {}
     }

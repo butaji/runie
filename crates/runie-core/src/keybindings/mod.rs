@@ -10,10 +10,7 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 
-use crate::event::Event;
-
-#[cfg(test)]
-use crate::event::{ControlEvent, InputEvent};
+use crate::Event;
 
 mod defaults;
 #[cfg(test)]

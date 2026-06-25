@@ -1,6 +1,5 @@
 //! Event update handlers — merged dispatcher (formerly split between mod.rs and dispatch.rs).
 
-use crate::event::DialogEvent;
 use crate::model::AppState;
 use crate::Event;
 
@@ -56,7 +55,7 @@ impl AppState {
             dispatch::dispatch_event(self, event.clone());
             return;
         }
-        if self.login_flow.is_some() && matches!(event, DialogEvent::DialogBack) {
+        if self.login_flow.is_some() && matches!(event, Event::DialogBack) {
             crate::login_flow::login_flow_cancel(self);
             return;
         }
@@ -67,17 +66,17 @@ impl AppState {
     }
 }
 
-fn is_login_flow_dialog_event(event: &DialogEvent) -> bool {
-    matches!(event, DialogEvent::ProvidersAdd)
+fn is_login_flow_dialog_event(event: &Event) -> bool {
+    matches!(event, Event::ProvidersAdd)
 }
 
-fn is_providers_dialog_event(event: &DialogEvent) -> bool {
+fn is_providers_dialog_event(event: &Event) -> bool {
     matches!(
         event,
-        DialogEvent::ProvidersDialog
-            | DialogEvent::ProvidersSelectModel { .. }
-            | DialogEvent::ProvidersDisconnect { .. }
-            | DialogEvent::ProvidersAdd
-            | DialogEvent::ProvidersEditModels { .. }
+        Event::ProvidersDialog
+            | Event::ProvidersSelectModel { .. }
+            | Event::ProvidersDisconnect { .. }
+            | Event::ProvidersAdd
+            | Event::ProvidersEditModels { .. }
     )
 }

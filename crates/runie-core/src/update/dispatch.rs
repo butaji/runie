@@ -1,6 +1,5 @@
 //! Central event dispatcher.
 
-use crate::event::DialogEvent;
 use crate::model::AppState;
 use crate::Event;
 
@@ -439,14 +438,14 @@ fn categorize_command_login(event: &Event) -> Option<EventCategory> {
     }
 }
 
-fn dispatch_dialog_event(state: &mut AppState, event: DialogEvent) {
+fn dispatch_dialog_event(state: &mut AppState, event: crate::Event) {
     if is_toggle_dialog_event(&event) {
         super::dialog::dialog_toggle_event(state, event);
     } else if is_form_dialog_event(&event) {
         super::dialog::handle_form_dialog(state, event);
-    } else if let DialogEvent::InsertAtRef(path) = event {
+    } else if let crate::Event::InsertAtRef(path) = event {
         super::dialog::insert_at_ref(state, &path);
-    } else if matches!(event, DialogEvent::DialogBack) {
+    } else if matches!(event, crate::Event::DialogBack) {
         handle_dialog_back_no_dialog(state);
     }
 }
@@ -466,34 +465,34 @@ pub(crate) fn is_dialog_event(event: &Event) -> bool {
         || matches!(event, Event::DialogBack)
 }
 
-fn is_toggle_dialog_event(event: &DialogEvent) -> bool {
+fn is_toggle_dialog_event(event: &crate::Event) -> bool {
     is_palette_selector_event(event)
         || is_path_form_event(event)
         || matches!(
             event,
-            DialogEvent::ToggleWelcome
-                | DialogEvent::ToggleSettingsDialog
-                | DialogEvent::ToggleModelSelector
-                | DialogEvent::AtFilePicker
-                | DialogEvent::ToggleVimMode
-                | DialogEvent::ProvidersDialog
-                | DialogEvent::ProvidersAdd | DialogEvent::ProvidersEditModels { .. }
-                | DialogEvent::ProvidersSelectModel { .. }
-                | DialogEvent::ProvidersDisconnect { .. }
-                | DialogEvent::ToggleScopedModelsDialog
-                | DialogEvent::ScopedModelEnableAll
-                | DialogEvent::ScopedModelDisableAll
+            crate::Event::ToggleWelcome
+                | crate::Event::ToggleSettingsDialog
+                | crate::Event::ToggleModelSelector
+                | crate::Event::AtFilePicker
+                | crate::Event::ToggleVimMode
+                | crate::Event::ProvidersDialog
+                | crate::Event::ProvidersAdd | crate::Event::ProvidersEditModels { .. }
+                | crate::Event::ProvidersSelectModel { .. }
+                | crate::Event::ProvidersDisconnect { .. }
+                | crate::Event::ToggleScopedModelsDialog
+                | crate::Event::ScopedModelEnableAll
+                | crate::Event::ScopedModelDisableAll
         )
 }
 
-fn is_form_dialog_event(event: &DialogEvent) -> bool {
+fn is_form_dialog_event(event: &crate::Event) -> bool {
     matches!(
         event,
-        DialogEvent::CommandFormInput(_)
-            | DialogEvent::CommandFormBackspace
-            | DialogEvent::CommandFormUp
-            | DialogEvent::CommandFormDown
-            | DialogEvent::CommandFormSubmit
-            | DialogEvent::CommandFormClose
+        crate::Event::CommandFormInput(_)
+            | crate::Event::CommandFormBackspace
+            | crate::Event::CommandFormUp
+            | crate::Event::CommandFormDown
+            | crate::Event::CommandFormSubmit
+            | crate::Event::CommandFormClose
     )
 }

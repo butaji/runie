@@ -1,5 +1,4 @@
-use crate::event::Event;
-use crate::event::{AgentEvent, ControlEvent, DialogEvent, InputEvent, ScrollEvent};
+use crate::Event;
 use crate::model::{AppState, Role};
 use crate::tests::fresh_state;
 
@@ -18,11 +17,11 @@ fn dispatch(state: &mut AppState, events: &[Event]) {
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
-    state.update(InputEvent::Input('/'));
+    state.update(crate::Event::Input('/'));
     for c in cmd.chars() {
-        state.update(DialogEvent::PaletteFilter(c));
+        state.update(crate::Event::PaletteFilter(c));
     }
-    state.update(DialogEvent::PaletteSelect);
+    state.update(crate::Event::PaletteSelect);
 }
 
 #[test]
@@ -32,7 +31,7 @@ fn test_reset_clears_state() {
     state.config.current_model = "gpt-4o".to_string();
     state.input.input = "test".to_string();
     state.agent.streaming = true;
-    state.update(ControlEvent::Reset);
+    state.update(crate::Event::Reset);
     assert_eq!(state.input.input, "");
     assert!(!state.agent.streaming);
     assert_eq!(state.session.messages.len(), 0);
@@ -47,14 +46,14 @@ fn test_reset_clears_state() {
 #[test]
 fn test_scroll_up() {
     let mut state = fresh_state();
-    state.update(ScrollEvent::Up);
+    state.update(crate::Event::Up);
     assert_eq!(state.view.scroll, 1);
 }
 
 #[test]
 fn test_scroll_down() {
     let mut state = fresh_state();
-    state.update(ScrollEvent::Down);
+    state.update(crate::Event::Down);
     assert_eq!(state.view.scroll, 0); // Down decreases scroll (newer content)
 }
 
@@ -62,7 +61,7 @@ fn test_scroll_down() {
 fn test_scroll_down_saturates() {
     let mut state = fresh_state();
     // Scroll down from default (0) saturates
-    state.update(ScrollEvent::Down);
+    state.update(crate::Event::Down);
     assert_eq!(state.view.scroll, 0);
 }
 
@@ -73,21 +72,21 @@ fn test_tool_flow_creates_two_thoughts() {
     dispatch(
         &mut state,
         &[
-            AgentEvent::Thinking { id: "req.0".into() },
-            AgentEvent::ThoughtDone { id: "req.0".into() },
-            AgentEvent::ToolStart {
+            crate::Event::Thinking { id: "req.0".into() },
+            crate::Event::ThoughtDone { id: "req.0".into() },
+            crate::Event::ToolStart {
                 id: "req.0".into(),
                 name: "list_files".into(),
                 input: serde_json::Value::Null,
             },
-            AgentEvent::ToolEnd {
+            crate::Event::ToolEnd {
                 id: "".to_string(),
                 duration_secs: 0.5,
                 output: String::new(),
             },
-            AgentEvent::Thinking { id: "req.0".into() },
-            AgentEvent::ThoughtDone { id: "req.0".into() },
-            AgentEvent::Response {
+            crate::Event::Thinking { id: "req.0".into() },
+            crate::Event::ThoughtDone { id: "req.0".into() },
+            crate::Event::Response {
                 id: "req.0".into(),
                 content: "Here are the files".into(),
             },
@@ -106,7 +105,7 @@ fn test_tool_flow_creates_two_thoughts() {
 fn test_turn_complete_event() {
     let mut state = fresh_state();
     state.agent.intermediate_step_count = 1;
-    state.update(AgentEvent::TurnComplete {
+    state.update(crate::Event::TurnComplete {
         id: "req.0".to_string(),
         duration_secs: 5.1,
     });
@@ -123,13 +122,13 @@ fn test_turn_complete_always_added_when_event_received() {
     dispatch(
         &mut state,
         &[
-            AgentEvent::Thinking { id: "req.0".into() },
-            AgentEvent::ThoughtDone { id: "req.0".into() },
-            AgentEvent::Response {
+            crate::Event::Thinking { id: "req.0".into() },
+            crate::Event::ThoughtDone { id: "req.0".into() },
+            crate::Event::Response {
                 id: "req.0".into(),
                 content: "Hi".into(),
             },
-            AgentEvent::TurnComplete {
+            crate::Event::TurnComplete {
                 id: "req.0".into(),
                 duration_secs: 1.0,
             },
@@ -146,12 +145,12 @@ fn test_turn_complete_always_added_when_event_received() {
 #[test]
 fn test_tool_done_event() {
     let mut state = fresh_state();
-    state.update(AgentEvent::ToolStart {
+    state.update(crate::Event::ToolStart {
         id: "req.0".to_string(),
         name: "list_files".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(AgentEvent::ToolEnd {
+    state.update(crate::Event::ToolEnd {
         id: "".to_string(),
         duration_secs: 0.3,
         output: String::new(),
@@ -170,24 +169,24 @@ fn test_turn_complete_shows_even_if_done_arrives_first() {
     dispatch(
         &mut state,
         &[
-            AgentEvent::Thinking { id: "req.0".into() },
-            AgentEvent::ThoughtDone { id: "req.0".into() },
-            AgentEvent::ToolStart {
+            crate::Event::Thinking { id: "req.0".into() },
+            crate::Event::ThoughtDone { id: "req.0".into() },
+            crate::Event::ToolStart {
                 id: "req.0".into(),
                 name: "list_files".into(),
                 input: serde_json::Value::Null,
             },
-            AgentEvent::ToolEnd {
+            crate::Event::ToolEnd {
                 id: "".to_string(),
                 duration_secs: 0.5,
                 output: String::new(),
             },
-            AgentEvent::Response {
+            crate::Event::Response {
                 id: "req.0".into(),
                 content: "Here are files".into(),
             },
-            AgentEvent::Done { id: "req.0".into() },
-            AgentEvent::TurnComplete {
+            crate::Event::Done { id: "req.0".into() },
+            crate::Event::TurnComplete {
                 id: "req.0".into(),
                 duration_secs: 3.2,
             },
@@ -247,8 +246,8 @@ fn test_save_and_load_session() {
     std::env::set_var("RUNIE_SESSIONS_DIR", &tmp);
 
     let mut state = fresh_state();
-    state.update(InputEvent::Input('h'));
-    state.update(InputEvent::Input('i'));
+    state.update(crate::Event::Input('h'));
+    state.update(crate::Event::Input('i'));
     state.update(Event::submit());
     exec(&mut state, "/save test_session"); // Opens form with pre-filled name
     state.update(Event::submit()); // Submits the form

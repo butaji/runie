@@ -1,4 +1,4 @@
-use crate::event::DialogEvent;
+use crate::Event;
 use crate::model::AppState;
 
 use super::{add_minimax_provider, clean_config, select_minimax_model};
@@ -11,8 +11,8 @@ fn providers_disconnect_removes_provider() {
     add_minimax_provider(&mut state);
     select_minimax_model(&mut state);
 
-    state.update(DialogEvent::ProvidersDialog);
-    state.update(DialogEvent::ProvidersDisconnect {
+    state.update(crate::Event::ProvidersDialog);
+    state.update(crate::Event::ProvidersDisconnect {
         provider: "minimax".into(),
     });
 
@@ -30,8 +30,8 @@ fn providers_disconnect_opens_login_when_no_models_remain() {
     add_minimax_provider(&mut state);
     select_minimax_model(&mut state);
 
-    state.update(DialogEvent::ProvidersDialog);
-    state.update(DialogEvent::ProvidersDisconnect {
+    state.update(crate::Event::ProvidersDialog);
+    state.update(crate::Event::ProvidersDisconnect {
         provider: "minimax".into(),
     });
 
@@ -57,8 +57,8 @@ fn disconnect_clears_active_provider_when_no_other() {
 
     state.dialog_back_stack.clear();
 
-    state.update(DialogEvent::ProvidersDialog);
-    state.update(DialogEvent::ProvidersDisconnect {
+    state.update(crate::Event::ProvidersDialog);
+    state.update(crate::Event::ProvidersDisconnect {
         provider: "minimax".into(),
     });
 

@@ -1,7 +1,7 @@
 //! Tests for agent error handling — especially that errors clear the active
 //! turn so the UI does not show a stuck "Working..." status.
 
-use crate::event::AgentEvent;
+use crate::Event;
 use crate::model::{AppState, QueuedMessage, QueuedMessageKind};
 
 #[test]
@@ -11,7 +11,7 @@ fn agent_error_clears_turn_active() {
     state.agent.streaming = true;
     state.agent.inflight = 1;
 
-    state.update(AgentEvent::Error {
+    state.update(crate::Event::Error {
         id: "req.0".to_string(),
         message: "Provider error: Missing API key".to_string(),
     });
@@ -29,7 +29,7 @@ fn agent_error_resets_timers() {
     state.agent.thinking_started_at = Some(std::time::Instant::now());
     state.agent.tool_started_at = Some(std::time::Instant::now());
 
-    state.update(AgentEvent::Error {
+    state.update(crate::Event::Error {
         id: "req.0".to_string(),
         message: "Provider error".to_string(),
     });
@@ -44,7 +44,7 @@ fn agent_error_inserts_error_message() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
 
-    state.update(AgentEvent::Error {
+    state.update(crate::Event::Error {
         id: "req.0".to_string(),
         message: "Missing API key".to_string(),
     });
@@ -63,7 +63,7 @@ fn agent_error_clears_current_request_id() {
     state.agent.turn_active = true;
     state.agent.current_request_id = Some("req.0".to_string());
 
-    state.update(AgentEvent::Error {
+    state.update(crate::Event::Error {
         id: "req.0".to_string(),
         message: "Provider error".to_string(),
     });
@@ -81,7 +81,7 @@ fn agent_error_clears_streaming_and_thought_state() {
     state.agent.last_assistant_index = Some(2);
     state.view.vim_nav_pending = true;
 
-    state.update(AgentEvent::Error {
+    state.update(crate::Event::Error {
         id: "req.0".to_string(),
         message: "Provider error".to_string(),
     });
@@ -101,7 +101,7 @@ fn agent_error_resets_streaming_buffer() {
     state.agent.streaming_buffer.push_delta("```rust\npartial");
     assert!(state.agent.streaming_buffer.has_pending_content());
 
-    state.update(AgentEvent::Error {
+    state.update(crate::Event::Error {
         id: "req.0".to_string(),
         message: "Provider error".to_string(),
     });
@@ -118,7 +118,7 @@ fn agent_error_delivers_queued_messages() {
         kind: QueuedMessageKind::FollowUp,
     });
 
-    state.update(AgentEvent::Error {
+    state.update(crate::Event::Error {
         id: "req.0".to_string(),
         message: "Provider error".to_string(),
     });

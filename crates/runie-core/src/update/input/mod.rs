@@ -11,7 +11,6 @@ mod scroll;
 mod support;
 mod text;
 
-use crate::event::{InputEvent, ScrollEvent};
 use crate::model::AppState;
 
 // Re-export only what callers actually need.
@@ -23,47 +22,47 @@ pub use support::{
 };
 
 
-pub fn input_event(state: &mut AppState, event: InputEvent) {
+pub fn input_event(state: &mut AppState, event: crate::Event) {
     if state.permission_request.is_some() {
         return permission_input_event(state, event);
     }
     apply_input_event(state, event);
 }
 
-fn apply_input_event(state: &mut AppState, event: InputEvent) {
+fn apply_input_event(state: &mut AppState, event: crate::Event) {
     match event {
-        InputEvent::Input(c) => state.push_input(c),
-        InputEvent::Backspace => state.pop_input(),
-        InputEvent::Newline => state.insert_newline(),
-        InputEvent::CursorLeft => state.cursor_left(),
-        InputEvent::CursorRight => state.cursor_right(),
-        InputEvent::CursorStart => state.cursor_start(),
-        InputEvent::CursorEnd => state.cursor_end(),
-        InputEvent::DeleteWord => state.delete_word(),
-        InputEvent::DeleteToEnd => state.delete_to_end(),
-        InputEvent::DeleteToStart => state.delete_to_start(),
-        InputEvent::KillChar => state.kill_char(),
-        InputEvent::Undo => state.undo(),
-        InputEvent::Redo => state.redo(),
-        InputEvent::CursorWordLeft => state.cursor_word_left(),
-        InputEvent::CursorWordRight => state.cursor_word_right(),
-        InputEvent::Paste(text) => state.paste(&text),
-        InputEvent::PasteImage => state.paste_image(),
-        InputEvent::Submit => state.submit(),
-        InputEvent::Escape => handle_escape(state),
-        InputEvent::PageUp => state.page_up(),
-        InputEvent::PageDown => state.page_down(),
-        InputEvent::GoToTop => state.go_to_top(),
-        InputEvent::GoToBottom => state.go_to_bottom(),
-        InputEvent::HistoryPrev => handle_history_prev(state),
-        InputEvent::HistoryNext => handle_history_next(state),
-        InputEvent::MouseScrollUp => scroll_event(state, ScrollEvent::Up),
-        InputEvent::MouseScrollDown => scroll_event(state, ScrollEvent::Down),
-        InputEvent::MouseClick { row, col, button } => {
+        crate::Event::Input(c) => state.push_input(c),
+        crate::Event::Backspace => state.pop_input(),
+        crate::Event::Newline => state.insert_newline(),
+        crate::Event::CursorLeft => state.cursor_left(),
+        crate::Event::CursorRight => state.cursor_right(),
+        crate::Event::CursorStart => state.cursor_start(),
+        crate::Event::CursorEnd => state.cursor_end(),
+        crate::Event::DeleteWord => state.delete_word(),
+        crate::Event::DeleteToEnd => state.delete_to_end(),
+        crate::Event::DeleteToStart => state.delete_to_start(),
+        crate::Event::KillChar => state.kill_char(),
+        crate::Event::Undo => state.undo(),
+        crate::Event::Redo => state.redo(),
+        crate::Event::CursorWordLeft => state.cursor_word_left(),
+        crate::Event::CursorWordRight => state.cursor_word_right(),
+        crate::Event::Paste(text) => state.paste(&text),
+        crate::Event::PasteImage => state.paste_image(),
+        crate::Event::Submit => state.submit(),
+        crate::Event::Escape => handle_escape(state),
+        crate::Event::PageUp => state.page_up(),
+        crate::Event::PageDown => state.page_down(),
+        crate::Event::GoToTop => state.go_to_top(),
+        crate::Event::GoToBottom => state.go_to_bottom(),
+        crate::Event::HistoryPrev => handle_history_prev(state),
+        crate::Event::HistoryNext => handle_history_next(state),
+        crate::Event::MouseScrollUp => scroll_event(state, crate::Event::Up),
+        crate::Event::MouseScrollDown => scroll_event(state, crate::Event::Down),
+        crate::Event::MouseClick { row, col, button } => {
             handle_mouse_click_event(state, row, col, &button);
         }
-        InputEvent::MouseMove { row, col } => handle_mouse_move(state, row, col),
-        InputEvent::TerminalSize { width, height } => {
+        crate::Event::MouseMove { row, col } => handle_mouse_move(state, row, col),
+        crate::Event::TerminalSize { width, height } => {
             handle_terminal_resize(state, width, height);
         }
         // intentionally ignored: other input events fall through
@@ -83,15 +82,15 @@ fn handle_terminal_resize(state: &mut AppState, width: u16, height: u16) {
     state.set_last_visible_height(viewport_height);
 }
 
-fn permission_input_event(state: &mut AppState, event: InputEvent) {
+fn permission_input_event(state: &mut AppState, event: crate::Event) {
     use crate::permissions::PermissionAction;
 
     let Some(req) = state.permission_request.take() else {
         return;
     };
     let action = match event {
-        InputEvent::Input('y') | InputEvent::Input('Y') => PermissionAction::Allow,
-        InputEvent::Input('a') | InputEvent::Input('A') => PermissionAction::Allow,
+        crate::Event::Input('y') | crate::Event::Input('Y') => PermissionAction::Allow,
+        crate::Event::Input('a') | crate::Event::Input('A') => PermissionAction::Allow,
         _ => PermissionAction::Deny,
     };
     if let Ok(registry) = state.approval_registry.lock() {

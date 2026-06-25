@@ -1,7 +1,7 @@
 use super::*;
 use crate::commands::DialogState;
 use crate::dialog::Panel;
-use crate::event::LoginFlowEvent;
+use crate::Event;
 
 #[test]
 fn space_toggles_checkbox_item_value() {
@@ -47,7 +47,7 @@ fn space_on_emit_checkbox_updates_state() {
     let mut panel = Panel::new("models", "Models").toggle(
         "m1",
         false,
-        ItemAction::Emit(crate::Event::from(LoginFlowEvent::ToggleModel {
+        ItemAction::Emit(crate::Event::from(crate::Event::ToggleModel {
             model: "m1".into(),
         })),
     );
@@ -68,7 +68,7 @@ fn space_in_list_panel_keeps_dialog_open() {
     let mut stack = PanelStack::new(panel);
     state.open_dialog = Some(DialogState::PanelStack(stack.clone()));
 
-    let result = update_panel_stack(&mut state, InputEvent::Input(' ').into(), &mut stack);
+    let result = update_panel_stack(&mut state, crate::Event::Input(' ').into(), &mut stack);
     assert_eq!(
         result,
         PanelUpdateResult::Consumed,

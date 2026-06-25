@@ -19,7 +19,7 @@ pub fn partition_model_items(
             last_header = header.clone();
         }
         if let Some((provider, model)) = name.split_once('/') {
-            let evt = crate::event::ModelConfigEvent::SwitchModel {
+            let evt = crate::Event::SwitchModel {
                 provider: provider.to_string(),
                 model: model.to_string(),
                 explicit: true,

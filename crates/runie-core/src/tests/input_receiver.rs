@@ -7,7 +7,7 @@
 
 use crate::commands::DialogState;
 use crate::dialog::{ItemAction, Panel, PanelStack};
-use crate::event::{DialogEvent, InputEvent};
+use crate::Event;
 use crate::model::{AppState, InputReceiver};
 
 fn state_with_vim() -> AppState {
@@ -36,7 +36,7 @@ fn opening_dialog_sets_input_receiver_to_dialog() {
     );
 
     // Open command palette via input event
-    state.update(InputEvent::Input('/'));
+    state.update(crate::Event::Input('/'));
     assert_eq!(
         state.view.input_receiver,
         InputReceiver::Dialog,
@@ -50,14 +50,14 @@ fn esc_closes_command_palette_without_triggering_vim_nav() {
     assert!(!state.view.vim_nav_mode);
 
     // Open command palette
-    state.update(InputEvent::Input('/'));
+    state.update(crate::Event::Input('/'));
     assert!(
         state.open_dialog.is_some(),
         "command palette should be open"
     );
 
     // Press Esc to close
-    state.update(DialogEvent::DialogBack);
+    state.update(crate::Event::DialogBack);
 
     assert!(
         state.open_dialog.is_none(),
@@ -79,12 +79,12 @@ fn esc_after_closing_dialog_still_allows_vim_nav() {
     let mut state = state_with_vim();
 
     // Open and close command palette
-    state.update(InputEvent::Input('/'));
-    state.update(DialogEvent::DialogBack);
+    state.update(crate::Event::Input('/'));
+    state.update(crate::Event::DialogBack);
     assert!(state.open_dialog.is_none());
 
     // Now Esc should enter vim-nav (since no dialog is open)
-    state.update(DialogEvent::DialogBack);
+    state.update(crate::Event::DialogBack);
     assert!(
         state.view.vim_nav_mode,
         "Esc after closing dialog should enter vim-nav mode"
@@ -102,7 +102,7 @@ fn esc_closes_settings_dialog_without_triggering_vim_nav() {
     state.view.input_receiver = InputReceiver::Dialog;
 
     // Press Esc to close
-    state.update(DialogEvent::SettingsClose);
+    state.update(crate::Event::SettingsClose);
 
     assert!(
         state.open_dialog.is_none(),
@@ -135,7 +135,7 @@ fn esc_closes_model_selector_without_triggering_vim_nav() {
     assert!(state.open_dialog.is_some());
 
     // Press Esc to close
-    state.update(DialogEvent::DialogBack);
+    state.update(crate::Event::DialogBack);
 
     assert!(
         state.open_dialog.is_none(),

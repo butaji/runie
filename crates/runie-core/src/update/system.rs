@@ -82,19 +82,19 @@ impl AppState {
     }
 
     pub(crate) fn page_up(&mut self) {
-        crate::update::input::scroll_event(self, crate::event::ScrollEvent::PageUp);
+        crate::update::input::scroll_event(self, Event::PageUp);
     }
 
     pub(crate) fn page_down(&mut self) {
-        crate::update::input::scroll_event(self, crate::event::ScrollEvent::PageDown);
+        crate::update::input::scroll_event(self, Event::PageDown);
     }
 
     pub(crate) fn go_to_top(&mut self) {
-        crate::update::input::scroll_event(self, crate::event::ScrollEvent::GoToTop);
+        crate::update::input::scroll_event(self, Event::GoToTop);
     }
 
     pub(crate) fn go_to_bottom(&mut self) {
-        crate::update::input::scroll_event(self, crate::event::ScrollEvent::GoToBottom);
+        crate::update::input::scroll_event(self, Event::GoToBottom);
     }
 
     // === Model / Config Helpers ===
@@ -205,23 +205,23 @@ pub fn apply_initial_trust(state: &mut AppState, cwd: &std::path::Path) {
 
 // ── Control Event Handler (merged from control.rs) ────────────────────────────
 
-use crate::event::ControlEvent;
+use crate::Event;
 
-pub fn control_event(state: &mut AppState, event: ControlEvent) {
+pub fn control_event(state: &mut AppState, event: Event) {
     match event {
-        ControlEvent::Quit | ControlEvent::ForceQuit => handle_quit_event(state, event),
-        ControlEvent::Reset => handle_reset(state),
-        ControlEvent::Abort => handle_abort(state),
-        ControlEvent::ExternalEditorDone { content } => handle_editor_done(state, content),
-        ControlEvent::ToggleExpand => state.toggle_expand_all(),
-        ControlEvent::FollowUp => state.queue_follow_up(),
-        ControlEvent::Dequeue => state.dequeue(),
-        ControlEvent::ToggleVimMode => {
+        Event::Quit | Event::ForceQuit => handle_quit_event(state, event),
+        Event::Reset => handle_reset(state),
+        Event::Abort => handle_abort(state),
+        Event::ExternalEditorDone { content } => handle_editor_done(state, content),
+        Event::ToggleExpand => state.toggle_expand_all(),
+        Event::FollowUp => state.queue_follow_up(),
+        Event::Dequeue => state.dequeue(),
+        Event::ToggleVimMode => {
             state.config.vim_mode = !state.config.vim_mode;
             state.view.cached_settings_valid = false;
             state.view.dirty = true;
         }
-        ControlEvent::NewSession => {
+        Event::NewSession => {
             // Close welcome screen if open
             if matches!(
                 state.open_dialog,
@@ -233,19 +233,19 @@ pub fn control_event(state: &mut AppState, event: ControlEvent) {
             // Ready for user input — welcome is gone
             state.view.dirty = true;
         }
-        ControlEvent::ResumeSession | ControlEvent::OpenSessionList => {
+        Event::ResumeSession | Event::OpenSessionList => {
             // Close welcome and open session tree
             crate::update::dialog::open_session_tree_dialog(state);
         }
         // intentionally ignored: these events are handled elsewhere
-        ControlEvent::Suspend | ControlEvent::ShareSession | ControlEvent::OpenExternalEditor => {}
+        Event::Suspend | Event::ShareSession | Event::OpenExternalEditor => {}
         // intentionally ignored: other ControlEvent variants fall through
         _ => {}
     }
 }
 
-fn handle_quit_event(state: &mut AppState, event: ControlEvent) {
-    if matches!(event, ControlEvent::ForceQuit) {
+fn handle_quit_event(state: &mut AppState, event: Event) {
+    if matches!(event, Event::ForceQuit) {
         state.should_quit = true;
         return;
     }
@@ -334,20 +334,18 @@ impl AppState {
 
 // ── System event dispatcher ──────────────────────────────────────────────────
 
-use crate::event::SystemEvent;
-
-pub(super) fn handle_system_event(state: &mut AppState, event: SystemEvent) {
+pub(super) fn handle_system_event(state: &mut AppState, event: Event) {
     match event {
-        SystemEvent::SystemMessage { content } => state.add_system_msg(content),
-        SystemEvent::TransientMessage { content, level } => state.set_transient(content, level),
-        SystemEvent::TransientError { content } => {
+        Event::SystemMessage { content } => state.add_system_msg(content),
+        Event::TransientMessage { content, level } => state.set_transient(content, level),
+        Event::TransientError { content } => {
             state.set_transient(content, crate::event::TransientLevel::Error)
         }
-        SystemEvent::ClearTransient => state.clear_transient(),
-        SystemEvent::ShowDiagnostics => state.show_diagnostics(),
-        SystemEvent::ToggleReadOnly => state.toggle_read_only(),
-        SystemEvent::TrustProject => state.apply_trust_project(),
-        SystemEvent::UntrustProject => state.apply_untrust_project(),
+        Event::ClearTransient => state.clear_transient(),
+        Event::ShowDiagnostics => state.show_diagnostics(),
+        Event::ToggleReadOnly => state.toggle_read_only(),
+        Event::TrustProject => state.apply_trust_project(),
+        Event::UntrustProject => state.apply_untrust_project(),
         // intentionally ignored: other SystemEvent variants fall through
         _ => {}
     }

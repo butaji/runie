@@ -1,7 +1,6 @@
 //! Tests for form panel editing (cursor-aware input).
 
 use super::*;
-use crate::LoginFlowEvent;
 
 fn key_panel() -> Panel {
     Panel::new("login-key", "Login")
@@ -122,7 +121,7 @@ fn submit_on_emit_toggle_checkbox_updates_state_and_keeps_open() {
     let mut panel = Panel::new("models", "Models").toggle(
         "m1",
         false,
-        ItemAction::Emit(LoginFlowEvent::ToggleModel { model: "m1".into() }),
+        ItemAction::Emit(crate::Event::ToggleModel { model: "m1".into() }),
     );
 
     let action = form_panel_action(&mut state, &mut panel, Event::Submit);
@@ -136,7 +135,7 @@ fn submit_on_emit_toggle_checkbox_updates_state_and_keeps_open() {
 fn submit_on_emit_action_dispatches_event() {
     let mut state = AppState::default();
     let mut panel =
-        Panel::new("models", "Models").item("_Save", ItemAction::Emit(LoginFlowEvent::Save));
+        Panel::new("models", "Models").item("_Save", ItemAction::Emit(crate::Event::Save));
 
     let action = form_panel_action(&mut state, &mut panel, Event::Submit);
 

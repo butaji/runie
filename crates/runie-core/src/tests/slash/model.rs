@@ -1,16 +1,15 @@
 use super::{exec, tmp_store, ENV_LOCK};
-use crate::event::Event;
-use crate::event::DialogEvent;
+use crate::Event;
 use crate::model::Role;
 use crate::tests::{fresh_state, type_str};
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
-    state.update(DialogEvent::ToggleCommandPalette);
+    state.update(crate::Event::ToggleCommandPalette);
     for c in cmd.chars() {
-        state.update(DialogEvent::PaletteFilter(c));
+        state.update(crate::Event::PaletteFilter(c));
     }
-    state.update(DialogEvent::PaletteSelect);
+    state.update(crate::Event::PaletteSelect);
 }
 
 #[test]

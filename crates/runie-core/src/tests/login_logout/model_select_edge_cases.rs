@@ -1,7 +1,6 @@
-use crate::event::{DialogEvent, InputEvent, LoginFlowEvent};
+use crate::Event;
 use crate::login_flow::LoginStep;
 use crate::model::AppState;
-use crate::Event;
 
 use super::{
     assert_step, assert_transient_contains, clean_config, current_panel, fetch_models,
@@ -11,8 +10,8 @@ use super::{
 fn start_minimax_flow(state: &mut AppState) {
     state.config.current_provider.clear();
     state.config.current_model.clear();
-    state.update(DialogEvent::ProvidersDialog);
-    state.update(DialogEvent::ProvidersAdd);
+    state.update(crate::Event::ProvidersDialog);
+    state.update(crate::Event::ProvidersAdd);
     select_provider(state, "minimax");
     submit_key(state, "sk-test");
 }
@@ -42,8 +41,8 @@ fn deselect_all_models_rejects_save() {
     start_minimax_flow(&mut state);
     fetch_models(&mut state, &["M3".into(), "M2".into()]);
 
-    state.update(LoginFlowEvent::ToggleModel { model: "M3".into() });
-    state.update(LoginFlowEvent::ToggleModel { model: "M2".into() });
+    state.update(crate::Event::ToggleModel { model: "M3".into() });
+    state.update(crate::Event::ToggleModel { model: "M2".into() });
     save_login_flow(&mut state);
 
     assert!(
@@ -60,7 +59,7 @@ fn single_model_enter_saves() {
     start_minimax_flow(&mut state);
     fetch_models(&mut state, &["M3".into()]);
 
-    state.update(Event::from(InputEvent::Submit));
+    state.update(Event::from(crate::Event::Submit));
 
     assert!(
         state.login_flow.is_none(),
@@ -78,7 +77,7 @@ fn multiple_models_toggle_first_save_activates_second() {
     start_minimax_flow(&mut state);
     fetch_models(&mut state, &["M3".into(), "M2".into()]);
 
-    state.update(LoginFlowEvent::ToggleModel { model: "M3".into() });
+    state.update(crate::Event::ToggleModel { model: "M3".into() });
     save_login_flow(&mut state);
 
     assert!(state.login_flow.is_none());
@@ -93,8 +92,8 @@ fn toggle_unchecked_model_then_save() {
     start_minimax_flow(&mut state);
     fetch_models(&mut state, &["M3".into(), "M2".into()]);
 
-    state.update(LoginFlowEvent::ToggleModel { model: "M3".into() });
-    state.update(LoginFlowEvent::ToggleModel { model: "M3".into() });
+    state.update(crate::Event::ToggleModel { model: "M3".into() });
+    state.update(crate::Event::ToggleModel { model: "M3".into() });
     save_login_flow(&mut state);
 
     assert!(state.login_flow.is_none());
@@ -109,7 +108,7 @@ fn space_toggles_model_checkbox() {
     start_minimax_flow(&mut state);
     fetch_models(&mut state, &["M3".into(), "M2".into()]);
 
-    state.update(Event::from(InputEvent::Input(' ')));
+    state.update(Event::from(crate::Event::Input(' ')));
 
     let flow = state.login_flow.as_ref().expect("flow still open");
     assert!(
@@ -129,14 +128,14 @@ fn toggle_model_event_preserves_selection_index() {
     start_minimax_flow(&mut state);
     fetch_models(&mut state, &["M3".into(), "M2".into(), "M1".into()]);
 
-    state.update(Event::from(InputEvent::HistoryNext));
+    state.update(Event::from(crate::Event::HistoryNext));
     assert_eq!(
         current_panel(&state).map(|p| p.selected),
         Some(1),
         "selection should start on second model"
     );
 
-    state.update(Event::from(LoginFlowEvent::ToggleModel { model: "M2".into() }));
+    state.update(Event::from(crate::Event::ToggleModel { model: "M2".into() }));
 
     assert_eq!(
         current_panel(&state).map(|p| p.selected),
@@ -153,14 +152,14 @@ fn space_toggle_preserves_selection_index() {
     fetch_models(&mut state, &["M3".into(), "M2".into(), "M1".into()]);
 
     // Move selection from the first model down to the second.
-    state.update(Event::from(InputEvent::HistoryNext));
+    state.update(Event::from(crate::Event::HistoryNext));
     assert_eq!(
         current_panel(&state).map(|p| p.selected),
         Some(1),
         "selection should start on second model"
     );
 
-    state.update(Event::from(InputEvent::Input(' ')));
+    state.update(Event::from(crate::Event::Input(' ')));
 
     assert_eq!(
         current_panel(&state).map(|p| p.selected),
@@ -182,7 +181,7 @@ fn saving_after_deselecting_model_persists_two_models() {
     fetch_models(&mut state, &["M3".into(), "M2".into(), "M1".into()]);
 
     // All models are selected by default after validation. Deselect one.
-    state.update(LoginFlowEvent::ToggleModel { model: "M1".into() });
+    state.update(crate::Event::ToggleModel { model: "M1".into() });
     save_login_flow(&mut state);
 
     let configured = crate::login_config::list_configured_providers();
