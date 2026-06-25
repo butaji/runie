@@ -87,7 +87,7 @@ fn handle_terminal_resize(state: &mut AppState, width: u16, height: u16) {
 fn permission_input_event(state: &mut AppState, event: crate::Event) {
     use crate::permissions::PermissionAction;
 
-    let Some(req) = state.permission_request().take() else {
+    let Some(req) = state.permission_request_mut().take() else {
         return;
     };
     let action = match event {

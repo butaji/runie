@@ -7,6 +7,12 @@ impl AppState {
         // Use open_dialog_mut() for both the read check and the write.
         // This avoids the immutable+mutable accessor borrow conflict.
         let dialog = self.open_dialog_mut();
+
+        // No dialog open: let event pass through to normal input handling
+        if dialog.is_none() {
+            return false;
+        }
+
         let is_welcome = matches!(dialog.as_ref(), Some(crate::commands::DialogState::Welcome));
         if is_welcome {
             match event {

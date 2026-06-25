@@ -126,8 +126,7 @@ fn is_model_config_intent(e: &Event) -> bool {
         | Event::ScopedModelToggle { .. } | Event::ScopedModelEnableAll
         | Event::ScopedModelDisableAll | Event::ScopedModelToggleProvider { .. }
         | Event::CycleThinkingLevel | Event::SetThinkingLevel(_) | Event::ToggleReadOnly
-        | Event::TrustProject | Event::UntrustProject | Event::ReloadAll
-        | Event::ToggleVimMode)
+        | Event::TrustProject | Event::UntrustProject | Event::ReloadAll)
 }
 
 fn is_command_intent(e: &Event) -> bool {
