@@ -29,6 +29,7 @@ nucleo-matcher = "0.3"
 similar = "3"
 diffy = "0.5"
 tracing = "0.1"
+backon = "1.6"
 
 insta = { version = "1.41", features = ["yaml"] }
 tempfile = "3"

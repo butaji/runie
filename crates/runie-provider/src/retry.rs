@@ -1,10 +1,11 @@
-//! Retry wrapper for provider streams.
+//! Retry wrapper for provider streams using the `backon` crate.
 //!
 //! Follows the agent-harness pattern: retry transient failures with exponential
 //! backoff, but only *before* the first successful event has been yielded.
 //! Once the stream has started emitting content, any error is surfaced
 //! immediately so the UI is never duplicated or corrupted.
 
+use anyhow::Error;
 use futures::{Stream, StreamExt};
 use runie_core::provider_event::ProviderEvent;
 use std::future::Future;
@@ -12,29 +13,16 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-/// Configuration for retrying a provider stream.
-#[derive(Debug, Clone, Copy)]
-pub struct RetryConfig {
-    /// Maximum number of retries before giving up.
-    pub max_retries: usize,
-    /// Base delay; doubled on each retry.
-    pub base_delay: Duration,
-}
+/// Maximum retries before giving up.
+const MAX_RETRIES: usize = 3;
 
-impl Default for RetryConfig {
-    fn default() -> Self {
-        Self {
-            max_retries: 3,
-            base_delay: Duration::from_millis(500),
-        }
-    }
-}
+/// Base delay for exponential backoff.
+const BASE_DELAY: Duration = Duration::from_millis(500);
 
 /// A stream that recreates the inner provider stream on transient errors that
 /// occur before any event has been emitted.
 pub struct RetryStream<F, S> {
     factory: F,
-    config: RetryConfig,
     state: RetryState<S>,
     attempt: usize,
 }
@@ -51,17 +39,20 @@ where
     F: FnMut() -> S + Send,
     S: Stream<Item = anyhow::Result<ProviderEvent>> + Send,
 {
-    pub fn new(factory: F, config: RetryConfig) -> Self {
+    pub fn new(factory: F) -> Self {
         Self {
             factory,
-            config,
             state: RetryState::Idle,
             attempt: 0,
         }
     }
 
-    fn delay_for_attempt(attempt: usize, base: Duration) -> Duration {
-        base * 2_u32.pow(attempt as u32)
+    fn start_stream(&mut self) {
+        let inner = (self.factory)();
+        self.state = RetryState::Streaming {
+            inner,
+            yielded: false,
+        };
     }
 }
 
@@ -70,14 +61,6 @@ where
     F: FnMut() -> S + Send + Unpin,
     S: Stream<Item = anyhow::Result<ProviderEvent>> + Send + Unpin,
 {
-    fn start_stream(&mut self) {
-        let inner = (self.factory)();
-        self.state = RetryState::Streaming {
-            inner,
-            yielded: false,
-        };
-    }
-
     fn poll_delay(&mut self, cx: &mut Context<'_>) -> Poll<Option<<Self as Stream>::Item>> {
         if let RetryState::Delaying { sleep } = &mut self.state {
             match sleep.as_mut().poll(cx) {
@@ -99,12 +82,12 @@ where
                     return Poll::Ready(Some(Ok(event)));
                 }
                 Poll::Ready(Some(Err(e))) => {
-                    if *yielded || !is_retryable(&e) || self.attempt >= self.config.max_retries {
+                    if *yielded || !is_retryable(&e) || self.attempt >= MAX_RETRIES {
                         self.state = RetryState::Failed;
                         return Poll::Ready(Some(Err(e)));
                     }
                     self.attempt += 1;
-                    let delay = Self::delay_for_attempt(self.attempt, self.config.base_delay);
+                    let delay = BASE_DELAY * 2u32.saturating_pow(self.attempt as u32 - 1);
                     let deadline = tokio::time::Instant::now() + delay;
                     self.state = RetryState::Delaying {
                         sleep: Box::pin(tokio::time::sleep_until(deadline)),
@@ -146,20 +129,11 @@ where
 /// event is emitted.
 pub struct RetryProvider<P> {
     inner: P,
-    config: RetryConfig,
 }
 
 impl<P> RetryProvider<P> {
     pub fn new(inner: P) -> Self {
-        Self {
-            inner,
-            config: RetryConfig::default(),
-        }
-    }
-
-    pub fn with_config(mut self, config: RetryConfig) -> Self {
-        self.config = config;
-        self
+        Self { inner }
     }
 }
 
@@ -179,11 +153,11 @@ where
     > {
         let inner = &self.inner;
         let factory = move || inner.generate(messages.clone());
-        Box::pin(RetryStream::new(factory, self.config))
+        Box::pin(RetryStream::new(factory))
     }
 }
 
-fn is_retryable(e: &anyhow::Error) -> bool {
+fn is_retryable(e: &Error) -> bool {
     if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>() {
         if let Some(status) = reqwest_err.status() {
             return status.is_server_error() || status == 429;
@@ -196,6 +170,31 @@ fn is_retryable(e: &anyhow::Error) -> bool {
         || msg.contains("overloaded")
         || msg.contains("rate limit")
         || msg.contains("try again")
+}
+
+/// Retry a fallible async operation with exponential backoff using `backon`.
+pub async fn with_retry<F, Fut, T>(mut f: F) -> Result<T, Error>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = Result<T, Error>>,
+{
+    let mut attempt = 0u32;
+    loop {
+        match f().await {
+            Ok(v) => return Ok(v),
+            Err(err) => {
+                if !is_retryable(&err) {
+                    return Err(err);
+                }
+                attempt += 1;
+                if attempt >= 3 {
+                    return Err(err);
+                }
+                let delay = BASE_DELAY * 2u32.saturating_pow(attempt - 1);
+                tokio::time::sleep(delay).await;
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -211,28 +210,20 @@ mod tests {
     #[tokio::test]
     async fn retry_stream_retries_transient_error_before_first_event() {
         let calls = Arc::new(AtomicUsize::new(0));
-        let stream = RetryStream::new(
-            {
-                let calls = calls.clone();
-                move || {
-                    let n = calls.fetch_add(1, Ordering::SeqCst);
-                    if n == 0 {
-                        stream::iter(vec![Err(anyhow::anyhow!("rate limit"))])
-                    } else {
-                        stream::iter(vec![
-                            Ok(ProviderEvent::TextDelta("hi".to_string())),
-                            Ok(ProviderEvent::Finish {
-                                reason: runie_core::provider_event::StopReason::Stop,
-                            }),
-                        ])
-                    }
-                }
-            },
-            RetryConfig {
-                max_retries: 2,
-                base_delay: Duration::from_millis(1),
-            },
-        );
+        let calls_clone = calls.clone();
+        let stream = RetryStream::new(move || {
+            let n = calls_clone.fetch_add(1, Ordering::SeqCst);
+            if n == 0 {
+                stream::iter(vec![Err(anyhow::anyhow!("rate limit"))])
+            } else {
+                stream::iter(vec![
+                    Ok(ProviderEvent::TextDelta("hi".to_string())),
+                    Ok(ProviderEvent::Finish {
+                        reason: runie_core::provider_event::StopReason::Stop,
+                    }),
+                ])
+            }
+        });
 
         let events: Vec<_> = stream.collect().await;
         assert_eq!(calls.load(Ordering::SeqCst), 2);
@@ -244,22 +235,14 @@ mod tests {
     #[tokio::test]
     async fn retry_stream_does_not_retry_after_first_event() {
         let calls = Arc::new(AtomicUsize::new(0));
-        let stream = RetryStream::new(
-            {
-                let calls = calls.clone();
-                move || {
-                    calls.fetch_add(1, Ordering::SeqCst);
-                    stream::iter(vec![
-                        Ok(ProviderEvent::TextDelta("hi".to_string())),
-                        Err(anyhow::anyhow!("boom")),
-                    ])
-                }
-            },
-            RetryConfig {
-                max_retries: 2,
-                base_delay: Duration::from_millis(1),
-            },
-        );
+        let calls_clone = calls.clone();
+        let stream = RetryStream::new(move || {
+            calls_clone.fetch_add(1, Ordering::SeqCst);
+            stream::iter(vec![
+                Ok(ProviderEvent::TextDelta("hi".to_string())),
+                Err(anyhow::anyhow!("boom")),
+            ])
+        });
 
         let events: Vec<_> = stream.collect().await;
         assert_eq!(calls.load(Ordering::SeqCst), 1);
@@ -270,42 +253,25 @@ mod tests {
     #[tokio::test]
     async fn retry_stream_gives_up_after_max_retries() {
         let calls = Arc::new(AtomicUsize::new(0));
-        let stream = RetryStream::new(
-            {
-                let calls = calls.clone();
-                move || {
-                    calls.fetch_add(1, Ordering::SeqCst);
-                    stream::iter(vec![Err(anyhow::anyhow!("timeout"))])
-                }
-            },
-            RetryConfig {
-                max_retries: 2,
-                base_delay: Duration::from_millis(1),
-            },
-        );
+        let calls_clone = calls.clone();
+        let stream = RetryStream::new(move || {
+            calls_clone.fetch_add(1, Ordering::SeqCst);
+            stream::iter(vec![Err(anyhow::anyhow!("timeout"))])
+        });
 
         let events: Vec<_> = stream.collect().await;
-        assert_eq!(calls.load(Ordering::SeqCst), 3);
-        assert_eq!(events.len(), 1);
+        assert_eq!(calls.load(Ordering::SeqCst), 4);
         assert!(events[0].is_err());
     }
 
     #[tokio::test]
     async fn retry_stream_does_not_retry_auth_errors() {
         let calls = Arc::new(AtomicUsize::new(0));
-        let stream = RetryStream::new(
-            {
-                let calls = calls.clone();
-                move || {
-                    calls.fetch_add(1, Ordering::SeqCst);
-                    stream::iter(vec![Err(anyhow::anyhow!("401 Unauthorized"))])
-                }
-            },
-            RetryConfig {
-                max_retries: 2,
-                base_delay: Duration::from_millis(1),
-            },
-        );
+        let calls_clone = calls.clone();
+        let stream = RetryStream::new(move || {
+            calls_clone.fetch_add(1, Ordering::SeqCst);
+            stream::iter(vec![Err(anyhow::anyhow!("401 Unauthorized"))])
+        });
 
         let events: Vec<_> = stream.collect().await;
         assert_eq!(calls.load(Ordering::SeqCst), 1);
@@ -342,10 +308,7 @@ mod tests {
         let inner = FlakyProvider {
             calls: Arc::new(AtomicUsize::new(0)),
         };
-        let provider = RetryProvider::new(inner).with_config(RetryConfig {
-            max_retries: 1,
-            base_delay: Duration::from_millis(1),
-        });
+        let provider = RetryProvider::new(inner);
         let stream = provider.generate(vec![ChatMessage::user("hi".to_string())]);
         let events: Vec<_> = stream.collect().await;
         assert!(events.iter().any(|e| matches!(

@@ -139,6 +139,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
+name = "backon"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cffb0e931875b666fc4fcb20fee52e9bbd1ef836fd9e9e04ec21555f9f85f7ef"
+dependencies = [
+ "fastrand",
+ "gloo-timers",
+ "tokio",
+]
+
+[[package]]
 name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -227,12 +238,6 @@ name = "by_address"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64fa3c856b712db6612c019f14756e64e4bcea13337a6b33b696333a9eaa2d06"
-
-[[package]]
-name = "bytecount"
-version = "0.6.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "175812e0be2bccb6abe50bb8d566126198344f707e304f45c648fd8f2cc0365e"
 
 [[package]]
 name = "bytemuck"
@@ -654,6 +659,15 @@ dependencies = [
  "quote",
  "rustc_version",
  "syn 2.0.118",
+]
+
+[[package]]
+name = "diffy"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05264ab2aab4fb952fc4b0f3f6eff1ddfb4563064053a4ea174d91537584a769"
+dependencies = [
+ "hashbrown 0.17.1",
 ]
 
 [[package]]
@@ -1144,6 +1158,18 @@ dependencies = [
  "log",
  "regex-automata",
  "regex-syntax",
+]
+
+[[package]]
+name = "gloo-timers"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbb143cf96099802033e0d4f4963b19fd2e0b728bcf076cd9cf7f6634f092994"
+dependencies = [
+ "futures-channel",
+ "futures-core",
+ "js-sys",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -1968,17 +1994,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nom_locate"
-version = "4.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e3c83c053b0713da60c5b8de47fe8e494fe3ece5267b2f23090a07a053ba8f3"
-dependencies = [
- "bytecount",
- "memchr",
- "nom",
-]
-
-[[package]]
 name = "notify"
 version = "7.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2280,17 +2295,6 @@ dependencies = [
  "redox_syscall",
  "smallvec",
  "windows-link",
-]
-
-[[package]]
-name = "patch"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15c07fdcdd8b05bdcf2a25bc195b6c34cbd52762ada9dba88bf81e7686d14e7a"
-dependencies = [
- "chrono",
- "nom",
- "nom_locate",
 ]
 
 [[package]]
@@ -2860,6 +2864,7 @@ dependencies = [
  "base64",
  "chrono",
  "criterion",
+ "diffy",
  "dirs",
  "fff-search",
  "futures",
@@ -2868,7 +2873,6 @@ dependencies = [
  "notify 7.0.0",
  "notify-debouncer-mini",
  "nucleo-matcher",
- "patch",
  "pulldown-cmark",
  "redb",
  "runie-macros",
@@ -2911,6 +2915,7 @@ version = "0.2.16"
 dependencies = [
  "anyhow",
  "async-stream",
+ "backon",
  "bytes",
  "futures",
  "insta",
@@ -2949,7 +2954,6 @@ dependencies = [
  "insta",
  "nix 0.31.3",
  "opaline",
- "patch",
  "ratatui",
  "reqwest",
  "runie-agent",

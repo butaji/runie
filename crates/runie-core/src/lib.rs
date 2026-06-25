@@ -66,7 +66,6 @@ pub mod path;
 pub mod path_complete;
 pub mod prompts;
 pub mod provider;
-pub mod retry;
 pub mod sanitize;
 pub mod scoped_model;
 pub mod session;
