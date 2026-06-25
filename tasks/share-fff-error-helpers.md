@@ -1,6 +1,6 @@
 # Share FFF error and lock helpers
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Tools
 **Priority**: P1

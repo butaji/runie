@@ -3,7 +3,7 @@
 //! Uses FFF's content search with `classify_definitions: true` to find
 //! `struct`, `fn`, `class`, `def`, `impl`, etc. definitions.
 
-use crate::tool::search::fff_helpers::with_picker;
+use crate::tool::search::fff_helpers::{build_error_json, build_error_json_with_instant, with_picker};
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -159,7 +159,14 @@ impl Tool for FindDefinitionsTool {
         let (symbol, glob, _path, limit) = parse_input(&input, ctx)?;
         let state = match FffSearchState::get() {
             Some(s) => s,
-            None => return build_uninitialized_output(&symbol, start),
+            None => return build_error_json_with_instant(
+                "find_definitions",
+                serde_json::json!({ "symbol": symbol }),
+                "FFF indexer not initialized",
+                "results",
+                false,
+                start,
+            ),
         };
         with_picker(
             &state,
@@ -210,44 +217,26 @@ fn parse_input(
     Ok((symbol, glob, full_path, limit))
 }
 
-fn build_uninitialized_output(symbol: &str, start: Instant) -> Result<ToolOutput> {
-    Ok(ToolOutput {
-        tool_name: "find_definitions".to_string(),
-        tool_args: serde_json::json!({ "symbol": symbol }),
-        content: serde_json::to_string_pretty(&serde_json::json!({
-            "error": "FFF indexer not initialized",
-            "results": [],
-        }))?,
-        bytes_transferred: None,
-        duration: start.elapsed(),
-        status: ToolStatus::Error,
-    })
-}
-
-fn build_find_def_lock_error(symbol: String, duration: std::time::Duration) -> ToolOutput {
-    ToolOutput {
-        tool_name: "find_definitions".to_string(),
-        tool_args: serde_json::json!({ "symbol": symbol }),
-        content: "Error acquiring picker lock".to_string(),
-        bytes_transferred: None,
+fn build_find_def_lock_error(msg: String, duration: std::time::Duration) -> ToolOutput {
+    build_error_json(
+        "find_definitions",
+        serde_json::json!({ "symbol": msg }),
+        &msg,
+        "results",
+        false,
         duration,
-        status: ToolStatus::Error,
-    }
+    )
 }
 
 fn build_find_def_not_initialized(symbol: String, duration: std::time::Duration) -> ToolOutput {
-    ToolOutput {
-        tool_name: "find_definitions".to_string(),
-        tool_args: serde_json::json!({ "symbol": symbol }),
-        content: serde_json::to_string_pretty(&serde_json::json!({
-            "error": "FFF picker not initialized",
-            "results": [],
-        }))
-        .unwrap_or_else(|_| r#"{"error":"FFF picker not initialized","results":[]}"#.to_string()),
-        bytes_transferred: None,
+    build_error_json(
+        "find_definitions",
+        serde_json::json!({ "symbol": symbol }),
+        "FFF picker not initialized",
+        "results",
+        false,
         duration,
-        status: ToolStatus::Error,
-    }
+    )
 }
 
 fn build_query(symbol: &str, glob: &str) -> String {

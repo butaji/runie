@@ -1,6 +1,7 @@
 //! Search tool — unified FFF-backed search for files and content.
 
 use crate::tool::search::fff_helpers::with_picker;
+use crate::tool::search::fff_helpers::{build_error_json, build_error_json_with_instant};
 use crate::tool::search::modes::{search_content, search_files, search_glob};
 use crate::tool::search::types::{SearchMode, DEFAULT_LIMIT};
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
@@ -106,14 +107,21 @@ pub(crate) fn search_impl(
 ) -> Result<ToolOutput> {
     let state = match FffSearchState::get() {
         Some(s) => s,
-        None => return build_not_indexed_output(query, start),
+        None => return build_error_json_with_instant(
+            "search",
+            serde_json::json!({ "query": query }),
+            "FFF indexer not initialized",
+            "items",
+            false,
+            start,
+        ),
     };
     with_picker(
         &state,
         query.to_string(),
         start,
-        build_lock_error_output,
-        build_picker_not_initialized_output,
+        build_search_lock_error,
+        build_search_not_initialized,
         |picker| {
             with_query_tracker(&state, query.to_string(), start, |qt| {
                 dispatch_search(picker, qt, query, mode, limit, start)
@@ -122,59 +130,26 @@ pub(crate) fn search_impl(
     )
 }
 
-fn build_not_indexed_output(query: &str, start: Instant) -> Result<ToolOutput> {
-    build_json_error_output(query, "FFF indexer not initialized", false, start)
-}
-
-fn build_picker_not_initialized_output(query: String, duration: std::time::Duration) -> ToolOutput {
-    build_json_error_output_fn(&query, "FFF picker not initialized", false, duration)
-}
-
-fn build_lock_error_output(msg: String, duration: Duration) -> ToolOutput {
-    build_json_error_output_fn(&msg, "FFF lock error", false, duration)
-}
-
-fn build_json_error_output(
-    query: &str,
-    error: &str,
-    indexed: bool,
-    start: Instant,
-) -> Result<ToolOutput> {
-    Ok(ToolOutput {
-        tool_name: "search".to_string(),
-        tool_args: serde_json::json!({ "query": query }),
-        content: serde_json::to_string_pretty(&serde_json::json!({
-            "error": error,
-            "items": [],
-            "total": 0,
-            "indexed": indexed
-        }))?,
-        bytes_transferred: None,
-        duration: start.elapsed(),
-        status: ToolStatus::Error,
-    })
-}
-
-fn build_json_error_output_fn(
-    query: &str,
-    error: &str,
-    indexed: bool,
-    duration: std::time::Duration,
-) -> ToolOutput {
-    ToolOutput {
-        tool_name: "search".to_string(),
-        tool_args: serde_json::json!({ "query": query }),
-        content: serde_json::to_string_pretty(&serde_json::json!({
-            "error": error,
-            "items": [],
-            "total": 0,
-            "indexed": indexed
-        }))
-        .unwrap_or_else(|_| r#"{"error":"","items":[],"total":0,"indexed":false}"#.to_string()),
-        bytes_transferred: None,
+fn build_search_lock_error(msg: String, duration: std::time::Duration) -> ToolOutput {
+    build_error_json(
+        "search",
+        serde_json::json!({ "query": msg }),
+        &msg,
+        "items",
+        false,
         duration,
-        status: ToolStatus::Error,
-    }
+    )
+}
+
+fn build_search_not_initialized(query: String, duration: std::time::Duration) -> ToolOutput {
+    build_error_json(
+        "search",
+        serde_json::json!({ "query": query }),
+        "FFF picker not initialized",
+        "items",
+        false,
+        duration,
+    )
 }
 
 fn with_query_tracker<F>(
