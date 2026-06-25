@@ -1,6 +1,6 @@
 # Replace single-use deps with stdlib where trivial
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2

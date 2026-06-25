@@ -522,7 +522,7 @@
   },
   {
     "id": "replace-single-use-deps-with-stdlib",
-    "status": "todo",
+    "status": "done",
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
