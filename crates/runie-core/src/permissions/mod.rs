@@ -31,11 +31,24 @@ pub use sink::{ApprovalSink, AutoAllowSink, DenyAllSink, ScriptedSink, TuiApprov
 mod tests;
 
 /// Permission action result.
+///
+/// This is the canonical enum for permission decisions throughout the codebase.
+/// The protocol's `ApprovalDecision` (Allow/Deny only) is converted to this type
+/// at the protocol/core boundary via `From<runie_protocol::op::ApprovalDecision>`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PermissionAction {
     Allow,
     Ask,
     Deny,
+}
+
+impl From<runie_protocol::op::ApprovalDecision> for PermissionAction {
+    fn from(decision: runie_protocol::op::ApprovalDecision) -> Self {
+        match decision {
+            runie_protocol::op::ApprovalDecision::Allow => PermissionAction::Allow,
+            runie_protocol::op::ApprovalDecision::Deny => PermissionAction::Deny,
+        }
+    }
 }
 
 /// Result returned by a permission policy.

@@ -285,3 +285,35 @@ async fn build_sink_yolo_false_denies_all() {
     let result = sink.ask("bash", &serde_json::Value::Null).await;
     assert_eq!(result, PermissionAction::Deny);
 }
+
+// ============================================================================
+// ApprovalDecision → PermissionAction conversion
+// ============================================================================
+
+#[test]
+fn approval_decision_allow_maps_to_permission_allow() {
+    use runie_protocol::op::ApprovalDecision;
+    let result = PermissionAction::from(ApprovalDecision::Allow);
+    assert_eq!(result, PermissionAction::Allow);
+}
+
+#[test]
+fn approval_decision_deny_maps_to_permission_deny() {
+    use runie_protocol::op::ApprovalDecision;
+    let result = PermissionAction::from(ApprovalDecision::Deny);
+    assert_eq!(result, PermissionAction::Deny);
+}
+
+#[test]
+fn permission_action_canonical() {
+    // PermissionAction is the canonical type used throughout the codebase.
+    // The protocol's ApprovalDecision is converted at the protocol/core boundary.
+    let allow = PermissionAction::Allow;
+    let ask = PermissionAction::Ask;
+    let deny = PermissionAction::Deny;
+
+    // Verify all variants exist
+    assert_eq!(format!("{:?}", allow), "Allow");
+    assert_eq!(format!("{:?}", ask), "Ask");
+    assert_eq!(format!("{:?}", deny), "Deny");
+}
