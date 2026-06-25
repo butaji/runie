@@ -135,6 +135,8 @@ pub enum Event {
         request_id: String,
         action: crate::permissions::PermissionAction,
     },
+    /// Permission request was dismissed (UI closed without resolution).
+    PermissionRequestDismissed,
     /// Assistant message ready with full content (used by agent to update
     /// AppState with the final message including tool calls after streaming).
     AssistantMessageReady {
@@ -353,6 +355,11 @@ pub enum Event {
     FilesWritten {
         count: usize,
         errors: Vec<String>,
+    },
+    /// Environment info detected at startup (cwd name, git info).
+    EnvDetected {
+        git_info: Option<crate::snapshot::GitInfo>,
+        cwd_name: String,
     },
 
     // Session

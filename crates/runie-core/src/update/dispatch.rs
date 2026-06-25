@@ -3,12 +3,8 @@
 use crate::model::AppState;
 use crate::Event;
 
-/// Dispatch an event when no dialog is open and no special early-return
-/// handler has consumed it.
 pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
-    if try_handle_early_events(state, &event) {
-        return;
-    }
+    if try_handle_early_events(state, &event) { return; }
     match categorize(&event) {
         EventCategory::Input => super::input::input_event(state, event),
         EventCategory::Agent => super::agent::agent_event(state, event),
@@ -27,42 +23,18 @@ pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
 }
 
 fn try_handle_early_events(state: &mut AppState, event: &Event) -> bool {
-    if let Event::MessageReplayed {
-        id,
-        role,
-        content,
-        timestamp,
-        provider,
-    } = event
-    {
-        state.replay_message(
-            id.clone(),
-            role.clone(),
-            content.clone(),
-            *timestamp,
-            provider.clone(),
-        );
+    if let Event::MessageReplayed { id, role, content, timestamp, provider } = event {
+        state.replay_message(id.clone(), role.clone(), content.clone(), *timestamp, provider.clone());
         return true;
     }
-    handle_persistence_events(state, event)
-        || handle_session_store_events(state, event)
-        || handle_io_events(state, event)
+    handle_persistence_events(state, event) || handle_session_store_events(state, event) || handle_io_events(state, event)
 }
 
 fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
     match event {
-        Event::TrustLoaded { decisions } => {
-            *state.trust_decisions_mut() = decisions.clone();
-            true
-        }
-        Event::TrustChanged { path, decision } => {
-            state.set_trust_decision(path.clone(), *decision);
-            true
-        }
-        Event::HistoryLoaded { entries } => {
-            state.input_mut().input_history = entries.clone();
-            true
-        }
+        Event::TrustLoaded { decisions } => { *state.trust_decisions_mut() = decisions.clone(); true }
+        Event::TrustChanged { path, decision } => { state.set_trust_decision(path.clone(), *decision); true }
+        Event::HistoryLoaded { entries } => { state.input_mut().input_history = entries.clone(); true }
         _ => false,
     }
 }
@@ -70,44 +42,18 @@ fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
 fn handle_session_store_events(state: &mut AppState, event: &Event) -> bool {
     use crate::event::TransientLevel;
     match event {
-        Event::SessionLoaded { name, events, metadata } => {
-            apply_session_loaded(state, name, events, metadata);
-            true
-        }
-        Event::SessionSaved { name } => {
-            state.notify(format!("Session '{}' saved.", name), TransientLevel::Info);
-            true
-        }
-        Event::SessionDeleted { name } => {
-            state.notify(format!("Session '{}' deleted.", name), TransientLevel::Info);
-            true
-        }
-        Event::SessionImported { session } => {
-            apply_session_imported(state, session);
-            true
-        }
-        Event::SessionExported { path } => {
-            state.notify(format!("Session exported to '{}'.", path), TransientLevel::Info);
-            true
-        }
-        Event::SessionList { sessions } => {
-            apply_session_list(state, sessions);
-            true
-        }
-        Event::SessionOperationFailed { operation, error } => {
-            state.notify(format!("{} failed: {}", operation, error), TransientLevel::Error);
-            true
-        }
+        Event::SessionLoaded { name, events, metadata } => { apply_session_loaded(state, name, events, metadata); true }
+        Event::SessionSaved { name } => { state.notify(format!("Session '{}' saved.", name), TransientLevel::Info); true }
+        Event::SessionDeleted { name } => { state.notify(format!("Session '{}' deleted.", name), TransientLevel::Info); true }
+        Event::SessionImported { session } => { apply_session_imported(state, session); true }
+        Event::SessionExported { path } => { state.notify(format!("Session exported to '{}'.", path), TransientLevel::Info); true }
+        Event::SessionList { sessions } => { apply_session_list(state, sessions); true }
+        Event::SessionOperationFailed { operation, error } => { state.notify(format!("{} failed: {}", operation, error), TransientLevel::Error); true }
         _ => false,
     }
 }
 
-fn apply_session_loaded(
-    state: &mut AppState,
-    name: &str,
-    events: &[crate::event::DurableCoreEvent],
-    metadata: &Option<Box<crate::session::index::SessionMetadata>>,
-) {
+fn apply_session_loaded(state: &mut AppState, name: &str, events: &[crate::event::DurableCoreEvent], metadata: &Option<Box<crate::session::index::SessionMetadata>>) {
     crate::session::replay::replay_events(state, events);
     if let Some(meta) = metadata {
         state.session_mut().session_display_name = Some(meta.display_name.clone());
@@ -116,18 +62,12 @@ fn apply_session_loaded(
     }
     state.configure_token_tracker();
     state.messages_changed();
-    state.notify(
-        format!("Session '{}' loaded.", name),
-        crate::event::TransientLevel::Info,
-    );
+    state.notify(format!("Session '{}' loaded.", name), crate::event::TransientLevel::Info);
 }
 
 fn apply_session_imported(state: &mut AppState, session: &crate::session::Session) {
     state.restore_session(session);
-    state.notify(
-        format!("Session imported from '{}'.", session.name),
-        crate::event::TransientLevel::Info,
-    );
+    state.notify(format!("Session imported from '{}'.", session.name), crate::event::TransientLevel::Info);
 }
 
 fn apply_session_list(state: &mut AppState, sessions: &[String]) {
@@ -141,299 +81,84 @@ fn apply_session_list(state: &mut AppState, sessions: &[String]) {
 
 fn handle_io_events(state: &mut AppState, event: &Event) -> bool {
     match event {
-        Event::BashOutput { command, output } => {
-            state.add_system_msg(format!("$ {}\n{}", command, output));
-            state.view_mut().scroll = 0;
-            state.messages_changed();
-            true
-        }
-        Event::FilesWritten { count, errors } => {
-            let mut msg = format!("Applied {} edit(s).", count);
-            if !errors.is_empty() {
-                msg.push_str(" Errors: ");
-                msg.push_str(&errors.join(", "));
-            }
-            state.add_system_msg(msg);
-            true
-        }
+        Event::BashOutput { command, output } => { state.add_system_msg(format!("$ {}\n{}", command, output)); state.view_mut().scroll = 0; state.messages_changed(); true }
+        Event::FilesWritten { count, errors } => { state.add_system_msg(if errors.is_empty() { format!("Applied {} edit(s).", count) } else { format!("Applied {} edit(s). Errors: {}", count, errors.join(", ")) }); true }
+        Event::EnvDetected { git_info, cwd_name } => { *state.git_info_mut() = git_info.clone(); *state.cwd_name_mut() = cwd_name.clone(); true }
         _ => false,
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum EventCategory {
-    Input,
-    Agent,
-    Scroll,
-    Control,
-    ModelConfig,
-    Dialog,
-    Edit,
-    System,
-    Session,
-    Command,
-    LoginFlow,
-    Permission,
-    Other,
-}
+enum EventCategory { Input, Agent, Scroll, Control, ModelConfig, Dialog, Edit, System, Session, Command, LoginFlow, Permission, Other }
 
 fn categorize(event: &Event) -> EventCategory {
-    if matches!(event, Event::PermissionRequest { .. }) {
-        return EventCategory::Permission;
-    }
-    if let Some(cat) = categorize_input_agent_scroll(event) {
-        return cat;
-    }
-    if let Some(cat) = categorize_control_model_dialog(event) {
-        return cat;
-    }
-    if let Some(cat) = categorize_edit_system_session(event) {
-        return cat;
-    }
-    if let Some(cat) = categorize_command_login(event) {
-        return cat;
-    }
+    if is_permission_event(event) { return EventCategory::Permission; }
+    if is_input_event(event) { return EventCategory::Input; }
+    if is_agent_event(event) { return EventCategory::Agent; }
+    if is_scroll_event(event) { return EventCategory::Scroll; }
+    if is_control_event(event) { return EventCategory::Control; }
+    if is_model_config_event(event) { return EventCategory::ModelConfig; }
+    if is_dialog_category_event(event) { return EventCategory::Dialog; }
+    if let Some(cat) = categorize_edit_system_session(event) { return cat; }
+    if let Some(cat) = categorize_command_login(event) { return cat; }
     EventCategory::Other
 }
 
-fn categorize_input_agent_scroll(event: &Event) -> Option<EventCategory> {
-    if is_input_event(event) {
-        return Some(EventCategory::Input);
+fn is_permission_event(e: &Event) -> bool {
+    matches!(e, Event::PermissionRequest { .. } | Event::PermissionResponse { .. } | Event::PermissionRequestDismissed)
+}
+
+fn is_scroll_event(e: &Event) -> bool {
+    matches!(e, Event::Up | Event::Down)
+}
+
+fn categorize_edit_system_session(e: &Event) -> Option<EventCategory> {
+    match e {
+        Event::PendingEdit { .. } | Event::ApproveEdit | Event::RejectEdit => Some(EventCategory::Edit),
+        Event::SystemMessage { .. } | Event::TransientMessage { .. } | Event::TransientError { .. } | Event::ClearTransient | Event::ShowDiagnostics => Some(EventCategory::System),
+        Event::ForkSession { .. } | Event::CloneSession | Event::ToggleSessionTree | Event::SessionTreeFilterCycle | Event::SessionTreeSelect { .. } => Some(EventCategory::Session),
+        _ => None,
     }
-    if is_agent_event(event) {
-        return Some(EventCategory::Agent);
+}
+
+fn categorize_command_login(e: &Event) -> Option<EventCategory> {
+    match e {
+        Event::RunLoadCommand { .. } | Event::RunSaveCommand { .. } | Event::RunDeleteCommand { .. } | Event::RunImportCommand { .. } | Event::RunExportCommand { .. } | Event::RunSkillCommand { .. } | Event::RunLoginCommand { .. } | Event::RunLogoutCommand { .. } | Event::RunNameCommand { .. } | Event::RunForkCommand { .. } | Event::RunCompactCommand { .. } | Event::RunPromptCommand { .. } | Event::RunThinkingCommand { .. } | Event::RunPaletteCommand { .. } => Some(EventCategory::Command),
+        Event::Start | Event::SelectProvider { .. } | Event::SubmitKey { .. } | Event::ValidationFailed { .. } | Event::ModelsFetched { .. } | Event::ToggleModel { .. } | Event::Save | Event::Cancel => Some(EventCategory::LoginFlow),
+        _ => None,
     }
-    if matches!(event, Event::Up | Event::Down) {
-        return Some(EventCategory::Scroll);
-    }
-    None
 }
 
 fn is_input_event(event: &Event) -> bool {
-    matches!(
-        event,
-        Event::Input(_)
-            | Event::Backspace
-            | Event::Newline
-            | Event::Submit
-            | Event::Escape
-            | Event::CursorLeft
-            | Event::CursorRight
-            | Event::CursorStart
-            | Event::CursorEnd
-            | Event::DeleteWord
-            | Event::DeleteToEnd
-            | Event::DeleteToStart
-            | Event::KillChar
-            | Event::HistoryPrev
-            | Event::HistoryNext
-            | Event::Undo
-            | Event::Redo
-            | Event::CursorWordLeft
-            | Event::CursorWordRight
-            | Event::PageUp
-            | Event::PageDown
-            | Event::GoToTop
-            | Event::GoToBottom
-            | Event::Paste(_)
-            | Event::PasteImage
-            | Event::MouseClick { .. }
-            | Event::MouseRelease { .. }
-            | Event::MouseDrag { .. }
-            | Event::MouseMove { .. }
-            | Event::MouseScrollUp
-            | Event::MouseScrollDown
-            | Event::FocusGained
-            | Event::FocusLost
-            | Event::TerminalSize { .. }
-    )
+    matches!(event, Event::Input(_) | Event::Backspace | Event::Newline | Event::Submit | Event::Escape | Event::CursorLeft | Event::CursorRight | Event::CursorStart | Event::CursorEnd | Event::DeleteWord | Event::DeleteToEnd | Event::DeleteToStart | Event::KillChar | Event::HistoryPrev | Event::HistoryNext | Event::Undo | Event::Redo | Event::CursorWordLeft | Event::CursorWordRight | Event::PageUp | Event::PageDown | Event::GoToTop | Event::GoToBottom | Event::Paste(_) | Event::PasteImage | Event::MouseClick { .. } | Event::MouseRelease { .. } | Event::MouseDrag { .. } | Event::MouseMove { .. } | Event::MouseScrollUp | Event::MouseScrollDown | Event::FocusGained | Event::FocusLost | Event::TerminalSize { .. })
 }
 
 fn is_agent_event(event: &Event) -> bool {
-    matches!(
-        event,
-        Event::Thinking { .. }
-            | Event::ThoughtDone { .. }
-            | Event::ToolStart { .. }
-            | Event::ToolEnd { .. }
-            | Event::ResponseDelta { .. }
-            | Event::Response { .. }
-            | Event::TurnComplete { .. }
-            | Event::Done { .. }
-            | Event::Error { .. }
-            | Event::TextStart { .. }
-            | Event::TextEnd { .. }
-            | Event::ThinkingStart { .. }
-            | Event::ThinkingDelta { .. }
-            | Event::ThinkingEnd { .. }
-    )
-}
-
-fn categorize_control_model_dialog(event: &Event) -> Option<EventCategory> {
-    if is_control_event(event) {
-        return Some(EventCategory::Control);
-    }
-    if is_model_config_event(event) {
-        return Some(EventCategory::ModelConfig);
-    }
-    if is_dialog_category_event(event) {
-        return Some(EventCategory::Dialog);
-    }
-    None
+    matches!(event, Event::Thinking { .. } | Event::ThoughtDone { .. } | Event::ToolStart { .. } | Event::ToolEnd { .. } | Event::ResponseDelta { .. } | Event::Response { .. } | Event::TurnComplete { .. } | Event::Done { .. } | Event::Error { .. } | Event::TextStart { .. } | Event::TextEnd { .. } | Event::ThinkingStart { .. } | Event::ThinkingDelta { .. } | Event::ThinkingEnd { .. })
 }
 
 fn is_control_event(event: &Event) -> bool {
-    matches!(
-        event,
-        Event::Quit
-            | Event::ForceQuit
-            | Event::Reset
-            | Event::Abort
-            | Event::FollowUp
-            | Event::ToggleExpand
-            | Event::Dequeue
-            | Event::OpenExternalEditor
-            | Event::ExternalEditorDone { .. }
-            | Event::ShareSession
-            | Event::Suspend
-            | Event::ToggleVimMode
-            | Event::CopyLastResponse
-            | Event::OpenSessionList
-            | Event::NewSession
-            | Event::ResumeSession
-            | Event::SelectSession { .. }
-            | Event::StarSession { .. }
-            | Event::RenameSession { .. }
-            | Event::DeleteSession { .. }
-    )
+    matches!(event, Event::Quit | Event::ForceQuit | Event::Reset | Event::Abort | Event::FollowUp | Event::ToggleExpand | Event::Dequeue | Event::OpenExternalEditor | Event::ExternalEditorDone { .. } | Event::ShareSession | Event::Suspend | Event::ToggleVimMode | Event::CopyLastResponse | Event::OpenSessionList | Event::NewSession | Event::ResumeSession | Event::SelectSession { .. } | Event::StarSession { .. } | Event::RenameSession { .. } | Event::DeleteSession { .. })
 }
 
 fn is_model_config_event(event: &Event) -> bool {
-    matches!(
-        event,
-        Event::SwitchModel { .. }
-            | Event::SwitchTheme { .. }
-            | Event::CycleModelNext
-            | Event::CycleModelPrev
-            | Event::ToggleScopedModelsDialog
-            | Event::ScopedModelToggle { .. }
-            | Event::ScopedModelEnableAll
-            | Event::ScopedModelDisableAll
-            | Event::ScopedModelToggleProvider { .. }
-            | Event::ToggleSettingsDialog
-            | Event::SettingsUp
-            | Event::SettingsDown
-            | Event::SettingsLeft
-            | Event::SettingsRight
-            | Event::SettingsSelect
-            | Event::SettingsClose
-            | Event::SettingsSwitchCategory { .. }
-            | Event::CycleThinkingLevel
-            | Event::SetThinkingLevel(_)
-            | Event::ToggleReadOnly
-            | Event::TrustProject
-            | Event::UntrustProject
-            | Event::ReloadAll
-            | Event::KeybindingsReloaded
-    )
+    matches!(event, Event::SwitchModel { .. } | Event::SwitchTheme { .. } | Event::CycleModelNext | Event::CycleModelPrev | Event::ToggleScopedModelsDialog | Event::ScopedModelToggle { .. } | Event::ScopedModelEnableAll | Event::ScopedModelDisableAll | Event::ScopedModelToggleProvider { .. } | Event::ToggleSettingsDialog | Event::SettingsUp | Event::SettingsDown | Event::SettingsLeft | Event::SettingsRight | Event::SettingsSelect | Event::SettingsClose | Event::SettingsSwitchCategory { .. } | Event::CycleThinkingLevel | Event::SetThinkingLevel(_) | Event::ToggleReadOnly | Event::TrustProject | Event::UntrustProject | Event::ReloadAll | Event::KeybindingsReloaded)
 }
 
 fn is_dialog_category_event(event: &Event) -> bool {
-    is_palette_selector_event(event)
-        || is_path_form_event(event)
-        || matches!(
-            event,
-            Event::ToggleWelcome
-                | Event::DialogBack
-                | Event::ProvidersDialog
-                | Event::ProvidersSelectModel { .. }
-                | Event::ProvidersDisconnect { .. }
-                | Event::ProvidersAdd
-                | Event::ProvidersEditModels { .. }
-                | Event::CopyToClipboard(_)
-                | Event::CopySelectedBlock
-                | Event::CopyBlockMetadata
-                | Event::AtFilePicker
-                | Event::InsertAtRef(_)
-        )
+    is_palette_selector_event(event) || is_path_form_event(event) || matches!(event, Event::ToggleWelcome | Event::DialogBack | Event::ProvidersDialog | Event::ProvidersSelectModel { .. } | Event::ProvidersDisconnect { .. } | Event::ProvidersAdd | Event::ProvidersEditModels { .. } | Event::CopyToClipboard(_) | Event::CopySelectedBlock | Event::CopyBlockMetadata | Event::AtFilePicker | Event::InsertAtRef(_))
 }
 
 fn is_palette_selector_event(event: &Event) -> bool {
-    matches!(
-        event,
-        Event::ToggleCommandPalette
-            | Event::PaletteFilter(_)
-            | Event::PaletteBackspace
-            | Event::PaletteUp
-            | Event::PaletteDown
-            | Event::PaletteSelect
-            | Event::PaletteClose
-            | Event::ToggleModelSelector
-            | Event::ModelSelectorFilter(_)
-            | Event::ModelSelectorBackspace
-            | Event::ModelSelectorUp
-            | Event::ModelSelectorDown
-            | Event::ModelSelectorSelect
-            | Event::ModelSelectorClose
-    )
+    matches!(event, Event::ToggleCommandPalette | Event::PaletteFilter(_) | Event::PaletteBackspace | Event::PaletteUp | Event::PaletteDown | Event::PaletteSelect | Event::PaletteClose | Event::ToggleModelSelector | Event::ModelSelectorFilter(_) | Event::ModelSelectorBackspace | Event::ModelSelectorUp | Event::ModelSelectorDown | Event::ModelSelectorSelect | Event::ModelSelectorClose)
 }
 
 fn is_path_form_event(event: &Event) -> bool {
-    matches!(
-        event,
-        Event::TogglePathCompletion
-            | Event::PathCompletionUp
-            | Event::PathCompletionDown
-            | Event::PathCompletionSelect
-            | Event::PathCompletionClose
-    ) || is_form_dialog_event(event)
+    matches!(event, Event::TogglePathCompletion | Event::PathCompletionUp | Event::PathCompletionDown | Event::PathCompletionSelect | Event::PathCompletionClose) || is_form_dialog_event(event)
 }
 
-fn categorize_edit_system_session(event: &Event) -> Option<EventCategory> {
-    match event {
-        Event::PendingEdit { .. } | Event::ApproveEdit | Event::RejectEdit => {
-            Some(EventCategory::Edit)
-        }
-        Event::SystemMessage { .. }
-        | Event::TransientMessage { .. }
-        | Event::TransientError { .. }
-        | Event::ClearTransient
-        | Event::ShowDiagnostics => Some(EventCategory::System),
-        Event::ForkSession { .. }
-        | Event::CloneSession
-        | Event::ToggleSessionTree
-        | Event::SessionTreeFilterCycle
-        | Event::SessionTreeSelect { .. } => Some(EventCategory::Session),
-        _ => None,
-    }
-}
-
-fn categorize_command_login(event: &Event) -> Option<EventCategory> {
-    match event {
-        Event::RunLoadCommand { .. }
-        | Event::RunSaveCommand { .. }
-        | Event::RunDeleteCommand { .. }
-        | Event::RunImportCommand { .. }
-        | Event::RunExportCommand { .. }
-        | Event::RunSkillCommand { .. }
-        | Event::RunLoginCommand { .. }
-        | Event::RunLogoutCommand { .. }
-        | Event::RunNameCommand { .. }
-        | Event::RunForkCommand { .. }
-        | Event::RunCompactCommand { .. }
-        | Event::RunPromptCommand { .. }
-        | Event::RunThinkingCommand { .. }
-        | Event::RunPaletteCommand { .. } => Some(EventCategory::Command),
-        Event::Start
-        | Event::SelectProvider { .. }
-        | Event::SubmitKey { .. }
-        | Event::ValidationFailed { .. }
-        | Event::ModelsFetched { .. }
-        | Event::ToggleModel { .. }
-        | Event::Save
-        | Event::Cancel => Some(EventCategory::LoginFlow),
-        _ => None,
-    }
+fn is_form_dialog_event(event: &crate::Event) -> bool {
+    matches!(event, crate::Event::CommandFormInput(_) | crate::Event::CommandFormBackspace | crate::Event::CommandFormUp | crate::Event::CommandFormDown | crate::Event::CommandFormSubmit | crate::Event::CommandFormClose)
 }
 
 fn dispatch_dialog_event(state: &mut AppState, event: crate::Event) {
@@ -457,41 +182,9 @@ fn handle_dialog_back_no_dialog(state: &mut AppState) {
 }
 
 pub(crate) fn is_dialog_event(event: &Event) -> bool {
-    is_toggle_dialog_event(event)
-        || is_form_dialog_event(event)
-        || matches!(event, Event::InsertAtRef(_))
-        || matches!(event, Event::DialogBack)
+    is_toggle_dialog_event(event) || is_form_dialog_event(event) || matches!(event, Event::InsertAtRef(_) | Event::DialogBack)
 }
 
 fn is_toggle_dialog_event(event: &crate::Event) -> bool {
-    is_palette_selector_event(event)
-        || is_path_form_event(event)
-        || matches!(
-            event,
-            crate::Event::ToggleWelcome
-                | crate::Event::ToggleSettingsDialog
-                | crate::Event::ToggleModelSelector
-                | crate::Event::AtFilePicker
-                | crate::Event::ToggleVimMode
-                | crate::Event::ProvidersDialog
-                | crate::Event::ProvidersAdd
-                | crate::Event::ProvidersEditModels { .. }
-                | crate::Event::ProvidersSelectModel { .. }
-                | crate::Event::ProvidersDisconnect { .. }
-                | crate::Event::ToggleScopedModelsDialog
-                | crate::Event::ScopedModelEnableAll
-                | crate::Event::ScopedModelDisableAll
-        )
-}
-
-fn is_form_dialog_event(event: &crate::Event) -> bool {
-    matches!(
-        event,
-        crate::Event::CommandFormInput(_)
-            | crate::Event::CommandFormBackspace
-            | crate::Event::CommandFormUp
-            | crate::Event::CommandFormDown
-            | crate::Event::CommandFormSubmit
-            | crate::Event::CommandFormClose
-    )
+    is_palette_selector_event(event) || is_path_form_event(event) || matches!(event, crate::Event::ToggleWelcome | crate::Event::ToggleSettingsDialog | crate::Event::ToggleModelSelector | crate::Event::AtFilePicker | crate::Event::ToggleVimMode | crate::Event::ProvidersDialog | crate::Event::ProvidersAdd | crate::Event::ProvidersEditModels { .. } | crate::Event::ProvidersSelectModel { .. } | crate::Event::ProvidersDisconnect { .. } | crate::Event::ToggleScopedModelsDialog | crate::Event::ScopedModelEnableAll | crate::Event::ScopedModelDisableAll)
 }

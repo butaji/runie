@@ -7,12 +7,15 @@ use runie_core::model::AppState;
 
 /// Load skills, auth providers, and git info asynchronously and apply them to
 /// `state`. Trust and input history are now owned by `PersistenceActor`.
+///
+/// Environment detection (git info, cwd name) is sent to `IoActor` as an
+/// intent; the actor emits `Event::EnvDetected` which is then applied to
+/// `AppState` through the normal event dispatch path.
 pub async fn bootstrap(state: &mut AppState) {
-    let (git_info, cwd_name) = tokio::task::spawn_blocking(runie_core::model::init_git_and_cwd)
-        .await
-        .unwrap_or_default();
-    state.set_git_info(git_info);
-    state.set_cwd_name(cwd_name);
+    // Send environment detection to IoActor (async, off the blocking thread)
+    if let Some(ref io_handle) = state.actor_handles().and_then(|h| h.io.as_ref()) {
+        io_handle.detect_env().await;
+    }
 
     let skills = tokio::task::spawn_blocking(runie_core::skills::load_all)
         .await

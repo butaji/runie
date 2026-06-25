@@ -152,7 +152,7 @@ fn is_session_fact(e: &Event) -> bool {
 }
 
 fn is_io_fact(e: &Event) -> bool {
-    matches!(e, Event::BashOutput { .. } | Event::FilesWritten { .. })
+    matches!(e, Event::BashOutput { .. } | Event::FilesWritten { .. } | Event::EnvDetected { .. })
 }
 
 fn is_system_fact(e: &Event) -> bool {

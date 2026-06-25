@@ -190,7 +190,7 @@
   },
   {
     "id": "env-actor-owns-git-cwd",
-    "status": "todo",
+    "status": "done",
     "milestone": "?",
     "category": "?",
     "priority": "?",

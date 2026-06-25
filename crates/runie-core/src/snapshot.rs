@@ -6,7 +6,7 @@ use crate::view::elements::Element;
 use std::sync::Arc;
 
 /// Git repository info detected from current working directory.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct GitInfo {
     pub repo_name: Option<String>,
     pub branch: Option<String>,

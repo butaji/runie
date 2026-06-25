@@ -366,44 +366,7 @@ fn try_intent_helpers(e: &Event) -> Option<Intent> {
 /// Returns true if this event is a Fact (not an Intent).
 /// Listed explicitly so the compiler catches new Fact variants that aren't handled.
 fn is_fact_variant(e: &Event) -> bool {
-    matches!(
-        e,
-        Event::Thinking { .. }
-            | Event::ThoughtDone { .. }
-            | Event::ToolStart { .. }
-            | Event::ToolEnd { .. }
-            | Event::ResponseDelta { .. }
-            | Event::ThinkingDelta { .. }
-            | Event::TextStart { .. }
-            | Event::TextEnd { .. }
-            | Event::ThinkingStart { .. }
-            | Event::ThinkingEnd { .. }
-            | Event::Response { .. }
-            | Event::TurnComplete { .. }
-            | Event::Done { .. }
-            | Event::Error { .. }
-            | Event::AssistantMessageReady { .. }
-            | Event::MessageReplayed { .. }
-            | Event::ConfigLoaded { .. }
-            | Event::TrustLoaded { .. }
-            | Event::TrustChanged { .. }
-            | Event::TrustSet { .. }
-            | Event::HistoryLoaded { .. }
-            | Event::HistoryAppend { .. }
-            | Event::SessionLoaded { .. }
-            | Event::SessionSaved { .. }
-            | Event::SessionDeleted { .. }
-            | Event::SessionImported { .. }
-            | Event::SessionExported { .. }
-            | Event::SessionList { .. }
-            | Event::SessionOperationFailed { .. }
-            | Event::BashOutput { .. }
-            | Event::FilesWritten { .. }
-            | Event::SystemMessage { .. }
-            | Event::ValidationFailed { .. }
-            | Event::ModelsFetched { .. }
-            | Event::PermissionRequest { .. }
-    )
+    matches!(e, Event::Thinking { .. } | Event::ThoughtDone { .. } | Event::ToolStart { .. } | Event::ToolEnd { .. } | Event::ResponseDelta { .. } | Event::ThinkingDelta { .. } | Event::TextStart { .. } | Event::TextEnd { .. } | Event::ThinkingStart { .. } | Event::ThinkingEnd { .. } | Event::Response { .. } | Event::TurnComplete { .. } | Event::Done { .. } | Event::Error { .. } | Event::AssistantMessageReady { .. } | Event::MessageReplayed { .. } | Event::ConfigLoaded { .. } | Event::TrustLoaded { .. } | Event::TrustChanged { .. } | Event::TrustSet { .. } | Event::HistoryLoaded { .. } | Event::HistoryAppend { .. } | Event::SessionLoaded { .. } | Event::SessionSaved { .. } | Event::SessionDeleted { .. } | Event::SessionImported { .. } | Event::SessionExported { .. } | Event::SessionList { .. } | Event::SessionOperationFailed { .. } | Event::BashOutput { .. } | Event::FilesWritten { .. } | Event::EnvDetected { .. } | Event::SystemMessage { .. } | Event::ValidationFailed { .. } | Event::ModelsFetched { .. } | Event::PermissionRequest { .. })
 }
 
 // ── Public impl (delegates to helpers) ────────────────────────────────────────

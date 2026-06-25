@@ -6,6 +6,7 @@ use std::process::{Command, Stdio};
 use crate::actors::{spawn_actor, Actor, ActorHandle};
 use crate::bus::EventBus;
 use crate::event::Event;
+use crate::model;
 
 use super::messages::{IoActorHandle, IoMsg};
 
@@ -39,6 +40,7 @@ impl IoActor {
         match msg {
             IoMsg::RunBash { command } => self.run_bash(command).await,
             IoMsg::WriteFiles { edits } => self.write_files(edits).await,
+            IoMsg::DetectEnv => self.detect_env().await,
         }
     }
 
@@ -58,6 +60,16 @@ impl IoActor {
                 Err(e) => (0, vec![format!("write task failed: {e}")]),
             };
         self.emit(Event::FilesWritten { count, errors });
+    }
+
+    /// Detect cwd name and git info asynchronously.
+    async fn detect_env(&self) {
+        let (git_info, cwd_name) =
+            match tokio::task::spawn_blocking(model::init_git_and_cwd).await {
+                Ok(info) => info,
+                Err(_) => (None, String::new()),
+            };
+        self.emit(Event::EnvDetected { git_info, cwd_name });
     }
 
     fn emit(&self, event: Event) {

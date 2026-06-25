@@ -10,6 +10,8 @@ pub enum IoMsg {
     RunBash { command: String },
     /// Write multiple files and publish the result.
     WriteFiles { edits: Vec<(PathBuf, String)> },
+    /// Detect environment info (cwd name, git info) asynchronously.
+    DetectEnv,
 }
 
 /// Handle for sending commands to an `IoActor`.
@@ -37,5 +39,10 @@ impl IoActorHandle {
     /// Request writing files.
     pub async fn write_files(&self, edits: Vec<(PathBuf, String)>) {
         let _ = self.tx.send(IoMsg::WriteFiles { edits }).await;
+    }
+
+    /// Request environment detection (cwd name, git info).
+    pub async fn detect_env(&self) {
+        let _ = self.tx.send(IoMsg::DetectEnv).await;
     }
 }

@@ -206,7 +206,8 @@ fn dispatcher_handles_all_variants() {
             | Event::SessionList { .. }
             | Event::SessionOperationFailed { .. }
             | Event::BashOutput { .. }
-            | Event::FilesWritten { .. } => Event::HistoryAppend {
+            | Event::FilesWritten { .. }
+            | Event::EnvDetected { .. } => Event::HistoryAppend {
                 entry: String::new(),
             },
 
@@ -253,6 +254,13 @@ fn dispatcher_handles_all_variants() {
             Event::PermissionResponse { .. } => Event::PermissionResponse {
                 request_id: String::new(),
                 action: crate::permissions::PermissionAction::Ask,
+            },
+            Event::PermissionRequestDismissed => Event::PermissionRequestDismissed,
+
+            // IO
+            Event::EnvDetected { .. } => Event::EnvDetected {
+                git_info: None,
+                cwd_name: String::new(),
             },
         }
     }
