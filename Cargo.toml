@@ -28,7 +28,6 @@ textwrap = { version = "0.16", features = ["unicode-linebreak"] }
 nucleo-matcher = "0.3"
 similar = "3"
 diffy = "0.5"
-tracing = "0.1"
 backon = "1.6"
 
 insta = { version = "1.41", features = ["yaml"] }
@@ -36,10 +35,8 @@ tempfile = "3"
 
 async-trait = "0.1"
 runie-core = { path = "crates/runie-core" }
-runie-tui = { path = "crates/runie-tui" }
 runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }
-runie-cli = { path = "crates/runie-cli" }
 runie-testing = { path = "crates/runie-testing" }
 runie-protocol = { path = "crates/runie-protocol" }
 runie-macros = { path = "crates/runie-macros" }
