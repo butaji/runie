@@ -2,7 +2,7 @@
 
 use tokio::sync::mpsc;
 
-use crate::actor::Reply;
+use crate::actors::Reply;
 use crate::config::Config;
 
 /// Messages accepted by `ConfigActor`.

@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 use tokio::sync::mpsc;
 
-use crate::actor::{spawn_actor, Actor, ActorHandle};
+use crate::actors::{spawn_actor, Actor, ActorHandle};
 use crate::bus::EventBus;
 use crate::event::{DurableCoreEvent, Event};
 use crate::message::now;

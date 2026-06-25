@@ -10,7 +10,7 @@
 //! The actor registers its shared handles in a process-wide registry so that
 //! tools can also access the index without going through the event bus.
 
-use crate::actor::{Actor, ActorHandle};
+use crate::actors::{Actor, ActorHandle};
 use crate::bus::EventBus;
 use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
 use parking_lot::RwLock;

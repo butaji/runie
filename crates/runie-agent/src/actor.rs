@@ -6,7 +6,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use runie_core::actor::{spawn_actor, Actor, ActorHandle};
+use runie_core::actors::{spawn_actor, Actor, ActorHandle};
 use runie_core::actors::ProviderActorHandle;
 use runie_core::bus::EventBus;
 use runie_core::event::{AgentEvent, Event};

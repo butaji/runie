@@ -13,6 +13,7 @@ extern crate self as runie_core;
 
 pub mod actors;
 pub use actors::{
+    Actor, ActorFuture, ActorHandle, Reply, spawn_actor,
     FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
     FffSearchState,
 };
@@ -20,7 +21,6 @@ pub use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
 pub use model::{
     now, AppState, ChatMessage, FffFileEntry, PermissionRequestState, Role,
 };
-pub mod actor;
 pub mod agent_phase;
 pub mod async_io;
 pub mod auth;

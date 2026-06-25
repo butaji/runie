@@ -89,8 +89,8 @@ fn spawn_actor(
     factory: Arc<dyn ProviderFactory>,
 ) -> (
     ProviderActorHandle,
-    crate::actor::ActorHandle,
-    crate::actor::ActorHandle,
+    crate::actors::ActorHandle,
+    crate::actors::ActorHandle,
 ) {
     let bus = EventBus::<Event>::new(1);
     let (config_handle, config_actor) = ConfigActor::spawn(bus.clone(), None);

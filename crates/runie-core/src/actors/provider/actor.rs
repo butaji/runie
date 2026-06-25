@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use tokio::sync::mpsc;
 
-use crate::actor::{Actor, ActorHandle};
+use crate::actors::{Actor, ActorHandle};
 use crate::actors::config::ConfigActorHandle;
 use crate::bus::EventBus;
 use crate::config::Config;

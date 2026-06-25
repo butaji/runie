@@ -1,11 +1,11 @@
-//! Minimal actor trait for Runie's lightweight actor model.
+//! Minimal actor trait and generic reply wrapper for Runie's lightweight actor model.
 //!
 //! We use simple tokio tasks + typed channels instead of a full actor framework.
 //! This keeps things simple while still providing type-safe actor boundaries.
 
 use std::future::Future;
 use std::pin::Pin;
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{mpsc, oneshot};
 
 /// Minimal actor trait.
 ///
@@ -139,10 +139,53 @@ impl Drop for ActorHandle {
     }
 }
 
+/// Generic reply wrapper for actor request/response patterns.
+///
+/// Wraps a `oneshot::Sender` behind an `Arc<Mutex<Option<T>>>` so it can be
+/// cloned and sent to request handlers without borrowing issues.
+/// Unlike `#[derive(Clone)]`, this always implements `Clone` regardless of `T`.
+///
+/// # Example
+/// ```ignore
+/// // Request side:
+/// let (tx, rx) = oneshot::channel();
+/// actor_tx.send(MyMsg::GetValue(Reply::new(tx))).await?;
+/// let value = rx.await?;
+///
+/// // Handler side:
+/// match msg {
+///     MyMsg::GetValue(reply) => reply.send(response),
+/// }
+/// ```
+#[derive(Debug)]
+pub struct Reply<T>(std::sync::Arc<std::sync::Mutex<Option<oneshot::Sender<T>>>>);
+
+impl<T> Clone for Reply<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<T> Reply<T> {
+    /// Create a new reply handle from a oneshot sender.
+    pub fn new(sender: oneshot::Sender<T>) -> Self {
+        Self(std::sync::Arc::new(std::sync::Mutex::new(Some(sender))))
+    }
+
+    /// Send the reply value, consuming the underlying sender.
+    /// No-op if the receiver was already dropped.
+    pub fn send(self, value: T) {
+        if let Some(sender) = self.0.lock().unwrap_or_else(|e| e.into_inner()).take() {
+            let _ = sender.send(value);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::bus::EventBus;
+    use tokio::sync::broadcast;
 
     /// Simple test actor that counts messages and emits events.
     struct TestActor {
@@ -216,4 +259,21 @@ mod tests {
         }
         events
     }
+}
+
+/// Smoke test: verify the re-export path from the actors module root works.
+#[test]
+fn actor_trait_resolves_from_actors_module() {
+    // This test only compiles if the re-exports from actors:: are correct.
+    // We verify that the types are reachable via the actors module path.
+    fn _uses_actor(_: &dyn crate::actors::Actor<Msg = String, Event = usize>) {}
+    fn _uses_handle(_: &crate::actors::ActorHandle) {}
+    fn _uses_reply(_: crate::actors::Reply<i32>) {}
+    // Suppress unused warnings — we only care that these paths resolve.
+    fn _assert() {
+        _uses_actor as fn(&dyn crate::actors::Actor<Msg = String, Event = usize>);
+        _uses_handle as fn(&crate::actors::ActorHandle);
+        _uses_reply as fn(crate::actors::Reply<i32>);
+    }
+    _assert();
 }

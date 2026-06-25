@@ -1,6 +1,6 @@
 //! Login API-key validation effect handler.
 
-use runie_core::actor::Reply;
+use runie_core::actors::Reply;
 use runie_core::actors::ProviderMsg;
 use runie_core::Event as CoreEvent;
 use tokio::sync::mpsc;

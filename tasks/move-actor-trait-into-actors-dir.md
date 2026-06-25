@@ -1,6 +1,6 @@
 # Move Actor trait into actors/ directory
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P1

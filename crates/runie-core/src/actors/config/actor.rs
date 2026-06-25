@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 use tokio::sync::mpsc;
 
-use crate::actor::{Actor, ActorHandle};
+use crate::actors::{Actor, ActorHandle};
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::event::Event;

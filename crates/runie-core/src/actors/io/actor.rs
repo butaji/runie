@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-use crate::actor::{spawn_actor, Actor, ActorHandle};
+use crate::actors::{spawn_actor, Actor, ActorHandle};
 use crate::bus::EventBus;
 use crate::event::Event;
 

@@ -15,7 +15,7 @@ use std::time::Duration;
 use tokio::time::timeout;
 
 use crate::actors::{ConfigActorHandle, ProviderActorHandle, ProviderActor, ConfigActor};
-use crate::actor::ActorHandle;
+use crate::actors::ActorHandle;
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::actors::provider::{BuiltProvider, ProviderFactory};

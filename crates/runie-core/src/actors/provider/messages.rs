@@ -4,7 +4,7 @@ use std::fmt;
 
 use tokio::sync::mpsc;
 
-use crate::actor::Reply;
+use crate::actors::Reply;
 use crate::provider::ProviderError;
 
 use super::factory::BuiltProvider;

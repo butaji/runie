@@ -1279,7 +1279,7 @@
     },
     {
       "id": "move-actor-trait-into-actors-dir",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P1",

@@ -97,7 +97,7 @@ fn spawn_provider_actor(
     config_handle: &runie_core::actors::ConfigActorHandle,
 ) -> (
     runie_core::actors::ProviderActorHandle,
-    runie_core::actor::ActorHandle,
+    runie_core::actors::ActorHandle,
 ) {
     ProviderActor::spawn(
         bus.clone(),
