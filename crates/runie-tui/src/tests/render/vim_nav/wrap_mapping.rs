@@ -3,7 +3,7 @@
 use super::*;
 use std::sync::Arc;
 
-use crate::core_ui::{Element, Post, PostKind};
+use runie_core::{Element, view::{Post, PostKind}};
 use ratatui::widgets::{Paragraph, Wrap};
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::Snapshot;

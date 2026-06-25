@@ -1,6 +1,6 @@
 //! Per-element line rendering — pure functions from Element + width to lines.
 
-use crate::core_ui::Element;
+use runie_core::Element;
 use ratatui::text::Line;
 use ratatui::widgets::{Paragraph, Wrap};
 

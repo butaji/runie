@@ -161,8 +161,8 @@ pub(crate) fn context_usage(snap: &Snapshot) -> ContextUsage {
         .filter(|e| {
             matches!(
                 e,
-                crate::core_ui::Element::UserMessage { .. }
-                    | crate::core_ui::Element::AgentMessage { .. }
+                runie_core::Element::UserMessage { .. }
+                    | runie_core::Element::AgentMessage { .. }
             )
         })
         .map(estimate_element_tokens)

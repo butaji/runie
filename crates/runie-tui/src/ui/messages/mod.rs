@@ -72,7 +72,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
-    use crate::core_ui::Element;
+    use runie_core::Element;
     use crate::ui::render_lines::to_lines_internal;
     use ratatui::{backend::TestBackend, Terminal};
 

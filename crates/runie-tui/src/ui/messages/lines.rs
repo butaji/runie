@@ -1,4 +1,4 @@
-use crate::core_ui::Element;
+use runie_core::Element;
 use ratatui::text::Line;
 
 use crate::ui::render_lines::to_lines_and_count;

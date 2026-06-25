@@ -1,4 +1,4 @@
-use crate::core_ui::{Element, PostKind};
+use runie_core::{Element, view::PostKind};
 use ratatui::{layout::Rect, Frame};
 use runie_core::Snapshot;
 
@@ -152,7 +152,7 @@ fn selected_post_row_range(
 
 fn post_content_range(
     snap: &Snapshot,
-    post: &crate::core_ui::Post,
+    post: &runie_core::view::Post,
     elem_start_rows: &[usize],
     elem_line_counts: &[usize],
 ) -> Option<(usize, usize)> {

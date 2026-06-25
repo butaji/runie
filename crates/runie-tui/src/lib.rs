@@ -5,7 +5,6 @@
 //! Contains terminal setup (`terminal_setup`, `terminal/`), input handling
 //! (`keymap`), side-effect handlers (`effects/`), and all rendering widgets.
 
-pub mod core_ui;
 pub mod diff;
 pub mod markdown;
 pub mod message;
