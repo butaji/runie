@@ -1,7 +1,6 @@
 //! Form Action Types and panel form handling (merged from dialog_form.rs).
 
 use crate::dialog::{ItemAction, Panel, PanelItem};
-use crate::event::TransientLevel;
 use crate::model::AppState;
 use crate::Event;
 
@@ -88,7 +87,7 @@ fn handle_form_input(state: &mut AppState, panel: &mut Panel, c: char) -> FormAc
     }
     if let Some(ItemAction::Emit(evt)) = panel.find_button_by_accel(c) {
         if panel.id == "login-key" && is_empty_submit_key(evt, panel) {
-            state.set_transient("API key is required.".into(), TransientLevel::Warning);
+            state.warn("API key is required.");
             return A::KeepOpen;
         }
         return A::Submit(Some(evt.clone()));
@@ -140,7 +139,7 @@ fn is_empty_submit_key(evt: &crate::Event, panel: &Panel) -> bool {
 fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
     use FormAction as A;
     if panel.id == "login-key" && key_field_empty(panel) {
-        state.set_transient("API key is required.".into(), TransientLevel::Warning);
+        state.warn("API key is required.");
         return A::KeepOpen;
     }
     match panel.selected_item().cloned() {

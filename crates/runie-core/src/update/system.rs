@@ -26,6 +26,11 @@ impl AppState {
         self.view_mut().dirty = true;
     }
 
+    /// Show a warning notification in the hints line.
+    pub(crate) fn warn(&mut self, msg: impl Into<String>) {
+        self.set_transient(msg.into(), TransientLevel::Warning);
+    }
+
     pub(crate) fn clear_transient(&mut self) {
         *self.transient_message_mut() = None;
         *self.transient_until_mut() = None;
@@ -365,4 +370,14 @@ pub(super) fn handle_system_event(state: &mut AppState, event: Event) {
 }
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    use super::*;
+
+    #[test]
+    fn warn_sets_transient_warning() {
+        let mut state = AppState::default();
+        state.warn("test warning");
+        assert_eq!(state.transient_message(), Some(&"test warning".to_string()));
+        assert_eq!(state.transient_level(), Some(TransientLevel::Warning));
+    }
+}

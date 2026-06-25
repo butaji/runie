@@ -27,6 +27,16 @@ impl AppState {
         *self.skills_mut() = skills;
     }
 
+    // ── Login flow helpers ──────────────────────────────────────────────────
+
+    /// Returns the provider from the active login flow, or the config's current provider.
+    pub fn active_provider(&self) -> String {
+        self.login_flow
+            .as_ref()
+            .map(|f| f.provider.clone())
+            .unwrap_or_else(|| self.config().current_provider.clone())
+    }
+
     // ── Trust ────────────────────────────────────────────────────────────────
 
     pub fn is_trusted(&mut self, path: &std::path::Path) -> bool {
@@ -444,5 +454,41 @@ impl AppState {
     /// Returns the truncation configuration for tool output.
     pub fn truncation(&self) -> &crate::config::TruncationSection {
         &self.config().truncation
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn active_provider_returns_login_flow_provider() {
+        let mut state = AppState::default();
+        *state.login_flow_mut() = Some(crate::login_flow::LoginFlowState {
+            step: crate::login_flow::LoginStep::KeyInput,
+            provider: "anthropic".to_string(),
+            key: "sk-test".to_string(),
+            available_models: vec![],
+            selected_models: std::collections::HashSet::new(),
+            validated: false,
+        });
+        assert_eq!(state.active_provider(), "anthropic");
+    }
+
+    #[test]
+    fn active_provider_returns_config_default_when_no_flow() {
+        let mut state = AppState::default();
+        state.config_mut().current_provider = "openai".to_string();
+        *state.login_flow_mut() = None;
+        assert_eq!(state.active_provider(), "openai");
+    }
+
+    #[test]
+    fn active_provider_returns_config_default_when_no_flow_no_config() {
+        // In test mode, default ConfigState sets current_provider to "mock"
+        let mut state = AppState::default();
+        *state.login_flow_mut() = None;
+        // active_provider falls back to config.current_provider
+        assert_eq!(state.active_provider(), "mock");
     }
 }

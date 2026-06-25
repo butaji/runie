@@ -63,18 +63,11 @@ fn reject_empty_key(
 ) -> Option<String> {
     if key.trim().is_empty() {
         let p = if provider.is_empty() {
-            state
-                .login_flow
-                .as_ref()
-                .map(|f| f.provider.clone())
-                .unwrap_or_default()
+            state.active_provider()
         } else {
             provider.to_string()
         };
-        state.set_transient(
-            "API key is required.".into(),
-            crate::event::TransientLevel::Warning,
-        );
+        state.warn("API key is required.");
         return Some(p);
     }
     None
@@ -88,11 +81,7 @@ fn login_flow_submit_key(state: &mut crate::model::AppState, provider: String, k
     }
 
     let final_provider = if provider.is_empty() {
-        state
-            .login_flow
-            .as_ref()
-            .map(|f| f.provider.clone())
-            .unwrap_or_default()
+        state.active_provider()
     } else {
         provider
     };
@@ -137,11 +126,7 @@ fn login_flow_validation_success(state: &mut crate::model::AppState, models: Vec
 }
 
 fn transition_to_model_selector(state: &mut crate::model::AppState) {
-    let provider = state
-        .login_flow
-        .as_ref()
-        .map(|f| f.provider.clone())
-        .unwrap_or_default();
+    let provider = state.active_provider();
     let key = state
         .login_flow
         .as_ref()
@@ -184,10 +169,7 @@ fn login_flow_validation_failed(state: &mut crate::model::AppState, error: Strin
         .map(|f| std::mem::take(&mut f.selected_models))
         .unwrap_or_default();
 
-    state.set_transient(
-        format!("Could not verify key: {}", error),
-        crate::event::TransientLevel::Warning,
-    );
+    state.warn(format!("Could not verify key: {}", error));
     if let Some(ref mut flow) = state.login_flow_mut() {
         flow.step = LoginStep::KeyInput;
         flow.available_models = available_models;
@@ -249,18 +231,12 @@ fn validate_login_flow_ready(state: &mut crate::model::AppState) -> bool {
         .unwrap_or(false);
 
     if !validated {
-        state.set_transient(
-            "Please wait for the API key to be validated before saving.".into(),
-            crate::event::TransientLevel::Warning,
-        );
+        state.warn("Please wait for the API key to be validated before saving.");
         reopen_login_panel_if_flow_present(state);
         return false;
     }
     if !has_models {
-        state.set_transient(
-            "Select at least one model before saving.".into(),
-            crate::event::TransientLevel::Warning,
-        );
+        state.warn("Select at least one model before saving.");
         reopen_login_panel_if_flow_present(state);
         return false;
     }
@@ -270,11 +246,7 @@ fn validate_login_flow_ready(state: &mut crate::model::AppState) -> bool {
 fn extract_login_flow_data(
     state: &crate::model::AppState,
 ) -> (String, String, Vec<String>, String) {
-    let provider = state
-        .login_flow
-        .as_ref()
-        .map(|f| f.provider.clone())
-        .unwrap_or_default();
+    let provider = state.active_provider();
     let key = state
         .login_flow
         .as_ref()

@@ -253,14 +253,14 @@
     },
     {
       "id": "extract-appstate-helpers",
-      "status": "todo",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P3",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/extract-appstate-helpers.md",
-      "title": ""
+      "title": "Extract active_provider() and warn() AppState helpers"
     },
     {
       "id": "fff-indexer-owns-file-picker-results",
