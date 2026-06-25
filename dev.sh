@@ -51,7 +51,7 @@ case "$mode" in
     cargo watch -x 'run -p runie-tui' -w crates
     ;;
   test)
-    cargo test --all
+    just test
     ;;
   *)
     echo "Usage: \$0 [run|run-delay|fast|fast-delay|test]"

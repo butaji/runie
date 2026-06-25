@@ -143,9 +143,11 @@ If you have credits there, Runie helps you use them.
 
 ```bash
 ./dev.sh                 # mock provider
-cargo test --workspace   # four-layer test suite
-cargo clippy --workspace
-cargo fmt
+just test                # four-layer test suite
+just lint                # run clippy
+just fmt                 # format code
+just verify-tests        # CI-equivalent test verification
+just --list              # see all available recipes
 ```
 
 See `AGENTS.md` for conventions.

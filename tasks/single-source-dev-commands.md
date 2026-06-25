@@ -1,6 +1,6 @@
 # Single-source dev commands
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P3
@@ -14,24 +14,24 @@
 
 ## Acceptance Criteria
 
-- [ ] `justfile` recipes (e.g., `just test`, `just lint`, `just fmt`) become the canonical commands.
-- [ ] `dev.sh`, `README.md`, and `bacon.toml` point to `just` recipes where possible.
-- [ ] CI either uses the `just` recipes or the same underlying commands.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `justfile` recipes (e.g., `just test`, `just lint`, `just fmt`) become the canonical commands.
+- [x] `dev.sh`, `README.md`, and `bacon.toml` point to `just` recipes where possible.
+- [x] CI either uses the `just` recipes or the same underlying commands.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `just_test_runs_workspace_tests` — `just test` passes.
+- [x] `just_test_runs_workspace_tests` — `just test` passes.
 
 ## Files touched
 

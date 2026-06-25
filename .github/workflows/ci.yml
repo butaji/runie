@@ -30,7 +30,7 @@ jobs:
         uses: ./.github/actions/rust-setup
 
       - name: Check formatting
-        run: cargo fmt --all -- --check
+        run: just fmt
 
   clippy:
     name: Clippy
@@ -40,7 +40,7 @@ jobs:
         uses: ./.github/actions/rust-setup
 
       - name: Run Clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: just lint
 
   e2e:
     name: E2E Tests
