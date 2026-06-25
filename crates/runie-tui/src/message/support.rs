@@ -76,7 +76,7 @@ pub fn render_tool_done(
     );
     let mut lines = vec![Line::from(header).style(style_tool_header())];
     if !output.is_empty() {
-        if crate::diff::is_diff_output(output) {
+        if runie_core::diff::Diff::is_diff_output(output) {
             lines.extend(crate::diff::render_diff_text(output));
         } else {
             for line in output.lines() {
