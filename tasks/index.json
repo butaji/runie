@@ -261,7 +261,7 @@
   },
   {
     "id": "fold-testing-into-agent-tests",
-    "status": "todo",
+    "status": "wontfix",
     "milestone": "?",
     "category": "?",
     "priority": "?",
@@ -285,7 +285,7 @@
   },
   {
     "id": "generate-config-schema-from-code",
-    "status": "done",
+    "status": "todo",
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
@@ -535,7 +535,7 @@
   },
   {
     "id": "replace-single-use-deps-with-stdlib",
-    "status": "done",
+    "status": "todo",
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
@@ -609,7 +609,7 @@
   },
   {
     "id": "sweep-allow-suppressions",
-    "status": "todo",
+    "status": "in_progress",
     "milestone": "?",
     "category": "?",
     "priority": "?",
