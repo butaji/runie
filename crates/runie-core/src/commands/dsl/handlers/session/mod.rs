@@ -1,8 +1,10 @@
 //! Session commands.
 //!
-//! Session IO (save/load/delete/import/export) is handled via
-//! `Commandcrate::Event::Run*Command` in `update::command`.
-//! Session run helpers (name/fork/compact) live in `run.rs`.
+//! Form submissions are routed through the command registry (see
+//! `dispatch_form_to_registry` in `update/dialog/form.rs`), which calls the
+//! canonical handlers in `run.rs`.  The `submit` field in `CommandKind::Form`
+//! is kept for backward compatibility but is never called for forms with a
+//! `cmd_name` set.
 
 pub mod run;
 
@@ -11,52 +13,12 @@ pub use run::{run_compact, run_fork, run_name};
 use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::model::AppState;
 
-use std::collections::HashMap;
-
 use super::spec::{CommandKind, CommandSpec};
 
-/// Build a `CommandEvent` from a single form field.
-fn make_submit<F>(values: &HashMap<String, String>, key: &str, f: F) -> crate::Event
-where
-    F: FnOnce(String) -> crate::Event,
-{
-    f(crate::dialog::dsl::get_field(values, key))
-}
-
-fn save_submit(values: &HashMap<String, String>) -> crate::Event {
-    make_submit(values, "name", |name| crate::Event::RunSaveCommand { name })
-}
-fn load_submit(values: &HashMap<String, String>) -> crate::Event {
-    make_submit(values, "name", |name| crate::Event::RunLoadCommand { name })
-}
-fn delete_submit(values: &HashMap<String, String>) -> crate::Event {
-    make_submit(values, "name", |name| crate::Event::RunDeleteCommand {
-        name,
-    })
-}
-fn export_submit(values: &HashMap<String, String>) -> crate::Event {
-    make_submit(values, "path", |path| crate::Event::RunExportCommand {
-        path,
-    })
-}
-fn import_submit(values: &HashMap<String, String>) -> crate::Event {
-    make_submit(values, "path", |path| crate::Event::RunImportCommand {
-        path,
-    })
-}
-fn compact_submit(values: &HashMap<String, String>) -> crate::Event {
-    crate::Event::RunCompactCommand {
-        keep: crate::dialog::dsl::get_field(values, "keep"),
-        focus: crate::dialog::dsl::get_field(values, "focus"),
-    }
-}
-fn fork_submit(values: &HashMap<String, String>) -> crate::Event {
-    crate::Event::RunForkCommand {
-        message_index: crate::dialog::dsl::get_field(values, "index"),
-    }
-}
-fn name_submit(values: &HashMap<String, String>) -> crate::Event {
-    make_submit(values, "name", |name| crate::Event::RunNameCommand { name })
+/// No-op submit factory.  Forms with a `cmd_name` are dispatched through
+/// the command registry; this factory is never called.
+fn noop_submit(_: &std::collections::HashMap<String, String>) -> crate::Event {
+    crate::Event::Abort
 }
 
 static SESSION_COMMANDS: &[CommandSpec] = &[
@@ -66,10 +28,10 @@ static SESSION_COMMANDS: &[CommandSpec] = &[
         aliases: &[],
         category: CommandCategory::Session,
         sub: true,
-        kind: CommandKind::Form {
+        kind: CommandKind::FormWithHandler {
             title: "Save Session",
             fields: &[("Name", "session-name", "name")],
-            submit: save_submit,
+            handler: run::run_save,
         },
     },
     CommandSpec {
@@ -78,10 +40,10 @@ static SESSION_COMMANDS: &[CommandSpec] = &[
         aliases: &[],
         category: CommandCategory::Session,
         sub: true,
-        kind: CommandKind::Form {
+        kind: CommandKind::FormWithHandler {
             title: "Load Session",
             fields: &[("Name", "session-name", "name")],
-            submit: load_submit,
+            handler: run::run_load,
         },
     },
     CommandSpec {
@@ -90,10 +52,10 @@ static SESSION_COMMANDS: &[CommandSpec] = &[
         aliases: &[],
         category: CommandCategory::Session,
         sub: true,
-        kind: CommandKind::Form {
+        kind: CommandKind::FormWithHandler {
             title: "Delete Session",
             fields: &[("Name", "session-name", "name")],
-            submit: delete_submit,
+            handler: run::run_delete,
         },
     },
     CommandSpec {
@@ -102,10 +64,10 @@ static SESSION_COMMANDS: &[CommandSpec] = &[
         aliases: &[],
         category: CommandCategory::Session,
         sub: true,
-        kind: CommandKind::Form {
+        kind: CommandKind::FormWithHandler {
             title: "Export Session",
             fields: &[("Path", "session.json", "path")],
-            submit: export_submit,
+            handler: run::run_export,
         },
     },
     CommandSpec {
@@ -114,10 +76,10 @@ static SESSION_COMMANDS: &[CommandSpec] = &[
         aliases: &[],
         category: CommandCategory::Session,
         sub: true,
-        kind: CommandKind::Form {
+        kind: CommandKind::FormWithHandler {
             title: "Import Session",
             fields: &[("Path", "session.json", "path")],
-            submit: import_submit,
+            handler: run::run_import,
         },
     },
     CommandSpec {
@@ -190,13 +152,13 @@ static SESSION_COMMANDS: &[CommandSpec] = &[
         aliases: &[],
         category: CommandCategory::Session,
         sub: true,
-        kind: CommandKind::Form {
+        kind: CommandKind::FormWithHandler {
             title: "Compact Context",
             fields: &[
                 ("Keep tokens", "2000", "keep"),
                 ("Focus", "optional focus keyword", "focus"),
             ],
-            submit: compact_submit,
+            handler: run::run_compact,
         },
     },
     CommandSpec {
@@ -205,10 +167,10 @@ static SESSION_COMMANDS: &[CommandSpec] = &[
         aliases: &[],
         category: CommandCategory::Session,
         sub: true,
-        kind: CommandKind::Form {
+        kind: CommandKind::FormWithHandler {
             title: "Fork Session",
             fields: &[("Message index", "0", "index")],
-            submit: fork_submit,
+            handler: run::run_fork,
         },
     },
     CommandSpec {
@@ -217,10 +179,10 @@ static SESSION_COMMANDS: &[CommandSpec] = &[
         aliases: &[],
         category: CommandCategory::Session,
         sub: true,
-        kind: CommandKind::Form {
+        kind: CommandKind::FormWithHandler {
             title: "Set Session Name",
             fields: &[("Name", "session-name", "name")],
-            submit: name_submit,
+            handler: run::run_name,
         },
     },
 ];

@@ -5,6 +5,9 @@ use crate::dialog::dsl::{form, FormPanel};
 use crate::dialog::PanelStack as CoreStack;
 use crate::model::AppState;
 
+/// Handler function type for form submissions.
+pub type FormHandler = fn(&mut AppState, &str) -> CommandResult;
+
 /// A single command definition
 #[derive(Clone)]
 pub struct CommandDef {
@@ -13,6 +16,11 @@ pub struct CommandDef {
     pub aliases: Vec<String>,
     pub category: CommandCategory,
     pub flow: CommandFlow,
+    /// Handler for form submissions. When a form is submitted via
+    /// `dispatch_form_to_registry`, this handler is called instead of
+    /// `flow.exec`. This allows `CommandKind::Form` commands to have
+    /// a separate submission path.
+    pub form_handler: Option<FormHandler>,
     /// If true, this command opens a sub-dialog: the current dialog
     /// (e.g. the command palette = Main Menu) is pushed onto the
     /// global back stack before the command runs. Android-like.
@@ -28,6 +36,7 @@ impl CommandDef {
             aliases: Vec::new(),
             category: CommandCategory::System,
             flow: CommandFlow::None,
+            form_handler: None,
             is_sub: false,
         }
     }
@@ -103,6 +112,25 @@ impl CommandDef {
         self.panel(move |_state, args| build_form_stack_from_template(template.clone(), args))
     }
 
+    /// Show a form dialog with a separate handler for form submissions.
+    /// The form opens when invoked from palette or with args.
+    /// The handler executes when the form is submitted (via dispatch_form_to_registry).
+    pub fn form_with_handler<F>(self, title: &'static str, build: F, handler: FormHandler) -> Self
+    where
+        F: FnOnce(FormPanel) -> FormPanel + Send + Sync + 'static,
+    {
+        let id = self.name.clone();
+        let template = build(form(id, title));
+        self.panel(move |_state, args| build_form_stack_from_template(template.clone(), args))
+            .with_form_handler(handler)
+    }
+
+    /// Set the handler function for form submissions.
+    pub fn with_form_handler(mut self, handler: FormHandler) -> Self {
+        self.form_handler = Some(handler);
+        self
+    }
+
     /// Custom handler
     pub fn handler(self, f: fn(&mut AppState, &str) -> CommandResult) -> Self {
         self.with_flow(CommandFlow::Handler(f)).apply_sub()
@@ -124,6 +152,8 @@ fn build_form_stack_from_template(template: FormPanel, args: &str) -> CoreStack 
     let built = template.build();
     let mut panel = crate::dialog::Panel::new(built.id, built.title).form();
     panel.submit_factory = built.submit_factory;
+    panel.cmd_name = built.cmd_name;
+    panel.field_keys = built.field_keys;
     let mut arg_idx = 0;
     for item in built.items {
         match item {

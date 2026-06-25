@@ -1,10 +1,13 @@
 //! Form Action Types and panel form handling (merged from dialog_form.rs).
 
+use std::collections::HashMap;
+
 use crate::dialog::{ItemAction, Panel, PanelItem};
 use crate::model::AppState;
 use crate::Event;
 
 use super::panel_handler::toggle_selected_checkbox;
+
 
 /// What a form panel should do in response to an event.
 #[derive(Debug, Clone)]
@@ -13,6 +16,14 @@ pub enum FormAction {
     KeepOpen,
     /// Close the form and dispatch the submit event.
     Submit(Option<crate::Event>),
+    /// Close the form and dispatch through the command registry.
+    /// Carries command name, ordered field keys, and form values so that
+    /// the handler can deserialize positional arguments correctly.
+    SubmitCommand {
+        name: String,
+        keys: Vec<String>,
+        values: HashMap<String, String>,
+    },
     /// Go back one step: if the stack is deeper than the root, pop the
     /// current panel and keep the dialog open; if at the root, close
     /// the dialog. This is the semantic of ESC / back.
@@ -143,27 +154,34 @@ fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
         return A::KeepOpen;
     }
     match panel.selected_item().cloned() {
-        Some(PanelItem::Action {
-            action: ItemAction::Emit(evt),
-            ..
-        }) => A::Submit(Some(evt)),
+        Some(PanelItem::Action { action: ItemAction::Emit(evt), .. }) => A::Submit(Some(evt)),
         Some(PanelItem::Action { .. }) => A::Submit(None),
-        Some(PanelItem::Toggle {
-            action: ItemAction::Emit(crate::Event::ToggleModel { model }),
-            ..
-        }) if panel.id == "login-models" => {
-            // In the login model selector, Enter confirms the selection and
-            // saves. Make sure the focused model is selected before saving.
-            if let Some(flow) = state.login_flow_mut().as_mut() {
-                flow.selected_models.insert(model.clone());
+        Some(PanelItem::Toggle { action: ItemAction::Emit(crate::Event::ToggleModel { model }), .. })
+            if panel.id == "login-models" => {
+                if let Some(flow) = state.login_flow_mut().as_mut() {
+                    flow.selected_models.insert(model.clone());
+                }
+                A::Submit(Some(crate::Event::Save))
             }
-            A::Submit(Some(crate::Event::Save))
-        }
         Some(PanelItem::Toggle { .. }) => {
             toggle_selected_checkbox(state, panel);
             A::KeepOpen
         }
-        _ => A::Submit(form_build_submit(panel)),
+        _ => route_form_submit(panel),
+    }
+}
+
+/// Route a form submit to either the legacy submit factory (for panels
+/// without a cmd_name, e.g. login forms) or through the command registry.
+fn route_form_submit(panel: &mut Panel) -> FormAction {
+    use FormAction as A;
+    if panel.cmd_name.is_none() && panel.submit_factory.is_some() {
+        return A::Submit(form_build_submit(panel));
+    }
+    A::SubmitCommand {
+        name: panel.cmd_name.clone().unwrap_or_default(),
+        keys: panel.field_keys.clone(),
+        values: panel.get_form_values().clone(),
     }
 }
 
@@ -338,18 +356,67 @@ fn find_word_boundary_left(s: &str, pos: usize) -> usize {
 pub fn apply_form_action(state: &mut AppState, action: FormAction) {
     match action {
         FormAction::Submit(evt) => {
-            *state.open_dialog_mut() = None;
-            state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
-            state.view_mut().dirty = true;
+            close_dialog(state);
             if let Some(e) = evt {
                 state.update(e);
             }
         }
-        FormAction::KeepOpen => {
-            state.view_mut().dirty = true;
+        FormAction::SubmitCommand { name, keys, values } => {
+            close_dialog(state);
+            dispatch_form_to_registry(state, &name, &keys, values);
         }
+        FormAction::KeepOpen => state.view_mut().dirty = true,
         FormAction::Back => {}
     }
+}
+
+/// Close the dialog and reset the input receiver.
+fn close_dialog(state: &mut AppState) {
+    *state.open_dialog_mut() = None;
+    state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+    state.view_mut().dirty = true;
+}
+
+/// Dispatch a form submission through the command registry.
+/// Replicates the logic of `run_palette_command` but for form values
+/// instead of parsed slash-command arguments.
+fn dispatch_form_to_registry(
+    state: &mut AppState,
+    name: &str,
+    keys: &[String],
+    values: HashMap<String, String>,
+) {
+    if name.is_empty() {
+        // Panels without cmd_name are handled in handle_form_submit.
+        // This is a defensive check.
+        return;
+    }
+    let Some(cmd) = state.registry().get(name) else {
+        state.add_system_msg(format!("Unknown command: /{}", name));
+        return;
+    };
+    // Serialize form values as positional args in field-key order.
+    let args = serialize_form_values_ordered(keys, &values);
+
+    // Use form_handler if available (for FormWithHandler commands),
+    // otherwise fall back to flow.exec (for regular Form commands).
+    let result = if let Some(handler) = cmd.form_handler {
+        handler(state, &args)
+    } else {
+        cmd.flow.clone().exec(state, name, &args)
+    };
+    super::router::process_command_result(state, result);
+}
+
+/// Serialize form values as positional arguments in field-key order.
+/// For a form with fields ["keep", "focus"] and values {"keep": "2000", "focus": "foo"},
+/// this produces "2000 foo".
+fn serialize_form_values_ordered(keys: &[String], values: &HashMap<String, String>) -> String {
+    let parts: Vec<String> = keys
+        .iter()
+        .filter_map(|k| values.get(k).cloned())
+        .collect();
+    parts.join(" ")
 }
 
 /// Build the submit event for a form panel by reading form values.

@@ -21,6 +21,14 @@ pub enum CommandKind {
         fields: &'static [(&'static str, &'static str, &'static str)],
         submit: FormSubmitFn,
     },
+    /// Form dialog with separate handler for form submissions.
+    /// The form opens when invoked from palette or with args,
+    /// but the handler executes when the form is submitted.
+    FormWithHandler {
+        title: &'static str,
+        fields: &'static [(&'static str, &'static str, &'static str)],
+        handler: fn(&mut AppState, &str) -> CommandResult,
+    },
     /// Show a static message.
     Msg(&'static str),
 }
@@ -53,7 +61,18 @@ pub fn build_cmd(spec: &CommandSpec) -> CommandDef {
         } => {
             let fields = *fields;
             let submit = *submit;
-            cmd.form(title, move |f| add_fields(f, fields).on_submit(submit))
+            let name = spec.name;
+            cmd.form(title, move |f| add_fields(f, fields).on_submit(submit).cmd_name(name))
+        }
+        CommandKind::FormWithHandler {
+            title,
+            fields,
+            handler,
+        } => {
+            let fields = *fields;
+            let handler = *handler;
+            let name = spec.name;
+            cmd.form_with_handler(title, move |f| add_fields(f, fields).cmd_name(name), handler)
         }
         CommandKind::Msg(m) => cmd.msg(m),
     }

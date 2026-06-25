@@ -19,6 +19,8 @@ impl Panel {
             closable: true,
             form_values: std::collections::HashMap::new(),
             submit_factory: None,
+            cmd_name: None,
+            field_keys: Vec::new(),
             view: PanelView::List,
         }
     }

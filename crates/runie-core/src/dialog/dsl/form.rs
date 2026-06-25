@@ -3,10 +3,19 @@
 use crate::dialog::Panel;
 use crate::Event;
 
-/// Form panel builder with submit handling
+/// Form panel builder with submit handling.
+///
+/// The `cmd_name` field carries the canonical slash-command name so that
+/// form submissions can be routed through the command registry rather than
+/// emitting raw `RunXCommand` events.
+///
+/// `field_keys` tracks field keys in declaration order so that multi-field
+/// form submissions can serialize values as positional arguments.
 #[derive(Debug, Clone)]
 pub struct FormPanel {
     panel: Panel,
+    cmd_name: Option<String>,
+    field_keys: Vec<String>,
 }
 
 impl FormPanel {
@@ -14,7 +23,7 @@ impl FormPanel {
     pub fn new(id: impl Into<String>, title: impl Into<String>) -> Self {
         // Forms never use fuzzy filtering — keystrokes edit field values.
         let panel = Panel::new(id, title).form();
-        Self { panel }
+        Self { panel, cmd_name: None, field_keys: Vec::new() }
     }
 
     /// Add a form field
@@ -24,7 +33,10 @@ impl FormPanel {
         placeholder: impl Into<String>,
         key: impl Into<String>,
     ) -> Self {
-        self.panel = self.panel.field(label, placeholder, key);
+        let k: String = key.into();
+        self.panel = self.panel.field(label, placeholder, &k);
+        self.field_keys.push(k.clone());
+        self.panel.field_keys.push(k);
         self
     }
 
@@ -36,16 +48,31 @@ impl FormPanel {
         key: impl Into<String>,
         value: impl Into<String>,
     ) -> Self {
-        self.panel = self.panel.field_value(label, placeholder, key, value);
+        let k: String = key.into();
+        self.panel = self.panel.field_value(label, placeholder, &k, value);
+        self.field_keys.push(k.clone());
+        self.panel.field_keys.push(k);
         self
     }
 
     /// Set the factory that produces the submit event from form values.
+    /// Also records the canonical command name so form submissions can be
+    /// dispatched through the command registry.
     pub fn on_submit(
         mut self,
         factory: fn(&std::collections::HashMap<String, String>) -> Event,
     ) -> Self {
         self.panel = self.panel.form_submit_with(factory);
+        self
+    }
+
+    /// Record the canonical slash-command name. When a form with a `cmd_name"
+    /// is submitted, the submit handler routes through the command registry
+    /// instead of emitting a raw `RunXCommand` event.
+    pub fn cmd_name(mut self, name: impl Into<String>) -> Self {
+        let name = name.into();
+        self.cmd_name = Some(name.clone());
+        self.panel.cmd_name = Some(name);
         self
     }
 

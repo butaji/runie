@@ -44,6 +44,22 @@ impl Panel {
         &self.form_values
     }
 
+    /// Get form field keys in declaration order (matching the `fields` order in
+    /// `CommandSpec`). This is used by the command-registry submit path to
+    /// serialize form values as positional arguments.
+    pub fn get_form_field_keys(&self) -> Vec<&str> {
+        self.items
+            .iter()
+            .filter_map(|item| {
+                if let PanelItem::FormField { key, .. } = item {
+                    Some(key.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
     /// Find a button whose label contains an accelerator matching `c`.
     pub fn find_button_by_accel(&self, c: char) -> Option<&super::ItemAction> {
         let c = c.to_ascii_lowercase();

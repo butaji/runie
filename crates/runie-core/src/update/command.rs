@@ -1,208 +1,77 @@
+//! Command event dispatcher.
+//!
+//! Routes `RunXCommand` events to canonical handlers.  This is the single
+//! dispatch point for slash commands triggered via events (as opposed to
+//! `/name args` in the input bar which goes through `AppState::handle_slash`).
+
+use crate::commands::dsl::handlers::session::run as session_run;
 use crate::model::AppState;
-use crate::session::Session;
 
 use super::dialog;
+use crate::commands::CommandResult;
 
 pub(super) fn handle_command_event(state: &mut AppState, event: crate::Event) {
-    use crate::commands::CommandResult;
     match &event {
-        crate::Event::RunLoadCommand { name } => run_load_command(state, name),
-        crate::Event::RunSaveCommand { name } => run_save_command(state, name),
-        crate::Event::RunDeleteCommand { name } => run_delete_command(state, name),
-        crate::Event::RunImportCommand { path } => run_import_command(state, path),
-        crate::Event::RunExportCommand { path } => run_export_command(state, path),
-        crate::Event::RunSkillCommand { name } => run_skill_command(state, name),
-        crate::Event::RunLoginCommand { .. } => {
-            dialog::process_command_result(
-                state,
-                CommandResult::OpenDialog(crate::commands::DialogType::CommandPalette),
-            );
-        }
+        // Session IO (save/load/delete/import/export) and state (name/fork)
+        // use a helper that calls the handler and dispatches the result.
+        crate::Event::RunLoadCommand { name } => session_dispatch(state, |s| session_run::run_load(s, name.trim())),
+        crate::Event::RunSaveCommand { name } => session_dispatch(state, |s| session_run::run_save(s, name.trim())),
+        crate::Event::RunDeleteCommand { name } => session_dispatch(state, |s| session_run::run_delete(s, name.trim())),
+        crate::Event::RunImportCommand { path } => session_dispatch(state, |s| session_run::run_import(s, path.trim())),
+        crate::Event::RunExportCommand { path } => session_dispatch(state, |s| session_run::run_export(s, path.trim())),
+        crate::Event::RunNameCommand { name } => session_dispatch(state, |s| session_run::run_name(s, name.trim())),
+        crate::Event::RunForkCommand { message_index } => session_dispatch(state, |s| session_run::run_fork(s, message_index.trim())),
+        crate::Event::RunCompactCommand { keep, focus } => run_compact(state, keep, focus),
+        // Login/logout
+        crate::Event::RunLoginCommand { .. } => dispatch_result(state, CommandResult::OpenDialog(crate::commands::DialogType::CommandPalette)),
         crate::Event::RunLogoutCommand { provider } => run_logout_command(state, provider),
-        crate::Event::RunNameCommand { name } => {
-            crate::commands::dsl::handlers::session::run_name(state, name);
-        }
-        crate::Event::RunForkCommand { message_index } => {
-            crate::commands::dsl::handlers::session::run_fork(state, message_index);
-        }
-        crate::Event::RunCompactCommand { keep, focus } => {
-            crate::commands::dsl::handlers::session::run_compact(state, keep, focus);
-        }
-        crate::Event::RunPromptCommand { name } => {
-            crate::commands::dsl::handlers::system::run_prompt(state, name);
-        }
-        crate::Event::RunThinkingCommand { level } => {
-            crate::commands::dsl::handlers::model::run_thinking(state, *level);
-        }
-        crate::Event::RunPaletteCommand { name, args } => {
-            run_palette_command(state, name, args);
-        }
+        // Skill
+        crate::Event::RunSkillCommand { name } => run_skill_command(state, name),
+        // System
+        crate::Event::RunPromptCommand { name } => crate::commands::dsl::handlers::system::run_prompt(state, name),
+        crate::Event::RunThinkingCommand { level } => crate::commands::dsl::handlers::model::run_thinking(state, *level),
+        // Registry dispatch (from command palette)
+        crate::Event::RunPaletteCommand { name, args } => run_palette_command(state, name, args),
         // intentionally ignored: other command events fall through
         _ => {}
     }
 }
 
-fn run_load_command(state: &mut AppState, name: &str) {
-    if send_to_session_store(state, |tx, name| async move { tx.load(name).await }, name) {
-        return;
-    }
-    use crate::commands::CommandResult;
-    let result = crate::session::replay::load_session(name, state)
-        .map(|_| CommandResult::Message(format!("Session '{}' loaded.", name)))
-        .unwrap_or_else(|_| {
-            CommandResult::Message(format!(
-                "Session '{}' not found. Use /sessions to list saved sessions.",
-                name
-            ))
-        });
-    dialog::process_command_result(state, result);
-}
-
-fn run_save_command(state: &mut AppState, name: &str) {
-    let name_owned = name.to_string();
-    let session = crate::session::Session::from_state(state, name_owned.clone());
-    // Extract handles before async work to avoid borrow conflicts.
-    let handles = state.actor_handles().cloned();
-    let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
-
-    if can_spawn {
-        let handles = handles.unwrap();
-        tokio::spawn(async move {
-            handles.send_save_session(name_owned, session).await;
-        });
-        return;
-    }
-    use crate::commands::CommandResult;
-    let result = crate::session::replay::save_session(name, state)
-        .map(|_| CommandResult::Message(format!("Session '{}' saved.", name)))
-        .unwrap_or_else(|e| CommandResult::Message(format!("Could not save session: {}", e)));
-    dialog::process_command_result(state, result);
-}
-
-fn run_delete_command(state: &mut AppState, name: &str) {
-    if send_to_session_store(state, |tx, name| async move { tx.delete(name).await }, name) {
-        return;
-    }
-    use crate::commands::CommandResult;
-    let result = crate::session::replay::delete_session(name)
-        .map(|_| CommandResult::Message(format!("Session '{}' deleted.", name)))
-        .unwrap_or_else(|_| {
-            CommandResult::Message(format!(
-                "Session '{}' not found. Use /sessions to list saved sessions.",
-                name
-            ))
-        });
-    dialog::process_command_result(state, result);
-}
-
-fn run_import_command(state: &mut AppState, path: &str) {
-    // Extract handles before async work to avoid borrow conflicts.
-    let handles = state.actor_handles().cloned();
-    let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
-
-    if can_spawn {
-        let handles = handles.unwrap();
-        let path_buf = std::path::PathBuf::from(path);
-        tokio::spawn(async move {
-            handles.send_import_session(path_buf).await;
-        });
-        return;
-    }
-    use crate::commands::CommandResult;
-    let path_buf = path.to_string();
-    let result = crate::async_io::block_in_place_if_runtime(|| {
-        std::fs::read_to_string(&path_buf)
-            .ok()
-            .and_then(|json| serde_json::from_str::<Session>(&json).ok())
-    })
-    .map(|session| {
-        let msg = format!("Session imported from '{}'", path);
-        state.restore_session(&session);
-        CommandResult::Message(msg)
-    })
-    .unwrap_or_else(|| CommandResult::Message(format!("Could not import session from '{}'", path)));
-    dialog::process_command_result(state, result);
-}
-
-fn run_export_command(state: &mut AppState, path: &str) {
-    let name = state
-        .session
-        .session_display_name
-        .clone()
-        .unwrap_or_else(|| "exported".into());
-    let session = Session::from_state(state, name);
-    let path_buf = std::path::PathBuf::from(path);
-    // Extract handles before async work to avoid borrow conflicts.
-    let handles = state.actor_handles().cloned();
-    let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
-
-    if can_spawn {
-        let handles = handles.unwrap();
-        tokio::spawn(async move {
-            handles.send_export_session(path_buf, session).await;
-        });
-        return;
-    }
-    use crate::commands::CommandResult;
-    let json = serde_json::to_string_pretty(&session).unwrap_or_default();
-    let result = crate::async_io::block_in_place_if_runtime(|| std::fs::write(&path_buf, json))
-        .map(|_| CommandResult::Message(format!("Session exported to '{}'", path)))
-        .unwrap_or_else(|e| CommandResult::Message(format!("Could not export: {}", e)));
-    dialog::process_command_result(state, result);
-}
-
-fn send_to_session_store<F, Fut>(state: &AppState, f: F, name: &str) -> bool
+/// Call a session handler and dispatch its result.
+fn session_dispatch<F>(state: &mut AppState, f: F)
 where
-    F: FnOnce(crate::actors::SessionActorHandle, String) -> Fut + Send + 'static,
-    Fut: std::future::Future<Output = ()> + Send + 'static,
+    F: FnOnce(&mut AppState) -> CommandResult,
 {
-    if let Some(ref handles) = state.actor_handles() {
-        if tokio::runtime::Handle::try_current().is_ok() {
-            if let Some(ref session) = handles.session {
-                let name = name.to_string();
-                let session = session.clone();
-                tokio::spawn(async move {
-                    f(session, name).await;
-                });
-                return true;
-            }
-        }
-    }
-    false
+    let result = f(state);
+    dispatch_result(state, result);
+}
+
+fn dispatch_result(state: &mut AppState, result: CommandResult) {
+    dialog::process_command_result(state, result);
+}
+
+fn run_compact(state: &mut AppState, keep: &str, focus: &str) {
+    let args = if focus.is_empty() { keep.to_string() } else { format!("{keep} {focus}") };
+    let result = session_run::run_compact(state, &args);
+    dispatch_result(state, result);
 }
 
 fn run_skill_command(state: &mut AppState, name: &str) {
-    use crate::commands::CommandResult;
-    let result = state
-        .skills
-        .iter()
+    let result = state.skills.iter()
         .find(|s| s.name == name)
         .map(|skill| {
             let mut lines = vec![format!("Skill: {}", skill.name)];
-            if !skill.description.is_empty() {
-                lines.push(format!("Description: {}", skill.description));
-            }
-            if !skill.context.is_empty() {
-                lines.push(format!("Context: {}", skill.context));
-            }
+            if !skill.description.is_empty() { lines.push(format!("Description: {}", skill.description)); }
+            if !skill.context.is_empty() { lines.push(format!("Context: {}", skill.context)); }
             CommandResult::Message(lines.join("\n"))
         })
-        .unwrap_or_else(|| {
-            CommandResult::Message(format!(
-                "Skill '{}' not found. Use /skills to list loaded skills.",
-                name
-            ))
-        });
-    dialog::process_command_result(state, result);
+        .unwrap_or_else(|| CommandResult::Message(format!("Skill '{}' not found. Use /skills to list loaded skills.", name)));
+    dispatch_result(state, result);
 }
 
 fn run_logout_command(state: &mut AppState, provider: &str) {
-    use crate::commands::CommandResult;
     if provider.is_empty() {
-        dialog::process_command_result(
-            state,
-            CommandResult::OpenDialog(crate::commands::DialogType::CommandPalette),
-        );
+        dispatch_result(state, CommandResult::OpenDialog(crate::commands::DialogType::CommandPalette));
         return;
     }
     state.remove_provider(provider);
@@ -210,25 +79,16 @@ fn run_logout_command(state: &mut AppState, provider: &str) {
         let (provider, model) = state.resolve_default_model();
         state.set_active_model(provider, model, crate::model::ModelSource::ConfigDefault);
     }
-    if !state.has_models() {
-        crate::login_flow::login_flow_start(state);
-    }
-    dialog::process_command_result(
-        state,
-        CommandResult::Message(format!(
-            "Disconnected '{}'. Use /providers to manage providers.",
-            provider
-        )),
-    );
+    if !state.has_models() { crate::login_flow::login_flow_start(state); }
+    dispatch_result(state, CommandResult::Message(format!("Disconnected '{}'. Use /providers to manage providers.", provider)));
 }
 
 fn run_palette_command(state: &mut AppState, name: &str, args: &str) {
-    use crate::commands::CommandResult;
     let result = if let Some(cmd) = state.registry().get(name) {
         let cmd_name = cmd.name.clone();
         cmd.flow.clone().exec(state, &cmd_name, args)
     } else {
         CommandResult::Message(format!("Unknown command: /{}", name))
     };
-    dialog::process_command_result(state, result);
+    dispatch_result(state, result);
 }

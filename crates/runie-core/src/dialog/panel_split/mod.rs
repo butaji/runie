@@ -52,6 +52,12 @@ pub struct Panel {
     pub form_values: std::collections::HashMap<String, String>,
     /// For form panels: factory that turns form values into the submit event.
     pub submit_factory: Option<FormSubmitFn>,
+    /// For form panels: the canonical command name, used to route submissions
+    /// through the command registry instead of emitting raw events.
+    pub cmd_name: Option<String>,
+    /// For form panels: ordered list of field keys, used to serialize form
+    /// values as positional arguments for the command registry.
+    pub field_keys: Vec<String>,
     /// Visual layout of this panel.
     pub view: PanelView,
 }

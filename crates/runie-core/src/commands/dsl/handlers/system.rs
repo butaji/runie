@@ -6,10 +6,10 @@ use crate::model::AppState;
 
 use super::spec::{CommandKind, CommandSpec};
 
-fn prompt_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::Event::RunPromptCommand {
-        name: crate::dialog::dsl::get_field(values, "name"),
-    }
+/// No-op submit factory.  Forms with a `cmd_name` are dispatched through
+/// the command registry; this factory is never called.
+fn noop_submit(_: &std::collections::HashMap<String, String>) -> crate::Event {
+    crate::Event::Abort
 }
 
 static SYSTEM_COMMANDS: &[CommandSpec] = &[
@@ -67,10 +67,10 @@ static SYSTEM_COMMANDS: &[CommandSpec] = &[
         aliases: &[],
         category: CommandCategory::System,
         sub: true,
-        kind: CommandKind::Form {
+        kind: CommandKind::FormWithHandler {
             title: "Switch Prompt",
             fields: &[("Prompt name", "prompt-name", "name")],
-            submit: prompt_submit,
+            handler: run_prompt_handler,
         },
     },
     CommandSpec {
@@ -263,6 +263,13 @@ fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 // ── Form-submit handlers ──────────────────────────────────────────────────────
+
+fn run_prompt_handler(state: &mut AppState, name: &str) -> CommandResult {
+    run_prompt(state, name);
+    CommandResult::None
+}
+
+
 
 pub fn run_prompt(state: &mut AppState, name: &str) {
     let name = name.trim();
