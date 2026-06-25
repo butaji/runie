@@ -3,11 +3,22 @@
 use crate::tests::ensure_mock_provider;
 use crate::{run_agent_turn, AgentCommand};
 use runie_core::permissions::{
-    ApprovalRegistry, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
+    ApprovalSink, AutoAllowSink, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove,
+    PermissionAction, PermissionManager,
 };
 use runie_core::Event;
 use runie_testing::mock_provider;
 use std::sync::{Arc, Mutex};
+
+/// A mock approval sink that always denies (for testing without a real PermissionActor).
+pub struct MockApprovalSink;
+
+#[async_trait::async_trait]
+impl ApprovalSink for MockApprovalSink {
+    async fn ask(&self, _tool: &str, _input: &serde_json::Value) -> PermissionAction {
+        PermissionAction::Deny
+    }
+}
 
 /// Simulate the permission gate used by the TUI and verify read-only tools
 /// are auto-approved and rendered as ToolStart/ToolEnd events.
@@ -32,18 +43,15 @@ async fn test_agent_loop_with_tui_gate_allows_read_only_tool() {
     let emit = Arc::new(Mutex::new(move |evt: runie_core::event::Event| {
         events_clone.lock().unwrap().push(evt)
     }));
-    let approval_registry = Arc::new(Mutex::new(ApprovalRegistry::default()));
     let permissions = PermissionManager::default().with_policies(vec![
         Box::new(DefaultToolApprove::new()),
         Box::new(GitTrackedWriteApprove::new()),
         Box::new(FileAccessAsk::new()),
     ]);
+    // Use AutoAllowSink so read-only tools are auto-approved without needing a real PermissionActor.
     let gate = crate::PermissionGate::new(
         permissions,
-        Arc::new(crate::emit_approval_sink::EmitApprovalSink::new(
-            emit.clone(),
-            approval_registry,
-        )),
+        Arc::new(AutoAllowSink),
     );
 
     run_agent_turn(&provider, &cmd, emit, 5, gate)

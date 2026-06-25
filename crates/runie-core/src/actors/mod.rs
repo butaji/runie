@@ -13,6 +13,7 @@ mod config;
 mod fff_indexer;
 mod handles;
 mod io;
+pub mod permission;
 pub mod provider;
 pub mod session;
 
@@ -27,6 +28,7 @@ pub use io::{IoActor, IoActorHandle, IoMsg};
 pub use provider::{
     BuiltProvider, ProviderActor, ProviderActorHandle, ProviderFactory, ProviderMsg,
 };
+pub use permission::{PermissionActor, PermissionActorHandle, PermissionMsg};
 pub use session::{
     PersistenceActorHandle, SessionActor, SessionActorHandle, SessionMsg, SessionStoreActorHandle,
 };

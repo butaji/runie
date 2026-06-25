@@ -96,13 +96,6 @@ impl AppState {
         self.permission_request.as_ref()
     }
 
-    /// Immutable access to the approval registry.
-    pub fn approval_registry(
-        &self,
-    ) -> &std::sync::Arc<std::sync::Mutex<crate::permissions::ApprovalRegistry>> {
-        &self.approval_registry
-    }
-
     pub fn actor_handles(&self) -> Option<&crate::actors::ActorHandles> {
         self.actor_handles.as_ref()
     }
@@ -211,12 +204,6 @@ impl AppState {
 
     pub fn permission_request_mut(&mut self) -> &mut Option<crate::model::PermissionRequestState> {
         &mut self.permission_request
-    }
-
-    pub(crate) fn approval_registry_mut(
-        &mut self,
-    ) -> &mut std::sync::Arc<std::sync::Mutex<crate::permissions::ApprovalRegistry>> {
-        &mut self.approval_registry
     }
 
     pub fn actor_handles_mut(&mut self) -> &mut Option<crate::actors::ActorHandles> {

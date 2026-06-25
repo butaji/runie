@@ -135,12 +135,11 @@ impl AppState {
 
     // ── Session reset ───────────────────────────────────────────────────────
 
-    /// Reset session/input/agent state without clearing config, registry,
+    /// Reset session/input/agent state without clearing config,
     /// actor handles, or trust decisions.
     pub fn reset_session(&mut self) {
         let prev = self.take();
         let config = prev.config;
-        let approval_registry = prev.approval_registry;
         let actor_handles = prev.actor_handles;
         let config_cache = prev.config_cache;
         let git_info = prev.git_info;
@@ -148,7 +147,6 @@ impl AppState {
         let trust_decisions = prev.trust_decisions;
         // prev is dropped; all its fields are returned to the pool
         self.config = config;
-        *self.approval_registry_mut() = approval_registry;
         *self.actor_handles_mut() = actor_handles;
         *self.config_cache_mut() = config_cache;
         self.git_info = git_info;

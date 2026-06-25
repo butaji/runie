@@ -12,7 +12,8 @@
 use std::path::PathBuf;
 
 use crate::actors::{
-    ConfigActorHandle, FffSearchRequest, IoActorHandle, ProviderActorHandle, SessionActorHandle,
+    ConfigActorHandle, FffSearchRequest, IoActorHandle, PermissionActorHandle,
+    ProviderActorHandle, SessionActorHandle,
 };
 use crate::config::TruncationSection;
 use crate::model::ThinkingLevel;
@@ -37,6 +38,8 @@ pub struct ActorHandles {
     /// Handle to `FffIndexerActor` — owns the file index and search.
     /// `None` when the indexer has not been spawned (e.g. headless mode).
     pub fff_indexer: Option<FffIndexerHandle>,
+    /// Handle to `PermissionActor` — owns approval registry and permission UI.
+    pub permission: Option<PermissionActorHandle>,
 }
 
 /// Typed handle for the FFF indexer actor.
@@ -189,6 +192,56 @@ impl ActorHandles {
         }
     }
 
+    /// Send `PermissionMsg::ResolvePermission` to `PermissionActor`.
+    pub async fn send_resolve_permission(
+        &self,
+        request_id: String,
+        action: crate::permissions::PermissionAction,
+    ) {
+        if let Some(ref h) = self.permission {
+            h.resolve_permission(request_id, action).await;
+        }
+    }
+
+    /// Send `PermissionMsg::CancelPermission` to `PermissionActor`.
+    pub async fn send_cancel_permission(&self, request_id: String) {
+        if let Some(ref h) = self.permission {
+            h.cancel_permission(request_id).await;
+        }
+    }
+
+    /// Send `PermissionMsg::DismissRequest` to `PermissionActor`.
+    pub async fn send_dismiss_permission(&self) {
+        if let Some(ref h) = self.permission {
+            h.dismiss().await;
+        }
+    }
+
+    /// Try to resolve permission (sync fire-and-forget).
+    pub fn try_resolve_permission(
+        &self,
+        request_id: String,
+        action: crate::permissions::PermissionAction,
+    ) {
+        if let Some(ref h) = self.permission {
+            h.try_resolve_permission(request_id, action);
+        }
+    }
+
+    /// Try to cancel permission (sync fire-and-forget).
+    pub fn try_cancel_permission(&self, request_id: String) {
+        if let Some(ref h) = self.permission {
+            h.try_cancel_permission(request_id);
+        }
+    }
+
+    /// Try to dismiss permission (sync fire-and-forget).
+    pub fn try_dismiss_permission(&self) {
+        if let Some(ref h) = self.permission {
+            h.try_dismiss();
+        }
+    }
+
     /// Run a bash command via `IoActor`.
     pub async fn run_bash(&self, command: String) {
         if let Some(ref h) = self.io {
@@ -231,6 +284,7 @@ mod tests {
         assert!(handles.session.is_none());
         assert!(handles.io.is_none());
         assert!(handles.fff_indexer.is_none());
+        assert!(handles.permission.is_none());
     }
 
     #[test]

@@ -43,7 +43,6 @@ pub struct AppState {
     pub fff_file_results: Vec<FffFileEntry>,
     pub fff_debounce: u32,
     pub permission_request: Option<crate::model::PermissionRequestState>,
-    pub approval_registry: std::sync::Arc<std::sync::Mutex<crate::permissions::ApprovalRegistry>>,
     pub actor_handles: Option<crate::actors::ActorHandles>,
     pub config_cache: Option<crate::config::Config>,
 }
@@ -73,9 +72,6 @@ impl Default for AppState {
             fff_file_results: Vec::new(),
             fff_debounce: 0,
             permission_request: None,
-            approval_registry: std::sync::Arc::new(std::sync::Mutex::new(
-                crate::permissions::ApprovalRegistry::new(),
-            )),
             actor_handles: None,
             config_cache: None,
         }

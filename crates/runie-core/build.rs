@@ -47,7 +47,6 @@ const APPSTATE_PATTERNS: &[(&str, &str)] = &[
     ("state.trust_decisions.", "state.trust_decisions_mut()"),
     ("state.config_cache ", "state.config_cache_mut()"),
     ("state.actor_handles ", "state.actor_handles_mut()"),
-    ("state.approval_registry ", "state.approval_registry_mut()"),
     ("state.registry ", "state.registry_mut()"),
     ("state.registry.", "state.registry_mut()"),
     // self.xxx patterns (same replacement, different prefix)
@@ -80,7 +79,6 @@ const APPSTATE_PATTERNS: &[(&str, &str)] = &[
     ("self.trust_decisions.", "self.trust_decisions_mut()"),
     ("self.config_cache ", "self.config_cache_mut()"),
     ("self.actor_handles ", "self.actor_handles_mut()"),
-    ("self.approval_registry ", "self.approval_registry_mut()"),
     ("self.registry ", "self.registry_mut()"),
     ("self.registry.", "self.registry_mut()"),
 ];
@@ -331,9 +329,9 @@ fn needs_appstate_lint(rel_path: &str) -> bool {
         "accessors.rs",
         "domain_ops.rs",
         "actors/config/actor.rs",
+        "actors/permission/actor.rs",
         "update/input/text.rs",
         "update/input/submit.rs",
-        "emit_approval_sink.rs",
         "retry.rs",
         "session/replay.rs",
         "login_flow/validation.rs",

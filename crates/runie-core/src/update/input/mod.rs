@@ -91,18 +91,17 @@ fn handle_paste_image(state: &mut AppState) {
 fn permission_input_event(state: &mut AppState, event: crate::Event) {
     use crate::permissions::PermissionAction;
 
-    let Some(req) = state.permission_request_mut().take() else {
+    let Some(req) = state.permission_request().cloned() else {
         return;
     };
     let action = match event {
-        crate::Event::Input('y') | crate::Event::Input('Y') => PermissionAction::Allow,
-        crate::Event::Input('a') | crate::Event::Input('A') => PermissionAction::Allow,
+        crate::Event::Input('y') | crate::Event::Input('Y') | crate::Event::Input('a') | crate::Event::Input('A') => PermissionAction::Allow,
         _ => PermissionAction::Deny,
     };
-    if let Ok(registry) = state.approval_registry().lock() {
-        registry.resolve(&req.request_id, action);
+    // Emit intent to PermissionActor instead of direct registry mutation
+    if let Some(ref handles) = state.actor_handles() {
+        handles.try_resolve_permission(req.request_id.clone(), action);
     }
-    state.view_mut().dirty = true;
 }
 
 fn handle_mouse_click_event(state: &mut AppState, row: u16, col: u16, button: &str) {

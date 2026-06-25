@@ -6,12 +6,13 @@
 
 use std::sync::{Arc, Mutex};
 
+use runie_core::actors::PermissionActorHandle;
 use runie_core::actors::ProviderActorHandle;
 use runie_core::actors::{spawn_actor, Actor, ActorHandle};
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::permissions::{
-    ApprovalRegistry, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
+    DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
 };
 use runie_core::AppState;
 
@@ -87,7 +88,7 @@ impl AgentActorHandle {
 pub struct AgentActor {
     bus: EventBus<Event>,
     provider_handle: ProviderActorHandle,
-    approval_registry: Arc<Mutex<ApprovalRegistry>>,
+    permission_handle: PermissionActorHandle,
 }
 
 impl AgentActor {
@@ -95,13 +96,13 @@ impl AgentActor {
     pub fn spawn(
         bus: EventBus<Event>,
         provider_handle: ProviderActorHandle,
-        approval_registry: Arc<Mutex<ApprovalRegistry>>,
+        permission_handle: PermissionActorHandle,
     ) -> (AgentActorHandle, ActorHandle) {
         let actor_bus = bus.clone();
         let actor = Self {
             bus: actor_bus,
             provider_handle,
-            approval_registry,
+            permission_handle,
         };
         let (tx, handle) = spawn_actor(actor, bus);
         (AgentActorHandle::new(tx), handle)
@@ -154,10 +155,7 @@ impl AgentActor {
         ]);
         let gate = PermissionGate::new(
             permissions,
-            Arc::new(EmitApprovalSink::new(
-                emit.clone(),
-                self.approval_registry.clone(),
-            )),
+            Arc::new(EmitApprovalSink::new(self.permission_handle.clone())),
         );
 
         if let Err(e) = run_agent_turn(&built, command, emit, 5, gate).await {
@@ -178,7 +176,7 @@ impl AgentActor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runie_core::actors::{ConfigActor, ProviderActor};
+    use runie_core::actors::{ConfigActor, PermissionActor, ProviderActor};
     use runie_provider::DynProviderFactory;
 
     fn test_command(provider: &str, model: &str) -> AgentCommand {
@@ -211,8 +209,9 @@ mod tests {
         let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
         let (provider_handle, _provider_actor) =
             ProviderActor::spawn(bus.clone(), config_handle, Arc::new(DynProviderFactory));
-        let registry = Arc::new(Mutex::new(ApprovalRegistry::default()));
-        let (agent_handle, _agent_actor) = AgentActor::spawn(bus, provider_handle, registry);
+        let (permission_handle, _permission_actor) = PermissionActor::spawn(bus.clone());
+        let (agent_handle, _agent_actor) =
+            AgentActor::spawn(bus, provider_handle, permission_handle);
 
         agent_handle.run(test_command("ghost-provider", "x")).await;
 

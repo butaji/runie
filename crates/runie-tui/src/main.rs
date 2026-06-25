@@ -14,8 +14,8 @@
 use futures::StreamExt;
 use runie_agent::AgentActor;
 use runie_core::actors::{
-    ActorHandles, ConfigActor, FffIndexerActor, FffIndexerHandle, IoActor, ProviderActor,
-    SessionActor,
+    ActorHandles, ConfigActor, FffIndexerActor, FffIndexerHandle, IoActor, PermissionActor,
+    ProviderActor, SessionActor,
 };
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
@@ -81,6 +81,7 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
     // Unified SessionActor: owns trust, history, session CRUD, and durable event append
     let (session_handle, _session_actor) = SessionActor::spawn(bus.clone());
     let (io_handle, _io_actor) = IoActor::spawn(bus.clone());
+    let (permission_handle, _permission_actor) = PermissionActor::spawn(bus.clone());
     let mut state = AppState::default();
     // Build the ActorHandles registry — this is the single source of truth
     // for all actor senders. It replaces the old loose config_tx/provider_tx/... fields.
@@ -89,6 +90,7 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
         provider: Some(provider_handle),
         session: Some(session_handle.clone()),
         io: Some(io_handle),
+        permission: Some(permission_handle),
         ..Default::default()
     };
     state.set_actor_handles(handles.clone());
@@ -153,14 +155,14 @@ struct ActorChannels {
 
 fn setup_actor_channels(
     handles: &ActorHandles,
-    state: &mut AppState,
+    _state: &mut AppState,
     bus: &EventBus<Event>,
 ) -> ActorChannels {
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
     let (agent_handle, agent_actor) = AgentActor::spawn(
         bus.clone(),
         handles.provider.clone().expect("ProviderActor must be spawned"),
-        state.approval_registry().clone(),
+        handles.permission.clone().expect("PermissionActor must be spawned"),
     );
     ActorChannels {
         input_tx,

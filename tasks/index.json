@@ -370,7 +370,7 @@
   },
   {
     "id": "permission-actor-owns-approvals",
-    "status": "todo",
+    "status": "done",
     "milestone": "?",
     "category": "?",
     "priority": "?",

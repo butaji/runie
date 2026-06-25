@@ -217,7 +217,13 @@ fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
     state.dialog_back_stack_mut().clear();
     *state.login_flow_mut() = None;
-    *state.permission_request_mut() = None;
+    // Dismiss any pending permission request via actor when available.
+    // Fall back to direct state update for tests without actor handles.
+    if let Some(ref handles) = state.actor_handles() {
+        handles.try_dismiss_permission();
+    } else {
+        *state.permission_request_mut() = None;
+    }
     let now = crate::update::now();
     state.session_mut().session_created_at = now;
     state.session_mut().session_updated_at = now;
