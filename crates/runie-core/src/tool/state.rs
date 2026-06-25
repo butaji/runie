@@ -1,5 +1,22 @@
 //! Tool call state machine for UI display.
+//!
+//! This module provides `ToolCallState` for tracking the UI lifecycle of tool calls:
+//! `Pending -> Running -> Completed/Error`.
+//!
+//! For final outcomes (including security/flow states like `Blocked` or `AwaitingUser`),
+//! use `ToolStatus` from [`context`](crate::tool::context).
+//!
+//! ## Relationship to `ToolStatus`
+//!
+//! `ToolCallState` is the UI state machine; `ToolStatus` is the execution outcome.
+//! Terminal states convert explicitly:
+//! - `ToolCallState::Completed` → `ToolStatus::Success`
+//! - `ToolCallState::Error` → `ToolStatus::Error`
+//!
+//! Other `ToolStatus` variants (`TimedOut`, `Blocked`, `AwaitingUser`) do not appear in
+//! `ToolCallState` because they represent flow/security outcomes, not UI phases.
 
+use crate::tool::ToolStatus;
 use serde_json::Value;
 use std::time::Instant;
 
@@ -82,6 +99,19 @@ impl ToolCallState {
                 error,
                 duration_secs,
             };
+        }
+    }
+
+    /// Convert terminal state to `ToolStatus`.
+    ///
+    /// Returns `None` for non-terminal states (Pending, Running).
+    /// This explicit conversion makes the semantic difference clear:
+    /// `ToolCallState` is for UI phases; `ToolStatus` includes flow/security outcomes.
+    pub fn to_status(&self) -> Option<ToolStatus> {
+        match self {
+            ToolCallState::Completed { .. } => Some(ToolStatus::Success),
+            ToolCallState::Error { .. } => Some(ToolStatus::Error),
+            _ => None,
         }
     }
 
@@ -285,5 +315,49 @@ mod tests {
         tracker.fail("call.1", "exit code 1".into());
         let state = tracker.get("call.1").unwrap();
         assert!(matches!(state, ToolCallState::Error { .. }));
+    }
+
+    #[test]
+    fn tool_state_completed_maps_to_success_status() {
+        let state = ToolCallState::Completed {
+            id: "call.1".into(),
+            name: "bash".into(),
+            output: "done".into(),
+            bytes: None,
+            duration_secs: 1.0,
+        };
+        assert_eq!(state.to_status(), Some(ToolStatus::Success));
+    }
+
+    #[test]
+    fn tool_state_error_maps_to_error_status() {
+        let state = ToolCallState::Error {
+            id: "call.1".into(),
+            name: "bash".into(),
+            error: "failed".into(),
+            duration_secs: 1.0,
+        };
+        assert_eq!(state.to_status(), Some(ToolStatus::Error));
+    }
+
+    #[test]
+    fn tool_state_pending_has_no_status() {
+        let state = ToolCallState::Pending {
+            id: "call.1".into(),
+            name: "bash".into(),
+            input: json!({"cmd": "ls"}),
+        };
+        assert_eq!(state.to_status(), None);
+    }
+
+    #[test]
+    fn tool_state_running_has_no_status() {
+        let state = ToolCallState::Running {
+            id: "call.1".into(),
+            name: "bash".into(),
+            input: json!({"cmd": "ls"}),
+            started: Instant::now(),
+        };
+        assert_eq!(state.to_status(), None);
     }
 }
