@@ -133,25 +133,38 @@ impl Runtime for TestRuntime {
 // ── RealRuntime ───────────────────────────────────────────────────────────────
 
 /// Route an intent to its owning actor via ActorHandles.
+///
+/// Intents are fire-and-forget: we spawn the async calls so they run
+/// in the background without blocking the sync DSL runtime.
 fn route_intent(handles: &Option<crate::actors::ActorHandles>, intent: &Intent) {
     let Some(h) = handles else { return };
     match intent {
         Intent::SetTheme { .. } | Intent::ReloadConfig => {
             if let Some(ref c) = h.config {
-                c.reload();
+                let h = c.clone();
+                tokio::spawn(async move { h.reload().await });
             }
         }
         Intent::SetTrust { path, decision } => {
-            h.send_set_trust(path.clone(), *decision);
+            let h = h.clone();
+            let path = path.clone();
+            let decision = *decision;
+            tokio::spawn(async move { h.send_set_trust(path, decision).await });
         }
         Intent::AppendHistory { entry } => {
-            h.send_append_history(entry.clone());
+            let h = h.clone();
+            let entry = entry.clone();
+            tokio::spawn(async move { h.send_append_history(entry).await });
         }
         Intent::RunBash { command } => {
-            h.run_bash(command.clone());
+            let h = h.clone();
+            let command = command.clone();
+            tokio::spawn(async move { h.run_bash(command).await });
         }
         Intent::WriteFiles { edits } => {
-            h.write_files(edits.clone());
+            let h = h.clone();
+            let edits = edits.clone();
+            tokio::spawn(async move { h.write_files(edits).await });
         }
         // TODO(r5): map remaining Intent variants to their owning actors
         _ => {}
