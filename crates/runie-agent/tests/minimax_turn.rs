@@ -13,18 +13,24 @@ use runie_core::message::ChatMessage;
 use runie_provider::openai::stream::replay_sse;
 use runie_provider::DynProvider;
 use runie_testing::allow_all_gate;
+use runie_testing::fixtures::minimax as fixtures;
 use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 fn fixture(name: &str) -> String {
-    std::fs::read_to_string(format!(
-        "{}/tests/fixtures/minimax/{}",
-        env!("CARGO_MANIFEST_DIR"),
-        name
-    ))
-    .unwrap()
+    // Use the shared fixture constants from runie-testing
+    match name {
+        "m3_list_files_call.sse" => fixtures::m3_list_files_call.to_string(),
+        "m3_list_files_final.sse" => fixtures::m3_list_files_final.to_string(),
+        "m3_read_file_call.sse" => fixtures::m3_read_file_call.to_string(),
+        "m3_read_file_final.sse" => fixtures::m3_read_file_final.to_string(),
+        "m3_multi_tool_list_dir.sse" => fixtures::m3_multi_tool_list_dir.to_string(),
+        "m3_multi_tool_readme.sse" => fixtures::m3_multi_tool_readme.to_string(),
+        "m27_multi_tool_readme.sse" => fixtures::m27_multi_tool_readme.to_string(),
+        _ => unreachable!(),
+    }
 }
 
 fn command(content: &str) -> AgentCommand {

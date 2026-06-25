@@ -7,7 +7,7 @@ macro_rules! define_fixtures {
     ($($name:ident),* $(,)?) => {
         $(
             #[doc = concat!("Contents of `minimax/", stringify!($name), ".sse`.")]
-            pub const $name: &str = include_str!(concat!("../fixtures/minimax/", stringify!($name), ".sse"));
+            pub const $name: &str = include_str!(concat!("minimax/", stringify!($name), ".sse"));
         )*
     };
 }

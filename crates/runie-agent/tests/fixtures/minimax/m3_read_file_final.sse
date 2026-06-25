@@ -1,4 +1,0 @@
-data: {"id":"0684fec7917fe7569b32acdc4522e514","choices":[{"index":0,"delta":{"content":"The file `/tmp/runie_minimax","role":"assistant"}}],"created":1781910471,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
-
-data: {"id":"0684fec7917fe7569b32acdc4522e514","choices":[{"index":0,"delta":{"content":"_notes_99892.txt` contains the following text:\n\n```\nrunie-minimax-notes-99892\n```","role":"assistant"}}],"created":1781910471,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
-

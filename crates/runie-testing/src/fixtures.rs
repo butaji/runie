@@ -1,5 +1,7 @@
 //! Common test fixtures.
 
+pub mod minimax;
+
 use std::sync::Arc;
 use std::sync::Once;
 

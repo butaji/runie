@@ -1804,7 +1804,7 @@
     },
     {
       "id": "share-minimax-sse-fixtures",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Testing",
       "priority": "P1",

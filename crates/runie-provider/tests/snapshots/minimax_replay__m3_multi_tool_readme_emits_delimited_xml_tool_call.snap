@@ -22,28 +22,27 @@ expression: events
         " files and then read the README.md file. I've already listed the directory. Now I need to read the README.md file.",
     ),
     TextDelta(
-        "\n</think>\n\n]<]minimax[>[<tool_call>\n]<]minimax[>[<invoke name=\"read_file\">]<]minimax[>[<path>README.md]<]minimax[>[</path>]<]minimax[>[</invoke>\n]<]minimax[>[</tool_call>",
+        "\n<tool_call>\n<invoke name=\"read_file\">\n<path>README.md</path>\n</invoke>\n</tool_call>",
     ),
+    ToolCallStart {
+        id: "call_def456",
+        name: "read_file",
+    },
+    ToolCallInputDelta {
+        id: "call_def456",
+        delta: "{\"path\": \"README.md\"}",
+    },
     TextDelta(
         "",
     ),
+    ToolCallEnd {
+        id: "call_def456",
+    },
     TextEnd {
         id: "text",
     },
     ThinkingEnd {
         id: "reasoning",
-    },
-    Finish {
-        reason: Stop,
-    },
-    TextStart {
-        id: "text",
-    },
-    TextDelta(
-        "",
-    ),
-    TextEnd {
-        id: "text",
     },
     Finish {
         reason: Stop,
