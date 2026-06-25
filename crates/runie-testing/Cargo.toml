@@ -4,9 +4,9 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-runie-core = { path = "../runie-core" }
-runie-agent = { path = "../runie-agent" }
-runie-provider = { path = "../runie-provider" }
+runie-core.workspace = true
+runie-agent.workspace = true
+runie-provider.workspace = true
 anyhow.workspace = true
 tokio.workspace = true
 tempfile.workspace = true
