@@ -1,6 +1,6 @@
 # Relocate stray top-level tool_parser_tests.rs
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2

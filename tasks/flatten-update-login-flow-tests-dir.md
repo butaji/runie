@@ -1,6 +1,6 @@
 # Flatten update/login_flow/tests.rs directory
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2
