@@ -1,0 +1,191 @@
+//! File picker helpers and FFF search query (merged from fff.rs and file_picker.rs).
+
+use crate::commands::DialogState;
+use crate::dialog::{ItemAction, Panel, PanelStack};
+use crate::model::{AppState, FffFileEntry};
+
+// ---------------------------------------------------------------------------
+// FFF file search
+// ---------------------------------------------------------------------------
+
+/// Query the global FFF index for fuzzy file search results.
+/// Returns up to `limit` entries ranked by frecency + fuzzy score.
+pub(crate) fn query_fff_files(query: &str, limit: usize) -> Vec<FffFileEntry> {
+    let fallback = build_fff_fallback(limit);
+    let Some(state) = crate::FffSearchState::get() else {
+        return fallback;
+    };
+    let Ok(picker_guard) = state.picker.read() else {
+        return fallback;
+    };
+    let Ok(qt_guard) = state.query_tracker.read() else {
+        return fallback;
+    };
+    let Some(picker) = picker_guard.as_ref() else {
+        return fallback;
+    };
+    let query_tracker = qt_guard.as_ref();
+
+    let parsed = fff_search::QueryParser::default().parse(query);
+    let results = picker.fuzzy_search(
+        &parsed,
+        query_tracker,
+        fff_search::FuzzySearchOptions {
+            max_threads: 0,
+            current_file: None,
+            project_path: None,
+            pagination: fff_search::PaginationArgs { offset: 0, limit },
+            combo_boost_score_multiplier: 100,
+            min_combo_count: 2,
+        },
+    );
+    if results.items.is_empty() {
+        return fallback;
+    }
+    format_fff_results(picker, &results)
+}
+
+fn build_fff_fallback(limit: usize) -> Vec<FffFileEntry> {
+    crate::async_io::block_in_place_if_runtime(|| crate::file_refs::find_file_entries(".", limit))
+        .into_iter()
+        .map(|e| FffFileEntry {
+            name: e.name.clone(),
+            path: e.name,
+            is_dir: e.is_dir,
+            score: 0.0,
+            git_status: None,
+        })
+        .collect()
+}
+
+fn format_fff_results(
+    picker: &fff_search::FilePicker,
+    results: &fff_search::SearchResult,
+) -> Vec<FffFileEntry> {
+    results
+        .items
+        .iter()
+        .zip(results.scores.iter())
+        .map(|(item, score)| {
+            let path = item.relative_path(picker);
+            let name = std::path::Path::new(&path)
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| path.clone());
+            let is_dir = path.ends_with('/') || item.relative_path(picker).is_empty();
+            let git_status = item.git_status.map(format_fff_git_status);
+            FffFileEntry {
+                name,
+                path,
+                is_dir,
+                score: score.total as f64,
+                git_status,
+            }
+        })
+        .collect()
+}
+
+fn format_fff_git_status(status: git2::Status) -> String {
+    use git2::Status as G;
+    const STATUS_LABELS: &[(git2::Status, &str)] = &[
+        (G::WT_NEW, "untracked"),
+        (G::INDEX_NEW, "untracked"),
+        (G::WT_MODIFIED, "modified"),
+        (G::INDEX_MODIFIED, "modified"),
+        (G::WT_DELETED, "deleted"),
+        (G::INDEX_DELETED, "deleted"),
+        (G::WT_RENAMED, "renamed"),
+        (G::INDEX_RENAMED, "renamed"),
+    ];
+    for (flag, label) in STATUS_LABELS {
+        if status.contains(*flag) {
+            return (*label).to_owned();
+        }
+    }
+    String::new()
+}
+
+// ---------------------------------------------------------------------------
+// File picker panel building and rebuilding
+// ---------------------------------------------------------------------------
+
+pub(crate) fn build_file_picker_panel(
+    mut panel: Panel,
+    entries: &[FffFileEntry],
+    filter: Option<&str>,
+) -> Panel {
+    let header = file_picker_header(entries.len(), filter);
+    panel = panel.header(&header);
+    for entry in entries {
+        let label = file_picker_label(entry);
+        let insert_name = file_picker_insert_name(entry);
+        panel = panel.item(
+            &label,
+            ItemAction::Emit(crate::Event::InsertAtRef(insert_name)),
+        );
+    }
+    panel
+}
+
+fn file_picker_header(count: usize, filter: Option<&str>) -> String {
+    if filter.map(|f| !f.is_empty()).unwrap_or(false) {
+        format!("{} files matching '{}'", count, filter.unwrap_or(""))
+    } else {
+        format!("{} files", count)
+    }
+}
+
+fn file_picker_label(entry: &FffFileEntry) -> String {
+    if entry.is_dir {
+        format!("{}/", entry.name)
+    } else {
+        entry.name.clone()
+    }
+}
+
+fn file_picker_insert_name(entry: &FffFileEntry) -> String {
+    if entry.is_dir {
+        format!("{}/", entry.path)
+    } else {
+        entry.path.clone()
+    }
+}
+
+/// Rebuild the file picker panel with the current FFF results and panel filter.
+pub(crate) fn rebuild_file_picker(state: &mut AppState) {
+    let Some(DialogState::PanelStack(stack)) = state.open_dialog() else {
+        return;
+    };
+    let Some(panel) = stack.current() else {
+        return;
+    };
+    let filter = panel.filter.clone();
+
+    let query = if filter.is_empty() { "" } else { &filter };
+    let entries = query_fff_files(query, 50);
+    state.fff_file_results = entries.clone();
+    *state.fff_debounce_mut() = state.fff_debounce().wrapping_add(1);
+
+    let mut new_panel = Panel::new("at-files", " Files ").with_filter();
+    new_panel.filter = filter.clone();
+
+    let count = entries.len();
+    new_panel = if entries.is_empty() {
+        new_panel.header("No files found")
+    } else {
+        let header = file_picker_header(count, Some(&filter));
+        new_panel = new_panel.header(&header);
+        for entry in entries {
+            let label = file_picker_label(&entry);
+            let insert_name = file_picker_insert_name(&entry);
+            new_panel = new_panel.item(
+                &label,
+                ItemAction::Emit(crate::Event::InsertAtRef(insert_name)),
+            );
+        }
+        new_panel
+    };
+
+    *state.open_dialog_mut() = Some(DialogState::PanelStack(PanelStack::new(new_panel)));
+    state.view_mut().dirty = true;
+}

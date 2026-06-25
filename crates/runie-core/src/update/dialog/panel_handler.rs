@@ -6,7 +6,7 @@ use crate::model::AppState;
 use crate::Event;
 
 use super::form::FormAction;
-use super::provider_model_toggle;
+use super::toggles;
 
 /// Result of handling a single event in a panel stack.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -381,8 +381,8 @@ fn apply_panel_setting(state: &mut AppState, stack: &mut PanelStack, key: &str) 
 }
 
 fn apply_checkbox_setting(state: &mut AppState, key: &str) -> bool {
-    if let Some((provider, model)) = provider_model_toggle::parse_provider_model_toggle(key) {
-        provider_model_toggle::toggle_provider_model(state, provider, model);
+    if let Some((provider, model)) = toggles::parse_provider_model_toggle(key) {
+        toggles::toggle_provider_model(state, provider, model);
         return true;
     }
     match key {

@@ -71,7 +71,7 @@ pub fn open_model_selector(state: &mut AppState) {
         &state.config().current_provider,
         &state.config().current_model,
     );
-    let (recent, groups) = super::model_selector::partition_model_items(items);
+    let (recent, groups) = super::toggles::partition_model_items(items);
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
@@ -184,7 +184,7 @@ pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
     state.input_mut().file_picker_range_suffix = range_suffix;
 
     let query = base_filter.as_deref().unwrap_or("");
-    let entries = super::fff::query_fff_files(query, 50);
+    let entries = super::file_pickers::query_fff_files(query, 50);
     *state.fff_file_results_mut() = entries.clone();
     *state.fff_debounce_mut() = state.fff_debounce().wrapping_add(1);
 
