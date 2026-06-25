@@ -32,9 +32,9 @@ pub use support::{
 const MARGIN_SYMBOL: &str = " ";
 
 fn add_lr_margins(line: Line<'static>) -> Line<'static> {
-    let mut spans = vec![Span::raw(MARGIN_SYMBOL.to_string())];
+    let mut spans = vec![Span::raw(MARGIN_SYMBOL.to_owned())];
     spans.extend(line.spans.iter().cloned());
-    spans.push(Span::raw(MARGIN_SYMBOL.to_string()));
+    spans.push(Span::raw(MARGIN_SYMBOL.to_owned()));
     Line::from(spans).style(line.style)
 }
 
@@ -293,7 +293,7 @@ fn build_agent_line_from_spans(
     ts_width: u16,
     with_ts: bool,
 ) -> Line<'static> {
-    let mut line_spans = vec![Span::styled(prefix.to_string(), style_agent())];
+    let mut line_spans = vec![Span::styled(prefix.to_owned(), style_agent())];
     line_spans.extend(md_to_spans(spans));
 
     if with_ts && content_width > 0 {
@@ -311,7 +311,7 @@ fn build_agent_line_from_spans(
 }
 
 fn render_empty_agent_line(content_width: u16, ts_str: &str) -> Line<'static> {
-    let text = GLYPH_AGENT.to_string();
+    let text = GLYPH_AGENT.to_owned();
     let mut spans = vec![Span::styled(text.clone(), style_agent())];
     if content_width > 0 {
         let ts_width = display_width::width(ts_str) + 1;

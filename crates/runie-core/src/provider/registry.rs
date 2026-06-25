@@ -271,8 +271,8 @@ pub fn is_known_provider(key: &str) -> bool {
 /// Get the display name for a provider key, or the key itself if unknown.
 pub fn display_name(key: &str) -> String {
     find_provider(key)
-        .map(|p| p.display_name.to_string())
-        .unwrap_or_else(|| key.to_string())
+        .map(|p| p.display_name.to_owned())
+        .unwrap_or_else(|| key.to_owned())
 }
 
 // ============================================================================

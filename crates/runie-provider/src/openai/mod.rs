@@ -24,9 +24,9 @@ impl OpenAiProvider {
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());
         Self {
-            api_key: api_key.trim().to_string(),
+            api_key: api_key.trim().to_owned(),
             model: model.into(),
-            base_url: "https://api.openai.com/v1".to_string(),
+            base_url: "https://api.openai.com/v1".to_owned(),
             model_meta: None,
             tools: Vec::new(),
             tool_choice: None,
@@ -35,7 +35,7 @@ impl OpenAiProvider {
     }
 
     pub fn with_base_url(mut self, url: impl Into<String>) -> Self {
-        self.base_url = url.into().trim_end_matches('/').to_string();
+        self.base_url = url.into().trim_end_matches('/').to_owned();
         self
     }
 

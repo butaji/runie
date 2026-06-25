@@ -76,7 +76,7 @@ fn last_assistant_text(messages: &[runie_core::ChatMessage]) -> String {
         .iter()
         .rev()
         .find(|m| m.role == runie_core::Role::Assistant)
-        .map(|m| m.content().clone())
+        .map(|m| m.content())
         .unwrap_or_default()
 }
 
@@ -150,7 +150,7 @@ impl EffectCommand {
             Self::LoginFlowSubmitKey { provider, key } => {
                 if let Some(ref handles) = state.actor_handles_mut() {
                     if let Some(ref provider_handle) = handles.provider {
-                        login::run(provider.clone(), key, tx, provider_handle.tx().clone());
+                        login::run(provider, key, tx, provider_handle.tx().clone());
                     }
                 }
             }

@@ -29,25 +29,25 @@ impl Event {
 
 fn tool_called(id: &str, name: &str, input: &serde_json::Value) -> crate::event::DurableCoreEvent {
     crate::event::DurableCoreEvent::ToolCalled {
-        id: id.to_string(),
-        name: name.to_string(),
+        id: id.to_owned(),
+        name: name.to_owned(),
         input: input.clone(),
     }
 }
 
 fn tool_result(id: &str, output: &str) -> crate::event::DurableCoreEvent {
     crate::event::DurableCoreEvent::ToolResult {
-        id: id.to_string(),
-        output: output.to_string(),
+        id: id.to_owned(),
+        output: output.to_owned(),
         success: true,
     }
 }
 
 fn message_sent(id: &str, content: &str) -> crate::event::DurableCoreEvent {
     crate::event::DurableCoreEvent::MessageSent {
-        id: id.to_string(),
+        id: id.to_owned(),
         role: "assistant".into(),
-        content: content.to_string(),
+        content: content.to_owned(),
         timestamp: crate::model::now(),
         provider: String::new(),
     }
@@ -55,8 +55,8 @@ fn message_sent(id: &str, content: &str) -> crate::event::DurableCoreEvent {
 
 fn model_switched(provider: &str, model: &str) -> crate::event::DurableCoreEvent {
     crate::event::DurableCoreEvent::ModelSwitched {
-        provider: provider.to_string(),
-        model: model.to_string(),
+        provider: provider.to_owned(),
+        model: model.to_owned(),
     }
 }
 

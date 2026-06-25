@@ -105,7 +105,7 @@ impl LoginFlowState {
         if self.selected_models.contains(model) {
             self.selected_models.remove(model);
         } else {
-            self.selected_models.insert(model.to_string());
+            self.selected_models.insert(model.to_owned());
         }
     }
 

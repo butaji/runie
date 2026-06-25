@@ -13,9 +13,9 @@ pub fn build_provider_picker() -> Panel {
         .keep_open();
 
     for provider in known_providers() {
-        let label = provider.display_name.to_string();
+        let label = provider.display_name.to_owned();
         let evt = crate::Event::SelectProvider {
-            provider: provider.key.to_string(),
+            provider: provider.key.to_owned(),
         };
         panel = panel.item(&label, ItemAction::Emit(evt));
     }

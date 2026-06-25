@@ -68,7 +68,7 @@ fn strip_minimax_tool_calls(content: &str) -> String {
 }
 
 fn normalize_m3_delimiters(text: &str) -> String {
-    let mut out = text.to_string();
+    let mut out = text.to_owned();
     out = out.replace("]<]minimax[>[</", "</");
     out = out.replace("]<]minimax[>[<", "<");
     out
@@ -268,7 +268,7 @@ fn strip_line_markers(content: &str) -> String {
     }
 
     if found_tool {
-        result.trim_end().to_string()
+        result.trim_end().to_owned()
     } else {
         result
     }
@@ -300,13 +300,13 @@ fn strip_empty_code_fences(content: &str) -> String {
                 in_fence = false;
             } else {
                 buf.clear();
-                buf.push(line.to_string());
+                buf.push(line.to_owned());
                 in_fence = true;
             }
             continue;
         }
         if in_fence {
-            buf.push(line.to_string());
+            buf.push(line.to_owned());
         } else {
             if !result.is_empty() {
                 result.push('\n');

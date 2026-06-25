@@ -162,7 +162,7 @@ fn build_search_output(
         serde_json::json!({ "query": query })
     };
     Ok(ToolOutput {
-        tool_name: "search".to_string(),
+        tool_name: "search".to_owned(),
         tool_args,
         content: serde_json::to_string_pretty(&result)?,
         bytes_transferred: None,

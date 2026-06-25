@@ -70,7 +70,7 @@ fn switch_to_model(state: &mut AppState, provider: &str, model: &str) -> Command
             provider, model
         ));
     }
-    state.switch_model(provider.to_string(), model.to_string(), true);
+    state.switch_model(provider.to_owned(), model.to_owned(), true);
     CommandResult::Message(format!("Switched to {}/{}", provider, model))
 }
 
@@ -81,7 +81,7 @@ fn is_model_configured(state: &AppState, provider: &str, model: &str) -> bool {
     state
         .configured_providers()
         .iter()
-        .any(|(p, _, models)| p == provider && models.contains(&model.to_string()))
+        .any(|(p, _, models)| p == provider && models.contains(&model.to_owned()))
 }
 
 fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
@@ -113,7 +113,7 @@ fn open_thinking_panel(state: &mut AppState) -> CommandResult {
         let label = if level == current {
             format!("{} (current)", level.as_str())
         } else {
-            level.as_str().to_string()
+            level.as_str().to_owned()
         };
         let evt = crate::Event::RunThinkingCommand { level };
         panel = panel.item(&label, ItemAction::Emit(evt));

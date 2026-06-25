@@ -80,23 +80,23 @@ pub fn key_event_to_combo(key: &KeyEvent) -> String {
         parts.push("shift");
     }
     let key_name = match key.code {
-        KeyCode::Char('\t') => "tab".to_string(),
+        KeyCode::Char('\t') => "tab".to_owned(),
         KeyCode::Char(c) => c.to_lowercase().collect(),
-        KeyCode::Enter => "enter".to_string(),
-        KeyCode::Esc => "escape".to_string(),
-        KeyCode::Backspace => "backspace".to_string(),
-        KeyCode::Tab => "tab".to_string(),
-        KeyCode::BackTab => "shift+tab".to_string(),
-        KeyCode::Delete => "delete".to_string(),
-        KeyCode::Up => "up".to_string(),
-        KeyCode::Down => "down".to_string(),
-        KeyCode::Left => "left".to_string(),
-        KeyCode::Right => "right".to_string(),
-        KeyCode::Home => "home".to_string(),
-        KeyCode::End => "end".to_string(),
-        KeyCode::Insert => "insert".to_string(),
-        KeyCode::PageUp => "pageup".to_string(),
-        KeyCode::PageDown => "pagedown".to_string(),
+        KeyCode::Enter => "enter".to_owned(),
+        KeyCode::Esc => "escape".to_owned(),
+        KeyCode::Backspace => "backspace".to_owned(),
+        KeyCode::Tab => "tab".to_owned(),
+        KeyCode::BackTab => "shift+tab".to_owned(),
+        KeyCode::Delete => "delete".to_owned(),
+        KeyCode::Up => "up".to_owned(),
+        KeyCode::Down => "down".to_owned(),
+        KeyCode::Left => "left".to_owned(),
+        KeyCode::Right => "right".to_owned(),
+        KeyCode::Home => "home".to_owned(),
+        KeyCode::End => "end".to_owned(),
+        KeyCode::Insert => "insert".to_owned(),
+        KeyCode::PageUp => "pageup".to_owned(),
+        KeyCode::PageDown => "pagedown".to_owned(),
         KeyCode::F(n) => format!("f{}", n),
         _ => return String::new(),
     };
@@ -229,9 +229,9 @@ fn convert_mouse_event(mouse: &MouseEvent) -> Option<CoreEvent> {
 
 fn mouse_button_to_string(button: MouseButton) -> String {
     match button {
-        MouseButton::Left => "left".to_string(),
-        MouseButton::Right => "right".to_string(),
-        MouseButton::Middle => "middle".to_string(),
+        MouseButton::Left => "left".to_owned(),
+        MouseButton::Right => "right".to_owned(),
+        MouseButton::Middle => "middle".to_owned(),
     }
 }
 

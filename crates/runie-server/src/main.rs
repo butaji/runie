@@ -191,7 +191,7 @@ async fn handle_complete(params: &Value, yolo: bool) -> Result<Value> {
 
     let msgs = vec![
         ChatMessage::system(headless_system_prompt()),
-        ChatMessage::user(prompt.to_string()),
+        ChatMessage::user(prompt.to_owned()),
     ];
 
     let sink = build_sink(yolo);

@@ -90,7 +90,7 @@ fn read_branch(head_path: &std::path::Path) -> Option<String> {
         content
             .trim()
             .strip_prefix("ref: refs/heads/")
-            .map(|b| b.to_string())
+            .map(|b| b.to_owned())
     })
 }
 
@@ -108,7 +108,7 @@ fn read_origin_repo_name(config_path: &std::path::Path) -> Option<String> {
                     let url = url.trim();
                     url.rsplit('/')
                         .next()
-                        .map(|name| name.trim_end_matches(".git").to_string())
+                        .map(|name| name.trim_end_matches(".git").to_owned())
                 })
         })
 }

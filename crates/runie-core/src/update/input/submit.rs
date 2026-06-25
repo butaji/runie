@@ -27,7 +27,7 @@ impl AppState {
         }
 
         if let Some(stripped) = content.strip_prefix('!') {
-            let command = stripped.trim().to_string();
+            let command = stripped.trim().to_owned();
             if !command.is_empty() {
                 self.run_bash_command(&command);
             }
@@ -45,7 +45,7 @@ impl AppState {
         }
         let content = {
             let input = self.input_mut();
-            std::mem::take(&mut input.input).trim().to_string()
+            std::mem::take(&mut input.input).trim().to_owned()
         };
         {
             let input = self.input_mut();
@@ -144,7 +144,7 @@ impl AppState {
         let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
 
         if can_spawn {
-            let command = command.to_string();
+            let command = command.to_owned();
             let handles = handles.unwrap();
             tokio::spawn(async move {
                 handles.run_bash(command).await;

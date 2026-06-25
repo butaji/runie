@@ -74,8 +74,8 @@ impl Diff {
     pub fn generate(old_content: &str, new_content: &str) -> Self {
         if old_content == new_content {
             return Diff {
-                old_path: "a".to_string(),
-                new_path: "b".to_string(),
+                old_path: "a".to_owned(),
+                new_path: "b".to_owned(),
                 hunks: Vec::new(),
             };
         }
@@ -91,8 +91,8 @@ impl Diff {
         }
 
         Diff {
-            old_path: "a".to_string(),
-            new_path: "b".to_string(),
+            old_path: "a".to_owned(),
+            new_path: "b".to_owned(),
             hunks: builder.finish(),
         }
     }
@@ -170,7 +170,7 @@ fn patch_hunk_to_diff_hunk(h: &patch::Hunk) -> DiffHunk {
             }
         })
         .collect();
-    let header = h.hint().map(|h| h.to_string()).unwrap_or_default();
+    let header = h.hint().map(|h| h.to_owned()).unwrap_or_default();
     DiffHunk { header, lines }
 }
 
@@ -259,11 +259,11 @@ impl LegacyParseState {
             .get(2)
             .and_then(|s| s.split(',').next()?.strip_prefix('+')?.parse().ok());
         self.current_hunk = Some(DiffHunk {
-            header: line.to_string(),
+            header: line.to_owned(),
             lines: Vec::new(),
         });
         // Add hunk header as a context line (preserves original behavior)
-        self.push_line(DiffLine::Context(line.to_string()));
+        self.push_line(DiffLine::Context(line.to_owned()));
     }
 
     fn push_line(&mut self, line: DiffLine) {

@@ -45,7 +45,7 @@ impl ToolCall {
 
     /// Serialize arguments to a JSON string for the OpenAI wire format.
     pub fn arguments_string(&self) -> String {
-        serde_json::to_string(&self.args).unwrap_or_else(|_| "{}".to_string())
+        serde_json::to_string(&self.args).unwrap_or_else(|_| "{}".to_owned())
     }
 }
 
@@ -142,7 +142,7 @@ impl ChatMessage {
             last.push_str(content);
         } else {
             self.parts.push(Part::Text {
-                content: content.to_string(),
+                content: content.to_owned(),
             });
         }
     }

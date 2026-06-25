@@ -11,7 +11,7 @@ pub struct Version(pub String);
 impl Version {
     /// The current protocol version.
     pub fn current() -> Self {
-        Self(PROTOCOL_VERSION.to_string())
+        Self(PROTOCOL_VERSION.to_owned())
     }
 }
 

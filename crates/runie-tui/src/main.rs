@@ -93,7 +93,7 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
     app_init::bootstrap(&mut state).await;
     // Spawn FffIndexerActor with the current working directory as the project root.
     let project_root = std::env::current_dir().unwrap_or_default();
-    let data_dir = dirs::data_dir().unwrap_or_else(|| std::env::temp_dir());
+    let data_dir = dirs::data_dir().unwrap_or_else(std::env::temp_dir);
     if let Ok((tx, _actor_handle)) =
         FffIndexerActor::spawn(project_root, data_dir, EventBus::new(16))
     {
@@ -193,22 +193,20 @@ fn spawn_agent_tasks(
     tokio::spawn(render_forwarder(render_rx, tx));
 }
 
-fn render_forwarder(
+async fn render_forwarder(
     mut render_rx: watch::Receiver<Snapshot>,
     tx: std::sync::mpsc::SyncSender<Snapshot>,
-) -> impl std::future::Future<Output = ()> {
-    async move {
-        loop {
-            let snap = render_rx.borrow_and_update().clone();
-            // Use try_send to avoid blocking the async event loop.
-            // If the render thread is busy, skip this frame and process the next one.
-            if tx.try_send(snap).is_err() {
-                // Render thread is backed up — skip this frame, let it catch up.
-                // This prevents input latency when the render is slow.
-            }
-            if render_rx.changed().await.is_err() {
-                break;
-            }
+) {
+    loop {
+        let snap = render_rx.borrow_and_update().clone();
+        // Use try_send to avoid blocking the async event loop.
+        // If the render thread is busy, skip this frame and process the next one.
+        if tx.try_send(snap).is_err() {
+            // Render thread is backed up — skip this frame, let it catch up.
+            // This prevents input latency when the render is slow.
+        }
+        if render_rx.changed().await.is_err() {
+            break;
         }
     }
 }

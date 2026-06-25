@@ -71,8 +71,8 @@ impl AgentActorHandle {
         self.run(AgentCommand {
             content,
             id,
-            provider: state.current_provider().to_string(),
-            model: state.current_model().to_string(),
+            provider: state.current_provider().to_owned(),
+            model: state.current_model().to_owned(),
             thinking_level: state.thinking_level(),
             read_only: state.read_only(),
             skills_context,
@@ -128,7 +128,7 @@ impl AgentActor {
 
     async fn run_turn(&self, command: &AgentCommand) {
         let (provider_key, model) = if runie_core::provider::is_mock_enabled() {
-            ("mock".to_string(), "echo".to_string())
+            ("mock".to_owned(), "echo".to_owned())
         } else {
             (command.provider.clone(), command.model.clone())
         };
@@ -167,11 +167,11 @@ impl AgentActor {
 
     fn emit_error_and_done(&self, id: &str, message: String) {
         self.bus.publish(runie_core::Event::Error {
-            id: id.to_string(),
+            id: id.to_owned(),
             message,
         });
         self.bus
-            .publish(runie_core::Event::Done { id: id.to_string() });
+            .publish(runie_core::Event::Done { id: id.to_owned() });
     }
 }
 

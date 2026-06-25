@@ -74,7 +74,7 @@ fn value_to_tool_call(value: &Value) -> Option<ParsedToolCall> {
         return None;
     }
     Some(ParsedToolCall {
-        name: name.to_string(),
+        name: name.to_owned(),
         args: Value::Object(args.clone()),
         id: None,
     })

@@ -53,7 +53,7 @@ impl StartupContextSkill {
             .args(&parts[1..])
             .output()
         {
-            Ok(o) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
+            Ok(o) => String::from_utf8_lossy(&o.stdout).trim().to_owned(),
             Err(_) => String::new(),
         }
     }

@@ -201,7 +201,7 @@ async fn handle_persistence_messages(
 ) {
     if let Some(entry) = submitted_text {
         if !entry.trim().is_empty() {
-            handle.append_history(entry.trim().to_string()).await;
+            handle.append_history(entry.trim().to_owned()).await;
         }
     }
     let cwd = std::env::current_dir().unwrap_or_default();

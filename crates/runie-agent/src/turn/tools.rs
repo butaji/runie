@@ -39,7 +39,7 @@ pub async fn execute_tools(
         emit_now(
             &emit,
             runie_core::Event::ToolEnd {
-                id: cmd_id.to_string(),
+                id: cmd_id.to_owned(),
                 duration_secs: output.duration.as_secs_f64(),
                 output: output.content.clone(),
             },
@@ -73,7 +73,7 @@ fn emit_tool_start(cmd_id: &str, tool_call: &ParsedToolCall, emit: &EmitFn) {
     emit_now(
         emit,
         runie_core::Event::ToolStart {
-            id: cmd_id.to_string(),
+            id: cmd_id.to_owned(),
             name: tool_call.name.clone(),
             input: tool_call.args.clone(),
         },

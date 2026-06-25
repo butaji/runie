@@ -48,8 +48,7 @@ pub(crate) fn parse_input(
 ) -> Result<(String, SearchMode, PathBuf, usize)> {
     let query = input["query"]
         .as_str()
-        .ok_or_else(|| anyhow::anyhow!("query is required"))?
-        .to_string();
+        .ok_or_else(|| anyhow::anyhow!("query is required"))?.to_owned();
     let mode = input["mode"]
         .as_str()
         .map(SearchMode::from_str)
@@ -82,12 +81,12 @@ pub(crate) fn search_impl(
     };
     with_picker(
         &state,
-        query.to_string(),
+        query.to_owned(),
         start,
         build_search_lock_error,
         build_search_not_initialized,
         |picker| {
-            with_query_tracker(&state, query.to_string(), start, |qt| {
+            with_query_tracker(&state, query.to_owned(), start, |qt| {
                 dispatch_search(picker, qt, query, mode, limit, start)
             })
         },
@@ -130,7 +129,7 @@ where
         Ok(g) => g,
         Err(e) => {
             return Ok(ToolOutput {
-                tool_name: "search".to_string(),
+                tool_name: "search".to_owned(),
                 tool_args: serde_json::json!({ "query": query }),
                 content: format!("Error acquiring query_tracker lock: {}", e),
                 bytes_transferred: None,

@@ -76,7 +76,7 @@ fn slice_content(content: &str, offset: Option<usize>, limit: Option<usize>) -> 
         .unwrap_or(total_lines);
 
     if start >= total_lines {
-        return "(end of file)".to_string();
+        return "(end of file)".to_owned();
     }
 
     let selected: String = lines[start..end].join("\n");

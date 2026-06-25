@@ -52,14 +52,14 @@ impl ConfigActor {
             Ok(Err(e)) => {
                 tracing::error!("config write failed: {e:?}");
                 bus.publish(Event::Error {
-                    id: "config".to_string(),
+                    id: "config".to_owned(),
                     message: format!("Config write failed: {e}"),
                 });
             }
             Err(e) => {
                 tracing::error!("config write task panicked: {e:?}");
                 bus.publish(Event::Error {
-                    id: "config".to_string(),
+                    id: "config".to_owned(),
                     message: format!("Config write task panicked: {e}"),
                 });
             }
@@ -101,9 +101,9 @@ impl ConfigActor {
         models: &[String],
         bus: &EventBus<Event>,
     ) {
-        let name = name.to_string();
-        let base_url = base_url.to_string();
-        let api_key = api_key.to_string();
+        let name = name.to_owned();
+        let base_url = base_url.to_owned();
+        let api_key = api_key.to_owned();
         let models = models.to_vec();
         self.mutate_config(bus, move |path| {
             save_provider_to_path(&path, &name, &base_url, &api_key, &models)
@@ -112,14 +112,14 @@ impl ConfigActor {
     }
 
     async fn remove_provider(&mut self, name: &str, bus: &EventBus<Event>) {
-        let name = name.to_string();
+        let name = name.to_owned();
         self.mutate_config(bus, move |path| remove_provider_from_path(&path, &name))
             .await;
     }
 
     async fn set_default_model(&mut self, provider: &str, model: &str, bus: &EventBus<Event>) {
-        let provider = provider.to_string();
-        let model = model.to_string();
+        let provider = provider.to_owned();
+        let model = model.to_owned();
         self.mutate_config(bus, move |path| {
             set_default_model_at_path(&path, &provider, &model)
         })
@@ -127,7 +127,7 @@ impl ConfigActor {
     }
 
     async fn set_provider_models(&mut self, name: &str, models: &[String], bus: &EventBus<Event>) {
-        let name = name.to_string();
+        let name = name.to_owned();
         let models = models.to_vec();
         self.mutate_config(bus, move |path| {
             set_provider_models_at_path(&path, &name, &models)

@@ -78,7 +78,7 @@ fn push_pending_edits(parts: &mut Vec<String>, snap: &Snapshot) {
 
 fn push_read_only(parts: &mut Vec<String>, snap: &Snapshot) {
     if snap.read_only {
-        parts.push("🔒 RO".to_string());
+        parts.push("🔒 RO".to_owned());
     }
 }
 
@@ -108,7 +108,7 @@ pub(crate) fn build_right_status(snap: &Snapshot) -> String {
         } else if snap.speed_tps > 0.0 {
             format!("{:.1}", snap.speed_tps)
         } else {
-            "-".to_string()
+            "-".to_owned()
         };
         // Use animated display values for smooth transitions
         let tokens_in_display = snap.tokens_in_display;

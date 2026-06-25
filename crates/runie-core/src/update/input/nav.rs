@@ -115,7 +115,7 @@ impl AppState {
             .find('\n')
             .map(|i| next_line_start + i)
             .unwrap_or(self.input().input.len());
-        let (current_line_start, _) = compute_line_bounds(&self.input());
+        let (current_line_start, _) = compute_line_bounds(self.input());
         let current_col = cursor_pos - current_line_start;
         let next_line_len = next_line_end - next_line_start;
         self.input_mut().cursor_pos = next_line_start + current_col.min(next_line_len);

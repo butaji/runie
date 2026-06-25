@@ -37,7 +37,7 @@ fn load_subdir_skills(
             continue;
         }
         if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
-            names.insert(name.to_string());
+            names.insert(name.to_owned());
         }
         if let Some(skill) = parse_skill_md(&skill_md) {
             skills.push(skill);
@@ -101,16 +101,16 @@ fn resolve_skill_name(path: &Path, frontmatter: &HashMap<String, String>) -> Str
     frontmatter
         .get("name")
         .cloned()
-        .unwrap_or_else(|| derive_skill_name(path).unwrap_or_else(|| "unnamed".to_string()))
+        .unwrap_or_else(|| derive_skill_name(path).unwrap_or_else(|| "unnamed".to_owned()))
 }
 
 fn derive_skill_name(path: &Path) -> Option<String> {
     if path.file_name().and_then(|s| s.to_str()) == Some("SKILL.md") {
-        path.parent()?.file_name()?.to_str().map(|s| s.to_string())
+        path.parent()?.file_name()?.to_str().map(|s| s.to_owned())
     } else {
         path.file_stem()
             .and_then(|s| s.to_str())
-            .map(|s| s.to_string())
+            .map(|s| s.to_owned())
     }
 }
 
@@ -173,6 +173,6 @@ pub(crate) fn extract_section(content: &str, heading: &str) -> Option<String> {
     if text.is_empty() {
         None
     } else {
-        Some(text.to_string())
+        Some(text.to_owned())
     }
 }

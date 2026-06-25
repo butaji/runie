@@ -73,14 +73,14 @@ fn build_subagent_command(
     system_prompt: &str,
 ) -> AgentCommand {
     AgentCommand {
-        content: prompt.to_string(),
-        id: "subagent.0".to_string(),
-        provider: provider_key.to_string(),
-        model: model.to_string(),
+        content: prompt.to_owned(),
+        id: "subagent.0".to_owned(),
+        provider: provider_key.to_owned(),
+        model: model.to_owned(),
         thinking_level,
         read_only,
-        skills_context: skills_context.to_string(),
-        system_prompt: system_prompt.to_string(),
+        skills_context: skills_context.to_owned(),
+        system_prompt: system_prompt.to_owned(),
         truncation: crate::truncate::TruncationPolicy::default(),
     }
 }

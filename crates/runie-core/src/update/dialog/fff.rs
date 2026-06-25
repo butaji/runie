@@ -96,7 +96,7 @@ fn format_fff_git_status(status: git2::Status) -> String {
     ];
     for (flag, label) in STATUS_LABELS {
         if status.contains(*flag) {
-            return (*label).to_string();
+            return (*label).to_owned();
         }
     }
     String::new()

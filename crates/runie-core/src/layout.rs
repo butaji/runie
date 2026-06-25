@@ -74,7 +74,7 @@ fn fallback_line_count(element: &Element) -> usize {
             if *collapsed {
                 1
             } else {
-                tools.iter().map(|t| fallback_line_count(t)).sum()
+                tools.iter().map(fallback_line_count).sum()
             }
         }
         Element::TurnComplete { .. } => 1,

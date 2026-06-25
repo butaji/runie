@@ -48,7 +48,7 @@ fn handle_double(
 fn handle_single(c: char, openers: &mut Vec<char>, blocker: Option<char>) {
     if openers.last() == Some(&c) {
         openers.pop();
-    } else if blocker.map_or(true, |b| openers.last() != Some(&b)) {
+    } else if blocker.is_none_or(|b| openers.last() != Some(&b)) {
         openers.push(c);
     }
 }
@@ -71,11 +71,10 @@ fn process_markdown_char(
         '_' => handle_single('_', openers, Some('*')),
         '~' => handle_double('~', chars, result, openers),
         '[' => openers.push('['),
-        ']' => {
-            if openers.last() == Some(&'[') {
+        ']'
+            if openers.last() == Some(&'[') => {
                 openers.pop();
             }
-        }
         // intentionally ignored: other characters don't affect bracket stack
         _ => {}
     }
@@ -202,7 +201,7 @@ impl StreamingBuffer {
 
         if stable_count > 0 {
             for &line in lines.iter().take(stable_count) {
-                self.stable.push(line.to_string());
+                self.stable.push(line.to_owned());
             }
         }
 
@@ -266,7 +265,7 @@ fn classify_normal_line(trimmed: &str) -> Option<LineClass> {
         return Some(LineClass::Empty);
     }
     if trimmed.starts_with("```") {
-        let lang = trimmed.trim_start_matches("```").trim().to_string();
+        let lang = trimmed.trim_start_matches("```").trim().to_owned();
         return Some(LineClass::Fence(lang));
     }
     if is_table_separator(trimmed) {

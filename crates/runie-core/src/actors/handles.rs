@@ -65,7 +65,7 @@ impl ActorHandles {
     /// Send `SetDefaultModel` to `ConfigActor`.
     pub async fn send_set_default_model(&self, provider: &str, model: &str) {
         if let Some(ref h) = self.config {
-            h.set_default_model(provider.to_string(), model.to_string())
+            h.set_default_model(provider.to_owned(), model.to_owned())
                 .await;
         }
     }
@@ -80,9 +80,9 @@ impl ActorHandles {
     ) {
         if let Some(ref h) = self.config {
             h.save_provider(
-                name.to_string(),
-                base_url.to_string(),
-                api_key.to_string(),
+                name.to_owned(),
+                base_url.to_owned(),
+                api_key.to_owned(),
                 models,
             )
             .await;
@@ -92,14 +92,14 @@ impl ActorHandles {
     /// Send `RemoveProvider` to `ConfigActor`.
     pub async fn send_remove_provider(&self, name: &str) {
         if let Some(ref h) = self.config {
-            h.remove_provider(name.to_string()).await;
+            h.remove_provider(name.to_owned()).await;
         }
     }
 
     /// Send `SetProviderModels` to `ConfigActor`.
     pub async fn send_set_provider_models(&self, name: &str, models: Vec<String>) {
         if let Some(ref h) = self.config {
-            h.set_provider_models(name.to_string(), models).await;
+            h.set_provider_models(name.to_owned(), models).await;
         }
     }
 

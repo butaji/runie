@@ -78,7 +78,7 @@ fn read_legacy_keybindings(json_path: &std::path::Path) -> Option<toml::value::T
     let mut kb_table = toml::value::Table::new();
     for (k, v) in obj {
         if let Some(s) = v.as_str() {
-            kb_table.insert(k.clone(), toml::Value::String(s.to_string()));
+            kb_table.insert(k.clone(), toml::Value::String(s.to_owned()));
         }
     }
     if !kb_table.is_empty() {

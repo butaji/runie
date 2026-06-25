@@ -59,13 +59,13 @@ pub(crate) fn parse_hint_spans(text: &str) -> Vec<Span<'static>> {
         if let Some(space_idx) = segment.find(' ') {
             let key = &segment[..space_idx];
             let desc = &segment[space_idx..];
-            spans.push(Span::styled(key.to_string(), style_hint_key()));
-            spans.push(Span::styled(desc.to_string(), style_hint()));
+            spans.push(Span::styled(key.to_owned(), style_hint_key()));
+            spans.push(Span::styled(desc.to_owned(), style_hint()));
         } else {
             spans.push(Span::styled(segment.to_string(), style_hint()));
         }
         if i + 1 < segments.len() {
-            spans.push(Span::styled(" · ".to_string(), style_hint()));
+            spans.push(Span::styled(" · ".to_owned(), style_hint()));
         }
     }
     spans

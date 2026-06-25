@@ -41,7 +41,7 @@ impl FffIndexerActor {
             self.shared_picker.clone(),
             self.shared_frecency.clone(),
             FilePickerOptions {
-                base_path: root_str.clone(),
+                base_path: root_str,
                 mode: FFFMode::Ai,
                 watch: true,
                 enable_mmap_cache: false,
@@ -138,10 +138,10 @@ fn format_git_status_str(status: git2::Status) -> String {
     ];
     for (flag, label) in STATUS_LABELS {
         if status.contains(*flag) {
-            return (*label).to_string();
+            return (*label).to_owned();
         }
     }
-    "clean".to_string()
+    "clean".to_owned()
 }
 
 /// Build a result payload.

@@ -54,16 +54,16 @@ pub fn parse_file_ref(input: &str) -> Option<ParsedFileRef> {
     Some(ParsedFileRef {
         path,
         range: Some(start..=end),
-        original: input.to_string(),
+        original: input.to_owned(),
     })
 }
 
 /// Return a plain ParsedFileRef with an explicit path and the original input preserved.
 fn plain_ref(path: &str, original: &str) -> ParsedFileRef {
     ParsedFileRef {
-        path: path.to_string(),
+        path: path.to_owned(),
         range: None,
-        original: original.to_string(),
+        original: original.to_owned(),
     }
 }
 
@@ -232,7 +232,7 @@ pub fn read_file_ref_with_range(
         // Images are always read whole — ranges don't apply.
         let bytes = std::fs::read(path).map_err(|e| format!("Error reading {}: {}", path, e))?;
         return Ok(FileRef {
-            path: path.to_string(),
+            path: path.to_owned(),
             text: base64::engine::general_purpose::STANDARD.encode(&bytes),
             is_image: true,
         });
@@ -247,7 +247,7 @@ pub fn read_file_ref_with_range(
     };
 
     Ok(FileRef {
-        path: path.to_string(),
+        path: path.to_owned(),
         text,
         is_image: false,
     })
@@ -295,6 +295,6 @@ pub fn insert_at_ref(input: &str, selected: &str) -> String {
         let prefix = &input[..pos];
         format!("{}[{}]", prefix, selected)
     } else {
-        input.to_string()
+        input.to_owned()
     }
 }

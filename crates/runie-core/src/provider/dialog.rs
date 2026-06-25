@@ -59,7 +59,7 @@ fn add_provider_section(
     let provider_label = provider_label(provider_name, is_active);
     panel = panel.header(format!("── {} ──", provider_label));
 
-    let provider = provider_name.to_string();
+    let provider = provider_name.to_owned();
     for model in models {
         let label = model_label(model, is_active, model == current_model);
         let evt = crate::Event::ProvidersSelectModel {
@@ -83,7 +83,7 @@ fn provider_label(name: &str, is_active: bool) -> String {
     if is_active {
         format!("{} (active)", name)
     } else {
-        name.to_string()
+        name.to_owned()
     }
 }
 

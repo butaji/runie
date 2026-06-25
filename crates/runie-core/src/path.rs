@@ -35,7 +35,7 @@ fn expand_tilde(path: &str) -> String {
             return home.to_string_lossy().to_string();
         }
     }
-    path.to_string()
+    path.to_owned()
 }
 
 fn normalize_path(path: &Path) -> PathBuf {

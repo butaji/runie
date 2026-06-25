@@ -56,10 +56,10 @@ fn build_header(lines: &mut Vec<Line<'static>>) {
 
 fn option_line(prefix: &str, label: &str, spacing: &str, key: &str) -> Line<'static> {
     Line::from(vec![
-        Span::raw(prefix.to_string()),
-        label.to_string().white(),
-        Span::raw(spacing.to_string()),
-        Span::styled(key.to_string(), Style::default().fg(color_accent())),
+        Span::raw(prefix.to_owned()),
+        label.to_owned().white(),
+        Span::raw(spacing.to_owned()),
+        Span::styled(key.to_owned(), Style::default().fg(color_accent())),
     ])
 }
 

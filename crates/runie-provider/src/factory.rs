@@ -30,8 +30,8 @@ impl ProviderFactory for DynProviderFactory {
         base_url: &str,
         api_key: &str,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<String>>> + Send + '_>> {
-        let base_url = base_url.to_string();
-        let api_key = api_key.to_string();
+        let base_url = base_url.to_owned();
+        let api_key = api_key.to_owned();
         Box::pin(async move { validate_api_key(&base_url, &api_key).await })
     }
 
@@ -47,5 +47,5 @@ impl ProviderFactory for DynProviderFactory {
 }
 
 fn default_base_url(provider: &str) -> Option<String> {
-    runie_core::provider::find_provider(provider).map(|m| m.base_url.to_string())
+    runie_core::provider::find_provider(provider).map(|m| m.base_url.to_owned())
 }

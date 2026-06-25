@@ -138,18 +138,15 @@ pub fn replay_sse(text: &str) -> Vec<ProviderEvent> {
         if trimmed.is_empty() {
             continue;
         }
-        match OpenAiFrame::from_line(trimmed) {
-            Some(frame) => {
-                if protocol.terminal(&frame) {
-                    let (_, new_events) = protocol.step(std::mem::take(&mut state), frame);
-                    events.extend(new_events);
-                    break;
-                }
-                let (new_state, new_events) = protocol.step(std::mem::take(&mut state), frame);
-                state = new_state;
+        if let Some(frame) = OpenAiFrame::from_line(trimmed) {
+            if protocol.terminal(&frame) {
+                let (_, new_events) = protocol.step(std::mem::take(&mut state), frame);
                 events.extend(new_events);
+                break;
             }
-            None => {}
+            let (new_state, new_events) = protocol.step(std::mem::take(&mut state), frame);
+            state = new_state;
+            events.extend(new_events);
         }
     }
     events.extend(protocol.on_halt(state));

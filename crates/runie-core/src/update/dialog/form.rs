@@ -159,7 +159,7 @@ fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
         Some(PanelItem::Toggle { action: ItemAction::Emit(crate::Event::ToggleModel { model }), .. })
             if panel.id == "login-models" => {
                 if let Some(flow) = state.login_flow_mut().as_mut() {
-                    flow.selected_models.insert(model.clone());
+                    flow.selected_models.insert(model);
                 }
                 A::Submit(Some(crate::Event::Save))
             }

@@ -81,11 +81,11 @@ impl HeadlessRuntime {
         let provider_name = provider
             .map(String::from)
             .or(config.provider.clone())
-            .unwrap_or_else(|| "mock".to_string());
+            .unwrap_or_else(|| "mock".to_owned());
         let model_name = model
             .map(String::from)
             .or_else(|| config.default_model().map(String::from))
-            .unwrap_or_else(|| "echo".to_string());
+            .unwrap_or_else(|| "echo".to_owned());
         self.provider_handle.build(provider_name, model_name).await
     }
 

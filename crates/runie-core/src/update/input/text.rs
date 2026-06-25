@@ -4,9 +4,9 @@ use crate::model::AppState;
 
 impl AppState {
     pub(crate) fn hint_text(&self) -> String {
-        let mut parts = vec!["ctrl+o expand/collapse".to_string()];
+        let mut parts = vec!["ctrl+o expand/collapse".to_owned()];
         parts.extend(self.mode_hints());
-        parts.push("ctrl+c quit".to_string());
+        parts.push("ctrl+c quit".to_owned());
         parts.join(" · ")
     }
 
@@ -27,7 +27,7 @@ impl AppState {
             return crate::update::input::input_active_hints();
         }
         if self.config().vim_mode {
-            return vec!["esc nav".to_string()];
+            return vec!["esc nav".to_owned()];
         }
         crate::update::input::empty_input_hints()
     }
@@ -39,9 +39,9 @@ impl AppState {
             "esc abort"
         };
         vec![
-            "enter steer".to_string(),
-            "alt+enter follow-up".to_string(),
-            esc.to_string(),
+            "enter steer".to_owned(),
+            "alt+enter follow-up".to_owned(),
+            esc.to_owned(),
         ]
     }
 

@@ -49,7 +49,7 @@ pub fn load_prompts(default: Option<&str>, custom_path: Option<&str>) -> Vec<Pro
     });
 
     if let Some(path) = custom_path {
-        let path_string = path.to_string();
+        let path_string = path.to_owned();
         let path_buf = PathBuf::from(path);
         if let Ok(content) =
             block_in_place_if_runtime(move || std::fs::read_to_string(&path_string))
@@ -74,7 +74,7 @@ pub fn build_system_prompt(
     read_only: bool,
     thinking_suffix: &str,
 ) -> String {
-    let mut system = base_prompt.to_string();
+    let mut system = base_prompt.to_owned();
     system.push_str(&format!(
         " Use structured JSON format: {{\"name\": \"tool_name\", \"arguments\": {{...}}}}. \
             Available tools: {}. \

@@ -57,7 +57,7 @@ pub fn build_request_body(
             body["tool_choice"] = provider
                 .tool_choice()
                 .cloned()
-                .unwrap_or_else(|| serde_json::Value::String("auto".to_string()));
+                .unwrap_or_else(|| serde_json::Value::String("auto".to_owned()));
         }
     }
     body
@@ -110,7 +110,7 @@ fn serialize_messages(messages: &[ChatMessage], supports_system: bool) -> Vec<se
 fn collect_tool_call_ids(messages: &[ChatMessage]) -> std::collections::HashSet<String> {
     messages
         .iter()
-        .flat_map(|m| m.tool_calls().into_iter().map(|c| c.id.clone()))
+        .flat_map(|m| m.tool_calls().into_iter().map(|c| c.id))
         .collect()
 }
 
@@ -135,13 +135,13 @@ fn message_to_openai(
     let has_tool_calls = !tool_calls.is_empty();
 
     serde_json::to_value(OpenAiMessage {
-        role: role.to_string(),
+        role: role.to_owned(),
         content: if has_tool_calls {
             Some(String::new())
         } else {
             Some(content.clone())
         },
-        tool_calls: tool_calls.iter().map(|c| tool_call_to_openai(c)).collect(),
+        tool_calls: tool_calls.iter().map(tool_call_to_openai).collect(),
         tool_call_id: None,
     })
     .unwrap_or_else(|_| fallback_message(role, &content))
@@ -168,7 +168,7 @@ fn serialize_tool_message(
 fn tool_call_to_openai(call: &ToolCall) -> OpenAiToolCall {
     OpenAiToolCall {
         id: sanitize_tool_call_id(&call.id),
-        call_type: "function".to_string(),
+        call_type: "function".to_owned(),
         function: OpenAiFunction {
             name: call.name.clone(),
             arguments: call.args.to_string(),

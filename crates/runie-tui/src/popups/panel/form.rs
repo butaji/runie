@@ -344,7 +344,7 @@ fn input_display_spans(
         let text = if is_active {
             format!("{}▏", placeholder)
         } else {
-            placeholder.to_string()
+            placeholder.to_owned()
         };
         return vec![Span::styled(pad_to_width(&text, avail), cursor_style)];
     }
@@ -373,11 +373,7 @@ fn compute_field_scroll(before_w: usize, after_w: usize, avail: usize) -> usize 
         return 0;
     }
     let need = before_w + 1;
-    if need <= avail {
-        0
-    } else {
-        need - avail
-    }
+    need.saturating_sub(avail)
 }
 
 fn build_field_spans(

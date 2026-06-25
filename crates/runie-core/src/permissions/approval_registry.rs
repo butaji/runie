@@ -26,7 +26,7 @@ impl ApprovalRegistry {
     pub fn register(&self, request_id: &str) -> oneshot::Receiver<PermissionAction> {
         let (tx, rx) = oneshot::channel();
         if let Ok(mut pending) = self.pending.lock() {
-            pending.insert(request_id.to_string(), tx);
+            pending.insert(request_id.to_owned(), tx);
         }
         rx
     }

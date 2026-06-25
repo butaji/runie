@@ -61,7 +61,7 @@ impl<E: std::fmt::Display> Stream for FramingStream<E> {
 
 fn drain_buffer(buffer: &mut String) -> Option<String> {
     while let Some(pos) = buffer.find('\n') {
-        let line = buffer[..pos].trim().to_string();
+        let line = buffer[..pos].trim().to_owned();
         *buffer = buffer[pos + 1..].to_string();
 
         let data = line.strip_prefix("data: ")?;
@@ -69,7 +69,7 @@ fn drain_buffer(buffer: &mut String) -> Option<String> {
             continue;
         }
 
-        return Some(data.to_string());
+        return Some(data.to_owned());
     }
     None
 }
@@ -80,7 +80,7 @@ pub fn parse_sse_line(line: &str) -> Option<String> {
     if data == "[DONE]" {
         return None;
     }
-    Some(data.to_string())
+    Some(data.to_owned())
 }
 
 /// Parse an SSE event line (data: {...} or data: [DONE]).
@@ -96,7 +96,7 @@ impl SseLine {
         if data == "[DONE]" {
             Some(SseLine::Done)
         } else {
-            Some(SseLine::Data(data.to_string()))
+            Some(SseLine::Data(data.to_owned()))
         }
     }
 

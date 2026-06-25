@@ -44,7 +44,7 @@ fn login_flow_select_provider(state: &mut crate::model::AppState, provider: Stri
     if let Some(flow) = state.login_flow_mut() {
         *flow = LoginFlowState {
             step: LoginStep::KeyInput,
-            provider: provider.clone(),
+            provider: provider,
             key: current_key,
             available_models: std::mem::take(&mut flow.available_models),
             selected_models: std::mem::take(&mut flow.selected_models),
@@ -65,7 +65,7 @@ fn reject_empty_key(
         let p = if provider.is_empty() {
             state.active_provider()
         } else {
-            provider.to_string()
+            provider.to_owned()
         };
         state.warn("API key is required.");
         return Some(p);
@@ -196,7 +196,7 @@ pub(crate) fn provider_base_url(state: &crate::model::AppState, provider: &str) 
         .map(|p| p.base_url.clone())
         .unwrap_or_else(|| {
             crate::provider::find_provider(provider)
-                .map(|p| p.base_url.to_string())
+                .map(|p| p.base_url.to_owned())
                 .unwrap_or_default()
         })
 }
@@ -276,9 +276,9 @@ fn persist_provider_config(
 
     if can_spawn {
         let handles = handles.unwrap();
-        let provider = provider.to_string();
-        let base_url = base_url.to_string();
-        let key = key.to_string();
+        let provider = provider.to_owned();
+        let base_url = base_url.to_owned();
+        let key = key.to_owned();
         let selected = selected.to_vec();
         tokio::spawn(async move {
             handles
@@ -304,7 +304,7 @@ fn activate_first_model(state: &mut crate::model::AppState, provider: &str, sele
                 .cloned()
         })
         .unwrap_or_default();
-    state.switch_model(provider.to_string(), first_model, false);
+    state.switch_model(provider.to_owned(), first_model, false);
 }
 
 fn sync_config_cache(

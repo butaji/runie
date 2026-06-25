@@ -14,7 +14,7 @@ pub fn run(text: String, tx: mpsc::Sender<CoreEvent>) {
 
 fn spawn_external_editor_sync(text: String, tx: mpsc::Sender<CoreEvent>) -> io::Result<()> {
     let editor = std::env::var("EDITOR")
-        .unwrap_or_else(|_| if cfg!(windows) { "notepad" } else { "vi" }.to_string());
+        .unwrap_or_else(|_| if cfg!(windows) { "notepad" } else { "vi" }.to_owned());
 
     let mut tmp = tempfile::NamedTempFile::new()?;
     tmp.write_all(text.as_bytes())?;

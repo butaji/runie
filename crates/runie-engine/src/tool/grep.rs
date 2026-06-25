@@ -52,12 +52,10 @@ impl Tool for GrepTool {
 fn parse_grep_input(input: &Value) -> Result<(String, String, Option<String>, bool, bool, usize)> {
     let pattern = input["pattern"]
         .as_str()
-        .ok_or_else(|| anyhow::anyhow!("pattern is required"))?
-        .to_string();
+        .ok_or_else(|| anyhow::anyhow!("pattern is required"))?.to_owned();
     let path = input["path"]
         .as_str()
-        .ok_or_else(|| anyhow::anyhow!("path is required"))?
-        .to_string();
+        .ok_or_else(|| anyhow::anyhow!("path is required"))?.to_owned();
     let glob = input["glob"].as_str().map(String::from);
     let ignore_case = input["ignore_case"].as_bool().unwrap_or(false);
     let literal = input["literal"].as_bool().unwrap_or(false);
@@ -124,7 +122,7 @@ fn build_grep_output(
     start: Instant,
 ) -> ToolOutput {
     ToolOutput {
-        tool_name: "grep".to_string(),
+        tool_name: "grep".to_owned(),
         tool_args: serde_json::json!({ "path": path, "pattern": pattern }),
         content,
         bytes_transferred: Some(bytes as u64),
@@ -136,12 +134,12 @@ fn build_grep_output(
 fn parse_grep_output(stdout: &str, stderr: &str, code: Option<i32>) -> (String, ToolStatus) {
     if stdout.trim().is_empty() {
         if code == Some(1) {
-            ("No matches found".to_string(), ToolStatus::Success)
+            ("No matches found".to_owned(), ToolStatus::Success)
         } else {
             (format!("Error: {}", stderr.trim()), ToolStatus::Error)
         }
     } else {
-        (stdout.to_string(), ToolStatus::Success)
+        (stdout.to_owned(), ToolStatus::Success)
     }
 }
 

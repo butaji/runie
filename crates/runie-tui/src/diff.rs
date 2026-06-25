@@ -36,12 +36,12 @@ pub fn render_canonical_diff(diff: &Diff, gutter_width: usize) -> Vec<Line<'stat
                                 .bg(style.bg.unwrap_or(Color::Reset)),
                         ),
                         Span::styled(prefix, style),
-                        Span::styled(line.content().to_string(), style),
+                        Span::styled(line.content().to_owned(), style),
                     ]
                 }
                 None => vec![
                     Span::styled(prefix, style),
-                    Span::styled(line.content().to_string(), style),
+                    Span::styled(line.content().to_owned(), style),
                 ],
             };
             output.push(Line::from(spans));
@@ -78,7 +78,7 @@ pub fn diff_line_prefix(line: &DiffLine) -> &'static str {
 /// Render diff text directly (convenience — for non-canonical tool output).
 pub fn render_diff_text(text: &str) -> Vec<Line<'static>> {
     if !Diff::is_diff_output(text) {
-        return text.lines().map(|l| Line::from(l.to_string())).collect();
+        return text.lines().map(|l| Line::from(l.to_owned())).collect();
     }
 
     let diff = Diff::parse(text);

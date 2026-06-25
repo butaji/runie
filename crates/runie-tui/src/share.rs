@@ -42,7 +42,7 @@ pub async fn share_session(
 
 /// Extract the HTML URL from a GitHub gist creation response.
 pub fn parse_gist_url(json: &serde_json::Value) -> Option<String> {
-    json.get("html_url")?.as_str().map(|s| s.to_string())
+    json.get("html_url")?.as_str().map(|s| s.to_owned())
 }
 
 #[cfg(test)]

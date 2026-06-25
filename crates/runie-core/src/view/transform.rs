@@ -58,7 +58,7 @@ impl LazyCache {
 
     fn action_turn_id(msg: &crate::model::ChatMessage) -> Option<String> {
         match msg.role {
-            Role::Thought => msg.id.split_once('#').map(|(prefix, _)| prefix.to_string()),
+            Role::Thought => msg.id.split_once('#').map(|(prefix, _)| prefix.to_owned()),
             Role::Tool => {
                 let rest = msg.id.strip_prefix("tool.")?;
                 let idx = rest.rfind('.')?;
@@ -238,16 +238,16 @@ impl LazyCache {
         Element::AgentMessage {
             content: crate::update::strip_tool_markers(content),
             timestamp: ts,
-            provider: provider.to_string(),
+            provider: provider.to_owned(),
         }
     }
 
     fn reasoning_elem(content: &str, state: &AppState, ts: f64) -> Element {
         if state.view().all_collapsed {
-            let first_line = content.lines().next().unwrap_or(content).to_string();
+            let first_line = content.lines().next().unwrap_or(content).to_owned();
             Element::thought_summary(first_line, 0.0).at(ts)
         } else {
-            Element::thought(content.to_string()).at(ts)
+            Element::thought(content.to_owned()).at(ts)
         }
     }
 
@@ -263,7 +263,7 @@ impl LazyCache {
     fn thought_elem(msg: &ChatMessage, state: &AppState, ts: f64) -> Element {
         let content = msg.content();
         if state.view().all_collapsed {
-            let first_line = content.lines().next().unwrap_or(&content).to_string();
+            let first_line = content.lines().next().unwrap_or(&content).to_owned();
             Element::thought_summary(first_line, Self::parse_thought_dur(&content)).at(ts)
         } else {
             Element::thought(content).at(ts)

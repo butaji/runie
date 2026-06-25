@@ -67,7 +67,7 @@ pub fn truncate_head(content: &str, policy: &TruncationPolicy) -> TruncatedOutpu
     let total_bytes = content.len();
 
     if total_lines <= policy.max_lines && total_bytes <= policy.max_bytes {
-        return TruncatedOutput::full(content.to_string());
+        return TruncatedOutput::full(content.to_owned());
     }
 
     let mut output = Vec::new();
@@ -102,7 +102,7 @@ pub fn truncate_tail(content: &str, policy: &TruncationPolicy) -> TruncatedOutpu
     let total_bytes = content.len();
 
     if total_lines <= policy.max_lines && total_bytes <= policy.max_bytes {
-        return TruncatedOutput::full(content.to_string());
+        return TruncatedOutput::full(content.to_owned());
     }
 
     let mut output = Vec::new();

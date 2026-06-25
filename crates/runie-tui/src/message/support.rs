@@ -80,7 +80,7 @@ pub fn render_tool_done(
             lines.extend(crate::diff::render_diff_text(output));
         } else {
             for line in output.lines() {
-                lines.push(Line::from(line.to_string()).style(style_tool_output()));
+                lines.push(Line::from(line.to_owned()).style(style_tool_output()));
             }
         }
     }
@@ -185,7 +185,7 @@ pub fn render_list_item(
     let bullet = if ordered {
         format!("{}.", idx + 1)
     } else {
-        "•".to_string()
+        "•".to_owned()
     };
     let first_line_prefix = if is_first {
         format!("{} {}", GLYPH_AGENT, bullet)
@@ -204,7 +204,7 @@ pub fn render_list_item(
             &rest_prefix
         };
         if j > 0 {
-            result_spans.push(Span::raw("\n".to_string()));
+            result_spans.push(Span::raw("\n".to_owned()));
         }
         result_spans.push(Span::styled(prefix.clone(), style_agent()));
         result_spans.push(Span::styled(line.to_string(), style_agent()));

@@ -158,7 +158,7 @@ fn remove_orphan_tool_results(messages: &mut Vec<ChatMessage>) -> Vec<SanitizeEr
     let removed = before - messages.len();
     for _ in 0..removed {
         errors.push(SanitizeError::OrphanToolResult {
-            tool_call_id: "<unknown>".to_string(),
+            tool_call_id: "<unknown>".to_owned(),
         });
     }
     errors
@@ -215,7 +215,7 @@ fn trim_assistant_whitespace(messages: &mut Vec<ChatMessage>) -> Vec<SanitizeErr
     for msg in messages.iter_mut() {
         if msg.role == Role::Assistant {
             if let Some(Part::Text { content }) = msg.parts.last_mut() {
-                *content = content.trim().to_string();
+                *content = content.trim().to_owned();
             }
         }
     }

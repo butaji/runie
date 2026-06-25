@@ -36,7 +36,7 @@ impl Tool for BashTool {
         let tool_args = serde_json::json!({ "command": command });
 
         if let Some(reason) = check_bash_safety(command) {
-            return Ok(ToolOutput::blocked("bash", tool_args, reason.to_string()));
+            return Ok(ToolOutput::blocked("bash", tool_args, reason.to_owned()));
         }
         let timeout_secs = input["timeout_seconds"]
             .as_u64()
@@ -46,7 +46,7 @@ impl Tool for BashTool {
         let result = run_bash_inner(command, &ctx.working_dir, &ctx.env, timeout).await;
 
         Ok(ToolOutput {
-            tool_name: "bash".to_string(),
+            tool_name: "bash".to_owned(),
             tool_args,
             content: result.output,
             bytes_transferred: result.bytes_transferred,
@@ -130,7 +130,7 @@ async fn collect_output(
 
 fn bash_error(msg: &str) -> BashResult {
     BashResult {
-        output: msg.to_string(),
+        output: msg.to_owned(),
         bytes_transferred: None,
         status: ToolStatus::Error,
     }
@@ -152,10 +152,10 @@ fn combine_output(stdout: &str, stderr: &str) -> String {
         return String::new();
     }
     if stdout.is_empty() {
-        return stderr.trim_end().to_string();
+        return stderr.trim_end().to_owned();
     }
     if stderr.is_empty() {
-        return stdout.trim_end().to_string();
+        return stdout.trim_end().to_owned();
     }
     format!("{}\n{}", stdout.trim_end(), stderr.trim_end())
 }

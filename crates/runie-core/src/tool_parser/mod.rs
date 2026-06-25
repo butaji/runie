@@ -77,7 +77,7 @@ fn parse_line_strategies(
             results.extend(inline);
         } else if trimmed.starts_with('{') {
             results.push(Err(ToolParseError {
-                raw: original_line.to_string(),
+                raw: original_line.to_owned(),
                 reason: "invalid JSON tool call or unknown tool name".into(),
             }));
         }
@@ -88,7 +88,7 @@ fn parse_line_strategies(
         match parse_markup_tool(trimmed) {
             Some(t) => results.push(Ok(t)),
             None => results.push(Err(ToolParseError {
-                raw: original_line.to_string(),
+                raw: original_line.to_owned(),
                 reason: "invalid [TOOL_CALL] markup or unknown tool name".into(),
             })),
         }
@@ -181,7 +181,7 @@ pub fn build_assistant_message(
             tool.args.clone(),
         ));
     }
-    ChatMessage::assistant(response_text.to_string())
+    ChatMessage::assistant(response_text.to_owned())
         .with_tool_calls(tool_calls)
         .with_parts(parts)
 }

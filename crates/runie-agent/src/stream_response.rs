@@ -48,7 +48,7 @@ impl StreamState {
             reasoning: None,
             tool_stream: ToolStream::new(),
             tool_calls: Vec::new(),
-            command_id: command_id.to_string(),
+            command_id: command_id.to_owned(),
             emit,
             think_filter: ThinkFilter::new(),
         }

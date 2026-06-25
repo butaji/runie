@@ -221,7 +221,7 @@ impl FnTracker {
         self.in_fn_body = false;
         self.fn_start = i;
         self.fn_complexity = 1;
-        self.fn_name = trimmed.lines().next().unwrap_or("").to_string();
+        self.fn_name = trimmed.lines().next().unwrap_or("").to_owned();
     }
 
     /// Update brace depth and return the complexity delta for this line.

@@ -107,8 +107,7 @@ impl AppState {
             return;
         }
         let content = std::mem::take(&mut self.input_mut().input)
-            .trim()
-            .to_string();
+            .trim().to_owned();
         self.input_mut().cursor_pos = 0;
         if content.is_empty() {
             return;

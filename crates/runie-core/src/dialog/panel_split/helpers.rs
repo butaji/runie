@@ -4,7 +4,7 @@
 
 /// Normalize title: one leading/trailing space, trimmed empty titles stay empty.
 pub fn normalize_title(title: impl Into<String>) -> String {
-    let trimmed = title.into().trim().to_string();
+    let trimmed = title.into().trim().to_owned();
     if trimmed.is_empty() {
         trimmed
     } else {

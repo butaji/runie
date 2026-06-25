@@ -21,8 +21,8 @@ pub fn partition_model_items(
         }
         if let Some((provider, model)) = name.split_once('/') {
             let evt = crate::Event::SwitchModel {
-                provider: provider.to_string(),
-                model: model.to_string(),
+                provider: provider.to_owned(),
+                model: model.to_owned(),
                 explicit: true,
             };
             current_group.push((name, evt));

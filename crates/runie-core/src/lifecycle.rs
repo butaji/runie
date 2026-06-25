@@ -25,38 +25,38 @@ impl LifecycleState {
     ///
     /// Returns `TextStart` on first delta for this `id`, then `TextDelta`.
     pub fn text_delta(&mut self, id: &str, delta: &str) -> Vec<ProviderEvent> {
-        let is_new = self.open_text_blocks.insert(id.to_string());
+        let is_new = self.open_text_blocks.insert(id.to_owned());
         let mut events = Vec::new();
         if is_new {
-            events.push(ProviderEvent::TextStart { id: id.to_string() });
+            events.push(ProviderEvent::TextStart { id: id.to_owned() });
         }
-        events.push(ProviderEvent::TextDelta(delta.to_string()));
+        events.push(ProviderEvent::TextDelta(delta.to_owned()));
         events
     }
 
     /// Explicitly close a text block and emit `TextEnd`.
     pub fn text_end(&mut self, id: &str) -> Vec<ProviderEvent> {
         self.open_text_blocks.remove(id);
-        vec![ProviderEvent::TextEnd { id: id.to_string() }]
+        vec![ProviderEvent::TextEnd { id: id.to_owned() }]
     }
 
     /// Process a thinking delta and emit lifecycle events.
     ///
     /// Returns `ThinkingStart` on first delta for this `id`, then `ThinkingDelta`.
     pub fn thinking_delta(&mut self, id: &str, delta: &str) -> Vec<ProviderEvent> {
-        let is_new = self.open_thinking_blocks.insert(id.to_string());
+        let is_new = self.open_thinking_blocks.insert(id.to_owned());
         let mut events = Vec::new();
         if is_new {
-            events.push(ProviderEvent::ThinkingStart { id: id.to_string() });
+            events.push(ProviderEvent::ThinkingStart { id: id.to_owned() });
         }
-        events.push(ProviderEvent::ThinkingDelta(delta.to_string()));
+        events.push(ProviderEvent::ThinkingDelta(delta.to_owned()));
         events
     }
 
     /// Explicitly close a thinking block and emit `ThinkingEnd`.
     pub fn thinking_end(&mut self, id: &str) -> Vec<ProviderEvent> {
         self.open_thinking_blocks.remove(id);
-        vec![ProviderEvent::ThinkingEnd { id: id.to_string() }]
+        vec![ProviderEvent::ThinkingEnd { id: id.to_owned() }]
     }
 
     /// Close all open blocks and emit their end events, plus `Finish`.

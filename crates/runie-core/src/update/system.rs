@@ -41,7 +41,7 @@ impl AppState {
         self.session_mut().messages.push(ChatMessage {
             role: Role::System,
             timestamp: crate::update::now(),
-            id: "system".to_string(),
+            id: "system".to_owned(),
             parts: vec![runie_core::message::Part::Text { content }],
             ..Default::default()
         });
@@ -208,7 +208,7 @@ pub fn apply_initial_trust(state: &mut AppState, cwd: &std::path::Path) {
                     .duration_since(std::time::UNIX_EPOCH)
                     .map(|d| d.as_secs_f64())
                     .unwrap_or(0.0),
-                id: "trust_welcome".to_string(),
+                id: "trust_welcome".to_owned(),
                 parts: vec![runie_core::message::Part::Text {
                     content: format!(
                         "Welcome to runie in {}.\n\nThis project is not yet trusted. \
@@ -319,14 +319,14 @@ fn handle_editor_done(state: &mut AppState, content: String) {
 
 impl AppState {
     pub(crate) fn show_diagnostics(&mut self) {
-        let mut lines = vec!["Diagnostics:".to_string()];
+        let mut lines = vec!["Diagnostics:".to_owned()];
         let config_path = crate::config::config_path();
         lines.push(format!(
             "  Config: {}",
             if config_path.exists() {
                 config_path.display().to_string()
             } else {
-                "not found".to_string()
+                "not found".to_owned()
             }
         ));
         let kb_path = crate::keybindings::default_keybindings_path();
@@ -335,7 +335,7 @@ impl AppState {
             if kb_path.as_ref().map(|p| p.exists()).unwrap_or(false) {
                 kb_path.unwrap().display().to_string()
             } else {
-                "default".to_string()
+                "default".to_owned()
             }
         ));
         let config = self.config();

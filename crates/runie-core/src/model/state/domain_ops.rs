@@ -210,14 +210,14 @@ impl AppState {
         let parts: Vec<&str> = s.split('/').collect();
         if parts.len() == 2 {
             crate::model::ScopedModel {
-                provider: parts[0].to_string(),
-                name: parts[1].to_string(),
+                provider: parts[0].to_owned(),
+                name: parts[1].to_owned(),
                 enabled: true,
             }
         } else {
             crate::model::ScopedModel {
                 provider: self.config().current_provider.clone(),
-                name: s.to_string(),
+                name: s.to_owned(),
                 enabled: true,
             }
         }
@@ -255,7 +255,7 @@ impl AppState {
             .map(|h| h.tx().clone());
         if let (Some(tx), Ok(_)) = (tx, tokio::runtime::Handle::try_current()) {
             let msg = crate::actors::ConfigMsg::RemoveProvider {
-                name: name.to_string(),
+                name: name.to_owned(),
             };
             tokio::spawn(async move {
                 let _ = tx.send(msg).await;
@@ -272,7 +272,7 @@ impl AppState {
             .map(|h| h.tx().clone());
         if let (Some(tx), Ok(_)) = (tx, tokio::runtime::Handle::try_current()) {
             let msg = crate::actors::ConfigMsg::SetProviderModels {
-                name: name.to_string(),
+                name: name.to_owned(),
                 models,
             };
             tokio::spawn(async move {
@@ -359,7 +359,7 @@ impl AppState {
         let entry = self
             .config
             .command_usage
-            .entry(name.to_string())
+            .entry(name.to_owned())
             .or_insert_with(|| CommandUsage {
                 count: 0,
                 last_used: now,

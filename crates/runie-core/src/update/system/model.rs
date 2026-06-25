@@ -42,7 +42,7 @@ impl AppState {
         let handles = self.actor_handles().cloned();
         if let Some(handles) = handles {
             if tokio::runtime::Handle::try_current().is_ok() {
-                let handles = handles.clone();
+                let handles = handles;
                 tokio::spawn(async move {
                     handles.send_set_default_model(&provider, &model).await;
                 });
@@ -54,7 +54,7 @@ impl AppState {
         if self.config().current_provider == provider {
             return;
         }
-        let provider = provider.to_string();
+        let provider = provider.to_owned();
         let model = self
             .config_cache
             .as_ref()
@@ -71,7 +71,7 @@ impl AppState {
         if self.config().current_model == model {
             return;
         }
-        let model = model.to_string();
+        let model = model.to_owned();
         let provider = self.config().current_provider.clone();
         self.switch_model(provider, model, true);
     }

@@ -65,11 +65,11 @@ fn quantize_theme(
 
     for name in theme.palette_names() {
         let c = theme.color(name);
-        quantized.push((name.to_string(), quantize_opaline_color(c, depth)));
+        quantized.push((name.to_owned(), quantize_opaline_color(c, depth)));
     }
     for name in theme.token_names() {
         let c = theme.color(name);
-        quantized.push((name.to_string(), quantize_opaline_color(c, depth)));
+        quantized.push((name.to_owned(), quantize_opaline_color(c, depth)));
     }
 
     // Reconstruct: load fresh theme and register quantized tokens on top.
@@ -134,9 +134,9 @@ fn ansi16_to_opaline(i: u8) -> opaline::OpalineColor {
 
 fn ansi256_cube_to_opaline(i: u8) -> opaline::OpalineColor {
     let n = i - 16;
-    let r = (n / 36) as u8;
-    let g = ((n % 36) / 6) as u8;
-    let b = (n % 6) as u8;
+    let r = (n / 36);
+    let g = ((n % 36) / 6);
+    let b = (n % 6);
     let channel = |v: u8| if v == 0 { 0 } else { 95 + (v - 1) * 40 };
     opaline::OpalineColor::new(channel(r), channel(g), channel(b))
 }

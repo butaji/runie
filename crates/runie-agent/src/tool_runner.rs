@@ -43,7 +43,7 @@ pub async fn execute_tool_call(
 
 fn timeout_error(tool_name: &str) -> ToolOutput {
     ToolOutput {
-        tool_name: tool_name.to_string(),
+        tool_name: tool_name.to_owned(),
         tool_args: serde_json::json!({}),
         content: format!(
             "Tool execution timed out after {} seconds",
@@ -91,7 +91,7 @@ async fn run_tool(
 
 fn blocked_output(tool_name: &str, tool_call: &ParsedToolCall) -> ToolOutput {
     ToolOutput {
-        tool_name: tool_name.to_string(),
+        tool_name: tool_name.to_owned(),
         tool_args: tool_call.args.clone(),
         content: format!("Permission denied for tool '{}'", tool_name),
         bytes_transferred: None,
@@ -102,7 +102,7 @@ fn blocked_output(tool_name: &str, tool_call: &ParsedToolCall) -> ToolOutput {
 
 fn unknown_tool_output(tool_name: &str, tool_call: &ParsedToolCall) -> ToolOutput {
     ToolOutput {
-        tool_name: tool_name.to_string(),
+        tool_name: tool_name.to_owned(),
         tool_args: tool_call.args.clone(),
         content: format!("Error: unknown tool '{}'", tool_name),
         bytes_transferred: None,

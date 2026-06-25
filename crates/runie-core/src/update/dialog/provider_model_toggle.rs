@@ -14,8 +14,8 @@ pub fn parse_provider_model_toggle(key: &str) -> Option<(&str, &str)> {
 
 /// Toggle whether `model` is enabled for `provider` in the saved config.
 pub fn toggle_provider_model(state: &mut AppState, provider: &str, model: &str) {
-    let provider = provider.to_string();
-    let model = model.to_string();
+    let provider = provider.to_owned();
+    let model = model.to_owned();
     // Read current models: first from config_cache, then from file as fallback.
     // config_cache may be stale after save_provider_config is called externally.
     let current_models: Vec<String> = state
@@ -50,7 +50,7 @@ fn sync_provider_models(state: &mut AppState, provider: &str, models: &[String])
         .unwrap_or_else(|| {
             (
                 crate::provider::find_provider(provider)
-                    .map(|p| p.base_url.to_string())
+                    .map(|p| p.base_url.to_owned())
                     .unwrap_or_default(),
                 String::new(),
             )

@@ -104,7 +104,7 @@ fn build_json_messages(req: &JsonRequest) -> Vec<ChatMessage> {
         .tools
         .as_ref()
         .map(|t| t.join(", "))
-        .unwrap_or_else(|| runie_core::prompts::DEFAULT_TOOLS.to_string());
+        .unwrap_or_else(|| runie_core::prompts::DEFAULT_TOOLS.to_owned());
 
     let system = runie_core::prompts::build_system_prompt(
         runie_core::prompts::DEFAULT_PROMPT,
@@ -128,7 +128,7 @@ async fn run_json_turn(
     let sink = build_sink(yolo);
     let opts = build_options(Some(Box::new(|chunk: &str| {
         let line = serde_json::to_string(&StreamChunk {
-            chunk: chunk.to_string(),
+            chunk: chunk.to_owned(),
         })
         .unwrap_or_default();
         println!("{}", line);

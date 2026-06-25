@@ -24,7 +24,7 @@ pub fn parse_minimax_tool_calls(text: &str) -> Vec<Result<ParsedToolCall, ToolPa
 }
 
 fn normalize_m3_delimiters(text: &str) -> String {
-    let mut out = text.to_string();
+    let mut out = text.to_owned();
     out = out.replace("]<]minimax[>[</", "</");
     out = out.replace("]<]minimax[>[<", "<");
     out
@@ -47,15 +47,15 @@ fn parse_minimax_invokes(block: &str) -> Vec<Result<ParsedToolCall, ToolParseErr
     }
     if !found_any {
         results.push(Err(ToolParseError {
-            raw: block.to_string(),
+            raw: block.to_owned(),
             reason: "no <invoke> blocks found in tool_call block".into(),
         }));
     }
     results
 }
 
-fn parse_next_invoke<'a>(
-    rest: &mut &'a str,
+fn parse_next_invoke(
+    rest: &mut &str,
     block: &str,
 ) -> Option<Result<ParsedToolCall, ToolParseError>> {
     let start = rest.find("<invoke")?;
@@ -69,7 +69,7 @@ fn parse_next_invoke<'a>(
     *rest = &after_tag[invoke_end + "</invoke>".len()..];
     if !is_known_tool(&name) {
         return Some(Err(ToolParseError {
-            raw: block.to_string(),
+            raw: block.to_owned(),
             reason: format!("unknown tool '{}'", name),
         }));
     }
@@ -121,7 +121,7 @@ fn parse_minimax_parameters(inner: &str) -> serde_json::Map<String, Value> {
             break;
         };
         let value_str = after_tag[..end].trim();
-        let value = serde_json::from_str(value_str).unwrap_or(Value::String(value_str.to_string()));
+        let value = serde_json::from_str(value_str).unwrap_or(Value::String(value_str.to_owned()));
         args.insert(name, value);
         found_parameter = true;
         rest = &after_tag[end + "</parameter>".len()..];
@@ -152,8 +152,8 @@ fn parse_minimax_child_tags(inner: &str, args: &mut serde_json::Map<String, Valu
             break;
         };
         let value_str = after_tag[..end].trim();
-        let value = serde_json::from_str(value_str).unwrap_or(Value::String(value_str.to_string()));
-        args.insert(name.to_string(), value);
+        let value = serde_json::from_str(value_str).unwrap_or(Value::String(value_str.to_owned()));
+        args.insert(name.to_owned(), value);
         rest = &after_tag[end + end_tag.len()..];
     }
 }

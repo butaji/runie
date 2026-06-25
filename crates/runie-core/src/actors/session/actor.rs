@@ -120,7 +120,7 @@ impl SessionActor {
         self.trust.set(&path, decision);
         let trust = self.trust.clone();
         let path_clone = path.clone();
-        let decision_clone = decision.clone();
+        let decision_clone = decision;
         let _ = tokio::task::spawn_blocking(move || trust.save()).await;
         self.bus.publish(Event::TrustChanged {
             path: path_clone,
@@ -269,11 +269,11 @@ impl SessionActor {
     /// Build metadata from a session.
     fn build_metadata_from_session(&self, session: &Session, name: &str) -> SessionMetadata {
         SessionMetadata {
-            id: name.to_string(),
+            id: name.to_owned(),
             display_name: session
                 .display_name
                 .clone()
-                .unwrap_or_else(|| name.to_string()),
+                .unwrap_or_else(|| name.to_owned()),
             created_at: session.created_at,
             updated_at: now(),
             message_count: session.messages.len(),
@@ -352,7 +352,7 @@ impl SessionActor {
 
     fn fail(&self, operation: &str, error: String) {
         self.emit(Event::SessionOperationFailed {
-            operation: operation.to_string(),
+            operation: operation.to_owned(),
             error,
         });
     }

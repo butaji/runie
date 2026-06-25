@@ -18,7 +18,7 @@ impl AppState {
             self.agent_state_mut().last_assistant_index = Some(idx);
             self.append_to_message(idx, &buffered);
         } else {
-            self.create_assistant_message(id.to_string(), buffered);
+            self.create_assistant_message(id.to_owned(), buffered);
         }
     }
 
@@ -140,7 +140,7 @@ impl AppState {
         }
         if msg.parts.is_empty() && !remaining_tail.is_empty() {
             msg.parts.push(Part::Text {
-                content: remaining_tail.to_string(),
+                content: remaining_tail.to_owned(),
             });
         }
     }

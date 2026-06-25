@@ -9,7 +9,7 @@ pub fn which_tool(name: &str) -> Option<String> {
         .output()
         .ok()
         .filter(|o| o.status.success())
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
 }
 
 /// Async version of [`which_tool`].
@@ -20,7 +20,7 @@ pub async fn which_tool_async(name: &str) -> Option<String> {
         .await
         .ok()
         .filter(|o| o.status.success())
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
 }
 
 /// Build a standard error (or warning) [`ToolOutput`].
@@ -34,9 +34,9 @@ pub fn tool_error(
     is_warning: bool,
 ) -> ToolOutput {
     ToolOutput {
-        tool_name: tool_name.to_string(),
+        tool_name: tool_name.to_owned(),
         tool_args: serde_json::Value::Null,
-        content: msg.to_string(),
+        content: msg.to_owned(),
         bytes_transferred: None,
         duration: start.elapsed(),
         status: if is_warning {
@@ -56,7 +56,7 @@ const ARGS_TRUNCATE_WIDTH: usize = 40;
 pub(crate) fn truncate_args(args: &str) -> String {
     let display_width = crate::display_width::width(args) as usize;
     if display_width <= ARGS_TRUNCATE_WIDTH {
-        return args.to_string();
+        return args.to_owned();
     }
 
     let mut result = String::new();
@@ -143,7 +143,7 @@ pub fn format_duration(secs: f64) -> String {
 /// character boundaries are preserved.
 pub fn truncate_output(output: &str, max_bytes: usize, max_lines: usize) -> String {
     if output.len() <= max_bytes && output.lines().count() <= max_lines {
-        return output.to_string();
+        return output.to_owned();
     }
 
     let mut truncated = truncate_to_bytes(output, max_bytes);
@@ -153,7 +153,7 @@ pub fn truncate_output(output: &str, max_bytes: usize, max_lines: usize) -> Stri
 
 fn truncate_to_bytes(s: &str, max_bytes: usize) -> String {
     if s.len() <= max_bytes {
-        return s.to_string();
+        return s.to_owned();
     }
     let mut end = max_bytes;
     while end > 0 && !s.is_char_boundary(end) {
@@ -165,7 +165,7 @@ fn truncate_to_bytes(s: &str, max_bytes: usize) -> String {
 fn truncate_to_lines(s: &str, max_lines: usize) -> String {
     let count = s.lines().count();
     if count <= max_lines {
-        return s.to_string();
+        return s.to_owned();
     }
     let kept: Vec<&str> = s.lines().take(max_lines).collect();
     format!("{}\n…", kept.join("\n"))

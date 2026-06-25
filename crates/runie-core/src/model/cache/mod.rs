@@ -52,7 +52,7 @@ impl AppState {
                 (
                     cmd.name.clone(),
                     cmd.desc.clone(),
-                    cmd.category.as_str().to_string(),
+                    cmd.category.as_str().to_owned(),
                 )
             })
             .collect()
@@ -69,7 +69,7 @@ impl AppState {
                 items.push((
                     skill.name.clone(),
                     skill.description.clone(),
-                    "Skill".to_string(),
+                    "Skill".to_owned(),
                 ));
             }
         }
@@ -412,7 +412,7 @@ impl AppState {
         s.speed_tps = agent.speed_tps;
         s.tokens_in_display = agent.tokens_in_display;
         s.tokens_out_display = agent.tokens_out_display;
-        s.streaming_tail = agent.streaming_buffer.tail().to_string();
+        s.streaming_tail = agent.streaming_buffer.tail().to_owned();
     }
 
     fn fill_snapshot_config(&self, s: &mut Snapshot) {
@@ -444,7 +444,7 @@ impl AppState {
         s.transient_message = self.transient_message().cloned();
         s.transient_level = self.transient_level;
         s.git_info = self.git_info().cloned();
-        s.cwd_name = self.cwd_name().to_string();
+        s.cwd_name = self.cwd_name().to_owned();
         s.pending_edits = self.session().pending_edits.clone();
         s.scoped_models = self.config().scoped_models.clone();
         s.image_attachments = self.session().image_attachments.clone();

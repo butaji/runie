@@ -10,7 +10,7 @@ impl AppState {
         self.agent_state_mut().current_request_id = Some(id);
         self.agent_state_mut().thinking_started_at = Some(std::time::Instant::now());
         self.agent_state_mut().turn_active = true;
-        self.agent_state_mut().current_action = Some("Thinking".to_string());
+        self.agent_state_mut().current_action = Some("Thinking".to_owned());
         self.agent
             .turn_started_at
             .get_or_insert_with(std::time::Instant::now);
@@ -251,7 +251,7 @@ impl AppState {
     }
     fn on_response_delta(&mut self, id: String, content: String) {
         self.track_response_tokens(&content);
-        let has_open_text = self.current_assistant_message_mut().map_or(false, |msg| {
+        let has_open_text = self.current_assistant_message_mut().is_some_and(|msg| {
             matches!(msg.parts.last(), Some(Part::Text { .. }))
         });
         if has_open_text {

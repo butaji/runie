@@ -118,7 +118,7 @@ pub(super) fn style_border() -> Style {
 pub(super) fn pad_to_width(s: &str, width: usize) -> String {
     let char_count = s.chars().count();
     if char_count >= width {
-        s.to_string()
+        s.to_owned()
     } else {
         format!("{}{}", s, " ".repeat(width - char_count))
     }

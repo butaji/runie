@@ -28,7 +28,7 @@ impl AppState {
 
         let cut_idx = self.find_compact_cut_index(keep_recent_tokens);
         if cut_idx == 0 {
-            return "Cannot compact: all messages are recent".to_string();
+            return "Cannot compact: all messages are recent".to_owned();
         }
 
         let removed_count = cut_idx;
@@ -42,7 +42,7 @@ impl AppState {
             ChatMessage {
                 role: Role::System,
                 timestamp: now(),
-                id: "compaction".to_string(),
+                id: "compaction".to_owned(),
                 metadata: MessageMetadata {
                     compacted: true,
                     ..Default::default()

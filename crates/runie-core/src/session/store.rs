@@ -260,9 +260,9 @@ impl SessionStore {
             let entry = entry?;
             let name = entry.file_name().to_string_lossy().to_string();
             if let Some(id) = name.strip_suffix(".redb") {
-                ids.push(id.to_string());
+                ids.push(id.to_owned());
             } else if let Some(id) = name.strip_suffix(".jsonl") {
-                ids.push(id.to_string());
+                ids.push(id.to_owned());
             }
         }
         ids.sort();

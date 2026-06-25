@@ -54,7 +54,7 @@ pub fn repair_partial_json(raw: &str) -> Option<Value> {
 /// Complete JSON by counting unmatched braces, brackets, and quotes.
 fn complete_by_brace_counting(raw: &str) -> Option<String> {
     let bytes = raw.as_bytes();
-    let mut result = raw.to_string();
+    let mut result = raw.to_owned();
     let mut stack: Vec<u8> = Vec::new();
     let mut in_string = false;
     let mut escape = false;
@@ -83,11 +83,10 @@ fn complete_by_brace_counting(raw: &str) -> Option<String> {
                         stack.pop();
                     }
                 }
-                b']' => {
-                    if stack.last() == Some(&b'[') {
+                b']'
+                    if stack.last() == Some(&b'[') => {
                         stack.pop();
                     }
-                }
                 _ => {}
             }
         }

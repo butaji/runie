@@ -126,7 +126,7 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
         .iter()
         .rev()
         .find(|m| m.role == crate::model::Role::Assistant)
-        .map(|m| m.content().clone())
+        .map(|m| m.content())
         .unwrap_or_default();
     if text.is_empty() {
         return CommandResult::Message("No assistant response to copy".into());
@@ -135,7 +135,7 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 fn handle_reload(state: &mut AppState, _: &str) -> CommandResult {
-    if let Some(ref handles) = state.actor_handles() {
+    if let Some(handles) = state.actor_handles() {
         if let Some(ref config) = handles.config {
             let tx = config.tx().clone();
             tokio::spawn(async move {
@@ -199,7 +199,7 @@ fn handle_theme(state: &mut AppState, args: &str) -> CommandResult {
         open_theme_selector(state);
         return CommandResult::None;
     }
-    state.config_mut().theme_name = name.to_string();
+    state.config_mut().theme_name = name.to_owned();
     if crate::themes::BUILTIN_THEMES.contains(&name) {
         CommandResult::Message(format!("Theme switched to '{}'", name))
     } else {
@@ -290,7 +290,7 @@ pub fn run_prompt(state: &mut AppState, name: &str) {
         return;
     }
     if state.prompts().iter().any(|p| p.name == name) {
-        state.input_mut().current_prompt = name.to_string();
+        state.input_mut().current_prompt = name.to_owned();
         state.add_system_msg(format!("Prompt switched to '{}'", name));
     } else {
         state.add_system_msg(format!("Prompt '{}' not found.", name));

@@ -63,7 +63,7 @@ fn push_span(spans: &mut Vec<MdSpan>, text: &str, style: Style) {
         }
     }
     spans.push(MdSpan {
-        content: text.to_string(),
+        content: text.to_owned(),
         style,
     });
 }

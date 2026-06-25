@@ -20,7 +20,7 @@ pub fn parse_tool_call_markup(line: &str) -> Option<ParsedToolCall> {
         return None;
     }
     Some(ParsedToolCall {
-        name: name.to_string(),
+        name: name.to_owned(),
         args: Value::Object(args.clone()),
         id: None,
     })

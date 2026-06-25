@@ -162,9 +162,8 @@ fn parse_input(
 ) -> Result<(String, String, std::path::PathBuf, usize)> {
     let symbol = input["symbol"]
         .as_str()
-        .ok_or_else(|| anyhow::anyhow!("symbol is required"))?
-        .to_string();
-    let glob = input["glob"].as_str().unwrap_or("").to_string();
+        .ok_or_else(|| anyhow::anyhow!("symbol is required"))?.to_owned();
+    let glob = input["glob"].as_str().unwrap_or("").to_owned();
     let path = input["path"].as_str().unwrap_or(".");
     let limit = input["limit"].as_u64().unwrap_or(DEFAULT_LIMIT as u64) as usize;
     let full_path = ctx.working_dir.join(path);
@@ -226,7 +225,7 @@ fn search_definitions(
 
 fn build_query(symbol: &str, glob: &str) -> String {
     if glob.is_empty() {
-        symbol.to_string()
+        symbol.to_owned()
     } else {
         format!("{} {}", symbol, glob)
     }
@@ -257,7 +256,7 @@ fn build_def_result(picker: &FilePicker, results: &GrepResult<'_>, m: &GrepMatch
         path,
         line: m.line_number,
         col: m.col,
-        kind: kind.to_string(),
+        kind: kind.to_owned(),
         content: m.line_content.clone(),
     }
 }
@@ -269,7 +268,7 @@ fn build_definitions_output(
     start: Instant,
 ) -> Result<ToolOutput> {
     Ok(ToolOutput {
-        tool_name: "find_definitions".to_string(),
+        tool_name: "find_definitions".to_owned(),
         tool_args: serde_json::json!({ "symbol": symbol }),
         content: serde_json::to_string_pretty(&serde_json::json!({
             "results": defs,

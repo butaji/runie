@@ -36,7 +36,7 @@ fn minimal_tool_env() -> HashMap<String, String> {
     let mut env = HashMap::new();
     for key in allowed {
         if let Ok(value) = std::env::var(key) {
-            env.insert(key.to_string(), value);
+            env.insert(key.to_owned(), value);
         }
     }
     env
@@ -134,7 +134,7 @@ impl ToolOutput {
     /// Create a successful tool output.
     pub fn success(tool_name: &str, tool_args: Value, content: String) -> Self {
         Self {
-            tool_name: tool_name.to_string(),
+            tool_name: tool_name.to_owned(),
             tool_args,
             content,
             bytes_transferred: None,
@@ -151,7 +151,7 @@ impl ToolOutput {
         bytes: u64,
     ) -> Self {
         Self {
-            tool_name: tool_name.to_string(),
+            tool_name: tool_name.to_owned(),
             tool_args,
             content,
             bytes_transferred: Some(bytes),
@@ -163,7 +163,7 @@ impl ToolOutput {
     /// Create an error tool output.
     pub fn error(tool_name: &str, tool_args: Value, content: String) -> Self {
         Self {
-            tool_name: tool_name.to_string(),
+            tool_name: tool_name.to_owned(),
             tool_args,
             content,
             bytes_transferred: None,
@@ -175,7 +175,7 @@ impl ToolOutput {
     /// Create a blocked tool output.
     pub fn blocked(tool_name: &str, tool_args: Value, reason: String) -> Self {
         Self {
-            tool_name: tool_name.to_string(),
+            tool_name: tool_name.to_owned(),
             tool_args,
             content: format!("Blocked: {}", reason),
             bytes_transferred: None,

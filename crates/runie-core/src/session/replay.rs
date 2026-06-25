@@ -135,8 +135,8 @@ fn message_to_event(message: &ChatMessage) -> Option<DurableCoreEvent> {
         Role::TurnComplete => None,
         _ => Some(DurableCoreEvent::MessageSent {
             id: message.id.clone(),
-            role: message.role.as_str().to_string(),
-            content: message.content().clone(),
+            role: message.role.as_str().to_owned(),
+            content: message.content(),
             timestamp: message.timestamp,
             provider: message.provider.clone(),
         }),
@@ -146,12 +146,12 @@ fn message_to_event(message: &ChatMessage) -> Option<DurableCoreEvent> {
 /// Build session metadata from current application state.
 fn build_metadata(state: &AppState, name: &str) -> SessionMetadata {
     SessionMetadata {
-        id: name.to_string(),
+        id: name.to_owned(),
         display_name: state
             .session
             .session_display_name
             .clone()
-            .unwrap_or_else(|| name.to_string()),
+            .unwrap_or_else(|| name.to_owned()),
         created_at: state.session().session_created_at,
         updated_at: crate::message::now(),
         message_count: state.session().messages.len(),

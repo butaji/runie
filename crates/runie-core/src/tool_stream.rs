@@ -37,7 +37,7 @@ impl ToolStream {
 
     /// Start tracking a new tool call with the given id and name.
     pub fn start(&mut self, id: &str, name: &str) {
-        self.pending.entry(id.to_string()).or_default().name = name.to_string();
+        self.pending.entry(id.to_owned()).or_default().name = name.to_owned();
     }
 
     /// Append argument delta to a tracked tool call.
@@ -62,7 +62,7 @@ impl ToolStream {
         Some(crate::tool_parser::ParsedToolCall {
             name: acc.name,
             args,
-            id: Some(id.to_string()),
+            id: Some(id.to_owned()),
         })
     }
 

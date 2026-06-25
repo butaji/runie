@@ -128,7 +128,7 @@ pub(crate) fn provider_model_lists(state: &AppState, provider: &str) -> (Vec<Str
     let mut available = saved.clone();
     if let Some(meta) = crate::provider::find_provider(provider) {
         for model in meta.models {
-            let name = model.name.to_string();
+            let name = model.name.to_owned();
             if !available.contains(&name) {
                 available.push(name);
             }
@@ -156,7 +156,7 @@ fn thinking_level_item(state: &AppState) -> SettingItem {
         "thinking_level",
         "Thinking Level",
         SettingValue::Cycle {
-            current: state.config().thinking_level.as_str().to_string(),
+            current: state.config().thinking_level.as_str().to_owned(),
             options: vec!["off".into(), "low".into(), "medium".into(), "high".into()],
         },
         "Agent reasoning depth",
@@ -179,7 +179,7 @@ fn steering_mode_item(state: &AppState) -> SettingItem {
         "steering_mode",
         "Steering Mode",
         SettingValue::Cycle {
-            current: delivery_mode_str(state.config().steering_mode).to_string(),
+            current: delivery_mode_str(state.config().steering_mode).to_owned(),
             options: vec!["one-at-a-time".into(), "all".into()],
         },
         "How steering messages are delivered",
@@ -192,7 +192,7 @@ fn follow_up_mode_item(state: &AppState) -> SettingItem {
         "follow_up_mode",
         "Follow-Up Mode",
         SettingValue::Cycle {
-            current: delivery_mode_str(state.config().follow_up_mode).to_string(),
+            current: delivery_mode_str(state.config().follow_up_mode).to_owned(),
             options: vec!["one-at-a-time".into(), "all".into()],
         },
         "How follow-up messages are delivered",
@@ -264,7 +264,7 @@ fn provider_options(state: &AppState) -> Vec<String> {
     }
     crate::provider::known_providers()
         .iter()
-        .map(|p| p.key.to_string())
+        .map(|p| p.key.to_owned())
         .collect()
 }
 

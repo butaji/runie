@@ -258,9 +258,9 @@ fn extract_palette_args(name: &str, filter: &str) -> String {
     if filter == name {
         String::new()
     } else if let Some(rest) = filter.strip_prefix(name) {
-        rest.trim().to_string()
+        rest.trim().to_owned()
     } else {
-        filter.to_string()
+        filter.to_owned()
     }
 }
 

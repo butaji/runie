@@ -131,7 +131,7 @@ fn resolve_credentials(
             resolver.resolve_api_key(key).unwrap_or_default(),
             resolver
                 .resolve_base_url(key)
-                .unwrap_or_else(|| meta.base_url.to_string()),
+                .unwrap_or_else(|| meta.base_url.to_owned()),
         )
     } else {
         let api_key = if meta.env_var.is_empty() {
@@ -139,11 +139,11 @@ fn resolve_credentials(
         } else {
             std::env::var(meta.env_var).unwrap_or_default()
         };
-        (api_key, meta.base_url.to_string())
+        (api_key, meta.base_url.to_owned())
     };
     (
-        api_key.trim().to_string(),
-        base_url.trim_end_matches('/').to_string(),
+        api_key.trim().to_owned(),
+        base_url.trim_end_matches('/').to_owned(),
     )
 }
 
@@ -162,18 +162,18 @@ pub fn build_provider(
     }
 
     let meta = runie_core::provider::find_provider(key)
-        .ok_or_else(|| ProviderError::UnknownProvider(key.to_string()))?;
+        .ok_or_else(|| ProviderError::UnknownProvider(key.to_owned()))?;
 
     let (api_key, base_url) = resolve_credentials(key, meta, config);
     if api_key.is_empty() && !runie_core::provider::is_mock_enabled() {
-        return Err(ProviderError::MissingApiKey(meta.env_var.to_string()));
+        return Err(ProviderError::MissingApiKey(meta.env_var.to_owned()));
     }
 
     let provider = build_openai_provider(api_key, model, &base_url);
     Ok(BuiltProvider::new(
         provider,
-        key.to_string(),
-        model.to_string(),
+        key.to_owned(),
+        model.to_owned(),
     ))
 }
 
@@ -183,7 +183,7 @@ fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
     } else {
         Box::new(MockProvider::default())
     };
-    BuiltProvider::new(provider, key.to_string(), model.to_string())
+    BuiltProvider::new(provider, key.to_owned(), model.to_owned())
 }
 
 fn build_openai_provider(api_key: String, model: &str, base_url: &str) -> Box<dyn Provider> {
@@ -214,7 +214,7 @@ pub fn build_provider_with_fallback(
             Err(e) => last_err = Some(e),
         }
     }
-    Err(last_err.unwrap_or_else(|| ProviderError::UnknownProvider("none".to_string())))
+    Err(last_err.unwrap_or_else(|| ProviderError::UnknownProvider("none".to_owned())))
 }
 
 // ---------------------------------------------------------------------------

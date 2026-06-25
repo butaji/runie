@@ -55,10 +55,10 @@ impl TestRunner {
     ) -> anyhow::Result<TestSubmissionId> {
         let id = format!("sub.{}", nanoid());
         let cmd = AgentCommand {
-            content: input.to_string(),
+            content: input.to_owned(),
             id: id.clone(),
             provider: self.config().provider.clone().unwrap_or("mock".into()),
-            model: self.config().default_model().unwrap_or("echo").to_string(),
+            model: self.config().default_model().unwrap_or("echo").to_owned(),
             thinking_level: runie_core::model::ThinkingLevel::Off,
             read_only: false,
             skills_context: String::new(),

@@ -59,7 +59,7 @@ pub fn set_current_theme_with_caps(name: &str, caps: crate::terminal::caps::Term
     }
 
     *CURRENT_CAPS.write().unwrap_or_else(|e| e.into_inner()) = Some(caps);
-    *CURRENT_THEME_NAME.lock().unwrap_or_else(|e| e.into_inner()) = name.to_string();
+    *CURRENT_THEME_NAME.lock().unwrap_or_else(|e| e.into_inner()) = name.to_owned();
     let theme = loader::load_theme_with_caps(name, caps);
     *CURRENT_THEME.write().unwrap_or_else(|e| e.into_inner()) = Some(Arc::new(theme));
 }
@@ -73,10 +73,9 @@ pub fn current_theme_name() -> String {
 }
 
 fn current_caps() -> Option<crate::terminal::caps::TerminalCapabilities> {
-    CURRENT_CAPS
+    *CURRENT_CAPS
         .read()
         .unwrap_or_else(|e| e.into_inner())
-        .clone()
 }
 
 /// Get the currently active theme (falls back to default).

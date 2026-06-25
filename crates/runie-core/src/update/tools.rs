@@ -6,7 +6,7 @@ use std::process::{Command, Stdio};
 ///
 /// Runs the subprocess off the async runtime so the UI cannot freeze.
 pub fn execute_bash(command: &str) -> String {
-    let command = command.to_string();
+    let command = command.to_owned();
     crate::async_io::block_in_place_if_runtime(move || execute_bash_sync(&command))
 }
 
@@ -115,9 +115,9 @@ pub fn update(state: &mut AppState, event: Event) {
                 .session
                 .pending_edits
                 .push(crate::edit_preview::EditPreview::new(
-                    std::path::PathBuf::from(path.clone()),
-                    original.clone(),
-                    proposed.clone(),
+                    std::path::PathBuf::from(path),
+                    original,
+                    proposed,
                 ));
             state.view_mut().dirty = true;
         }
@@ -155,7 +155,7 @@ impl AppState {
 
     pub(crate) fn approve_edits(&mut self) {
         if self.session().pending_edits.is_empty() {
-            self.add_system_msg("No pending edits to approve.".to_string());
+            self.add_system_msg("No pending edits to approve.".to_owned());
             return;
         }
         if self.try_spawn_io_write() {
@@ -182,7 +182,7 @@ impl AppState {
     pub(crate) fn reject_edits(&mut self) {
         let count = self.session().pending_edits.len();
         if count == 0 {
-            self.add_system_msg("No pending edits to reject.".to_string());
+            self.add_system_msg("No pending edits to reject.".to_owned());
             return;
         }
         self.session_mut().pending_edits.clear();

@@ -126,9 +126,9 @@ pub fn model_catalog() -> Vec<ModelInfo> {
                 cache_control: model.cache_control,
             };
             models.push(ModelInfo {
-                provider: provider.key.to_string(),
-                name: model.name.to_string(),
-                display_name: model.name.to_string(),
+                provider: provider.key.to_owned(),
+                name: model.name.to_owned(),
+                display_name: model.name.to_owned(),
                 cost_prompt: model.cost_prompt,
                 cost_completion: model.cost_completion,
                 supports_thinking: model.supports_thinking,
@@ -239,8 +239,8 @@ fn build_main_items(
 
 fn provider_header(last_provider: &mut String, provider: &str) -> String {
     if provider != *last_provider {
-        *last_provider = provider.to_string();
-        provider.to_string()
+        *last_provider = provider.to_owned();
+        provider.to_owned()
     } else {
         String::new()
     }
@@ -255,7 +255,7 @@ fn model_item(
 ) -> ModelSelectorItem {
     let cost = format_cost(m.cost_prompt, m.cost_completion);
     let is_current = m.provider == current_provider && m.name == current_model;
-    (header.to_string(), m.full(), cost, selected, is_current)
+    (header.to_owned(), m.full(), cost, selected, is_current)
 }
 
 fn format_cost(prompt: Option<f64>, completion: Option<f64>) -> String {

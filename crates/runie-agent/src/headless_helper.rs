@@ -24,7 +24,7 @@ pub fn build_system_prompt() -> String {
 pub fn build_messages(user_prompt: &str) -> Vec<ChatMessage> {
     vec![
         ChatMessage::system(build_system_prompt()),
-        ChatMessage::user(user_prompt.to_string()),
+        ChatMessage::user(user_prompt.to_owned()),
     ]
 }
 

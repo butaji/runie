@@ -43,7 +43,7 @@ impl Tool for FetchDocsTool {
         };
 
         Ok(ToolOutput {
-            tool_name: "fetch_docs".to_string(),
+            tool_name: "fetch_docs".to_owned(),
             tool_args: serde_json::json!({ "library": library }),
             content,
             bytes_transferred: None,

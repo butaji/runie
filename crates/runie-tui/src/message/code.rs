@@ -36,7 +36,7 @@ pub(super) fn render_code_block_lines(content: &str, lang: &str) -> Vec<Line<'st
     highlighted
         .into_iter()
         .map(|tokens| {
-            let mut spans = vec![Span::raw(GLYPH_INDENT.to_string())];
+            let mut spans = vec![Span::raw(GLYPH_INDENT.to_owned())];
             for token in tokens {
                 spans.push(Span::styled(token.content, token.style));
             }

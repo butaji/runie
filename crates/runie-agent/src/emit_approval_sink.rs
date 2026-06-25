@@ -36,7 +36,7 @@ impl ApprovalSink for EmitApprovalSink {
         };
         let event = Event::PermissionRequest {
             request_id,
-            tool: tool.to_string(),
+            tool: tool.to_owned(),
             input: input.clone(),
         };
         if let Ok(mut emit) = self.emit.lock() {

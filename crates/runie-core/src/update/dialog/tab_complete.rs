@@ -105,7 +105,7 @@ impl AppState {
             has_suggestions = comp
                 .at_suggestions
                 .as_ref()
-                .map_or(false, |s| !s.is_empty());
+                .is_some_and(|s| !s.is_empty());
             suggestions_len = comp.at_suggestions.as_ref().map_or(0, |s| s.len());
             if !has_suggestions {
                 comp.at_selected = None;

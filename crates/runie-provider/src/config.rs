@@ -48,8 +48,8 @@ impl ProviderConfigResolver {
             }
             if let Some((key, val)) = line.split_once('=') {
                 map.insert(
-                    key.trim().to_string(),
-                    val.trim().trim_matches('"').to_string(),
+                    key.trim().to_owned(),
+                    val.trim().trim_matches('"').to_owned(),
                 );
             }
         }
@@ -95,7 +95,7 @@ fn non_empty(s: &str) -> Option<String> {
     if s.is_empty() {
         None
     } else {
-        Some(s.to_string())
+        Some(s.to_owned())
     }
 }
 

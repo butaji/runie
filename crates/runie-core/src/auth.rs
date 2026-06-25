@@ -90,10 +90,10 @@ impl AuthStorage {
 
     pub fn set(&mut self, provider: &str, token: &str, expires_at: Option<f64>) {
         self.tokens.insert(
-            provider.to_string(),
+            provider.to_owned(),
             AuthToken {
-                provider: provider.to_string(),
-                token: token.to_string(),
+                provider: provider.to_owned(),
+                token: token.to_owned(),
                 expires_at,
             },
         );

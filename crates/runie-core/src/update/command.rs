@@ -51,7 +51,7 @@ fn dispatch_result(state: &mut AppState, result: CommandResult) {
 }
 
 fn run_compact(state: &mut AppState, keep: &str, focus: &str) {
-    let args = if focus.is_empty() { keep.to_string() } else { format!("{keep} {focus}") };
+    let args = if focus.is_empty() { keep.to_owned() } else { format!("{keep} {focus}") };
     let result = session_run::run_compact(state, &args);
     dispatch_result(state, result);
 }

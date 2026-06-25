@@ -135,7 +135,7 @@ impl SessionIndex {
     /// Rename a session.
     pub fn rename(&mut self, id: &str, new_name: &str) -> bool {
         if let Some(session) = self.get_mut(id) {
-            session.display_name = new_name.to_string();
+            session.display_name = new_name.to_owned();
             session.updated_at = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|d| d.as_secs_f64())

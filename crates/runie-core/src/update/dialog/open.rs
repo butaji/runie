@@ -43,7 +43,7 @@ pub fn open_command_palette_with_filter(state: &mut AppState, initial_filter: &s
     // Set initial filter if provided (e.g. when `/` is typed with existing text)
     if !initial_filter.is_empty() {
         if let Some(panel) = stack.current_mut() {
-            panel.set_filter(&initial_filter);
+            panel.set_filter(initial_filter);
         }
     }
     let v = state.view_mut();
@@ -85,7 +85,7 @@ pub fn open_settings_dialog(state: &mut AppState) {
 
     let categories: Vec<(String, Vec<_>)> = settings_dialog::build_setting_categories(state)
         .into_iter()
-        .map(|(cat, items)| (cat.as_str().to_string(), items))
+        .map(|(cat, items)| (cat.as_str().to_owned(), items))
         .collect();
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
@@ -167,7 +167,7 @@ fn parse_filter(filter: Option<&str>) -> (Option<String>, Option<String>) {
                 let suffix = parsed.range.map(|r| format!(":{}-{}", r.start(), r.end()));
                 (Some(parsed.path), suffix)
             } else {
-                (Some(f.to_string()), None)
+                (Some(f.to_owned()), None)
             }
         }
         None => (None, None),

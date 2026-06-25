@@ -39,7 +39,7 @@ fn split_spans_by_newline(spans: &[MdSpan]) -> Vec<Vec<MdSpan>> {
                 }
                 if !part.is_empty() {
                     rows.last_mut().unwrap().push(MdSpan {
-                        content: part.to_string(),
+                        content: part.to_owned(),
                         style: span.style,
                     });
                 }
@@ -108,7 +108,7 @@ fn push_span(spans: &mut Vec<MdSpan>, text: &str, style: ratatui::style::Style) 
         }
     }
     spans.push(MdSpan {
-        content: text.to_string(),
+        content: text.to_owned(),
         style,
     });
 }

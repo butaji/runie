@@ -80,11 +80,11 @@ pub fn install_panic_hook(tx: tokio::sync::mpsc::Sender<TelemetryEvent>) {
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         let payload = if let Some(s) = info.payload().downcast_ref::<&str>() {
-            (*s).to_string()
+            (*s).to_owned()
         } else if let Some(s) = info.payload().downcast_ref::<String>() {
             s.clone()
         } else {
-            "unknown panic".to_string()
+            "unknown panic".to_owned()
         };
         let location = info
             .location()

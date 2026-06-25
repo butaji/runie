@@ -26,7 +26,7 @@ pub fn parse_legacy_tool(payload: &str) -> Option<ParsedToolCall> {
 
     let args = build_legacy_args(tool_name, arg1, arg2)?;
     Some(ParsedToolCall {
-        name: tool_name.to_string(),
+        name: tool_name.to_owned(),
         args,
         id: None,
     })
@@ -44,7 +44,7 @@ fn parse_legacy_colon_form(trimmed: &str) -> (&str, String, String) {
 fn parse_legacy_space_form(trimmed: &str) -> (&str, String, String) {
     let mut tokens = trimmed.split_whitespace();
     let name = tokens.next().unwrap_or("");
-    let first = tokens.next().unwrap_or("").to_string();
+    let first = tokens.next().unwrap_or("").to_owned();
     let rest = tokens.collect::<Vec<_>>().join(" ");
     (name, first, rest)
 }
@@ -53,17 +53,17 @@ fn build_legacy_args(tool_name: &str, arg1: String, arg2: String) -> Option<Valu
     let mut args = Map::new();
     match tool_name {
         "read_file" => {
-            args.insert("path".to_string(), Value::String(arg1));
+            args.insert("path".to_owned(), Value::String(arg1));
         }
         "list_dir" => {
-            args.insert("path".to_string(), Value::String(arg1));
+            args.insert("path".to_owned(), Value::String(arg1));
         }
         "write_file" => {
-            args.insert("path".to_string(), Value::String(arg1));
-            args.insert("content".to_string(), Value::String(arg2));
+            args.insert("path".to_owned(), Value::String(arg1));
+            args.insert("content".to_owned(), Value::String(arg2));
         }
         "bash" => {
-            args.insert("command".to_string(), Value::String(arg1));
+            args.insert("command".to_owned(), Value::String(arg1));
         }
         _ => return None,
     }
@@ -81,7 +81,7 @@ pub fn parse_legacy_tools_in_line(line: &str) -> Vec<Result<ParsedToolCall, Tool
             Some(t) => results.push(Ok(t)),
             None if !rest.trim().is_empty() => {
                 results.push(Err(ToolParseError {
-                    raw: line.to_string(),
+                    raw: line.to_owned(),
                     reason: "invalid legacy TOOL syntax or unknown tool name".into(),
                 }));
             }

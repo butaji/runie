@@ -23,32 +23,32 @@ pub trait Stylize {
 
 impl Stylize for &str {
     fn red(self) -> Span<'static> {
-        Span::styled(self.to_string(), Style::default().fg(Color::Red))
+        Span::styled(self.to_owned(), Style::default().fg(Color::Red))
     }
     fn green(self) -> Span<'static> {
-        Span::styled(self.to_string(), Style::default().fg(Color::Green))
+        Span::styled(self.to_owned(), Style::default().fg(Color::Green))
     }
     fn blue(self) -> Span<'static> {
-        Span::styled(self.to_string(), Style::default().fg(Color::Blue))
+        Span::styled(self.to_owned(), Style::default().fg(Color::Blue))
     }
     fn white(self) -> Span<'static> {
-        Span::styled(self.to_string(), Style::default().fg(Color::White))
+        Span::styled(self.to_owned(), Style::default().fg(Color::White))
     }
     fn dim(self) -> Span<'static> {
         Span::styled(
-            self.to_string(),
+            self.to_owned(),
             Style::default().add_modifier(Modifier::DIM),
         )
     }
     fn bold(self) -> Span<'static> {
         Span::styled(
-            self.to_string(),
+            self.to_owned(),
             Style::default().add_modifier(Modifier::BOLD),
         )
     }
     fn underlined(self) -> Span<'static> {
         Span::styled(
-            self.to_string(),
+            self.to_owned(),
             Style::default().add_modifier(Modifier::UNDERLINED),
         )
     }

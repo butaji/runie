@@ -67,7 +67,7 @@ fn resolve_provider_model(config: &Config) -> Result<(String, String), String> {
     let provider = config
         .provider
         .clone()
-        .ok_or_else(|| "no provider configured".to_string())?;
+        .ok_or_else(|| "no provider configured".to_owned())?;
 
     if !crate::provider::is_known_provider(&provider) {
         return Err(format!("unknown provider '{}'", provider));
@@ -75,8 +75,8 @@ fn resolve_provider_model(config: &Config) -> Result<(String, String), String> {
 
     let model = config
         .default_model()
-        .map(|s| s.to_string())
-        .ok_or_else(|| "no model configured".to_string())?;
+        .map(|s| s.to_owned())
+        .ok_or_else(|| "no model configured".to_owned())?;
 
     let known = crate::model_catalog::model_catalog()
         .iter()

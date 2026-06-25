@@ -22,7 +22,7 @@ pub fn run_name(state: &mut AppState, name: &str) -> CommandResult {
     let truncated = if name.chars().count() > 64 {
         format!("{}…", name.chars().take(64).collect::<String>())
     } else {
-        name.to_string()
+        name.to_owned()
     };
     state.session_mut().session_display_name = Some(truncated.clone());
     state.add_system_msg(format!("Session name set to '{}'", truncated));
@@ -113,7 +113,7 @@ pub fn run_compact(state: &mut AppState, args: &str) -> CommandResult {
 
 /// Save the current session.  Args: session name.
 pub fn run_save(state: &mut AppState, name: &str) -> CommandResult {
-    let name_owned = name.trim().to_string();
+    let name_owned = name.trim().to_owned();
     if name_owned.is_empty() {
         return CommandResult::Message("Usage: /save name".into());
     }
@@ -232,10 +232,10 @@ where
     F: FnOnce(crate::actors::SessionActorHandle, String) -> Fut + Send + 'static,
     Fut: std::future::Future<Output = ()> + Send + 'static,
 {
-    if let Some(ref handles) = state.actor_handles() {
+    if let Some(handles) = state.actor_handles() {
         if tokio::runtime::Handle::try_current().is_ok() {
             if let Some(ref session) = handles.session {
-                let name = name.to_string();
+                let name = name.to_owned();
                 let session = session.clone();
                 tokio::spawn(async move {
                     f(session, name).await;

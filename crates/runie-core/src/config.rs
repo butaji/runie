@@ -268,7 +268,7 @@ impl Config {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        std::fs::write(&path, toml::to_string_pretty(self)?)?;
+        std::fs::write(path, toml::to_string_pretty(self)?)?;
         Ok(())
     }
 
@@ -366,7 +366,7 @@ impl Config {
                 .first_model_for_provider(provider)
                 .or_else(|| self.default_model().map(String::from))
                 .unwrap_or_default();
-            return (provider.to_string(), model);
+            return (provider.to_owned(), model);
         }
         let mut providers: Vec<_> = self.model_providers.iter().collect();
         providers.sort_by_key(|(k, _)| *k);
@@ -414,7 +414,7 @@ pub enum ConfigChange {
 
 fn current_config_values(config: &Config) -> (String, String, String) {
     let (provider, model) = config.resolve_default_model();
-    let theme = config.theme.clone().unwrap_or_else(|| "runie".to_string());
+    let theme = config.theme.clone().unwrap_or_else(|| "runie".to_owned());
     (provider, model, theme)
 }
 

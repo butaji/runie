@@ -100,7 +100,7 @@ fn build_placeholder_line(
     // No cursor block while the input box is disabled (vim nav mode or
     // a dialog is open). `token_held` is the unified enabled flag.
     if token_held {
-        spans.push(Span::styled(" ".to_string(), style_input_cursor()));
+        spans.push(Span::styled(" ".to_owned(), style_input_cursor()));
     }
     spans.push(Span::styled(snap.placeholder.clone(), style_placeholder()));
     Line::from(spans)
@@ -228,9 +228,9 @@ fn render_cursor_spans<'a>(
         let char_len = c.len_utf8();
         (c.to_string(), &line_content[boundary + char_len..])
     } else if token_held {
-        (" ".to_string(), "")
+        (" ".to_owned(), "")
     } else {
-        ("".to_string(), "")
+        ("".to_owned(), "")
     };
     let mut spans = vec![
         Span::styled(before, text_style),
@@ -247,7 +247,7 @@ fn render_cursor_spans<'a>(
 fn image_attachment_label(snap: &Snapshot) -> Option<String> {
     match snap.image_attachments.len() {
         0 => None,
-        1 => Some(" 📎 1 image".to_string()),
+        1 => Some(" 📎 1 image".to_owned()),
         n => Some(format!(" 📎 {} images", n)),
     }
 }

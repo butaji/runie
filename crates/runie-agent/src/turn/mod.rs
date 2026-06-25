@@ -119,7 +119,7 @@ async fn emit_turn_end(
             .iter()
             .rev()
             .find(|m| m.role == Role::Assistant)
-            .map(|m| m.content().clone())
+            .map(|m| m.content())
             .unwrap_or_default();
 
         let ctx = TurnEndCtx {
@@ -137,12 +137,12 @@ async fn emit_turn_end(
         emit_now(
             emit,
             runie_core::Event::TurnComplete {
-                id: id.to_string(),
+                id: id.to_owned(),
                 duration_secs: turn_start.elapsed().as_secs_f64(),
             },
         );
     }
-    emit_now(emit, runie_core::Event::Done { id: id.to_string() });
+    emit_now(emit, runie_core::Event::Done { id: id.to_owned() });
 }
 
 // allow: iteration control params — orthogonal and intentionally flat for turn loop clarity

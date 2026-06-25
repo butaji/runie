@@ -39,16 +39,13 @@ impl Tool for EditFileTool {
 fn parse_input(input: &Value) -> Result<(String, String, String)> {
     let path = input["path"]
         .as_str()
-        .ok_or_else(|| anyhow::anyhow!("path is required"))?
-        .to_string();
+        .ok_or_else(|| anyhow::anyhow!("path is required"))?.to_owned();
     let search = input["search"]
         .as_str()
-        .ok_or_else(|| anyhow::anyhow!("search is required"))?
-        .to_string();
+        .ok_or_else(|| anyhow::anyhow!("search is required"))?.to_owned();
     let replace = input["replace"]
         .as_str()
-        .ok_or_else(|| anyhow::anyhow!("replace is required"))?
-        .to_string();
+        .ok_or_else(|| anyhow::anyhow!("replace is required"))?.to_owned();
     Ok((path, search, replace))
 }
 
@@ -114,7 +111,7 @@ fn build_edit_output(
     start: Instant,
 ) -> ToolOutput {
     ToolOutput {
-        tool_name: "edit_file".to_string(),
+        tool_name: "edit_file".to_owned(),
         tool_args: serde_json::json!({ "path": path.to_string_lossy(), "search": search, "replace": replace }),
         content: format!(
             "Replaced 1 occurrence in {}\n\nBefore:\n{}\n\nAfter:\n{}",

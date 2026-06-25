@@ -178,7 +178,7 @@ fn run_shell_hook(command: &str, input: &str) -> HookDecision {
         return HookDecision::Allow;
     }
 
-    let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let text = String::from_utf8_lossy(&output.stdout).trim().to_owned();
     match text.to_ascii_lowercase().as_str() {
         "allow" | "" => HookDecision::Allow,
         "deny" => HookDecision::Deny {

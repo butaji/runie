@@ -56,7 +56,7 @@ impl ToolSchemaEnricherSkill {
 
     /// Check if a tool should be enriched (not in skip list).
     pub(crate) fn should_enrich(&self, tool_name: &str) -> bool {
-        !self.config.skip_tools.contains(&tool_name.to_string())
+        !self.config.skip_tools.contains(&tool_name.to_owned())
     }
 
     /// Enrich a tool schema with examples.
@@ -71,7 +71,7 @@ impl ToolSchemaEnricherSkill {
             .get_mut("input_schema")
             .and_then(|v| v.as_object_mut())
         {
-            obj.insert("examples".to_string(), serde_json::json!(examples));
+            obj.insert("examples".to_owned(), serde_json::json!(examples));
         }
         enriched
     }

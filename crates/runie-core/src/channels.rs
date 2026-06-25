@@ -58,7 +58,7 @@ impl TextChannel {
     }
 
     fn handle_text_start(&mut self, id: &str) {
-        self.current_id = Some(id.to_string());
+        self.current_id = Some(id.to_owned());
         self.current_text.clear();
     }
 

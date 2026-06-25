@@ -130,7 +130,7 @@ impl Runtime for TestRuntime {
     }
 
     fn notify(&mut self, content: &str, level: TransientLevel) {
-        self.notifications.push((content.to_string(), level));
+        self.notifications.push((content.to_owned(), level));
     }
 }
 
@@ -224,7 +224,7 @@ impl Runtime for RealRuntime {
 // Code that runs before the runtime is spawned (e.g. config loading)
 // sees `None` and falls back to no-op.
 thread_local! {
-    static CURRENT_RUNTIME: std::cell::RefCell<Option<RealRuntime>> = std::cell::RefCell::new(None);
+    static CURRENT_RUNTIME: std::cell::RefCell<Option<RealRuntime>> = const { std::cell::RefCell::new(None) };
 }
 
 /// Get the current runtime, if any.

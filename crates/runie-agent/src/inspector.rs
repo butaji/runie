@@ -70,7 +70,7 @@ impl ToolPipeline {
 
 fn blocked_output(name: &str, input: serde_json::Value, msg: &str) -> ToolOutput {
     ToolOutput {
-        tool_name: name.to_string(),
+        tool_name: name.to_owned(),
         tool_args: input,
         content: format!("Inspector blocked: {}", msg),
         bytes_transferred: None,
@@ -87,7 +87,7 @@ async fn dispatch_tool(
 ) -> ToolOutput {
     match registry.get(name) {
         Some(tool) => tool.call(input, ctx).await.unwrap_or_else(|e| ToolOutput {
-            tool_name: name.to_string(),
+            tool_name: name.to_owned(),
             tool_args: serde_json::Value::Null,
             content: format!("Tool execution failed: {}", e),
             bytes_transferred: None,
@@ -95,7 +95,7 @@ async fn dispatch_tool(
             status: ToolStatus::Error,
         }),
         None => ToolOutput {
-            tool_name: name.to_string(),
+            tool_name: name.to_owned(),
             tool_args: serde_json::Value::Null,
             content: format!("Error: unknown tool '{}'", name),
             bytes_transferred: None,
@@ -130,7 +130,7 @@ impl Default for CallCounter {
 impl Inspector for CallCounter {
     fn after_call(&self, tool_name: &str, _output: &ToolOutput) {
         let mut counts = self.counts.lock().unwrap();
-        *counts.entry(tool_name.to_string()).or_insert(0) += 1;
+        *counts.entry(tool_name.to_owned()).or_insert(0) += 1;
     }
 }
 

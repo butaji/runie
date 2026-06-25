@@ -120,7 +120,7 @@ pub fn default_keybindings() -> HashMap<String, String> {
     }
     #[cfg(not(target_os = "windows"))]
     {
-        map.insert("ctrl+v".to_string(), "PasteImage".to_string());
+        map.insert("ctrl+v".to_owned(), "PasteImage".to_owned());
     }
     #[cfg(target_os = "windows")]
     {

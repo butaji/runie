@@ -36,7 +36,7 @@ impl ToolRegistry {
     }
 
     pub fn register(&mut self, tool: Arc<dyn Tool>) {
-        self.tools.insert(tool.name().to_string(), tool);
+        self.tools.insert(tool.name().to_owned(), tool);
     }
 
     pub fn list(&self) -> Vec<&Arc<dyn Tool>> {

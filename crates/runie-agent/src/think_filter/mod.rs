@@ -140,8 +140,8 @@ impl ThinkFilter {
         let remaining = &text[pos..];
         // Check for partial opening tag at start.
         if starts_with_opening_tag(remaining).is_none() {
-            if let Some(_) = starts_partial_opening_tag(remaining) {
-                self.buffer = remaining.to_string();
+            if starts_partial_opening_tag(remaining).is_some() {
+                self.buffer = remaining.to_owned();
                 self.state = ThinkState::WaitingPartialOpen;
                 return text.len();
             }
@@ -153,9 +153,9 @@ impl ThinkFilter {
                     self.state,
                     ThinkState::WaitingPartialOpen | ThinkState::Inside
                 ) {
-                    self.buffer = remaining.to_string();
+                    self.buffer = remaining.to_owned();
                 } else {
-                    emit_text(out, remaining.to_string());
+                    emit_text(out, remaining.to_owned());
                 }
                 text.len()
             }
@@ -187,8 +187,8 @@ impl ThinkFilter {
         let close_pos = find_earliest_close(remaining);
         match close_pos {
             None => {
-                emit_thinking(out, remaining.to_string());
-                return text.len();
+                emit_thinking(out, remaining.to_owned());
+                text.len()
             }
             Some((cp, ct)) => self.handle_close_before_open(remaining, pos, next_open, cp, ct, out),
         }
@@ -214,7 +214,7 @@ impl ThinkFilter {
                 self.state = ThinkState::PostThought;
                 let after_tag_pos = pos + open_pos + open_tag.len();
                 if after_tag_pos >= remaining.len() {
-                    self.buffer = open_tag.to_string();
+                    self.buffer = open_tag.to_owned();
                     self.state = ThinkState::WaitingPartialOpen;
                     return remaining.len();
                 }

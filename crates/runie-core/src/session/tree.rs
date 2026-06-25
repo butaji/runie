@@ -177,7 +177,7 @@ impl SessionTree {
             timestamp: crate::message::now(),
             id: format!("fork.{}", message_index),
             parts: vec![crate::message::Part::Text {
-                content: "[fork point]".to_string(),
+                content: "[fork point]".to_owned(),
             }],
             ..Default::default()
         };

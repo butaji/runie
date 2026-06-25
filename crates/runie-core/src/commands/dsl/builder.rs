@@ -165,7 +165,7 @@ fn build_form_stack_from_template(template: FormPanel, args: &str) -> CoreStack 
                 ..
             } => {
                 let val = if arg_idx < args_list.len() {
-                    args_list[arg_idx].to_string()
+                    args_list[arg_idx].to_owned()
                 } else {
                     value
                 };

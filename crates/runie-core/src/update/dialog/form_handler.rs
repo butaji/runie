@@ -43,7 +43,7 @@ pub fn insert_at_ref(state: &mut AppState, path: &str) {
 fn build_insert_text(state: &mut AppState, path: &str) -> String {
     let Some((original_input, insert_pos, cursor, _)) = state.input_mut().file_picker_backup.take()
     else {
-        return path.to_string();
+        return path.to_owned();
     };
     let before = compute_before_text(&original_input, insert_pos, cursor);
     let after = extract_after(&original_input, cursor);
@@ -66,7 +66,7 @@ fn compute_before_text(original_input: &str, insert_pos: usize, cursor: usize) -
     if has_word_boundary_space {
         before
     } else if cursor >= original_input.len() && trimmed_before != prefix {
-        trimmed_before.to_string()
+        trimmed_before.to_owned()
     } else {
         before
     }

@@ -74,7 +74,7 @@ pub fn build_error_json(
     });
 
     ToolOutput {
-        tool_name: tool_name.to_string(),
+        tool_name: tool_name.to_owned(),
         tool_args,
         content,
         bytes_transferred: None,

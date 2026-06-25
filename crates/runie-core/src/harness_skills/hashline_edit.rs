@@ -97,7 +97,7 @@ impl HashlineEditSkill {
     pub fn apply_edits(path: &std::path::Path, edits: &[HashlineEdit]) -> Result<String, String> {
         let content = std::fs::read_to_string(path)
             .map_err(|e| format!("Error reading {}: {}", path.display(), e))?;
-        let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
+        let mut lines: Vec<String> = content.lines().map(|s| s.to_owned()).collect();
         // Apply from bottom to top to avoid line number shifting
         let mut sorted = edits.to_vec();
         sorted.sort_by_key(|b| std::cmp::Reverse(b.line));
@@ -155,7 +155,7 @@ fn try_apply_hashline(ctx: &ToolCallCtx) -> Result<ToolCallResult, String> {
         .tool_input
         .get("path")
         .and_then(|p| p.as_str())
-        .ok_or_else(|| "path is required for hashline edit".to_string())?;
+        .ok_or_else(|| "path is required for hashline edit".to_owned())?;
     let path = std::path::PathBuf::from(path);
 
     HashlineEditSkill::validate_hashes(&path, &edits)?;

@@ -78,7 +78,7 @@ pub fn highlight_code(code: &str, lang: &str) -> Vec<Vec<SyntaxToken>> {
                 .unwrap_or_default()
                 .into_iter()
                 .map(|(style, content)| SyntaxToken {
-                    content: content.to_string(),
+                    content: content.to_owned(),
                     style: convert_style(style),
                 })
                 .collect()

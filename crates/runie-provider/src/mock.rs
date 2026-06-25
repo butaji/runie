@@ -72,33 +72,32 @@ fn xorshift64star(mut x: u64) -> u64 {
 fn file_tool_chunks(input: &str) -> Option<Vec<String>> {
     if input.contains("markup") {
         return Some(vec![
-            "I'll list the files in the current directory.\n".to_string(),
-            r#"[TOOL_CALL]{tool => "list_dir", args => {"path" => "."}}[/TOOL_CALL]"#.to_string(),
+            "I'll list the files in the current directory.\n".to_owned(),
+            r#"[TOOL_CALL]{tool => "list_dir", args => {"path" => "."}}[/TOOL_CALL]"#.to_owned(),
         ]);
     }
     if input.contains("list files") || input.contains("files") {
         return Some(vec![
-            "I'll list the files in the current directory.\n".to_string(),
-            "TOOL:list_dir:.".to_string(),
+            "I'll list the files in the current directory.\n".to_owned(),
+            "TOOL:list_dir:.".to_owned(),
         ]);
     }
     if input.contains("read") {
         return Some(vec![
-            "Let me read that file for you.\n".to_string(),
-            "TOOL:read_file:README.md".to_string(),
+            "Let me read that file for you.\n".to_owned(),
+            "TOOL:read_file:README.md".to_owned(),
         ]);
     }
     if input.contains("write") {
         return Some(vec![
-            "I'll create that file for you.\n".to_string(),
-            "TOOL:write_file:hello.txt:Hello World".to_string(),
+            "I'll create that file for you.\n".to_owned(),
+            "TOOL:write_file:hello.txt:Hello World".to_owned(),
         ]);
     }
     if input.contains("edit") {
         return Some(vec![
-            "I'll make that edit for you.\n".to_string(),
-            r#"{"name": "edit_file", "arguments": {"path": "src/main.rs", "search": "old", "replace": "new"}}"#
-                .to_string(),
+            "I'll make that edit for you.\n".to_owned(),
+            r#"{"name": "edit_file", "arguments": {"path": "src/main.rs", "search": "old", "replace": "new"}}"#.to_owned(),
         ]);
     }
     None
@@ -107,8 +106,8 @@ fn file_tool_chunks(input: &str) -> Option<Vec<String>> {
 fn malformed_tool_chunks(input: &str) -> Option<Vec<String>> {
     if input.contains("malformed") {
         return Some(vec![
-            "I will call a malformed tool.\n".to_string(),
-            r#"{"name": "bash" "arguments": {"command": "echo hi"}}"#.to_string(),
+            "I will call a malformed tool.\n".to_owned(),
+            r#"{"name": "bash" "arguments": {"command": "echo hi"}}"#.to_owned(),
         ]);
     }
     None
@@ -117,21 +116,20 @@ fn malformed_tool_chunks(input: &str) -> Option<Vec<String>> {
 fn command_tool_chunks(input: &str) -> Option<Vec<String>> {
     if input.contains("run") || input.contains("cmd") {
         return Some(vec![
-            "I'll run that command for you.\n".to_string(),
-            "TOOL:bash:echo hello".to_string(),
+            "I'll run that command for you.\n".to_owned(),
+            "TOOL:bash:echo hello".to_owned(),
         ]);
     }
     if input.contains("grep") || input.contains("search") {
         return Some(vec![
-            "I'll search for that pattern.\n".to_string(),
-            r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": ".", "glob": "*.rs"}}"#
-                .to_string(),
+            "I'll search for that pattern.\n".to_owned(),
+            r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": ".", "glob": "*.rs"}}"#.to_owned(),
         ]);
     }
     if input.contains("find") || input.contains("glob") {
         return Some(vec![
-            "I'll find those files for you.\n".to_string(),
-            r#"{"name": "find", "arguments": {"pattern": "*.rs", "path": "."}}"#.to_string(),
+            "I'll find those files for you.\n".to_owned(),
+            r#"{"name": "find", "arguments": {"pattern": "*.rs", "path": "."}}"#.to_owned(),
         ]);
     }
     None
@@ -139,7 +137,7 @@ fn command_tool_chunks(input: &str) -> Option<Vec<String>> {
 
 fn response_chunks(last: Option<&ChatMessage>, user_input: &str) -> Vec<String> {
     if matches!(last, Some(m) if m.role == Role::Tool) {
-        return vec!["Done. I have the information you requested.".to_string()];
+        return vec!["Done. I have the information you requested.".to_owned()];
     }
     let input_lower = user_input.to_lowercase();
     if let Some(chunks) = file_tool_chunks(&input_lower) {
@@ -160,7 +158,7 @@ fn response_chunks(last: Option<&ChatMessage>, user_input: &str) -> Vec<String> 
 fn last_user_content(messages: &[ChatMessage]) -> Option<String> {
     messages.iter().rev().find_map(|m| {
         if m.role == Role::User {
-            Some(m.content().clone())
+            Some(m.content())
         } else {
             None
         }
@@ -270,7 +268,7 @@ impl Provider for MockStreamingProvider {
         messages: Vec<ChatMessage>,
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
         let user_input = last_user_content(&messages)
-            .unwrap_or_else(|| "This is a test response with multiple words.".to_string());
+            .unwrap_or_else(|| "This is a test response with multiple words.".to_owned());
         let response = format!(
             "You said: '{}'. I understand and will help you with that task. ",
             user_input
