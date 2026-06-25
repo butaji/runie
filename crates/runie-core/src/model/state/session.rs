@@ -8,6 +8,9 @@ use crate::session::tree::SessionTree;
 
 use super::CommandUsage;
 
+/// Session state — messages, tree, pending edits.
+/// Fields are public to allow test setup in dependent crates.
+/// Use `session_mut()` for production mutations.
 #[derive(Clone)]
 pub struct SessionState {
     pub messages: Vec<ChatMessage>,
@@ -43,6 +46,9 @@ pub enum ModelSource {
     UserOverride,
 }
 
+/// Configuration state — provider, model, theme, keybindings.
+/// Fields are public to allow test setup in dependent crates.
+/// Use `config_mut()` for production mutations.
 #[derive(Clone)]
 pub struct ConfigState {
     pub current_provider: String,
@@ -106,6 +112,8 @@ impl Default for ConfigState {
     }
 }
 
+/// Completion/suggestion state — path and @ mentions.
+/// Fields are public to allow test setup in dependent crates.
 #[derive(Clone, Default)]
 pub struct CompletionState {
     pub path_suggestions: Option<Vec<PathCompletion>>,

@@ -2,13 +2,12 @@
 
 /// A file entry from the FFF indexer for the file picker.
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
-pub(crate) struct FffFileEntry {
-    pub(crate) name: String,
-    pub(crate) path: String,
-    pub(crate) is_dir: bool,
-    pub(crate) score: f64,
-    pub(crate) git_status: Option<String>,
+pub struct FffFileEntry {
+    pub name: String,
+    pub path: String,
+    pub is_dir: bool,
+    pub score: f64,
+    pub git_status: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -103,6 +102,8 @@ impl std::str::FromStr for ThinkingLevel {
     }
 }
 
+/// Queued message for steering/follow-up.
+/// Fields are public to allow test setup in dependent crates.
 #[derive(Clone, Debug)]
 pub struct QueuedMessage {
     pub content: String,
@@ -110,6 +111,7 @@ pub struct QueuedMessage {
 }
 
 /// Active permission approval prompt shown as a blocking modal dialog.
+/// Fields are public to allow test setup in dependent crates.
 #[derive(Clone, Debug)]
 pub struct PermissionRequestState {
     pub request_id: String,

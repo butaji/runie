@@ -95,6 +95,9 @@ impl SpeedWindow {
     }
 }
 
+/// Agent turn state — queues, tokens, streaming.
+/// Fields are public to allow test setup in dependent crates.
+/// Use `agent_state_mut()` for production mutations.
 #[derive(Clone, Default)]
 pub struct AgentState {
     pub request_queue: VecDeque<(String, String)>,

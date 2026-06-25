@@ -4,6 +4,9 @@ use crate::model::InputReceiver;
 use crate::model::ModelSelectorItem;
 use crate::view::elements::Element;
 
+/// View/cache state — scroll, elements, animation.
+/// Fields are public to allow test setup in dependent crates.
+/// Use `view_mut()` for production mutations.
 #[derive(Clone)]
 pub struct ViewState {
     pub scroll: usize,

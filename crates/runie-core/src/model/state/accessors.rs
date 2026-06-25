@@ -130,7 +130,8 @@ impl AppState {
         &mut self.view
     }
 
-    pub(crate) fn config_mut(&mut self) -> &mut ConfigState {
+    /// Mutable access to config state (for test setup).
+    pub fn config_mut(&mut self) -> &mut ConfigState {
         &mut self.config
     }
 
@@ -222,7 +223,8 @@ impl AppState {
         &mut self.actor_handles
     }
 
-    pub(crate) fn config_cache_mut(&mut self) -> &mut Option<crate::config::Config> {
+    /// Mutable access to config cache (for test setup).
+    pub fn config_cache_mut(&mut self) -> &mut Option<crate::config::Config> {
         &mut self.config_cache
     }
 }

@@ -1,15 +1,20 @@
 //! `AppState` — the read-only UI projection of actor-owned state.
 //!
-//! All fields are private. Use accessors in `accessors.rs` for reads and
-//! `pub(crate)` mutable accessors for internal mutations.
+//! Fields are public to allow test setup in dependent crates.
+//! Production code should use the accessors in `accessors.rs` for reads and
+//! mutable accessors for internal mutations.
 //!
 //! The `take()` method supports `reset_session()` without requiring a full
-//! struct reassignment (which is illegal when fields are private).
+//! struct reassignment.
 
 use super::{
     AgentState, CompletionState, ConfigState, FffFileEntry, InputState, SessionState, ViewState,
 };
 
+/// Application state — a read-only UI projection of actor-owned state.
+///
+/// Fields are public to allow test setup in dependent crates.
+/// Production code should use the accessors in `accessors.rs`.
 #[derive(Clone)]
 pub struct AppState {
     // 6 inner state structs (factored domain state)
@@ -34,7 +39,6 @@ pub struct AppState {
     pub transient_level: Option<crate::event::TransientLevel>,
     pub git_info: Option<crate::snapshot::GitInfo>,
     pub cwd_name: String,
-    #[allow(private_interfaces)]
     pub fff_file_results: Vec<FffFileEntry>,
     pub fff_debounce: u32,
     pub permission_request: Option<crate::model::PermissionRequestState>,

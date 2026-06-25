@@ -5,6 +5,9 @@ pub struct CommandUsage {
     pub last_used: f64,
 }
 
+/// Input state — text, cursor, history.
+/// Fields are public to allow test setup in dependent crates.
+/// Use `input_mut()` for production mutations.
 #[derive(Clone)]
 pub struct InputState {
     pub input: String,
