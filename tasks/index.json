@@ -365,7 +365,7 @@
     },
     {
       "id": "inline-or-document-core-ui-shim",
-      "status": "todo",
+      "status": "done",
       "milestone": "?",
       "category": "?",
       "priority": "?",
