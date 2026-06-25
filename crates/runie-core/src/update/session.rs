@@ -198,43 +198,44 @@ impl AppState {
 
     fn try_deliver_steering(&mut self) -> bool {
         match self.config_mut().steering_mode {
-            DeliveryMode::OneAtATime => {
-                if let Some(idx) = self
-                    .agent
-                    .message_queue
-                    .iter()
-                    .position(|m| m.kind == crate::model::QueuedMessageKind::Steering)
-                {
-                    let content = self.agent_state_mut().message_queue.remove(idx).content;
-                    self.push_user_message(content);
-                    self.view_mut().scroll = 0;
-                    self.messages_changed();
-                    true
-                } else {
-                    false
-                }
-            }
-            DeliveryMode::All => {
-                let steerings: Vec<String> = self
-                    .agent
-                    .message_queue
-                    .iter()
-                    .filter(|m| m.kind == crate::model::QueuedMessageKind::Steering)
-                    .map(|m| m.content.clone())
-                    .collect();
-                if steerings.is_empty() {
-                    return false;
-                }
-                let content = steerings.join("\n");
-                self.agent
-                    .message_queue
-                    .retain(|m| m.kind != crate::model::QueuedMessageKind::Steering);
-                self.push_user_message(content);
-                self.view_mut().scroll = 0;
-                self.messages_changed();
-                true
-            }
+            DeliveryMode::OneAtATime => self.try_steering_one(),
+            DeliveryMode::All => self.try_steering_all(),
         }
+    }
+
+    fn try_steering_one(&mut self) -> bool {
+        let kind = crate::model::QueuedMessageKind::Steering;
+        let idx = match self.agent_state().message_queue.iter().position(|m| m.kind == kind) {
+            Some(idx) => idx,
+            None => return false,
+        };
+        let content = self.agent_state_mut().message_queue.remove(idx).content;
+        self.push_user_message(content);
+        self.view_mut().scroll = 0;
+        self.messages_changed();
+        true
+    }
+
+    fn try_steering_all(&mut self) -> bool {
+        let kind = crate::model::QueuedMessageKind::Steering;
+        let steerings: Vec<String> = self
+            .agent_state()
+            .message_queue
+            .iter()
+            .filter(|m| m.kind == kind)
+            .map(|m| m.content.clone())
+            .collect();
+        if steerings.is_empty() {
+            return false;
+        }
+        let content = steerings.join("\n");
+        self.agent_state_mut()
+            .message_queue
+            .retain(|m| m.kind != kind);
+        self.push_user_message(content);
+        self.view_mut().scroll = 0;
+        self.messages_changed();
+        true
     }
 
     pub(crate) fn dequeue(&mut self) {
