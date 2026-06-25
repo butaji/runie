@@ -844,7 +844,7 @@
   },
   {
     "id": "unify-provider-modules",
-    "status": "todo",
+    "status": "done",
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P1",
@@ -860,7 +860,7 @@
   },
   {
     "id": "consolidate-login-flow-handlers",
-    "status": "todo",
+    "status": "done",
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
@@ -875,7 +875,7 @@
   },
   {
     "id": "delete-config-reload-shim",
-    "status": "todo",
+    "status": "done",
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
@@ -890,7 +890,7 @@
   },
   {
     "id": "consolidate-dual-path-modules",
-    "status": "todo",
+    "status": "done",
     "milestone": "R4",
     "category": "Architecture / Refactoring",
     "priority": "P2",
@@ -905,7 +905,7 @@
   },
   {
     "id": "drop-event-bus-replay-buffer",
-    "status": "todo",
+    "status": "done",
     "milestone": "R4",
     "category": "Architecture / Refactoring",
     "priority": "P3",
