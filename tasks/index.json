@@ -535,14 +535,14 @@
   },
   {
     "id": "replace-single-use-deps-with-stdlib",
-    "status": "todo",
-    "milestone": "?",
-    "category": "?",
-    "priority": "?",
+    "status": "done",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
     "depends_on": [],
     "blocks": [],
     "file": "tasks/replace-single-use-deps-with-stdlib.md",
-    "title": ""
+    "title": "Replace single-use deps with stdlib"
   },
   {
     "id": "session-actor-owns-session-state",

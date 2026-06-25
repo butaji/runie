@@ -119,7 +119,45 @@ fn is_user_invocable(invocation: &str) -> bool {
     lower.contains("user can invoke") || lower.contains("/skill")
 }
 
-/// Extract YAML frontmatter from content if present, using serde_yaml.
+/// Parse simple YAML frontmatter: "key: value" lines.
+/// Supports unquoted values and single-quoted values. No nested structures.
+fn parse_frontmatter_yaml(fm_text: &str) -> HashMap<String, String> {
+    let mut result = HashMap::new();
+    for line in fm_text.lines() {
+        if let Some((key, value)) = parse_yaml_line(line) {
+            result.insert(key, value);
+        }
+    }
+    result
+}
+
+/// Parse a single YAML "key: value" line, returning (key, value) or None.
+fn parse_yaml_line(line: &str) -> Option<(String, String)> {
+    let line = line.trim();
+    if line.is_empty() || line.starts_with('#') {
+        return None;
+    }
+    let colon_pos = line.find(':')?;
+    let key = line[..colon_pos].trim().to_owned();
+    if key.is_empty() {
+        return None;
+    }
+    let value = strip_quotes(line[colon_pos + 1..].trim());
+    Some((key, value))
+}
+
+/// Strip surrounding quotes from a YAML value.
+fn strip_quotes(s: &str) -> String {
+    let s = s.trim();
+    let unquoted = if (s.starts_with('\'') && s.ends_with('\'')) || (s.starts_with('"') && s.ends_with('"')) {
+        &s[1..s.len() - 1]
+    } else {
+        s
+    };
+    unquoted.to_owned()
+}
+
+/// Extract YAML frontmatter from content if present.
 /// Returns a HashMap of key-value pairs suitable for the skill frontmatter schema.
 pub(crate) fn extract_frontmatter(content: &str) -> HashMap<String, String> {
     // Only recognize frontmatter if content starts with "---"
@@ -139,25 +177,8 @@ pub(crate) fn extract_frontmatter(content: &str) -> HashMap<String, String> {
     };
 
     let fm_text = &after_opening[..end_pos];
-    // Body starts after the closing "---\n"
-    let _body = &after_opening[end_pos + 4..];
 
-    // Parse YAML with serde_yaml
-    match serde_yaml::from_str::<serde_yaml::Value>(fm_text) {
-        Ok(serde_yaml::Value::Mapping(mapping)) => {
-            let mut result = HashMap::new();
-            for (k, v) in mapping {
-                if let serde_yaml::Value::String(key) = k {
-                    if let serde_yaml::Value::String(val) = v {
-                        result.insert(key, val);
-                    }
-                }
-            }
-            result
-        }
-        // Non-mapping values (e.g. a bare string) are treated as no frontmatter
-        _ => HashMap::new(),
-    }
+    parse_frontmatter_yaml(fm_text)
 }
 
 /// Extract text under a markdown `## Section` heading.

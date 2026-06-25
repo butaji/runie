@@ -1,7 +1,7 @@
 //! Session tree — branching conversation history.
 
 use crate::message::{ChatMessage, Role};
-use parking_lot::Mutex;
+use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -291,7 +291,7 @@ impl SessionTree {
     /// Collect visible nodes given a filter, with caching.
     pub fn filtered_walk(&self, filter: SessionTreeFilter) -> Vec<(usize, &TreeNode)> {
         // Try cache first
-        if let Some(cache) = self.cached_filter.try_lock() {
+        if let Ok(cache) = self.cached_filter.try_lock() {
             if let Some((cached_filter, cached_version, cached_paths)) = cache.as_ref() {
                 if *cached_filter == filter && *cached_version == self.index_version {
                     return cached_paths
@@ -316,7 +316,7 @@ impl SessionTree {
         let output: Vec<_> = result.into_iter().map(|(d, n, _)| (d, n)).collect();
 
         // Store in cache
-        if let Some(mut cache) = self.cached_filter.try_lock() {
+        if let Ok(mut cache) = self.cached_filter.try_lock() {
             *cache = Some((filter, self.index_version, paths));
         }
 
@@ -355,7 +355,7 @@ impl SessionTree {
         self.index_version = self.index_version.wrapping_add(1);
         self.built_version = self.index_version.wrapping_sub(1); // force rebuild
         self.node_index.clear();
-        if let Some(mut cache) = self.cached_filter.try_lock() {
+        if let Ok(mut cache) = self.cached_filter.try_lock() {
             *cache = None;
         }
     }

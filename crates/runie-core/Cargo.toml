@@ -15,7 +15,7 @@ schema = ["dep:schemars"]
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
-serde_yaml.workspace = true
+
 runie-protocol.workspace = true
 anyhow.workspace = true
 similar.workspace = true
@@ -26,7 +26,6 @@ unicode-segmentation = "1.10"
 toml.workspace = true
 tokio.workspace = true
 futures.workspace = true
-parking_lot.workspace = true
 chrono = "0.4"
 pulldown-cmark.workspace = true
 unicode-width.workspace = true
@@ -48,7 +47,6 @@ async-trait.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 criterion = "0.5"
-parking_lot.workspace = true
 runie-macros.workspace = true
 
 [[bench]]

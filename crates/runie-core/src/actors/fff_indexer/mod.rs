@@ -13,7 +13,7 @@
 use crate::actors::{Actor, ActorHandle};
 use crate::bus::EventBus;
 use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
-use parking_lot::RwLock;
+use std::sync::RwLock;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -61,13 +61,16 @@ impl FffSearchState {
     ///
     /// Returns `None` if the indexer has not been spawned yet.
     pub fn get() -> Option<Self> {
-        let guard = fff_state().read();
+        let guard = fff_state().read().ok()?;
         guard.as_ref().map(|inner| inner.state.clone())
     }
 
     /// Returns `true` if the global indexer has completed its initial scan.
     pub fn is_indexed() -> bool {
-        let guard = fff_state().read();
+        let guard = match fff_state().read() {
+            Ok(g) => g,
+            Err(_) => return false,
+        };
         guard.as_ref().map(|i| i.indexed).unwrap_or(false)
     }
 
@@ -75,8 +78,9 @@ impl FffSearchState {
     /// Clears the inner state so a new indexer can initialize with a fresh root.
     #[cfg(test)]
     pub fn reset_for_test() {
-        let mut g = fff_state().write();
-        *g = None;
+        if let Ok(mut g) = fff_state().write() {
+            *g = None;
+        }
     }
 
     /// Record that a file was accessed (read or selected) to boost its frecency score.
