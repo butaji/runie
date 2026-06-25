@@ -1,4 +1,5 @@
 /// Partition model catalog items into recent models and provider groups.
+// allow: intentionally complex return type — 2-tuple of (recent names, grouped items)
 #[allow(clippy::type_complexity)]
 pub fn partition_model_items(
     items: Vec<(String, String, String, bool, bool)>,

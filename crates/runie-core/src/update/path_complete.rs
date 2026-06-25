@@ -8,15 +8,16 @@ pub(crate) fn extract_path_prefix(input: &str, cursor: usize) -> String {
 
 impl AppState {
     pub(crate) fn toggle_path_completion(&mut self) {
-        let input = self.input_mut();
-        let partial = extract_path_prefix(&input.input, input.cursor_pos);
+        let partial = {
+            let input = self.input();
+            extract_path_prefix(&input.input, input.cursor_pos)
+        };
         let cwd = std::env::current_dir().unwrap_or_default();
         let suggestions = crate::path_complete::complete_path(&partial, &cwd);
         if suggestions.is_empty() {
-            input.input_flash = 3;
+            self.input_mut().input_flash = 3;
             return;
         }
-        drop(input);
         self.completion_mut().path_suggestions = Some(suggestions);
         self.completion_mut().path_selected = Some(0);
         self.view_mut().dirty = true;
@@ -68,19 +69,18 @@ impl AppState {
     }
 
     fn replace_path_prefix(&mut self, prefix: &str, replacement: &str) {
-        let cursor_pos = self.input().cursor_pos;
-        let before = &self.input().input[..cursor_pos];
-        if let Some(pos) = before.rfind(prefix) {
+        let (cursor_pos, input_len, input_str) = {
             let input = self.input();
-            let input_len = input.input.len();
-            let input_str = input.input.clone();
-            drop(input);
-            let mut input_mut = self.input_mut();
+            (input.cursor_pos, input.input.len(), input.input.clone())
+        };
+        let before = &input_str[..cursor_pos];
+        if let Some(pos) = before.rfind(prefix) {
             let mut new_input =
                 String::with_capacity(input_len - prefix.len() + replacement.len());
             new_input.push_str(&input_str[..pos]);
             new_input.push_str(replacement);
             new_input.push_str(&input_str[cursor_pos..]);
+            let input_mut = self.input_mut();
             input_mut.input = new_input;
             input_mut.cursor_pos = pos + replacement.len();
         }

@@ -125,33 +125,6 @@ impl AppState {
         self.view_mut().dirty = true;
     }
 
-    #[allow(dead_code)]
-    fn find_prefix_file_matches(&self, prefix: &str) -> Vec<String> {
-        let base = std::env::current_dir().unwrap_or_default();
-        let Ok(entries) = std::fs::read_dir(&base) else {
-            return Vec::new();
-        };
-
-        let prefix_lower = prefix.to_lowercase();
-        let mut matches: Vec<String> = Vec::new();
-        for entry in entries.flatten() {
-            let name = entry.file_name().to_string_lossy().to_string();
-            if name.starts_with('.') {
-                continue;
-            }
-            if name.to_lowercase().starts_with(&prefix_lower) {
-                let is_dir = entry.file_type().is_ok_and(|t| t.is_dir());
-                let display = if is_dir {
-                    format!("{}/", name)
-                } else {
-                    name
-                };
-                matches.push(display);
-            }
-        }
-        matches.sort();
-        matches
-    }
 }
 
 /// Pure function to compute the tab prefix at a given cursor position.
@@ -174,16 +147,3 @@ fn choose_insert_pos(cursor: usize, prefix_start: usize, prefix: &str, len: usiz
     }
 }
 
-#[allow(dead_code)]
-fn suffix_after_prefix(prefix: &str, full: &str) -> String {
-    if prefix.is_empty() {
-        return full.to_string();
-    }
-    let prefix_lower = prefix.to_lowercase();
-    let full_lower = full.to_lowercase();
-    if let Some(pos) = full_lower.find(&prefix_lower) {
-        let end = pos + prefix.len();
-        return full[end..].to_string();
-    }
-    full.to_string()
-}

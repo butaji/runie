@@ -5,8 +5,7 @@
 
 use super::ranking;
 use super::{
-    AgentState, AppState, CommandUsage, CompletionState, ConfigState, FffFileEntry,
-    InputState, ModelSource, SessionState, ViewState,
+    AppState, CommandUsage, ModelSource,
 };
 use crate::actors::ActorHandles;
 use crate::view::elements::Element;

@@ -79,6 +79,7 @@ pub fn render_user_message(
     lines
 }
 
+// allow: orthogonal layout dimensions and styles — bundled for rendering context
 #[allow(clippy::too_many_arguments)]
 fn build_user_body(
     content: &str,
@@ -116,6 +117,7 @@ fn build_user_body(
         .collect()
 }
 
+// allow: orthogonal layout dimensions and styles — bundled for rendering context
 #[allow(clippy::too_many_arguments)]
 fn build_user_line_from_spans(
     spans: &[MdSpan],

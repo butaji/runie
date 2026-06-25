@@ -78,15 +78,6 @@ pub fn vim_nav_hints() -> Vec<String> {
     ]
 }
 
-#[allow(dead_code)]
-pub fn feed_focused_hints() -> Vec<String> {
-    vec![
-        "j/k".to_string(),
-        "enter expand".to_string(),
-        "q quit".to_string(),
-    ]
-}
-
 pub fn at_suggestion_hints() -> Vec<String> {
     vec![
         "tab cycle".to_string(),

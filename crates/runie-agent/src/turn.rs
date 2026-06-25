@@ -158,6 +158,7 @@ fn emit_error_and_done(emit: &EmitFn, id: &str, message: String) {
     );
     emit_now(emit, runie_core::Event::Done { id: id.to_string() });
 }
+// allow: iteration control params — orthogonal and intentionally flat for turn loop clarity
 #[allow(clippy::too_many_arguments)]
 async fn run_iterations(
     provider: &dyn Provider,

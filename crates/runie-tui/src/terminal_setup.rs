@@ -2,7 +2,7 @@
 
 use crate::terminal::caps;
 use crossterm::event::{
-    DisableMouseCapture, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,
+    KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,
     PushKeyboardEnhancementFlags,
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
@@ -196,12 +196,6 @@ pub fn disable_mouse_grok_style<W: io::Write>(writer: &mut W) -> io::Result<()> 
     disable_all_mouse_modes(writer)?;
     leave_alternate_screen(writer)?;
     writer.flush()
-}
-
-/// Disable mouse capture.
-#[allow(dead_code)]
-pub fn disable_mouse<W: io::Write>(writer: &mut W) -> io::Result<()> {
-    crossterm::execute!(writer, DisableMouseCapture)
 }
 
 #[cfg(test)]

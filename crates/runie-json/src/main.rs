@@ -24,7 +24,7 @@
 //! ```
 
 use anyhow::Result;
-use runie_agent::headless_helper::{build_options, build_sink, build_system_prompt};
+use runie_agent::headless_helper::{build_options, build_sink};
 use runie_agent::{run_headless_cli, HeadlessResult};
 use runie_core::message::ChatMessage;
 

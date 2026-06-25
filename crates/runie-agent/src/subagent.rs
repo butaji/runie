@@ -30,6 +30,7 @@ pub enum SubagentError {
 /// `provider` and `provider_key`/`model` come from the caller (usually the
 /// `ProviderActor`). `prompt` is the user request. The subagent's message
 /// buffer is empty (no parent history leaks in).
+// allow: all args are orthogonal subagent config params — refactoring would hurt call-site clarity
 #[allow(clippy::too_many_arguments)]
 pub async fn run_subagent(
     prompt: &str,

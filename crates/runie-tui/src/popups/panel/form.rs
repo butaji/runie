@@ -78,6 +78,7 @@ fn build_body(panel: &Panel, inner_w: usize) -> Vec<Line<'_>> {
     body
 }
 
+// allow: orthogonal form layout params — bundled for panel item rendering
 #[allow(clippy::too_many_arguments)]
 fn push_body_item<'a>(
     body: &mut Vec<Line<'a>>,
@@ -116,6 +117,7 @@ fn push_body_item<'a>(
     }
 }
 
+// allow: orthogonal form layout params — bundled for field rendering context
 #[allow(clippy::too_many_arguments)]
 fn push_form_field_body<'a>(
     body: &mut Vec<Line<'a>>,
@@ -264,6 +266,7 @@ fn field_indices(panel: &Panel) -> Vec<usize> {
         .collect()
 }
 
+// allow: orthogonal field rendering params — bundled for complete field rendering
 #[allow(clippy::too_many_arguments)]
 fn push_field<'a>(
     lines: &mut Vec<Line<'a>>,

@@ -74,6 +74,7 @@ pub struct HeadlessResult {
 }
 
 /// Options for headless turn execution.
+// allow: fn_mut callback type is intentional for flexible on_chunk hook
 #[allow(clippy::type_complexity)]
 pub struct HeadlessOptions {
     /// Execute tools and collect results.

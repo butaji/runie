@@ -21,7 +21,6 @@ pub use app_state::AppState;
 pub(crate) use input::{CommandUsage, InputState};
 pub use session::{CompletionState, ConfigState, ModelSource, SessionState};
 pub(crate) use types::{
-    DeliveryMode, FffFileEntry, PermissionRequestState, QueuedMessage, QueuedMessageKind,
-    ThinkingLevel,
+    FffFileEntry, QueuedMessage, QueuedMessageKind,
 };
 pub(crate) use view::ViewState;

@@ -2,7 +2,6 @@ use crate::labels::{tool_done, tool_running};
 use crate::message::{now, Part};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::update::agent::thought::{plan_thought, ThoughtPlan};
-use crate::update::strip_tool_markers;
 #[path = "core/tests.rs"]
 mod tests;
 impl AppState {
@@ -244,17 +243,6 @@ impl AppState {
             } else {
                 self.create_assistant_message(id.clone(), stable);
             }
-        }
-    }
-    #[allow(dead_code)]
-    fn find_or_create_message(&mut self, id: &str, content: &str) {
-        if let Some(idx) = self.find_cached_assistant_index(id) {
-            self.append_to_message(idx, content);
-        } else if let Some(idx) = self.find_assistant_by_id(id) {
-            self.agent_state_mut().last_assistant_index = Some(idx);
-            self.append_to_message(idx, content);
-        } else {
-            self.create_assistant_message(id.to_string(), content.to_string());
         }
     }
 }

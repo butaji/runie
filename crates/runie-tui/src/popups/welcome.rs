@@ -19,6 +19,7 @@ use crate::theme::{block_popup, color_accent, color_bg_panel, color_dim};
 use crate::Stylize;
 
 /// Render the welcome/launcher overlay covering the main area.
+// allow: vec![] then push is necessary — initial content is not statically known
 #[allow(clippy::vec_init_then_push)]
 pub fn render_welcome(f: &mut Frame, snap: &Snapshot) {
     let area = palette_popup_rect(f.area());

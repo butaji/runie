@@ -1,4 +1,3 @@
-use crate::labels::{tool_done, tool_running};
 use crate::message::{now, Part};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::update::strip_tool_markers;
