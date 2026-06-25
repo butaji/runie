@@ -3,11 +3,11 @@
 //! Uses the `ProviderProtocol` trait to handle SSE frames.
 
 use super::protocol::{OpenAiFrame, OpenAiProtocol, OpenAiState};
-use super::request::send_openai_request;
+use super::request::build_request_body;
 use super::OpenAiProvider;
-use crate::framing::sse_framing;
 use crate::protocol::ProviderProtocol;
-use futures::StreamExt;
+use reqwest_eventsource::retry::Never;
+use reqwest_eventsource::EventSource;
 use runie_core::message::ChatMessage;
 use runie_core::provider_event::ProviderEvent;
 
@@ -73,31 +73,63 @@ fn openai_event_stream(
     messages: Vec<ChatMessage>,
 ) -> impl futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send {
     async_stream::stream! {
-        let response = match send_openai_request(&provider.client, &provider, &messages).await {
-            Ok(r) => r,
+        let mut es = match build_eventsource(&provider, &messages) {
+            Ok(es) => es,
             Err(e) => { yield Err(e); return; }
         };
 
+        es.set_retry_policy(Box::new(Never));
+        let mut es = Box::pin(es);
         let protocol = OpenAiProtocol::new();
         let mut state = OpenAiState::default();
-        let mut stream = sse_framing(response.bytes_stream());
 
-        while let Some(result) = stream.next().await {
-            let line = match result {
-                Ok(l) => l,
-                Err(e) => { yield Err(anyhow::anyhow!("SSE framing error: {}", e)); break; }
-            };
-            let frame = match OpenAiFrame::from_line(&line) {
-                Some(f) => f, None => continue,
-            };
-            let is_terminal = protocol.terminal(&frame);
-            let (new_state, events) = protocol.step(state, frame);
-            state = new_state;
-            for event in events { yield Ok(event); }
-            if is_terminal { break; }
+        while let Some(result) = futures::StreamExt::next(&mut es).await {
+            match parse_sse_result(result) {
+                Some(Ok(event)) => {
+                    let frame = match OpenAiFrame::from_line(&event) {
+                        Some(f) => f,
+                        None => continue,
+                    };
+                    let is_terminal = protocol.terminal(&frame);
+                    let (new_state, events) = protocol.step(state, frame);
+                    state = new_state;
+                    for event in events { yield Ok(event); }
+                    if is_terminal { break; }
+                }
+                Some(Err(e)) => { yield Err(e); break; }
+                None => continue,
+            }
         }
 
         for event in protocol.on_halt(state) { yield Ok(event); }
+    }
+}
+
+fn build_eventsource(
+    provider: &OpenAiProvider,
+    messages: &[ChatMessage],
+) -> anyhow::Result<reqwest_eventsource::EventSource> {
+    let body = build_request_body(provider, messages);
+    let url = format!("{}/chat/completions", provider.base_url);
+    let api_key = &provider.api_key;
+
+    EventSource::new(
+        provider.client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", api_key.trim()))
+            .header("Content-Type", "application/json")
+            .json(&body),
+    )
+    .map_err(|e| anyhow::anyhow!("reqwest-eventsource: {}", e))
+}
+
+fn parse_sse_result(
+    result: Result<reqwest_eventsource::Event, reqwest_eventsource::Error>,
+) -> Option<anyhow::Result<String>> {
+    match result {
+        Ok(reqwest_eventsource::Event::Open) => None,
+        Ok(reqwest_eventsource::Event::Message(msg)) => Some(Ok(msg.data)),
+        Err(e) => Some(Err(anyhow::anyhow!("SSE stream error: {}", e))),
     }
 }
 

@@ -192,33 +192,6 @@ fn fallback_message(role: &str, content: &str) -> serde_json::Value {
     serde_json::json!({"role": role, "content": content})
 }
 
-pub async fn send_openai_request(
-    client: &reqwest::Client,
-    provider: &OpenAiProvider,
-    messages: &[ChatMessage],
-) -> anyhow::Result<reqwest::Response> {
-    let url = format!("{}/chat/completions", provider.base_url);
-    let body = build_request_body(provider, messages);
-
-    let response = client
-        .post(&url)
-        .header(
-            "Authorization",
-            format!("Bearer {}", provider.api_key.trim()),
-        )
-        .header("Content-Type", "application/json")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| anyhow::anyhow!("OpenAI request failed: {}", e))?;
-
-    if !response.status().is_success() {
-        let text = response.text().await.unwrap_or_default();
-        return Err(anyhow::anyhow!("OpenAI error: {}", text));
-    }
-    Ok(response)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

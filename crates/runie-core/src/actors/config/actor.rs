@@ -142,15 +142,11 @@ impl ConfigActor {
     }
 
     async fn set_vim_mode(&mut self, enabled: bool, bus: &EventBus<Event>) {
-        let enabled = enabled;
-        self.mutate_config(bus, move |path| set_vim_mode_at_path(&path, enabled))
-            .await;
+        self.mutate_config(bus, move |path| set_vim_mode_at_path(&path, enabled)).await;
     }
 
     async fn set_telemetry(&mut self, enabled: bool, bus: &EventBus<Event>) {
-        let enabled = enabled;
-        self.mutate_config(bus, move |path| set_telemetry_at_path(&path, enabled))
-            .await;
+        self.mutate_config(bus, move |path| set_telemetry_at_path(&path, enabled)).await;
     }
 
     async fn set_truncation(&mut self, limits: crate::config::TruncationSection, bus: &EventBus<Event>) {

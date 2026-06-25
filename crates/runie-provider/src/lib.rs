@@ -4,7 +4,6 @@
 
 pub mod config;
 pub mod factory;
-pub mod framing;
 pub mod mock;
 pub mod openai;
 pub mod protocol;
