@@ -383,7 +383,7 @@
   },
   {
     "id": "r5-partial-json-repair",
-    "status": "todo",
+    "status": "done",
     "milestone": "?",
     "category": "?",
     "priority": "?",
@@ -409,7 +409,7 @@
   },
   {
     "id": "r5-provider-protocol-trait",
-    "status": "todo",
+    "status": "done",
     "milestone": "?",
     "category": "?",
     "priority": "?",

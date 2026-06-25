@@ -1,6 +1,6 @@
 # Extract per-provider `Protocol` trait with `step()` state machine
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: Architecture / Actors
 **Priority**: P0

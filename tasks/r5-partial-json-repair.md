@@ -1,6 +1,6 @@
 # Add partial JSON repair for streaming tool-call arguments
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: Tools
 **Priority**: P1
