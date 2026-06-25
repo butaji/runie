@@ -142,7 +142,7 @@ fn redb_list() {
 #[test]
 fn redb_meta_round_trips() {
     use crate::session_index::SessionMetadata;
-    use crate::session_store::{TABLE_EVENTS, TABLE_META};
+    use crate::session_store::TABLE_META;
 
     let store = test_store();
     let sid = "test-meta";

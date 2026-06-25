@@ -5,7 +5,7 @@
 //! messages with the same role, or histories that do not start with a user
 //! or system message. This module repairs the most common issues.
 
-use runie_core::message::{ChatMessage, Role};
+use runie_core::message::ChatMessage;
 use runie_core::sanitize::sanitize_messages;
 
 /// Normalize a message list for an OpenAI-compatible request.
@@ -31,6 +31,7 @@ fn strip_provider_metadata(messages: Vec<ChatMessage>) -> Vec<ChatMessage> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use runie_core::message::Role;
 
     #[test]
     fn strips_provider_metadata() {

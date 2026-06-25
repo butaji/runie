@@ -6,7 +6,6 @@ use std::pin::Pin;
 use runie_core::actors::provider::{BuiltProvider, ProviderFactory};
 use runie_core::config::Config;
 use runie_core::provider::ProviderError;
-use runie_core::provider;
 
 use crate::{build_provider, validate_api_key};
 

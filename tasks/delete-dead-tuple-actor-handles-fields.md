@@ -1,6 +1,6 @@
 # Delete unused `ActorHandles` tuple struct fields
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P1
@@ -22,7 +22,7 @@ struct ActorHandles(
 );
 ```
 
-The struct is constructed once at line 123 inside `bootstrap_app` and bound to `_actors` at line 74. The five fields are never read; only the struct itself is kept alive so the underlying tasks are not dropped (each `ActorHandle`'s `Drop` impl aborts its task). This is the correct lifetime pattern, but the fields don't need to be named — `_0`..`_5` work, or `#[allow(dead_code)]` with a justifying comment.
+**N/A**: The `ActorHandles` struct described in this task does not exist in the current codebase. The struct may have been removed during a previous refactoring. No action needed.
 
 ## Acceptance Criteria
 

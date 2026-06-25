@@ -11,7 +11,6 @@ use fff_search::{FilePicker, QueryTracker};
 use runie_core::actors::FffSearchState;
 use runie_core::path::resolve_path_in;
 use serde_json::Value;
-use std::time::Duration;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 

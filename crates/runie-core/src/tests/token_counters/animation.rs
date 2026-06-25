@@ -1,7 +1,6 @@
 //! Layer 1 + Layer 2 tests for token counters and animated speed
 
 use crate::event::AgentEvent;
-use crate::model::AppState;
 use crate::tests::fresh_state;
 
 // =============================================================================

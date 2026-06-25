@@ -85,8 +85,6 @@ async fn bootstrap_app(
         config_tx: Some(config_handle.tx().clone()),
         provider_tx: Some(provider_handle.tx().clone()),
         persistence_tx: Some(session_handle.clone()),
-        #[allow(deprecated)]
-        session_store_tx: Some(session_handle.clone()),
         io_tx: Some(io_handle.clone()),
         ..Default::default()
     };

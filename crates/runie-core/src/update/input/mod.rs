@@ -22,8 +22,6 @@ pub use support::{
     prev_grapheme_boundary, vim_nav_hints,
 };
 
-#[cfg(test)]
-pub use support::feed_focused_hints;
 
 pub fn input_event(state: &mut AppState, event: InputEvent) {
     if state.permission_request.is_some() {

@@ -122,6 +122,7 @@ impl AppState {
         }
         self.create_assistant_message(id, content);
     }
+    #[allow(dead_code)]
     pub(crate) fn append_response_delta(&mut self, id: String, content: String) {
         self.track_response_tokens(&content);
         self.agent.streaming_buffer.push_delta(&content);
@@ -241,8 +242,7 @@ impl AppState {
             }
         }
     }
-    /// Find an existing assistant message by id or create a new one with `content`
-    /// as its initial text. Updates `last_assistant_index` to the found/created message.
+    #[allow(dead_code)]
     fn find_or_create_message(&mut self, id: &str, content: &str) {
         if let Some(idx) = self.find_cached_assistant_index(id) {
             self.append_to_message(idx, content);

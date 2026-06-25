@@ -6,8 +6,7 @@
 
 use crate::event::{DialogEvent, InputEvent};
 use crate::model::{AppState, ChatMessage};
-use crate::message::Part;
-use crate::tests::{fresh_state, type_str};
+use crate::tests::fresh_state;
 use std::sync::Mutex;
 
 /// Serializes tests that touch shared env/state.

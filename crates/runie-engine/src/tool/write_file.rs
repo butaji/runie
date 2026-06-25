@@ -1,5 +1,6 @@
 //! WriteFile tool — writes content to a file.
 
+#![allow(unused_imports)]
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;

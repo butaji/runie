@@ -1,4 +1,4 @@
-use super::{exec, minimal_session, tmp_store, ENV_LOCK};
+use super::{exec, tmp_store, ENV_LOCK};
 use crate::event::Event;
 use crate::event::{DialogEvent, InputEvent};
 use crate::message::Part;

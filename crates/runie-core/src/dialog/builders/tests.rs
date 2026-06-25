@@ -1,8 +1,8 @@
 use crate::dialog::builders::{
-    command_palette, file_picker, model_selector, scoped_models, session_list, session_tree,
+    command_palette, model_selector, scoped_models, session_list, session_tree,
     settings, theme_picker, SessionRow,
 };
-use crate::dialog::{PanelItem, PanelStack};
+use crate::dialog::PanelItem;
 use crate::event::ControlEvent;
 use crate::Event;
 

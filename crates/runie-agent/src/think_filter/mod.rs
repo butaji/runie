@@ -183,7 +183,7 @@ impl ThinkFilter {
     ) -> usize {
         match next_open {
             None => self.emit_close_and_end(remaining, pos, close_pos, close_tag, out),
-            Some((open_tag, open_pos)) if close_pos <= open_pos => {
+            Some((_open_tag, open_pos)) if close_pos <= open_pos => {
                 self.emit_close_and_end(remaining, pos, close_pos, close_tag, out)
             }
             Some((open_tag, open_pos)) => {

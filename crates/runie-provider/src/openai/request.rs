@@ -1,5 +1,6 @@
 //! OpenAI Chat Completions request-body construction.
 
+#![allow(unused_imports)]
 use super::OpenAiProvider;
 use runie_core::message::{ChatMessage, Part, ToolCall};
 use runie_core::provider::ModelMeta;
@@ -220,7 +221,7 @@ pub async fn send_openai_request(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runie_core::message::{MessageMetadata, Role};
+    use runie_core::message::{MessageMetadata, Part, Role};
     use runie_core::provider::ModelMeta;
 
     fn provider() -> OpenAiProvider {

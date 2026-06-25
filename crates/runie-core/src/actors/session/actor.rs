@@ -20,9 +20,10 @@ use crate::session_replay::session_to_durable_events;
 use crate::session_store::SessionStore;
 use crate::trust::{TrustDecision, TrustManager};
 
-use super::messages::{PersistenceActorHandle, SessionActorHandle, SessionMsg, SessionStoreActorHandle};
+use super::messages::{SessionActorHandle, SessionMsg};
 
 /// Unified session actor owning all durable state.
+#[allow(dead_code)]
 pub struct SessionActor {
     bus: EventBus<Event>,
     /// Trust manager for trust.json
@@ -276,6 +277,7 @@ impl SessionActor {
     }
 
     /// Build metadata for current session (durable appends).
+    #[allow(dead_code)]
     fn build_meta(&self) -> SessionMetadata {
         SessionMetadata {
             id: self.session_id.clone(),
@@ -290,6 +292,7 @@ impl SessionActor {
     }
 
     /// Generate summary from first 500 chars of content.
+    #[allow(dead_code)]
     fn generate_summary(&self) -> String {
         let chars: Vec<char> = self.summary_buffer.chars().take(500).collect();
         let truncated: String = chars.into_iter().collect();
@@ -300,6 +303,7 @@ impl SessionActor {
         }
     }
 
+    #[allow(dead_code)]
     fn append_to_summary(&mut self, msg: &str) {
         if self.summary_buffer.len() < 500 {
             self.summary_buffer.push_str(msg);
@@ -307,6 +311,7 @@ impl SessionActor {
     }
 
     /// Persist a durable event to the session file.
+    #[allow(dead_code)]
     async fn persist(&self, durable: &DurableCoreEvent) -> anyhow::Result<()> {
         let store = self.store.clone();
         let session_id = self.session_id.clone();
@@ -317,6 +322,7 @@ impl SessionActor {
     }
 
     /// Update the session index.
+    #[allow(dead_code)]
     async fn update_index(&self) {
         let store = self.store.clone();
         let meta = self.build_meta();

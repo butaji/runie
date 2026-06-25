@@ -3,7 +3,6 @@
 //! runtime save/load use `crate::session_store::SessionStore`.
 
 use crate::model::ChatMessage;
-use crate::message::Part;
 use serde::{Deserialize, Serialize};
 
 /// Session snapshot — serializable conversation state.
@@ -69,7 +68,7 @@ pub fn format_as_markdown(messages: &[ChatMessage], display_name: Option<&str>) 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{ChatMessage, Role};
+    use crate::{ChatMessage, Part, Role};
 
     fn sample_session(name: &str) -> Session {
         Session {

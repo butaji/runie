@@ -1,11 +1,7 @@
 //! Transient message tests (Layer 1: state logic)
 
-use crate::event::{
-    AgentEvent, CommandEvent, ControlEvent, DialogEvent, DurableCoreEvent, EditEvent, InputEvent,
-    ModelConfigEvent, ScrollEvent, SessionEvent, SystemEvent,
-};
+use crate::event::SystemEvent;
 
-use crate::event::Event;
 use crate::model::Role;
 use crate::tests::fresh_state;
 

@@ -62,7 +62,7 @@ fn run_load_command(state: &mut AppState, name: &str) {
 fn run_save_command(state: &mut AppState, name: &str) {
     let name_owned = name.to_string();
     let session = crate::session::Session::from_state(state, name_owned.clone());
-    if let Some(tx) = state.session_store_tx.clone() {
+    if let Some(tx) = state.persistence_tx.clone() {
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
             let _ = handle.spawn(async move { tx.save(name_owned, session).await; });
             return;
@@ -92,7 +92,7 @@ fn run_delete_command(state: &mut AppState, name: &str) {
 }
 
 fn run_import_command(state: &mut AppState, path: &str) {
-    if let Some(tx) = state.session_store_tx.clone() {
+    if let Some(tx) = state.persistence_tx.clone() {
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
             let path = std::path::PathBuf::from(path);
             let _ = handle.spawn(async move { tx.import(path).await; });
@@ -118,7 +118,7 @@ fn run_import_command(state: &mut AppState, path: &str) {
 }
 
 fn run_export_command(state: &mut AppState, path: &str) {
-    if let Some(tx) = state.session_store_tx.clone() {
+    if let Some(tx) = state.persistence_tx.clone() {
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
             let name = state
                 .session

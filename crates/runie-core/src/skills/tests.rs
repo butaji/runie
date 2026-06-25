@@ -1,4 +1,5 @@
 use super::*;
+use crate::skills::load::extract_frontmatter;
 use std::io::Write;
 use std::path::Path;
 use tempfile::tempdir;

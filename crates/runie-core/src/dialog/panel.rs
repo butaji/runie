@@ -1,7 +1,6 @@
 //! Panel state and builder methods.
 
 use super::item::parse_accel;
-use super::score::item_match_score;
 use super::{ItemAction, PanelItem};
 use crate::Event;
 

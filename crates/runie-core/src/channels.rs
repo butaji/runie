@@ -9,7 +9,6 @@ use std::collections::HashMap;
 
 use crate::event::Event;
 use crate::message::ToolCall;
-use crate::bus::EventBus;
 
 /// Output item emitted by a channel decoder.
 #[derive(Debug, Clone)]
@@ -256,6 +255,7 @@ impl ChannelDecoder for ReasoningChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bus::EventBus;
 
     #[test]
     fn text_channel_accumulates_deltas() {

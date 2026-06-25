@@ -61,9 +61,6 @@ pub struct AppState {
     /// Handle to the unified `SessionActor`. `None` in unit tests that do not spawn it.
     /// Owns: trust, history, session CRUD, and durable event append.
     pub persistence_tx: Option<crate::actors::SessionActorHandle>,
-    /// Backward-compatible alias for `persistence_tx`. Use `persistence_tx` instead.
-    #[deprecated(since = "0.2.16", note = "Use persistence_tx instead")]
-    pub session_store_tx: Option<crate::actors::SessionActorHandle>,
     /// Handle to the `IoActor`. `None` in unit tests that do not spawn it.
     pub io_tx: Option<crate::actors::IoActorHandle>,
     /// Last config applied to the state (read-only cache for sync lookups).
@@ -100,7 +97,6 @@ impl Default for AppState {
             config_tx: None,
             provider_tx: None,
             persistence_tx: None,
-            session_store_tx: None,
             io_tx: None,
             config_cache: None,
         }
@@ -173,7 +169,6 @@ impl AppState {
         let config_tx = self.config_tx.clone();
         let provider_tx = self.provider_tx.clone();
         let persistence_tx = self.persistence_tx.clone();
-        let session_store_tx = self.session_store_tx.clone();
         let io_tx = self.io_tx.clone();
         let config_cache = self.config_cache.clone();
         let git_info = self.git_info.clone();
@@ -185,7 +180,6 @@ impl AppState {
         self.config_tx = config_tx;
         self.provider_tx = provider_tx;
         self.persistence_tx = persistence_tx;
-        self.session_store_tx = session_store_tx;
         self.io_tx = io_tx;
         self.config_cache = config_cache;
         self.git_info = git_info;

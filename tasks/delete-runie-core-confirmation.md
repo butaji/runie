@@ -1,6 +1,6 @@
 # Delete dead `runie-core/src/confirmation.rs`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P1
@@ -10,9 +10,7 @@
 
 ## Description
 
-`crates/runie-core/src/confirmation.rs` (217 LOC) defines `pub enum ConfirmationKind { None, Diff { preview }, Write { path, content, byte_count }, Bash { command, reason } }` (with `impl ConfirmationKind { fn is_blocking, fn summary }`) and `pub struct ConfirmationRouter` with `for_edit` / `for_write` / `for_bash` / `for_read_only` / `approval_event` / `rejection_event`. Both are re-exported via `lib.rs:106`, but `rg 'ConfirmationKind::|ConfirmationRouter::' crates/` returns only the file itself.
-
-The live permission/approval system is `PermissionGate` + `PermissionAction` + `EditPreview` in `crates/runie-core/src/permissions/` and the edit-preview flow in `edit_preview.rs`. `ConfirmationKind::Diff { preview }` overlaps with `EditPreview`; `ConfirmationRouter::for_edit` duplicates `PermissionGate::check` for edit-style tools. The dead module is parallel to live wiring.
+**N/A**: The file `crates/runie-core/src/confirmation.rs` does not exist in the current codebase. The dead code was already removed in a previous refactoring.
 
 ## Acceptance Criteria
 

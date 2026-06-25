@@ -10,7 +10,6 @@ mod load;
 mod tests;
 
 pub use load::load_from_dir;
-pub(crate) use load::{extract_frontmatter, extract_section, parse_skill_md};
 
 /// A loaded skill parsed from a SKILL.md file.
 #[derive(Clone, Debug, PartialEq, Eq)]

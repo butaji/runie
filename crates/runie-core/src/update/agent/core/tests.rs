@@ -4,15 +4,17 @@
 //! `Event::TextStart` / `Event::ResponseDelta` / `Event::Done` sequences
 //! into `AppState` without any TUI or async overhead.
 
+#![allow(unused_imports)]
 use crate::event::Event;
 use crate::message::{ChatMessage, Part, Role};
 use crate::model::AppState;
 use crate::tool_parser::{build_assistant_message, ParsedToolCall};
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Helpers (only used in tests, so dead_code is expected in lib check)
+// -----------------------------------------------------------------------------
 
+#[allow(dead_code)]
 fn make_app_state() -> AppState {
     let mut state = AppState::default();
     let config = crate::config::Config::default();
@@ -21,6 +23,7 @@ fn make_app_state() -> AppState {
 }
 
 /// Feed a sequence of events into an AppState.
+#[allow(dead_code)]
 fn feed_events(state: &mut AppState, events: impl IntoIterator<Item = Event>) {
     for event in events {
         state.update(event);
@@ -28,6 +31,7 @@ fn feed_events(state: &mut AppState, events: impl IntoIterator<Item = Event>) {
 }
 
 /// Return the last assistant message in the session.
+#[allow(dead_code)]
 fn last_assistant(state: &AppState) -> Option<&ChatMessage> {
     state
         .session

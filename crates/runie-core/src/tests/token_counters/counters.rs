@@ -3,7 +3,6 @@
 use crate::event::Event;
 
 use crate::event::AgentEvent;
-use crate::model::AppState;
 use crate::tests::fresh_state;
 
 // =============================================================================

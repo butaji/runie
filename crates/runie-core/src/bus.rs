@@ -3,7 +3,6 @@
 //! Provides a publish-subscribe bus. Late subscribers are served by
 //! SessionActor disk-replay on startup; no in-memory ring buffer is needed.
 
-use std::sync::Arc;
 use tokio::sync::broadcast;
 
 use crate::channels::ChannelDecoder;

@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use crate::path::resolve_path_in as resolve_path;
 use crate::tool::{

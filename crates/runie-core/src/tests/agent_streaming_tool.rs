@@ -1,7 +1,7 @@
 //! Streaming tool-turn regression tests.
 
 use crate::event::Event;
-use crate::model::{AppState, Role};
+use crate::model::Role;
 use crate::tests::fresh_state;
 use crate::view::LazyCache;
 

@@ -1,7 +1,6 @@
 use crate::event::Event;
 use crate::event::{
-    AgentEvent, CommandEvent, ControlEvent, DialogEvent, DurableCoreEvent, EditEvent, InputEvent,
-    ModelConfigEvent, ScrollEvent, SessionEvent, SystemEvent,
+    AgentEvent, ControlEvent, InputEvent, ScrollEvent,
 };
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};

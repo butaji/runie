@@ -3,6 +3,7 @@
 //! We use simple tokio tasks + typed channels instead of a full actor framework.
 //! This keeps things simple while still providing type-safe actor boundaries.
 
+#![allow(unused_imports)]
 use std::future::Future;
 use std::pin::Pin;
 use tokio::sync::{broadcast, mpsc, oneshot};

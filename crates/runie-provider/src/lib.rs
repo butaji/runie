@@ -20,7 +20,6 @@ use runie_core::actors::provider::BuiltProvider;
 use runie_core::provider_event::ProviderEvent;
 use runie_core::message::ChatMessage;
 use runie_core::provider::{Provider, ProviderError};
-use runie_core::provider;
 
 /// Default timeout for API key validation requests.
 pub const VALIDATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);

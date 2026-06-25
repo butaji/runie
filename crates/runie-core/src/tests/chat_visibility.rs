@@ -1,8 +1,5 @@
 use crate::event::Event;
-use crate::event::{
-    AgentEvent, CommandEvent, ControlEvent, DialogEvent, EditEvent, InputEvent,
-    ModelConfigEvent, ScrollEvent, SessionEvent, SystemEvent,
-};
+use crate::event::AgentEvent;
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tests::fresh_state;

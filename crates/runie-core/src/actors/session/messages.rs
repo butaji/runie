@@ -138,18 +138,6 @@ impl SessionActorHandle {
     }
 }
 
-// Backward-compatible type aliases
-#[allow(non_upper_case_globals)]
-impl PersistenceActorHandle {
-    pub fn to_session(&self) -> SessionActorHandle {
-        // We can't actually convert, but this maintains API compatibility
-        // for code that still uses the old handle type
-        SessionActorHandle {
-            tx: mpsc::Sender::clone(&self.tx),
-        }
-    }
-}
-
 impl From<SessionActorHandle> for PersistenceActorHandle {
     fn from(h: SessionActorHandle) -> Self {
         PersistenceActorHandle { tx: h.tx }

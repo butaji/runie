@@ -238,7 +238,7 @@ pub fn register(registry: &mut CommandRegistry) {
 // ── Command handlers ──────────────────────────────────────────────────────────
 
 fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
-    if let Some(tx) = state.session_store_tx.clone() {
+    if let Some(tx) = state.persistence_tx.clone() {
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
             let _ = handle.spawn(async move { tx.list().await; });
             return CommandResult::None;
