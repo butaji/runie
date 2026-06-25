@@ -1,6 +1,6 @@
 # Collapse `runie-core/src/event/variants/` subdir into one file
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P2

@@ -4,7 +4,7 @@ set -euo pipefail
 echo "=== Runie Test Verification Script ==="
 echo ""
 
-EXPECTED_TOTAL=1806
+EXPECTED_TOTAL=2414
 MIN_TESTS=100
 
 # List tests

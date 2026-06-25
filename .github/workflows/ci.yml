@@ -8,8 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  # Total expected tests across the workspace (run `scripts/verify-tests.sh` to update)
-  EXPECTED_TOTAL_TESTS: 2412
 
 jobs:
   test:

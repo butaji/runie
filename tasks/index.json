@@ -205,7 +205,7 @@
     },
     {
       "id": "centralize-test-verification",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Testing",
       "priority": "P0",
@@ -244,7 +244,7 @@
     },
     {
       "id": "collapse-event-variants-subdir",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
@@ -699,7 +699,7 @@
     },
     {
       "id": "delete-provider-message-enum",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",

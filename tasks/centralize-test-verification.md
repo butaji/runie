@@ -1,6 +1,6 @@
 # Centralize test-count verification
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Testing
 **Priority**: P0

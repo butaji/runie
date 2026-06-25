@@ -28,10 +28,16 @@ pub fn load_default_config_for_test(test_home: &TempDir) -> Config {
 
 /// Return a mock provider suitable for deterministic tests.
 pub fn mock_provider() -> runie_provider::DynProvider {
-    
+    let prev = std::env::var_os("RUNIE_MOCK");
     std::env::set_var("RUNIE_MOCK", "1");
     let mock = runie_provider::MockProvider::default();
-    runie_provider::DynProvider::from_provider(Box::new(mock), "mock", "echo")
+    let provider = runie_provider::DynProvider::from_provider(Box::new(mock), "mock", "echo");
+    // Restore prior state so tests don't pollute the env for subsequent tests.
+    match prev {
+        Some(v) => std::env::set_var("RUNIE_MOCK", v),
+        None => std::env::remove_var("RUNIE_MOCK"),
+    }
+    provider
 }
 
 /// Build a permission gate that allows all operations without prompting.
