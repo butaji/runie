@@ -1896,7 +1896,7 @@
     },
     {
       "id": "unify-permission-gate",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Security",
       "priority": "P0",

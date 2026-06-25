@@ -2,7 +2,7 @@ use runie_core::sanitize::sanitize_messages;
 use runie_core::tool_parser::{
     assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
 };
-use crate::permission_gate::PermissionGate;
+use runie_core::permissions::PermissionGate;
 use crate::stream_response::{stream_response, EmitFn, StreamedResponse};
 use crate::tool_runner::{execute_tool_call, tool_result_message};
 use crate::AgentCommand;

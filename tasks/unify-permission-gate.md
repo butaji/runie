@@ -1,6 +1,6 @@
 # Unify duplicated PermissionGate
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Security
 **Priority**: P0

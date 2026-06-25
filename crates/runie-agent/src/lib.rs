@@ -5,7 +5,7 @@ pub mod emit_approval_sink;
 pub mod headless;
 pub mod inspector;
 
-pub mod permission_gate;
+
 pub mod safety;
 pub mod stream_response;
 pub mod subagent;
@@ -17,7 +17,7 @@ pub mod turn;
 pub use actor::{AgentActor, AgentActorHandle, AgentMsg};
 pub use headless::{run_headless_cli, run_headless_turn, HeadlessCliOptions, HeadlessOptions, HeadlessResult};
 pub use runie_core::tool_parser::{has_tool_calls, parse_tool_calls, ParsedToolCall};
-pub use permission_gate::PermissionGate;
+pub use runie_core::permissions::PermissionGate;
 pub use runie_core::tool::ToolOutput;
 pub use turn::{run_agent_turn, run_agent_turn_with_skills};
 

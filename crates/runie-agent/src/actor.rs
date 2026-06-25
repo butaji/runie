@@ -18,7 +18,7 @@ use runie_core::permissions::{
 use tokio::sync::mpsc;
 
 use crate::emit_approval_sink::EmitApprovalSink;
-use crate::permission_gate::PermissionGate;
+use runie_core::permissions::PermissionGate;
 use crate::run_agent_turn;
 use crate::truncate::policy_from_section;
 use crate::AgentCommand;
