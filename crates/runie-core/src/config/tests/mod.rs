@@ -3,6 +3,7 @@ use std::fs;
 use std::sync::Mutex;
 
 mod layered_tests;
+mod schema_tests;
 mod validate_tests;
 
 static HOME_LOCK: Mutex<()> = Mutex::new(());

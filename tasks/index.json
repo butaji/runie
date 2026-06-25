@@ -285,7 +285,7 @@
   },
   {
     "id": "generate-config-schema-from-code",
-    "status": "todo",
+    "status": "done",
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
