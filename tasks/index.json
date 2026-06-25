@@ -3,9 +3,9 @@
     {
       "id": "app-state-read-only-projection",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync"
@@ -28,9 +28,9 @@
     {
       "id": "audit-borrow-workarounds",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P3",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "consolidate-login-flow-handlers"
       ],
@@ -41,9 +41,9 @@
     {
       "id": "centralize-error-type",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/centralize-error-type.md",
@@ -52,9 +52,9 @@
     {
       "id": "collapse-headless-binaries-into-one-cli",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P1",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "extract-headless-cli-helper"
       ],
@@ -65,9 +65,9 @@
     {
       "id": "completion-actor-owns-completion-state",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Input / Commands",
-      "priority": "P1",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync",
@@ -81,9 +81,9 @@
     {
       "id": "config-ssot-via-configactor",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "event-taxonomy-for-actor-state-sync",
         "app-state-read-only-projection"
@@ -95,9 +95,9 @@
     {
       "id": "consolidate-config-modules-into-dir",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "delete-config-reload-shim",
         "consolidate-login-flow-handlers",
@@ -110,9 +110,9 @@
     {
       "id": "consolidate-login-logout-tests",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Testing",
-      "priority": "P3",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "consolidate-login-flow-handlers"
       ],
@@ -123,9 +123,9 @@
     {
       "id": "consolidate-settings-providers-dialog",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P1",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "unify-provider-modules",
         "actor-owned-state-ssot",
@@ -138,9 +138,9 @@
     {
       "id": "consolidate-slash-command-handlers",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Input / Commands",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/consolidate-slash-command-handlers.md",
@@ -149,9 +149,9 @@
     {
       "id": "consolidate-tiny-binary-crates",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/consolidate-tiny-binary-crates.md",
@@ -160,9 +160,9 @@
     {
       "id": "consolidate-update-dialog-files",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Refactoring",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "rename-update-dialog-panel"
       ],
@@ -173,9 +173,9 @@
     {
       "id": "decouple-appstate-from-view-cache",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "fold-state-into-model-state"
       ],
@@ -188,9 +188,9 @@
     {
       "id": "dedupe-fresh-state-test-helper",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Testing",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/dedupe-fresh-state-test-helper.md",
@@ -199,9 +199,9 @@
     {
       "id": "dedupe-git-status-formatter",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Tools",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "replace-git2-with-cli"
       ],
@@ -212,9 +212,9 @@
     {
       "id": "dedupe-messages-changed-ensure-fresh",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Testing",
-      "priority": "P3",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/dedupe-messages-changed-ensure-fresh.md",
@@ -223,9 +223,9 @@
     {
       "id": "delete-async-io-bridge",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P1",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "finish-io-migration"
       ],
@@ -236,9 +236,9 @@
     {
       "id": "drop-small-stdlib-replaceable-deps",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "drop-event-bus-replay-buffer"
       ],
@@ -249,9 +249,9 @@
     {
       "id": "drop-thiserror-and-async-trait-deps",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/drop-thiserror-and-async-trait-deps.md",
@@ -260,9 +260,9 @@
     {
       "id": "env-actor-owns-git-cwd",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P1",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync",
@@ -276,9 +276,9 @@
     {
       "id": "extract-appstate-helpers",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P3",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/extract-appstate-helpers.md",
@@ -287,9 +287,9 @@
     {
       "id": "fff-indexer-owns-file-picker-results",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Tools",
-      "priority": "P1",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync",
@@ -303,9 +303,9 @@
     {
       "id": "finish-io-migration",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "remove-login-config-test-shim"
       ],
@@ -318,9 +318,9 @@
     {
       "id": "fold-protocol-into-core",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/fold-protocol-into-core.md",
@@ -329,9 +329,9 @@
     {
       "id": "fold-runie-engine-into-agent",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/fold-runie-engine-into-agent.md",
@@ -340,9 +340,9 @@
     {
       "id": "fold-testing-into-agent-tests",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P3",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/fold-testing-into-agent-tests.md",
@@ -351,9 +351,9 @@
     {
       "id": "gate-or-move-single-consumer-core-modules",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "split-runie-core-into-domain-and-io-crates"
       ],
@@ -364,9 +364,9 @@
     {
       "id": "generate-config-schema-from-code",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/generate-config-schema-from-code.md",
@@ -375,9 +375,9 @@
     {
       "id": "generate-ui-elements-from-model",
       "status": "todo",
-      "milestone": "R4",
-      "category": "TUI / Rendering",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "rename-core-ui-to-view"
       ],
@@ -388,9 +388,9 @@
     {
       "id": "inline-or-document-core-ui-shim",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/inline-or-document-core-ui-shim.md",
@@ -399,9 +399,9 @@
     {
       "id": "input-actor-owns-input-state",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Input / Commands",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync",
@@ -417,31 +417,20 @@
     {
       "id": "merge-diff-modules",
       "status": "todo",
-      "milestone": "R4",
-      "category": "TUI / Rendering",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/merge-diff-modules.md",
       "title": ""
     },
     {
-      "id": "merge-tool-status-state",
-      "status": "done",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P2",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/merge-tool-status-state.md",
-      "title": ""
-    },
-    {
       "id": "move-provider-catalog-to-provider-crate",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "unify-provider-modules"
       ],
@@ -452,9 +441,9 @@
     {
       "id": "move-tui-effects-into-io-actor",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "finish-io-migration"
       ],
@@ -467,9 +456,9 @@
     {
       "id": "notification-actor-owns-transient-messages",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P1",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync",
@@ -482,9 +471,9 @@
     {
       "id": "permission-actor-owns-approvals",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Security",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync",
@@ -497,9 +486,9 @@
     {
       "id": "r5-paced-text-rendering",
       "status": "todo",
-      "milestone": "R5",
-      "category": "TUI / Rendering",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/r5-paced-text-rendering.md",
@@ -508,9 +497,9 @@
     {
       "id": "r5-partial-json-repair",
       "status": "todo",
-      "milestone": "R5",
-      "category": "Tools",
-      "priority": "P1",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "r5-extract-tool-stream"
       ],
@@ -521,9 +510,9 @@
     {
       "id": "r5-per-channel-decoders",
       "status": "todo",
-      "milestone": "R5",
-      "category": "Architecture / Actors",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "r5-populate-parts-streaming"
       ],
@@ -534,9 +523,9 @@
     {
       "id": "r5-populate-parts-streaming",
       "status": "todo",
-      "milestone": "R5",
-      "category": "Core / State",
-      "priority": "P1",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "r5-add-lifecycle-events"
       ],
@@ -550,9 +539,9 @@
     {
       "id": "r5-provider-protocol-trait",
       "status": "todo",
-      "milestone": "R5",
-      "category": "Architecture / Actors",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "r5-extract-tool-stream"
       ],
@@ -563,9 +552,9 @@
     {
       "id": "reconsider-clipboard-image-deps",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/reconsider-clipboard-image-deps.md",
@@ -574,9 +563,9 @@
     {
       "id": "reconsider-redb-session-store",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Sessions",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/reconsider-redb-session-store.md",
@@ -585,9 +574,9 @@
     {
       "id": "reconsider-schemars-jsonschema",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/reconsider-schemars-jsonschema.md",
@@ -596,9 +585,9 @@
     {
       "id": "reconsider-tiktoken-rs",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/reconsider-tiktoken-rs.md",
@@ -607,9 +596,9 @@
     {
       "id": "reduce-actor-handle-boilerplate",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P1",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "generic-actor-reply"
       ],
@@ -620,9 +609,9 @@
     {
       "id": "relocate-loose-tests-files",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "consolidate-dual-path-modules"
       ],
@@ -633,9 +622,9 @@
     {
       "id": "remove-direct-appstate-mutations",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "session-actor-owns-session-state",
         "input-actor-owns-input-state",
@@ -658,9 +647,9 @@
     {
       "id": "remove-login-config-test-shim",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-owned-state-ssot",
         "config-ssot-via-configactor"
@@ -672,9 +661,9 @@
     {
       "id": "rename-update-dialog-panel",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P3",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/rename-update-dialog-panel.md",
@@ -683,9 +672,9 @@
     {
       "id": "replace-git2-with-cli",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P1",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "finish-io-migration"
       ],
@@ -696,9 +685,9 @@
     {
       "id": "replace-single-use-deps-with-stdlib",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/replace-single-use-deps-with-stdlib.md",
@@ -707,9 +696,9 @@
     {
       "id": "session-actor-owns-session-state",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync",
@@ -724,9 +713,9 @@
     {
       "id": "simplify-actor-trait",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "unify-persistence-actors"
       ],
@@ -737,9 +726,9 @@
     {
       "id": "single-source-dev-commands",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P3",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/single-source-dev-commands.md",
@@ -748,9 +737,9 @@
     {
       "id": "split-runie-core-into-domain-and-io-crates",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "finish-io-migration",
         "delete-async-io-bridge",
@@ -768,9 +757,9 @@
     {
       "id": "standardize-test-layout-inline",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "relocate-loose-tests-files"
       ],
@@ -781,9 +770,9 @@
     {
       "id": "sweep-allow-suppressions",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "gate-or-implement-mcp-client",
         "delete-config-reload-shim"
@@ -795,9 +784,9 @@
     {
       "id": "sweep-to-string-allocs",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P3",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/sweep-to-string-allocs.md",
@@ -806,9 +795,9 @@
     {
       "id": "test-actor-harness",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Testing",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-lifecycle-and-handle-registry",
         "event-taxonomy-for-actor-state-sync",
@@ -830,9 +819,9 @@
     {
       "id": "theme-color-accessor-macro",
       "status": "todo",
-      "milestone": "R4",
-      "category": "TUI / Rendering",
-      "priority": "P3",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/theme-color-accessor-macro.md",
@@ -841,9 +830,9 @@
     {
       "id": "tighten-build-lint-complexity-heuristic",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Refactoring",
-      "priority": "P3",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/tighten-build-lint-complexity-heuristic.md",
@@ -852,9 +841,9 @@
     {
       "id": "trust-actor-owns-trust-decisions",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Security",
-      "priority": "P1",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync",
@@ -867,9 +856,9 @@
     {
       "id": "turn-actor-owns-agent-turn-state",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync",
@@ -884,9 +873,9 @@
     {
       "id": "ui-control-actor-owns-dialog-state",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync",
@@ -904,9 +893,9 @@
     {
       "id": "unified-dsl-intents-for-state-mutations",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Input / Commands",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync",
@@ -919,9 +908,9 @@
     {
       "id": "unify-approval-decision",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Architecture / Security",
-      "priority": "P1",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "unify-permission-gate"
       ],
@@ -932,9 +921,9 @@
     {
       "id": "unify-duplicate-module-names-core-tui",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P2",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "split-runie-core-into-domain-and-io-crates"
       ],
@@ -945,9 +934,9 @@
     {
       "id": "use-workspace-deps-in-runie-testing",
       "status": "todo",
-      "milestone": "R4",
-      "category": "Configuration",
-      "priority": "P3",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/use-workspace-deps-in-runie-testing.md",
@@ -956,9 +945,9 @@
     {
       "id": "view-actor-owns-view-state",
       "status": "todo",
-      "milestone": "R4",
-      "category": "TUI / Rendering",
-      "priority": "P0",
+      "milestone": "?",
+      "category": "?",
+      "priority": "?",
       "depends_on": [
         "actor-owned-state-ssot",
         "event-taxonomy-for-actor-state-sync",
