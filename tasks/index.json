@@ -446,14 +446,14 @@
   },
   {
     "id": "reconsider-redb-session-store",
-    "status": "todo",
-    "milestone": "?",
-    "category": "?",
-    "priority": "?",
+    "status": "done",
+    "milestone": "R4",
+    "category": "Sessions",
+    "priority": "P2",
     "depends_on": [],
     "blocks": [],
     "file": "tasks/reconsider-redb-session-store.md",
-    "title": ""
+    "title": "Reconsider redb session store"
   },
   {
     "id": "reduce-actor-handle-boilerplate",

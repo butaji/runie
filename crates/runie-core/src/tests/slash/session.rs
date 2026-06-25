@@ -80,9 +80,9 @@ fn save_trims_whitespace() {
     state.update(Event::submit()); // Submits the form
 
     // Should save with trimmed name
-    let redb_path =
+    let jsonl_path =
         crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("trimmed");
-    assert!(redb_path.exists(), "whitespace should be trimmed");
+    assert!(jsonl_path.exists(), "whitespace should be trimmed");
 
     // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };

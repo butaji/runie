@@ -1,7 +1,7 @@
 //! Durable event types for session persistence.
 //!
-//! These events are stored in `SessionStore` (redb) under
-//! `data_dir/runie/sessions/<id>.redb` and can be replayed to reconstruct a
+//! These events are stored in `SessionStore` (JSONL) under
+//! `data_dir/runie/sessions/<id>.jsonl` and can be replayed to reconstruct a
 //! session.
 
 use serde::{Deserialize, Serialize};

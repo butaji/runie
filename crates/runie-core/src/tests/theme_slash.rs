@@ -102,8 +102,8 @@ fn theme_persisted_in_session() {
     exec(&mut state, "/save themed"); // Opens form with pre-filled name
     state.update(Event::submit()); // Submits the form
 
-    let redb_store = crate::session::store::SessionStore::new(store.dir().to_path_buf());
-    let events = redb_store.load_events("themed").unwrap();
+    let jsonl_store = crate::session::store::SessionStore::new(store.dir().to_path_buf());
+    let events = jsonl_store.load_events("themed").unwrap();
     let mut loaded = crate::model::AppState::default();
     crate::session::replay::replay_events(&mut loaded, &events);
     assert_eq!(loaded.config.theme_name, "nord");

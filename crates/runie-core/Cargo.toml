@@ -11,6 +11,8 @@ path = "src/lib.rs"
 default = []
 mcp = []
 schema = ["dep:schemars"]
+# Enable migration from redb session files (can be disabled to reduce dependencies)
+redb-migration = ["dep:redb"]
 
 [dependencies]
 serde.workspace = true
@@ -35,13 +37,13 @@ notify = "7.0"
 notify-debouncer-mini = "0.5"
 glob = "0.3"
 strum = { version = "0.26", features = ["derive"] }
-redb.workspace = true
 fff-search.workspace = true
 git2.workspace = true
 tracing = "0.1"
 schemars = { version = "0.8", optional = true }
 uuid = { version = "1", features = ["v4"] }
 async-trait.workspace = true
+redb = { version = "2", optional = true }
 
 
 [dev-dependencies]

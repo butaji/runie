@@ -1,6 +1,6 @@
 # Add paced text rendering for smooth typing animation
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: TUI / Rendering
 **Priority**: P2

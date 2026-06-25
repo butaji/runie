@@ -21,7 +21,6 @@ dirs = "5.0"
 nix = { version = "0.31", features = ["signal"] }
 base64 = "0.22"
 pulldown-cmark = "0.13"
-redb = "2"
 fff-search = "0.9.5-nightly.ec57eb0"
 git2 = { version = "0.20.2", features = ["vendored-libgit2"], default-features = false }
 unicode-width = "0.2"

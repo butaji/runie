@@ -1,6 +1,6 @@
 # Reconsider redb session store
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Sessions
 **Priority**: P2

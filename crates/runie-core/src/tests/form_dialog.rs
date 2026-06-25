@@ -113,9 +113,9 @@ fn form_submit_executes_command() {
     state.update(Event::submit());
     // Should close dialog and execute save
     assert!(state.open_dialog.is_none(), "dialog should close");
-    let redb_path =
+    let jsonl_path =
         crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("myses");
-    assert!(redb_path.exists(), "session should be saved");
+    assert!(jsonl_path.exists(), "session should be saved");
     // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }
