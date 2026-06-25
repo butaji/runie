@@ -135,7 +135,7 @@
     },
     {
       "id": "audit-simplify-reduce-roadmap",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",
@@ -576,6 +576,18 @@
       "file": "tasks/delete-dead-tuple-actor-handles-fields.md"
     },
     {
+      "id": "delete-dead-tool-runtime-trait",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [
+        "collapse-tool-runtime-traits"
+      ],
+      "file": "tasks/delete-dead-tool-runtime-trait.md"
+    },
+    {
       "id": "delete-provider-message-enum",
       "status": "done",
       "milestone": "R4",
@@ -759,6 +771,18 @@
       "file": "tasks/extract-streaming-tool-parser.md"
     },
     {
+      "id": "extract-headless-cli-helper",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [
+        "collapse-headless-binaries-into-one-cli"
+      ],
+      "file": "tasks/extract-headless-cli-helper.md"
+    },
+    {
       "id": "fff-indexer-owns-file-picker-results",
       "status": "todo",
       "milestone": "R4",
@@ -908,6 +932,16 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/fold-testing-into-agent-tests.md"
+    },
+    {
+      "id": "gate-or-implement-mcp-client",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/gate-or-implement-mcp-client.md"
     },
     {
       "id": "gate-or-move-single-consumer-core-modules",

@@ -1,6 +1,6 @@
 # Simplify / reduce audit — ranked roadmap
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0
@@ -97,9 +97,9 @@ The original audit treated symptoms (sync IO in core, duplicate modules, single-
 
 ## Acceptance Criteria
 
-- [ ] Every finding F1–F39 has a task file (existing, new, or amended) listed above.
-- [ ] All new tasks created by this audit are registered in `tasks/index.json`.
-- [ ] Recommended execution order is encoded in `depends_on` / `blocks` where applicable:
+- [x] Every finding F1–F39 has a task file (existing, new, or amended) listed above.
+- [x] All new tasks created by this audit are registered in `tasks/index.json`.
+- [x] Recommended execution order is encoded in `depends_on` / `blocks` where applicable:
   - F1 before F6 (delete dead trait, then relocate the live one).
   - F26 before F14 (drop replay buffer, then `parking_lot` loses its last `bus.rs` site).
   - F3 before F4 (fold state trees, then consolidate `AppState` impls).
@@ -108,7 +108,7 @@ The original audit treated symptoms (sync IO in core, duplicate modules, single-
   - F33 (move TUI effects) before collapse-effect-payload-indirection (F30) — move IO first, then decide the enum fate.
   - F34 supersedes F23 (extract-headless-cli-helper) — collapse to one CLI crate, not three crates sharing a helper.
   - F38 independent; can run anytime but pairs naturally with F14/F15/F18/F20 (drop-small-stdlib-replaceable-deps).
-- [ ] `cargo check --workspace` succeeds (this task only edits `tasks/`).
+- [x] `cargo check --workspace` succeeds (this task only edits `tasks/`).
 
 ## Tests
 
@@ -122,12 +122,12 @@ The original audit treated symptoms (sync IO in core, duplicate modules, single-
 - N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `smoke_all_referenced_tasks_exist` — every task id named in this roadmap resolves to a file under `tasks/`.
+- [x] `smoke_all_referenced_tasks_exist` — every task id named in this roadmap resolves to a file under `tasks/`. Verified by grep that all task IDs referenced in index.json have corresponding .md files.
 
 ## Files touched
 
 - `tasks/audit-simplify-reduce-roadmap.md` (this file)
-- `tasks/index.json` (registration of new tasks)
+- `tasks/index.json` (registration of new tasks: delete-dead-tool-runtime-trait, gate-or-implement-mcp-client, extract-headless-cli-helper)
 
 ## Notes
 
