@@ -1,6 +1,6 @@
 # Consolidate `update/dialog/` thin handler files
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Refactoring
 **Priority**: P2
