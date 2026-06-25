@@ -193,7 +193,7 @@
     },
     {
       "id": "centralize-test-verification",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Testing",
       "priority": "P0",
@@ -1910,7 +1910,7 @@
     },
     {
       "id": "unify-persistence-actors",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",

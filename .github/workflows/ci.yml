@@ -9,7 +9,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   # Total expected tests across the workspace (run `scripts/verify-tests.sh` to update)
-  EXPECTED_TOTAL_TESTS: 1806
+  EXPECTED_TOTAL_TESTS: 2412
 
 jobs:
   test:
@@ -42,79 +42,10 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: List tests
-        run: |
-          echo "=== Listing all tests ==="
-          cargo test -- --list 2>&1 | tee test_list.txt
-          TEST_COUNT=$(grep "test$" test_list.txt | wc -l)
-          echo ""
-          echo "=== Test count: $TEST_COUNT ==="
-
-      - name: Verify test count
-        run: |
-          TEST_COUNT=$(grep "test$" test_list.txt | wc -l)
-          echo "Found $TEST_COUNT tests (expected: ${{ env.EXPECTED_TOTAL_TESTS }})"
-          
-          # Assert test count is greater than 0 (at least 100 tests per requirement)
-          if [ "$TEST_COUNT" -lt 100 ]; then
-            echo "ERROR: Test count ($TEST_COUNT) is below minimum threshold (100)"
-            exit 1
-          fi
-          
-          # Warn if count differs from expected (but don't fail - tests may have been added/removed)
-          if [ "$TEST_COUNT" -ne ${{ env.EXPECTED_TOTAL_TESTS }} ]; then
-            echo "WARNING: Test count ($TEST_COUNT) differs from expected (${{ env.EXPECTED_TOTAL_TESTS }})"
-            echo "Update EXPECTED_TOTAL_TESTS in ci.yml if this is intentional"
-          fi
-
       - name: Run tests
         run: |
           echo "=== Running all tests ==="
-          cargo test 2>&1 | tee test_output.txt
-
-      - name: Verify test results
-        run: |
-          echo "=== Verifying test results ==="
-          
-          # Check for test failures
-          if grep -q "FAILED" test_output.txt; then
-            echo "ERROR: Some tests failed!"
-            grep "FAILED" test_output.txt
-            exit 1
-          fi
-          
-          # Check for panics
-          if grep -q "panicked at" test_output.txt; then
-            echo "ERROR: Test panic detected!"
-            grep "panicked at" test_output.txt
-            exit 1
-          fi
-          
-          # Extract and verify passed test count
-          PASSED=$(grep "test result:" test_output.txt | grep -oE "[0-9]+ passed" | awk '{sum+=$1} END {print sum}')
-          RUNNING=$(grep "^running [0-9]* test" test_output.txt | awk '{sum+=$2} END {print sum}')
-          
-          echo "Tests running: $RUNNING"
-          echo "Tests passed: $PASSED"
-          
-          if [ "$PASSED" -eq 0 ]; then
-            echo "ERROR: No tests passed!"
-            exit 1
-          fi
-          
-          if [ "$PASSED" -lt 100 ]; then
-            echo "ERROR: Passed test count ($PASSED) is below minimum threshold (100)"
-            exit 1
-          fi
-          
-          if [ "$PASSED" -ne "$RUNNING" ]; then
-            echo "ERROR: Not all tests passed ($PASSED/$RUNNING)"
-            exit 1
-          fi
-          
-          echo ""
-          echo "=== All tests passed! ==="
-          echo "Total tests: $PASSED"
+          ./scripts/verify-tests.sh
 
   fmt:
     name: Rustfmt

@@ -148,10 +148,10 @@ fn run_export_command(state: &mut AppState, path: &str) {
 
 fn send_to_session_store<F, Fut>(state: &AppState, f: F, name: &str) -> bool
 where
-    F: FnOnce(crate::actors::SessionStoreActorHandle, String) -> Fut + Send + 'static,
+    F: FnOnce(crate::actors::SessionActorHandle, String) -> Fut + Send + 'static,
     Fut: std::future::Future<Output = ()> + Send + 'static,
 {
-    if let Some(tx) = state.session_store_tx.clone() {
+    if let Some(tx) = state.persistence_tx.clone() {
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
             let name = name.to_string();
             let _ = handle.spawn(async move { f(tx, name).await; });

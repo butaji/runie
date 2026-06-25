@@ -13,10 +13,9 @@
 
 use futures::StreamExt;
 use runie_agent::AgentActor;
-use runie_core::actors::{ConfigActor, IoActor, PersistenceActor, ProviderActor, SessionStoreActor};
+use runie_core::actors::{ConfigActor, IoActor, ProviderActor, SessionActor};
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
-use runie_core::session_store::SessionStore;
 use runie_core::{AppState, Snapshot};
 use runie_provider::DynProviderFactory;
 use runie_tui::{app_init, keymap, terminal, terminal_setup, theme, ui, ui_actor::UiActor};
@@ -37,25 +36,8 @@ impl Drop for Cleanup {
     }
 }
 
-fn generate_session_id() -> String {
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or_else(|e| e.duration().as_nanos());
-    format!("session_{}", nanos)
-}
-
-fn spawn_session_persistence(bus: &EventBus<Event>) {
-    let session_id = generate_session_id();
-    let store = SessionStore::new(
-        dirs::data_dir()
-            .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join("runie")
-            .join("sessions"),
-    );
-    let actor = runie_core::SessionActor::new(session_id, "main".into(), store);
-    tokio::spawn(actor.run_loop(bus.clone()));
-}
+// Note: Durable event append is now handled by the unified SessionActor
+// spawned in bootstrap_app(). No separate persistence actor needed.
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> io::Result<()> {
@@ -96,14 +78,15 @@ async fn bootstrap_app(
 ) -> (AppState, runie_core::actors::ProviderActorHandle) {
     let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
     let (provider_handle, _provider_actor) = spawn_provider_actor(&bus, &config_handle);
-    let (persistence_handle, _persistence_actor) = PersistenceActor::spawn(bus.clone());
-    let (session_store_handle, _session_store_actor) = SessionStoreActor::spawn(bus.clone());
+    // Unified SessionActor: owns trust, history, session CRUD, and durable event append
+    let (session_handle, _session_actor) = SessionActor::spawn(bus.clone());
     let (io_handle, _io_actor) = IoActor::spawn(bus.clone());
     let mut state = AppState {
         config_tx: Some(config_handle.tx().clone()),
         provider_tx: Some(provider_handle.tx().clone()),
-        persistence_tx: Some(persistence_handle.clone()),
-        session_store_tx: Some(session_store_handle.clone()),
+        persistence_tx: Some(session_handle.clone()),
+        #[allow(deprecated)]
+        session_store_tx: Some(session_handle.clone()),
         io_tx: Some(io_handle.clone()),
         ..Default::default()
     };
@@ -143,7 +126,7 @@ fn spawn_background_tasks(
     let persistence_handle = state
         .persistence_tx
         .clone()
-        .expect("PersistenceActor must be spawned before UI");
+        .expect("SessionActor must be spawned before UI");
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
     let (agent_handle, agent_actor) = AgentActor::spawn(
         bus.clone(),
@@ -164,7 +147,6 @@ fn spawn_background_tasks(
         shutdown_tx,
         caps,
     );
-    spawn_session_persistence(&bus);
 
     // Keep the agent actor alive until shutdown; its handle aborts on Drop.
     tokio::spawn(async move {
@@ -254,7 +236,7 @@ fn spawn_ui_actor(
     state: AppState,
     render_tx: watch::Sender<Snapshot>,
     agent_handle: runie_agent::AgentActorHandle,
-    persistence_handle: runie_core::actors::PersistenceActorHandle,
+    persistence_handle: runie_core::actors::SessionActorHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: oneshot::Sender<()>,

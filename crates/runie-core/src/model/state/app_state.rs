@@ -58,10 +58,12 @@ pub struct AppState {
     pub config_tx: Option<tokio::sync::mpsc::Sender<crate::actors::ConfigMsg>>,
     /// Sender to the `ProviderActor`. `None` in unit tests that do not spawn it.
     pub provider_tx: Option<tokio::sync::mpsc::Sender<crate::actors::ProviderMsg>>,
-    /// Handle to the `PersistenceActor`. `None` in unit tests that do not spawn it.
-    pub persistence_tx: Option<crate::actors::PersistenceActorHandle>,
-    /// Handle to the `SessionStoreActor`. `None` in unit tests that do not spawn it.
-    pub session_store_tx: Option<crate::actors::SessionStoreActorHandle>,
+    /// Handle to the unified `SessionActor`. `None` in unit tests that do not spawn it.
+    /// Owns: trust, history, session CRUD, and durable event append.
+    pub persistence_tx: Option<crate::actors::SessionActorHandle>,
+    /// Backward-compatible alias for `persistence_tx`. Use `persistence_tx` instead.
+    #[deprecated(since = "0.2.16", note = "Use persistence_tx instead")]
+    pub session_store_tx: Option<crate::actors::SessionActorHandle>,
     /// Handle to the `IoActor`. `None` in unit tests that do not spawn it.
     pub io_tx: Option<crate::actors::IoActorHandle>,
     /// Last config applied to the state (read-only cache for sync lookups).

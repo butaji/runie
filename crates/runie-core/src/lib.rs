@@ -72,7 +72,6 @@ pub mod providers_dialog;
 pub mod retry;
 pub mod scoped_model;
 pub mod session;
-pub mod session_actor;
 pub mod session_index;
 pub mod session_replay;
 pub mod session_store;
@@ -149,7 +148,7 @@ pub use provider_registry::{
     ProviderMeta,
 };
 pub use session::{format_as_markdown, Session};
-pub use session_actor::SessionActor;
+pub use actors::session::SessionActor;
 pub use session_index::{SessionIndex, SessionMetadata};
 pub use session_store::SessionStore;
 pub use session_tree::{SessionTree, SessionTreeFilter, TreeNode};

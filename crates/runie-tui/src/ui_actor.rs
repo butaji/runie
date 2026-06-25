@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use runie_agent::AgentActorHandle;
-use runie_core::actors::PersistenceActorHandle;
+use runie_core::actors::SessionActorHandle;
 use runie_core::bus::{EventBus, ReplayReceiver};
 use runie_core::event::{ControlEvent, Event, InputEvent};
 use runie_core::login_flow::LoginStep;
@@ -25,7 +25,7 @@ pub struct UiActor {
     state: AppState,
     render_tx: watch::Sender<Snapshot>,
     agent_handle: AgentActorHandle,
-    persistence_handle: PersistenceActorHandle,
+    persistence_handle: SessionActorHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: Option<oneshot::Sender<()>>,
@@ -38,7 +38,7 @@ impl UiActor {
         state: AppState,
         render_tx: watch::Sender<Snapshot>,
         agent_handle: AgentActorHandle,
-        persistence_handle: PersistenceActorHandle,
+        persistence_handle: SessionActorHandle,
         kb_tx: watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
         shutdown_tx: oneshot::Sender<()>,
@@ -190,7 +190,7 @@ impl UiActor {
 }
 
 async fn handle_persistence_messages(
-    handle: PersistenceActorHandle,
+    handle: SessionActorHandle,
     evt: Event,
     submitted_text: Option<String>,
 ) {
@@ -222,8 +222,8 @@ mod tests {
         let (render_tx, mut render_rx) = watch::channel(Snapshot::default());
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
         let agent_handle = AgentActorHandle::new(agent_tx);
-        let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::PersistenceMsg>(1);
-        let persistence_handle = PersistenceActorHandle::new(persist_tx);
+        let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::SessionMsg>(1);
+        let persistence_handle = SessionActorHandle::new(persist_tx);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
 
@@ -282,8 +282,8 @@ mod tests {
         let (render_tx, _render_rx) = watch::channel(Snapshot::default());
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
         let agent_handle = AgentActorHandle::new(agent_tx);
-        let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::PersistenceMsg>(1);
-        let persistence_handle = PersistenceActorHandle::new(persist_tx);
+        let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::SessionMsg>(1);
+        let persistence_handle = SessionActorHandle::new(persist_tx);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, mut effect_rx) = mpsc::channel::<Event>(16);
