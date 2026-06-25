@@ -34,7 +34,6 @@ pub mod config;
 pub mod config_migrate;
 pub mod dialog;
 pub mod diff;
-pub mod effect_payload;
 pub mod display_width;
 pub mod dry_run;
 pub mod dsl;
