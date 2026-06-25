@@ -224,14 +224,29 @@ impl FnTracker {
         self.fn_name = trimmed.lines().next().unwrap_or("").to_string();
     }
 
-    fn update_braces(&mut self, trimmed: &str) {
+    /// Update brace depth and return the complexity delta for this line.
+    ///
+    /// Complexity is counted at the CURRENT depth before brace changes are
+    /// applied. This ensures:
+    /// - `match {` arms are counted at depth 1 (before the `{` opens depth 2).
+    /// - The closing `}` of a block is counted at that block's depth (not after
+    ///   decrementing, which would wrongly count it at the enclosing depth).
+    fn update_depth_and_count(&mut self, trimmed: &str) -> usize {
         let opens = trimmed.matches('{').count();
         let closes = trimmed.matches('}').count();
+
+        // Count complexity at current depth BEFORE updating depth.
+        let c = count_complexity(trimmed, self.brace_depth);
+
+        // Apply depth change.
         self.brace_depth = self.brace_depth.saturating_add(opens);
         self.brace_depth = self.brace_depth.saturating_sub(closes);
+
         if opens > 0 {
             self.in_fn_body = true;
         }
+
+        c
     }
 
     fn ended(&self, trimmed: &str) -> bool {
@@ -268,8 +283,7 @@ fn check_function_violations(rel_path: &str, lines: &[&str], errors: &mut Vec<St
         }
 
         if tracker.in_fn {
-            tracker.update_braces(trimmed);
-            tracker.fn_complexity += count_complexity(trimmed);
+            tracker.fn_complexity += tracker.update_depth_and_count(trimmed);
 
             if tracker.ended(trimmed) {
                 tracker.report_and_reset(rel_path, i, lines, errors);
