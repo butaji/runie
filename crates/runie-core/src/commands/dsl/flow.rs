@@ -1,4 +1,9 @@
 //! Command Flow Types
+//!
+//! ## Borrow pattern
+//! `open_dialog.take()` is used in `exec_sub` to temporarily move the dialog out of
+//! `AppState` before executing a sub-dialog. This is a legitimate borrow-conflict
+//! workaround: pushing to the back stack requires mutable access to `AppState`.
 
 use crate::dialog::PanelStack;
 use crate::model::AppState;

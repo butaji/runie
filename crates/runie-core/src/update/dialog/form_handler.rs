@@ -1,4 +1,9 @@
 //! Command form dialog handling and @-ref insertion.
+//!
+//! ## Borrow pattern
+//! Form updates require `open_dialog.take()` to temporarily move the dialog out of
+//! `AppState`. This is a legitimate borrow-conflict workaround: the form panel handler
+//! needs `&mut AppState` to access input state, which conflicts with holding `&mut DialogState`.
 
 use crate::commands::DialogState;
 use crate::model::AppState;

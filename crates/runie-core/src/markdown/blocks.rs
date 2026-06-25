@@ -3,6 +3,10 @@ use pulldown_cmark::{Event, Parser, Tag, TagEnd};
 use super::md_options;
 use super::CodeBlock;
 
+// Note: Parser buffer flushes use `mem::take`. These are idiomatic Rust patterns
+// for "move out of mutable buffer, reset to empty, push to result". Each flush
+// takes accumulated text/code/list content and resets the parser state for the next block.
+
 pub(crate) fn split_unclosed_fence(text: &str) -> (&str, Option<&str>) {
     let mut offset = 0;
     let mut in_code = false;

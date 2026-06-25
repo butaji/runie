@@ -1,4 +1,9 @@
 //! Login flow panel operations — push, pop, replace, rebuild.
+//!
+//! ## Borrow pattern
+//! Login panel operations require `open_dialog.take()` to temporarily move the dialog out of
+//! `AppState`. This is a legitimate borrow-conflict workaround when the operation needs to
+//! both read from `LoginFlowState` and modify `open_dialog`.
 
 use super::panels::{
     build_key_input, build_login_root, build_model_selector, build_provider_picker,

@@ -1,4 +1,10 @@
 //! Dialog routing, command-result processing, and back-stack helpers.
+//!
+//! ## Borrow pattern
+//! Dialog updates require `open_dialog.take()` to temporarily move the dialog out of
+//! `AppState`. This is a legitimate borrow-conflict workaround: `&mut AppState` cannot
+//! be held while also holding `&mut DialogState` (same struct). The take/process/restore
+//! pattern is unavoidable without restructuring AppState's dialog ownership.
 
 use crate::commands::{CommandResult, DialogState, DialogType};
 use crate::model::AppState;
