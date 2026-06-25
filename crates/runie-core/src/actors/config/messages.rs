@@ -1,7 +1,8 @@
 //! Typed messages and handle for `ConfigActor`.
 
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 
+use crate::actor::Reply;
 use crate::config::Config;
 
 /// Messages accepted by `ConfigActor`.
@@ -25,27 +26,9 @@ pub enum ConfigMsg {
     /// Update the saved model list for a provider.
     SetProviderModels { name: String, models: Vec<String> },
     /// Request the current in-memory config.
-    GetConfig(ConfigReply<Config>),
+    GetConfig(Reply<Config>),
     /// Request the list of configured providers.
-    GetConfiguredProviders(ConfigReply<Vec<(String, String, Vec<String>)>>),
-}
-
-/// Cloneable reply wrapper around a `oneshot::Sender`.
-#[derive(Debug, Clone)]
-pub struct ConfigReply<T>(std::sync::Arc<std::sync::Mutex<Option<oneshot::Sender<T>>>>);
-
-impl<T> ConfigReply<T> {
-    /// Build a reply handle from a fresh oneshot sender.
-    pub fn new(sender: oneshot::Sender<T>) -> Self {
-        Self(std::sync::Arc::new(std::sync::Mutex::new(Some(sender))))
-    }
-
-    /// Send the reply, consuming the underlying sender.
-    pub fn send(self, value: T) {
-        if let Some(sender) = self.0.lock().unwrap_or_else(|e| e.into_inner()).take() {
-            let _ = sender.send(value);
-        }
-    }
+    GetConfiguredProviders(Reply<Vec<(String, String, Vec<String>)>>),
 }
 
 /// Ergonomic handle for sending messages to a `ConfigActor`.
@@ -117,9 +100,9 @@ impl ConfigActorHandle {
 
     /// Request the current in-memory config.
     pub async fn get_config(&self) -> Option<Config> {
-        let (tx, rx) = oneshot::channel();
+        let (tx, rx) = tokio::sync::oneshot::channel();
         self.tx
-            .send(ConfigMsg::GetConfig(ConfigReply::new(tx)))
+            .send(ConfigMsg::GetConfig(Reply::new(tx)))
             .await
             .ok()?;
         rx.await.ok()
@@ -127,9 +110,9 @@ impl ConfigActorHandle {
 
     /// Request the list of configured providers.
     pub async fn get_configured_providers(&self) -> Option<Vec<(String, String, Vec<String>)>> {
-        let (tx, rx) = oneshot::channel();
+        let (tx, rx) = tokio::sync::oneshot::channel();
         self.tx
-            .send(ConfigMsg::GetConfiguredProviders(ConfigReply::new(tx)))
+            .send(ConfigMsg::GetConfiguredProviders(Reply::new(tx)))
             .await
             .ok()?;
         rx.await.ok()

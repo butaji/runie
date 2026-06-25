@@ -10,7 +10,7 @@ mod io;
 pub mod provider;
 pub mod session;
 
-pub use config::{ConfigActor, ConfigActorHandle, ConfigMsg, ConfigReply};
+pub use config::{ConfigActor, ConfigActorHandle, ConfigMsg};
 pub use fff_indexer::{
     FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
     FffSearchState,

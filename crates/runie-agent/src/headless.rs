@@ -38,9 +38,9 @@ pub async fn run_headless_cli(
     options: HeadlessCliOptions,
 ) -> Result<HeadlessResult> {
     let runtime = runie_provider::spawn_headless_runtime().await;
-    let built = runtime.provider(provider_name, provider_model).await?;
+    let provider = runtime.provider(provider_name, provider_model).await?;
     let opts = build_headless_options(sink, options);
-    run_headless_turn(messages, built.provider.as_ref(), opts).await
+    run_headless_turn(messages, &provider, opts).await
 }
 
 /// Options for `run_headless_cli` (subset of `HeadlessOptions` that varies per caller).

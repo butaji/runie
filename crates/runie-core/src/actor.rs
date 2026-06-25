@@ -1,11 +1,11 @@
-//! Minimal actor trait for Runie's lightweight actor model.
+//! Minimal actor trait and generic reply wrapper for Runie's lightweight actor model.
 //!
 //! We use simple tokio tasks + typed channels instead of a full actor framework.
 //! This keeps things simple while still providing type-safe actor boundaries.
 
 use std::future::Future;
 use std::pin::Pin;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 
 /// Minimal actor trait.
 ///
@@ -136,6 +136,48 @@ impl Future for ActorHandle {
 impl Drop for ActorHandle {
     fn drop(&mut self) {
         self.abort();
+    }
+}
+
+/// Generic reply wrapper for actor request/response patterns.
+///
+/// Wraps a `oneshot::Sender` behind an `Arc<Mutex<Option<T>>>` so it can be
+/// cloned and sent to request handlers without borrowing issues.
+/// Unlike `#[derive(Clone)]`, this always implements `Clone` regardless of `T`.
+///
+/// # Example
+/// ```ignore
+/// // Request side:
+/// let (tx, rx) = oneshot::channel();
+/// actor_tx.send(MyMsg::GetValue(Reply::new(tx))).await?;
+/// let value = rx.await?;
+///
+/// // Handler side:
+/// match msg {
+///     MyMsg::GetValue(reply) => reply.send(response),
+/// }
+/// ```
+#[derive(Debug)]
+pub struct Reply<T>(std::sync::Arc<std::sync::Mutex<Option<oneshot::Sender<T>>>>);
+
+impl<T> Clone for Reply<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<T> Reply<T> {
+    /// Create a new reply handle from a oneshot sender.
+    pub fn new(sender: oneshot::Sender<T>) -> Self {
+        Self(std::sync::Arc::new(std::sync::Mutex::new(Some(sender))))
+    }
+
+    /// Send the reply value, consuming the underlying sender.
+    /// No-op if the receiver was already dropped.
+    pub fn send(self, value: T) {
+        if let Some(sender) = self.0.lock().unwrap_or_else(|e| e.into_inner()).take() {
+            let _ = sender.send(value);
+        }
     }
 }
 

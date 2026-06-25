@@ -1,0 +1,9 @@
+data: {"id":"0684fec59f01b4bc151eb35a5c470a2a","choices":[{"index":0,"delta":{"content":"<think>\nThe user is","role":"assistant","reasoning":"The user is"}}],"created":1781910469,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684fec59f01b4bc151eb35a5c470a2a","choices":[{"index":0,"delta":{"content":" asking me to read a file and quote its exact contents. I should use the read_file tool to do this. However, I notice the user mentioned a tool name \"read_file\" - I should use the correct tool name from my available tools","role":"assistant","reasoning":" asking me to read a file and quote its exact contents. I should use the read_file tool to do this. However, I notice the user mentioned a tool name \"read_file\" - I should use the correct tool name from my available tools"}}],"created":1781910469,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684fec59f01b4bc151eb35a5c470a2a","choices":[{"index":0,"delta":{"content":". Looking at my tools, I have \"read_file\" available.\n\nLet me read the file.","role":"assistant","reasoning":". Looking at my tools, I have \"read_file\" available.\n\nLet me read the file."}}],"created":1781910469,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684fec59f01b4bc151eb35a5c470a2a","choices":[{"index":0,"delta":{"content":"\n</think>\n\n{\"name\": \"read_file\", \"arguments\": {\"path\": \"/tmp/runie_minimax_notes_99892.txt\"}}","role":"assistant"}}],"created":1781910469,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684fec59f01b4bc151eb35a5c470a2a","choices":[{"finish_reason":"stop","index":0,"delta":{"content":"","role":"assistant"}}],"created":1781910469,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}

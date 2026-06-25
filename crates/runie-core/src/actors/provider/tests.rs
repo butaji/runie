@@ -33,11 +33,7 @@ struct MockFactory {
 impl MockFactory {
     fn ok(provider: Box<dyn Provider>, key: &str, model: &str) -> Self {
         Self {
-            build_result: std::sync::Mutex::new(Some(Ok(BuiltProvider {
-                provider,
-                key: key.into(),
-                model: model.into(),
-            }))),
+            build_result: std::sync::Mutex::new(Some(Ok(BuiltProvider::new(provider, key.into(), model.into())))),
             validate_result: std::sync::Mutex::new(None),
             credentials: Some(("http://localhost".into(), "sk-test".into())),
         }

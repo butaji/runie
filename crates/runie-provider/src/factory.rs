@@ -1,4 +1,4 @@
-//! Concrete [`ProviderFactory`] implementation backed by `DynProvider`.
+//! Concrete [`ProviderFactory`] implementation backed by `BuiltProvider`.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -8,12 +8,12 @@ use runie_core::config::Config;
 use runie_core::provider::ProviderError;
 use runie_core::provider_registry;
 
-use crate::{validate_api_key, DynProvider};
+use crate::{build_provider, validate_api_key};
 
 /// The production provider factory.
 ///
 /// This is the only production implementation of [`ProviderFactory`] and the
-/// only production code path that calls `DynProvider::new_with_config`.
+/// only production code path that constructs providers.
 pub struct DynProviderFactory;
 
 impl ProviderFactory for DynProviderFactory {
@@ -23,14 +23,8 @@ impl ProviderFactory for DynProviderFactory {
         model: &str,
         config: &Config,
     ) -> Result<BuiltProvider, ProviderError> {
-        let dyn_provider = DynProvider::new_with_config(provider, model, config)?;
-        let key = dyn_provider.key().to_string();
-        let model = dyn_provider.model().to_string();
-        Ok(BuiltProvider {
-            provider: Box::new(dyn_provider),
-            key,
-            model,
-        })
+        let built = build_provider(provider, model, Some(config))?;
+        Ok(built)
     }
 
     fn validate_key(

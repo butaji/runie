@@ -14,7 +14,7 @@ use runie_core::AppState;
 use runie_core::permissions::{
     ApprovalRegistry, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
 };
-use runie_provider::DynProvider;
+
 use tokio::sync::mpsc;
 
 use crate::emit_approval_sink::EmitApprovalSink;
@@ -142,7 +142,7 @@ impl AgentActor {
             }
         };
 
-        let provider = DynProvider::from_provider(built.provider, &built.key, &built.model);
+        // BuiltProvider implements Provider, so use it directly
         let emit = Arc::new(Mutex::new({
             let bus = self.bus.clone();
             move |evt: Event| {
@@ -159,7 +159,7 @@ impl AgentActor {
             Arc::new(EmitApprovalSink::new(emit.clone(), self.approval_registry.clone())),
         );
 
-        if let Err(e) = run_agent_turn(&provider, command, emit, 5, gate).await {
+        if let Err(e) = run_agent_turn(&built, command, emit, 5, gate).await {
             self.emit_error_and_done(&command.id, format!("Agent error: {e}"));
         }
     }

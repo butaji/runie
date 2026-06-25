@@ -12,4 +12,4 @@ mod tests;
 
 pub use actor::ProviderActor;
 pub use factory::{BuiltProvider, ProviderFactory};
-pub use messages::{ProviderActorHandle, ProviderMsg, ProviderReply};
+pub use messages::{ProviderActorHandle, ProviderMsg};

@@ -1,6 +1,6 @@
 //! Login API-key validation effect handler.
 
-use runie_core::actors::provider::ProviderReply;
+use runie_core::actor::Reply;
 use runie_core::actors::ProviderMsg;
 use runie_core::Event as CoreEvent;
 use tokio::sync::mpsc;
@@ -52,7 +52,7 @@ async fn validate_provider_key(
         .send(ProviderMsg::ValidateKey {
             provider: provider.into(),
             api_key: key.into(),
-            reply: ProviderReply::new(reply_tx),
+            reply: Reply::new(reply_tx),
         })
         .await
         .map_err(|_| anyhow::anyhow!("provider actor unavailable"))?;

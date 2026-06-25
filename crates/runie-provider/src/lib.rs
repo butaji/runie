@@ -16,28 +16,26 @@ pub use mock::{MockProvider, MockStreamingProvider};
 pub use openai::OpenAiProvider;
 
 use anyhow::Result;
+use runie_core::actors::provider::BuiltProvider;
+use runie_core::llm_event::LLMEvent;
 use runie_core::message::ChatMessage;
 use runie_core::provider::{Provider, ProviderError};
 use runie_core::provider_registry;
-use std::pin::Pin;
 
 /// Default timeout for API key validation requests.
 pub const VALIDATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
 
 // ---------------------------------------------------------------------------
-// DynProvider — dynamic dispatch wrapper
+// DynProvider — provider handle with construction helpers
 // ---------------------------------------------------------------------------
 
-/// A provider owned behind a trait object, enabling dynamic dispatch.
+/// Provider handle that wraps a built provider.
 ///
-/// All concrete providers (`OpenAiProvider`, `MockProvider`, etc.) implement
-/// `Provider` and can be wrapped here.
+/// This type wraps [`BuiltProvider`] and adds construction helpers that depend
+/// on `runie-provider` internals. It implements [`Provider`] directly.
+#[derive(Clone, Debug)]
 pub struct DynProvider {
-    inner: Box<dyn Provider>,
-    /// The registry key used to build this provider (e.g. "openai", "mock").
-    key: String,
-    /// The model name (e.g. "gpt-4o", "echo").
-    model: String,
+    inner: BuiltProvider,
 }
 
 impl DynProvider {
@@ -48,36 +46,28 @@ impl DynProvider {
         model: &str,
         config: &runie_core::config::Config,
     ) -> Result<Self, ProviderError> {
-        build_dyn_provider(key, model, Some(config))
+        build_provider(key, model, Some(config)).map(|b| DynProvider { inner: b })
+    }
+
+    /// Wrap a built provider.
+    pub fn from_built(built: BuiltProvider) -> Self {
+        DynProvider { inner: built }
     }
 
     /// Wrap an arbitrary provider implementation.
     #[doc(hidden)]
     pub fn from_provider(provider: Box<dyn Provider>, key: &str, model: &str) -> Self {
-        Self {
-            inner: provider,
-            key: key.to_string(),
-            model: model.to_string(),
-        }
+        DynProvider { inner: BuiltProvider::from_provider(provider, key, model) }
     }
 
     /// Returns the registry key used to build this provider.
     pub fn key(&self) -> &str {
-        &self.key
+        self.inner.key()
     }
 
     /// Returns the model name.
     pub fn model(&self) -> &str {
-        &self.model
-    }
-}
-
-impl std::fmt::Debug for DynProvider {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("DynProvider")
-            .field("key", &self.key)
-            .field("model", &self.model)
-            .finish()
+        self.inner.model()
     }
 }
 
@@ -85,10 +75,8 @@ impl Provider for DynProvider {
     fn generate(
         &self,
         messages: Vec<ChatMessage>,
-    ) -> Pin<
-        Box<
-            dyn futures::Stream<Item = anyhow::Result<runie_core::llm_event::LLMEvent>> + Send + '_,
-        >,
+    ) -> std::pin::Pin<
+        Box<dyn futures::Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>,
     > {
         self.inner.generate(messages)
     }
@@ -97,12 +85,22 @@ impl Provider for DynProvider {
         &self,
         messages: Vec<ChatMessage>,
         tools: Vec<serde_json::Value>,
-    ) -> Pin<
-        Box<
-            dyn futures::Stream<Item = anyhow::Result<runie_core::llm_event::LLMEvent>> + Send + '_,
-        >,
+    ) -> std::pin::Pin<
+        Box<dyn futures::Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>,
     > {
         self.inner.generate_with_tools(messages, tools)
+    }
+}
+
+impl From<BuiltProvider> for DynProvider {
+    fn from(built: BuiltProvider) -> Self {
+        DynProvider { inner: built }
+    }
+}
+
+impl AsRef<BuiltProvider> for DynProvider {
+    fn as_ref(&self) -> &BuiltProvider {
+        &self.inner
     }
 }
 
@@ -147,16 +145,16 @@ fn resolve_credentials(
     )
 }
 
-/// Build a `DynProvider` from a registry key and model name.
+/// Build a provider from a registry key and model name.
 ///
 /// **No silent Mock fallback.** Unknown keys return `Err(UnknownProvider)`.
 /// If the API key is not set (and `RUNIE_MOCK` is not enabled), returns
 /// `Err(MissingApiKey)`.
-fn build_dyn_provider(
+pub fn build_provider(
     key: &str,
     model: &str,
     config: Option<&runie_core::config::Config>,
-) -> Result<DynProvider, ProviderError> {
+) -> Result<BuiltProvider, ProviderError> {
     if key == "mock" && provider_registry::is_mock_enabled() {
         return Ok(build_mock_provider(key, model));
     }
@@ -169,24 +167,17 @@ fn build_dyn_provider(
         return Err(ProviderError::MissingApiKey(meta.env_var.to_string()));
     }
 
-    Ok(DynProvider {
-        inner: build_openai_provider(api_key, model, &base_url),
-        key: key.to_string(),
-        model: model.to_string(),
-    })
+    let provider = build_openai_provider(api_key, model, &base_url);
+    Ok(BuiltProvider::new(provider, key.to_string(), model.to_string()))
 }
 
-fn build_mock_provider(key: &str, model: &str) -> DynProvider {
+fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
     let provider: Box<dyn Provider> = if std::env::var_os("RUNIE_MOCK_DELAY").is_some() {
         Box::new(MockProvider::with_delay(300, 800))
     } else {
         Box::new(MockProvider::default())
     };
-    DynProvider {
-        inner: provider,
-        key: key.to_string(),
-        model: model.to_string(),
-    }
+    BuiltProvider::new(provider, key.to_string(), model.to_string())
 }
 
 fn build_openai_provider(api_key: String, model: &str, base_url: &str) -> Box<dyn Provider> {
@@ -209,10 +200,10 @@ pub fn build_provider_with_fallback(
     chain: &[&str],
     model: &str,
     config: &runie_core::config::Config,
-) -> Result<DynProvider, ProviderError> {
+) -> Result<BuiltProvider, ProviderError> {
     let mut last_err = None;
     for key in chain {
-        match build_dyn_provider(key, model, Some(config)) {
+        match build_provider(key, model, Some(config)) {
             Ok(provider) => return Ok(provider),
             Err(e) => last_err = Some(e),
         }

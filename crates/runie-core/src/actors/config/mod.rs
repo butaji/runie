@@ -6,4 +6,4 @@ mod messages;
 mod tests;
 
 pub use actor::ConfigActor;
-pub use messages::{ConfigActorHandle, ConfigMsg, ConfigReply};
+pub use messages::{ConfigActorHandle, ConfigMsg};

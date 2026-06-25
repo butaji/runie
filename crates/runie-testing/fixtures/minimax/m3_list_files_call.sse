@@ -1,0 +1,7 @@
+data: {"id":"0684febd8532035657d4c1205e90ffb5","choices":[{"index":0,"delta":{"content":"<think>\nThe user wants to list files in the","role":"assistant","reasoning":"The user wants to list files in the"}}],"created":1781910461,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684febd8532035657d4c1205e90ffb5","choices":[{"index":0,"delta":{"content":" current directory. I'll use the list_dir tool.","role":"assistant","reasoning":" current directory. I'll use the list_dir tool."}}],"created":1781910461,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684febd8532035657d4c1205e90ffb5","choices":[{"index":0,"delta":{"content":"\n</think>\n\n{\"name\": \"list_dir\", \"arguments\": {\"path\": \".\"}}","role":"assistant"}}],"created":1781910461,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
+
+data: {"id":"0684febd8532035657d4c1205e90ffb5","choices":[{"finish_reason":"stop","index":0,"delta":{"content":"","role":"assistant"}}],"created":1781910461,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
