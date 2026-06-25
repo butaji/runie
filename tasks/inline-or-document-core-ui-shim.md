@@ -1,6 +1,6 @@
 # Inline or document runie-tui core_ui re-export shim
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2

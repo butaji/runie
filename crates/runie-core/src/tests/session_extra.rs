@@ -1,16 +1,10 @@
 //! Extra session command tests — export, import, display name
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
+use crate::tests::exec;
 use crate::tests::fresh_state;
 use crate::tests::slash::ENV_LOCK;
 use crate::Event;
-
-/// Set input buffer directly and submit — bypasses the command palette.
-fn exec(state: &mut AppState, text: &str) {
-    state.input.input = text.into();
-    state.input.cursor_pos = text.len();
-    state.update(Event::submit());
-}
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {

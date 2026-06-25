@@ -1,12 +1,9 @@
 //! Shared test helpers for runie-core tests.
 //!
-//! This module provides common utilities for tests:
-//! - `fresh_state()` - creates a fresh AppState
-//! - `type_str()` - simulates typing into input buffer
-//! - `exec()` - sets input and submits
-//! - `tmp_store()` - creates a temp session store
-//! - `minimal_session()` - creates a minimal session
-//! - `ENV_LOCK` - serializes tests that touch env vars
+//! Canonical source for `fresh_state()`, `type_str()`, and `exec()` within
+//! `runie-core`.  The remaining helpers (`ENV_LOCK`, `tmp_store`,
+//! `minimal_session`) also live here because they need access to
+//! `runie-core` internals.
 
 use std::sync::Mutex;
 
@@ -15,7 +12,7 @@ use crate::model::AppState;
 use crate::session::store::SessionStore;
 use crate::session::Session;
 
-/// Global lock to serialize tests that modify environment variables.
+/// Global lock to serialize tests that touch environment variables.
 pub static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 /// Returns a fresh `AppState` with default values and config cache populated
@@ -36,9 +33,9 @@ pub fn type_str(state: &mut AppState, text: &str) {
 /// Set input buffer directly and submit — bypasses the command palette.
 /// Use for slash commands that need arguments.
 pub fn exec(state: &mut AppState, text: &str) {
-    state.input.input = text.into();
-    state.input.cursor_pos = text.len();
-    state.update(Event::submit());
+    state.input_mut().input = text.into();
+    state.input_mut().cursor_pos = text.len();
+    state.update(Event::Submit);
 }
 
 /// Creates a temporary session store in the system temp directory.
@@ -86,12 +83,8 @@ mod tests {
     #[test]
     fn shared_exec_sets_input_and_submits() {
         let mut state = fresh_state();
-        // Before exec, input is empty
         assert_eq!(state.input().input, "");
         exec(&mut state, "/save");
-        // After exec, input is consumed by submit, but cursor was set before
-        // The key assertion is that exec called submit, which may produce side effects
-        // For this test, we just verify exec doesn't panic
         assert!(state.input().cursor_pos >= 0);
     }
 
@@ -99,10 +92,7 @@ mod tests {
     fn shared_tmp_store_is_unique() {
         let store1 = tmp_store();
         let store2 = tmp_store();
-        // Each call should create a unique directory
         assert_ne!(store1.dir(), store2.dir());
-        // Both should be valid stores
-        assert!(store1.dir().exists() || !store1.dir().to_path_buf().starts_with("/tmp/runie_slash_test_"));
     }
 
     #[test]

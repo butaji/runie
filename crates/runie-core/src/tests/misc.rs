@@ -1,13 +1,6 @@
 use crate::model::{AppState, Role};
-use crate::tests::fresh_state;
+use crate::tests::{exec, fresh_state};
 use crate::Event;
-
-/// Set input buffer directly and submit — bypasses the command palette.
-fn exec(state: &mut AppState, text: &str) {
-    state.input.input = text.into();
-    state.input.cursor_pos = text.len();
-    state.update(Event::submit());
-}
 
 fn dispatch(state: &mut AppState, events: &[Event]) {
     for e in events {

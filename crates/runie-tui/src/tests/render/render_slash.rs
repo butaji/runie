@@ -1,14 +1,8 @@
 use super::super::*;
 use super::*;
-use runie_core::Event;
 use std::sync::Mutex;
 
 static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-fn type_str(state: &mut AppState, text: &str) {
-    runie_testing::type_str(state, text);
-    state.update(runie_core::event::Event::Submit);
-}
 
 fn render_slash(input: &str) -> String {
     let mut state = AppState::default();
@@ -18,7 +12,7 @@ fn render_slash(input: &str) -> String {
 fn render_slash_with_state(input: &str, state: &mut AppState) -> String {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
-    type_str(state, input);
+    runie_testing::exec(state, input);
     terminal.draw(|f| view(f, state)).expect("draw");
     let buf = terminal.backend().buffer();
     buf.content.iter().map(|c| c.symbol()).collect()
@@ -68,7 +62,7 @@ fn test_render_sessions_list_on_separate_lines() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
-    type_str(&mut state, "/sessions");
+    runie_testing::exec(&mut state, "/sessions");
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
     let lines = buffer_lines(&terminal);

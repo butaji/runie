@@ -6,7 +6,7 @@ use crate::Event;
 use crate::commands::DialogState;
 use crate::message::Part;
 use crate::tests::slash::ENV_LOCK;
-use crate::tests::{fresh_state, type_str};
+use crate::tests::{fresh_state, tmp_store, type_str};
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
@@ -18,12 +18,6 @@ fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
     }
     // Select the command
     state.update(crate::Event::PaletteSelect);
-}
-
-fn tmp_store() -> crate::session::store::SessionStore {
-    let dir = std::env::temp_dir().join(format!("runie_test_{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    crate::session::store::SessionStore::new(dir)
 }
 
 #[test]

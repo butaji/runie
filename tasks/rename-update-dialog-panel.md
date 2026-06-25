@@ -1,6 +1,6 @@
 # Rename `update/dialog/panel.rs` to disambiguate from `dialog/panel.rs`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P3
