@@ -14,5 +14,5 @@ pub use events::{
 pub use fixtures::{
     allow_all_gate, load_default_config_for_test, mock_provider, session_store_for_test, temp_home,
 };
-pub use runner::{SubmissionId, TestRunner};
+pub use runner::{TestSubmissionId, TestRunner};
 pub use state::{fresh_state, type_str};

@@ -13,7 +13,7 @@ use tempfile::TempDir;
 use crate::fixtures::{load_default_config_for_test, temp_home};
 
 /// Identifier for a submitted user turn.
-pub type SubmissionId = String;
+pub type TestSubmissionId = String;
 
 /// A test harness that drives an agent turn and collects emitted events.
 pub struct TestRunner {
@@ -52,7 +52,7 @@ impl TestRunner {
         &self,
         input: &str,
         provider: &DynProvider,
-    ) -> anyhow::Result<SubmissionId> {
+    ) -> anyhow::Result<TestSubmissionId> {
         let id = format!("sub.{}", nanoid());
         let cmd = AgentCommand {
             content: input.to_string(),
