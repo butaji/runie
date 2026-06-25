@@ -101,20 +101,10 @@ impl AppState {
     }
 
     pub(crate) fn cycle_thinking_level(&mut self) {
-        self.config_mut().thinking_level = self.config_mut().thinking_level.cycle();
+        let new_level = self.config().thinking_level.cycle();
+        self.set_thinking_level(new_level);
         self.notify(
             format!("Thinking level: {}", self.config().thinking_level.as_str()),
-            TransientLevel::Info,
-        );
-    }
-
-    pub(crate) fn set_thinking_level(&mut self, level: crate::model::ThinkingLevel) {
-        self.config_mut().thinking_level = level;
-        self.notify(
-            format!(
-                "Thinking level set to: {}",
-                self.config().thinking_level.as_str()
-            ),
             TransientLevel::Info,
         );
     }

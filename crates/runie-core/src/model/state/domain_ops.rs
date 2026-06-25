@@ -8,6 +8,7 @@ use super::{
     AppState, CommandUsage, ModelSource,
 };
 use crate::actors::ActorHandles;
+use crate::event::TransientLevel;
 use crate::view::elements::Element;
 
 impl AppState {
@@ -388,6 +389,21 @@ impl AppState {
     /// Returns the current thinking level setting.
     pub fn thinking_level(&self) -> crate::model::ThinkingLevel {
         self.config().thinking_level
+    }
+
+    /// Set the thinking level and update derived state.
+    pub(crate) fn set_thinking_level(&mut self, level: crate::model::ThinkingLevel) {
+        if self.config().thinking_level == level {
+            return;
+        }
+        self.config_mut().thinking_level = level;
+        self.notify(
+            format!(
+                "Thinking level set to: {}",
+                self.config().thinking_level.as_str()
+            ),
+            TransientLevel::Info,
+        );
     }
 
     /// Returns whether the app is in read-only mode.
