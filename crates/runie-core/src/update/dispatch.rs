@@ -105,7 +105,7 @@ fn handle_session_store_events(state: &mut AppState, event: &Event) -> bool {
 fn apply_session_loaded(
     state: &mut AppState,
     name: &str,
-    events: &Box<Vec<crate::event::DurableCoreEvent>>,
+    events: &[crate::event::DurableCoreEvent],
     metadata: &Option<Box<crate::session::index::SessionMetadata>>,
 ) {
     crate::session::replay::replay_events(state, events);
@@ -122,7 +122,7 @@ fn apply_session_loaded(
     );
 }
 
-fn apply_session_imported(state: &mut AppState, session: &Box<crate::session::Session>) {
+fn apply_session_imported(state: &mut AppState, session: &crate::session::Session) {
     state.restore_session(session);
     state.notify(
         format!("Session imported from '{}'.", session.name),
@@ -130,7 +130,7 @@ fn apply_session_imported(state: &mut AppState, session: &Box<crate::session::Se
     );
 }
 
-fn apply_session_list(state: &mut AppState, sessions: &Box<Vec<String>>) {
+fn apply_session_list(state: &mut AppState, sessions: &[String]) {
     let content = if sessions.is_empty() {
         "No saved sessions. Use /save name to create one.".into()
     } else {

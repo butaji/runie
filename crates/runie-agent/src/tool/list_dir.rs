@@ -14,19 +14,14 @@ impl ListDirTool {
     async fn collect_entries(dir: tokio::fs::ReadDir) -> Vec<String> {
         let mut names = Vec::new();
         let mut entries = dir;
-        loop {
-            match entries.next_entry().await {
-                Ok(Some(entry)) => {
-                    let name = entry.file_name().to_string_lossy().to_string();
-                    let suffix = entry
-                        .file_type()
-                        .await
-                        .map(|ft| ft.is_dir())
-                        .unwrap_or(false);
-                    names.push(format!("{}{}", name, if suffix { "/" } else { "" }));
-                }
-                _ => break,
-            }
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            let name = entry.file_name().to_string_lossy().to_string();
+            let suffix = entry
+                .file_type()
+                .await
+                .map(|ft| ft.is_dir())
+                .unwrap_or(false);
+            names.push(format!("{}{}", name, if suffix { "/" } else { "" }));
         }
         names.sort();
         names

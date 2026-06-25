@@ -44,6 +44,7 @@ pub async fn run_headless_cli(
 
 /// Options for `run_headless_cli` (subset of `HeadlessOptions` that varies per caller).
 #[derive(Default)]
+#[allow(clippy::type_complexity)]
 pub struct HeadlessCliOptions {
     pub execute_tools: bool,
     pub max_tool_rounds: usize,

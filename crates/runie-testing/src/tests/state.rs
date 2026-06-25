@@ -2,8 +2,7 @@
 //!
 //! Canonical source for `fresh_state()`, `type_str()`, and `exec()` shared by
 //! `runie-core` and `runie-tui` tests.  Crates import from `runie_testing`
-///  instead of defining their own copies.
-
+/// instead of defining their own copies.
 use runie_core::event::Event;
 use runie_core::model::AppState;
 

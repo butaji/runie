@@ -84,11 +84,13 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
     let mut state = AppState::default();
     // Build the ActorHandles registry — this is the single source of truth
     // for all actor senders. It replaces the old loose config_tx/provider_tx/... fields.
-    let mut handles = ActorHandles::default();
-    handles.config = Some(config_handle);
-    handles.provider = Some(provider_handle);
-    handles.session = Some(session_handle.clone());
-    handles.io = Some(io_handle);
+    let mut handles = ActorHandles {
+        config: Some(config_handle),
+        provider: Some(provider_handle),
+        session: Some(session_handle.clone()),
+        io: Some(io_handle),
+        ..Default::default()
+    };
     state.set_actor_handles(handles.clone());
     app_init::bootstrap(&mut state).await;
     // Spawn FffIndexerActor with the current working directory as the project root.
@@ -248,6 +250,7 @@ fn render_loop(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_ui_actor(
     state: AppState,
     render_tx: watch::Sender<Snapshot>,

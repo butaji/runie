@@ -42,7 +42,7 @@ impl PacedRenderer {
         // Calculate step size: clamp to [2, 24] range
         let pending_len = self.received.len().saturating_sub(self.displayed);
         let rate_chunk = (pending_len as f64 / 20.0).ceil() as usize;
-        let step = rate_chunk.max(2).min(24);
+        let step = rate_chunk.clamp(2, 24);
 
         // Look for a word boundary (whitespace or punctuation) within `step + 10` chars.
         let lookahead = (step + 10).min(self.received.len() - self.displayed);

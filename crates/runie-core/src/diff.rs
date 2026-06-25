@@ -175,7 +175,6 @@ fn patch_hunk_to_diff_hunk(h: &patch::Hunk) -> DiffHunk {
 }
 
 /// ── Legacy parser for imperfect agent output strings ─────────────────────────
-
 fn legacy_parse_diff(text: &str) -> Diff {
     let mut state = LegacyParseState::default();
     for line in text.lines() {

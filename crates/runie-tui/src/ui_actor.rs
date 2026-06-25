@@ -37,6 +37,7 @@ pub struct UiActor {
 
 impl UiActor {
     /// Create a new `UiActor`.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         state: AppState,
         render_tx: watch::Sender<Snapshot>,

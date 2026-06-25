@@ -42,7 +42,7 @@ pub fn sanitize_messages(messages: &mut Vec<ChatMessage>) -> Vec<SanitizeError> 
 
 /// Remove tool calls from assistant messages that have no matching tool result.
 fn remove_dangling_tool_calls(
-    messages: &mut Vec<ChatMessage>,
+    messages: &mut [ChatMessage],
     cleaned_indices: &mut Vec<usize>,
 ) -> Vec<SanitizeError> {
     let mut errors = Vec::new();
@@ -211,7 +211,7 @@ fn ensure_starts_with_user_or_system(messages: &mut Vec<ChatMessage>) -> Vec<San
 }
 
 /// Trim leading and trailing whitespace from assistant message content.
-fn trim_assistant_whitespace(messages: &mut Vec<ChatMessage>) -> Vec<SanitizeError> {
+fn trim_assistant_whitespace(messages: &mut [ChatMessage]) -> Vec<SanitizeError> {
     for msg in messages.iter_mut() {
         if msg.role == Role::Assistant {
             if let Some(Part::Text { content }) = msg.parts.last_mut() {

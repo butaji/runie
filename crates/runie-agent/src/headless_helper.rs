@@ -33,6 +33,7 @@ pub fn build_messages(user_prompt: &str) -> Vec<ChatMessage> {
 /// - `execute_tools: true` — run tools by default
 /// - `max_tool_rounds: 5` — conservative round limit for CLI use
 /// - `on_chunk: None` — caller supplies their own chunk handler
+#[allow(clippy::type_complexity)]
 pub fn build_options(on_chunk: Option<Box<dyn FnMut(&str) + Send>>) -> HeadlessCliOptions {
     HeadlessCliOptions {
         execute_tools: true,
@@ -49,6 +50,7 @@ pub fn build_sink(yolo: bool) -> Arc<dyn runie_core::permissions::ApprovalSink> 
 }
 
 /// Run a headless CLI turn with the common defaults.
+#[allow(clippy::type_complexity)]
 pub async fn run_headless(
     messages: Vec<ChatMessage>,
     yolo: bool,
