@@ -206,7 +206,7 @@
     },
     {
       "id": "collapse-effect-payload-indirection",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P2",
@@ -228,7 +228,7 @@
     },
     {
       "id": "collapse-event-variants-subdir",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
@@ -548,7 +548,7 @@
     },
     {
       "id": "dedupe-turn-complete-last-calls",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
