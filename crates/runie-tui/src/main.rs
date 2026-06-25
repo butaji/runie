@@ -99,7 +99,7 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
     let project_root = std::env::current_dir().unwrap_or_default();
     let data_dir = dirs::data_dir().unwrap_or_else(std::env::temp_dir);
     if let Ok((tx, _actor_handle)) =
-        FffIndexerActor::spawn(project_root, data_dir, EventBus::new(16))
+        FffIndexerActor::spawn(project_root, data_dir, bus.clone())
     {
         handles.fff_indexer = Some(FffIndexerHandle::new(tx));
         state.set_actor_handles(handles.clone());

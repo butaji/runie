@@ -258,9 +258,11 @@ fn dispatcher_handles_all_variants() {
             Event::PermissionRequestDismissed => Event::PermissionRequestDismissed,
 
             // IO
-            Event::EnvDetected { .. } => Event::EnvDetected {
-                git_info: None,
-                cwd_name: String::new(),
+            Event::FffSearchResult { .. } => Event::FffSearchResult {
+                request_id: 0,
+                entries: Vec::new(),
+                query: String::new(),
+                indexed: false,
             },
         }
     }

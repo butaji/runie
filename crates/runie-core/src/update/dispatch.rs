@@ -84,6 +84,13 @@ fn handle_io_events(state: &mut AppState, event: &Event) -> bool {
         Event::BashOutput { command, output } => { state.add_system_msg(format!("$ {}\n{}", command, output)); state.view_mut().scroll = 0; state.messages_changed(); true }
         Event::FilesWritten { count, errors } => { state.add_system_msg(if errors.is_empty() { format!("Applied {} edit(s).", count) } else { format!("Applied {} edit(s). Errors: {}", count, errors.join(", ")) }); true }
         Event::EnvDetected { git_info, cwd_name } => { *state.git_info_mut() = git_info.clone(); *state.cwd_name_mut() = cwd_name.clone(); true }
+        Event::FffSearchResult { request_id, entries, query: _, indexed: _ } => {
+            // Only update if request_id matches current debounce (most recent request)
+            if *request_id == state.fff_debounce() {
+                *state.fff_file_results_mut() = entries.clone();
+            }
+            true
+        }
         _ => false,
     }
 }

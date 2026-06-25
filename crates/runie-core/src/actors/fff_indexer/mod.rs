@@ -12,6 +12,8 @@
 
 use crate::actors::{Actor, ActorHandle};
 use crate::bus::EventBus;
+use crate::event::Event;
+use crate::model::FffFileEntry;
 use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
 use std::sync::RwLock;
 use serde::{Deserialize, Serialize};
@@ -155,6 +157,20 @@ pub struct FffSearchRequest {
     pub project_path: PathBuf,
 }
 
+impl FffSearchRequest {
+    /// Create a new search request.
+    pub fn new(query: String, project_path: PathBuf) -> Self {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static REQUEST_ID: AtomicU64 = AtomicU64::new(1);
+        Self {
+            request_id: REQUEST_ID.fetch_add(1, Ordering::Relaxed),
+            query,
+            limit: Some(50),
+            project_path,
+        }
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // FffIndexerActor
 // ─────────────────────────────────────────────────────────────────────────────
@@ -200,11 +216,11 @@ impl FffIndexerActor {
     /// Spawn the indexer actor and return a handle + bus tx.
     ///
     /// Returns `(tx, actor_handle)` — send `FffSearchRequest` via `tx`.
-    /// The actor emits `FffSearchResult` events on `bus`.
+    /// The actor emits `Event::FffSearchResult` events on `bus`.
     pub fn spawn(
         root: PathBuf,
         data_dir: PathBuf,
-        bus: EventBus<FffSearchResult>,
+        bus: EventBus<Event>,
     ) -> anyhow::Result<(mpsc::Sender<FffSearchRequest>, ActorHandle)> {
         let actor = Self::new(root, data_dir)?;
         let (tx, rx) = mpsc::channel(64);
@@ -215,9 +231,9 @@ impl FffIndexerActor {
 
 impl Actor for FffIndexerActor {
     type Msg = FffSearchRequest;
-    type Event = FffSearchResult;
+    type Event = Event;
 
-    async fn run_body(self, rx: mpsc::Receiver<Self::Msg>, bus: EventBus<FffSearchResult>) {
+    async fn run_body(self, rx: mpsc::Receiver<Self::Msg>, bus: EventBus<Event>) {
         self.run_inner(rx, bus).await;
     }
 }
@@ -227,7 +243,7 @@ impl FffIndexerActor {
     async fn run_inner(
         mut self,
         mut rx: mpsc::Receiver<FffSearchRequest>,
-        bus: EventBus<FffSearchResult>,
+        bus: EventBus<Event>,
     ) {
         // Initialize FFF shared state
         if let Err(e) = self.init_fff().await {
@@ -237,8 +253,27 @@ impl FffIndexerActor {
 
         // Process messages until the channel closes
         while let Some(request) = rx.recv().await {
-            let result = self.handle_search(request).await;
-            bus.publish(FffSearchResult(result));
+            let payload = self.handle_search(request).await;
+            let entries: Vec<FffFileEntry> = payload
+                .items
+                .iter()
+                .map(|item| FffFileEntry {
+                    name: std::path::Path::new(&item.relative_path)
+                        .file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_else(|| item.relative_path.clone()),
+                    path: item.relative_path.clone(),
+                    is_dir: item.relative_path.ends_with('/'),
+                    score: item.score,
+                    git_status: item.git_status.clone(),
+                })
+                .collect();
+            bus.publish(Event::FffSearchResult {
+                request_id: payload.request_id,
+                entries,
+                query: payload.query,
+                indexed: payload.indexed,
+            });
         }
     }
 }

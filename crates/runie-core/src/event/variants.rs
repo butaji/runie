@@ -361,6 +361,13 @@ pub enum Event {
         git_info: Option<crate::snapshot::GitInfo>,
         cwd_name: String,
     },
+    /// FFF search results from FffIndexerActor.
+    FffSearchResult {
+        request_id: u64,
+        entries: Vec<crate::model::FffFileEntry>,
+        query: String,
+        indexed: bool,
+    },
 
     // Session
     ForkSession {

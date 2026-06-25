@@ -32,7 +32,7 @@ const APPSTATE_PATTERNS: &[(&str, &str)] = &[
     ("state.transient_message ", "state.transient_message_mut()"),
     ("state.transient_until ", "state.transient_until_mut()"),
     ("state.transient_level ", "state.transient_level_mut()"),
-    ("state.fff_file_results.", "state.fff_file_results_mut()"),
+    ("state.fff_file_results.", "state.fff_file_results()"),
     ("state.fff_debounce ", "state.fff_debounce_mut()"),
     (
         "state.permission_request ",

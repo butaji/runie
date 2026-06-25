@@ -1,4 +1,6 @@
 use super::*;
+use crate::event::Event;
+use crate::model::FffFileEntry;
 
 // Serialize FFF indexer tests to prevent cross-test state interference.
 // The FFF library uses OS threads and LMDB handles that can conflict when
@@ -68,11 +70,11 @@ async fn indexer_initializes_in_temp_dir() {
         .await;
 
     // Collect results using deterministic sync
-    let mut result = None;
+    let mut result_entries: Option<Vec<FffFileEntry>> = None;
     for _ in 0..100 {
-        if let Ok(FffSearchResult(payload)) = sub.try_recv() {
-            if payload.request_id == request_id {
-                result = Some(payload);
+        if let Ok(Event::FffSearchResult { request_id: rid, entries, .. }) = sub.try_recv() {
+            if rid == request_id {
+                result_entries = Some(entries);
                 break;
             }
         }
@@ -87,9 +89,7 @@ async fn indexer_initializes_in_temp_dir() {
         "send should not panic"
     );
 
-    if let Some(res) = result {
-        assert_eq!(res.request_id, request_id);
-    }
+    assert!(result_entries.is_some(), "should have received search result");
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -129,11 +129,11 @@ async fn indexer_answers_file_search() {
     .expect("send succeeds");
 
     // Wait for result
-    let mut result = None;
+    let mut result_entries: Option<Vec<FffFileEntry>> = None;
     for _ in 0..100 {
-        if let Ok(FffSearchResult(payload)) = sub.try_recv() {
-            if payload.request_id == request_id {
-                result = Some(payload);
+        if let Ok(Event::FffSearchResult { request_id: rid, entries, .. }) = sub.try_recv() {
+            if rid == request_id {
+                result_entries = Some(entries);
                 break;
             }
         }
@@ -142,13 +142,12 @@ async fn indexer_answers_file_search() {
 
     handle.abort();
 
-    let result = result.expect("got a result for request_id 2");
-    assert_eq!(result.request_id, 2);
+    let entries = result_entries.expect("got a result for request_id 2");
     // Should find src/cli/main.rs
     assert!(
-        result.items.iter().any(|i| i.relative_path.contains("cli")),
+        entries.iter().any(|i| i.path.contains("cli")),
         "expected cli file in results: {:?}",
-        result.items
+        entries
     );
 }
 
@@ -188,9 +187,11 @@ async fn search_request_event_returns_results() {
     // Drain events using deterministic sync
     let mut got_result = false;
     for _ in 0..500 {
-        if let Ok(FffSearchResult(payload)) = sub.try_recv() {
-            if payload.request_id == request_id {
-                assert!(!payload.items.is_empty() || !payload.indexed);
+        if let Ok(Event::FffSearchResult { request_id: rid, entries, indexed, .. }) =
+            sub.try_recv()
+        {
+            if rid == request_id {
+                assert!(!entries.is_empty() || !indexed);
                 got_result = true;
                 break;
             }

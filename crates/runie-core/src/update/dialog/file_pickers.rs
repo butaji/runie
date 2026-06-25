@@ -160,32 +160,53 @@ pub(crate) fn rebuild_file_picker(state: &mut AppState) {
         return;
     };
     let filter = panel.filter.clone();
-
     let query = if filter.is_empty() { "" } else { &filter };
-    let entries = query_fff_files(query, 50);
-    state.fff_file_results = entries.clone();
-    *state.fff_debounce_mut() = state.fff_debounce().wrapping_add(1);
-
-    let mut new_panel = Panel::new("at-files", " Files ").with_filter();
-    new_panel.filter = filter.clone();
-
-    let count = entries.len();
-    new_panel = if entries.is_empty() {
-        new_panel.header("No files found")
-    } else {
-        let header = file_picker_header(count, Some(&filter));
-        new_panel = new_panel.header(&header);
-        for entry in entries {
-            let label = file_picker_label(&entry);
-            let insert_name = file_picker_insert_name(&entry);
-            new_panel = new_panel.item(
-                &label,
-                ItemAction::Emit(crate::Event::InsertAtRef(insert_name)),
-            );
-        }
-        new_panel
-    };
-
+    refresh_file_picker_search(state, query);
+    let entries = state.fff_file_results();
+    let new_panel = build_picker_panel_with_results(&filter, entries);
     *state.open_dialog_mut() = Some(DialogState::PanelStack(PanelStack::new(new_panel)));
     state.view_mut().dirty = true;
+}
+
+/// Refresh file picker results — try actor first, fall back to sync query.
+fn refresh_file_picker_search(state: &mut AppState, query: &str) {
+    if let Some(ref handles) = state.actor_handles() {
+        if let Some(ref fff) = handles.fff_indexer {
+            let request_id = state.fff_debounce().wrapping_add(1);
+            let request = crate::actors::FffSearchRequest {
+                request_id,
+                query: query.to_owned(),
+                limit: Some(50),
+                project_path: std::env::current_dir().unwrap_or_default(),
+            };
+            fff.try_search(request);
+            *state.fff_debounce_mut() = request_id;
+            return;
+        }
+    }
+    // Fall back to synchronous query.
+    let entries = query_fff_files(query, 50);
+    *state.fff_file_results_mut() = entries;
+}
+
+fn build_picker_panel_with_results(filter: &str, entries: &[FffFileEntry]) -> Panel {
+    let mut new_panel = Panel::new("at-files", " Files ").with_filter();
+    new_panel.filter = filter.to_owned();
+
+    let count = entries.len();
+    if entries.is_empty() {
+        return new_panel.header("No files found");
+    }
+
+    let header = file_picker_header(count, Some(filter));
+    new_panel = new_panel.header(&header);
+    for entry in entries {
+        let label = file_picker_label(entry);
+        let insert_name = file_picker_insert_name(entry);
+        new_panel = new_panel.item(
+            &label,
+            ItemAction::Emit(crate::Event::InsertAtRef(insert_name)),
+        );
+    }
+    new_panel
 }

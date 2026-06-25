@@ -1,7 +1,7 @@
 //! Core application state types used by `AppState`.
 
 /// A file entry from the FFF indexer for the file picker.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct FffFileEntry {
     pub name: String,
     pub path: String,

@@ -184,10 +184,9 @@ pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
     state.input_mut().file_picker_range_suffix = range_suffix;
 
     let query = base_filter.as_deref().unwrap_or("");
-    let entries = super::file_pickers::query_fff_files(query, 50);
-    *state.fff_file_results_mut() = entries.clone();
-    *state.fff_debounce_mut() = state.fff_debounce().wrapping_add(1);
+    refresh_file_picker_search(state, query);
 
+    let entries = state.fff_file_results();
     let mut panel = Panel::new("at-files", " Files ").with_filter();
     if let Some(ref f) = base_filter {
         panel.filter = f.clone();
@@ -195,12 +194,33 @@ pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
     panel = if entries.is_empty() {
         panel.header("No files found")
     } else {
-        build_file_picker_panel(panel, &entries, base_filter.as_deref())
+        build_file_picker_panel(panel, entries, base_filter.as_deref())
     };
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
     *state.open_dialog_mut() = Some(DialogState::PanelStack(PanelStack::new(panel)));
+}
+
+/// Refresh file picker results — try actor first, fall back to sync query.
+fn refresh_file_picker_search(state: &mut AppState, query: &str) {
+    if let Some(ref handles) = state.actor_handles() {
+        if let Some(ref fff) = handles.fff_indexer {
+            let request_id = state.fff_debounce().wrapping_add(1);
+            let request = crate::actors::FffSearchRequest {
+                request_id,
+                query: query.to_owned(),
+                limit: Some(50),
+                project_path: std::env::current_dir().unwrap_or_default(),
+            };
+            fff.try_search(request);
+            *state.fff_debounce_mut() = request_id;
+            return;
+        }
+    }
+    // Fall back to synchronous query.
+    let entries = super::file_pickers::query_fff_files(query, 50);
+    *state.fff_file_results_mut() = entries;
 }
 
 /// Opens the file picker without any filter (shows all files).

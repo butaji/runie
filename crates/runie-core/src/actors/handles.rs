@@ -58,9 +58,14 @@ impl FffIndexerHandle {
         Self { tx }
     }
 
-    /// Request a file search from the indexer.
+    /// Request a file search from the indexer (async).
     pub async fn search(&self, request: FffSearchRequest) {
         let _ = self.tx.send(request).await;
+    }
+
+    /// Request a file search from the indexer (sync fire-and-forget).
+    pub fn try_search(&self, request: FffSearchRequest) {
+        let _ = self.tx.try_send(request);
     }
 }
 

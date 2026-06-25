@@ -4,7 +4,8 @@
 //! private fields. Handlers and actors use these instead of direct field access.
 
 use crate::model::state::{
-    AgentState, AppState, CompletionState, ConfigState, InputState, SessionState, ViewState,
+    AgentState, AppState, CompletionState, ConfigState, FffFileEntry, InputState, SessionState,
+    ViewState,
 };
 
 impl AppState {
@@ -88,8 +89,12 @@ impl AppState {
         &self.cwd_name
     }
 
-    pub fn fff_debounce(&self) -> u32 {
+    pub fn fff_debounce(&self) -> u64 {
         self.fff_debounce
+    }
+
+    pub fn fff_file_results(&self) -> &[FffFileEntry] {
+        &self.fff_file_results
     }
 
     pub fn permission_request(&self) -> Option<&crate::model::PermissionRequestState> {
@@ -198,7 +203,7 @@ impl AppState {
         &mut self.fff_file_results
     }
 
-    pub fn fff_debounce_mut(&mut self) -> &mut u32 {
+    pub fn fff_debounce_mut(&mut self) -> &mut u64 {
         &mut self.fff_debounce
     }
 
