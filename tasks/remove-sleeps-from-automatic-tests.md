@@ -1,6 +1,6 @@
 # Remove remaining `sleep()` calls from automatic tests
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Core / State
 **Priority**: P1

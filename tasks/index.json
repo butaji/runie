@@ -638,7 +638,7 @@
     },
     {
       "id": "delete-runie-core-confirmation",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P1",
@@ -1489,7 +1489,7 @@
     },
     {
       "id": "remove-sleeps-from-automatic-tests",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P1",

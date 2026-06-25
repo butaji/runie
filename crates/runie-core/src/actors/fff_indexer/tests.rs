@@ -1,5 +1,24 @@
 use super::*;
 
+/// Wait for the FFF indexer to finish its initial scan.
+/// Uses a spawned blocking task with spin-loop to poll the indexed state.
+async fn wait_for_indexed(max_wait_ms: u64) -> bool {
+    let max_wait = max_wait_ms;
+    let handle = tokio::task::spawn_blocking(move || {
+        let start = std::time::Instant::now();
+        let max_duration = std::time::Duration::from_millis(max_wait);
+        while start.elapsed() <= max_duration {
+            if FffSearchState::is_indexed() {
+                return true;
+            }
+            // Spin loop - the RwLock read is fast and allows CPU to schedule threads
+            std::hint::spin_loop();
+        }
+        FffSearchState::is_indexed()
+    });
+    handle.await.unwrap_or(false)
+}
+
 #[tokio::test]
 async fn indexer_initializes_in_temp_dir() {
     let tmp = tempfile::tempdir().unwrap();
@@ -24,9 +43,8 @@ async fn indexer_initializes_in_temp_dir() {
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    // Give the actor a brief moment to finish initialization (spawn_blocking runs on
-    // a separate thread; we need wall-clock time for the scan to complete).
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    // Wait for the actor to finish initialization using deterministic polling.
+    wait_for_indexed(500).await;
 
     // Send a search request
     let request_id = 42;
@@ -82,8 +100,8 @@ async fn indexer_answers_file_search() {
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    // Brief init so the actor can finish scanning via spawn_blocking
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    // Wait for the actor to finish initialization using deterministic polling.
+    wait_for_indexed(500).await;
 
     // Search for "cli"
     let request_id = 7;
@@ -135,8 +153,8 @@ async fn search_request_event_returns_results() {
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    // Brief init so the actor can finish scanning via spawn_blocking
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    // Wait for the actor to finish initialization using deterministic polling.
+    wait_for_indexed(500).await;
 
     let request_id = 99;
     tx.send(FffSearchRequest {
@@ -151,7 +169,7 @@ async fn search_request_event_returns_results() {
     // Drain events using deterministic sync
     let mut got_result = false;
     let mut sub = bus.subscribe();
-    for _ in 0..100 {
+    for _ in 0..500 {
         if let Some(Ok(FffSearchResult(payload))) = sub.try_recv() {
             if payload.request_id == request_id {
                 assert!(!payload.items.is_empty() || !payload.indexed);
