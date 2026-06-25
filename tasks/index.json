@@ -248,14 +248,15 @@
     },
     {
       "id": "drop-thiserror-and-async-trait-deps",
-      "status": "todo",
+      "status": "done",
       "milestone": "?",
       "category": "?",
       "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/drop-thiserror-and-async-trait-deps.md",
-      "title": ""
+      "title": "",
+      "notes": "thiserror removed; async-trait kept for dyn-safe traits (Tool, ApprovalSink, HarnessSkill, PermissionPolicy)"
     },
     {
       "id": "env-actor-owns-git-cwd",
@@ -584,7 +585,7 @@
     },
     {
       "id": "reconsider-tiktoken-rs",
-      "status": "todo",
+      "status": "done",
       "milestone": "?",
       "category": "?",
       "priority": "?",
@@ -660,14 +661,15 @@
     },
     {
       "id": "rename-update-dialog-panel",
-      "status": "todo",
+      "status": "done",
       "milestone": "?",
       "category": "?",
       "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/rename-update-dialog-panel.md",
-      "title": ""
+      "title": "",
+      "notes": "only one panel.rs exists in update/dialog/"
     },
     {
       "id": "replace-git2-with-cli",

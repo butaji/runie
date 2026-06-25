@@ -1,6 +1,6 @@
 use crate::tokens::{
     estimate_tokens, estimate_tokens_for_model, estimate_tokens_with_tokenizer, token_tracker_for,
-    TokenTracker, Tokenizer,
+    TokenTracker,
 };
 
 #[test]
@@ -82,64 +82,29 @@ fn cost_estimation_zero() {
 }
 
 #[test]
-fn tiktoken_counts_openai_model() {
-    let text = "日本語テキスト";
-    let approx = estimate_tokens(text);
-    let tiktoken = estimate_tokens_with_tokenizer(text, Tokenizer::Tiktoken("o200k_base".into()));
-    assert!(
-        tiktoken > approx,
-        "tiktoken count {tiktoken} should exceed approximation {approx}"
-    );
-}
-
-#[test]
-fn approximate_fallback_for_unknown_model() {
+fn estimate_tokens_uses_heuristic() {
     let text = "hello world";
-    assert_eq!(
-        estimate_tokens_with_tokenizer(text, Tokenizer::Tiktoken("unknown_base".into())),
-        estimate_tokens(text)
-    );
+    // All estimation uses the chars/4 heuristic
+    assert_eq!(estimate_tokens_with_tokenizer(text), estimate_tokens(text));
+    assert_eq!(estimate_tokens_for_model(text, "openai", "gpt-4o"), estimate_tokens(text));
+    assert_eq!(estimate_tokens_for_model(text, "unknown", "unknown"), estimate_tokens(text));
 }
 
 #[test]
-fn token_tracker_uses_real_counts() {
+fn token_tracker_track_uses_heuristic() {
     let text = "Hello world";
-    let mut tracker =
-        TokenTracker::with_costs(0.0, 0.0).with_tokenizer(Tokenizer::Tiktoken("o200k_base".into()));
+    let mut tracker = TokenTracker::with_costs(0.0, 0.0);
+    let expected = estimate_tokens(text);
     tracker.track_input(text);
-    assert_ne!(
-        tracker.input_total(),
-        estimate_tokens(text),
-        "tracker should use tiktoken counts, not chars/4 approximation"
-    );
+    assert_eq!(tracker.input_total(), expected);
+    tracker.track_output(text);
+    assert_eq!(tracker.output_total(), expected);
 }
 
 #[test]
-fn token_tracker_uses_registry_costs() {
-    let tracker = token_tracker_for("openai", "gpt-4o");
-    assert_eq!(tracker.session_cost(), 0.0);
-    assert!(
-        matches!(tracker.tokenizer(), Tokenizer::Tiktoken(name) if name == "o200k_base"),
-        "gpt-4o should use o200k_base tokenizer"
-    );
-}
-
-#[test]
-fn estimate_tokens_selects_model_tokenizer() {
+fn token_tracker_estimate_uses_heuristic() {
     let text = "Hello world";
-    let model_count = estimate_tokens_for_model(text, "openai", "gpt-4o");
-    let approx = estimate_tokens(text);
-    assert_ne!(
-        model_count, approx,
-        "gpt-4o should use tiktoken, not chars/4 approximation"
-    );
-}
-
-#[test]
-fn unknown_model_falls_back_to_approximation() {
-    let text = "Hello world";
-    assert_eq!(
-        estimate_tokens_for_model(text, "unknown", "unknown"),
-        estimate_tokens(text)
-    );
+    let tracker = TokenTracker::new();
+    assert_eq!(tracker.estimate_input(text), estimate_tokens(text));
+    assert_eq!(tracker.estimate_output(text), estimate_tokens(text));
 }

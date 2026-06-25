@@ -29,7 +29,6 @@ impl ListDirTool {
     }
 }
 
-#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for ListDirTool {
     define_tool! {

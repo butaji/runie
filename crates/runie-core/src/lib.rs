@@ -147,7 +147,7 @@ pub use snapshot::{GitInfo, Snapshot};
 pub use telemetry::Telemetry;
 pub use tokens::{
     estimate_tokens, estimate_tokens_for_model, estimate_tokens_with_tokenizer, token_tracker_for,
-    TokenTracker, Tokenizer,
+    TokenTracker,
 };
 pub use trust::{TrustDecision, TrustManager};
 pub use view::{Element, Feed, LazyCache};

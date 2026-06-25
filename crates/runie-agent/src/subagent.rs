@@ -17,13 +17,21 @@ use runie_core::model::ThinkingLevel;
 use runie_core::permissions::{AutoAllowSink, PermissionManager};
 use runie_core::provider::Provider;
 use std::sync::{Arc, Mutex};
-use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug)]
 pub enum SubagentError {
-    #[error("agent turn failed: {0}")]
     Agent(String),
 }
+
+impl std::fmt::Display for SubagentError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SubagentError::Agent(msg) => write!(f, "agent turn failed: {msg}"),
+        }
+    }
+}
+
+impl std::error::Error for SubagentError {}
 
 /// Run a subagent turn asynchronously. Returns the final assistant text.
 ///
