@@ -240,19 +240,6 @@ impl AppState {
         self.view_mut().dirty = true;
     }
 
-    pub(crate) fn paste_image(&mut self) {
-        match crate::clipboard_image::read_clipboard_image() {
-            Some(bytes) => {
-                let uri = crate::clipboard_image::to_data_uri(&bytes);
-                self.session_mut().image_attachments.push(uri);
-                self.view_mut().dirty = true;
-            }
-            None => {
-                self.input_mut().input_flash = 3;
-            }
-        }
-    }
-
     pub(crate) fn pop_input(&mut self) {
         self.delete_before_cursor();
     }

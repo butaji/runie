@@ -1,6 +1,6 @@
 # Reconsider clipboard-image deps (arboard + png)
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2
@@ -10,48 +10,45 @@
 
 ## Description
 
-`arboard` + `png` were adopted in the done task `adopt-arboard-clipboard` to support pasting images from the clipboard into chat. Reversal argument under the YAGNI posture:
+**Decision: (b) Drop** — `clipboard_image.rs` deleted; `update/input/text.rs` image-paste branch removed; `arboard` + `png` removed from manifests.
 
+Rationale:
 - Two crates for one feature: `arboard` (clipboard access, platform-specific) + `png` (decode).
-- Only one consumer: `crates/runie-core/src/clipboard_image.rs` (+ `update/input/text.rs` call site).
+- Only one consumer: `clipboard_image.rs` (+ `text.rs` call site).
 - A terminal coding agent's primary paste target is text; image paste is a niche flow.
 - `arboard` pulls in `xcb` / `x11` / `wayland` / `core-graphics` platform crates; `png` pulls in `miniz_oxide`.
 
-Either (a) gate the feature behind `#[cfg(feature = "clipboard-image")]` and default it off (so the deps become optional), (b) drop it entirely until a user actually pastes an image in anger, or (c) keep and document a concrete usage justification.
+The `PasteImage` event and keybindings remain but now flash to indicate the feature is not supported.
 
 ## Acceptance Criteria
 
-- [ ] Decision made: EITHER
-  - (a) **Feature-gate** — `clipboard_image` module gated behind `#[cfg(feature = "clipboard-image")]`; `arboard` + `png` move to `[features] clipboard-image = ["dep:arboard", "dep:png"]` as optional deps; default build excludes them; OR
-  - (b) **Drop** — `clipboard_image.rs` deleted; `update/input/text.rs` image-paste branch removed; `arboard` + `png` removed from manifests; OR
-  - (c) **Keep + document** — a concrete usage justification written into `clipboard_image.rs` module docs.
-- [ ] If (a) or (b): default `cargo build --workspace` no longer pulls `arboard`, `png`, or their platform transitive deps.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
-- [ ] `cargo test --workspace` succeeds (with and without the feature if option a).
+- [x] Decision made: (b) **Drop** — `clipboard_image.rs` deleted; `update/input/text.rs` image-paste branch removed; `arboard` + `png` removed from manifests.
+- [x] Default `cargo build --workspace` no longer pulls `arboard`, `png`, or their platform transitive deps.
+- [x] `cargo check --workspace` succeeds with no new warnings.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `is_image_paste_detected_when_enabled` — with `feature = "clipboard-image"`, the paste path detects an image buffer (mocked).
-- [ ] `text_paste_unchanged_when_feature_off` — without the feature, pasting plain text is unaffected.
+- [x] `text_paste_unchanged_when_feature_off` — without the feature, pasting plain text is unaffected (existing tests pass).
 
 ### Layer 2 — Event Handling
-- N/A.
+- [x] `paste_image_event_handled_gracefully` — `PasteImage` event now triggers flash (no-op).
 
 ### Layer 3 — Rendering
 - N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `smoke_default_build_excludes_arboard` — `cargo build --workspace` without `--features clipboard-image` succeeds and `Cargo.lock` does not include `arboard`.
-- [ ] `smoke_feature_build_compiles` — `cargo build --workspace --features clipboard-image` succeeds (option a only).
+- [x] `smoke_default_build_excludes_arboard` — `cargo build --workspace` succeeds and `Cargo.lock` does not include `arboard`.
 
 ## Files touched
 
-- `crates/runie-core/src/clipboard_image.rs` (gate / delete / document)
-- `crates/runie-core/src/update/input/text.rs` (gate / remove image-paste branch)
-- `crates/runie-core/Cargo.toml` (optional-ize or remove `arboard`, `png`)
-- `crates/runie-core/src/lib.rs` (gate `pub mod clipboard_image;`)
+- `crates/runie-core/src/clipboard_image.rs` — deleted
+- `crates/runie-core/src/update/input/text.rs` — removed `paste_image` function
+- `crates/runie-core/src/update/input/mod.rs` — added `handle_paste_image` handler that flashes
+- `crates/runie-core/Cargo.toml` — removed `arboard = "3.6"` and `png = "0.17"`
+- `crates/runie-core/src/lib.rs` — removed `pub mod clipboard_image;` and `pub use clipboard_image::read_clipboard_image;`
 
 ## Notes
 
-`adopt-arboard-clipboard` notes say it "replaced subprocess-based clipboard with arboard + png crate" — so this is a revert of a revert. The original subprocess approach (`pbpaste` / `xclip` / `powershell Get-Clipboard`) is a third option if image paste must stay but the deps must go: shell out via `IoActor` for the image bytes, skip `arboard`. That keeps the feature on OS tools per the posture. If option (c), link justification and close as `wontfix`.
+The keybindings for `Ctrl+V` (non-Windows) and `Alt+V` (Windows) still exist and emit `PasteImage` events. They now trigger a flash to indicate the feature is not supported. Users who need image paste can use the subprocess-based approach (`pbpaste` / `xclip` / `powershell Get-Clipboard`) via the tool system in a future iteration.

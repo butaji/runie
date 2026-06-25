@@ -48,7 +48,7 @@ fn apply_input_event(state: &mut AppState, event: crate::Event) {
         crate::Event::CursorWordLeft => state.cursor_word_left(),
         crate::Event::CursorWordRight => state.cursor_word_right(),
         crate::Event::Paste(text) => state.paste(&text),
-        crate::Event::PasteImage => state.paste_image(),
+        crate::Event::PasteImage => handle_paste_image(state),
         crate::Event::Submit => state.submit(),
         crate::Event::Escape => handle_escape(state),
         crate::Event::PageUp => state.page_up(),
@@ -81,6 +81,11 @@ fn handle_terminal_resize(state: &mut AppState, width: u16, height: u16) {
     // status bar, and margins. This matches the legacy `view()` heuristic.
     let viewport_height = height.saturating_sub(8).max(3);
     state.set_last_visible_height(viewport_height);
+}
+
+/// Handle PasteImage event. Image paste was removed, so just flash.
+fn handle_paste_image(state: &mut AppState) {
+    state.input_mut().input_flash = 3;
 }
 
 fn permission_input_event(state: &mut AppState, event: crate::Event) {
