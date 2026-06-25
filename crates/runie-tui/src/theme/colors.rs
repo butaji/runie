@@ -87,19 +87,15 @@ pub fn color_accent_bg() -> Color {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Darken an RGB color by a factor (0.0–1.0).
-/// Uses palette::Srgb for correct gamma-space darkening.
+/// Standard linear scaling of sRGB components toward black.
 pub fn darken(color: Color, factor: f32) -> Color {
     match color {
         Color::Rgb(r, g, b) => {
-            use palette::Srgb;
-            // palette uses 0.0-1.0 range
-            let s = Srgb::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
-            // Darken by scaling toward black in display gamma space.
             let factor = factor.clamp(0.0, 1.0);
             Color::Rgb(
-                (s.red * factor * 255.0) as u8,
-                (s.green * factor * 255.0) as u8,
-                (s.blue * factor * 255.0) as u8,
+                ((r as f32 / 255.0) * factor * 255.0) as u8,
+                ((g as f32 / 255.0) * factor * 255.0) as u8,
+                ((b as f32 / 255.0) * factor * 255.0) as u8,
             )
         }
         _ => color,
@@ -107,15 +103,11 @@ pub fn darken(color: Color, factor: f32) -> Color {
 }
 
 /// Blend two RGB colors with the given opacity (0.0-1.0).
-/// Uses palette::Srgba for proper premultiplied-alpha blending.
+/// Standard premultiplied-alpha over-compositing.
 fn blend(bg: Color, fg: Color, opacity: f32) -> Color {
-    use palette::blend::BlendWith;
-    use palette::blend::PreAlpha;
-    use palette::Srgba;
-
     let opacity = opacity.clamp(0.0, 1.0);
 
-    let (br, bb, bblue) = match bg {
+    let (bg_r, bg_g, bg_b) = match bg {
         Color::Rgb(r, g, b) => (r as f32, g as f32, b as f32),
         _ => (30.0, 30.0, 30.0),
     };
@@ -124,28 +116,19 @@ fn blend(bg: Color, fg: Color, opacity: f32) -> Color {
         _ => return fg,
     };
 
-    // Convert to palette's 0.0-1.0 Srgba space.
-    let bg_s: Srgba<f32> = Srgba::new(br / 255.0, bb / 255.0, bblue / 255.0, 1.0);
-    let fg_s: Srgba<f32> = Srgba::new(fr / 255.0, fg_g / 255.0, fb / 255.0, opacity);
+    // Normalize to 0.0–1.0 and apply premultiplied-alpha over.
+    let (bg_r, bg_g, bg_b) = (bg_r / 255.0, bg_g / 255.0, bg_b / 255.0);
+    let (fr, fg_g, fb) = (fr / 255.0, fg_g / 255.0, fb / 255.0);
 
-    // Standard over-compositing with premultiplied alpha.
-    let bg_pre: PreAlpha<_> = bg_s.into();
-    let fg_pre: PreAlpha<_> = fg_s.into();
+    // Standard over-compositing: dst*(1-src_alpha) + src
+    let out_r = fr * opacity + bg_r * (1.0 - opacity);
+    let out_g = fg_g * opacity + bg_g * (1.0 - opacity);
+    let out_b = fb * opacity + bg_b * (1.0 - opacity);
 
-    let out: PreAlpha<_> = fg_pre.blend_with(bg_pre, |src: PreAlpha<_>, dst: PreAlpha<_>| {
-        // Standard over: dst * (1 - src_alpha) + src
-        PreAlpha {
-            color: src.color + dst.color * (1.0 - src.alpha),
-            alpha: src.alpha + dst.alpha * (1.0 - src.alpha),
-        }
-    });
-
-    // Convert back to Srgba, then to sRGB.
-    let out: Srgba<f32> = out.into();
     Color::Rgb(
-        (out.red.clamp(0.0, 1.0) * 255.0) as u8,
-        (out.green.clamp(0.0, 1.0) * 255.0) as u8,
-        (out.blue.clamp(0.0, 1.0) * 255.0) as u8,
+        (out_r.clamp(0.0, 1.0) * 255.0) as u8,
+        (out_g.clamp(0.0, 1.0) * 255.0) as u8,
+        (out_b.clamp(0.0, 1.0) * 255.0) as u8,
     )
 }
 

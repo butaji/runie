@@ -31,7 +31,6 @@ nucleo-matcher = "0.3"
 similar = "3"
 tracing = "0.1"
 parking_lot = "0.12"
-palette = "0.7"
 insta = { version = "1.41", features = ["yaml"] }
 tempfile = "3"
 

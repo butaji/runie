@@ -386,14 +386,14 @@
     },
     {
       "id": "r5-paced-text-rendering",
-      "status": "todo",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
+      "status": "done",
+      "milestone": "R5",
+      "category": "TUI / Rendering",
+      "priority": "P2",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/r5-paced-text-rendering.md",
-      "title": ""
+      "title": "Add paced text rendering for smooth typing animation"
     },
     {
       "id": "r5-partial-json-repair",

@@ -16,6 +16,7 @@ use runie_core::{AppState, Snapshot};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::effects::EffectCommand;
+use crate::pace::PacedRenderer;
 use crate::terminal::caps::TerminalCapabilities;
 
 const ANIM_MS: u64 = 100;
@@ -30,6 +31,8 @@ pub struct UiActor {
     bus: EventBus<Event>,
     shutdown_tx: Option<oneshot::Sender<()>>,
     caps: TerminalCapabilities,
+    /// Paces the streaming text display for smooth typing animation.
+    paced: PacedRenderer,
 }
 
 impl UiActor {
@@ -53,6 +56,7 @@ impl UiActor {
             bus,
             shutdown_tx: Some(shutdown_tx),
             caps,
+            paced: PacedRenderer::new(),
         }
     }
 
@@ -63,7 +67,8 @@ impl UiActor {
 
         let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
         self.state.ensure_fresh();
-        let _ = self.render_tx.send(self.state.snapshot());
+        let snap = self.build_paced_snapshot();
+        let _ = self.render_tx.send(snap);
 
         loop {
             tokio::select! {
@@ -84,6 +89,7 @@ impl UiActor {
                 }
                 _ = anim.tick() => {
                     self.state.tick_animation();
+                    self.paced.tick();
                     self.publish_snapshot();
                 }
             }
@@ -117,9 +123,9 @@ impl UiActor {
     async fn handle_event_inner(&mut self, evt: Event, effect_tx: mpsc::Sender<Event>) -> bool {
         let was_submit = matches!(evt, Event::Submit);
         let was_followup = matches!(evt, Event::FollowUp);
-        let was_config_loaded = matches!(evt, Event::ConfigLoaded { .. });
-        let was_agent_done = matches!(evt, Event::Done { .. } | Event::Error { .. });
-        let was_trust_loaded = matches!(evt, Event::TrustLoaded { .. });
+        let was_config_loaded = matches!(&evt, Event::ConfigLoaded { .. });
+        let was_agent_done = matches!(&evt, Event::Done { .. } | Event::Error { .. });
+        let was_trust_loaded = matches!(&evt, Event::TrustLoaded { .. });
 
         let submitted_text = if was_submit {
             Some(self.state.input().input.clone())
@@ -128,15 +134,14 @@ impl UiActor {
         };
 
         let old_login_step = self.state.login_flow().as_ref().map(|f| f.step.clone());
-
         self.apply_event(evt.clone());
+        self.update_paced_renderer(&evt);
         self.dispatch_effect(&evt, effect_tx.clone());
         self.dispatch_login_validation(effect_tx, old_login_step);
 
         if *self.state.should_quit_mut() {
             return true;
         }
-
         if was_config_loaded {
             let _ = self.kb_tx.send(self.state.config().keybindings.clone());
         }
@@ -150,6 +155,22 @@ impl UiActor {
         }
 
         false
+    }
+
+    /// Update the paced renderer based on the received event.
+    fn update_paced_renderer(&mut self, evt: &Event) {
+        match evt {
+            Event::TextStart { .. } => {
+                self.paced = PacedRenderer::new();
+            }
+            Event::ResponseDelta { content, .. } => {
+                self.paced.push(content);
+            }
+            Event::TurnComplete { .. } | Event::Done { .. } => {
+                self.paced.finish();
+            }
+            _ => {}
+        }
     }
 
     fn apply_event(&mut self, evt: Event) {
@@ -188,9 +209,18 @@ impl UiActor {
         }
     }
 
-    fn publish_snapshot(&mut self) {
+    /// Build a snapshot with the paced streaming tail applied.
+    fn build_paced_snapshot(&mut self) -> Snapshot {
         self.state.ensure_fresh();
-        let _ = self.render_tx.send(self.state.snapshot());
+        let mut snap = self.state.snapshot();
+        // Show the paced display text instead of the raw streaming tail.
+        snap.streaming_tail = self.paced.displayed().to_owned();
+        snap
+    }
+
+    fn publish_snapshot(&mut self) {
+        let snap = self.build_paced_snapshot();
+        let _ = self.render_tx.send(snap);
     }
 }
 
@@ -282,6 +312,96 @@ mod tests {
         // The snapshot was rendered from an immutable reference.
         // Mutation would require a mutable borrow, which the draw closure does not take.
         assert_eq!(state.input().input, "hello");
+    }
+
+    #[tokio::test]
+    async fn paced_renderer_advances_on_response_delta() {
+        let state = AppState::default();
+        let (render_tx, _render_rx) = watch::channel(Snapshot::default());
+        let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
+        let agent_handle = AgentActorHandle::new(agent_tx);
+        let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::SessionMsg>(1);
+        let persistence_handle = SessionActorHandle::new(persist_tx);
+        let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
+        let (shutdown_tx, _shutdown_rx) = oneshot::channel();
+        let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
+
+        let mut actor = UiActor::new(
+            state,
+            render_tx,
+            agent_handle,
+            persistence_handle,
+            kb_tx,
+            EventBus::new(4),
+            shutdown_tx,
+            TerminalCapabilities::default(),
+        );
+
+        // Simulate a streaming message: TextStart -> ResponseDelta -> tick.
+        actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
+        actor.handle_event(
+            Event::ResponseDelta { id: "1".into(), content: "hello world".into() },
+            effect_tx.clone(),
+        )
+        .await;
+
+        // Tick once to advance the paced renderer.
+        actor.paced.tick();
+
+        let displayed = actor.paced.displayed();
+        // Should have advanced at least the first 2 chars.
+        assert!(
+            !displayed.is_empty() || actor.paced.is_caught_up(),
+            "paced renderer should show some text: '{}'",
+            displayed
+        );
+    }
+
+    #[tokio::test]
+    async fn paced_renderer_finishes_on_turn_complete() {
+        let state = AppState::default();
+        let (render_tx, _render_rx) = watch::channel(Snapshot::default());
+        let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
+        let agent_handle = AgentActorHandle::new(agent_tx);
+        let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::SessionMsg>(1);
+        let persistence_handle = SessionActorHandle::new(persist_tx);
+        let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
+        let (shutdown_tx, _shutdown_rx) = oneshot::channel();
+        let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
+
+        let mut actor = UiActor::new(
+            state,
+            render_tx,
+            agent_handle,
+            persistence_handle,
+            kb_tx,
+            EventBus::new(4),
+            shutdown_tx,
+            TerminalCapabilities::default(),
+        );
+
+        actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
+        actor.handle_event(
+            Event::ResponseDelta { id: "1".into(), content: "hello world".into() },
+            effect_tx.clone(),
+        )
+        .await;
+        actor.handle_event(
+            Event::TurnComplete { id: "1".into(), duration_secs: 1.0 },
+            effect_tx.clone(),
+        )
+        .await;
+
+        // After TurnComplete, renderer should be caught up.
+        assert!(
+            actor.paced.is_caught_up(),
+            "paced renderer should be caught up after TurnComplete"
+        );
+        assert!(
+            actor.paced.displayed().contains("hello"),
+            "paced renderer should contain full text: '{}'",
+            actor.paced.displayed()
+        );
     }
 
     #[tokio::test]
