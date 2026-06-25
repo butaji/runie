@@ -42,11 +42,10 @@ Rules:
 | `runie-agent` | Agent turn loop, tool-call parsing, truncation, subagent runner, built-in tools |
 | `runie-provider` | LLM provider clients and model catalog (OpenAI-compatible, Anthropic, MiniMax, …) |
 | `runie-tui` | CLI entry, Ratatui rendering, panels/forms, theme, terminal setup |
-| `runie-print` | Non-interactive print mode binary |
-| `runie-json` | Non-interactive JSON mode binary |
 | `runie-server` | RPC / server mode binary |
 | `runie-protocol` | Shared IPC types |
 | `runie-testing` | Test fixtures, mock providers, and harness helpers |
+| `runie-macros` | Derive macros for commands, policies, and events |
 
 ## Runtime
 
