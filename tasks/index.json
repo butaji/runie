@@ -175,17 +175,6 @@
       "title": ""
     },
     {
-      "id": "dedupe-fresh-state-test-helper",
-      "status": "done",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/dedupe-fresh-state-test-helper.md",
-      "title": ""
-    },
-    {
       "id": "dedupe-git-status-formatter",
       "status": "todo",
       "milestone": "?",
@@ -196,17 +185,6 @@
       ],
       "blocks": [],
       "file": "tasks/dedupe-git-status-formatter.md",
-      "title": ""
-    },
-    {
-      "id": "dedupe-messages-changed-ensure-fresh",
-      "status": "done",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/dedupe-messages-changed-ensure-fresh.md",
       "title": ""
     },
     {
@@ -252,17 +230,6 @@
       "title": ""
     },
     {
-      "id": "extract-appstate-helpers",
-      "status": "done",
-      "milestone": "R4",
-      "category": "Core / State",
-      "priority": "P3",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/extract-appstate-helpers.md",
-      "title": "Extract active_provider() and warn() AppState helpers"
-    },
-    {
       "id": "fff-indexer-owns-file-picker-results",
       "status": "todo",
       "milestone": "?",
@@ -292,17 +259,6 @@
       ],
       "file": "tasks/finish-io-migration.md",
       "title": ""
-    },
-    {
-      "id": "fold-protocol-into-core",
-      "status": "done",
-      "milestone": "R4",
-      "category": "Architecture / Actors",
-      "priority": "P2",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/archive/fold-protocol-into-core.md",
-      "title": "Fold runie-protocol into runie-core"
     },
     {
       "id": "fold-runie-engine-into-agent",
@@ -364,17 +320,6 @@
       "title": ""
     },
     {
-      "id": "inline-or-document-core-ui-shim",
-      "status": "done",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/inline-or-document-core-ui-shim.md",
-      "title": ""
-    },
-    {
       "id": "input-actor-owns-input-state",
       "status": "todo",
       "milestone": "?",
@@ -390,17 +335,6 @@
         "completion-actor-owns-completion-state"
       ],
       "file": "tasks/input-actor-owns-input-state.md",
-      "title": ""
-    },
-    {
-      "id": "merge-diff-modules",
-      "status": "done",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/merge-diff-modules.md",
       "title": ""
     },
     {
@@ -534,17 +468,6 @@
       "title": ""
     },
     {
-      "id": "reconsider-schemars-jsonschema",
-      "status": "done",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/reconsider-schemars-jsonschema.md",
-      "title": ""
-    },
-    {
       "id": "reduce-actor-handle-boilerplate",
       "status": "todo",
       "milestone": "?",
@@ -610,17 +533,6 @@
       "title": ""
     },
     {
-      "id": "rename-update-dialog-panel",
-      "status": "done",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/rename-update-dialog-panel.md",
-      "title": ""
-    },
-    {
       "id": "replace-git2-with-cli",
       "status": "todo",
       "milestone": "?",
@@ -672,17 +584,6 @@
       ],
       "blocks": [],
       "file": "tasks/simplify-actor-trait.md",
-      "title": ""
-    },
-    {
-      "id": "single-source-dev-commands",
-      "status": "done",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/single-source-dev-commands.md",
       "title": ""
     },
     {
@@ -880,17 +781,6 @@
       ],
       "blocks": [],
       "file": "tasks/unify-duplicate-module-names-core-tui.md",
-      "title": ""
-    },
-    {
-      "id": "use-workspace-deps-in-runie-testing",
-      "status": "done",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/use-workspace-deps-in-runie-testing.md",
       "title": ""
     },
     {
