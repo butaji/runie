@@ -26,8 +26,7 @@ fn ctrl_o_toggles_expand_state() {
         id: "t1".to_string(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let before = state.view.all_collapsed;
 

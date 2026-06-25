@@ -271,8 +271,7 @@ fn turn_complete_before_next_turn_user_message() {
         }],
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let kinds = element_kinds_no_spacer(&state);
     let turn_pos = kinds

@@ -30,8 +30,7 @@ fn large_tool_output_bottom_lines_in_viewport() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     // Total = 2 + 22 = 24 lines. Viewport = 5.
     // max_scroll = 19. scroll=0 → viewport [19, 24)
@@ -64,8 +63,7 @@ fn viewport_never_exceeds_height() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     // ToolDone: header(1) + 5 output = 6 lines + spacer = 7 lines total
     // Viewport = 5, max_scroll = 2, viewport [2, 7)

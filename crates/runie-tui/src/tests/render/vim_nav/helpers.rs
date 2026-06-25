@@ -49,8 +49,8 @@ pub(crate) fn add_message(
 
 pub(crate) fn enter_vim_nav(state: &mut AppState) {
     state.config.vim_mode = true;
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.update(Event::DialogBack);
     assert!(state.view.vim_nav_mode);
 }
@@ -89,8 +89,8 @@ pub(crate) fn state_with_user_agent_pairs(count: usize) -> AppState {
             &format!("resp.{}", i),
         );
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.last_visible_height = 10;
     state
 }
@@ -110,8 +110,8 @@ pub(crate) fn state_with_wrapped_welcome() -> AppState {
         ..Default::default()
     });
     add_message(&mut state, Role::User, "hi", 1.0, "req.0");
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.last_visible_height = 12;
     enter_vim_nav(&mut state);
     state.update(Event::Input('k'));
@@ -141,8 +141,8 @@ pub(crate) fn state_with_selected_post() -> AppState {
         provider: "mock".to_string(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     enter_vim_nav(&mut state);
     state
 }

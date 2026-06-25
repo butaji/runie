@@ -35,8 +35,7 @@ fn user_post_in_feed_has_background_color() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     add_message(&mut state, Role::User, "hello", 0.0, "req.0");
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let buf = draw(&mut state, 60, 12);
     let bg = accent_bg();

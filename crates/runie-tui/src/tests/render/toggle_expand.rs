@@ -47,8 +47,7 @@ fn ctrl_shift_e_collapses_thought_post_in_feed() {
         id: "t1".to_string(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let before = count_matching_lines(&state, &["line1", "line2", "line3"]);
     assert!(
@@ -89,8 +88,7 @@ fn ctrl_shift_e_collapses_tool_post_in_feed() {
         id: "tool.u1.1".to_string(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let before = count_matching_lines(&state, &["file1.rs", "file2.rs"]);
     assert!(
@@ -122,8 +120,7 @@ fn ctrl_shift_e_twice_restores_post_lines() {
         id: "t1".to_string(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let original = count_matching_lines(&state, &["alpha", "beta"]);
 

@@ -15,8 +15,7 @@ fn add_messages(state: &mut AppState, count: usize) {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 }
 
 // ── Submit resets scroll ──────────────────────────────────────────────
@@ -259,8 +258,7 @@ fn single_message_visible() {
         id: "u1".into(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
     assert_eq!(

@@ -115,8 +115,8 @@ fn large_thought_bottom_lines_visible() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 0;
 
     let region = crate::tests::core::visible_helper::compute_viewport(&state, height);
@@ -155,8 +155,8 @@ fn viewport_never_empty_when_content_exists() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 0;
 
     let region = crate::tests::core::visible_helper::compute_viewport(&state, height);
@@ -183,8 +183,8 @@ fn scroll_zero_always_shows_latest() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 0;
 
     let region = crate::tests::core::visible_helper::compute_viewport(&state, height);

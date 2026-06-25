@@ -42,8 +42,8 @@ fn state_with_vim_and_messages() -> AppState {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state
 }
 
@@ -445,8 +445,8 @@ fn state_for_nav_copy() -> AppState {
         }],
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.last_visible_height = 10;
     state
 }

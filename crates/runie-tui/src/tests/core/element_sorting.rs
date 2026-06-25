@@ -319,8 +319,7 @@ fn elements_sorted_by_timestamp_not_index() {
         id: "u2".into(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let feed = LazyCache::feed(&state);
     let user_contents: Vec<_> = feed

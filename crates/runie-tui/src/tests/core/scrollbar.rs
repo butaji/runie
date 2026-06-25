@@ -18,8 +18,8 @@ fn scrollbar_no_scrollbar_when_content_fits() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     let (thumb, offset) = state.scrollbar_metrics(10);
     assert_eq!(thumb, 0, "No scrollbar when content fits");
     assert_eq!(offset, 0);
@@ -39,8 +39,8 @@ fn scrollbar_shows_when_content_overflows() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     let (thumb, _offset) = state.scrollbar_metrics(10);
     assert!(
         thumb > 0,
@@ -63,8 +63,8 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 0; // at bottom
     let (thumb, offset) = state.scrollbar_metrics(10);
     assert_eq!(offset, 10 - thumb, "Thumb at bottom when scroll=0");
@@ -84,8 +84,8 @@ fn scrollbar_thumb_at_top_when_fully_scrolled() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 200; // way up, clamped to max_scroll
     let (_thumb, offset) = state.scrollbar_metrics(10);
     assert_eq!(offset, 0, "Thumb at top when fully scrolled");
@@ -105,8 +105,8 @@ fn scrollbar_thumb_in_middle_when_half_scrolled() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     // 30 messages = 120 lines (30*3 messages + 30 spacers)
     // max_scroll = 110, thumb = max(1, 10*10/120) = 1
     state.view.scroll = 25; // halfway
@@ -131,8 +131,8 @@ fn scroll_clamped_to_max() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 500;
     let (_thumb, offset) = state.scrollbar_metrics(10);
     assert_eq!(offset, 0, "Scroll should be clamped to max");
@@ -152,8 +152,8 @@ fn visible_uses_scroll_offset() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     // 10 messages = 40 lines (10*3 messages + 10 spacers), max_scroll = 35
 
     // At scroll=0 (bottom), we see newest 5 lines worth of elements
@@ -180,8 +180,8 @@ fn scrollbar_thumb_never_exceeds_track() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     for scroll in [0, 5, 10, 20, 50, 100] {
         state.view.scroll = scroll;
         let (thumb, offset) = state.scrollbar_metrics(10);
@@ -216,8 +216,8 @@ fn scrollbar_consistent_between_offset_and_metrics() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     for scroll in [0, 5, 10, 25, 50, 100] {
         state.view.scroll = scroll;
         let offset = state.scroll_offset(10) as usize;
@@ -246,8 +246,8 @@ fn compute_viewport_handles_partial_element_at_top() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = state.view.total_lines.saturating_sub(3);
     let visible = crate::tests::core::visible_helper::compute_viewport(&state, 3);
     assert!(!visible.elements.is_empty(), "Should have visible elements");
@@ -267,8 +267,8 @@ fn pageup_scrolls_by_five_lines() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 0; // at bottom
 
     state.update(Event::PageUp);
@@ -292,8 +292,8 @@ fn pagedown_scrolls_down_by_five_lines() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 20;
 
     state.update(Event::PageDown);
@@ -320,8 +320,8 @@ fn pagedown_stops_at_zero() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 3;
 
     state.update(Event::PageDown);
@@ -355,8 +355,8 @@ fn pagedown_flashes_at_bottom() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 0;
 
     state.update(Event::PageDown);
@@ -378,8 +378,8 @@ fn scrollbar_with_single_message() {
         id: "u0".into(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     let (thumb, offset) = state.scrollbar_metrics(1);
     let total = state.view.total_lines;
     if total > 1 {
@@ -409,8 +409,7 @@ fn page_down_scrolls_by_rendered_lines() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     // Start at the top of the feed so PageDown has room to move.
     let max_scroll = state.view.total_lines.saturating_sub(10);
@@ -441,8 +440,7 @@ fn scrollbar_thumb_position_matches_line_count() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let width = state.view.last_content_width;
     let expected_total: usize = state

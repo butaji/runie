@@ -178,8 +178,7 @@ fn thinking_element_stores_instant_not_elapsed() {
     state.agent.thinking_started_at =
         Some(std::time::Instant::now() - std::time::Duration::from_secs(3));
     state.agent.turn_active = true;
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let started = state
         .view
@@ -215,8 +214,7 @@ fn tool_running_element_stores_instant_not_elapsed() {
     state.agent.tool_started_at =
         Some(std::time::Instant::now() - std::time::Duration::from_secs(2));
     state.agent.turn_active = true;
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let started = state
         .view
@@ -243,8 +241,8 @@ fn timer_advances_without_cache_rebuild() {
     state.agent.thinking_started_at =
         Some(std::time::Instant::now() - std::time::Duration::from_secs(5));
     state.agent.turn_active = true;
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     let gen_before = state.cache_generation();
     state.tick_animation();
     assert_eq!(

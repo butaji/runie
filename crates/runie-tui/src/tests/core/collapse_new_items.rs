@@ -358,8 +358,7 @@ fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
         id: "a1".into(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     verify_collapsed_elements(&state);
 }

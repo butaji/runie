@@ -189,8 +189,8 @@ fn nav_mode_highlights_selected_post_with_orange_bracket() {
     let mut state = AppState::default();
     state.config.vim_mode = true;
     add_messages(&mut state, 4);
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.update(Event::DialogBack);
 
     let backend = TestBackend::new(80, 24);

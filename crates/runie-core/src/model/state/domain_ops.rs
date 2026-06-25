@@ -76,6 +76,13 @@ impl AppState {
         self.view_mut().dirty = true;
     }
 
+    /// Call after the message list changes: bumps generation and rebuilds caches.
+    /// Combines `messages_changed()` + `ensure_fresh()` for the common test pattern.
+    pub fn refresh_after_message_change(&mut self) {
+        self.messages_changed();
+        self.ensure_fresh();
+    }
+
     // ── Turn lifecycle ──────────────────────────────────────────────────────
 
     /// Returns whether a turn is currently active.

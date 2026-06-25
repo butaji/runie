@@ -22,8 +22,8 @@ fn vim_nav_mode_bracket_spans_post_elements() {
         id: "req.0".to_string(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.last_visible_height = 10;
 
     enter_vim_nav(&mut state);
@@ -54,8 +54,8 @@ fn vim_nav_mode_bracket_around_long_system_welcome_post() {
         ..Default::default()
     });
     add_message(&mut state, Role::User, "list files", 1.0, "req.0");
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.last_visible_height = 10;
 
     enter_vim_nav(&mut state);
@@ -106,8 +106,7 @@ fn nav_mode_bracket_for_one_line_user_post_is_three_rows() {
     state.config.vim_mode = true;
 
     add_message(&mut state, Role::User, "x", 0.0, "req.0");
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     enter_vim_nav(&mut state);
 
@@ -140,8 +139,7 @@ fn nav_mode_bracket_for_one_line_non_user_post_is_three_rows() {
         provider: "mock".to_string(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     enter_vim_nav(&mut state);
 

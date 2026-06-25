@@ -15,8 +15,8 @@ fn scroll_offset_zero_when_at_bottom() {
         id: "u0".into(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 0; // at bottom
 
     let snap = state.snapshot();
@@ -39,8 +39,8 @@ fn scroll_offset_max_when_fully_scrolled() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 100; // fully scrolled up (clamped)
 
     let snap = state.snapshot();
@@ -63,8 +63,8 @@ fn scroll_offset_shows_bottom_when_zero() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 0; // at bottom
 
     let snap = state.snapshot();
@@ -87,8 +87,8 @@ fn scroll_offset_halfway() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 7; // halfway up
 
     let snap = state.snapshot();
@@ -115,8 +115,8 @@ fn scrollbar_state_has_viewport_content_length() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.scroll = 0;
 
     let snap = state.snapshot();

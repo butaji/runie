@@ -20,8 +20,7 @@ fn test_snapshot_contains_expected_fields() {
         }],
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let snap = state.snapshot();
     assert!(!snap.elements.is_empty(), "elements should be present");
@@ -86,8 +85,7 @@ fn test_render_receives_valid_snapshot() {
             ..Default::default()
         });
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let snap = state.snapshot();
     let region = snap.visible(0, 5);
@@ -111,8 +109,7 @@ fn test_elements_uses_arc() {
         }],
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let snap1 = state.snapshot();
     let snap2 = state.snapshot();
@@ -140,8 +137,7 @@ fn test_arc_pointer_stability_after_state_mutation() {
         }],
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let snap1 = state.snapshot();
     let ptr1 = Arc::as_ptr(&snap1.elements);
@@ -210,4 +206,30 @@ fn test_palette_items_cached() {
         Arc::ptr_eq(&snap1.palette_items, &snap2.palette_items),
         "palette_items should be Arc-shared across unchanged snapshots"
     );
+}
+
+// Layer 1 — State/Logic
+
+#[test]
+fn test_refresh_after_message_change_updates_flags() {
+    let mut state = AppState::default();
+    state.session.messages.push(ChatMessage {
+        role: Role::User,
+        timestamp: 1.0,
+        id: "u1".into(),
+        parts: vec![Part::Text {
+            content: "hello".into(),
+        }],
+        ..Default::default()
+    });
+
+    let gen_before = state.view().message_gen;
+    state.refresh_after_message_change();
+
+    // Verify messages_changed behavior: message_gen should be bumped
+    assert!(state.view().message_gen > gen_before);
+
+    // Verify ensure_fresh was called: cache should be rebuilt, dirty should be cleared
+    assert!(!state.view().dirty);
+    assert!(!state.view().elements_cache.is_empty());
 }

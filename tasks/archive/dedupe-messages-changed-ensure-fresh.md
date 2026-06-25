@@ -1,6 +1,6 @@
 # Dedupe messages_changed + ensure_fresh call sequence
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Testing
 **Priority**: P3
@@ -14,15 +14,15 @@ The two-call sequence `state.messages_changed(); state.ensure_fresh();` appears 
 
 ## Acceptance Criteria
 
-- [ ] A helper such as `AppState::refresh_after_message_change(&mut self)` replaces the two-call sequence.
-- [ ] Message-pushing helpers (`push_assistant`, `push_user`, etc.) call it automatically.
-- [ ] All 174 call sites are replaced.
-- [ ] `cargo test --workspace` succeeds.
+- [x] A helper such as `AppState::refresh_after_message_change(&mut self)` replaces the two-call sequence.
+- [x] Message-pushing helpers (`push_assistant`, `push_user`, etc.) call it automatically.
+- [x] All 174 call sites are replaced.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `refresh_after_message_change_updates_flags` — helper sets the same flags as the two-call sequence.
+- [x] `refresh_after_message_change_updates_flags` — helper sets the same flags as the two-call sequence.
 
 ### Layer 2 — Event Handling
 - [ ] N/A.

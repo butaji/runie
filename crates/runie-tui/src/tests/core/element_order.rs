@@ -73,8 +73,7 @@ fn elements_ordered_by_timestamp_strict() {
         id: "req.0#thought.0".into(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let kinds = element_kinds_no_spacer(&state);
     assert_eq!(
@@ -105,8 +104,7 @@ fn newer_assistant_appears_after_older_thought() {
         id: "req.0".into(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let kinds = element_kinds_no_spacer(&state);
     assert_eq!(
@@ -138,8 +136,7 @@ fn thinking_indicator_is_always_last_when_newest() {
         ..Default::default()
     });
     state.agent.thinking_started_at = Some(std::time::Instant::now());
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let kinds = element_kinds_no_spacer(&state);
     assert_eq!(
@@ -164,8 +161,8 @@ fn streaming_bump_moves_assistant_to_end() {
         .find(|m| m.role == Role::Assistant && m.id == "req.0")
         .unwrap()
         .timestamp = 4.0;
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     let kinds = element_kinds_no_spacer(&state);
     assert_eq!(
         kinds,
@@ -205,8 +202,7 @@ fn tool_end_bump_moves_tool_after_later_messages() {
         msg.timestamp = 5.0;
         msg.set_text_part("✓ ls 0.5s\noutput".into());
     }
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let kinds = element_kinds_no_spacer(&state);
     assert_eq!(
@@ -224,8 +220,8 @@ fn multiple_tools_ordered_by_completion_time() {
         msg(Role::Tool, "✓ ls 0.2s", 2.0, "t2"),
         msg(Role::Tool, "✓ grep 0.3s", 8.0, "t3"),
     ]);
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     let kinds = element_kinds_no_spacer(&state);
     assert_eq!(
         kinds,
@@ -269,8 +265,7 @@ fn thought_before_agent_when_older_timestamp() {
         id: "req.0".into(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let kinds = element_kinds_no_spacer(&state);
     assert_eq!(
@@ -301,8 +296,7 @@ fn agent_before_thought_when_agent_newer() {
         id: "req.0".into(),
         ..Default::default()
     });
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
 
     let kinds = element_kinds_no_spacer(&state);
     assert_eq!(

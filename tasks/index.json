@@ -200,7 +200,7 @@
     },
     {
       "id": "dedupe-messages-changed-ensure-fresh",
-      "status": "todo",
+      "status": "done",
       "milestone": "?",
       "category": "?",
       "priority": "?",

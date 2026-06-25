@@ -125,8 +125,8 @@ fn state_with_selected_post_user() -> AppState {
             .with_id("req.0")
             .with_timestamp(1.0),
     );
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.selected_post = Some(0);
     state
 }
@@ -139,8 +139,8 @@ fn state_with_selected_post_agent() -> AppState {
             .with_id("resp.0")
             .with_timestamp(1.0),
     );
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.selected_post = Some(0);
     state
 }
@@ -158,8 +158,8 @@ fn state_with_selected_post_tool_done() -> AppState {
             .with_id("tool.0")
             .with_timestamp(2.0),
     );
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     // Tool-done is post index 1
     state.view.selected_post = Some(1);
     state
@@ -225,8 +225,8 @@ fn copy_selected_post_text_empty_post_returns_none() {
     // A post with only Spacer elements returns None (Spacer has no text)
     let mut state = AppState::default();
     // Empty state has one empty post
-    state.messages_changed();
-    state.ensure_fresh();
+    state.refresh_after_message_change();
+
     state.view.selected_post = Some(0);
     assert_eq!(state.copy_selected_post_text(), None);
 }
