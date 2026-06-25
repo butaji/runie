@@ -1,13 +1,12 @@
 //! Tests for runie-provider
 
-use crate::{DynProvider, DynProviderFactory, MockProvider, MockStreamingProvider};
+use crate::{DynProvider, DynProviderFactory, MockProvider, MockStreamingProvider, Provider, ProviderError};
 use futures::StreamExt;
 use runie_core::actors::{ConfigActor, ProviderActor};
 use runie_core::bus::EventBus;
 use runie_core::config::Config;
 use runie_core::event::Event;
 use runie_core::message::ChatMessage;
-use runie_core::provider::{Provider, ProviderError};
 use runie_core::provider_event::ProviderEvent;
 use std::io::{Read, Write};
 use std::sync::Mutex;

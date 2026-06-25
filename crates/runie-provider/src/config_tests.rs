@@ -1,5 +1,5 @@
 use crate::config::{Config, ModelProvider};
-use runie_core::ProviderError;
+use crate::ProviderError;
 use std::collections::HashMap;
 use std::sync::Mutex;
 

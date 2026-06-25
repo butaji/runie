@@ -5,9 +5,7 @@ use std::pin::Pin;
 
 use runie_core::actors::provider::{BuiltProvider, ProviderFactory};
 use runie_core::config::Config;
-use runie_core::provider::ProviderError;
-
-use crate::{build_provider, validate_api_key};
+use crate::{find_provider, build_provider, validate_api_key, ProviderError};
 
 /// The production provider factory.
 ///
@@ -47,5 +45,5 @@ impl ProviderFactory for DynProviderFactory {
 }
 
 fn default_base_url(provider: &str) -> Option<String> {
-    runie_core::provider::find_provider(provider).map(|m| m.base_url.to_owned())
+    find_provider(provider).map(|m| m.base_url.to_owned())
 }

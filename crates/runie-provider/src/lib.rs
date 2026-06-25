@@ -10,13 +10,28 @@ pub mod openai;
 pub mod protocol;
 pub mod retry;
 
+// ---------------------------------------------------------------------------
+// Re-exports from runie-core
+// ---------------------------------------------------------------------------
+
+// Provider trait and registry (moved to runie-core for cross-crate access).
+pub use runie_core::provider::{Provider, ResponseChunk};
+pub use runie_core::provider::registry::{
+    display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
+    known_providers, is_mock_enabled, ModelMeta, ProviderMeta,
+};
+pub use runie_core::provider::ProviderError;
+
+// Model catalog types.
+pub use runie_core::model_catalog::{filter_models, model_catalog, ModelCapabilities, ModelInfo};
+pub use runie_core::model_catalog::configured::configured_models_catalog;
+
 pub use config::Config;
 pub use factory::DynProviderFactory;
 pub use mock::{MockProvider, MockStreamingProvider};
 pub use openai::OpenAiProvider;
 
 use anyhow::Result;
-use runie_core::provider::{Provider, ProviderError};
 
 /// Default timeout for API key validation requests.
 pub const VALIDATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
@@ -112,17 +127,13 @@ impl DynProvider {
 
 /// Check whether `key` is known in the registry.
 pub fn is_known(key: &str) -> bool {
-    runie_core::provider::is_known_provider(key)
+    is_known_provider(key)
 }
 
 /// Resolve API key and base URL for a provider.
-///
-/// When a config is supplied, use the layered resolver
-/// (env > dotenv > config file) so keys saved during onboarding are available
-/// even when the env var is empty. Otherwise fall back to the env var only.
 fn resolve_credentials(
     key: &str,
-    meta: &runie_core::provider::ProviderMeta,
+    meta: &ProviderMeta,
     config: Option<&runie_core::config::Config>,
 ) -> (String, String) {
     let (api_key, base_url) = if let Some(cfg) = config {
@@ -148,33 +159,25 @@ fn resolve_credentials(
 }
 
 /// Build a provider from a registry key and model name.
-///
-/// **No silent Mock fallback.** Unknown keys return `Err(UnknownProvider)`.
-/// If the API key is not set (and `RUNIE_MOCK` is not enabled), returns
-/// `Err(MissingApiKey)`.
 pub fn build_provider(
     key: &str,
     model: &str,
     config: Option<&runie_core::config::Config>,
 ) -> Result<BuiltProvider, ProviderError> {
-    if key == "mock" && runie_core::provider::is_mock_enabled() {
+    if key == "mock" && is_mock_enabled() {
         return Ok(build_mock_provider(key, model));
     }
 
-    let meta = runie_core::provider::find_provider(key)
+    let meta = find_provider(key)
         .ok_or_else(|| ProviderError::UnknownProvider(key.to_owned()))?;
 
     let (api_key, base_url) = resolve_credentials(key, meta, config);
-    if api_key.is_empty() && !runie_core::provider::is_mock_enabled() {
+    if api_key.is_empty() && !is_mock_enabled() {
         return Err(ProviderError::MissingApiKey(meta.env_var.to_owned()));
     }
 
     let provider = build_openai_provider(api_key, model, &base_url);
-    Ok(BuiltProvider::new(
-        provider,
-        key.to_owned(),
-        model.to_owned(),
-    ))
+    Ok(BuiltProvider::new(provider, key.to_owned(), model.to_owned()))
 }
 
 fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
@@ -188,7 +191,7 @@ fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
 
 fn build_openai_provider(api_key: String, model: &str, base_url: &str) -> Box<dyn Provider> {
     let p = OpenAiProvider::new(api_key, model).with_base_url(base_url);
-    let p = if let Some(meta) = runie_core::provider::find_model(model) {
+    let p = if let Some(meta) = find_model(model) {
         p.with_model_meta(meta)
     } else {
         p
@@ -196,12 +199,7 @@ fn build_openai_provider(api_key: String, model: &str, base_url: &str) -> Box<dy
     Box::new(retry::RetryProvider::new(p))
 }
 
-// ---------------------------------------------------------------------------
-// Provider construction helpers
-// ---------------------------------------------------------------------------
-
-/// Try each provider in the chain until one builds successfully, using the
-/// provided config to resolve API keys and base URLs.
+/// Try each provider until one builds successfully.
 pub fn build_provider_with_fallback(
     chain: &[&str],
     model: &str,
@@ -221,16 +219,10 @@ pub fn build_provider_with_fallback(
 // API key validation
 // ---------------------------------------------------------------------------
 
-/// Validate an API key by calling the provider's `/models` endpoint.
-/// Returns a list of available model IDs on success.
-///
-/// Fails after [`VALIDATION_TIMEOUT`] so the UI never gets stuck waiting
-/// for an unreachable or unresponsive provider.
 pub async fn validate_api_key(base_url: &str, api_key: &str) -> Result<Vec<String>> {
     validate_api_key_with_timeout(base_url, api_key, VALIDATION_TIMEOUT).await
 }
 
-/// Validate an API key with a configurable request timeout.
 pub async fn validate_api_key_with_timeout(
     base_url: &str,
     api_key: &str,
@@ -248,7 +240,10 @@ async fn fetch_models(
     api_key: &str,
     timeout: std::time::Duration,
 ) -> Result<Vec<String>> {
-    let client = build_http_client(timeout)?;
+    let client = reqwest::Client::builder()
+        .timeout(timeout)
+        .connect_timeout(timeout)
+        .build()?;
     let url = format!("{}/models", base_url.trim_end_matches('/'));
     let resp = client
         .get(&url)
@@ -262,35 +257,21 @@ async fn fetch_models(
     }
 
     let json: serde_json::Value = resp.json().await?;
-    Ok(extract_model_ids(&json))
-}
-
-fn build_http_client(timeout: std::time::Duration) -> Result<reqwest::Client> {
-    Ok(reqwest::Client::builder()
-        .timeout(timeout)
-        .connect_timeout(timeout)
-        .build()?)
-}
-
-fn extract_model_ids(json: &serde_json::Value) -> Vec<String> {
-    json.get("data")
+    Ok(json
+        .get("data")
         .and_then(|d| d.as_array())
         .map(|arr| {
             arr.iter()
                 .filter_map(|m| m.get("id").and_then(|id| id.as_str()).map(String::from))
                 .collect()
         })
-        .unwrap_or_default()
+        .unwrap_or_default())
 }
 
 // ---------------------------------------------------------------------------
 // Re-exports for consumers
 // ---------------------------------------------------------------------------
 
-/// Spawn a production `HeadlessRuntime` using the default provider factory.
-///
-/// This is the shared entry point for all non-interactive binaries so they do
-/// not duplicate the runtime setup.
 pub async fn spawn_headless_runtime() -> runie_core::headless_runtime::HeadlessRuntime {
     use runie_core::bus::EventBus;
     use runie_core::event::Event;

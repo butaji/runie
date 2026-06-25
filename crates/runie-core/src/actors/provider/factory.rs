@@ -6,14 +6,16 @@ use std::sync::Arc;
 
 use crate::config::Config;
 use crate::message::ChatMessage;
-use crate::provider::{Provider, ProviderError};
 use crate::provider_event::ProviderEvent;
+
+// `Provider` and `ProviderError` are defined in `runie-provider` and re-exported here.
+use crate::provider::{Provider, ProviderError};
 
 /// Built provider that wraps a concrete provider implementation.
 ///
 /// This type implements `Provider` directly, so it can be used anywhere a
 /// `Box<dyn Provider>` is expected without an extra layer of indirection.
-/// The `DynProvider` type in `runie-provider` is a type alias for this struct.
+/// The `DynProvider` type in `runie-provider` is a thin wrapper around this.
 #[derive(Clone)]
 pub struct BuiltProvider {
     /// The constructed provider implementation.

@@ -1,6 +1,6 @@
 use futures::Stream;
 use runie_core::message::{ChatMessage, Role};
-use runie_core::provider::Provider;
+use crate::Provider;
 use runie_core::provider_event::{ProviderEvent, StopReason};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};

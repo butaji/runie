@@ -163,9 +163,9 @@ impl<P> RetryProvider<P> {
     }
 }
 
-impl<P> runie_core::provider::Provider for RetryProvider<P>
+impl<P> crate::Provider for RetryProvider<P>
 where
-    P: runie_core::provider::Provider + Clone,
+    P: crate::Provider + Clone,
 {
     fn generate(
         &self,
@@ -203,7 +203,7 @@ mod tests {
     use super::*;
     use futures::stream;
     use runie_core::message::ChatMessage;
-    use runie_core::provider::Provider;
+    use crate::Provider;
     use runie_core::provider_event::StopReason;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
