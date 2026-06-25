@@ -64,7 +64,6 @@ impl AppState {
         {
             let input = self.input();
             if !input.input.contains('\n') {
-                drop(input);
                 self.history_prev();
                 return;
             }
@@ -99,7 +98,6 @@ impl AppState {
         let (line_end, input_len, cursor_pos) = {
             let input = self.input();
             if !input.input.contains('\n') {
-                drop(input);
                 self.history_next();
                 return;
             }
@@ -154,7 +152,6 @@ impl AppState {
             let pos = input.cursor_pos;
             let text = input.input.clone();
             input.cursor_pos = crate::update::input::prev_grapheme_boundary(&text, pos);
-            drop(input);
             self.clear_ghost();
             self.clamp_input_scroll();
             self.view_mut().dirty = true;
@@ -173,7 +170,6 @@ impl AppState {
             let pos = input.cursor_pos;
             let text = input.input.clone();
             input.cursor_pos = crate::update::input::next_grapheme_boundary(&text, pos);
-            drop(input);
             self.clamp_input_scroll();
             self.view_mut().dirty = true;
         } else {
@@ -200,7 +196,6 @@ impl AppState {
         } else if self.input().cursor_pos != self.input().input.len() {
             let input = self.input_mut();
             input.cursor_pos = input.input.len();
-            drop(input);
             self.clear_ghost();
             self.clamp_input_scroll();
             self.view_mut().dirty = true;
@@ -215,7 +210,6 @@ impl AppState {
             let pos = input.cursor_pos;
             let text = input.input.clone();
             input.cursor_pos = crate::update::input::find_word_boundary_left(&text, pos);
-            drop(input);
             self.clear_ghost();
             self.clamp_input_scroll();
             self.view_mut().dirty = true;
@@ -230,7 +224,6 @@ impl AppState {
             let pos = input.cursor_pos;
             let text = input.input.clone();
             input.cursor_pos = crate::update::input::find_word_boundary_right(&text, pos);
-            drop(input);
             self.clear_ghost();
             self.clamp_input_scroll();
             self.view_mut().dirty = true;

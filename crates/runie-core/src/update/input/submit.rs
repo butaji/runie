@@ -161,7 +161,6 @@ impl AppState {
     pub(crate) fn history_prev(&mut self) {
         let input = self.input();
         if input.input_history.is_empty() {
-            drop(input);
             self.input_mut().input_flash = 3;
             return;
         }
@@ -170,7 +169,6 @@ impl AppState {
             Some(p) => p,
             None => input.input_history.len() - 1,
         };
-        drop(input);
         {
             let input = self.input_mut();
             input.history_pos = Some(pos);
@@ -186,20 +184,17 @@ impl AppState {
         let pos = match input.history_pos {
             Some(p) => p + 1,
             None => {
-                drop(input);
                 self.input_mut().input_flash = 3;
                 return;
             }
         };
         if pos >= input.input_history.len() {
-            drop(input);
             let input = self.input_mut();
             input.history_pos = None;
             input.input.clear();
             input.cursor_pos = 0;
         } else {
             let history_entry = input.input_history[pos].clone();
-            drop(input);
             let input = self.input_mut();
             input.history_pos = Some(pos);
             input.input = history_entry;

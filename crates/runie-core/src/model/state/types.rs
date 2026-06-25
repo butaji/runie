@@ -2,6 +2,7 @@
 
 /// A file entry from the FFF indexer for the file picker.
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub(crate) struct FffFileEntry {
     pub(crate) name: String,
     pub(crate) path: String,

@@ -430,25 +430,9 @@ impl AppState {
         self.config().read_only
     }
 
-    /// Mutable access to `read_only` for internal config mutations.
-    pub(crate) fn read_only_mut(&mut self) -> &mut bool {
-        &mut self.config_mut().read_only
-    }
-
     /// Current vim_mode setting.
     pub fn vim_mode(&self) -> bool {
         self.config().vim_mode
-    }
-
-    /// Mutable access to `vim_mode` for internal config mutations.
-    pub(crate) fn vim_mode_mut(&mut self) -> &mut bool {
-        &mut self.config_mut().vim_mode
-    }
-
-    /// Set vim_mode and update derived state.
-    pub(crate) fn set_vim_mode(&mut self, mode: bool) {
-        self.config_mut().vim_mode = mode;
-        self.view_mut().cached_settings_valid = false;
     }
 
     /// Returns the truncation configuration for tool output.

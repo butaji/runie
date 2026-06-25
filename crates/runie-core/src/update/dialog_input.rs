@@ -25,7 +25,7 @@ impl AppState {
                 _ => return false, // let other keys pass through to input
             }
         }
-        drop(dialog); // release mutable borrow before dialog::update_dialog
+        let _ = dialog; // release mutable borrow before dialog::update_dialog
         match event {
             crate::Event::Input(_)
             | crate::Event::Submit
@@ -88,11 +88,9 @@ impl AppState {
         if view.vim_nav_pending {
             view.vim_nav_pending = false;
             view.vim_nav_mode = true;
-            drop(view);
             self.view_mut().selected_post = self.current_bottom_post_index();
             return;
         }
-        drop(view);
         if self.agent_state_mut().turn_active {
             self.agent_state_mut().turn_active = false;
             self.agent_state_mut().inflight = 0;
@@ -117,7 +115,6 @@ impl AppState {
             view.last_visible_height,
         )?;
         let posts = view.posts.clone();
-        drop(view);
         posts
             .iter()
             .find(|p| p.start <= bottom && bottom < p.end)

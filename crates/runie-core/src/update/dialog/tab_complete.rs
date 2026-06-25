@@ -47,7 +47,6 @@ impl AppState {
             input.tab_complete_prefix = None;
             input.tab_complete_matches.clear();
             input.tab_complete_index = 0;
-            drop(input);
             self.view_mut().dirty = true;
         }
     }
@@ -91,7 +90,6 @@ impl AppState {
         input.tab_complete_prefix = None;
         input.tab_complete_matches.clear();
         input.tab_complete_index = 0;
-        drop(input);
         self.view_mut().dirty = true;
     }
 
@@ -123,7 +121,6 @@ impl AppState {
         let comp = self.completion_mut();
         let current = comp.at_selected.unwrap_or(0);
         comp.at_selected = Some((current + 1) % suggestions_len);
-        drop(comp);
         self.view_mut().dirty = true;
     }
 }

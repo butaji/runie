@@ -34,6 +34,7 @@ pub struct AppState {
     pub transient_level: Option<crate::event::TransientLevel>,
     pub git_info: Option<crate::snapshot::GitInfo>,
     pub cwd_name: String,
+    #[allow(private_interfaces)]
     pub fff_file_results: Vec<FffFileEntry>,
     pub fff_debounce: u32,
     pub permission_request: Option<crate::model::PermissionRequestState>,

@@ -6,12 +6,6 @@ use crate::model::AppState;
 
 use super::spec::{CommandKind, CommandSpec};
 
-/// No-op submit factory.  Forms with a `cmd_name` are dispatched through
-/// the command registry; this factory is never called.
-fn noop_submit(_: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::Event::Abort
-}
-
 static SYSTEM_COMMANDS: &[CommandSpec] = &[
     CommandSpec {
         name: "settings",

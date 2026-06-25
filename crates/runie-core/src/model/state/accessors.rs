@@ -88,10 +88,6 @@ impl AppState {
         &self.cwd_name
     }
 
-    pub(crate) fn fff_file_results(&self) -> &[super::FffFileEntry] {
-        &self.fff_file_results
-    }
-
     pub fn fff_debounce(&self) -> u32 {
         self.fff_debounce
     }
