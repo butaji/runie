@@ -412,4 +412,30 @@ mod tests {
         assert!(parsed.parts.is_empty());
         assert_eq!(parsed.content(), "");
     }
+
+    /// Layer 1: Canonical ToolCall serializes and deserializes unchanged.
+    #[test]
+    fn canonical_tool_call_round_trips_through_json() {
+        let tc = ToolCall::new("call_abc", "bash", serde_json::json!({"cmd": "ls -la"}));
+        let json = serde_json::to_string(&tc).unwrap();
+        let parsed: ToolCall = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.id, "call_abc");
+        assert_eq!(parsed.name, "bash");
+        assert_eq!(parsed.args["cmd"], "ls -la");
+    }
+
+    /// Layer 1: ParsedToolCall converts to canonical ToolCall.
+    #[test]
+    fn parsed_tool_call_maps_to_canonical() {
+        use crate::tool_parser::ParsedToolCall;
+        let parsed = ParsedToolCall {
+            name: "read_file".into(),
+            args: serde_json::json!({"path": "Cargo.toml"}),
+            id: Some("call_123".into()),
+        };
+        let tc: ToolCall = parsed.into();
+        assert_eq!(tc.id, "call_123");
+        assert_eq!(tc.name, "read_file");
+        assert_eq!(tc.args["path"], "Cargo.toml");
+    }
 }

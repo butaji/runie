@@ -205,4 +205,35 @@ pub mod tests {
         let thinking_starts: Vec<_> = events.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { id } if id == "reasoning")).collect();
         assert_eq!(thinking_starts.len(), 1);
     }
+
+    /// Layer 4: OpenAI SSE stream accumulates to canonical ToolCall.
+    #[test]
+    fn openai_stream_accumulates_canonical_tool_calls() {
+        use runie_core::message::ToolCall;
+        let lines = &[
+            r#"data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_abc","type":"function","function":{"name":"read_file","arguments":""}}]}}]}"#,
+            r#"data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"path\":\"C"}}]}}]}"#,
+            r#"data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"argo.toml\"}"}}]}}]}"#,
+            "data: [DONE]",
+        ];
+        let events = collect_events(lines);
+        // Find ToolCallEnd events and verify they contain canonical ToolCalls
+        let tool_ends: Vec<_> = events.iter().filter_map(|e| {
+            if let ProviderEvent::ToolCallEnd { id } = e {
+                Some(id.clone())
+            } else {
+                None
+            }
+        }).collect();
+        assert_eq!(tool_ends, vec!["call_abc"], "Should emit ToolCallEnd with canonical id");
+        // Verify ToolCallStart was emitted with the name
+        let tool_starts: Vec<_> = events.iter().filter_map(|e| {
+            if let ProviderEvent::ToolCallStart { id, name } = e {
+                Some((id.clone(), name.clone()))
+            } else {
+                None
+            }
+        }).collect();
+        assert_eq!(tool_starts, vec![("call_abc".into(), "read_file".into())]);
+    }
 }
