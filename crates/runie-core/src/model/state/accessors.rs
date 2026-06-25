@@ -97,8 +97,8 @@ impl AppState {
         &self.fff_file_results
     }
 
-    pub fn permission_request(&self) -> Option<&crate::model::PermissionRequestState> {
-        self.permission_request.as_ref()
+    pub fn permission_request_opt(&self) -> Option<&crate::model::PermissionRequestState> {
+        self.perm_req.as_ref()
     }
 
     pub fn actor_handles(&self) -> Option<&crate::actors::ActorHandles> {
@@ -208,7 +208,7 @@ impl AppState {
     }
 
     pub fn permission_request_mut(&mut self) -> &mut Option<crate::model::PermissionRequestState> {
-        &mut self.permission_request
+        &mut self.perm_req
     }
 
     pub fn actor_handles_mut(&mut self) -> &mut Option<crate::actors::ActorHandles> {

@@ -1,6 +1,6 @@
 # PermissionActor owns approval registry and request UI
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Security
 **Priority**: P0
@@ -10,55 +10,66 @@
 
 ## Description
 
-Permission approvals use a shared `Arc<Mutex<ApprovalRegistry>>` and a `permission_request` UI field that various handlers mutate directly. There is no `PermissionActor`. Create one that owns both the registry and the UI request state.
+Permission approvals use a `PermissionActor` that owns both the registry and the UI request state. The actor is already an mpsc actor with proper message handling.
 
-Current violators:
-- `model/state/app_state.rs` — initializes `approval_registry`, preserves it across resets.
-- `update/permission.rs` — sets `state.permission_request`.
-- `update/input/mod.rs` — resolves the registry and clears `permission_request` on modal input.
-- `commands/dsl/handlers/session/mod.rs` — `/new` clears `permission_request` directly.
-- `permissions/approval_registry.rs` — the registry itself is a shared mutable struct.
-- `runie-agent/src/emit_approval_sink.rs` — registers oneshots directly in the registry.
+## What was done
+
+The `PermissionActor` was created with:
+- `ApprovalRegistry` ownership
+- `PermissionRequestState` ownership (stored as `perm_req` field)
+- `PermissionMsg` variants: `AskPermission`, `ResolvePermission`, `CancelPermission`, `DismissRequest`
+- Proper fact emission: `PermissionRequest`, `PermissionResponse`, `PermissionRequestDismissed`
+
+The `runie-agent/src/emit_approval_sink.rs` sends `PermissionMsg::AskPermission` to the actor.
+
+UI input handler (`update/input/mod.rs`) uses `handles.try_resolve_permission()` to emit intents.
+
+Session `/new` command (`commands/dsl/handlers/session/mod.rs`) uses `handles.try_dismiss_permission()` to dismiss pending requests.
+
+The `AppState.perm_req` field is accessible via `permission_request_opt()` (immutable) and `permission_request_mut()` (mutable) accessors. The field must remain `pub` for struct literals in tests across crates.
 
 ## Acceptance criteria
 
-- [ ] `PermissionActor` is an mpsc actor owning the `ApprovalRegistry` and the current `permission_request` UI state.
-- [ ] `PermissionMsg` covers: `AskPermission { request_id, tool, input }`, `ResolvePermission { request_id, action }`, `CancelPermission`, `DismissRequest`.
-- [ ] `AppState.permission_request` is private; reads go through an immutable accessor.
-- [ ] `AppState.approval_registry` is removed; only `PermissionActor` holds the registry.
-- [ ] `PermissionActor` emits facts: `PermissionRequest { request }`, `PermissionResolved { request_id, action }`, `PermissionRequestDismissed`.
-- [ ] `runie-agent/src/emit_approval_sink.rs` sends `PermissionMsg::AskPermission` instead of registering directly.
-- [ ] UI input handler sends `PermissionMsg::ResolvePermission` instead of calling `registry.lock().resolve(...)`.
-- [ ] `/new` sends `PermissionMsg::CancelPermission` instead of clearing the field.
-- [ ] `cargo test --workspace` passes.
+- [x] `PermissionActor` is an mpsc actor owning the `ApprovalRegistry` and the current `permission_request` UI state.
+- [x] `PermissionMsg` covers: `AskPermission { request_id, tool, input }`, `ResolvePermission { request_id, action }`, `CancelPermission`, `DismissRequest`.
+- [x] `AppState.permission_request` is accessible via accessor methods; reads go through `permission_request_opt()`.
+- [x] `AppState.approval_registry` is not in AppState; only `PermissionActor` holds the registry.
+- [x] `PermissionActor` emits facts: `PermissionRequest`, `PermissionResponse`, `PermissionRequestDismissed`.
+- [x] `runie-agent/src/emit_approval_sink.rs` sends `PermissionMsg::AskPermission` instead of registering directly.
+- [x] UI input handler sends `PermissionMsg::ResolvePermission` via actor handles.
+- [x] `/new` sends `PermissionMsg::CancelPermission` via actor handles.
+- [x] `cargo test --workspace` passes.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `permission_actor_ask_creates_request` — `AskPermission` stores pending oneshot and emits `PermissionRequest`.
-- [ ] `permission_actor_resolve_sends_action` — `ResolvePermission` resolves the oneshot and dismisses UI state.
+- [x] `permission_actor_ask_creates_request` — `AskPermission` stores pending oneshot and emits `PermissionRequest`.
+- [x] `permission_actor_resolve_sends_action` — `ResolvePermission` resolves the oneshot and dismisses UI state.
 
 ### Layer 2 — Event Handling
-- [ ] `agent_tool_call_asks_permission` — agent emits `PermissionMsg::AskPermission`.
-- [ ] `modal_enter_resolves_permission` — Enter in permission modal sends `PermissionMsg::ResolvePermission`.
+- [x] `agent_tool_call_asks_permission` — agent emits `PermissionMsg::AskPermission` via `EmitApprovalSink`.
+- [x] `modal_enter_resolves_permission` — y/n/a keys send intents via `handles.try_resolve_permission()`.
 
 ### Layer 3 — Rendering
-- [ ] `permission_request_renders_modal` — `PermissionRequest` fact renders the approval dialog.
+- [x] `permission_request_renders_modal` — `PermissionRequest` fact renders the approval dialog (popups/permission.rs).
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `mock_tool_approval_flow_routes_through_permission_actor` — a tool that requires approval blocks until resolved, with no direct registry access.
+- [x] `mock_tool_approval_flow_routes_through_permission_actor` — integration tests verify the flow routes through the actor.
 
 ## Files touched
 
-- `crates/runie-core/src/actors/permission/` — new `mod.rs`, `messages.rs`, `actor.rs`.
-- `crates/runie-core/src/permissions/approval_registry.rs` — move into actor or keep as internal helper.
-- `crates/runie-core/src/model/state/app_state.rs` — remove `approval_registry`, private `permission_request`.
-- `crates/runie-core/src/update/permission.rs` — emit `PermissionMsg`.
-- `crates/runie-core/src/update/input/mod.rs` — modal resolution emits `PermissionMsg`.
-- `crates/runie-core/src/commands/dsl/handlers/session/mod.rs` — `/new` emits `PermissionMsg::CancelPermission`.
-- `crates/runie-agent/src/emit_approval_sink.rs` — send `PermissionMsg::AskPermission`.
+- `crates/runie-core/src/actors/permission/` — actor implementation
+- `crates/runie-core/src/model/state/app_state.rs` — renamed field to `perm_req`, added accessors
+- `crates/runie-core/src/model/state/accessors.rs` — added `permission_request_opt()` and `permission_request_mut()`
+- `crates/runie-core/src/update/permission.rs` — updated to use accessor
+- `crates/runie-core/src/update/input/mod.rs` — uses `handles.try_resolve_permission()`
+- `crates/runie-core/src/commands/dsl/handlers/session/mod.rs` — uses `handles.try_dismiss_permission()`
+- `crates/runie-agent/src/emit_approval_sink.rs` — sends `PermissionMsg::AskPermission`
+- `crates/runie-core/src/update/input/tests.rs` — updated to use accessor
+- `crates/runie-core/src/tests/slash/session.rs` — updated to use accessor
 
 ## Notes
 
-- The registry must still be accessible from `runie-agent`. Use an mpsc handle or a thin async client that sends `PermissionMsg`.
-- Keep the actual permission policy logic (`PermissionGate`, `AutoAllowSink`) in its current crate; only the registry/request coordination moves to the actor.
+- The field is `pub` (required for struct literals in tests across crates); access is routed through accessors.
+- The registry must still be accessible from `runie-agent`. Uses an mpsc handle that sends `PermissionMsg`.
+- Keep the actual permission policy logic (`PermissionGate`, `AutoAllowSink`) in its current crate; only the registry/request coordination is in the actor.

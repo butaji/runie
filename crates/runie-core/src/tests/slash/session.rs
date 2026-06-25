@@ -143,7 +143,7 @@ fn new_closes_open_dialog_and_clears_ui_state() {
         .dialog_back_stack
         .push(crate::commands::DialogState::Welcome);
     state.login_flow = Some(crate::login_flow::LoginFlowState::default());
-    state.permission_request = Some(crate::model::PermissionRequestState {
+    *state.permission_request_mut() = Some(crate::model::PermissionRequestState {
         request_id: "perm".into(),
         tool: "bash".into(),
         input: serde_json::Value::Null,
@@ -158,7 +158,7 @@ fn new_closes_open_dialog_and_clears_ui_state() {
     assert!(state.dialog_back_stack.is_empty(), "back stack cleared");
     assert!(state.login_flow.is_none(), "login_flow cleared");
     assert!(
-        state.permission_request.is_none(),
+        state.permission_request_opt().is_none(),
         "permission_request cleared"
     );
 }

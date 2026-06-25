@@ -1,9 +1,9 @@
 [
   {
-    "status": "todo",
+    "status": "unknown",
     "depends_on": [],
     "blocks": [],
-    "milestone": "R4",
+    "milestone": "unknown",
     "category": "Unknown",
     "priority": "P3",
     "title": "Tasks Directory",
@@ -28,9 +28,7 @@
   },
   {
     "status": "done",
-    "depends_on": [
-      "none"
-    ],
+    "depends_on": [],
     "blocks": [
       "app-state-read-only-projection",
       "input-actor-owns-input-state",
@@ -57,12 +55,8 @@
   },
   {
     "status": "todo",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "Tools",
     "priority": "P0",
@@ -95,12 +89,8 @@
   },
   {
     "status": "done",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "Core / State",
     "priority": "P2",
@@ -112,9 +102,7 @@
     "depends_on": [
       "extract-headless-cli-helper"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P1",
@@ -129,9 +117,7 @@
       "app-state-read-only-projection",
       "input-actor-owns-input-state"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Input / Commands",
     "priority": "P1",
@@ -144,9 +130,7 @@
       "event-taxonomy-for-actor-state-sync",
       "app-state-read-only-projection"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P0",
@@ -160,9 +144,7 @@
       "consolidate-login-flow-handlers",
       "split-runie-core-into-domain-and-io-crates"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
@@ -202,9 +184,7 @@
     "depends_on": [
       "consolidate-login-flow-handlers"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Testing",
     "priority": "P3",
@@ -218,9 +198,7 @@
       "actor-owned-state-ssot",
       "config-ssot-via-configactor"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P1",
@@ -232,9 +210,7 @@
     "depends_on": [
       "rename-update-dialog-panel"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Refactoring",
     "priority": "P2",
@@ -245,7 +221,7 @@
     "status": "todo",
     "depends_on": [],
     "blocks": [],
-    "milestone": "R4",
+    "milestone": "unknown",
     "category": "Unknown",
     "priority": "P3",
     "title": "Declarative Actor DSL",
@@ -270,9 +246,7 @@
     "depends_on": [
       "replace-git2-with-cli"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Tools",
     "priority": "P2",
@@ -284,9 +258,7 @@
     "depends_on": [
       "finish-io-migration"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Actors",
     "priority": "P1",
@@ -326,9 +298,7 @@
     "depends_on": [
       "drop-event-bus-replay-buffer"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
@@ -343,9 +313,7 @@
       "app-state-read-only-projection",
       "actor-lifecycle-and-handle-registry"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P1",
@@ -354,9 +322,7 @@
   },
   {
     "status": "done",
-    "depends_on": [
-      "none"
-    ],
+    "depends_on": [],
     "blocks": [
       "app-state-read-only-projection",
       "input-actor-owns-input-state",
@@ -378,12 +344,8 @@
   },
   {
     "status": "todo",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
@@ -392,9 +354,7 @@
   },
   {
     "status": "done",
-    "depends_on": [
-      "none"
-    ],
+    "depends_on": [],
     "blocks": [
       "collapse-headless-binaries-into-one-cli"
     ],
@@ -412,9 +372,7 @@
       "app-state-read-only-projection",
       "actor-lifecycle-and-handle-registry"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Tools",
     "priority": "P1",
@@ -437,12 +395,8 @@
   },
   {
     "status": "done",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Actors",
     "priority": "P2",
@@ -466,12 +420,8 @@
   },
   {
     "status": "wontfix",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P3",
@@ -480,12 +430,8 @@
   },
   {
     "status": "todo",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "Core / State",
     "priority": "P2",
@@ -497,9 +443,7 @@
     "depends_on": [
       "split-runie-core-into-domain-and-io-crates"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
@@ -508,12 +452,8 @@
   },
   {
     "status": "done",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
@@ -525,9 +465,7 @@
     "depends_on": [
       "rename-core-ui-to-view"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "TUI / Rendering",
     "priority": "P2",
@@ -538,7 +476,7 @@
     "status": "todo",
     "depends_on": [],
     "blocks": [],
-    "milestone": "R4",
+    "milestone": "unknown",
     "category": "Unknown",
     "priority": "P3",
     "title": "Generic Actor Reply",
@@ -566,9 +504,7 @@
     "depends_on": [
       "unify-provider-modules"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Actors",
     "priority": "P0",
@@ -596,9 +532,7 @@
       "event-taxonomy-for-actor-state-sync",
       "app-state-read-only-projection"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Core / State",
     "priority": "P1",
@@ -606,15 +540,13 @@
     "file": "notification-actor-owns-transient-messages.md"
   },
   {
-    "status": "todo",
+    "status": "done",
     "depends_on": [
       "actor-owned-state-ssot",
       "event-taxonomy-for-actor-state-sync",
       "app-state-read-only-projection"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Security",
     "priority": "P0",
@@ -623,12 +555,8 @@
   },
   {
     "status": "done",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R5",
     "category": "TUI / Rendering",
     "priority": "P2",
@@ -640,9 +568,7 @@
     "depends_on": [
       "r5-extract-tool-stream"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R5",
     "category": "Tools",
     "priority": "P1",
@@ -654,9 +580,7 @@
     "depends_on": [
       "r5-populate-parts-streaming"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R5",
     "category": "Architecture / Actors",
     "priority": "P2",
@@ -667,7 +591,7 @@
     "status": "todo",
     "depends_on": [],
     "blocks": [],
-    "milestone": "R4",
+    "milestone": "unknown",
     "category": "Unknown",
     "priority": "P3",
     "title": "R5 Populate Parts Streaming",
@@ -678,9 +602,7 @@
     "depends_on": [
       "r5-extract-tool-stream"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R5",
     "category": "Architecture / Actors",
     "priority": "P0",
@@ -689,12 +611,8 @@
   },
   {
     "status": "done",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
@@ -703,12 +621,8 @@
   },
   {
     "status": "done",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "Sessions",
     "priority": "P2",
@@ -720,9 +634,7 @@
     "depends_on": [
       "generic-actor-reply"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Actors",
     "priority": "P1",
@@ -734,9 +646,7 @@
     "depends_on": [
       "consolidate-dual-path-modules"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
@@ -760,9 +670,7 @@
       "config-ssot-via-configactor",
       "actor-lifecycle-and-handle-registry"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Actors",
     "priority": "P0",
@@ -775,9 +683,7 @@
       "actor-owned-state-ssot",
       "config-ssot-via-configactor"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Actors",
     "priority": "P0",
@@ -804,9 +710,7 @@
     "depends_on": [
       "actor-owned-state-ssot"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Actors",
     "priority": "P1",
@@ -815,12 +719,8 @@
   },
   {
     "status": "done",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "Core / State",
     "priority": "P1",
@@ -832,9 +732,7 @@
     "depends_on": [
       "finish-io-migration"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Actors",
     "priority": "P1",
@@ -843,12 +741,8 @@
   },
   {
     "status": "todo",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "TUI / Rendering",
     "priority": "P1",
@@ -857,12 +751,8 @@
   },
   {
     "status": "done",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "Core / State",
     "priority": "P1",
@@ -871,12 +761,8 @@
   },
   {
     "status": "done",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
@@ -885,12 +771,8 @@
   },
   {
     "status": "todo",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "Provider",
     "priority": "P1",
@@ -918,9 +800,7 @@
     "depends_on": [
       "unify-persistence-actors"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Actors",
     "priority": "P2",
@@ -951,9 +831,7 @@
     "depends_on": [
       "relocate-loose-tests-files"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
@@ -990,9 +868,7 @@
       "event-taxonomy-for-actor-state-sync",
       "app-state-read-only-projection"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Security",
     "priority": "P1",
@@ -1008,9 +884,7 @@
       "session-actor-owns-session-state",
       "input-actor-owns-input-state"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Actors",
     "priority": "P0",
@@ -1043,9 +917,7 @@
       "event-taxonomy-for-actor-state-sync",
       "declarative-actor-dsl"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Input / Commands",
     "priority": "P0",
@@ -1057,9 +929,7 @@
     "depends_on": [
       "unify-permission-gate"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Architecture / Security",
     "priority": "P1",
@@ -1071,9 +941,7 @@
     "depends_on": [
       "split-runie-core-into-domain-and-io-crates"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "Configuration",
     "priority": "P2",
@@ -1084,7 +952,7 @@
     "status": "todo",
     "depends_on": [],
     "blocks": [],
-    "milestone": "R4",
+    "milestone": "unknown",
     "category": "Unknown",
     "priority": "P3",
     "title": "Unify Persistence Actors",
@@ -1107,12 +975,8 @@
   },
   {
     "status": "todo",
-    "depends_on": [
-      "none"
-    ],
-    "blocks": [
-      "none"
-    ],
+    "depends_on": [],
+    "blocks": [],
     "milestone": "R4",
     "category": "Provider",
     "priority": "P0",
@@ -1129,9 +993,7 @@
       "input-actor-owns-input-state",
       "ui-control-actor-owns-dialog-state"
     ],
-    "blocks": [
-      "none"
-    ],
+    "blocks": [],
     "milestone": "R4",
     "category": "TUI / Rendering",
     "priority": "P0",

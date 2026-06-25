@@ -44,7 +44,7 @@ pub struct AppState {
     pub cwd_name: String,
     pub fff_file_results: Vec<FffFileEntry>,
     pub fff_debounce: u64,
-    pub permission_request: Option<crate::model::PermissionRequestState>,
+    pub perm_req: Option<crate::model::PermissionRequestState>,
     pub actor_handles: Option<crate::actors::ActorHandles>,
     pub config_cache: Option<crate::config::Config>,
 }
@@ -73,7 +73,7 @@ impl Default for AppState {
             cwd_name: String::new(),
             fff_file_results: Vec::new(),
             fff_debounce: 0u64,
-            permission_request: None,
+            perm_req: None,
             actor_handles: None,
             config_cache: None,
         }

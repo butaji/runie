@@ -24,7 +24,7 @@ pub use support::{
 };
 
 pub fn input_event(state: &mut AppState, event: crate::Event) {
-    if state.permission_request().is_some() {
+    if state.permission_request_opt().is_some() {
         return permission_input_event(state, event);
     }
     apply_input_event(state, event);
@@ -91,7 +91,7 @@ fn handle_paste_image(state: &mut AppState) {
 fn permission_input_event(state: &mut AppState, event: crate::Event) {
     use crate::permissions::PermissionAction;
 
-    let Some(req) = state.permission_request().cloned() else {
+    let Some(req) = state.permission_request_opt().cloned() else {
         return;
     };
     let action = match event {

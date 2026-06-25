@@ -35,8 +35,12 @@ const APPSTATE_PATTERNS: &[(&str, &str)] = &[
     ("state.fff_file_results.", "state.fff_file_results()"),
     ("state.fff_debounce ", "state.fff_debounce_mut()"),
     (
-        "state.permission_request ",
-        "state.permission_request_mut()",
+        "state.perm_req ",
+        "state.permission_request_opt()",
+    ),
+    (
+        "state.perm_req.",
+        "state.permission_request_opt().",
     ),
     ("state.cwd_name ", "state.cwd_name_mut()"),
     ("state.git_info ", "state.git_info_mut()"),

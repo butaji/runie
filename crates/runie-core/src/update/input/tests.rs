@@ -4,7 +4,7 @@ use crate::Event;
 
 fn setup_permission_request(id: &str) -> AppState {
     let mut state = AppState::default();
-    state.permission_request = Some(PermissionRequestState {
+    *state.permission_request_mut() = Some(PermissionRequestState {
         request_id: id.into(),
         tool: "bash".into(),
         input: serde_json::Value::Null,
@@ -24,13 +24,13 @@ fn y_key_triggers_permission_allow_intent() {
     let mut state = setup_permission_request("test-y");
     // Actor handles are None in tests, so try_resolve_permission is no-op.
     // The actual resolution happens via PermissionActor in integration tests.
-    assert!(state.permission_request.is_some());
+    assert!(state.permission_request_opt().is_some());
 
     input_event(&mut state, Event::Input('y'));
 
     // Permission request remains in state until PermissionResponse event clears it.
     // This is the correct behavior - input handler emits intent, actor resolves.
-    assert!(state.permission_request.is_some());
+    assert!(state.permission_request_opt().is_some());
 }
 
 #[test]
@@ -40,16 +40,16 @@ fn n_key_triggers_permission_deny_intent() {
     input_event(&mut state, Event::Input('n'));
 
     // Intent sent, projection happens via PermissionResponse event
-    assert!(state.permission_request.is_some());
+    assert!(state.permission_request_opt().is_some());
 }
 
 #[test]
-fn a_key_allows_permission_request() {
+fn a_key_allows_permission_request_opt() {
     let mut state = setup_permission_request("test-a");
 
     input_event(&mut state, Event::Input('a'));
 
-    assert!(state.permission_request.is_some());
+    assert!(state.permission_request_opt().is_some());
 }
 
 // ============================================================================

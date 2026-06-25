@@ -26,7 +26,7 @@ pub(crate) fn permission_event(state: &mut AppState, event: Event) {
             // Projection: the PermissionActor resolved the request.
             // Clear the request UI after resolution.
             if state
-                .permission_request()
+                .permission_request_opt()
                 .map(|r| r.request_id == request_id)
                 .unwrap_or(false)
             {

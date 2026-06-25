@@ -448,7 +448,7 @@ impl AppState {
         s.pending_edits = self.session().pending_edits.clone();
         s.scoped_models = self.config().scoped_models.clone();
         s.image_attachments = self.session().image_attachments.clone();
-        s.permission_request = self.permission_request().cloned();
+        s.permission_request = self.permission_request_opt().cloned();
         s.last_visible_height = self.view().last_visible_height;
     }
 }
