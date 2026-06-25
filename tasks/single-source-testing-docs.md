@@ -1,6 +1,6 @@
 # Single-source testing-strategy documentation
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P1

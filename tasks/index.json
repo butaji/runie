@@ -1858,7 +1858,7 @@
     },
     {
       "id": "single-source-testing-docs",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",

@@ -239,22 +239,7 @@ Custom code is kept where it is project-specific or where a drop-in crate does n
 
 ## Configuration
 
-User settings live in `~/.runie/config.toml`:
-
-```toml
-provider = "anthropic"
-model = "claude-sonnet-4-6"
-
-[models]
-scoped = ["claude-sonnet-4-6", "gpt-4o", "deepseek-chat"]
-
-[truncation]
-max_lines = 2000
-max_bytes = 51200
-
-[telemetry]
-enabled = false
-```
+User settings live in `~/.runie/config.toml`. See [Configuration](Configuration.md) for the full reference.
 
 ## Async IO discipline
 

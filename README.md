@@ -120,19 +120,7 @@ RUNIE_MOCK=1 ./target/release/runie
 ./target/release/runie-print "find unused imports" < src/main.rs
 ```
 
-Add keys in `~/.runie/config.toml`:
-
-```toml
-provider = "openai"
-model = "gpt-4o"
-
-[models]
-scoped = [
-  "gpt-4o",
-  "anthropic/claude-sonnet-4-6",
-  "deepseek/deepseek-chat",
-]
-```
+Add keys in `~/.runie/config.toml`. See [docs/Configuration.md](docs/Configuration.md) for the full reference.
 
 Config hot-reloads while you type.
 
