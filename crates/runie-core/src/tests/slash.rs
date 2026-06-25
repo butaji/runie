@@ -1,43 +1,6 @@
 //! Slash command tests — ensure all /commands work as users expect
 
-use crate::event::Event;
-use crate::model::AppState;
-use crate::session::store::SessionStore;
-use std::sync::Mutex;
-
-pub static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-/// Set input buffer directly and submit — bypasses the command palette.
-/// Use for slash commands that need arguments.
-pub fn exec(state: &mut AppState, text: &str) {
-    state.input.input = text.into();
-    state.input.cursor_pos = text.len();
-    state.update(Event::submit());
-}
-
-pub fn tmp_store() -> SessionStore {
-    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-    let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-    let dir = std::env::temp_dir().join(format!("runie_slash_test_{}_{}", std::process::id(), n));
-    let _ = std::fs::remove_dir_all(&dir);
-    SessionStore::new(dir)
-}
-
-pub fn minimal_session(name: &str) -> crate::session::Session {
-    crate::session::Session {
-        name: name.to_string(),
-        created_at: 1.0,
-        updated_at: 1.0,
-        messages: vec![],
-        provider: "mock".into(),
-        model: "echo".into(),
-        theme_name: "runie".into(),
-        thinking_level: crate::model::ThinkingLevel::Off,
-        read_only: false,
-        display_name: None,
-        session_tree: None,
-    }
-}
+pub use crate::tests::support::{ENV_LOCK, exec, minimal_session, tmp_store};
 
 pub mod compact;
 pub mod copy;

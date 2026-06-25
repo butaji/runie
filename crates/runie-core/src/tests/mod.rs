@@ -1,33 +1,9 @@
 #[cfg(test)]
-use std::sync::Mutex;
+mod support;
 
+// Re-export shared test helpers for backward compatibility
 #[cfg(test)]
-pub static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-// ── Shared test helpers ─────────────────────────────────────────────────────────
-
-#[cfg(test)]
-use crate::model::AppState;
-#[cfg(test)]
-use crate::Event;
-
-#[cfg(test)]
-/// Returns a fresh `AppState` with config_cache populated from login_config.
-/// Tests that call `set_test_config_with_providers` before this will have
-/// the correct providers available.
-pub fn fresh_state() -> AppState {
-    let mut state = AppState::default();
-    state.populate_cache_from_login_config();
-    state
-}
-
-#[cfg(test)]
-/// Simulates typing `text` into the input buffer of `state`.
-pub fn type_str(state: &mut AppState, text: &str) {
-    for c in text.chars() {
-        state.update(crate::Event::Input(c));
-    }
-}
+pub use support::{ENV_LOCK, exec, fresh_state, minimal_session, tmp_store, type_str};
 
 #[cfg(test)]
 mod agent;

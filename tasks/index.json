@@ -176,7 +176,7 @@
     },
     {
       "id": "dedupe-fresh-state-test-helper",
-      "status": "todo",
+      "status": "done",
       "milestone": "?",
       "category": "?",
       "priority": "?",
