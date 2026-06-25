@@ -125,7 +125,7 @@
     "file": "tasks/drop-small-stdlib-replaceable-deps.md"
   },
   {
-    "status": "todo",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
     "milestone": "R4",

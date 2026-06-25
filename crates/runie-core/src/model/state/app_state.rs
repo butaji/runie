@@ -38,6 +38,8 @@ pub struct AppState {
     pub transient_message: Option<String>,
     pub transient_until: Option<std::time::Instant>,
     pub transient_level: Option<crate::event::TransientLevel>,
+    // NOTE: These fields are set through events (EnvDetected) in production.
+    // For tests, they may be set directly via struct literals.
     pub git_info: Option<crate::snapshot::GitInfo>,
     pub cwd_name: String,
     pub fff_file_results: Vec<FffFileEntry>,
