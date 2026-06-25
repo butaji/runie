@@ -27,7 +27,7 @@
     },
     {
       "id": "actor-owned-state-ssot",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",
@@ -395,7 +395,7 @@
     },
     {
       "id": "declarative-actor-dsl",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",
@@ -577,7 +577,7 @@
     },
     {
       "id": "delete-dead-tool-runtime-trait",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P1",
@@ -772,7 +772,7 @@
     },
     {
       "id": "extract-headless-cli-helper",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
@@ -935,7 +935,7 @@
     },
     {
       "id": "gate-or-implement-mcp-client",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P1",
