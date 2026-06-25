@@ -670,7 +670,7 @@
     },
     {
       "id": "theme-color-accessor-macro",
-      "status": "todo",
+      "status": "done",
       "milestone": "?",
       "category": "?",
       "priority": "?",

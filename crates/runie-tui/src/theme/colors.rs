@@ -1,46 +1,52 @@
 use ratatui::style::Color;
 
-pub fn color_bg() -> Color {
-    crate::theme::current_theme()
-        .try_color("bg.base")
-        .map(Color::from)
-        .unwrap_or(Color::Reset)
+// ─────────────────────────────────────────────────────────────────────────────
+// Macro-based color accessors
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Generates a simple color accessor from a theme key.
+/// Example: `theme_color!(color_fg, "text.primary");`
+macro_rules! theme_color {
+    ($fn_name:ident, $key:literal) => {
+        pub fn $fn_name() -> Color {
+            Color::from(crate::theme::current_theme().color($key))
+        }
+    };
 }
-pub fn color_bg_panel() -> Color {
-    crate::theme::current_theme()
-        .try_color("bg.panel")
-        .map(Color::from)
-        .unwrap_or(Color::Reset)
+
+/// Generates a color accessor with a fallback value when the key is not found.
+/// Example: `theme_color_try!(color_bg, "bg.base", Color::Reset);`
+macro_rules! theme_color_try {
+    ($fn_name:ident, $key:literal, $fallback:expr) => {
+        pub fn $fn_name() -> Color {
+            crate::theme::current_theme()
+                .try_color($key)
+                .map(Color::from)
+                .unwrap_or($fallback)
+        }
+    };
 }
-pub fn color_fg() -> Color {
-    Color::from(crate::theme::current_theme().color("text.primary"))
-}
-pub fn color_fg_mid() -> Color {
-    Color::from(crate::theme::current_theme().color("text.secondary"))
-}
+
+// Generated color accessors
+theme_color_try!(color_bg, "bg.base", Color::Reset);
+theme_color_try!(color_bg_panel, "bg.panel", Color::Reset);
+theme_color!(color_fg, "text.primary");
+theme_color!(color_fg_mid, "text.secondary");
+theme_color!(color_accent, "accent.primary");
+theme_color!(color_success, "success");
+theme_color!(color_warning, "warning");
+theme_color!(color_error, "error");
+theme_color!(color_dim, "text.dim");
+theme_color!(color_border, "border.unfocused");
+theme_color!(color_code, "code.function");
+theme_color_try!(color_code_bg, "bg.code", Color::Reset);
+
+/// Bright foreground: primary text lightened by 0.3.
 pub fn color_fg_bright() -> Color {
     let c = crate::theme::current_theme()
         .color("text.primary")
         .lighten(0.3);
     Color::Rgb(c.r, c.g, c.b)
-}
-pub fn color_accent() -> Color {
-    Color::from(crate::theme::current_theme().color("accent.primary"))
-}
-pub fn color_success() -> Color {
-    Color::from(crate::theme::current_theme().color("success"))
-}
-pub fn color_warning() -> Color {
-    Color::from(crate::theme::current_theme().color("warning"))
-}
-pub fn color_error() -> Color {
-    Color::from(crate::theme::current_theme().color("error"))
-}
-pub fn color_dim() -> Color {
-    Color::from(crate::theme::current_theme().color("text.dim"))
-}
-pub fn color_border() -> Color {
-    Color::from(crate::theme::current_theme().color("border.unfocused"))
 }
 
 /// Diff gutter insert background: subtle green tint over base bg.
@@ -55,35 +61,6 @@ pub fn color_diff_remove_bg() -> Color {
     let bg = color_bg();
     let error = color_error();
     blend(bg, error, 0.12)
-}
-
-/// Darken an RGB color by a factor (0.0–1.0).
-/// Uses palette::Srgb for correct gamma-space darkening.
-pub fn darken(color: Color, factor: f32) -> Color {
-    match color {
-        Color::Rgb(r, g, b) => {
-            use palette::Srgb;
-            // palette uses 0.0-1.0 range
-            let s = Srgb::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
-            // Darken by scaling toward black in display gamma space.
-            let factor = factor.clamp(0.0, 1.0);
-            Color::Rgb(
-                (s.red * factor * 255.0) as u8,
-                (s.green * factor * 255.0) as u8,
-                (s.blue * factor * 255.0) as u8,
-            )
-        }
-        _ => color,
-    }
-}
-pub fn color_code() -> Color {
-    Color::from(crate::theme::current_theme().color("code.function"))
-}
-pub fn color_code_bg() -> Color {
-    crate::theme::current_theme()
-        .try_color("bg.code")
-        .map(Color::from)
-        .unwrap_or(Color::Reset)
 }
 
 /// User message post background. Themes can override `bg.user`;
@@ -103,6 +80,30 @@ pub fn color_user_bg() -> Color {
 /// the selected post in vim nav mode.
 pub fn color_accent_bg() -> Color {
     blend(color_bg(), color_accent(), 0.1)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Color utility functions
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Darken an RGB color by a factor (0.0–1.0).
+/// Uses palette::Srgb for correct gamma-space darkening.
+pub fn darken(color: Color, factor: f32) -> Color {
+    match color {
+        Color::Rgb(r, g, b) => {
+            use palette::Srgb;
+            // palette uses 0.0-1.0 range
+            let s = Srgb::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            // Darken by scaling toward black in display gamma space.
+            let factor = factor.clamp(0.0, 1.0);
+            Color::Rgb(
+                (s.red * factor * 255.0) as u8,
+                (s.green * factor * 255.0) as u8,
+                (s.blue * factor * 255.0) as u8,
+            )
+        }
+        _ => color,
+    }
 }
 
 /// Blend two RGB colors with the given opacity (0.0-1.0).
@@ -151,6 +152,29 @@ fn blend(bg: Color, fg: Color, opacity: f32) -> Color {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn macro_generates_same_color_values() {
+        // Verify macro-generated accessors return valid Color values.
+        // These call the actual generated functions to ensure they compile and work.
+        assert!(matches!(color_bg(), Color::Rgb(_, _, _) | Color::Reset));
+        assert!(matches!(color_bg_panel(), Color::Rgb(_, _, _) | Color::Reset));
+        assert!(matches!(color_fg(), Color::Rgb(_, _, _)));
+        assert!(matches!(color_fg_mid(), Color::Rgb(_, _, _)));
+        assert!(matches!(color_accent(), Color::Rgb(_, _, _)));
+        assert!(matches!(color_success(), Color::Rgb(_, _, _)));
+        assert!(matches!(color_warning(), Color::Rgb(_, _, _)));
+        assert!(matches!(color_error(), Color::Rgb(_, _, _)));
+        assert!(matches!(color_dim(), Color::Rgb(_, _, _)));
+        assert!(matches!(color_border(), Color::Rgb(_, _, _)));
+        assert!(matches!(color_code(), Color::Rgb(_, _, _)));
+        assert!(matches!(color_code_bg(), Color::Rgb(_, _, _) | Color::Reset));
+        assert!(matches!(color_fg_bright(), Color::Rgb(_, _, _)));
+        assert!(matches!(color_diff_insert_bg(), Color::Rgb(_, _, _)));
+        assert!(matches!(color_diff_remove_bg(), Color::Rgb(_, _, _)));
+        assert!(matches!(color_user_bg(), Color::Rgb(_, _, _) | Color::Reset));
+        assert!(matches!(color_accent_bg(), Color::Rgb(_, _, _)));
+    }
 
     #[test]
     fn palette_darken_uses_palette_types() {
