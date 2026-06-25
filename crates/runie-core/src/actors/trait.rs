@@ -16,18 +16,21 @@ use tokio::sync::{mpsc, oneshot};
 /// - `M`: The message type this actor receives (must be Send + Clone)
 /// - `E`: The event type this actor can emit to the bus (must be Send + Clone)
 ///
+/// # Implementation
+///
+/// Implement `run_body` to define the actor's async message loop. The `run`
+/// method boxes the future returned by `run_body` for `tokio::spawn`.
+///
 /// # Example
 /// ```ignore
 /// struct MyActor;
 /// impl Actor for MyActor {
 ///     type Msg = String;
 ///     type Event = MyEvent;
-///     
-///     fn run(self, rx: mpsc::Receiver<Self::Msg>, bus: EventBus<Self::Event>) -> impl Future<Output = ()> + Send {
-///         async move {
-///             while let Some(msg) = rx.recv().await {
-///                 bus.publish(MyEvent::Received(msg));
-///             }
+///
+///     async fn run_body(self, rx: mpsc::Receiver<Self::Msg>, bus: EventBus<Self::Event>) {
+///         while let Some(msg) = rx.recv().await {
+///             bus.publish(MyEvent::Received(msg));
 ///         }
 ///     }
 /// }
@@ -40,8 +43,7 @@ pub trait Actor: Send + 'static {
 
     /// Run the actor until the receiver closes or the task is cancelled.
     ///
-    /// The default implementation wraps the async body in a pin-boxed future
-    /// for easier composition.
+    /// Boxes the future returned by `run_body` for `tokio::spawn`.
     fn run(
         self,
         rx: mpsc::Receiver<Self::Msg>,
@@ -53,20 +55,14 @@ pub trait Actor: Send + 'static {
         Box::pin(self.run_body(rx, bus))
     }
 
-    /// Override this to implement the actor's behavior.
-    /// Default implementation runs until channel closes.
+    /// Implement the actor's async message loop.
+    ///
+    /// This is the only method that must be implemented; `run` handles boxing.
     fn run_body(
         self,
         rx: mpsc::Receiver<Self::Msg>,
         bus: crate::bus::EventBus<Self::Event>,
-    ) -> impl Future<Output = ()> + Send + 'static
-    where
-        Self: Sized,
-    {
-        async move {
-            let _ = (self, rx, bus);
-        }
-    }
+    ) -> impl Future<Output = ()> + Send + 'static;
 }
 
 /// Future type returned by Actor::run.
@@ -211,6 +207,31 @@ mod tests {
         }
     }
 
+    /// L1: `run_body` has no noop default body.
+    ///
+    /// The old default `async move { let _ = (self, rx, bus); }` was dead code —
+    /// every real actor overrides `run_body`. This test ensures no accidental regression.
+    #[test]
+    fn actor_trait_has_no_noop_default() {
+        let src = include_str!("trait.rs");
+        // The noop pattern appears only in the old default body.
+        // If it exists outside tests, the default leaked back in.
+        let in_tests = src.contains("#[cfg(test)]");
+        if in_tests {
+            let parts: std::borrow::Cow<[_]> = src.split("#[cfg(test)]").collect();
+            let non_test = parts[0];
+            assert!(
+                !non_test.contains("let _ = (self, rx, bus)"),
+                "`run_body` must not have a noop default body"
+            );
+        } else {
+            assert!(
+                !src.contains("let _ = (self, rx, bus)"),
+                "`run_body` must not have a noop default body"
+            );
+        }
+    }
+
     #[tokio::test]
     async fn actor_trait_runs_and_receives_messages() {
         let bus = EventBus::new(10);
@@ -269,12 +290,10 @@ mod tests {
 fn actor_trait_resolves_from_actors_module() {
     // This test only compiles if the re-exports from actors:: are correct.
     // We verify that the types are reachable via the actors module path.
-    fn _uses_actor(_: &dyn crate::actors::Actor<Msg = String, Event = usize>) {}
     fn _uses_handle(_: &crate::actors::ActorHandle) {}
     fn _uses_reply(_: crate::actors::Reply<i32>) {}
     // Suppress unused warnings — we only care that these paths resolve.
     fn _assert() {
-        _uses_actor as fn(&dyn crate::actors::Actor<Msg = String, Event = usize>);
         _uses_handle as fn(&crate::actors::ActorHandle);
         _uses_reply as fn(crate::actors::Reply<i32>);
     }

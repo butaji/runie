@@ -364,7 +364,7 @@
     "file": "tasks/session-actor-owns-session-state.md"
   },
   {
-    "status": "todo",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
     "milestone": "R4",
