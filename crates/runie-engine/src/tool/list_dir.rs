@@ -1,5 +1,6 @@
 //! ListDir tool — lists directory contents.
 
+use crate::tool::define::build_schema;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -10,6 +11,14 @@ use std::time::Instant;
 use tokio::fs;
 
 pub struct ListDirTool;
+
+/// Schema definition for list_dir tool.
+fn list_dir_schema() -> Value {
+    build_schema(
+        &[("path", "string", "Directory path to list (default: current directory)")],
+        &[],
+    )
+}
 
 #[async_trait]
 impl Tool for ListDirTool {
@@ -22,15 +31,7 @@ impl Tool for ListDirTool {
     }
 
     fn input_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Directory path to list (default: current directory)"
-                }
-            }
-        })
+        list_dir_schema()
     }
 
     fn is_read_only(&self) -> bool {

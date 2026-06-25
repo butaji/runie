@@ -1,5 +1,6 @@
 //! FetchDocs tool — fetches documentation from context7.com.
 
+use crate::tool::define::build_schema;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -10,6 +11,18 @@ pub struct FetchDocsTool;
 
 const SEARCH_URL: &str = "https://context7.com/api/v2/libs/search";
 const DOC_BASE: &str = "https://context7.com";
+
+/// Schema definition for fetch_docs tool.
+fn fetch_docs_schema() -> Value {
+    build_schema(
+        &[(
+            "library",
+            "string",
+            "Library name to fetch docs for (e.g., 'ramda', 'lodash')",
+        )],
+        &["library"],
+    )
+}
 
 #[async_trait]
 impl Tool for FetchDocsTool {
@@ -22,16 +35,7 @@ impl Tool for FetchDocsTool {
     }
 
     fn input_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "library": {
-                    "type": "string",
-                    "description": "Library name to fetch docs for (e.g., 'ramda', 'lodash')"
-                }
-            },
-            "required": ["library"]
-        })
+        fetch_docs_schema()
     }
 
     fn is_read_only(&self) -> bool {
