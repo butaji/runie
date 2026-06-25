@@ -174,30 +174,7 @@ impl Tool for FindDefinitionsTool {
             start,
             build_find_def_lock_error,
             build_find_def_not_initialized,
-            |picker| {
-                let query_str = build_query(&symbol, &glob);
-                let parsed = QueryParser::default().parse(&query_str);
-                let results = picker.grep(
-                    &parsed,
-                    &GrepSearchOptions {
-                        max_file_size: fff_search::MAX_FFFILE_SIZE,
-                        max_matches_per_file: 5,
-                        smart_case: true,
-                        file_offset: 0,
-                        page_limit: limit,
-                        mode: GrepMode::Regex,
-                        time_budget_ms: 5000,
-                        before_context: 0,
-                        after_context: 0,
-                        classify_definitions: true,
-                        trim_whitespace: true,
-                        abort_signal: None,
-                    },
-                );
-                let defs = map_definition_results(picker, &results, limit);
-                let indexed = FffSearchState::is_indexed();
-                build_definitions_output(&symbol, defs, indexed, start)
-            },
+            |picker| search_definitions(picker, &symbol, &glob, limit, start),
         )
     }
 }
@@ -237,6 +214,37 @@ fn build_find_def_not_initialized(symbol: String, duration: std::time::Duration)
         false,
         duration,
     )
+}
+
+fn search_definitions(
+    picker: &FilePicker,
+    symbol: &str,
+    glob: &str,
+    limit: usize,
+    start: Instant,
+) -> Result<ToolOutput> {
+    let query_str = build_query(symbol, glob);
+    let parsed = QueryParser::default().parse(&query_str);
+    let results = picker.grep(
+        &parsed,
+        &GrepSearchOptions {
+            max_file_size: fff_search::MAX_FFFILE_SIZE,
+            max_matches_per_file: 5,
+            smart_case: true,
+            file_offset: 0,
+            page_limit: limit,
+            mode: GrepMode::Regex,
+            time_budget_ms: 5000,
+            before_context: 0,
+            after_context: 0,
+            classify_definitions: true,
+            trim_whitespace: true,
+            abort_signal: None,
+        },
+    );
+    let defs = map_definition_results(picker, &results, limit);
+    let indexed = FffSearchState::is_indexed();
+    build_definitions_output(symbol, defs, indexed, start)
 }
 
 fn build_query(symbol: &str, glob: &str) -> String {

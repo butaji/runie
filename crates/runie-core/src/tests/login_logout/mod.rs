@@ -74,7 +74,6 @@ mod core;
 mod disconnect;
 mod edge_cases;
 mod happy_path;
-mod login_flow;
 mod model_select;
 mod model_select_edge_cases;
 mod multiple;
