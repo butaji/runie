@@ -54,3 +54,23 @@ jobs:
 
       - name: Run TUI e2e-style tests
         run: cargo test -p runie-tui toggle_e2e
+
+  schema:
+    name: Config Schema
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Rust
+        uses: ./.github/actions/rust-setup
+
+      - name: Check config schema is up to date
+        run: |
+          # Generate the schema to a temp file
+          cargo run -p runie-core --example write_config_schema --features schema -- config.schema.gen.json
+          # Compare with the checked-in schema
+          if ! diff -q config.schema.json config.schema.gen.json; then
+            echo "ERROR: config.schema.json is out of date with Config type."
+            echo "Run 'cargo run -p runie-core --example write_config_schema --features schema' to regenerate."
+            diff config.schema.json config.schema.gen.json
+            exit 1
+          fi
+          echo "config.schema.json is up to date."

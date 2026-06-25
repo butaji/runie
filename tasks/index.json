@@ -286,14 +286,14 @@
     },
     {
       "id": "generate-config-schema-from-code",
-      "status": "todo",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Configuration",
+      "priority": "P2",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/generate-config-schema-from-code.md",
-      "title": ""
+      "title": "Generate config.schema.json from code"
     },
     {
       "id": "generate-ui-elements-from-model",
