@@ -2,14 +2,17 @@
 //!
 //! Sub-enums are reduced to type aliases for backward compatibility, so old
 //! code such as `InputEvent::Submit` still resolves to `Event::Submit`.
+//!
+//! ## Event taxonomy
+//!
+//! See [`kind.rs`](kind) for the `EventKind` enum and `Event::kind()` method
+//! that classifies each variant as **Fact**, **Intent**, or **Control**.
 
 use serde::{Deserialize, Serialize};
 use strum::IntoStaticStr;
 
 use crate::model::ThinkingLevel;
 use crate::settings::SettingsCategory;
-
-
 
 /// The top-level event type for the entire application.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, IntoStaticStr)]

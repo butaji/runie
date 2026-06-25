@@ -12,8 +12,8 @@ use runie_core::message::ChatMessage;
 use runie_core::provider::Provider;
 use runie_core::tool_markers::strip_tool_markers;
 use runie_core::tool_parser::{parse_tool_calls_fallible, ParsedToolCall, ToolParseError};
+use runie_core::tool_stream::ToolStream;
 use serde_json::Value;
-use std::collections::HashMap;
 use std::ops::ControlFlow;
 use std::sync::{Arc, Mutex};
 
@@ -31,16 +31,10 @@ pub struct StreamedResponse {
     pub reasoning: Option<String>,
 }
 
-#[derive(Debug, Default)]
-struct ToolCallAccumulator {
-    name: String,
-    arguments: String,
-}
-
 struct StreamState {
     text: String,
     reasoning: Option<String>,
-    accumulators: HashMap<String, ToolCallAccumulator>,
+    tool_stream: ToolStream,
     tool_calls: Vec<ParsedToolCall>,
     command_id: String,
     emit: EmitFn,
@@ -52,7 +46,7 @@ impl StreamState {
         Self {
             text: String::new(),
             reasoning: None,
-            accumulators: HashMap::new(),
+            tool_stream: ToolStream::new(),
             tool_calls: Vec::new(),
             command_id: command_id.to_string(),
             emit,
@@ -103,36 +97,25 @@ impl StreamState {
     }
 
     fn on_tool_start(&mut self, id: String, name: String) -> ControlFlow<Result<()>> {
-        self.accumulators.entry(id).or_default().name = name;
+        self.tool_stream.start(&id, &name);
         ControlFlow::Continue(())
     }
 
     fn on_tool_input(&mut self, id: String, delta: String) -> ControlFlow<Result<()>> {
-        self.accumulators
-            .entry(id)
-            .or_default()
-            .arguments
-            .push_str(&delta);
+        self.tool_stream.append(&id, &delta);
         ControlFlow::Continue(())
     }
 
     fn on_tool_end(&mut self, id: String) -> ControlFlow<Result<()>> {
-        if let Some(acc) = self.accumulators.remove(&id) {
-            if let Some(call) = finish_tool_call(id, acc) {
-                self.tool_calls.push(call);
-            }
+        if let Some(call) = self.tool_stream.finish(&id) {
+            self.tool_calls.push(call);
         }
         ControlFlow::Continue(())
     }
 
     fn finish_remaining_tools(&mut self) {
-        let remaining: Vec<(String, ToolCallAccumulator)> =
-            self.accumulators.drain().collect();
-        for (id, acc) in remaining {
-            if let Some(call) = finish_tool_call(id, acc) {
-                self.tool_calls.push(call);
-            }
-        }
+        let calls = self.tool_stream.finish_all();
+        self.tool_calls.extend(calls);
     }
 
     fn into_response(mut self) -> StreamedResponse {
@@ -183,18 +166,6 @@ pub async fn stream_response(
     }
 
     Ok(state.into_response())
-}
-
-fn finish_tool_call(id: String, acc: ToolCallAccumulator) -> Option<ParsedToolCall> {
-    if acc.name.is_empty() {
-        return None;
-    }
-    let args: Value = serde_json::from_str(&acc.arguments).unwrap_or(Value::Null);
-    Some(ParsedToolCall {
-        name: acc.name,
-        args,
-        id: Some(id),
-    })
 }
 
 fn emit_now(emit: &EmitFn, event: Event) {

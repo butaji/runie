@@ -85,6 +85,7 @@ pub mod tokens;
 pub mod tool;
 pub mod tool_markers;
 pub mod tool_parser;
+pub mod tool_stream;
 pub use tool::{format_bytes, format_duration};
 pub mod permissions;
 pub mod trust;

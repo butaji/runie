@@ -39,7 +39,7 @@ impl fmt::Debug for ProviderMsg {
                 .field("provider", provider)
                 .field("model", model)
                 .finish(),
-            ProviderMsg::ValidateKey { provider, api_key, .. } => f
+            ProviderMsg::ValidateKey { provider, api_key: _, .. } => f
                 .debug_struct("ProviderMsg::ValidateKey")
                 .field("provider", provider)
                 .field("api_key", &"***")

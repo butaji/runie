@@ -35,5 +35,8 @@ mod names;
 pub mod to_durable;
 mod variants;
 pub mod from_provider_event;
+pub mod kind;
+
+pub use kind::EventKind;
 #[cfg(test)]
 mod variants_tests;
