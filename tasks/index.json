@@ -494,7 +494,7 @@
     },
     {
       "id": "merge-tool-status-state",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",

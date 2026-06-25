@@ -1,6 +1,6 @@
 # Merge ToolCallState and ToolStatus
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P2
