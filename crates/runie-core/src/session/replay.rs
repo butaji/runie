@@ -7,8 +7,8 @@
 use crate::event::{DurableCoreEvent, Event};
 use crate::message::ChatMessage;
 use crate::model::{AppState, Role};
-use crate::session_index::SessionMetadata;
-use crate::session_store::SessionStore;
+use crate::session::index::SessionMetadata;
+use crate::session::store::SessionStore;
 
 /// Convert a durable event to a bus event for replay.
 pub fn durable_to_event(event: &DurableCoreEvent) -> Option<Event> {
@@ -187,7 +187,7 @@ pub fn load_session(name: &str, state: &mut AppState) -> anyhow::Result<()> {
 
 fn restore_metadata(name: &str, state: &mut AppState, store: &SessionStore) -> anyhow::Result<()> {
     let data_dir = store.dir().parent().unwrap_or(store.dir()).to_path_buf();
-    let index = crate::session_index::SessionIndex::load(&data_dir).unwrap_or_default();
+    let index = crate::session::index::SessionIndex::load(&data_dir).unwrap_or_default();
     if let Some(meta) = index.get(name) {
         state.session.session_display_name = Some(meta.display_name.clone());
         state.session.session_created_at = meta.created_at;

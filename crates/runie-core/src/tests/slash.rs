@@ -2,7 +2,7 @@
 
 use crate::event::Event;
 use crate::model::AppState;
-use crate::session_store::SessionStore;
+use crate::session::store::SessionStore;
 use std::sync::Mutex;
 
 pub static ENV_LOCK: Mutex<()> = Mutex::new(());

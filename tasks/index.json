@@ -891,7 +891,7 @@
     },
     {
       "id": "extract-ci-setup-action",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
@@ -1168,7 +1168,7 @@
     },
     {
       "id": "group-session-modules-into-dir",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Sessions",
       "priority": "P1",

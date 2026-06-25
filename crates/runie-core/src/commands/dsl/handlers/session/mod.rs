@@ -244,7 +244,7 @@ fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
             return CommandResult::None;
         }
     }
-    match crate::session_replay::list_sessions() {
+    match crate::session::replay::list_sessions() {
         Ok(sessions) if sessions.is_empty() => {
             CommandResult::Message("No saved sessions. Use /save name to create one.".into())
         }
@@ -383,7 +383,7 @@ fn handle_share(_: &mut AppState, _: &str) -> CommandResult {
 
 fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {
     match find_most_recent() {
-        Some(name) => match crate::session_replay::load_session(&name, state) {
+        Some(name) => match crate::session::replay::load_session(&name, state) {
             Ok(_) => CommandResult::Message(format!("Loaded '{}'.", name)),
             Err(_) => CommandResult::Message("Could not load session.".into()),
         },
@@ -392,8 +392,8 @@ fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 fn find_most_recent() -> Option<String> {
-    let names = crate::session_replay::list_sessions().ok()?;
-    let store = crate::session_store::SessionStore::default_store()?;
+    let names = crate::session::replay::list_sessions().ok()?;
+    let store = crate::session::store::SessionStore::default_store()?;
     let mut most_recent = None;
     let mut most_recent_time = 0.0f64;
     for name in names {
@@ -408,11 +408,11 @@ fn find_most_recent() -> Option<String> {
 }
 
 fn load_session_metadata(
-    store: &crate::session_store::SessionStore,
+    store: &crate::session::store::SessionStore,
     name: &str,
-) -> anyhow::Result<crate::session_index::SessionMetadata> {
+) -> anyhow::Result<crate::session::index::SessionMetadata> {
     let data_dir = store.dir().parent().unwrap_or(store.dir()).to_path_buf();
-    let index = crate::session_index::SessionIndex::load(&data_dir)?;
+    let index = crate::session::index::SessionIndex::load(&data_dir)?;
     index
         .get(name)
         .cloned()

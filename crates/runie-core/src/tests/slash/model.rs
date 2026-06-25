@@ -168,7 +168,7 @@ fn save_creates_session_file() {
     exec(&mut state, "/save mysession"); // Opens form with pre-filled name
     state.update(Event::submit()); // Submits the form
 
-    let redb_path = crate::session_store::SessionStore::new(store.dir().to_path_buf()).path("mysession");
+    let redb_path = crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("mysession");
     assert!(redb_path.exists(), "session file created");
 
     let sys_msgs: Vec<_> = state
@@ -198,10 +198,10 @@ fn save_preserves_messages_provider_model() {
     exec(&mut state, "/save preserved"); // Opens form with pre-filled name
     state.update(Event::submit()); // Submits the form
 
-    let redb_store = crate::session_store::SessionStore::new(store.dir().to_path_buf());
+    let redb_store = crate::session::store::SessionStore::new(store.dir().to_path_buf());
     let events = redb_store.load_events("preserved").unwrap();
     let mut loaded = crate::model::AppState::default();
-    crate::session_replay::replay_events(&mut loaded, &events);
+    crate::session::replay::replay_events(&mut loaded, &events);
     assert_eq!(loaded.config.current_provider, "openai");
     assert_eq!(loaded.config.current_model, "gpt-4o");
     assert_eq!(loaded.session.messages.len(), 1);

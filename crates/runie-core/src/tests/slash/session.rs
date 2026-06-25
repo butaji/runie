@@ -80,7 +80,7 @@ fn save_trims_whitespace() {
     state.update(Event::submit()); // Submits the form
 
     // Should save with trimmed name
-    let redb_path = crate::session_store::SessionStore::new(store.dir().to_path_buf()).path("trimmed");
+    let redb_path = crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("trimmed");
     assert!(redb_path.exists(), "whitespace should be trimmed");
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
@@ -208,7 +208,7 @@ fn resume_loads_most_recent_session() {
         parts: vec![Part::Text { content: "older".into() }],
         ..Default::default()
     });
-    crate::session_replay::save_session("older", &older).unwrap();
+    crate::session::replay::save_session("older", &older).unwrap();
 
     // Save a newer session
     let mut newer = fresh_state();
@@ -221,7 +221,7 @@ fn resume_loads_most_recent_session() {
         parts: vec![Part::Text { content: "newer".into() }],
         ..Default::default()
     });
-    crate::session_replay::save_session("newer", &newer).unwrap();
+    crate::session::replay::save_session("newer", &newer).unwrap();
 
     let mut state = fresh_state();
     exec(&mut state, "/resume");

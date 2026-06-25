@@ -21,10 +21,10 @@ fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
     state.update(DialogEvent::PaletteSelect);
 }
 
-fn tmp_store() -> crate::session_store::SessionStore {
+fn tmp_store() -> crate::session::store::SessionStore {
     let dir = std::env::temp_dir().join(format!("runie_test_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    crate::session_store::SessionStore::new(dir)
+    crate::session::store::SessionStore::new(dir)
 }
 
 #[test]
@@ -119,7 +119,7 @@ fn form_submit_executes_command() {
     state.update(Event::submit());
     // Should close dialog and execute save
     assert!(state.open_dialog.is_none(), "dialog should close");
-    let redb_path = crate::session_store::SessionStore::new(store.dir().to_path_buf()).path("myses");
+    let redb_path = crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("myses");
     assert!(redb_path.exists(), "session should be saved");
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }

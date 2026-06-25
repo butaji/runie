@@ -9,10 +9,10 @@
 //! Wrap `SessionStore` methods in `tokio::task::spawn_blocking` for async contexts.
 
 /// Alias for backward compatibility with SessionActor.
-pub use crate::session_index::SessionMetadata as SessionMeta;
+pub use crate::session::index::SessionMetadata as SessionMeta;
 
 use crate::event::durable::DurableCoreEvent;
-use crate::session_index::{SessionIndex, SessionMetadata};
+use crate::session::index::{SessionIndex, SessionMetadata};
 use redb::{Database, ReadableTable, TableDefinition};
 use std::fs;
 use std::io::{BufRead, BufReader};

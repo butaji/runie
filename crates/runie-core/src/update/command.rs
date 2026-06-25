@@ -48,7 +48,7 @@ fn run_load_command(state: &mut AppState, name: &str) {
         return;
     }
     use crate::commands::CommandResult;
-    let result = crate::session_replay::load_session(name, state)
+    let result = crate::session::replay::load_session(name, state)
         .map(|_| CommandResult::Message(format!("Session '{}' loaded.", name)))
         .unwrap_or_else(|_| {
             CommandResult::Message(format!(
@@ -69,7 +69,7 @@ fn run_save_command(state: &mut AppState, name: &str) {
         }
     }
     use crate::commands::CommandResult;
-    let result = crate::session_replay::save_session(name, state)
+    let result = crate::session::replay::save_session(name, state)
         .map(|_| CommandResult::Message(format!("Session '{}' saved.", name)))
         .unwrap_or_else(|e| CommandResult::Message(format!("Could not save session: {}", e)));
     dialog::process_command_result(state, result);
@@ -80,7 +80,7 @@ fn run_delete_command(state: &mut AppState, name: &str) {
         return;
     }
     use crate::commands::CommandResult;
-    let result = crate::session_replay::delete_session(name)
+    let result = crate::session::replay::delete_session(name)
         .map(|_| CommandResult::Message(format!("Session '{}' deleted.", name)))
         .unwrap_or_else(|_| {
             CommandResult::Message(format!(

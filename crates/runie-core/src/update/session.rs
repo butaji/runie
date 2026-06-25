@@ -34,7 +34,7 @@ impl AppState {
                 self.add_system_msg(format!("Forked at message {}.", message_index));
             }
         } else {
-            let mut tree = crate::session_tree::SessionTree::from_messages(&self.session.messages);
+            let mut tree = crate::session::tree::SessionTree::from_messages(&self.session.messages);
             if let Some(path) = tree.fork_at(message_index) {
                 tree.navigate_to(&path);
                 self.session.session_tree = Some(tree);
@@ -45,7 +45,7 @@ impl AppState {
 
     pub(super) fn clone_session(&mut self) {
         let tree = self.session.session_tree.clone().unwrap_or_else(|| {
-            crate::session_tree::SessionTree::from_messages(&self.session.messages)
+            crate::session::tree::SessionTree::from_messages(&self.session.messages)
         });
         self.session.session_tree = Some(tree);
         self.add_system_msg("Session cloned at current position.".into());

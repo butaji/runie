@@ -7,7 +7,7 @@ use std::sync::Once;
 
 use runie_core::config::Config;
 use runie_core::permissions::{AutoAllowSink, PermissionGate, PermissionManager};
-use runie_core::session_store::SessionStore;
+use runie_core::session::store::SessionStore;
 use tempfile::TempDir;
 
 static SET_MOCK_HOME: Once = Once::new();

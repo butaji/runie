@@ -163,7 +163,7 @@ fn import_loads_file() {
 
 #[test]
 fn roundtrip_save_load_preserves_display_name() {
-    use crate::session_replay::{load_session, save_snapshot};
+    use crate::session::replay::{load_session, save_snapshot};
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let dir = std::env::temp_dir().join(format!("runie_roundtrip_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);

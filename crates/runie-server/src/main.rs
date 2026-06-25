@@ -225,7 +225,7 @@ fn handle_list_models() -> Value {
 }
 
 async fn handle_list_sessions() -> Result<Value> {
-    let store = runie_core::session_store::SessionStore::default_store()
+    let store = runie_core::session::store::SessionStore::default_store()
         .ok_or_else(|| anyhow::anyhow!("No data directory"))?;
     let sessions = store.list_async().await?;
     Ok(serde_json::json!({ "sessions": sessions }))

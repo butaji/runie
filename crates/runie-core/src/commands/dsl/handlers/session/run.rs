@@ -60,7 +60,7 @@ pub fn run_fork(state: &mut AppState, index_raw: &str) {
         return;
     }
     let mut tree = state.session.session_tree.take().unwrap_or_else(|| {
-        crate::session_tree::SessionTree::from_messages(&state.session.messages)
+        crate::session::tree::SessionTree::from_messages(&state.session.messages)
     });
     match tree.fork_at(message_index) {
         Some(path) => {

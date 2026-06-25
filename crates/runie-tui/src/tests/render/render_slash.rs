@@ -50,7 +50,7 @@ fn save_test_session(name: &str) {
     };
     let mut state = AppState::default();
     state.restore_session(&session);
-    runie_core::session_replay::save_session(name, &state).unwrap();
+    runie_core::session::replay::save_session(name, &state).unwrap();
 }
 
 #[test]

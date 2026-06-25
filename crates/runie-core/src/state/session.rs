@@ -4,7 +4,7 @@ use crate::message::{now, ChatMessage};
 use crate::model::ThinkingLevel;
 use crate::path_complete::PathCompletion;
 use crate::scoped_model::ScopedModel;
-use crate::session_tree::SessionTree;
+use crate::session::tree::SessionTree;
 
 use super::CommandUsage;
 

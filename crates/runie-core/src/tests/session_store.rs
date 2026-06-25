@@ -1,5 +1,5 @@
 use crate::event::DurableCoreEvent;
-use crate::session_store::{SessionStore, TABLE_EVENTS};
+use crate::session::store::{SessionStore, TABLE_EVENTS};
 
 fn test_store() -> SessionStore {
     let dir = tempfile::tempdir().unwrap();
@@ -141,8 +141,8 @@ fn redb_list() {
 
 #[test]
 fn redb_meta_round_trips() {
-    use crate::session_index::SessionMetadata;
-    use crate::session_store::TABLE_META;
+    use crate::session::index::SessionMetadata;
+    use crate::session::store::TABLE_META;
 
     let store = test_store();
     let sid = "test-meta";

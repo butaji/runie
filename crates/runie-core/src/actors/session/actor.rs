@@ -15,9 +15,9 @@ use crate::bus::EventBus;
 use crate::event::{DurableCoreEvent, Event};
 use crate::message::now;
 use crate::session::Session;
-use crate::session_index::{SessionIndex, SessionMetadata};
-use crate::session_replay::session_to_durable_events;
-use crate::session_store::SessionStore;
+use crate::session::index::{SessionIndex, SessionMetadata};
+use crate::session::replay::session_to_durable_events;
+use crate::session::store::SessionStore;
 use crate::trust::{TrustDecision, TrustManager};
 
 use super::messages::{SessionActorHandle, SessionMsg};

@@ -127,7 +127,7 @@ fn sync_scoped_models_with_config(state: &mut AppState) {
 pub fn open_session_tree_dialog(state: &mut AppState) {
     let items: Vec<(usize, String, crate::Event)> = match state.session.session_tree.as_ref() {
         Some(tree) => tree
-            .filtered_walk(crate::session_tree::SessionTreeFilter::All)
+            .filtered_walk(crate::session::tree::SessionTreeFilter::All)
             .into_iter()
             .map(|(depth, node)| {
                 let preview = format!(

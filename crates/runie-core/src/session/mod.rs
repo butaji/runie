@@ -1,6 +1,11 @@
 //! Session snapshot DTO — serializable conversation state used for
 //! import/export and `/restore`. This is *not* a persistence backend;
-//! runtime save/load use `crate::session_store::SessionStore`.
+//! runtime save/load use `crate::session::store::SessionStore`.
+
+pub mod index;
+pub mod replay;
+pub mod store;
+pub mod tree;
 
 use crate::model::ChatMessage;
 use serde::{Deserialize, Serialize};
@@ -20,7 +25,7 @@ pub struct Session {
     pub thinking_level: crate::model::ThinkingLevel,
     pub read_only: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub session_tree: Option<crate::session_tree::SessionTree>,
+    pub session_tree: Option<crate::session::tree::SessionTree>,
 }
 
 impl Session {

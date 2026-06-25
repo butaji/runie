@@ -107,9 +107,9 @@ fn apply_session_loaded(
     state: &mut AppState,
     name: &str,
     events: &Box<Vec<crate::event::DurableCoreEvent>>,
-    metadata: &Option<Box<crate::session_index::SessionMetadata>>,
+    metadata: &Option<Box<crate::session::index::SessionMetadata>>,
 ) {
-    crate::session_replay::replay_events(state, events);
+    crate::session::replay::replay_events(state, events);
     if let Some(meta) = metadata {
         state.session.session_display_name = Some(meta.display_name.clone());
         state.session.session_created_at = meta.created_at;

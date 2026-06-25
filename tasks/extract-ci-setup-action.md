@@ -1,6 +1,6 @@
 # Extract composite CI setup action
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P1
@@ -14,9 +14,9 @@
 
 ## Acceptance Criteria
 
-- [ ] A composite action at `.github/actions/rust-setup/action.yml` (or similar) encapsulates checkout, toolchain, and cache.
-- [ ] All CI jobs use the composite action.
-- [ ] CI still passes.
+- [x] A composite action at `.github/actions/rust-setup/action.yml` (or similar) encapsulates checkout, toolchain, and cache.
+- [x] All CI jobs use the composite action.
+- [x] CI still passes.
 
 ## Tests
 

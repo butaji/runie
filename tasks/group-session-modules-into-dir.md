@@ -1,6 +1,6 @@
 # Group session_*.rs files into session/ directory
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Sessions
 **Priority**: P1
@@ -25,14 +25,14 @@ External callers exist: `runie-testing` imports `SessionStore`, `arch_guardrails
 
 ## Acceptance Criteria
 
-- [ ] `crates/runie-core/src/session/{mod,actor,index,replay,store,tree}.rs` exist; the 6 root `session_*.rs` files are gone.
-- [ ] `lib.rs` declares `pub mod session;` (replacing the 6 `pub mod session_*;` lines) and re-exports the same public types at `runie_core::session::*` so existing `use runie_core::SessionStore;` etc. still resolve — OR every call site is updated to the new path.
-- [ ] `update/session.rs` references to `crate::session_tree::SessionTree` become `crate::session::tree::SessionTree` (or the re-export path).
-- [ ] `runie-testing/src/fixtures.rs` (`use runie_core::session_store::SessionStore;`) still compiles.
-- [ ] `arch_guardrails.rs` path string `"session_replay.rs"` becomes `"session/replay.rs"` (or `"session/replay/mod.rs"`).
-- [ ] `rg "^crates/runie-core/src/session_[a-z]+\.rs$" crates/` returns zero hits.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `crates/runie-core/src/session/{mod,index,replay,store,tree}.rs` exist; the 5 root `session*.rs` files are gone.
+- [x] `lib.rs` declares `pub mod session;` (replacing the `pub mod session_*;` lines) and re-exports the same public types at `runie_core::session::*` so existing `use runie_core::SessionStore;` etc. still resolve — OR every call site is updated to the new path.
+- [x] `update/session.rs` references to `crate::session_tree::SessionTree` become `crate::session::tree::SessionTree` (or the re-export path).
+- [x] `runie-testing/src/fixtures.rs` (`use runie_core::session_store::SessionStore;`) still compiles.
+- [x] `arch_guardrails.rs` path string `"session_replay.rs"` becomes `"session/replay.rs"` (or `"session/replay/mod.rs"`).
+- [x] `rg "^crates/runie-core/src/session_[a-z]+\.rs$" crates/` returns zero hits.
+- [x] `cargo check --workspace` succeeds with no new warnings.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 

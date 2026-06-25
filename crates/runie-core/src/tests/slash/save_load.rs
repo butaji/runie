@@ -4,7 +4,7 @@ use crate::event::{DialogEvent, InputEvent};
 use crate::message::Part;
 use crate::model::{ChatMessage, Role};
 use crate::session::Session;
-use crate::session_replay::save_snapshot;
+use crate::session::replay::save_snapshot;
 use crate::tests::fresh_state;
 
 /// Open palette and select a command by name

@@ -4,7 +4,7 @@ use crate::event::Event;
 use crate::event::{DialogEvent, InputEvent, SessionEvent};
 use crate::message::{ChatMessage, Part, Role};
 use crate::model::AppState;
-use crate::session_tree::{SessionTree, SessionTreeFilter};
+use crate::session::tree::{SessionTree, SessionTreeFilter};
 
 fn msg(role: Role, content: &str) -> ChatMessage {
     ChatMessage {

@@ -1,8 +1,8 @@
 use runie_core::event::{DialogEvent, ModelConfigEvent};
 use runie_core::model::ThinkingLevel;
 use runie_core::session::Session;
-use runie_core::session_replay::{replay_events, state_to_durable_events};
-use runie_core::session_store::SessionStore;
+use runie_core::session::replay::{replay_events, state_to_durable_events};
+use runie_core::session::store::SessionStore;
 use runie_core::{AppState, Event};
 
 #[test]

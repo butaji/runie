@@ -82,7 +82,7 @@ impl AppState {
     fn refresh_session_tree_items(&mut self) {
         let filter = match &self.open_dialog {
             Some(crate::commands::DialogState::SessionTree(_)) => {
-                crate::session_tree::SessionTreeFilter::All
+                crate::session::tree::SessionTreeFilter::All
             }
             _ => {
                 self.view.cached_session_tree_valid = false;
