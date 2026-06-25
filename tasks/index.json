@@ -147,17 +147,6 @@
       "title": ""
     },
     {
-      "id": "consolidate-tiny-binary-crates",
-      "status": "done",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/consolidate-tiny-binary-crates.md",
-      "title": ""
-    },
-    {
       "id": "consolidate-update-dialog-files",
       "status": "todo",
       "milestone": "?",
@@ -248,15 +237,14 @@
     },
     {
       "id": "drop-thiserror-and-async-trait-deps",
-      "status": "done",
+      "status": "todo",
       "milestone": "?",
       "category": "?",
       "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/drop-thiserror-and-async-trait-deps.md",
-      "title": "",
-      "notes": "thiserror removed; async-trait kept for dyn-safe traits (Tool, ApprovalSink, HarnessSkill, PermissionPolicy)"
+      "title": ""
     },
     {
       "id": "env-actor-owns-git-cwd",
@@ -522,22 +510,6 @@
       "title": ""
     },
     {
-      "id": "r5-populate-parts-streaming",
-      "status": "todo",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [
-        "r5-add-lifecycle-events"
-      ],
-      "blocks": [
-        "r5-per-channel-decoders",
-        "r5-parts-canonical-migration"
-      ],
-      "file": "tasks/r5-populate-parts-streaming.md",
-      "title": ""
-    },
-    {
       "id": "r5-provider-protocol-trait",
       "status": "todo",
       "milestone": "?",
@@ -585,7 +557,7 @@
     },
     {
       "id": "reconsider-tiktoken-rs",
-      "status": "done",
+      "status": "todo",
       "milestone": "?",
       "category": "?",
       "priority": "?",
@@ -661,15 +633,14 @@
     },
     {
       "id": "rename-update-dialog-panel",
-      "status": "done",
+      "status": "todo",
       "milestone": "?",
       "category": "?",
       "priority": "?",
       "depends_on": [],
       "blocks": [],
       "file": "tasks/rename-update-dialog-panel.md",
-      "title": "",
-      "notes": "only one panel.rs exists in update/dialog/"
+      "title": ""
     },
     {
       "id": "replace-git2-with-cli",
