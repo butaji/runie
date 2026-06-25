@@ -315,6 +315,7 @@ fn needs_appstate_lint(rel_path: &str) -> bool {
         "retry.rs",
         "session/replay.rs",
         "login_flow/validation.rs",
+        "model/state/input.rs",
     ];
     !is_test_file(rel_path)
         && !rel_path.contains("/benches/")
