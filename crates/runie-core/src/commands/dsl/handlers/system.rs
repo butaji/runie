@@ -223,7 +223,7 @@ fn open_theme_selector(state: &mut AppState) {
     state.open_dialog = Some(crate::commands::DialogState::PanelStack(PanelStack::new(
         panel,
     )));
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 fn handle_approve(_: &mut AppState, _: &str) -> CommandResult {

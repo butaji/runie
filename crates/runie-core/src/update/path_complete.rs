@@ -17,14 +17,14 @@ impl AppState {
         }
         self.completion.path_suggestions = Some(suggestions);
         self.completion.path_selected = Some(0);
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(crate) fn path_completion_up(&mut self) {
         if let Some(ref items) = self.completion.path_suggestions {
             let sel = self.completion.path_selected.unwrap_or(0);
             self.completion.path_selected = Some(if sel == 0 { items.len() - 1 } else { sel - 1 });
-            self.mark_dirty();
+            self.view.dirty = true;
         }
     }
 
@@ -32,7 +32,7 @@ impl AppState {
         if let Some(ref items) = self.completion.path_suggestions {
             let sel = self.completion.path_selected.unwrap_or(0);
             self.completion.path_selected = Some((sel + 1) % items.len());
-            self.mark_dirty();
+            self.view.dirty = true;
         }
     }
 
@@ -51,13 +51,13 @@ impl AppState {
         self.replace_path_prefix(&prefix, &replacement);
         self.completion.path_suggestions = None;
         self.completion.path_selected = None;
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(super) fn path_completion_close(&mut self) {
         self.completion.path_suggestions = None;
         self.completion.path_selected = None;
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     fn replace_path_prefix(&mut self, prefix: &str, replacement: &str) {

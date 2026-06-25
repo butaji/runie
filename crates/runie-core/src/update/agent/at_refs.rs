@@ -33,6 +33,6 @@ impl AppState {
         // Clear completion state
         self.completion.at_suggestions = None;
         self.completion.at_selected = None;
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 }

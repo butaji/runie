@@ -52,7 +52,7 @@ pub fn update_panel_stack(
         return result;
     }
     handle_panel_filter(state, &event, stack);
-    state.mark_dirty();
+    state.view.dirty = true;
     PanelUpdateResult::Ignored
 }
 
@@ -160,19 +160,19 @@ fn handle_panel_filter(state: &mut AppState, event: &Event, stack: &mut PanelSta
 fn pop_dialog_or_close(state: &mut AppState, root_closable: bool) -> bool {
     if !root_closable {
         // The root panel has asked to stay open.
-        state.mark_dirty();
+        state.view.dirty = true;
         return false;
     }
     if let Some(previous) = state.dialog_back_stack.pop() {
         state.open_dialog = Some(previous);
-        state.mark_dirty();
+        state.view.dirty = true;
         false
     } else {
         state.open_dialog = None;
         // NOTE: Do NOT reset input_receiver here. handle_vim_dialog_back()
         // checks input_receiver == Dialog to know a dialog was closed and
         // should NOT trigger vim-nav. It will reset input_receiver itself.
-        state.mark_dirty();
+        state.view.dirty = true;
         true
     }
 }
@@ -238,7 +238,7 @@ fn handle_panel_action(state: &mut AppState, action: ItemAction, stack: &mut Pan
         ItemAction::Close => {
             state.open_dialog = None;
             state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-            state.mark_dirty();
+            state.view.dirty = true;
             true
         }
         ItemAction::Emit(evt) => handle_emit_action(state, stack, evt),
@@ -274,7 +274,7 @@ fn handle_emit_action(state: &mut AppState, stack: &mut PanelStack, evt: crate::
         state.open_dialog = None;
         state.view.input_receiver = crate::model::InputReceiver::ChatInput;
     }
-    state.mark_dirty();
+    state.view.dirty = true;
     // For RunPaletteCommand, pass the panel filter as args
     let evt = if let crate::Event::RunPaletteCommand { name, args } = &evt {
         if args.is_empty() {
@@ -305,7 +305,7 @@ fn close_panel_on_activate(state: &mut AppState, stack: &mut PanelStack) -> bool
     if !keep_open {
         state.open_dialog = None;
         state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-        state.mark_dirty();
+        state.view.dirty = true;
     }
     !keep_open
 }
@@ -338,7 +338,7 @@ fn toggle_checkbox_item(state: &mut AppState, item: &mut PanelItem) -> bool {
             // intentionally ignored: other item actions are handled elsewhere
             _ => {}
         }
-        state.mark_dirty();
+        state.view.dirty = true;
         true
     } else {
         false

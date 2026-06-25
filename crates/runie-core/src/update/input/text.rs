@@ -57,7 +57,7 @@ impl AppState {
         self.clear_redo();
         self.handle_at_trigger();
         self.clamp_input_scroll();
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(crate) fn delete_before_cursor(&mut self) {
@@ -87,7 +87,7 @@ impl AppState {
         self.clear_redo();
         self.handle_at_trigger();
         self.clamp_input_scroll();
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     fn remove_grapheme_before_cursor(&mut self) {
@@ -99,7 +99,7 @@ impl AppState {
         self.clear_redo();
         self.handle_at_trigger();
         self.clamp_input_scroll();
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     fn delete_leading_newline(&mut self) {
@@ -109,7 +109,7 @@ impl AppState {
             self.clear_redo();
             self.handle_at_trigger();
             self.clamp_input_scroll();
-            self.mark_dirty();
+            self.view.dirty = true;
         } else {
             self.input.input_flash = 3;
         }
@@ -128,7 +128,7 @@ impl AppState {
         self.clear_redo();
         self.handle_at_trigger();
         self.clamp_input_scroll();
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(crate) fn delete_to_end(&mut self) {
@@ -138,7 +138,7 @@ impl AppState {
             self.clear_redo();
             self.handle_at_trigger();
             self.clamp_input_scroll();
-            self.mark_dirty();
+            self.view.dirty = true;
         } else {
             self.input.input_flash = 3;
         }
@@ -152,7 +152,7 @@ impl AppState {
             self.clear_redo();
             self.handle_at_trigger();
             self.clamp_input_scroll();
-            self.mark_dirty();
+            self.view.dirty = true;
         } else {
             self.input.input_flash = 3;
         }
@@ -169,7 +169,7 @@ impl AppState {
             self.clear_redo();
             self.handle_at_trigger();
             self.clamp_input_scroll();
-            self.mark_dirty();
+            self.view.dirty = true;
         } else {
             self.input.input_flash = 3;
         }
@@ -194,7 +194,7 @@ impl AppState {
             self.input.cursor_pos = pos;
             self.handle_at_trigger();
             self.clamp_input_scroll();
-            self.mark_dirty();
+            self.view.dirty = true;
         }
     }
 
@@ -207,7 +207,7 @@ impl AppState {
             self.input.cursor_pos = pos;
             self.handle_at_trigger();
             self.clamp_input_scroll();
-            self.mark_dirty();
+            self.view.dirty = true;
         }
     }
 
@@ -225,7 +225,7 @@ impl AppState {
         self.clear_redo();
         self.handle_at_trigger();
         self.clamp_input_scroll();
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(crate) fn paste_image(&mut self) {
@@ -233,7 +233,7 @@ impl AppState {
             Some(bytes) => {
                 let uri = crate::clipboard_image::to_data_uri(&bytes);
                 self.session.image_attachments.push(uri);
-                self.mark_dirty();
+                self.view.dirty = true;
             }
             None => {
                 self.input.input_flash = 3;
@@ -255,7 +255,7 @@ impl AppState {
         self.input.cursor_pos += 1;
         self.clear_redo();
         self.clamp_input_scroll();
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(crate) fn push_input(&mut self, c: char) {
@@ -275,7 +275,7 @@ impl AppState {
                 self.input.input.clear();
                 self.input.cursor_pos = 0;
                 crate::update::dialog::open_command_palette_with_filter(self, &initial_filter);
-                self.mark_dirty();
+                self.view.dirty = true;
                 return;
             }
             if c == '@' {
@@ -368,7 +368,7 @@ impl AppState {
         if let Some(result) = self.handle_slash(&content) {
             self.apply_command_result(result);
             self.view.scroll = 0;
-            self.mark_dirty();
+            self.view.dirty = true;
             return;
         }
         if self.agent.turn_active {
@@ -377,7 +377,7 @@ impl AppState {
                 kind: crate::model::QueuedMessageKind::Steering,
             });
             self.view.scroll = 0;
-            self.mark_dirty();
+            self.view.dirty = true;
             return;
         }
         let id = self.next_id();
@@ -409,7 +409,7 @@ impl AppState {
             },
             crate::commands::CommandResult::OpenPanelStack(stack) => {
                 self.open_dialog = Some(crate::commands::DialogState::PanelStack(*stack));
-                self.mark_dirty();
+                self.view.dirty = true;
             }
             crate::commands::CommandResult::None => {}
         }
@@ -444,7 +444,7 @@ impl AppState {
         self.input.input = self.input.input_history[pos].clone();
         self.input.cursor_pos = self.input.input.len();
         self.clamp_input_scroll();
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(crate) fn history_next(&mut self) {
@@ -465,6 +465,6 @@ impl AppState {
             self.input.cursor_pos = self.input.input.len();
         }
         self.clamp_input_scroll();
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 }

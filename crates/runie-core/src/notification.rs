@@ -48,7 +48,7 @@ impl Notification {
         state.transient_until = self
             .duration_secs
             .map(|secs| std::time::Instant::now() + std::time::Duration::from_secs_f64(secs));
-        state.mark_dirty();
+        state.view.dirty = true;
     }
 }
 
@@ -97,7 +97,7 @@ pub fn dismiss(state: &mut AppState) {
     state.transient_message = None;
     state.transient_level = None;
     state.transient_until = None;
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 #[cfg(test)]

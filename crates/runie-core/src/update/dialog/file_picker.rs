@@ -87,5 +87,5 @@ pub(crate) fn rebuild_file_picker(state: &mut AppState) {
     };
 
     state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(new_panel)));
-    state.mark_dirty();
+    state.view.dirty = true;
 }

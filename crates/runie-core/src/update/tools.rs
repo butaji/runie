@@ -119,7 +119,7 @@ pub fn update(state: &mut AppState, event: EditEvent) {
                     original.clone(),
                     proposed.clone(),
                 ));
-            state.mark_dirty();
+            state.view.dirty = true;
         }
         EditEvent::ApproveEdit => state.approve_edits(),
         EditEvent::RejectEdit => state.reject_edits(),

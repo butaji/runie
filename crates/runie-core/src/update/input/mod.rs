@@ -99,7 +99,7 @@ fn permission_input_event(state: &mut AppState, event: InputEvent) {
     if let Ok(registry) = state.approval_registry.lock() {
         registry.resolve(&req.request_id, action);
     }
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 fn handle_mouse_click_event(state: &mut AppState, row: u16, col: u16, button: &str) {
@@ -156,20 +156,20 @@ fn handle_escape(state: &mut AppState) {
     if state.agent.turn_active {
         state.stop_turn();
         state.view.vim_nav_pending = true;
-        state.mark_dirty();
+        state.view.dirty = true;
         return;
     }
     if state.view.vim_nav_pending {
         state.view.vim_nav_pending = false;
         state.view.vim_nav_mode = true;
         state.view.selected_post = state.current_bottom_post_index();
-        state.mark_dirty();
+        state.view.dirty = true;
         return;
     }
     if !state.view.vim_nav_mode {
         state.view.vim_nav_mode = true;
         state.view.selected_post = state.current_bottom_post_index();
-        state.mark_dirty();
+        state.view.dirty = true;
     }
 }
 
@@ -191,7 +191,7 @@ fn handle_mouse_click(state: &mut AppState, row: u16, col: u16, button: &str) {
                 if state.view.vim_nav_mode {
                     state.view.vim_nav_mode = false;
                 }
-                state.mark_dirty();
+                state.view.dirty = true;
             }
             crate::snapshot::MouseTarget::Feed => {
                 // Left-click in feed: toggle collapse-all (same as Ctrl+O).

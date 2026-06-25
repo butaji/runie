@@ -48,7 +48,7 @@ impl AppState {
             self.input.tab_complete_prefix = None;
             self.input.tab_complete_matches.clear();
             self.input.tab_complete_index = 0;
-            self.mark_dirty();
+            self.view.dirty = true;
         }
     }
 
@@ -75,7 +75,7 @@ impl AppState {
         self.input.tab_complete_prefix = None;
         self.input.tab_complete_matches.clear();
         self.input.tab_complete_index = 0;
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     /// Handle Tab key for @ file reference suggestions.
@@ -86,7 +86,7 @@ impl AppState {
             _ => {
                 // No suggestions available, just flash
                 self.input.input_flash = 3;
-                self.mark_dirty();
+                self.view.dirty = true;
                 return;
             }
         };
@@ -100,7 +100,7 @@ impl AppState {
         let current = self.completion.at_selected.unwrap_or(0);
         let next = (current + 1) % suggestions.len();
         self.completion.at_selected = Some(next);
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     #[allow(dead_code)]

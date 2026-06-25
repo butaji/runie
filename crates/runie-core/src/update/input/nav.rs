@@ -47,14 +47,14 @@ impl AppState {
         let (line_start, _) = self.get_current_line_bounds();
         self.input.cursor_pos = line_start;
         self.clamp_input_scroll();
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(crate) fn move_cursor_to_line_end(&mut self) {
         let (_, line_end) = self.get_current_line_bounds();
         self.input.cursor_pos = line_end;
         self.clamp_input_scroll();
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(crate) fn move_cursor_up(&mut self) {
@@ -76,7 +76,7 @@ impl AppState {
         let prev_line_len = prev_line_end - prev_line_start;
         self.input.cursor_pos = prev_line_start + current_col.min(prev_line_len);
         self.clamp_input_scroll();
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(crate) fn move_cursor_down(&mut self) {
@@ -99,7 +99,7 @@ impl AppState {
         let next_line_len = next_line_end - next_line_start;
         self.input.cursor_pos = next_line_start + current_col.min(next_line_len);
         self.clamp_input_scroll();
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(crate) fn clamp_input_scroll(&mut self) {
@@ -137,7 +137,7 @@ impl AppState {
             );
             self.clear_ghost();
             self.clamp_input_scroll();
-            self.mark_dirty();
+            self.view.dirty = true;
         } else {
             self.input.input_flash = 3;
         }
@@ -154,7 +154,7 @@ impl AppState {
                 self.input.cursor_pos,
             );
             self.clamp_input_scroll();
-            self.mark_dirty();
+            self.view.dirty = true;
         } else {
             self.input.input_flash = 3;
         }
@@ -167,7 +167,7 @@ impl AppState {
             self.input.cursor_pos = 0;
             self.clear_ghost();
             self.clamp_input_scroll();
-            self.mark_dirty();
+            self.view.dirty = true;
         } else {
             self.input.input_flash = 3;
         }
@@ -180,7 +180,7 @@ impl AppState {
             self.input.cursor_pos = self.input.input.len();
             self.clear_ghost();
             self.clamp_input_scroll();
-            self.mark_dirty();
+            self.view.dirty = true;
         } else {
             self.input.input_flash = 3;
         }
@@ -194,7 +194,7 @@ impl AppState {
             );
             self.clear_ghost();
             self.clamp_input_scroll();
-            self.mark_dirty();
+            self.view.dirty = true;
         } else {
             self.input.input_flash = 3;
         }
@@ -208,7 +208,7 @@ impl AppState {
             );
             self.clear_ghost();
             self.clamp_input_scroll();
-            self.mark_dirty();
+            self.view.dirty = true;
         } else {
             self.input.input_flash = 3;
         }
@@ -222,7 +222,7 @@ impl AppState {
         }
         if c == 'i' {
             self.view.vim_nav_mode = false;
-            self.mark_dirty();
+            self.view.dirty = true;
             return;
         }
         if let Some(handled) = self.try_vim_nav_motion(c) {
@@ -260,7 +260,7 @@ impl AppState {
     fn handle_vim_jump_down(&mut self, last: usize) -> bool {
         if self.view.selected_post.unwrap_or(0) >= last {
             self.view.vim_nav_mode = false;
-            self.mark_dirty();
+            self.view.dirty = true;
             true
         } else {
             crate::update::input::element_jump_down(self);
@@ -271,7 +271,7 @@ impl AppState {
     fn handle_vim_jump_up(&mut self) -> bool {
         if self.view.selected_post.unwrap_or(0) == 0 {
             self.input.input_flash = 3;
-            self.mark_dirty();
+            self.view.dirty = true;
             true
         } else {
             crate::update::input::element_jump_up(self);
@@ -282,7 +282,7 @@ impl AppState {
     fn handle_vim_copy(&mut self, evt: DialogEvent) -> bool {
         self.update(evt);
         self.view.vim_nav_mode = false;
-        self.mark_dirty();
+        self.view.dirty = true;
         true
     }
 
@@ -314,7 +314,7 @@ impl AppState {
     pub(crate) fn vim_nav_up(&mut self) {
         if self.view.selected_post.unwrap_or(0) == 0 {
             self.input.input_flash = 3;
-            self.mark_dirty();
+            self.view.dirty = true;
         } else {
             crate::update::input::element_jump_up(self);
         }
@@ -324,7 +324,7 @@ impl AppState {
         let last = self.view.posts.len().saturating_sub(1);
         if self.view.selected_post.unwrap_or(0) >= last {
             self.view.vim_nav_mode = false;
-            self.mark_dirty();
+            self.view.dirty = true;
             false
         } else {
             crate::update::input::element_jump_down(self);

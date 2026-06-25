@@ -455,7 +455,7 @@ fn handle_dialog_back_no_dialog(state: &mut AppState) {
     if state.open_dialog.is_none() && state.config.vim_mode {
         state.view.vim_nav_mode = true;
         state.view.selected_post = state.current_bottom_post_index();
-        state.mark_dirty();
+        state.view.dirty = true;
     }
 }
 

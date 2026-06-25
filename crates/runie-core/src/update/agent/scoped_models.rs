@@ -8,7 +8,7 @@ pub fn toggle_scoped_model(state: &mut AppState, provider: &str, name: &str) {
         .position(|m| m.provider == provider && m.name == name)
     {
         state.config.scoped_models[idx].enabled = !state.config.scoped_models[idx].enabled;
-        state.mark_dirty();
+        state.view.dirty = true;
     }
 }
 
@@ -16,14 +16,14 @@ pub fn enable_all(state: &mut AppState) {
     for m in &mut state.config.scoped_models {
         m.enabled = true;
     }
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 pub fn disable_all(state: &mut AppState) {
     for m in &mut state.config.scoped_models {
         m.enabled = false;
     }
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 pub fn toggle_provider(state: &mut AppState, provider: &str) {
@@ -38,5 +38,5 @@ pub fn toggle_provider(state: &mut AppState, provider: &str) {
             m.enabled = !all_enabled;
         }
     }
-    state.mark_dirty();
+    state.view.dirty = true;
 }

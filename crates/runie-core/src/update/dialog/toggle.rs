@@ -43,7 +43,7 @@ fn handle_welcome_toggle(state: &mut AppState) {
     } else {
         Some(DialogState::Welcome)
     };
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 fn handle_model_selector_toggle(state: &mut AppState) {
@@ -78,7 +78,7 @@ fn handle_vim_mode_toggle(state: &mut AppState) {
 fn handle_providers_dialog(state: &mut AppState) {
     use crate::provider::dialog::build_providers_dialog;
     state.open_dialog = Some(DialogState::PanelStack(build_providers_dialog(state)));
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 fn handle_providers_add(state: &mut AppState) {
@@ -98,7 +98,7 @@ fn handle_providers_select_model(state: &mut AppState, event: &DialogEvent) {
         state.open_dialog = None;
         state.view.input_receiver = crate::model::InputReceiver::ChatInput;
         state.dialog_back_stack.clear();
-        state.mark_dirty();
+        state.view.dirty = true;
     }
 }
 
@@ -112,7 +112,7 @@ fn handle_providers_edit_models(state: &mut AppState, event: &DialogEvent) {
         } else {
             state.open_dialog = Some(DialogState::PanelStack(stack));
         }
-        state.mark_dirty();
+        state.view.dirty = true;
     }
 }
 
@@ -140,7 +140,7 @@ fn handle_providers_disconnect(state: &mut AppState, event: &DialogEvent) {
             crate::login_flow::login_flow_start(state);
         }
         state.dialog_back_stack.clear();
-        state.mark_dirty();
+        state.view.dirty = true;
     }
 }
 
@@ -156,14 +156,14 @@ fn set_scoped_models_enabled(state: &mut AppState, enabled: bool) {
     for model in &mut state.config.scoped_models {
         model.enabled = enabled;
     }
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 fn do_toggle_dialog(state: &mut AppState, is_same: bool, open: fn(&mut AppState)) {
     if is_same {
         state.open_dialog = None;
         state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-        state.mark_dirty();
+        state.view.dirty = true;
     } else {
         open(state);
     }

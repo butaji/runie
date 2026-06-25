@@ -9,7 +9,7 @@ impl AppState {
         if matches!(self.open_dialog, Some(DialogState::SessionTree(_))) {
             self.open_dialog = None;
             self.view.input_receiver = crate::model::InputReceiver::ChatInput;
-            self.mark_dirty();
+            self.view.dirty = true;
         } else {
             self.view.cached_session_tree_valid = false;
             open_session_tree_dialog(self);
@@ -22,7 +22,7 @@ impl AppState {
             if let Some(_panel) = stack.current_mut() {
                 // cycle through filter variants based on panel id or custom logic
                 // For now just mark dirty so the panel re-renders
-                self.mark_dirty();
+                self.view.dirty = true;
             }
         }
     }
@@ -115,14 +115,14 @@ impl AppState {
             kind: crate::model::QueuedMessageKind::FollowUp,
         });
         self.view.scroll = 0;
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(super) fn abort_queue(&mut self) {
         if self.completion.at_suggestions.take().is_some() {
             self.completion.at_selected = None;
             self.completion.last_at_query = None;
-            self.mark_dirty();
+            self.view.dirty = true;
             return;
         }
         for msg in self.agent.message_queue.drain(..).rev() {
@@ -131,7 +131,7 @@ impl AppState {
             }
             self.input.input.push_str(&msg.content);
         }
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(crate) fn deliver_queued(&mut self) {
@@ -240,10 +240,10 @@ impl AppState {
         if let Some(msg) = self.agent.message_queue.pop() {
             self.input.input = msg.content;
             self.input.cursor_pos = self.input.input.len();
-            self.mark_dirty();
+            self.view.dirty = true;
         } else {
             self.input.input_flash = 3;
-            self.mark_dirty();
+            self.view.dirty = true;
         }
     }
 

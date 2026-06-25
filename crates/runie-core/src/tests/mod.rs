@@ -70,6 +70,8 @@ mod harness_skills;
 #[cfg(test)]
 mod hashline_edit_apply;
 #[cfg(test)]
+mod dirty_flag;
+#[cfg(test)]
 mod input_cursor;
 #[cfg(test)]
 mod input_flash;

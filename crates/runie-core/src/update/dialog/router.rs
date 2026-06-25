@@ -39,7 +39,7 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
         state.handle_vim_dialog_back();
     }
 
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
@@ -51,7 +51,7 @@ fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
         state.input.file_picker_range_suffix = None;
         state.open_dialog = None;
         state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-        state.mark_dirty();
+        state.view.dirty = true;
         return true;
     }
     if matches!(event, ControlEvent::Quit) {
@@ -110,7 +110,7 @@ pub fn process_command_result(state: &mut AppState, result: CommandResult) {
                 push_dialog_to_back_stack(state, current);
             }
             state.open_dialog = Some(DialogState::PanelStack(*stack));
-            state.mark_dirty();
+            state.view.dirty = true;
         }
         CR::None => {}
     }

@@ -48,7 +48,7 @@ pub fn open_command_palette_with_filter(state: &mut AppState, initial_filter: &s
     }
     state.open_dialog = Some(DialogState::CommandPalette(stack));
     state.view.input_receiver = InputReceiver::Dialog;
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 pub fn open_model_selector(state: &mut AppState) {
@@ -71,7 +71,7 @@ pub fn open_model_selector(state: &mut AppState) {
         recent, groups, &current,
     )));
     state.view.input_receiver = InputReceiver::Dialog;
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 pub fn open_settings_dialog(state: &mut AppState) {
@@ -83,7 +83,7 @@ pub fn open_settings_dialog(state: &mut AppState) {
         .collect();
     state.open_dialog = Some(DialogState::Settings(settings(categories)));
     state.view.input_receiver = InputReceiver::Dialog;
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 pub fn open_scoped_models_dialog(state: &mut AppState) {
@@ -96,7 +96,7 @@ pub fn open_scoped_models_dialog(state: &mut AppState) {
         .collect();
     state.open_dialog = Some(DialogState::ScopedModels(scoped_models(models)));
     state.view.input_receiver = InputReceiver::Dialog;
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 fn sync_scoped_models_with_config(state: &mut AppState) {
@@ -145,7 +145,7 @@ pub fn open_session_tree_dialog(state: &mut AppState) {
     };
     state.open_dialog = Some(DialogState::SessionTree(session_tree(items)));
     state.view.input_receiver = InputReceiver::Dialog;
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 /// Opens the file picker with an optional filter.
@@ -189,7 +189,7 @@ pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
     };
     state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
     state.view.input_receiver = InputReceiver::Dialog;
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 /// Opens the file picker without any filter (shows all files).

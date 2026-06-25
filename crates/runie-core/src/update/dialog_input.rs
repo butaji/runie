@@ -17,7 +17,7 @@ impl AppState {
                 InputEvent::Input(_) | InputEvent::Submit => {
                     self.open_dialog = None;
                     self.view.input_receiver = InputReceiver::ChatInput;
-                    self.mark_dirty();
+                    self.view.dirty = true;
                     return false; // also pass to input handler
                 }
                 _ => return false, // let other keys pass through to input
@@ -75,30 +75,30 @@ impl AppState {
         // Reset the input receiver and return.
         if self.view.input_receiver == InputReceiver::Dialog {
             self.view.input_receiver = InputReceiver::ChatInput;
-            self.mark_dirty();
+            self.view.dirty = true;
             return;
         }
         if self.view.vim_nav_mode {
             self.view.vim_nav_mode = false;
-            self.mark_dirty();
+            self.view.dirty = true;
             return;
         }
         if self.view.vim_nav_pending {
             self.view.vim_nav_pending = false;
             self.view.vim_nav_mode = true;
-            self.mark_dirty();
+            self.view.dirty = true;
             return;
         }
         if self.agent.turn_active {
             self.agent.turn_active = false;
             self.agent.inflight = 0;
             self.view.vim_nav_pending = true;
-            self.mark_dirty();
+            self.view.dirty = true;
             return;
         }
         self.view.vim_nav_mode = true;
         self.view.selected_post = self.current_bottom_post_index();
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(crate) fn current_bottom_post_index(&self) -> Option<usize> {

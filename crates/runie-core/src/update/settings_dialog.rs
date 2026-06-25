@@ -8,7 +8,7 @@ use crate::model::{AppState, DeliveryMode};
 use crate::settings::{SettingItem, SettingValue, SettingsCategory};
 
 pub fn handle_settings_category(state: &mut AppState, _category: SettingsCategory) {
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 /// Build settings items grouped by category, already mapped to panel items.

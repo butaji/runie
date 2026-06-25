@@ -160,10 +160,6 @@ impl AppState {
         id
     }
 
-    pub(crate) fn mark_dirty(&mut self) {
-        self.view.dirty = true;
-    }
-
     pub fn messages_changed(&mut self) {
         self.view.message_gen = self.view.message_gen.wrapping_add(1);
         self.session.session_updated_at = crate::message::now();

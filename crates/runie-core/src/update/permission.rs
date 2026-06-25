@@ -16,6 +16,6 @@ pub(crate) fn permission_event(state: &mut AppState, event: Event) {
             tool,
             input,
         });
-        state.mark_dirty();
+        state.view.dirty = true;
     }
 }

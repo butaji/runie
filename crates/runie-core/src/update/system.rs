@@ -23,14 +23,14 @@ impl AppState {
             TransientLevel::Error => None,
             _ => Some(std::time::Instant::now() + std::time::Duration::from_secs(5)),
         };
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 
     pub(crate) fn clear_transient(&mut self) {
         self.transient_message = None;
         self.transient_until = None;
         self.transient_level = None;
-        self.mark_dirty();
+        self.view.dirty = true;
     }
     pub(crate) fn add_system_msg(&mut self, content: String) {
         self.session.messages.push(ChatMessage {
@@ -169,7 +169,7 @@ impl AppState {
             self.input.input.push_str(&msg.content);
         }
         self.input.cursor_pos = self.input.input.len();
-        self.mark_dirty();
+        self.view.dirty = true;
     }
 }
 
@@ -219,7 +219,7 @@ pub fn control_event(state: &mut AppState, event: ControlEvent) {
         ControlEvent::ToggleVimMode => {
             state.config.vim_mode = !state.config.vim_mode;
             state.view.cached_settings_valid = false;
-            state.mark_dirty();
+            state.view.dirty = true;
         }
         ControlEvent::NewSession => {
             // Close welcome screen if open
@@ -231,7 +231,7 @@ pub fn control_event(state: &mut AppState, event: ControlEvent) {
                 state.view.input_receiver = crate::model::InputReceiver::ChatInput;
             }
             // Ready for user input — welcome is gone
-            state.mark_dirty();
+            state.view.dirty = true;
         }
         ControlEvent::ResumeSession | ControlEvent::OpenSessionList => {
             // Close welcome and open session tree
@@ -258,7 +258,7 @@ fn handle_quit_event(state: &mut AppState, event: ControlEvent) {
         state.input.input_scroll = 0;
         state.input.undo_stack.clear();
         state.input.redo_stack.clear();
-        state.mark_dirty();
+        state.view.dirty = true;
     } else {
         state.should_quit = true;
     }
@@ -281,7 +281,7 @@ fn handle_abort(state: &mut AppState) {
         // Close dialog when open
         state.open_dialog = None;
         state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-        state.mark_dirty();
+        state.view.dirty = true;
     } else if state.agent.turn_active {
         state.stop_turn();
     } else {
@@ -292,7 +292,7 @@ fn handle_abort(state: &mut AppState) {
 fn handle_editor_done(state: &mut AppState, content: String) {
     state.input.input = content;
     state.input.cursor_pos = state.input.input.len();
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 // ── System actions (merged from system_actions.rs) ───────────────────────────

@@ -55,7 +55,7 @@ fn login_flow_select_provider(state: &mut crate::model::AppState, provider: Stri
             selected_models: std::mem::take(&mut flow.selected_models),
             validated: false,
         };
-        state.mark_dirty();
+        state.view.dirty = true;
     }
     let panel = build_key_input(state.login_flow.as_ref().unwrap());
     push_login_panel(state, panel);
@@ -170,7 +170,7 @@ fn transition_to_model_selector(state: &mut crate::model::AppState) {
         validated: true,
     };
     replace_top_login_panel_with(state, build_model_selector(&updated));
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 fn login_flow_validation_failed(state: &mut crate::model::AppState, error: String) {
@@ -201,13 +201,13 @@ fn login_flow_validation_failed(state: &mut crate::model::AppState, error: Strin
         flow.validated = false;
     }
     pop_login_panel(state);
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 fn login_flow_toggle_model(state: &mut crate::model::AppState, model: String) {
     if let Some(ref mut flow) = state.login_flow {
         flow.toggle_model(&model);
-        state.mark_dirty();
+        state.view.dirty = true;
     }
 }
 
@@ -376,5 +376,5 @@ fn close_login_flow(state: &mut crate::model::AppState) {
     state.dialog_back_stack.clear();
     state.open_dialog = None;
     state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-    state.mark_dirty();
+    state.view.dirty = true;
 }

@@ -338,13 +338,13 @@ pub fn apply_form_action(state: &mut AppState, action: FormAction) {
         FormAction::Submit(evt) => {
             state.open_dialog = None;
             state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-            state.mark_dirty();
+            state.view.dirty = true;
             if let Some(e) = evt {
                 state.update(e);
             }
         }
         FormAction::KeepOpen => {
-            state.mark_dirty();
+            state.view.dirty = true;
         }
         FormAction::Back => {}
     }

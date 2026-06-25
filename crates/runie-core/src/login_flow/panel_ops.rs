@@ -24,7 +24,7 @@ pub(super) fn push_login_panel(
     let mut stack = take_or_create_login_stack(state);
     stack.push(panel);
     state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 /// Replace the top panel of the login stack with `new_top`, popping
@@ -40,7 +40,7 @@ pub(super) fn replace_top_login_panel_with(
     }
     stack.push(new_top);
     state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 /// Pop the top panel of the login stack without closing the dialog.
@@ -63,7 +63,7 @@ pub(super) fn pop_login_panel(state: &mut crate::model::AppState) {
         };
     }
     state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
-    state.mark_dirty();
+    state.view.dirty = true;
 }
 
 /// Pop the top panel of the login stack. If we're at the root, close
@@ -86,23 +86,23 @@ pub(super) fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
             };
         }
         state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
-        state.mark_dirty();
+        state.view.dirty = true;
     } else if stack.root().map(|p| p.closable).unwrap_or(true) {
         // At the root: close the login flow and restore the previous
         // dialog from the back stack.
         state.login_flow = None;
         if let Some(previous) = state.dialog_back_stack.pop() {
             state.open_dialog = Some(previous);
-            state.mark_dirty();
+            state.view.dirty = true;
         } else {
             state.open_dialog = None;
             state.view.input_receiver = crate::model::InputReceiver::ChatInput;
-            state.mark_dirty();
+            state.view.dirty = true;
         }
     } else {
         // The root panel is marked non-closable: keep it open.
         state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
-        state.mark_dirty();
+        state.view.dirty = true;
     }
 }
 
@@ -152,6 +152,6 @@ pub(super) fn rebuild_login_dialog(state: &mut crate::model::AppState) {
         root.closable = state.has_models();
         let stack = PanelStack::new(root);
         state.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
-        state.mark_dirty();
+        state.view.dirty = true;
     }
 }
