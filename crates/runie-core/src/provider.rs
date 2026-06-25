@@ -1,49 +1,10 @@
-//! Provider trait and message types
+//! Provider trait and types
 
 use crate::llm_event::LLMEvent;
 use crate::message::ChatMessage;
 use anyhow::Result;
 use futures::Stream;
 use std::pin::Pin;
-
-/// Message roles for LLM conversations
-#[derive(Debug, Clone, PartialEq)]
-pub enum Message {
-    System {
-        content: String,
-    },
-    User {
-        content: String,
-    },
-    Assistant {
-        content: String,
-        tool_calls: Vec<crate::message::ToolCall>,
-    },
-    ToolResult {
-        content: String,
-        tool_call_id: Option<String>,
-    },
-}
-
-impl Message {
-    pub fn role(&self) -> &'static str {
-        match self {
-            Message::System { .. } => "system",
-            Message::User { .. } => "user",
-            Message::Assistant { .. } => "assistant",
-            Message::ToolResult { .. } => "tool",
-        }
-    }
-
-    pub fn content(&self) -> &str {
-        match self {
-            Message::System { content }
-            | Message::User { content }
-            | Message::Assistant { content, .. }
-            | Message::ToolResult { content, .. } => content,
-        }
-    }
-}
 
 /// A chunk of streaming response (legacy type, prefer LLMEvent).
 #[derive(Debug, Clone)]

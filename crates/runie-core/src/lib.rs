@@ -145,7 +145,7 @@ pub use permissions::{
 pub use prompts::{
     build_system_prompt, load_prompts, PromptSource, PromptTemplate, DEFAULT_PROMPT, DEFAULT_TOOLS,
 };
-pub use provider::{Message, Provider, ProviderError, ResponseChunk};
+pub use provider::{Provider, ProviderError, ResponseChunk};
 pub use provider_registry::{
     display_name, find_provider, find_provider_by_env_var, is_known_provider, known_providers,
     ProviderMeta,

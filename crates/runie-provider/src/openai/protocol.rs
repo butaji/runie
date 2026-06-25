@@ -40,6 +40,18 @@ pub struct ToolAccum {
     pub arguments: String,
 }
 
+impl From<ToolAccum> for runie_core::message::ToolCall {
+    fn from(acc: ToolAccum) -> Self {
+        let args: serde_json::Value =
+            serde_json::from_str(&acc.arguments).unwrap_or(serde_json::Value::Null);
+        runie_core::message::ToolCall {
+            id: acc.id,
+            name: acc.name,
+            args,
+        }
+    }
+}
+
 /// A parsed OpenAI SSE frame.
 #[derive(Debug, Clone, PartialEq)]
 pub enum OpenAiFrame {

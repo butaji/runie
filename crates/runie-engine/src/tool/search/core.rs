@@ -1,5 +1,6 @@
 //! Search tool — unified FFF-backed search for files and content.
 
+use crate::tool::search::fff_helpers::with_picker;
 use crate::tool::search::modes::{search_content, search_files, search_glob};
 use crate::tool::search::types::{SearchMode, DEFAULT_LIMIT};
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
@@ -9,6 +10,7 @@ use fff_search::{FilePicker, QueryTracker};
 use runie_core::actors::FffSearchState;
 use runie_core::path::resolve_path_in;
 use serde_json::Value;
+use std::time::Duration;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -106,19 +108,30 @@ pub(crate) fn search_impl(
         Some(s) => s,
         None => return build_not_indexed_output(query, start),
     };
-    with_picker(&state, query, start, |picker| {
-        with_query_tracker(&state, query, start, |qt| {
-            dispatch_search(picker, qt, query, mode, limit, start)
-        })
-    })
+    with_picker(
+        &state,
+        query.to_string(),
+        start,
+        build_lock_error_output,
+        build_picker_not_initialized_output,
+        |picker| {
+            with_query_tracker(&state, query.to_string(), start, |qt| {
+                dispatch_search(picker, qt, query, mode, limit, start)
+            })
+        },
+    )
 }
 
 fn build_not_indexed_output(query: &str, start: Instant) -> Result<ToolOutput> {
     build_json_error_output(query, "FFF indexer not initialized", false, start)
 }
 
-fn build_picker_not_initialized_output(query: &str, start: Instant) -> Result<ToolOutput> {
-    build_json_error_output(query, "FFF picker not initialized", false, start)
+fn build_picker_not_initialized_output(query: String, duration: std::time::Duration) -> ToolOutput {
+    build_json_error_output_fn(&query, "FFF picker not initialized", false, duration)
+}
+
+fn build_lock_error_output(msg: String, duration: Duration) -> ToolOutput {
+    build_json_error_output_fn(&msg, "FFF lock error", false, duration)
 }
 
 fn build_json_error_output(
@@ -142,59 +155,52 @@ fn build_json_error_output(
     })
 }
 
-fn with_picker<F>(state: &FffSearchState, query: &str, start: Instant, f: F) -> Result<ToolOutput>
-where
-    F: FnOnce(&FilePicker) -> Result<ToolOutput>,
-{
-    let guard = match state.picker.read() {
-        Ok(g) => g,
-        Err(e) => {
-            return Ok(build_lock_error_output(
-                query,
-                "picker",
-                &e.to_string(),
-                start,
-            ))
-        }
-    };
-    match guard.as_ref() {
-        Some(p) => f(p),
-        None => build_picker_not_initialized_output(query, start),
+fn build_json_error_output_fn(
+    query: &str,
+    error: &str,
+    indexed: bool,
+    duration: std::time::Duration,
+) -> ToolOutput {
+    ToolOutput {
+        tool_name: "search".to_string(),
+        tool_args: serde_json::json!({ "query": query }),
+        content: serde_json::to_string_pretty(&serde_json::json!({
+            "error": error,
+            "items": [],
+            "total": 0,
+            "indexed": indexed
+        }))
+        .unwrap_or_else(|_| r#"{"error":"","items":[],"total":0,"indexed":false}"#.to_string()),
+        bytes_transferred: None,
+        duration,
+        status: ToolStatus::Error,
     }
 }
 
 fn with_query_tracker<F>(
     state: &FffSearchState,
-    query: &str,
+    query: String,
     start: Instant,
     f: F,
 ) -> Result<ToolOutput>
 where
     F: FnOnce(Option<&QueryTracker>) -> Result<ToolOutput>,
 {
+    let duration = start.elapsed();
     let guard = match state.query_tracker.read() {
         Ok(g) => g,
         Err(e) => {
-            return Ok(build_lock_error_output(
-                query,
-                "query tracker",
-                &e.to_string(),
-                start,
-            ))
+            return Ok(ToolOutput {
+                tool_name: "search".to_string(),
+                tool_args: serde_json::json!({ "query": query }),
+                content: format!("Error acquiring query_tracker lock: {}", e),
+                bytes_transferred: None,
+                duration,
+                status: ToolStatus::Error,
+            });
         }
     };
     f(guard.as_ref())
-}
-
-fn build_lock_error_output(query: &str, resource: &str, error: &str, start: Instant) -> ToolOutput {
-    ToolOutput {
-        tool_name: "search".to_string(),
-        tool_args: serde_json::json!({ "query": query }),
-        content: format!("Error acquiring {} lock: {}", resource, error),
-        bytes_transferred: None,
-        duration: start.elapsed(),
-        status: ToolStatus::Error,
-    }
 }
 
 fn dispatch_search(

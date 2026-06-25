@@ -3,6 +3,7 @@
 //! Uses FFF's content search with `classify_definitions: true` to find
 //! `struct`, `fn`, `class`, `def`, `impl`, etc. definitions.
 
+use crate::tool::search::fff_helpers::with_picker;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -160,30 +161,37 @@ impl Tool for FindDefinitionsTool {
             Some(s) => s,
             None => return build_uninitialized_output(&symbol, start),
         };
-        with_picker(&state, &symbol, start, |picker| {
-            let query_str = build_query(&symbol, &glob);
-            let parsed = QueryParser::default().parse(&query_str);
-            let results = picker.grep(
-                &parsed,
-                &GrepSearchOptions {
-                    max_file_size: fff_search::MAX_FFFILE_SIZE,
-                    max_matches_per_file: 5,
-                    smart_case: true,
-                    file_offset: 0,
-                    page_limit: limit,
-                    mode: GrepMode::Regex,
-                    time_budget_ms: 5000,
-                    before_context: 0,
-                    after_context: 0,
-                    classify_definitions: true,
-                    trim_whitespace: true,
-                    abort_signal: None,
-                },
-            );
-            let defs = map_definition_results(picker, &results, limit);
-            let indexed = FffSearchState::is_indexed();
-            build_definitions_output(&symbol, defs, indexed, start)
-        })
+        with_picker(
+            &state,
+            symbol.clone(),
+            start,
+            build_find_def_lock_error,
+            build_find_def_not_initialized,
+            |picker| {
+                let query_str = build_query(&symbol, &glob);
+                let parsed = QueryParser::default().parse(&query_str);
+                let results = picker.grep(
+                    &parsed,
+                    &GrepSearchOptions {
+                        max_file_size: fff_search::MAX_FFFILE_SIZE,
+                        max_matches_per_file: 5,
+                        smart_case: true,
+                        file_offset: 0,
+                        page_limit: limit,
+                        mode: GrepMode::Regex,
+                        time_budget_ms: 5000,
+                        before_context: 0,
+                        after_context: 0,
+                        classify_definitions: true,
+                        trim_whitespace: true,
+                        abort_signal: None,
+                    },
+                );
+                let defs = map_definition_results(picker, &results, limit);
+                let indexed = FffSearchState::is_indexed();
+                build_definitions_output(&symbol, defs, indexed, start)
+            },
+        )
     }
 }
 
@@ -216,41 +224,30 @@ fn build_uninitialized_output(symbol: &str, start: Instant) -> Result<ToolOutput
     })
 }
 
-fn with_picker<F>(state: &FffSearchState, symbol: &str, start: Instant, f: F) -> Result<ToolOutput>
-where
-    F: FnOnce(&FilePicker) -> Result<ToolOutput>,
-{
-    let guard = match state.picker.read() {
-        Ok(g) => g,
-        Err(_) => {
-            return Ok(ToolOutput {
-                tool_name: "find_definitions".to_string(),
-                tool_args: serde_json::json!({ "symbol": symbol }),
-                content: "Error acquiring picker lock".to_string(),
-                bytes_transferred: None,
-                duration: start.elapsed(),
-                status: ToolStatus::Error,
-            });
-        }
-    };
-    match guard.as_ref() {
-        Some(p) => f(p),
-        None => build_picker_not_initialized_output(symbol, start),
+fn build_find_def_lock_error(symbol: String, duration: std::time::Duration) -> ToolOutput {
+    ToolOutput {
+        tool_name: "find_definitions".to_string(),
+        tool_args: serde_json::json!({ "symbol": symbol }),
+        content: "Error acquiring picker lock".to_string(),
+        bytes_transferred: None,
+        duration,
+        status: ToolStatus::Error,
     }
 }
 
-fn build_picker_not_initialized_output(symbol: &str, start: Instant) -> Result<ToolOutput> {
-    Ok(ToolOutput {
+fn build_find_def_not_initialized(symbol: String, duration: std::time::Duration) -> ToolOutput {
+    ToolOutput {
         tool_name: "find_definitions".to_string(),
         tool_args: serde_json::json!({ "symbol": symbol }),
         content: serde_json::to_string_pretty(&serde_json::json!({
             "error": "FFF picker not initialized",
             "results": [],
-        }))?,
+        }))
+        .unwrap_or_else(|_| r#"{"error":"FFF picker not initialized","results":[]}"#.to_string()),
         bytes_transferred: None,
-        duration: start.elapsed(),
+        duration,
         status: ToolStatus::Error,
-    })
+    }
 }
 
 fn build_query(symbol: &str, glob: &str) -> String {

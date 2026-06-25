@@ -5,6 +5,7 @@
 //! glob patterns, and git-status filters via a unified query syntax.
 
 mod core;
+pub(crate) mod fff_helpers;
 mod modes;
 mod types;
 

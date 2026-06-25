@@ -146,21 +146,6 @@ impl ChatMessage {
             self.parts.push(Part::Text { content });
         }
     }
-
-    /// Convert to a provider-agnostic message (drops metadata).
-    pub fn to_provider_message(&self) -> crate::provider::Message {
-        let content = self.content();
-        let tool_calls = self.tool_calls();
-        match self.role {
-            Role::System => crate::provider::Message::System { content },
-            Role::User | Role::Thought => crate::provider::Message::User { content },
-            Role::Assistant => crate::provider::Message::Assistant { content, tool_calls },
-            Role::Tool | Role::TurnComplete => crate::provider::Message::ToolResult {
-                content,
-                tool_call_id: self.tool_call_id.clone(),
-            },
-        }
-    }
 }
 
 /// Metadata for chat messages (compaction and visibility control).
@@ -271,7 +256,6 @@ impl ChatMessage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::provider::Message;
 
     #[test]
     fn role_as_str_matches_provider_expectations() {
@@ -343,70 +327,48 @@ mod tests {
         assert_eq!(parsed.id, "msg-1");
     }
 
+    /// Layer 1: ChatMessage serializes and deserializes unchanged.
     #[test]
-    fn chat_message_to_provider_message() {
-        let msg = ChatMessage::new(Role::User, "hello");
-        let provider_msg = msg.to_provider_message();
-        assert!(matches!(provider_msg, Message::User { content } if content == "hello"));
-    }
-
-    #[test]
-    fn chat_message_to_provider_message_with_tool_call() {
+    fn chat_message_serializes_round_trip() {
         let msg = ChatMessage {
             role: Role::Assistant,
-            timestamp: 0.0,
-            id: "2".to_string(),
-            provider: String::new(),
-            metadata: MessageMetadata::default(),
-            tool_call_id: None,
-            provider_metadata: None,
+            timestamp: 1.0,
+            id: "a1".into(),
             parts: vec![
-                Part::Text { content: String::new() },
+                Part::Text { content: "hello".into() },
                 Part::ToolCall {
                     id: "call_1".into(),
-                    name: "read_file".into(),
-                    args: serde_json::json!({"path": "Cargo.toml"}),
+                    name: "list_dir".into(),
+                    args: serde_json::json!({"path": "."}),
                 },
             ],
+            ..Default::default()
         };
-        let provider_msg = msg.to_provider_message();
-        match provider_msg {
-            Message::Assistant {
-                content,
-                tool_calls,
-            } => {
-                assert!(content.is_empty());
-                assert_eq!(tool_calls.len(), 1);
-                assert_eq!(tool_calls[0].id, "call_1");
-                assert_eq!(tool_calls[0].name, "read_file");
-            }
-            other => panic!("expected Assistant message, got {:?}", other),
-        }
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed: ChatMessage = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.role, Role::Assistant);
+        assert_eq!(parsed.content(), "hello");
+        assert_eq!(parsed.tool_calls().len(), 1);
+        assert_eq!(parsed.tool_calls()[0].name, "list_dir");
     }
 
+    /// Layer 1: Canonical message parts are well-formed for all roles.
     #[test]
-    fn chat_message_to_provider_message_with_tool_result_id() {
+    fn provider_view_from_chat_message() {
         let msg = ChatMessage {
-            role: Role::Tool,
-            timestamp: 0.0,
-            id: "3".to_string(),
-            provider: String::new(),
-            metadata: MessageMetadata::default(),
-            tool_call_id: Some("call_1".to_string()),
-            provider_metadata: None,
-            parts: vec![Part::Text { content: "file contents".into() }],
+            role: Role::Assistant,
+            parts: vec![
+                Part::Text { content: "hi".into() },
+                Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({"cmd": "ls"}) },
+            ],
+            ..Default::default()
         };
-        let provider_msg = msg.to_provider_message();
-        match provider_msg {
-            Message::ToolResult {
-                content,
-                tool_call_id,
-            } => {
-                assert_eq!(content, "file contents");
-                assert_eq!(tool_call_id, Some("call_1".to_string()));
-            }
-            other => panic!("expected ToolResult message, got {:?}", other),
-        }
+        assert_eq!(msg.content(), "hi");
+        let tcs = msg.tool_calls();
+        assert_eq!(tcs.len(), 1);
+        assert_eq!(tcs[0].name, "bash");
+        assert_eq!(tcs[0].id, "c1");
+        assert_eq!(tcs[0].args["cmd"], "ls");
     }
 
     #[test]
@@ -449,26 +411,5 @@ mod tests {
         // Legacy format has no parts - content getter returns empty for backward compat
         assert!(parsed.parts.is_empty());
         assert_eq!(parsed.content(), "");
-    }
-
-    #[test]
-    fn to_provider_message_serializes_from_parts() {
-        let msg = ChatMessage {
-            role: Role::Assistant,
-            parts: vec![
-                Part::Text { content: "hi".into() },
-                Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({"cmd": "ls"}) },
-            ],
-            ..Default::default()
-        };
-        let provider_msg = msg.to_provider_message();
-        match provider_msg {
-            Message::Assistant { content, tool_calls } => {
-                assert_eq!(content, "hi");
-                assert_eq!(tool_calls.len(), 1);
-                assert_eq!(tool_calls[0].name, "bash");
-            }
-            other => panic!("expected Assistant message, got {:?}", other),
-        }
     }
 }

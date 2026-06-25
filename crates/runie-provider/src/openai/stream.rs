@@ -38,6 +38,21 @@ pub struct ToolCallDelta {
     pub arguments: Option<String>,
 }
 
+impl From<ToolCallDelta> for runie_core::message::ToolCall {
+    fn from(delta: ToolCallDelta) -> Self {
+        let args: serde_json::Value = delta
+            .arguments
+            .as_ref()
+            .and_then(|a| serde_json::from_str(a).ok())
+            .unwrap_or(serde_json::Value::Null);
+        runie_core::message::ToolCall {
+            id: delta.id.unwrap_or_default(),
+            name: delta.name.unwrap_or_default(),
+            args,
+        }
+    }
+}
+
 /// An OpenAI SSE chunk.
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Chunk {
