@@ -6,7 +6,7 @@ mod form;
 mod form_handler;
 mod model_selector;
 mod open;
-mod panel;
+mod panel_handler;
 mod provider_model_toggle;
 mod router;
 mod tab_complete;
@@ -17,7 +17,7 @@ pub use open::{
     open_at_file_picker, open_at_file_picker_all, open_command_palette, open_command_palette_with_filter,
     open_model_selector, open_scoped_models_dialog, open_session_tree_dialog, open_settings_dialog,
 };
-pub(crate) use panel::root_closable;
+pub(crate) use panel_handler::root_closable;
 pub use router::{process_command_result, update_dialog};
 pub use toggle::dialog_toggle_event;
 

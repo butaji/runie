@@ -5,7 +5,7 @@ use crate::event::TransientLevel;
 use crate::model::AppState;
 use crate::Event;
 
-use super::panel::toggle_selected_checkbox;
+use super::panel_handler::toggle_selected_checkbox;
 
 /// What a form panel should do in response to an event.
 #[derive(Debug, Clone)]
