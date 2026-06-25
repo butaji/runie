@@ -199,7 +199,8 @@ mod tests {
     use super::*;
 
     fn set_test_machine_key() {
-        std::env::set_var("RUNIE_MACHINE_KEY", "runie-test-key-16bytes");
+        // FIXME: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::set_var("RUNIE_MACHINE_KEY", "runie-test-key-16bytes") };
     }
 
     fn tmp_storage() -> AuthStorage {

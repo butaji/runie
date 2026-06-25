@@ -21,7 +21,8 @@ fn layered_config_env_overrides_file() {
     let local = tempfile::tempdir().unwrap();
     let global_path = global.path().join("config.toml");
     fs::write(&global_path, "provider = \"openai\"\nmodel = \"gpt-4o\"\n").unwrap();
-    std::env::set_var("RUNIE_PROVIDER", "anthropic");
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("RUNIE_PROVIDER", "anthropic") };
     let config = Config::load_layers_from_paths(global_path, local.path().join("config.toml"));
     assert_eq!(config.provider, Some("anthropic".to_string()));
 }

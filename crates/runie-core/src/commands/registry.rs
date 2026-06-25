@@ -88,7 +88,7 @@ pub enum DialogState {
 }
 
 macro_rules! with_panel_stack {
-    ($self:expr, $stack:ident, $body:expr) => {
+    ($self:expr_2021, $stack:ident, $body:expr_2021) => {
         match $self {
             DialogState::Welcome => None,
             DialogState::CommandPalette($stack) => Some($body),

@@ -121,7 +121,7 @@ fn handle_providers_disconnect(state: &mut AppState, event: &crate::Event) {
         // Fire-and-forget async removal (no-op in tests without ConfigActor).
         state.remove_provider(&provider);
         // Also sync config_cache directly so tests and sync paths see the change immediately.
-        if let Some(ref mut cache) = state.config_cache_mut() {
+        if let Some(cache) = state.config_cache_mut() {
             cache.model_providers.remove(&provider);
         }
         if state.config().current_provider == provider {

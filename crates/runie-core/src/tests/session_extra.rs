@@ -165,7 +165,8 @@ fn roundtrip_save_load_preserves_display_name() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let dir = std::env::temp_dir().join(format!("runie_roundtrip_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    std::env::set_var("RUNIE_SESSIONS_DIR", &dir);
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", &dir) };
 
     let session = crate::session::Session {
         name: "roundtrip".to_string(),
@@ -188,6 +189,7 @@ fn roundtrip_save_load_preserves_display_name() {
         state.session.session_display_name,
         Some("Display Name".to_string())
     );
-    std::env::remove_var("RUNIE_SESSIONS_DIR");
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
     let _ = std::fs::remove_dir_all(&dir);
 }

@@ -52,7 +52,7 @@ fn file_picker_insert_name(entry: &FffFileEntry) -> String {
 /// Rebuild the file picker panel with the current FFF results and panel filter.
 /// Called when the user types in the file picker to update fuzzy results.
 pub(crate) fn rebuild_file_picker(state: &mut AppState) {
-    let Some(DialogState::PanelStack(ref stack)) = state.open_dialog() else {
+    let Some(DialogState::PanelStack(stack)) = state.open_dialog() else {
         return;
     };
     let Some(panel) = stack.current() else {

@@ -41,7 +41,7 @@ fn login_flow_select_provider(state: &mut crate::model::AppState, provider: Stri
         .map(|f| f.key.clone())
         .unwrap_or_default();
 
-    if let Some(ref mut flow) = state.login_flow_mut() {
+    if let Some(flow) = state.login_flow_mut() {
         *flow = LoginFlowState {
             step: LoginStep::KeyInput,
             provider: provider.clone(),
@@ -97,7 +97,7 @@ fn login_flow_submit_key(state: &mut crate::model::AppState, provider: String, k
         .map(|f| std::mem::take(&mut f.selected_models))
         .unwrap_or_default();
 
-    if let Some(ref mut flow) = state.login_flow_mut() {
+    if let Some(flow) = state.login_flow_mut() {
         flow.provider = final_provider.clone();
         flow.key = key.clone();
         flow.step = LoginStep::Validating;
@@ -115,7 +115,7 @@ fn login_flow_validation_success(state: &mut crate::model::AppState, models: Vec
     }
 
     let selected_models: std::collections::HashSet<String> = models.iter().cloned().collect();
-    if let Some(ref mut flow) = state.login_flow_mut() {
+    if let Some(flow) = state.login_flow_mut() {
         flow.step = LoginStep::ModelSelect;
         flow.available_models = models;
         flow.selected_models = selected_models;
@@ -170,7 +170,7 @@ fn login_flow_validation_failed(state: &mut crate::model::AppState, error: Strin
         .unwrap_or_default();
 
     state.warn(format!("Could not verify key: {}", error));
-    if let Some(ref mut flow) = state.login_flow_mut() {
+    if let Some(flow) = state.login_flow_mut() {
         flow.step = LoginStep::KeyInput;
         flow.available_models = available_models;
         flow.selected_models = selected_models;
@@ -181,7 +181,7 @@ fn login_flow_validation_failed(state: &mut crate::model::AppState, error: Strin
 }
 
 fn login_flow_toggle_model(state: &mut crate::model::AppState, model: String) {
-    if let Some(ref mut flow) = state.login_flow_mut() {
+    if let Some(flow) = state.login_flow_mut() {
         flow.toggle_model(&model);
         state.view_mut().dirty = true;
     }

@@ -94,7 +94,8 @@ fn theme_persisted_in_session() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf());
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
 
     let mut state = fresh_state();
     state.config.theme_name = "nord".to_string();
@@ -107,7 +108,8 @@ fn theme_persisted_in_session() {
     crate::session::replay::replay_events(&mut loaded, &events);
     assert_eq!(loaded.config.theme_name, "nord");
 
-    std::env::remove_var("RUNIE_SESSIONS_DIR");
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }
 
 #[test]

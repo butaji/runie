@@ -57,7 +57,8 @@ fn load_restores_conversation() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf());
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
 
     save_snapshot("restore_me", &restored_session()).unwrap();
 
@@ -74,7 +75,8 @@ fn load_restores_conversation() {
         .iter()
         .any(|m| m.content().contains("loaded")));
 
-    std::env::remove_var("RUNIE_SESSIONS_DIR");
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }
 
 #[test]
@@ -82,7 +84,8 @@ fn load_missing_session_shows_error() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf());
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
 
     let mut state = fresh_state();
     exec(&mut state, "/load nope"); // Opens form with pre-filled name
@@ -106,7 +109,8 @@ fn load_missing_session_shows_error() {
         last.content()
     );
 
-    std::env::remove_var("RUNIE_SESSIONS_DIR");
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }
 
 #[test]
@@ -129,7 +133,8 @@ fn sessions_lists_saved_sessions() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf());
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
 
     save_snapshot("alpha", &minimal_session("alpha")).unwrap();
     save_snapshot("beta", &minimal_session("beta")).unwrap();
@@ -155,7 +160,8 @@ fn sessions_lists_saved_sessions() {
         last.content()
     );
 
-    std::env::remove_var("RUNIE_SESSIONS_DIR");
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }
 
 #[test]
@@ -163,7 +169,8 @@ fn sessions_empty_shows_no_sessions() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf());
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
 
     let mut state = fresh_state();
     palette_select(&mut state, "sessions");
@@ -181,7 +188,8 @@ fn sessions_empty_shows_no_sessions() {
         last.content()
     );
 
-    std::env::remove_var("RUNIE_SESSIONS_DIR");
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }
 
 #[test]
@@ -189,7 +197,8 @@ fn delete_removes_session_file() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf());
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
 
     save_snapshot("gone", &minimal_session("gone")).unwrap();
 
@@ -212,7 +221,8 @@ fn delete_removes_session_file() {
         last.content()
     );
 
-    std::env::remove_var("RUNIE_SESSIONS_DIR");
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }
 
 #[test]
@@ -220,7 +230,8 @@ fn delete_missing_session_shows_error() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf());
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
 
     let mut state = fresh_state();
     exec(&mut state, "/delete missing"); // Opens form with pre-filled name
@@ -244,5 +255,6 @@ fn delete_missing_session_shows_error() {
         last.content()
     );
 
-    std::env::remove_var("RUNIE_SESSIONS_DIR");
+    // FIXME: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }

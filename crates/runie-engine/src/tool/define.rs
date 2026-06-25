@@ -79,10 +79,10 @@ pub fn build_schema(fields: &[(&str, &str, &str)], required: &[&str]) -> Value {
 #[macro_export]
 macro_rules! define_tool {
     (
-        name: $name:expr,
-        description: $desc:expr,
-        read_only: $ro:expr,
-        approval: $approval:expr,
+        name: $name:expr_2021,
+        description: $desc:expr_2021,
+        read_only: $ro:expr_2021,
+        approval: $approval:expr_2021,
         fields: {
             $($fname:literal: ($ftype:literal, $fdesc:literal)),* $(,)?
         },

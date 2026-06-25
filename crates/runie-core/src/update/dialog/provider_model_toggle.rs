@@ -62,7 +62,7 @@ fn sync_provider_models(state: &mut AppState, provider: &str, models: &[String])
         return;
     }
     // Sync config_cache.
-    if let Some(ref mut cache) = state.config_cache_mut() {
+    if let Some(cache) = state.config_cache_mut() {
         cache
             .model_providers
             .entry(provider.into())

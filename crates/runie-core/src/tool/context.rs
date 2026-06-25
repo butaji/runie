@@ -48,7 +48,8 @@ mod tests {
 
     #[test]
     fn default_context_excludes_secrets() {
-        std::env::set_var("RUNIE_TEST_API_KEY", "should-not-appear");
+        // FIXME: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::set_var("RUNIE_TEST_API_KEY", "should-not-appear") };
         let ctx = ToolContext::default();
         assert!(!ctx.env.contains_key("RUNIE_TEST_API_KEY"));
     }

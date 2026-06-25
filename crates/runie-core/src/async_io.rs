@@ -14,12 +14,12 @@ where
     F: FnOnce() -> T + Send + 'static,
     T: Send + 'static,
 {
-    if let Ok(handle) = Handle::try_current() {
+    match Handle::try_current() { Ok(handle) => {
         Some(handle.spawn_blocking(f))
-    } else {
+    } _ => {
         let _ = f();
         None
-    }
+    }}
 }
 
 /// Run a blocking closure without blocking the async runtime.

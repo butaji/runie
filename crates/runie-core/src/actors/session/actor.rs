@@ -376,8 +376,10 @@ mod tests {
         let data = tmp.path().join("data");
         std::fs::create_dir_all(&cfg).unwrap();
         std::fs::create_dir_all(&data).unwrap();
-        std::env::set_var("RUNIE_TEST_CONFIG_DIR", &cfg);
-        std::env::set_var("RUNIE_TEST_DATA_DIR", &data);
+        // FIXME: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::set_var("RUNIE_TEST_CONFIG_DIR", &cfg) };
+        // FIXME: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::set_var("RUNIE_TEST_DATA_DIR", &data) };
 
         let bus = EventBus::<Event>::new(4);
         let mut sub = bus.subscribe();
@@ -419,8 +421,10 @@ mod tests {
         }
         assert!(saw_changed);
 
-        std::env::remove_var("RUNIE_TEST_CONFIG_DIR");
-        std::env::remove_var("RUNIE_TEST_DATA_DIR");
+        // FIXME: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::remove_var("RUNIE_TEST_CONFIG_DIR") };
+        // FIXME: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::remove_var("RUNIE_TEST_DATA_DIR") };
     }
 
     #[tokio::test]

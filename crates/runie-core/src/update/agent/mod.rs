@@ -12,7 +12,7 @@ pub use model_config::model_config_event;
 
 /// Helper to apply state mutation and ensure TurnComplete stays last.
 macro_rules! with_ordering {
-    ($state:expr, $apply:expr) => {{
+    ($state:expr_2021, $apply:expr_2021) => {{
         $apply;
         $state.ensure_turn_complete_last();
     }};
