@@ -23,7 +23,7 @@ pub(super) fn clean_config() {
 }
 
 pub(super) fn default_models_for_provider(provider: &str) -> Vec<String> {
-    crate::provider_registry::find_provider(provider)
+    crate::provider::find_provider(provider)
         .map(|p| p.models.iter().map(|m| m.name.to_string()).collect())
         .unwrap_or_default()
 }

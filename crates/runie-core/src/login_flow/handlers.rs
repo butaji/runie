@@ -219,7 +219,7 @@ pub(crate) fn provider_base_url(state: &crate::model::AppState, provider: &str) 
         .filter(|p| !p.base_url.is_empty())
         .map(|p| p.base_url.clone())
         .unwrap_or_else(|| {
-            crate::provider_registry::find_provider(provider)
+            crate::provider::find_provider(provider)
                 .map(|p| p.base_url.to_string())
                 .unwrap_or_default()
         })

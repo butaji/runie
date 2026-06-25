@@ -27,7 +27,7 @@ fn app_state_with_config(path: &std::path::Path) -> crate::model::AppState {
 fn provider_base_url_uses_registry_default_for_new_provider() {
     let path = temp_config_path();
 
-    let default = crate::provider_registry::find_provider("openai")
+    let default = crate::provider::find_provider("openai")
         .map(|p| p.base_url.to_string())
         .expect("openai should be registered");
 

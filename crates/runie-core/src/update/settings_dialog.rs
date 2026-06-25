@@ -131,7 +131,7 @@ pub(crate) fn provider_model_lists(state: &AppState, provider: &str) -> (Vec<Str
         .map(|c| c.models_for_provider(provider))
         .unwrap_or_default();
     let mut available = saved.clone();
-    if let Some(meta) = crate::provider_registry::find_provider(provider) {
+    if let Some(meta) = crate::provider::find_provider(provider) {
         for model in meta.models {
             let name = model.name.to_string();
             if !available.contains(&name) {
@@ -267,7 +267,7 @@ fn provider_options(state: &AppState) -> Vec<String> {
     if !configured.is_empty() {
         return configured;
     }
-    crate::provider_registry::known_providers()
+    crate::provider::known_providers()
         .iter()
         .map(|p| p.key.to_string())
         .collect()

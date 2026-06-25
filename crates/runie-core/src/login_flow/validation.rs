@@ -19,7 +19,7 @@ mod tests {
         state.update(LoginFlowEvent::SelectProvider {
             provider: provider.into(),
         });
-        let defaults: Vec<String> = crate::provider_registry::find_provider(provider)
+        let defaults: Vec<String> = crate::provider::find_provider(provider)
             .map(|m| {
                 m.models
                     .iter()

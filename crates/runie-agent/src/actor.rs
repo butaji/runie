@@ -129,7 +129,7 @@ impl AgentActor {
     }
 
     async fn run_turn(&self, command: &AgentCommand) {
-        let (provider_key, model) = if runie_core::provider_registry::is_mock_enabled() {
+        let (provider_key, model) = if runie_core::provider::is_mock_enabled() {
             ("mock".to_string(), "echo".to_string())
         } else {
             (command.provider.clone(), command.model.clone())
@@ -199,8 +199,8 @@ mod tests {
     #[tokio::test]
     async fn actor_publishes_error_when_provider_unknown() {
         let _lock = crate::tests::MOCK_STATE_LOCK.lock().await;
-        let was_mock = runie_core::provider_registry::is_mock_enabled();
-        runie_core::provider_registry::set_mock_enabled(false);
+        let was_mock = runie_core::provider::is_mock_enabled();
+        runie_core::provider::set_mock_enabled(false);
         let bus = EventBus::<Event>::new(10);
         let mut sub = bus.subscribe();
 
@@ -229,7 +229,7 @@ mod tests {
         }
         assert!(saw_error, "expected Error event for unknown provider");
         assert!(saw_done, "expected Done event after error");
-        runie_core::provider_registry::set_mock_enabled(was_mock);
+        runie_core::provider::set_mock_enabled(was_mock);
     }
 
     #[tokio::test]

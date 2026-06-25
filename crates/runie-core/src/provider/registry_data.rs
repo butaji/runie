@@ -1,8 +1,22 @@
 //! Static provider/model data table.
+//!
+//! This file contains only the static data definitions and is intentionally
+//! kept separate to keep registry.rs under the 500-line limit.
 
 use super::{ModelMeta, ProviderMeta};
 
-pub(crate) static KNOWN_PROVIDERS: &[ProviderMeta] = &[
+/// Mock provider entry — included in `known_providers()` only when
+/// `is_mock_enabled()` returns true.
+pub(super) const MOCK_PROVIDER: ProviderMeta = ProviderMeta::new(
+    "mock",
+    "Mock (dev only)",
+    "http://localhost/mock",
+    "",
+    &[ModelMeta::new("echo")],
+);
+
+/// Static provider/model data table.
+pub(super) static KNOWN_PROVIDERS: &[ProviderMeta] = &[
     ProviderMeta::new(
         "anthropic",
         "Anthropic",

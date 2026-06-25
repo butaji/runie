@@ -2,7 +2,7 @@
 
 use super::OpenAiProvider;
 use runie_core::message::{ChatMessage, Part, ToolCall};
-use runie_core::provider_registry::ModelMeta;
+use runie_core::provider::ModelMeta;
 
 const MAX_TOOL_CALL_ID_LEN: usize = 64;
 
@@ -221,7 +221,7 @@ pub async fn send_openai_request(
 mod tests {
     use super::*;
     use runie_core::message::{MessageMetadata, Role};
-    use runie_core::provider_registry::ModelMeta;
+    use runie_core::provider::ModelMeta;
 
     fn provider() -> OpenAiProvider {
         OpenAiProvider::new("sk".to_string(), "gpt-4o")

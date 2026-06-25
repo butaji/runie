@@ -26,7 +26,7 @@ pub(crate) struct MockGuard {
 
 impl Drop for MockGuard {
     fn drop(&mut self) {
-        runie_core::provider_registry::set_mock_enabled(self.prev);
+        runie_core::provider::set_mock_enabled(self.prev);
     }
 }
 
@@ -35,7 +35,7 @@ impl Drop for MockGuard {
 /// to return UnknownProvider error.
 pub(crate) async fn ensure_mock_provider() -> MockGuard {
     let guard = MOCK_STATE_LOCK.lock().await;
-    let prev = runie_core::provider_registry::is_mock_enabled();
-    runie_core::provider_registry::set_mock_enabled(true);
+    let prev = runie_core::provider::is_mock_enabled();
+    runie_core::provider::set_mock_enabled(true);
     MockGuard { prev, guard }
 }

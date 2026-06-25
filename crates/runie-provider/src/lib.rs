@@ -20,7 +20,7 @@ use runie_core::actors::provider::BuiltProvider;
 use runie_core::provider_event::ProviderEvent;
 use runie_core::message::ChatMessage;
 use runie_core::provider::{Provider, ProviderError};
-use runie_core::provider_registry;
+use runie_core::provider;
 
 /// Default timeout for API key validation requests.
 pub const VALIDATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
@@ -110,7 +110,7 @@ impl AsRef<BuiltProvider> for DynProvider {
 
 /// Check whether `key` is known in the registry.
 pub fn is_known(key: &str) -> bool {
-    provider_registry::is_known_provider(key)
+    runie_core::provider::is_known_provider(key)
 }
 
 /// Resolve API key and base URL for a provider.
@@ -120,7 +120,7 @@ pub fn is_known(key: &str) -> bool {
 /// even when the env var is empty. Otherwise fall back to the env var only.
 fn resolve_credentials(
     key: &str,
-    meta: &runie_core::provider_registry::ProviderMeta,
+    meta: &runie_core::provider::ProviderMeta,
     config: Option<&runie_core::config::Config>,
 ) -> (String, String) {
     let (api_key, base_url) = if let Some(cfg) = config {
@@ -155,15 +155,15 @@ pub fn build_provider(
     model: &str,
     config: Option<&runie_core::config::Config>,
 ) -> Result<BuiltProvider, ProviderError> {
-    if key == "mock" && provider_registry::is_mock_enabled() {
+    if key == "mock" && runie_core::provider::is_mock_enabled() {
         return Ok(build_mock_provider(key, model));
     }
 
-    let meta = provider_registry::find_provider(key)
+    let meta = runie_core::provider::find_provider(key)
         .ok_or_else(|| ProviderError::UnknownProvider(key.to_string()))?;
 
     let (api_key, base_url) = resolve_credentials(key, meta, config);
-    if api_key.is_empty() && !provider_registry::is_mock_enabled() {
+    if api_key.is_empty() && !runie_core::provider::is_mock_enabled() {
         return Err(ProviderError::MissingApiKey(meta.env_var.to_string()));
     }
 
@@ -182,7 +182,7 @@ fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
 
 fn build_openai_provider(api_key: String, model: &str, base_url: &str) -> Box<dyn Provider> {
     let p = OpenAiProvider::new(api_key, model).with_base_url(base_url);
-    let p = if let Some(meta) = provider_registry::find_model(model) {
+    let p = if let Some(meta) = runie_core::provider::find_model(model) {
         p.with_model_meta(meta)
     } else {
         p

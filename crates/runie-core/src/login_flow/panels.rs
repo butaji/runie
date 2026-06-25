@@ -3,7 +3,7 @@
 use crate::dialog::dsl::get_field;
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::event::LoginFlowEvent;
-use crate::provider_registry::{display_name, known_providers};
+use crate::provider::{display_name, known_providers};
 
 use super::state::LoginFlowState;
 

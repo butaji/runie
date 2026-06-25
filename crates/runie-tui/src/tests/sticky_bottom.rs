@@ -218,7 +218,7 @@ fn empty_chat_shows_panels() {
     state.ensure_fresh();
 
     let out = render_content(&mut state);
-    if runie_core::provider_registry::is_mock_enabled() {
+    if runie_core::provider::is_mock_enabled() {
         assert!(
             out.contains("mock/echo"),
             "Input panel should show mock/echo in dev"

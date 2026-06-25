@@ -66,8 +66,6 @@ pub mod path;
 pub mod path_complete;
 pub mod prompts;
 pub mod provider;
-pub mod provider_registry;
-pub mod providers_dialog;
 pub mod retry;
 pub mod scoped_model;
 pub mod session;
@@ -141,10 +139,9 @@ pub use permissions::{
 pub use prompts::{
     build_system_prompt, load_prompts, PromptSource, PromptTemplate, DEFAULT_PROMPT, DEFAULT_TOOLS,
 };
-pub use provider::{Provider, ProviderError, ResponseChunk};
-pub use provider_registry::{
-    display_name, find_provider, find_provider_by_env_var, is_known_provider, known_providers,
-    ProviderMeta,
+pub use provider::{
+    display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
+    known_providers, Provider, ProviderError, ProviderMeta, ResponseChunk,
 };
 pub use session::{format_as_markdown, Session};
 pub use actors::session::SessionActor;

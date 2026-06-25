@@ -52,7 +52,7 @@ fn sync_provider_models(state: &mut AppState, provider: &str, models: &[String])
         .map(|(b, k, _)| (b, k))
         .unwrap_or_else(|| {
             (
-                crate::provider_registry::find_provider(provider)
+                crate::provider::find_provider(provider)
                     .map(|p| p.base_url.to_string())
                     .unwrap_or_default(),
                 String::new(),

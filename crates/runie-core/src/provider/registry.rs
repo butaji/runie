@@ -4,6 +4,7 @@
 //! base URLs, API type, environment variable, and the models each provider supports.
 
 use std::sync::atomic::{AtomicBool, Ordering};
+use super::registry_data::KNOWN_PROVIDERS;
 
 static MOCK_ENABLED: AtomicBool = AtomicBool::new(false);
 
@@ -220,15 +221,7 @@ impl ProviderMeta {
     }
 }
 
-/// Mock provider entry — included in `known_providers()` only when
-/// `is_mock_enabled()` returns true.
-const MOCK_PROVIDER: ProviderMeta = ProviderMeta::new(
-    "mock",
-    "Mock (dev only)",
-    "http://localhost/mock",
-    "",
-    &[ModelMeta::new("echo")],
-);
+
 
 /// All known providers. In production (no `RUNIE_MOCK`), this is the
 /// real provider list only. With dev flags, the mock provider is
@@ -236,7 +229,7 @@ const MOCK_PROVIDER: ProviderMeta = ProviderMeta::new(
 pub fn known_providers() -> Vec<&'static ProviderMeta> {
     let mut providers: Vec<&'static ProviderMeta> = KNOWN_PROVIDERS.iter().collect();
     if is_mock_enabled() {
-        providers.push(&MOCK_PROVIDER);
+        providers.push(&super::registry_data::MOCK_PROVIDER);
     }
     providers
 }
@@ -244,7 +237,7 @@ pub fn known_providers() -> Vec<&'static ProviderMeta> {
 /// Find a provider by its key (e.g. "minimax").
 pub fn find_provider(key: &str) -> Option<&'static ProviderMeta> {
     if key == "mock" && is_mock_enabled() {
-        return Some(&MOCK_PROVIDER);
+        return Some(&super::registry_data::MOCK_PROVIDER);
     }
     KNOWN_PROVIDERS.iter().find(|p| p.key == key)
 }
@@ -262,7 +255,10 @@ pub fn find_model(model: &str) -> Option<&'static ModelMeta> {
         .find(|m| m.name == model)
         .or_else(|| {
             if is_mock_enabled() {
-                MOCK_PROVIDER.models.iter().find(|m| m.name == model)
+                super::registry_data::MOCK_PROVIDER
+                    .models
+                    .iter()
+                    .find(|m| m.name == model)
             } else {
                 None
             }
@@ -281,9 +277,6 @@ pub fn display_name(key: &str) -> String {
         .unwrap_or_else(|| key.to_string())
 }
 
-mod data;
-pub(crate) use data::KNOWN_PROVIDERS;
-
 // ============================================================================
 // Tests
 // ============================================================================
@@ -296,7 +289,6 @@ mod tests {
     fn provider_registry_lists_known_providers() {
         let providers = known_providers();
         assert!(!providers.is_empty(), "Registry should not be empty");
-        // Spot-check well-known providers
         assert!(providers.iter().any(|p| p.key == "anthropic"));
         assert!(providers.iter().any(|p| p.key == "openai"));
         assert!(providers.iter().any(|p| p.key == "minimax"));
@@ -321,7 +313,8 @@ mod tests {
 
     #[test]
     fn provider_registry_find_by_env_var() {
-        let p = find_provider_by_env_var("MINIMAX_API_KEY").expect("should find by env var");
+        let p =
+            find_provider_by_env_var("MINIMAX_API_KEY").expect("should find by env var");
         assert_eq!(p.key, "minimax");
     }
 
@@ -346,9 +339,8 @@ mod tests {
         for p in known_providers() {
             assert!(
                 p.base_url.starts_with("http"),
-                "Provider {} should have a valid base URL, got {}",
-                p.key,
-                p.base_url
+                "Provider {} should have valid base URL",
+                p.key
             );
         }
     }
@@ -356,62 +348,32 @@ mod tests {
     #[test]
     fn provider_registry_all_have_models() {
         for p in known_providers() {
-            assert!(
-                !p.models.is_empty(),
-                "Provider {} should have default models",
-                p.key
-            );
+            assert!(!p.models.is_empty(), "Provider {} should have models", p.key);
         }
     }
 
     #[test]
-    fn provider_registry_model_names_are_unique_per_provider() {
+    fn provider_registry_model_names_unique_per_provider() {
         for p in known_providers() {
             let mut names: Vec<_> = p.models.iter().map(|m| m.name).collect();
             let before = names.len();
             names.sort_unstable();
             names.dedup();
-            assert_eq!(
-                names.len(),
-                before,
-                "Provider {} has duplicate model names",
-                p.key
-            );
+            assert_eq!(names.len(), before, "Provider {} has duplicates", p.key);
         }
-    }
-
-    fn canonical_for_openrouter(model: &ModelMeta) -> &'static ModelMeta {
-        let (provider_key, base_name) = model
-            .name
-            .split_once('/')
-            .expect("OpenRouter model should be provider/name");
-        let provider = find_provider(provider_key).expect("Canonical provider should exist");
-        if let Some(m) = provider.models.iter().find(|m| m.name == base_name) {
-            return m;
-        }
-        provider
-            .models
-            .iter()
-            .find(|m| capabilities_match(m, model))
-            .expect("Canonical model should exist")
-    }
-
-    fn capabilities_match(a: &ModelMeta, b: &ModelMeta) -> bool {
-        a.supports_thinking == b.supports_thinking
-            && a.supports_vision == b.supports_vision
-            && a.context_window == b.context_window
     }
 
     #[test]
     fn openrouter_model_matches_canonical() {
         let openrouter = find_provider("openrouter").expect("openrouter should exist");
         for model in openrouter.models {
-            let canonical = canonical_for_openrouter(model);
-            assert!(
-                capabilities_match(model, canonical),
-                "capabilities mismatch for {}",
-                model.name
-            );
+            let (provider_key, base_name) = model.name.split_once('/').expect("should have /");
+            let provider = find_provider(provider_key).expect("canonical provider exists");
+            if let Some(m) = provider.models.iter().find(|m| m.name == base_name) {
+                assert_eq!(m.supports_thinking, model.supports_thinking);
+                assert_eq!(m.supports_vision, model.supports_vision);
+                assert_eq!(m.context_window, model.context_window);
+            }
         }
     }
 
@@ -424,7 +386,7 @@ mod tests {
             for model in p.models {
                 assert!(
                     model.context_window.is_some(),
-                    "Provider {} model {} should have a context window",
+                    "Provider {} model {} needs context window",
                     p.key,
                     model.name
                 );

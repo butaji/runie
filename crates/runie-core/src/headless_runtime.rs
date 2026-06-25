@@ -19,7 +19,7 @@ use crate::actor::ActorHandle;
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::actors::provider::{BuiltProvider, ProviderFactory};
-use crate::ProviderError;
+use crate::provider::ProviderError;
 use crate::event::Event;
 
 /// Non-interactive runtime backed by the same actors as the TUI.

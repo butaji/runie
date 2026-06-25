@@ -114,7 +114,7 @@ impl ModelInfo {
 /// Derived from the provider registry so provider and model metadata stay in sync.
 pub fn model_catalog() -> Vec<ModelInfo> {
     let mut models = Vec::new();
-    for provider in crate::provider_registry::known_providers() {
+    for provider in crate::provider::known_providers() {
         for model in provider.models {
             let capabilities = ModelCapabilities {
                 streaming: model.streaming,
@@ -283,7 +283,7 @@ mod tests {
     #[test]
     fn model_catalog_contains_all_provider_default_models() {
         let catalog = model_catalog();
-        for provider in crate::provider_registry::known_providers() {
+        for provider in crate::provider::known_providers() {
             for model in provider.models {
                 assert!(
                     catalog
@@ -299,7 +299,7 @@ mod tests {
 
     #[test]
     fn registry_model_has_consistent_provider() {
-        for provider in crate::provider_registry::known_providers() {
+        for provider in crate::provider::known_providers() {
             for model in provider.models {
                 let info = ModelInfo {
                     provider: provider.key.to_string(),

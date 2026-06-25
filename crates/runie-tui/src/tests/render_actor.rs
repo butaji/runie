@@ -37,7 +37,7 @@ fn snapshot_renders_empty_state() {
     let out = render_snapshot(&snap);
     // In dev (RUNIE_MOCK) the input panel shows "mock/echo". In production
     // the app starts with no provider and the model area is empty.
-    if runie_core::provider_registry::is_mock_enabled() {
+    if runie_core::provider::is_mock_enabled() {
         assert!(
             out.contains("mock/echo"),
             "input panel should show mock/echo in dev"

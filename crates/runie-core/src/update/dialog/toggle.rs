@@ -76,7 +76,7 @@ fn handle_vim_mode_toggle(state: &mut AppState) {
 }
 
 fn handle_providers_dialog(state: &mut AppState) {
-    use crate::providers_dialog::build_providers_dialog;
+    use crate::provider::dialog::build_providers_dialog;
     state.open_dialog = Some(DialogState::PanelStack(build_providers_dialog(state)));
     state.mark_dirty();
 }
@@ -104,7 +104,7 @@ fn handle_providers_select_model(state: &mut AppState, event: &DialogEvent) {
 
 fn handle_providers_edit_models(state: &mut AppState, event: &DialogEvent) {
     if let DialogEvent::ProvidersEditModels { provider } = event {
-        let stack = crate::providers_dialog::build_provider_models_editor(state, provider);
+        let stack = crate::provider::dialog::build_provider_models_editor(state, provider);
         if let Some(DialogState::PanelStack(current)) = &mut state.open_dialog {
             if let Some(panel) = stack.current() {
                 current.push(panel.clone());

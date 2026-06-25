@@ -216,7 +216,7 @@ impl AppState {
             prompts_section.custom.as_deref(),
         );
         self.apply_scoped_models(config);
-        if !self.has_models() && !crate::provider_registry::is_mock_enabled() {
+        if !self.has_models() && !crate::provider::is_mock_enabled() {
             self.update(crate::event::LoginFlowEvent::Start);
         }
     }

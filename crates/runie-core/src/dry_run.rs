@@ -69,7 +69,7 @@ fn resolve_provider_model(config: &Config) -> Result<(String, String), String> {
         .clone()
         .ok_or_else(|| "no provider configured".to_string())?;
 
-    if !crate::provider_registry::is_known_provider(&provider) {
+    if !crate::provider::is_known_provider(&provider) {
         return Err(format!("unknown provider '{}'", provider));
     }
 

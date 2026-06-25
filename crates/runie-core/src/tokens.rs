@@ -152,7 +152,7 @@ impl TokenTracker {
 /// Build a `TokenTracker` configured from the provider/model registry.
 /// Falls back to the chars/4 approximation and zero costs for unknown models.
 pub fn token_tracker_for(provider: &str, model: &str) -> TokenTracker {
-    crate::provider_registry::find_provider(provider)
+    crate::provider::find_provider(provider)
         .and_then(|p| p.models.iter().find(|m| m.name == model))
         .map(|meta| {
             let mut tracker = TokenTracker::with_costs(
