@@ -43,7 +43,7 @@
     "file": "tasks/consolidate-login-flow-handlers.md"
   },
   {
-    "status": "todo",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
     "milestone": "R4",
@@ -479,7 +479,7 @@
     "file": "tasks/unify-persistence-actors.md"
   },
   {
-    "status": "todo",
+    "status": "done",
     "depends_on": [],
     "blocks": [
       "move-provider-catalog-to-provider-crate",
@@ -502,7 +502,7 @@
     "file": "tasks/view-actor-owns-view-state.md"
   },
   {
-    "status": "in_progress",
+    "status": "done",
     "depends_on": [],
     "blocks": [
       "app-state-read-only-projection",
@@ -529,7 +529,7 @@
     "file": "tasks/actor-owned-state-ssot.md"
   },
   {
-    "status": "in_progress",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
     "milestone": "R4",
@@ -539,7 +539,7 @@
     "file": "tasks/config-ssot-via-configactor.md"
   },
   {
-    "status": "in_progress",
+    "status": "done",
     "depends_on": [],
     "blocks": [
       "app-state-read-only-projection",
