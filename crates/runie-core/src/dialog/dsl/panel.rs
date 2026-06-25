@@ -4,12 +4,6 @@
 
 use crate::dialog::Panel;
 
-/// Create a new list-view panel builder. Alias for [`panel`].
-#[allow(dead_code)]
-pub fn list(id: impl Into<String>, title: impl Into<String>) -> Panel {
-    Panel::new(id, title)
-}
-
 /// Create a new list-view panel builder.
 pub fn panel(id: impl Into<String>, title: impl Into<String>) -> Panel {
     Panel::new(id, title)

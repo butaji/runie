@@ -32,6 +32,7 @@ pub enum PanelView {
 }
 
 /// A single panel inside a dialog — title + list of items + selection state.
+// allow: fn pointer comparison is unavoidable for the FormSubmitFn type in PanelEq
 #[allow(unpredictable_function_pointer_comparisons)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Panel {

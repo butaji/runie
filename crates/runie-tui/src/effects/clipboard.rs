@@ -33,7 +33,7 @@ fn platform_copy(text: &str) -> Result<(), String> {
 
     #[cfg(not(any(target_os = "macos", unix, target_os = "windows")))]
     {
-        // allow: code path never reached on supported platforms
+        // allow: code path never reached on supported platforms (macOS, Unix, Windows are supported)
         #[allow(clippy::unreachable)]
         return Err("no clipboard fallback available for this platform".into());
     }

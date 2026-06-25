@@ -8,7 +8,7 @@
 //!
 //! There are two high-level panel layouts:
 //!
-//! * **List view** (`panel` / `list`) — a scrollable list of actions, toggles,
+//! * **List view** (`panel`) — a scrollable list of actions, toggles,
 //!   and selects. List panels have fuzzy search enabled by default: typing while
 //!   the dialog is open filters items.
 //! * **Form view** (`form`) — labeled input fields with a submit button. Forms
@@ -29,13 +29,8 @@
 //!
 //! // List view (fuzzy-searchable by default)
 //! let _ = panel("settings", "Settings")
-//!     .list()
 //!     .toggle("Dark Mode", false, ItemAction::Toggle("dark".into()))
 //!     .select("Theme", "runie", vec!["runie".into(), "dracula".into()], "theme");
-//!
-//! // Equivalent list-view alias
-//! let _ = runie_core::dialog::dsl::list("settings", "Settings")
-//!     .action("Done", ItemAction::Close);
 //!
 //! // Form view (filtering disabled, fields editable)
 //! let _ = form("save", "Save Session")

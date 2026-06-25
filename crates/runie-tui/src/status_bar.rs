@@ -147,7 +147,6 @@ fn format_k_animated(n: f64) -> String {
 }
 
 pub(crate) struct ContextUsage {
-    #[allow(dead_code)]
     pub(crate) used: usize,
     pub(crate) limit: usize,
     pub(crate) percent: usize,

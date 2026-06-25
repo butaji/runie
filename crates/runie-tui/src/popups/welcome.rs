@@ -1,5 +1,7 @@
 //! Welcome / launcher screen — shown when no session is active.
 
+// allow: vec![] then push is necessary — welcome content is built dynamically
+//       by helper functions that append to the lines Vec
 #![allow(clippy::vec_init_then_push)]
 
 #[cfg(test)]
