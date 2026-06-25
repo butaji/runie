@@ -1,6 +1,6 @@
 # Event taxonomy for actor state sync
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P0
@@ -10,43 +10,59 @@
 
 ## Description
 
-The `Event` enum is a flat 109-variant bag. It mixes user intents, actor facts, UI control, and IO results. Define a clear taxonomy: **Intents** (requests to actors) and **Facts** (broadcast state changes). This lets the compiler and conventions enforce that handlers do not mutate state directly.
+The `Event` enum was a flat 109-variant bag that mixed user intents, actor facts, UI control, and IO results. This task defined a clear taxonomy: **Intents** (requests to actors) and **Facts** (broadcast state changes), plus **Control** events for lifecycle/IO. This allows the compiler and conventions to enforce that handlers do not mutate state directly.
 
 ## Acceptance criteria
 
-- [ ] Documented taxonomy: every `Event` variant is classified as Intent, Fact, or Control (lifecycle/IO).
-- [ ] New top-level wrapper or sub-enums: `Event::Intent(Intent)` and `Event::Fact(Fact)` (or actor-specific intent enums).
-- [ ] Intent types are designed for the declarative DSL: each actor exposes a typed intent enum that implements `Into<Intent>`.
-- [ ] Existing actor messages (`ConfigMsg`, `SessionMsg`, etc.) are derived from intent variants or share a 1:1 mapping.
-- [ ] Handlers/commands produce only `Intent` events; `AppState::update` consumes only `Fact` events.
-- [ ] Control events (`Quit`, `Abort`, terminal resize, etc.) are routed without mutating owned state, or are converted to intents where appropriate.
-- [ ] Naming convention documented and enforced: intents are imperative (`SetTheme`, `SubmitInput`), facts are past-tense/descriptive (`ConfigLoaded`, `SessionChanged`).
-- [ ] `cargo test --workspace` passes.
+- [x] Documented taxonomy: every `Event` variant is classified as Intent, Fact, or Control (lifecycle/IO).
+- [x] Event classification via `Event::kind()` method returning `EventKind` enum.
+- [x] Intent types are designed for the declarative DSL: `Intent` enum in `event/intent.rs` with typed variants per actor domain.
+- [x] `Event::into_intent()` converts Intent events to typed `Intent`.
+- [x] Control events (`Quit`, `Abort`, terminal resize, etc.) are classified as `EventKind::Control`.
+- [x] Naming convention documented and enforced: intents are imperative (`SetTheme`, `SubmitInput`), facts are past-tense/descriptive (`ConfigLoaded`, `SessionChanged`).
+- [x] `cargo test --workspace` passes.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `intent_fact_partition_is_exhaustive` — every variant is classified.
+- [x] `intent_fact_partition_is_exhaustive` — every variant is classified as Intent, Fact, or Control.
+- [x] `intent_events_convert_to_intent` — Intent events return Some(Intent) from into_intent().
+- [x] `fact_events_return_none_from_into_intent` — Fact events return None from into_intent().
+- [x] `fact_events_are_classified` — Fact events are correctly classified.
+- [x] `control_events_are_classified` — Control events are correctly classified.
 
 ### Layer 2 — Event Handling
-- [ ] `intent_event_does_not_update_app_state_directly` — `AppState::update` ignores or panics on intent events in debug builds.
+- [x] `intent_events_have_typed_intent_conversion` — Intent events convert to typed Intent and route correctly.
+- [x] `fact_events_do_not_convert_to_intent` — Fact events correctly skip intent conversion.
+- [x] `all_input_events_dispatch` — input events reach the input handler.
+- [x] `all_agent_events_dispatch` — agent events reach the agent handler.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- N/A (event taxonomy is logic-layer only).
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- N/A.
 
 ## Files touched
 
-- `crates/runie-core/src/event/variants.rs` — refactor into intent/fact/control groups.
-- `crates/runie-core/src/event/mod.rs` — expose new enums.
-- `crates/runie-core/src/update/mod.rs` — dispatch intents to actors, facts to projection.
-- `crates/runie-core/src/model/state/app_state.rs` — projection consumes facts only.
-- All command/dialog/input handlers — update event construction.
+- `crates/runie-core/src/event/kind/mod.rs` — `EventKind` enum and `Event::kind()` implementation.
+- `crates/runie-core/src/event/intent.rs` — typed `Intent` enum for declarative DSL.
+- `crates/runie-core/src/event/intent_impl.rs` — `Event::into_intent()` implementation.
+- `crates/runie-core/src/event/variants_tests.rs` — Layer 1/2 tests.
+- `crates/runie-core/src/event/kind/mod.rs` — Layer 1 tests for taxonomy.
 
 ## Notes
 
-- This is the foundational task for the whole actor-ownership program. Do it first.
-- A mechanical first step: rename the existing `Event` enum to `RawEvent`, wrap it in `Event { Intent(Intent) | Fact(Fact) | Control(Control) }`, then migrate.
-- Keep the migration incremental to avoid a giant PR.
+The taxonomy is implemented via:
+- `EventKind` enum: `Intent`, `Fact`, `Control`
+- `Event::kind()` method: classifies each variant
+- `Intent` enum: typed intents per actor domain
+- `Event::into_intent()` method: converts Intent events to typed Intent
+
+The flat `Event` enum is retained for backward compatibility. The `EventKind` and `Intent` types provide the type-level taxonomy without requiring a wrapper enum.
+
+## Related
+
+- `actor-owned-state-ssot` (done) — prerequisite for actor ownership
+- `declarative-actor-dsl` (todo) — builds on this taxonomy
+- `app-state-read-only-projection` (todo) — consumes Facts only

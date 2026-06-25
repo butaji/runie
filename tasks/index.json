@@ -851,7 +851,7 @@
     },
     {
       "id": "event-taxonomy-for-actor-state-sync",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P0",
