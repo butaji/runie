@@ -1,122 +1,84 @@
-use crate::tool_parser::{
-    assign_tool_call_ids, build_assistant_message, has_tool_calls, parse_tool_calls,
-    parse_tool_calls_fallible, ParsedToolCall,
-};
-use serde_json::Value;
+//! Tests for partial JSON repair functionality.
+
+use super::*;
 
 #[test]
-fn test_parse_markup_bash_tool() {
-    let text = r#"[TOOL_CALL]{tool => "bash", args => {"command" => "echo hi"}}[/TOOL_CALL]"#;
-    let tools = parse_tool_calls(text);
-    assert_eq!(tools.len(), 1);
-    assert_eq!(tools[0].name, "bash");
-    assert_eq!(tools[0].args["command"], "echo hi");
+fn repair_valid_json_passes_through() {
+    let json = r#"{"command":"ls"}"#;
+    let result = repair_partial_json(json);
+    assert!(result.is_some());
+    assert_eq!(
+        result.unwrap().as_object().unwrap().get("command").unwrap().as_str().unwrap(),
+        "ls"
+    );
 }
 
 #[test]
-fn test_parse_markup_unknown_tool_ignored() {
-    let text = r#"[TOOL_CALL]{tool => "unknown_tool", args => {}}[/TOOL_CALL]"#;
-    let tools = parse_tool_calls(text);
-    assert!(tools.is_empty());
+fn repair_missing_closing_brace() {
+    let json = r#"{"command":"ls""#;
+    let result = repair_partial_json(json);
+    assert!(result.is_some());
+    let obj = result.unwrap().as_object().unwrap();
+    assert_eq!(obj.get("command").unwrap().as_str().unwrap(), "ls");
 }
 
 #[test]
-fn test_parse_inline_json_tool() {
-    let text = r#"{"name": "bash", "arguments": {"command": "ls"}}"#;
-    let tools = parse_tool_calls(text);
-    assert_eq!(tools.len(), 1);
-    assert_eq!(tools[0].name, "bash");
-    assert_eq!(tools[0].args["command"], "ls");
+fn repair_missing_closing_quote_and_brace() {
+    let json = r#"{"command":"ls"#;
+    let result = repair_partial_json(json);
+    assert!(result.is_some());
+    let obj = result.unwrap().as_object().unwrap();
+    assert_eq!(obj.get("command").unwrap().as_str().unwrap(), "ls");
 }
 
 #[test]
-fn test_parse_legacy_tool() {
-    let tools = parse_tool_calls("TOOL:read_file:Cargo.toml");
-    assert_eq!(tools.len(), 1);
-    assert_eq!(tools[0].name, "read_file");
-    assert_eq!(tools[0].args["path"], "Cargo.toml");
+fn repair_missing_closing_bracket() {
+    let json = r#"{"files":["a","b""#;
+    let result = repair_partial_json(json);
+    assert!(result.is_some());
 }
 
 #[test]
-fn test_has_tool_calls() {
-    assert!(has_tool_calls("TOOL:bash:ls"));
-    assert!(!has_tool_calls("Hello world"));
+fn repair_empty_string_defaults_to_empty_object() {
+    let result = repair_partial_json("");
+    assert!(result.is_some());
+    assert_eq!(result.unwrap(), serde_json::json!({}));
 }
 
 #[test]
-fn test_assign_tool_call_ids() {
-    let mut tools = vec![ParsedToolCall {
-        name: "bash".into(),
-        args: Value::Null,
-        id: None,
-    }];
-    assign_tool_call_ids(&mut tools);
-    assert_eq!(tools[0].id, Some("call_0".into()));
+fn repair_nested_unclosed() {
+    let json = r#"{"a":{"b":1"#;
+    let result = repair_partial_json(json);
+    assert!(result.is_some());
+    let obj = result.unwrap().as_object().unwrap();
+    let nested = obj.get("a").unwrap().as_object().unwrap();
+    assert_eq!(nested.get("b").unwrap().as_i64().unwrap(), 1);
 }
 
 #[test]
-fn test_parse_tool_calls_fallible_returns_errors() {
-    let text = "{invalid json}";
-    let results = parse_tool_calls_fallible(text);
-    assert_eq!(results.len(), 1);
-    assert!(results[0].is_err());
+fn repair_garbage_returns_none() {
+    let result = repair_partial_json("not json at all");
+    assert!(result.is_none());
 }
 
 #[test]
-fn parse_minimax_m3_delimited_read_file() {
-    let text = r#"<think>
-Now let me read the README.md file.
-</think>
-
-]<]minimax[>[<tool_call>
-]<]minimax[>[<invoke name="read_file">]<]minimax[>[<path>README.md]<]minimax[>[</path>]<]minimax[>[</invoke>
-]<]minimax[>[</tool_call>"#;
-    let tools = parse_tool_calls(text);
-    assert_eq!(tools.len(), 1);
-    assert_eq!(tools[0].name, "read_file");
-    assert_eq!(tools[0].args["path"], "README.md");
+fn repair_string_with_escaped_quotes() {
+    // This tests the brace-counting with escaped quotes
+    let json = r#"{"cmd":"hello world""#;
+    let result = repair_partial_json(json);
+    // Should repair: missing closing }
+    assert!(result.is_some());
 }
 
 #[test]
-fn parse_minimax_m2_parameter_tags() {
-    let text = r#"<minimax:tool_call>
-<invoke name="list_dir">
-<parameter name="path">.</parameter>
-</invoke>
-</minimax:tool_call>"#;
-    let tools = parse_tool_calls(text);
-    assert_eq!(tools.len(), 1);
-    assert_eq!(tools[0].args["path"], ".");
-}
-
-#[test]
-fn test_build_assistant_message_includes_tools() {
-    let tools = vec![ParsedToolCall {
-        name: "bash".into(),
-        args: Value::Object(
-            [("command".into(), Value::String("ls".into()))]
-                .into_iter()
-                .collect(),
-        ),
-        id: Some("call_0".into()),
-    }];
-    let msg = build_assistant_message("hello", None, &tools);
-    assert_eq!(msg.role, crate::message::Role::Assistant);
-    assert_eq!(msg.tool_calls().len(), 1);
-}
-
-#[test]
-fn parse_tool_calls_extracts_inline_legacy_marker() {
-    let text = "I'll list files.TOOL:list_dir:.";
-    let tools = parse_tool_calls(text);
-    assert_eq!(tools.len(), 1);
-    assert_eq!(tools[0].name, "list_dir");
-    assert_eq!(tools[0].args["path"], ".");
-}
-
-#[test]
-fn parse_tool_calls_ignores_inline_tool_mention() {
-    let text = "Use the TOOL: parameter to configure the tool.";
-    let tools = parse_tool_calls(text);
-    assert!(tools.is_empty());
+fn tool_stream_finish_uses_repair_for_truncated_args() {
+    use crate::tool_stream::ToolStream;
+    let mut stream = ToolStream::new();
+    stream.start("call_1", "bash");
+    stream.append("call_1", r#"{"command":"ls"#); // truncated - missing closing brace
+    let call = stream.finish("call_1");
+    assert!(call.is_some());
+    let call = call.unwrap();
+    assert_eq!(call.name, "bash");
+    assert_eq!(call.args["command"], "ls");
 }

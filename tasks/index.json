@@ -639,7 +639,7 @@
     },
     {
       "id": "drop-event-aliases",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P2",
@@ -1016,7 +1016,7 @@
     },
     {
       "id": "introduce-tool-definition-macro",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Tools",
       "priority": "P1",
@@ -1471,7 +1471,7 @@
     },
     {
       "id": "share-minimax-sse-fixtures",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Testing",
       "priority": "P1",
@@ -1530,6 +1530,16 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/split-files-at-limit-round-2.md"
+    },
+    {
+      "id": "split-tool-parser-parsers",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core / State",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/split-tool-parser-parsers.md"
     },
     {
       "id": "split-runie-core-into-domain-and-io-crates",
@@ -1760,7 +1770,7 @@
     },
     {
       "id": "unify-persistence-actors",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",

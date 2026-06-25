@@ -50,12 +50,14 @@ impl ToolStream {
 
     /// Finish and return a tool call, removing it from tracking.
     /// Returns `None` if the id is not tracked or parsing fails.
+    ///
+    /// Uses partial JSON repair to handle truncated JSON from streaming.
     pub fn finish(&mut self, id: &str) -> Option<crate::tool_parser::ParsedToolCall> {
         let acc = self.pending.remove(id)?;
         let args = if acc.arguments.is_empty() {
             Value::Object(serde_json::Map::new())
         } else {
-            serde_json::from_str(&acc.arguments).ok()?
+            crate::tool_parser::repair_partial_json(&acc.arguments)?
         };
         Some(crate::tool_parser::ParsedToolCall {
             name: acc.name,
