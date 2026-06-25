@@ -242,7 +242,15 @@ fn load_events_rejects_misaligned_entries() {
 
     // load_events should return an error instead of silently dropping/offsetting.
     let result = store.load_events(sid);
-    assert!(result.is_err(), "parse failure should be an error, not silent drop: {:?}", result);
+    assert!(
+        result.is_err(),
+        "parse failure should be an error, not silent drop: {:?}",
+        result
+    );
     let err = result.unwrap_err().to_string();
-    assert!(err.contains("unparseable"), "error message should mention unparseable, got: {}", err);
+    assert!(
+        err.contains("unparseable"),
+        "error message should mention unparseable, got: {}",
+        err
+    );
 }

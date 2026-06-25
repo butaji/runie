@@ -56,8 +56,14 @@ fn append_response_delta_populates_text_part() {
         &mut state,
         [
             Event::TextStart { id: id.clone() },
-            Event::ResponseDelta { id: id.clone(), content: "hi".to_string() },
-            Event::ResponseDelta { id: id.clone(), content: " there".to_string() },
+            Event::ResponseDelta {
+                id: id.clone(),
+                content: "hi".to_string(),
+            },
+            Event::ResponseDelta {
+                id: id.clone(),
+                content: " there".to_string(),
+            },
             Event::TextEnd { id: id.clone() },
             Event::Done { id },
         ],
@@ -90,7 +96,10 @@ fn append_response_delta_populates_reasoning_part() {
         &mut state,
         [
             Event::ThinkingStart { id: id.clone() },
-            Event::ThinkingDelta { id: id.clone(), content: "reasoning".to_string() },
+            Event::ThinkingDelta {
+                id: id.clone(),
+                content: "reasoning".to_string(),
+            },
             Event::ThinkingEnd { id },
         ],
     );
@@ -124,7 +133,10 @@ fn append_response_delta_multiple_text_blocks() {
         &mut state,
         [
             Event::TextStart { id: id1.clone() },
-            Event::ResponseDelta { id: id1.clone(), content: "a".to_string() },
+            Event::ResponseDelta {
+                id: id1.clone(),
+                content: "a".to_string(),
+            },
             Event::TextEnd { id: id1.clone() },
             Event::Done { id: id1 },
         ],
@@ -135,7 +147,10 @@ fn append_response_delta_multiple_text_blocks() {
         &mut state,
         [
             Event::TextStart { id: id2.clone() },
-            Event::ResponseDelta { id: id2.clone(), content: "b".to_string() },
+            Event::ResponseDelta {
+                id: id2.clone(),
+                content: "b".to_string(),
+            },
             Event::TextEnd { id: id2.clone() },
             Event::Done { id: id2 },
         ],
@@ -176,12 +191,15 @@ fn finish_turn_closes_open_parts() {
         &mut state,
         [
             Event::TextStart { id: id.clone() },
-            Event::ResponseDelta { id: id.clone(), content: "hi".to_string() },
+            Event::ResponseDelta {
+                id: id.clone(),
+                content: "hi".to_string(),
+            },
         ],
     );
 
-    let msg_before = last_assistant(&state)
-        .expect("assistant message should exist after ResponseDelta");
+    let msg_before =
+        last_assistant(&state).expect("assistant message should exist after ResponseDelta");
     assert!(
         !msg_before.parts.is_empty(),
         "parts should not be empty (TextStart pushes a Part::Text)"
@@ -207,7 +225,10 @@ fn finish_turn_fallback_creates_text_part_when_empty() {
 
     feed_events(
         &mut state,
-        [Event::ResponseDelta { id: id.clone(), content: "hi".to_string() }],
+        [Event::ResponseDelta {
+            id: id.clone(),
+            content: "hi".to_string(),
+        }],
     );
     feed_events(&mut state, [Event::Done { id }]);
 

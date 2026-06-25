@@ -29,11 +29,7 @@ pub trait ProviderProtocol: Send + Sync {
     }
 
     /// Process a single frame and return updated state plus emitted events.
-    fn step(
-        &self,
-        state: Self::State,
-        frame: Self::Frame,
-    ) -> (Self::State, Vec<ProviderEvent>);
+    fn step(&self, state: Self::State, frame: Self::Frame) -> (Self::State, Vec<ProviderEvent>);
 
     /// Called when the stream halts (error or end). Flushes any pending state.
     fn on_halt(&self, state: Self::State) -> Vec<ProviderEvent> {
@@ -134,11 +130,17 @@ pub struct TerminalWrapper<F> {
 
 impl<F> TerminalWrapper<F> {
     pub fn new(inner: F) -> Self {
-        Self { inner, is_done: false }
+        Self {
+            inner,
+            is_done: false,
+        }
     }
 
     pub fn done(inner: F) -> Self {
-        Self { inner, is_done: true }
+        Self {
+            inner,
+            is_done: true,
+        }
     }
 }
 

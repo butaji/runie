@@ -9,7 +9,9 @@ use std::sync::Arc;
 
 use runie_core::message::ChatMessage;
 use runie_core::permissions::build_sink as core_sink;
-use runie_core::prompts::{build_system_prompt as core_system_prompt, DEFAULT_PROMPT, DEFAULT_TOOLS};
+use runie_core::prompts::{
+    build_system_prompt as core_system_prompt, DEFAULT_PROMPT, DEFAULT_TOOLS,
+};
 
 use crate::HeadlessCliOptions;
 
@@ -31,9 +33,7 @@ pub fn build_messages(user_prompt: &str) -> Vec<ChatMessage> {
 /// - `execute_tools: true` — run tools by default
 /// - `max_tool_rounds: 5` — conservative round limit for CLI use
 /// - `on_chunk: None` — caller supplies their own chunk handler
-pub fn build_options(
-    on_chunk: Option<Box<dyn FnMut(&str) + Send>>,
-) -> HeadlessCliOptions {
+pub fn build_options(on_chunk: Option<Box<dyn FnMut(&str) + Send>>) -> HeadlessCliOptions {
     HeadlessCliOptions {
         execute_tools: true,
         max_tool_rounds: 5,

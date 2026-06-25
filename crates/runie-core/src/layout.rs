@@ -38,7 +38,9 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
         Element::ToolRunning { .. } => 1,
         Element::ToolDone { output, .. } => tool_done_line_count(output),
         Element::ToolSummary { .. } => 1,
-        Element::ContextGroup { tools, collapsed, .. } => {
+        Element::ContextGroup {
+            tools, collapsed, ..
+        } => {
             if *collapsed {
                 1
             } else {
@@ -66,7 +68,9 @@ fn fallback_line_count(element: &Element) -> usize {
             }
         }
         Element::ToolSummary { .. } => 1,
-        Element::ContextGroup { tools, collapsed, .. } => {
+        Element::ContextGroup {
+            tools, collapsed, ..
+        } => {
             if *collapsed {
                 1
             } else {

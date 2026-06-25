@@ -89,10 +89,12 @@ impl AppState {
             return;
         }
         if self.agent_state().turn_active {
-            self.agent_state_mut().message_queue.push(crate::model::QueuedMessage {
-                content,
-                kind: crate::model::QueuedMessageKind::Steering,
-            });
+            self.agent_state_mut()
+                .message_queue
+                .push(crate::model::QueuedMessage {
+                    content,
+                    kind: crate::model::QueuedMessageKind::Steering,
+                });
             self.view_mut().scroll = 0;
             self.view_mut().dirty = true;
             return;
@@ -102,10 +104,14 @@ impl AppState {
             role: Role::User,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![runie_core::message::Part::Text { content: content.clone() }],
+            parts: vec![runie_core::message::Part::Text {
+                content: content.clone(),
+            }],
             ..Default::default()
         });
-        self.agent_state_mut().request_queue.push_back((content, id));
+        self.agent_state_mut()
+            .request_queue
+            .push_back((content, id));
         self.view_mut().scroll = 0;
         self.messages_changed();
     }
@@ -135,13 +141,14 @@ impl AppState {
     fn run_bash_command(&mut self, command: &str) {
         // Extract handles before async work to avoid borrow conflicts.
         let handles = self.actor_handles().cloned();
-        let can_spawn = handles.as_ref().is_some()
-            && tokio::runtime::Handle::try_current().is_ok();
+        let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
 
         if can_spawn {
             let command = command.to_string();
             let handles = handles.unwrap();
-            tokio::spawn(async move { handles.run_bash(command).await; });
+            tokio::spawn(async move {
+                handles.run_bash(command).await;
+            });
             return;
         }
         let result = crate::update::tools::execute_bash(command);

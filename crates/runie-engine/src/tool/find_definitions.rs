@@ -3,9 +3,10 @@
 //! Uses FFF's content search with `classify_definitions: true` to find
 //! `struct`, `fn`, `class`, `def`, `impl`, etc. definitions.
 
-
 use crate::define_tool;
-use crate::tool::search::fff_helpers::{build_error_json, build_error_json_with_instant, with_picker};
+use crate::tool::search::fff_helpers::{
+    build_error_json, build_error_json_with_instant, with_picker,
+};
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -133,14 +134,16 @@ impl Tool for FindDefinitionsTool {
         let (symbol, glob, _path, limit) = parse_input(&input, ctx)?;
         let state = match FffSearchState::get() {
             Some(s) => s,
-            None => return build_error_json_with_instant(
-                "find_definitions",
-                serde_json::json!({ "symbol": symbol }),
-                "FFF indexer not initialized",
-                "results",
-                false,
-                start,
-            ),
+            None => {
+                return build_error_json_with_instant(
+                    "find_definitions",
+                    serde_json::json!({ "symbol": symbol }),
+                    "FFF indexer not initialized",
+                    "results",
+                    false,
+                    start,
+                )
+            }
         };
         with_picker(
             &state,

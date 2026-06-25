@@ -1,10 +1,10 @@
 //! Tests for vim-nav bracket size and shape.
 
-use super::*;
 use super::helpers::{
     add_message, assert_bracket_one_cell_wide, bracket_rows, draw, enter_vim_nav,
     state_with_wrapped_welcome,
 };
+use super::*;
 use runie_core::Event;
 
 #[test]
@@ -15,7 +15,9 @@ fn vim_nav_mode_bracket_spans_post_elements() {
 
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text { content: "hello".into() }],
+        parts: vec![Part::Text {
+            content: "hello".into(),
+        }],
         timestamp: 0.0,
         id: "req.0".to_string(),
         ..Default::default()
@@ -130,7 +132,9 @@ fn nav_mode_bracket_for_one_line_non_user_post_is_three_rows() {
     add_message(&mut state, Role::User, "hi", 0.0, "req.0");
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        parts: vec![Part::Text { content: "x".into() }],
+        parts: vec![Part::Text {
+            content: "x".into(),
+        }],
         timestamp: 1.0,
         id: "resp.0".to_string(),
         provider: "mock".to_string(),

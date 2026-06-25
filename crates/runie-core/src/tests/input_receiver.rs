@@ -7,8 +7,8 @@
 
 use crate::commands::DialogState;
 use crate::dialog::{ItemAction, Panel, PanelStack};
-use crate::Event;
 use crate::model::{AppState, InputReceiver};
+use crate::Event;
 
 fn state_with_vim() -> AppState {
     let mut state = AppState::default();

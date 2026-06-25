@@ -18,7 +18,10 @@ use crate::trust::TrustDecision;
 #[derive(Debug, Clone)]
 pub enum PersistenceMsg {
     /// Set a trust decision for a project path.
-    SetTrust { path: PathBuf, decision: TrustDecision },
+    SetTrust {
+        path: PathBuf,
+        decision: TrustDecision,
+    },
     /// Append one entry to the input history file.
     AppendHistory { entry: String },
 }
@@ -52,14 +55,31 @@ pub enum SessionStoreMsg {
 #[derive(Debug, Clone)]
 pub enum SessionMsg {
     // Trust + history
-    SetTrust { path: PathBuf, decision: TrustDecision },
-    AppendHistory { entry: String },
+    SetTrust {
+        path: PathBuf,
+        decision: TrustDecision,
+    },
+    AppendHistory {
+        entry: String,
+    },
     // Session CRUD
-    Load { name: String },
-    Save { name: String, session: Session },
-    Delete { name: String },
-    Import { path: PathBuf },
-    Export { path: PathBuf, session: Session },
+    Load {
+        name: String,
+    },
+    Save {
+        name: String,
+        session: Session,
+    },
+    Delete {
+        name: String,
+    },
+    Import {
+        path: PathBuf,
+    },
+    Export {
+        path: PathBuf,
+        session: Session,
+    },
     List,
 }
 

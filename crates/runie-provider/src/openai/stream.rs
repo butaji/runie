@@ -8,8 +8,8 @@ use super::OpenAiProvider;
 use crate::framing::sse_framing;
 use crate::protocol::ProviderProtocol;
 use futures::StreamExt;
-use runie_core::provider_event::ProviderEvent;
 use runie_core::message::ChatMessage;
+use runie_core::provider_event::ProviderEvent;
 
 /// Re-export types for testing and external consumers.
 pub use super::protocol::ToolAccum;
@@ -107,9 +107,17 @@ pub fn parse_sse_event(line: &str) -> Option<SseEvent> {
             delta: Delta {
                 content: c.delta.content,
                 reasoning: c.delta.reasoning,
-                tool_calls: c.delta.tool_calls.into_iter().map(|tc| ToolCallDelta {
-                    index: tc.index, id: tc.id, name: tc.name, arguments: tc.arguments,
-                }).collect(),
+                tool_calls: c
+                    .delta
+                    .tool_calls
+                    .into_iter()
+                    .map(|tc| ToolCallDelta {
+                        index: tc.index,
+                        id: tc.id,
+                        name: tc.name,
+                        arguments: tc.arguments,
+                    })
+                    .collect(),
             },
             finish_reason: c.finish_reason,
             usage: c.usage,
@@ -127,20 +135,25 @@ pub fn replay_sse(text: &str) -> Vec<ProviderEvent> {
 
     for line in text.lines() {
         let trimmed = line.trim();
-        if trimmed.is_empty() { continue; }
+        if trimmed.is_empty() {
+            continue;
+        }
         match OpenAiFrame::from_line(trimmed) {
             Some(frame) => {
                 if protocol.terminal(&frame) {
                     let (_, new_events) = protocol.step(std::mem::take(&mut state), frame);
-                    events.extend(new_events); break;
+                    events.extend(new_events);
+                    break;
                 }
                 let (new_state, new_events) = protocol.step(std::mem::take(&mut state), frame);
-                state = new_state; events.extend(new_events);
+                state = new_state;
+                events.extend(new_events);
             }
             None => {}
         }
     }
-    events.extend(protocol.on_halt(state)); events
+    events.extend(protocol.on_halt(state));
+    events
 }
 
 #[cfg(test)]
@@ -153,20 +166,25 @@ pub mod tests {
         let mut all = Vec::new();
         for line in lines {
             let trimmed = line.trim();
-            if trimmed.is_empty() { continue; }
+            if trimmed.is_empty() {
+                continue;
+            }
             match OpenAiFrame::from_line(trimmed) {
                 Some(frame) => {
                     if protocol.terminal(&frame) {
                         let (_, events) = protocol.step(std::mem::take(&mut state), frame);
-                        all.extend(events); break;
+                        all.extend(events);
+                        break;
                     }
                     let (new_state, events) = protocol.step(std::mem::take(&mut state), frame);
-                    state = new_state; all.extend(events);
+                    state = new_state;
+                    all.extend(events);
                 }
                 None => {}
             }
         }
-        all.extend(protocol.on_halt(state)); all
+        all.extend(protocol.on_halt(state));
+        all
     }
 
     #[test]
@@ -177,15 +195,30 @@ pub mod tests {
             "data: [DONE]",
         ];
         let events = collect_events(lines);
-        let first_delta_idx = events.iter().position(|e| matches!(e, ProviderEvent::TextDelta(_)))
+        let first_delta_idx = events
+            .iter()
+            .position(|e| matches!(e, ProviderEvent::TextDelta(_)))
             .expect("Should have TextDelta");
-        assert!(matches!(&events[0], ProviderEvent::TextStart { id } if id == "text"), "First event should be TextStart");
-        let start_idx = events.iter().position(|e| matches!(e, ProviderEvent::TextStart { .. }))
+        assert!(
+            matches!(&events[0], ProviderEvent::TextStart { id } if id == "text"),
+            "First event should be TextStart"
+        );
+        let start_idx = events
+            .iter()
+            .position(|e| matches!(e, ProviderEvent::TextStart { .. }))
             .expect("Should have TextStart");
         assert!(start_idx < first_delta_idx);
-        let text_starts: Vec<_> = events.iter().filter(|e| matches!(e, ProviderEvent::TextStart { id } if id == "text")).collect();
+        let text_starts: Vec<_> = events
+            .iter()
+            .filter(|e| matches!(e, ProviderEvent::TextStart { id } if id == "text"))
+            .collect();
         assert_eq!(text_starts.len(), 1);
-        assert!(events.iter().any(|e| matches!(e, ProviderEvent::Finish { .. })), "Should emit Finish");
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, ProviderEvent::Finish { .. })),
+            "Should emit Finish"
+        );
     }
 
     #[test]
@@ -196,13 +229,23 @@ pub mod tests {
             "data: [DONE]",
         ];
         let events = collect_events(lines);
-        let first_delta_idx = events.iter().position(|e| matches!(e, ProviderEvent::ThinkingDelta(_)))
+        let first_delta_idx = events
+            .iter()
+            .position(|e| matches!(e, ProviderEvent::ThinkingDelta(_)))
             .expect("Should have ThinkingDelta");
-        assert!(matches!(&events[0], ProviderEvent::ThinkingStart { id } if id == "reasoning"), "First event should be ThinkingStart");
-        let start_idx = events.iter().position(|e| matches!(e, ProviderEvent::ThinkingStart { .. }))
+        assert!(
+            matches!(&events[0], ProviderEvent::ThinkingStart { id } if id == "reasoning"),
+            "First event should be ThinkingStart"
+        );
+        let start_idx = events
+            .iter()
+            .position(|e| matches!(e, ProviderEvent::ThinkingStart { .. }))
             .expect("Should have ThinkingStart");
         assert!(start_idx < first_delta_idx);
-        let thinking_starts: Vec<_> = events.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { id } if id == "reasoning")).collect();
+        let thinking_starts: Vec<_> = events
+            .iter()
+            .filter(|e| matches!(e, ProviderEvent::ThinkingStart { id } if id == "reasoning"))
+            .collect();
         assert_eq!(thinking_starts.len(), 1);
     }
 
@@ -218,22 +261,32 @@ pub mod tests {
         ];
         let events = collect_events(lines);
         // Find ToolCallEnd events and verify they contain canonical ToolCalls
-        let tool_ends: Vec<_> = events.iter().filter_map(|e| {
-            if let ProviderEvent::ToolCallEnd { id } = e {
-                Some(id.clone())
-            } else {
-                None
-            }
-        }).collect();
-        assert_eq!(tool_ends, vec!["call_abc"], "Should emit ToolCallEnd with canonical id");
+        let tool_ends: Vec<_> = events
+            .iter()
+            .filter_map(|e| {
+                if let ProviderEvent::ToolCallEnd { id } = e {
+                    Some(id.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(
+            tool_ends,
+            vec!["call_abc"],
+            "Should emit ToolCallEnd with canonical id"
+        );
         // Verify ToolCallStart was emitted with the name
-        let tool_starts: Vec<_> = events.iter().filter_map(|e| {
-            if let ProviderEvent::ToolCallStart { id, name } = e {
-                Some((id.clone(), name.clone()))
-            } else {
-                None
-            }
-        }).collect();
+        let tool_starts: Vec<_> = events
+            .iter()
+            .filter_map(|e| {
+                if let ProviderEvent::ToolCallStart { id, name } = e {
+                    Some((id.clone(), name.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect();
         assert_eq!(tool_starts, vec![("call_abc".into(), "read_file".into())]);
     }
 }

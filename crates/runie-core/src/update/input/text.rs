@@ -100,8 +100,7 @@ impl AppState {
     fn remove_grapheme_before_cursor(&mut self) {
         self.push_undo();
         let input = self.input();
-        let new_pos =
-            crate::update::input::prev_grapheme_boundary(&input.input, input.cursor_pos);
+        let new_pos = crate::update::input::prev_grapheme_boundary(&input.input, input.cursor_pos);
         drop(input);
         let input = self.input_mut();
         input.input.drain(new_pos..input.cursor_pos);
@@ -136,8 +135,7 @@ impl AppState {
             self.input_mut().input_flash = 3;
             return;
         }
-        let start =
-            crate::update::input::find_word_boundary_left(&input.input, input.cursor_pos);
+        let start = crate::update::input::find_word_boundary_left(&input.input, input.cursor_pos);
         drop(input);
         self.push_undo();
         let input = self.input_mut();
@@ -185,10 +183,7 @@ impl AppState {
     pub(crate) fn kill_char(&mut self) {
         let input = self.input();
         if input.cursor_pos < input.input.len() {
-            let end = crate::update::input::next_grapheme_boundary(
-                &input.input,
-                input.cursor_pos,
-            );
+            let end = crate::update::input::next_grapheme_boundary(&input.input, input.cursor_pos);
             drop(input);
             self.push_undo();
             let input = self.input_mut();

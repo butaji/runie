@@ -75,8 +75,7 @@ impl AppState {
         };
         let before = &input_str[..cursor_pos];
         if let Some(pos) = before.rfind(prefix) {
-            let mut new_input =
-                String::with_capacity(input_len - prefix.len() + replacement.len());
+            let mut new_input = String::with_capacity(input_len - prefix.len() + replacement.len());
             new_input.push_str(&input_str[..pos]);
             new_input.push_str(replacement);
             new_input.push_str(&input_str[cursor_pos..]);

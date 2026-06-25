@@ -1,5 +1,5 @@
-use super::*;
 use super::super::*;
+use super::*;
 use runie_core::Event;
 use runie_core::Part;
 
@@ -11,7 +11,9 @@ fn test_toggle_expand_changes_rendered_output() {
 
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text { content: "◆ Thought 1.2s\nI'll list the files.".into() }],
+        parts: vec![Part::Text {
+            content: "◆ Thought 1.2s\nI'll list the files.".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -51,7 +53,9 @@ fn test_toggle_expand_changes_tool_render() {
 
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text { content: "◆ Ran list_files 0.5s\nfile1\nfile2".into() }],
+        parts: vec![Part::Text {
+            content: "◆ Ran list_files 0.5s\nfile1\nfile2".into(),
+        }],
         timestamp: 0.0,
         id: "x1".into(),
         ..Default::default()

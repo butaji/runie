@@ -13,15 +13,15 @@ use crate::tool_runner::{execute_tool_call, tool_result_message};
 use crate::PermissionGate;
 use anyhow::Result;
 use futures::StreamExt;
-use runie_core::provider_event::ProviderEvent;
 use runie_core::message::ChatMessage;
 use runie_core::permissions::PermissionManager;
 use runie_core::provider::Provider;
+use runie_core::provider_event::ProviderEvent;
+use runie_core::tool::{ToolContext, ToolOutput, ToolRegistry};
 use runie_core::tool_parser::{
     assign_tool_call_ids, build_assistant_message, parse_tool_calls_fallible,
     tool_parse_error_message, ParsedToolCall, ToolParseError,
 };
-use runie_core::tool::{ToolContext, ToolOutput, ToolRegistry};
 use runie_core::tool_stream::ToolStream;
 use std::ops::ControlFlow;
 use std::sync::Arc;
@@ -388,9 +388,10 @@ mod tests {
             result.tool_outputs.is_empty(),
             "malformed tool should not be executed"
         );
-        let has_parse_error = result.messages.iter().any(|m| {
-            m.role == Role::Tool && m.content().contains("Could not parse tool call")
-        });
+        let has_parse_error = result
+            .messages
+            .iter()
+            .any(|m| m.role == Role::Tool && m.content().contains("Could not parse tool call"));
         assert!(has_parse_error, "parse error should be added to messages");
     }
 
@@ -421,8 +422,7 @@ mod tests {
     // Layer 1 — State/Logic: helper constructs a PermissionGate with the supplied sink.
     #[tokio::test]
     async fn headless_cli_helper_builds_gate() {
-        let sink: Arc<dyn runie_core::permissions::ApprovalSink> =
-            Arc::new(AutoAllowSink);
+        let sink: Arc<dyn runie_core::permissions::ApprovalSink> = Arc::new(AutoAllowSink);
         let opts = HeadlessCliOptions {
             execute_tools: true,
             max_tool_rounds: 5,
@@ -436,8 +436,7 @@ mod tests {
     #[tokio::test]
     async fn headless_cli_smoke_with_mock() {
         let _mock_guard = crate::tests::ensure_mock_provider().await;
-        let sink: Arc<dyn runie_core::permissions::ApprovalSink> =
-            Arc::new(AutoAllowSink);
+        let sink: Arc<dyn runie_core::permissions::ApprovalSink> = Arc::new(AutoAllowSink);
         let messages = vec![
             ChatMessage::system("You are helpful."),
             ChatMessage::user("hello"),

@@ -71,7 +71,10 @@ fn model_unknown_provider_model_returns_warning() {
 #[test]
 fn model_known_model_switches() {
     let mut state = AppState::default();
-    set_config(&mut state, &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
+    set_config(
+        &mut state,
+        &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])],
+    );
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
     let result = crate::commands::dsl::handlers::model::handle_model(&mut state, "gpt-4o-mini");
@@ -158,10 +161,13 @@ fn model_unknown_model_name_without_provider_returns_warning() {
 #[test]
 fn model_selector_includes_unknown_configured_models() {
     let mut state = AppState::default();
-    set_config(&mut state, &[(
-        "custom-provider".into(),
-        vec!["custom-model".into(), "other-model".into()],
-    )]);
+    set_config(
+        &mut state,
+        &[(
+            "custom-provider".into(),
+            vec!["custom-model".into(), "other-model".into()],
+        )],
+    );
     state.config.current_provider = "custom-provider".into();
     state.config.current_model = "custom-model".into();
 
@@ -177,12 +183,16 @@ fn model_selector_includes_unknown_configured_models() {
 
     let labels: Vec<_> = items.iter().filter_map(|i| i.label()).collect();
     assert!(
-        labels.iter().any(|l| l.contains("custom-provider/custom-model")),
+        labels
+            .iter()
+            .any(|l| l.contains("custom-provider/custom-model")),
         "selector should contain unknown configured model, got: {:?}",
         labels
     );
     assert!(
-        labels.iter().any(|l| l.contains("custom-provider/other-model")),
+        labels
+            .iter()
+            .any(|l| l.contains("custom-provider/other-model")),
         "selector should contain every configured model, got: {:?}",
         labels
     );

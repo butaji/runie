@@ -2,10 +2,10 @@
 
 use super::*;
 use runie_core::commands::DialogState;
-use runie_core::Event;
 use runie_core::model::{AppState, DeliveryMode};
 use runie_core::settings::{SettingValue, SettingsCategory};
 use runie_core::update::settings_dialog::build_setting_items;
+use runie_core::Event;
 
 fn settings_selected(state: &AppState) -> Option<usize> {
     match &state.open_dialog {

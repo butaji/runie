@@ -72,9 +72,9 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
-    use runie_core::Element;
     use crate::ui::render_lines::to_lines_internal;
     use ratatui::{backend::TestBackend, Terminal};
+    use runie_core::Element;
 
     #[test]
     fn scrollbar_thumb_matches_markdown_message_height() {

@@ -3,7 +3,6 @@
 use super::*;
 use runie_core::Event;
 
-
 /// Typing @ at the beginning of input (empty input) opens the file picker.
 #[test]
 fn at_opens_file_picker_when_input_empty() {

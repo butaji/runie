@@ -5,7 +5,9 @@
 
 use std::sync::Arc;
 
-pub use runie_core::tool::{which_tool, which_tool_async, Tool, ToolContext, ToolOutput, ToolRegistry, ToolStatus};
+pub use runie_core::tool::{
+    which_tool, which_tool_async, Tool, ToolContext, ToolOutput, ToolRegistry, ToolStatus,
+};
 
 mod bash;
 mod define;

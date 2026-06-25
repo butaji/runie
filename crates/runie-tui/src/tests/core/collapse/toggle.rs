@@ -1,11 +1,11 @@
 //! toggle tests.
 
 use super::*;
-use runie_core::Event;
-use runie_core::model::{AppState, ChatMessage,  Role};
-use runie_core::Part;
+use runie_core::model::{AppState, ChatMessage, Role};
 use runie_core::view::elements::Element;
 use runie_core::view::LazyCache;
+use runie_core::Event;
+use runie_core::Part;
 use runie_testing::fresh_state;
 
 #[test]
@@ -103,7 +103,9 @@ fn thought_expanded_by_default() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text { content: "Thinking...".into() }],
+        parts: vec![Part::Text {
+            content: "Thinking...".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -121,7 +123,9 @@ fn toggle_expand_hides_thought() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text { content: "Deep reasoning here\nline two".into() }],
+        parts: vec![Part::Text {
+            content: "Deep reasoning here\nline two".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -135,7 +139,9 @@ fn toggle_expand_restores_thought() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text { content: "Deep reasoning".into() }],
+        parts: vec![Part::Text {
+            content: "Deep reasoning".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -150,7 +156,9 @@ fn collapsed_thought_renders_one_line_summary() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text { content: "Deep reasoning\nline two\nline three".into() }],
+        parts: vec![Part::Text {
+            content: "Deep reasoning\nline two\nline three".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -176,7 +184,9 @@ fn tool_collapsed_by_toggle() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text { content: "✓ list_files 0.5s".into() }],
+        parts: vec![Part::Text {
+            content: "✓ list_files 0.5s".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -190,7 +200,9 @@ fn toggle_expand_restores_tool() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text { content: "✓ list_files 0.5s".into() }],
+        parts: vec![Part::Text {
+            content: "✓ list_files 0.5s".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -205,7 +217,9 @@ fn collapsed_tool_renders_one_line_summary() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text { content: "✓ list_files 0.5s".into() }],
+        parts: vec![Part::Text {
+            content: "✓ list_files 0.5s".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()

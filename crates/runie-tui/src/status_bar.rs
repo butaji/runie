@@ -161,8 +161,7 @@ pub(crate) fn context_usage(snap: &Snapshot) -> ContextUsage {
         .filter(|e| {
             matches!(
                 e,
-                runie_core::Element::UserMessage { .. }
-                    | runie_core::Element::AgentMessage { .. }
+                runie_core::Element::UserMessage { .. } | runie_core::Element::AgentMessage { .. }
             )
         })
         .map(estimate_element_tokens)
@@ -240,5 +239,4 @@ mod tests {
             "left text should contain worktree: {left}"
         );
     }
-
 }

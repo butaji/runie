@@ -12,9 +12,7 @@ use super::{model_catalog, ModelInfo};
 /// A provider configured without an explicit model list contributes no models
 /// to the selector; the user must choose models via `/provider` before they
 /// appear in `/model`.
-pub fn configured_models_catalog(
-    configured: &[(String, String, Vec<String>)],
-) -> Vec<ModelInfo> {
+pub fn configured_models_catalog(configured: &[(String, String, Vec<String>)]) -> Vec<ModelInfo> {
     let catalog = model_catalog();
     let mut models = Vec::new();
     for (provider, _base_url, chosen) in configured {
@@ -62,11 +60,7 @@ mod tests {
 
     #[test]
     fn excludes_models_not_in_provider_config() {
-        let configured = vec![(
-            "openai".into(),
-            "http://test".into(),
-            vec!["gpt-4o".into()],
-        )];
+        let configured = vec![("openai".into(), "http://test".into(), vec!["gpt-4o".into()])];
         let models = configured_models_catalog(&configured);
         assert_eq!(models.len(), 1);
         assert!(!models.iter().any(|m| m.name == "gpt-4o-mini"));

@@ -38,7 +38,10 @@ pub enum Step {
     /// Perform a pure side-effect (IO request, clipboard, etc.).
     Effect(Effect),
     /// Show a transient notification.
-    Notify { content: String, level: TransientLevel },
+    Notify {
+        content: String,
+        level: TransientLevel,
+    },
     /// Do nothing — terminal no-op.
     None,
 }
@@ -56,10 +59,6 @@ impl std::fmt::Debug for Step {
         }
     }
 }
-
-
-
-
 
 // ── Flow ───────────────────────────────────────────────────────────────────────
 
@@ -110,7 +109,10 @@ impl<T> Flow<T> {
 
     /// Show a transient notification at a specific level.
     pub fn notify_level<S: ToString>(self, content: S, level: TransientLevel) -> Flow<T> {
-        self.push(Step::Notify { content: content.to_string(), level })
+        self.push(Step::Notify {
+            content: content.to_string(),
+            level,
+        })
     }
 
     /// Perform a pure side-effect (clipboard, IO request, etc.).
@@ -146,7 +148,10 @@ impl<T> Flow<T> {
         let mut combined = self;
         combined.steps.extend(next.steps);
         // Re-annotate the type to use U instead of T.
-        let combined: Flow<U> = Flow { steps: combined.steps, _marker: std::marker::PhantomData };
+        let combined: Flow<U> = Flow {
+            steps: combined.steps,
+            _marker: std::marker::PhantomData,
+        };
         combined
     }
 
@@ -167,7 +172,10 @@ impl<T> Flow<T> {
     {
         // _f is used only to constrain the output type O.
         // The closure body is invoked at runtime inside `execute_transform`.
-        Flow { steps: self.steps, _marker: std::marker::PhantomData }
+        Flow {
+            steps: self.steps,
+            _marker: std::marker::PhantomData,
+        }
     }
 
     /// Drop the flow unless the predicate returns true.
@@ -199,7 +207,10 @@ impl<T> Flow<T> {
     where
         P: Fn(&T) -> bool,
     {
-        Flow { steps: self.steps, _marker: std::marker::PhantomData }
+        Flow {
+            steps: self.steps,
+            _marker: std::marker::PhantomData,
+        }
     }
 
     /// Internal: append a step.
@@ -243,7 +254,10 @@ impl<T> Flow<T> {
 /// ```
 pub fn on<T>(input: T) -> Flow<T> {
     let _ = input; // consumed to bind the type
-    Flow { steps: Vec::new(), _marker: std::marker::PhantomData }
+    Flow {
+        steps: Vec::new(),
+        _marker: std::marker::PhantomData,
+    }
 }
 
 #[cfg(test)]
@@ -259,10 +273,14 @@ mod tests {
         let mut rt = TestRuntime::new();
 
         on(())
-            .intent(Intent::SetTheme { name: "dark".into() })
+            .intent(Intent::SetTheme {
+                name: "dark".into(),
+            })
             .run(&mut rt, ());
 
-        assert!(rt.intents().any(|i| matches!(i, Intent::SetTheme { name } if name == "dark")));
+        assert!(rt
+            .intents()
+            .any(|i| matches!(i, Intent::SetTheme { name } if name == "dark")));
     }
 
     /// dsl_branch_combinator_is_callable
@@ -272,7 +290,9 @@ mod tests {
         // produces a Flow<()> without panicking.
         // The combinator is implemented; full predicate evaluation is tested
         // when the full flow engine is wired up.
-        fn always_true(_: &()) -> bool { true }
+        fn always_true(_: &()) -> bool {
+            true
+        }
         let _: Flow<()> = on(()).branch([(always_true, on(()).notify("ok"))]);
     }
 
@@ -296,7 +316,9 @@ mod tests {
         let mut rt = TestRuntime::new();
 
         on(())
-            .intent(Intent::SetTheme { name: "runie".into() })
+            .intent(Intent::SetTheme {
+                name: "runie".into(),
+            })
             .notify("Theme set!")
             .run(&mut rt, ());
 
@@ -313,7 +335,10 @@ mod tests {
             .notify_level("error!", TransientLevel::Error)
             .run(&mut rt, ());
 
-        assert!(rt.notifications().iter().any(|(n, l)| n == "error!" && *l == TransientLevel::Error));
+        assert!(rt
+            .notifications()
+            .iter()
+            .any(|(n, l)| n == "error!" && *l == TransientLevel::Error));
     }
 
     /// dsl_fact_broadcasts_to_runtime
@@ -321,9 +346,7 @@ mod tests {
     fn dsl_fact_broadcasts_to_runtime() {
         let mut rt = TestRuntime::new();
 
-        on(())
-            .fact(Fact::ViewInvalidated)
-            .run(&mut rt, ());
+        on(()).fact(Fact::ViewInvalidated).run(&mut rt, ());
 
         assert!(rt.facts().any(|ff| matches!(ff, Fact::ViewInvalidated)));
     }

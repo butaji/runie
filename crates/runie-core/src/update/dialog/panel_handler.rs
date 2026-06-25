@@ -366,7 +366,8 @@ fn apply_panel_setting(state: &mut AppState, stack: &mut PanelStack, key: &str) 
             state.config_mut().steering_mode = cycle_delivery_mode(state.config_mut().steering_mode)
         }
         "follow_up_mode" => {
-            state.config_mut().follow_up_mode = cycle_delivery_mode(state.config_mut().follow_up_mode)
+            state.config_mut().follow_up_mode =
+                cycle_delivery_mode(state.config_mut().follow_up_mode)
         }
         "provider" | "model" | "theme" | "thinking_level" => {
             apply_select_setting(state, stack, key);

@@ -1,8 +1,8 @@
 //! Safety command tests — read-only mode and trust system
 use super::slash::exec;
-use crate::Event;
 use crate::model::AppState;
 use crate::tests::fresh_state;
+use crate::Event;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {

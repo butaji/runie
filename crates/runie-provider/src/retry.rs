@@ -172,7 +172,9 @@ where
         messages: Vec<runie_core::message::ChatMessage>,
     ) -> std::pin::Pin<
         Box<
-            dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>> + Send + '_,
+            dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
+                + Send
+                + '_,
         >,
     > {
         let inner = &self.inner;
@@ -200,9 +202,9 @@ fn is_retryable(e: &anyhow::Error) -> bool {
 mod tests {
     use super::*;
     use futures::stream;
-    use runie_core::provider_event::StopReason;
     use runie_core::message::ChatMessage;
     use runie_core::provider::Provider;
+    use runie_core::provider_event::StopReason;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
 
@@ -319,7 +321,8 @@ mod tests {
         fn generate(
             &self,
             _messages: Vec<ChatMessage>,
-        ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
+        ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
+        {
             let n = self.calls.fetch_add(1, Ordering::SeqCst);
             if n == 0 {
                 Box::pin(stream::iter(vec![Err(anyhow::anyhow!("timeout"))]))

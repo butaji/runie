@@ -19,7 +19,9 @@ fn ctrl_o_toggles_expand_state() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text { content: "deep reasoning\nsecond line".into() }],
+        parts: vec![Part::Text {
+            content: "deep reasoning\nsecond line".into(),
+        }],
         timestamp: 1.0,
         id: "t1".to_string(),
         ..Default::default()
@@ -32,10 +34,7 @@ fn ctrl_o_toggles_expand_state() {
     let key = KeyEvent::new(KeyCode::Char('o'), KeyModifiers::CONTROL);
     let event = crossterm::event::Event::Key(key);
     let core_event = crate::keymap::convert_event(&event, &default_bindings());
-    assert!(matches!(
-        core_event,
-        Some(runie_core::Event::ToggleExpand)
-    ));
+    assert!(matches!(core_event, Some(runie_core::Event::ToggleExpand)));
 
     state.update(core_event.unwrap());
     assert_ne!(

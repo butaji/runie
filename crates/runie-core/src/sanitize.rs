@@ -59,25 +59,39 @@ fn remove_dangling_tool_calls(
         if tool_call_ids.is_empty() {
             continue;
         }
-        let has_result = messages[i + 1..]
-            .iter()
-            .any(|m| m.tool_call_id.as_ref().map(|id| tool_call_ids.contains(id)).unwrap_or(false));
+        let has_result = messages[i + 1..].iter().any(|m| {
+            m.tool_call_id
+                .as_ref()
+                .map(|id| tool_call_ids.contains(id))
+                .unwrap_or(false)
+        });
         if !has_result {
-            errors.extend(remove_dangling_from_message(&mut messages[i], tool_call_ids));
+            errors.extend(remove_dangling_from_message(
+                &mut messages[i],
+                tool_call_ids,
+            ));
             cleaned_indices.push(i);
         }
     }
     errors
 }
 
-fn remove_dangling_from_message(msg: &mut ChatMessage, dangling_ids: Vec<String>) -> Vec<SanitizeError> {
+fn remove_dangling_from_message(
+    msg: &mut ChatMessage,
+    dangling_ids: Vec<String>,
+) -> Vec<SanitizeError> {
     let mut errors = Vec::new();
-    let removed: Vec<_> = msg.tool_calls().into_iter().filter(|tc| dangling_ids.contains(&tc.id)).collect();
-    msg.parts.retain(|p| {
-        !matches!(p, Part::ToolCall { id, .. } if dangling_ids.contains(id))
-    });
+    let removed: Vec<_> = msg
+        .tool_calls()
+        .into_iter()
+        .filter(|tc| dangling_ids.contains(&tc.id))
+        .collect();
+    msg.parts
+        .retain(|p| !matches!(p, Part::ToolCall { id, .. } if dangling_ids.contains(id)));
     for tc in removed {
-        errors.push(SanitizeError::DanglingToolCall { tool_call_id: tc.id });
+        errors.push(SanitizeError::DanglingToolCall {
+            tool_call_id: tc.id,
+        });
     }
     errors
 }
@@ -101,7 +115,10 @@ fn remove_empty_assistant_messages(
         };
         retain_mask.push(keep);
         if !keep {
-            errors.push(SanitizeError::RemovedMessage { role: Role::Assistant, reason: "empty message" });
+            errors.push(SanitizeError::RemovedMessage {
+                role: Role::Assistant,
+                reason: "empty message",
+            });
         }
     }
     let mut write_idx = 0;
@@ -132,11 +149,17 @@ fn remove_orphan_tool_results(messages: &mut Vec<ChatMessage>) -> Vec<SanitizeEr
     }
     let before = messages.len();
     messages.retain(|m| {
-        m.role != Role::Tool || m.tool_call_id.as_ref().map(|id| seen_ids.contains(id)).unwrap_or(false)
+        m.role != Role::Tool
+            || m.tool_call_id
+                .as_ref()
+                .map(|id| seen_ids.contains(id))
+                .unwrap_or(false)
     });
     let removed = before - messages.len();
     for _ in 0..removed {
-        errors.push(SanitizeError::OrphanToolResult { tool_call_id: "<unknown>".to_string() });
+        errors.push(SanitizeError::OrphanToolResult {
+            tool_call_id: "<unknown>".to_string(),
+        });
     }
     errors
 }
@@ -159,7 +182,11 @@ fn merge_consecutive_same_role(messages: &mut Vec<ChatMessage>) -> Vec<SanitizeE
                     }
                 }
                 for tc in msg.tool_calls() {
-                    last.parts.push(Part::ToolCall { id: tc.id, name: tc.name, args: tc.args });
+                    last.parts.push(Part::ToolCall {
+                        id: tc.id,
+                        name: tc.name,
+                        args: tc.args,
+                    });
                 }
                 continue;
             }
@@ -172,7 +199,11 @@ fn merge_consecutive_same_role(messages: &mut Vec<ChatMessage>) -> Vec<SanitizeE
 
 /// Prepend a system placeholder if the history does not start with user or system.
 fn ensure_starts_with_user_or_system(messages: &mut Vec<ChatMessage>) -> Vec<SanitizeError> {
-    if messages.first().map(|m| m.role == Role::User || m.role == Role::System).unwrap_or(false) {
+    if messages
+        .first()
+        .map(|m| m.role == Role::User || m.role == Role::System)
+        .unwrap_or(false)
+    {
         return Vec::new();
     }
     messages.insert(0, ChatMessage::system("Continue."));
@@ -197,9 +228,15 @@ fn trim_assistant_whitespace(messages: &mut Vec<ChatMessage>) -> Vec<SanitizeErr
 mod tests {
     use super::*;
 
-    fn user(s: &str) -> ChatMessage { ChatMessage::user(s) }
-    fn assistant(s: &str) -> ChatMessage { ChatMessage::assistant(s) }
-    fn tool(s: &str, id: &str) -> ChatMessage { ChatMessage::tool(s).with_tool_call_id(id) }
+    fn user(s: &str) -> ChatMessage {
+        ChatMessage::user(s)
+    }
+    fn assistant(s: &str) -> ChatMessage {
+        ChatMessage::assistant(s)
+    }
+    fn tool(s: &str, id: &str) -> ChatMessage {
+        ChatMessage::tool(s).with_tool_call_id(id)
+    }
 
     #[test]
     fn sanitize_removes_empty_assistant() {
@@ -207,13 +244,23 @@ mod tests {
         let errs = sanitize_messages(&mut msgs);
         assert_eq!(msgs.len(), 2);
         assert!(msgs.iter().any(|m| m.content() == "real reply"));
-        assert!(errs.iter().any(|e| matches!(e, SanitizeError::RemovedMessage { role: Role::Assistant, .. })));
+        assert!(errs.iter().any(|e| matches!(
+            e,
+            SanitizeError::RemovedMessage {
+                role: Role::Assistant,
+                ..
+            }
+        )));
     }
 
     #[test]
     fn sanitize_removes_dangling_tool_call() {
         let mut msgs = vec![assistant("call a tool"), user("ok")];
-        msgs[0].parts.push(Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({}) });
+        msgs[0].parts.push(Part::ToolCall {
+            id: "c1".into(),
+            name: "bash".into(),
+            args: serde_json::json!({}),
+        });
         let errs = sanitize_messages(&mut msgs);
         assert!(msgs[0].tool_calls().is_empty());
         assert!(errs.iter().any(|e| matches!(e, SanitizeError::DanglingToolCall { tool_call_id } if tool_call_id == "c1")));
@@ -222,7 +269,11 @@ mod tests {
     #[test]
     fn sanitize_keeps_matched_tool_call_and_result() {
         let mut msgs = vec![assistant("call a tool"), tool("result", "c1")];
-        msgs[0].parts.push(Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({}) });
+        msgs[0].parts.push(Part::ToolCall {
+            id: "c1".into(),
+            name: "bash".into(),
+            args: serde_json::json!({}),
+        });
         sanitize_messages(&mut msgs);
         assert_eq!(msgs[0].role, Role::System);
         assert_eq!(msgs[1].role, Role::Assistant);
@@ -236,7 +287,9 @@ mod tests {
         let errs = sanitize_messages(&mut msgs);
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].role, Role::User);
-        assert!(errs.iter().any(|e| matches!(e, SanitizeError::OrphanToolResult { .. })));
+        assert!(errs
+            .iter()
+            .any(|e| matches!(e, SanitizeError::OrphanToolResult { .. })));
     }
 
     #[test]

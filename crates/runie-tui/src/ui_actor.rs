@@ -10,8 +10,8 @@ use std::time::Duration;
 use runie_agent::AgentActorHandle;
 use runie_core::actors::SessionActorHandle;
 use runie_core::bus::{EventBus, Receiver};
-use runie_core::Event;
 use runie_core::login_flow::LoginStep;
+use runie_core::Event;
 use runie_core::{AppState, Snapshot};
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -158,7 +158,12 @@ impl UiActor {
 
     fn dispatch_effect(&mut self, evt: &Event, effect_tx: mpsc::Sender<Event>) {
         if let Some(cmd) = EffectCommand::try_from_event(evt, &mut self.state, &self.caps) {
-            cmd.dispatch(effect_tx, self.render_tx.clone(), &mut self.state, self.caps);
+            cmd.dispatch(
+                effect_tx,
+                self.render_tx.clone(),
+                &mut self.state,
+                self.caps,
+            );
         }
     }
 
@@ -202,10 +207,14 @@ async fn handle_persistence_messages(
     let cwd = std::env::current_dir().unwrap_or_default();
     match evt {
         Event::TrustProject => {
-            handle.set_trust(cwd, runie_core::trust::TrustDecision::Trusted).await;
+            handle
+                .set_trust(cwd, runie_core::trust::TrustDecision::Trusted)
+                .await;
         }
         Event::UntrustProject => {
-            handle.set_trust(cwd, runie_core::trust::TrustDecision::Untrusted).await;
+            handle
+                .set_trust(cwd, runie_core::trust::TrustDecision::Untrusted)
+                .await;
         }
         _ => {}
     }

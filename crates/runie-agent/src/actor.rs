@@ -6,22 +6,22 @@
 
 use std::sync::{Arc, Mutex};
 
-use runie_core::actors::{spawn_actor, Actor, ActorHandle};
 use runie_core::actors::ProviderActorHandle;
+use runie_core::actors::{spawn_actor, Actor, ActorHandle};
 use runie_core::bus::EventBus;
-use runie_core::event::{Event};
-use runie_core::AppState;
+use runie_core::event::Event;
 use runie_core::permissions::{
     ApprovalRegistry, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
 };
+use runie_core::AppState;
 
 use tokio::sync::mpsc;
 
 use crate::emit_approval_sink::EmitApprovalSink;
-use runie_core::permissions::PermissionGate;
 use crate::run_agent_turn;
 use crate::truncate::policy_from_section;
 use crate::AgentCommand;
+use runie_core::permissions::PermissionGate;
 
 /// Messages accepted by `AgentActor`.
 #[derive(Clone, Debug)]
@@ -154,7 +154,10 @@ impl AgentActor {
         ]);
         let gate = PermissionGate::new(
             permissions,
-            Arc::new(EmitApprovalSink::new(emit.clone(), self.approval_registry.clone())),
+            Arc::new(EmitApprovalSink::new(
+                emit.clone(),
+                self.approval_registry.clone(),
+            )),
         );
 
         if let Err(e) = run_agent_turn(&built, command, emit, 5, gate).await {
@@ -167,7 +170,8 @@ impl AgentActor {
             id: id.to_string(),
             message,
         });
-        self.bus.publish(runie_core::Event::Done { id: id.to_string() });
+        self.bus
+            .publish(runie_core::Event::Done { id: id.to_string() });
     }
 }
 
@@ -187,10 +191,12 @@ mod tests {
             read_only: true,
             skills_context: String::new(),
             system_prompt: String::new(),
-            truncation: crate::truncate::policy_from_section(&runie_core::config::TruncationSection {
-                max_lines: 2000,
-                max_bytes: 50_000,
-            }),
+            truncation: crate::truncate::policy_from_section(
+                &runie_core::config::TruncationSection {
+                    max_lines: 2000,
+                    max_bytes: 50_000,
+                },
+            ),
         }
     }
 
@@ -255,7 +261,10 @@ mod tests {
         let msg = rx.try_recv().expect("command should be sent to agent");
         let AgentMsg::Run { command } = msg;
         assert_eq!(command.content, "hello");
-        assert_eq!(command.thinking_level, runie_core::model::ThinkingLevel::Off);
+        assert_eq!(
+            command.thinking_level,
+            runie_core::model::ThinkingLevel::Off
+        );
         assert_eq!(command.system_prompt, "");
     }
 

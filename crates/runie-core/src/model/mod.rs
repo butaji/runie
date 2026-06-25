@@ -3,19 +3,17 @@
 pub use crate::message::{now, ChatMessage, Role};
 // Inner state structs are pub(crate) — accessible within runie-core but not exported externally.
 // AppState itself remains pub so it can be used in public DSL signatures.
-pub use crate::model::state::AppState;
 pub use crate::model::state::types::ThinkingLevel;
+pub use crate::model::state::AppState;
 // Re-export state types as pub for external crates.
 pub use crate::model::state::agent::{AgentState, SpeedWindow};
 pub use crate::model::state::input::InputState;
 pub use crate::model::state::session::{CompletionState, ConfigState, SessionState};
 pub use crate::model::state::types::DeliveryMode;
+pub(crate) use crate::model::state::types::InputReceiver;
 pub use crate::model::state::types::PermissionRequestState;
 pub use crate::model::state::view::ViewState;
-pub(crate) use crate::model::state::{
-    FffFileEntry, ModelSource, QueuedMessage, QueuedMessageKind,
-};
-pub(crate) use crate::model::state::types::InputReceiver;
+pub(crate) use crate::model::state::{FffFileEntry, ModelSource, QueuedMessage, QueuedMessageKind};
 pub use crate::model_catalog::{
     build_model_selector_items, filter_models, model_catalog, ModelInfo,
 };

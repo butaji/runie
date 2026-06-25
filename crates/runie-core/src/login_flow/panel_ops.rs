@@ -8,10 +8,7 @@ use super::state::LoginFlowState;
 use crate::dialog::{Panel, PanelStack};
 
 /// Push a panel onto the login stack (and set the step on the state).
-pub(super) fn push_login_panel(
-    state: &mut crate::model::AppState,
-    panel: Panel,
-) {
+pub(super) fn push_login_panel(state: &mut crate::model::AppState, panel: Panel) {
     if let Some(flow) = state.login_flow_mut().as_mut() {
         flow.step = match panel.id.as_str() {
             "login-provider" => super::state::LoginStep::ProviderPicker,
@@ -30,10 +27,7 @@ pub(super) fn push_login_panel(
 /// Replace the top panel of the login stack with `new_top`, popping
 /// the current top first. Used when a panel is "consumed" (e.g. the
 /// key input is submitted → model selector).
-pub(super) fn replace_top_login_panel_with(
-    state: &mut crate::model::AppState,
-    new_top: Panel,
-) {
+pub(super) fn replace_top_login_panel_with(state: &mut crate::model::AppState, new_top: Panel) {
     let mut stack = take_or_create_login_stack(state);
     if !stack.is_empty() {
         stack.pop();
@@ -131,9 +125,7 @@ fn build_login_stack_for_flow(flow: &LoginFlowState) -> PanelStack {
     }
     stack.push(build_key_input(flow));
     match flow.step {
-        super::state::LoginStep::Validating => {
-            stack.push(build_validating_panel(&flow.provider))
-        }
+        super::state::LoginStep::Validating => stack.push(build_validating_panel(&flow.provider)),
         super::state::LoginStep::ModelSelect => stack.push(build_model_selector(flow)),
         // intentionally ignored: other login steps are handled elsewhere
         _ => {}

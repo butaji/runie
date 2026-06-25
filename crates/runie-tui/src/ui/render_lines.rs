@@ -1,8 +1,8 @@
 //! Per-element line rendering — pure functions from Element + width to lines.
 
-use runie_core::Element;
 use ratatui::text::Line;
 use ratatui::widgets::{Paragraph, Wrap};
+use runie_core::Element;
 
 use crate::message as msg;
 
@@ -48,7 +48,9 @@ fn render_element(elem: &Element, content_width: u16) -> Vec<Line<'static>> {
             ..
         } => msg::render_thought_summary(content, *duration_secs),
         ThoughtMarker { content, .. } => msg::render_thought_marker(content, content_width),
-        ContextGroup { tools, collapsed, .. } => msg::render_context_group(tools, *collapsed),
+        ContextGroup {
+            tools, collapsed, ..
+        } => msg::render_context_group(tools, *collapsed),
         _ => render_tool_element(elem, content_width),
     }
 }

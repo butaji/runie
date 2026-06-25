@@ -4,8 +4,8 @@
 //! with lock-poisoning and not-initialized errors. The lock-guard pattern and
 //! error JSON shapes are shared; tool-specific formatting lives in the callers.
 
-use anyhow::Result;
 use crate::tool::{ToolOutput, ToolStatus};
+use anyhow::Result;
 use fff_search::FilePicker;
 use runie_core::actors::FffSearchState;
 use serde_json::json;
@@ -36,7 +36,12 @@ where
     let duration = start.elapsed();
     let guard = match state.picker.read() {
         Ok(g) => g,
-        Err(e) => return Ok(lock_err(format!("Error acquiring picker lock: {}", e), duration)),
+        Err(e) => {
+            return Ok(lock_err(
+                format!("Error acquiring picker lock: {}", e),
+                duration,
+            ))
+        }
     };
     match guard.as_ref() {
         Some(p) => f(p),
@@ -61,7 +66,12 @@ pub fn build_error_json(
         "total": 0,
         "indexed": indexed
     }))
-    .unwrap_or_else(|_| format!(r#"{{"error":"{}","{}":[],"total":0,"indexed":{}}}"#, error, result_key, indexed));
+    .unwrap_or_else(|_| {
+        format!(
+            r#"{{"error":"{}","{}":[],"total":0,"indexed":{}}}"#,
+            error, result_key, indexed
+        )
+    });
 
     ToolOutput {
         tool_name: tool_name.to_string(),
@@ -82,5 +92,12 @@ pub fn build_error_json_with_instant(
     indexed: bool,
     start: Instant,
 ) -> Result<ToolOutput> {
-    Ok(build_error_json(tool_name, tool_args, error, result_key, indexed, start.elapsed()))
+    Ok(build_error_json(
+        tool_name,
+        tool_args,
+        error,
+        result_key,
+        indexed,
+        start.elapsed(),
+    ))
 }

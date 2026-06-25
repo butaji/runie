@@ -1,6 +1,6 @@
-use runie_core::{Element, view::PostKind};
 use ratatui::{layout::Rect, Frame};
 use runie_core::Snapshot;
+use runie_core::{view::PostKind, Element};
 
 pub(crate) fn compute_scroll_offset(
     snap: &Snapshot,

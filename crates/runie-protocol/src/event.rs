@@ -76,10 +76,7 @@ impl Event {
 
     /// Create a new event correlated to a submission.
     pub fn correlated(id: SubmissionId, msg: EventMsg) -> Self {
-        Self {
-            id: Some(id),
-            msg,
-        }
+        Self { id: Some(id), msg }
     }
 }
 

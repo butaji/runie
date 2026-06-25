@@ -1,5 +1,5 @@
-use crate::Event;
 use crate::model::AppState;
+use crate::Event;
 
 use super::{add_minimax_provider, clean_config, select_minimax_model};
 

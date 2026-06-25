@@ -162,9 +162,7 @@ pub fn build_assistant_message(
 ) -> ChatMessage {
     let tool_calls: Vec<ToolCall> = tools
         .iter()
-        .map(|t| {
-            ToolCall::new(t.id.clone().unwrap_or_default(), &t.name, t.args.clone())
-        })
+        .map(|t| ToolCall::new(t.id.clone().unwrap_or_default(), &t.name, t.args.clone()))
         .collect();
 
     let mut parts = Vec::with_capacity(tools.len() + 2);

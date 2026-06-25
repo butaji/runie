@@ -126,11 +126,7 @@ fn handle_providers_disconnect(state: &mut AppState, event: &crate::Event) {
         }
         if state.config().current_provider == provider {
             let (provider, model) = state.resolve_default_model();
-            state.set_active_model(
-                provider,
-                model,
-                crate::model::ModelSource::ConfigDefault,
-            );
+            state.set_active_model(provider, model, crate::model::ModelSource::ConfigDefault);
         }
         if state.has_models() {
             *state.open_dialog_mut() = None;

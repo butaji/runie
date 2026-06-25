@@ -1,8 +1,8 @@
 //! Scoped models tests (Layer 1 + Layer 2)
 
 use crate::commands::DialogState;
-use crate::Event;
 use crate::model::{AppState, ScopedModel};
+use crate::Event;
 
 fn sm(provider: &str, name: &str, enabled: bool) -> ScopedModel {
     ScopedModel {
@@ -105,10 +105,13 @@ fn scoped_selected(state: &AppState) -> Option<usize> {
 #[test]
 fn slash_scoped_models_opens_dialog() {
     let mut state = AppState::default();
-    configure(&mut state, &[
-        ("mock".into(), vec!["echo".into()]),
-        ("openai".into(), vec!["gpt-4o".into()]),
-    ]);
+    configure(
+        &mut state,
+        &[
+            ("mock".into(), vec!["echo".into()]),
+            ("openai".into(), vec!["gpt-4o".into()]),
+        ],
+    );
 
     palette_select(&mut state, "scoped-models");
 
@@ -122,11 +125,14 @@ fn slash_scoped_models_opens_dialog() {
 #[test]
 fn scoped_models_dialog_navigates_up() {
     let mut state = AppState::default();
-    configure(&mut state, &[
-        ("mock".into(), vec!["echo".into()]),
-        ("openai".into(), vec!["gpt-4o".into()]),
-        ("anthropic".into(), vec!["claude-3".into()]),
-    ]);
+    configure(
+        &mut state,
+        &[
+            ("mock".into(), vec!["echo".into()]),
+            ("openai".into(), vec!["gpt-4o".into()]),
+            ("anthropic".into(), vec!["claude-3".into()]),
+        ],
+    );
     state.update(crate::Event::ToggleScopedModelsDialog);
 
     state.update(crate::Event::HistoryPrev);
@@ -141,11 +147,14 @@ fn scoped_models_dialog_navigates_up() {
 #[test]
 fn scoped_models_dialog_navigates_down() {
     let mut state = AppState::default();
-    configure(&mut state, &[
-        ("mock".into(), vec!["echo".into()]),
-        ("openai".into(), vec!["gpt-4o".into()]),
-        ("anthropic".into(), vec!["claude-3".into()]),
-    ]);
+    configure(
+        &mut state,
+        &[
+            ("mock".into(), vec!["echo".into()]),
+            ("openai".into(), vec!["gpt-4o".into()]),
+            ("anthropic".into(), vec!["claude-3".into()]),
+        ],
+    );
     state.update(crate::Event::ToggleScopedModelsDialog);
     state.update(crate::Event::HistoryNext);
     state.update(crate::Event::HistoryNext);
@@ -161,10 +170,13 @@ fn scoped_models_dialog_navigates_down() {
 #[test]
 fn scoped_models_dialog_submit_toggles() {
     let mut state = AppState::default();
-    configure(&mut state, &[
-        ("mock".into(), vec!["echo".into()]),
-        ("openai".into(), vec!["gpt-4o".into()]),
-    ]);
+    configure(
+        &mut state,
+        &[
+            ("mock".into(), vec!["echo".into()]),
+            ("openai".into(), vec!["gpt-4o".into()]),
+        ],
+    );
     state.update(crate::Event::ToggleScopedModelsDialog);
     state.update(crate::Event::HistoryNext);
 
@@ -198,7 +210,10 @@ fn toggle_scoped_model_uses_provider_and_name() {
         name: "gpt-4o".into(),
     });
 
-    assert!(state.config.scoped_models[0].enabled, "openai model stayed on");
+    assert!(
+        state.config.scoped_models[0].enabled,
+        "openai model stayed on"
+    );
     assert!(
         !state.config.scoped_models[1].enabled,
         "anthropic model was toggled off"

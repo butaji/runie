@@ -124,7 +124,12 @@ async fn config_actor_emits_error_on_failed_save() {
 
     std::fs::set_permissions(&readonly, readonly_perms).unwrap();
     handle
-        .save_provider("openai".into(), "https://api.openai.com".into(), "sk-test".into(), vec!["gpt-4o".into()])
+        .save_provider(
+            "openai".into(),
+            "https://api.openai.com".into(),
+            "sk-test".into(),
+            vec!["gpt-4o".into()],
+        )
         .await;
 
     let mut saw_error = false;
@@ -203,7 +208,10 @@ async fn mutate_config_helper_reports_error() {
     }
 
     std::fs::set_permissions(&readonly, perms).unwrap();
-    assert!(saw_error, "expected Event::Error from config actor after failed write");
+    assert!(
+        saw_error,
+        "expected Event::Error from config actor after failed write"
+    );
 }
 
 /// Layer 2: SaveProvider event still flows through the refactored helper.

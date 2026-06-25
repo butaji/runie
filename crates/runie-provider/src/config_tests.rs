@@ -129,7 +129,8 @@ fn dyn_provider_from_registry_key() {
 
 #[test]
 fn dyn_provider_unknown_key_returns_error() {
-    let result = crate::DynProvider::new_with_config("nonexistent-provider", "model-x", &Config::default());
+    let result =
+        crate::DynProvider::new_with_config("nonexistent-provider", "model-x", &Config::default());
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(matches!(err, ProviderError::UnknownProvider(k) if k == "nonexistent-provider"));

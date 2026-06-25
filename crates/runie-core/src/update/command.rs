@@ -63,8 +63,7 @@ fn run_save_command(state: &mut AppState, name: &str) {
     let session = crate::session::Session::from_state(state, name_owned.clone());
     // Extract handles before async work to avoid borrow conflicts.
     let handles = state.actor_handles().cloned();
-    let can_spawn = handles.as_ref().is_some()
-        && tokio::runtime::Handle::try_current().is_ok();
+    let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
 
     if can_spawn {
         let handles = handles.unwrap();
@@ -99,8 +98,7 @@ fn run_delete_command(state: &mut AppState, name: &str) {
 fn run_import_command(state: &mut AppState, path: &str) {
     // Extract handles before async work to avoid borrow conflicts.
     let handles = state.actor_handles().cloned();
-    let can_spawn = handles.as_ref().is_some()
-        && tokio::runtime::Handle::try_current().is_ok();
+    let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
 
     if can_spawn {
         let handles = handles.unwrap();
@@ -122,9 +120,7 @@ fn run_import_command(state: &mut AppState, path: &str) {
         state.restore_session(&session);
         CommandResult::Message(msg)
     })
-    .unwrap_or_else(|| {
-        CommandResult::Message(format!("Could not import session from '{}'", path))
-    });
+    .unwrap_or_else(|| CommandResult::Message(format!("Could not import session from '{}'", path)));
     dialog::process_command_result(state, result);
 }
 
@@ -138,8 +134,7 @@ fn run_export_command(state: &mut AppState, path: &str) {
     let path_buf = std::path::PathBuf::from(path);
     // Extract handles before async work to avoid borrow conflicts.
     let handles = state.actor_handles().cloned();
-    let can_spawn = handles.as_ref().is_some()
-        && tokio::runtime::Handle::try_current().is_ok();
+    let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
 
     if can_spawn {
         let handles = handles.unwrap();
@@ -166,7 +161,9 @@ where
             if let Some(ref session) = handles.session {
                 let name = name.to_string();
                 let session = session.clone();
-                tokio::spawn(async move { f(session, name).await; });
+                tokio::spawn(async move {
+                    f(session, name).await;
+                });
                 return true;
             }
         }
@@ -211,11 +208,7 @@ fn run_logout_command(state: &mut AppState, provider: &str) {
     state.remove_provider(provider);
     if state.config().current_provider == provider {
         let (provider, model) = state.resolve_default_model();
-        state.set_active_model(
-            provider,
-            model,
-            crate::model::ModelSource::ConfigDefault,
-        );
+        state.set_active_model(provider, model, crate::model::ModelSource::ConfigDefault);
     }
     if !state.has_models() {
         crate::login_flow::login_flow_start(state);

@@ -40,23 +40,63 @@ pub enum EventKind {
 // ── Predicate helpers (one function per event sub-family) ──────────────────────
 
 fn is_llm_agent_fact(e: &Event) -> bool {
-    matches!(e, Event::Thinking { .. } | Event::ThoughtDone { .. } | Event::ToolStart { .. }
-        | Event::ToolEnd { .. } | Event::ResponseDelta { .. } | Event::ThinkingDelta { .. }
-        | Event::TextStart { .. } | Event::TextEnd { .. } | Event::ThinkingStart { .. }
-        | Event::ThinkingEnd { .. } | Event::Response { .. } | Event::TurnComplete { .. }
-        | Event::Done { .. } | Event::Error { .. } | Event::AssistantMessageReady { .. })
+    matches!(
+        e,
+        Event::Thinking { .. }
+            | Event::ThoughtDone { .. }
+            | Event::ToolStart { .. }
+            | Event::ToolEnd { .. }
+            | Event::ResponseDelta { .. }
+            | Event::ThinkingDelta { .. }
+            | Event::TextStart { .. }
+            | Event::TextEnd { .. }
+            | Event::ThinkingStart { .. }
+            | Event::ThinkingEnd { .. }
+            | Event::Response { .. }
+            | Event::TurnComplete { .. }
+            | Event::Done { .. }
+            | Event::Error { .. }
+            | Event::AssistantMessageReady { .. }
+    )
 }
 
 fn is_input_intent(e: &Event) -> bool {
-    matches!(e, Event::Input(_) | Event::Backspace | Event::Newline | Event::Submit
-        | Event::Escape | Event::CursorLeft | Event::CursorRight | Event::CursorStart
-        | Event::CursorEnd | Event::DeleteWord | Event::DeleteToEnd | Event::DeleteToStart
-        | Event::KillChar | Event::HistoryPrev | Event::HistoryNext | Event::Undo | Event::Redo
-        | Event::CursorWordLeft | Event::CursorWordRight | Event::PageUp | Event::PageDown
-        | Event::GoToTop | Event::GoToBottom | Event::Paste(_) | Event::PasteImage
-        | Event::MouseClick { .. } | Event::MouseRelease { .. } | Event::MouseDrag { .. }
-        | Event::MouseMove { .. } | Event::MouseScrollUp | Event::MouseScrollDown
-        | Event::FocusGained | Event::FocusLost)
+    matches!(
+        e,
+        Event::Input(_)
+            | Event::Backspace
+            | Event::Newline
+            | Event::Submit
+            | Event::Escape
+            | Event::CursorLeft
+            | Event::CursorRight
+            | Event::CursorStart
+            | Event::CursorEnd
+            | Event::DeleteWord
+            | Event::DeleteToEnd
+            | Event::DeleteToStart
+            | Event::KillChar
+            | Event::HistoryPrev
+            | Event::HistoryNext
+            | Event::Undo
+            | Event::Redo
+            | Event::CursorWordLeft
+            | Event::CursorWordRight
+            | Event::PageUp
+            | Event::PageDown
+            | Event::GoToTop
+            | Event::GoToBottom
+            | Event::Paste(_)
+            | Event::PasteImage
+            | Event::MouseClick { .. }
+            | Event::MouseRelease { .. }
+            | Event::MouseDrag { .. }
+            | Event::MouseMove { .. }
+            | Event::MouseScrollUp
+            | Event::MouseScrollDown
+            | Event::FocusGained
+            | Event::FocusLost
+    )
 }
 
 // Fact aggregates (OR chains as helper functions to keep kind() complexity low)
@@ -88,15 +128,27 @@ fn is_config_fact(e: &Event) -> bool {
 }
 
 fn is_trust_history_fact(e: &Event) -> bool {
-    matches!(e, Event::TrustLoaded { .. } | Event::TrustChanged { .. } | Event::TrustSet { .. }
-        | Event::HistoryLoaded { .. } | Event::HistoryAppend { .. })
+    matches!(
+        e,
+        Event::TrustLoaded { .. }
+            | Event::TrustChanged { .. }
+            | Event::TrustSet { .. }
+            | Event::HistoryLoaded { .. }
+            | Event::HistoryAppend { .. }
+    )
 }
 
 fn is_session_fact(e: &Event) -> bool {
-    matches!(e, Event::SessionLoaded { .. } | Event::SessionSaved { .. }
-        | Event::SessionDeleted { .. } | Event::SessionImported { .. }
-        | Event::SessionExported { .. } | Event::SessionList { .. }
-        | Event::SessionOperationFailed { .. })
+    matches!(
+        e,
+        Event::SessionLoaded { .. }
+            | Event::SessionSaved { .. }
+            | Event::SessionDeleted { .. }
+            | Event::SessionImported { .. }
+            | Event::SessionExported { .. }
+            | Event::SessionList { .. }
+            | Event::SessionOperationFailed { .. }
+    )
 }
 
 fn is_io_fact(e: &Event) -> bool {
@@ -104,16 +156,28 @@ fn is_io_fact(e: &Event) -> bool {
 }
 
 fn is_system_fact(e: &Event) -> bool {
-    matches!(e, Event::SystemMessage { .. } | Event::TransientMessage { .. }
-        | Event::TransientError { .. } | Event::ClearTransient | Event::ShowDiagnostics)
+    matches!(
+        e,
+        Event::SystemMessage { .. }
+            | Event::TransientMessage { .. }
+            | Event::TransientError { .. }
+            | Event::ClearTransient
+            | Event::ShowDiagnostics
+    )
 }
 
 fn is_login_flow_fact(e: &Event) -> bool {
-    matches!(e, Event::ValidationFailed { .. } | Event::ModelsFetched { .. })
+    matches!(
+        e,
+        Event::ValidationFailed { .. } | Event::ModelsFetched { .. }
+    )
 }
 
 fn is_permission_fact(e: &Event) -> bool {
-    matches!(e, Event::PermissionRequest { .. } | Event::PermissionResponse { .. })
+    matches!(
+        e,
+        Event::PermissionRequest { .. } | Event::PermissionResponse { .. }
+    )
 }
 
 fn is_replay_fact(e: &Event) -> bool {
@@ -121,46 +185,101 @@ fn is_replay_fact(e: &Event) -> bool {
 }
 
 fn is_model_config_intent(e: &Event) -> bool {
-    matches!(e, Event::SwitchModel { .. } | Event::SwitchTheme { .. }
-        | Event::CycleModelNext | Event::CycleModelPrev | Event::ToggleScopedModelsDialog
-        | Event::ScopedModelToggle { .. } | Event::ScopedModelEnableAll
-        | Event::ScopedModelDisableAll | Event::ScopedModelToggleProvider { .. }
-        | Event::CycleThinkingLevel | Event::SetThinkingLevel(_) | Event::ToggleReadOnly
-        | Event::TrustProject | Event::UntrustProject | Event::ReloadAll)
+    matches!(
+        e,
+        Event::SwitchModel { .. }
+            | Event::SwitchTheme { .. }
+            | Event::CycleModelNext
+            | Event::CycleModelPrev
+            | Event::ToggleScopedModelsDialog
+            | Event::ScopedModelToggle { .. }
+            | Event::ScopedModelEnableAll
+            | Event::ScopedModelDisableAll
+            | Event::ScopedModelToggleProvider { .. }
+            | Event::CycleThinkingLevel
+            | Event::SetThinkingLevel(_)
+            | Event::ToggleReadOnly
+            | Event::TrustProject
+            | Event::UntrustProject
+            | Event::ReloadAll
+    )
 }
 
 fn is_command_intent(e: &Event) -> bool {
-    matches!(e, Event::RunLoadCommand { .. } | Event::RunSaveCommand { .. }
-        | Event::RunDeleteCommand { .. } | Event::RunImportCommand { .. }
-        | Event::RunExportCommand { .. } | Event::RunSkillCommand { .. }
-        | Event::RunLoginCommand { .. } | Event::RunLogoutCommand { .. }
-        | Event::RunNameCommand { .. } | Event::RunForkCommand { .. }
-        | Event::RunCompactCommand { .. } | Event::RunPromptCommand { .. }
-        | Event::RunThinkingCommand { .. } | Event::RunPaletteCommand { .. })
+    matches!(
+        e,
+        Event::RunLoadCommand { .. }
+            | Event::RunSaveCommand { .. }
+            | Event::RunDeleteCommand { .. }
+            | Event::RunImportCommand { .. }
+            | Event::RunExportCommand { .. }
+            | Event::RunSkillCommand { .. }
+            | Event::RunLoginCommand { .. }
+            | Event::RunLogoutCommand { .. }
+            | Event::RunNameCommand { .. }
+            | Event::RunForkCommand { .. }
+            | Event::RunCompactCommand { .. }
+            | Event::RunPromptCommand { .. }
+            | Event::RunThinkingCommand { .. }
+            | Event::RunPaletteCommand { .. }
+    )
 }
 
 fn is_session_intent(e: &Event) -> bool {
-    matches!(e, Event::ForkSession { .. } | Event::CloneSession | Event::ToggleSessionTree
-        | Event::SessionTreeFilterCycle | Event::SessionTreeSelect { .. })
+    matches!(
+        e,
+        Event::ForkSession { .. }
+            | Event::CloneSession
+            | Event::ToggleSessionTree
+            | Event::SessionTreeFilterCycle
+            | Event::SessionTreeSelect { .. }
+    )
 }
 
 fn is_login_flow_intent(e: &Event) -> bool {
-    matches!(e, Event::Start | Event::SelectProvider { .. } | Event::SubmitKey { .. }
-        | Event::ToggleModel { .. } | Event::Save | Event::Cancel)
+    matches!(
+        e,
+        Event::Start
+            | Event::SelectProvider { .. }
+            | Event::SubmitKey { .. }
+            | Event::ToggleModel { .. }
+            | Event::Save
+            | Event::Cancel
+    )
 }
 
 fn is_control_kind(e: &Event) -> bool {
-    matches!(e, Event::Quit | Event::ForceQuit | Event::Reset | Event::Abort
-        | Event::FollowUp | Event::ToggleExpand | Event::Dequeue | Event::OpenExternalEditor
-        | Event::ExternalEditorDone { .. } | Event::ShareSession | Event::Suspend
-        | Event::ToggleVimMode | Event::CopyLastResponse | Event::OpenSessionList
-        | Event::NewSession | Event::ResumeSession | Event::SelectSession { .. }
-        | Event::StarSession { .. } | Event::RenameSession { .. } | Event::DeleteSession { .. }
-        | Event::TerminalSize { .. })
+    matches!(
+        e,
+        Event::Quit
+            | Event::ForceQuit
+            | Event::Reset
+            | Event::Abort
+            | Event::FollowUp
+            | Event::ToggleExpand
+            | Event::Dequeue
+            | Event::OpenExternalEditor
+            | Event::ExternalEditorDone { .. }
+            | Event::ShareSession
+            | Event::Suspend
+            | Event::ToggleVimMode
+            | Event::CopyLastResponse
+            | Event::OpenSessionList
+            | Event::NewSession
+            | Event::ResumeSession
+            | Event::SelectSession { .. }
+            | Event::StarSession { .. }
+            | Event::RenameSession { .. }
+            | Event::DeleteSession { .. }
+            | Event::TerminalSize { .. }
+    )
 }
 
 fn is_edit_intent(e: &Event) -> bool {
-    matches!(e, Event::PendingEdit { .. } | Event::ApproveEdit | Event::RejectEdit)
+    matches!(
+        e,
+        Event::PendingEdit { .. } | Event::ApproveEdit | Event::RejectEdit
+    )
 }
 
 fn is_scroll_nav_intent(e: &Event) -> bool {
@@ -168,22 +287,54 @@ fn is_scroll_nav_intent(e: &Event) -> bool {
 }
 
 fn is_dialog_intent(e: &Event) -> bool {
-    matches!(e, Event::ToggleWelcome | Event::ToggleCommandPalette | Event::PaletteFilter(_)
-        | Event::PaletteBackspace | Event::PaletteUp | Event::PaletteDown | Event::PaletteSelect
-        | Event::PaletteClose | Event::ToggleModelSelector | Event::ModelSelectorFilter(_)
-        | Event::ModelSelectorBackspace | Event::ModelSelectorUp | Event::ModelSelectorDown
-        | Event::ModelSelectorSelect | Event::ModelSelectorClose | Event::ToggleSettingsDialog
-        | Event::SettingsUp | Event::SettingsDown | Event::SettingsLeft | Event::SettingsRight
-        | Event::SettingsSelect | Event::SettingsClose | Event::SettingsSwitchCategory { .. }
-        | Event::TogglePathCompletion | Event::PathCompletionUp | Event::PathCompletionDown
-        | Event::PathCompletionSelect | Event::PathCompletionClose
-        | Event::CommandFormInput(_) | Event::CommandFormBackspace | Event::CommandFormUp
-        | Event::CommandFormDown | Event::CommandFormSubmit | Event::CommandFormClose
-        | Event::DialogBack | Event::ProvidersDialog | Event::ProvidersSelectModel { .. }
-        | Event::ProvidersDisconnect { .. } | Event::ProvidersAdd
-        | Event::ProvidersEditModels { .. } | Event::CopyToClipboard(_)
-        | Event::CopySelectedBlock | Event::CopyBlockMetadata | Event::AtFilePicker
-        | Event::InsertAtRef(_))
+    matches!(
+        e,
+        Event::ToggleWelcome
+            | Event::ToggleCommandPalette
+            | Event::PaletteFilter(_)
+            | Event::PaletteBackspace
+            | Event::PaletteUp
+            | Event::PaletteDown
+            | Event::PaletteSelect
+            | Event::PaletteClose
+            | Event::ToggleModelSelector
+            | Event::ModelSelectorFilter(_)
+            | Event::ModelSelectorBackspace
+            | Event::ModelSelectorUp
+            | Event::ModelSelectorDown
+            | Event::ModelSelectorSelect
+            | Event::ModelSelectorClose
+            | Event::ToggleSettingsDialog
+            | Event::SettingsUp
+            | Event::SettingsDown
+            | Event::SettingsLeft
+            | Event::SettingsRight
+            | Event::SettingsSelect
+            | Event::SettingsClose
+            | Event::SettingsSwitchCategory { .. }
+            | Event::TogglePathCompletion
+            | Event::PathCompletionUp
+            | Event::PathCompletionDown
+            | Event::PathCompletionSelect
+            | Event::PathCompletionClose
+            | Event::CommandFormInput(_)
+            | Event::CommandFormBackspace
+            | Event::CommandFormUp
+            | Event::CommandFormDown
+            | Event::CommandFormSubmit
+            | Event::CommandFormClose
+            | Event::DialogBack
+            | Event::ProvidersDialog
+            | Event::ProvidersSelectModel { .. }
+            | Event::ProvidersDisconnect { .. }
+            | Event::ProvidersAdd
+            | Event::ProvidersEditModels { .. }
+            | Event::CopyToClipboard(_)
+            | Event::CopySelectedBlock
+            | Event::CopyBlockMetadata
+            | Event::AtFilePicker
+            | Event::InsertAtRef(_)
+    )
 }
 
 impl Event {
@@ -218,9 +369,15 @@ mod tests {
         for e in [
             Event::Input('x'),
             Event::Submit,
-            Event::SwitchModel { provider: "anthropic".into(), model: "claude".into(), explicit: true },
+            Event::SwitchModel {
+                provider: "anthropic".into(),
+                model: "claude".into(),
+                explicit: true,
+            },
             Event::Quit,
-            Event::RunSaveCommand { name: "test".into() },
+            Event::RunSaveCommand {
+                name: "test".into(),
+            },
         ] {
             assert_ne!(e.kind(), EventKind::Fact, "{e:?} must not be Fact");
         }
@@ -230,13 +387,34 @@ mod tests {
     fn fact_events_are_classified() {
         for e in [
             Event::Thinking { id: "1".into() },
-            Event::ToolEnd { id: "t1".into(), duration_secs: 0.5, output: "ok".into() },
-            Event::TurnComplete { id: "1".into(), duration_secs: 1.0 },
-            Event::ConfigLoaded { config: Box::new(crate::config::Config::default()) },
-            Event::TrustLoaded { decisions: Default::default() },
-            Event::SessionLoaded { name: "test".into(), events: Box::new(vec![]), metadata: None },
-            Event::BashOutput { command: "pwd".into(), output: "/tmp".into() },
-            Event::TransientMessage { content: "hello".into(), level: crate::event::TransientLevel::Info },
+            Event::ToolEnd {
+                id: "t1".into(),
+                duration_secs: 0.5,
+                output: "ok".into(),
+            },
+            Event::TurnComplete {
+                id: "1".into(),
+                duration_secs: 1.0,
+            },
+            Event::ConfigLoaded {
+                config: Box::new(crate::config::Config::default()),
+            },
+            Event::TrustLoaded {
+                decisions: Default::default(),
+            },
+            Event::SessionLoaded {
+                name: "test".into(),
+                events: Box::new(vec![]),
+                metadata: None,
+            },
+            Event::BashOutput {
+                command: "pwd".into(),
+                output: "/tmp".into(),
+            },
+            Event::TransientMessage {
+                content: "hello".into(),
+                level: crate::event::TransientLevel::Info,
+            },
         ] {
             assert_eq!(e.kind(), EventKind::Fact, "{e:?} must be Fact");
         }
@@ -248,7 +426,10 @@ mod tests {
             Event::Quit,
             Event::Reset,
             Event::Abort,
-            Event::TerminalSize { width: 80, height: 24 },
+            Event::TerminalSize {
+                width: 80,
+                height: 24,
+            },
         ] {
             assert_eq!(e.kind(), EventKind::Control, "{e:?} must be Control");
         }
@@ -265,17 +446,35 @@ mod tests {
         let intent_events = [
             Event::Input('x'),
             Event::Submit,
-            Event::SwitchModel { provider: "a".into(), model: "b".into(), explicit: false },
-            Event::RunSaveCommand { name: "test".into() },
+            Event::SwitchModel {
+                provider: "a".into(),
+                model: "b".into(),
+                explicit: false,
+            },
+            Event::RunSaveCommand {
+                name: "test".into(),
+            },
             Event::ToggleCommandPalette,
             Event::Up,
             Event::Down,
-            Event::PendingEdit { path: "x".into(), original: "a".into(), proposed: "b".into() },
+            Event::PendingEdit {
+                path: "x".into(),
+                original: "a".into(),
+                proposed: "b".into(),
+            },
             Event::ForkSession { message_index: 0 },
             Event::Start,
-            Event::RunCompactCommand { keep: "*".into(), focus: "".into() },
-            Event::SelectProvider { provider: "openai".into() },
-            Event::SubmitKey { provider: "openai".into(), key: "sk-".into() },
+            Event::RunCompactCommand {
+                keep: "*".into(),
+                focus: "".into(),
+            },
+            Event::SelectProvider {
+                provider: "openai".into(),
+            },
+            Event::SubmitKey {
+                provider: "openai".into(),
+                key: "sk-".into(),
+            },
         ];
         for e in intent_events {
             assert_eq!(e.kind(), Intent, "{e:?} must be Intent");
@@ -284,20 +483,67 @@ mod tests {
         // Verify Fact events return Fact
         let fact_events = [
             Event::Thinking { id: "1".into() },
-            Event::ToolStart { id: "t1".into(), name: "bash".into(), input: serde_json::json!({}) },
-            Event::ToolEnd { id: "t1".into(), duration_secs: 1.0, output: "ok".into() },
-            Event::Response { id: "r1".into(), content: "hi".into() },
-            Event::TurnComplete { id: "1".into(), duration_secs: 1.0 },
-            Event::ConfigLoaded { config: Box::new(crate::config::Config::default()) },
-            Event::TrustLoaded { decisions: Default::default() },
-            Event::SessionSaved { name: "test".into() },
-            Event::BashOutput { command: "ls".into(), output: "/".into() },
-            Event::TransientMessage { content: "hi".into(), level: crate::event::TransientLevel::Info },
-            Event::MessageReplayed { id: "1".into(), role: "user".into(), content: "hi".into(), timestamp: 0.0, provider: "openai".into() },
-            Event::ValidationFailed { provider: "a".into(), key: "k".into(), error: "e".into() },
-            Event::ModelsFetched { provider: "a".into(), key: "k".into(), models: vec![] },
-            Event::PermissionRequest { request_id: "1".into(), tool: "bash".into(), input: serde_json::json!({}) },
-            Event::PermissionResponse { request_id: "1".into(), action: crate::permissions::PermissionAction::Allow },
+            Event::ToolStart {
+                id: "t1".into(),
+                name: "bash".into(),
+                input: serde_json::json!({}),
+            },
+            Event::ToolEnd {
+                id: "t1".into(),
+                duration_secs: 1.0,
+                output: "ok".into(),
+            },
+            Event::Response {
+                id: "r1".into(),
+                content: "hi".into(),
+            },
+            Event::TurnComplete {
+                id: "1".into(),
+                duration_secs: 1.0,
+            },
+            Event::ConfigLoaded {
+                config: Box::new(crate::config::Config::default()),
+            },
+            Event::TrustLoaded {
+                decisions: Default::default(),
+            },
+            Event::SessionSaved {
+                name: "test".into(),
+            },
+            Event::BashOutput {
+                command: "ls".into(),
+                output: "/".into(),
+            },
+            Event::TransientMessage {
+                content: "hi".into(),
+                level: crate::event::TransientLevel::Info,
+            },
+            Event::MessageReplayed {
+                id: "1".into(),
+                role: "user".into(),
+                content: "hi".into(),
+                timestamp: 0.0,
+                provider: "openai".into(),
+            },
+            Event::ValidationFailed {
+                provider: "a".into(),
+                key: "k".into(),
+                error: "e".into(),
+            },
+            Event::ModelsFetched {
+                provider: "a".into(),
+                key: "k".into(),
+                models: vec![],
+            },
+            Event::PermissionRequest {
+                request_id: "1".into(),
+                tool: "bash".into(),
+                input: serde_json::json!({}),
+            },
+            Event::PermissionResponse {
+                request_id: "1".into(),
+                action: crate::permissions::PermissionAction::Allow,
+            },
         ];
         for e in fact_events {
             assert_eq!(e.kind(), Fact, "{e:?} must be Fact");
@@ -309,12 +555,17 @@ mod tests {
             Event::ForceQuit,
             Event::Reset,
             Event::Abort,
-            Event::TerminalSize { width: 80, height: 24 },
+            Event::TerminalSize {
+                width: 80,
+                height: 24,
+            },
             Event::FollowUp,
             Event::ToggleExpand,
             Event::Dequeue,
             Event::OpenExternalEditor,
-            Event::ExternalEditorDone { content: "x".into() },
+            Event::ExternalEditorDone {
+                content: "x".into(),
+            },
             Event::ShareSession,
             Event::Suspend,
             Event::ToggleVimMode,
@@ -324,7 +575,10 @@ mod tests {
             Event::ResumeSession,
             Event::SelectSession { id: "1".into() },
             Event::StarSession { id: "1".into() },
-            Event::RenameSession { id: "1".into(), name: "test".into() },
+            Event::RenameSession {
+                id: "1".into(),
+                name: "test".into(),
+            },
             Event::DeleteSession { id: "1".into() },
         ];
         for e in control_events {
@@ -338,12 +592,21 @@ mod tests {
         let events = [
             Event::Input('x'),
             Event::Quit,
-            Event::SwitchModel { provider: "a".into(), model: "b".into(), explicit: true },
-            Event::RunSaveCommand { name: "test".into() },
+            Event::SwitchModel {
+                provider: "a".into(),
+                model: "b".into(),
+                explicit: true,
+            },
+            Event::RunSaveCommand {
+                name: "test".into(),
+            },
             Event::Submit,
         ];
         for e in events {
-            assert!(e.clone().into_intent().is_some(), "{e:?} must convert to Intent");
+            assert!(
+                e.clone().into_intent().is_some(),
+                "{e:?} must convert to Intent"
+            );
         }
     }
 
@@ -352,8 +615,14 @@ mod tests {
     fn fact_events_return_none_from_into_intent() {
         let events = [
             Event::Thinking { id: "1".into() },
-            Event::ConfigLoaded { config: Box::new(crate::config::Config::default()) },
-            Event::ToolEnd { id: "t1".into(), duration_secs: 1.0, output: "ok".into() },
+            Event::ConfigLoaded {
+                config: Box::new(crate::config::Config::default()),
+            },
+            Event::ToolEnd {
+                id: "t1".into(),
+                duration_secs: 1.0,
+                output: "ok".into(),
+            },
         ];
         for e in events {
             assert!(e.clone().into_intent().is_none(), "{e:?} must return None");

@@ -1,6 +1,6 @@
 use crate::commands::DialogState;
-use crate::Event;
 use crate::model::AppState;
+use crate::Event;
 
 #[test]
 fn at_ref_opens_file_picker_dialog() {

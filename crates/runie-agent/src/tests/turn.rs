@@ -1,10 +1,12 @@
 //! Tests for agent turn execution
 use crate::tests::ensure_mock_provider;
-use crate::{run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages, AgentCommand};
-use runie_core::Event;
+use crate::{
+    run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages, AgentCommand,
+};
 use runie_core::harness_skills::{
     HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult,
 };
+use runie_core::Event;
 use runie_testing::{allow_all_gate, mock_provider};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -38,7 +40,10 @@ impl HarnessSkill for MockToolSkill {
 
 pub(crate) fn mock_tool_skill() -> SkillRegistry {
     let mut outputs = HashMap::new();
-    outputs.insert("list_dir".to_string(), "Cargo.toml\nREADME.md\n".to_string());
+    outputs.insert(
+        "list_dir".to_string(),
+        "Cargo.toml\nREADME.md\n".to_string(),
+    );
     outputs.insert("bash".to_string(), "hello\n".to_string());
     let mut registry = SkillRegistry::new();
     registry.register(MockToolSkill::new(outputs));
@@ -442,7 +447,9 @@ impl HarnessSkill for RecordingSkill {
 #[test]
 fn tool_call_hook_receives_input() {
     let recorded = Arc::new(Mutex::new(None));
-    let skill = RecordingSkill { ctx: recorded.clone() };
+    let skill = RecordingSkill {
+        ctx: recorded.clone(),
+    };
     let mut registry = SkillRegistry::new();
     registry.register(skill);
 

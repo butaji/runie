@@ -1,11 +1,11 @@
 //! rebuild tests.
 
 use super::*;
-use runie_core::Event;
-use runie_core::model::{AppState, ChatMessage,  Role};
-use runie_core::Part;
+use runie_core::model::{AppState, ChatMessage, Role};
 use runie_core::view::elements::Element;
 use runie_core::view::LazyCache;
+use runie_core::Event;
+use runie_core::Part;
 use runie_testing::fresh_state;
 
 #[test]
@@ -13,14 +13,18 @@ fn toggle_expand_affects_all_items() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text { content: "older thought".into() }],
+        parts: vec![Part::Text {
+            content: "older thought".into(),
+        }],
         timestamp: 0.0,
         id: "old".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text { content: "✓ list_files 0.5s".into() }],
+        parts: vec![Part::Text {
+            content: "✓ list_files 0.5s".into(),
+        }],
         timestamp: 1.0,
         id: "new".into(),
         ..Default::default()
@@ -37,7 +41,9 @@ fn toggle_thought_rebuilds_cache() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text { content: "Deep reasoning\nline two".into() }],
+        parts: vec![Part::Text {
+            content: "Deep reasoning\nline two".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -64,7 +70,9 @@ fn toggle_thought_twice_restores_cache() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text { content: "Deep reasoning".into() }],
+        parts: vec![Part::Text {
+            content: "Deep reasoning".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -87,7 +95,9 @@ fn toggle_tool_rebuilds_cache() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text { content: "✓ list_files 0.5s".into() }],
+        parts: vec![Part::Text {
+            content: "✓ list_files 0.5s".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -112,7 +122,9 @@ fn toggle_tool_twice_restores_cache() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text { content: "✓ list_files 0.5s".into() }],
+        parts: vec![Part::Text {
+            content: "✓ list_files 0.5s".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -231,7 +243,9 @@ fn collapsed_thought_hides_reasoning() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text { content: "◆ Thought 1.2s\nI'll list the files.".into() }],
+        parts: vec![Part::Text {
+            content: "◆ Thought 1.2s\nI'll list the files.".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -255,7 +269,9 @@ fn expanded_thought_shows_reasoning() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text { content: "◆ Thought 1.2s\nI'll list the files.".into() }],
+        parts: vec![Part::Text {
+            content: "◆ Thought 1.2s\nI'll list the files.".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -278,7 +294,9 @@ fn collapsed_tool_hides_output() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text { content: "✓ list_files 0.5s\nfile1\nfile2".into() }],
+        parts: vec![Part::Text {
+            content: "✓ list_files 0.5s\nfile1\nfile2".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -304,7 +322,9 @@ fn expanded_tool_shows_output() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text { content: "✓ list_files 0.5s\nfile1\nfile2".into() }],
+        parts: vec![Part::Text {
+            content: "✓ list_files 0.5s\nfile1\nfile2".into(),
+        }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()

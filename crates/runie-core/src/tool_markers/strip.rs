@@ -80,9 +80,7 @@ fn strip_inline_fenced_tools(content: &str) -> String {
         if let Some(idx) = line.find("```") {
             let rest = &line[idx + 3..];
             let after_lang = strip_language_prefix(rest).trim_start();
-            if !after_lang.is_empty()
-                && !after_lang.starts_with('{')
-                && !after_lang.contains("```")
+            if !after_lang.is_empty() && !after_lang.starts_with('{') && !after_lang.contains("```")
             {
                 result.push_str(after_lang);
                 continue;
@@ -97,8 +95,27 @@ fn strip_inline_fenced_tools(content: &str) -> String {
 }
 
 const FENCE_LANGS: &[&str] = &[
-    "bash", "diff", "html", "javascript", "js", "json", "markdown", "md", "plaintext", "py",
-    "python", "rust", "sh", "shell", "sql", "text", "toml", "ts", "typescript", "xml", "yaml",
+    "bash",
+    "diff",
+    "html",
+    "javascript",
+    "js",
+    "json",
+    "markdown",
+    "md",
+    "plaintext",
+    "py",
+    "python",
+    "rust",
+    "sh",
+    "shell",
+    "sql",
+    "text",
+    "toml",
+    "ts",
+    "typescript",
+    "xml",
+    "yaml",
     "yml",
 ];
 
@@ -121,11 +138,7 @@ fn strip_inline_json_objects(content: &str) -> String {
         }
         if let Some((end, value)) = parse_json_object_at(content.as_bytes(), i) {
             if is_tool_call_value(&value) {
-                while chars
-                    .peek()
-                    .map(|(idx, _)| *idx <= end)
-                    .unwrap_or(false)
-                {
+                while chars.peek().map(|(idx, _)| *idx <= end).unwrap_or(false) {
                     chars.next();
                 }
                 continue;
@@ -207,7 +220,8 @@ fn legacy_tool_marker_len(after: &str) -> Option<usize> {
         }
         let arg1 = parts.get(1).unwrap_or(&"");
         let arg2 = parts.get(2).unwrap_or(&"");
-        let consumed = name.len() + 1 + arg1.len() + if arg2.is_empty() { 0 } else { 1 + arg2.len() };
+        let consumed =
+            name.len() + 1 + arg1.len() + if arg2.is_empty() { 0 } else { 1 + arg2.len() };
         (name, consumed)
     } else {
         let mut tokens = trimmed.split_whitespace();
@@ -398,7 +412,8 @@ Done."#;
 
     #[test]
     fn test_strip_all_inline_json() {
-        let input = r#"Here's the result: {"name": "read_file", "arguments": {"path": "/test"}} Done."#;
+        let input =
+            r#"Here's the result: {"name": "read_file", "arguments": {"path": "/test"}} Done."#;
         let result = strip_all(input);
         assert_eq!(result, "Here's the result:  Done.");
     }

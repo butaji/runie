@@ -90,22 +90,26 @@ impl TestRuntime {
             self.intents
         );
         for (got, exp) in self.intents.iter().zip(expected.iter()) {
-            assert_eq!(
-                format!("{got:?}"),
-                format!("{exp:?}"),
-                "intent mismatch"
-            );
+            assert_eq!(format!("{got:?}"), format!("{exp:?}"), "intent mismatch");
         }
     }
 
     /// Assert no intents were recorded.
     pub fn assert_no_intents(&self) {
-        assert!(self.intents.is_empty(), "expected no intents, got {:?}", self.intents);
+        assert!(
+            self.intents.is_empty(),
+            "expected no intents, got {:?}",
+            self.intents
+        );
     }
 
     /// Assert no notifications were recorded.
     pub fn assert_no_notifications(&self) {
-        assert!(self.notifications.is_empty(), "expected no notifications, got {:?}", self.notifications);
+        assert!(
+            self.notifications.is_empty(),
+            "expected no notifications, got {:?}",
+            self.notifications
+        );
     }
 
     /// Clear all recorded side-effects (useful for reusable test fixtures).
@@ -297,7 +301,9 @@ mod tests {
     #[test]
     fn test_runtime_records_notifications() {
         let mut rt = TestRuntime::new();
-        let flow: Flow<()> = on(()).notify("hello").notify_level("error!", TransientLevel::Error);
+        let flow: Flow<()> = on(())
+            .notify("hello")
+            .notify_level("error!", TransientLevel::Error);
         flow.run(&mut rt, ());
 
         let notes = rt.notifications();
@@ -345,7 +351,10 @@ mod tests {
         let mut rt = TestRuntime::new();
         on(()).intent(Intent::Quit).run(&mut rt, ());
         let result = std::panic::catch_unwind(|| rt.assert_no_intents());
-        assert!(result.is_err(), "assert_no_intents should panic when intents exist");
+        assert!(
+            result.is_err(),
+            "assert_no_intents should panic when intents exist"
+        );
     }
 
     // ── Layer 2: .then() chains flows ───────────────────────────────────────
@@ -353,11 +362,16 @@ mod tests {
     #[test]
     fn then_chains_intents_and_notifications() {
         let mut rt = TestRuntime::new();
-        let flow = on(()).intent(Intent::SetTheme { name: "dark".into() })
+        let flow = on(())
+            .intent(Intent::SetTheme {
+                name: "dark".into(),
+            })
             .then(on(()).notify("done!"));
         flow.run(&mut rt, ());
 
-        assert!(rt.intents().any(|i| matches!(i, Intent::SetTheme { name } if name == "dark")));
+        assert!(rt
+            .intents()
+            .any(|i| matches!(i, Intent::SetTheme { name } if name == "dark")));
         assert!(rt.notifications().iter().any(|(n, _)| n == "done!"));
     }
 
@@ -376,8 +390,13 @@ mod tests {
     #[test]
     fn notify_level_records_error() {
         let mut rt = TestRuntime::new();
-        on(()).notify_level("failed", TransientLevel::Error).run(&mut rt, ());
-        assert!(rt.notifications().iter().any(|(n, l)| n == "failed" && *l == TransientLevel::Error));
+        on(())
+            .notify_level("failed", TransientLevel::Error)
+            .run(&mut rt, ());
+        assert!(rt
+            .notifications()
+            .iter()
+            .any(|(n, l)| n == "failed" && *l == TransientLevel::Error));
     }
 
     // ── Layer 2: empty flow does nothing ─────────────────────────────────────

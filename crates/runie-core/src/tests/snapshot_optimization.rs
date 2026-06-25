@@ -1,10 +1,9 @@
 //! Snapshot optimization tests (Layer 1–3)
 
-
-use crate::Event;
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::snapshot::Snapshot;
+use crate::Event;
 use std::sync::Arc;
 
 // Layer 1 — State/Logic
@@ -16,7 +15,9 @@ fn test_snapshot_contains_expected_fields() {
         role: Role::User,
         timestamp: 1.0,
         id: "u1".into(),
-        parts: vec![Part::Text { content: "hello".into() }],
+        parts: vec![Part::Text {
+            content: "hello".into(),
+        }],
         ..Default::default()
     });
     state.messages_changed();
@@ -77,7 +78,9 @@ fn test_render_receives_valid_snapshot() {
     for i in 0..10 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text { content: format!("msg{}", i) }],
+            parts: vec![Part::Text {
+                content: format!("msg{}", i),
+            }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -103,7 +106,9 @@ fn test_elements_uses_arc() {
         role: Role::User,
         timestamp: 1.0,
         id: "u1".into(),
-        parts: vec![Part::Text { content: "hello".into() }],
+        parts: vec![Part::Text {
+            content: "hello".into(),
+        }],
         ..Default::default()
     });
     state.messages_changed();
@@ -130,7 +135,9 @@ fn test_arc_pointer_stability_after_state_mutation() {
         role: Role::User,
         timestamp: 1.0,
         id: "u1".into(),
-        parts: vec![Part::Text { content: "first".into() }],
+        parts: vec![Part::Text {
+            content: "first".into(),
+        }],
         ..Default::default()
     });
     state.messages_changed();

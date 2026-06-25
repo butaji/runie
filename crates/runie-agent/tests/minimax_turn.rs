@@ -4,12 +4,12 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::Stream;
 use runie_agent::{run_agent_turn_with_skills, AgentCommand};
-use runie_core::Event;
 use runie_core::harness_skills::{
     HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult,
 };
-use runie_core::provider_event::ProviderEvent;
 use runie_core::message::ChatMessage;
+use runie_core::provider_event::ProviderEvent;
+use runie_core::Event;
 use runie_provider::openai::stream::replay_sse;
 use runie_provider::DynProvider;
 use runie_testing::allow_all_gate;
@@ -153,7 +153,9 @@ async fn m3_list_files_turn_executes_list_dir() {
         e,
         crate::Event::ToolStart { name, .. } if name == "list_dir"
     )));
-    assert!(events.iter().any(|e| matches!(e, crate::Event::Done { .. })));
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, crate::Event::Done { .. })));
 }
 
 #[tokio::test]
@@ -176,15 +178,14 @@ async fn m3_read_file_turn_executes_read_file() {
         e,
         crate::Event::ToolStart { name, .. } if name == "read_file"
     )));
-    assert!(events.iter().any(|e| matches!(e, crate::Event::Done { .. })));
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, crate::Event::Done { .. })));
 }
 
 #[tokio::test]
 async fn m3_multi_tool_turn_executes_list_dir_and_read_file() {
-    let provider = dyn_replay(&[
-        "m3_multi_tool_list_dir.sse",
-        "m3_multi_tool_readme.sse",
-    ]);
+    let provider = dyn_replay(&["m3_multi_tool_list_dir.sse", "m3_multi_tool_readme.sse"]);
     let (events, emit) = capture_events();
     run_agent_turn_with_skills(
         &provider,
@@ -207,7 +208,9 @@ async fn m3_multi_tool_turn_executes_list_dir_and_read_file() {
         .collect();
     assert!(tool_names.contains(&"list_dir"));
     assert!(tool_names.contains(&"read_file"));
-    assert!(events.iter().any(|e| matches!(e, crate::Event::Done { .. })));
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, crate::Event::Done { .. })));
 }
 
 #[tokio::test]
@@ -230,5 +233,7 @@ async fn m27_multi_tool_turn_executes_read_file() {
         e,
         crate::Event::ToolStart { name, .. } if name == "read_file"
     )));
-    assert!(events.iter().any(|e| matches!(e, crate::Event::Done { .. })));
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, crate::Event::Done { .. })));
 }

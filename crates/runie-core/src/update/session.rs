@@ -34,7 +34,8 @@ impl AppState {
                 self.add_system_msg(format!("Forked at message {}.", message_index));
             }
         } else {
-            let mut tree = crate::session::tree::SessionTree::from_messages(&self.session_mut().messages);
+            let mut tree =
+                crate::session::tree::SessionTree::from_messages(&self.session_mut().messages);
             if let Some(path) = tree.fork_at(message_index) {
                 tree.navigate_to(&path);
                 self.session_mut().session_tree = Some(tree);
@@ -105,15 +106,19 @@ impl AppState {
         if self.input_mut().input.is_empty() {
             return;
         }
-        let content = std::mem::take(&mut self.input_mut().input).trim().to_string();
+        let content = std::mem::take(&mut self.input_mut().input)
+            .trim()
+            .to_string();
         self.input_mut().cursor_pos = 0;
         if content.is_empty() {
             return;
         }
-        self.agent_state_mut().message_queue.push(crate::model::QueuedMessage {
-            content,
-            kind: crate::model::QueuedMessageKind::FollowUp,
-        });
+        self.agent_state_mut()
+            .message_queue
+            .push(crate::model::QueuedMessage {
+                content,
+                kind: crate::model::QueuedMessageKind::FollowUp,
+            });
         self.view_mut().scroll = 0;
         self.view_mut().dirty = true;
     }
@@ -125,7 +130,12 @@ impl AppState {
             self.view_mut().dirty = true;
             return;
         }
-        let msgs: Vec<_> = self.agent_state_mut().message_queue.drain(..).rev().collect();
+        let msgs: Vec<_> = self
+            .agent_state_mut()
+            .message_queue
+            .drain(..)
+            .rev()
+            .collect();
         for msg in msgs {
             if !self.input_mut().input.is_empty() {
                 self.input_mut().input.push('\n');
@@ -190,10 +200,14 @@ impl AppState {
             role: Role::User,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![runie_core::message::Part::Text { content: content.clone() }],
+            parts: vec![runie_core::message::Part::Text {
+                content: content.clone(),
+            }],
             ..Default::default()
         });
-        self.agent_state_mut().request_queue.push_back((content, id));
+        self.agent_state_mut()
+            .request_queue
+            .push_back((content, id));
     }
 
     fn try_deliver_steering(&mut self) -> bool {
@@ -205,7 +219,12 @@ impl AppState {
 
     fn try_steering_one(&mut self) -> bool {
         let kind = crate::model::QueuedMessageKind::Steering;
-        let idx = match self.agent_state().message_queue.iter().position(|m| m.kind == kind) {
+        let idx = match self
+            .agent_state()
+            .message_queue
+            .iter()
+            .position(|m| m.kind == kind)
+        {
             Some(idx) => idx,
             None => return false,
         };
@@ -265,7 +284,6 @@ impl AppState {
 }
 
 // ── Session event dispatcher ─────────────────────────────────────────────────
-
 
 pub(super) fn handle_session_event(state: &mut AppState, event: crate::Event) {
     match event {

@@ -86,8 +86,14 @@ fn estimate_tokens_uses_heuristic() {
     let text = "hello world";
     // All estimation uses the chars/4 heuristic
     assert_eq!(estimate_tokens_with_tokenizer(text), estimate_tokens(text));
-    assert_eq!(estimate_tokens_for_model(text, "openai", "gpt-4o"), estimate_tokens(text));
-    assert_eq!(estimate_tokens_for_model(text, "unknown", "unknown"), estimate_tokens(text));
+    assert_eq!(
+        estimate_tokens_for_model(text, "openai", "gpt-4o"),
+        estimate_tokens(text)
+    );
+    assert_eq!(
+        estimate_tokens_for_model(text, "unknown", "unknown"),
+        estimate_tokens(text)
+    );
 }
 
 #[test]

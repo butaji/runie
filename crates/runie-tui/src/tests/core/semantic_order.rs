@@ -1,6 +1,6 @@
 use super::*;
-use runie_core::Event;
 use runie_core::model::AppState;
+use runie_core::Event;
 use runie_testing::fresh_state;
 
 fn big_output() -> String {

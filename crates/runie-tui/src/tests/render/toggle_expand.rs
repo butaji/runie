@@ -31,14 +31,18 @@ fn ctrl_shift_e_collapses_thought_post_in_feed() {
 
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text { content: "hi".into() }],
+        parts: vec![Part::Text {
+            content: "hi".into(),
+        }],
         timestamp: 0.0,
         id: "u1".to_string(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text { content: "line1\nline2\nline3".into() }],
+        parts: vec![Part::Text {
+            content: "line1\nline2\nline3".into(),
+        }],
         timestamp: 1.0,
         id: "t1".to_string(),
         ..Default::default()
@@ -69,14 +73,18 @@ fn ctrl_shift_e_collapses_tool_post_in_feed() {
 
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text { content: "list files".into() }],
+        parts: vec![Part::Text {
+            content: "list files".into(),
+        }],
         timestamp: 0.0,
         id: "u1".to_string(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text { content: "✓ list_dir 0.5s\nfile1.rs\nfile2.rs".into() }],
+        parts: vec![Part::Text {
+            content: "✓ list_dir 0.5s\nfile1.rs\nfile2.rs".into(),
+        }],
         timestamp: 1.0,
         id: "tool.u1.1".to_string(),
         ..Default::default()
@@ -107,7 +115,9 @@ fn ctrl_shift_e_twice_restores_post_lines() {
 
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text { content: "alpha\nbeta".into() }],
+        parts: vec![Part::Text {
+            content: "alpha\nbeta".into(),
+        }],
         timestamp: 0.0,
         id: "t1".to_string(),
         ..Default::default()

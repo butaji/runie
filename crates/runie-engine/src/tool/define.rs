@@ -25,10 +25,7 @@
 use serde_json::{json, Value};
 
 /// Helper to build an input schema from field declarations.
-pub fn build_schema(
-    fields: &[(&str, &str, &str)],
-    required: &[&str],
-) -> Value {
+pub fn build_schema(fields: &[(&str, &str, &str)], required: &[&str]) -> Value {
     let properties = fields
         .iter()
         .map(|(name, typ, desc)| {

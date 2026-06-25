@@ -11,9 +11,11 @@
 
 use std::path::PathBuf;
 
-use crate::actors::{ConfigActorHandle, FffSearchRequest, IoActorHandle, ProviderActorHandle, SessionActorHandle};
-use crate::trust::TrustDecision;
+use crate::actors::{
+    ConfigActorHandle, FffSearchRequest, IoActorHandle, ProviderActorHandle, SessionActorHandle,
+};
 use crate::session::Session;
+use crate::trust::TrustDecision;
 
 /// All actor senders in one place.
 ///
@@ -63,7 +65,8 @@ impl ActorHandles {
     /// Send `SetDefaultModel` to `ConfigActor`.
     pub async fn send_set_default_model(&self, provider: &str, model: &str) {
         if let Some(ref h) = self.config {
-            h.set_default_model(provider.to_string(), model.to_string()).await;
+            h.set_default_model(provider.to_string(), model.to_string())
+                .await;
         }
     }
 
@@ -76,7 +79,13 @@ impl ActorHandles {
         models: Vec<String>,
     ) {
         if let Some(ref h) = self.config {
-            h.save_provider(name.to_string(), base_url.to_string(), api_key.to_string(), models).await;
+            h.save_provider(
+                name.to_string(),
+                base_url.to_string(),
+                api_key.to_string(),
+                models,
+            )
+            .await;
         }
     }
 
@@ -222,7 +231,9 @@ mod tests {
         handles.config = Some(handle);
 
         // Send via ActorHandles helper
-        handles.send_save_provider("test", "http://localhost", "key", vec!["model".into()]).await;
+        handles
+            .send_save_provider("test", "http://localhost", "key", vec!["model".into()])
+            .await;
 
         // Actor should have received the message (no panic = success)
         drop(handles);

@@ -53,7 +53,6 @@ fn type_api_key_appears_in_field() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-
     start_provider_select(&mut state, "minimax");
     for c in "sk-test".chars() {
         state.update(Event::from(Event::Input(c)));
@@ -74,7 +73,6 @@ fn backspace_removes_key_character() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-
 
     start_provider_select(&mut state, "minimax");
     for c in "sk-test".chars() {
@@ -98,7 +96,6 @@ fn paste_fills_api_key_field() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-
     start_provider_select(&mut state, "minimax");
     state.update(Event::Paste("sk-pasted".into()));
 
@@ -117,7 +114,6 @@ fn space_toggles_model_checkbox_in_login_flow() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-
 
     reach_model_select(&mut state, &["MiniMax-M3".into()]);
 
@@ -143,7 +139,6 @@ fn enter_on_save_action_saves() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-
     reach_model_select(&mut state, &["MiniMax-M3".into()]);
     // Move selection from the model toggle down to the _Save action.
     state.update(Event::from(Event::HistoryNext));
@@ -167,7 +162,6 @@ fn enter_on_unchecked_model_selects_and_saves() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-
 
     reach_model_select(&mut state, &["MiniMax-M3".into(), "MiniMax-M2.7".into()]);
     // Uncheck the first model.
@@ -200,7 +194,6 @@ fn cancel_action_returns_to_previous_panel() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-
     reach_model_select(&mut state, &["MiniMax-M3".into()]);
     // Move selection from the model toggle down to _Save, then to _Cancel.
     state.update(Event::from(Event::HistoryNext));
@@ -220,7 +213,6 @@ fn paste_multiline_api_key_preserves_full_text() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-
 
     start_provider_select(&mut state, "minimax");
     state.update(Event::Paste("sk-line1\nline2\nline3".into()));

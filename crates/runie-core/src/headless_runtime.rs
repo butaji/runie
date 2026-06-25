@@ -14,13 +14,13 @@ use std::time::Duration;
 
 use tokio::time::timeout;
 
-use crate::actors::{ConfigActorHandle, ProviderActorHandle, ProviderActor, ConfigActor};
+use crate::actors::provider::{BuiltProvider, ProviderFactory};
 use crate::actors::ActorHandle;
+use crate::actors::{ConfigActor, ConfigActorHandle, ProviderActor, ProviderActorHandle};
 use crate::bus::EventBus;
 use crate::config::Config;
-use crate::actors::provider::{BuiltProvider, ProviderFactory};
-use crate::provider::ProviderError;
 use crate::event::Event;
+use crate::provider::ProviderError;
 
 /// Non-interactive runtime backed by the same actors as the TUI.
 pub struct HeadlessRuntime {
@@ -46,7 +46,9 @@ impl HeadlessRuntime {
         timeout(Duration::from_secs(2), async {
             loop {
                 match sub.recv().await {
-                    Ok(Event::ConfigLoaded { .. }) | Ok(Event::Error { .. }) => return Ok::<(), anyhow::Error>(()),
+                    Ok(Event::ConfigLoaded { .. }) | Ok(Event::Error { .. }) => {
+                        return Ok::<(), anyhow::Error>(())
+                    }
                     Err(_) => return Ok::<(), anyhow::Error>(()),
                     // intentionally ignored: other events loop back
                     _ => {}
@@ -88,11 +90,9 @@ impl HeadlessRuntime {
     }
 
     /// Validate an API key for a provider.
-    pub async fn validate_key(
-        &self,
-        provider: &str,
-        api_key: &str,
-    ) -> anyhow::Result<Vec<String>> {
-        self.provider_handle.validate_key(provider.into(), api_key.into()).await
+    pub async fn validate_key(&self, provider: &str, api_key: &str) -> anyhow::Result<Vec<String>> {
+        self.provider_handle
+            .validate_key(provider.into(), api_key.into())
+            .await
     }
 }

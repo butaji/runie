@@ -6,8 +6,8 @@ mod minimax_like;
 mod parser;
 mod permissions;
 mod safety;
-mod tools;
 mod tool_marker_state;
+mod tools;
 mod turn;
 mod turn_gate;
 

@@ -3,8 +3,8 @@
 //! This module is the single source of truth for provider names, display names,
 //! base URLs, API type, environment variable, and the models each provider supports.
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use super::registry_data::KNOWN_PROVIDERS;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 static MOCK_ENABLED: AtomicBool = AtomicBool::new(false);
 
@@ -221,8 +221,6 @@ impl ProviderMeta {
     }
 }
 
-
-
 /// All known providers. In production (no `RUNIE_MOCK`), this is the
 /// real provider list only. With dev flags, the mock provider is
 /// appended at the end.
@@ -313,8 +311,7 @@ mod tests {
 
     #[test]
     fn provider_registry_find_by_env_var() {
-        let p =
-            find_provider_by_env_var("MINIMAX_API_KEY").expect("should find by env var");
+        let p = find_provider_by_env_var("MINIMAX_API_KEY").expect("should find by env var");
         assert_eq!(p.key, "minimax");
     }
 
@@ -348,7 +345,11 @@ mod tests {
     #[test]
     fn provider_registry_all_have_models() {
         for p in known_providers() {
-            assert!(!p.models.is_empty(), "Provider {} should have models", p.key);
+            assert!(
+                !p.models.is_empty(),
+                "Provider {} should have models",
+                p.key
+            );
         }
     }
 

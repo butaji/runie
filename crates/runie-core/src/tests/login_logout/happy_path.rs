@@ -1,8 +1,8 @@
 //! Onboarding happy path tests.
 
-use crate::Event;
 use crate::login_flow::LoginStep;
 use crate::model::AppState;
+use crate::Event;
 
 use super::{
     assert_panel_id, assert_step, clean_config, fetch_models, save_login_flow, select_provider,

@@ -138,10 +138,7 @@ mod tests {
             prev_displayed_len = curr_len;
         }
         // Should have made progress and snapped to word boundaries eventually
-        assert!(
-            prev_displayed_len > 0,
-            "should have displayed some text"
-        );
+        assert!(prev_displayed_len > 0, "should have displayed some text");
     }
 
     #[test]
@@ -169,10 +166,7 @@ mod tests {
         // Finish should flush everything
         renderer.finish();
 
-        assert!(
-            renderer.is_caught_up(),
-            "finish should catch up completely"
-        );
+        assert!(renderer.is_caught_up(), "finish should catch up completely");
         assert!(
             renderer.displayed().contains("This is a longer"),
             "finish should display all: {}",

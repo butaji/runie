@@ -1,11 +1,10 @@
 //! single tests.
 
-
-use crate::Event;
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
-use crate::view::LazyCache;
 use crate::tests::fresh_state;
+use crate::view::LazyCache;
+use crate::Event;
 
 fn dispatch(state: &mut AppState, events: &[Event]) {
     for e in events {
@@ -267,7 +266,9 @@ fn turn_complete_before_next_turn_user_message() {
         role: Role::User,
         timestamp: crate::model::now(),
         id: "u1".into(),
-        parts: vec![Part::Text { content: "Next turn".into() }],
+        parts: vec![Part::Text {
+            content: "Next turn".into(),
+        }],
         ..Default::default()
     });
     state.messages_changed();

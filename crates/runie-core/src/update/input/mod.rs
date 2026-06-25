@@ -23,7 +23,6 @@ pub use support::{
     prev_grapheme_boundary, vim_nav_hints,
 };
 
-
 pub fn input_event(state: &mut AppState, event: crate::Event) {
     if state.permission_request().is_some() {
         return permission_input_event(state, event);

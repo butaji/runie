@@ -2,8 +2,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::Event;
     use crate::model::AppState;
+    use crate::Event;
 
     #[test]
     fn default_placeholder_is_set() {

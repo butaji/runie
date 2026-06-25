@@ -31,8 +31,7 @@ impl AppState {
         let insert_pos = choose_insert_pos(cursor, prefix_start, &prefix, input_len);
 
         // Phase 3: mutations after all borrows are released
-        self.input_mut().file_picker_backup =
-            Some((input_clone, insert_pos, cursor, false));
+        self.input_mut().file_picker_backup = Some((input_clone, insert_pos, cursor, false));
         crate::update::dialog::open_at_file_picker(self, Some(&prefix));
     }
 
@@ -103,7 +102,10 @@ impl AppState {
         let has_suggestions;
         {
             let comp = self.completion_mut();
-            has_suggestions = comp.at_suggestions.as_ref().map_or(false, |s| !s.is_empty());
+            has_suggestions = comp
+                .at_suggestions
+                .as_ref()
+                .map_or(false, |s| !s.is_empty());
             suggestions_len = comp.at_suggestions.as_ref().map_or(0, |s| s.len());
             if !has_suggestions {
                 comp.at_selected = None;
@@ -124,7 +126,6 @@ impl AppState {
         drop(comp);
         self.view_mut().dirty = true;
     }
-
 }
 
 /// Pure function to compute the tab prefix at a given cursor position.
@@ -146,4 +147,3 @@ fn choose_insert_pos(cursor: usize, prefix_start: usize, prefix: &str, len: usiz
         cursor
     }
 }
-

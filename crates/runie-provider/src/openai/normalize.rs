@@ -75,8 +75,12 @@ mod tests {
         ];
         let out = normalize_messages(messages);
         // Both tool results should be preserved (have matching tool calls)
-        assert!(out.iter().any(|m| m.tool_call_id.as_deref() == Some("call_1")));
-        assert!(out.iter().any(|m| m.tool_call_id.as_deref() == Some("call_2")));
+        assert!(out
+            .iter()
+            .any(|m| m.tool_call_id.as_deref() == Some("call_1")));
+        assert!(out
+            .iter()
+            .any(|m| m.tool_call_id.as_deref() == Some("call_2")));
     }
 
     #[test]

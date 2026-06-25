@@ -7,8 +7,7 @@ pub fn toggle_scoped_model(state: &mut AppState, provider: &str, name: &str) {
         .iter()
         .position(|m| m.provider == provider && m.name == name)
     {
-        state.config_mut().scoped_models[idx].enabled =
-            !state.config().scoped_models[idx].enabled;
+        state.config_mut().scoped_models[idx].enabled = !state.config().scoped_models[idx].enabled;
         state.view_mut().dirty = true;
     }
 }

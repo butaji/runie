@@ -2,16 +2,18 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::Event;
     use crate::message::Part;
     use crate::model::{AppState, ChatMessage, Role};
     use crate::view::elements::Element;
     use crate::view::LazyCache;
+    use crate::Event;
 
     fn msg(role: Role, content: &str, timestamp: f64, id: &str) -> ChatMessage {
         ChatMessage {
             role,
-            parts: vec![Part::Text { content: content.into() }],
+            parts: vec![Part::Text {
+                content: content.into(),
+            }],
             timestamp,
             id: id.into(),
             ..Default::default()
@@ -23,7 +25,9 @@ mod tests {
         let mut state = AppState::default();
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text { content: "Hello".to_string() }],
+            parts: vec![Part::Text {
+                content: "Hello".to_string(),
+            }],
             timestamp: 0.0,
             id: "req.0".to_string(),
             ..Default::default()
@@ -176,14 +180,18 @@ mod tests {
         let mut state = AppState::default();
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text { content: "First".into() }],
+            parts: vec![Part::Text {
+                content: "First".into(),
+            }],
             timestamp: 1.0,
             id: "u1".into(),
             ..Default::default()
         });
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text { content: "Second".into() }],
+            parts: vec![Part::Text {
+                content: "Second".into(),
+            }],
             timestamp: 1.0,
             id: "u2".into(),
             ..Default::default()

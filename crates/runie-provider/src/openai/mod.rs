@@ -39,10 +39,7 @@ impl OpenAiProvider {
         self
     }
 
-    pub fn with_model_meta(
-        mut self,
-        meta: &'static runie_core::provider::ModelMeta,
-    ) -> Self {
+    pub fn with_model_meta(mut self, meta: &'static runie_core::provider::ModelMeta) -> Self {
         self.model_meta = Some(meta);
         self
     }
@@ -80,7 +77,9 @@ impl runie_core::provider::Provider for OpenAiProvider {
         messages: Vec<runie_core::message::ChatMessage>,
     ) -> std::pin::Pin<
         Box<
-            dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>> + Send + '_,
+            dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
+                + Send
+                + '_,
         >,
     > {
         stream::openai_stream(self.clone(), messages)
@@ -92,7 +91,9 @@ impl runie_core::provider::Provider for OpenAiProvider {
         tools: Vec<serde_json::Value>,
     ) -> std::pin::Pin<
         Box<
-            dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>> + Send + '_,
+            dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
+                + Send
+                + '_,
         >,
     > {
         let provider = self
@@ -107,8 +108,8 @@ impl runie_core::provider::Provider for OpenAiProvider {
 mod tests {
     use super::*;
     use request::build_request_body;
-    use runie_core::provider_event::{ProviderEvent, StopReason};
     use runie_core::message::{ChatMessage, Part, Role, ToolCall};
+    use runie_core::provider_event::{ProviderEvent, StopReason};
     use stream::{parse_sse_event, SseEvent};
 
     fn test_provider() -> OpenAiProvider {
@@ -155,7 +156,9 @@ mod tests {
                 tool_call_id: None,
                 provider_metadata: None,
                 parts: vec![
-                    Part::Text { content: "Reading...".into() },
+                    Part::Text {
+                        content: "Reading...".into(),
+                    },
                     Part::ToolCall {
                         id: "call_1".into(),
                         name: "read_file".into(),
@@ -169,7 +172,10 @@ mod tests {
         assert_eq!(serialized["role"], "assistant");
         // Content preserved since dangling tool call was removed
         assert_eq!(serialized["content"], "Reading...");
-        assert!(serialized["tool_calls"].as_array().map(|a| a.is_empty()).unwrap_or(true));
+        assert!(serialized["tool_calls"]
+            .as_array()
+            .map(|a| a.is_empty())
+            .unwrap_or(true));
     }
 
     #[test]
@@ -192,7 +198,10 @@ mod tests {
         };
         let result =
             ChatMessage::tool("read_file result:\nhello".to_string()).with_tool_call_id("call_abc");
-        let body = build_request_body(&test_provider(), &[ChatMessage::user("read it".to_string()), assistant, result]);
+        let body = build_request_body(
+            &test_provider(),
+            &[ChatMessage::user("read it".to_string()), assistant, result],
+        );
         let serialized = body["messages"].as_array().unwrap();
         assert_eq!(serialized[1]["role"], "assistant");
         assert_eq!(serialized[2]["role"], "tool");
@@ -226,13 +235,11 @@ mod tests {
                 metadata: Default::default(),
                 tool_call_id: None,
                 provider_metadata: None,
-                parts: vec![
-                    Part::ToolCall {
-                        id: String::new(),  // empty = not tracked as dangling
-                        name: "read_file".into(),
-                        args: serde_json::json!({"path":"Cargo.toml"}),
-                    },
-                ],
+                parts: vec![Part::ToolCall {
+                    id: String::new(), // empty = not tracked as dangling
+                    name: "read_file".into(),
+                    args: serde_json::json!({"path":"Cargo.toml"}),
+                }],
             },
         ];
         let body = build_request_body(&test_provider(), &messages);

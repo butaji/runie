@@ -2,8 +2,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::Event;
     use crate::model::AppState;
+    use crate::Event;
 
     #[test]
     fn flash_increments_on_noop() {

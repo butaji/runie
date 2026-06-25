@@ -1,9 +1,9 @@
 //! Extra session command tests — export, import, display name
-use crate::Event;
-use crate::model::{AppState, ChatMessage, Role};
 use crate::message::Part;
-use crate::tests::slash::ENV_LOCK;
+use crate::model::{AppState, ChatMessage, Role};
 use crate::tests::fresh_state;
+use crate::tests::slash::ENV_LOCK;
+use crate::Event;
 
 /// Set input buffer directly and submit — bypasses the command palette.
 fn exec(state: &mut AppState, text: &str) {
@@ -31,7 +31,9 @@ fn imported_session() -> crate::session::Session {
             role: Role::Assistant,
             timestamp: 0.0,
             id: "resp.0".into(),
-            parts: vec![Part::Text { content: "imported msg".into() }],
+            parts: vec![Part::Text {
+                content: "imported msg".into(),
+            }],
             ..Default::default()
         }],
         provider: "openai".into(),
@@ -117,7 +119,9 @@ fn export_creates_file() {
         role: Role::User,
         timestamp: 0.0,
         id: "req.0".into(),
-        parts: vec![Part::Text { content: "hello".into() }],
+        parts: vec![Part::Text {
+            content: "hello".into(),
+        }],
         ..Default::default()
     });
     let tmp = std::env::temp_dir().join(format!("runie_export_{}.json", std::process::id()));

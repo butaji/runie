@@ -5,9 +5,9 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use crate::config::Config;
-use crate::provider_event::ProviderEvent;
 use crate::message::ChatMessage;
 use crate::provider::{Provider, ProviderError};
+use crate::provider_event::ProviderEvent;
 
 /// Built provider that wraps a concrete provider implementation.
 ///
@@ -68,9 +68,8 @@ impl Provider for BuiltProvider {
     fn generate(
         &self,
         messages: Vec<ChatMessage>,
-    ) -> std::pin::Pin<
-        Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>,
-    > {
+    ) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
+    {
         self.provider.generate(messages)
     }
 
@@ -78,9 +77,8 @@ impl Provider for BuiltProvider {
         &self,
         messages: Vec<ChatMessage>,
         tools: Vec<serde_json::Value>,
-    ) -> std::pin::Pin<
-        Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>,
-    > {
+    ) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
+    {
         self.provider.generate_with_tools(messages, tools)
     }
 }

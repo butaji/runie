@@ -1,8 +1,8 @@
 //! Tests for agent error handling — especially that errors clear the active
 //! turn so the UI does not show a stuck "Working..." status.
 
-use crate::Event;
 use crate::model::{AppState, QueuedMessage, QueuedMessageKind};
+use crate::Event;
 
 #[test]
 fn agent_error_clears_turn_active() {
@@ -125,5 +125,8 @@ fn agent_error_delivers_queued_messages() {
 
     assert!(state.agent.message_queue.is_empty());
     assert_eq!(state.agent.request_queue.len(), 1);
-    assert_eq!(state.agent.request_queue.front().map(|(c, _)| c), Some(&"follow up".to_string()));
+    assert_eq!(
+        state.agent.request_queue.front().map(|(c, _)| c),
+        Some(&"follow up".to_string())
+    );
 }

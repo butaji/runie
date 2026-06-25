@@ -1,6 +1,6 @@
-use crate::Event;
 use crate::event::DurableCoreEvent;
 use crate::event::EVENT_NAMES;
+use crate::Event;
 
 /// Pre-optimization size of `Event` before boxing large orchestrator payloads.
 const EVENT_BASELINE_SIZE: usize = 288;
@@ -185,25 +185,32 @@ fn all_agent_events_dispatch() {
 /// This test ensures the taxonomy is used for typed intent conversion.
 #[test]
 fn intent_events_have_typed_intent_conversion() {
-    use crate::event::{EventKind, intent::Intent};
+    use crate::event::{intent::Intent, EventKind};
 
     // Verify key intent events convert to typed Intent
     let test_cases: Vec<(Event, fn(Intent) -> bool)> = vec![
         (Event::Input('x'), |i| matches!(i, Intent::Input('x'))),
         (Event::Submit, |i| matches!(i, Intent::Submit)),
         (
-            Event::SwitchModel { provider: "openai".into(), model: "gpt-4".into(), explicit: true },
+            Event::SwitchModel {
+                provider: "openai".into(),
+                model: "gpt-4".into(),
+                explicit: true,
+            },
             |i| matches!(i, Intent::SwitchModel { provider, model, explicit } if provider == "openai" && model == "gpt-4" && explicit),
         ),
         (
-            Event::RunSaveCommand { name: "test".into() },
+            Event::RunSaveCommand {
+                name: "test".into(),
+            },
             |i| matches!(i, Intent::RunSaveCommand { name } if name == "test"),
         ),
-        (Event::ToggleCommandPalette, |i| matches!(i, Intent::ToggleCommandPalette)),
-        (
-            Event::ForkSession { message_index: 5 },
-            |i| matches!(i, Intent::ForkSession { message_index: 5 }),
-        ),
+        (Event::ToggleCommandPalette, |i| {
+            matches!(i, Intent::ToggleCommandPalette)
+        }),
+        (Event::ForkSession { message_index: 5 }, |i| {
+            matches!(i, Intent::ForkSession { message_index: 5 })
+        }),
     ];
 
     for (event, check) in test_cases {
@@ -236,14 +243,37 @@ fn intent_events_have_typed_intent_conversion() {
 fn fact_events_do_not_convert_to_intent() {
     let fact_events = vec![
         Event::Thinking { id: "1".into() },
-        Event::ToolStart { id: "t1".into(), name: "bash".into(), input: serde_json::json!({}) },
-        Event::ToolEnd { id: "t1".into(), duration_secs: 1.0, output: "ok".into() },
-        Event::Response { id: "r1".into(), content: "hello".into() },
-        Event::TurnComplete { id: "1".into(), duration_secs: 1.0 },
-        Event::ConfigLoaded { config: Box::new(crate::config::Config::default()) },
-        Event::TrustLoaded { decisions: Default::default() },
-        Event::SessionSaved { name: "test".into() },
-        Event::BashOutput { command: "ls".into(), output: "/".into() },
+        Event::ToolStart {
+            id: "t1".into(),
+            name: "bash".into(),
+            input: serde_json::json!({}),
+        },
+        Event::ToolEnd {
+            id: "t1".into(),
+            duration_secs: 1.0,
+            output: "ok".into(),
+        },
+        Event::Response {
+            id: "r1".into(),
+            content: "hello".into(),
+        },
+        Event::TurnComplete {
+            id: "1".into(),
+            duration_secs: 1.0,
+        },
+        Event::ConfigLoaded {
+            config: Box::new(crate::config::Config::default()),
+        },
+        Event::TrustLoaded {
+            decisions: Default::default(),
+        },
+        Event::SessionSaved {
+            name: "test".into(),
+        },
+        Event::BashOutput {
+            command: "ls".into(),
+            output: "/".into(),
+        },
     ];
 
     for event in fact_events {

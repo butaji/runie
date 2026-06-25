@@ -73,7 +73,10 @@ pub fn current_theme_name() -> String {
 }
 
 fn current_caps() -> Option<crate::terminal::caps::TerminalCapabilities> {
-    CURRENT_CAPS.read().unwrap_or_else(|e| e.into_inner()).clone()
+    CURRENT_CAPS
+        .read()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone()
 }
 
 /// Get the currently active theme (falls back to default).

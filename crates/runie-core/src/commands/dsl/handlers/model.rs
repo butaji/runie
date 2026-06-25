@@ -57,7 +57,8 @@ pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
         }
         _ => CommandResult::Message(format!(
             "Current: {}/{}. Format: /model provider/model or /model model",
-            state.config().current_provider, state.config().current_model
+            state.config().current_provider,
+            state.config().current_model
         )),
     }
 }

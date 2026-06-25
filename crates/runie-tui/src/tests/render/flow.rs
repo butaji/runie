@@ -1,8 +1,8 @@
 //! Layer 3 rendering tests for full agent tool flows.
 //! Migrated from runie-core's `format_test` ASCII renderer → TUI TestBackend.
 
-use super::*;
 use super::super::*;
+use super::*;
 use runie_core::Event;
 use runie_core::Role;
 

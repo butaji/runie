@@ -118,7 +118,8 @@ fn form_submit_executes_command() {
     state.update(Event::submit());
     // Should close dialog and execute save
     assert!(state.open_dialog.is_none(), "dialog should close");
-    let redb_path = crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("myses");
+    let redb_path =
+        crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("myses");
     assert!(redb_path.exists(), "session should be saved");
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }
@@ -197,7 +198,9 @@ fn invalid_fork_index_shows_error_for_out_of_range() {
         role: Role::User,
         timestamp: 0.0,
         id: "u0".into(),
-        parts: vec![Part::Text { content: "hi".into() }],
+        parts: vec![Part::Text {
+            content: "hi".into(),
+        }],
         ..Default::default()
     });
     let mut panel = Panel::new("fork", "Fork Session").form_field("Message index", "0", "index");
@@ -318,14 +321,8 @@ fn form_button_activated_by_enter() {
     use crate::dialog::{ItemAction, Panel};
     let mut panel = Panel::new("test", "Test")
         .form_field("Name", "", "name")
-        .item(
-            "_Submit",
-            ItemAction::Emit(Event::Save),
-        )
-        .item(
-            "_Cancel",
-            ItemAction::Emit(Event::Cancel),
-        );
+        .item("_Submit", ItemAction::Emit(Event::Save))
+        .item("_Cancel", ItemAction::Emit(Event::Cancel));
     // Navigate to the first button (index 1, after form field at index 0)
     panel.selected = 1;
     let mut state = crate::model::AppState::default();
@@ -342,22 +339,13 @@ fn form_button_activated_by_accelerator() {
     use crate::dialog::{ItemAction, Panel};
     let mut panel = Panel::new("test", "Test")
         .form_field("Name", "", "name")
-        .item(
-            "_Submit",
-            ItemAction::Emit(Event::Save),
-        )
-        .item(
-            "_Cancel",
-            ItemAction::Emit(Event::Cancel),
-        );
+        .item("_Submit", ItemAction::Emit(Event::Save))
+        .item("_Cancel", ItemAction::Emit(Event::Cancel));
     // On a form field, typing 'c' should type into the field
     panel.selected = 0;
     let mut state = crate::model::AppState::default();
-    let action = crate::update::dialog::form_panel_action(
-        &mut state,
-        &mut panel,
-        Event::Input('c'),
-    );
+    let action =
+        crate::update::dialog::form_panel_action(&mut state, &mut panel, Event::Input('c'));
     assert!(matches!(
         action,
         crate::update::dialog::FormAction::KeepOpen
@@ -366,11 +354,8 @@ fn form_button_activated_by_accelerator() {
 
     // On a button, typing 'c' should activate Cancel
     panel.selected = 2;
-    let action = crate::update::dialog::form_panel_action(
-        &mut state,
-        &mut panel,
-        Event::Input('c'),
-    );
+    let action =
+        crate::update::dialog::form_panel_action(&mut state, &mut panel, Event::Input('c'));
     assert!(matches!(
         action,
         crate::update::dialog::FormAction::Submit(Some(Event::Cancel))
@@ -382,10 +367,7 @@ fn form_field_submit_still_builds_form_values() {
     use crate::dialog::{ItemAction, Panel};
     let mut panel = Panel::new("save", "Save")
         .form_field("Name", "my-session", "name")
-        .item(
-            "_Submit",
-            ItemAction::Emit(Event::Save),
-        );
+        .item("_Submit", ItemAction::Emit(Event::Save));
     panel.submit_factory = Some(|values| Event::RunSaveCommand {
         name: crate::dialog::dsl::get_field(values, "name"),
     });
@@ -396,9 +378,7 @@ fn form_field_submit_still_builds_form_values() {
         crate::update::dialog::form_panel_action(&mut state, &mut panel, crate::Event::submit());
     assert!(matches!(
         action,
-        crate::update::dialog::FormAction::Submit(Some(
-            Event::RunSaveCommand { .. }
-        ))
+        crate::update::dialog::FormAction::Submit(Some(Event::RunSaveCommand { .. }))
     ));
 }
 
@@ -421,9 +401,7 @@ fn form_submit_button_uses_factory() {
     assert!(
         matches!(
             action,
-            crate::update::dialog::FormAction::Submit(Some(
-                Event::RunSaveCommand { .. }
-            ))
+            crate::update::dialog::FormAction::Submit(Some(Event::RunSaveCommand { .. }))
         ),
         "Enter on FormSubmit button should use the submit factory"
     );

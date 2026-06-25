@@ -6,8 +6,8 @@ use ratatui::{
     widgets::{Paragraph, Wrap},
     Frame,
 };
-use unicode_width::UnicodeWidthChar;
 use runie_core::dialog::{Panel, PanelItem};
+use unicode_width::UnicodeWidthChar;
 
 use crate::theme::{color_accent, style_hint, style_placeholder, style_thinking};
 use crate::ui::parse_hint_spans;
@@ -281,8 +281,7 @@ fn push_field<'a>(
 ) {
     lines.push(field_label_line(field_num, total, label, is_active));
 
-    let (top, mid_spans, bot) =
-        build_input_box(value, placeholder, cursor_pos, is_active, inner_w);
+    let (top, mid_spans, bot) = build_input_box(value, placeholder, cursor_pos, is_active, inner_w);
     lines.push(Line::from(top).style(style_border()));
     lines.push(Line::from(mid_spans));
     lines.push(Line::from(bot).style(style_border()));
@@ -357,7 +356,15 @@ fn input_display_spans(
     let after_w = runie_core::display_width::width(after) as usize;
     let scroll = compute_field_scroll(before_w, after_w, avail);
 
-    build_field_spans(before, after, before_w, scroll, avail, val_style, cursor_style)
+    build_field_spans(
+        before,
+        after,
+        before_w,
+        scroll,
+        avail,
+        val_style,
+        cursor_style,
+    )
 }
 
 fn compute_field_scroll(before_w: usize, after_w: usize, avail: usize) -> usize {

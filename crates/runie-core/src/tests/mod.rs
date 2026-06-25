@@ -7,9 +7,9 @@ pub static ENV_LOCK: Mutex<()> = Mutex::new(());
 // ── Shared test helpers ─────────────────────────────────────────────────────────
 
 #[cfg(test)]
-use crate::Event;
-#[cfg(test)]
 use crate::model::AppState;
+#[cfg(test)]
+use crate::Event;
 
 #[cfg(test)]
 /// Returns a fresh `AppState` with config_cache populated from login_config.
@@ -42,15 +42,17 @@ mod autoscroll;
 #[cfg(test)]
 mod chat_visibility;
 #[cfg(test)]
-mod context_grouping;
-#[cfg(test)]
 mod command_forms;
 #[cfg(test)]
 mod compaction;
 #[cfg(test)]
+mod context_grouping;
+#[cfg(test)]
 mod copy;
 #[cfg(test)]
 mod diagnostics;
+#[cfg(test)]
+mod dirty_flag;
 #[cfg(test)]
 mod dsl;
 #[cfg(test)]
@@ -70,8 +72,6 @@ mod harness_skills;
 #[cfg(test)]
 mod hashline_edit_apply;
 #[cfg(test)]
-mod dirty_flag;
-#[cfg(test)]
 mod input_cursor;
 #[cfg(test)]
 mod input_flash;
@@ -80,11 +80,11 @@ mod input_grapheme;
 #[cfg(test)]
 mod input_history;
 #[cfg(test)]
-mod input_receiver;
-#[cfg(test)]
 mod input_multiline;
 #[cfg(test)]
 mod input_paste;
+#[cfg(test)]
+mod input_receiver;
 #[cfg(test)]
 mod input_scroll;
 #[cfg(test)]

@@ -1,8 +1,8 @@
 use super::{exec, tmp_store, ENV_LOCK};
-use crate::Event;
 use crate::message::Part;
 use crate::model::Role;
 use crate::tests::{fresh_state, type_str};
+use crate::Event;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
@@ -79,7 +79,8 @@ fn save_trims_whitespace() {
     state.update(Event::submit()); // Submits the form
 
     // Should save with trimmed name
-    let redb_path = crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("trimmed");
+    let redb_path =
+        crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("trimmed");
     assert!(redb_path.exists(), "whitespace should be trimmed");
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
@@ -136,7 +137,9 @@ fn new_closes_open_dialog_and_clears_ui_state() {
     let mut state = fresh_state();
     palette_select(&mut state, "delete");
     assert!(state.open_dialog.is_some(), "dialog should be open");
-    state.dialog_back_stack.push(crate::commands::DialogState::Welcome);
+    state
+        .dialog_back_stack
+        .push(crate::commands::DialogState::Welcome);
     state.login_flow = Some(crate::login_flow::LoginFlowState::default());
     state.permission_request = Some(crate::model::PermissionRequestState {
         request_id: "perm".into(),
@@ -152,7 +155,10 @@ fn new_closes_open_dialog_and_clears_ui_state() {
     assert!(state.open_dialog.is_none(), "open_dialog cleared");
     assert!(state.dialog_back_stack.is_empty(), "back stack cleared");
     assert!(state.login_flow.is_none(), "login_flow cleared");
-    assert!(state.permission_request.is_none(), "permission_request cleared");
+    assert!(
+        state.permission_request.is_none(),
+        "permission_request cleared"
+    );
 }
 
 #[test]
@@ -204,7 +210,9 @@ fn resume_loads_most_recent_session() {
         role: Role::User,
         timestamp: 1.0,
         id: "u.older".into(),
-        parts: vec![Part::Text { content: "older".into() }],
+        parts: vec![Part::Text {
+            content: "older".into(),
+        }],
         ..Default::default()
     });
     crate::session::replay::save_session("older", &older).unwrap();
@@ -217,7 +225,9 @@ fn resume_loads_most_recent_session() {
         role: Role::User,
         timestamp: 2.0,
         id: "u.newer".into(),
-        parts: vec![Part::Text { content: "newer".into() }],
+        parts: vec![Part::Text {
+            content: "newer".into(),
+        }],
         ..Default::default()
     });
     crate::session::replay::save_session("newer", &newer).unwrap();
@@ -231,11 +241,19 @@ fn resume_loads_most_recent_session() {
     );
     assert_eq!(state.config.current_model, "gpt-4o", "loads newer model");
     assert!(
-        state.session.messages.iter().any(|m| m.content() == "newer"),
+        state
+            .session
+            .messages
+            .iter()
+            .any(|m| m.content() == "newer"),
         "newer message loaded"
     );
     assert!(
-        !state.session.messages.iter().any(|m| m.content() == "older"),
+        !state
+            .session
+            .messages
+            .iter()
+            .any(|m| m.content() == "older"),
         "older message not loaded"
     );
 

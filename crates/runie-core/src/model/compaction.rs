@@ -10,7 +10,11 @@ impl AppState {
         self.session
             .messages
             .iter()
-            .map(|m| self.agent_state().token_tracker.estimate_input(&m.content()))
+            .map(|m| {
+                self.agent_state()
+                    .token_tracker
+                    .estimate_input(&m.content())
+            })
             .sum()
     }
 
@@ -43,7 +47,9 @@ impl AppState {
                     compacted: true,
                     ..Default::default()
                 },
-                parts: vec![runie_core::message::Part::Text { content: summary.clone() }],
+                parts: vec![runie_core::message::Part::Text {
+                    content: summary.clone(),
+                }],
                 ..Default::default()
             },
         );
@@ -59,7 +65,10 @@ impl AppState {
             if msg.metadata.pinned {
                 continue;
             }
-            accumulated += self.agent_state().token_tracker.estimate_input(&msg.content());
+            accumulated += self
+                .agent_state()
+                .token_tracker
+                .estimate_input(&msg.content());
             if accumulated >= keep_recent_tokens {
                 cut_idx = i;
                 break;

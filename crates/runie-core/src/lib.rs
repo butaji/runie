@@ -13,18 +13,17 @@ extern crate self as runie_core;
 
 pub mod actors;
 pub use actors::{
-    Actor, ActorFuture, ActorHandle, Reply, spawn_actor,
-    FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
-    FffSearchState,
+    spawn_actor, Actor, ActorFuture, ActorHandle, FffFileItem, FffIndexerActor, FffSearchRequest,
+    FffSearchResult, FffSearchResultPayload, FffSearchState, Reply,
 };
 pub use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
 // Inner state structs are pub(crate) — accessible within runie-core but not exported externally.
 // AppState itself remains pub so it can be used in public DSL signatures.
+pub use message::{ChatMessage, Role};
 pub use model::{
-    AppState, AgentState, CompletionState, ConfigState, DeliveryMode, InputState,
+    AgentState, AppState, CompletionState, ConfigState, DeliveryMode, InputState,
     PermissionRequestState, ScopedModel, SessionState, ThinkingLevel, ViewState,
 };
-pub use message::{ChatMessage, Role};
 pub mod agent_phase;
 pub mod async_io;
 pub mod auth;
@@ -53,25 +52,25 @@ pub mod keybindings;
 pub mod labels;
 pub mod layout;
 pub mod lifecycle;
-pub mod provider_event;
 pub mod location;
 pub mod login_config;
 pub mod login_flow;
 pub mod markdown;
 pub mod message;
+pub mod provider_event;
 pub use message::Part;
+pub mod harness_skills;
 pub mod model;
 pub mod model_catalog;
-pub mod harness_skills;
 pub mod notification;
 pub mod path;
 pub mod path_complete;
 pub mod prompts;
 pub mod provider;
 pub mod retry;
+pub mod sanitize;
 pub mod scoped_model;
 pub mod session;
-pub mod sanitize;
 pub mod settings;
 pub mod skills;
 pub mod snapshot;
@@ -87,14 +86,15 @@ pub mod tool_stream;
 pub use tool::{format_bytes, format_duration};
 pub mod permissions;
 pub mod trust;
-pub mod view;
 pub mod update;
+pub mod view;
 
 #[cfg(test)]
 mod file_refs_lookup_tests;
 #[cfg(test)]
 mod tests;
 
+pub use actors::session::SessionActor;
 pub use agent_phase::{elapsed_secs, format_elapsed, AgentPhase};
 pub use auth::{AuthStorage, AuthToken};
 pub use clipboard_image::read_clipboard_image;
@@ -115,7 +115,6 @@ pub use keybindings::{
     parse_keybindings_json,
 };
 pub use labels::{format_timestamp, thinking_with_time, thought_with_time, THINKING_LOADING};
-pub use provider_event::{ModelError, ProviderEvent, StopReason};
 pub use lifecycle::LifecycleState;
 pub use login_config::{
     config_path as login_config_path, list_configured_providers, remove_provider_config,
@@ -137,11 +136,11 @@ pub use provider::{
     display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
     known_providers, Provider, ProviderError, ProviderMeta, ResponseChunk,
 };
-pub use session::{format_as_markdown, Session};
-pub use actors::session::SessionActor;
+pub use provider_event::{ModelError, ProviderEvent, StopReason};
 pub use session::index::{SessionIndex, SessionMetadata};
 pub use session::store::SessionStore;
 pub use session::tree::{SessionTree, SessionTreeFilter, TreeNode};
+pub use session::{format_as_markdown, Session};
 pub use skills::{build_skills_context, load_all, load_from_dir, Skill};
 pub use snapshot::{GitInfo, Snapshot};
 pub use telemetry::Telemetry;

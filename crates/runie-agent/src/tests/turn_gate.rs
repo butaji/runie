@@ -1,11 +1,11 @@
 //! Agent turn tests that exercise the TUI-style permission gate.
 
+use crate::tests::ensure_mock_provider;
 use crate::{run_agent_turn, AgentCommand};
-use runie_core::Event;
 use runie_core::permissions::{
     ApprovalRegistry, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
 };
-use crate::tests::ensure_mock_provider;
+use runie_core::Event;
 use runie_testing::mock_provider;
 use std::sync::{Arc, Mutex};
 
@@ -46,7 +46,9 @@ async fn test_agent_loop_with_tui_gate_allows_read_only_tool() {
         )),
     );
 
-    run_agent_turn(&provider, &cmd, emit, 5, gate).await.unwrap();
+    run_agent_turn(&provider, &cmd, emit, 5, gate)
+        .await
+        .unwrap();
 
     let events = events.lock().unwrap();
     let tool_starts = events

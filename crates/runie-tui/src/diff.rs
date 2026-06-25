@@ -132,10 +132,7 @@ mod tests {
         let diff = "--- a/test.txt\n+++ b/test.txt\n@@ -1,5 +1,7 @@ context";
         let parsed = Diff::parse(diff);
         assert!(!parsed.hunks.is_empty());
-        assert!(parsed
-            .hunks
-            .iter()
-            .any(|h| !h.header.is_empty()));
+        assert!(parsed.hunks.iter().any(|h| !h.header.is_empty()));
     }
 
     #[test]
@@ -225,8 +222,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).unwrap();
         terminal
             .draw(|f| {
-                Paragraph::new(lines.clone())
-                    .render(Rect::new(0, 0, 40, 20), f.buffer_mut());
+                Paragraph::new(lines.clone()).render(Rect::new(0, 0, 40, 20), f.buffer_mut());
             })
             .unwrap();
 

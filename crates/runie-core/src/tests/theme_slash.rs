@@ -1,9 +1,9 @@
 //! Theme slash command tests
 
 use super::slash::{exec, tmp_store, ENV_LOCK};
-use crate::Event;
 use crate::model::Role;
 use crate::tests::fresh_state;
+use crate::Event;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
@@ -28,7 +28,9 @@ fn theme_switch_updates_state() {
         .collect();
     assert_eq!(sys_msgs.len(), 1);
     assert!(
-        sys_msgs[0].content().contains("Theme switched to 'dracula'"),
+        sys_msgs[0]
+            .content()
+            .contains("Theme switched to 'dracula'"),
         "should confirm theme switch: {}",
         sys_msgs[0].content()
     );

@@ -34,12 +34,18 @@ pub enum ProviderMsg {
 impl fmt::Debug for ProviderMsg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ProviderMsg::Build { provider, model, .. } => f
+            ProviderMsg::Build {
+                provider, model, ..
+            } => f
                 .debug_struct("ProviderMsg::Build")
                 .field("provider", provider)
                 .field("model", model)
                 .finish(),
-            ProviderMsg::ValidateKey { provider, api_key: _, .. } => f
+            ProviderMsg::ValidateKey {
+                provider,
+                api_key: _,
+                ..
+            } => f
                 .debug_struct("ProviderMsg::ValidateKey")
                 .field("provider", provider)
                 .field("api_key", &"***")

@@ -1,7 +1,7 @@
 use super::*;
-use runie_core::Event;
 use runie_core::model::AppState;
 use runie_core::view::LazyCache;
+use runie_core::Event;
 use runie_testing::fresh_state;
 
 fn has_agent_message(state: &AppState) -> bool {

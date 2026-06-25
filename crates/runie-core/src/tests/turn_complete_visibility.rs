@@ -1,7 +1,7 @@
-use crate::Event;
 use crate::model::{AppState, Role};
-use crate::view::LazyCache;
 use crate::tests::fresh_state;
+use crate::view::LazyCache;
+use crate::Event;
 
 fn dispatch(state: &mut AppState, events: &[Event]) {
     for e in events {

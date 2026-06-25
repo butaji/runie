@@ -21,10 +21,7 @@ pub fn toggle_provider_model(state: &mut AppState, provider: &str, model: &str) 
     let current_models: Vec<String> = state
         .provider_config(&provider)
         .map(|p| p.models)
-        .or_else(|| {
-            crate::login_config::get_provider_config(&provider)
-                .map(|(_, _, m)| m)
-        })
+        .or_else(|| crate::login_config::get_provider_config(&provider).map(|(_, _, m)| m))
         .unwrap_or_default();
     let mut models = current_models;
     let pos = models.iter().position(|m| m == &model);

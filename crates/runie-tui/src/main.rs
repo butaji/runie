@@ -13,7 +13,10 @@
 
 use futures::StreamExt;
 use runie_agent::AgentActor;
-use runie_core::actors::{ActorHandles, ConfigActor, FffIndexerActor, FffIndexerHandle, IoActor, ProviderActor, SessionActor};
+use runie_core::actors::{
+    ActorHandles, ConfigActor, FffIndexerActor, FffIndexerHandle, IoActor, ProviderActor,
+    SessionActor,
+};
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::{AppState, Snapshot};
@@ -57,7 +60,14 @@ async fn main() -> io::Result<()> {
     init_terminal_state(&mut state);
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
-    spawn_background_tasks(terminal, state, terminal_caps, bus, shutdown_tx, actor_handles);
+    spawn_background_tasks(
+        terminal,
+        state,
+        terminal_caps,
+        bus,
+        shutdown_tx,
+        actor_handles,
+    );
 
     shutdown_rx
         .await
@@ -65,9 +75,7 @@ async fn main() -> io::Result<()> {
     Ok(())
 }
 
-async fn bootstrap_app(
-    bus: EventBus<Event>,
-) -> (AppState, ActorHandles) {
+async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
     let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
     let (provider_handle, _provider_actor) = spawn_provider_actor(&bus, &config_handle);
     // Unified SessionActor: owns trust, history, session CRUD, and durable event append
@@ -86,11 +94,9 @@ async fn bootstrap_app(
     // Spawn FffIndexerActor with the current working directory as the project root.
     let project_root = std::env::current_dir().unwrap_or_default();
     let data_dir = dirs::data_dir().unwrap_or_else(|| std::env::temp_dir());
-    if let Ok((tx, _actor_handle)) = FffIndexerActor::spawn(
-        project_root,
-        data_dir,
-        EventBus::new(16),
-    ) {
+    if let Ok((tx, _actor_handle)) =
+        FffIndexerActor::spawn(project_root, data_dir, EventBus::new(16))
+    {
         handles.fff_indexer = Some(FffIndexerHandle::new(tx));
         state.set_actor_handles(handles.clone());
     }
@@ -126,8 +132,14 @@ fn spawn_background_tasks(
     shutdown_tx: oneshot::Sender<()>,
     handles: ActorHandles,
 ) {
-    let persistence_handle = handles.session.clone().expect("SessionActor must be spawned");
-    let provider_handle = handles.provider.clone().expect("ProviderActor must be spawned");
+    let persistence_handle = handles
+        .session
+        .clone()
+        .expect("SessionActor must be spawned");
+    let provider_handle = handles
+        .provider
+        .clone()
+        .expect("ProviderActor must be spawned");
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
     let (agent_handle, agent_actor) = AgentActor::spawn(
         bus.clone(),
@@ -223,7 +235,10 @@ fn render_loop(
             snap = s;
         }
 
-        let new_size = terminal.size().map(|r| (r.width, r.height)).unwrap_or((0, 0));
+        let new_size = terminal
+            .size()
+            .map(|r| (r.width, r.height))
+            .unwrap_or((0, 0));
         if last_size != Some(new_size) {
             let _ = terminal.clear();
             last_size = Some(new_size);
@@ -282,5 +297,3 @@ async fn input_reader(
         }
     }
 }
-
-

@@ -1,7 +1,7 @@
 use crate::commands::CommandResult;
-use crate::Event;
 use crate::model::AppState;
 use crate::skills::Skill;
+use crate::Event;
 
 use super::{exec_handler, run_slash};
 

@@ -3,10 +3,10 @@
 
 use crate::{run_agent_turn, AgentCommand};
 use futures::Stream;
-use runie_core::Event;
-use runie_core::provider_event::{ProviderEvent, StopReason};
 use runie_core::message::{ChatMessage, Role};
 use runie_core::provider::Provider;
+use runie_core::provider_event::{ProviderEvent, StopReason};
+use runie_core::Event;
 use runie_testing::allow_all_gate;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
@@ -20,8 +20,12 @@ impl Provider for MinimaxLikeProvider {
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
         Box::pin(futures::stream::iter(vec![
             Ok(ProviderEvent::TextStart { id: "text".into() }),
-            Ok(ProviderEvent::TextDelta("<think>\nThe user is asking".into())),
-            Ok(ProviderEvent::ThinkingStart { id: "reasoning".into() }),
+            Ok(ProviderEvent::TextDelta(
+                "<think>\nThe user is asking".into(),
+            )),
+            Ok(ProviderEvent::ThinkingStart {
+                id: "reasoning".into(),
+            }),
             Ok(ProviderEvent::ThinkingDelta("The user is asking".into())),
             Ok(ProviderEvent::TextDelta(
                 " me to say hi. I will respond with a friendly greeting.".into(),
@@ -33,7 +37,9 @@ impl Provider for MinimaxLikeProvider {
                 "\n</think>\n\nHi there! How can I help you today?".into(),
             )),
             Ok(ProviderEvent::TextEnd { id: "text".into() }),
-            Ok(ProviderEvent::ThinkingEnd { id: "reasoning".into() }),
+            Ok(ProviderEvent::ThinkingEnd {
+                id: "reasoning".into(),
+            }),
             Ok(ProviderEvent::Finish {
                 reason: StopReason::Stop,
             }),

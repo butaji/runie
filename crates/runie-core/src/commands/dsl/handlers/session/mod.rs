@@ -24,28 +24,24 @@ where
 }
 
 fn save_submit(values: &HashMap<String, String>) -> crate::Event {
-    make_submit(values, "name", |name| {
-        crate::Event::RunSaveCommand { name }
-    })
+    make_submit(values, "name", |name| crate::Event::RunSaveCommand { name })
 }
 fn load_submit(values: &HashMap<String, String>) -> crate::Event {
-    make_submit(values, "name", |name| {
-        crate::Event::RunLoadCommand { name }
-    })
+    make_submit(values, "name", |name| crate::Event::RunLoadCommand { name })
 }
 fn delete_submit(values: &HashMap<String, String>) -> crate::Event {
-    make_submit(values, "name", |name| {
-        crate::Event::RunDeleteCommand { name }
+    make_submit(values, "name", |name| crate::Event::RunDeleteCommand {
+        name,
     })
 }
 fn export_submit(values: &HashMap<String, String>) -> crate::Event {
-    make_submit(values, "path", |path| {
-        crate::Event::RunExportCommand { path }
+    make_submit(values, "path", |path| crate::Event::RunExportCommand {
+        path,
     })
 }
 fn import_submit(values: &HashMap<String, String>) -> crate::Event {
-    make_submit(values, "path", |path| {
-        crate::Event::RunImportCommand { path }
+    make_submit(values, "path", |path| crate::Event::RunImportCommand {
+        path,
     })
 }
 fn compact_submit(values: &HashMap<String, String>) -> crate::Event {
@@ -60,9 +56,7 @@ fn fork_submit(values: &HashMap<String, String>) -> crate::Event {
     }
 }
 fn name_submit(values: &HashMap<String, String>) -> crate::Event {
-    make_submit(values, "name", |name| {
-        crate::Event::RunNameCommand { name }
-    })
+    make_submit(values, "name", |name| crate::Event::RunNameCommand { name })
 }
 
 static SESSION_COMMANDS: &[CommandSpec] = &[
@@ -313,7 +307,12 @@ fn session_token_count(state: &AppState) -> usize {
         .session
         .messages
         .iter()
-        .map(|m| state.agent_state().token_tracker.estimate_input(&m.content()))
+        .map(|m| {
+            state
+                .agent_state()
+                .token_tracker
+                .estimate_input(&m.content())
+        })
         .sum()
 }
 
@@ -344,7 +343,11 @@ fn build_session_info(
     } else {
         &state.input().current_prompt
     };
-    let read_only = if state.config().read_only { "on" } else { "off" };
+    let read_only = if state.config().read_only {
+        "on"
+    } else {
+        "off"
+    };
     let trust = project_trust_status(state);
     format!(
         "Session: {}\nMessages: {} ({} user, {} assistant, {} tool)\nTokens: {} estimated\nProvider: {}\nModel: {}\nPrompt: {}\nThinking: {}\nRead-only: {}\nTrust: {}\nCreated: {}\nUpdated: {}",

@@ -3,9 +3,9 @@
 use super::*;
 use runie_core::Event;
 
-use runie_core::model::{AppState, ChatMessage,  Role};
-use runie_core::Part;
+use runie_core::model::{AppState, ChatMessage, Role};
 use runie_core::view::LazyCache;
+use runie_core::Part;
 use runie_testing::fresh_state;
 
 fn dispatch(state: &mut AppState, events: &[Event]) {
@@ -303,14 +303,18 @@ fn elements_sorted_by_timestamp_not_index() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text { content: "First".into() }],
+        parts: vec![Part::Text {
+            content: "First".into(),
+        }],
         timestamp: 3.0,
         id: "u1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text { content: "Second".into() }],
+        parts: vec![Part::Text {
+            content: "Second".into(),
+        }],
         timestamp: 1.0,
         id: "u2".into(),
         ..Default::default()

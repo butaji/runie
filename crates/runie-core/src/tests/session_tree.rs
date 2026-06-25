@@ -1,16 +1,18 @@
 //! Session tree tests — fork, clone, filter
 
-use crate::Event;
 use crate::message::{ChatMessage, Part, Role};
 use crate::model::AppState;
 use crate::session::tree::{SessionTree, SessionTreeFilter};
+use crate::Event;
 
 fn msg(role: Role, content: &str) -> ChatMessage {
     ChatMessage {
         role,
         timestamp: 0.0,
         id: "test".into(),
-        parts: vec![Part::Text { content: content.into() }],
+        parts: vec![Part::Text {
+            content: content.into(),
+        }],
         ..Default::default()
     }
 }
@@ -306,21 +308,27 @@ fn tree_select_branch_switches_conversation() {
             role: Role::User,
             timestamp: 0.0,
             id: "root".into(),
-            parts: vec![Part::Text { content: "root".into() }],
+            parts: vec![Part::Text {
+                content: "root".into(),
+            }],
             ..Default::default()
         },
         ChatMessage {
             role: Role::Assistant,
             timestamp: 1.0,
             id: "branch-a".into(),
-            parts: vec![Part::Text { content: "branch-a".into() }],
+            parts: vec![Part::Text {
+                content: "branch-a".into(),
+            }],
             ..Default::default()
         },
         ChatMessage {
             role: Role::Assistant,
             timestamp: 2.0,
             id: "branch-b".into(),
-            parts: vec![Part::Text { content: "branch-b".into() }],
+            parts: vec![Part::Text {
+                content: "branch-b".into(),
+            }],
             ..Default::default()
         },
     ]));

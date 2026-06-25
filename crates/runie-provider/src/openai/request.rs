@@ -54,9 +54,10 @@ pub fn build_request_body(
         let tools = provider.tools();
         if !tools.is_empty() {
             body["tools"] = serde_json::Value::Array(tools.to_vec());
-            body["tool_choice"] = provider.tool_choice().cloned().unwrap_or_else(|| {
-                serde_json::Value::String("auto".to_string())
-            });
+            body["tool_choice"] = provider
+                .tool_choice()
+                .cloned()
+                .unwrap_or_else(|| serde_json::Value::String("auto".to_string()));
         }
     }
     body
@@ -249,8 +250,14 @@ mod tests {
             tool_call_id: None,
             provider_metadata: None,
             parts: vec![
-                Part::Text { content: "I'll read it.".into() },
-                Part::ToolCall { id: "call_1".into(), name: "read_file".into(), args: serde_json::json!({"path":"Cargo.toml"}) },
+                Part::Text {
+                    content: "I'll read it.".into(),
+                },
+                Part::ToolCall {
+                    id: "call_1".into(),
+                    name: "read_file".into(),
+                    args: serde_json::json!({"path":"Cargo.toml"}),
+                },
             ],
         };
         let body = build_request_body(&provider(), &[ChatMessage::user("hi".to_string()), msg]);
@@ -259,7 +266,10 @@ mod tests {
         // Dangling tool call was removed, so content is preserved
         assert_eq!(serialized["content"], "I'll read it.");
         // No tool_calls since the dangling one was removed
-        assert!(serialized["tool_calls"].as_array().map(|a| a.is_empty()).unwrap_or(true));
+        assert!(serialized["tool_calls"]
+            .as_array()
+            .map(|a| a.is_empty())
+            .unwrap_or(true));
     }
 
     #[test]

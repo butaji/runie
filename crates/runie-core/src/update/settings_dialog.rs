@@ -28,11 +28,7 @@ pub fn build_setting_categories(state: &AppState) -> Vec<(SettingsCategory, Vec<
     categories
 }
 
-fn setting_value_to_panel_items(
-    key: &str,
-    label: &str,
-    value: &SettingValue,
-) -> Vec<PanelItem> {
+fn setting_value_to_panel_items(key: &str, label: &str, value: &SettingValue) -> Vec<PanelItem> {
     match value {
         SettingValue::Bool(v) => vec![PanelItem::Toggle {
             label: label.into(),
@@ -51,8 +47,7 @@ fn setting_value_to_panel_items(
         }],
         SettingValue::MultiSelect { current, options } => {
             let mut items = vec![PanelItem::Header(format!("{} models", label))];
-            let selected: std::collections::HashSet<String> =
-                current.iter().cloned().collect();
+            let selected: std::collections::HashSet<String> = current.iter().cloned().collect();
             for option in options {
                 let toggle_key = format!("edit_provider:{}:{}", key, option);
                 items.push(PanelItem::Toggle {

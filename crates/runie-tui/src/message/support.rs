@@ -102,10 +102,7 @@ pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
     add_lr_margins_to_lines(lines)
 }
 
-pub fn render_context_group(
-    tools: &[runie_core::Element],
-    collapsed: bool,
-) -> Vec<Line<'static>> {
+pub fn render_context_group(tools: &[runie_core::Element], collapsed: bool) -> Vec<Line<'static>> {
     if collapsed {
         return vec![add_lr_margins(
             Line::from(context_group_summary(tools)).style(style_tool_summary()),
@@ -152,10 +149,19 @@ fn render_context_tool(elem: &runie_core::Element) -> Vec<Line<'static>> {
             bytes_transferred,
             error,
             ..
-        } => render_tool_done(name, args, *duration_secs, output, *bytes_transferred, *error),
-        runie_core::Element::ToolSummary { name, duration_secs, .. } => {
-            render_tool_summary(name, "", *duration_secs)
-        }
+        } => render_tool_done(
+            name,
+            args,
+            *duration_secs,
+            output,
+            *bytes_transferred,
+            *error,
+        ),
+        runie_core::Element::ToolSummary {
+            name,
+            duration_secs,
+            ..
+        } => render_tool_summary(name, "", *duration_secs),
         _ => Vec::new(),
     }
 }

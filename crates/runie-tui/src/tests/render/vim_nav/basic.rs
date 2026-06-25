@@ -1,9 +1,9 @@
 //! Basic vim-nav visibility tests.
 
-use super::*;
 use super::helpers::{
     accent, add_message, draw, enter_vim_nav_and_select_top, state_with_user_agent_pairs,
 };
+use super::*;
 use runie_core::Event;
 
 #[test]

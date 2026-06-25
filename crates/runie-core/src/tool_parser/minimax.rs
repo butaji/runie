@@ -9,9 +9,7 @@ const OPEN_M3: &str = "<tool_call>";
 const CLOSE_M3: &str = "</tool_call>";
 
 pub fn has_minimax_tool_calls(text: &str) -> bool {
-    text.contains(OPEN_M2)
-        || text.contains(OPEN_M3)
-        || text.contains("]<]minimax[>[<tool_call>")
+    text.contains(OPEN_M2) || text.contains(OPEN_M3) || text.contains("]<]minimax[>[<tool_call>")
 }
 
 pub fn parse_minimax_tool_calls(text: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {

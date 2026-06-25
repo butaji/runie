@@ -1,6 +1,6 @@
 use super::helpers::compute_ranking_score;
-use std::collections::HashMap;
 use super::CommandUsage;
+use std::collections::HashMap;
 
 pub fn rank_commands_empty_query(
     command_usage: &HashMap<String, CommandUsage>,

@@ -1,6 +1,6 @@
-use crate::Event;
 use crate::login_flow::LoginStep;
 use crate::model::AppState;
+use crate::Event;
 
 use super::{
     add_provider_and_select_model, assert_panel_id, assert_step, clean_config, current_panel_id,

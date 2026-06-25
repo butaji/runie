@@ -4,12 +4,12 @@
 //! Import/export still uses the `Session` snapshot DTO in `crate::session`,
 //! but runtime persistence goes exclusively through `SessionStore`.
 
-use crate::Event;
 use crate::event::DurableCoreEvent;
 use crate::message::ChatMessage;
 use crate::model::{AppState, Role};
 use crate::session::index::SessionMetadata;
 use crate::session::store::SessionStore;
+use crate::Event;
 
 /// Convert a durable event to a bus event for replay.
 pub fn durable_to_event(event: &DurableCoreEvent) -> Option<Event> {
@@ -240,14 +240,18 @@ mod tests {
         state.config.current_model = "claude-3".into();
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![crate::message::Part::Text { content: "Hello".into() }],
+            parts: vec![crate::message::Part::Text {
+                content: "Hello".into(),
+            }],
             timestamp: 1.0,
             id: "msg.1".into(),
             ..Default::default()
         });
         state.session.messages.push(ChatMessage {
             role: Role::Assistant,
-            parts: vec![crate::message::Part::Text { content: "Hi!".into() }],
+            parts: vec![crate::message::Part::Text {
+                content: "Hi!".into(),
+            }],
             timestamp: 2.0,
             id: "msg.2".into(),
             provider: "anthropic".into(),

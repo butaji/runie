@@ -2,7 +2,9 @@
 
 use std::sync::Arc;
 
-use super::{ApprovalSink, PermissionAction, PermissionContext, PermissionManager, PermissionResult};
+use super::{
+    ApprovalSink, PermissionAction, PermissionContext, PermissionManager, PermissionResult,
+};
 
 /// Combines a permission policy chain with an approval sink.
 #[derive(Clone)]

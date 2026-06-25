@@ -41,7 +41,10 @@ impl AppState {
             }
             (idx, plan)
         } else {
-            (self.session_mut().messages.len(), ThoughtPlan::plain(duration))
+            (
+                self.session_mut().messages.len(),
+                ThoughtPlan::plain(duration),
+            )
         };
         let thought_id = format!("{}#thought.{}", id, self.agent_state_mut().thought_seq);
         self.agent_state_mut().thought_seq += 1;
@@ -51,11 +54,14 @@ impl AppState {
                 role: Role::Thought,
                 timestamp: now(),
                 id: thought_id,
-                parts: vec![Part::Text { content: plan.thought_content }],
+                parts: vec![Part::Text {
+                    content: plan.thought_content,
+                }],
                 ..Default::default()
             },
         );
-        if !plan.remove_assistant && self.agent_state_mut().last_assistant_index == Some(insert_idx) {
+        if !plan.remove_assistant && self.agent_state_mut().last_assistant_index == Some(insert_idx)
+        {
             self.agent_state_mut().last_assistant_index = Some(insert_idx + 1);
         }
         self.messages_changed();
@@ -67,12 +73,18 @@ impl AppState {
         self.agent_state_mut().tool_started_at = Some(std::time::Instant::now());
         self.agent_state_mut().intermediate_step_count += 1;
         self.agent_state_mut().current_action = Some(format!("Running {}", name));
-        let tool_id = format!("tool.{}.{}", id, self.agent_state_mut().intermediate_step_count);
+        let tool_id = format!(
+            "tool.{}.{}",
+            id,
+            self.agent_state_mut().intermediate_step_count
+        );
         self.session_mut().messages.push(ChatMessage {
             role: Role::Tool,
             timestamp: now(),
             id: tool_id,
-            parts: vec![Part::Text { content: tool_running(&name) }],
+            parts: vec![Part::Text {
+                content: tool_running(&name),
+            }],
             ..Default::default()
         });
         self.config_mut().telemetry.track_event("tool_usage", {
@@ -95,11 +107,7 @@ impl AppState {
                 let max_bytes = self.config().truncation.max_bytes;
                 let max_lines = self.config().truncation.max_lines;
                 if let Some(last) = self.session_mut().messages.get_mut(idx) {
-                    let output = crate::tool::truncate_output(
-                        &output,
-                        max_bytes,
-                        max_lines,
-                    );
+                    let output = crate::tool::truncate_output(&output, max_bytes, max_lines);
                     last.set_text_part(if output.trim().is_empty() {
                         tool_done(&name, duration_secs)
                     } else {
@@ -146,7 +154,10 @@ impl AppState {
         if content.is_empty() {
             return;
         }
-        let n = self.agent_state_mut().token_tracker.estimate_output(content);
+        let n = self
+            .agent_state_mut()
+            .token_tracker
+            .estimate_output(content);
         self.agent_state_mut().tokens_out += n;
         self.agent_state_mut().turn_tokens_out += n;
     }
@@ -189,28 +200,43 @@ impl AppState {
     }
     fn on_text_start(&mut self) {
         if let Some(msg) = self.current_assistant_message_mut() {
-            msg.parts.push(Part::Text { content: String::new() });
+            msg.parts.push(Part::Text {
+                content: String::new(),
+            });
         } else {
-            self.start_assistant_message(Part::Text { content: String::new() });
+            self.start_assistant_message(Part::Text {
+                content: String::new(),
+            });
         }
     }
     fn on_thinking_start(&mut self) {
         if let Some(msg) = self.current_assistant_message_mut() {
-            msg.parts.push(Part::Reasoning { content: String::new() });
+            msg.parts.push(Part::Reasoning {
+                content: String::new(),
+            });
         } else {
-            self.start_assistant_message(Part::Reasoning { content: String::new() });
+            self.start_assistant_message(Part::Reasoning {
+                content: String::new(),
+            });
         }
     }
     /// Push a new assistant message for a new request cycle.
     fn start_assistant_message(&mut self, part: Part) {
-        let id = self.agent_state_mut().current_request_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+        let id = self
+            .agent_state_mut()
+            .current_request_id
+            .clone()
+            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
         let provider = self.config().current_provider.clone();
         self.agent_state_mut().current_request_id = Some(id.clone());
         let idx = self.session_mut().messages.len();
         self.session_mut().messages.push(ChatMessage {
-            role: Role::Assistant, timestamp: now(), id,
+            role: Role::Assistant,
+            timestamp: now(),
+            id,
             provider,
-            parts: vec![part], ..Default::default()
+            parts: vec![part],
+            ..Default::default()
         });
         self.agent_state_mut().last_assistant_index = Some(idx);
         self.messages_changed();
@@ -225,9 +251,9 @@ impl AppState {
     }
     fn on_response_delta(&mut self, id: String, content: String) {
         self.track_response_tokens(&content);
-        let has_open_text = self
-            .current_assistant_message_mut()
-            .map_or(false, |msg| matches!(msg.parts.last(), Some(Part::Text { .. })));
+        let has_open_text = self.current_assistant_message_mut().map_or(false, |msg| {
+            matches!(msg.parts.last(), Some(Part::Text { .. }))
+        });
         if has_open_text {
             self.append_delta_to_text_part(&content);
             return;

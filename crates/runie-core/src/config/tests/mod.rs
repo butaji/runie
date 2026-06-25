@@ -171,10 +171,7 @@ fn classify_change_detects_credentials_change() {
         },
     );
     let mut curr = prev.clone();
-    curr.model_providers
-        .get_mut("openai")
-        .unwrap()
-        .api_key = "sk-new".to_string();
+    curr.model_providers.get_mut("openai").unwrap().api_key = "sk-new".to_string();
     let changes = curr.classify_change(&prev);
     assert!(changes.contains(&ConfigChange::Credentials));
 }

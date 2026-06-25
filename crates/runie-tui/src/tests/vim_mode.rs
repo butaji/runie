@@ -2,12 +2,12 @@
 
 use super::*;
 use crate::tests::connect_model;
-use runie_core::Part;
 use ratatui::backend::TestBackend;
 use ratatui::buffer::Buffer;
 use ratatui::style::Style;
 use ratatui::Terminal;
 use runie_core::Event;
+use runie_core::Part;
 
 fn state_with_vim_and_messages() -> AppState {
     let mut state = AppState::default();
@@ -22,14 +22,18 @@ fn add_messages(state: &mut AppState, count: usize) {
     for i in 0..count {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text { content: format!("message {}", i) }],
+            parts: vec![Part::Text {
+                content: format!("message {}", i),
+            }],
             timestamp: i as f64,
             id: format!("req.{}", i),
             ..Default::default()
         });
         state.session.messages.push(ChatMessage {
             role: Role::Assistant,
-            parts: vec![Part::Text { content: format!("response {}", i) }],
+            parts: vec![Part::Text {
+                content: format!("response {}", i),
+            }],
             timestamp: i as f64 + 0.5,
             id: format!("resp.{}", i),
             ..Default::default()
@@ -88,7 +92,10 @@ fn vim_mode_scroll_renders_older_content() {
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).expect("terminal");
 
-    state.update(Event::TerminalSize { width: 80, height: 24 });
+    state.update(Event::TerminalSize {
+        width: 80,
+        height: 24,
+    });
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     state.update(Event::Input('g'));
     terminal.draw(|f| view(f, &mut state)).expect("draw");
@@ -113,7 +120,10 @@ fn vim_mode_page_down_renders_newer_content() {
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).expect("terminal");
 
-    state.update(Event::TerminalSize { width: 80, height: 24 });
+    state.update(Event::TerminalSize {
+        width: 80,
+        height: 24,
+    });
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     state.update(Event::Input('g'));
     state.update(Event::Input(' '));

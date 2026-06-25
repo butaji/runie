@@ -94,22 +94,23 @@ impl AppState {
             }
         };
         if !self.view_mut().cached_session_tree_valid {
-            self.view_mut().cached_session_tree_items = match self.session_mut().session_tree.as_ref() {
-                Some(tree) => tree
-                    .filtered_walk(filter)
-                    .into_iter()
-                    .map(|(depth, node)| {
-                        let preview = format!(
-                            "[{}] {}",
-                            node.message.role.as_str(),
-                            node.message.content().chars().take(60).collect::<String>()
-                        );
-                        (depth, preview)
-                    })
-                    .collect::<Vec<_>>()
-                    .into(),
-                None => Arc::new([]),
-            };
+            self.view_mut().cached_session_tree_items =
+                match self.session_mut().session_tree.as_ref() {
+                    Some(tree) => tree
+                        .filtered_walk(filter)
+                        .into_iter()
+                        .map(|(depth, node)| {
+                            let preview = format!(
+                                "[{}] {}",
+                                node.message.role.as_str(),
+                                node.message.content().chars().take(60).collect::<String>()
+                            );
+                            (depth, preview)
+                        })
+                        .collect::<Vec<_>>()
+                        .into(),
+                    None => Arc::new([]),
+                };
             self.view_mut().cached_session_tree_valid = true;
         }
     }
@@ -242,9 +243,14 @@ impl AppState {
             self.agent_state_mut().tokens_out_prev = self.agent_state_mut().tokens_out;
         }
 
-        let c1 = Self::animate_token_value(self.agent_state_mut().tokens_in, &mut self.agent_state_mut().tokens_in_display);
-        let c2 =
-            Self::animate_token_value(self.agent_state_mut().tokens_out, &mut self.agent_state_mut().tokens_out_display);
+        let c1 = Self::animate_token_value(
+            self.agent_state_mut().tokens_in,
+            &mut self.agent_state_mut().tokens_in_display,
+        );
+        let c2 = Self::animate_token_value(
+            self.agent_state_mut().tokens_out,
+            &mut self.agent_state_mut().tokens_out_display,
+        );
         c1 || c2
     }
 
@@ -271,7 +277,11 @@ impl AppState {
         let (elapsed, tokens_out, tokens_at_last_speed) = {
             let agent = self.agent_state_mut();
             let last = agent.last_speed_update.get_or_insert(now);
-            (now.duration_since(*last).as_secs_f64(), agent.tokens_out, agent.tokens_at_last_speed)
+            (
+                now.duration_since(*last).as_secs_f64(),
+                agent.tokens_out,
+                agent.tokens_at_last_speed,
+            )
         };
 
         if elapsed < 0.05 {
@@ -441,7 +451,6 @@ impl AppState {
         s.permission_request = self.permission_request().cloned();
         s.last_visible_height = self.view().last_visible_height;
     }
-
 }
 /// Build the input box title string.
 /// Format: `provider/model · read-only` when read-only, otherwise `provider/model`.

@@ -1,7 +1,7 @@
 //! Layer 2 tests for Shift+Enter multiline input.
 
-use crate::Event;
 use crate::model::{AppState, Role};
+use crate::Event;
 
 #[test]
 fn shift_enter_inserts_newline_without_submitting() {

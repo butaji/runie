@@ -1,20 +1,20 @@
-use runie_core::sanitize::sanitize_messages;
-use runie_core::tool_parser::{
-    assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
-};
-use runie_core::permissions::PermissionGate;
 use crate::stream_response::{stream_response, EmitFn, StreamedResponse};
 use crate::tool_runner::{execute_tool_call, tool_result_message};
 use crate::AgentCommand;
 use anyhow::Result;
-use runie_core::Event;
 use runie_core::harness_skills::{
     SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult, TurnEndCtx, TurnEndResult,
     TurnStartCtx, TurnStartResult,
 };
 use runie_core::message::{ChatMessage, Role};
+use runie_core::permissions::PermissionGate;
 use runie_core::provider::Provider;
+use runie_core::sanitize::sanitize_messages;
 use runie_core::tool::{ToolContext, ToolOutput, ToolRegistry, ToolStatus};
+use runie_core::tool_parser::{
+    assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
+};
+use runie_core::Event;
 use std::time::Instant;
 
 /// Run an agent turn with optional skill hooks.
@@ -204,10 +204,20 @@ async fn run_agent_iteration(
     tool_call_count: &mut usize,
     gate: &PermissionGate,
 ) -> Result<bool> {
-    emit_now(&emit, runie_core::Event::Thinking { id: command.id.clone() });
+    emit_now(
+        &emit,
+        runie_core::Event::Thinking {
+            id: command.id.clone(),
+        },
+    );
     let tools = build_tool_registry(command.read_only).to_openai_functions();
     let response = stream_response(provider, &command.id, messages, tools, emit.clone()).await?;
-    emit_now(&emit, runie_core::Event::ThoughtDone { id: command.id.clone() });
+    emit_now(
+        &emit,
+        runie_core::Event::ThoughtDone {
+            id: command.id.clone(),
+        },
+    );
     if response.tool_calls.is_empty() {
         return Ok(false);
     }
@@ -463,7 +473,10 @@ mod tests {
         let emit: EmitFn = Arc::new(Mutex::new(|_| {}));
 
         let result = check_turn_start(&registry, &cmd, &emit);
-        assert!(result.is_none(), "check_turn_start should return None for Continue");
+        assert!(
+            result.is_none(),
+            "check_turn_start should return None for Continue"
+        );
 
         let call_count = *count.lock().unwrap();
         assert_eq!(call_count, 1, "on_turn_start should be called exactly once");
@@ -485,9 +498,13 @@ mod tests {
         ];
         // Simulate sanitize run after execute_tools (no result pushed).
         sanitize_messages(&mut messages);
-        let assistant = messages.iter().find(|m| m.role == runie_core::message::Role::Assistant);
+        let assistant = messages
+            .iter()
+            .find(|m| m.role == runie_core::message::Role::Assistant);
         assert!(
-            assistant.map(|m| m.tool_calls().is_empty()).unwrap_or(false),
+            assistant
+                .map(|m| m.tool_calls().is_empty())
+                .unwrap_or(false),
             "Dangling tool call should be removed by sanitize_messages"
         );
     }

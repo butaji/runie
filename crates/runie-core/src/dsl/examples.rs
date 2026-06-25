@@ -71,8 +71,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::dsl::{on, Intent, Fact};
     use crate::dsl::runtime::TestRuntime;
+    use crate::dsl::{on, Fact, Intent};
     use crate::event::TransientLevel;
 
     // ── ToggleVimMode DSL flow example ───────────────────────────────────────
@@ -82,7 +82,9 @@ mod tests {
     fn theme_command_flow_emits_set_theme_intent() {
         let mut rt = TestRuntime::new();
         let name = "dark";
-        let flow = on(()).intent(Intent::SetTheme { name: name.to_string() });
+        let flow = on(()).intent(Intent::SetTheme {
+            name: name.to_string(),
+        });
         flow.run(&mut rt, ());
 
         assert!(rt.intents().any(|i| matches!(
@@ -95,7 +97,9 @@ mod tests {
     #[test]
     fn toggle_vim_mode_flow_emits_intent_and_fact() {
         let mut rt = TestRuntime::new();
-        let flow = on(()).intent(Intent::ToggleVimMode).fact(Fact::ViewInvalidated);
+        let flow = on(())
+            .intent(Intent::ToggleVimMode)
+            .fact(Fact::ViewInvalidated);
         flow.run(&mut rt, ());
 
         assert!(rt.intents().any(|i| matches!(i, Intent::ToggleVimMode)));
@@ -109,9 +113,10 @@ mod tests {
         let flow = on(()).notify_level("Session saved.", TransientLevel::Info);
         flow.run(&mut rt, ());
 
-        assert!(rt.notifications().iter().any(|(n, l)| {
-            n == "Session saved." && *l == TransientLevel::Info
-        }));
+        assert!(rt
+            .notifications()
+            .iter()
+            .any(|(n, l)| { n == "Session saved." && *l == TransientLevel::Info }));
     }
 
     /// DSL flow composes with .then()

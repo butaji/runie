@@ -1,5 +1,5 @@
-use super::*;
 use super::super::*;
+use super::*;
 use runie_core::Event;
 
 #[test]

@@ -1,6 +1,6 @@
-use crate::Event;
 use crate::model::{AppState, Role};
 use crate::tests::fresh_state;
+use crate::Event;
 
 /// Set input buffer directly and submit — bypasses the command palette.
 fn exec(state: &mut AppState, text: &str) {

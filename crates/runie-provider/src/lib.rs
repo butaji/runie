@@ -65,9 +65,11 @@ impl Provider for DynProvider {
         &self,
         messages: Vec<runie_core::message::ChatMessage>,
     ) -> std::pin::Pin<
-        Box<dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
-             + Send
-             + '_>,
+        Box<
+            dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
+                + Send
+                + '_,
+        >,
     > {
         self.0.generate(messages)
     }
@@ -77,9 +79,11 @@ impl Provider for DynProvider {
         messages: Vec<runie_core::message::ChatMessage>,
         tools: Vec<serde_json::Value>,
     ) -> std::pin::Pin<
-        Box<dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
-             + Send
-             + '_>,
+        Box<
+            dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
+                + Send
+                + '_,
+        >,
     > {
         self.0.generate_with_tools(messages, tools)
     }
@@ -97,11 +101,7 @@ impl DynProvider {
     }
 
     /// Wrap an arbitrary provider implementation.
-    pub fn from_provider(
-        provider: Box<dyn Provider>,
-        key: &str,
-        model: &str,
-    ) -> Self {
+    pub fn from_provider(provider: Box<dyn Provider>, key: &str, model: &str) -> Self {
         DynProvider(BuiltProvider::from_provider(provider, key, model))
     }
 }
@@ -170,7 +170,11 @@ pub fn build_provider(
     }
 
     let provider = build_openai_provider(api_key, model, &base_url);
-    Ok(BuiltProvider::new(provider, key.to_string(), model.to_string()))
+    Ok(BuiltProvider::new(
+        provider,
+        key.to_string(),
+        model.to_string(),
+    ))
 }
 
 fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {

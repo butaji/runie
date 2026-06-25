@@ -4,9 +4,7 @@
 //! They are kept in a separate file to keep the source files under 500 lines.
 
 use super::ranking;
-use super::{
-    AppState, CommandUsage, ModelSource,
-};
+use super::{AppState, CommandUsage, ModelSource};
 use crate::actors::ActorHandles;
 use crate::event::TransientLevel;
 use crate::view::elements::Element;
@@ -93,15 +91,21 @@ impl AppState {
     }
 
     pub fn thinking_elapsed_secs(&self) -> Option<f64> {
-        self.agent_state().thinking_started_at.map(|t| t.elapsed().as_secs_f64())
+        self.agent_state()
+            .thinking_started_at
+            .map(|t| t.elapsed().as_secs_f64())
     }
 
     pub fn turn_elapsed_secs(&self) -> Option<f64> {
-        self.agent_state().turn_started_at.map(|t| t.elapsed().as_secs_f64())
+        self.agent_state()
+            .turn_started_at
+            .map(|t| t.elapsed().as_secs_f64())
     }
 
     pub fn tool_elapsed_secs(&self) -> Option<f64> {
-        self.agent_state().tool_started_at.map(|t| t.elapsed().as_secs_f64())
+        self.agent_state()
+            .tool_started_at
+            .map(|t| t.elapsed().as_secs_f64())
     }
 
     /// Braille spinner frame (12-frame cycle)
@@ -287,7 +291,9 @@ impl AppState {
     }
 
     pub fn count(&self) -> usize {
-        self.view().element_count.max(self.view().elements_cache.len())
+        self.view()
+            .element_count
+            .max(self.view().elements_cache.len())
     }
 
     pub fn element_count(&self) -> usize {
@@ -361,11 +367,7 @@ impl AppState {
         };
         ranked_names
             .into_iter()
-            .filter_map(|(name, score)| {
-                self.registry()
-                    .get(&name)
-                    .map(|cmd| (cmd, score))
-            })
+            .filter_map(|(name, score)| self.registry().get(&name).map(|cmd| (cmd, score)))
             .collect()
     }
 

@@ -41,7 +41,8 @@ impl AppState {
             ..Default::default()
         });
         self.messages_changed();
-        *self.transient_until_mut() = Some(std::time::Instant::now() + std::time::Duration::from_secs(5));
+        *self.transient_until_mut() =
+            Some(std::time::Instant::now() + std::time::Duration::from_secs(5));
     }
 
     /// Emit a transient notification in the hints line (not in the feed).
@@ -54,11 +55,15 @@ impl AppState {
     /// or falling back to the last assistant message's id), so earlier turns'
     /// TurnComplete are not affected.
     pub(crate) fn ensure_turn_complete_last(&mut self) {
-        let target_id = self.agent_state_mut().current_request_id.clone().or_else(|| {
-            self.agent
-                .last_assistant_index
-                .and_then(|idx| self.session_mut().messages.get(idx).map(|m| m.id.clone()))
-        });
+        let target_id = self
+            .agent_state_mut()
+            .current_request_id
+            .clone()
+            .or_else(|| {
+                self.agent
+                    .last_assistant_index
+                    .and_then(|idx| self.session_mut().messages.get(idx).map(|m| m.id.clone()))
+            });
         let Some(target_id) = target_id else {
             return;
         };
@@ -101,10 +106,8 @@ impl AppState {
 
     pub(crate) fn configure_token_tracker(&mut self) {
         let config = self.config();
-        self.agent_state_mut().token_tracker = crate::tokens::token_tracker_for(
-            &config.current_provider,
-            &config.current_model,
-        );
+        self.agent_state_mut().token_tracker =
+            crate::tokens::token_tracker_for(&config.current_provider, &config.current_model);
     }
 
     pub(crate) fn switch_theme(&mut self, name: String) {
@@ -134,7 +137,9 @@ impl AppState {
     pub(crate) fn apply_trust_project(&mut self) {
         let cwd = std::env::current_dir().unwrap_or_default();
         self.config_mut().read_only = false;
-        self.session_mut().messages.retain(|m| m.id != "trust_welcome");
+        self.session_mut()
+            .messages
+            .retain(|m| m.id != "trust_welcome");
         self.messages_changed();
         self.notify(
             format!("Project '{}' trusted. Read-only disabled.", cwd.display()),
@@ -163,7 +168,12 @@ impl AppState {
         self.agent_state_mut().thinking_started_at = None;
         self.agent_state_mut().tool_started_at = None;
         // Drain the queue back to input
-        let messages: Vec<_> = self.agent_state_mut().message_queue.drain(..).rev().collect();
+        let messages: Vec<_> = self
+            .agent_state_mut()
+            .message_queue
+            .drain(..)
+            .rev()
+            .collect();
         let input = &mut self.input_mut().input;
         for msg in messages {
             if !input.is_empty() {
@@ -194,11 +204,13 @@ pub fn apply_initial_trust(state: &mut AppState, cwd: &std::path::Path) {
                     .map(|d| d.as_secs_f64())
                     .unwrap_or(0.0),
                 id: "trust_welcome".to_string(),
-                parts: vec![runie_core::message::Part::Text { content: format!(
-                    "Welcome to runie in {}.\n\nThis project is not yet trusted. \
+                parts: vec![runie_core::message::Part::Text {
+                    content: format!(
+                        "Welcome to runie in {}.\n\nThis project is not yet trusted. \
                     Run /trust to enable write tools, or /untrust to enforce read-only mode.",
-                    cwd.display()
-                ) }],
+                        cwd.display()
+                    ),
+                }],
                 ..Default::default()
             });
             state.messages_changed();
@@ -328,10 +340,7 @@ impl AppState {
             config.current_provider, config.current_model
         ));
         lines.push(format!("  Read-only: {}", config.read_only));
-        lines.push(format!(
-            "  Scoped models: {}",
-            config.scoped_models.len()
-        ));
+        lines.push(format!("  Scoped models: {}", config.scoped_models.len()));
         self.add_system_msg(lines.join("\n"));
     }
 }

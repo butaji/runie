@@ -1,6 +1,6 @@
 use crate::commands::filter_commands;
-use crate::Event;
 use crate::model::AppState;
+use crate::Event;
 
 use super::palette_stack;
 

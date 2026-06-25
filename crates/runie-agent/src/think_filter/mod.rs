@@ -1,8 +1,8 @@
 //! ThinkFilter: converts inline `<tool_call>` / `<thinking>` / `</thinking>` /
 //! `</tool_call>` tags in `TextDelta` streams into structured thinking events.
 
-use std::mem;
 use runie_core::provider_event::ProviderEvent;
+use std::mem;
 
 /// Tags that open a thinking block.
 const OPENING_TAGS: [&str; 2] = ["<tool_call>", "<thinking>"];
@@ -31,22 +31,32 @@ pub struct ThinkFilter {
 }
 
 impl ThinkFilter {
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     /// Process a single `ProviderEvent`. Returns zero or more transformed events.
     pub fn feed(&mut self, event: ProviderEvent) -> Vec<ProviderEvent> {
         match event {
             ProviderEvent::TextDelta(delta) => self.feed_text(delta),
             ProviderEvent::ThinkingDelta(delta) => vec![ProviderEvent::ThinkingDelta(delta)],
-            other => { let mut out = self.flush_buffer(); out.push(other); out }
+            other => {
+                let mut out = self.flush_buffer();
+                out.push(other);
+                out
+            }
         }
     }
 
     /// Drain buffered state and emit final thinking close.
-    pub fn flush(&mut self) -> Vec<ProviderEvent> { self.flush_buffer() }
+    pub fn flush(&mut self) -> Vec<ProviderEvent> {
+        self.flush_buffer()
+    }
 
     fn feed_text(&mut self, delta: String) -> Vec<ProviderEvent> {
-        if delta.is_empty() { return Vec::new(); }
+        if delta.is_empty() {
+            return Vec::new();
+        }
         let text = prepend_buffer(mem::take(&mut self.buffer), delta);
         let mut out = Vec::new();
         let mut pos = 0usize;
@@ -71,14 +81,18 @@ impl ThinkFilter {
                 if !self.buffer.is_empty() {
                     out.push(ProviderEvent::ThinkingDelta(self.buffer.clone()));
                 }
-                out.push(ProviderEvent::ThinkingEnd { id: "inline".into() });
+                out.push(ProviderEvent::ThinkingEnd {
+                    id: "inline".into(),
+                });
             }
             ThinkState::WaitingPartialOpen => {
                 emit_thinking_start(&mut out);
                 if !self.buffer.is_empty() {
                     out.push(ProviderEvent::ThinkingDelta(self.buffer.clone()));
                 }
-                out.push(ProviderEvent::ThinkingEnd { id: "inline".into() });
+                out.push(ProviderEvent::ThinkingEnd {
+                    id: "inline".into(),
+                });
             }
             _ if !self.buffer.is_empty() => {
                 out.push(ProviderEvent::TextDelta(self.buffer.clone()));
@@ -94,7 +108,12 @@ impl ThinkFilter {
     // Post-thought: skip the duplicate </thinking> then return to outside
     // =========================================================================
 
-    fn consume_post_thought(&mut self, text: &str, pos: usize, out: &mut Vec<ProviderEvent>) -> usize {
+    fn consume_post_thought(
+        &mut self,
+        text: &str,
+        pos: usize,
+        out: &mut Vec<ProviderEvent>,
+    ) -> usize {
         self.state = ThinkState::Outside;
         let remaining = &text[pos..];
         let ws_len = remaining.chars().take_while(|c| c.is_whitespace()).count();
@@ -130,7 +149,10 @@ impl ThinkFilter {
         let next_open = find_next_opening_tag(remaining);
         match next_open {
             None => {
-                if matches!(self.state, ThinkState::WaitingPartialOpen | ThinkState::Inside) {
+                if matches!(
+                    self.state,
+                    ThinkState::WaitingPartialOpen | ThinkState::Inside
+                ) {
                     self.buffer = remaining.to_string();
                 } else {
                     emit_text(out, remaining.to_string());
@@ -230,19 +252,27 @@ impl ThinkFilter {
 // ============================================================================
 
 fn emit_text(out: &mut Vec<ProviderEvent>, text: String) {
-    if !text.is_empty() { out.push(ProviderEvent::TextDelta(text)); }
+    if !text.is_empty() {
+        out.push(ProviderEvent::TextDelta(text));
+    }
 }
 
 fn emit_thinking(out: &mut Vec<ProviderEvent>, text: String) {
-    if !text.is_empty() { out.push(ProviderEvent::ThinkingDelta(text)); }
+    if !text.is_empty() {
+        out.push(ProviderEvent::ThinkingDelta(text));
+    }
 }
 
 fn emit_thinking_start(out: &mut Vec<ProviderEvent>) {
-    out.push(ProviderEvent::ThinkingStart { id: "inline".into() });
+    out.push(ProviderEvent::ThinkingStart {
+        id: "inline".into(),
+    });
 }
 
 fn emit_thinking_end(out: &mut Vec<ProviderEvent>) {
-    out.push(ProviderEvent::ThinkingEnd { id: "inline".into() });
+    out.push(ProviderEvent::ThinkingEnd {
+        id: "inline".into(),
+    });
 }
 
 // ============================================================================
@@ -252,7 +282,9 @@ fn emit_thinking_end(out: &mut Vec<ProviderEvent>) {
 /// Returns Some(tag) if `text` starts with a complete opening tag.
 fn starts_with_opening_tag(text: &str) -> Option<&'static str> {
     for tag in &OPENING_TAGS {
-        if text.starts_with(tag) { return Some(*tag); }
+        if text.starts_with(tag) {
+            return Some(*tag);
+        }
     }
     None
 }
@@ -260,7 +292,9 @@ fn starts_with_opening_tag(text: &str) -> Option<&'static str> {
 /// Returns Some(tag) if the start of `text` is a partial opening tag.
 fn starts_partial_opening_tag(text: &str) -> Option<&'static str> {
     for tag in &OPENING_TAGS {
-        if tag.starts_with(text) { return Some(*tag); }
+        if tag.starts_with(text) {
+            return Some(*tag);
+        }
     }
     None
 }
@@ -272,8 +306,14 @@ fn find_next_opening_tag(text: &str) -> Option<(&str, usize)> {
     for tag in &OPENING_TAGS {
         if let Some(pos) = text.find(tag) {
             match best_pos {
-                None => { best_pos = Some(pos); best_tag = Some(*tag); }
-                Some(bp) if pos < bp => { best_pos = Some(pos); best_tag = Some(*tag); }
+                None => {
+                    best_pos = Some(pos);
+                    best_tag = Some(*tag);
+                }
+                Some(bp) if pos < bp => {
+                    best_pos = Some(pos);
+                    best_tag = Some(*tag);
+                }
                 _ => {}
             }
         }
@@ -296,7 +336,11 @@ fn find_earliest_close(text: &str) -> Option<(usize, &'static str)> {
 
 /// Prepend any buffered content to the new delta.
 pub(crate) fn prepend_buffer(buffer: String, delta: String) -> String {
-    if buffer.is_empty() { delta } else { format!("{}{}", buffer, delta) }
+    if buffer.is_empty() {
+        delta
+    } else {
+        format!("{}{}", buffer, delta)
+    }
 }
 
 #[cfg(test)]

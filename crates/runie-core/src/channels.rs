@@ -174,7 +174,8 @@ impl ChannelDecoder for ToolCallChannel {
                             return Some(tool_call);
                         }
                         ToolCallState::Waiting => {
-                            let tool_call = ToolCall::new(id.clone(), String::new(), serde_json::json!({}));
+                            let tool_call =
+                                ToolCall::new(id.clone(), String::new(), serde_json::json!({}));
                             self.completed.push(tool_call.clone());
                             return Some(tool_call);
                         }
@@ -262,10 +263,20 @@ mod tests {
         let mut channel = TextChannel::new();
 
         channel.process(&Event::TextStart { id: "msg1".into() });
-        channel.process(&Event::ResponseDelta { id: "msg1".into(), content: "Hello ".into() });
-        channel.process(&Event::ResponseDelta { id: "msg1".into(), content: "world!".into() });
+        channel.process(&Event::ResponseDelta {
+            id: "msg1".into(),
+            content: "Hello ".into(),
+        });
+        channel.process(&Event::ResponseDelta {
+            id: "msg1".into(),
+            content: "world!".into(),
+        });
 
-        assert_eq!(channel.output().len(), 0, "text should not emit until TextEnd");
+        assert_eq!(
+            channel.output().len(),
+            0,
+            "text should not emit until TextEnd"
+        );
 
         let output = channel.process(&Event::TextEnd { id: "msg1".into() });
         assert!(output.is_some(), "TextEnd should produce output");
@@ -279,10 +290,19 @@ mod tests {
         let mut channel = TextChannel::new();
 
         channel.process(&Event::TextStart { id: "msg1".into() });
-        channel.process(&Event::ResponseDelta { id: "msg1".into(), content: "Incomplete".into() });
+        channel.process(&Event::ResponseDelta {
+            id: "msg1".into(),
+            content: "Incomplete".into(),
+        });
 
-        let output = channel.process(&Event::TurnComplete { id: "turn1".into(), duration_secs: 1.0 });
-        assert!(output.is_some(), "TurnComplete should flush incomplete text");
+        let output = channel.process(&Event::TurnComplete {
+            id: "turn1".into(),
+            duration_secs: 1.0,
+        });
+        assert!(
+            output.is_some(),
+            "TurnComplete should flush incomplete text"
+        );
         assert_eq!(output.unwrap().content(), "Incomplete");
     }
 
@@ -303,18 +323,32 @@ mod tests {
         });
 
         assert!(output.is_some(), "ToolEnd should produce output");
-        assert_eq!(channel.output().len(), 1, "completed tool should be in output");
+        assert_eq!(
+            channel.output().len(),
+            1,
+            "completed tool should be in output"
+        );
     }
 
     #[test]
     fn reasoning_channel_collects_thoughts() {
         let mut channel = ReasoningChannel::new();
 
-        channel.process(&Event::ThinkingStart { id: "think1".into() });
-        channel.process(&Event::ThinkingDelta { id: "think1".into(), content: "Let me think... ".into() });
-        channel.process(&Event::ThinkingDelta { id: "think1".into(), content: "Done!".into() });
+        channel.process(&Event::ThinkingStart {
+            id: "think1".into(),
+        });
+        channel.process(&Event::ThinkingDelta {
+            id: "think1".into(),
+            content: "Let me think... ".into(),
+        });
+        channel.process(&Event::ThinkingDelta {
+            id: "think1".into(),
+            content: "Done!".into(),
+        });
 
-        let output = channel.process(&Event::ThoughtDone { id: "think1".into() });
+        let output = channel.process(&Event::ThoughtDone {
+            id: "think1".into(),
+        });
         assert!(output.is_some(), "ThoughtDone should produce output");
         assert_eq!(output.unwrap().content(), "Let me think... Done!");
     }
@@ -327,7 +361,11 @@ mod tests {
         text_channel.process(&Event::Submit);
         text_channel.process(&Event::Quit);
 
-        assert_eq!(text_channel.output().len(), 0, "unrelated events should be ignored");
+        assert_eq!(
+            text_channel.output().len(),
+            0,
+            "unrelated events should be ignored"
+        );
     }
 
     #[test]
@@ -338,7 +376,10 @@ mod tests {
         bus.subscribe_channel(TextChannel::new(), tx);
 
         bus.publish(Event::TextStart { id: "msg1".into() });
-        bus.publish(Event::ResponseDelta { id: "msg1".into(), content: "Hello".into() });
+        bus.publish(Event::ResponseDelta {
+            id: "msg1".into(),
+            content: "Hello".into(),
+        });
         bus.publish(Event::TextEnd { id: "msg1".into() });
         bus.publish(Event::Input('x')); // Should be ignored by text channel
     }

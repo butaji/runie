@@ -3,8 +3,8 @@
 //! These verify that state mutations correctly set the dirty flag,
 //! which replaces the old mark_dirty() pattern.
 
-use crate::Event;
 use crate::model::AppState;
+use crate::Event;
 
 #[test]
 fn update_sets_dirty_flag() {
@@ -15,10 +15,7 @@ fn update_sets_dirty_flag() {
 
     // Input event mutates state and sets dirty
     state.update(crate::Event::Input('a'));
-    assert!(
-        state.is_dirty(),
-        "input event should set dirty flag"
-    );
+    assert!(state.is_dirty(), "input event should set dirty flag");
 }
 
 #[test]
@@ -62,10 +59,7 @@ fn text_input_marks_dirty() {
 fn login_flow_start_marks_dirty() {
     let mut state = AppState::default();
     state.update(crate::Event::Start);
-    assert!(
-        state.is_dirty(),
-        "login flow start should mark dirty"
-    );
+    assert!(state.is_dirty(), "login flow start should mark dirty");
 }
 
 #[test]

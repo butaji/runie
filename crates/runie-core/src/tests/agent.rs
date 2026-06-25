@@ -1,7 +1,7 @@
 use crate::dsl::AppStateDsl;
-use crate::Event;
 use crate::model::Role;
 use crate::tests::fresh_state;
+use crate::Event;
 
 #[test]
 fn test_agent_thinking_sets_streaming() {
@@ -357,10 +357,7 @@ fn message_stores_provider() {
 #[test]
 fn assistant_message_preserves_unicode_after_tool_strip() {
     let mut state = fresh_state();
-    state
-        .agent("req.0")
-        .respond("hello 😊 world")
-        .done();
+    state.agent("req.0").respond("hello 😊 world").done();
     let msg = state
         .session
         .messages

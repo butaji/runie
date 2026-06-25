@@ -8,7 +8,6 @@
 use super::*;
 use runie_core::Event;
 
-
 /// "ca ca" -> Tab -> pick -> "ca filename" (space preserved, NO brackets).
 #[test]
 fn tab_file_picker_preserves_space_in_middle() {

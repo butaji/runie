@@ -5,9 +5,9 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::Event;
     use crate::login_flow::state::LoginStep;
     use crate::model::AppState;
+    use crate::Event;
 
     // -----------------------------------------------------------------------
     // Layer 2 helpers
@@ -358,5 +358,4 @@ mod tests {
         assert_eq!(flow.step, LoginStep::KeyInput);
         assert_transient_contains(&state, "API key is required");
     }
-
 }

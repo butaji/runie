@@ -89,7 +89,6 @@ fn add_provider_via_providers_dialog_keeps_active_model_unchanged() {
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
 
-
     state.update(Event::ProvidersDialog);
     state.update(Event::ProvidersAdd);
     state.update(Event::from(Event::SelectProvider {

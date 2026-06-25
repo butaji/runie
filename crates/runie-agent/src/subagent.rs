@@ -112,13 +112,12 @@ fn build_subagent_callback(
     state: Arc<SubagentState>,
 ) -> Arc<Mutex<dyn FnMut(runie_core::Event) + Send + Sync>> {
     Arc::new(Mutex::new(move |evt: runie_core::Event| match evt {
-        runie_core::Event::ResponseDelta { content, .. } | runie_core::Event::Response { content, .. } => {
-            state
-                .responses
-                .lock()
-                .unwrap_or_else(|p| p.into_inner())
-                .push(content)
-        }
+        runie_core::Event::ResponseDelta { content, .. }
+        | runie_core::Event::Response { content, .. } => state
+            .responses
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .push(content),
         runie_core::Event::Error { message, .. } => {
             *state.error.lock().unwrap_or_else(|p| p.into_inner()) = Some(message)
         }
@@ -130,12 +129,7 @@ fn build_subagent_callback(
 }
 
 fn finalize_subagent_result(state: Arc<SubagentState>) -> Result<String, SubagentError> {
-    if let Some(msg) = state
-        .error
-        .lock()
-        .unwrap_or_else(|p| p.into_inner())
-        .take()
-    {
+    if let Some(msg) = state.error.lock().unwrap_or_else(|p| p.into_inner()).take() {
         return Err(SubagentError::Agent(msg));
     }
     if !*state.done.lock().unwrap_or_else(|p| p.into_inner()) {

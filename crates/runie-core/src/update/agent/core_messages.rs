@@ -4,7 +4,11 @@ use crate::update::strip_tool_markers;
 
 impl AppState {
     pub(crate) fn flush_buffered_response(&mut self, id: &str) {
-        let buffered = self.agent_state_mut().streaming_buffer.force_flush().join("");
+        let buffered = self
+            .agent_state_mut()
+            .streaming_buffer
+            .force_flush()
+            .join("");
         if buffered.is_empty() {
             return;
         }
@@ -37,8 +41,7 @@ impl AppState {
             }
         }
         self.session_mut().messages.push(message);
-        self.agent_state_mut().last_assistant_index =
-            Some(self.session_mut().messages.len() - 1);
+        self.agent_state_mut().last_assistant_index = Some(self.session_mut().messages.len() - 1);
         self.messages_changed();
     }
 
@@ -95,7 +98,11 @@ impl AppState {
 
     pub(crate) fn finish_turn(&mut self, id: String) {
         let assistant_idx = self.agent_state_mut().last_assistant_index;
-        let remaining_tail = self.agent_state_mut().streaming_buffer.force_flush().join("");
+        let remaining_tail = self
+            .agent_state_mut()
+            .streaming_buffer
+            .force_flush()
+            .join("");
         if !remaining_tail.is_empty() {
             if let Some(idx) = assistant_idx {
                 self.append_to_message(idx, &remaining_tail);
@@ -132,7 +139,9 @@ impl AppState {
             }
         }
         if msg.parts.is_empty() && !remaining_tail.is_empty() {
-            msg.parts.push(Part::Text { content: remaining_tail.to_string() });
+            msg.parts.push(Part::Text {
+                content: remaining_tail.to_string(),
+            });
         }
     }
 
@@ -171,9 +180,7 @@ impl AppState {
     }
 
     fn maybe_end_streaming(&mut self) {
-        if self.agent_state_mut().inflight == 0
-            && self.agent_state_mut().request_queue.is_empty()
-        {
+        if self.agent_state_mut().inflight == 0 && self.agent_state_mut().request_queue.is_empty() {
             self.agent_state_mut().streaming = false;
             if self.agent_state_mut().current_request_id.is_none() {
                 self.agent_state_mut().thinking_started_at = None;
@@ -218,8 +225,7 @@ impl AppState {
             // Update cached index if it was affected
             if let Some(last_idx) = self.agent_state_mut().last_assistant_index {
                 if last_idx >= idx {
-                    self.agent_state_mut().last_assistant_index =
-                        Some(last_idx.saturating_sub(1));
+                    self.agent_state_mut().last_assistant_index = Some(last_idx.saturating_sub(1));
                 }
             }
         }
@@ -247,11 +253,16 @@ impl AppState {
             timestamp: now(),
             id: format!("error.{}", id),
             provider: self.config_mut().current_provider.clone(),
-            parts: vec![Part::Text { content: format!("Error: {}", message) }],
+            parts: vec![Part::Text {
+                content: format!("Error: {}", message),
+            }],
             ..Default::default()
         };
-        if let Some(idx) =
-            self.session().messages.iter().position(|m| m.role == Role::TurnComplete)
+        if let Some(idx) = self
+            .session()
+            .messages
+            .iter()
+            .position(|m| m.role == Role::TurnComplete)
         {
             error.timestamp = self.session_mut().messages[idx].timestamp;
             self.session_mut().messages.insert(idx, error);

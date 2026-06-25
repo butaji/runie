@@ -12,14 +12,14 @@ use tokio::sync::mpsc;
 
 use crate::actors::{spawn_actor, Actor, ActorHandle};
 use crate::bus::EventBus;
-use crate::Event;
 use crate::event::DurableCoreEvent;
 use crate::message::now;
-use crate::session::Session;
 use crate::session::index::{SessionIndex, SessionMetadata};
 use crate::session::replay::session_to_durable_events;
 use crate::session::store::SessionStore;
+use crate::session::Session;
 use crate::trust::{TrustDecision, TrustManager};
+use crate::Event;
 
 use super::messages::{SessionActorHandle, SessionMsg};
 
@@ -46,9 +46,8 @@ pub struct SessionActor {
 impl SessionActor {
     /// Spawn a `SessionActor` on the given event bus.
     pub fn spawn(bus: EventBus<Event>) -> (SessionActorHandle, ActorHandle) {
-        let store = SessionStore::default_store().unwrap_or_else(|| {
-            SessionStore::new(std::env::temp_dir().join("runie_sessions"))
-        });
+        let store = SessionStore::default_store()
+            .unwrap_or_else(|| SessionStore::new(std::env::temp_dir().join("runie_sessions")));
         let actor = Self {
             bus: bus.clone(),
             trust: TrustManager::default(),
@@ -131,8 +130,9 @@ impl SessionActor {
 
     async fn append_history(&self, entry: String) {
         let entry_clone = entry.clone();
-        let _ = tokio::task::spawn_blocking(move || crate::input_history::append_history(&entry_clone))
-            .await;
+        let _ =
+            tokio::task::spawn_blocking(move || crate::input_history::append_history(&entry_clone))
+                .await;
     }
 
     // -------------------------------------------------------------------------
@@ -165,7 +165,10 @@ impl SessionActor {
             }
             _ => self.fail(
                 "load",
-                format!("Session '{}' not found. Use /sessions to list saved sessions.", name),
+                format!(
+                    "Session '{}' not found. Use /sessions to list saved sessions.",
+                    name
+                ),
             ),
         }
     }
@@ -203,7 +206,10 @@ impl SessionActor {
             Ok(Ok(())) => self.emit(Event::SessionDeleted { name }),
             Ok(Err(_)) => self.fail(
                 "delete",
-                format!("Session '{}' not found. Use /sessions to list saved sessions.", name),
+                format!(
+                    "Session '{}' not found. Use /sessions to list saved sessions.",
+                    name
+                ),
             ),
             Err(e) => self.fail("delete", e.to_string()),
         }
@@ -395,7 +401,9 @@ mod tests {
         assert!(saw_trust);
         assert!(saw_history);
 
-        handle.set_trust(PathBuf::from("/tmp/project"), TrustDecision::Trusted).await;
+        handle
+            .set_trust(PathBuf::from("/tmp/project"), TrustDecision::Trusted)
+            .await;
 
         let mut saw_changed = false;
         for _ in 0..60 {

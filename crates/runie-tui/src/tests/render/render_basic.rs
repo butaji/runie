@@ -1,5 +1,5 @@
-use super::*;
 use super::super::*;
+use super::*;
 use runie_core::Event;
 use runie_core::Part;
 use std::time::Instant;
@@ -222,14 +222,18 @@ fn test_render_performance_1000_messages() {
     for i in 0..200 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text { content: format!("Message {} from user with some content here", i) }],
+            parts: vec![Part::Text {
+                content: format!("Message {} from user with some content here", i),
+            }],
             timestamp: 0.0,
             id: format!("req.{}", i),
             ..Default::default()
         });
         state.session.messages.push(ChatMessage {
             role: Role::Assistant,
-            parts: vec![Part::Text { content: format!("Response {} from agent with detailed explanation", i) }],
+            parts: vec![Part::Text {
+                content: format!("Response {} from agent with detailed explanation", i),
+            }],
             timestamp: 0.0,
             id: format!("resp.{}", i),
             ..Default::default()

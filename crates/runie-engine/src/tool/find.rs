@@ -1,7 +1,7 @@
 //! Find tool — searches for files matching a pattern.
 
 use crate::define_tool;
-use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus, which_tool_async};
+use crate::tool::{which_tool_async, Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::path::resolve_path_in;

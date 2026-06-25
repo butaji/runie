@@ -137,7 +137,11 @@ pub struct Submission {
 impl Submission {
     /// Create a new submission.
     pub fn new(id: SubmissionId, op: Op) -> Self {
-        Self { id, op, trace: None }
+        Self {
+            id,
+            op,
+            trace: None,
+        }
     }
 
     /// Attach a trace context.
@@ -190,8 +194,7 @@ mod tests {
 
     #[test]
     fn submission_with_trace_roundtrips() {
-        let trace = W3cTraceContext::new("00-abc-def-01")
-            .with_trace_state("vendor=kimi");
+        let trace = W3cTraceContext::new("00-abc-def-01").with_trace_state("vendor=kimi");
         let sub = Submission::new(SubmissionId::new(7), Op::Interrupt).with_trace(trace);
         let json = serde_json::to_string(&sub).unwrap();
         let parsed: Submission = serde_json::from_str(&json).unwrap();

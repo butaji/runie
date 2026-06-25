@@ -86,14 +86,18 @@ mod tests {
                     role: Role::User,
                     timestamp: 1.0,
                     id: "req.0".into(),
-                    parts: vec![Part::Text { content: "hi".into() }],
+                    parts: vec![Part::Text {
+                        content: "hi".into(),
+                    }],
                     ..Default::default()
                 },
                 ChatMessage {
                     role: Role::Assistant,
                     timestamp: 2.0,
                     id: "resp.0".into(),
-                    parts: vec![Part::Text { content: "hello".into() }],
+                    parts: vec![Part::Text {
+                        content: "hello".into(),
+                    }],
                     ..Default::default()
                 },
             ],
@@ -120,7 +124,9 @@ mod tests {
             role: Role::User,
             timestamp: 1.5,
             id: "req.1".into(),
-            parts: vec![Part::Text { content: "test".into() }],
+            parts: vec![Part::Text {
+                content: "test".into(),
+            }],
             ..Default::default()
         };
         let json = serde_json::to_string(&msg).unwrap();
@@ -171,7 +177,9 @@ mod tests {
         let mut session = sample_session("md_test");
         session.messages.push(ChatMessage {
             role: Role::TurnComplete,
-            parts: vec![crate::message::Part::Text { content: String::new() }],
+            parts: vec![crate::message::Part::Text {
+                content: String::new(),
+            }],
             timestamp: 3.0,
             id: "tc".into(),
             ..Default::default()

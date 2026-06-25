@@ -54,7 +54,11 @@ pub fn open_command_palette_with_filter(state: &mut AppState, initial_filter: &s
 
 pub fn open_model_selector(state: &mut AppState) {
     let current = if state.has_models() {
-        format!("{}/{}", state.config().current_provider, state.config().current_model)
+        format!(
+            "{}/{}",
+            state.config().current_provider,
+            state.config().current_model
+        )
     } else {
         String::new()
     };
@@ -118,11 +122,14 @@ fn sync_scoped_models_with_config(state: &mut AppState) {
                 .iter()
                 .any(|m| m.provider == provider && m.name == name);
             if !already_present {
-                state.config_mut().scoped_models.push(crate::model::ScopedModel {
-                    provider: provider.clone(),
-                    name,
-                    enabled: true,
-                });
+                state
+                    .config_mut()
+                    .scoped_models
+                    .push(crate::model::ScopedModel {
+                        provider: provider.clone(),
+                        name,
+                        enabled: true,
+                    });
             }
         }
     }

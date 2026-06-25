@@ -3,10 +3,13 @@
 use super::*;
 use std::sync::Arc;
 
-use runie_core::{Element, view::{Post, PostKind}};
 use ratatui::widgets::{Paragraph, Wrap};
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::Snapshot;
+use runie_core::{
+    view::{Post, PostKind},
+    Element,
+};
 
 use crate::ui::messages::build_lines_with_mapping;
 

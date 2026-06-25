@@ -42,9 +42,9 @@ fn extract(event: &CoreEvent, state: &mut AppState) -> Option<EffectPayload> {
         CoreEvent::OpenExternalEditor => Some(EffectPayload::OpenExternalEditor {
             text: state.input().input.clone(),
         }),
-        CoreEvent::CopyToClipboard(text) => Some(EffectPayload::CopyToClipboard {
-            text: text.clone(),
-        }),
+        CoreEvent::CopyToClipboard(text) => {
+            Some(EffectPayload::CopyToClipboard { text: text.clone() })
+        }
         CoreEvent::CopyLastResponse => {
             let text = last_assistant_text(&state.session().messages);
             if text.is_empty() {
@@ -85,8 +85,12 @@ fn last_assistant_text(messages: &[runie_core::ChatMessage]) -> String {
 // ---------------------------------------------------------------------------
 
 pub enum EffectCommand {
-    OpenExternalEditor { text: String },
-    CopyToClipboard { text: String },
+    OpenExternalEditor {
+        text: String,
+    },
+    CopyToClipboard {
+        text: String,
+    },
     ShareSession {
         messages: Vec<runie_core::ChatMessage>,
         display_name: Option<String>,
@@ -121,7 +125,9 @@ impl EffectCommand {
             EffectPayload::LoginValidateKey { provider, key } => {
                 Self::LoginFlowSubmitKey { provider, key }
             }
-            EffectPayload::Suspend => Self::Suspend { terminal_caps: *caps },
+            EffectPayload::Suspend => Self::Suspend {
+                terminal_caps: *caps,
+            },
         })
     }
 
@@ -164,7 +170,10 @@ mod tests {
     #[test]
     fn copy_last_response_extracts_assistant_text() {
         let mut state = AppState::default();
-        state.session_mut().messages.push(ChatMessage::system("sys".to_string()));
+        state
+            .session_mut()
+            .messages
+            .push(ChatMessage::system("sys".to_string()));
         state
             .session
             .messages

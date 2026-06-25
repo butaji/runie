@@ -1,6 +1,6 @@
 use super::*;
-use crate::Event;
 use crate::model::AppState;
+use crate::Event;
 
 /// Type a slash command directly into the input and submit it.
 /// Bypasses the `/` → command-palette shortcut so tests can exercise

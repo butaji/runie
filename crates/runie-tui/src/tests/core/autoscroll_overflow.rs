@@ -1,8 +1,8 @@
 #![allow(clippy::needless_borrow)]
 use super::*;
 
+use runie_core::model::{AppState, ChatMessage, Role};
 use runie_core::Event;
-use runie_core::model::{AppState, ChatMessage,  Role};
 use runie_core::Part;
 use runie_testing::fresh_state;
 
@@ -147,7 +147,9 @@ fn viewport_never_empty_when_content_exists() {
     for i in 0..10 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text { content: format!("msg{}", i) }],
+            parts: vec![Part::Text {
+                content: format!("msg{}", i),
+            }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -173,7 +175,9 @@ fn scroll_zero_always_shows_latest() {
     for i in 0..3 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text { content: format!("msg{}", i) }],
+            parts: vec![Part::Text {
+                content: format!("msg{}", i),
+            }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()

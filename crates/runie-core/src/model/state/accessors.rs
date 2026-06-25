@@ -4,8 +4,7 @@
 //! private fields. Handlers and actors use these instead of direct field access.
 
 use crate::model::state::{
-    AgentState, AppState, CompletionState, ConfigState, InputState, SessionState,
-    ViewState,
+    AgentState, AppState, CompletionState, ConfigState, InputState, SessionState, ViewState,
 };
 
 impl AppState {
@@ -155,9 +154,7 @@ impl AppState {
         &mut self.dialog_back_stack
     }
 
-    pub fn login_flow_mut(
-        &mut self,
-    ) -> &mut Option<crate::login_flow::LoginFlowState> {
+    pub fn login_flow_mut(&mut self) -> &mut Option<crate::login_flow::LoginFlowState> {
         &mut self.login_flow
     }
 
@@ -183,8 +180,7 @@ impl AppState {
 
     pub(crate) fn trust_decisions_mut(
         &mut self,
-    ) -> &mut std::collections::HashMap<std::path::PathBuf, crate::trust::TrustDecision>
-    {
+    ) -> &mut std::collections::HashMap<std::path::PathBuf, crate::trust::TrustDecision> {
         &mut self.trust_decisions
     }
 

@@ -20,10 +20,7 @@ fn is_triple_backtick(chars: &std::iter::Peekable<std::str::Chars>) -> bool {
     chars.clone().nth(1) == Some('`')
 }
 
-fn handle_triple_backtick(
-    chars: &mut std::iter::Peekable<std::str::Chars>,
-    result: &mut String,
-) {
+fn handle_triple_backtick(chars: &mut std::iter::Peekable<std::str::Chars>, result: &mut String) {
     // First backtick already pushed by main loop; consume the next two
     chars.next();
     result.push('`');
@@ -145,7 +142,11 @@ impl StreamingBuffer {
             }
         }
         self.last_flush = Some(Instant::now());
-        self.stable.drain(..).filter(|l| !l.is_empty()).map(|l| heal_markdown(&l)).collect()
+        self.stable
+            .drain(..)
+            .filter(|l| !l.is_empty())
+            .map(|l| heal_markdown(&l))
+            .collect()
     }
 
     pub fn force_flush(&mut self) -> Vec<String> {
@@ -331,8 +332,14 @@ mod tests {
 
     #[test]
     fn heal_markdown_leaves_closed_syntax_unchanged() {
-        assert_eq!(heal_markdown("hello **world** and `code`"), "hello **world** and `code`");
-        assert_eq!(heal_markdown("**bold** and _italic_ and `code`"), "**bold** and _italic_ and `code`");
+        assert_eq!(
+            heal_markdown("hello **world** and `code`"),
+            "hello **world** and `code`"
+        );
+        assert_eq!(
+            heal_markdown("**bold** and _italic_ and `code`"),
+            "**bold** and _italic_ and `code`"
+        );
     }
 
     #[test]

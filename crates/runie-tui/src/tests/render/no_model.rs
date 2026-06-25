@@ -1,5 +1,5 @@
-use super::*;
 use super::find_input_box_bounds;
+use super::*;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::AppState;

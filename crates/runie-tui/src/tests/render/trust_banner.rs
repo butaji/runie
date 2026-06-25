@@ -3,8 +3,8 @@
 use super::*;
 use ratatui::{backend::TestBackend, Terminal};
 
-use runie_core::Event;
 use runie_core::model::{AppState, ChatMessage, Role};
+use runie_core::Event;
 use runie_core::Part;
 
 fn render_state(state: &mut AppState, width: u16, height: u16) -> String {

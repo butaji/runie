@@ -4,8 +4,8 @@
 use crate::tests::ensure_mock_provider;
 use crate::tests::turn::mock_tool_skill;
 use crate::{run_agent_turn_with_skills, AgentCommand};
-use runie_core::Event;
 use runie_core::message::Role;
+use runie_core::Event;
 use runie_testing::{allow_all_gate, mock_provider};
 use std::sync::{Arc, Mutex};
 

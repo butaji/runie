@@ -61,7 +61,10 @@ pub fn save_provider_config(
     models: &[String],
 ) -> anyhow::Result<()> {
     with_write_lock(|config| {
-        let provider_type = config.model_providers.get(name).and_then(|p| p.provider_type.clone());
+        let provider_type = config
+            .model_providers
+            .get(name)
+            .and_then(|p| p.provider_type.clone());
         config.model_providers.insert(
             name.into(),
             crate::config::ModelProvider {

@@ -5,8 +5,8 @@
 
 use super::*;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::Event;
 use runie_core::login_flow::LoginStep;
+use runie_core::Event;
 
 use crate::tests::{connect_model, view};
 
@@ -69,7 +69,6 @@ fn e2e_login_flow_reaches_model_selector() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
@@ -105,7 +104,6 @@ fn e2e_login_flow_save_activates_first_model() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-
 
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {
@@ -171,7 +169,6 @@ fn e2e_login_flow_title_has_exactly_one_space_padding() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
@@ -200,7 +197,6 @@ fn e2e_providers_add_flow_save_renders_input_box() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-
 
     state.update(Event::ProvidersDialog);
     state.update(Event::ProvidersAdd);
@@ -240,7 +236,6 @@ fn e2e_login_flow_submit_save_button_renders_input_box() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-
 
     state.update(Event::Start);
     state.update(Event::SelectProvider {
@@ -282,7 +277,6 @@ fn e2e_login_flow_save_renders_input_box() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
@@ -316,7 +310,6 @@ fn e2e_login_flow_submit_on_model_toggle_saves_and_connects() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-
 
     state.update(Event::Start);
     state.update(Event::SelectProvider {
@@ -356,7 +349,6 @@ fn e2e_login_flow_api_key_label_renders_fully() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-
 
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {

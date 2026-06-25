@@ -1,8 +1,7 @@
 //! Layer 1 + Layer 2 tests for token counters and animated speed
 
-
-use crate::Event;
 use crate::tests::fresh_state;
+use crate::Event;
 
 // =============================================================================
 // Layer 1: Token counting logic

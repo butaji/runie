@@ -30,7 +30,9 @@ fn command_palette_hides_underlying_messages() {
     // Add a visible message that would show through if popup is transparent
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text { content: "XYZZY_PLUGH".into() }],
+        parts: vec![Part::Text {
+            content: "XYZZY_PLUGH".into(),
+        }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -66,7 +68,9 @@ fn settings_dialog_hides_underlying_messages() {
 
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text { content: "XYZZY_PLUGH".into() }],
+        parts: vec![Part::Text {
+            content: "XYZZY_PLUGH".into(),
+        }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -100,7 +104,9 @@ fn model_selector_hides_underlying_messages() {
 
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text { content: "XYZZY_PLUGH".into() }],
+        parts: vec![Part::Text {
+            content: "XYZZY_PLUGH".into(),
+        }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -151,7 +157,9 @@ fn command_palette_uses_terminal_background() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text { content: "XYZZY_PLUGH".into() }],
+        parts: vec![Part::Text {
+            content: "XYZZY_PLUGH".into(),
+        }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -184,7 +192,9 @@ fn panel_dialog_hides_underlying_messages() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text { content: "XYZZY_PLUGH".into() }],
+        parts: vec![Part::Text {
+            content: "XYZZY_PLUGH".into(),
+        }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()

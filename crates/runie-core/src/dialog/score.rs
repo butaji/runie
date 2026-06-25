@@ -24,7 +24,9 @@ pub fn match_score(label: &str, query: &str) -> Option<isize> {
 /// Score any panel item, using command-aware matching for palette entries.
 pub fn item_match_score(item: &PanelItem, query: &str) -> Option<isize> {
     match item {
-        PanelItem::Command { name, desc, label, .. } => command_match_score(name, desc, label, query),
+        PanelItem::Command {
+            name, desc, label, ..
+        } => command_match_score(name, desc, label, query),
         _ => match_score(item.label()?, query),
     }
 }
@@ -41,7 +43,9 @@ fn command_match_score(name: &str, desc: &str, label: &str, query: &str) -> Opti
 
     // Exact "name args" input: highest priority.
     if query_lower.starts_with(&name_lower)
-        && query_lower.get(name_lower.len()..).is_some_and(|r| r.starts_with(' '))
+        && query_lower
+            .get(name_lower.len()..)
+            .is_some_and(|r| r.starts_with(' '))
     {
         return Some(20_000 + (100 - name.len() as isize).max(0));
     }

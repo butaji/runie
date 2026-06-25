@@ -2,8 +2,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::Event;
     use crate::model::AppState;
+    use crate::Event;
 
     /// Regression test: HistoryPrev/HistoryNext must NOT be consumed by vim_nav
     /// handler. They should fall through to normal history navigation dispatch.

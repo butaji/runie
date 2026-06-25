@@ -4,11 +4,11 @@ use crate::tool::search::types::{
     build_search_item, SearchItem, SearchResult, DEFAULT_MAX_MATCHES,
 };
 use crate::tool::{ToolOutput, ToolStatus};
-use runie_core::tool::truncate_output;
 use fff_search::{
     FilePicker, FuzzySearchOptions, GrepMatch, GrepMode, GrepResult, GrepSearchOptions,
     PaginationArgs, QueryParser, QueryTracker,
 };
+use runie_core::tool::truncate_output;
 use std::time::Instant;
 
 pub(crate) fn search_files(
@@ -142,7 +142,6 @@ fn map_content_match(picker: &FilePicker, results: &GrepResult<'_>, m: &GrepMatc
         git_status: None,
     }
 }
-
 
 fn build_search_output(
     query: &str,

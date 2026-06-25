@@ -99,8 +99,8 @@ fn model_label(model: &str, is_active: bool, is_current: bool) -> String {
 pub fn build_provider_models_editor(state: &AppState, provider: &str) -> PanelStack {
     let (saved, available) = crate::update::settings_dialog::provider_model_lists(state, provider);
     let saved: std::collections::HashSet<String> = saved.into_iter().collect();
-    let mut panel = Panel::new("provider-models", format!(" Edit {} models ", provider))
-        .with_filter();
+    let mut panel =
+        Panel::new("provider-models", format!(" Edit {} models ", provider)).with_filter();
     for model in available {
         let key = format!("edit_provider:{}:{}", provider, model);
         panel = panel.toggle(&model, saved.contains(&model), ItemAction::Toggle(key));

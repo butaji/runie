@@ -1,5 +1,5 @@
-use crate::Event;
 use crate::model::{AppState, ChatMessage, Role};
+use crate::Event;
 
 #[test]
 fn queue_empty_by_default() {

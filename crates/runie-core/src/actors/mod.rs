@@ -7,7 +7,7 @@
 mod r#trait;
 
 // Re-exports from the actor trait (lives in trait.rs).
-pub use r#trait::{Actor, ActorFuture, ActorHandle, Reply, spawn_actor};
+pub use r#trait::{spawn_actor, Actor, ActorFuture, ActorHandle, Reply};
 
 mod config;
 mod fff_indexer;

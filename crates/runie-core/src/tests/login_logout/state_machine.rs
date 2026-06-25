@@ -1,5 +1,5 @@
-use crate::Event;
 use crate::model::AppState;
+use crate::Event;
 
 use super::clean_config;
 

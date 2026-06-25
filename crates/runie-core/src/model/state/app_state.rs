@@ -7,8 +7,7 @@
 //! struct reassignment (which is illegal when fields are private).
 
 use super::{
-    AgentState, CompletionState, ConfigState, FffFileEntry, InputState,
-    SessionState, ViewState,
+    AgentState, CompletionState, ConfigState, FffFileEntry, InputState, SessionState, ViewState,
 };
 
 #[derive(Clone)]

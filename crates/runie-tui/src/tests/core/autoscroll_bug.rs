@@ -1,7 +1,7 @@
 use super::*;
-use runie_core::Event;
 use runie_core::layout::element_line_count;
-use runie_core::model::{AppState, ChatMessage,  Role};
+use runie_core::model::{AppState, ChatMessage, Role};
+use runie_core::Event;
 use runie_core::Part;
 use runie_testing::fresh_state;
 
@@ -15,7 +15,9 @@ fn large_tool_output_bottom_lines_in_viewport() {
     // User message + spacer = 2 lines
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text { content: "list files".into() }],
+        parts: vec![Part::Text {
+            content: "list files".into(),
+        }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -55,7 +57,9 @@ fn viewport_never_exceeds_height() {
 
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text { content: "◆ Ran ls 0.5s\nfile1\nfile2\nfile3\nfile4\nfile5".into() }],
+        parts: vec![Part::Text {
+            content: "◆ Ran ls 0.5s\nfile1\nfile2\nfile3\nfile4\nfile5".into(),
+        }],
         timestamp: 1.0,
         id: "t1".into(),
         ..Default::default()
@@ -104,7 +108,9 @@ fn last_element_lines_clipped_to_fit_viewport() {
 fn add_user_and_huge_thought(state: &mut AppState) {
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text { content: "hi".into() }],
+        parts: vec![Part::Text {
+            content: "hi".into(),
+        }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()

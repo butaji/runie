@@ -22,9 +22,7 @@ fn apply_config_reloads_prompts() {
 #[test]
 fn resume_session_opens_session_tree_dialog() {
     let mut state = crate::model::AppState::default();
-    state.update(crate::Event::from(
-        Event::ResumeSession,
-    ));
+    state.update(crate::Event::from(Event::ResumeSession));
     assert!(
         matches!(
             state.open_dialog,
@@ -39,9 +37,7 @@ fn resume_session_opens_session_tree_dialog() {
 fn toggle_vim_mode_marks_dirty() {
     let mut state = crate::model::AppState::default();
     state.view.dirty = false;
-    state.update(crate::Event::from(
-        Event::ToggleVimMode,
-    ));
+    state.update(crate::Event::from(Event::ToggleVimMode));
     assert!(state.view.dirty, "ToggleVimMode should mark the view dirty");
 }
 

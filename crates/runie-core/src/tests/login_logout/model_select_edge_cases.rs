@@ -1,6 +1,6 @@
-use crate::Event;
 use crate::login_flow::LoginStep;
 use crate::model::AppState;
+use crate::Event;
 
 use super::{
     assert_step, assert_transient_contains, clean_config, current_panel, fetch_models,
@@ -135,7 +135,9 @@ fn toggle_model_event_preserves_selection_index() {
         "selection should start on second model"
     );
 
-    state.update(Event::from(crate::Event::ToggleModel { model: "M2".into() }));
+    state.update(Event::from(crate::Event::ToggleModel {
+        model: "M2".into(),
+    }));
 
     assert_eq!(
         current_panel(&state).map(|p| p.selected),

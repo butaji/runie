@@ -1,6 +1,6 @@
 use crate::commands::{CommandResult, DialogState};
-use crate::Event;
 use crate::model::AppState;
+use crate::Event;
 
 use super::{exec_handler, run_slash};
 

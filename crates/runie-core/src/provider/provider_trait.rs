@@ -1,7 +1,7 @@
 //! Provider trait and types
 
-use crate::provider_event::ProviderEvent;
 use crate::message::ChatMessage;
+use crate::provider_event::ProviderEvent;
 use anyhow::Result;
 use futures::Stream;
 use std::pin::Pin;

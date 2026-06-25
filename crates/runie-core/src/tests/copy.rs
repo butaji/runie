@@ -4,9 +4,9 @@
 //! write the OSC 52 sequence directly to the terminal. These tests
 //! verify the event is emitted with the correct payload.
 
-use crate::Event;
 use crate::model::{AppState, ChatMessage};
 use crate::tests::fresh_state;
+use crate::Event;
 use std::sync::Mutex;
 
 /// Serializes tests that touch shared env/state.
@@ -47,9 +47,11 @@ fn copy_with_no_assistant_message_shows_error() {
 fn copy_emits_clipboard_event_with_last_assistant_text() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = fresh_state();
-    state.session.messages.push(ChatMessage::assistant("the answer is 42")
-        .with_id("resp.0")
-        .with_timestamp(0.0));
+    state.session.messages.push(
+        ChatMessage::assistant("the answer is 42")
+            .with_id("resp.0")
+            .with_timestamp(0.0),
+    );
 
     // Capture the event emitted by /copy. Since CopyToClipboard is
     // routed to control_event (which currently ignores it), we
@@ -66,12 +68,16 @@ fn copy_emits_clipboard_event_with_last_assistant_text() {
 fn copy_uses_most_recent_assistant_message() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = fresh_state();
-    state.session.messages.push(ChatMessage::assistant("old response")
-        .with_id("resp.0")
-        .with_timestamp(0.0));
-    state.session.messages.push(ChatMessage::assistant("newer response")
-        .with_id("resp.1")
-        .with_timestamp(1.0));
+    state.session.messages.push(
+        ChatMessage::assistant("old response")
+            .with_id("resp.0")
+            .with_timestamp(0.0),
+    );
+    state.session.messages.push(
+        ChatMessage::assistant("newer response")
+            .with_id("resp.1")
+            .with_timestamp(1.0),
+    );
 
     let result = state.handle_slash("/copy");
     assert!(
@@ -85,12 +91,16 @@ fn copy_uses_most_recent_assistant_message() {
 fn copy_event_payload_does_not_include_older_messages() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = fresh_state();
-    state.session.messages.push(ChatMessage::assistant("old response")
-        .with_id("resp.0")
-        .with_timestamp(0.0));
-    state.session.messages.push(ChatMessage::assistant("newer response")
-        .with_id("resp.1")
-        .with_timestamp(1.0));
+    state.session.messages.push(
+        ChatMessage::assistant("old response")
+            .with_id("resp.0")
+            .with_timestamp(0.0),
+    );
+    state.session.messages.push(
+        ChatMessage::assistant("newer response")
+            .with_id("resp.1")
+            .with_timestamp(1.0),
+    );
 
     let result = state.handle_slash("/copy");
     if let Some(crate::commands::CommandResult::Event(crate::Event::CopyToClipboard(text))) = result
@@ -110,9 +120,11 @@ fn copy_event_payload_does_not_include_older_messages() {
 /// Build state with a single user message post selected.
 fn state_with_selected_post_user() -> AppState {
     let mut state = AppState::default();
-    state.session.messages.push(ChatMessage::user("hello world")
-        .with_id("req.0")
-        .with_timestamp(1.0));
+    state.session.messages.push(
+        ChatMessage::user("hello world")
+            .with_id("req.0")
+            .with_timestamp(1.0),
+    );
     state.messages_changed();
     state.ensure_fresh();
     state.view.selected_post = Some(0);
@@ -122,9 +134,11 @@ fn state_with_selected_post_user() -> AppState {
 /// Build state with a single agent message post selected.
 fn state_with_selected_post_agent() -> AppState {
     let mut state = AppState::default();
-    state.session.messages.push(ChatMessage::assistant("the answer is 42")
-        .with_id("resp.0")
-        .with_timestamp(1.0));
+    state.session.messages.push(
+        ChatMessage::assistant("the answer is 42")
+            .with_id("resp.0")
+            .with_timestamp(1.0),
+    );
     state.messages_changed();
     state.ensure_fresh();
     state.view.selected_post = Some(0);
@@ -134,12 +148,16 @@ fn state_with_selected_post_agent() -> AppState {
 /// Build state with a tool-done element selected.
 fn state_with_selected_post_tool_done() -> AppState {
     let mut state = AppState::default();
-    state.session.messages.push(ChatMessage::assistant("running ls")
-        .with_id("resp.0")
-        .with_timestamp(1.0));
-    state.session.messages.push(ChatMessage::tool_result("x bash 0.5s\nfile1\nfile2")
-        .with_id("tool.0")
-        .with_timestamp(2.0));
+    state.session.messages.push(
+        ChatMessage::assistant("running ls")
+            .with_id("resp.0")
+            .with_timestamp(1.0),
+    );
+    state.session.messages.push(
+        ChatMessage::tool_result("x bash 0.5s\nfile1\nfile2")
+            .with_id("tool.0")
+            .with_timestamp(2.0),
+    );
     state.messages_changed();
     state.ensure_fresh();
     // Tool-done is post index 1

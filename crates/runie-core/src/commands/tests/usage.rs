@@ -142,7 +142,9 @@ fn no_form_submit_handler_returns_usage_message() {
 
     assert_no_usage_message(
         "load",
-        &state.handle_slash("/load").expect("load should return result"),
+        &state
+            .handle_slash("/load")
+            .expect("load should return result"),
     );
     assert_no_usage_message(
         "delete",
@@ -188,7 +190,9 @@ fn assert_form_submit_does_not_show_usage(
 fn load_form_submit_empty_does_not_show_usage() {
     let mut state = AppState::default();
     let initial_msg_count = state.session.messages.len();
-    let result = state.handle_slash("/load").expect("load should return result");
+    let result = state
+        .handle_slash("/load")
+        .expect("load should return result");
     assert_form_submit_does_not_show_usage("load", &result, initial_msg_count, &state);
 }
 

@@ -214,7 +214,9 @@ fn empty_current_marker_when_no_active_model() {
         _ => Vec::new(),
     };
     assert!(
-        !items.iter().any(|i| i.label().map(|l| l.starts_with('★')).unwrap_or(false)),
+        !items
+            .iter()
+            .any(|i| i.label().map(|l| l.starts_with('★')).unwrap_or(false)),
         "no item should be starred when there is no active model"
     );
 }
@@ -242,7 +244,10 @@ fn filter_narrows_selector() {
 #[test]
 fn up_down_navigates_selector() {
     let mut state = AppState::default();
-    configure(&mut state, &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
+    configure(
+        &mut state,
+        &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])],
+    );
     state.update(crate::Event::ToggleModelSelector);
     state.update(crate::Event::ModelSelectorDown);
     let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
@@ -255,7 +260,10 @@ fn up_down_navigates_selector() {
 #[test]
 fn selector_wraps_up() {
     let mut state = AppState::default();
-    configure(&mut state, &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
+    configure(
+        &mut state,
+        &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])],
+    );
     state.update(crate::Event::ToggleModelSelector);
     state.update(crate::Event::ModelSelectorUp);
     let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
@@ -269,7 +277,10 @@ fn selector_wraps_up() {
 #[test]
 fn selector_wraps_down() {
     let mut state = AppState::default();
-    configure(&mut state, &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
+    configure(
+        &mut state,
+        &[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])],
+    );
     state.update(crate::Event::ToggleModelSelector);
     let count = match &state.open_dialog {
         Some(DialogState::ModelSelector(stack)) => {

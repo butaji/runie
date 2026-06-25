@@ -5,8 +5,8 @@
 
 use super::*;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::Event;
 use runie_core::login_flow::LoginStep;
+use runie_core::Event;
 
 use crate::tests::{configure_test_providers, view};
 

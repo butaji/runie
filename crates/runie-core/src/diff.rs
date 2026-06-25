@@ -11,8 +11,14 @@ const DIFF_DEADLINE_SECS: u64 = 5;
 /// A line within a hunk.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum DiffLine {
-    Added(String, #[serde(skip_serializing_if = "Option::is_none")] Option<u32>),
-    Removed(String, #[serde(skip_serializing_if = "Option::is_none")] Option<u32>),
+    Added(
+        String,
+        #[serde(skip_serializing_if = "Option::is_none")] Option<u32>,
+    ),
+    Removed(
+        String,
+        #[serde(skip_serializing_if = "Option::is_none")] Option<u32>,
+    ),
     Context(String),
 }
 
@@ -333,16 +339,14 @@ impl HunkBuilder {
 
     fn apply_delete(&mut self, value: &str) {
         self.start_hunk_if_needed();
-        self.current
-            .push(DiffLine::removed(trim_end(value)));
+        self.current.push(DiffLine::removed(trim_end(value)));
         self.old_len += 1;
         self.old_line += 1;
     }
 
     fn apply_insert(&mut self, value: &str) {
         self.start_hunk_if_needed();
-        self.current
-            .push(DiffLine::added(trim_end(value)));
+        self.current.push(DiffLine::added(trim_end(value)));
         self.new_len += 1;
         self.new_line += 1;
     }

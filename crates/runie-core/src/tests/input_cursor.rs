@@ -2,8 +2,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::Event;
     use crate::model::AppState;
+    use crate::Event;
 
     #[test]
     fn cursor_starts_at_zero() {
@@ -126,7 +126,7 @@ mod tests {
         state.update(crate::Event::CursorLeft); // at 10
         state.update(crate::Event::CursorLeft); // at 9
         state.update(crate::Event::CursorLeft); // at 8 (before 'r')
-                                              // DeleteWord should delete from position 6 ("w") to cursor 8 = "wo"
+                                                // DeleteWord should delete from position 6 ("w") to cursor 8 = "wo"
         state.update(crate::Event::DeleteWord);
         assert_eq!(state.input.input, "hello rld");
         assert_eq!(state.input.cursor_pos, 6);

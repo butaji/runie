@@ -20,10 +20,9 @@ pub fn build_provider_picker() -> Panel {
         panel = panel.item(&label, ItemAction::Emit(evt));
     }
 
-    panel = panel.separator().item(
-        "_Cancel",
-        ItemAction::Emit(crate::Event::Abort),
-    );
+    panel = panel
+        .separator()
+        .item("_Cancel", ItemAction::Emit(crate::Event::Abort));
     panel
 }
 
@@ -35,10 +34,7 @@ pub fn build_key_input(state: &LoginFlowState) -> Panel {
         .form_field_value("API Key", "sk-...", "key", state.key.clone())
         .form_hidden("provider", state.provider.clone())
         .form_submit_with(login_key_submit)
-        .item(
-            "_Cancel",
-            ItemAction::Emit(crate::Event::Abort),
-        )
+        .item("_Cancel", ItemAction::Emit(crate::Event::Abort))
 }
 
 fn login_key_submit(values: &std::collections::HashMap<String, String>) -> crate::event::Event {
@@ -78,14 +74,8 @@ pub fn build_model_selector(state: &LoginFlowState) -> Panel {
 
     panel = panel
         .separator()
-        .item(
-            "_Save",
-            ItemAction::Emit(crate::Event::Save),
-        )
-        .item(
-            "_Cancel",
-            ItemAction::Emit(crate::Event::Abort),
-        );
+        .item("_Save", ItemAction::Emit(crate::Event::Save))
+        .item("_Cancel", ItemAction::Emit(crate::Event::Abort));
     panel
 }
 

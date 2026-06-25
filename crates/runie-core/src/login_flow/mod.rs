@@ -20,10 +20,10 @@ pub use state::{LoginFlowState, LoginStep};
 // Re-exports from handlers module.
 pub use handlers::{login_flow_cancel, login_flow_event, login_flow_start};
 
-mod panels;
-pub(crate) mod panel_ops;
-mod state;
 pub(crate) mod handlers;
+pub(crate) mod panel_ops;
+mod panels;
+mod state;
 
 #[cfg(test)]
 mod state_tests;

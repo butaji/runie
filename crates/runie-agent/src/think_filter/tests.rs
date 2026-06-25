@@ -3,26 +3,60 @@
 use super::*;
 use runie_core::provider_event::StopReason as SR;
 
-fn ev(delta: &str) -> ProviderEvent { ProviderEvent::TextDelta(delta.into()) }
-fn td(delta: &str) -> ProviderEvent { ProviderEvent::ThinkingDelta(delta.into()) }
-fn fin() -> ProviderEvent { ProviderEvent::Finish { reason: SR::Stop } }
-fn ts() -> ProviderEvent { ProviderEvent::ThinkingStart { id: "inline".into() } }
-fn te() -> ProviderEvent { ProviderEvent::ThinkingEnd { id: "inline".into() } }
+fn ev(delta: &str) -> ProviderEvent {
+    ProviderEvent::TextDelta(delta.into())
+}
+fn td(delta: &str) -> ProviderEvent {
+    ProviderEvent::ThinkingDelta(delta.into())
+}
+fn fin() -> ProviderEvent {
+    ProviderEvent::Finish { reason: SR::Stop }
+}
+fn ts() -> ProviderEvent {
+    ProviderEvent::ThinkingStart {
+        id: "inline".into(),
+    }
+}
+fn te() -> ProviderEvent {
+    ProviderEvent::ThinkingEnd {
+        id: "inline".into(),
+    }
+}
 
 fn has_ts(events: &[ProviderEvent]) -> bool {
-    events.iter().any(|e| matches!(e, ProviderEvent::ThinkingStart { .. }))
+    events
+        .iter()
+        .any(|e| matches!(e, ProviderEvent::ThinkingStart { .. }))
 }
 fn has_te(events: &[ProviderEvent]) -> bool {
-    events.iter().any(|e| matches!(e, ProviderEvent::ThinkingEnd { .. }))
+    events
+        .iter()
+        .any(|e| matches!(e, ProviderEvent::ThinkingEnd { .. }))
 }
 fn has_td(events: &[ProviderEvent]) -> bool {
-    events.iter().any(|e| matches!(e, ProviderEvent::ThinkingDelta(_)))
+    events
+        .iter()
+        .any(|e| matches!(e, ProviderEvent::ThinkingDelta(_)))
 }
 fn td_content(events: &[ProviderEvent]) -> String {
-    events.iter().filter_map(|e| match e { ProviderEvent::ThinkingDelta(s) => Some(s.as_str()), _ => None }).collect::<Vec<_>>().join("")
+    events
+        .iter()
+        .filter_map(|e| match e {
+            ProviderEvent::ThinkingDelta(s) => Some(s.as_str()),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join("")
 }
 fn text_content(events: &[ProviderEvent]) -> String {
-    events.iter().filter_map(|e| match e { ProviderEvent::TextDelta(s) => Some(s.as_str()), _ => None }).collect::<Vec<_>>().join("")
+    events
+        .iter()
+        .filter_map(|e| match e {
+            ProviderEvent::TextDelta(s) => Some(s.as_str()),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join("")
 }
 
 /// Layer 1: ThinkFilter passes plain text through unchanged.
@@ -37,7 +71,10 @@ fn passes_plain_text() {
 #[test]
 fn strips_closed_block() {
     let mut f = ThinkFilter::new();
-    let out: Vec<_> = f.feed(ev("<tool_call>planning</tool_call>")).into_iter().collect();
+    let out: Vec<_> = f
+        .feed(ev("<tool_call>planning</tool_call>"))
+        .into_iter()
+        .collect();
     assert!(has_ts(&out));
     assert!(has_td(&out));
     assert!(has_te(&out));
@@ -50,7 +87,10 @@ fn partial_open_tag() {
     let mut f = ThinkFilter::new();
     let out1: Vec<_> = f.feed(ev("<tool")).into_iter().collect();
     assert!(out1.is_empty());
-    let out2: Vec<_> = f.feed(ev("_call>analysis</thinking>")).into_iter().collect();
+    let out2: Vec<_> = f
+        .feed(ev("_call>analysis</thinking>"))
+        .into_iter()
+        .collect();
     assert!(has_ts(&out2));
     assert!(has_td(&out2));
     assert!(has_te(&out2));
@@ -79,7 +119,9 @@ fn thinking_delta_passthrough() {
 #[test]
 fn flush_emits_te() {
     let mut f = ThinkFilter::new();
-    f.feed(ev("<thinking>unclosed")).into_iter().collect::<Vec<_>>();
+    f.feed(ev("<thinking>unclosed"))
+        .into_iter()
+        .collect::<Vec<_>>();
     let flushed: Vec<_> = f.flush().into_iter().collect();
     assert!(has_te(&flushed));
 }
@@ -97,9 +139,22 @@ fn flush_empty() {
 #[test]
 fn nested_opens() {
     let mut f = ThinkFilter::new();
-    let out: Vec<_> = f.feed(ev("<thinking>first</thinking><tool_call>second</thinking>")).into_iter().collect();
-    assert_eq!(out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. })).count(), 2);
-    assert_eq!(out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. })).count(), 2);
+    let out: Vec<_> = f
+        .feed(ev("<thinking>first</thinking><tool_call>second</thinking>"))
+        .into_iter()
+        .collect();
+    assert_eq!(
+        out.iter()
+            .filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. }))
+            .count(),
+        2
+    );
+    assert_eq!(
+        out.iter()
+            .filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. }))
+            .count(),
+        2
+    );
 }
 
 /// Layer 1: Empty thinking block emits TS + TE, no delta.
@@ -116,7 +171,9 @@ fn empty_block() {
 #[test]
 fn after_flush() {
     let mut f = ThinkFilter::new();
-    f.feed(ev("<thinking>done</thinking>")).into_iter().collect::<Vec<_>>();
+    f.feed(ev("<thinking>done</thinking>"))
+        .into_iter()
+        .collect::<Vec<_>>();
     f.flush().into_iter().collect::<Vec<_>>();
     let out: Vec<_> = f.feed(ev("more text")).into_iter().collect();
     assert_eq!(out, vec![ev("more text")]);
@@ -126,7 +183,9 @@ fn after_flush() {
 #[test]
 fn multiple_chunks() {
     let mut f = ThinkFilter::new();
-    f.feed(ev("<tool_call>first")).into_iter().collect::<Vec<_>>();
+    f.feed(ev("<tool_call>first"))
+        .into_iter()
+        .collect::<Vec<_>>();
     let out2: Vec<_> = f.feed(ev(" second")).into_iter().collect();
     let out3: Vec<_> = f.feed(ev(" third</thinking>")).into_iter().collect();
     let all = td_content(&[out2, out3].concat());
@@ -139,16 +198,32 @@ fn multiple_chunks() {
 #[test]
 fn adjacent_blocks() {
     let mut f = ThinkFilter::new();
-    let out: Vec<_> = f.feed(ev("<thinking>a</thinking><thinking>b</thinking>")).into_iter().collect();
-    assert_eq!(out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. })).count(), 2);
-    assert_eq!(out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. })).count(), 2);
+    let out: Vec<_> = f
+        .feed(ev("<thinking>a</thinking><thinking>b</thinking>"))
+        .into_iter()
+        .collect();
+    assert_eq!(
+        out.iter()
+            .filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. }))
+            .count(),
+        2
+    );
+    assert_eq!(
+        out.iter()
+            .filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. }))
+            .count(),
+        2
+    );
 }
 
 /// Layer 1: Text before and after thinking block preserved.
 #[test]
 fn text_before_and_after() {
     let mut f = ThinkFilter::new();
-    let out: Vec<_> = f.feed(ev("before<thinking>think</thinking>after")).into_iter().collect();
+    let out: Vec<_> = f
+        .feed(ev("before<thinking>think</thinking>after"))
+        .into_iter()
+        .collect();
     let texts = text_content(&out);
     assert!(texts.contains("before"));
     assert!(texts.contains("after"));
@@ -170,16 +245,29 @@ fn flush_with_open() {
 #[test]
 fn whitespace_between_closes() {
     let mut f = ThinkFilter::new();
-    let out: Vec<_> = f.feed(ev("<thinking>a</thinking>   </thinking>b")).into_iter().collect();
-    assert_eq!(out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. })).count(), 1);
-    assert_eq!(out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. })).count(), 1);
+    let out: Vec<_> = f
+        .feed(ev("<thinking>a</thinking>   </thinking>b"))
+        .into_iter()
+        .collect();
+    assert_eq!(
+        out.iter()
+            .filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. }))
+            .count(),
+        1
+    );
+    assert_eq!(
+        out.iter()
+            .filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. }))
+            .count(),
+        1
+    );
     assert!(text_content(&out).contains("b"));
 }
 
 /// Layer 1: emit helpers produce correct events.
 #[test]
 fn emit_helpers() {
-    use super::{emit_thinking, emit_thinking_end, emit_thinking_start, emit_text};
+    use super::{emit_text, emit_thinking, emit_thinking_end, emit_thinking_start};
     let mut out = Vec::new();
     emit_thinking_start(&mut out);
     emit_thinking(&mut out, "test".into());

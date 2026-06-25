@@ -14,15 +14,15 @@ pub use level::TransientLevel;
 
 pub mod constructors;
 pub mod durable;
+pub mod from_provider_event;
+pub mod intent;
+pub(crate) mod intent_impl;
+pub mod kind;
 mod level;
 pub mod name;
 mod names;
 pub mod to_durable;
 mod variants;
-pub mod from_provider_event;
-pub mod intent;
-pub(crate) mod intent_impl;
-pub mod kind;
 
 pub use kind::EventKind;
 #[cfg(test)]

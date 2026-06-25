@@ -6,10 +6,10 @@
 
 use anyhow::Result;
 use futures::StreamExt;
-use runie_core::event::{Event};
-use runie_core::provider_event::ProviderEvent;
+use runie_core::event::Event;
 use runie_core::message::ChatMessage;
 use runie_core::provider::Provider;
+use runie_core::provider_event::ProviderEvent;
 use runie_core::tool_markers::strip_tool_markers;
 use runie_core::tool_parser::{parse_tool_calls_fallible, ParsedToolCall, ToolParseError};
 use runie_core::tool_stream::ToolStream;
@@ -72,7 +72,9 @@ impl StreamState {
             ProviderEvent::ToolCallInputDelta { id, delta } => self.on_tool_input(id, delta),
             ProviderEvent::ToolCallEnd { id } => self.on_tool_end(id),
             ProviderEvent::Finish { .. } => ControlFlow::Break(Ok(())),
-            ProviderEvent::Error(e) => ControlFlow::Break(Err(anyhow::anyhow!("Model error: {:?}", e))),
+            ProviderEvent::Error(e) => {
+                ControlFlow::Break(Err(anyhow::anyhow!("Model error: {:?}", e)))
+            }
             _ => ControlFlow::Continue(()),
         }
     }
@@ -186,7 +188,8 @@ mod tests {
         fn generate(
             &self,
             _messages: Vec<ChatMessage>,
-        ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<ProviderEvent>> + Send + '_>> {
+        ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<ProviderEvent>> + Send + '_>>
+        {
             let events = self.events.clone();
             Box::pin(futures::stream::iter(events.into_iter().map(Ok)))
         }
@@ -206,7 +209,9 @@ mod tests {
                     id: "call_1".into(),
                     delta: "{\"path\":\"Cargo.toml\"}".into(),
                 },
-                ProviderEvent::ToolCallEnd { id: "call_1".into() },
+                ProviderEvent::ToolCallEnd {
+                    id: "call_1".into(),
+                },
                 ProviderEvent::Finish {
                     reason: StopReason::ToolCalls,
                 },
@@ -250,8 +255,7 @@ mod tests {
         let provider = TestProvider {
             events: vec![
                 ProviderEvent::TextDelta(
-                    "→ ```json{\"name\":\"list_dir\",\"arguments\":{\"path\":\".\"}}"
-                        .into(),
+                    "→ ```json{\"name\":\"list_dir\",\"arguments\":{\"path\":\".\"}}".into(),
                 ),
                 ProviderEvent::TextDelta("Here's the current directory.".into()),
                 ProviderEvent::Finish {
@@ -385,8 +389,9 @@ mod tests {
     async fn think_filter_nested_tool_call_tags() {
         let provider = TestProvider {
             events: vec![
-                ProviderEvent::TextDelta("<tool_call>first</tool_call><tool_call>second</tool_call>rest"
-                    .into()),
+                ProviderEvent::TextDelta(
+                    "<tool_call>first</tool_call><tool_call>second</tool_call>rest".into(),
+                ),
                 ProviderEvent::Finish {
                     reason: StopReason::Stop,
                 },

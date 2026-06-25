@@ -69,7 +69,8 @@ mod tests {
 
     #[test]
     fn tool_output_success_with_bytes() {
-        let output = ToolOutput::success_with_bytes("test", serde_json::json!({}), "content".into(), 100);
+        let output =
+            ToolOutput::success_with_bytes("test", serde_json::json!({}), "content".into(), 100);
         assert_eq!(output.status, ToolStatus::Success);
         assert_eq!(output.bytes_transferred, Some(100));
     }

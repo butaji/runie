@@ -1,8 +1,8 @@
 //! Layer 2 + Layer 3 tests for Ctrl+M model cycling.
 
 use super::*;
-use runie_core::Event;
 use runie_core::model::{AppState, ScopedModel};
+use runie_core::Event;
 
 fn scoped_model(provider: &str, name: &str) -> ScopedModel {
     ScopedModel {

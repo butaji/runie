@@ -1,7 +1,7 @@
 use futures::Stream;
-use runie_core::provider_event::{ProviderEvent, StopReason};
 use runie_core::message::{ChatMessage, Role};
 use runie_core::provider::Provider;
+use runie_core::provider_event::{ProviderEvent, StopReason};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -201,7 +201,8 @@ impl Provider for MockProvider {
     }
 }
 
-fn native_tool_stream() -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + 'static>> {
+fn native_tool_stream(
+) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + 'static>> {
     Box::pin(async_stream::stream! {
         yield Ok(ProviderEvent::TextDelta("I'll run a command.\n".into()));
         yield Ok(ProviderEvent::ToolCallStart {

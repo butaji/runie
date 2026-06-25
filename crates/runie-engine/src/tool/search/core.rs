@@ -69,14 +69,16 @@ pub(crate) fn search_impl(
 ) -> Result<ToolOutput> {
     let state = match FffSearchState::get() {
         Some(s) => s,
-        None => return build_error_json_with_instant(
-            "search",
-            serde_json::json!({ "query": query }),
-            "FFF indexer not initialized",
-            "items",
-            false,
-            start,
-        ),
+        None => {
+            return build_error_json_with_instant(
+                "search",
+                serde_json::json!({ "query": query }),
+                "FFF indexer not initialized",
+                "items",
+                false,
+                start,
+            )
+        }
     };
     with_picker(
         &state,

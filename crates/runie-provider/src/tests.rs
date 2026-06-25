@@ -6,9 +6,9 @@ use runie_core::actors::{ConfigActor, ProviderActor};
 use runie_core::bus::EventBus;
 use runie_core::config::Config;
 use runie_core::event::Event;
-use runie_core::provider_event::ProviderEvent;
 use runie_core::message::ChatMessage;
 use runie_core::provider::{Provider, ProviderError};
+use runie_core::provider_event::ProviderEvent;
 use std::io::{Read, Write};
 use std::sync::Mutex;
 
@@ -161,9 +161,11 @@ async fn test_dyn_provider_mock_delay_adds_streaming_delay() {
     std::env::remove_var("RUNIE_MOCK");
     std::env::set_var("RUNIE_MOCK_DELAY", "1");
 
-    let provider = DynProvider::new_with_config("mock", "echo", &Config::default()).expect("mock should build with RUNIE_MOCK_DELAY");
+    let provider = DynProvider::new_with_config("mock", "echo", &Config::default())
+        .expect("mock should build with RUNIE_MOCK_DELAY");
     let start = std::time::Instant::now();
-    let texts = collect_text(provider.generate(vec![ChatMessage::user("hello world".to_string())])).await;
+    let texts =
+        collect_text(provider.generate(vec![ChatMessage::user("hello world".to_string())])).await;
 
     std::env::remove_var("RUNIE_MOCK_DELAY");
     assert!(!texts.is_empty());
@@ -224,7 +226,8 @@ fn test_dyn_provider_known_with_key_succeeds() {
 #[test]
 fn test_dyn_provider_key_and_model_accessors() {
     with_env_lock("OPENAI_API_KEY", "sk-test", || {
-        let provider = DynProvider::new_with_config("openai", "gpt-4o", &Config::default()).unwrap();
+        let provider =
+            DynProvider::new_with_config("openai", "gpt-4o", &Config::default()).unwrap();
         assert_eq!(provider.key(), "openai");
         assert_eq!(provider.model(), "gpt-4o");
     });
@@ -377,7 +380,8 @@ async fn test_validate_api_key_parses_minimax_models_and_trims_key() {
 #[test]
 fn test_dyn_provider_trims_whitespace_api_key_from_env() {
     with_env_lock("OPENAI_API_KEY", "  sk-with-space\n ", || {
-        let provider = DynProvider::new_with_config("openai", "gpt-4o-mini", &Config::default()).expect("trimmed key should build");
+        let provider = DynProvider::new_with_config("openai", "gpt-4o-mini", &Config::default())
+            .expect("trimmed key should build");
         assert_eq!(provider.key(), "openai");
     });
 }

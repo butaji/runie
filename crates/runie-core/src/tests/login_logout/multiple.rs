@@ -1,5 +1,5 @@
-use crate::Event;
 use crate::model::AppState;
+use crate::Event;
 
 use super::{add_provider_and_select_model, clean_config};
 

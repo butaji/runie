@@ -1,12 +1,12 @@
 //! Grep tool — searches for patterns in files.
 
 use crate::define_tool;
-use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
-use runie_core::tool::tool_error;
 use crate::tool::which_tool_async;
+use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::path::resolve_path_in;
+use runie_core::tool::tool_error;
 use serde_json::Value;
 use std::time::Instant;
 use tokio::process::Command;

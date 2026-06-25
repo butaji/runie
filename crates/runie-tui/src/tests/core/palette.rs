@@ -1,7 +1,7 @@
 use super::*;
 use runie_core::commands::DialogState;
-use runie_core::Event;
 use runie_core::model::AppState;
+use runie_core::Event;
 
 use crate::tests::view;
 
@@ -266,12 +266,7 @@ fn palette_model_with_zero_providers_shows_message() {
         "model command with no providers should close palette, got {:?}",
         state.open_dialog
     );
-    let msgs: Vec<String> = state
-        .session
-        .messages
-        .iter()
-        .map(|m| m.content())
-        .collect();
+    let msgs: Vec<String> = state.session.messages.iter().map(|m| m.content()).collect();
     assert!(
         msgs.iter().any(|m| m.contains("No connected providers")),
         "expected message about no connected providers, got messages: {:?}",
@@ -306,9 +301,10 @@ fn palette_model_with_zero_providers_renders_message() {
 
 #[test]
 fn palette_model_with_args_switches_model() {
-    super::super::configure_test_providers(&[
-        ("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()]),
-    ]);
+    super::super::configure_test_providers(&[(
+        "openai".into(),
+        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+    )]);
     let mut state = AppState::default();
     super::super::apply_test_config_to_state(&mut state);
     state.config.current_provider = "openai".into();
@@ -325,14 +321,10 @@ fn palette_model_with_args_switches_model() {
         "palette should close after /model with args"
     );
     assert_eq!(state.config.current_model, "gpt-4o-mini");
-    let msgs: Vec<String> = state
-        .session
-        .messages
-        .iter()
-        .map(|m| m.content())
-        .collect();
+    let msgs: Vec<String> = state.session.messages.iter().map(|m| m.content()).collect();
     assert!(
-        msgs.iter().any(|m| m.contains("Switched to openai/gpt-4o-mini")),
+        msgs.iter()
+            .any(|m| m.contains("Switched to openai/gpt-4o-mini")),
         "expected switch message, got messages: {:?}",
         msgs
     );

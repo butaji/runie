@@ -1,7 +1,7 @@
 use super::{exec, tmp_store, ENV_LOCK};
-use crate::Event;
 use crate::model::Role;
 use crate::tests::{fresh_state, type_str};
+use crate::Event;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
@@ -112,7 +112,10 @@ fn slash_opens_palette_and_typing_filters_commands() {
     assert_eq!(panel.filter, "model");
     // The model command should be first in filtered results
     let selected_label = panel.selected_item().expect("selected item").label();
-    assert!(selected_label.expect("label").starts_with("model "), "Expected model command, got: {selected_label:?}");
+    assert!(
+        selected_label.expect("label").starts_with("model "),
+        "Expected model command, got: {selected_label:?}"
+    );
 }
 
 #[test]
@@ -167,7 +170,8 @@ fn save_creates_session_file() {
     exec(&mut state, "/save mysession"); // Opens form with pre-filled name
     state.update(Event::submit()); // Submits the form
 
-    let redb_path = crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("mysession");
+    let redb_path =
+        crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("mysession");
     assert!(redb_path.exists(), "session file created");
 
     let sys_msgs: Vec<_> = state

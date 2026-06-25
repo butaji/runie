@@ -1,10 +1,10 @@
 use super::{exec, minimal_session, tmp_store, ENV_LOCK};
-use crate::Event;
 use crate::message::Part;
 use crate::model::{ChatMessage, Role};
-use crate::session::Session;
 use crate::session::replay::save_snapshot;
+use crate::session::Session;
 use crate::tests::fresh_state;
+use crate::Event;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
@@ -25,14 +25,18 @@ fn restored_session() -> Session {
             role: Role::User,
             timestamp: 1.0,
             id: "req.0".into(),
-            parts: vec![Part::Text { content: "hi".into() }],
+            parts: vec![Part::Text {
+                content: "hi".into(),
+            }],
             ..Default::default()
         },
         ChatMessage {
             role: Role::Assistant,
             timestamp: 2.0,
             id: "resp.0".into(),
-            parts: vec![Part::Text { content: "hello there".into() }],
+            parts: vec![Part::Text {
+                content: "hello there".into(),
+            }],
             ..Default::default()
         },
     ];

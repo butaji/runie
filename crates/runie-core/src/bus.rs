@@ -82,21 +82,20 @@ impl EventBus<Event> {
         output_tx: std::sync::mpsc::Sender<C::Output>,
     ) {
         let mut rx = self.subscribe();
-        std::thread::spawn(move || {
-            loop {
-                match rx.try_recv() {
-                    Ok(event) => {
-                        if let Some(output) = decoder.process(&event) {
-                            if output_tx.send(output).is_err() {
-                                break;
-                            }
+        std::thread::spawn(move || loop {
+            match rx.try_recv() {
+                Ok(event) => {
+                    if let Some(output) = decoder.process(&event) {
+                        if output_tx.send(output).is_err() {
+                            break;
                         }
                     }
-                    Err(broadcast::error::TryRecvError::Closed) => break,
-                    Err(broadcast::error::TryRecvError::Lagged(_)) | Err(broadcast::error::TryRecvError::Empty) => {}
                 }
-                std::thread::sleep(std::time::Duration::from_millis(10));
+                Err(broadcast::error::TryRecvError::Closed) => break,
+                Err(broadcast::error::TryRecvError::Lagged(_))
+                | Err(broadcast::error::TryRecvError::Empty) => {}
             }
+            std::thread::sleep(std::time::Duration::from_millis(10));
         });
     }
 }

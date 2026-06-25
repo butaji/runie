@@ -81,8 +81,13 @@ async fn run_json(yolo: bool) -> Result<()> {
     let messages = build_json_messages(&req);
     let start = Instant::now();
 
-    let result = run_json_turn(req.provider.as_deref(), req.model.as_deref(), messages, yolo)
-        .await?;
+    let result = run_json_turn(
+        req.provider.as_deref(),
+        req.model.as_deref(),
+        messages,
+        yolo,
+    )
+    .await?;
     let response = build_json_response(result, start.elapsed().as_millis() as u64);
     println!("{}", serde_json::to_string(&response)?);
     Ok(())
@@ -183,8 +188,8 @@ mod tests {
     #[tokio::test]
     async fn json_mode_returns_tool_calls() {
         use futures::StreamExt;
-        use runie_core::provider_event::ProviderEvent;
         use runie_core::provider::Provider;
+        use runie_core::provider_event::ProviderEvent;
         use runie_core::tool_parser::parse_tool_calls;
         let provider = runie_provider::MockProvider::default();
         let messages = vec![
@@ -215,7 +220,9 @@ mod tests {
             ChatMessage::system("You are helpful."),
             ChatMessage::user("write something".to_string()),
         ];
-        let result = run_json_turn(Some("mock"), None, messages, false).await.unwrap();
+        let result = run_json_turn(Some("mock"), None, messages, false)
+            .await
+            .unwrap();
 
         std::env::remove_var("RUNIE_MOCK");
         std::env::set_current_dir(original).unwrap();
@@ -241,7 +248,9 @@ mod tests {
             ChatMessage::system("You are helpful."),
             ChatMessage::user("write something".to_string()),
         ];
-        let result = run_json_turn(Some("mock"), None, messages, true).await.unwrap();
+        let result = run_json_turn(Some("mock"), None, messages, true)
+            .await
+            .unwrap();
 
         std::env::remove_var("RUNIE_MOCK");
         std::env::set_current_dir(original).unwrap();

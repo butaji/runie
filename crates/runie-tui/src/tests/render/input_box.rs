@@ -1,10 +1,10 @@
-use super::*;
 use super::find_input_box_bounds;
+use super::*;
 use crate::tests::connect_model;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::Event;
 use runie_core::AppState;
+use runie_core::Event;
 
 fn buffer_content(terminal: &Terminal<TestBackend>) -> String {
     let buf = terminal.backend().buffer();

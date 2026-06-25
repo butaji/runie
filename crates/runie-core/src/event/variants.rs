@@ -99,10 +99,18 @@ pub enum Event {
         content: String,
     },
     // LLM lifecycle events (populated from LLMEvent via LifecycleState)
-    TextStart { id: String },
-    TextEnd { id: String },
-    ThinkingStart { id: String },
-    ThinkingEnd { id: String },
+    TextStart {
+        id: String,
+    },
+    TextEnd {
+        id: String,
+    },
+    ThinkingStart {
+        id: String,
+    },
+    ThinkingEnd {
+        id: String,
+    },
     Response {
         id: String,
         content: String,

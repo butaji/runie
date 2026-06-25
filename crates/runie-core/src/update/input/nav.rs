@@ -34,10 +34,7 @@ fn compute_line_bounds(input: &InputState) -> (usize, usize) {
             line_start = i + 1;
         }
     }
-    if line_end == input.input.len()
-        && input.input.ends_with('\n')
-        && cursor_pos > line_start
-    {
+    if line_end == input.input.len() && input.input.ends_with('\n') && cursor_pos > line_start {
         line_end = input.input.len();
     }
     (line_start, line_end)
@@ -141,10 +138,7 @@ impl AppState {
             return;
         }
         let pos = input.cursor_pos.min(input.input.len());
-        let cursor_line = input.input[..pos]
-            .chars()
-            .filter(|&c| c == '\n')
-            .count();
+        let cursor_line = input.input[..pos].chars().filter(|&c| c == '\n').count();
         if cursor_line < input.input_scroll {
             input.input_scroll = cursor_line;
         } else if cursor_line >= input.input_scroll + visible_height {

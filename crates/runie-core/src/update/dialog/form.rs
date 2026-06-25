@@ -24,9 +24,9 @@ pub enum FormAction {
 pub fn form_panel_action(state: &mut AppState, panel: &mut Panel, event: Event) -> FormAction {
     use FormAction as A;
     match &event {
-        crate::Event::SettingsClose
-        | crate::Event::CommandFormClose
-        | crate::Event::DialogBack => A::Back,
+        crate::Event::SettingsClose | crate::Event::CommandFormClose | crate::Event::DialogBack => {
+            A::Back
+        }
         crate::Event::CommandFormUp
         | crate::Event::HistoryPrev
         | crate::Event::SettingsUp
@@ -309,7 +309,10 @@ fn form_panel_move_cursor(panel: &mut Panel, dir: CursorDir) {
     let Some(idx) = panel.selected_form_field() else {
         return;
     };
-    let PanelItem::FormField { value, cursor_pos, .. } = &mut panel.items[idx] else {
+    let PanelItem::FormField {
+        value, cursor_pos, ..
+    } = &mut panel.items[idx]
+    else {
         return;
     };
     *cursor_pos = match dir {

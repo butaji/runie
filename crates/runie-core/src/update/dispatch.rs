@@ -70,7 +70,11 @@ fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
 fn handle_session_store_events(state: &mut AppState, event: &Event) -> bool {
     use crate::event::TransientLevel;
     match event {
-        Event::SessionLoaded { name, events, metadata } => {
+        Event::SessionLoaded {
+            name,
+            events,
+            metadata,
+        } => {
             apply_session_loaded(state, name, events, metadata);
             true
         }
@@ -87,7 +91,10 @@ fn handle_session_store_events(state: &mut AppState, event: &Event) -> bool {
             true
         }
         Event::SessionExported { path } => {
-            state.notify(format!("Session exported to '{}'.", path), TransientLevel::Info);
+            state.notify(
+                format!("Session exported to '{}'.", path),
+                TransientLevel::Info,
+            );
             true
         }
         Event::SessionList { sessions } => {
@@ -95,7 +102,10 @@ fn handle_session_store_events(state: &mut AppState, event: &Event) -> bool {
             true
         }
         Event::SessionOperationFailed { operation, error } => {
-            state.notify(format!("{} failed: {}", operation, error), TransientLevel::Error);
+            state.notify(
+                format!("{} failed: {}", operation, error),
+                TransientLevel::Error,
+            );
             true
         }
         _ => false,
@@ -116,7 +126,10 @@ fn apply_session_loaded(
     }
     state.configure_token_tracker();
     state.messages_changed();
-    state.notify(format!("Session '{}' loaded.", name), crate::event::TransientLevel::Info);
+    state.notify(
+        format!("Session '{}' loaded.", name),
+        crate::event::TransientLevel::Info,
+    );
 }
 
 fn apply_session_imported(state: &mut AppState, session: &Box<crate::session::Session>) {
@@ -345,7 +358,8 @@ fn is_dialog_category_event(event: &Event) -> bool {
                 | Event::ProvidersDialog
                 | Event::ProvidersSelectModel { .. }
                 | Event::ProvidersDisconnect { .. }
-                | Event::ProvidersAdd | Event::ProvidersEditModels { .. }
+                | Event::ProvidersAdd
+                | Event::ProvidersEditModels { .. }
                 | Event::CopyToClipboard(_)
                 | Event::CopySelectedBlock
                 | Event::CopyBlockMetadata
@@ -476,7 +490,8 @@ fn is_toggle_dialog_event(event: &crate::Event) -> bool {
                 | crate::Event::AtFilePicker
                 | crate::Event::ToggleVimMode
                 | crate::Event::ProvidersDialog
-                | crate::Event::ProvidersAdd | crate::Event::ProvidersEditModels { .. }
+                | crate::Event::ProvidersAdd
+                | crate::Event::ProvidersEditModels { .. }
                 | crate::Event::ProvidersSelectModel { .. }
                 | crate::Event::ProvidersDisconnect { .. }
                 | crate::Event::ToggleScopedModelsDialog

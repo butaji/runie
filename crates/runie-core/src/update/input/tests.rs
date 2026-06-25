@@ -1,7 +1,7 @@
 use super::{get_history_nav_mode, input_event, HistoryNavMode};
-use crate::Event;
 use crate::model::{AppState, PermissionRequestState};
 use crate::permissions::PermissionAction;
+use crate::Event;
 
 fn setup_permission_request(id: &str) -> AppState {
     let mut state = AppState::default();
@@ -16,11 +16,7 @@ fn setup_permission_request(id: &str) -> AppState {
 #[test]
 fn y_allows_pending_permission_request() {
     let mut state = setup_permission_request("test-y");
-    let rx = state
-        .approval_registry
-        .lock()
-        .unwrap()
-        .register("test-y");
+    let rx = state.approval_registry.lock().unwrap().register("test-y");
 
     input_event(&mut state, Event::Input('y'));
 
@@ -31,11 +27,7 @@ fn y_allows_pending_permission_request() {
 #[test]
 fn n_denies_pending_permission_request() {
     let mut state = setup_permission_request("test-n");
-    let rx = state
-        .approval_registry
-        .lock()
-        .unwrap()
-        .register("test-n");
+    let rx = state.approval_registry.lock().unwrap().register("test-n");
 
     input_event(&mut state, Event::Input('n'));
 
@@ -112,8 +104,14 @@ fn history_nav_mode_selects_path_complete_when_suggestions_open() {
 
     let mut state = AppState::default();
     state.completion.path_suggestions = Some(vec![
-        PathCompletion { path: "/src".to_string(), is_dir: true },
-        PathCompletion { path: "/tests".to_string(), is_dir: true },
+        PathCompletion {
+            path: "/src".to_string(),
+            is_dir: true,
+        },
+        PathCompletion {
+            path: "/tests".to_string(),
+            is_dir: true,
+        },
     ]);
 
     // Both prev and next should use path completion when suggestions are open

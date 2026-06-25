@@ -6,8 +6,8 @@
 //! state.agent("req.0").think().respond("hi").complete(1.0).done();
 //! ```
 
-use crate::Event;
 use crate::model::AppState;
+use crate::Event;
 
 /// Fluent builder for an agent turn sequence.
 pub struct AgentTurn<'a> {

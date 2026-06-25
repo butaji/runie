@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use tokio::sync::mpsc;
 
-use crate::actors::{Actor, ActorHandle};
 use crate::actors::config::ConfigActorHandle;
+use crate::actors::{Actor, ActorHandle};
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::event::Event;
@@ -81,12 +81,13 @@ impl ProviderActor {
     }
 
     async fn validate_key(&self, provider: &str, api_key: &str) -> anyhow::Result<Vec<String>> {
-        let config = self
-            .config()
-            .await
-            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        let config = self.config().await.map_err(|e| anyhow::anyhow!("{e}"))?;
         let (base_url, resolved_key) = self.factory.resolve_credentials(provider, &config);
-        let api_key = if api_key.is_empty() { &resolved_key } else { api_key };
+        let api_key = if api_key.is_empty() {
+            &resolved_key
+        } else {
+            api_key
+        };
         if api_key.is_empty() {
             anyhow::bail!("API key is required");
         }

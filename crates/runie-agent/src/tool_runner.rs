@@ -1,14 +1,14 @@
 //! Shared tool execution helpers for agent turn and headless runners.
 
 #![allow(unused_imports)]
-use std::time::Duration;
-use tokio::time::timeout;
+use crate::PermissionGate;
 use runie_core::harness_skills::{SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult};
 use runie_core::message::{ChatMessage, Part, Role};
 use runie_core::permissions::{PermissionAction, PermissionContext};
-use runie_core::tool_parser::ParsedToolCall;
-use crate::PermissionGate;
 use runie_core::tool::{ToolContext, ToolOutput, ToolStatus};
+use runie_core::tool_parser::ParsedToolCall;
+use std::time::Duration;
+use tokio::time::timeout;
 
 /// Default timeout for tool execution (30 seconds).
 const DEFAULT_TOOL_TIMEOUT_SECS: u64 = 30;
@@ -45,7 +45,10 @@ fn timeout_error(tool_name: &str) -> ToolOutput {
     ToolOutput {
         tool_name: tool_name.to_string(),
         tool_args: serde_json::json!({}),
-        content: format!("Tool execution timed out after {} seconds", DEFAULT_TOOL_TIMEOUT_SECS),
+        content: format!(
+            "Tool execution timed out after {} seconds",
+            DEFAULT_TOOL_TIMEOUT_SECS
+        ),
         bytes_transferred: None,
         duration: Duration::from_secs(DEFAULT_TOOL_TIMEOUT_SECS),
         status: ToolStatus::Error,
@@ -57,8 +60,16 @@ pub fn build_permission_context<'a>(
     input: &'a serde_json::Value,
     cwd: &'a std::path::Path,
 ) -> PermissionContext<'a> {
-    let path = input.get("path").and_then(|v| v.as_str()).map(std::path::Path::new);
-    PermissionContext { tool, path, input: Some(input), cwd: Some(cwd) }
+    let path = input
+        .get("path")
+        .and_then(|v| v.as_str())
+        .map(std::path::Path::new);
+    PermissionContext {
+        tool,
+        path,
+        input: Some(input),
+        cwd: Some(cwd),
+    }
 }
 
 async fn run_tool(
@@ -132,10 +143,8 @@ pub async fn execute_tools_with_observer(
     let registry = runie_engine::tool::builtin_registry();
     let mut outputs = Vec::with_capacity(tools.len());
     for tool_call in tools {
-        let output = execute_single_with_observer(
-            tool_call, ctx, &registry, gate, observer, hooks,
-        )
-        .await;
+        let output =
+            execute_single_with_observer(tool_call, ctx, &registry, gate, observer, hooks).await;
         outputs.push(output);
     }
     outputs
@@ -263,10 +272,13 @@ mod tests {
         assert_eq!(msg.tool_call_id, Some("call_1".to_string()));
         // Check that the message has a ToolResult part with the output
         let has_tool_result = msg.parts.iter().any(|p| {
-            matches!(p, runie_core::message::Part::ToolResult { output, .. } 
+            matches!(p, runie_core::message::Part::ToolResult { output, .. }
                 if output.contains("[Lines"))
         });
-        assert!(has_tool_result, "Expected ToolResult part with output content");
+        assert!(
+            has_tool_result,
+            "Expected ToolResult part with output content"
+        );
     }
 
     // Layer 2: with observer, ToolStart/ToolEnd are emitted.
@@ -298,7 +310,10 @@ mod tests {
 
         execute_tools_with_observer(&tools, "req.0", &ctx, &gate, &mut observer, None).await;
 
-        assert!(observer.events.iter().any(|e| e.starts_with("start:list_dir")));
+        assert!(observer
+            .events
+            .iter()
+            .any(|e| e.starts_with("start:list_dir")));
         assert!(observer.events.iter().any(|e| e.starts_with("end:")));
     }
 

@@ -1,7 +1,7 @@
 //! Login API-key validation effect handler.
 
-use runie_core::actors::Reply;
 use runie_core::actors::ProviderMsg;
+use runie_core::actors::Reply;
 use runie_core::Event as CoreEvent;
 use tokio::sync::mpsc;
 
@@ -60,4 +60,3 @@ async fn validate_provider_key(
         .await
         .map_err(|_| anyhow::anyhow!("provider actor dropped"))?
 }
-

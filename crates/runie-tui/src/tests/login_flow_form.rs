@@ -9,8 +9,10 @@ use runie_core::Event;
 use crate::tests::view;
 
 fn clean_config() {
-    let dir =
-        std::env::temp_dir().join(format!("runie_login_form_{:?}", std::thread::current().id()));
+    let dir = std::env::temp_dir().join(format!(
+        "runie_login_form_{:?}",
+        std::thread::current().id()
+    ));
     let _ = std::fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     let _ = std::fs::remove_file(&path);
@@ -37,7 +39,6 @@ fn e2e_login_flow_paste_fills_api_key_field() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
@@ -63,7 +64,6 @@ fn e2e_login_flow_typing_renders_api_key_field() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
@@ -86,7 +86,6 @@ fn e2e_providers_add_flow_typing_renders_api_key_field() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-
 
     state.update(Event::from(Event::ProvidersDialog));
     state.update(Event::from(Event::ProvidersAdd));
@@ -111,7 +110,6 @@ fn e2e_login_flow_cursor_left_allows_inline_editing() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-
 
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {

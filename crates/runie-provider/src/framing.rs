@@ -15,7 +15,10 @@ where
     E: std::fmt::Display + std::marker::Send,
 {
     let stream = Box::pin(bytes);
-    FramingStream { inner: stream, buffer: String::new() }
+    FramingStream {
+        inner: stream,
+        buffer: String::new(),
+    }
 }
 
 struct FramingStream<E> {
@@ -62,7 +65,9 @@ fn drain_buffer(buffer: &mut String) -> Option<String> {
         *buffer = buffer[pos + 1..].to_string();
 
         let data = line.strip_prefix("data: ")?;
-        if data == "[DONE]" { continue; }
+        if data == "[DONE]" {
+            continue;
+        }
 
         return Some(data.to_string());
     }
@@ -72,7 +77,9 @@ fn drain_buffer(buffer: &mut String) -> Option<String> {
 /// Parse a raw SSE data line into a JSON string.
 pub fn parse_sse_line(line: &str) -> Option<String> {
     let data = line.strip_prefix("data: ")?;
-    if data == "[DONE]" { return None; }
+    if data == "[DONE]" {
+        return None;
+    }
     Some(data.to_string())
 }
 
@@ -86,14 +93,24 @@ pub enum SseLine {
 impl SseLine {
     pub fn parse(line: &str) -> Option<Self> {
         let data = line.strip_prefix("data: ")?;
-        if data == "[DONE]" { Some(SseLine::Done) }
-        else { Some(SseLine::Data(data.to_string())) }
+        if data == "[DONE]" {
+            Some(SseLine::Done)
+        } else {
+            Some(SseLine::Data(data.to_string()))
+        }
     }
 
-    pub fn is_data(&self) -> bool { matches!(self, SseLine::Data(_)) }
-    pub fn is_done(&self) -> bool { matches!(self, SseLine::Done) }
+    pub fn is_data(&self) -> bool {
+        matches!(self, SseLine::Data(_))
+    }
+    pub fn is_done(&self) -> bool {
+        matches!(self, SseLine::Done)
+    }
     pub fn into_data(self) -> Option<String> {
-        match self { SseLine::Data(s) => Some(s), SseLine::Done => None }
+        match self {
+            SseLine::Data(s) => Some(s),
+            SseLine::Done => None,
+        }
     }
 }
 
@@ -103,8 +120,11 @@ mod tests {
     use futures::stream;
     use futures::StreamExt;
 
-    fn bytes_stream<E: std::fmt::Display + std::marker::Send>(data: &[&[u8]]) -> impl Stream<Item = Result<Bytes, E>> + Send {
-        let stream_data: Vec<Result<Bytes, E>> = data.iter().map(|b| Ok(Bytes::copy_from_slice(b))).collect();
+    fn bytes_stream<E: std::fmt::Display + std::marker::Send>(
+        data: &[&[u8]],
+    ) -> impl Stream<Item = Result<Bytes, E>> + Send {
+        let stream_data: Vec<Result<Bytes, E>> =
+            data.iter().map(|b| Ok(Bytes::copy_from_slice(b))).collect();
         stream::iter(stream_data)
     }
 
@@ -126,7 +146,8 @@ mod tests {
 
     #[tokio::test]
     async fn sse_framing_handles_multiple_events() {
-        let input = bytes_stream::<std::io::Error>(&[b"data: {\"x\":1}\ndata: {\"y\":2}\ndata: [DONE]\n"]);
+        let input =
+            bytes_stream::<std::io::Error>(&[b"data: {\"x\":1}\ndata: {\"y\":2}\ndata: [DONE]\n"]);
         let framing = sse_framing(input);
         let items: Vec<String> = framing.filter_map(|r| async { r.ok() }).collect().await;
         assert_eq!(items, vec![r#"{"x":1}"#, r#"{"y":2}"#]);
@@ -142,7 +163,10 @@ mod tests {
 
     #[test]
     fn parse_sse_line_text() {
-        assert_eq!(parse_sse_line("data: {\"x\":1}"), Some(r#"{"x":1}"#.to_string()));
+        assert_eq!(
+            parse_sse_line("data: {\"x\":1}"),
+            Some(r#"{"x":1}"#.to_string())
+        );
     }
 
     #[test]
@@ -157,7 +181,10 @@ mod tests {
 
     #[test]
     fn sse_line_parse_data() {
-        assert_eq!(SseLine::parse("data: {\"x\":1}"), Some(SseLine::Data(r#"{"x":1}"#.to_string())));
+        assert_eq!(
+            SseLine::parse("data: {\"x\":1}"),
+            Some(SseLine::Data(r#"{"x":1}"#.to_string()))
+        );
     }
 
     #[test]
@@ -167,7 +194,10 @@ mod tests {
 
     #[test]
     fn sse_line_into_data() {
-        assert_eq!(SseLine::Data(r#"{"x":1}"#.to_string()).into_data(), Some(r#"{"x":1}"#.to_string()));
+        assert_eq!(
+            SseLine::Data(r#"{"x":1}"#.to_string()).into_data(),
+            Some(r#"{"x":1}"#.to_string())
+        );
         assert_eq!(SseLine::Done.into_data(), None);
     }
 }

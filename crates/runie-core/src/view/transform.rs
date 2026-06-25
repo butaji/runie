@@ -91,14 +91,18 @@ impl LazyCache {
             .iter()
             .find(|m| m.role == Role::TurnComplete)
             .map(|m| m.timestamp);
-        let current = state.agent_state().current_request_id.as_ref().and_then(|id| {
-            state
-                .session
-                .messages
-                .iter()
-                .find(|m| m.role == Role::TurnComplete && m.id == *id)
-                .map(|m| m.timestamp)
-        });
+        let current = state
+            .agent_state()
+            .current_request_id
+            .as_ref()
+            .and_then(|id| {
+                state
+                    .session
+                    .messages
+                    .iter()
+                    .find(|m| m.role == Role::TurnComplete && m.id == *id)
+                    .map(|m| m.timestamp)
+            });
         current
             .map(|t| t - 1e-6)
             .unwrap_or_else(|| turn_ts.map(|t| t + 1e-6).unwrap_or(max_ts + 1e-6))
@@ -139,7 +143,10 @@ impl LazyCache {
                 continue;
             }
             if !group.is_empty() {
-                out.extend(Self::flush_context_group(std::mem::take(&mut group), collapsed));
+                out.extend(Self::flush_context_group(
+                    std::mem::take(&mut group),
+                    collapsed,
+                ));
             }
             out.push(elem);
         }
@@ -151,10 +158,7 @@ impl LazyCache {
 
     fn flush_context_group(group: Vec<Element>, collapsed: bool) -> Vec<Element> {
         if group.len() > 1 {
-            let ts = group
-                .iter()
-                .map(|e| e.timestamp())
-                .fold(0.0, f64::max);
+            let ts = group.iter().map(|e| e.timestamp()).fold(0.0, f64::max);
             vec![Element::context_group(group, collapsed).at(ts)]
         } else {
             group
@@ -221,12 +225,7 @@ impl LazyCache {
             .collect()
     }
 
-    fn part_to_element(
-        part: &Part,
-        state: &AppState,
-        ts: f64,
-        provider: &str,
-    ) -> Option<Element> {
+    fn part_to_element(part: &Part, state: &AppState, ts: f64, provider: &str) -> Option<Element> {
         match part {
             Part::Text { content } => Some(Self::text_elem(content, ts, provider)),
             Part::Reasoning { content } => Some(Self::reasoning_elem(content, state, ts)),

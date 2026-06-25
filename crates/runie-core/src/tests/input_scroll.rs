@@ -1,8 +1,7 @@
 //! Layer 1 + Layer 3 tests for input box scrolling and cursor visibility
 
-
-use crate::Event;
 use crate::model::AppState;
+use crate::Event;
 
 // ── Layer 1: Pure logic tests ──────────────────────────────────────────────
 

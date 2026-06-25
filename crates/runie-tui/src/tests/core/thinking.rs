@@ -1,9 +1,9 @@
 use super::*;
-use runie_core::Event;
 use runie_core::model::ThinkingLevel;
-use runie_core::session::Session;
 use runie_core::session::replay::{replay_events, state_to_durable_events};
 use runie_core::session::store::SessionStore;
+use runie_core::session::Session;
+use runie_core::Event;
 
 #[test]
 fn cycle_rotates() {

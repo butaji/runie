@@ -2,8 +2,7 @@
 
 use crate::terminal::caps;
 use crossterm::event::{
-    KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,
-    PushKeyboardEnhancementFlags,
+    KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;

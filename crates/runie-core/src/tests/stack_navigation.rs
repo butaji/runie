@@ -173,10 +173,7 @@ fn check_command_is_sub(reg: &crate::commands::CommandRegistry, name: &str) -> O
                 CommandFlow::Sub(inner) => inner.as_ref(),
                 other => other,
             };
-            let opens_sub = matches!(
-                flow,
-                CommandFlow::PanelStack(_) | CommandFlow::Handler(_)
-            );
+            let opens_sub = matches!(flow, CommandFlow::PanelStack(_) | CommandFlow::Handler(_));
             let is_sub = matches!(def.flow, CommandFlow::Sub(_));
             if !is_sub {
                 Some(format!("'{}' is missing .sub()", name))

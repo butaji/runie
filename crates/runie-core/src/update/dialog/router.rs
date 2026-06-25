@@ -5,8 +5,7 @@ use crate::model::AppState;
 use crate::Event;
 
 use super::{
-    open_command_palette, open_model_selector, open_scoped_models_dialog,
-    open_settings_dialog,
+    open_command_palette, open_model_selector, open_scoped_models_dialog, open_settings_dialog,
     panel_handler::{update_panel_stack, PanelUpdateResult},
 };
 

@@ -120,10 +120,17 @@ impl ChatMessage {
 
     /// Returns tool calls extracted from `Part::ToolCall` variants.
     pub fn tool_calls(&self) -> Vec<ToolCall> {
-        self.parts.iter().filter_map(|p| match p {
-            Part::ToolCall { id, name, args } => Some(ToolCall { id: id.clone(), name: name.clone(), args: args.clone() }),
-            _ => None,
-        }).collect()
+        self.parts
+            .iter()
+            .filter_map(|p| match p {
+                Part::ToolCall { id, name, args } => Some(ToolCall {
+                    id: id.clone(),
+                    name: name.clone(),
+                    args: args.clone(),
+                }),
+                _ => None,
+            })
+            .collect()
     }
 
     /// Push a text part, or append to the last text part if one exists.
@@ -134,7 +141,9 @@ impl ChatMessage {
         if let Some(Part::Text { content: last }) = self.parts.last_mut() {
             last.push_str(content);
         } else {
-            self.parts.push(Part::Text { content: content.to_string() });
+            self.parts.push(Part::Text {
+                content: content.to_string(),
+            });
         }
     }
 
@@ -224,7 +233,11 @@ impl ChatMessage {
 
     pub fn with_tool_calls(mut self, calls: Vec<ToolCall>) -> Self {
         for tc in calls {
-            self.parts.push(Part::ToolCall { id: tc.id, name: tc.name, args: tc.args });
+            self.parts.push(Part::ToolCall {
+                id: tc.id,
+                name: tc.name,
+                args: tc.args,
+            });
         }
         self
     }
@@ -269,9 +282,15 @@ mod tests {
     fn chat_message_content_getter_concatenates_text_parts() {
         let msg = ChatMessage {
             parts: vec![
-                Part::Text { content: "a".into() },
-                Part::Reasoning { content: "r".into() },
-                Part::Text { content: "b".into() },
+                Part::Text {
+                    content: "a".into(),
+                },
+                Part::Reasoning {
+                    content: "r".into(),
+                },
+                Part::Text {
+                    content: "b".into(),
+                },
             ],
             ..Default::default()
         };
@@ -282,8 +301,14 @@ mod tests {
     fn chat_message_tool_calls_getter_extracts_from_parts() {
         let msg = ChatMessage {
             parts: vec![
-                Part::Text { content: "hi".into() },
-                Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({}) },
+                Part::Text {
+                    content: "hi".into(),
+                },
+                Part::ToolCall {
+                    id: "c1".into(),
+                    name: "bash".into(),
+                    args: serde_json::json!({}),
+                },
             ],
             ..Default::default()
         };
@@ -302,7 +327,11 @@ mod tests {
     #[test]
     fn chat_message_no_text_parts_returns_empty_content() {
         let msg = ChatMessage {
-            parts: vec![Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({}) }],
+            parts: vec![Part::ToolCall {
+                id: "c1".into(),
+                name: "bash".into(),
+                args: serde_json::json!({}),
+            }],
             ..Default::default()
         };
         assert_eq!(msg.content(), "");
@@ -318,7 +347,9 @@ mod tests {
             metadata: MessageMetadata::default(),
             tool_call_id: None,
             provider_metadata: None,
-            parts: vec![Part::Text { content: "hello".into() }],
+            parts: vec![Part::Text {
+                content: "hello".into(),
+            }],
         };
         let json = serde_json::to_string(&msg).unwrap();
         let parsed: ChatMessage = serde_json::from_str(&json).unwrap();
@@ -335,7 +366,9 @@ mod tests {
             timestamp: 1.0,
             id: "a1".into(),
             parts: vec![
-                Part::Text { content: "hello".into() },
+                Part::Text {
+                    content: "hello".into(),
+                },
                 Part::ToolCall {
                     id: "call_1".into(),
                     name: "list_dir".into(),
@@ -358,8 +391,14 @@ mod tests {
         let msg = ChatMessage {
             role: Role::Assistant,
             parts: vec![
-                Part::Text { content: "hi".into() },
-                Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({"cmd": "ls"}) },
+                Part::Text {
+                    content: "hi".into(),
+                },
+                Part::ToolCall {
+                    id: "c1".into(),
+                    name: "bash".into(),
+                    args: serde_json::json!({"cmd": "ls"}),
+                },
             ],
             ..Default::default()
         };

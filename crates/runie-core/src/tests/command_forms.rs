@@ -61,7 +61,9 @@ fn no_form_submit_handler_returns_usage_message() {
     let mut state = AppState::default();
 
     assert_no_usage(
-        &state.handle_slash("/load").expect("load should return result"),
+        &state
+            .handle_slash("/load")
+            .expect("load should return result"),
         "handle_load",
     );
     assert_no_usage(
@@ -92,7 +94,9 @@ fn load_form_submit_empty_does_not_show_usage() {
     let initial_msg_count = state.session.messages.len();
 
     // Simulate typing /load with no args
-    let result = state.handle_slash("/load").expect("load should return result");
+    let result = state
+        .handle_slash("/load")
+        .expect("load should return result");
 
     // No "Usage:" message should be added to the feed
     if let CommandResult::Message(_) = &result {

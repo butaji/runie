@@ -40,9 +40,9 @@ pub mod runtime;
 
 pub use effect::Effect;
 pub use fact::Fact;
-pub use flow::{Flow, Step, on};
+pub use flow::{on, Flow, Step};
 pub use intent::Intent;
-pub use runtime::{set_runtime, with_runtime, run_flow, RealRuntime, Runtime, TestRuntime};
+pub use runtime::{run_flow, set_runtime, with_runtime, RealRuntime, Runtime, TestRuntime};
 
 #[cfg(test)]
 mod test_dsl;

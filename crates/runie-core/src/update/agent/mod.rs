@@ -1,5 +1,5 @@
-use crate::Event;
 use crate::model::AppState;
+use crate::Event;
 
 mod at_refs;
 mod core;
@@ -24,7 +24,11 @@ pub fn agent_event(state: &mut AppState, event: crate::Event) {
         E::Thinking { id } => with_ordering!(state, state.set_thinking(id)),
         E::ThoughtDone { id } => with_ordering!(state, state.add_thought(id)),
         E::ToolStart { id, name, .. } => with_ordering!(state, state.start_tool(id, name)),
-        E::ToolEnd { duration_secs, output, .. } => {
+        E::ToolEnd {
+            duration_secs,
+            output,
+            ..
+        } => {
             with_ordering!(state, state.end_tool(duration_secs, output))
         }
         E::ResponseDelta { .. } => state.handle_llm_event(event),
@@ -64,7 +68,13 @@ mod tests {
         state.apply_config(&config);
 
         // Start a turn with thinking
-        agent_event(&mut state, crate::Event::TurnComplete { id: "1".into(), duration_secs: 1.0 });
+        agent_event(
+            &mut state,
+            crate::Event::TurnComplete {
+                id: "1".into(),
+                duration_secs: 1.0,
+            },
+        );
         agent_event(&mut state, crate::Event::Thinking { id: "2".into() });
         agent_event(&mut state, crate::Event::ThoughtDone { id: "2".into() });
 
@@ -78,9 +88,29 @@ mod tests {
         let config = crate::config::Config::default();
         state.apply_config(&config);
 
-        agent_event(&mut state, crate::Event::TurnComplete { id: "1".into(), duration_secs: 1.0 });
-        agent_event(&mut state, crate::Event::ToolStart { id: "t1".into(), name: "bash".into(), input: Default::default() });
-        agent_event(&mut state, crate::Event::ToolEnd { id: "t1".into(), duration_secs: 0.5, output: "done".into() });
+        agent_event(
+            &mut state,
+            crate::Event::TurnComplete {
+                id: "1".into(),
+                duration_secs: 1.0,
+            },
+        );
+        agent_event(
+            &mut state,
+            crate::Event::ToolStart {
+                id: "t1".into(),
+                name: "bash".into(),
+                input: Default::default(),
+            },
+        );
+        agent_event(
+            &mut state,
+            crate::Event::ToolEnd {
+                id: "t1".into(),
+                duration_secs: 0.5,
+                output: "done".into(),
+            },
+        );
 
         state.ensure_turn_complete_last();
     }
@@ -91,8 +121,20 @@ mod tests {
         let config = crate::config::Config::default();
         state.apply_config(&config);
 
-        agent_event(&mut state, crate::Event::TurnComplete { id: "1".into(), duration_secs: 1.0 });
-        agent_event(&mut state, crate::Event::Response { id: "2".into(), content: "hello".into() });
+        agent_event(
+            &mut state,
+            crate::Event::TurnComplete {
+                id: "1".into(),
+                duration_secs: 1.0,
+            },
+        );
+        agent_event(
+            &mut state,
+            crate::Event::Response {
+                id: "2".into(),
+                content: "hello".into(),
+            },
+        );
 
         state.ensure_turn_complete_last();
     }
@@ -103,8 +145,20 @@ mod tests {
         let config = crate::config::Config::default();
         state.apply_config(&config);
 
-        agent_event(&mut state, crate::Event::TurnComplete { id: "1".into(), duration_secs: 1.0 });
-        agent_event(&mut state, crate::Event::Error { id: "2".into(), message: "oops".into() });
+        agent_event(
+            &mut state,
+            crate::Event::TurnComplete {
+                id: "1".into(),
+                duration_secs: 1.0,
+            },
+        );
+        agent_event(
+            &mut state,
+            crate::Event::Error {
+                id: "2".into(),
+                message: "oops".into(),
+            },
+        );
 
         state.ensure_turn_complete_last();
     }

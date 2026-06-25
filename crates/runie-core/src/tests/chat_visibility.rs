@@ -1,7 +1,7 @@
-use crate::Event;
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tests::fresh_state;
+use crate::Event;
 
 /// Helper: get element kinds in visible region (no spacer)
 fn visible_kinds(state: &AppState, height: usize) -> Vec<String> {
@@ -210,7 +210,9 @@ fn add_small_messages(state: &mut AppState) {
     for i in 0..3 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text { content: format!("msg{}", i) }],
+            parts: vec![Part::Text {
+                content: format!("msg{}", i),
+            }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -359,7 +361,8 @@ fn streaming_response_appends_not_replaces() {
         "Should have exactly one assistant message"
     );
     assert_eq!(
-        assistant_msgs[0].content(), "Hello world",
+        assistant_msgs[0].content(),
+        "Hello world",
         "Content should be appended"
     );
 }

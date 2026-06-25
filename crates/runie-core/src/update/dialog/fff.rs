@@ -43,18 +43,16 @@ pub(crate) fn query_fff_files(query: &str, limit: usize) -> Vec<FffFileEntry> {
 }
 
 fn build_fff_fallback(limit: usize) -> Vec<FffFileEntry> {
-    crate::async_io::block_in_place_if_runtime(|| {
-        crate::file_refs::find_file_entries(".", limit)
-    })
-    .into_iter()
-    .map(|e| FffFileEntry {
-        name: e.name.clone(),
-        path: e.name,
-        is_dir: e.is_dir,
-        score: 0.0,
-        git_status: None,
-    })
-    .collect()
+    crate::async_io::block_in_place_if_runtime(|| crate::file_refs::find_file_entries(".", limit))
+        .into_iter()
+        .map(|e| FffFileEntry {
+            name: e.name.clone(),
+            path: e.name,
+            is_dir: e.is_dir,
+            score: 0.0,
+            git_status: None,
+        })
+        .collect()
 }
 
 fn format_fff_results(

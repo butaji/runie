@@ -4,8 +4,8 @@
 
 use super::stream::{Chunk, Delta, ToolCallDelta};
 use crate::protocol::ProviderProtocol;
-use runie_core::provider_event::{ProviderEvent, StopReason};
 use runie_core::lifecycle::LifecycleState;
+use runie_core::provider_event::{ProviderEvent, StopReason};
 use std::collections::{BTreeMap, HashSet};
 
 /// OpenAI protocol state machine.
@@ -183,9 +183,11 @@ fn process_openai_chunk(chunk: Chunk, state: &mut OpenAiState) -> Vec<ProviderEv
 
     if chunk.finish_reason.is_some() {
         events.extend(flush_tool_calls(state));
-        events.extend(state.lifecycle.finish(map_finish_reason(
-            chunk.finish_reason.as_deref(),
-        )));
+        events.extend(
+            state
+                .lifecycle
+                .finish(map_finish_reason(chunk.finish_reason.as_deref())),
+        );
     }
 
     if let Some((input, output)) = chunk.usage {
@@ -201,9 +203,13 @@ fn process_openai_chunk(chunk: Chunk, state: &mut OpenAiState) -> Vec<ProviderEv
 fn process_tool_call_delta(delta: ToolCallDelta, state: &mut OpenAiState) -> Vec<ProviderEvent> {
     let acc = state.tools.entry(delta.index).or_default();
     // Buffer id and name; only proceed when we have both
-    if !update_tool_acc(acc, &delta) { return vec![]; }
+    if !update_tool_acc(acc, &delta) {
+        return vec![];
+    }
     // Buffer args until the tool is "started" (first args delta arrives)
-    if state.started.contains(&acc.id) { return emit_args_delta(acc); }
+    if state.started.contains(&acc.id) {
+        return emit_args_delta(acc);
+    }
     // Only emit ToolCallStart when the first args chunk arrives
     if acc.arguments.is_empty() {
         return vec![]; // Still waiting for args
@@ -212,7 +218,10 @@ fn process_tool_call_delta(delta: ToolCallDelta, state: &mut OpenAiState) -> Vec
     let id = acc.id.clone();
     let name = acc.name.clone();
     let args = std::mem::take(&mut acc.arguments);
-    let mut events = vec![ProviderEvent::ToolCallStart { id: id.clone(), name: name.clone() }];
+    let mut events = vec![ProviderEvent::ToolCallStart {
+        id: id.clone(),
+        name: name.clone(),
+    }];
     if !args.is_empty() {
         events.push(ProviderEvent::ToolCallInputDelta { id, delta: args });
     }
@@ -220,18 +229,33 @@ fn process_tool_call_delta(delta: ToolCallDelta, state: &mut OpenAiState) -> Vec
 }
 
 fn update_tool_acc(acc: &mut ToolAccum, delta: &ToolCallDelta) -> bool {
-    if let Some(ref id) = delta.id { if !id.is_empty() { acc.id.clone_from(id); } }
-    if let Some(ref name) = delta.name { if !name.is_empty() { acc.name.clone_from(name); } }
-    if let Some(ref args) = delta.arguments { acc.arguments.push_str(args); }
+    if let Some(ref id) = delta.id {
+        if !id.is_empty() {
+            acc.id.clone_from(id);
+        }
+    }
+    if let Some(ref name) = delta.name {
+        if !name.is_empty() {
+            acc.name.clone_from(name);
+        }
+    }
+    if let Some(ref args) = delta.arguments {
+        acc.arguments.push_str(args);
+    }
     !acc.id.is_empty() && !acc.name.is_empty()
 }
 
 fn emit_args_delta(acc: &mut ToolAccum) -> Vec<ProviderEvent> {
-    if acc.arguments.is_empty() { return vec![]; }
+    if acc.arguments.is_empty() {
+        return vec![];
+    }
     let id = acc.id.clone();
     let delta_str = acc.arguments.clone();
     acc.arguments.clear();
-    vec![ProviderEvent::ToolCallInputDelta { id, delta: delta_str }]
+    vec![ProviderEvent::ToolCallInputDelta {
+        id,
+        delta: delta_str,
+    }]
 }
 
 fn flush_tool_calls(state: &mut OpenAiState) -> Vec<ProviderEvent> {
@@ -337,9 +361,13 @@ mod tests {
         let frame = chunk_with_content("hi");
         let (new_state, events) = protocol.step(state, frame);
 
-        assert!(events.iter().any(|e| matches!(e, ProviderEvent::TextDelta(t) if t == "hi")));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::TextDelta(t) if t == "hi")));
         // Verify lifecycle state was updated by checking for TextStart event
-        assert!(events.iter().any(|e| matches!(e, ProviderEvent::TextStart { id } if id == "text")));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::TextStart { id } if id == "text")));
     }
 
     #[test]
@@ -372,7 +400,10 @@ mod tests {
             e, ProviderEvent::ToolCallEnd { id } if id == "call_1"
         )));
         assert!(events.iter().any(|e| matches!(
-            e, ProviderEvent::Finish { reason: StopReason::ToolCalls }
+            e,
+            ProviderEvent::Finish {
+                reason: StopReason::ToolCalls
+            }
         )));
         assert!(final_state.ended.contains("call_1"));
     }

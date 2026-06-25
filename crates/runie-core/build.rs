@@ -34,7 +34,10 @@ const APPSTATE_PATTERNS: &[(&str, &str)] = &[
     ("state.transient_level ", "state.transient_level_mut()"),
     ("state.fff_file_results.", "state.fff_file_results_mut()"),
     ("state.fff_debounce ", "state.fff_debounce_mut()"),
-    ("state.permission_request ", "state.permission_request_mut()"),
+    (
+        "state.permission_request ",
+        "state.permission_request_mut()",
+    ),
     ("state.cwd_name ", "state.cwd_name_mut()"),
     ("state.git_info ", "state.git_info_mut()"),
     ("state.git_info.", "state.git_info_mut()"),
@@ -105,7 +108,12 @@ fn relative_path(path: &Path, workspace_root: &Path) -> String {
 }
 
 fn is_test_file(rel_path: &str) -> bool {
-    rel_path.contains("/tests/") || rel_path.ends_with("/tests.rs") || rel_path.ends_with("_tests.rs") || rel_path.ends_with("_test.rs") || rel_path.contains("_tests.") || rel_path.contains("_test.")
+    rel_path.contains("/tests/")
+        || rel_path.ends_with("/tests.rs")
+        || rel_path.ends_with("_tests.rs")
+        || rel_path.ends_with("_test.rs")
+        || rel_path.contains("_tests.")
+        || rel_path.contains("_test.")
 }
 
 fn is_test_function(lines: &[&str], fn_start: usize) -> bool {

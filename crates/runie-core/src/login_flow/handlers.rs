@@ -4,15 +4,13 @@
 //! Manages its own dialog state via `LoginFlowState` and the global
 //! back stack for Android-like ESC semantics.
 
-use crate::login_flow::panel_ops::{
-    pop_login_panel, pop_login_panel_or_close, push_login_panel,
-    rebuild_login_dialog, replace_top_login_panel_with,
-};
-use super::panels::{
-    build_key_input, build_model_selector, build_validating_panel,
-};
+use super::panels::{build_key_input, build_model_selector, build_validating_panel};
 use super::state::{LoginFlowState, LoginStep};
 use crate::config::Config;
+use crate::login_flow::panel_ops::{
+    pop_login_panel, pop_login_panel_or_close, push_login_panel, rebuild_login_dialog,
+    replace_top_login_panel_with,
+};
 use crate::Event;
 
 /// Top-level login flow dispatcher.
@@ -21,12 +19,8 @@ pub fn login_flow_event(state: &mut crate::model::AppState, event: Event) {
         Event::Start => login_flow_start(state),
         Event::SelectProvider { provider } => login_flow_select_provider(state, provider),
         Event::SubmitKey { provider, key } => login_flow_submit_key(state, provider, key),
-        Event::ModelsFetched { models, .. } => {
-            login_flow_validation_success(state, models)
-        }
-        Event::ValidationFailed { error, .. } => {
-            login_flow_validation_failed(state, error)
-        }
+        Event::ModelsFetched { models, .. } => login_flow_validation_success(state, models),
+        Event::ValidationFailed { error, .. } => login_flow_validation_failed(state, error),
         Event::ToggleModel { model } => login_flow_toggle_model(state, model),
         Event::Save => login_flow_save(state),
         Event::Cancel => login_flow_cancel(state),
@@ -131,8 +125,7 @@ fn login_flow_validation_success(state: &mut crate::model::AppState, models: Vec
         return;
     }
 
-    let selected_models: std::collections::HashSet<String> =
-        models.iter().cloned().collect();
+    let selected_models: std::collections::HashSet<String> = models.iter().cloned().collect();
     if let Some(ref mut flow) = state.login_flow_mut() {
         flow.step = LoginStep::ModelSelect;
         flow.available_models = models;
@@ -244,7 +237,11 @@ fn login_flow_save(state: &mut crate::model::AppState) {
 }
 
 fn validate_login_flow_ready(state: &mut crate::model::AppState) -> bool {
-    let validated = state.login_flow().as_ref().map(|f| f.validated).unwrap_or(false);
+    let validated = state
+        .login_flow()
+        .as_ref()
+        .map(|f| f.validated)
+        .unwrap_or(false);
     let has_models = state
         .login_flow
         .as_ref()
@@ -303,8 +300,7 @@ fn persist_provider_config(
 
     // Extract handles before any async work to avoid borrow conflicts.
     let handles = state.actor_handles().cloned();
-    let can_spawn = handles.as_ref().is_some()
-        && tokio::runtime::Handle::try_current().is_ok();
+    let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
 
     if can_spawn {
         let handles = handles.unwrap();
@@ -313,13 +309,13 @@ fn persist_provider_config(
         let key = key.to_string();
         let selected = selected.to_vec();
         tokio::spawn(async move {
-            handles.send_save_provider(&provider, &base_url, &key, selected).await;
+            handles
+                .send_save_provider(&provider, &base_url, &key, selected)
+                .await;
         });
         return;
     }
-    if let Err(e) =
-        crate::login_config::save_provider_config(provider, base_url, key, selected)
-    {
+    if let Err(e) = crate::login_config::save_provider_config(provider, base_url, key, selected) {
         state.add_system_msg(format!("Failed to save provider config: {}", e));
     }
 }

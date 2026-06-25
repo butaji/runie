@@ -248,7 +248,10 @@ mod tests {
         // The actor task should be cancelled
     }
 
-    fn drain_events<E: Clone + Send + 'static>(sub: &mut broadcast::Receiver<E>, count: usize) -> Vec<E> {
+    fn drain_events<E: Clone + Send + 'static>(
+        sub: &mut broadcast::Receiver<E>,
+        count: usize,
+    ) -> Vec<E> {
         let mut events = Vec::with_capacity(count);
         for _ in 0..count {
             match sub.try_recv() {

@@ -113,7 +113,8 @@ Done."#;
 
     #[test]
     fn test_strip_tool_markers_inline_json() {
-        let input = r#"Here's the result: {"name": "read_file", "arguments": {"path": "/test"}} Done."#;
+        let input =
+            r#"Here's the result: {"name": "read_file", "arguments": {"path": "/test"}} Done."#;
         let result = strip_tool_markers(input);
         assert_eq!(result, "Here's the result:  Done.");
     }

@@ -1,8 +1,8 @@
 //! Tests for mouse event handling in the AppState.
 
 use super::*;
-use runie_core::Event;
 use runie_core::AppState;
+use runie_core::Event;
 
 /// Mouse click event should not crash the state.
 #[test]

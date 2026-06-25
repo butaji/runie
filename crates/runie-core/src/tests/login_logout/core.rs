@@ -1,5 +1,5 @@
-use crate::Event;
 use crate::model::AppState;
+use crate::Event;
 
 use super::clean_config;
 
@@ -69,9 +69,15 @@ fn edit_models_opens_dedicated_panel() {
         .and_then(|d| d.panel_stack())
         .expect("panel stack should be open");
     let panel = stack.current().expect("editor panel should exist");
-    assert_eq!(panel.id, "provider-models", "expected provider-models panel");
+    assert_eq!(
+        panel.id, "provider-models",
+        "expected provider-models panel"
+    );
     assert!(
-        panel.items.iter().any(|i| i.label().is_some_and(|l| l == "gpt-4o")),
+        panel
+            .items
+            .iter()
+            .any(|i| i.label().is_some_and(|l| l == "gpt-4o")),
         "editor should contain configured model"
     );
 }

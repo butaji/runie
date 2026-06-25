@@ -89,11 +89,7 @@ async fn handle_connection(stream: TcpStream, yolo: bool) {
         if line.trim().is_empty() {
             continue;
         }
-        let _ = write_response(
-            &mut writer,
-            &process_request(&line, yolo).await,
-        )
-        .await;
+        let _ = write_response(&mut writer, &process_request(&line, yolo).await).await;
     }
 }
 
@@ -176,7 +172,6 @@ fn headless_options(_yolo: bool) -> HeadlessCliOptions {
         on_chunk: None,
     }
 }
-
 
 async fn handle_chat(params: &Value, yolo: bool) -> Result<Value> {
     let messages: Vec<ChatMessage> =

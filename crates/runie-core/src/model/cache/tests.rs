@@ -23,7 +23,9 @@ fn snapshot_rebuilds_palette_cache_without_blocking_io() {
     state.update(Event::ToggleCommandPalette);
     let snap = state.snapshot();
     assert!(
-        snap.palette_items.iter().any(|(n, _, c)| n == "rust" && c == "Skill"),
+        snap.palette_items
+            .iter()
+            .any(|(n, _, c)| n == "rust" && c == "Skill"),
         "skill should appear in palette items"
     );
 }

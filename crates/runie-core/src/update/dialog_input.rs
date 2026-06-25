@@ -118,7 +118,8 @@ impl AppState {
         )?;
         let posts = view.posts.clone();
         drop(view);
-        posts.iter()
+        posts
+            .iter()
             .find(|p| p.start <= bottom && bottom < p.end)
             .map(|p| p.index)
     }

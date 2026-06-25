@@ -1,7 +1,7 @@
 //! Layer 2 tests for bracketed paste of long text.
 
-use crate::Event;
 use crate::model::AppState;
+use crate::Event;
 
 #[test]
 fn paste_long_text_inserts_full_content() {

@@ -1,8 +1,8 @@
 use super::*;
-use runie_core::Event;
 use runie_core::model::AppState;
 use runie_core::view::elements::Element;
 use runie_core::view::LazyCache;
+use runie_core::Event;
 
 fn dispatch(state: &mut AppState, events: &[Event]) {
     for e in events {

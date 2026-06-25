@@ -1,7 +1,7 @@
 use super::exec;
-use crate::Event;
 use crate::model::Role;
 use crate::tests::{fresh_state, type_str};
+use crate::Event;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {

@@ -1,6 +1,6 @@
-use crate::Event;
 use crate::model::{AppState, Role};
 use crate::tests::fresh_state;
+use crate::Event;
 
 fn user_count(state: &AppState) -> usize {
     state

@@ -91,7 +91,6 @@ fn key_input_renders_provider_name_and_field() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
@@ -126,7 +125,6 @@ fn typed_api_key_renders_in_input_box() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
@@ -149,7 +147,6 @@ fn validating_panel_renders_provider() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-
 
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {
@@ -174,7 +171,6 @@ fn model_selector_renders_toggles_save_cancel() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-
 
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {
@@ -225,7 +221,6 @@ fn empty_model_list_renders_save_and_warning() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
@@ -260,7 +255,6 @@ fn validation_failure_renders_error() {
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
-
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {
         provider: "minimax".into(),
@@ -289,7 +283,6 @@ fn title_padding_exactly_one_space() {
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
-
 
     state.update(Event::from(Event::Start));
     state.update(Event::from(Event::SelectProvider {

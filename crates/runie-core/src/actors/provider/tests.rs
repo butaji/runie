@@ -9,9 +9,9 @@ use crate::actors::provider::{BuiltProvider, ProviderActor, ProviderActorHandle,
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::event::Event;
-use crate::provider_event::ProviderEvent;
 use crate::message::ChatMessage;
 use crate::provider::{Provider, ProviderError};
+use crate::provider_event::ProviderEvent;
 
 struct DummyProvider;
 
@@ -33,7 +33,11 @@ struct MockFactory {
 impl MockFactory {
     fn ok(provider: Box<dyn Provider>, key: &str, model: &str) -> Self {
         Self {
-            build_result: std::sync::Mutex::new(Some(Ok(BuiltProvider::new(provider, key.into(), model.into())))),
+            build_result: std::sync::Mutex::new(Some(Ok(BuiltProvider::new(
+                provider,
+                key.into(),
+                model.into(),
+            )))),
             validate_result: std::sync::Mutex::new(None),
             credentials: Some(("http://localhost".into(), "sk-test".into())),
         }

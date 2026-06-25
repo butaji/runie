@@ -1,6 +1,6 @@
-use crate::Event;
 use crate::model::AppState;
 use crate::update::dialog::dialog_toggle_event;
+use crate::Event;
 
 pub fn model_config_event(state: &mut AppState, event: crate::Event) {
     let invalidate = handle_main_events(state, &event)

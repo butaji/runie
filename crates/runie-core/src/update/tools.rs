@@ -101,8 +101,8 @@ mod tests {
 
 // ── Form-submit and edit-event handling (merged from edit.rs) ─────────────────
 
-use crate::Event;
 use crate::model::AppState;
+use crate::Event;
 
 pub fn update(state: &mut AppState, event: Event) {
     match event {
@@ -135,13 +135,19 @@ impl AppState {
     fn try_spawn_io_write(&mut self) -> bool {
         // Extract handles before async work to avoid borrow conflicts.
         let handles = self.actor_handles().cloned();
-        let can_spawn = handles.as_ref().is_some()
-            && tokio::runtime::Handle::try_current().is_ok();
+        let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
 
         if can_spawn {
-            let edits: Vec<_> = self.session_mut().pending_edits.drain(..).map(|p| (p.path, p.proposed)).collect();
+            let edits: Vec<_> = self
+                .session_mut()
+                .pending_edits
+                .drain(..)
+                .map(|p| (p.path, p.proposed))
+                .collect();
             let handles = handles.unwrap();
-            tokio::spawn(async move { handles.write_files(edits).await; });
+            tokio::spawn(async move {
+                handles.write_files(edits).await;
+            });
             return true;
         }
         false
