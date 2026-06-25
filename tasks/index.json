@@ -915,7 +915,7 @@
     },
     {
       "id": "fold-state-into-model-state",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
@@ -1427,7 +1427,7 @@
     },
     {
       "id": "rename-model-snapshot-to-compaction",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
@@ -1437,7 +1437,7 @@
     },
     {
       "id": "rename-test-submission-id",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Testing",
       "priority": "P2",
