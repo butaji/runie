@@ -2,7 +2,7 @@
   "tasks": [
     {
       "id": "actor-lifecycle-and-handle-registry",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",

@@ -12,24 +12,24 @@ use super::panels::{
     build_key_input, build_model_selector, build_validating_panel,
 };
 use super::state::{LoginFlowState, LoginStep};
-use crate::event::LoginFlowEvent;
+use crate::Event;
 
 /// Top-level login flow dispatcher.
-pub fn login_flow_event(state: &mut crate::model::AppState, event: LoginFlowEvent) {
+pub fn login_flow_event(state: &mut crate::model::AppState, event: Event) {
     match event {
-        LoginFlowEvent::Start => login_flow_start(state),
-        LoginFlowEvent::SelectProvider { provider } => login_flow_select_provider(state, provider),
-        LoginFlowEvent::SubmitKey { provider, key } => login_flow_submit_key(state, provider, key),
-        LoginFlowEvent::ModelsFetched { models, .. } => {
+        Event::Start => login_flow_start(state),
+        Event::SelectProvider { provider } => login_flow_select_provider(state, provider),
+        Event::SubmitKey { provider, key } => login_flow_submit_key(state, provider, key),
+        Event::ModelsFetched { models, .. } => {
             login_flow_validation_success(state, models)
         }
-        LoginFlowEvent::ValidationFailed { error, .. } => {
+        Event::ValidationFailed { error, .. } => {
             login_flow_validation_failed(state, error)
         }
-        LoginFlowEvent::ToggleModel { model } => login_flow_toggle_model(state, model),
-        LoginFlowEvent::Save => login_flow_save(state),
-        LoginFlowEvent::Cancel => login_flow_cancel(state),
-        // intentionally ignored: other LoginFlowEvent variants are not used in this handler
+        Event::ToggleModel { model } => login_flow_toggle_model(state, model),
+        Event::Save => login_flow_save(state),
+        Event::Cancel => login_flow_cancel(state),
+        // intentionally ignored: other LoginFlow variants are not used in this handler
         _ => {}
     }
 }
@@ -300,17 +300,20 @@ fn persist_provider_config(
 ) {
     sync_config_cache(state, provider, base_url, key, selected);
 
-    if let Some(tx) = state.config_tx.clone() {
-        let msg = crate::actors::ConfigMsg::SaveProvider {
-            name: provider.to_string(),
-            base_url: base_url.to_string(),
-            api_key: key.to_string(),
-            models: selected.to_vec(),
-        };
-        tokio::spawn(async move {
-            let _ = tx.send(msg).await;
-        });
-    } else if let Err(e) =
+    if let Some(ref handles) = state.actor_handles {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            let handles = handles.clone();
+            let provider = provider.to_string();
+            let base_url = base_url.to_string();
+            let key = key.to_string();
+            let selected = selected.to_vec();
+            tokio::spawn(async move {
+                handles.send_save_provider(&provider, &base_url, &key, selected).await;
+            });
+            return;
+        }
+    }
+    if let Err(e) =
         crate::login_config::save_provider_config(provider, base_url, key, selected)
     {
         state.add_system_msg(format!("Failed to save provider config: {}", e));

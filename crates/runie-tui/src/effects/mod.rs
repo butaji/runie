@@ -146,8 +146,6 @@ impl EffectCommand {
                     if let Some(ref provider_handle) = handles.provider {
                         login::run(provider.clone(), key, tx, provider_handle.tx().clone());
                     }
-                } else if let Some(ref provider_tx) = state.provider_tx {
-                    login::run(provider.clone(), key, tx, provider_tx.clone());
                 }
             }
         }

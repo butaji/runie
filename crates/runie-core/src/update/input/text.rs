@@ -416,10 +416,11 @@ impl AppState {
     }
 
     fn run_bash_command(&mut self, command: &str) {
-        if let Some(tx) = self.io_tx.clone() {
-            if let Ok(handle) = tokio::runtime::Handle::try_current() {
+        if let Some(ref handles) = self.actor_handles {
+            if tokio::runtime::Handle::try_current().is_ok() {
                 let command = command.to_string();
-                let _ = handle.spawn(async move { tx.run_bash(command).await; });
+                let handles = handles.clone();
+                tokio::spawn(async move { handles.run_bash(command).await; });
                 return;
             }
         }

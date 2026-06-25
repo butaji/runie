@@ -61,9 +61,12 @@ fn run_load_command(state: &mut AppState, name: &str) {
 fn run_save_command(state: &mut AppState, name: &str) {
     let name_owned = name.to_string();
     let session = crate::session::Session::from_state(state, name_owned.clone());
-    if let Some(tx) = state.persistence_tx.clone() {
-        if let Ok(handle) = tokio::runtime::Handle::try_current() {
-            let _ = handle.spawn(async move { tx.save(name_owned, session).await; });
+    if let Some(ref handles) = state.actor_handles {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            let handles = handles.clone();
+            tokio::spawn(async move {
+                handles.send_save_session(name_owned, session).await;
+            });
             return;
         }
     }
@@ -91,10 +94,13 @@ fn run_delete_command(state: &mut AppState, name: &str) {
 }
 
 fn run_import_command(state: &mut AppState, path: &str) {
-    if let Some(tx) = state.persistence_tx.clone() {
-        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+    if let Some(ref handles) = state.actor_handles {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            let handles = handles.clone();
             let path = std::path::PathBuf::from(path);
-            let _ = handle.spawn(async move { tx.import(path).await; });
+            tokio::spawn(async move {
+                handles.send_import_session(path).await;
+            });
             return;
         }
     }
@@ -117,27 +123,24 @@ fn run_import_command(state: &mut AppState, path: &str) {
 }
 
 fn run_export_command(state: &mut AppState, path: &str) {
-    if let Some(tx) = state.persistence_tx.clone() {
-        if let Ok(handle) = tokio::runtime::Handle::try_current() {
-            let name = state
-                .session
-                .session_display_name
-                .clone()
-                .unwrap_or_else(|| "exported".into());
-            let session = Session::from_state(state, name);
-            let path = std::path::PathBuf::from(path);
-            let _ = handle.spawn(async move { tx.export(path, session).await; });
-            return;
-        }
-    }
-    use crate::commands::CommandResult;
     let name = state
         .session
         .session_display_name
         .clone()
         .unwrap_or_else(|| "exported".into());
     let session = Session::from_state(state, name);
-    let path_buf = path.to_string();
+    let path_buf = std::path::PathBuf::from(path);
+    // Try actor-based async path first
+    if let Some(ref handles) = state.actor_handles {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            let handles = handles.clone();
+            tokio::spawn(async move {
+                handles.send_export_session(path_buf.clone(), session).await;
+            });
+            return;
+        }
+    }
+    use crate::commands::CommandResult;
     let json = serde_json::to_string_pretty(&session).unwrap_or_default();
     let result = crate::async_io::block_in_place_if_runtime(|| std::fs::write(&path_buf, json))
         .map(|_| CommandResult::Message(format!("Session exported to '{}'", path)))
@@ -150,11 +153,14 @@ where
     F: FnOnce(crate::actors::SessionActorHandle, String) -> Fut + Send + 'static,
     Fut: std::future::Future<Output = ()> + Send + 'static,
 {
-    if let Some(tx) = state.persistence_tx.clone() {
-        if let Ok(handle) = tokio::runtime::Handle::try_current() {
-            let name = name.to_string();
-            let _ = handle.spawn(async move { f(tx, name).await; });
-            return true;
+    if let Some(ref handles) = state.actor_handles {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            if let Some(ref session) = handles.session {
+                let name = name.to_string();
+                let session = session.clone();
+                tokio::spawn(async move { f(session, name).await; });
+                return true;
+            }
         }
     }
     false
@@ -200,7 +206,7 @@ fn run_logout_command(state: &mut AppState, provider: &str) {
         state.set_active_model(
             provider,
             model,
-            crate::state::ModelSource::ConfigDefault,
+            crate::model::ModelSource::ConfigDefault,
         );
     }
     if !state.has_models() {

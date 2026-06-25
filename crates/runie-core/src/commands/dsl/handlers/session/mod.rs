@@ -1,7 +1,7 @@
 //! Session commands.
 //!
 //! Session IO (save/load/delete/import/export) is handled via
-//! `CommandEvent::Run*Command` in `update::command`.
+//! `Commandcrate::Event::Run*Command` in `update::command`.
 //! Session run helpers (name/fork/compact) live in `run.rs`.
 
 pub mod run;
@@ -25,43 +25,43 @@ where
 
 fn save_submit(values: &HashMap<String, String>) -> crate::Event {
     make_submit(values, "name", |name| {
-        crate::event::CommandEvent::RunSaveCommand { name }
+        crate::Event::RunSaveCommand { name }
     })
 }
 fn load_submit(values: &HashMap<String, String>) -> crate::Event {
     make_submit(values, "name", |name| {
-        crate::event::CommandEvent::RunLoadCommand { name }
+        crate::Event::RunLoadCommand { name }
     })
 }
 fn delete_submit(values: &HashMap<String, String>) -> crate::Event {
     make_submit(values, "name", |name| {
-        crate::event::CommandEvent::RunDeleteCommand { name }
+        crate::Event::RunDeleteCommand { name }
     })
 }
 fn export_submit(values: &HashMap<String, String>) -> crate::Event {
     make_submit(values, "path", |path| {
-        crate::event::CommandEvent::RunExportCommand { path }
+        crate::Event::RunExportCommand { path }
     })
 }
 fn import_submit(values: &HashMap<String, String>) -> crate::Event {
     make_submit(values, "path", |path| {
-        crate::event::CommandEvent::RunImportCommand { path }
+        crate::Event::RunImportCommand { path }
     })
 }
 fn compact_submit(values: &HashMap<String, String>) -> crate::Event {
-    crate::event::CommandEvent::RunCompactCommand {
+    crate::Event::RunCompactCommand {
         keep: crate::dialog::dsl::get_field(values, "keep"),
         focus: crate::dialog::dsl::get_field(values, "focus"),
     }
 }
 fn fork_submit(values: &HashMap<String, String>) -> crate::Event {
-    crate::event::CommandEvent::RunForkCommand {
+    crate::Event::RunForkCommand {
         message_index: crate::dialog::dsl::get_field(values, "index"),
     }
 }
 fn name_submit(values: &HashMap<String, String>) -> crate::Event {
     make_submit(values, "name", |name| {
-        crate::event::CommandEvent::RunNameCommand { name }
+        crate::Event::RunNameCommand { name }
     })
 }
 
@@ -238,9 +238,12 @@ pub fn register(registry: &mut CommandRegistry) {
 // ── Command handlers ──────────────────────────────────────────────────────────
 
 fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
-    if let Some(tx) = state.persistence_tx.clone() {
-        if let Ok(handle) = tokio::runtime::Handle::try_current() {
-            let _ = handle.spawn(async move { tx.list().await; });
+    if let Some(ref handles) = state.actor_handles {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            let handles = handles.clone();
+            tokio::spawn(async move {
+                handles.send_list_sessions().await;
+            });
             return CommandResult::None;
         }
     }
@@ -374,11 +377,11 @@ fn project_trust_status(_state: &AppState) -> &'static str {
 }
 
 fn handle_tree(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::event::SessionEvent::ToggleSessionTree)
+    CommandResult::Event(crate::Event::ToggleSessionTree)
 }
 
 fn handle_share(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::event::ControlEvent::ShareSession)
+    CommandResult::Event(crate::Event::ShareSession)
 }
 
 fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {

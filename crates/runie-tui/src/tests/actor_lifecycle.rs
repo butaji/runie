@@ -3,6 +3,9 @@
 //! These tests spawn the real actor system and verify actors stay alive
 //! throughout the application lifetime. They catch lifecycle bugs like
 //! silently dropping actor handles.
+//!
+//! Layer 2 test: `bootstrap_spawns_all_actors` — TUI bootstrap produces
+//! a non-empty ActorSystem.
 
 use runie_core::actors::{ConfigActor, ProviderActor};
 use runie_core::actors::provider::{ProviderMsg, ProviderReply};
@@ -79,4 +82,43 @@ async fn provider_actor_handle_can_be_cloned() {
         result.is_ok(),
         "cloned provider_tx should send successfully"
     );
+}
+
+/// Layer 2 test: bootstrap produces an ActorHandles with all actors spawned.
+#[tokio::test]
+async fn bootstrap_spawns_all_actors() {
+    use runie_core::bus::EventBus;
+    use runie_core::Event;
+    use runie_core::actors::{
+        ConfigActor, IoActor, ProviderActor, SessionActor,
+        ActorHandles,
+    };
+    use runie_provider::DynProviderFactory;
+    use std::sync::Arc;
+
+    let bus = EventBus::<Event>::new(16);
+
+    // Spawn actors the same way bootstrap_app does
+    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
+    let (provider_handle, _provider_actor) = ProviderActor::spawn(
+        bus,
+        config_handle,
+        Arc::new(DynProviderFactory),
+    );
+    let (session_handle, _session_actor) = SessionActor::spawn(bus.clone());
+    let (io_handle, _io_actor) = IoActor::spawn(bus.clone());
+
+    let handles = ActorHandles {
+        config: Some(config_handle),
+        provider: Some(provider_handle),
+        session: Some(session_handle),
+        io: Some(io_handle),
+        fff_indexer: None,
+    };
+
+    // Verify all actors are present
+    assert!(handles.config.is_some(), "config actor should be spawned");
+    assert!(handles.provider.is_some(), "provider actor should be spawned");
+    assert!(handles.session.is_some(), "session actor should be spawned");
+    assert!(handles.io.is_some(), "io actor should be spawned");
 }

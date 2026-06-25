@@ -7,7 +7,7 @@ use crate::model::AppState;
 use super::spec::{CommandKind, CommandSpec};
 
 fn prompt_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
-    crate::event::CommandEvent::RunPromptCommand {
+    crate::Event::RunPromptCommand {
         name: crate::dialog::dsl::get_field(values, "name"),
     }
 }
@@ -131,15 +131,17 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
     if text.is_empty() {
         return CommandResult::Message("No assistant response to copy".into());
     }
-    CommandResult::Event(crate::event::DialogEvent::CopyToClipboard(text))
+    CommandResult::Event(crate::Event::CopyToClipboard(text))
 }
 
 fn handle_reload(state: &mut AppState, _: &str) -> CommandResult {
-    if let Some(ref tx) = state.config_tx {
-        let tx = tx.clone();
-        tokio::spawn(async move {
-            let _ = tx.send(crate::actors::ConfigMsg::Reload).await;
-        });
+    if let Some(ref handles) = state.actor_handles {
+        if let Some(ref config) = handles.config {
+            let tx = config.tx().clone();
+            tokio::spawn(async move {
+                let _ = tx.send(crate::actors::ConfigMsg::Reload).await;
+            });
+        }
     }
     state.skills = crate::async_io::block_in_place_if_runtime(crate::skills::load_all);
     CommandResult::Message("Reloaded config, keybindings, theme, skills, and prompts.".into())
@@ -151,7 +153,7 @@ fn handle_settings(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 fn handle_diagnostics(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::event::SystemEvent::ShowDiagnostics)
+    CommandResult::Event(crate::Event::ShowDiagnostics)
 }
 
 fn handle_skills(state: &mut AppState, _: &str) -> CommandResult {
@@ -170,7 +172,7 @@ fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
         use crate::dialog::dsl::form;
         let stack = form("skill", "Show Skill")
             .field("Name", "skill-name", "name")
-            .on_submit(|values| crate::event::CommandEvent::RunSkillCommand {
+            .on_submit(|values| crate::Event::RunSkillCommand {
                 name: crate::dialog::dsl::get_field(values, "name"),
             })
             .into_stack();
@@ -215,7 +217,7 @@ fn open_theme_selector(state: &mut AppState) {
     for theme in crate::themes::BUILTIN_THEMES {
         panel = panel.item(
             *theme,
-            ItemAction::Emit(crate::event::ModelConfigEvent::SwitchTheme {
+            ItemAction::Emit(crate::Event::SwitchTheme {
                 name: theme.to_string(),
             }),
         );
@@ -227,15 +229,15 @@ fn open_theme_selector(state: &mut AppState) {
 }
 
 fn handle_approve(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::event::EditEvent::ApproveEdit)
+    CommandResult::Event(crate::Event::ApproveEdit)
 }
 
 fn handle_reject(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::event::EditEvent::RejectEdit)
+    CommandResult::Event(crate::Event::RejectEdit)
 }
 
 fn handle_providers(_: &mut AppState, _args: &str) -> CommandResult {
-    CommandResult::Event(crate::event::DialogEvent::ProvidersDialog)
+    CommandResult::Event(crate::Event::ProvidersDialog)
 }
 
 fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {

@@ -131,22 +131,24 @@ pub fn update(state: &mut AppState, event: Event) {
 // ── Edit approval/rejection (merged from edit_approval.rs) ───────────────────
 
 impl AppState {
+    /// Try to spawn IO write via actor_handles, else fallback to sync.
+    fn try_spawn_io_write(&mut self) -> bool {
+        if self.actor_handles.as_ref().map_or(false, |_| tokio::runtime::Handle::try_current().is_ok()) {
+            let edits: Vec<_> = self.session.pending_edits.drain(..).map(|p| (p.path, p.proposed)).collect();
+            let handles = self.actor_handles.as_ref().unwrap().clone();
+            tokio::spawn(async move { handles.write_files(edits).await; });
+            return true;
+        }
+        false
+    }
+
     pub(crate) fn approve_edits(&mut self) {
         if self.session.pending_edits.is_empty() {
             self.add_system_msg("No pending edits to approve.".to_string());
             return;
         }
-        if let Some(tx) = self.io_tx.clone() {
-            if let Ok(handle) = tokio::runtime::Handle::try_current() {
-                let edits: Vec<_> = self
-                    .session
-                    .pending_edits
-                    .drain(..)
-                    .map(|p| (p.path, p.proposed))
-                    .collect();
-                let _ = handle.spawn(async move { tx.write_files(edits).await; });
-                return;
-            }
+        if self.try_spawn_io_write() {
+            return;
         }
         let mut applied = 0;
         let mut errors = Vec::new();

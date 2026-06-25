@@ -1,6 +1,6 @@
 # Actor lifecycle and handle registry
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0
@@ -26,28 +26,29 @@ This task introduces the registry in two phases:
 
 ## Acceptance criteria
 
-- [ ] `ActorHandles` struct exists in `crates/runie-core/src/actors/mod.rs` and holds cloneable handles for existing actors (`config`, `provider`, `persistence`, `session_store`, `io`, `fff_indexer`, `agent`, `ui`, session-log).
-- [ ] `AppState` stores one `ActorHandles` instead of loose `Option<Sender>` fields.
-- [ ] `config_tx` and `provider_tx` are wrapped in typed handles rather than raw `mpsc::Sender`.
-- [ ] `FffIndexerActor` is spawned in the runtime and its handle stored in `ActorHandles`.
-- [ ] `ActorHandles` provides `send_*` helpers; tests use a `TestActorHandles` recording variant (see `test-actor-harness`).
-- [ ] Actors that need to talk to other actors receive the target handle at construction time (dependency injection), not via `AppState`.
-- [ ] `cargo test --workspace` passes.
+- [x] `ActorHandles` struct exists in `crates/runie-core/src/actors/mod.rs` and holds cloneable handles for existing actors (`config`, `provider`, `persistence`, `session_store`, `io`, `fff_indexer`, `agent`, `ui`, session-log).
+- [x] `AppState` stores one `ActorHandles` instead of loose `Option<Sender>` fields.
+- [x] `config_tx` and `provider_tx` are wrapped in typed handles rather than raw `mpsc::Sender`.
+- [x] `FffIndexerActor` is spawned in the runtime and its handle stored in `ActorHandles`.
+- [x] `ActorHandles` provides `send_*` helpers; tests use a `TestActorHandles` recording variant (see `test-actor-harness`).
+- [x] Actors that need to talk to other actors receive the target handle at construction time (dependency injection), not via `AppState`.
+- [x] `cargo test --workspace` passes.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `actor_system_send_records_message_in_test_runtime` — test-only runtime captures sent intents.
-- [ ] `actor_system_clone_is_shallow` — cloning handles does not duplicate actors.
+- [x] `actor_system_clone_is_shallow` — cloning handles does not duplicate actors.
+- [x] `actor_handles_send_save_provider_via_actor` — integration test for send helper.
 
 ### Layer 2 — Event Handling
-- [ ] `bootstrap_spawns_all_actors` — TUI bootstrap produces a non-empty `ActorSystem`.
+- [x] `bootstrap_spawns_all_actors` — TUI bootstrap produces a non-empty `ActorSystem`.
 
 ### Layer 3 — Rendering
 - [ ] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] `provider_actor_responds_to_list_models_request` — actor stays alive.
+- [x] `provider_actor_handle_can_be_cloned` — handles are cloneable.
 
 ## Files touched
 

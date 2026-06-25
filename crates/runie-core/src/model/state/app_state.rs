@@ -58,14 +58,6 @@ pub struct AppState {
     /// Unified actor handle registry — single source for all actor senders.
     /// `None` in unit tests that do not spawn actors.
     pub actor_handles: Option<ActorHandles>,
-    /// Sender to the `ConfigActor`. Deprecated: use `actor_handles.config` instead.
-    pub config_tx: Option<tokio::sync::mpsc::Sender<crate::actors::ConfigMsg>>,
-    /// Sender to the `ProviderActor`. Deprecated: use `actor_handles.provider` instead.
-    pub provider_tx: Option<tokio::sync::mpsc::Sender<crate::actors::ProviderMsg>>,
-    /// Handle to the unified `SessionActor`. Deprecated: use `actor_handles.session` instead.
-    pub persistence_tx: Option<crate::actors::SessionActorHandle>,
-    /// Handle to the `IoActor`. Deprecated: use `actor_handles.io` instead.
-    pub io_tx: Option<crate::actors::IoActorHandle>,
     /// Last config applied to the state (read-only cache for sync lookups).
     pub config_cache: Option<crate::config::Config>,
 }
@@ -98,10 +90,6 @@ impl Default for AppState {
                 crate::permissions::ApprovalRegistry::new(),
             )),
             actor_handles: None,
-            config_tx: None,
-            provider_tx: None,
-            persistence_tx: None,
-            io_tx: None,
             config_cache: None,
         }
     }
@@ -123,13 +111,9 @@ impl AppState {
         self.trust_decisions.insert(path, decision);
     }
 
-    /// Install a complete `ActorHandles` registry and sync loose handle fields.
+    /// Install a complete `ActorHandles` registry.
     pub fn set_actor_handles(&mut self, handles: ActorHandles) {
-        self.actor_handles = Some(handles.clone());
-        self.config_tx = handles.config.as_ref().map(|h| h.tx().clone());
-        self.provider_tx = handles.provider.as_ref().map(|h| h.tx().clone());
-        self.persistence_tx = handles.session.clone();
-        self.io_tx = handles.io.clone();
+        self.actor_handles = Some(handles);
     }
 
     pub fn add_to_input_history(&mut self, entry: String) {
@@ -180,10 +164,6 @@ impl AppState {
         let config = self.config.clone();
         let registry = self.approval_registry.clone();
         let actor_handles = self.actor_handles.clone();
-        let config_tx = self.config_tx.clone();
-        let provider_tx = self.provider_tx.clone();
-        let persistence_tx = self.persistence_tx.clone();
-        let io_tx = self.io_tx.clone();
         let config_cache = self.config_cache.clone();
         let git_info = self.git_info.clone();
         let cwd_name = self.cwd_name.clone();
@@ -192,10 +172,6 @@ impl AppState {
         self.config = config;
         self.approval_registry = registry;
         self.actor_handles = actor_handles;
-        self.config_tx = config_tx;
-        self.provider_tx = provider_tx;
-        self.persistence_tx = persistence_tx;
-        self.io_tx = io_tx;
         self.config_cache = config_cache;
         self.git_info = git_info;
         self.cwd_name = cwd_name;
@@ -293,8 +269,7 @@ impl AppState {
     pub fn remove_provider(&self, name: &str) {
         let tx = self.actor_handles.as_ref()
             .and_then(|h| h.config.as_ref())
-            .map(|h| h.tx().clone())
-            .or_else(|| self.config_tx.clone());
+            .map(|h| h.tx().clone());
         if let (Some(tx), Ok(_)) = (tx, tokio::runtime::Handle::try_current()) {
             let msg = crate::actors::ConfigMsg::RemoveProvider { name: name.to_string() };
             tokio::spawn(async move { let _ = tx.send(msg).await; });
@@ -305,8 +280,7 @@ impl AppState {
     pub fn set_provider_models(&self, name: &str, models: Vec<String>) {
         let tx = self.actor_handles.as_ref()
             .and_then(|h| h.config.as_ref())
-            .map(|h| h.tx().clone())
-            .or_else(|| self.config_tx.clone());
+            .map(|h| h.tx().clone());
         if let (Some(tx), Ok(_)) = (tx, tokio::runtime::Handle::try_current()) {
             let msg = crate::actors::ConfigMsg::SetProviderModels { name: name.to_string(), models };
             tokio::spawn(async move { let _ = tx.send(msg).await; });

@@ -1,8 +1,7 @@
 //! Model/provider switching helpers.
 
 use crate::event::TransientLevel;
-use crate::model::AppState;
-use crate::state::ModelSource;
+use crate::model::{AppState, ModelSource};
 
 impl AppState {
     /// Switch the active provider/model and optionally persist it to config.
@@ -37,15 +36,15 @@ impl AppState {
     }
 
     fn persist_current_model(&self) {
-        if let Some(ref tx) = self.config_tx {
-            let msg = crate::actors::ConfigMsg::SetDefaultModel {
-                provider: self.config.current_provider.clone(),
-                model: self.config.current_model.clone(),
-            };
-            let tx = tx.clone();
-            tokio::spawn(async move {
-                let _ = tx.send(msg).await;
-            });
+        let provider = self.config.current_provider.clone();
+        let model = self.config.current_model.clone();
+        if let Some(ref handles) = self.actor_handles {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let handles = handles.clone();
+                tokio::spawn(async move {
+                    handles.send_set_default_model(&provider, &model).await;
+                });
+            }
         }
     }
 

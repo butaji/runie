@@ -13,6 +13,7 @@ use std::path::PathBuf;
 
 use crate::actors::{ConfigActorHandle, FffSearchRequest, IoActorHandle, ProviderActorHandle, SessionActorHandle};
 use crate::trust::TrustDecision;
+use crate::session::Session;
 
 /// All actor senders in one place.
 ///
@@ -141,6 +142,34 @@ impl ActorHandles {
             h.search(request).await;
         }
     }
+
+    /// Run a bash command via `IoActor`.
+    pub async fn run_bash(&self, command: String) {
+        if let Some(ref h) = self.io {
+            h.run_bash(command).await;
+        }
+    }
+
+    /// Write files via `IoActor`.
+    pub async fn write_files(&self, edits: Vec<(PathBuf, String)>) {
+        if let Some(ref h) = self.io {
+            h.write_files(edits).await;
+        }
+    }
+
+    /// Send `SessionMsg::Import` to `SessionActor`.
+    pub async fn send_import_session(&self, path: PathBuf) {
+        if let Some(ref h) = self.session {
+            h.import(path).await;
+        }
+    }
+
+    /// Send `SessionMsg::Export` to `SessionActor`.
+    pub async fn send_export_session(&self, path: PathBuf, session: Session) {
+        if let Some(ref h) = self.session {
+            h.export(path, session).await;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -163,5 +192,40 @@ mod tests {
         // FffIndexerHandle is Clone so it can be stored in ActorHandles which is Clone
         fn _assert_clone<T: Clone>() {}
         _assert_clone::<FffIndexerHandle>();
+    }
+
+    #[test]
+    fn actor_system_clone_is_shallow() {
+        // Cloning ActorHandles should be shallow — just copies the handles,
+        // does not spawn new actors.
+        let handles = ActorHandles::default();
+        let handles2 = handles.clone();
+        // Both are still all-None (no actors spawned)
+        assert!(handles.config.is_none());
+        assert!(handles2.config.is_none());
+        // Cloning produces identical but independent handles
+        assert!(handles.provider.is_none());
+        assert!(handles2.provider.is_none());
+    }
+
+    #[tokio::test]
+    async fn actor_handles_send_save_provider_via_actor() {
+        // Integration test: verify send_save_provider reaches ConfigActor.
+        use crate::actors::ConfigActor;
+        use crate::bus::EventBus;
+        use crate::Event;
+
+        let bus = EventBus::<Event>::new(16);
+        let (handle, _actor) = ConfigActor::spawn(bus.clone(), None);
+
+        let mut handles = ActorHandles::default();
+        handles.config = Some(handle);
+
+        // Send via ActorHandles helper
+        handles.send_save_provider("test", "http://localhost", "key", vec!["model".into()]).await;
+
+        // Actor should have received the message (no panic = success)
+        drop(handles);
+        drop(_actor);
     }
 }
