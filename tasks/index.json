@@ -28,7 +28,7 @@
     },
     {
       "id": "actor-owned-state-ssot",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",

@@ -13,13 +13,13 @@ macro_rules! define_fixtures {
 }
 
 define_fixtures! {
-    m3_read_file_final,
-    m3_read_file_call,
-    m3_multi_tool_readme,
-    m3_multi_tool_list_dir,
-    m3_list_files_final,
-    m3_list_files_call,
-    m27_multi_tool_readme,
+    M3_READ_FILE_FINAL,
+    M3_READ_FILE_CALL,
+    M3_MULTI_TOOL_README,
+    M3_MULTI_TOOL_LIST_DIR,
+    M3_LIST_FILES_FINAL,
+    M3_LIST_FILES_CALL,
+    M27_MULTI_TOOL_README,
 }
 
 /// All MiniMax fixture names.

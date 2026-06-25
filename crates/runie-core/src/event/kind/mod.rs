@@ -1,6 +1,23 @@
 //! Event taxonomy — `EventKind` enum and helper predicates.
 //!
-//! The `kind()` method is in [`kind_impl`](kind_impl).
+//! ## Naming Convention
+//!
+//! - **Intents** are imperative or noun-phrase requests from handlers/UI to actors:
+//!   `SetTheme`, `TrustProject`, `SubmitInput`, `RunCompact`.
+//!   Named like "set X", "do Y" — what the user/system wants.
+//! - **Facts** are past-tense or descriptive broadcasts from actors:
+//!   `ConfigLoaded`, `TrustChanged`, `SessionSaved`, `ToolEnd`.
+//!   Named like "X happened" or "X changed" — what actually occurred.
+//! - **Control** events are lifecycle / terminal signals:
+//!   `Quit`, `Abort`, `Reset`, `TerminalSize`.
+//!
+//! ## Routing
+//!
+//! - Facts → `AppState::update()` (the projection path)
+//! - Intents → actors via `ActorHandles` (see `actors/handles.rs`)
+//! - Control → `dispatch_event()` system handler (no state mutation)
+//!
+//! See [`intent`](crate::event::intent) for the typed intent enum.
 
 use crate::event::variants::Event;
 
@@ -67,8 +84,7 @@ fn is_intent(e: &Event) -> bool {
 }
 
 fn is_config_fact(e: &Event) -> bool {
-    matches!(e, Event::ConfigLoaded { .. } | Event::SwitchTheme { .. }
-        | Event::KeybindingsReloaded)
+    matches!(e, Event::ConfigLoaded { .. } | Event::KeybindingsReloaded)
 }
 
 fn is_trust_history_fact(e: &Event) -> bool {
@@ -105,7 +121,8 @@ fn is_replay_fact(e: &Event) -> bool {
 }
 
 fn is_model_config_intent(e: &Event) -> bool {
-    matches!(e, Event::CycleModelNext | Event::CycleModelPrev | Event::ToggleScopedModelsDialog
+    matches!(e, Event::SwitchModel { .. } | Event::SwitchTheme { .. }
+        | Event::CycleModelNext | Event::CycleModelPrev | Event::ToggleScopedModelsDialog
         | Event::ScopedModelToggle { .. } | Event::ScopedModelEnableAll
         | Event::ScopedModelDisableAll | Event::ScopedModelToggleProvider { .. }
         | Event::CycleThinkingLevel | Event::SetThinkingLevel(_) | Event::ToggleReadOnly
