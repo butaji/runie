@@ -39,8 +39,7 @@ Rules:
 | Crate | Role |
 |-------|------|
 | `runie-core` | Events, `AppState`, sessions, config, commands, dialog DSL, harness skills |
-| `runie-agent` | Agent turn loop, tool-call parsing, truncation, subagent runner |
-| `runie-engine` | Concrete built-in tool implementations (`read`, `write`, `edit`, `bash`, search, …) |
+| `runie-agent` | Agent turn loop, tool-call parsing, truncation, subagent runner, built-in tools |
 | `runie-provider` | LLM provider clients and model catalog (OpenAI-compatible, Anthropic, MiniMax, …) |
 | `runie-tui` | CLI entry, Ratatui rendering, panels/forms, theme, terminal setup |
 | `runie-print` | Non-interactive print mode binary |
@@ -115,14 +114,14 @@ Slash commands (`/model`, `/save`, `/compact`, …) are registered in a typed `C
 
 ### Tool model
 
-Tools implement a shared `Tool` trait. The built-in tools live in `runie-engine`; the registry and shared types live in `runie-core` so new tools can be added without depending on the engine.
+Tools implement a shared `Tool` trait. The built-in tools live in `runie-agent::tool`; the registry and shared types live in `runie-core` so new tools can be added without depending on the engine.
 
 Execution flow:
 
 1. Provider emits `ToolCallStart` + `ToolCallInputDelta`.
 2. Agent parses and validates the input.
 3. Permission policy decides `Allow`, `Ask`, or `Deny`.
-4. `runie-engine` executes the tool.
+4. `runie-agent` executes the tool.
 5. Result is emitted as a durable `ToolResult` event.
 
 ### Harness skills
@@ -198,8 +197,6 @@ crates/runie-agent/src/
   actor.rs          # AgentActor (interactive turn executor)
   turn.rs           # Agent turn loop
   subagent.rs       # Subagent runner
-
-crates/runie-engine/src/
   tool/             # Built-in tool implementations
 
 crates/runie-tui/src/

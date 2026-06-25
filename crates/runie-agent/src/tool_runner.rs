@@ -140,7 +140,7 @@ pub async fn execute_tools_with_observer(
     observer: &mut dyn ToolExecutorObserver,
     hooks: Option<&SkillRegistry>,
 ) -> Vec<ToolOutput> {
-    let registry = runie_engine::tool::builtin_registry();
+    let registry = crate::tool::builtin_registry();
     let mut outputs = Vec::with_capacity(tools.len());
     for tool_call in tools {
         let output =

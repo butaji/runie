@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use runie_core::tool::{ToolContext, ToolOutput, ToolRegistry, ToolStatus};
-use runie_engine::tool::builtin_registry;
+use crate::tool::builtin_registry;
 
 /// A single hook in the inspector pipeline.
 pub trait Inspector: Send + Sync {

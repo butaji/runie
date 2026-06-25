@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/runie-core", "crates/runie-engine", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-server", "crates/runie-testing", "crates/runie-protocol", "crates/runie-macros"]
+members = ["crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-server", "crates/runie-testing", "crates/runie-protocol", "crates/runie-macros"]
 resolver = "2"
 
 [workspace.package]
@@ -36,7 +36,6 @@ tempfile = "3"
 
 async-trait = "0.1"
 runie-core = { path = "crates/runie-core" }
-runie-engine = { path = "crates/runie-engine" }
 runie-tui = { path = "crates/runie-tui" }
 runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }

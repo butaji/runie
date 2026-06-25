@@ -273,7 +273,7 @@ async fn stream_headless_response(
 }
 
 fn build_tool_registry() -> ToolRegistry {
-    runie_engine::tool::builtin_registry()
+    crate::tool::builtin_registry()
 }
 
 async fn execute_headless_tools(
@@ -283,7 +283,7 @@ async fn execute_headless_tools(
     gate: &PermissionGate,
 ) -> Result<()> {
     let ctx = ToolContext::default();
-    let registry = runie_engine::tool::builtin_registry();
+    let registry = crate::tool::builtin_registry();
 
     for tool_call in tools {
         let output = execute_tool_call(&registry, tool_call, &ctx, gate).await;

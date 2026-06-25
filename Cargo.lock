@@ -3024,13 +3024,16 @@ version = "0.2.16"
 dependencies = [
  "anyhow",
  "async-trait",
+ "fff-search",
  "futures",
+ "git2",
+ "reqwest",
  "runie-core",
- "runie-engine",
  "runie-provider",
  "runie-testing",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
  "toml",
 ]
@@ -3074,22 +3077,6 @@ dependencies = [
  "unicode-segmentation",
  "unicode-width",
  "uuid",
-]
-
-[[package]]
-name = "runie-engine"
-version = "0.2.16"
-dependencies = [
- "anyhow",
- "async-trait",
- "fff-search",
- "git2",
- "reqwest",
- "runie-core",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
 ]
 
 [[package]]

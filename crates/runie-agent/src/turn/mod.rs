@@ -236,7 +236,7 @@ fn collect_parsed_tool_calls(
 }
 
 fn build_tool_registry(read_only: bool) -> ToolRegistry {
-    let registry = runie_engine::tool::builtin_registry();
+    let registry = crate::tool::builtin_registry();
     if read_only {
         registry.read_only_subset()
     } else {

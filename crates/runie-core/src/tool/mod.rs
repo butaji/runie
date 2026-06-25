@@ -1,6 +1,6 @@
 //! Tool registry and shared types for Runie.
 //!
-//! The concrete tool implementations have moved to `runie-engine::tool`. This
+//! The concrete tool implementations live in `runie-agent::tool`. This
 //! module keeps the [`Tool`] trait, [`ToolRegistry`], context/output/status
 //! types, and pure formatting helpers so that crates can depend only on core.
 

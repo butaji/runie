@@ -71,7 +71,7 @@ async fn ensure_parent_dirs(full_path: &std::path::Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tool::ToolStatus;
+    use super::super::ToolStatus;
 
     fn ctx() -> ToolContext {
         ToolContext {

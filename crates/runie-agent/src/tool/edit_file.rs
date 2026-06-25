@@ -1,11 +1,10 @@
 //! EditFile tool — performs a single search-and-replace in a file.
 
 use crate::define_tool;
-use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
+use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus, tool_error};
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::path::resolve_path_in;
-use runie_core::tool::tool_error;
 use serde_json::Value;
 use std::time::Instant;
 use tokio::fs;

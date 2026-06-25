@@ -76,6 +76,34 @@ pub fn build_schema(fields: &[(&str, &str, &str)], required: &[&str]) -> Value {
 /// fn is_read_only(&self) -> bool { true }
 /// fn requires_approval(&self, _input: &Value) -> bool { false }
 /// ```
+/// Declare a tool with its metadata.
+///
+/// # Example
+///
+/// ```ignore
+/// use crate::define_tool;
+///
+/// define_tool! {
+///     name: "read_file",
+///     description: "Read a file from disk",
+///     read_only: true,
+///     approval: false,
+///     fields: {
+///         "path": ("string", "Path to the file"),
+///     },
+///     required: ["path"]
+/// }
+/// ```
+///
+/// This expands to:
+///
+/// ```ignore
+/// fn name(&self) -> &str { "read_file" }
+/// fn description(&self) -> &str { "Read a file from disk" }
+/// fn input_schema(&self) -> Value { /* ... */ }
+/// fn is_read_only(&self) -> bool { true }
+/// fn requires_approval(&self, _input: &Value) -> bool { false }
+/// ```
 #[macro_export]
 macro_rules! define_tool {
     (

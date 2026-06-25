@@ -1,5 +1,5 @@
 use runie_core::tool_parser::parse_tool_calls;
-use runie_engine::tool::builtin_registry;
+use crate::tool::builtin_registry;
 
 #[test]
 fn parse_grep_tool_json() {

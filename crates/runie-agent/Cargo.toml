@@ -8,7 +8,6 @@ path = "src/lib.rs"
 
 [dependencies]
 runie-core.workspace = true
-runie-engine.workspace = true
 runie-provider.workspace = true
 anyhow.workspace = true
 serde.workspace = true
@@ -16,7 +15,11 @@ serde_json.workspace = true
 tokio = { workspace = true, features = ["rt", "macros", "rt-multi-thread"] }
 futures.workspace = true
 async-trait.workspace = true
+reqwest.workspace = true
+fff-search.workspace = true
+git2.workspace = true
 
 [dev-dependencies]
 runie-testing.workspace = true
 toml.workspace = true
+tempfile.workspace = true

@@ -10,6 +10,7 @@ pub mod safety;
 pub mod stream_response;
 pub mod subagent;
 pub mod think_filter;
+pub mod tool;
 pub mod tool_runner;
 pub mod truncate;
 pub mod turn;

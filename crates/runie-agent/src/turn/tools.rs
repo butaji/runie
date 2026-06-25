@@ -21,7 +21,7 @@ pub async fn execute_tools(
     gate: &PermissionGate,
 ) {
     let ctx = ToolContext::default();
-    let registry = runie_engine::tool::builtin_registry();
+    let registry = crate::tool::builtin_registry();
 
     for tool_call in tools {
         *tool_call_count += 1;

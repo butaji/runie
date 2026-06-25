@@ -1,4 +1,4 @@
-//! Built-in tool implementations for the Runie engine.
+//! Built-in tool implementations for the Runie agent.
 //!
 //! Tool trait and shared types live in `runie_core::tool`; this module provides
 //! the concrete implementations and the canonical [`builtin_registry`].
@@ -6,11 +6,12 @@
 use std::sync::Arc;
 
 pub use runie_core::tool::{
-    which_tool, which_tool_async, Tool, ToolContext, ToolOutput, ToolRegistry, ToolStatus,
+    tool_error, truncate_output, which_tool, which_tool_async, Tool, ToolContext, ToolOutput,
+    ToolRegistry, ToolStatus,
 };
 
 mod bash;
-mod define;
+pub mod define;
 mod edit_file;
 mod fetch_docs;
 mod find;
