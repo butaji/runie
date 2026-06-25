@@ -1,4 +1,4 @@
-use super::input_event;
+use super::{get_history_nav_mode, input_event, HistoryNavMode};
 use crate::event::{Event, InputEvent};
 use crate::model::{AppState, PermissionRequestState};
 use crate::permissions::PermissionAction;
@@ -100,4 +100,40 @@ fn history_next_moves_down() {
     assert_eq!(state.input.input, "b");
     state.update(InputEvent::HistoryNext);
     assert!(state.input.input.is_empty());
+}
+
+// ============================================================================
+// Layer 1 — State/Logic: history_nav_mode_selects_by_mode
+// ============================================================================
+
+#[test]
+fn history_nav_mode_selects_path_complete_when_suggestions_open() {
+    use crate::path_complete::PathCompletion;
+
+    let mut state = AppState::default();
+    state.completion.path_suggestions = Some(vec![
+        PathCompletion { path: "/src".to_string(), is_dir: true },
+        PathCompletion { path: "/tests".to_string(), is_dir: true },
+    ]);
+
+    // Both prev and next should use path completion when suggestions are open
+    let mode = get_history_nav_mode(&state);
+    assert!(matches!(mode, HistoryNavMode::PathComplete));
+}
+
+#[test]
+fn history_nav_mode_selects_cursor_when_multiline_input() {
+    let mut state = AppState::default();
+    state.input.input = "line1\nline2".to_string();
+
+    let mode = get_history_nav_mode(&state);
+    assert!(matches!(mode, HistoryNavMode::Cursor));
+}
+
+#[test]
+fn history_nav_mode_selects_history_when_plain_input() {
+    let state = AppState::default();
+
+    let mode = get_history_nav_mode(&state);
+    assert!(matches!(mode, HistoryNavMode::History));
 }

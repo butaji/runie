@@ -559,7 +559,7 @@
     },
     {
       "id": "dedupe-update-input-history",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Input / Commands",
       "priority": "P2",

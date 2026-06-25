@@ -107,23 +107,45 @@ fn handle_mouse_click_event(state: &mut AppState, row: u16, col: u16, button: &s
     handle_mouse_click(state, row, col, button);
 }
 
-fn handle_history_prev(state: &mut AppState) {
+/// Navigation mode selected by history/preview key bindings.
+///
+/// The three input modes that affect history navigation are:
+/// - Path-completion suggestions open → navigate those
+/// - Multi-line input active → move cursor vertically
+/// - Otherwise → navigate session history
+pub(crate) enum HistoryNavMode {
+    PathComplete,
+    Cursor,
+    History,
+}
+
+/// Returns the navigation mode based on current input state.
+///
+/// The logic is shared by both history-prev and history-next handlers;
+/// the caller maps the mode to up/down.
+pub(crate) fn get_history_nav_mode(state: &AppState) -> HistoryNavMode {
     if state.completion.path_suggestions.is_some() {
-        state.path_completion_up();
+        HistoryNavMode::PathComplete
     } else if state.input.input.contains('\n') {
-        state.move_cursor_up();
+        HistoryNavMode::Cursor
     } else {
-        state.history_prev();
+        HistoryNavMode::History
+    }
+}
+
+fn handle_history_prev(state: &mut AppState) {
+    match get_history_nav_mode(state) {
+        HistoryNavMode::PathComplete => state.path_completion_up(),
+        HistoryNavMode::Cursor => state.move_cursor_up(),
+        HistoryNavMode::History => state.history_prev(),
     }
 }
 
 fn handle_history_next(state: &mut AppState) {
-    if state.completion.path_suggestions.is_some() {
-        state.path_completion_down();
-    } else if state.input.input.contains('\n') {
-        state.move_cursor_down();
-    } else {
-        state.history_next();
+    match get_history_nav_mode(state) {
+        HistoryNavMode::PathComplete => state.path_completion_down(),
+        HistoryNavMode::Cursor => state.move_cursor_down(),
+        HistoryNavMode::History => state.history_next(),
     }
 }
 
