@@ -6,13 +6,19 @@
 // such as `loop`, `break`, `continue`, `return`, nested closures, `try` blocks,
 // match guards, and short-circuiting macros. It is sufficient as a coarse
 // guardrail, not a precise metric.
+//
+// Note: Match arms (`=>`) are intentionally not counted because `=>` also
+// appears in map literals (`HashMap::from([(k, v)])`) and closure patterns,
+// which would produce excessive false positives. Functions with many match
+// arms should be caught by the function-length limit (MAX_FUNCTION_LINES) or
+// refactored into helper methods.
 
 /// Approximate cyclomatic complexity by counting control-flow tokens.
 ///
 /// Currently counted tokens: `if`, `else if`, `match`, `while`, `for`, `&&`,
-/// `||`, and `?`. `loop`, `break`, `continue`, and `return` are intentionally
-/// excluded because they occur in most async/production functions and would
-/// produce excessive false positives under the current thresholds.
+/// `||`, and `?`. `loop`, `break`, `continue`, `return`, and match arms (`=>`)
+/// are intentionally excluded to avoid false positives from map literals and
+/// closure patterns.
 pub fn count_complexity(trimmed: &str) -> usize {
     trimmed.matches("if ").count()
         + trimmed.matches("else if").count()
@@ -41,5 +47,12 @@ mod tests {
         // count loop control tokens.
         assert_eq!(count_complexity("loop { break; continue; }"), 0);
         assert_eq!(count_complexity("return x;"), 0);
+    }
+
+    #[test]
+    fn complexity_count_does_not_count_map_literals() {
+        // Match arms are not counted to avoid false positives from map literals
+        let code = "HashMap::from([(k1, v1), (k2, v2), (k3, v3)])";
+        assert_eq!(count_complexity(code), 0);
     }
 }
