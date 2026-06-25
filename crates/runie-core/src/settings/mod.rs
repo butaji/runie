@@ -1,5 +1,9 @@
 //! Settings dialog state and items.
 
+mod dialog;
+
+pub use dialog::{build_setting_categories, build_setting_items, handle_settings_category, provider_model_lists};
+
 use crate::Event;
 
 /// Category for grouping settings in the dialog.
