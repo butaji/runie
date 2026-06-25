@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use runie_agent::AgentActorHandle;
 use runie_core::actors::SessionActorHandle;
-use runie_core::bus::{EventBus, ReplayReceiver};
+use runie_core::bus::{EventBus, Receiver};
 use runie_core::event::{ControlEvent, Event, InputEvent};
 use runie_core::login_flow::LoginStep;
 use runie_core::{AppState, Snapshot};
@@ -57,7 +57,7 @@ impl UiActor {
     }
 
     /// Run the actor until a quit event is processed.
-    pub async fn run(mut self, mut rx: ReplayReceiver<Event>) {
+    pub async fn run(mut self, mut rx: Receiver<Event>) {
         let (effect_tx, effect_rx) = mpsc::channel::<Event>(16);
         Self::spawn_effect_forwarder(self.bus.clone(), effect_rx);
 
@@ -74,7 +74,7 @@ impl UiActor {
                     // Drain any events already queued (e.g. streaming response
                     // deltas) and apply them in one batch, then publish a single
                     // snapshot for the whole burst instead of one per token.
-                    while let Some(Ok(evt)) = rx.try_recv() {
+                    while let Ok(evt) = rx.try_recv() {
                         if self.handle_event_inner(evt, effect_tx.clone()).await {
                             self.publish_snapshot();
                             return;

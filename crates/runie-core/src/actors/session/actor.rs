@@ -367,7 +367,7 @@ mod tests {
         std::env::set_var("RUNIE_TEST_DATA_DIR", &data);
 
         let bus = EventBus::<Event>::new(4);
-        let mut sub = bus.subscribe_with_replay();
+        let mut sub = bus.subscribe();
         let (handle, _actor_handle) = SessionActor::spawn(bus);
 
         let mut saw_trust = false;
@@ -377,7 +377,7 @@ mod tests {
                 break;
             }
             tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-            while let Some(Ok(evt)) = sub.try_recv() {
+            while let Ok(evt) = sub.try_recv() {
                 match evt {
                     Event::TrustLoaded { .. } => saw_trust = true,
                     Event::HistoryLoaded { .. } => saw_history = true,
@@ -396,7 +396,7 @@ mod tests {
                 break;
             }
             tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-            while let Some(Ok(evt)) = sub.try_recv() {
+            while let Ok(evt) = sub.try_recv() {
                 if matches!(evt, Event::TrustChanged { .. }) {
                     saw_changed = true;
                 }

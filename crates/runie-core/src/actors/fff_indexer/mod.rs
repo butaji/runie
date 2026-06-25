@@ -71,6 +71,14 @@ impl FffSearchState {
         guard.as_ref().map(|i| i.indexed).unwrap_or(false)
     }
 
+    /// Reset the global FFF state for test isolation.
+    /// Clears the inner state so a new indexer can initialize with a fresh root.
+    #[cfg(test)]
+    pub fn reset_for_test() {
+        let mut g = fff_state().write();
+        *g = None;
+    }
+
     /// Record that a file was accessed (read or selected) to boost its frecency score.
     /// This is a best-effort operation — failures are silently ignored.
     pub fn record_file_access(&self, path: &std::path::Path) {

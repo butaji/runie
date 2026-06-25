@@ -1,5 +1,11 @@
 use super::*;
 
+// Serialize FFF indexer tests to prevent cross-test state interference.
+// The FFF library uses OS threads and LMDB handles that can conflict when
+// multiple tests run concurrently. Each test acquires this lock and holds it
+// until completion.
+static TEST_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Wait for the FFF indexer to finish its initial scan.
 /// Uses a spawned blocking task with spin-loop to poll the indexed state.
 async fn wait_for_indexed(max_wait_ms: u64) -> bool {
@@ -19,8 +25,10 @@ async fn wait_for_indexed(max_wait_ms: u64) -> bool {
     handle.await.unwrap_or(false)
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "current_thread")]
 async fn indexer_initializes_in_temp_dir() {
+    let _lock = TEST_MUTEX.lock().unwrap();
+    FffSearchState::reset_for_test();
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path().to_path_buf();
     let data_dir = tmp.path().to_path_buf();
@@ -36,18 +44,20 @@ async fn indexer_initializes_in_temp_dir() {
     std::fs::create_dir_all(data_dir.join("runie").join("fff").join("frecency")).ok();
     std::fs::create_dir_all(data_dir.join("runie").join("fff").join("queries")).ok();
 
-    // Create the bus
     let bus = EventBus::new(16);
+
+    // Subscribe BEFORE spawning so we don't miss any events
+    let mut sub = bus.subscribe();
 
     // Spawn the indexer
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    // Wait for the actor to finish initialization using deterministic polling.
+    // Wait for the actor to finish initialization
     wait_for_indexed(500).await;
 
     // Send a search request
-    let request_id = 42;
+    let request_id = 1;
     let send_result = tx
         .send(FffSearchRequest {
             request_id,
@@ -57,11 +67,10 @@ async fn indexer_initializes_in_temp_dir() {
         })
         .await;
 
-    // Collect results using deterministic sync instead of sleeps
+    // Collect results using deterministic sync
     let mut result = None;
-    let mut sub = bus.subscribe();
     for _ in 0..100 {
-        if let Some(Ok(FffSearchResult(payload))) = sub.try_recv() {
+        if let Ok(FffSearchResult(payload)) = sub.try_recv() {
             if payload.request_id == request_id {
                 result = Some(payload);
                 break;
@@ -70,7 +79,6 @@ async fn indexer_initializes_in_temp_dir() {
         tokio::task::yield_now().await;
     }
 
-    // Abort the actor
     handle.abort();
 
     // Send should succeed (or gracefully fail if actor exited)
@@ -84,8 +92,10 @@ async fn indexer_initializes_in_temp_dir() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "current_thread")]
 async fn indexer_answers_file_search() {
+    let _lock = TEST_MUTEX.lock().unwrap();
+    FffSearchState::reset_for_test();
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path().to_path_buf();
     let data_dir = tmp.path().to_path_buf();
@@ -97,14 +107,18 @@ async fn indexer_answers_file_search() {
     std::fs::write(root.join("src/server/api.rs"), "pub fn api() {}").unwrap();
 
     let bus = EventBus::new(16);
+
+    // Subscribe BEFORE spawning so we don't miss any events
+    let mut sub = bus.subscribe();
+
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    // Wait for the actor to finish initialization using deterministic polling.
+    // Wait for the actor to finish initialization
     wait_for_indexed(500).await;
 
     // Search for "cli"
-    let request_id = 7;
+    let request_id = 2;
     tx.send(FffSearchRequest {
         request_id,
         query: "cli".to_string(),
@@ -114,11 +128,10 @@ async fn indexer_answers_file_search() {
     .await
     .expect("send succeeds");
 
-    // Wait for result using deterministic sync
+    // Wait for result
     let mut result = None;
-    let mut sub = bus.subscribe();
     for _ in 0..100 {
-        if let Some(Ok(FffSearchResult(payload))) = sub.try_recv() {
+        if let Ok(FffSearchResult(payload)) = sub.try_recv() {
             if payload.request_id == request_id {
                 result = Some(payload);
                 break;
@@ -129,8 +142,8 @@ async fn indexer_answers_file_search() {
 
     handle.abort();
 
-    let result = result.expect("got a result for request_id 7");
-    assert_eq!(result.request_id, 7);
+    let result = result.expect("got a result for request_id 2");
+    assert_eq!(result.request_id, 2);
     // Should find src/cli/main.rs
     assert!(
         result.items.iter().any(|i| i.relative_path.contains("cli")),
@@ -139,8 +152,10 @@ async fn indexer_answers_file_search() {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "current_thread")]
 async fn search_request_event_returns_results() {
+    let _lock = TEST_MUTEX.lock().unwrap();
+    FffSearchState::reset_for_test();
     // Integration test: search request → search result event
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path().to_path_buf();
@@ -150,13 +165,17 @@ async fn search_request_event_returns_results() {
     std::fs::write(root.join("todo.txt"), "buy milk").unwrap();
 
     let bus = EventBus::new(16);
+
+    // Subscribe BEFORE spawning so we don't miss any events
+    let mut sub = bus.subscribe();
+
     let (tx, handle) =
         FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
 
-    // Wait for the actor to finish initialization using deterministic polling.
+    // Wait for the actor to finish initialization
     wait_for_indexed(500).await;
 
-    let request_id = 99;
+    let request_id = 3;
     tx.send(FffSearchRequest {
         request_id,
         query: "readme".to_string(),
@@ -168,9 +187,8 @@ async fn search_request_event_returns_results() {
 
     // Drain events using deterministic sync
     let mut got_result = false;
-    let mut sub = bus.subscribe();
     for _ in 0..500 {
-        if let Some(Ok(FffSearchResult(payload))) = sub.try_recv() {
+        if let Ok(FffSearchResult(payload)) = sub.try_recv() {
             if payload.request_id == request_id {
                 assert!(!payload.items.is_empty() || !payload.indexed);
                 got_result = true;

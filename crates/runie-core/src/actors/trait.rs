@@ -5,7 +5,7 @@
 
 use std::future::Future;
 use std::pin::Pin;
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
 
 /// Minimal actor trait.
 ///
@@ -205,15 +205,13 @@ mod tests {
         // The actor task should be cancelled
     }
 
-    fn drain_events<E: Clone + Send + 'static>(
-        sub: &mut crate::bus::ReplayReceiver<E>,
-        count: usize,
-    ) -> Vec<E> {
+    fn drain_events<E: Clone + Send + 'static>(sub: &mut broadcast::Receiver<E>, count: usize) -> Vec<E> {
         let mut events = Vec::with_capacity(count);
         for _ in 0..count {
             match sub.try_recv() {
-                Some(Ok(e)) => events.push(e),
-                _ => break,
+                Ok(e) => events.push(e),
+                Err(broadcast::error::TryRecvError::Empty) => break,
+                Err(_) => break,
             }
         }
         events

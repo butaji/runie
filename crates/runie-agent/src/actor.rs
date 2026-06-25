@@ -219,7 +219,7 @@ mod tests {
                 break;
             }
             tokio::task::yield_now().await;
-            while let Some(Ok(evt)) = sub.try_recv() {
+            while let Ok(evt) = sub.try_recv() {
                 match evt {
                     Event::Error { .. } => saw_error = true,
                     Event::Done { .. } => saw_done = true,

@@ -243,9 +243,8 @@ fn spawn_ui_actor(
     caps: terminal::caps::TerminalCapabilities,
 ) {
     // UiActor is the sole owner of AppState and the only runtime mutator.
-    // Subscribe with replay so resuming a session restores prior messages.
-    // UiActor MUST subscribe before SessionActor replays durable events.
-    let ui_sub = bus.subscribe_with_replay();
+    // Late subscriber catch-up is handled by SessionActor disk-replay at startup.
+    let ui_sub = bus.subscribe();
     tokio::spawn(
         UiActor::new(
             state,
