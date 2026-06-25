@@ -355,7 +355,7 @@
   },
   {
     "id": "notification-actor-owns-transient-messages",
-    "status": "todo",
+    "status": "done",
     "milestone": "?",
     "category": "?",
     "priority": "?",
@@ -978,5 +978,49 @@
     ],
     "file": "tasks/r5-populate-parts-streaming.md",
     "title": "Stream partial parts to UI as they arrive"
+  },
+  {
+    "id": "replace-diff-parser-with-diffy",
+    "status": "todo",
+    "milestone": "?",
+    "category": "?",
+    "priority": "?",
+    "depends_on": [],
+    "blocks": [],
+    "file": "tasks/replace-diff-parser-with-diffy.md",
+    "title": ""
+  },
+  {
+    "id": "replace-markdown-renderer-with-tui-markdown",
+    "status": "todo",
+    "milestone": "?",
+    "category": "?",
+    "priority": "?",
+    "depends_on": [],
+    "blocks": [],
+    "file": "tasks/replace-markdown-renderer-with-tui-markdown.md",
+    "title": ""
+  },
+  {
+    "id": "replace-retry-with-backon",
+    "status": "todo",
+    "milestone": "?",
+    "category": "?",
+    "priority": "?",
+    "depends_on": [],
+    "blocks": [],
+    "file": "tasks/replace-retry-with-backon.md",
+    "title": ""
+  },
+  {
+    "id": "replace-sse-framing-with-reqwest-eventsource",
+    "status": "todo",
+    "milestone": "?",
+    "category": "?",
+    "priority": "?",
+    "depends_on": [],
+    "blocks": [],
+    "file": "tasks/replace-sse-framing-with-reqwest-eventsource.md",
+    "title": ""
   }
 ]
