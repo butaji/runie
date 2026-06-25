@@ -3289,6 +3289,7 @@ dependencies = [
  "notify-debouncer-mini",
  "nucleo-matcher",
  "parking_lot",
+ "patch",
  "png 0.17.16",
  "pulldown-cmark",
  "redb",
