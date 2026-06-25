@@ -236,17 +236,6 @@
       "title": ""
     },
     {
-      "id": "drop-thiserror-and-async-trait-deps",
-      "status": "todo",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/drop-thiserror-and-async-trait-deps.md",
-      "title": ""
-    },
-    {
       "id": "env-actor-owns-git-cwd",
       "status": "todo",
       "milestone": "?",
@@ -553,17 +542,6 @@
       "depends_on": [],
       "blocks": [],
       "file": "tasks/reconsider-schemars-jsonschema.md",
-      "title": ""
-    },
-    {
-      "id": "reconsider-tiktoken-rs",
-      "status": "todo",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/reconsider-tiktoken-rs.md",
       "title": ""
     },
     {
