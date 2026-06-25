@@ -16,25 +16,73 @@ pub use mock::{MockProvider, MockStreamingProvider};
 pub use openai::OpenAiProvider;
 
 use anyhow::Result;
-use runie_core::actors::provider::BuiltProvider;
-use runie_core::provider_event::ProviderEvent;
-use runie_core::message::ChatMessage;
 use runie_core::provider::{Provider, ProviderError};
 
 /// Default timeout for API key validation requests.
 pub const VALIDATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
 
+/// Re-export `BuiltProvider` from `runie-core`.
+pub use runie_core::actors::provider::BuiltProvider;
+
 // ---------------------------------------------------------------------------
-// DynProvider — provider handle with construction helpers
+// DynProvider — wrapper around BuiltProvider for backward compatibility
 // ---------------------------------------------------------------------------
 
-/// Provider handle that wraps a built provider.
+/// Provider handle with construction helpers.
 ///
-/// This type wraps [`BuiltProvider`] and adds construction helpers that depend
-/// on `runie-provider` internals. It implements [`Provider`] directly.
-#[derive(Clone, Debug)]
-pub struct DynProvider {
-    inner: BuiltProvider,
+/// This type wraps [`BuiltProvider`] and adds helper methods for backward
+/// compatibility. New code should use `BuiltProvider` directly.
+#[derive(Clone)]
+pub struct DynProvider(BuiltProvider);
+
+impl std::fmt::Debug for DynProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl From<BuiltProvider> for DynProvider {
+    fn from(built: BuiltProvider) -> Self {
+        DynProvider(built)
+    }
+}
+
+impl AsRef<BuiltProvider> for DynProvider {
+    fn as_ref(&self) -> &BuiltProvider {
+        &self.0
+    }
+}
+
+impl std::ops::Deref for DynProvider {
+    type Target = BuiltProvider;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Provider for DynProvider {
+    fn generate(
+        &self,
+        messages: Vec<runie_core::message::ChatMessage>,
+    ) -> std::pin::Pin<
+        Box<dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
+             + Send
+             + '_>,
+    > {
+        self.0.generate(messages)
+    }
+
+    fn generate_with_tools(
+        &self,
+        messages: Vec<runie_core::message::ChatMessage>,
+        tools: Vec<serde_json::Value>,
+    ) -> std::pin::Pin<
+        Box<dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
+             + Send
+             + '_>,
+    > {
+        self.0.generate_with_tools(messages, tools)
+    }
 }
 
 impl DynProvider {
@@ -45,61 +93,16 @@ impl DynProvider {
         model: &str,
         config: &runie_core::config::Config,
     ) -> Result<Self, ProviderError> {
-        build_provider(key, model, Some(config)).map(|b| DynProvider { inner: b })
-    }
-
-    /// Wrap a built provider.
-    pub fn from_built(built: BuiltProvider) -> Self {
-        DynProvider { inner: built }
+        build_provider(key, model, Some(config)).map(DynProvider)
     }
 
     /// Wrap an arbitrary provider implementation.
-    #[doc(hidden)]
-    pub fn from_provider(provider: Box<dyn Provider>, key: &str, model: &str) -> Self {
-        DynProvider { inner: BuiltProvider::from_provider(provider, key, model) }
-    }
-
-    /// Returns the registry key used to build this provider.
-    pub fn key(&self) -> &str {
-        self.inner.key()
-    }
-
-    /// Returns the model name.
-    pub fn model(&self) -> &str {
-        self.inner.model()
-    }
-}
-
-impl Provider for DynProvider {
-    fn generate(
-        &self,
-        messages: Vec<ChatMessage>,
-    ) -> std::pin::Pin<
-        Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>,
-    > {
-        self.inner.generate(messages)
-    }
-
-    fn generate_with_tools(
-        &self,
-        messages: Vec<ChatMessage>,
-        tools: Vec<serde_json::Value>,
-    ) -> std::pin::Pin<
-        Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>,
-    > {
-        self.inner.generate_with_tools(messages, tools)
-    }
-}
-
-impl From<BuiltProvider> for DynProvider {
-    fn from(built: BuiltProvider) -> Self {
-        DynProvider { inner: built }
-    }
-}
-
-impl AsRef<BuiltProvider> for DynProvider {
-    fn as_ref(&self) -> &BuiltProvider {
-        &self.inner
+    pub fn from_provider(
+        provider: Box<dyn Provider>,
+        key: &str,
+        model: &str,
+    ) -> Self {
+        DynProvider(BuiltProvider::from_provider(provider, key, model))
     }
 }
 

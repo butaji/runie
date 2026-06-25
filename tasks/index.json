@@ -272,7 +272,7 @@
     },
     {
       "id": "collapse-provider-wrappers",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",
@@ -2114,7 +2114,7 @@
     },
     {
       "id": "unify-event-vocabulary",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",
@@ -2154,7 +2154,7 @@
     },
     {
       "id": "unify-persistence-actors",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",

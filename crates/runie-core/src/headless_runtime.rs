@@ -5,8 +5,8 @@
 //!
 //! ```ignore
 //! let rt = HeadlessRuntime::spawn(EventBus::new(10), Arc::new(factory)).await?;
-//! let built = rt.provider(Some("openai"), Some("gpt-4o")).await?;
-//! run_headless_turn(messages, built.provider.as_ref(), options).await;
+//! let provider = rt.provider(Some("openai"), Some("gpt-4o")).await?;
+//! run_headless_turn(messages, provider.as_ref(), options).await;
 //! ```
 
 use std::sync::Arc;

@@ -1,5 +1,7 @@
 //! Typed messages and handle for `ProviderActor`.
 
+use std::fmt;
+
 use tokio::sync::mpsc;
 
 use crate::actor::Reply;
@@ -8,7 +10,7 @@ use crate::provider::ProviderError;
 use super::factory::BuiltProvider;
 
 /// Messages accepted by `ProviderActor`.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum ProviderMsg {
     /// Build a provider for the given registry key and model.
     Build {
@@ -27,6 +29,27 @@ pub enum ProviderMsg {
         provider: String,
         reply: Reply<anyhow::Result<Vec<String>>>,
     },
+}
+
+impl fmt::Debug for ProviderMsg {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ProviderMsg::Build { provider, model, .. } => f
+                .debug_struct("ProviderMsg::Build")
+                .field("provider", provider)
+                .field("model", model)
+                .finish(),
+            ProviderMsg::ValidateKey { provider, api_key, .. } => f
+                .debug_struct("ProviderMsg::ValidateKey")
+                .field("provider", provider)
+                .field("api_key", &"***")
+                .finish(),
+            ProviderMsg::ListModels { provider, .. } => f
+                .debug_struct("ProviderMsg::ListModels")
+                .field("provider", provider)
+                .finish(),
+        }
+    }
 }
 
 /// Ergonomic handle for sending messages to a `ProviderActor`.

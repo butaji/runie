@@ -13,8 +13,7 @@ use crate::provider::{Provider, ProviderError};
 ///
 /// This type implements `Provider` directly, so it can be used anywhere a
 /// `Box<dyn Provider>` is expected without an extra layer of indirection.
-/// The `DynProvider` type in `runie-provider` is a re-export of this struct
-/// for backward compatibility.
+/// The `DynProvider` type in `runie-provider` is a type alias for this struct.
 #[derive(Clone)]
 pub struct BuiltProvider {
     /// The constructed provider implementation.

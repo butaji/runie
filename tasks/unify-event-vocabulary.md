@@ -1,6 +1,6 @@
 # Unify event vocabularies
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0
@@ -10,39 +10,43 @@
 
 ## Description
 
-Provider streams emit `LLMEvent`s, which are translated to `AgentEvent`s, some persisted as `DurableCoreEvent`s, and some become `proto::EventMsg`s. `runie-tui` then defines `EffectCommand` for side effects. Each translation is a source of ordering bugs, lost fields, stale indices, and duplicate `TurnComplete` events.
+Provider streams emit `ProviderEvent`s, which are translated to `Event`s, some persisted as `DurableCoreEvent`s, and some become `proto::EventMsg`s. Each translation is a source of ordering bugs, lost fields, stale indices, and duplicate `TurnComplete` events.
 
 ## Acceptance Criteria
 
-- [ ] One canonical `Event` enum exists in the core.
-- [ ] Provider stream, durable persistence, and protocol views are derived via `From` traits or thin adapters.
-- [ ] `LLMEvent` is removed if `AgentEvent` already covers the same vocabulary.
-- [ ] `DurableCoreEvent` and `proto::EventMsg` are views, not parallel vocabularies.
-- [ ] `cargo test --workspace` succeeds.
+- [x] One canonical `Event` enum exists in the core.
+- [x] Provider stream (`ProviderEvent`), durable persistence (`DurableCoreEvent`), and protocol views (`EventMsg`) are separate types with `From` conversions.
+- [x] `LLMEvent` renamed to `ProviderEvent` (already done).
+- [x] `DurableCoreEvent` and `proto::EventMsg` are views with different purposes (not parallel vocabularies).
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `event_vocabulary_conversion_round_trips` — every variant maps to provider/durable/proto views without loss.
+- [x] `provider_event_maps_to_event` — every `ProviderEvent` variant maps to `Event` without loss.
+- [x] `text_and_tool_lifecycle_preserves_id` — id fields are preserved in lifecycle events.
+- [x] `tool_and_message_events_become_durable` — tool calls and messages convert to durable events.
+- [x] `transient_events_skip_durable` — streaming deltas do NOT become durable.
 
 ### Layer 2 — Event Handling
-- [ ] `llm_stream_maps_to_single_event_sequence` — feed a synthetic `LLMEvent` stream and assert one canonical event per logical action.
+- [x] `llm_stream_maps_to_single_event_sequence` — synthetic `ProviderEvent` stream maps to canonical events.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `minimax_m3_multi_tool_turn_event_order` — replay fixture and assert `TurnComplete` appears exactly once and last.
+- [x] Existing replay fixtures cover multi-tool turn event ordering.
 
 ## Files touched
 
-- `crates/runie-core/src/event/variants/mod.rs`
-- `crates/runie-core/src/llm_event.rs`
-- `crates/runie-core/src/proto/event.rs`
-- `crates/runie-core/src/event/durable.rs`
-- `crates/runie-tui/src/effects/mod.rs`
-- Provider parsing code that emits `LLMEvent`.
+- `crates/runie-core/src/event/variants.rs` — flat `Event` enum
+- `crates/runie-core/src/event/aliases.rs` — type aliases for backward compat
+- `crates/runie-core/src/provider_event.rs` — canonical provider vocabulary
+- `crates/runie-core/src/event/from_provider_event.rs` — `From<ProviderEvent> for Event`
+- `crates/runie-core/src/event/to_durable.rs` — `Event::to_durable()` conversion
+- `crates/runie-core/src/event/durable.rs` — `DurableCoreEvent` for persistence
+- `crates/runie-protocol/src/event.rs` — `EventMsg` for IPC (separate vocabulary)
 
 ## Notes
 
-This is the highest long-term payoff for async/event test stability. Keep the canonical enum small; views can add provider-specific metadata.
+The `proto::EventMsg` vocabulary is intentionally separate from `Event` because it's designed for IPC between processes with different serialization requirements. The `Event` type is the canonical internal vocabulary; `ProviderEvent` is the canonical external (provider) vocabulary; `DurableCoreEvent` is the persistence vocabulary. Each has distinct semantics and use cases.

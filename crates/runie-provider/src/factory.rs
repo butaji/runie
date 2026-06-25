@@ -1,4 +1,4 @@
-//! Concrete [`ProviderFactory`] implementation backed by `BuiltProvider`.
+//! Concrete [`ProviderFactory`] implementation backed by `DynProvider`.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -22,8 +22,7 @@ impl ProviderFactory for DynProviderFactory {
         model: &str,
         config: &Config,
     ) -> Result<BuiltProvider, ProviderError> {
-        let built = build_provider(provider, model, Some(config))?;
-        Ok(built)
+        build_provider(provider, model, Some(config))
     }
 
     fn validate_key(
