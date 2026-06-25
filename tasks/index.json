@@ -856,7 +856,7 @@
     },
     {
       "id": "fix-duplicate-cargo-toml-keys",
-      "status": "done",
+      "status": "todo",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
@@ -1345,7 +1345,7 @@
     },
     {
       "id": "reconsider-notify-config-watcher",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P2",

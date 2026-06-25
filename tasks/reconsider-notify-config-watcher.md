@@ -1,6 +1,6 @@
 # Reconsider notify config watcher
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2
