@@ -126,5 +126,5 @@ pub fn init_git_and_cwd() -> (Option<crate::snapshot::GitInfo>, String) {
 }
 
 mod cache;
-mod snapshot;
+mod compaction;
 pub(crate) mod state;
