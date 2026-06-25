@@ -153,7 +153,7 @@
     },
     {
       "id": "audit-simplify-reduce-roadmap",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P0",
@@ -166,7 +166,7 @@
     },
     {
       "id": "canonicalize-chat-message",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P0",
@@ -179,7 +179,7 @@
     },
     {
       "id": "canonicalize-tool-call",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P0",
@@ -954,7 +954,7 @@
     },
     {
       "id": "fix-duplicate-cargo-toml-keys",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
@@ -1155,7 +1155,7 @@
     },
     {
       "id": "generic-actor-reply",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P1",
@@ -1183,7 +1183,7 @@
     },
     {
       "id": "hoist-cargo-workspace-deps",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
