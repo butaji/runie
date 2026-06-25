@@ -136,17 +136,6 @@
       "title": ""
     },
     {
-      "id": "consolidate-slash-command-handlers",
-      "status": "todo",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/consolidate-slash-command-handlers.md",
-      "title": ""
-    },
-    {
       "id": "consolidate-update-dialog-files",
       "status": "todo",
       "milestone": "?",
@@ -666,17 +655,6 @@
         "trust-actor-owns-trust-decisions"
       ],
       "file": "tasks/test-actor-harness.md",
-      "title": ""
-    },
-    {
-      "id": "theme-color-accessor-macro",
-      "status": "done",
-      "milestone": "?",
-      "category": "?",
-      "priority": "?",
-      "depends_on": [],
-      "blocks": [],
-      "file": "tasks/theme-color-accessor-macro.md",
       "title": ""
     },
     {
