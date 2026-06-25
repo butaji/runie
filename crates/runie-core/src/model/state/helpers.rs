@@ -1,6 +1,6 @@
 //! Helper functions for command ranking and post copy extraction.
 
-use crate::state::CommandUsage;
+use super::CommandUsage;
 use crate::view::elements::Element;
 
 /// Compute a ranking score boost from usage count and recency.

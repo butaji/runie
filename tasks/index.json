@@ -1086,7 +1086,7 @@
     },
     {
       "id": "fold-state-into-model-state",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Core / State",
       "priority": "P2",
@@ -2211,5 +2211,16 @@
       "file": "tasks/view-actor-owns-view-state.md",
       "title": ""
     }
-  ]
+  ],
+  "id": "fold-state-into-model-state",
+  "status": "done",
+  "milestone": "R4",
+  "category": "Core / State",
+  "priority": "P2",
+  "depends_on": [],
+  "blocks": [
+    "none"
+  ],
+  "file": "tasks/fold-state-into-model-state.md",
+  "title": ""
 }

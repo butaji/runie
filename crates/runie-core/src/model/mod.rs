@@ -2,8 +2,9 @@
 
 pub use crate::message::{now, ChatMessage, Role};
 pub use crate::model::state::{
-    AppState, DeliveryMode, FffFileEntry, PermissionRequestState, QueuedMessage,
-    QueuedMessageKind, ThinkingLevel,
+    AgentState, AppState, CommandUsage, CompletionState, ConfigState, DeliveryMode,
+    FffFileEntry, InputState, ModelSource, PermissionRequestState, QueuedMessage,
+    QueuedMessageKind, SessionState, SpeedWindow, ThinkingLevel, ViewState,
 };
 pub use crate::model::state::types::InputReceiver;
 pub use crate::model_catalog::{
@@ -127,4 +128,4 @@ pub fn init_git_and_cwd() -> (Option<crate::snapshot::GitInfo>, String) {
 
 mod cache;
 mod compaction;
-pub(crate) mod state;
+pub mod state;

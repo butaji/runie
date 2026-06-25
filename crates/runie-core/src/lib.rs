@@ -19,7 +19,9 @@ pub use actors::{
 };
 pub use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
 pub use model::{
-    now, AppState, ChatMessage, FffFileEntry, PermissionRequestState, Role,
+    now, AgentState, AppState, ChatMessage, CommandUsage, CompletionState, ConfigState,
+    FffFileEntry, InputState, ModelSource, PermissionRequestState, Role, ScopedModel,
+    SessionState, SpeedWindow, ThinkingLevel, ViewState,
 };
 pub mod agent_phase;
 pub mod async_io;
@@ -73,7 +75,7 @@ pub mod sanitize;
 pub mod settings;
 pub mod skills;
 pub mod snapshot;
-pub mod state;
+// state types moved to model::state
 pub mod streaming_buffer;
 pub mod telemetry;
 pub mod themes;
@@ -100,12 +102,7 @@ pub use config::{Config, ConfigChange, ModelProvider, ModelsSection, TruncationS
 pub use diff::{Diff, DiffHunk, DiffLine};
 pub use dry_run::{run_dry_run, DryRunReport, DryRunStatus};
 pub use edit_preview::EditPreview;
-pub use event::DialogEvent; // Re-export to avoid circular dependency with dialog module
 pub use event::Event;
-pub use event::{
-    AgentEvent, CommandEvent, ControlEvent, EditEvent, InputEvent, LoginFlowEvent,
-    ModelConfigEvent, ScrollEvent, SessionEvent, SystemEvent,
-};
 pub use file_refs::{find_files, is_image_file, read_file_ref, FileRef};
 pub use harness_skills::{
     HarnessConfig, HarnessSkill, HashlineEdit, HashlineEditConfig, HashlineEditSkill,

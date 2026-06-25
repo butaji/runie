@@ -1,18 +1,19 @@
 //! `AppState` struct and its inherent methods.
 use super::helpers::{element_metadata, element_text};
 use crate::model::state::ranking;
-use super::FffFileEntry;
+use super::{AgentState, CommandUsage, CompletionState, ConfigState, FffFileEntry, InputState, ModelSource, SessionState, ViewState};
 use crate::view::elements::Element;
+use crate::actors::ActorHandles;
 
 #[derive(Clone)]
 pub struct AppState {
     // 6 inner state structs (factored domain state)
-    pub session: crate::state::SessionState,
-    pub input: crate::state::InputState,
-    pub agent: crate::state::AgentState,
-    pub view: crate::state::ViewState,
-    pub config: crate::state::ConfigState,
-    pub completion: crate::state::CompletionState,
+    pub session: SessionState,
+    pub input: InputState,
+    pub agent: AgentState,
+    pub view: ViewState,
+    pub config: ConfigState,
+    pub completion: CompletionState,
 
     // Singleton UI/control flags (don't fit a single domain)
     /// Quit flag read by the main event loop
@@ -54,14 +55,16 @@ pub struct AppState {
     /// request/response plumbing between the agent task and the UI task, not
     /// accidental global mutable state.
     pub approval_registry: std::sync::Arc<std::sync::Mutex<crate::permissions::ApprovalRegistry>>,
-    /// Sender to the `ConfigActor`. `None` in unit tests that do not spawn it.
+    /// Unified actor handle registry — single source for all actor senders.
+    /// `None` in unit tests that do not spawn actors.
+    pub actor_handles: Option<ActorHandles>,
+    /// Sender to the `ConfigActor`. Deprecated: use `actor_handles.config` instead.
     pub config_tx: Option<tokio::sync::mpsc::Sender<crate::actors::ConfigMsg>>,
-    /// Sender to the `ProviderActor`. `None` in unit tests that do not spawn it.
+    /// Sender to the `ProviderActor`. Deprecated: use `actor_handles.provider` instead.
     pub provider_tx: Option<tokio::sync::mpsc::Sender<crate::actors::ProviderMsg>>,
-    /// Handle to the unified `SessionActor`. `None` in unit tests that do not spawn it.
-    /// Owns: trust, history, session CRUD, and durable event append.
+    /// Handle to the unified `SessionActor`. Deprecated: use `actor_handles.session` instead.
     pub persistence_tx: Option<crate::actors::SessionActorHandle>,
-    /// Handle to the `IoActor`. `None` in unit tests that do not spawn it.
+    /// Handle to the `IoActor`. Deprecated: use `actor_handles.io` instead.
     pub io_tx: Option<crate::actors::IoActorHandle>,
     /// Last config applied to the state (read-only cache for sync lookups).
     pub config_cache: Option<crate::config::Config>,
@@ -69,12 +72,12 @@ pub struct AppState {
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            session: crate::state::SessionState::default(),
-            input: crate::state::InputState::default(),
-            agent: crate::state::AgentState::default(),
-            view: crate::state::ViewState::default(),
-            config: crate::state::ConfigState::default(),
-            completion: crate::state::CompletionState::default(),
+            session: SessionState::default(),
+            input: InputState::default(),
+            agent: AgentState::default(),
+            view: ViewState::default(),
+            config: ConfigState::default(),
+            completion: CompletionState::default(),
             should_quit: false,
             open_dialog: None,
             dialog_back_stack: Vec::new(),
@@ -94,6 +97,7 @@ impl Default for AppState {
             approval_registry: std::sync::Arc::new(std::sync::Mutex::new(
                 crate::permissions::ApprovalRegistry::new(),
             )),
+            actor_handles: None,
             config_tx: None,
             provider_tx: None,
             persistence_tx: None,
@@ -117,6 +121,15 @@ impl AppState {
         decision: crate::trust::TrustDecision,
     ) {
         self.trust_decisions.insert(path, decision);
+    }
+
+    /// Install a complete `ActorHandles` registry and sync loose handle fields.
+    pub fn set_actor_handles(&mut self, handles: ActorHandles) {
+        self.actor_handles = Some(handles.clone());
+        self.config_tx = handles.config.as_ref().map(|h| h.tx().clone());
+        self.provider_tx = handles.provider.as_ref().map(|h| h.tx().clone());
+        self.persistence_tx = handles.session.clone();
+        self.io_tx = handles.io.clone();
     }
 
     pub fn add_to_input_history(&mut self, entry: String) {
@@ -166,6 +179,7 @@ impl AppState {
     pub fn reset_session(&mut self) {
         let config = self.config.clone();
         let registry = self.approval_registry.clone();
+        let actor_handles = self.actor_handles.clone();
         let config_tx = self.config_tx.clone();
         let provider_tx = self.provider_tx.clone();
         let persistence_tx = self.persistence_tx.clone();
@@ -177,6 +191,7 @@ impl AppState {
         *self = Self::default();
         self.config = config;
         self.approval_registry = registry;
+        self.actor_handles = actor_handles;
         self.config_tx = config_tx;
         self.provider_tx = provider_tx;
         self.persistence_tx = persistence_tx;
@@ -190,7 +205,7 @@ impl AppState {
     /// Apply a loaded config to all config-driven state fields.
     pub fn apply_config(&mut self, config: &crate::config::Config) {
         self.config_cache = Some(config.clone());
-        if self.config.model_source != crate::state::ModelSource::UserOverride {
+        if self.config.model_source != ModelSource::UserOverride {
             self.apply_active_model(config);
         }
         self.config.keybindings = crate::keybindings::load_keybindings(Some(config));
@@ -207,14 +222,14 @@ impl AppState {
         );
         self.apply_scoped_models(config);
         if !self.has_models() && !crate::provider::is_mock_enabled() {
-            self.update(crate::event::LoginFlowEvent::Start);
+            self.update(crate::Event::Start);
         }
     }
 
     fn apply_active_model(&mut self, config: &crate::config::Config) {
         let (provider, model) = config.resolve_default_model();
         if !provider.is_empty() && ranking::has_provider_credentials(config, &provider) {
-            self.set_active_model(provider, model, crate::state::ModelSource::ConfigDefault);
+            self.set_active_model(provider, model, ModelSource::ConfigDefault);
         }
     }
 
@@ -274,29 +289,27 @@ impl AppState {
             .and_then(|c| c.model_providers.get(name).cloned())
     }
 
-    /// Fire-and-forget request to remove a provider via the ConfigActor.
+    /// Fire-and-forget request to remove a provider via ConfigActor.
     pub fn remove_provider(&self, name: &str) {
-        self.send_config_msg(crate::actors::ConfigMsg::RemoveProvider {
-            name: name.to_string(),
-        });
+        let tx = self.actor_handles.as_ref()
+            .and_then(|h| h.config.as_ref())
+            .map(|h| h.tx().clone())
+            .or_else(|| self.config_tx.clone());
+        if let (Some(tx), Ok(_)) = (tx, tokio::runtime::Handle::try_current()) {
+            let msg = crate::actors::ConfigMsg::RemoveProvider { name: name.to_string() };
+            tokio::spawn(async move { let _ = tx.send(msg).await; });
+        }
     }
 
     /// Fire-and-forget request to update a provider's saved model list.
     pub fn set_provider_models(&self, name: &str, models: Vec<String>) {
-        self.send_config_msg(crate::actors::ConfigMsg::SetProviderModels {
-            name: name.to_string(),
-            models,
-        });
-    }
-
-    fn send_config_msg(&self, msg: crate::actors::ConfigMsg) {
-        if let Some(ref tx) = self.config_tx {
-            if tokio::runtime::Handle::try_current().is_ok() {
-                let tx = tx.clone();
-                tokio::spawn(async move {
-                    let _ = tx.send(msg).await;
-                });
-            }
+        let tx = self.actor_handles.as_ref()
+            .and_then(|h| h.config.as_ref())
+            .map(|h| h.tx().clone())
+            .or_else(|| self.config_tx.clone());
+        if let (Some(tx), Ok(_)) = (tx, tokio::runtime::Handle::try_current()) {
+            let msg = crate::actors::ConfigMsg::SetProviderModels { name: name.to_string(), models };
+            tokio::spawn(async move { let _ = tx.send(msg).await; });
         }
     }
 
@@ -372,7 +385,7 @@ impl AppState {
             .config
             .command_usage
             .entry(name.to_string())
-            .or_insert_with(|| crate::state::CommandUsage {
+            .or_insert_with(|| CommandUsage {
                 count: 0,
                 last_used: now,
             });
@@ -441,7 +454,7 @@ impl AppState {
         self.set_active_model(
             session.provider.clone(),
             session.model.clone(),
-            crate::state::ModelSource::UserOverride,
+            ModelSource::UserOverride,
         );
         self.config.theme_name = session.theme_name.clone();
         self.config.thinking_level = session.thinking_level;
