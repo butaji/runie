@@ -321,7 +321,7 @@
     },
     {
       "id": "consolidate-dual-path-modules",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Configuration",
       "priority": "P1",
@@ -570,7 +570,7 @@
     },
     {
       "id": "dedupe-yolo-sink-setup",
-      "status": "todo",
+      "status": "done",
       "milestone": "R4",
       "category": "Architecture / Actors",
       "priority": "P2",

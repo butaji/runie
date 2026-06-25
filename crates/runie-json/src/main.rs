@@ -26,8 +26,7 @@
 use anyhow::Result;
 use runie_agent::{run_headless_cli, HeadlessCliOptions, HeadlessResult};
 use runie_core::message::ChatMessage;
-use runie_core::permissions::{AutoAllowSink, DenyAllSink};
-use std::sync::Arc;
+use runie_core::permissions::build_sink;
 
 #[cfg(test)]
 use runie_core::provider_event::ProviderEvent;
@@ -125,11 +124,7 @@ async fn run_json_turn(
     messages: Vec<ChatMessage>,
     yolo: bool,
 ) -> Result<HeadlessResult> {
-    let sink: Arc<dyn runie_core::permissions::ApprovalSink> = if yolo {
-        Arc::new(AutoAllowSink)
-    } else {
-        Arc::new(DenyAllSink)
-    };
+    let sink = build_sink(yolo);
     let opts = HeadlessCliOptions {
         execute_tools: true,
         max_tool_rounds: 5,

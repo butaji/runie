@@ -135,6 +135,18 @@ pub fn is_sensitive_path(path: &str) -> bool {
         .any(|p| Pattern::new(p).is_ok_and(|pat| pat.matches(path)))
 }
 
+/// Build an approval sink based on yolo mode.
+///
+/// When `yolo` is true, returns an auto-allow sink that approves all tool calls.
+/// When `yolo` is false, returns a deny-all sink that blocks all tool calls.
+pub fn build_sink(yolo: bool) -> std::sync::Arc<dyn ApprovalSink> {
+    if yolo {
+        std::sync::Arc::new(AutoAllowSink)
+    } else {
+        std::sync::Arc::new(DenyAllSink)
+    }
+}
+
 /// Tools that are read-only (safe for auto-approval).
 pub fn is_read_only_tool(tool: &str) -> bool {
     matches!(

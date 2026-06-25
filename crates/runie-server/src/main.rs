@@ -13,7 +13,7 @@
 
 use anyhow::Result;
 use runie_agent::{run_headless_cli, HeadlessCliOptions};
-use runie_core::permissions::{AutoAllowSink, DenyAllSink};
+use runie_core::permissions::build_sink;
 use runie_core::message::ChatMessage;
 use runie_protocol::{Error, Message, Request, Response};
 use serde_json::Value;
@@ -179,11 +179,7 @@ fn headless_options(_yolo: bool) -> HeadlessCliOptions {
 }
 
 fn headless_sink(yolo: bool) -> Arc<dyn runie_core::permissions::ApprovalSink> {
-    if yolo {
-        Arc::new(AutoAllowSink)
-    } else {
-        Arc::new(DenyAllSink)
-    }
+    build_sink(yolo)
 }
 
 async fn handle_chat(params: &Value, yolo: bool) -> Result<Value> {

@@ -2,9 +2,8 @@
 
 use anyhow::Result;
 use runie_agent::{run_headless_cli, HeadlessCliOptions};
-use runie_core::permissions::DenyAllSink;
+use runie_core::permissions::build_sink;
 use runie_core::message::ChatMessage;
-use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
@@ -33,7 +32,7 @@ async fn run_print(prompt: &str) -> Result<()> {
         ChatMessage::system(system),
         ChatMessage::user(prompt.to_string()),
     ];
-    let sink: Arc<dyn runie_core::permissions::ApprovalSink> = Arc::new(DenyAllSink);
+    let sink = build_sink(false);
     let opts = HeadlessCliOptions {
         execute_tools: true,
         max_tool_rounds: 5,

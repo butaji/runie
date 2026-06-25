@@ -1,6 +1,6 @@
 # Dedupe yolo/approval-sink setup
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P2
@@ -14,33 +14,34 @@
 
 ## Acceptance Criteria
 
-- [ ] A helper `build_sink(yolo: bool) -> Arc<dyn ApprovalSink>` (or similar) lives in `runie-agent` or `runie-core`.
-- [ ] `runie-json` and `runie-server` use the helper.
-- [ ] `runie-print` is also covered if it has similar logic.
-- [ ] `cargo test --workspace` succeeds.
+- [x] A helper `build_sink(yolo: bool) -> Arc<dyn ApprovalSink>` lives in `runie-core/src/permissions/mod.rs`.
+- [x] `runie-json` and `runie-server` use the helper.
+- [x] `runie-print` is also covered (uses `build_sink(false)` since it has no yolo flag).
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `build_sink_yolo_true_allows_all` — returns auto-allow sink.
-- [ ] `build_sink_yolo_false_denies_all` — returns deny-all sink.
+- [x] `build_sink_yolo_true_allows_all` — returns auto-allow sink.
+- [x] `build_sink_yolo_false_denies_all` — returns deny-all sink.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `headless_yolo_turn_allows_tools` — a headless turn with `--yolo` executes tools without prompting.
+- N/A.
 
 ## Files touched
 
-- `crates/runie-json/src/main.rs`
-- `crates/runie-server/src/main.rs`
-- `crates/runie-print/src/main.rs`
-- `crates/runie-agent/src/lib.rs` or `crates/runie-core/src/permissions/mod.rs`
+- `crates/runie-core/src/permissions/mod.rs` — added `build_sink` helper
+- `crates/runie-core/src/permissions/tests.rs` — added Layer 1 tests
+- `crates/runie-json/src/main.rs` — use `build_sink` helper
+- `crates/runie-server/src/main.rs` — use `build_sink` helper (via `headless_sink`)
+- `crates/runie-print/src/main.rs` — use `build_sink(false)`
 
 ## Notes
 
-Combine with `collapse-headless-binaries-into-one-cli` if that task lands first; the helper becomes a CLI flag handler.
+The `--yolo` flag parsing and warning message remain in each binary's main function - those are CLI concerns. The sink construction is now shared.

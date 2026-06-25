@@ -267,3 +267,21 @@ fn effective_action_denies_sensitive_paths() {
         PermissionAction::Allow
     );
 }
+
+// ============================================================================
+// build_sink tests
+// ============================================================================
+
+#[tokio::test]
+async fn build_sink_yolo_true_allows_all() {
+    let sink = super::build_sink(true);
+    let result = sink.ask("bash", &serde_json::Value::Null).await;
+    assert_eq!(result, PermissionAction::Allow);
+}
+
+#[tokio::test]
+async fn build_sink_yolo_false_denies_all() {
+    let sink = super::build_sink(false);
+    let result = sink.ask("bash", &serde_json::Value::Null).await;
+    assert_eq!(result, PermissionAction::Deny);
+}
