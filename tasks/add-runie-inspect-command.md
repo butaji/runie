@@ -10,15 +10,35 @@
 
 ## Summary
 
-Add a `runie inspect` command that prints the runtime configuration discovered for the current directory: loaded config layers, project instructions, skills, commands, MCP servers, permission rules, built-in subagents, and actor health.
+Add a `runie inspect` command that prints the runtime configuration discovered for the current directory. Because everything is declared in files, the system can show exactly what it loaded.
+
+## Output sections
+
+```bash
+runie inspect
+runie inspect --json
+```
+
+Human-readable sections:
+- Project instructions (`AGENTS.md`)
+- Loaded skills (user + bundled)
+- Registered slash commands
+- Built-in subagent types
+- MCP servers
+- Permission rules
+- Config sources and layers
+- Active actor states
+- Model catalog entries
+- Recent slash commands (MRU)
+
+Secrets (API keys, tokens) are redacted in all output.
 
 ## Acceptance Criteria
 
-- `runie inspect` prints a human-readable summary of discovered configuration.
+- `runie inspect` prints a human-readable summary.
 - `runie inspect --json` emits machine-readable JSON.
-- Output includes: project instructions (`AGENTS.md`), loaded skills, registered commands, MCP servers, permission rules, built-in subagent types, config sources, and active actor states.
-- Secrets (API keys, tokens) are redacted.
 - The command is read-only and never mutates state or starts a turn.
+- Secrets are redacted.
 - `cargo check --workspace` is green.
 
 ## Tests

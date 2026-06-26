@@ -1062,5 +1062,29 @@
     "priority": "P0",
     "title": "LeaderActor shared runtime with thin clients",
     "file": "leader-actor-shared-runtime.md"
+  },
+  {
+    "status": "todo",
+    "depends_on": [
+      "built-in-subagent-types"
+    ],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Core / State",
+    "priority": "P2",
+    "title": "Bundle default resources with checksum manifest",
+    "file": "bundle-default-resources-with-manifest.md"
+  },
+  {
+    "status": "todo",
+    "depends_on": [
+      "make-mcp-the-only-tool-boundary"
+    ],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Tools",
+    "priority": "P2",
+    "title": "Validate tool constraints at session build time",
+    "file": "validate-tool-constraints-at-session-build.md"
   }
 ]
