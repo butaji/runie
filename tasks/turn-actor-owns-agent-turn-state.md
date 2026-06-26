@@ -18,19 +18,19 @@
 - ✅ Fact event handlers in dispatch module
 - ✅ Turn fact projections extracted to `model/state/turn_projections.rs`
 
-**In progress:**
-- Partial routing of handlers through TurnActor:
-  - ✅ stop_turn() routes through TurnActor::AbortTurn
-  - ✅ abort_queue() routes through TurnActor::AbortQueue  
-  - ✅ queue_follow_up() routes through TurnActor::QueueFollowUp
-  - ✅ handle_vim_dialog_back() routes through TurnActor
-  - ✅ Agent events routed through TurnActor via handle_agent_event()
-  - ✅ to_turn_msg() converts Event to TurnMsg for TurnActor routing
-  - ✅ submit_user_message() routes through TurnActor::SubmitUserMessage
+**Implemented:**
+- ✅ stop_turn() routes through TurnActor::AbortTurn
+- ✅ abort_queue() routes through TurnActor::AbortQueue  
+- ✅ queue_follow_up() routes through TurnActor::QueueFollowUp
+- ✅ handle_vim_dialog_back() routes through TurnActor
+- ✅ Agent events routed through TurnActor via handle_agent_event()
+- ✅ to_turn_msg() converts Event to TurnMsg for TurnActor routing
+- ✅ submit_user_message() routes through TurnActor::SubmitUserMessage
+- ✅ clear_queues() routes through TurnActor::ClearQueues
 
-**Remaining work:**
-- Queue delivery operations (deliver_queued, dequeue) - these need TurnActor coordination
-- `update/system.rs` - peek_queue, pop_queue, configure_token_tracker - need routing
+**Remaining work (requires architectural decision):**
+- Queue delivery operations (deliver_queued, dequeue, try_deliver_*) - these need TurnActor to coordinate between queue state and session.messages
+- The current design has TurnActor own queues and AppState project facts. Queue delivery requires TurnActor to emit SteeringDelivered/FollowUpDelivered facts that AppState handles.
 
 ## Architecture Notes
 
