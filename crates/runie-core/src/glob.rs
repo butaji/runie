@@ -67,7 +67,7 @@ fn single_star(pat: &[u8], name: &[u8]) -> bool {
 }
 
 fn question(name: &[u8]) -> bool {
-    name.first().map_or(false, |c| c != &b'/')
+    name.first().is_some_and(|c| c != &b'/')
 }
 
 #[cfg(test)]

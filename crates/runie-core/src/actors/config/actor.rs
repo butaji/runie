@@ -150,13 +150,11 @@ impl ConfigActor {
     }
 
     async fn set_truncation(&mut self, limits: crate::config::TruncationSection, bus: &EventBus<Event>) {
-        let limits = limits;
         self.mutate_config(bus, move |path| set_truncation_at_path(&path, &limits))
             .await;
     }
 
     async fn set_thinking_level(&mut self, level: crate::model::ThinkingLevel, bus: &EventBus<Event>) {
-        let level = level;
         self.mutate_config(bus, move |path| set_thinking_level_at_path(&path, level))
             .await;
     }

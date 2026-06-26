@@ -18,20 +18,12 @@ use super::messages::{TrustActorHandle, TrustMsg};
 /// persistence (via SessionActor). The actor emits:
 /// - `Event::TrustChanged` when a decision changes
 /// - `Event::ReadOnlyChanged` when the read-only flag changes
+#[derive(Default)]
 pub struct TrustActor {
     /// Trust decisions keyed by project path.
     decisions: HashMap<PathBuf, TrustDecision>,
     /// Current read-only flag state.
     read_only: bool,
-}
-
-impl Default for TrustActor {
-    fn default() -> Self {
-        Self {
-            decisions: HashMap::new(),
-            read_only: false,
-        }
-    }
 }
 
 impl TrustActor {

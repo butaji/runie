@@ -105,17 +105,9 @@ impl SubagentType {
 }
 
 /// Registry of all available subagent types.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SubagentRegistry {
     types: HashMap<String, SubagentType>,
-}
-
-impl Default for SubagentRegistry {
-    fn default() -> Self {
-        Self {
-            types: HashMap::new(),
-        }
-    }
 }
 
 impl SubagentRegistry {

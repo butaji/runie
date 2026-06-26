@@ -53,7 +53,7 @@ impl PermissionActor {
     }
 
     fn handle_resolve_permission(&mut self, request_id: String, action: PermissionAction, bus: &EventBus<Event>) {
-        self.registry.resolve(&request_id, action.clone());
+        self.registry.resolve(&request_id, action);
         self.clear_request_if_matches(&request_id);
         bus.publish(Event::PermissionResponse { request_id, action });
     }

@@ -27,6 +27,11 @@ impl Manifest {
         self.files.len()
     }
 
+    /// Check if the manifest has no files.
+    pub fn is_empty(&self) -> bool {
+        self.files.is_empty()
+    }
+
     /// Check whether a specific file's SHA-256 matches the stored hash.
     pub fn check_file(&self, filename: &str, actual_hash: &str) -> bool {
         self.files.get(filename) == Some(&actual_hash.to_lowercase())

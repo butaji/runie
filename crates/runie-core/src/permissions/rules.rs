@@ -27,21 +27,16 @@ use serde::{Deserialize, Serialize};
 use super::PermissionAction;
 
 /// Scope of a permission rule.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum PermissionScope {
     /// User-level rules from ~/.runie/config.toml
+    #[default]
     User,
     /// Project-level rules from .runie/config.toml or AGENTS.md
     Project,
     /// Session-level rules from CLI flags
     Session,
-}
-
-impl Default for PermissionScope {
-    fn default() -> Self {
-        PermissionScope::User
-    }
 }
 
 /// A single permission rule with glob patterns and scope.

@@ -217,7 +217,7 @@ fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     *state.login_flow_mut() = None;
     // Dismiss any pending permission request via actor when available.
     // Fall back to direct state update for tests without actor handles.
-    if let Some(ref handles) = state.actor_handles() {
+    if let Some(handles) = state.actor_handles() {
         handles.try_dismiss_permission();
     } else {
         *state.permission_request_mut() = None;

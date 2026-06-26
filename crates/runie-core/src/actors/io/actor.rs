@@ -73,11 +73,9 @@ impl IoActor {
 
     /// Detect cwd name and git info asynchronously.
     async fn detect_env(&self) {
-        let (git_info, cwd_name) =
-            match tokio::task::spawn_blocking(detect_env_sync).await {
-                Ok(info) => info,
-                Err(_) => (None, String::new()),
-            };
+        let (git_info, cwd_name) = tokio::task::spawn_blocking(detect_env_sync)
+            .await
+            .unwrap_or_default();
         self.emit(Event::EnvDetected { git_info, cwd_name });
     }
 

@@ -61,11 +61,9 @@ impl AppState {
             (input.cursor_pos, input.input.len(), input.input.clone())
         };
 
-        if cursor_pos > 0 {
-            try_send_input(self, crate::actors::InputMsg::Backspace);
-            self.handle_at_trigger();
-            self.view_mut().dirty = true;
-        } else if cursor_pos == 0 && input_len > 0 && input_text.starts_with('\n') {
+        let should_backspace = cursor_pos > 0
+            || (cursor_pos == 0 && input_len > 0 && input_text.starts_with('\n'));
+        if should_backspace {
             try_send_input(self, crate::actors::InputMsg::Backspace);
             self.handle_at_trigger();
             self.view_mut().dirty = true;

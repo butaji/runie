@@ -225,7 +225,7 @@ impl ViewActor {
     fn animation_tick(&mut self) {
         self.animation_accum += 1;
         // Throttle to ~15fps
-        if self.animation_accum % 4 == 0 {
+        if self.animation_accum.is_multiple_of(4) {
             self.state.animation_frame = self.state.animation_frame.wrapping_add(1);
             self.state.dirty = true;
         }

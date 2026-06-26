@@ -42,7 +42,7 @@ impl Clone for PermissionMsg {
             PermissionMsg::ResolvePermission { request_id, action } => {
                 PermissionMsg::ResolvePermission {
                     request_id: request_id.clone(),
-                    action: action.clone(),
+                    action: *action,
                 }
             }
             PermissionMsg::CancelPermission { request_id } => {
