@@ -207,7 +207,8 @@ fn dispatcher_handles_all_variants() {
             | Event::SessionOperationFailed { .. }
             | Event::BashOutput { .. }
             | Event::FilesWritten { .. }
-            | Event::EnvDetected { .. } => Event::HistoryAppend {
+            | Event::EnvDetected { .. }
+            | Event::InputChanged { .. } => Event::HistoryAppend {
                 entry: String::new(),
             },
 

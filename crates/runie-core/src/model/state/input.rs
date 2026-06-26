@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 /// Tracks usage count and last-used timestamp for a command.
 #[derive(Clone, Debug)]
 pub struct CommandUsage {
@@ -7,7 +9,7 @@ pub struct CommandUsage {
 
 /// Input state — text, cursor, history.
 /// Fields are public for test setup; production code should use accessors.
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct InputState {
     pub input: String,
     pub cursor_pos: usize,
