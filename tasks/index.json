@@ -420,7 +420,7 @@
   },
   {
     "file": "frontmatter-based-skills-dsl.md",
-    "title": "Frontmatter-based skills and command DSL",
+    "title": "AGENTS.md and frontmatter-based skills and command DSL",
     "status": "todo",
     "category": "Core / State",
     "priority": "P2",
@@ -999,5 +999,53 @@
       "ui-control-actor-owns-dialog-state"
     ],
     "blocks": []
+  },
+  {
+    "status": "todo",
+    "depends_on": [
+      "adopt-mcp-native-tool-calling"
+    ],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Tools",
+    "priority": "P0",
+    "title": "Make MCP the only tool boundary",
+    "file": "make-mcp-the-only-tool-boundary.md"
+  },
+  {
+    "status": "todo",
+    "depends_on": [
+      "app-state-read-only-projection"
+    ],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P0",
+    "title": "Expose Runie via ACP over stdio",
+    "file": "expose-runie-via-acp-stdio.md"
+  },
+  {
+    "status": "todo",
+    "depends_on": [
+      "expose-runie-via-acp-stdio"
+    ],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Core / State",
+    "priority": "P1",
+    "title": "Standardize headless output as streaming JSON events",
+    "file": "standardize-headless-output-streaming-json.md"
+  },
+  {
+    "status": "todo",
+    "depends_on": [
+      "turn-actor-owns-agent-turn-state"
+    ],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P1",
+    "title": "Add PlanActor for plan-first execution",
+    "file": "add-plan-actor-for-plan-first-execution.md"
   }
 ]
