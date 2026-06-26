@@ -1,12 +1,22 @@
 # TurnActor owns agent turn lifecycle and queues
 
-**Status**: todo
+**Status**: in_progress
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0
 
 **Depends on**: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, session-actor-owns-session-state, input-actor-owns-input-state
 **Blocks**: none
+
+## Progress
+
+**In Progress**: Partial implementation started. The following changes have been made:
+
+- ✅ Added `Event::ClearQueues` as a control event intent
+- ✅ Added handler in `update/system.rs` to route `ClearQueues` to `TurnActor`
+- ✅ Updated `commands/dsl/handlers/session/mod.rs` `handle_new` to emit `Event::ClearQueues` instead of directly mutating queues
+
+**Remaining work**: Many violators still need conversion to intent-based approach.
 
 ## Description
 
