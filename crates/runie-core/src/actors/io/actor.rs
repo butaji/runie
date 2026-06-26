@@ -1,12 +1,12 @@
-//! `IoActor` — owns user-initiated blocking IO (bash, file writes).
+//! `IoActor` — owns user-initiated blocking IO (bash, file writes, git detection).
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use crate::actors::{spawn_actor, Actor, ActorHandle};
 use crate::bus::EventBus;
 use crate::event::Event;
-use crate::model;
+use crate::snapshot::GitInfo;
 
 use super::messages::{IoActorHandle, IoMsg};
 
@@ -65,7 +65,7 @@ impl IoActor {
     /// Detect cwd name and git info asynchronously.
     async fn detect_env(&self) {
         let (git_info, cwd_name) =
-            match tokio::task::spawn_blocking(model::init_git_and_cwd).await {
+            match tokio::task::spawn_blocking(detect_env_sync).await {
                 Ok(info) => info,
                 Err(_) => (None, String::new()),
             };
@@ -127,9 +127,112 @@ fn write_files_sync(edits: &[(PathBuf, String)]) -> (usize, Vec<String>) {
     (count, errors)
 }
 
+/// Synchronous git and cwd detection for use in spawn_blocking.
+fn detect_env_sync() -> (Option<GitInfo>, String) {
+    let cwd = std::env::current_dir().ok();
+    let cwd_name = cwd
+        .as_ref()
+        .and_then(|p| p.file_name())
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let git_info = cwd.as_ref().and_then(|p| detect_git_info_sync(p));
+    (git_info, cwd_name)
+}
+
+/// Detect git repo name and current branch from the given directory.
+/// Walks up the tree looking for `.git` (dir or file with `gitdir:` pointer).
+fn detect_git_info_sync(start: &Path) -> Option<GitInfo> {
+    let mut current = Some(start);
+    while let Some(dir) = current {
+        let git_path = dir.join(".git");
+        if git_path.is_dir() {
+            return read_git_info_sync(&git_path);
+        }
+        if git_path.is_file() {
+            if let Some(info) = read_worktree_git_info_sync(&git_path) {
+                return Some(info);
+            }
+        }
+        current = dir.parent();
+    }
+    None
+}
+
+fn read_git_info_sync(git_dir: &Path) -> Option<GitInfo> {
+    let head_path = git_dir.join("HEAD");
+    let branch = read_branch_sync(&head_path);
+    let config_path = git_dir.join("config");
+    let repo_name = read_origin_repo_name_sync(&config_path);
+    Some(GitInfo {
+        repo_name,
+        branch,
+        is_worktree: false,
+        worktree_source: None,
+    })
+}
+
+fn read_worktree_git_info_sync(git_file: &Path) -> Option<GitInfo> {
+    let gitdir = std::fs::read_to_string(git_file).ok().and_then(|content| {
+        content
+            .trim()
+            .strip_prefix("gitdir:")
+            .map(|s| PathBuf::from(s.trim()))
+    });
+    let worktree_gitdir = gitdir?;
+    let head_path = worktree_gitdir.join("HEAD");
+    let branch = read_branch_sync(&head_path);
+    let config_path = worktree_gitdir
+        .parent()
+        .and_then(|p| p.parent())
+        .map(|p| p.join("config"));
+    let repo_name = config_path.and_then(|p| read_origin_repo_name_sync(&p));
+    let worktree_source = worktree_gitdir
+        .parent()
+        .and_then(|p| p.parent())
+        .and_then(|p| p.parent())
+        .map(|p| p.to_string_lossy().to_string());
+    Some(GitInfo {
+        repo_name,
+        branch,
+        is_worktree: true,
+        worktree_source,
+    })
+}
+
+fn read_branch_sync(head_path: &Path) -> Option<String> {
+    std::fs::read_to_string(head_path)
+        .ok()
+        .and_then(|content| {
+            content
+                .trim()
+                .strip_prefix("ref: refs/heads/")
+                .map(|b| b.to_owned())
+        })
+}
+
+fn read_origin_repo_name_sync(config_path: &Path) -> Option<String> {
+    std::fs::read_to_string(config_path)
+        .ok()
+        .and_then(|config| {
+            config
+                .lines()
+                .skip_while(|line| !line.contains("[remote \"origin\"]"))
+                .skip(1)
+                .find(|line| line.trim().starts_with("url"))
+                .and_then(|url_line| {
+                    let url = url_line.split('=').nth(1)?;
+                    let url = url.trim();
+                    url.rsplit('/')
+                        .next()
+                        .map(|name| name.trim_end_matches(".git").to_owned())
+                })
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     #[test]
     fn execute_echo_command() {
@@ -175,5 +278,101 @@ mod tests {
         let result = format_command_output("stdout\noutput", "stderr msg", 0);
         assert!(result.contains("stdout"));
         assert!(result.contains("stderr"));
+    }
+
+    // Git detection tests
+
+    #[test]
+    fn git_detect_finds_branch_and_repo() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let git_dir = temp_dir.path().join(".git");
+        fs::create_dir_all(&git_dir).unwrap();
+
+        // Create HEAD with branch ref
+        fs::write(git_dir.join("HEAD"), "ref: refs/heads/main").unwrap();
+
+        // Create config with origin
+        fs::write(
+            git_dir.join("config"),
+            "[remote \"origin\"]\n        url = https://github.com/test/repo.git\n",
+        )
+        .unwrap();
+
+        let result = detect_git_info_sync(temp_dir.path());
+        assert!(result.is_some());
+        let info = result.unwrap();
+        assert_eq!(info.branch, Some("main".to_string()));
+        assert_eq!(info.repo_name, Some("repo".to_string()));
+        assert!(!info.is_worktree);
+    }
+
+    #[test]
+    fn git_detect_returns_none_for_non_git_dir() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let result = detect_git_info_sync(temp_dir.path());
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn git_detect_walks_up_directory_tree() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let sub_dir = temp_dir.path().join("subdir/nested");
+        fs::create_dir_all(&sub_dir).unwrap();
+
+        // Create git in parent, not in subdir
+        let git_dir = temp_dir.path().join(".git");
+        fs::create_dir_all(&git_dir).unwrap();
+        fs::write(git_dir.join("HEAD"), "ref: refs/heads/feature").unwrap();
+
+        // Detect from subdirectory should find parent git
+        let result = detect_git_info_sync(&sub_dir);
+        assert!(result.is_some());
+        let info = result.unwrap();
+        assert_eq!(info.branch, Some("feature".to_string()));
+    }
+
+    #[test]
+    fn read_branch_extracts_branch_name() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        fs::write(temp_dir.path().join("HEAD"), "ref: refs/heads/develop").unwrap();
+
+        let result = read_branch_sync(temp_dir.path().join("HEAD").as_path());
+        assert_eq!(result, Some("develop".to_string()));
+    }
+
+    #[test]
+    fn read_branch_handles_detached_head() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        // Detached HEAD contains commit hash, not branch ref
+        fs::write(temp_dir.path().join("HEAD"), "abc123def456").unwrap();
+
+        let result = read_branch_sync(temp_dir.path().join("HEAD").as_path());
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn read_origin_repo_name_extracts_from_config() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        fs::write(
+            temp_dir.path().join("config"),
+            "[core]\n        repositoryformatversion = 0\n[remote \"origin\"]\n        url = https://github.com/myuser/myproject.git\n",
+        )
+        .unwrap();
+
+        let result = read_origin_repo_name_sync(temp_dir.path().join("config").as_path());
+        assert_eq!(result, Some("myproject".to_string()));
+    }
+
+    #[test]
+    fn read_origin_repo_name_handles_missing_origin() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        fs::write(
+            temp_dir.path().join("config"),
+            "[core]\n        repositoryformatversion = 0\n",
+        )
+        .unwrap();
+
+        let result = read_origin_repo_name_sync(temp_dir.path().join("config").as_path());
+        assert_eq!(result, None);
     }
 }

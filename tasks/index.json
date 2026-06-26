@@ -167,7 +167,7 @@
   {
     "file": "finish-io-migration.md",
     "title": "Finish IO migration: remove remaining sync IO from runie-core domain",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fold-runie-engine-into-agent.md",

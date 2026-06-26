@@ -1,4 +1,6 @@
 #[cfg(test)]
+mod arch_guardrails;
+#[cfg(test)]
 mod support;
 
 // Re-export shared test helpers for backward compatibility
