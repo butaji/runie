@@ -1,12 +1,33 @@
 # Remove direct AppState mutations
 
-**Status**: todo
+**Status**: in_progress
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0
 
 **Depends on**: session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results, ui-control-actor-owns-dialog-state, config-ssot-via-configactor, actor-lifecycle-and-handle-registry
 **Blocks**: none
+
+## Progress
+
+**Completed changes:**
+- ✅ `stop_turn()` now routes through `TurnActor::AbortTurn` 
+- ✅ `abort_queue()` now routes through `TurnActor::AbortQueue`
+- ✅ `queue_follow_up()` now routes through `TurnActor::QueueFollowUp`
+- ✅ Added fact projection handlers: `apply_turn_aborted()`, `apply_turn_completed()`, `apply_turn_errored()`, `apply_token_stats()`
+- ✅ Added fact projection handlers: `apply_turn_started()` for TurnStarted events
+- ✅ `handle_vim_dialog_back()` now routes turn abort through TurnActor
+- ✅ Added TurnActorHandle helpers for all queue and lifecycle operations
+- ✅ Added fact event handlers in dispatch module for TurnAborted, QueueAborted, TurnStarted, TurnCompleted, TurnErrored, TokenStatsUpdated
+
+**Remaining work:**
+- `update/agent/core/mod.rs` - `set_thinking`, `add_thought`, `start_tool`, `end_tool`, `append_response*` still mutate state directly
+- `update/agent/core_messages.rs` - AgentCoreMessage handlers still mutate state
+- `update/session.rs` - `push_user_message`, `deliver_queued`, `dequeue`, `try_deliver_*` still access queue state directly
+- `update/system.rs` - `peek_queue`, `pop_queue`, `configure_token_tracker` still access state directly
+- `update/input/submit.rs` - `submit_user_message` and related still mutate state
+- `update/input/mod.rs` - `handle_escape` checks `turn_active` directly
+- `model/cache/mod.rs` - speed/tokens animation still updates state directly
 
 ## Description
 
@@ -37,10 +58,16 @@ After each domain actor is introduced, do a final sweep to remove any remaining 
 
 ## Files touched
 
-- Whatever remaining files still contain direct mutations after the child tasks land.
-- `crates/runie-core/src/model/state/app_state.rs` — delete legacy helpers.
+- `crates/runie-core/src/actors/handles.rs` — added TurnActorHandle helpers
+- `crates/runie-core/src/update/system.rs` — routed stop_turn through TurnActor
+- `crates/runie-core/src/update/session.rs` — routed queue_follow_up and abort_queue through TurnActor
+- `crates/runie-core/src/update/dialog_input.rs` — routed vim dialog back turn abort through TurnActor
+- `crates/runie-core/src/update/dispatch.rs` — added fact event handlers
+- `crates/runie-core/src/model/state/domain_ops.rs` — added fact projection handlers
+- `crates/runie-core/src/model/state/tests/` — moved tests to separate directory
 
 ## Notes
 
 - This task must run last in the actor-ownership program.
 - The grep acceptance criteria can be enforced by a small shell test in `scripts/verify-tests.sh` or a build-script check.
+- Remaining work requires TurnActor to expose queue query methods and agent event routing.

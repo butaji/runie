@@ -1,5 +1,10 @@
 [
   {
+    "file": "README.md",
+    "title": "Tasks Directory",
+    "status": "todo"
+  },
+  {
     "file": "actor-lifecycle-and-handle-registry.md",
     "title": "Actor Lifecycle and Handle Registry",
     "status": "done"
@@ -287,7 +292,7 @@
   {
     "file": "remove-direct-appstate-mutations.md",
     "title": "Remove direct AppState mutations",
-    "status": "todo"
+    "status": "in_progress"
   },
   {
     "file": "remove-login-config-test-shim.md",
@@ -377,7 +382,7 @@
   {
     "file": "turn-actor-owns-agent-turn-state.md",
     "title": "TurnActor owns agent turn lifecycle and queues",
-    "status": "todo"
+    "status": "in_progress"
   },
   {
     "file": "ui-control-actor-owns-dialog-state.md",

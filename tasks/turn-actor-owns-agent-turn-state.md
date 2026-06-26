@@ -1,22 +1,37 @@
 # TurnActor owns agent turn lifecycle and queues
 
-**Status**: todo
+**Status**: in_progress
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0
 
 **Depends on**: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, session-actor-owns-session-state, input-actor-owns-input-state
-**Blocks**: none
+**Blocks**: remove-direct-appstate-mutations
 
 ## Progress
 
-**In Progress**: Partial implementation started. The following changes have been made:
+**Completed:**
+- ✅ TurnActor exists and owns TurnState with all required fields
+- ✅ TurnMsg enum covers all required messages
+- ✅ TurnActor emits facts: TurnStarted, TurnAborted, TurnCompleted, TurnErrored, TokenStatsUpdated, UserMessageSubmitted, QueueAborted, QueuesCleared
+- ✅ Fact projection handlers in AppState: apply_turn_aborted, apply_turn_completed, apply_turn_errored, apply_token_stats, apply_turn_started
+- ✅ Fact event handlers in dispatch module
 
-- ✅ Added `Event::ClearQueues` as a control event intent
-- ✅ Added handler in `update/system.rs` to route `ClearQueues` to `TurnActor`
-- ✅ Updated `commands/dsl/handlers/session/mod.rs` `handle_new` to emit `Event::ClearQueues` instead of directly mutating queues
+**In progress:**
+- Partial routing of handlers through TurnActor:
+  - ✅ stop_turn() routes through TurnActor::AbortTurn
+  - ✅ abort_queue() routes through TurnActor::AbortQueue  
+  - ✅ queue_follow_up() routes through TurnActor::QueueFollowUp
+  - ✅ handle_vim_dialog_back() routes through TurnActor
 
-**Remaining work**: Many violators still need conversion to intent-based approach.
+**Remaining work:**
+- Route remaining handlers through TurnActor:
+  - `update/agent/core/mod.rs` - set_thinking, add_thought, start_tool, end_tool, etc.
+  - `update/agent/core_messages.rs` - AgentCoreMessage handlers
+  - `update/session.rs` - push_user_message, deliver_queued, dequeue, try_deliver_*
+  - `update/system.rs` - peek_queue, pop_queue, configure_token_tracker
+  - `update/input/submit.rs` - submit_user_message
+  - `update/input/mod.rs` - handle_escape
 
 ## Description
 
@@ -65,17 +80,19 @@ Current violators:
 
 ## Files touched
 
-- `crates/runie-core/src/actors/turn/` — new `mod.rs`, `messages.rs`, `actor.rs`.
-- `crates/runie-core/src/model/state/app_state.rs` — private turn fields; remove queue helpers.
+- `crates/runie-core/src/actors/turn/` — TurnActor implementation (mod.rs, messages.rs, state.rs, actor.rs).
+- `crates/runie-core/src/actors/handles.rs` — added TurnActorHandle helpers.
+- `crates/runie-core/src/model/state/app_state.rs` — private turn fields.
+- `crates/runie-core/src/model/state/domain_ops.rs` — fact projection handlers.
 - `crates/runie-core/src/update/agent/mod.rs` — dispatcher routes `AgentEvent` to `TurnActor`.
-- `crates/runie-core/src/update/agent/core.rs` — agent lifecycle becomes `TurnActor` message handlers.
-- `crates/runie-core/src/update/session.rs` — queue logic moves into `TurnActor`.
-- `crates/runie-core/src/update/system.rs` — `stop_turn` emits `TurnMsg::AbortTurn`.
-- `crates/runie-core/src/update/input/text.rs` — submit emits `TurnMsg::SubmitUserMessage`.
-- `crates/runie-core/src/update/input/mod.rs` — escape emits `TurnMsg::AbortTurn`.
-- `crates/runie-core/src/update/dialog_input.rs` — vim dialog back emits `TurnMsg::AbortTurn`.
+- `crates/runie-core/src/update/agent/core.rs` — agent lifecycle handlers.
+- `crates/runie-core/src/update/session.rs` — queue operations (partial).
+- `crates/runie-core/src/update/system.rs` — `stop_turn` routes to TurnActor.
+- `crates/runie-core/src/update/input/text.rs` — submit handler.
+- `crates/runie-core/src/update/input/mod.rs` — escape handler.
+- `crates/runie-core/src/update/dialog_input.rs` — vim dialog back routes to TurnActor.
 - `crates/runie-core/src/commands/dsl/handlers/session/mod.rs` — `/new` emits `TurnMsg::ClearQueues`.
-- `crates/runie-agent/src/actor.rs` — `AgentActorHandle` sends `TurnMsg` instead of mutating state.
+- `crates/runie-agent/src/actor.rs` — `AgentActorHandle` sends `TurnMsg`.
 - `crates/runie-core/src/model/cache.rs` — token animation reads public turn stats only.
 
 ## Notes
