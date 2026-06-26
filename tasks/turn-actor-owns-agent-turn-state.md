@@ -1,6 +1,6 @@
 # TurnActor owns agent turn lifecycle and queues
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0
@@ -28,9 +28,12 @@
 - ✅ submit_user_message() routes through TurnActor::SubmitUserMessage
 - ✅ clear_queues() routes through TurnActor::ClearQueues
 
-**Remaining work (requires architectural decision):**
-- Queue delivery operations (deliver_queued, dequeue, try_deliver_*) - these need TurnActor to coordinate between queue state and session.messages
-- The current design has TurnActor own queues and AppState project facts. Queue delivery requires TurnActor to emit SteeringDelivered/FollowUpDelivered facts that AppState handles.
+**Completed (this commit):**
+- ✅ Queue delivery routed through TurnActor::DeliverQueued
+- ✅ Dequeue routed through TurnActor::Dequeue
+- ✅ SteeringDelivered, FollowUpDelivered, MessageDequeued events emitted
+- ✅ Fact projections: apply_steering_delivered, apply_follow_up_delivered, apply_message_dequeued
+- ✅ Tests: deliver_queued_delivers_steering, deliver_queued_batches_all_steering, dequeue_emits_message_dequeued
 
 ## Architecture Notes
 
