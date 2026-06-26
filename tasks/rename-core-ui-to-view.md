@@ -1,6 +1,6 @@
 # Rename core-ui to view
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Refactoring
 **Priority**: P2

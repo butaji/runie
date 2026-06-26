@@ -1,6 +1,6 @@
 # Drop Event Bus Replay Buffer
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category": Architecture / Refactoring
 **Priority**: P3

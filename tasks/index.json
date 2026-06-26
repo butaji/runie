@@ -6,8 +6,15 @@
     "category": "Architecture / Actors",
     "priority": "P1",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot"],
-    "blocks": ["test-actor-harness", "env-actor-owns-git-cwd", "fff-indexer-owns-file-picker-results", "remove-direct-appstate-mutations"]
+    "depends_on": [
+      "actor-owned-state-ssot"
+    ],
+    "blocks": [
+      "test-actor-harness",
+      "env-actor-owns-git-cwd",
+      "fff-indexer-owns-file-picker-results",
+      "remove-direct-appstate-mutations"
+    ]
   },
   {
     "file": "actor-owned-state-ssot.md",
@@ -17,7 +24,24 @@
     "priority": "P0",
     "milestone": "R4",
     "depends_on": [],
-    "blocks": ["app-state-read-only-projection", "input-actor-owns-input-state", "session-actor-owns-session-state", "view-actor-owns-view-state", "completion-actor-owns-completion-state", "turn-actor-owns-agent-turn-state", "permission-actor-owns-approvals", "notification-actor-owns-transient-messages", "trust-actor-owns-trust-decisions", "env-actor-owns-git-cwd", "fff-indexer-owns-file-picker-results", "remove-login-config-test-shim", "ui-control-actor-owns-dialog-state", "unify-approval-decision", "consolidate-settings-providers-dialog", "unified-dsl-intents-for-state-mutations"]
+    "blocks": [
+      "app-state-read-only-projection",
+      "input-actor-owns-input-state",
+      "session-actor-owns-session-state",
+      "view-actor-owns-view-state",
+      "completion-actor-owns-completion-state",
+      "turn-actor-owns-agent-turn-state",
+      "permission-actor-owns-approvals",
+      "notification-actor-owns-transient-messages",
+      "trust-actor-owns-trust-decisions",
+      "env-actor-owns-git-cwd",
+      "fff-indexer-owns-file-picker-results",
+      "remove-login-config-test-shim",
+      "ui-control-actor-owns-dialog-state",
+      "unify-approval-decision",
+      "consolidate-settings-providers-dialog",
+      "unified-dsl-intents-for-state-mutations"
+    ]
   },
   {
     "file": "adopt-mcp-native-tool-calling.md",
@@ -36,8 +60,22 @@
     "category": "Core / State",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot", "event-taxonomy-for-actor-state-sync"],
-    "blocks": ["session-actor-owns-session-state", "input-actor-owns-input-state", "view-actor-owns-view-state", "completion-actor-owns-completion-state", "turn-actor-owns-agent-turn-state", "permission-actor-owns-approvals", "notification-actor-owns-transient-messages", "trust-actor-owns-trust-decisions", "env-actor-owns-git-cwd", "fff-indexer-owns-file-picker-results"]
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "session-actor-owns-session-state",
+      "input-actor-owns-input-state",
+      "view-actor-owns-view-state",
+      "completion-actor-owns-completion-state",
+      "turn-actor-owns-agent-turn-state",
+      "permission-actor-owns-approvals",
+      "notification-actor-owns-transient-messages",
+      "trust-actor-owns-trust-decisions",
+      "env-actor-owns-git-cwd",
+      "fff-indexer-owns-file-picker-results"
+    ]
   },
   {
     "file": "centralize-error-type.md",
@@ -56,7 +94,9 @@
     "category": "Configuration",
     "priority": "P1",
     "milestone": "R4",
-    "depends_on": ["extract-headless-cli-helper"],
+    "depends_on": [
+      "extract-headless-cli-helper"
+    ],
     "blocks": []
   },
   {
@@ -66,7 +106,12 @@
     "category": "Input / Commands",
     "priority": "P1",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot", "event-taxonomy-for-actor-state-sync", "app-state-read-only-projection", "input-actor-owns-input-state"],
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection",
+      "input-actor-owns-input-state"
+    ],
     "blocks": []
   },
   {
@@ -76,7 +121,10 @@
     "category": "Configuration",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["event-taxonomy-for-actor-state-sync", "app-state-read-only-projection"],
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
     "blocks": []
   },
   {
@@ -86,7 +134,11 @@
     "category": "Configuration",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["delete-config-reload-shim", "consolidate-login-flow-handlers", "split-runie-core-into-domain-and-io-crates"],
+    "depends_on": [
+      "delete-config-reload-shim",
+      "consolidate-login-flow-handlers",
+      "split-runie-core-into-domain-and-io-crates"
+    ],
     "blocks": []
   },
   {
@@ -96,18 +148,26 @@
     "category": "",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["event-taxonomy-for-actor-state-sync"],
-    "blocks": ["relocate-loose-tests-files"]
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "relocate-loose-tests-files"
+    ]
   },
   {
     "file": "consolidate-login-flow-handlers.md",
     "title": "Consolidate Login Flow Handlers",
-    "status": "todo",
+    "status": "done",
     "category": "Configuration",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["event-taxonomy-for-actor-state-sync"],
-    "blocks": ["consolidate-config-modules-into-dir"]
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "consolidate-config-modules-into-dir"
+    ]
   },
   {
     "file": "consolidate-login-logout-tests.md",
@@ -116,7 +176,9 @@
     "category": "Architecture / Testing",
     "priority": "P3",
     "milestone": "R4",
-    "depends_on": ["consolidate-login-flow-handlers"],
+    "depends_on": [
+      "consolidate-login-flow-handlers"
+    ],
     "blocks": []
   },
   {
@@ -126,7 +188,11 @@
     "category": "Configuration",
     "priority": "P1",
     "milestone": "R4",
-    "depends_on": ["unify-provider-modules", "actor-owned-state-ssot", "config-ssot-via-configactor"],
+    "depends_on": [
+      "unify-provider-modules",
+      "actor-owned-state-ssot",
+      "config-ssot-via-configactor"
+    ],
     "blocks": []
   },
   {
@@ -136,7 +202,9 @@
     "category": "Architecture / Refactoring",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["rename-update-dialog-panel"],
+    "depends_on": [
+      "rename-update-dialog-panel"
+    ],
     "blocks": []
   },
   {
@@ -156,8 +224,12 @@
     "category": "Architecture / Actors",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["fold-state-into-model-state"],
-    "blocks": ["rename-core-ui-to-view"]
+    "depends_on": [
+      "fold-state-into-model-state"
+    ],
+    "blocks": [
+      "rename-core-ui-to-view"
+    ]
   },
   {
     "file": "dedupe-git-status-formatter.md",
@@ -166,7 +238,9 @@
     "category": "Tools",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["replace-git2-with-cli"],
+    "depends_on": [
+      "replace-git2-with-cli"
+    ],
     "blocks": []
   },
   {
@@ -176,7 +250,9 @@
     "category": "Architecture / Actors",
     "priority": "P1",
     "milestone": "R4",
-    "depends_on": ["finish-io-migration"],
+    "depends_on": [
+      "finish-io-migration"
+    ],
     "blocks": []
   },
   {
@@ -186,18 +262,26 @@
     "category": "Configuration",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["config-ssot-via-configactor"],
-    "blocks": ["consolidate-config-modules-into-dir"]
+    "depends_on": [
+      "config-ssot-via-configactor"
+    ],
+    "blocks": [
+      "consolidate-config-modules-into-dir"
+    ]
   },
   {
     "file": "drop-event-bus-replay-buffer.md",
     "title": "Drop Event Bus Replay Buffer",
-    "status": "todo",
+    "status": "done",
     "category": "",
     "priority": "P3",
     "milestone": "R4",
-    "depends_on": ["event-taxonomy-for-actor-state-sync"],
-    "blocks": ["drop-small-stdlib-replaceable-deps"]
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "drop-small-stdlib-replaceable-deps"
+    ]
   },
   {
     "file": "drop-small-stdlib-replaceable-deps.md",
@@ -206,7 +290,9 @@
     "category": "Configuration",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["drop-event-bus-replay-buffer"],
+    "depends_on": [
+      "drop-event-bus-replay-buffer"
+    ],
     "blocks": []
   },
   {
@@ -216,7 +302,12 @@
     "category": "Configuration",
     "priority": "P1",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot", "event-taxonomy-for-actor-state-sync", "app-state-read-only-projection", "actor-lifecycle-and-handle-registry"],
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection",
+      "actor-lifecycle-and-handle-registry"
+    ],
     "blocks": []
   },
   {
@@ -227,7 +318,19 @@
     "priority": "P0",
     "milestone": "R4",
     "depends_on": [],
-    "blocks": ["app-state-read-only-projection", "input-actor-owns-input-state", "session-actor-owns-session-state", "view-actor-owns-view-state", "completion-actor-owns-completion-state", "turn-actor-owns-agent-turn-state", "permission-actor-owns-approvals", "notification-actor-owns-transient-messages", "trust-actor-owns-trust-decisions", "env-actor-owns-git-cwd", "fff-indexer-owns-file-picker-results"]
+    "blocks": [
+      "app-state-read-only-projection",
+      "input-actor-owns-input-state",
+      "session-actor-owns-session-state",
+      "view-actor-owns-view-state",
+      "completion-actor-owns-completion-state",
+      "turn-actor-owns-agent-turn-state",
+      "permission-actor-owns-approvals",
+      "notification-actor-owns-transient-messages",
+      "trust-actor-owns-trust-decisions",
+      "env-actor-owns-git-cwd",
+      "fff-indexer-owns-file-picker-results"
+    ]
   },
   {
     "file": "externalize-model-metadata-as-yaml.md",
@@ -247,7 +350,9 @@
     "priority": "P1",
     "milestone": "R4",
     "depends_on": [],
-    "blocks": ["collapse-headless-binaries-into-one-cli"]
+    "blocks": [
+      "collapse-headless-binaries-into-one-cli"
+    ]
   },
   {
     "file": "fff-indexer-owns-file-picker-results.md",
@@ -256,7 +361,12 @@
     "category": "Tools",
     "priority": "P1",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot", "event-taxonomy-for-actor-state-sync", "app-state-read-only-projection", "actor-lifecycle-and-handle-registry"],
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection",
+      "actor-lifecycle-and-handle-registry"
+    ],
     "blocks": []
   },
   {
@@ -266,8 +376,12 @@
     "category": "Architecture / Actors",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["remove-login-config-test-shim"],
-    "blocks": ["delete-async-io-bridge"]
+    "depends_on": [
+      "remove-login-config-test-shim"
+    ],
+    "blocks": [
+      "delete-async-io-bridge"
+    ]
   },
   {
     "file": "fold-runie-engine-into-agent.md",
@@ -286,8 +400,13 @@
     "category": "Architecture / Refactoring",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["event-taxonomy-for-actor-state-sync"],
-    "blocks": ["decouple-appstate-from-view-cache", "split-runie-core-into-domain-and-io-crates"]
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "decouple-appstate-from-view-cache",
+      "split-runie-core-into-domain-and-io-crates"
+    ]
   },
   {
     "file": "fold-testing-into-agent-tests.md",
@@ -316,7 +435,9 @@
     "category": "Configuration",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["split-runie-core-into-domain-and-io-crates"],
+    "depends_on": [
+      "split-runie-core-into-domain-and-io-crates"
+    ],
     "blocks": []
   },
   {
@@ -336,7 +457,9 @@
     "category": "TUI / Rendering",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["rename-core-ui-to-view"],
+    "depends_on": [
+      "rename-core-ui-to-view"
+    ],
     "blocks": []
   },
   {
@@ -356,8 +479,15 @@
     "category": "Input / Commands",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot", "event-taxonomy-for-actor-state-sync", "app-state-read-only-projection"],
-    "blocks": ["turn-actor-owns-agent-turn-state", "completion-actor-owns-completion-state"]
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
+    "blocks": [
+      "turn-actor-owns-agent-turn-state",
+      "completion-actor-owns-completion-state"
+    ]
   },
   {
     "file": "move-provider-catalog-to-provider-crate.md",
@@ -366,7 +496,9 @@
     "category": "Architecture / Actors",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["unify-provider-modules"],
+    "depends_on": [
+      "unify-provider-modules"
+    ],
     "blocks": []
   },
   {
@@ -376,8 +508,12 @@
     "category": "Architecture / Actors",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["finish-io-migration"],
-    "blocks": ["collapse-effect-payload-indirection"]
+    "depends_on": [
+      "finish-io-migration"
+    ],
+    "blocks": [
+      "collapse-effect-payload-indirection"
+    ]
   },
   {
     "file": "notification-actor-owns-transient-messages.md",
@@ -386,7 +522,11 @@
     "category": "Core / State",
     "priority": "P1",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot", "event-taxonomy-for-actor-state-sync", "app-state-read-only-projection"],
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
     "blocks": []
   },
   {
@@ -396,7 +536,11 @@
     "category": "Architecture / Security",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot", "event-taxonomy-for-actor-state-sync", "app-state-read-only-projection"],
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
     "blocks": []
   },
   {
@@ -416,17 +560,21 @@
     "category": "Tools",
     "priority": "P1",
     "milestone": "R5",
-    "depends_on": ["r5-extract-tool-stream"],
+    "depends_on": [
+      "r5-extract-tool-stream"
+    ],
     "blocks": []
   },
   {
     "file": "r5-per-channel-decoders.md",
     "title": "Add per-channel stream decoders for UI projections",
-    "status": "todo",
+    "status": "done",
     "category": "Architecture / Actors",
     "priority": "P2",
     "milestone": "R5",
-    "depends_on": ["r5-populate-parts-streaming"],
+    "depends_on": [
+      "r5-populate-parts-streaming"
+    ],
     "blocks": []
   },
   {
@@ -446,7 +594,9 @@
     "category": "Architecture / Actors",
     "priority": "P0",
     "milestone": "R5",
-    "depends_on": ["r5-extract-tool-stream"],
+    "depends_on": [
+      "r5-extract-tool-stream"
+    ],
     "blocks": []
   },
   {
@@ -486,7 +636,9 @@
     "category": "Architecture / Actors",
     "priority": "P1",
     "milestone": "R4",
-    "depends_on": ["generic-actor-reply"],
+    "depends_on": [
+      "generic-actor-reply"
+    ],
     "blocks": []
   },
   {
@@ -496,7 +648,9 @@
     "category": "Configuration",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["consolidate-dual-path-modules"],
+    "depends_on": [
+      "consolidate-dual-path-modules"
+    ],
     "blocks": []
   },
   {
@@ -506,7 +660,21 @@
     "category": "Architecture / Actors",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["session-actor-owns-session-state", "input-actor-owns-input-state", "view-actor-owns-view-state", "completion-actor-owns-completion-state", "turn-actor-owns-agent-turn-state", "permission-actor-owns-approvals", "notification-actor-owns-transient-messages", "trust-actor-owns-trust-decisions", "env-actor-owns-git-cwd", "fff-indexer-owns-file-picker-results", "ui-control-actor-owns-dialog-state", "config-ssot-via-configactor", "actor-lifecycle-and-handle-registry"],
+    "depends_on": [
+      "session-actor-owns-session-state",
+      "input-actor-owns-input-state",
+      "view-actor-owns-view-state",
+      "completion-actor-owns-completion-state",
+      "turn-actor-owns-agent-turn-state",
+      "permission-actor-owns-approvals",
+      "notification-actor-owns-transient-messages",
+      "trust-actor-owns-trust-decisions",
+      "env-actor-owns-git-cwd",
+      "fff-indexer-owns-file-picker-results",
+      "ui-control-actor-owns-dialog-state",
+      "config-ssot-via-configactor",
+      "actor-lifecycle-and-handle-registry"
+    ],
     "blocks": []
   },
   {
@@ -516,18 +684,26 @@
     "category": "Architecture / Actors",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot", "config-ssot-via-configactor"],
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "config-ssot-via-configactor"
+    ],
     "blocks": []
   },
   {
     "file": "rename-core-ui-to-view.md",
     "title": "Rename core-ui to view",
-    "status": "todo",
+    "status": "done",
     "category": "Architecture / Refactoring",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["fold-state-into-model-state"],
-    "blocks": ["generate-ui-elements-from-model", "split-runie-core-into-domain-and-io-crates"]
+    "depends_on": [
+      "fold-state-into-model-state"
+    ],
+    "blocks": [
+      "generate-ui-elements-from-model",
+      "split-runie-core-into-domain-and-io-crates"
+    ]
   },
   {
     "file": "replace-actor-runtime-with-ractor.md",
@@ -536,7 +712,9 @@
     "category": "Architecture / Actors",
     "priority": "P1",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot"],
+    "depends_on": [
+      "actor-owned-state-ssot"
+    ],
     "blocks": []
   },
   {
@@ -556,7 +734,9 @@
     "category": "Architecture / Actors",
     "priority": "P1",
     "milestone": "R4",
-    "depends_on": ["finish-io-migration"],
+    "depends_on": [
+      "finish-io-migration"
+    ],
     "blocks": []
   },
   {
@@ -606,8 +786,14 @@
     "category": "Core / State",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot", "event-taxonomy-for-actor-state-sync", "app-state-read-only-projection"],
-    "blocks": ["turn-actor-owns-agent-turn-state"]
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
+    "blocks": [
+      "turn-actor-owns-agent-turn-state"
+    ]
   },
   {
     "file": "simplify-actor-trait.md",
@@ -616,7 +802,9 @@
     "category": "Architecture / Actors",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["unify-persistence-actors"],
+    "depends_on": [
+      "unify-persistence-actors"
+    ],
     "blocks": []
   },
   {
@@ -626,8 +814,17 @@
     "category": "Architecture / Refactoring",
     "priority": "P2",
     "milestone": "R5",
-    "depends_on": ["finish-io-migration", "delete-async-io-bridge", "fold-state-into-model-state", "rename-core-ui-to-view"],
-    "blocks": ["gate-or-move-single-consumer-core-modules", "consolidate-config-modules-into-dir", "unify-duplicate-module-names-core-tui"]
+    "depends_on": [
+      "finish-io-migration",
+      "delete-async-io-bridge",
+      "fold-state-into-model-state",
+      "rename-core-ui-to-view"
+    ],
+    "blocks": [
+      "gate-or-move-single-consumer-core-modules",
+      "consolidate-config-modules-into-dir",
+      "unify-duplicate-module-names-core-tui"
+    ]
   },
   {
     "file": "standardize-test-layout-inline.md",
@@ -636,7 +833,9 @@
     "category": "Configuration",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["relocate-loose-tests-files"],
+    "depends_on": [
+      "relocate-loose-tests-files"
+    ],
     "blocks": []
   },
   {
@@ -646,8 +845,21 @@
     "category": "Architecture / Testing",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["actor-lifecycle-and-handle-registry", "event-taxonomy-for-actor-state-sync", "app-state-read-only-projection"],
-    "blocks": ["session-actor-owns-session-state", "input-actor-owns-input-state", "view-actor-owns-view-state", "completion-actor-owns-completion-state", "turn-actor-owns-agent-turn-state", "permission-actor-owns-approvals", "notification-actor-owns-transient-messages", "trust-actor-owns-trust-decisions"]
+    "depends_on": [
+      "actor-lifecycle-and-handle-registry",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
+    "blocks": [
+      "session-actor-owns-session-state",
+      "input-actor-owns-input-state",
+      "view-actor-owns-view-state",
+      "completion-actor-owns-completion-state",
+      "turn-actor-owns-agent-turn-state",
+      "permission-actor-owns-approvals",
+      "notification-actor-owns-transient-messages",
+      "trust-actor-owns-trust-decisions"
+    ]
   },
   {
     "file": "trust-actor-owns-trust-decisions.md",
@@ -656,7 +868,11 @@
     "category": "Architecture / Security",
     "priority": "P1",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot", "event-taxonomy-for-actor-state-sync", "app-state-read-only-projection"],
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
     "blocks": []
   },
   {
@@ -666,7 +882,13 @@
     "category": "Architecture / Actors",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot", "event-taxonomy-for-actor-state-sync", "app-state-read-only-projection", "session-actor-owns-session-state", "input-actor-owns-input-state"],
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection",
+      "session-actor-owns-session-state",
+      "input-actor-owns-input-state"
+    ],
     "blocks": []
   },
   {
@@ -676,8 +898,17 @@
     "category": "Architecture / Actors",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot", "event-taxonomy-for-actor-state-sync", "app-state-read-only-projection"],
-    "blocks": ["view-actor-owns-view-state", "input-actor-owns-input-state", "turn-actor-owns-agent-turn-state", "remove-direct-appstate-mutations"]
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
+    "blocks": [
+      "view-actor-owns-view-state",
+      "input-actor-owns-input-state",
+      "turn-actor-owns-agent-turn-state",
+      "remove-direct-appstate-mutations"
+    ]
   },
   {
     "file": "unified-dsl-intents-for-state-mutations.md",
@@ -686,7 +917,11 @@
     "category": "Input / Commands",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot", "event-taxonomy-for-actor-state-sync", "declarative-actor-dsl"],
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "declarative-actor-dsl"
+    ],
     "blocks": []
   },
   {
@@ -696,7 +931,9 @@
     "category": "Architecture / Security",
     "priority": "P1",
     "milestone": "R4",
-    "depends_on": ["unify-permission-gate"],
+    "depends_on": [
+      "unify-permission-gate"
+    ],
     "blocks": []
   },
   {
@@ -706,7 +943,9 @@
     "category": "Configuration",
     "priority": "P2",
     "milestone": "R4",
-    "depends_on": ["split-runie-core-into-domain-and-io-crates"],
+    "depends_on": [
+      "split-runie-core-into-domain-and-io-crates"
+    ],
     "blocks": []
   },
   {
@@ -726,8 +965,13 @@
     "category": "Configuration",
     "priority": "P1",
     "milestone": "R4",
-    "depends_on": ["event-taxonomy-for-actor-state-sync"],
-    "blocks": ["move-provider-catalog-to-provider-crate", "consolidate-settings-providers-dialog"]
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
+    "blocks": [
+      "move-provider-catalog-to-provider-crate",
+      "consolidate-settings-providers-dialog"
+    ]
   },
   {
     "file": "unify-provider-stack-with-rig-core.md",
@@ -746,7 +990,14 @@
     "category": "TUI / Rendering",
     "priority": "P0",
     "milestone": "R4",
-    "depends_on": ["actor-owned-state-ssot", "event-taxonomy-for-actor-state-sync", "app-state-read-only-projection", "session-actor-owns-session-state", "input-actor-owns-input-state", "ui-control-actor-owns-dialog-state"],
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection",
+      "session-actor-owns-session-state",
+      "input-actor-owns-input-state",
+      "ui-control-actor-owns-dialog-state"
+    ],
     "blocks": []
   }
 ]

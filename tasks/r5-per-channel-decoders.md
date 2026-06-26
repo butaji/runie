@@ -1,6 +1,6 @@
 # Add per-channel stream decoders for UI projections
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: Architecture / Actors
 **Priority**: P2
