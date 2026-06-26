@@ -72,7 +72,7 @@
   {
     "file": "consolidate-dual-path-modules.md",
     "title": "Consolidate Dual-Path Modules",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "consolidate-login-flow-handlers.md",

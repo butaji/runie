@@ -1,12 +1,14 @@
 # Consolidate Dual-Path Modules
 
-**Status**: todo
+**Status**: partial
 **Milestone**: R4
 **Category": Architecture / Refactoring
 **Priority**: P2
 
 **Depends on**: event-taxonomy-for-actor-state-sync
 **Blocks**: relocate-loose-tests-files
+
+**Progress**: Moved `file_refs_lookup_tests.rs` from src root to `tests/file_refs_lookup.rs`; declared in `tests/mod.rs`.
 
 ## Description
 
