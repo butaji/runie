@@ -61,13 +61,6 @@ impl AppState {
         *self.actor_handles_mut() = Some(handles);
     }
 
-    // ── Input history ──────────────────────────────────────────────────────
-
-    pub fn add_to_input_history(&mut self, entry: String) {
-        self.input_mut().input_history.retain(|h| h != &entry);
-        self.input_mut().input_history.push(entry);
-    }
-
     // ── ID generation ───────────────────────────────────────────────────────
 
     pub fn next_id(&mut self) -> String {

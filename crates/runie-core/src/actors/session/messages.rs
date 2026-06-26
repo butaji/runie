@@ -132,6 +132,11 @@ impl SessionActorHandle {
         let _ = self.tx.send(SessionMsg::AppendHistory { entry }).await;
     }
 
+    /// Append an entry to the history file (sync fire-and-forget).
+    pub fn try_append_history(&self, entry: String) {
+        let _ = self.tx.try_send(SessionMsg::AppendHistory { entry });
+    }
+
     /// Request loading a named session.
     pub async fn load(&self, name: String) {
         let _ = self.tx.send(SessionMsg::Load { name }).await;

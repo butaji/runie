@@ -1,9 +1,26 @@
-//! Cursor & vim navigation (merged from input_nav.rs).
+//! Cursor & vim navigation.
+//!
+//! Cursor mutations are delegated to `InputActor` via `InputMsg`.
+//! View-side concerns (scroll clamp, ghost, dirty) are handled here.
 
-use crate::model::{AppState, InputState};
+use crate::model::AppState;
 use crate::Event;
 
 pub const PAGE_SIZE: usize = 5;
+
+/// Pure helper: compute the byte offset of the start of the line containing `cursor_pos`.
+fn current_line_start(input: &str, cursor_pos: usize) -> usize {
+    let mut pos = 0;
+    for (i, c) in input.char_indices() {
+        if c == '\n' {
+            if i >= cursor_pos {
+                return pos;
+            }
+            pos = i + 1;
+        }
+    }
+    pos
+}
 
 fn count_input_lines(input: &str) -> usize {
     if input.is_empty() {
@@ -16,115 +33,96 @@ fn count_input_lines(input: &str) -> usize {
     lines
 }
 
-/// Compute line bounds from raw input state (pure helper — no borrow of AppState).
-fn compute_line_bounds(input: &InputState) -> (usize, usize) {
-    if input.input.is_empty() {
-        return (0, 0);
-    }
-    let mut line_start = 0;
-    let mut line_end = input.input.len();
-    let cursor_pos = input.cursor_pos;
-
-    for (i, c) in input.input.char_indices() {
-        if c == '\n' {
-            if i >= cursor_pos {
-                line_end = i;
-                break;
-            }
-            line_start = i + 1;
-        }
-    }
-    if line_end == input.input.len() && input.input.ends_with('\n') && cursor_pos > line_start {
-        line_end = input.input.len();
-    }
-    (line_start, line_end)
-}
-
 impl AppState {
-    pub(crate) fn get_current_line_bounds(&mut self) -> (usize, usize) {
-        let input = self.input();
-        compute_line_bounds(input)
-    }
-
     pub(crate) fn move_cursor_to_line_start(&mut self) {
-        let (line_start, _) = self.get_current_line_bounds();
-        self.input_mut().cursor_pos = line_start;
+        try_send_input(self, crate::actors::InputMsg::CursorStart);
+        // Direct mutation for tests (when InputActor is not spawned)
+        let input_text = self.input().input.clone();
+        let cursor_pos = self.input().cursor_pos;
+        self.input_mut().cursor_pos = current_line_start(&input_text, cursor_pos);
         self.clamp_input_scroll();
         self.view_mut().dirty = true;
     }
 
     pub(crate) fn move_cursor_to_line_end(&mut self) {
-        let (_, line_end) = self.get_current_line_bounds();
+        try_send_input(self, crate::actors::InputMsg::CursorEnd);
+        // Direct mutation for tests (when InputActor is not spawned)
+        let input_text = self.input().input.clone();
+        let cursor_pos = self.input().cursor_pos;
+        let line_start = current_line_start(&input_text, cursor_pos);
+        let line_end = input_text[line_start..]
+            .find('\n')
+            .map(|i| line_start + i)
+            .unwrap_or(input_text.len());
         self.input_mut().cursor_pos = line_end;
         self.clamp_input_scroll();
         self.view_mut().dirty = true;
     }
 
     pub(crate) fn move_cursor_up(&mut self) {
-        {
-            let input = self.input();
-            if !input.input.contains('\n') {
-                self.history_prev();
-                return;
-            }
+        let input = self.input();
+        if !input.input.contains('\n') {
+            self.history_prev();
+            return;
         }
-        let (line_start, _) = {
-            let input = self.input();
-            compute_line_bounds(input)
-        };
-        if line_start == 0 {
+        let input_text = input.input.clone();
+        let cursor_pos = input.cursor_pos;
+
+        let cur_start = current_line_start(&input_text, cursor_pos);
+        if cur_start == 0 {
             self.input_mut().input_flash = 3;
             return;
         }
-        let prev_line_start = {
-            let input = self.input();
-            input.input[..line_start - 1]
-                .rfind('\n')
-                .map(|i| i + 1)
-                .unwrap_or(0)
-        };
-        let current_col = {
-            let input = self.input();
-            input.cursor_pos - line_start
-        };
-        let prev_line_end = line_start - 1;
-        let prev_line_len = prev_line_end - prev_line_start;
-        self.input_mut().cursor_pos = prev_line_start + current_col.min(prev_line_len);
+        let prev_ls = input_text[..cur_start - 1].rfind('\n').map(|i| i + 1).unwrap_or(0);
+        let prev_le = cur_start - 1;
+        let current_col = cursor_pos - cur_start;
+        let new_pos = prev_ls + current_col.min(prev_le - prev_ls);
+        try_send_input(self, crate::actors::InputMsg::MoveCursor { pos: new_pos });
+        // Direct mutation for tests (when InputActor is not spawned)
+        self.input_mut().cursor_pos = new_pos;
         self.clamp_input_scroll();
         self.view_mut().dirty = true;
     }
 
     pub(crate) fn move_cursor_down(&mut self) {
-        let (line_end, input_len, cursor_pos) = {
-            let input = self.input();
-            if !input.input.contains('\n') {
-                self.history_next();
-                return;
-            }
-            let (_, end) = compute_line_bounds(input);
-            (end, input.input.len(), input.cursor_pos)
-        };
+        let input = self.input();
+        if !input.input.contains('\n') {
+            self.history_next();
+            return;
+        }
+        let input_text = input.input.clone();
+        let cursor_pos = input.cursor_pos;
+        let input_len = input.input.len();
+        let cur_start = current_line_start(&input_text, cursor_pos);
+
+        // Find end of current line (cursor is at line_end).
+        let line_end = input_text[cur_start..]
+            .find('\n')
+            .map(|i| cur_start + i)
+            .unwrap_or(input_text.len());
         if line_end >= input_len {
             self.input_mut().input_flash = 3;
             return;
         }
-        let next_line_start = line_end + 1;
-        let next_line_end = self.input().input[next_line_start..]
+        let next_ls = line_end + 1;
+        let next_le = input_text[next_ls..]
             .find('\n')
-            .map(|i| next_line_start + i)
-            .unwrap_or(self.input().input.len());
-        let (current_line_start, _) = compute_line_bounds(self.input());
-        let current_col = cursor_pos - current_line_start;
-        let next_line_len = next_line_end - next_line_start;
-        self.input_mut().cursor_pos = next_line_start + current_col.min(next_line_len);
+            .map(|i| next_ls + i)
+            .unwrap_or(input_text.len());
+        let current_col = cursor_pos - cur_start;
+        let new_pos = next_ls + current_col.min(next_le - next_ls);
+        try_send_input(self, crate::actors::InputMsg::MoveCursor { pos: new_pos });
+        // Direct mutation for tests (when InputActor is not spawned)
+        self.input_mut().cursor_pos = new_pos;
         self.clamp_input_scroll();
         self.view_mut().dirty = true;
     }
 
     pub(crate) fn clamp_input_scroll(&mut self) {
-        let input = self.input_mut();
+        let input = self.input();
         let total_lines = count_input_lines(&input.input);
         if total_lines <= 1 {
+            let input = self.input_mut();
             input.input_scroll = 0;
             return;
         }
@@ -132,11 +130,13 @@ impl AppState {
         const BORDER_ROWS: usize = 2;
         let visible_height = MAX_INPUT_HEIGHT.saturating_sub(BORDER_ROWS);
         if total_lines <= visible_height {
+            let input = self.input_mut();
             input.input_scroll = 0;
             return;
         }
         let pos = input.cursor_pos.min(input.input.len());
         let cursor_line = input.input[..pos].chars().filter(|&c| c == '\n').count();
+        let input = self.input_mut();
         if cursor_line < input.input_scroll {
             input.input_scroll = cursor_line;
         } else if cursor_line >= input.input_scroll + visible_height {
@@ -147,17 +147,18 @@ impl AppState {
     }
 
     pub(crate) fn cursor_left(&mut self) {
-        let input = self.input_mut();
-        if input.cursor_pos > 0 {
-            let pos = input.cursor_pos;
-            let text = input.input.clone();
-            input.cursor_pos = crate::update::input::prev_grapheme_boundary(&text, pos);
-            self.clear_ghost();
-            self.clamp_input_scroll();
-            self.view_mut().dirty = true;
+        try_send_input(self, crate::actors::InputMsg::CursorLeft);
+        // Direct mutation for tests (when InputActor is not spawned)
+        if self.input().cursor_pos > 0 {
+            let pos = self.input().cursor_pos;
+            self.input_mut().cursor_pos =
+                crate::update::input::prev_grapheme_boundary(&self.input().input, pos);
         } else {
-            input.input_flash = 3;
+            self.input_mut().input_flash = 3;
         }
+        self.clear_ghost();
+        self.clamp_input_scroll();
+        self.view_mut().dirty = true;
     }
 
     pub(crate) fn cursor_right(&mut self) {
@@ -165,22 +166,23 @@ impl AppState {
             self.accept_ghost();
             return;
         }
-        let input = self.input_mut();
-        if input.cursor_pos < input.input.len() {
-            let pos = input.cursor_pos;
-            let text = input.input.clone();
-            input.cursor_pos = crate::update::input::next_grapheme_boundary(&text, pos);
-            self.clamp_input_scroll();
-            self.view_mut().dirty = true;
-        } else {
-            input.input_flash = 3;
+        try_send_input(self, crate::actors::InputMsg::CursorRight);
+        // Direct mutation for tests (when InputActor is not spawned)
+        if self.input().cursor_pos < self.input().input.len() {
+            let pos = self.input().cursor_pos;
+            self.input_mut().cursor_pos =
+                crate::update::input::next_grapheme_boundary(&self.input().input, pos);
         }
+        self.clamp_input_scroll();
+        self.view_mut().dirty = true;
     }
 
     pub(crate) fn cursor_start(&mut self) {
         if self.input().input.contains('\n') {
             self.move_cursor_to_line_start();
         } else if self.input().cursor_pos != 0 {
+            try_send_input(self, crate::actors::InputMsg::CursorStart);
+            // Direct mutation for tests (when InputActor is not spawned)
             self.input_mut().cursor_pos = 0;
             self.clear_ghost();
             self.clamp_input_scroll();
@@ -194,8 +196,9 @@ impl AppState {
         if self.input().input.contains('\n') {
             self.move_cursor_to_line_end();
         } else if self.input().cursor_pos != self.input().input.len() {
-            let input = self.input_mut();
-            input.cursor_pos = input.input.len();
+            try_send_input(self, crate::actors::InputMsg::CursorEnd);
+            // Direct mutation for tests (when InputActor is not spawned)
+            self.input_mut().cursor_pos = self.input().input.len();
             self.clear_ghost();
             self.clamp_input_scroll();
             self.view_mut().dirty = true;
@@ -205,31 +208,29 @@ impl AppState {
     }
 
     pub(crate) fn cursor_word_left(&mut self) {
-        let input = self.input_mut();
-        if input.cursor_pos > 0 {
-            let pos = input.cursor_pos;
-            let text = input.input.clone();
-            input.cursor_pos = crate::update::input::find_word_boundary_left(&text, pos);
-            self.clear_ghost();
-            self.clamp_input_scroll();
-            self.view_mut().dirty = true;
-        } else {
-            input.input_flash = 3;
+        try_send_input(self, crate::actors::InputMsg::CursorWordLeft);
+        // Direct mutation for tests (when InputActor is not spawned)
+        if self.input().cursor_pos > 0 {
+            let pos = self.input().cursor_pos;
+            self.input_mut().cursor_pos =
+                crate::update::input::find_word_boundary_left(&self.input().input, pos);
         }
+        self.clear_ghost();
+        self.clamp_input_scroll();
+        self.view_mut().dirty = true;
     }
 
     pub(crate) fn cursor_word_right(&mut self) {
-        let input = self.input_mut();
-        if input.cursor_pos < input.input.len() {
-            let pos = input.cursor_pos;
-            let text = input.input.clone();
-            input.cursor_pos = crate::update::input::find_word_boundary_right(&text, pos);
-            self.clear_ghost();
-            self.clamp_input_scroll();
-            self.view_mut().dirty = true;
-        } else {
-            input.input_flash = 3;
+        try_send_input(self, crate::actors::InputMsg::CursorWordRight);
+        // Direct mutation for tests (when InputActor is not spawned)
+        if self.input().cursor_pos < self.input().input.len() {
+            let pos = self.input().cursor_pos;
+            self.input_mut().cursor_pos =
+                crate::update::input::find_word_boundary_right(&self.input().input, pos);
         }
+        self.clear_ghost();
+        self.clamp_input_scroll();
+        self.view_mut().dirty = true;
     }
 
     pub(crate) fn handle_vim_nav_char(&mut self, c: char) {
@@ -362,5 +363,12 @@ impl AppState {
             '/' => Some(crate::Event::ToggleCommandPalette),
             _ => None,
         }
+    }
+}
+
+/// Fire-and-forget send to InputActor.
+fn try_send_input(state: &mut AppState, msg: crate::actors::InputMsg) {
+    if let Some(ref handles) = state.actor_handles() {
+        handles.try_send_input(msg);
     }
 }

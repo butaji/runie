@@ -303,6 +303,10 @@ pub enum Event {
     },
 
     // Persistence
+    /// Input state changed — emitted by InputActor.
+    InputChanged {
+        state: Box<crate::model::InputState>,
+    },
     TrustLoaded {
         decisions: std::collections::HashMap<std::path::PathBuf, crate::trust::TrustDecision>,
     },

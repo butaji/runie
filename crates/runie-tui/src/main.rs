@@ -82,6 +82,8 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
     let (session_handle, _session_actor) = SessionActor::spawn(bus.clone());
     let (io_handle, _io_actor) = IoActor::spawn(bus.clone());
     let (permission_handle, _permission_actor) = PermissionActor::spawn(bus.clone());
+    // InputActor owns the input buffer, cursor, history, undo/redo.
+    let (input_handle, _input_actor) = runie_core::actors::InputActor::spawn(bus.clone());
     let mut state = AppState::default();
     // Build the ActorHandles registry — this is the single source of truth
     // for all actor senders. It replaces the old loose config_tx/provider_tx/... fields.
@@ -91,6 +93,7 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
         session: Some(session_handle.clone()),
         io: Some(io_handle),
         permission: Some(permission_handle),
+        input: Some(input_handle),
         ..Default::default()
     };
     state.set_actor_handles(handles.clone());

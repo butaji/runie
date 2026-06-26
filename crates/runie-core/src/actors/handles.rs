@@ -12,8 +12,8 @@
 use std::path::PathBuf;
 
 use crate::actors::{
-    ConfigActorHandle, FffSearchRequest, IoActorHandle, PermissionActorHandle,
-    ProviderActorHandle, SessionActorHandle,
+    ConfigActorHandle, FffSearchRequest, InputActorHandle, IoActorHandle,
+    PermissionActorHandle, ProviderActorHandle, SessionActorHandle,
 };
 use crate::config::TruncationSection;
 use crate::model::ThinkingLevel;
@@ -38,6 +38,9 @@ pub struct ActorHandles {
     /// Handle to `FffIndexerActor` — owns the file index and search.
     /// `None` when the indexer has not been spawned (e.g. headless mode).
     pub fff_indexer: Option<FffIndexerHandle>,
+    /// Handle to `InputActor` — owns the input buffer, cursor, history, undo/redo.
+    /// `None` when the input actor has not been spawned (e.g. headless mode).
+    pub input: Option<InputActorHandle>,
     /// Handle to `PermissionActor` — owns approval registry and permission UI.
     pub permission: Option<PermissionActorHandle>,
 }
@@ -162,6 +165,13 @@ impl ActorHandles {
         }
     }
 
+    /// Append to history file (sync fire-and-forget).
+    pub fn try_send_append_history(&self, entry: String) {
+        if let Some(ref h) = self.session {
+            h.try_append_history(entry);
+        }
+    }
+
     /// Send `SessionMsg::Load` to `SessionActor`.
     pub async fn send_load_session(&self, name: String) {
         if let Some(ref h) = self.session {
@@ -194,6 +204,20 @@ impl ActorHandles {
     pub async fn send_fff_search(&self, request: FffSearchRequest) {
         if let Some(ref h) = self.fff_indexer {
             h.search(request).await;
+        }
+    }
+
+    /// Send `InputMsg` to `InputActor` (async).
+    pub async fn send_input(&self, msg: crate::actors::InputMsg) {
+        if let Some(ref h) = self.input {
+            h.send(msg).await;
+        }
+    }
+
+    /// Send `InputMsg` to `InputActor` (sync fire-and-forget).
+    pub fn try_send_input(&self, msg: crate::actors::InputMsg) {
+        if let Some(ref h) = self.input {
+            h.try_send(msg);
         }
     }
 

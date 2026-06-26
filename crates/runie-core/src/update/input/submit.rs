@@ -1,4 +1,7 @@
 //! Submit, command dispatch, and history management.
+//!
+//! Submitting content emits `InputMsg::Clear` and `SessionMsg::AppendHistory`.
+//! History navigation emits `InputMsg::HistoryPrev/Next`.
 
 use crate::message::{now, ChatMessage, Role};
 use crate::model::AppState;
@@ -26,16 +29,31 @@ impl AppState {
             agent.tokens_in += agent.token_tracker.estimate_input(&content);
         }
 
-        if let Some(stripped) = content.strip_prefix('!') {
-            let command = stripped.trim().to_owned();
-            if !command.is_empty() {
-                self.run_bash_command(&command);
-            }
+        if self.try_handle_bang_command(&content).is_some() {
             return;
         }
 
-        self.add_to_input_history(content.clone());
+        // Emit history append through SessionActor.
+        try_append_history(self, content.clone());
+        // Direct mutation for tests (when InputActor is not spawned)
+        self.push_to_input_history(&content);
         self.dispatch_submit_content(content);
+    }
+
+    fn try_handle_bang_command(&mut self, content: &str) -> Option<()> {
+        let stripped = content.strip_prefix('!')?;
+        let command = stripped.trim().to_owned();
+        if !command.is_empty() {
+            self.run_bash_command(&command);
+        }
+        Some(())
+    }
+
+    fn push_to_input_history(&mut self, content: &str) {
+        let history = &mut self.input_mut().input_history;
+        if history.is_empty() || history.last() != Some(&content.to_string()) {
+            history.push(content.to_string());
+        }
     }
 
     fn take_submit_content(&mut self) -> Option<String> {
@@ -43,18 +61,16 @@ impl AppState {
             self.input_mut().input_flash = 3;
             return None;
         }
-        let content = {
-            let input = self.input_mut();
-            std::mem::take(&mut input.input).trim().to_owned()
-        };
-        {
-            let input = self.input_mut();
-            input.cursor_pos = 0;
-            input.input_scroll = 0;
-            input.history_pos = None;
-            input.undo_stack.clear();
-            input.redo_stack.clear();
-        }
+        // Clear input through InputActor.
+        try_send_input(self, crate::actors::InputMsg::Clear);
+        // Direct mutation for tests (when InputActor is not spawned)
+        let content = self.input().input.trim().to_owned();
+        self.input_mut().input.clear();
+        self.input_mut().cursor_pos = 0;
+        self.input_mut().history_pos = None;
+        self.input_mut().undo_stack.clear();
+        self.input_mut().redo_stack.clear();
+        self.input_mut().input_scroll = 0;
         if crate::update::input::is_quit_command(&content) {
             *self.should_quit_mut() = true;
             return None;
@@ -159,48 +175,58 @@ impl AppState {
     }
 
     pub(crate) fn history_prev(&mut self) {
-        let input = self.input();
-        if input.input_history.is_empty() {
+        let has_history = !self.input().input_history.is_empty();
+        if has_history {
+            try_send_input(self, crate::actors::InputMsg::HistoryPrev);
+            // Direct mutation for tests (when InputActor is not spawned)
+            let pos = match self.input().history_pos {
+                Some(p) if p > 0 => p - 1,
+                Some(p) => p,
+                None => self.input().input_history.len() - 1,
+            };
+            self.input_mut().history_pos = Some(pos);
+            self.input_mut().input = self.input().input_history[pos].clone();
+            self.input_mut().cursor_pos = self.input().input.len();
+            self.clamp_input_scroll();
+            self.view_mut().dirty = true;
+        } else {
             self.input_mut().input_flash = 3;
-            return;
         }
-        let pos = match input.history_pos {
-            Some(p) if p > 0 => p - 1,
-            Some(p) => p,
-            None => input.input_history.len() - 1,
-        };
-        {
-            let input = self.input_mut();
-            input.history_pos = Some(pos);
-            input.input = input.input_history[pos].clone();
-            input.cursor_pos = input.input.len();
-        }
-        self.clamp_input_scroll();
-        self.view_mut().dirty = true;
     }
 
     pub(crate) fn history_next(&mut self) {
-        let input = self.input();
-        let pos = match input.history_pos {
-            Some(p) => p + 1,
-            None => {
-                self.input_mut().input_flash = 3;
-                return;
+        let history_pos = self.input().history_pos;
+        if history_pos.is_some() {
+            try_send_input(self, crate::actors::InputMsg::HistoryNext);
+            // Direct mutation for tests (when InputActor is not spawned)
+            let pos = history_pos.unwrap() + 1;
+            if pos >= self.input().input_history.len() {
+                self.input_mut().history_pos = None;
+                self.input_mut().input.clear();
+                self.input_mut().cursor_pos = 0;
+            } else {
+                self.input_mut().history_pos = Some(pos);
+                self.input_mut().input = self.input().input_history[pos].clone();
+                self.input_mut().cursor_pos = self.input().input.len();
             }
-        };
-        if pos >= input.input_history.len() {
-            let input = self.input_mut();
-            input.history_pos = None;
-            input.input.clear();
-            input.cursor_pos = 0;
+            self.clamp_input_scroll();
+            self.view_mut().dirty = true;
         } else {
-            let history_entry = input.input_history[pos].clone();
-            let input = self.input_mut();
-            input.history_pos = Some(pos);
-            input.input = history_entry;
-            input.cursor_pos = input.input.len();
+            self.input_mut().input_flash = 3;
         }
-        self.clamp_input_scroll();
-        self.view_mut().dirty = true;
+    }
+}
+
+/// Fire-and-forget send to InputActor.
+fn try_send_input(state: &mut AppState, msg: crate::actors::InputMsg) {
+    if let Some(ref handles) = state.actor_handles() {
+        handles.try_send_input(msg);
+    }
+}
+
+/// Emit `SessionMsg::AppendHistory` to SessionActor (fire-and-forget).
+fn try_append_history(state: &mut AppState, entry: String) {
+    if let Some(ref handles) = state.actor_handles() {
+        handles.try_send_append_history(entry);
     }
 }

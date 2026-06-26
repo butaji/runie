@@ -12,6 +12,7 @@ pub use r#trait::{spawn_actor, Actor, ActorFuture, ActorHandle, Reply};
 mod config;
 mod fff_indexer;
 mod handles;
+mod input;
 mod io;
 pub mod permission;
 pub mod provider;
@@ -24,6 +25,7 @@ pub use fff_indexer::{
     FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
     FffSearchState,
 };
+pub use input::{InputActor, InputActorHandle, InputMsg};
 pub use io::{IoActor, IoActorHandle, IoMsg};
 pub use provider::{
     BuiltProvider, ProviderActor, ProviderActorHandle, ProviderFactory, ProviderMsg,
