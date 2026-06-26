@@ -11,6 +11,7 @@ use runie_testing::fresh_state;
 #[test]
 fn tab_opens_file_picker_with_filter() {
     let mut state = fresh_state();
+    inject_mock_file_entries(&mut state);
     state.input.input = "Tes".to_string();
     state.input.cursor_pos = 3;
 
@@ -24,6 +25,7 @@ fn tab_opens_file_picker_with_filter() {
 #[test]
 fn tab_opens_file_picker_empty_input() {
     let mut state = fresh_state();
+    inject_mock_file_entries(&mut state);
 
     // Tab should open file picker
     state.update(Event::Input('\t'));
@@ -38,6 +40,7 @@ fn tab_opens_file_picker_empty_input() {
 #[test]
 fn tab_cycles_wraps_around() {
     let mut state = fresh_state();
+    inject_mock_file_entries(&mut state);
 
     // Open file picker
     state.update(Event::Input('\t'));
@@ -61,6 +64,7 @@ fn tab_cycles_wraps_around() {
 #[test]
 fn tab_with_no_matches_shows_empty_picker() {
     let mut state = fresh_state();
+    inject_mock_file_entries(&mut state);
     let text = "xyznonexistent123";
     state.input.input = text.to_string();
     state.input.cursor_pos = text.len();
@@ -74,6 +78,7 @@ fn tab_with_no_matches_shows_empty_picker() {
 #[test]
 fn file_picker_replaces_typed_prefix() {
     let mut state = fresh_state();
+    inject_mock_file_entries(&mut state);
     state.input.input = "Tes".to_string();
     state.input.cursor_pos = 3;
 

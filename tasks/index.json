@@ -162,7 +162,7 @@
   {
     "file": "fff-indexer-owns-file-picker-results.md",
     "title": "FffIndexerActor owns file picker search results",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "finish-io-migration.md",

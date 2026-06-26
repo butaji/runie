@@ -202,25 +202,21 @@ pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
     *state.open_dialog_mut() = Some(DialogState::PanelStack(PanelStack::new(panel)));
 }
 
-/// Refresh file picker results — try actor first, fall back to sync query.
-fn refresh_file_picker_search(state: &mut AppState, query: &str) {
-    if let Some(ref handles) = state.actor_handles() {
-        if let Some(ref fff) = handles.fff_indexer {
-            let request_id = state.fff_debounce().wrapping_add(1);
-            let request = crate::actors::FffSearchRequest {
-                request_id,
-                query: query.to_owned(),
-                limit: Some(50),
-                project_path: std::env::current_dir().unwrap_or_default(),
-            };
-            fff.try_search(request);
-            *state.fff_debounce_mut() = request_id;
-            return;
-        }
-    }
-    // Fall back to synchronous query.
-    let entries = super::file_pickers::query_fff_files(query, 50);
-    *state.fff_file_results_mut() = entries;
+/// Send a file search request to `FffIndexerActor`.
+/// Results arrive asynchronously via `Event::FffSearchResult`.
+pub(crate) fn refresh_file_picker_search(state: &mut AppState, query: &str) {
+    let Some(ref handles) = state.actor_handles() else { return };
+    let Some(ref fff) = handles.fff_indexer else { return };
+
+    let request_id = state.fff_debounce().wrapping_add(1);
+    let request = crate::actors::FffSearchRequest {
+        request_id,
+        query: query.to_owned(),
+        limit: Some(50),
+        project_path: std::env::current_dir().unwrap_or_default(),
+    };
+    fff.try_search(request);
+    *state.fff_debounce_mut() = request_id;
 }
 
 /// Opens the file picker without any filter (shows all files).

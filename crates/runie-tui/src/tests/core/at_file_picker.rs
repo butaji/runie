@@ -69,6 +69,7 @@ fn at_opens_file_picker_for_at_ref_suggestion() {
 #[test]
 fn tab_cycles_panel_selection_in_file_picker() {
     let mut state = AppState::default();
+    inject_mock_file_entries(&mut state);
 
     // Open file picker
     state.update(Event::Input('@'));
@@ -91,6 +92,7 @@ fn tab_cycles_panel_selection_in_file_picker() {
 #[test]
 fn tab_wraps_around_panel_selection() {
     let mut state = AppState::default();
+    inject_mock_file_entries(&mut state);
 
     // Open file picker
     state.update(Event::Input('@'));
@@ -121,6 +123,7 @@ fn tab_wraps_around_panel_selection() {
 #[test]
 fn submit_inserts_selected_file() {
     let mut state = AppState::default();
+    inject_mock_file_entries(&mut state);
 
     // Open file picker
     state.update(Event::Input('@'));

@@ -12,6 +12,7 @@ use runie_core::Event;
 #[test]
 fn tab_file_picker_preserves_space_in_middle() {
     let mut state = AppState::default();
+    inject_mock_file_entries(&mut state);
     state.input.input = "ca ca".to_string();
     state.input.cursor_pos = 5; // cursor after "ca ca"
 
@@ -43,6 +44,7 @@ fn tab_file_picker_preserves_space_in_middle() {
 #[test]
 fn tab_file_picker_preserves_space_before_prefix() {
     let mut state = AppState::default();
+    inject_mock_file_entries(&mut state);
     state.input.input = "car dev".to_string();
     state.input.cursor_pos = 7; // cursor after "car dev"
 
@@ -80,6 +82,7 @@ fn tab_file_picker_preserves_space_before_prefix() {
 #[test]
 fn tab_file_picker_empty_input() {
     let mut state = AppState::default();
+    inject_mock_file_entries(&mut state);
     // Empty input
     assert_eq!(state.input.input, "");
 
@@ -109,6 +112,7 @@ fn tab_file_picker_empty_input() {
 #[test]
 fn tab_file_picker_replaces_typed_prefix() {
     let mut state = AppState::default();
+    inject_mock_file_entries(&mut state);
     state.input.input = "Tes".to_string();
     state.input.cursor_pos = 3;
 
@@ -140,6 +144,7 @@ fn tab_file_picker_replaces_typed_prefix() {
 #[test]
 fn tab_file_picker_replaces_last_word_at_end() {
     let mut state = AppState::default();
+    inject_mock_file_entries(&mut state);
     state.input.input = "Hello World".to_string();
     state.input.cursor_pos = 11; // cursor after "Hello World"
 
@@ -171,6 +176,7 @@ fn tab_file_picker_replaces_last_word_at_end() {
 #[test]
 fn tab_file_picker_inserts_at_cursor_middle() {
     let mut state = AppState::default();
+    inject_mock_file_entries(&mut state);
     state.input.input = "Hello World".to_string();
     state.input.cursor_pos = 5; // cursor after "Hello"
 
@@ -201,6 +207,7 @@ fn tab_file_picker_inserts_at_cursor_middle() {
 #[test]
 fn tab_file_picker_at_alone_no_brackets() {
     let mut state = AppState::default();
+    inject_mock_file_entries(&mut state);
 
     // Type just @
     state.update(Event::Input('@'));
@@ -224,6 +231,7 @@ fn tab_file_picker_at_alone_no_brackets() {
 #[test]
 fn tab_file_picker_at_with_prefix_no_brackets() {
     let mut state = AppState::default();
+    inject_mock_file_entries(&mut state);
 
     // Type "car @"
     state.update(Event::Input('c'));
@@ -288,6 +296,7 @@ fn escape_closes_file_picker_restores_input() {
 #[test]
 fn tab_file_picker_preserves_trailing_space() {
     let mut state = AppState::default();
+    inject_mock_file_entries(&mut state);
     state.input.input = "test  ".to_string(); // with trailing space
     state.input.cursor_pos = 5;
 

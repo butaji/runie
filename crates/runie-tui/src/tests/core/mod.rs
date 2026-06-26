@@ -6,6 +6,35 @@ pub use super::{
     Snapshot,
 };
 
+/// Inject mock file entries for file picker tests.
+/// File picker results now come via `FffIndexerActor`, so tests need mock data.
+pub(crate) fn inject_mock_file_entries(state: &mut AppState) {
+    use runie_core::model::FffFileEntry;
+    state.fff_file_results = vec![
+        FffFileEntry {
+            name: "README.md".to_owned(),
+            path: "README.md".to_owned(),
+            is_dir: false,
+            score: 1.0,
+            git_status: None,
+        },
+        FffFileEntry {
+            name: "src/main.rs".to_owned(),
+            path: "src/main.rs".to_owned(),
+            is_dir: false,
+            score: 0.9,
+            git_status: None,
+        },
+        FffFileEntry {
+            name: "src/lib.rs".to_owned(),
+            path: "src/lib.rs".to_owned(),
+            is_dir: false,
+            score: 0.8,
+            git_status: None,
+        },
+    ];
+}
+
 #[cfg(test)]
 mod action_text;
 #[cfg(test)]

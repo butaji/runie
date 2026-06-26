@@ -1,6 +1,6 @@
 # FffIndexerActor owns file picker search results
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Tools
 **Priority**: P1

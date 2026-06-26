@@ -1,6 +1,25 @@
 use crate::commands::DialogState;
-use crate::model::AppState;
-use crate::Event;
+use crate::model::{AppState, FffFileEntry};
+
+/// Create a mock file entry for testing.
+fn mock_file_entry(name: &str) -> FffFileEntry {
+    FffFileEntry {
+        name: name.to_owned(),
+        path: name.to_owned(),
+        is_dir: false,
+        score: 1.0,
+        git_status: None,
+    }
+}
+
+/// Inject mock file entries for testing (since file picker now uses actor-based search).
+fn inject_mock_files(state: &mut AppState) {
+    state.fff_file_results = vec![
+        mock_file_entry("README.md"),
+        mock_file_entry("src/main.rs"),
+        mock_file_entry("src/lib.rs"),
+    ];
+}
 
 #[test]
 fn at_ref_opens_file_picker_dialog() {
@@ -15,6 +34,7 @@ fn at_ref_opens_file_picker_dialog() {
 #[test]
 fn at_ref_dialog_has_file_items() {
     let mut state = AppState::default();
+    inject_mock_files(&mut state);
     state.update(crate::Event::Input('@'));
     let stack = match &state.open_dialog {
         Some(DialogState::PanelStack(s)) => s,
@@ -44,6 +64,7 @@ fn at_ref_dialog_is_filterable() {
 #[test]
 fn at_ref_select_inserts_file_path() {
     let mut state = AppState::default();
+    inject_mock_files(&mut state);
     state.update(crate::Event::Input('@'));
     // Find a file item and select it
     let label = {
