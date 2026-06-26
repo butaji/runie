@@ -317,7 +317,7 @@
   {
     "file": "replace-git2-with-cli.md",
     "title": "Replace git2 crate with git CLI via IoActor",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-markdown-renderer-with-tui-markdown.md",
