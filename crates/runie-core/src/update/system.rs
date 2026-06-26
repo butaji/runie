@@ -117,6 +117,14 @@ impl AppState {
     }
 
     pub(crate) fn switch_theme(&mut self, name: String) {
+        // Validate theme name
+        if !crate::themes::BUILTIN_THEMES.contains(&name.as_str()) {
+            self.add_system_msg(format!(
+                "Theme '{}' not found. Use /theme to list available themes.",
+                name
+            ));
+            return;
+        }
         if self.config_mut().theme_name == name {
             return;
         }

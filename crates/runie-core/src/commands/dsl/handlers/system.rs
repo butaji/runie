@@ -129,9 +129,9 @@ fn handle_reload(_state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ReloadAll)
 }
 
-fn handle_settings(state: &mut AppState, _: &str) -> CommandResult {
-    crate::update::dialog::open_settings_dialog(state);
-    CommandResult::None
+fn handle_settings(_state: &mut AppState, _: &str) -> CommandResult {
+    // Emit intent event; owning actor handles opening the dialog
+    CommandResult::Event(crate::Event::ToggleSettingsDialog)
 }
 
 fn handle_diagnostics(_: &mut AppState, _: &str) -> CommandResult {
@@ -175,23 +175,13 @@ fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
     }
 }
 
-fn handle_theme(state: &mut AppState, args: &str) -> CommandResult {
+fn handle_theme(_state: &mut AppState, args: &str) -> CommandResult {
     let name = args.trim();
     if name.is_empty() {
         return CommandResult::OpenDialog(DialogType::ThemeSelector);
     }
-    if crate::themes::BUILTIN_THEMES.contains(&name) {
-        // Emit SwitchTheme event for valid themes to trigger the actual switch
-        // and show a message to confirm
-        CommandResult::Event(crate::Event::SwitchTheme { name: name.to_owned() })
-    } else {
-        // Still set the theme name for fallback, then emit a message
-        state.config_mut().theme_name = name.to_owned();
-        CommandResult::Message(format!(
-            "Theme '{}' not found. Use /theme to list. (fallback: runie)",
-            name
-        ))
-    }
+    // Emit SwitchTheme event; handler will validate and show error if invalid
+    CommandResult::Event(crate::Event::SwitchTheme { name: name.to_owned() })
 }
 
 fn handle_approve(_: &mut AppState, _: &str) -> CommandResult {
@@ -231,37 +221,9 @@ fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {
 // ── Prompt command handler ─────────────────────────────────────────────────────
 
 /// Handler for the `/prompt` command.
-/// Handles both direct invocation (`/prompt name`) and form submission.
-fn handle_prompt(state: &mut AppState, args: &str) -> CommandResult {
-    run_prompt(state, args)
-}
-
-/// Implementation of `/prompt` command logic.
-/// Emits `Event::SetPrompt` for state mutation.
-/// Returns `CommandResult::Message` for confirmation/info messages.
-pub fn run_prompt(state: &mut AppState, name: &str) -> CommandResult {
-    let name = name.trim();
-    if name.is_empty() {
-        // No argument: show current and available prompts
-        let current = if state.input().current_prompt.is_empty() {
-            "default"
-        } else {
-            &state.input().current_prompt
-        };
-        let mut lines = vec![format!("Current prompt: {}", current)];
-        if !state.prompts().is_empty() {
-            lines.push("Available prompts:".into());
-            for p in state.prompts() {
-                lines.push(format!("  {}", p.summary()));
-            }
-        }
-        return CommandResult::Message(lines.join("\n"));
-    }
-    if state.prompts().iter().any(|p| p.name == name) {
-        // Emit SetPrompt event for state mutation
-        state.update(crate::Event::SetPrompt { name: name.to_owned() });
-        CommandResult::Message(format!("Prompt switched to '{}'", name))
-    } else {
-        CommandResult::Message(format!("Prompt '{}' not found.", name))
-    }
+/// Emits `RunPromptCommand` intent for state mutation.
+fn handle_prompt(_state: &mut AppState, args: &str) -> CommandResult {
+    CommandResult::Event(crate::Event::RunPromptCommand {
+        name: args.trim().to_owned(),
+    })
 }

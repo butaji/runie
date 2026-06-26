@@ -37,11 +37,13 @@ fn theme_switch_updates_state() {
 }
 
 #[test]
-fn theme_invalid_shows_fallback_warning() {
+fn theme_invalid_shows_error() {
     let mut state = fresh_state();
+    state.config.theme_name = "dracula".to_string();
     exec(&mut state, "/theme not-a-real-theme");
 
-    assert_eq!(state.config.theme_name, "not-a-real-theme");
+    // Invalid themes should NOT be set
+    assert_eq!(state.config.theme_name, "dracula", "invalid theme should not be set");
     let sys_msgs: Vec<_> = state
         .session
         .messages
@@ -51,12 +53,7 @@ fn theme_invalid_shows_fallback_warning() {
     assert_eq!(sys_msgs.len(), 1);
     assert!(
         sys_msgs[0].content().contains("not found"),
-        "should warn about fallback: {}",
-        sys_msgs[0].content()
-    );
-    assert!(
-        sys_msgs[0].content().contains("runie"),
-        "should mention fallback: {}",
+        "should warn about invalid theme: {}",
         sys_msgs[0].content()
     );
 }

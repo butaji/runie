@@ -3,30 +3,20 @@
 //! Functions named `run_*` are canonical handlers matching
 //! `fn(&mut AppState, &str) -> CommandResult` for use as
 //! `CommandKind::Handler` in the command registry.
+//!
+//! These handlers emit intent events. The actual state mutation logic lives
+//! in `handle_command_event` to avoid circular event loops.
 
 use crate::commands::CommandResult;
 use crate::model::AppState;
 
 /// Set the session display name.  Returns `CommandResult` for registry use.
-pub fn run_name(state: &mut AppState, name: &str) -> CommandResult {
+pub fn run_name(_state: &mut AppState, name: &str) -> CommandResult {
     let name = name.trim();
-    if name.is_empty() {
-        let current = state
-            .session
-            .session_display_name
-            .as_deref()
-            .unwrap_or("(unset)");
-        state.add_system_msg(format!("Current display name: {}", current));
-        return CommandResult::None;
-    }
-    let truncated = if name.chars().count() > 64 {
-        format!("{}…", name.chars().take(64).collect::<String>())
-    } else {
-        name.to_owned()
-    };
-    state.session_mut().session_display_name = Some(truncated.clone());
-    state.add_system_msg(format!("Session name set to '{}'", truncated));
-    CommandResult::None
+    // Emit intent event; handle_command_event contains the actual mutation logic
+    CommandResult::Event(crate::Event::RunNameCommand {
+        name: name.to_owned(),
+    })
 }
 
 /// Default fork index: the most recent user message. 0 if no user messages.
@@ -49,61 +39,37 @@ pub fn run_fork(state: &mut AppState, index_raw: &str) -> CommandResult {
         match index_raw.trim().parse::<usize>() {
             Ok(n) => n,
             Err(_) => {
-                state.add_system_msg(format!(
-                    "Invalid message index '{}': expected a non-negative integer.",
-                    index_raw
-                ));
-                return CommandResult::None;
+                // Emit event for invalid input; handler will show error
+                return CommandResult::Event(crate::Event::RunForkCommand {
+                    message_index: index_raw.to_string(),
+                });
             }
         }
     };
     let msg_count = state.session().messages.len();
     if message_index >= msg_count {
-        state.add_system_msg(format!(
-            "Index {} out of range (0–{})",
-            message_index,
-            msg_count.saturating_sub(1)
-        ));
-        return CommandResult::None;
+        // Emit event; handler will show range error
+        return CommandResult::Event(crate::Event::RunForkCommand {
+            message_index: index_raw.to_string(),
+        });
     }
-    let mut tree = state.session_mut().session_tree.take().unwrap_or_else(|| {
-        crate::session::tree::SessionTree::from_messages(&state.session().messages)
-    });
-    match tree.fork_at(message_index) {
-        Some(path) => {
-            tree.navigate_to(&path);
-            state.session_mut().session_tree = Some(tree);
-            state.add_system_msg(format!("Forked at message {}.", message_index));
-        }
-        None => state.add_system_msg("Could not fork.".into()),
-    }
-    CommandResult::None
+    // Emit ForkSession intent; owning actor handles the mutation
+    CommandResult::Event(crate::Event::ForkSession {
+        message_index,
+    })
 }
 
 /// Compact the context, keeping the last `keep_raw` tokens.
 /// Returns `CommandResult` for registry use.  Accepts args as "keep focus".
-pub fn run_compact(state: &mut AppState, args: &str) -> CommandResult {
+pub fn run_compact(_state: &mut AppState, args: &str) -> CommandResult {
     let parts: Vec<&str> = args.split_whitespace().collect();
-    let keep_raw = parts.first().unwrap_or(&"2000");
-    let focus = parts.get(1).unwrap_or(&"");
-    let keep = match keep_raw.parse::<usize>() {
-        Ok(n) if n > 0 => n,
-        _ => {
-            state.add_system_msg(format!(
-                "Invalid keep value '{}': expected a positive integer.",
-                keep_raw
-            ));
-            return CommandResult::None;
-        }
-    };
-    let msg = state.compact(keep);
-    let result = if focus.is_empty() {
-        msg
-    } else {
-        format!("{} (focus: {})", msg, focus)
-    };
-    state.add_system_msg(result);
-    CommandResult::None
+    let keep = parts.first().unwrap_or(&"2000").to_string();
+    let focus = parts.get(1).unwrap_or(&"").to_string();
+    // Emit intent event; owning actor handles the mutation
+    CommandResult::Event(crate::Event::RunCompactCommand {
+        keep,
+        focus,
+    })
 }
 
 // ── Session IO handlers ──────────────────────────────────────────────────────

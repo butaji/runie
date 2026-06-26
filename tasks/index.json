@@ -387,7 +387,7 @@
   {
     "file": "unified-dsl-intents-for-state-mutations.md",
     "title": "Unified DSL intents for all state mutations",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-approval-decision.md",
