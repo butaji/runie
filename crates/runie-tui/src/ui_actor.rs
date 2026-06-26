@@ -6,17 +6,13 @@
 
 use std::collections::HashMap;
 use std::time::Duration;
-
 use runie_agent::AgentActorHandle;
 use runie_core::actors::SessionActorHandle;
 use runie_core::bus::{EventBus, Receiver};
 use runie_core::login_flow::LoginStep;
-use runie_core::Event;
-use runie_core::{AppState, Snapshot};
+use runie_core::{AppState, Snapshot, Event};
 use tokio::sync::{mpsc, oneshot, watch};
-
-use crate::effects::login;
-use crate::effects::EffectCommand;
+use crate::effects::{login, EffectCommand};
 use crate::pace::PacedRenderer;
 use crate::terminal::caps::TerminalCapabilities;
 
@@ -28,6 +24,7 @@ pub struct UiActor {
     render_tx: watch::Sender<Snapshot>,
     agent_handle: AgentActorHandle,
     persistence_handle: SessionActorHandle,
+    turn_handle: runie_core::actors::TurnActorHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: Option<oneshot::Sender<()>>,
@@ -44,6 +41,7 @@ impl UiActor {
         render_tx: watch::Sender<Snapshot>,
         agent_handle: AgentActorHandle,
         persistence_handle: SessionActorHandle,
+        turn_handle: runie_core::actors::TurnActorHandle,
         kb_tx: watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
         shutdown_tx: oneshot::Sender<()>,
@@ -54,6 +52,7 @@ impl UiActor {
             render_tx,
             agent_handle,
             persistence_handle,
+            turn_handle,
             kb_tx,
             bus,
             shutdown_tx: Some(shutdown_tx),
@@ -150,7 +149,7 @@ impl UiActor {
         self.handle_trust_loaded(was_trust_loaded);
         handle_persistence_messages(self.persistence_handle.clone(), evt, submitted_text).await;
         if was_submit || was_followup || was_agent_done {
-            self.agent_handle.run_if_queued(&mut self.state).await;
+            self.agent_handle.run_if_queued(&self.turn_handle).await;
         }
 
         false
@@ -268,7 +267,11 @@ async fn handle_persistence_messages(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runie_core::actors::{ActorHandles, ProviderActorHandle};
+    use runie_core::actors::{ActorHandles, ProviderActorHandle, TurnActorHandle};
+
+    fn test_turn_handle() -> TurnActorHandle {
+        TurnActorHandle::new(tokio::sync::mpsc::channel(1).0)
+    }
 
     #[tokio::test]
     async fn ui_actor_updates_state_from_bus_event() {
@@ -281,6 +284,7 @@ mod tests {
         let persistence_handle = SessionActorHandle::new(persist_tx);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
+        let turn_handle = test_turn_handle();
 
         let ui_sub = bus.subscribe();
         tokio::spawn(
@@ -289,6 +293,7 @@ mod tests {
                 render_tx,
                 agent_handle,
                 persistence_handle,
+                turn_handle,
                 kb_tx,
                 bus.clone(),
                 shutdown_tx,
@@ -334,23 +339,13 @@ mod tests {
         let state = AppState::default();
         let (render_tx, _render_rx) = watch::channel(Snapshot::default());
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
-        let agent_handle = AgentActorHandle::new(agent_tx);
         let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::SessionMsg>(1);
-        let persistence_handle = SessionActorHandle::new(persist_tx);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
-
-        let mut actor = UiActor::new(
-            state,
-            render_tx,
-            agent_handle,
-            persistence_handle,
-            kb_tx,
-            EventBus::new(4),
-            shutdown_tx,
-            TerminalCapabilities::default(),
-        );
+        let mut actor = UiActor::new(state, render_tx, AgentActorHandle::new(agent_tx),
+            SessionActorHandle::new(persist_tx), test_turn_handle(), kb_tx,
+            EventBus::new(4), shutdown_tx, TerminalCapabilities::default());
 
         // Simulate a streaming message: TextStart -> ResponseDelta -> tick.
         actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
@@ -377,23 +372,13 @@ mod tests {
         let state = AppState::default();
         let (render_tx, _render_rx) = watch::channel(Snapshot::default());
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
-        let agent_handle = AgentActorHandle::new(agent_tx);
         let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::SessionMsg>(1);
-        let persistence_handle = SessionActorHandle::new(persist_tx);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
-
-        let mut actor = UiActor::new(
-            state,
-            render_tx,
-            agent_handle,
-            persistence_handle,
-            kb_tx,
-            EventBus::new(4),
-            shutdown_tx,
-            TerminalCapabilities::default(),
-        );
+        let mut actor = UiActor::new(state, render_tx, AgentActorHandle::new(agent_tx),
+            SessionActorHandle::new(persist_tx), test_turn_handle(), kb_tx,
+            EventBus::new(4), shutdown_tx, TerminalCapabilities::default());
 
         actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
         actor.handle_event(
@@ -445,12 +430,14 @@ mod tests {
         let mut handles = ActorHandles::default();
         handles.provider = Some(ProviderActorHandle::new(provider_tx));
         state.set_actor_handles(handles);
+        let turn_handle = test_turn_handle();
 
         let mut actor = UiActor::new(
             state,
             render_tx,
             agent_handle,
             persistence_handle,
+            turn_handle,
             kb_tx,
             EventBus::new(4),
             shutdown_tx,

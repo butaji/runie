@@ -1,426 +1,261 @@
 //! `ActorHandles` — single registry for all actor senders.
-//!
-//! Instead of storing loose `Option<Sender>` fields in `AppState`, all
-//! actor handles are collected here. This makes it easy to:
-//! - Pass all handles at once to constructors that need multiple actors
-//! - Replace all handles in tests with `TestActorHandles`
-//! - Add new actor handles without adding more fields to `AppState`
-//!
-//! Each handle provides typed `send_*` helpers so callers don't need to
-//! construct raw `Msg` enum variants.
 
 use std::path::PathBuf;
 
 use crate::actors::{
     CompletionActorHandle, ConfigActorHandle, FffSearchRequest, InputActorHandle,
     IoActorHandle, PermissionActorHandle, ProviderActorHandle, SessionActorHandle,
-    TrustActorHandle, ViewActorHandle,
+    TrustActorHandle, TurnActorHandle, ViewActorHandle,
 };
 use crate::config::TruncationSection;
 use crate::model::ThinkingLevel;
 use crate::session::Session;
 use crate::trust::TrustDecision;
 
-/// All actor senders in one place.
-///
-/// `AppState` holds one `ActorHandles` instead of individual
-/// `Option<Sender>` fields. `None` values mean the actor has not been
-/// spawned (typical in unit tests).
 #[derive(Clone, Debug, Default)]
 pub struct ActorHandles {
-    /// Handle to `ConfigActor` — owns `~/.runie/config.toml`.
     pub config: Option<ConfigActorHandle>,
-    /// Handle to `ProviderActor` — owns provider factory and credentials.
     pub provider: Option<ProviderActorHandle>,
-    /// Handle to `SessionActor` — owns trust, history, session CRUD.
     pub session: Option<SessionActorHandle>,
-    /// Handle to `IoActor` — owns bash and file-write effects.
     pub io: Option<IoActorHandle>,
-    /// Handle to `FffIndexerActor` — owns the file index and search.
-    /// `None` when the indexer has not been spawned (e.g. headless mode).
     pub fff_indexer: Option<FffIndexerHandle>,
-    /// Handle to `InputActor` — owns the input buffer, cursor, history, undo/redo.
-    /// `None` when the input actor has not been spawned (e.g. headless mode).
     pub input: Option<InputActorHandle>,
-    /// Handle to `PermissionActor` — owns approval registry and permission UI.
     pub permission: Option<PermissionActorHandle>,
-    /// Handle to `ViewActor` — owns scroll, elements cache, animation, vim nav.
-    /// `None` when the view actor has not been spawned (e.g. headless mode).
     pub view: Option<ViewActorHandle>,
-    /// Handle to `CompletionActor` — owns path completion, @ suggestions, tab/ghost state.
-    /// `None` when the completion actor has not been spawned (e.g. headless mode).
     pub completion: Option<CompletionActorHandle>,
-    /// Handle to `TrustActor` — owns trust decisions and the derived read-only flag.
-    /// `None` when the trust actor has not been spawned (e.g. headless mode).
     pub trust: Option<TrustActorHandle>,
+    pub turn: Option<TurnActorHandle>,
 }
 
-/// Typed handle for the FFF indexer actor.
-///
-/// Unlike the other handles, `FffIndexerActor` uses its own message type
-/// (`FffSearchRequest`) rather than a shared `Msg` enum, so we define a
-/// dedicated handle type here.
 #[derive(Clone, Debug)]
 pub struct FffIndexerHandle {
     tx: tokio::sync::mpsc::Sender<FffSearchRequest>,
 }
 
 impl FffIndexerHandle {
-    /// Wrap an existing sender.
     pub fn new(tx: tokio::sync::mpsc::Sender<FffSearchRequest>) -> Self {
         Self { tx }
     }
-
-    /// Request a file search from the indexer (async).
     pub async fn search(&self, request: FffSearchRequest) {
         let _ = self.tx.send(request).await;
     }
-
-    /// Request a file search from the indexer (sync fire-and-forget).
     pub fn try_search(&self, request: FffSearchRequest) {
         let _ = self.tx.try_send(request);
     }
 }
 
-// ── Typed send helpers ────────────────────────────────────────────────────────
-
 impl ActorHandles {
-    /// Send `SetDefaultModel` to `ConfigActor`.
+    // Config helpers
     pub async fn send_set_default_model(&self, provider: &str, model: &str) {
         if let Some(ref h) = self.config {
-            h.set_default_model(provider.to_owned(), model.to_owned())
-                .await;
+            h.set_default_model(provider.to_owned(), model.to_owned()).await;
         }
     }
 
-    /// Send `SaveProvider` to `ConfigActor`.
-    pub async fn send_save_provider(
-        &self,
-        name: &str,
-        base_url: &str,
-        api_key: &str,
-        models: Vec<String>,
-    ) {
+    pub async fn send_save_provider(&self, name: &str, base_url: &str, api_key: &str, models: Vec<String>) {
         if let Some(ref h) = self.config {
-            h.save_provider(
-                name.to_owned(),
-                base_url.to_owned(),
-                api_key.to_owned(),
-                models,
-            )
-            .await;
+            h.save_provider(name.to_owned(), base_url.to_owned(), api_key.to_owned(), models).await;
         }
     }
 
-    /// Send `RemoveProvider` to `ConfigActor`.
     pub async fn send_remove_provider(&self, name: &str) {
-        if let Some(ref h) = self.config {
-            h.remove_provider(name.to_owned()).await;
-        }
+        if let Some(ref h) = self.config { h.remove_provider(name.to_owned()).await; }
     }
 
-    /// Send `SetProviderModels` to `ConfigActor`.
     pub async fn send_set_provider_models(&self, name: &str, models: Vec<String>) {
-        if let Some(ref h) = self.config {
-            h.set_provider_models(name.to_owned(), models).await;
-        }
+        if let Some(ref h) = self.config { h.set_provider_models(name.to_owned(), models).await; }
     }
 
-    /// Send `SetTheme` to `ConfigActor`.
     pub async fn send_set_theme(&self, name: String) {
-        if let Some(ref h) = self.config {
-            h.set_theme(name).await;
-        }
+        if let Some(ref h) = self.config { h.set_theme(name).await; }
     }
 
-    /// Send `SetVimMode` to `ConfigActor`.
     pub async fn send_set_vim_mode(&self, enabled: bool) {
-        if let Some(ref h) = self.config {
-            h.set_vim_mode(enabled).await;
-        }
+        if let Some(ref h) = self.config { h.set_vim_mode(enabled).await; }
     }
 
-    /// Send `SetTelemetry` to `ConfigActor`.
     pub async fn send_set_telemetry(&self, enabled: bool) {
-        if let Some(ref h) = self.config {
-            h.set_telemetry(enabled).await;
-        }
+        if let Some(ref h) = self.config { h.set_telemetry(enabled).await; }
     }
 
-    /// Send `SetTruncation` to `ConfigActor`.
     pub async fn send_set_truncation(&self, limits: TruncationSection) {
-        if let Some(ref h) = self.config {
-            h.set_truncation(limits).await;
-        }
+        if let Some(ref h) = self.config { h.set_truncation(limits).await; }
     }
 
-    /// Send `SetThinkingLevel` to `ConfigActor`.
     pub async fn send_set_thinking_level(&self, level: ThinkingLevel) {
-        if let Some(ref h) = self.config {
-            h.set_thinking_level(level).await;
-        }
+        if let Some(ref h) = self.config { h.set_thinking_level(level).await; }
     }
 
-    /// Send `SetTrust` to `SessionActor`.
+    // Session helpers
     pub async fn send_set_trust(&self, path: PathBuf, decision: TrustDecision) {
-        if let Some(ref h) = self.session {
-            h.set_trust(path, decision).await;
-        }
+        if let Some(ref h) = self.session { h.set_trust(path, decision).await; }
     }
 
-    /// Send `TrustMsg::SetTrust` to `TrustActor`.
     pub async fn send_trust(&self, path: PathBuf, decision: TrustDecision) {
         if let Some(ref h) = self.trust {
             h.send(crate::actors::TrustMsg::SetTrust { path, decision }).await;
         }
     }
 
-    /// Send `TrustMsg::InitReadOnly` to `TrustActor`.
     pub async fn send_init_read_only(&self, path: PathBuf) {
         if let Some(ref h) = self.trust {
             h.send(crate::actors::TrustMsg::InitReadOnly { path }).await;
         }
     }
 
-    /// Send `AppendHistory` to `SessionActor`.
     pub async fn send_append_history(&self, entry: String) {
-        if let Some(ref h) = self.session {
-            h.append_history(entry).await;
-        }
+        if let Some(ref h) = self.session { h.append_history(entry).await; }
     }
 
-    /// Append to history file (sync fire-and-forget).
     pub fn try_send_append_history(&self, entry: String) {
-        if let Some(ref h) = self.session {
-            h.try_append_history(entry);
-        }
+        if let Some(ref h) = self.session { h.try_append_history(entry); }
     }
 
-    /// Send `SessionMsg::Load` to `SessionActor`.
     pub async fn send_load_session(&self, name: String) {
-        if let Some(ref h) = self.session {
-            h.load(name).await;
-        }
+        if let Some(ref h) = self.session { h.load(name).await; }
     }
 
-    /// Send `SessionMsg::Save` to `SessionActor`.
-    pub async fn send_save_session(&self, name: String, session: crate::session::Session) {
-        if let Some(ref h) = self.session {
-            h.save(name, session).await;
-        }
+    pub async fn send_save_session(&self, name: String, session: Session) {
+        if let Some(ref h) = self.session { h.save(name, session).await; }
     }
 
-    /// Send `SessionMsg::Delete` to `SessionActor`.
     pub async fn send_delete_session(&self, name: String) {
-        if let Some(ref h) = self.session {
-            h.delete(name).await;
-        }
+        if let Some(ref h) = self.session { h.delete(name).await; }
     }
 
-    /// Send `SessionMsg::List` to `SessionActor`.
     pub async fn send_list_sessions(&self) {
-        if let Some(ref h) = self.session {
-            h.list().await;
-        }
+        if let Some(ref h) = self.session { h.list().await; }
     }
 
-    /// Send a file search request to `FffIndexerActor`.
-    pub async fn send_fff_search(&self, request: FffSearchRequest) {
-        if let Some(ref h) = self.fff_indexer {
-            h.search(request).await;
-        }
-    }
-
-    /// Send `InputMsg` to `InputActor` (async).
-    pub async fn send_input(&self, msg: crate::actors::InputMsg) {
-        if let Some(ref h) = self.input {
-            h.send(msg).await;
-        }
-    }
-
-    /// Send `InputMsg` to `InputActor` (sync fire-and-forget).
-    pub fn try_send_input(&self, msg: crate::actors::InputMsg) {
-        if let Some(ref h) = self.input {
-            h.try_send(msg);
-        }
-    }
-
-    /// Send `PermissionMsg::ResolvePermission` to `PermissionActor`.
-    pub async fn send_resolve_permission(
-        &self,
-        request_id: String,
-        action: crate::permissions::PermissionAction,
-    ) {
-        if let Some(ref h) = self.permission {
-            h.resolve_permission(request_id, action).await;
-        }
-    }
-
-    /// Send `PermissionMsg::CancelPermission` to `PermissionActor`.
-    pub async fn send_cancel_permission(&self, request_id: String) {
-        if let Some(ref h) = self.permission {
-            h.cancel_permission(request_id).await;
-        }
-    }
-
-    /// Send `PermissionMsg::DismissRequest` to `PermissionActor`.
-    pub async fn send_dismiss_permission(&self) {
-        if let Some(ref h) = self.permission {
-            h.dismiss().await;
-        }
-    }
-
-    /// Try to resolve permission (sync fire-and-forget).
-    pub fn try_resolve_permission(
-        &self,
-        request_id: String,
-        action: crate::permissions::PermissionAction,
-    ) {
-        if let Some(ref h) = self.permission {
-            h.try_resolve_permission(request_id, action);
-        }
-    }
-
-    /// Try to cancel permission (sync fire-and-forget).
-    pub fn try_cancel_permission(&self, request_id: String) {
-        if let Some(ref h) = self.permission {
-            h.try_cancel_permission(request_id);
-        }
-    }
-
-    /// Try to dismiss permission (sync fire-and-forget).
-    pub fn try_dismiss_permission(&self) {
-        if let Some(ref h) = self.permission {
-            h.try_dismiss();
-        }
-    }
-
-    /// Send `ViewMsg` to `ViewActor` (async).
-    pub async fn send_view(&self, msg: crate::actors::ViewMsg) {
-        if let Some(ref h) = self.view {
-            h.send(msg).await;
-        }
-    }
-
-    /// Send `ViewMsg` to `ViewActor` (sync fire-and-forget).
-    pub fn try_send_view(&self, msg: crate::actors::ViewMsg) {
-        if let Some(ref h) = self.view {
-            h.try_send(msg);
-        }
-    }
-
-    /// Run a bash command via `IoActor`.
-    pub async fn run_bash(&self, command: String) {
-        if let Some(ref h) = self.io {
-            h.run_bash(command).await;
-        }
-    }
-
-    /// Write files via `IoActor`.
-    pub async fn write_files(&self, edits: Vec<(PathBuf, String)>) {
-        if let Some(ref h) = self.io {
-            h.write_files(edits).await;
-        }
-    }
-
-    /// Send `SessionMsg::Import` to `SessionActor`.
     pub async fn send_import_session(&self, path: PathBuf) {
-        if let Some(ref h) = self.session {
-            h.import(path).await;
-        }
+        if let Some(ref h) = self.session { h.import(path).await; }
     }
 
-    /// Send `SessionMsg::Export` to `SessionActor`.
     pub async fn send_export_session(&self, path: PathBuf, session: Session) {
-        if let Some(ref h) = self.session {
-            h.export(path, session).await;
-        }
+        if let Some(ref h) = self.session { h.export(path, session).await; }
     }
 
-    // ── Session state mutations (fire-and-forget) ───────────────────────────────
-
-    /// Try to add a user message (fire-and-forget).
+    // Session state mutations
     pub fn try_send_session_add_user(&self, content: String, images: Vec<String>) {
-        if let Some(ref h) = self.session {
-            h.try_add_user_message(content, images);
-        }
+        if let Some(ref h) = self.session { h.try_add_user_message(content, images); }
     }
 
-    /// Try to add a system message (fire-and-forget).
     pub fn try_send_session_add_system(&self, content: String) {
-        if let Some(ref h) = self.session {
-            h.try_add_system_message(content);
-        }
+        if let Some(ref h) = self.session { h.try_add_system_message(content); }
     }
 
-    /// Try to add a tool message (fire-and-forget).
     pub fn try_send_session_add_tool(&self, id: String, name: String, content: String) {
-        if let Some(ref h) = self.session {
-            h.try_add_tool_message(id, name, content);
-        }
+        if let Some(ref h) = self.session { h.try_add_tool_message(id, name, content); }
     }
 
-    /// Try to update a tool message (fire-and-forget).
     pub fn try_send_session_update_tool(&self, id_contains: String, content: String) {
-        if let Some(ref h) = self.session {
-            h.try_update_tool_message(id_contains, content);
-        }
+        if let Some(ref h) = self.session { h.try_update_tool_message(id_contains, content); }
     }
 
-    /// Try to add a turn-complete message (fire-and-forget).
     pub fn try_send_session_add_turn_complete(&self, id: String, content: String) {
-        if let Some(ref h) = self.session {
-            h.try_add_turn_complete(id, content);
-        }
+        if let Some(ref h) = self.session { h.try_add_turn_complete(id, content); }
     }
 
-    /// Try to add an error message (fire-and-forget).
     pub fn try_send_session_add_error(&self, id: String, content: String) {
-        if let Some(ref h) = self.session {
-            h.try_add_error_message(id, content);
-        }
+        if let Some(ref h) = self.session { h.try_add_error_message(id, content); }
     }
 
-    /// Try to reset session (fire-and-forget).
     pub fn try_send_session_reset(&self) {
-        if let Some(ref h) = self.session {
-            h.try_reset();
-        }
+        if let Some(ref h) = self.session { h.try_reset(); }
     }
 
-    /// Try to fork at message index (fire-and-forget).
     pub fn try_send_session_fork_at(&self, index: usize) {
-        if let Some(ref h) = self.session {
-            h.try_fork_at(index);
-        }
+        if let Some(ref h) = self.session { h.try_fork_at(index); }
     }
 
-    /// Try to clone branch (fire-and-forget).
     pub fn try_send_session_clone_branch(&self) {
-        if let Some(ref h) = self.session {
-            h.try_clone_branch();
-        }
+        if let Some(ref h) = self.session { h.try_clone_branch(); }
     }
 
-    /// Try to push a pending edit (fire-and-forget).
     pub fn try_send_session_push_pending_edit(&self, edit: crate::edit_preview::EditPreview) {
-        if let Some(ref h) = self.session {
-            h.try_push_pending_edit(edit);
-        }
+        if let Some(ref h) = self.session { h.try_push_pending_edit(edit); }
     }
 
-    /// Try to drain pending edits (fire-and-forget).
     pub fn try_send_session_drain_pending_edits(&self) {
-        if let Some(ref h) = self.session {
-            h.try_drain_pending_edits();
-        }
+        if let Some(ref h) = self.session { h.try_drain_pending_edits(); }
     }
 
-    /// Try to clear pending edits (fire-and-forget).
     pub fn try_send_session_clear_pending_edits(&self) {
-        if let Some(ref h) = self.session {
-            h.try_clear_pending_edits();
-        }
+        if let Some(ref h) = self.session { h.try_clear_pending_edits(); }
+    }
+
+    // IO helpers
+    pub async fn send_fff_search(&self, request: FffSearchRequest) {
+        if let Some(ref h) = self.fff_indexer { h.search(request).await; }
+    }
+
+    pub async fn send_input(&self, msg: crate::actors::InputMsg) {
+        if let Some(ref h) = self.input { h.send(msg).await; }
+    }
+
+    pub fn try_send_input(&self, msg: crate::actors::InputMsg) {
+        if let Some(ref h) = self.input { h.try_send(msg); }
+    }
+
+    pub async fn send_resolve_permission(&self, request_id: String, action: crate::permissions::PermissionAction) {
+        if let Some(ref h) = self.permission { h.resolve_permission(request_id, action).await; }
+    }
+
+    pub async fn send_cancel_permission(&self, request_id: String) {
+        if let Some(ref h) = self.permission { h.cancel_permission(request_id).await; }
+    }
+
+    pub async fn send_dismiss_permission(&self) {
+        if let Some(ref h) = self.permission { h.dismiss().await; }
+    }
+
+    pub fn try_resolve_permission(&self, request_id: String, action: crate::permissions::PermissionAction) {
+        if let Some(ref h) = self.permission { h.try_resolve_permission(request_id, action); }
+    }
+
+    pub fn try_cancel_permission(&self, request_id: String) {
+        if let Some(ref h) = self.permission { h.try_cancel_permission(request_id); }
+    }
+
+    pub fn try_dismiss_permission(&self) {
+        if let Some(ref h) = self.permission { h.try_dismiss(); }
+    }
+
+    pub async fn send_view(&self, msg: crate::actors::ViewMsg) {
+        if let Some(ref h) = self.view { h.send(msg).await; }
+    }
+
+    pub fn try_send_view(&self, msg: crate::actors::ViewMsg) {
+        if let Some(ref h) = self.view { h.try_send(msg); }
+    }
+
+    pub async fn run_bash(&self, command: String) {
+        if let Some(ref h) = self.io { h.run_bash(command).await; }
+    }
+
+    pub async fn write_files(&self, edits: Vec<(PathBuf, String)>) {
+        if let Some(ref h) = self.io { h.write_files(edits).await; }
+    }
+
+    // TurnActor helpers
+    pub async fn send_turn_run_if_queued(&self) {
+        if let Some(ref h) = self.turn { h.send(crate::actors::TurnMsg::RunIfQueued).await; }
+    }
+
+    pub async fn send_turn_abort(&self) {
+        if let Some(ref h) = self.turn { h.send(crate::actors::TurnMsg::AbortTurn).await; }
+    }
+
+    pub async fn send_turn_clear_queues(&self) {
+        if let Some(ref h) = self.turn { h.send(crate::actors::TurnMsg::ClearQueues).await; }
+    }
+
+    pub fn try_send_turn_abort(&self) {
+        if let Some(ref h) = self.turn { h.try_send(crate::actors::TurnMsg::AbortTurn); }
+    }
+
+    pub fn try_send_turn_clear_queues(&self) {
+        if let Some(ref h) = self.turn { h.try_send(crate::actors::TurnMsg::ClearQueues); }
     }
 }
 
@@ -428,7 +263,6 @@ impl ActorHandles {
 mod tests {
     use super::*;
 
-    // Test-only handles have None for all fields (simulates unit test state)
     #[test]
     fn actor_handles_default_is_all_none() {
         let handles = ActorHandles::default();
@@ -441,48 +275,27 @@ mod tests {
         assert!(handles.permission.is_none());
         assert!(handles.view.is_none());
         assert!(handles.completion.is_none());
+        assert!(handles.trust.is_none());
+        assert!(handles.turn.is_none());
     }
 
     #[test]
     fn fff_indexer_handle_is_cloneable() {
-        // FffIndexerHandle is Clone so it can be stored in ActorHandles which is Clone
         fn _assert_clone<T: Clone>() {}
         _assert_clone::<FffIndexerHandle>();
     }
 
-    #[test]
-    fn actor_system_clone_is_shallow() {
-        // Cloning ActorHandles should be shallow — just copies the handles,
-        // does not spawn new actors.
-        let handles = ActorHandles::default();
-        let handles2 = handles.clone();
-        // Both are still all-None (no actors spawned)
-        assert!(handles.config.is_none());
-        assert!(handles2.config.is_none());
-        // Cloning produces identical but independent handles
-        assert!(handles.provider.is_none());
-        assert!(handles2.provider.is_none());
-    }
-
     #[tokio::test]
     async fn actor_handles_send_save_provider_via_actor() {
-        // Integration test: verify send_save_provider reaches ConfigActor.
         use crate::actors::ConfigActor;
         use crate::bus::EventBus;
         use crate::Event;
 
         let bus = EventBus::<Event>::new(16);
         let (handle, _actor) = ConfigActor::spawn(bus.clone(), None);
-
         let mut handles = ActorHandles::default();
         handles.config = Some(handle);
-
-        // Send via ActorHandles helper
-        handles
-            .send_save_provider("test", "http://localhost", "key", vec!["model".into()])
-            .await;
-
-        // Actor should have received the message (no panic = success)
+        handles.send_save_provider("test", "http://localhost", "key", vec!["model".into()]).await;
         drop(handles);
         drop(_actor);
     }

@@ -79,7 +79,6 @@ fn dispatcher_handles_all_variants() {
             | Event::TextEnd { .. }
             | Event::ThinkingStart { .. }
             | Event::ThinkingEnd { .. }
-            | Event::AssistantMessageReady { .. }
             | Event::Response { .. }
             | Event::MessageReplayed { .. }
             | Event::TurnComplete { .. }
@@ -261,6 +260,41 @@ fn dispatcher_handles_all_variants() {
                 action: crate::permissions::PermissionAction::Ask,
             },
             Event::PermissionRequestDismissed => Event::PermissionRequestDismissed,
+
+            // TurnActor
+            Event::TurnStarted { .. } => Event::TurnStarted {
+                id: String::new(),
+                request_id: String::new(),
+                content: String::new(),
+            },
+            Event::TurnAborted => Event::TurnAborted,
+            Event::TurnCompleted => Event::TurnCompleted,
+            Event::TurnErrored { .. } => Event::TurnErrored {
+                id: String::new(),
+                message: String::new(),
+            },
+            Event::TokenStatsUpdated { .. } => Event::TokenStatsUpdated {
+                tokens_in: 0,
+                tokens_out: 0,
+                speed_tps: 0.0,
+            },
+            Event::StreamStarted { .. } => Event::StreamStarted {
+                id: String::new(),
+            },
+            Event::UserMessageSubmitted { .. } => Event::UserMessageSubmitted {
+                id: String::new(),
+                content: String::new(),
+            },
+            Event::QueueAborted { .. } => Event::QueueAborted {
+                content: String::new(),
+            },
+            Event::QueuesCleared => Event::QueuesCleared,
+            Event::IdGenerated(_) => Event::IdGenerated(crate::actors::turn::NextIdResponse {
+                id: String::new(),
+            }),
+            Event::AssistantMessageReady { .. } => Event::AssistantMessageReady {
+                message: crate::ChatMessage::default(),
+            },
 
             // IO
             Event::FffSearchResult { .. } => Event::FffSearchResult {

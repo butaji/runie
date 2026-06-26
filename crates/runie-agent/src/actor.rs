@@ -14,13 +14,11 @@ use runie_core::event::Event;
 use runie_core::permissions::{
     DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
 };
-use runie_core::AppState;
 
 use tokio::sync::mpsc;
 
 use crate::emit_approval_sink::EmitApprovalSink;
 use crate::run_agent_turn;
-use crate::truncate::policy_from_section;
 use crate::AgentCommand;
 use runie_core::permissions::PermissionGate;
 
@@ -49,38 +47,12 @@ impl AgentActorHandle {
     }
 
     /// Pop the next queued message and run a turn for it, if one is waiting.
-    pub async fn run_if_queued(&self, state: &mut AppState) {
-        if state.turn_active() {
-            return;
-        }
-        let Some((content, id)) = state.peek_queue() else {
-            return;
-        };
-        let (content, id) = (content.clone(), id.clone());
-        state.pop_queue();
-
-        state.start_turn();
-
-        let skills_context = runie_core::skills::build_skills_context(state.skills());
-        let system_prompt = state
-            .prompts()
-            .iter()
-            .find(|p| p.name == state.current_prompt())
-            .map(|p| p.content.clone())
-            .unwrap_or_default();
-
-        self.run(AgentCommand {
-            content,
-            id,
-            provider: state.current_provider().to_owned(),
-            model: state.current_model().to_owned(),
-            thinking_level: state.thinking_level(),
-            read_only: state.read_only(),
-            skills_context,
-            system_prompt,
-            truncation: policy_from_section(state.truncation()),
-        })
-        .await;
+    ///
+    /// This method sends `TurnMsg::RunIfQueued` to the TurnActor, which owns
+    /// the authoritative queue state. The TurnActor will emit `TurnStarted`
+    /// when it pops a message and starts a turn.
+    pub async fn run_if_queued(&self, turn_handle: &runie_core::actors::TurnActorHandle) {
+        turn_handle.send(runie_core::actors::TurnMsg::RunIfQueued).await;
     }
 }
 
@@ -245,62 +217,84 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn run_if_queued_sets_turn_active_and_inflight() {
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<AgentMsg>(10);
-        let agent_handle = AgentActorHandle::new(tx);
-        let mut state = AppState::default();
-        state
-            .agent
-            .request_queue
-            .push_back(("hello".to_string(), "req.0".to_string()));
-
-        assert!(!state.agent_state().turn_active);
-        assert_eq!(state.agent_state().inflight, 0);
-
-        agent_handle.run_if_queued(&mut state).await;
-
-        assert!(state.agent_state().turn_active, "must set turn_active");
-        assert_eq!(state.agent_state().inflight, 1, "must increment inflight");
-        assert!(
-            state.agent_state().request_queue.is_empty(),
-            "message should be popped from queue"
-        );
-
-        let msg = rx.try_recv().expect("command should be sent to agent");
-        let AgentMsg::Run { command } = msg;
-        assert_eq!(command.content, "hello");
-        assert_eq!(
-            command.thinking_level,
-            runie_core::model::ThinkingLevel::Off
-        );
-        assert_eq!(command.system_prompt, "");
-    }
-
-    #[tokio::test]
-    async fn run_if_queued_noop_when_queue_empty() {
+    async fn run_if_queued_sends_run_if_queued_to_turn_actor() {
+        let bus = runie_core::bus::EventBus::<Event>::new(16);
+        let (turn_handle, _turn_actor) = runie_core::actors::TurnActor::spawn(bus.clone());
         let (tx, _rx) = tokio::sync::mpsc::channel::<AgentMsg>(10);
         let agent_handle = AgentActorHandle::new(tx);
-        let mut state = AppState::default();
 
-        agent_handle.run_if_queued(&mut state).await;
+        // Subscribe BEFORE operations so we can receive events
+        let mut sub = bus.subscribe();
 
-        assert!(!state.agent_state().turn_active);
-        assert_eq!(state.agent_state().inflight, 0);
+        // Queue a message via TurnActor
+        turn_handle.send(runie_core::actors::TurnMsg::SubmitUserMessage {
+            content: "hello".into(),
+            id: "req.0".into(),
+        }).await;
+
+        // Call run_if_queued - this sends TurnMsg::RunIfQueued to TurnActor
+        agent_handle.run_if_queued(&turn_handle).await;
+
+        // Verify TurnStarted was emitted (TurnActor handles RunIfQueued and emits this)
+        let mut found = false;
+        let mut content = None;
+        while let Ok(evt) = sub.recv().await {
+            if let Event::TurnStarted { content: c, .. } = evt {
+                found = true;
+                content = Some(c);
+                break;
+            }
+        }
+        assert!(found, "TurnStarted should be emitted");
+        assert_eq!(content.as_deref(), Some("hello"), "TurnStarted should contain queued content");
     }
 
     #[tokio::test]
     async fn run_if_queued_noop_when_turn_active() {
+        let bus = runie_core::bus::EventBus::<Event>::new(16);
+        let (turn_handle, _turn_actor) = runie_core::actors::TurnActor::spawn(bus.clone());
         let (tx, _rx) = tokio::sync::mpsc::channel::<AgentMsg>(10);
         let agent_handle = AgentActorHandle::new(tx);
-        let mut state = AppState::default();
-        state.agent_state_mut().turn_active = true;
-        state
-            .agent
-            .request_queue
-            .push_back(("hello".to_string(), "req.0".to_string()));
 
-        agent_handle.run_if_queued(&mut state).await;
+        // Subscribe BEFORE operations so we can receive events
+        let mut sub = bus.subscribe();
 
-        assert_eq!(state.agent_state().request_queue.len(), 1);
+        // Queue and start a turn
+        turn_handle.send(runie_core::actors::TurnMsg::SubmitUserMessage {
+            content: "hello".into(),
+            id: "req.0".into(),
+        }).await;
+        turn_handle.send(runie_core::actors::TurnMsg::RunIfQueued).await;
+
+        // Wait for first TurnStarted
+        while let Ok(evt) = sub.recv().await {
+            if matches!(evt, Event::TurnStarted { .. }) {
+                break;
+            }
+        }
+
+        // Queue another message
+        turn_handle.send(runie_core::actors::TurnMsg::SubmitUserMessage {
+            content: "world".into(),
+            id: "req.1".into(),
+        }).await;
+
+        // Try to run again (should be noop since turn is active)
+        agent_handle.run_if_queued(&turn_handle).await;
+
+        // Verify no additional TurnStarted was emitted (use try_recv with timeout)
+        let mut turn_started_count = 1; // We already saw one
+        let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_millis(100);
+        while tokio::time::Instant::now() < deadline {
+            match sub.try_recv() {
+                Ok(evt) => {
+                    if matches!(evt, Event::TurnStarted { .. }) {
+                        turn_started_count += 1;
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+        assert_eq!(turn_started_count, 1, "only one TurnStarted should be emitted");
     }
 }

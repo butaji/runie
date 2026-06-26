@@ -126,6 +126,19 @@ pub enum Event {
         id: String,
         message: String,
     },
+
+    // TurnActor facts
+    TurnStarted { id: String, request_id: String, content: String },
+    TurnAborted,
+    TurnCompleted,
+    TurnErrored { id: String, message: String },
+    TokenStatsUpdated { tokens_in: usize, tokens_out: usize, speed_tps: f64 },
+    StreamStarted { id: String },
+    UserMessageSubmitted { id: String, content: String },
+    QueueAborted { content: String },
+    QueuesCleared,
+    IdGenerated(crate::actors::turn::NextIdResponse),
+
     PermissionRequest {
         request_id: String,
         tool: String,
@@ -135,13 +148,8 @@ pub enum Event {
         request_id: String,
         action: crate::permissions::PermissionAction,
     },
-    /// Permission request was dismissed (UI closed without resolution).
     PermissionRequestDismissed,
-    /// Assistant message ready with full content (used by agent to update
-    /// AppState with the final message including tool calls after streaming).
-    AssistantMessageReady {
-        message: crate::message::ChatMessage,
-    },
+    AssistantMessageReady { message: crate::message::ChatMessage },
 
     // Replay
     MessageReplayed {
