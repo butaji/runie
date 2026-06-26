@@ -1,6 +1,6 @@
 # ViewActor owns ViewState
 
-**Status**: partial
+**Status**: done
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P0

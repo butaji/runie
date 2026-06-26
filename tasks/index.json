@@ -986,7 +986,7 @@
   {
     "file": "view-actor-owns-view-state.md",
     "title": "ViewActor owns ViewState",
-    "status": "partial",
+    "status": "done",
     "category": "TUI / Rendering",
     "priority": "P0",
     "milestone": "R4",
