@@ -367,7 +367,7 @@
   {
     "file": "test-actor-harness.md",
     "title": "Test harness for actor-based state",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "trust-actor-owns-trust-decisions.md",
