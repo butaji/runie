@@ -50,17 +50,14 @@ pub async fn run() -> Result<()> {
     let bus = EventBus::<Event>::new(100);
     let (event_tx, mut event_rx) = mpsc::channel::<Event>(100);
     let runtime = spawn_runtime(bus.clone()).await?;
-
-    let stdin = tokio::io::stdin();
-    let stdout = tokio::io::stdout();
-    let reader = BufReader::new(stdin);
-    let mut lines = reader.lines();
-    let mut stdout = stdout;
-
-    // Event forwarder: bus → stdout notifications
     spawn_event_forwarder(bus.clone());
+    spawn_combined_receiver(bus, event_tx);
+    let stdin = tokio::io::stdin();
+    let mut stdout = tokio::io::stdout();
+    process_stdin_loop(stdin, &mut stdout, &runtime, &mut event_rx).await
+}
 
-    // Combined receiver: bus events + local channel events
+fn spawn_combined_receiver(bus: EventBus<Event>, event_tx: mpsc::Sender<Event>) {
     let (tx, mut local_rx) = mpsc::channel::<Event>(100);
     tokio::spawn(async move {
         let mut sub = bus.subscribe();
@@ -68,9 +65,7 @@ pub async fn run() -> Result<()> {
             tokio::select! {
                 biased;
                 Some(evt) = local_rx.recv() => {
-                    if event_tx.send(evt).await.is_err() {
-                        break;
-                    }
+                    if event_tx.send(evt).await.is_err() { break; }
                 }
                 result = sub.recv() => {
                     match result {
@@ -84,9 +79,7 @@ pub async fn run() -> Result<()> {
                                     let _ = out.flush().await;
                                 }
                             }
-                            if tx.send(evt).await.is_err() {
-                                break;
-                            }
+                            if tx.send(evt).await.is_err() { break; }
                         }
                         Err(_) => break,
                     }
@@ -94,30 +87,36 @@ pub async fn run() -> Result<()> {
             }
         }
     });
+}
 
+async fn process_stdin_loop(
+    stdin: tokio::io::Stdin,
+    stdout: &mut tokio::io::Stdout,
+    runtime: &AcpRuntime,
+    event_rx: &mut mpsc::Receiver<Event>,
+) -> Result<()> {
+    let mut lines = BufReader::new(stdin).lines();
     while let Some(line) = lines.next_line().await? {
         if line.trim().is_empty() {
             continue;
         }
-
         let req = match serde_json::from_str::<Request>(&line) {
             Ok(r) => r,
             Err(e) => {
                 let err = Message::error(Some(Value::String(line)), Error::parse(format!("Parse error: {e}")));
-                write_message(&mut stdout, &err).await?;
+                write_message(stdout, &err).await?;
                 continue;
             }
         };
-
         let id = req.id.clone();
-        match dispatch_acp_request(&req, &runtime, &mut event_rx).await {
+        match dispatch_acp_request(&req, runtime, event_rx).await {
             Ok(result) => {
                 let resp = Message::Response(Response::ok(id, result));
-                write_message(&mut stdout, &resp).await?;
+                write_message(stdout, &resp).await?;
             }
             Err(e) => {
                 let err = Message::error(id, Error::internal(format!("ACP error: {e}")));
-                write_message(&mut stdout, &err).await?;
+                write_message(stdout, &err).await?;
             }
         }
     }
@@ -196,49 +195,33 @@ async fn submit_input(
     event_rx: &mut mpsc::Receiver<Event>,
 ) -> Result<Value> {
     let params: SubmitInputParams = serde_json::from_value(params.clone())?;
+    let turn_id = turn_id_from_time();
 
-    // Generate a simple turn ID
-    let turn_id = format!("turn_{}", std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis());
-
-    // Send input event
-    runtime.event_tx.send(Event::InputChanged {
-        state: Box::new(runie_core::model::InputState {
-            input: params.input,
-            cursor_pos: 0,
-            history_pos: None,
-            undo_stack: Vec::new(),
-            redo_stack: Vec::new(),
-            input_flash: 0,
-            placeholder: String::new(),
-            ghost_completion: None,
-            tab_complete_prefix: None,
-            tab_complete_matches: Vec::new(),
-            tab_complete_index: 0,
-            input_scroll: 0,
-            input_history: Vec::new(),
-            current_prompt: String::new(),
-            file_picker_backup: None,
-            file_picker_range_suffix: None,
-        }),
-    }).await?;
-
-    // Submit the input
+    // Send input event using InputState::default() + set input text
+    let mut state = runie_core::model::InputState::default();
+    state.input = params.input;
+    runtime.event_tx.send(Event::InputChanged { state: Box::new(state) }).await?;
     runtime.event_tx.send(Event::Submit).await?;
 
     // Wait for turn completion with timeout
     timeout(Duration::from_secs(300), async {
         while let Some(evt) = event_rx.recv().await {
             if let Event::TurnComplete { id, .. } = evt {
-                return Ok(serde_json::json!({ "turnId": id, "responseId": id }))
+                return Ok(serde_json::json!({ "turnId": id, "responseId": id }));
             }
         }
         Ok(serde_json::json!({ "turnId": turn_id }))
     })
     .await
     .map_err(|_| anyhow::anyhow!("Timeout waiting for turn"))?
+}
+
+fn turn_id_from_time() -> String {
+    let ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    format!("turn_{ms}")
 }
 
 async fn interrupt(runtime: &AcpRuntime) -> Result<Value> {

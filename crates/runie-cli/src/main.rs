@@ -33,48 +33,31 @@ Options:
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-
     if args.len() < 2 {
         print_usage();
         std::process::exit(1);
     }
-
     let result = match args[1].as_str() {
-        "--help" | "-h" => {
-            print_usage();
-            return;
-        }
-        "--version" => {
-            println!("runie-cli {}", env!("CARGO_PKG_VERSION"));
-            return;
-        }
+        "--help" | "-h" => { print_usage(); return; }
+        "--version" => { println!("runie-cli {}", env!("CARGO_PKG_VERSION")); return; }
         "print" => run_print(&args[2..]),
-        "json" => tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(run_json()),
-        "server" => tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(run_server(&args[2..])),
-        "acp" => tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(acp::run()),
-        other => {
-            eprintln!("Unknown command: {other}");
-            print_usage();
-            std::process::exit(1);
-        }
+        "json" => block_on(run_json()),
+        "server" => block_on(run_server(&args[2..])),
+        "acp" => block_on(acp::run()),
+        other => { eprintln!("Unknown command: {other}"); print_usage(); std::process::exit(1); }
     };
-
     if let Err(e) = result {
         eprintln!("Error: {}", e);
         std::process::exit(1);
     }
+}
+
+fn block_on<F: std::future::Future>(fut: F) -> F::Output {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(fut)
 }
 
 fn run_print(args: &[String]) -> Result<()> {

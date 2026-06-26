@@ -20,5 +20,6 @@ pub(crate) use agent::AgentState;
 pub use app_state::AppState;
 pub(crate) use input::{CommandUsage, InputState};
 pub use session::{CompletionState, ConfigState, ModelSource, SessionState};
-pub(crate) use types::{FffFileEntry, QueuedMessage, QueuedMessageKind};
+pub use types::FffFileEntry;
+pub(crate) use types::{QueuedMessage, QueuedMessageKind};
 pub(crate) use view::ViewState;

@@ -127,11 +127,17 @@ fn file_picker_header(count: usize, filter: Option<&str>) -> String {
 }
 
 fn file_picker_label(entry: &FffFileEntry) -> String {
-    if entry.is_dir {
+    let name = if entry.is_dir {
         format!("{}/", entry.name)
     } else {
         entry.name.clone()
+    };
+    if let Some(status) = &entry.git_status {
+        if !status.is_empty() {
+            return format!("{} {}", status, name);
+        }
     }
+    name
 }
 
 fn file_picker_insert_name(entry: &FffFileEntry) -> String {

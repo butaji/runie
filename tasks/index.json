@@ -112,7 +112,7 @@
   {
     "file": "dedupe-git-status-formatter.md",
     "title": "Dedupe Git Status Formatter",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "delete-async-io-bridge.md",

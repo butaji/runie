@@ -11,6 +11,8 @@ mod action_text;
 #[cfg(test)]
 mod at_file_picker;
 #[cfg(test)]
+mod file_picker_git_status;
+#[cfg(test)]
 mod autoscroll_bug;
 #[cfg(test)]
 mod autoscroll_overflow;

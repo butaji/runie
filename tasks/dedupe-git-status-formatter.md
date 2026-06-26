@@ -1,6 +1,6 @@
 # Deduplicate git-status formatter
 
-**Status**: partial
+**Status**: done
 **Milestone**: R4
 **Category**: Tools
 **Priority**: P2
@@ -42,7 +42,8 @@ Both produce the same human-readable status string ("modified", "untracked", etc
 - N/A — pure formatter.
 
 ### Layer 3 — Rendering
-- [ ] `fff_picker_displays_status_labels` — a render test feeds file items with mixed git statuses and asserts the labels appear in the panel output.
+- [x] `fff_picker_displays_status_labels` — a render test feeds file items with mixed git statuses and asserts the labels appear in the panel output.
+- [x] `fff_picker_status_labels_in_render_order` — verifies multiple entries with mixed statuses render correctly in order.
 
 ### Layer 4 — Smoke / Crash
 - [ ] `smoke_fff_search_returns_status_labels` — `FffIndexerActor` search in a temp git repo with staged + unstaged + untracked files returns items whose labels match `git status --porcelain=1`.
@@ -52,8 +53,12 @@ Both produce the same human-readable status string ("modified", "untracked", etc
 - `crates/runie-core/src/actors/fff_indexer/search.rs` — extracted shared `format_git_status` function
 - `crates/runie-core/src/actors/fff_indexer/mod.rs` — re-exported `format_git_status`
 - `crates/runie-core/src/actors/mod.rs` — added `format_git_status` to re-exports
-- `crates/runie-core/src/update/dialog/file_pickers.rs` — now calls shared helper
+- `crates/runie-core/src/update/dialog/file_pickers.rs` — now calls shared helper + displays git status in label
 - `crates/runie-core/src/actors/fff_indexer/tests.rs` — added Layer 1 tests
+- `crates/runie-core/src/model/state/mod.rs` — made `FffFileEntry` `pub` (was `pub(crate)`)
+- `crates/runie-core/src/model/mod.rs` — updated re-export visibility
+- `crates/runie-tui/src/tests/core/file_picker_git_status.rs` — Layer 3 rendering tests
+- `crates/runie-tui/src/tests/core/mod.rs` — registered `file_picker_git_status` module
 
 ## Notes
 
