@@ -29,4 +29,4 @@ mod state;
 mod validation;
 
 #[cfg(test)]
-mod handlers_tests;
+mod tests;

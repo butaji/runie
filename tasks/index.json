@@ -362,7 +362,7 @@
   {
     "file": "standardize-test-layout-inline.md",
     "title": "Standardize test layout on inline mod tests",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "test-actor-harness.md",

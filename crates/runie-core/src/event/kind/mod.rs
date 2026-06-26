@@ -399,3 +399,6 @@ impl Event {
         EventKind::Intent
     }
 }
+
+#[cfg(test)]
+mod kind_tests;

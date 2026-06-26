@@ -1,4 +1,4 @@
-use super::handlers::provider_base_url;
+use crate::login_flow::handlers::provider_base_url;
 use crate::provider::config::{save_provider_config, set_test_config_path};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};

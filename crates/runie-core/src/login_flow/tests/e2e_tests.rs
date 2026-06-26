@@ -1,6 +1,6 @@
 use crate::Event;
-use crate::login_config::list_configured_providers;
 use crate::model::AppState;
+use crate::provider::config::list_configured_providers;
 
 use crate::tests::login_logout::clean_config;
 use crate::tests::login_logout::default_models_for_provider;

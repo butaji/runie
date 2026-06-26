@@ -27,4 +27,4 @@ mod variants;
 
 pub use kind::EventKind;
 #[cfg(test)]
-mod variants_tests;
+mod tests;

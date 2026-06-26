@@ -72,7 +72,7 @@ mod input_undo;
 #[cfg(test)]
 mod input_word_nav;
 #[cfg(test)]
-mod login_logout;
+pub(crate) mod login_logout;
 #[cfg(test)]
 mod misc;
 #[cfg(test)]
