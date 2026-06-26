@@ -315,6 +315,92 @@ impl ActorHandles {
             h.export(path, session).await;
         }
     }
+
+    // ── Session state mutations (fire-and-forget) ───────────────────────────────
+
+    /// Try to add a user message (fire-and-forget).
+    pub fn try_send_session_add_user(&self, content: String, images: Vec<String>) {
+        if let Some(ref h) = self.session {
+            h.try_add_user_message(content, images);
+        }
+    }
+
+    /// Try to add a system message (fire-and-forget).
+    pub fn try_send_session_add_system(&self, content: String) {
+        if let Some(ref h) = self.session {
+            h.try_add_system_message(content);
+        }
+    }
+
+    /// Try to add a tool message (fire-and-forget).
+    pub fn try_send_session_add_tool(&self, id: String, name: String, content: String) {
+        if let Some(ref h) = self.session {
+            h.try_add_tool_message(id, name, content);
+        }
+    }
+
+    /// Try to update a tool message (fire-and-forget).
+    pub fn try_send_session_update_tool(&self, id_contains: String, content: String) {
+        if let Some(ref h) = self.session {
+            h.try_update_tool_message(id_contains, content);
+        }
+    }
+
+    /// Try to add a turn-complete message (fire-and-forget).
+    pub fn try_send_session_add_turn_complete(&self, id: String, content: String) {
+        if let Some(ref h) = self.session {
+            h.try_add_turn_complete(id, content);
+        }
+    }
+
+    /// Try to add an error message (fire-and-forget).
+    pub fn try_send_session_add_error(&self, id: String, content: String) {
+        if let Some(ref h) = self.session {
+            h.try_add_error_message(id, content);
+        }
+    }
+
+    /// Try to reset session (fire-and-forget).
+    pub fn try_send_session_reset(&self) {
+        if let Some(ref h) = self.session {
+            h.try_reset();
+        }
+    }
+
+    /// Try to fork at message index (fire-and-forget).
+    pub fn try_send_session_fork_at(&self, index: usize) {
+        if let Some(ref h) = self.session {
+            h.try_fork_at(index);
+        }
+    }
+
+    /// Try to clone branch (fire-and-forget).
+    pub fn try_send_session_clone_branch(&self) {
+        if let Some(ref h) = self.session {
+            h.try_clone_branch();
+        }
+    }
+
+    /// Try to push a pending edit (fire-and-forget).
+    pub fn try_send_session_push_pending_edit(&self, edit: crate::edit_preview::EditPreview) {
+        if let Some(ref h) = self.session {
+            h.try_push_pending_edit(edit);
+        }
+    }
+
+    /// Try to drain pending edits (fire-and-forget).
+    pub fn try_send_session_drain_pending_edits(&self) {
+        if let Some(ref h) = self.session {
+            h.try_drain_pending_edits();
+        }
+    }
+
+    /// Try to clear pending edits (fire-and-forget).
+    pub fn try_send_session_clear_pending_edits(&self) {
+        if let Some(ref h) = self.session {
+            h.try_clear_pending_edits();
+        }
+    }
 }
 
 #[cfg(test)]

@@ -7,6 +7,7 @@ use std::path::PathBuf;
 
 use tokio::sync::mpsc;
 
+use crate::edit_preview::EditPreview;
 use crate::session::Session;
 use crate::trust::TrustDecision;
 
@@ -48,6 +49,39 @@ pub enum SessionStoreMsg {
 }
 
 // ============================================================================
+// Session State Mutations (formerly direct AppState mutations)
+// ============================================================================
+
+/// Messages for session state mutations.
+#[derive(Debug, Clone)]
+pub enum SessionMutationMsg {
+    /// Add a user message with optional image attachments.
+    AddUserMessage { content: String, images: Vec<String> },
+    /// Add a system message.
+    AddSystemMessage { content: String },
+    /// Add a tool message.
+    AddToolMessage { id: String, name: String, content: String },
+    /// Update an existing tool message.
+    UpdateToolMessage { id_contains: String, content: String },
+    /// Add a turn-complete message.
+    AddTurnComplete { id: String, content: String },
+    /// Add an error message.
+    AddErrorMessage { id: String, content: String },
+    /// Reset the session to empty state.
+    Reset,
+    /// Fork the session tree at the given message index.
+    ForkAt { index: usize },
+    /// Clone the current branch.
+    CloneBranch,
+    /// Push a pending edit.
+    PushPendingEdit { edit: EditPreview },
+    /// Drain all pending edits.
+    DrainPendingEdits,
+    /// Clear all pending edits.
+    ClearPendingEdits,
+}
+
+// ============================================================================
 // Unified SessionActor
 // ============================================================================
 
@@ -81,6 +115,19 @@ pub enum SessionMsg {
         session: Session,
     },
     List,
+    // Session state mutations
+    AddUserMessage { content: String, images: Vec<String> },
+    AddSystemMessage { content: String },
+    AddToolMessage { id: String, name: String, content: String },
+    UpdateToolMessage { id_contains: String, content: String },
+    AddTurnComplete { id: String, content: String },
+    AddErrorMessage { id: String, content: String },
+    Reset,
+    ForkAt { index: usize },
+    CloneBranch,
+    PushPendingEdit { edit: EditPreview },
+    DrainPendingEdits,
+    ClearPendingEdits,
 }
 
 impl From<PersistenceMsg> for SessionMsg {
@@ -165,6 +212,68 @@ impl SessionActorHandle {
     /// Request listing saved sessions.
     pub async fn list(&self) {
         let _ = self.tx.send(SessionMsg::List).await;
+    }
+
+    // ── Session state mutation methods (fire-and-forget) ──────────────────────
+
+    /// Try to add a user message (fire-and-forget).
+    pub fn try_add_user_message(&self, content: String, images: Vec<String>) {
+        let _ = self.tx.try_send(SessionMsg::AddUserMessage { content, images });
+    }
+
+    /// Try to add a system message (fire-and-forget).
+    pub fn try_add_system_message(&self, content: String) {
+        let _ = self.tx.try_send(SessionMsg::AddSystemMessage { content });
+    }
+
+    /// Try to add a tool message (fire-and-forget).
+    pub fn try_add_tool_message(&self, id: String, name: String, content: String) {
+        let _ = self.tx.try_send(SessionMsg::AddToolMessage { id, name, content });
+    }
+
+    /// Try to update a tool message (fire-and-forget).
+    pub fn try_update_tool_message(&self, id_contains: String, content: String) {
+        let _ = self.tx.try_send(SessionMsg::UpdateToolMessage { id_contains, content });
+    }
+
+    /// Try to add a turn-complete message (fire-and-forget).
+    pub fn try_add_turn_complete(&self, id: String, content: String) {
+        let _ = self.tx.try_send(SessionMsg::AddTurnComplete { id, content });
+    }
+
+    /// Try to add an error message (fire-and-forget).
+    pub fn try_add_error_message(&self, id: String, content: String) {
+        let _ = self.tx.try_send(SessionMsg::AddErrorMessage { id, content });
+    }
+
+    /// Try to reset session (fire-and-forget).
+    pub fn try_reset(&self) {
+        let _ = self.tx.try_send(SessionMsg::Reset);
+    }
+
+    /// Try to fork at message index (fire-and-forget).
+    pub fn try_fork_at(&self, index: usize) {
+        let _ = self.tx.try_send(SessionMsg::ForkAt { index });
+    }
+
+    /// Try to clone branch (fire-and-forget).
+    pub fn try_clone_branch(&self) {
+        let _ = self.tx.try_send(SessionMsg::CloneBranch);
+    }
+
+    /// Try to push a pending edit (fire-and-forget).
+    pub fn try_push_pending_edit(&self, edit: EditPreview) {
+        let _ = self.tx.try_send(SessionMsg::PushPendingEdit { edit });
+    }
+
+    /// Try to drain pending edits (fire-and-forget).
+    pub fn try_drain_pending_edits(&self) {
+        let _ = self.tx.try_send(SessionMsg::DrainPendingEdits);
+    }
+
+    /// Try to clear pending edits (fire-and-forget).
+    pub fn try_clear_pending_edits(&self) {
+        let _ = self.tx.try_send(SessionMsg::ClearPendingEdits);
     }
 }
 

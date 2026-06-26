@@ -5,6 +5,7 @@
 //! - `trust.json` + `history.jsonl` (formerly PersistenceActor)
 //! - Named-session CRUD: load/save/delete/import/export/list (formerly SessionStoreActor)
 //! - Durable event append + replay + summary index (formerly session_actor.rs)
+//! - Session state mutations (messages, tree, pending edits)
 
 use std::path::PathBuf;
 
@@ -14,6 +15,7 @@ use crate::actors::{spawn_actor, Actor, ActorHandle};
 use crate::bus::EventBus;
 use crate::event::DurableCoreEvent;
 use crate::message::now;
+use crate::model::SessionState;
 use crate::session::index::{SessionIndex, SessionMetadata};
 use crate::session::replay::session_to_durable_events;
 use crate::session::store::SessionStore;
@@ -24,23 +26,54 @@ use crate::Event;
 use super::messages::{SessionActorHandle, SessionMsg};
 
 /// Unified session actor owning all durable state.
-#[allow(dead_code)]
 pub struct SessionActor {
-    bus: EventBus<Event>,
+    pub(crate) bus: EventBus<Event>,
     /// Trust manager for trust.json
+    #[cfg(test)]
+    pub trust: TrustManager,
+    #[cfg(not(test))]
     trust: TrustManager,
     /// Session store for named sessions and durable events
+    #[cfg(test)]
+    pub store: SessionStore,
+    #[cfg(not(test))]
     store: SessionStore,
     /// Current session id for durable appends
+    #[cfg(test)]
+    pub session_id: String,
+    #[cfg(not(test))]
     session_id: String,
     /// Display name for current session
+    #[cfg(test)]
+    pub display_name: String,
+    #[cfg(not(test))]
     display_name: String,
     /// Message count for summary generation
+    #[cfg(test)]
+    pub message_count: usize,
+    #[cfg(not(test))]
     message_count: usize,
     /// Summary buffer (first 500 chars of content)
+    #[cfg(test)]
+    pub summary_buffer: String,
+    #[cfg(not(test))]
     summary_buffer: String,
     /// Started timestamp
+    #[cfg(test)]
+    pub started_at: f64,
+    #[cfg(not(test))]
     started_at: f64,
+    /// Authoritative session state (messages, tree, pending edits)
+    pub(crate) session_state: SessionState,
+    /// Next message id counter
+    pub(crate) next_id: usize,
+    /// Thought sequence counter (reserved for future use)
+    #[allow(dead_code)]
+    #[cfg(test)]
+    pub thought_seq: usize,
+    #[cfg(not(test))]
+    #[allow(dead_code)]
+    thought_seq: usize,
 }
 
 impl SessionActor {
@@ -57,6 +90,9 @@ impl SessionActor {
             message_count: 0,
             summary_buffer: String::new(),
             started_at: now(),
+            session_state: SessionState::default(),
+            next_id: 0,
+            thought_seq: 0,
         };
         let (tx, handle) = spawn_actor(actor, bus);
         (SessionActorHandle::new(tx), handle)
@@ -68,9 +104,7 @@ impl Actor for SessionActor {
     type Event = Event;
 
     async fn run_body(mut self, mut rx: mpsc::Receiver<Self::Msg>, _bus: EventBus<Event>) {
-        // Load trust + history on startup
         self.load_all().await;
-        // Main message loop
         while let Some(msg) = rx.recv().await {
             self.handle_msg(msg).await;
         }
@@ -80,14 +114,13 @@ impl Actor for SessionActor {
 impl SessionActor {
     /// Load trust and history from disk on startup.
     async fn load_all(&self) {
-        // Load trust
         let trust = tokio::task::spawn_blocking(TrustManager::load)
             .await
             .unwrap_or_default();
-        let decisions = trust.decisions();
-        self.bus.publish(Event::TrustLoaded { decisions });
+        self.bus.publish(Event::TrustLoaded {
+            decisions: trust.decisions(),
+        });
 
-        // Load history
         let entries = tokio::task::spawn_blocking(crate::input_history::load_history)
             .await
             .ok()
@@ -99,22 +132,40 @@ impl SessionActor {
     /// Dispatch incoming messages.
     async fn handle_msg(&mut self, msg: SessionMsg) {
         match msg {
-            // Trust + history
             SessionMsg::SetTrust { path, decision } => self.set_trust(path, decision).await,
             SessionMsg::AppendHistory { entry } => self.append_history(entry).await,
-            // Session CRUD
             SessionMsg::Load { name } => self.load_session(name).await,
             SessionMsg::Save { name, session } => self.save_session(name, session).await,
             SessionMsg::Delete { name } => self.delete_session(name).await,
             SessionMsg::Import { path } => self.import_session(path).await,
             SessionMsg::Export { path, session } => self.export_session(path, session).await,
             SessionMsg::List => self.list_sessions().await,
+            SessionMsg::AddUserMessage { content, images } => {
+                self.handle_add_user_message(content, images)
+            }
+            SessionMsg::AddSystemMessage { content } => self.handle_add_system_message(content),
+            SessionMsg::AddToolMessage { id, name, content } => {
+                self.handle_add_tool_message(id, name, content)
+            }
+            SessionMsg::UpdateToolMessage { id_contains, content } => {
+                self.handle_update_tool_message(&id_contains, &content)
+            }
+            SessionMsg::AddTurnComplete { id, content } => {
+                self.handle_add_turn_complete(id, content)
+            }
+            SessionMsg::AddErrorMessage { id, content } => {
+                self.handle_add_error_message(id, content)
+            }
+            SessionMsg::Reset => self.handle_reset(),
+            SessionMsg::ForkAt { index } => self.handle_fork_at(index),
+            SessionMsg::CloneBranch => self.handle_clone_branch(),
+            SessionMsg::PushPendingEdit { edit } => self.handle_push_pending_edit(edit),
+            SessionMsg::DrainPendingEdits => self.handle_drain_pending_edits(),
+            SessionMsg::ClearPendingEdits => self.handle_clear_pending_edits(),
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Trust + history handlers (formerly PersistenceActor)
-    // -------------------------------------------------------------------------
+    // ── Trust + history ────────────────────────────────────────────────────────
 
     async fn set_trust(&mut self, path: PathBuf, decision: TrustDecision) {
         self.trust.set(&path, decision);
@@ -129,15 +180,13 @@ impl SessionActor {
     }
 
     async fn append_history(&self, entry: String) {
-        let entry_clone = entry.clone();
+        let entry_clone = entry;
         let _ =
             tokio::task::spawn_blocking(move || crate::input_history::append_history(&entry_clone))
                 .await;
     }
 
-    // -------------------------------------------------------------------------
-    // Session CRUD handlers (formerly SessionStoreActor)
-    // -------------------------------------------------------------------------
+    // ── Session CRUD ────────────────────────────────────────────────────────────
 
     async fn load_session(&self, name: String) {
         let store = self.store.clone();
@@ -262,11 +311,8 @@ impl SessionActor {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Durable event handling (formerly session_actor.rs)
-    // -------------------------------------------------------------------------
+    // ── Metadata helpers ───────────────────────────────────────────────────────
 
-    /// Build metadata from a session.
     fn build_metadata_from_session(&self, session: &Session, name: &str) -> SessionMetadata {
         SessionMetadata {
             id: name.to_owned(),
@@ -283,7 +329,6 @@ impl SessionActor {
         }
     }
 
-    /// Build metadata for current session (durable appends).
     #[allow(dead_code)]
     fn build_meta(&self) -> SessionMetadata {
         SessionMetadata {
@@ -298,7 +343,6 @@ impl SessionActor {
         }
     }
 
-    /// Generate summary from first 500 chars of content.
     #[allow(dead_code)]
     fn generate_summary(&self) -> String {
         let chars: Vec<char> = self.summary_buffer.chars().take(500).collect();
@@ -311,14 +355,6 @@ impl SessionActor {
     }
 
     #[allow(dead_code)]
-    fn append_to_summary(&mut self, msg: &str) {
-        if self.summary_buffer.len() < 500 {
-            self.summary_buffer.push_str(msg);
-        }
-    }
-
-    /// Persist a durable event to the session file.
-    #[allow(dead_code)]
     async fn persist(&self, durable: &DurableCoreEvent) -> anyhow::Result<()> {
         let store = self.store.clone();
         let session_id = self.session_id.clone();
@@ -328,7 +364,6 @@ impl SessionActor {
             .map_err(|e| anyhow::anyhow!("spawn_blocking failed: {}", e))?
     }
 
-    /// Update the session index.
     #[allow(dead_code)]
     async fn update_index(&self) {
         let store = self.store.clone();
@@ -342,9 +377,7 @@ impl SessionActor {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
+    // ── Helpers ────────────────────────────────────────────────────────────────
 
     fn emit(&self, event: Event) {
         let _ = self.bus.publish(event);
@@ -355,98 +388,5 @@ impl SessionActor {
             operation: operation.to_owned(),
             error,
         });
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::TempDir;
-
-    fn make_store() -> (SessionStore, TempDir) {
-        let dir = TempDir::new().unwrap();
-        let store = SessionStore::new(dir.path().to_path_buf());
-        (store, dir)
-    }
-
-    #[tokio::test]
-    async fn actor_loads_and_emits_trust_and_history() {
-        let tmp = tempfile::tempdir().unwrap();
-        let cfg = tmp.path().join("cfg");
-        let data = tmp.path().join("data");
-        std::fs::create_dir_all(&cfg).unwrap();
-        std::fs::create_dir_all(&data).unwrap();
-        // FIXME: Audit that the environment access only happens in single-threaded code.
-        unsafe { std::env::set_var("RUNIE_TEST_CONFIG_DIR", &cfg) };
-        // FIXME: Audit that the environment access only happens in single-threaded code.
-        unsafe { std::env::set_var("RUNIE_TEST_DATA_DIR", &data) };
-
-        let bus = EventBus::<Event>::new(4);
-        let mut sub = bus.subscribe();
-        let (handle, _actor_handle) = SessionActor::spawn(bus);
-
-        let mut saw_trust = false;
-        let mut saw_history = false;
-        for _ in 0..60 {
-            if saw_trust && saw_history {
-                break;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-            while let Ok(evt) = sub.try_recv() {
-                match evt {
-                    Event::TrustLoaded { .. } => saw_trust = true,
-                    Event::HistoryLoaded { .. } => saw_history = true,
-                    _ => {}
-                }
-            }
-        }
-        assert!(saw_trust);
-        assert!(saw_history);
-
-        handle
-            .set_trust(PathBuf::from("/tmp/project"), TrustDecision::Trusted)
-            .await;
-
-        let mut saw_changed = false;
-        for _ in 0..60 {
-            if saw_changed {
-                break;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-            while let Ok(evt) = sub.try_recv() {
-                if matches!(evt, Event::TrustChanged { .. }) {
-                    saw_changed = true;
-                }
-            }
-        }
-        assert!(saw_changed);
-
-        // FIXME: Audit that the environment access only happens in single-threaded code.
-        unsafe { std::env::remove_var("RUNIE_TEST_CONFIG_DIR") };
-        // FIXME: Audit that the environment access only happens in single-threaded code.
-        unsafe { std::env::remove_var("RUNIE_TEST_DATA_DIR") };
-    }
-
-    #[tokio::test]
-    async fn session_metadata_built_once() {
-        // Verify that build_meta appears exactly once in the unified actor
-        // This is tested by the fact that we only have one build_meta implementation
-        let (store, _dir) = make_store();
-        let actor = SessionActor {
-            bus: EventBus::new(4),
-            trust: TrustManager::default(),
-            store,
-            session_id: "test".into(),
-            display_name: "Test".into(),
-            message_count: 5,
-            summary_buffer: "Hello world".into(),
-            started_at: 1000.0,
-        };
-
-        let meta = actor.build_meta();
-        assert_eq!(meta.id, "test");
-        assert_eq!(meta.display_name, "Test");
-        assert_eq!(meta.message_count, 5);
-        assert!(meta.summary.is_some());
     }
 }

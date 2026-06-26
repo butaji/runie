@@ -5,6 +5,9 @@
 
 mod actor;
 pub mod messages;
+mod mutations;
+#[cfg(test)]
+mod tests;
 
 pub use actor::SessionActor;
 pub use messages::{

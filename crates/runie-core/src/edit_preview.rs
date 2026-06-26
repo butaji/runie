@@ -2,10 +2,12 @@
 
 use std::path::PathBuf;
 
+use serde::{Deserialize, Serialize};
+
 use crate::diff::Diff;
 
 /// Preview of a proposed file edit.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EditPreview {
     /// Path to the file being edited.
     pub path: PathBuf,

@@ -19,6 +19,8 @@ use super::{
 #[derive(Clone)]
 pub struct AppState {
     // 6 inner state structs (factored domain state)
+    // `session` transitions to private once all direct mutations are removed
+    // (tracked in `remove-direct-appstate-mutations`). Use `session()` accessor.
     pub session: SessionState,
     pub input: InputState,
     pub agent: AgentState,

@@ -357,6 +357,10 @@ pub enum Event {
         operation: String,
         error: String,
     },
+    /// Emitted when session state changes (messages, tree, pending edits).
+    SessionChanged {
+        state: Box<crate::model::SessionState>,
+    },
 
     // IO effects
     BashOutput {

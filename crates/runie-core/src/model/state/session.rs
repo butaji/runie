@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::edit_preview::EditPreview;
 use crate::keybindings::default_keybindings;
 use crate::message::{now, ChatMessage};
@@ -10,7 +12,7 @@ use super::CommandUsage;
 
 /// Session state — messages, tree, pending edits.
 /// Fields are public for test setup; production code should use accessors.
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SessionState {
     pub messages: Vec<ChatMessage>,
     pub session_tree: Option<SessionTree>,
