@@ -18,7 +18,7 @@ use std::collections::HashSet;
 #[derive(Debug, Default, Clone, serde::Serialize)]
 pub struct InspectReport {
     pub config_sources: Vec<ConfigSource>,
-    pub skills: Vec<SkillInfo>,
+    pub skill_items: Vec<SkillInfo>,
     pub commands: Vec<CommandInfo>,
     pub subagents: Vec<SubagentInfo>,
     pub permissions: Vec<PermissionInfo>,
@@ -94,7 +94,7 @@ impl InspectReport {
 
         Self {
             config_sources: Self::discover_config_sources(),
-            skills: Self::format_skills(skills),
+            skill_items: Self::format_skills(skills),
             commands: Self::list_commands(),
             subagents: Self::list_subagents(&subagent_registry),
             permissions: Self::list_permissions(&config),
@@ -111,12 +111,8 @@ impl InspectReport {
         if let Some(global) = Self::global_config_path() {
             if !seen.contains(&global) {
                 seen.insert(global.clone());
-                let path = std::path::Path::new(&global);
-                let loaded = path.exists();
-                sources.push(ConfigSource {
-                    path: global,
-                    loaded,
-                });
+                let loaded = std::path::Path::new(&global).exists();
+                sources.push(ConfigSource { path: global, loaded });
             }
         }
 
@@ -124,12 +120,8 @@ impl InspectReport {
         if let Some(local) = Self::local_config_path() {
             if !seen.contains(&local) {
                 seen.insert(local.clone());
-                let path = std::path::Path::new(&local);
-                let loaded = path.exists();
-                sources.push(ConfigSource {
-                    path: local,
-                    loaded,
-                });
+                let loaded = std::path::Path::new(&local).exists();
+                sources.push(ConfigSource { path: local, loaded });
             }
         }
 
@@ -220,7 +212,6 @@ impl InspectReport {
                 name: name.clone(),
                 base_url: provider.base_url.clone(),
                 model_count: provider.models.len(),
-                // API key intentionally omitted — always redacted
             })
             .collect()
     }
@@ -247,8 +238,16 @@ impl InspectReport {
     /// Print human-readable report.
     pub fn print_human(&self) {
         println!("# Runie Inspect Report\n");
+        self.print_config_sources();
+        self.print_skills();
+        self.print_commands();
+        self.print_subagents();
+        self.print_permissions();
+        self.print_providers();
+        self.print_model_catalog();
+    }
 
-        // Config Sources
+    fn print_config_sources(&self) {
         println!("## Config Sources");
         if self.config_sources.is_empty() {
             println!("  (none found)");
@@ -259,21 +258,23 @@ impl InspectReport {
             }
         }
         println!();
+    }
 
-        // Skills
-        println!("## Skills ({} loaded)", self.skills.len());
-        if self.skills.is_empty() {
+    fn print_skills(&self) {
+        println!("## Skills ({} loaded)", self.skill_items.len());
+        if self.skill_items.is_empty() {
             println!("  (none)");
         } else {
-            for skill in &self.skills {
+            for skill in &self.skill_items {
                 let invocable = if skill.invocable { " [invocable]" } else { "" };
                 println!("  • {} — {}{}", skill.name, skill.description, invocable);
                 println!("    from: {}", skill.path);
             }
         }
         println!();
+    }
 
-        // Commands
+    fn print_commands(&self) {
         println!("## Commands ({} registered)", self.commands.len());
         if self.commands.is_empty() {
             println!("  (none)");
@@ -288,27 +289,23 @@ impl InspectReport {
             }
         }
         println!();
+    }
 
-        // Subagents
+    fn print_subagents(&self) {
         println!("## Subagent Types ({} defined)", self.subagents.len());
         if self.subagents.is_empty() {
             println!("  (none)");
         } else {
             for agent in &self.subagents {
                 let agents_md = if agent.agents_md { " (AGENTS.md)" } else { "" };
-                println!(
-                    "  • {} — {}{}",
-                    agent.name, agent.description, agents_md
-                );
-                println!(
-                    "    mode: {}, perms: {}",
-                    agent.prompt_mode, agent.permission_mode
-                );
+                println!("  • {} — {}{}", agent.name, agent.description, agents_md);
+                println!("    mode: {}, perms: {}", agent.prompt_mode, agent.permission_mode);
             }
         }
         println!();
+    }
 
-        // Permissions
+    fn print_permissions(&self) {
         println!("## Permission Rules ({} defined)", self.permissions.len());
         if self.permissions.is_empty() {
             println!("  (none — using defaults)");
@@ -319,8 +316,9 @@ impl InspectReport {
             }
         }
         println!();
+    }
 
-        // Providers
+    fn print_providers(&self) {
         println!("## Providers ({} configured)", self.providers.len());
         if self.providers.is_empty() {
             println!("  (none — run `runie login` to configure)");
@@ -334,13 +332,13 @@ impl InspectReport {
             }
         }
         println!();
+    }
 
-        // Model Catalog
+    fn print_model_catalog(&self) {
         println!("## Model Catalog ({} models)", self.model_catalog.len());
         if self.model_catalog.is_empty() {
             println!("  (empty)");
         } else {
-            // Group by provider
             let mut by_provider: std::collections::BTreeMap<&str, Vec<&ModelInfoEntry>> =
                 std::collections::BTreeMap::new();
             for model in &self.model_catalog {
@@ -349,30 +347,28 @@ impl InspectReport {
             for (provider, models) in by_provider {
                 println!("  {}:", provider);
                 for model in models {
-                    let context = model
-                        .context_window
-                        .map(|c| format!("{}k", c / 1000))
-                        .unwrap_or_default();
-                    let flags: Vec<&str> = [
-                        model.supports_thinking.then_some("thinking"),
-                        model.supports_vision.then_some("vision"),
-                    ]
-                    .into_iter()
-                    .flatten()
-                    .collect();
-                    let flags_str = if flags.is_empty() {
-                        String::new()
-                    } else {
-                        format!(" [{}]", flags.join(", "))
-                    };
-                    if context.is_empty() {
-                        println!("    • {}{}", model.name, flags_str);
-                    } else {
-                        println!("    • {} ({}k){}", model.name, context, flags_str);
-                    }
+                    Self::print_model_entry(model);
                 }
             }
         }
+    }
+
+    fn print_model_entry(model: &ModelInfoEntry) {
+        let context = model.context_window.map(|c| format!("{}k", c / 1000));
+        let flags: Vec<&str> = [
+            model.supports_thinking.then_some("thinking"),
+            model.supports_vision.then_some("vision"),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        let flags_str = if flags.is_empty() {
+            String::new()
+        } else {
+            format!(" [{}]", flags.join(", "))
+        };
+        let suffix = format!("{}{}", flags_str, context.map(|c| format!(" ({})", c)).unwrap_or_default());
+        println!("    • {}{}", model.name, suffix);
     }
 
     /// Print JSON report.
@@ -381,7 +377,7 @@ impl InspectReport {
         #[serde(rename_all = "camelCase")]
         struct Report<'a> {
             config_sources: &'a [ConfigSource],
-            skills: &'a [SkillInfo],
+            skill_items: &'a [SkillInfo],
             commands: &'a [CommandInfo],
             subagents: &'a [SubagentInfo],
             permissions: &'a [PermissionInfo],
@@ -391,7 +387,7 @@ impl InspectReport {
 
         let report = Report {
             config_sources: &self.config_sources,
-            skills: &self.skills,
+            skill_items: &self.skill_items,
             commands: &self.commands,
             subagents: &self.subagents,
             permissions: &self.permissions,
@@ -425,9 +421,7 @@ mod tests {
     #[test]
     fn inspect_report_builds_without_panic() {
         let report = InspectReport::build();
-        // Commands should be registered
         assert!(!report.commands.is_empty(), "Expected commands to be registered");
-        // Model catalog should have entries
         assert!(!report.model_catalog.is_empty(), "Expected model catalog entries");
     }
 
@@ -441,14 +435,13 @@ mod tests {
     #[test]
     fn inspect_report_human_does_not_panic() {
         let report = InspectReport::build();
-        // Should not panic
         report.print_human();
     }
 
     #[test]
     fn skill_info_contains_path() {
         let report = InspectReport::build();
-        for skill in &report.skills {
+        for skill in &report.skill_items {
             assert!(!skill.path.is_empty(), "Skill path should not be empty");
         }
     }
@@ -457,8 +450,6 @@ mod tests {
     fn provider_info_has_no_api_key() {
         let report = InspectReport::build();
         for provider in &report.providers {
-            // ProviderInfo struct should not have api_key field
-            // This is verified by struct definition (no api_key field)
             assert!(provider.name != "" || provider.base_url != "");
         }
     }
