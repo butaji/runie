@@ -56,13 +56,10 @@ impl AppState {
         }
         let provider = provider.to_owned();
         let model = self
-            .config_cache
-            .as_ref()
-            .map(|c| {
-                c.first_model_for_provider(&provider)
-                    .or_else(|| c.default_model().map(String::from))
-                    .unwrap_or_else(|| self.config().current_model.clone())
-            })
+            .config()
+            .model_providers()
+            .get(&provider)
+            .and_then(|p| p.models.first().cloned())
             .unwrap_or_else(|| self.config().current_model.clone());
         self.switch_model(provider, model, true);
     }

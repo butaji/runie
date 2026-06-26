@@ -46,16 +46,26 @@ fn toggle_provider_model_disables_model_and_switches_active() {
     let mut state = AppState::default();
     state.config_mut().current_provider = "openai".into();
     state.config_mut().current_model = "gpt-4o-mini".into();
-    // Initialize the config cache so toggle_provider_model can update it
-    state.config_cache = Some(Config::default());
+    // Initialize the model_providers so toggle_provider_model can update it
+    state.config_mut().model_providers.insert(
+        "openai".into(),
+        Config::default().model_providers.get("openai").cloned().unwrap_or_else(|| {
+            crate::config::ModelProvider {
+                provider_type: None,
+                base_url: "https://api.openai.com/v1".into(),
+                api_key: "sk-test".into(),
+                models: vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+            }
+        }),
+    );
 
     toggle_provider_model(&mut state, "openai", "gpt-4o-mini");
 
-    // Verify cache was updated (synchronous update)
+    // Verify model_providers was updated (synchronous update)
     let cached_models = state
-        .config_cache
-        .as_ref()
-        .and_then(|c| c.model_providers.get("openai"))
+        .config()
+        .model_providers()
+        .get("openai")
         .map(|p| p.models.clone())
         .unwrap_or_default();
     assert_eq!(cached_models, vec!["gpt-4o"]);
@@ -77,16 +87,24 @@ fn toggle_provider_model_enables_missing_model() {
     let mut state = AppState::default();
     state.config_mut().current_provider = "openai".into();
     state.config_mut().current_model = "gpt-4o".into();
-    // Initialize the config cache so toggle_provider_model can update it
-    state.config_cache = Some(Config::default());
+    // Initialize the model_providers so toggle_provider_model can update it
+    state.config_mut().model_providers.insert(
+        "openai".into(),
+        crate::config::ModelProvider {
+            provider_type: None,
+            base_url: "https://api.openai.com/v1".into(),
+            api_key: "sk-test".into(),
+            models: vec!["gpt-4o".into()],
+        },
+    );
 
     toggle_provider_model(&mut state, "openai", "gpt-4o-mini");
 
-    // Verify cache was updated (synchronous update)
+    // Verify model_providers was updated (synchronous update)
     let cached_models = state
-        .config_cache
-        .as_ref()
-        .and_then(|c| c.model_providers.get("openai"))
+        .config()
+        .model_providers()
+        .get("openai")
         .map(|p| p.models.clone())
         .unwrap_or_default();
     assert!(cached_models.contains(&"gpt-4o".to_string()));

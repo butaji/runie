@@ -105,10 +105,6 @@ impl AppState {
         self.actor_handles.as_ref()
     }
 
-    pub fn config_cache(&self) -> Option<&crate::config::Config> {
-        self.config_cache.as_ref()
-    }
-
     // ── Mutable accessors (crate-internal) ────────────────────────────────────
 
     /// Mutable access to session state.
@@ -213,10 +209,5 @@ impl AppState {
 
     pub fn actor_handles_mut(&mut self) -> &mut Option<crate::actors::ActorHandles> {
         &mut self.actor_handles
-    }
-
-    /// Mutable access to config cache (for test setup).
-    pub fn config_cache_mut(&mut self) -> &mut Option<crate::config::Config> {
-        &mut self.config_cache
     }
 }

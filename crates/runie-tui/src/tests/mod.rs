@@ -79,10 +79,11 @@ pub fn configure_test_providers(providers: &[(String, Vec<String>)]) {
     }
 }
 
-/// Helper: load the current thread's test config into an `AppState` cache.
+/// Helper: load the current thread's test config into `AppState`.
 pub fn apply_test_config_to_state(state: &mut runie_core::AppState) {
     let path = runie_core::login_config::config_path();
-    state.config_cache = Some(runie_core::config::Config::load(Some(&path)));
+    let config = runie_core::config::Config::load(Some(&path));
+    *state.config_mut().model_providers_mut() = config.model_providers;
 }
 
 /// Helper: simulate full tool flow

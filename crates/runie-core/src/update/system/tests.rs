@@ -100,8 +100,7 @@ fn set_provider_uses_configured_model_for_custom_provider() {
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
 
-    let mut config = crate::config::Config::default();
-    config.model_providers.insert(
+    state.config_mut().model_providers_mut().insert(
         "custom".into(),
         crate::config::ModelProvider {
             provider_type: None,
@@ -110,7 +109,6 @@ fn set_provider_uses_configured_model_for_custom_provider() {
             models: vec!["custom-model".into()],
         },
     );
-    state.config_cache = Some(config);
 
     state.set_provider("custom");
 

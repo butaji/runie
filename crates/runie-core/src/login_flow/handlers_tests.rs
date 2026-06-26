@@ -19,7 +19,8 @@ fn temp_config_path() -> PathBuf {
 
 fn app_state_with_config(path: &std::path::Path) -> crate::model::AppState {
     let mut state = crate::model::AppState::default();
-    state.config_cache = Some(crate::config::Config::load(Some(path)));
+    let config = crate::config::Config::load(Some(path));
+    *state.config_mut().model_providers_mut() = config.model_providers;
     state
 }
 

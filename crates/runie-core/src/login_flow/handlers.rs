@@ -6,7 +6,6 @@
 
 use super::panels::{build_key_input, build_model_selector, build_validating_panel};
 use super::state::{LoginFlowState, LoginStep};
-use crate::config::Config;
 use crate::login_flow::panel_ops::{
     pop_login_panel, pop_login_panel_or_close, push_login_panel, rebuild_login_dialog,
     replace_top_login_panel_with,
@@ -189,9 +188,9 @@ fn login_flow_toggle_model(state: &mut crate::model::AppState, model: String) {
 
 pub(crate) fn provider_base_url(state: &crate::model::AppState, provider: &str) -> String {
     state
-        .config_cache
-        .as_ref()
-        .and_then(|c| c.model_providers.get(provider))
+        .config()
+        .model_providers()
+        .get(provider)
         .filter(|p| !p.base_url.is_empty())
         .map(|p| p.base_url.clone())
         .unwrap_or_else(|| {
@@ -314,12 +313,11 @@ fn sync_config_cache(
     api_key: &str,
     models: &[String],
 ) {
-    let cache = state.config_cache_mut().get_or_insert_with(Config::default);
-    cache.model_providers.insert(
+    let providers = state.config_mut().model_providers_mut();
+    providers.insert(
         provider.into(),
         crate::config::ModelProvider {
-            provider_type: cache
-                .model_providers
+            provider_type: providers
                 .get(provider)
                 .and_then(|p| p.provider_type.clone()),
             base_url: base_url.into(),

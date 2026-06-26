@@ -121,9 +121,10 @@ fn provider_models_item(state: &AppState) -> SettingItem {
 
 pub fn provider_model_lists(state: &AppState, provider: &str) -> (Vec<String>, Vec<String>) {
     let saved = state
-        .config_cache
-        .as_ref()
-        .map(|c| c.models_for_provider(provider))
+        .config()
+        .model_providers()
+        .get(provider)
+        .map(|p| p.models.clone())
         .unwrap_or_default();
     let mut available = saved.clone();
     if let Some(meta) = crate::provider::find_provider(provider) {

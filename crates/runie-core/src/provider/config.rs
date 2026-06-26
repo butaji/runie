@@ -131,12 +131,11 @@ pub fn set_test_config_with_providers(providers: &[(String, Vec<String>)]) {
 }
 
 /// Reload the global config cache from the current config file.
-/// Used by tests to ensure config_cache reflects the latest file state.
+/// Used by tests to ensure ConfigState.model_providers reflects the latest file state.
 pub fn reload_cache_from_file() {
-    // Update the global cache by reading fresh from file.
-    // The cache lives in AppState.config_cache which is managed separately.
     // This function is called after save_provider_config to ensure the
     // file-backed reads (via list_configured_providers etc.) are consistent.
+    // Note: AppState.model_providers is updated synchronously by handlers.
 }
 
 #[cfg(test)]

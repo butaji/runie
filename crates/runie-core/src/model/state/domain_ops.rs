@@ -141,14 +141,12 @@ impl AppState {
         let prev = self.take();
         let config = prev.config;
         let actor_handles = prev.actor_handles;
-        let config_cache = prev.config_cache;
         let git_info = prev.git_info;
         let cwd_name = prev.cwd_name;
         let trust_decisions = prev.trust_decisions;
         // prev is dropped; all its fields are returned to the pool
         self.config = config;
         *self.actor_handles_mut() = actor_handles;
-        *self.config_cache_mut() = config_cache;
         self.git_info = git_info;
         self.cwd_name = cwd_name;
         *self.trust_decisions_mut() = trust_decisions;
@@ -158,7 +156,7 @@ impl AppState {
 
     /// Apply a loaded config to all config-driven state fields.
     pub fn apply_config(&mut self, config: &crate::config::Config) {
-        *self.config_cache_mut() = Some(config.clone());
+        *self.config_mut().model_providers_mut() = config.model_providers.clone();
         if self.config().model_source != ModelSource::UserOverride {
             self.apply_active_model(config);
         }
@@ -222,27 +220,35 @@ impl AppState {
         }
     }
 
-    /// List configured providers from the cached config.
+    /// List configured providers from ConfigState.
     pub fn configured_providers(&self) -> Vec<(String, String, Vec<String>)> {
-        self.config_cache
-            .as_ref()
-            .map(|c| c.configured_providers())
-            .unwrap_or_default()
+        let mut result: Vec<_> = self
+            .config()
+            .model_providers()
+            .iter()
+            .map(|(name, p)| (name.clone(), p.base_url.clone(), p.models.clone()))
+            .collect();
+        result.sort_by(|a, b| a.0.cmp(&b.0));
+        result
     }
 
-    /// Resolve the default provider/model pair from the cached config.
+    /// Resolve the default provider/model pair from ConfigState.
     pub fn resolve_default_model(&self) -> (String, String) {
-        self.config_cache
-            .as_ref()
-            .map(|c| c.resolve_default_model())
-            .unwrap_or_default()
+        let config = self.config();
+        // Try explicit provider field first
+        if let Some(provider) = config.model_providers().keys().next() {
+            if let Some(mp) = config.model_providers().get(provider) {
+                if let Some(model) = mp.models.first() {
+                    return (provider.clone(), model.clone());
+                }
+            }
+        }
+        (String::new(), String::new())
     }
 
-    /// Look up a configured provider from the cached config.
+    /// Look up a configured provider from ConfigState.
     pub fn provider_config(&self, name: &str) -> Option<crate::config::ModelProvider> {
-        self.config_cache
-            .as_ref()
-            .and_then(|c| c.model_providers.get(name).cloned())
+        self.config().model_providers().get(name).cloned()
     }
 
     /// Fire-and-forget request to remove a provider via ConfigActor.

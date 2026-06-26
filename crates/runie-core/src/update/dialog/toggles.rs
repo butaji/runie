@@ -163,9 +163,7 @@ fn handle_providers_disconnect(state: &mut AppState, event: &crate::Event) {
     if let crate::Event::ProvidersDisconnect { provider } = event {
         let provider = provider.clone();
         state.remove_provider(&provider);
-        if let Some(cache) = state.config_cache_mut() {
-            cache.model_providers.remove(&provider);
-        }
+        state.config_mut().model_providers_mut().remove(&provider);
         if state.config().current_provider == provider {
             let (provider, model) = state.resolve_default_model();
             state.set_active_model(provider, model, crate::model::ModelSource::ConfigDefault);
@@ -220,29 +218,28 @@ pub fn toggle_provider_model(state: &mut AppState, provider: &str, model: &str) 
 }
 
 fn sync_provider_models(state: &mut AppState, provider: &str, models: &[String]) {
-    // Update local cache for immediate UI feedback
-    if let Some(cache) = state.config_cache_mut() {
-        let (base_url, api_key) = crate::login_config::get_provider_config(provider)
-            .map(|(b, k, _)| (b, k))
-            .unwrap_or_else(|| {
-                (
-                    crate::provider::find_provider(provider)
-                        .map(|p| p.base_url.to_owned())
-                        .unwrap_or_default(),
-                    String::new(),
-                )
-            });
-        cache
-            .model_providers
-            .entry(provider.into())
-            .or_insert_with(|| crate::config::ModelProvider {
-                provider_type: None,
-                base_url,
-                api_key,
-                models: vec![],
-            })
-            .models = models.to_vec();
-    }
+    // Update ConfigState for immediate UI feedback
+    let (base_url, api_key) = crate::login_config::get_provider_config(provider)
+        .map(|(b, k, _)| (b, k))
+        .unwrap_or_else(|| {
+            (
+                crate::provider::find_provider(provider)
+                    .map(|p| p.base_url.to_owned())
+                    .unwrap_or_default(),
+                String::new(),
+            )
+        });
+    state
+        .config_mut()
+        .model_providers_mut()
+        .entry(provider.into())
+        .or_insert_with(|| crate::config::ModelProvider {
+            provider_type: None,
+            base_url,
+            api_key,
+            models: vec![],
+        })
+        .models = models.to_vec();
     // Persist to config.toml via ConfigActor
     let handles = state.actor_handles().cloned();
     if let Some(h) = handles {

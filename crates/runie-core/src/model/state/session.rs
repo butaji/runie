@@ -108,6 +108,9 @@ pub struct ConfigState {
     pub command_usage: std::collections::HashMap<String, CommandUsage>,
     /// Why the current provider/model is active.
     pub model_source: ModelSource,
+    /// Provider configurations loaded from config.toml.
+    /// Previously accessed via AppState.config_cache.
+    pub model_providers: std::collections::HashMap<String, crate::config::ModelProvider>,
 }
 
 impl Default for ConfigState {
@@ -143,6 +146,7 @@ impl Default for ConfigState {
             telemetry: crate::telemetry::Telemetry::new(false),
             command_usage: std::collections::HashMap::new(),
             model_source: ModelSource::ConfigDefault,
+            model_providers: std::collections::HashMap::new(),
         }
     }
 }
@@ -221,6 +225,16 @@ impl ConfigState {
     /// Mutable access to truncation.
     pub fn truncation_mut(&mut self) -> &mut crate::config::TruncationSection {
         &mut self.truncation
+    }
+
+    /// Immutable access to model_providers.
+    pub fn model_providers(&self) -> &std::collections::HashMap<String, crate::config::ModelProvider> {
+        &self.model_providers
+    }
+
+    /// Mutable access to model_providers.
+    pub fn model_providers_mut(&mut self) -> &mut std::collections::HashMap<String, crate::config::ModelProvider> {
+        &mut self.model_providers
     }
 }
 

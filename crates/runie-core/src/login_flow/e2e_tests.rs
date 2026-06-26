@@ -373,11 +373,11 @@ fn login_flow_save_updates_config_cache_for_immediate_model_switch() {
     validate_provider(&mut state, "minimax", "sk-test");
     state.update(crate::Event::Save);
 
-    // Verify config_cache contains the provider immediately
+    // Verify ConfigState contains the provider immediately
     let configured = state.configured_providers();
     assert!(
         configured.iter().any(|(p, _, _)| p == "minimax"),
-        "config_cache should contain minimax provider immediately after save"
+        "ConfigState should contain minimax provider immediately after save"
     );
 
     // Try to switch to a different model using the /model command

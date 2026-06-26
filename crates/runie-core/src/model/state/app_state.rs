@@ -46,7 +46,6 @@ pub struct AppState {
     pub fff_debounce: u64,
     pub perm_req: Option<crate::model::PermissionRequestState>,
     pub actor_handles: Option<crate::actors::ActorHandles>,
-    pub config_cache: Option<crate::config::Config>,
 }
 
 impl Default for AppState {
@@ -75,7 +74,6 @@ impl Default for AppState {
             fff_debounce: 0u64,
             perm_req: None,
             actor_handles: None,
-            config_cache: None,
         }
     }
 }
