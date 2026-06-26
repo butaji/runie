@@ -231,7 +231,7 @@ impl SessionStore {
 
     /// Update a session's metadata in the JSON index.
     pub fn update_index(&self, meta: &SessionMetadata) -> anyhow::Result<()> {
-        let data_dir = self.dir.parent().unwrap_or(&self.dir).to_path_buf();
+        let data_dir = self.dir.clone();
         let mut index = SessionIndex::load(&data_dir).unwrap_or_default();
         index.upsert(meta.clone());
         index.save(&data_dir)

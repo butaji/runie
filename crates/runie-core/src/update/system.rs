@@ -37,6 +37,18 @@ impl AppState {
         *self.transient_level_mut() = None;
         self.view_mut().dirty = true;
     }
+
+    /// Send trust decision to TrustActor for persistence (async).
+    fn try_send_trust(&self, path: std::path::PathBuf, decision: crate::trust::TrustDecision) {
+        let handles = self.actor_handles().cloned();
+        if let Some(h) = handles {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                tokio::spawn(async move {
+                    h.send_trust(path, decision).await;
+                });
+            }
+        }
+    }
     pub(crate) fn add_system_msg(&mut self, content: String) {
         self.session_mut().messages.push(ChatMessage {
             role: Role::System,
@@ -160,6 +172,8 @@ impl AppState {
             format!("Project '{}' trusted. Read-only disabled.", cwd.display()),
             TransientLevel::Success,
         );
+        // Send to TrustActor for persistence
+        self.try_send_trust(cwd, crate::trust::TrustDecision::Trusted);
     }
 
     pub(crate) fn apply_untrust_project(&mut self) {
@@ -169,6 +183,8 @@ impl AppState {
             format!("Project '{}' untrusted. Read-only enabled.", cwd.display()),
             TransientLevel::Warning,
         );
+        // Send to TrustActor for persistence
+        self.try_send_trust(cwd, crate::trust::TrustDecision::Untrusted);
     }
 
     pub(crate) fn stop_turn(&mut self) {

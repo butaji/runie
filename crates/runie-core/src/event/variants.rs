@@ -329,6 +329,10 @@ pub enum Event {
         path: std::path::PathBuf,
         decision: crate::trust::TrustDecision,
     },
+    /// Read-only flag changed — emitted by TrustActor.
+    ReadOnlyChanged {
+        enabled: bool,
+    },
     HistoryLoaded {
         entries: Vec<String>,
     },

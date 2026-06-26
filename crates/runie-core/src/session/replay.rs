@@ -187,10 +187,15 @@ pub fn load_session(name: &str, state: &mut AppState) -> anyhow::Result<()> {
 }
 
 fn restore_metadata(name: &str, state: &mut AppState, store: &SessionStore) -> anyhow::Result<()> {
-    let data_dir = store.dir().parent().unwrap_or(store.dir()).to_path_buf();
+    let data_dir = store.dir().to_path_buf();
     let index = crate::session::index::SessionIndex::load(&data_dir).unwrap_or_default();
     if let Some(meta) = index.get(name) {
-        state.session_mut().session_display_name = Some(meta.display_name.clone());
+        // Only overwrite session_display_name if the metadata's display_name
+        // differs from the session name — identical names mean the metadata is
+        // just storing the session name as a fallback, not a custom display.
+        if meta.display_name != name {
+            state.session_mut().session_display_name = Some(meta.display_name.clone());
+        }
         state.session_mut().session_created_at = meta.created_at;
         state.session_mut().session_updated_at = meta.updated_at;
     }

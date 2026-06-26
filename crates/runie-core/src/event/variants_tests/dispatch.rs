@@ -196,6 +196,7 @@ fn dispatcher_handles_all_variants() {
             Event::TrustLoaded { .. }
             | Event::TrustChanged { .. }
             | Event::TrustSet { .. }
+            | Event::ReadOnlyChanged { .. }
             | Event::HistoryLoaded { .. }
             | Event::HistoryAppend { .. }
             | Event::SessionLoaded { .. }

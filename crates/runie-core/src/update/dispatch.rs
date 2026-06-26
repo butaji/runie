@@ -34,6 +34,7 @@ fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
     match event {
         Event::TrustLoaded { decisions } => { *state.trust_decisions_mut() = decisions.clone(); true }
         Event::TrustChanged { path, decision } => { state.set_trust_decision(path.clone(), *decision); true }
+        Event::ReadOnlyChanged { enabled } => { state.config_mut().read_only = *enabled; true }
         Event::HistoryLoaded { entries } => {
             // Route through InputActor.
             if let Some(ref handles) = state.actor_handles() {

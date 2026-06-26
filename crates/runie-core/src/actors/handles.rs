@@ -14,7 +14,7 @@ use std::path::PathBuf;
 use crate::actors::{
     CompletionActorHandle, ConfigActorHandle, FffSearchRequest, InputActorHandle,
     IoActorHandle, PermissionActorHandle, ProviderActorHandle, SessionActorHandle,
-    ViewActorHandle,
+    TrustActorHandle, ViewActorHandle,
 };
 use crate::config::TruncationSection;
 use crate::model::ThinkingLevel;
@@ -50,6 +50,9 @@ pub struct ActorHandles {
     /// Handle to `CompletionActor` — owns path completion, @ suggestions, tab/ghost state.
     /// `None` when the completion actor has not been spawned (e.g. headless mode).
     pub completion: Option<CompletionActorHandle>,
+    /// Handle to `TrustActor` — owns trust decisions and the derived read-only flag.
+    /// `None` when the trust actor has not been spawned (e.g. headless mode).
+    pub trust: Option<TrustActorHandle>,
 }
 
 /// Typed handle for the FFF indexer actor.
@@ -162,6 +165,20 @@ impl ActorHandles {
     pub async fn send_set_trust(&self, path: PathBuf, decision: TrustDecision) {
         if let Some(ref h) = self.session {
             h.set_trust(path, decision).await;
+        }
+    }
+
+    /// Send `TrustMsg::SetTrust` to `TrustActor`.
+    pub async fn send_trust(&self, path: PathBuf, decision: TrustDecision) {
+        if let Some(ref h) = self.trust {
+            h.send(crate::actors::TrustMsg::SetTrust { path, decision }).await;
+        }
+    }
+
+    /// Send `TrustMsg::InitReadOnly` to `TrustActor`.
+    pub async fn send_init_read_only(&self, path: PathBuf) {
+        if let Some(ref h) = self.trust {
+            h.send(crate::actors::TrustMsg::InitReadOnly { path }).await;
         }
     }
 
