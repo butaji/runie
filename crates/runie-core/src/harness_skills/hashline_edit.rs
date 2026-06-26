@@ -184,7 +184,7 @@ impl HarnessSkill for HashlineEditSkill {
             return ToolCallResult::Continue;
         }
 
-        match crate::async_io::block_in_place_if_runtime(|| try_apply_hashline(ctx)) {
+        match tokio::task::block_in_place(|| try_apply_hashline(ctx)) {
             Ok(result) => result,
             Err(e) => ToolCallResult::Abort(format!("Hashline edit failed: {}", e)),
         }

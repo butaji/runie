@@ -25,7 +25,6 @@ pub use model::{
     PermissionRequestState, ScopedModel, SessionState, ThinkingLevel, ViewState,
 };
 pub mod agent_phase;
-pub mod async_io;
 pub mod auth;
 pub mod bash_safety;
 pub mod build_lint;

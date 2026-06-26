@@ -186,11 +186,9 @@ pub fn run_import(state: &mut AppState, path: &str) -> CommandResult {
         });
         return CommandResult::Message(format!("Importing session from '{}'…", path));
     }
-    let json = match crate::async_io::block_in_place_if_runtime(|| {
-        std::fs::read_to_string(&path_buf).ok()
-    }) {
-        Some(s) => s,
-        None => return CommandResult::Message(format!("Could not read '{}'", path)),
+    let json = match std::fs::read_to_string(&path_buf) {
+        Ok(s) => s,
+        Err(_) => return CommandResult::Message(format!("Could not read '{}'", path)),
     };
     match serde_json::from_str::<crate::session::Session>(&json) {
         Ok(session) => {
@@ -220,7 +218,7 @@ pub fn run_export(state: &mut AppState, path: &str) -> CommandResult {
         return CommandResult::Message(format!("Exporting session to '{}'…", path));
     }
     let json = serde_json::to_string_pretty(&session).unwrap_or_default();
-    match crate::async_io::block_in_place_if_runtime(|| std::fs::write(&path_buf, json)) {
+    match std::fs::write(&path_buf, json) {
         Ok(_) => CommandResult::Message(format!("Session exported to '{}'", path)),
         Err(e) => CommandResult::Message(format!("Could not export: {}", e)),
     }

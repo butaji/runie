@@ -165,7 +165,8 @@ impl AppState {
             });
             return;
         }
-        let result = crate::update::tools::execute_bash(command);
+        // Fallback: no actor handles — run bash synchronously.
+        let result = crate::update::tools::execute_bash_sync(command);
         let output_msg = format!("$ {}\n{}", command, result);
         self.add_system_msg(output_msg);
         self.view_mut().scroll = 0;

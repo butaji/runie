@@ -117,7 +117,7 @@
   {
     "file": "delete-async-io-bridge.md",
     "title": "Delete async_io.rs bridge helpers",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-config-reload-shim.md",

@@ -31,7 +31,7 @@ pub fn complete_path(partial: &str, cwd: &Path) -> Vec<PathCompletion> {
         (parent, prefix)
     };
 
-    crate::async_io::block_in_place_if_runtime(|| collect_completions(&dir, &prefix))
+    tokio::task::block_in_place(|| collect_completions(&dir, &prefix))
 }
 
 fn collect_completions(dir: &Path, prefix: &str) -> Vec<PathCompletion> {
@@ -83,8 +83,8 @@ mod tests {
         (dir, names)
     }
 
-    #[test]
-    fn complete_empty_returns_cwd_entries() {
+    #[tokio::test(flavor = "multi_thread")]
+    async fn complete_empty_returns_cwd_entries() {
         let (dir, _names) = tmp_dir_with(&[("alpha.txt", false), ("beta", true)]);
         let results = complete_path("", &dir);
         assert!(results
@@ -93,32 +93,32 @@ mod tests {
         assert!(results.iter().any(|r| r.path.ends_with("beta") && r.is_dir));
     }
 
-    #[test]
-    fn complete_filters_prefix() {
+    #[tokio::test(flavor = "multi_thread")]
+    async fn complete_filters_prefix() {
         let (dir, _names) = tmp_dir_with(&[("src", true), ("main.rs", false), ("lib.rs", false)]);
         let results = complete_path("main", &dir);
         assert_eq!(results.len(), 1);
         assert!(results[0].path.ends_with("main.rs"));
     }
 
-    #[test]
-    fn complete_excludes_hidden_by_default() {
+    #[tokio::test(flavor = "multi_thread")]
+    async fn complete_excludes_hidden_by_default() {
         let (dir, _names) = tmp_dir_with(&[(".hidden", false), ("visible", false)]);
         let results = complete_path("", &dir);
         assert!(!results.iter().any(|r| r.path.contains(".hidden")));
         assert!(results.iter().any(|r| r.path.contains("visible")));
     }
 
-    #[test]
-    fn complete_includes_hidden_when_prefixed() {
+    #[tokio::test(flavor = "multi_thread")]
+    async fn complete_includes_hidden_when_prefixed() {
         let (dir, _names) = tmp_dir_with(&[(".hidden", false), ("visible", false)]);
         let results = complete_path(".hid", &dir);
         assert_eq!(results.len(), 1);
         assert!(results[0].path.contains(".hidden"));
     }
 
-    #[test]
-    fn complete_directories_first() {
+    #[tokio::test(flavor = "multi_thread")]
+    async fn complete_directories_first() {
         let (dir, _names) = tmp_dir_with(&[("z_dir", true), ("a_file", false)]);
         let results = complete_path("", &dir);
         assert!(results[0].is_dir, "directories should come first");

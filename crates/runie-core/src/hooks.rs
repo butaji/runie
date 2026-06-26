@@ -149,7 +149,7 @@ impl HookHandler for ShellHook {
             Ok(s) => s,
             Err(_) => return HookDecision::Allow,
         };
-        crate::async_io::block_in_place_if_runtime(|| run_shell_hook(&self.command, &input))
+        tokio::task::block_in_place(|| run_shell_hook(&self.command, &input))
     }
 }
 

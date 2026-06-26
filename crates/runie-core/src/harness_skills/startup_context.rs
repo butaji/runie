@@ -83,7 +83,11 @@ impl StartupContextSkill {
                 return c.clone();
             }
         }
-        let ctx = crate::async_io::block_in_place_if_runtime(|| self.discover());
+        // Use block_in_place with catch_unwind for compatibility with single-threaded
+        // runtimes used in tests. If block_in_place panics (not multi-threaded), fall
+        // back to synchronous execution.
+        let ctx = std::panic::catch_unwind(|| tokio::task::block_in_place(|| self.discover()))
+            .unwrap_or_else(|_| self.discover());
         if let Ok(mut g) = self.cache.write() {
             *g = Some(ctx.clone());
         }

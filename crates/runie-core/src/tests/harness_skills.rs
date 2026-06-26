@@ -419,8 +419,8 @@ fn startup_context_disabled_returns_continue() {
     ));
 }
 
-#[test]
-fn startup_context_injects_workspace_context() {
+#[tokio::test]
+async fn startup_context_injects_workspace_context() {
     let skill = StartupContextSkill::new(StartupContextConfig {
         enabled: true,
         max_output_bytes: 2048,
@@ -440,8 +440,8 @@ fn startup_context_injects_workspace_context() {
     }
 }
 
-#[test]
-fn startup_context_respects_max_output_bytes() {
+#[tokio::test]
+async fn startup_context_respects_max_output_bytes() {
     let skill = StartupContextSkill::new(StartupContextConfig {
         enabled: true,
         max_output_bytes: 50, // Very small

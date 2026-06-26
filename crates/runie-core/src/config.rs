@@ -322,14 +322,24 @@ impl Config {
                 return;
             }
         };
-        crate::async_io::run_blocking_if_runtime(move || {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            tokio::spawn(tokio::task::spawn_blocking(move || {
+                if let Some(parent) = path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                if let Err(e) = std::fs::write(&path, text) {
+                    tracing::error!("failed to write config: {e}");
+                }
+            }));
+        } else {
+            // Fallback: write synchronously when no runtime is present.
             if let Some(parent) = path.parent() {
                 let _ = std::fs::create_dir_all(parent);
             }
             if let Err(e) = std::fs::write(&path, text) {
                 tracing::error!("failed to write config: {e}");
             }
-        });
+        }
     }
 
     /// Get the default model (from `[models].default` or legacy `model` field).

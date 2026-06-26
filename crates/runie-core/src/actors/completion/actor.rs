@@ -166,7 +166,7 @@ impl Actor for CompletionActor {
 mod tests {
     use super::*;
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn toggle_path_completion_creates_suggestions() {
         let bus = EventBus::<Event>::new(16);
         let mut sub = bus.subscribe();

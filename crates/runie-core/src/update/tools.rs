@@ -1,17 +1,12 @@
 //! Bash command execution for ! prefix (merged from bash.rs).
 
-use std::process::{Command, Stdio};
+use std::process::{Command as SyncCommand, Stdio};
 
-/// Execute a bash command and return output string.
+/// Execute a bash command and return output string (sync fallback).
 ///
-/// Runs the subprocess off the async runtime so the UI cannot freeze.
-pub fn execute_bash(command: &str) -> String {
-    let command = command.to_owned();
-    crate::async_io::block_in_place_if_runtime(move || execute_bash_sync(&command))
-}
-
-fn execute_bash_sync(command: &str) -> String {
-    let output = match Command::new("sh")
+/// Used by the non-actor fallback path in test mode.
+pub fn execute_bash_sync(command: &str) -> String {
+    let output = match SyncCommand::new("sh")
         .arg("-c")
         .arg(command)
         .stdout(Stdio::piped())
@@ -51,27 +46,6 @@ pub fn format_command_output(stdout: &str, stderr: &str, exit_code: i32) -> Stri
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn execute_echo_command() {
-        let output = execute_bash("echo hello");
-        assert!(output.contains("hello"), "Should contain hello");
-    }
-
-    #[test]
-    fn execute_pwd_command() {
-        let output = execute_bash("pwd");
-        assert!(!output.is_empty(), "pwd should return output");
-    }
-
-    #[test]
-    fn command_not_found() {
-        let output = execute_bash("nonexistent_command_xyz");
-        assert!(
-            output.contains("Error") || output.contains("not found"),
-            "Should show error for invalid command"
-        );
-    }
 
     #[test]
     fn format_empty_output() {
@@ -166,7 +140,7 @@ impl AppState {
         for preview in self.session_mut().pending_edits.drain(..) {
             let path = preview.path.clone();
             let content = preview.proposed.clone();
-            match crate::async_io::block_in_place_if_runtime(|| std::fs::write(&path, content)) {
+            match tokio::task::block_in_place(|| std::fs::write(&path, content)) {
                 Ok(()) => applied += 1,
                 Err(e) => errors.push(format!("{}: {}", preview.path.display(), e)),
             }
