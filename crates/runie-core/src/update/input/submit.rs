@@ -143,6 +143,7 @@ impl AppState {
                 DialogType::ModelSelector => crate::update::dialog::open_model_selector(self),
                 DialogType::Settings => crate::update::dialog::open_settings_dialog(self),
                 DialogType::ScopedModels => crate::update::dialog::open_scoped_models_dialog(self),
+                DialogType::ThemeSelector => crate::update::dialog::open_theme_selector(self),
             },
             crate::commands::CommandResult::OpenPanelStack(stack) => {
                 *self.open_dialog_mut() = Some(crate::commands::DialogState::PanelStack(*stack));

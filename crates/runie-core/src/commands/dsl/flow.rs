@@ -100,6 +100,7 @@ pub enum DialogType {
     ModelSelector,
     Settings,
     ScopedModels,
+    ThemeSelector,
 }
 
 #[cfg(test)]

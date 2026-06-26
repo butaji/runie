@@ -12,7 +12,7 @@ use crate::Event;
 
 use super::{
     open_command_palette, open_model_selector, open_scoped_models_dialog, open_settings_dialog,
-    panel_handler::{update_panel_stack, PanelUpdateResult},
+    open_theme_selector, panel_handler::{update_panel_stack, PanelUpdateResult},
 };
 
 /// Handles dialog-specific events. Returns whether the dialog was closed.
@@ -106,6 +106,7 @@ pub fn process_command_result(state: &mut AppState, result: CommandResult) {
                 DialogType::ModelSelector => open_model_selector(state),
                 DialogType::Settings => open_settings_dialog(state),
                 DialogType::ScopedModels => open_scoped_models_dialog(state),
+                DialogType::ThemeSelector => open_theme_selector(state),
             }
         }
         CR::OpenPanelStack(stack) => {

@@ -131,10 +131,7 @@ impl AppState {
                 });
             }
         }
-        self.notify(
-            format!("Theme switched to '{}'", name),
-            TransientLevel::Success,
-        );
+        self.add_system_msg(format!("Theme switched to '{}'", name));
     }
 
     pub(crate) fn toggle_read_only(&mut self) {

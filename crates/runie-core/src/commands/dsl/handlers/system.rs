@@ -1,6 +1,6 @@
 //! System commands.
 
-use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
+use crate::commands::{CommandCategory, CommandRegistry, CommandResult, DialogType};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
 
@@ -128,17 +128,9 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::CopyToClipboard(text))
 }
 
-fn handle_reload(state: &mut AppState, _: &str) -> CommandResult {
-    if let Some(handles) = state.actor_handles() {
-        if let Some(ref config) = handles.config {
-            let tx = config.tx().clone();
-            tokio::spawn(async move {
-                let _ = tx.send(crate::actors::ConfigMsg::Reload).await;
-            });
-        }
-    }
-    *state.skills_mut() = crate::skills::load_all();
-    CommandResult::Message("Reloaded config, keybindings, theme, skills, and prompts.".into())
+fn handle_reload(_state: &mut AppState, _: &str) -> CommandResult {
+    // Emit ReloadAll event which will be handled by ConfigActor and other actors
+    CommandResult::Event(crate::Event::ReloadAll)
 }
 
 fn handle_settings(state: &mut AppState, _: &str) -> CommandResult {
@@ -190,36 +182,20 @@ fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
 fn handle_theme(state: &mut AppState, args: &str) -> CommandResult {
     let name = args.trim();
     if name.is_empty() {
-        open_theme_selector(state);
-        return CommandResult::None;
+        return CommandResult::OpenDialog(DialogType::ThemeSelector);
     }
-    state.config_mut().theme_name = name.to_owned();
     if crate::themes::BUILTIN_THEMES.contains(&name) {
-        CommandResult::Message(format!("Theme switched to '{}'", name))
+        // Emit SwitchTheme event for valid themes to trigger the actual switch
+        // and show a message to confirm
+        CommandResult::Event(crate::Event::SwitchTheme { name: name.to_owned() })
     } else {
+        // Still set the theme name for fallback, then emit a message
+        state.config_mut().theme_name = name.to_owned();
         CommandResult::Message(format!(
             "Theme '{}' not found. Use /theme to list. (fallback: runie)",
             name
         ))
     }
-}
-
-fn open_theme_selector(state: &mut AppState) {
-    let mut panel = Panel::new("theme", "Choose Theme")
-        .header("available themes")
-        .keep_open();
-    for theme in crate::themes::BUILTIN_THEMES {
-        panel = panel.item(
-            *theme,
-            ItemAction::Emit(crate::Event::SwitchTheme {
-                name: theme.to_string(),
-            }),
-        );
-    }
-    *state.open_dialog_mut() = Some(crate::commands::DialogState::PanelStack(PanelStack::new(
-        panel,
-    )));
-    state.view_mut().dirty = true;
 }
 
 fn handle_approve(_: &mut AppState, _: &str) -> CommandResult {

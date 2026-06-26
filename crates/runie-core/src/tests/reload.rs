@@ -4,14 +4,14 @@ use crate::event::Event;
 use crate::model::AppState;
 
 #[test]
-fn reload_returns_success_message() {
+fn reload_returns_event() {
     let mut state = AppState::default();
     let cmd = state.registry.get("reload").unwrap();
     let cmd_name = cmd.name.clone();
     let result = cmd.flow.clone().exec(&mut state, &cmd_name, "");
     assert!(
-        matches!(result, crate::commands::CommandResult::Message(ref m) if m.contains("Reloaded")),
-        "got {result:?}"
+        matches!(result, crate::commands::CommandResult::Event(crate::Event::ReloadAll)),
+        "expected ReloadAll event, got {result:?}"
     );
 }
 

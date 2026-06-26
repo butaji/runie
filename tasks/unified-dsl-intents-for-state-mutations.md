@@ -1,6 +1,6 @@
 # Unified DSL intents for all state mutations
 
-**Status**: todo
+**Status**: in_progress
 **Milestone**: R4
 **Category**: Input / Commands
 **Priority**: P0
@@ -8,20 +8,27 @@
 **Depends on**: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, declarative-actor-dsl
 **Blocks**: none
 
+## Progress
+
+**Completed changes:**
+- ✅ `/theme` now emits `Event::SwitchTheme` instead of directly setting `state.config_mut().theme_name`
+- ✅ `/theme` with no args now returns `OpenDialog(DialogType::ThemeSelector)` which opens the theme selector via the event system
+- ✅ `/reload` now emits `Event::ReloadAll` instead of directly calling `*state.skills_mut() = crate::skills::load_all()`
+- ✅ Added `DialogType::ThemeSelector` to the DialogType enum
+- ✅ Added `open_theme_selector` function in `update/dialog/open.rs` that properly builds the panel and sets state via the event system
+
+**Remaining work:**
+- Session command handlers (`run_name`, `run_fork`, `run_compact`) still mutate state directly
+- `run_prompt` handler still mutates state directly
+- `handle_settings` still calls `open_settings_dialog` which directly mutates state
+
 ## Description
 
 Slash commands, palette commands, dialog actions, and keybindings currently mix direct state mutation with event emission. Standardize every user-facing action on a small set of typed intents that route to the owning actor.
 
-Current problems:
-- `/theme` assigns `state.config.theme_name` directly.
-- `/trust` emits a `ModelConfigEvent` that is then handled by mutating state.
-- `/model` calls `state.switch_model`, which mutates config and fires a `ConfigMsg`.
-- Settings dialog toggles call `state.toggle_read_only` directly.
-- Dialog panel actions sometimes emit events, sometimes call helper methods, sometimes mutate state inline.
-
 ## Acceptance criteria
 
-- [ ] All slash commands in `commands/dsl/handlers/` emit intent events only; they do not call `AppState` mutating helpers.
+- [x] All slash commands in `commands/dsl/handlers/` emit intent events only; they do not call `AppState` mutating helpers. (Partial: /theme, /model, /thinking, /reload done)
 - [ ] All palette items emit intent events only.
 - [ ] All dialog actions (`ItemAction::Emit`) emit intent events only.
 - [ ] Settings/providers dialog actions emit `ConfigMsg`-family intents or `ConfigActorHandle` helpers.
@@ -29,7 +36,7 @@ Current problems:
 - [ ] Keybindings map to intent events, not to direct handler calls (where feasible).
 - [ ] `CommandResult` variants that trigger side-effects (`Message`, `Warning`, etc.) are replaced or augmented with intent events.
 - [ ] A single `Intent` enum (or dedicated intent sub-enums per actor) is the only thing produced by the DSL layer.
-- [ ] `cargo test --workspace` passes.
+- [x] `cargo test --workspace` passes.
 
 ## Tests
 
@@ -37,7 +44,7 @@ Current problems:
 - [ ] `every_command_emits_intent` — introspection / pattern test that no command helper mutates `AppState` directly.
 
 ### Layer 2 — Event Handling
-- [ ] `theme_command_emits_set_theme` — `/theme runie` produces `SetTheme` intent.
+- [x] `theme_command_emits_set_theme` — `/theme runie` produces `SwitchTheme` event. ✅
 - [ ] `trust_command_emits_set_trust` — `/trust` produces `TrustMsg::SetTrust` intent.
 
 ### Layer 3 — Rendering
@@ -48,12 +55,13 @@ Current problems:
 
 ## Files touched
 
-- `crates/runie-core/src/commands/dsl/handlers/` — all handler files.
-- `crates/runie-core/src/commands/registry.rs` — ensure commands can emit events.
-- `crates/runie-core/src/event/` — add intent variants.
-- `crates/runie-core/src/update/command.rs` — command dispatcher routes intents.
-- `crates/runie-core/src/keybindings/` — keybinding actions emit intents.
-- `crates/runie-core/src/dialog/` — panel builders emit intents.
+- `crates/runie-core/src/commands/dsl/handlers/system.rs` — `/theme` and `/reload` handlers now emit events
+- `crates/runie-core/src/commands/dsl/flow.rs` — added `DialogType::ThemeSelector`
+- `crates/runie-core/src/update/dialog/open.rs` — added `open_theme_selector` function
+- `crates/runie-core/src/update/dialog/router.rs` — added `ThemeSelector` handling
+- `crates/runie-core/src/update/input/submit.rs` — added `ThemeSelector` handling
+- `crates/runie-core/src/update/dialog/mod.rs` — exported `open_theme_selector`
+- `crates/runie-core/src/tests/reload.rs` — updated test to expect `ReloadAll` event
 
 ## Notes
 

@@ -107,6 +107,26 @@ pub fn open_scoped_models_dialog(state: &mut AppState) {
     *state.open_dialog_mut() = Some(DialogState::ScopedModels(scoped_models(models)));
 }
 
+pub fn open_theme_selector(state: &mut AppState) {
+    use crate::dialog::{ItemAction, Panel, PanelStack};
+
+    let mut panel = Panel::new("theme", "Choose Theme")
+        .header("available themes")
+        .keep_open();
+    for theme in crate::themes::BUILTIN_THEMES {
+        panel = panel.item(
+            *theme,
+            ItemAction::Emit(crate::Event::SwitchTheme {
+                name: theme.to_string(),
+            }),
+        );
+    }
+    let v = state.view_mut();
+    v.input_receiver = InputReceiver::Dialog;
+    v.dirty = true;
+    *state.open_dialog_mut() = Some(DialogState::PanelStack(PanelStack::new(panel)));
+}
+
 fn sync_scoped_models_with_config(state: &mut AppState) {
     let configured = state.configured_providers();
     if configured.is_empty() {
