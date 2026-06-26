@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 use tokio::sync::mpsc;
 
-use crate::actors::{spawn_actor, Actor, ActorHandle};
+use crate::actors::{spawn_actor, Actor, ActorHandle, PersistenceActor};
 use crate::bus::EventBus;
 use crate::event::DurableCoreEvent;
 use crate::message::now;
@@ -103,21 +103,20 @@ impl Actor for SessionActor {
     type Msg = SessionMsg;
     type Event = Event;
 
-    async fn run_body(mut self, mut rx: mpsc::Receiver<Self::Msg>, _bus: EventBus<Event>) {
-        self.load_all().await;
+    async fn run_body(mut self, mut rx: mpsc::Receiver<Self::Msg>, bus: EventBus<Event>) {
+        self.load_all(&bus).await;
         while let Some(msg) = rx.recv().await {
             self.handle_msg(msg).await;
         }
     }
 }
 
-impl SessionActor {
-    /// Load trust and history from disk on startup.
-    async fn load_all(&self) {
+impl PersistenceActor for SessionActor {
+    async fn load_all(&mut self, bus: &EventBus<Event>) {
         let trust = tokio::task::spawn_blocking(TrustManager::load)
             .await
             .unwrap_or_default();
-        self.bus.publish(Event::TrustLoaded {
+        bus.publish(Event::TrustLoaded {
             decisions: trust.decisions(),
         });
 
@@ -126,9 +125,11 @@ impl SessionActor {
             .ok()
             .and_then(|r| r.ok())
             .unwrap_or_default();
-        self.bus.publish(Event::HistoryLoaded { entries });
+        bus.publish(Event::HistoryLoaded { entries });
     }
+}
 
+impl SessionActor {
     /// Dispatch incoming messages.
     async fn handle_msg(&mut self, msg: SessionMsg) {
         match msg {

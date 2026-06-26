@@ -14,7 +14,7 @@ extern crate self as runie_core;
 pub mod actors;
 pub use actors::{
     spawn_actor, Actor, ActorFuture, ActorHandle, FffFileItem, FffIndexerActor, FffSearchRequest,
-    FffSearchResult, FffSearchResultPayload, FffSearchState, Reply,
+    FffSearchResult, FffSearchResultPayload, FffSearchState, PersistenceActor, Reply,
 };
 pub use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
 // Inner state structs are pub(crate) — accessible within runie-core but not exported externally.

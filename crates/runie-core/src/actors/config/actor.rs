@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 use tokio::sync::mpsc;
 
-use crate::actors::{Actor, ActorHandle};
+use crate::actors::{Actor, ActorHandle, PersistenceActor};
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::event::Event;
@@ -188,11 +188,17 @@ impl Actor for ConfigActor {
     type Event = Event;
 
     async fn run_body(mut self, mut rx: mpsc::Receiver<Self::Msg>, bus: EventBus<Event>) {
-        self.load_and_emit(&bus).await;
+        self.load_all(&bus).await;
         self.spawn_watcher();
         while let Some(msg) = rx.recv().await {
             self.handle_msg(msg, &bus).await;
         }
+    }
+}
+
+impl PersistenceActor for ConfigActor {
+    async fn load_all(&mut self, bus: &EventBus<Event>) {
+        self.load_and_emit(bus).await;
     }
 }
 

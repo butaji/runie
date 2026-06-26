@@ -9,6 +9,9 @@ mod r#trait;
 // Re-exports from the actor trait (lives in trait.rs).
 pub use r#trait::{spawn_actor, Actor, ActorFuture, ActorHandle, GenericActorHandle, Reply};
 
+mod persistence;
+pub use persistence::PersistenceActor;
+
 mod completion;
 mod config;
 mod fff_indexer;
