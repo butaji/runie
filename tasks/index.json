@@ -257,7 +257,7 @@
   {
     "file": "r5-populate-parts-streaming.md",
     "title": "R5 Populate Parts Streaming",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "r5-provider-protocol-trait.md",

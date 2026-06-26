@@ -84,6 +84,10 @@ pub enum Event {
         name: String,
         input: serde_json::Value,
     },
+    ToolInputDelta {
+        id: String,
+        content: String,
+    },
     ToolEnd {
         id: String,
         duration_secs: f64,
@@ -93,7 +97,6 @@ pub enum Event {
         id: String,
         content: String,
     },
-    /// A delta of thinking/reasoning content (from think filter).
     ThinkingDelta {
         id: String,
         content: String,

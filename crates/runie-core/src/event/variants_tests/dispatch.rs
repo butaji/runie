@@ -72,6 +72,7 @@ fn dispatcher_handles_all_variants() {
             Event::Thinking { .. }
             | Event::ThoughtDone { .. }
             | Event::ToolStart { .. }
+            | Event::ToolInputDelta { .. }
             | Event::ToolEnd { .. }
             | Event::ResponseDelta { .. }
             | Event::ThinkingDelta { .. }

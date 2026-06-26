@@ -45,7 +45,7 @@ fn tool_start(id: String, name: String) -> Event {
 }
 
 fn tool_input_delta(id: String, delta: String) -> Event {
-    Event::ResponseDelta { id, content: delta }
+    Event::ToolInputDelta { id, content: delta }
 }
 
 fn tool_end(id: String) -> Event {
@@ -115,6 +115,22 @@ mod tests {
             assert_eq!(name, "read");
         } else {
             panic!("Expected ToolStart");
+        }
+    }
+
+    /// Verify ToolInputDelta maps to the new ToolInputDelta event (not ResponseDelta).
+    #[test]
+    fn tool_input_delta_maps_to_tool_input_delta_event() {
+        let tool_input = ProviderEvent::ToolCallInputDelta {
+            id: "c42".into(),
+            delta: "{\"command\": ".into(),
+        };
+        let ev: Event = tool_input.into();
+        if let Event::ToolInputDelta { id, content } = ev {
+            assert_eq!(id, "c42");
+            assert_eq!(content, "{\"command\": ");
+        } else {
+            panic!("Expected ToolInputDelta, got {:?}", ev);
         }
     }
 }
