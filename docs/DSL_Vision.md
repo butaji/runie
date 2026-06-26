@@ -213,12 +213,126 @@ With the DSL it is:
 
 Three small, independent declarations. No `AppState` edits, no dispatch boilerplate, no manual state sync.
 
+## 7. Declarative runtime configuration
+
+Most of the runtime can be declared in files rather than Rust code. A generic loader reads frontmatter and emits facts:
+
+```yaml
+# ~/.runie/skills/check-work/SKILL.md
+---
+name: check-work
+description: Verify changes with a subagent.
+triggers:
+  - command: /check-work
+  - command: /verify
+---
+
+# Usage, prompt template, and steps go here.
+```
+
+```yaml
+# ~/.runie/agents/explore.md
+---
+name: explore
+description: Fast codebase exploration.
+model: fast
+input_schema: ExploreRequest
+---
+
+You are an expert explorer. Search for files matching {{pattern}} and summarize.
+```
+
+```yaml
+# ~/.runie/commands/bookmark.yaml
+---
+name: bookmark
+description: Bookmark the current assistant message
+intent: BookmarkMessage
+---
+```
+
+The loader emits `SkillLoaded`, `AgentTypeRegistered`, `CommandRegistered`, etc. The runtime never needs a new Rust branch to support a new skill, subagent type, or command.
+
+## 8. Permission rules as data
+
+Permissions are declarative rules evaluated by `PermissionActor`:
+
+```yaml
+# ~/.runie/config.toml
+[[permissions]]
+action = "allow"
+tool = "read_file"
+
+[[permissions]]
+action = "deny"
+tool = "bash"
+pattern = "rm -rf /"
+
+[[permissions]]
+action = "ask"
+tool = "write_file"
+pattern = "*.rs"
+```
+
+CLI flags layer on top: `--allow read_file`, `--deny bash`, `--tools read_file,list_dir`, `--permission-mode plan`. No custom policy code per tool.
+
+## 9. External interfaces as DSL consumers
+
+The same intent/fact stream that powers the TUI can be exposed to external clients. The DSL makes this trivial because every feature is already expressed as events:
+
+```rust
+// ACP JSON-RPC adapter
+acp.on_request("run_intent", |intent: CoreIntent| {
+    bus.emit(Event::Intent(intent));
+});
+
+// Headless streaming output
+for fact in bus.facts() {
+    println!("{}", serde_json::to_string(&fact)?);
+}
+```
+
+The TUI, headless scripts, and IDE extensions all consume the same facts. Adding a new client does not require new Runie internals — only a new consumer of the event stream.
+
+## 10. Plan-first execution
+
+Plan mode is also declarative. A plan is a graph of intents with dependencies:
+
+```rust
+plan("Refactor auth module")
+    .step("Extract password module", Intent::ExtractPasswordModule)
+    .step("Update call sites", Intent::UpdateCallSites)
+        .after("Extract password module")
+    .step("Run tests", Intent::RunTests)
+        .after("Update call sites")
+    .submit(Intent::CreatePlan)
+```
+
+`PlanActor` owns the graph. It emits `PlanCreated`, waits for `PlanApproved`, and then emits each step as an intent only after its dependencies are satisfied. The UI renders the plan from facts; write tools remain blocked until approval.
+
+## 11. `runie inspect` — the DSL as introspection
+
+Because everything is declared, the system can show what it loaded:
+
+```bash
+runie inspect
+runie inspect --json
+```
+
+This prints the discovered `AGENTS.md`, skills, commands, subagent types, permission rules, MCP servers, and active actor states. It is both a debugging tool and a confirmation that the declarative runtime loaded correctly.
+
 ## Where we are now
 
-The DSL layer is already scaffolded in `crates/runie-core/src/dsl/` and the command/dialog builders exist. What is missing is making it the **default path**:
+The DSL layer is already scaffolded in `crates/runie-core/src/dsl/` and the command/dialog builders exist. The tool layer is moving to MCP and `schemars`. What is missing is making these the **default path**:
 
 - Finish the actor-SSOT refactor so intents route to actors instead of `AppState`.
 - Convert the existing command palette and dialogs to the declarative builders.
 - Replace direct `AppState` mutations in handlers with intent emission.
+- Make MCP the only tool boundary and delete the legacy `Tool` trait/parsers.
+- Introduce `LeaderActor` as the shared runtime owner; TUI/headless/ACP become thin clients.
+- Standardize headless and ACP output on the streaming fact schema.
+- Load skills, commands, subagent types, permission rules, and MCP servers from frontmatter/config files.
+- Add `PlanActor` so plan-first execution is a first-class DSL primitive.
+- Add `runie inspect` so the declarative runtime is observable.
 
 Once that happens, adding a feature will look like the examples above instead of a multi-file refactor.

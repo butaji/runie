@@ -50,33 +50,39 @@ Rules:
 ## Runtime
 
 ```text
-                    User input / crossterm
-                            │
-                            ▼
-              ┌─────────────────────────────┐
-              │   Input / command handlers  │  (pure: build intents)
-              └─────────────────────────────┘
-                            │
-              Intent events │ Facts
-              ─────────────►│◄─────────────
-                            │
-      ┌──────────┬──────────┼──────────┬──────────┬──────────┐
-      │          │          │          │          │          │
-   Config    Session     Turn       Input       View    Notification
-   Actor     Actor      Actor      Actor       Actor      Actor
-      │          │          │          │          │          │
-      └──────────┴──────────┴──────────┴──────────┴──────────┘
-                            │
-                            ▼
-              ┌─────────────────────────────┐
-              │  AppState projection (pure) │  reads facts only
-              └─────────────────────────────┘
-                            │
-                            ▼
-              ┌─────────────────────────────┐
-              │     RenderActor (pure)      │  draw(&mut Frame, &Snapshot)
-              └─────────────────────────────┘
+         TUI client      Headless client     ACP/WS client
+              │                  │                  │
+              └──────────────────┼──────────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────┐
+                    │      LeaderActor        │  owns the event bus,
+                    │  (session, plan, turn,  │  runtime lifecycle,
+                    │   MCP, permissions)     │  and durable state
+                    └─────────────────────────┘
+                                 │
+              Intent events      │      Facts
+              ──────────────────►│◄──────────────────
+                                 │
+      ┌──────────┬───────────────┼───────────────┬──────────┐
+      │          │               │               │          │
+   Config    Session           Turn            Input      View
+   Actor     Actor             Actor           Actor      Actor
+      │          │               │               │          │
+      └──────────┴───────────────┴───────────────┴──────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────┐
+                    │  AppState/Snapshot (pure)
+                    └─────────────────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────┐
+                    │     RenderActor (pure)  │  draw(&mut Frame, &Snapshot)
+                    └─────────────────────────┘
 ```
+
+The runtime is centered on a `LeaderActor` that owns the event bus and the long-lived actors. Clients (TUI, headless, ACP, WebSocket) are thin producers of intents and consumers of facts. They do not duplicate runtime logic. This makes it cheap to add new surfaces: a new client only needs to speak the intent/fact protocol.
 
 Actors are plain `tokio` tasks. Each actor owns a slice of authoritative state and communicates through typed intents and facts. There is no central mutable `AppState`; `AppState` is a read-only projection updated by facts.
 
@@ -177,6 +183,22 @@ pub enum LLMEvent {
 ```
 
 Provider-specific parsing (for example MiniMax XML tool-call delimiters) is isolated in `runie-provider`.
+
+## Declarative configuration
+
+Most runtime behavior is declared in files rather than Rust code. The leader loads these at startup and publishes them as facts:
+
+| Kind | Location | Declares |
+|---|---|---|
+| Project instructions | `AGENTS.md` (project root) | High-level rules, conventions, and context for the agent. |
+| Skills | `~/.runie/skills/<name>/SKILL.md` | Reusable behaviors with YAML frontmatter and markdown instructions. |
+| Slash commands | `~/.runie/commands/` or project `.runie/commands/` | `CommandDef` as frontmatter; no Rust enum edits. |
+| Subagent types | `resources/agents/` / `~/.runie/agents/` | Prompt templates, input schemas, and model preferences. |
+| Permission rules | `~/.runie/config.toml` / `./.runie/config.toml` | Allow/deny rules by tool, path, command, or scope. |
+| MCP servers | `~/.runie/config.toml` / `./.runie/config.toml` | stdio/http/sse server definitions managed by `runie mcp`. |
+| Agent profiles | `~/.runie/profiles/` | Model, effort, tool set, and system-prompt overrides. |
+
+A generic loader parses frontmatter and emits `SkillLoaded`, `CommandRegistered`, `PermissionRulesLoaded`, `McpServerLoaded`, etc. Adding a feature usually means adding a file, not editing the engine.
 
 ## Code layout
 
