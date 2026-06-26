@@ -54,6 +54,8 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     "file_refs.rs",
     // Prompts loading
     "prompts.rs",
+    // Subagent type loading — uses sync IO similar to skills/
+    "subagents/",
     // Update modules with tool execution
     "update/tools.rs",
     "update/system.rs",

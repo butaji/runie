@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "description": "Bundled built-in subagent types. SHA-256 checksums validate integrity at build time.",
+  "files": {
+    "check-work.md": "fc47e73f1f7ad3028f5f41f09a1ab5bf64b293ab15c23de287285a4bc3a7dadd",
+    "explore.md": "df970274bb17718fecb10d6bcf8757bd9cd5bae8607eb7665ed6a8035234b723",
+    "plan.md": "aa4e47a1a9c7fbc7043afcc31071eb09a44f0a42940c85766e3a23312501dbe1",
+    "verify.md": "db36c61a2af260775c16683fa5cc5b06eb03ae6f4809804579630a914e11a8f3"
+  }
+}

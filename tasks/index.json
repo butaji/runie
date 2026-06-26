@@ -37,7 +37,7 @@
   {
     "file": "built-in-subagent-types.md",
     "title": "Built-in subagent types as declarative data",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "bundle-default-resources-with-manifest.md",

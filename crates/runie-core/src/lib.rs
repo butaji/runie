@@ -74,6 +74,7 @@ pub mod skills;
 pub mod snapshot;
 // state types moved to model::state
 pub mod streaming_buffer;
+pub mod subagents;
 pub mod telemetry;
 pub mod themes;
 pub mod tokens;

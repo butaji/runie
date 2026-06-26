@@ -365,9 +365,16 @@ fn main() {
         return;
     }
 
-    let mut errors = Vec::new();
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
     let workspace_root = Path::new(&manifest_dir).parent().unwrap().parent().unwrap();
+
+    // Validate bundled subagent type checksums.
+    if let Err(msg) = validate_agent_manifest(PathBuf::from(&manifest_dir).join("resources").join("agents")) {
+        eprintln!("\n=== AGENT MANIFEST VALIDATION FAILED ===\n  {}\n\n", msg);
+        std::process::exit(1);
+    }
+
+    let mut errors = Vec::new();
     let crates_path = workspace_root.join("crates");
 
     for path in find_rust_files(&crates_path) {
@@ -384,4 +391,36 @@ fn main() {
         eprintln!("\n{} violations found\n", errors.len());
         std::process::exit(1);
     }
+}
+
+/// Validate that all files in `resources/agents/manifest.json` match their
+/// stored SHA-256 checksums.
+fn validate_agent_manifest(agents_dir: PathBuf) -> Result<(), String> {
+    let manifest_path = agents_dir.join("manifest.json");
+    let manifest_json = fs::read_to_string(&manifest_path)
+        .map_err(|e| format!("failed to read manifest.json: {}", e))?;
+
+    #[derive(serde::Deserialize)]
+    struct Manifest {
+        files: std::collections::HashMap<String, String>,
+    }
+    let manifest: Manifest = serde_json::from_str(&manifest_json)
+        .map_err(|e| format!("failed to parse manifest.json: {}", e))?;
+
+    use sha2::{Sha256, Digest};
+    for (filename, expected_hash) in &manifest.files {
+        let file_path = agents_dir.join(filename);
+        let content = fs::read(&file_path)
+            .map_err(|e| format!("failed to read {}: {}", filename, e))?;
+        let mut hasher = Sha256::new();
+        hasher.update(&content);
+        let actual = hex::encode(hasher.finalize());
+        if &actual != expected_hash {
+            return Err(format!(
+                "checksum mismatch for {}: expected {}, got {}",
+                filename, expected_hash, actual
+            ));
+        }
+    }
+    Ok(())
 }
