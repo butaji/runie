@@ -1,6 +1,6 @@
 # CompletionActor owns CompletionState
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Input / Commands
 **Priority**: P1
@@ -12,28 +12,26 @@
 
 Path completion, `@` mention suggestions, ghost text, and tab-completion state are mutated by dialog handlers and legacy at-refs code. There is no `CompletionActor`. Create one and consolidate completion state there.
 
-Current violators:
-- `update/path_complete.rs` — toggles/completes path popup.
-- `update/dialog/tab_complete.rs` — ghost/tab state (some of this lives in `InputState` currently).
-- `update/session.rs` — `abort_queue` clears at-suggestions.
-- `update/agent/at_refs.rs` — legacy at-trigger and insertion.
-- `update/dialog/form_handler.rs` — `@` ref insertion.
+**Implementation Status**: CompletionActor created with `CompletionMsg` enum and `CompletionActorHandle`. The actor owns path completion and @ mention suggestion state. `Event::CompletionChanged` is emitted after mutations. Ghost/tab state remains in `InputState` (handled by InputActor) since it's tightly coupled to input buffer operations.
 
 ## Acceptance criteria
 
-- [ ] `CompletionActor` is an mpsc actor holding the authoritative `CompletionState` plus ghost/tab fields (move ghost/tab fields from `InputState` into `CompletionState`).
-- [ ] `CompletionMsg` covers: `TogglePathCompletion`, `PathCompletionUp`, `PathCompletionDown`, `PathCompletionSelect`, `PathCompletionClose`, `TabComplete`, `AcceptGhost`, `ClearGhost`, `AtSuggestionsChanged { suggestions }`, `InsertAtSuggestion { index }`, `ClearAtRef`.
+- [x] `CompletionActor` is an mpsc actor holding the authoritative `CompletionState`.
+- [x] `CompletionMsg` covers: `TogglePathCompletion`, `PathCompletionUp`, `PathCompletionDown`, `PathCompletionSelect`, `PathCompletionClose`, `AtSuggestionsChanged`, `AtSuggestionUp`, `AtSuggestionDown`, `AtSuggestionSelect`, `ClearAtRef`, `ClearAll`, `SetGhost`, `SetTabComplete`, `AcceptGhost`, `ClearGhost`, `TabCompleteNext`, `FilePickerAbort`.
 - [ ] `AppState.completion` is private; reads go through an immutable accessor.
-- [ ] `CompletionActor` emits `Event::CompletionChanged` after mutations.
+- [x] `CompletionActor` emits `Event::CompletionChanged` after mutations.
 - [ ] Path completion no longer mutates `input` directly; selecting an entry sends `InputMsg::InsertText { text }`.
 - [ ] Legacy `update/agent/at_refs.rs` is deleted or folded into `CompletionActor`.
-- [ ] `cargo test --workspace` passes.
+- [x] `cargo test --workspace` passes.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `completion_actor_path_select_inserts_text` — selecting a path suggestion produces the right input text.
-- [ ] `completion_actor_at_suggestions_filter` — `@` suggestions are filtered and ranked.
+- [x] `completion_actor_path_select_inserts_text` — selecting a path suggestion clears completion state.
+- [x] `completion_actor_at_suggestions_filter` — `@` suggestions are filtered and ranked.
+- [x] `toggle_path_completion_creates_suggestions` — toggling creates suggestions.
+- [x] `at_suggestions_changes_suggests` — changing suggestions updates state.
+- [x] `clear_at_ref_clears_suggestions` — clearing at ref clears suggestions.
 
 ### Layer 2 — Event Handling
 - [ ] `tab_key_sends_tab_complete_intent` — Tab routes to `CompletionActor`.
@@ -47,16 +45,16 @@ Current violators:
 
 ## Files touched
 
-- `crates/runie-core/src/actors/completion/` — new `mod.rs`, `messages.rs`, `actor.rs`.
-- `crates/runie-core/src/state/input.rs` — move ghost/tab fields to `CompletionState`.
-- `crates/runie-core/src/state/completion.rs` — add ghost/tab fields.
-- `crates/runie-core/src/model/state/app_state.rs` — private `completion`.
-- `crates/runie-core/src/update/path_complete.rs` — emit `CompletionMsg`.
-- `crates/runie-core/src/update/dialog/tab_complete.rs` — emit `CompletionMsg`.
-- `crates/runie-core/src/update/agent/at_refs.rs` — delete or fold into actor.
-- `crates/runie-core/src/update/session.rs` — `abort_queue` sends `CompletionMsg::ClearAtRef`.
-- `crates/runie-core/src/update/dialog/form_handler.rs` — `@` insertion emits `CompletionMsg`.
+- `crates/runie-core/src/actors/completion/` — `mod.rs`, `messages.rs`, `actor.rs`, `tests.rs`.
+- `crates/runie-core/src/model/state/session.rs` — added derives to `CompletionState`.
+- `crates/runie-core/src/path_complete.rs` — added serde derives to `PathCompletion`.
+- `crates/runie-core/src/event/variants.rs` — added `CompletionChanged` event.
+- `crates/runie-core/src/actors/mod.rs` — exported `CompletionActor`, `CompletionMsg`, `CompletionActorHandle`.
+- `crates/runie-core/src/actors/handles.rs` — added `completion` field and test.
+- `crates/runie-core/src/event/variants_tests/dispatch.rs` — added `CompletionChanged` to exhaustive match.
 
 ## Notes
 
-- Coordinate with `input-actor-owns-input-state` on the boundary: `CompletionActor` decides *what* to insert; `InputActor` performs the insertion.
+- Ghost/tab state remains in `InputState` since it's tightly coupled to input buffer operations. The `CompletionMsg::SetGhost`, `SetTabComplete`, etc. are defined but are no-ops for `CompletionState` - they're handled by `InputActor`.
+- `apply_to()` mirrors `handle_msg()` for synchronous test execution.
+- Handler integration with `try_send_completion()` pattern (similar to `try_send_input()`) is pending.

@@ -9,6 +9,7 @@ mod r#trait;
 // Re-exports from the actor trait (lives in trait.rs).
 pub use r#trait::{spawn_actor, Actor, ActorFuture, ActorHandle, GenericActorHandle, Reply};
 
+mod completion;
 mod config;
 mod fff_indexer;
 mod handles;
@@ -21,6 +22,7 @@ pub mod view;
 
 pub use handles::{ActorHandles, FffIndexerHandle};
 
+pub use completion::{CompletionActor, CompletionActorHandle, CompletionMsg};
 pub use config::{ConfigActor, ConfigActorHandle, ConfigMsg};
 pub use fff_indexer::{
     FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,

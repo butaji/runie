@@ -314,6 +314,10 @@ pub enum Event {
     ViewChanged {
         state: Box<crate::model::ViewState>,
     },
+    /// Completion state changed — emitted by CompletionActor.
+    CompletionChanged {
+        state: Box<crate::model::CompletionState>,
+    },
     TrustLoaded {
         decisions: std::collections::HashMap<std::path::PathBuf, crate::trust::TrustDecision>,
     },

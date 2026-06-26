@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PathCompletion {
     pub path: String,
     pub is_dir: bool,

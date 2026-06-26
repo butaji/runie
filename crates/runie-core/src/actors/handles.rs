@@ -12,8 +12,9 @@
 use std::path::PathBuf;
 
 use crate::actors::{
-    ConfigActorHandle, FffSearchRequest, InputActorHandle, IoActorHandle,
-    PermissionActorHandle, ProviderActorHandle, SessionActorHandle, ViewActorHandle,
+    CompletionActorHandle, ConfigActorHandle, FffSearchRequest, InputActorHandle,
+    IoActorHandle, PermissionActorHandle, ProviderActorHandle, SessionActorHandle,
+    ViewActorHandle,
 };
 use crate::config::TruncationSection;
 use crate::model::ThinkingLevel;
@@ -46,6 +47,9 @@ pub struct ActorHandles {
     /// Handle to `ViewActor` — owns scroll, elements cache, animation, vim nav.
     /// `None` when the view actor has not been spawned (e.g. headless mode).
     pub view: Option<ViewActorHandle>,
+    /// Handle to `CompletionActor` — owns path completion, @ suggestions, tab/ghost state.
+    /// `None` when the completion actor has not been spawned (e.g. headless mode).
+    pub completion: Option<CompletionActorHandle>,
 }
 
 /// Typed handle for the FFF indexer actor.
@@ -416,8 +420,10 @@ mod tests {
         assert!(handles.session.is_none());
         assert!(handles.io.is_none());
         assert!(handles.fff_indexer.is_none());
+        assert!(handles.input.is_none());
         assert!(handles.permission.is_none());
         assert!(handles.view.is_none());
+        assert!(handles.completion.is_none());
     }
 
     #[test]

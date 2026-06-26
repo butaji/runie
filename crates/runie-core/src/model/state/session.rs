@@ -242,7 +242,7 @@ impl ConfigState {
 
 /// Completion/suggestion state — path and @ mentions.
 /// Fields are public for test setup.
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CompletionState {
     pub path_suggestions: Option<Vec<PathCompletion>>,
     pub path_selected: Option<usize>,
