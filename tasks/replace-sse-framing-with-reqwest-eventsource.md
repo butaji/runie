@@ -1,6 +1,6 @@
 # Replace custom SSE framing with `reqwest-eventsource`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Provider
 **Priority**: P1
@@ -14,11 +14,11 @@ Delete `crates/runie-provider/src/framing.rs` and consume provider Server-Sent E
 
 ## Acceptance Criteria
 
-- `reqwest-eventsource` is added to `runie-provider` dependencies.
-- Custom SSE framing parser is removed.
-- OpenAI-compatible streaming continues to emit correct `ProviderEvent`s.
-- Reconnection/backoff is delegated to the crate or composed with the retry layer.
-- `cargo check --workspace` is green with no new warnings.
+- [x] `reqwest-eventsource` is added to `runie-provider` dependencies.
+- [x] Custom SSE framing parser is removed (`crates/runie-provider/src/framing.rs` deleted).
+- [x] OpenAI-compatible streaming continues to emit correct `ProviderEvent`s.
+- [x] Reconnection/backoff is delegated to the crate or composed with the retry layer.
+- [x] `cargo check --workspace` is green with no new warnings.
 
 ## Tests
 

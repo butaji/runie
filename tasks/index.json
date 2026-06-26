@@ -660,7 +660,7 @@
     "file": "replace-git2-with-cli.md"
   },
   {
-    "status": "todo",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
     "milestone": "R4",
@@ -690,7 +690,7 @@
     "file": "replace-single-use-deps-with-stdlib.md"
   },
   {
-    "status": "todo",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
     "milestone": "R4",
