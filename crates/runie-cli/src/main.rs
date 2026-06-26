@@ -2,6 +2,7 @@
 //!
 //! Supports modes:
 //! - `runie print <prompt>` — single-turn streaming to stdout
+//! - `runie inspect` — print runtime configuration discovered for the current directory
 //! - `runie json` — structured JSON stdin/stdout for scripting
 //! - `runie server` — TCP/stdio JSON-RPC server for IDE integration
 //! - `runie acp` — ACP (Agent Client Protocol) over stdio for programmatic control
@@ -14,13 +15,15 @@ mod print;
 mod json;
 mod server;
 mod acp;
+mod inspect;
 
 fn print_usage() {
     eprintln!(
         "Usage: runie <command> [args]
-        
+
 Commands:
   print <prompt>    Stream LLM response to stdout
+  inspect           Show runtime configuration for current directory
   json              JSON stdin/stdout for scripting
   server            TCP/stdio JSON-RPC server
   acp               ACP (Agent Client Protocol) over stdio
@@ -41,6 +44,7 @@ fn main() {
         "--help" | "-h" => { print_usage(); return; }
         "--version" => { println!("runie-cli {}", env!("CARGO_PKG_VERSION")); return; }
         "print" => run_print(&args[2..]),
+        "inspect" => run_inspect(&args[2..]),
         "json" => block_on(run_json()),
         "server" => block_on(run_server(&args[2..])),
         "acp" => block_on(acp::run()),
@@ -58,6 +62,11 @@ fn block_on<F: std::future::Future>(fut: F) -> F::Output {
         .build()
         .unwrap()
         .block_on(fut)
+}
+
+fn run_inspect(args: &[String]) -> Result<()> {
+    let json = args.iter().any(|a| a == "--json");
+    inspect::run(json)
 }
 
 fn run_print(args: &[String]) -> Result<()> {
@@ -80,5 +89,3 @@ async fn run_server(args: &[String]) -> Result<()> {
     let yolo = args.iter().any(|a| a == "--yolo");
     server::run(use_stdio, yolo).await
 }
-
-

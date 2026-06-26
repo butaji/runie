@@ -22,7 +22,7 @@
   {
     "file": "add-runie-inspect-command.md",
     "title": "Add `runie inspect` command",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "adopt-mcp-native-tool-calling.md",
