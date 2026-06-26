@@ -307,6 +307,13 @@ pub enum Event {
     InputChanged {
         state: Box<crate::model::InputState>,
     },
+    /// View/cache state changed — emitted by ViewActor.
+    /// Note: skipped for serialization since ViewState contains runtime-only
+    /// cache data that cannot be serialized.
+    #[serde(skip)]
+    ViewChanged {
+        state: Box<crate::model::ViewState>,
+    },
     TrustLoaded {
         decisions: std::collections::HashMap<std::path::PathBuf, crate::trust::TrustDecision>,
     },

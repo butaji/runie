@@ -1,6 +1,6 @@
 # ViewActor owns ViewState
 
-**Status**: todo
+**Status**: partial
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P0
@@ -12,37 +12,25 @@
 
 `ViewState` and the derived feed cache (`elements_cache`, `posts`, `line_counts`, `total_lines`, etc.) are written from dozens of places. `mark_dirty()` and `messages_changed()` are universal side-effects. Create a `ViewActor` that owns all view/cache state and is updated only by facts from other actors.
 
-Current violators:
-- `model/state/app_state.rs` — `mark_dirty`, `messages_changed`, `set_last_visible_height`, `set_last_content_width`.
-- `model/cache.rs` — `ensure_fresh`, `tick_animation`, `animate_tokens`, `update_speed`, `clear_expired_transient`.
-- `update/input/scroll.rs` — scroll and selected post.
-- `update/input/mod.rs` — mouse position, vim nav, escape.
-- `update/input/nav.rs` — vim nav mode.
-- `update/system.rs` — `ToggleVimMode`, `NewSession` set `input_receiver` / `cached_settings_valid`.
-- `update/session.rs` — queue delivery sets scroll.
-- `update/dispatch.rs` — IO events set scroll/vim nav.
-- `update/dialog/*.rs` — open/close/router/panel/toggle/form set `input_receiver`, `cached_settings_valid`, `cached_session_tree_valid`.
-- `update/login_flow.rs` — close/cancel sets `input_receiver`, `cached_auth_valid`.
-- `update/agent/core.rs` — `clear_turn_state` and `add_error` touch `vim_nav_pending`.
-- `runie-tui/src/main.rs` — `init_terminal_state` sets dimensions.
+**Implementation Status**: ViewActor created with `ViewMsg` and `ViewActorHandle`. The actor owns scroll, vim nav, terminal sizing, dialog state, and animation. Handler migration is pending.
 
 ## Acceptance criteria
 
-- [ ] `ViewActor` is an mpsc actor holding the authoritative `ViewState`.
-- [ ] `ViewMsg` covers: `Invalidate`, `MessagesChanged`, `Scroll { direction }`, `PageUp`, `PageDown`, `GoToTop`, `GoToBottom`, `ElementJump { direction }`, `MouseMoved { row, col }`, `MouseClicked { ... }`, `TerminalSized { width, height }`, `DialogOpened`, `DialogClosed`, `SetInputReceiver { receiver }`, `VimNav { enabled, selected_post }`, `ToggleExpandAll`, `TurnEnded`, `TurnErrored`, `AnimationTick`.
+- [x] `ViewActor` is an mpsc actor holding the authoritative `ViewState`.
+- [x] `ViewMsg` covers: `Invalidate`, `MessagesChanged`, `Scroll { direction }`, `PageUp`, `PageDown`, `GoToTop`, `GoToBottom`, `ElementJump { direction }`, `MouseMoved { row, col }`, `MouseClicked { ... }`, `TerminalSized { width, height }`, `DialogOpened`, `DialogClosed`, `SetInputReceiver { receiver }`, `VimNav { enabled, selected_post }`, `ToggleExpandAll`, `TurnEnded`, `TurnErrored`, `AnimationTick`.
 - [ ] `AppState.view` is private; reads go through an immutable accessor.
 - [ ] `mark_dirty()` and `messages_changed()` helpers are removed from `AppState`.
 - [ ] `ensure_fresh` (feed cache rebuild) and `tick_animation` are internal `ViewActor` helpers triggered by `ViewMsg::MessagesChanged` / `ViewMsg::AnimationTick`.
 - [ ] `input_receiver` management is centralized in `ViewActor`: dialog openers/close send `ViewMsg::DialogOpened`/`DialogClosed`.
 - [ ] Terminal resize sends `ViewMsg::TerminalSized` from both TUI init and input resize handler.
-- [ ] `cargo test --workspace` passes.
+- [x] `cargo test --workspace` passes.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `view_actor_invalidate_sets_dirty` — `Invalidate` sets `dirty=true` and emits `ViewChanged`.
+- [x] `view_actor_invalidate_sets_dirty` — `Invalidate` sets `dirty=true` and emits `ViewChanged`.
 - [ ] `view_actor_messages_changed_rebuilds_cache` — `MessagesChanged` runs `ensure_fresh` and updates `message_gen`.
-- [ ] `view_actor_terminal_sized_updates_dimensions` — resize updates `last_content_width/height`.
+- [x] `view_actor_terminal_sized_updates_dimensions` — resize updates `last_content_width/height`.
 
 ### Layer 2 — Event Handling
 - [ ] `dialog_open_sends_dialog_opened` — opening any dialog routes `DialogOpened` to `ViewActor`.
@@ -58,6 +46,13 @@ Current violators:
 ## Files touched
 
 - `crates/runie-core/src/actors/view/` — new `mod.rs`, `messages.rs`, `actor.rs`.
+- `crates/runie-core/src/actors/mod.rs` — export ViewActor.
+- `crates/runie-core/src/actors/handles.rs` — add ViewActorHandle.
+- `crates/runie-core/src/event/variants.rs` — add ViewChanged event.
+- `crates/runie-core/src/model/state/view.rs` — add PartialEq, Debug.
+
+## Pending files to update
+
 - `crates/runie-core/src/model/state/app_state.rs` — private `view`, remove `mark_dirty`/`messages_changed`.
 - `crates/runie-core/src/model/cache.rs` — move cache logic into `ViewActor`; keep pure cache builders.
 - `crates/runie-core/src/update/input/scroll.rs` — emit `ViewMsg`.

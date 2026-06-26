@@ -6,7 +6,7 @@ use crate::view::elements::Element;
 
 /// View/cache state — scroll, elements, animation.
 /// Fields are public for test setup; production code should use accessors.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ViewState {
     pub scroll: usize,
     pub elements_cache: Arc<[Element]>,
@@ -60,6 +60,21 @@ pub struct ViewState {
     /// Identifies which component is currently receiving keyboard input.
     /// Used to determine how Esc should behave (e.g., close dialog vs enter vim-nav).
     pub input_receiver: InputReceiver,
+}
+
+impl PartialEq for ViewState {
+    fn eq(&self, other: &Self) -> bool {
+        // Only compare essential navigation state, not caches (caches are runtime-only)
+        self.scroll == other.scroll
+            && self.dirty == other.dirty
+            && self.message_gen == other.message_gen
+            && self.all_collapsed == other.all_collapsed
+            && self.last_visible_height == other.last_visible_height
+            && self.last_content_width == other.last_content_width
+            && self.selected_post == other.selected_post
+            && self.mouse_position == other.mouse_position
+            && self.vim_nav_mode == other.vim_nav_mode
+    }
 }
 
 impl ViewState {

@@ -208,7 +208,8 @@ fn dispatcher_handles_all_variants() {
             | Event::BashOutput { .. }
             | Event::FilesWritten { .. }
             | Event::EnvDetected { .. }
-            | Event::InputChanged { .. } => Event::HistoryAppend {
+            | Event::InputChanged { .. }
+            | Event::ViewChanged { .. } => Event::HistoryAppend {
                 entry: String::new(),
             },
 

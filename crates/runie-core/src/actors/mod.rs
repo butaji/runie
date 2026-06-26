@@ -17,6 +17,7 @@ mod io;
 pub mod permission;
 pub mod provider;
 pub mod session;
+pub mod view;
 
 pub use handles::{ActorHandles, FffIndexerHandle};
 
@@ -34,3 +35,4 @@ pub use permission::{PermissionActor, PermissionActorHandle, PermissionMsg};
 pub use session::{
     PersistenceActorHandle, SessionActor, SessionActorHandle, SessionMsg, SessionStoreActorHandle,
 };
+pub use view::{ViewActor, ViewActorHandle, ViewMsg};

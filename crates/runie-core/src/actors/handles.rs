@@ -13,7 +13,7 @@ use std::path::PathBuf;
 
 use crate::actors::{
     ConfigActorHandle, FffSearchRequest, InputActorHandle, IoActorHandle,
-    PermissionActorHandle, ProviderActorHandle, SessionActorHandle,
+    PermissionActorHandle, ProviderActorHandle, SessionActorHandle, ViewActorHandle,
 };
 use crate::config::TruncationSection;
 use crate::model::ThinkingLevel;
@@ -43,6 +43,9 @@ pub struct ActorHandles {
     pub input: Option<InputActorHandle>,
     /// Handle to `PermissionActor` — owns approval registry and permission UI.
     pub permission: Option<PermissionActorHandle>,
+    /// Handle to `ViewActor` — owns scroll, elements cache, animation, vim nav.
+    /// `None` when the view actor has not been spawned (e.g. headless mode).
+    pub view: Option<ViewActorHandle>,
 }
 
 /// Typed handle for the FFF indexer actor.
@@ -271,6 +274,20 @@ impl ActorHandles {
         }
     }
 
+    /// Send `ViewMsg` to `ViewActor` (async).
+    pub async fn send_view(&self, msg: crate::actors::ViewMsg) {
+        if let Some(ref h) = self.view {
+            h.send(msg).await;
+        }
+    }
+
+    /// Send `ViewMsg` to `ViewActor` (sync fire-and-forget).
+    pub fn try_send_view(&self, msg: crate::actors::ViewMsg) {
+        if let Some(ref h) = self.view {
+            h.try_send(msg);
+        }
+    }
+
     /// Run a bash command via `IoActor`.
     pub async fn run_bash(&self, command: String) {
         if let Some(ref h) = self.io {
@@ -314,6 +331,7 @@ mod tests {
         assert!(handles.io.is_none());
         assert!(handles.fff_indexer.is_none());
         assert!(handles.permission.is_none());
+        assert!(handles.view.is_none());
     }
 
     #[test]
