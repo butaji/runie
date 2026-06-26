@@ -1,6 +1,6 @@
 # Replace git2 crate with git CLI via IoActor
 
-**Status**: done
+**Status**: todo
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P1
