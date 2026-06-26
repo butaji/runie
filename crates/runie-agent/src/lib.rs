@@ -42,5 +42,3 @@ pub struct AgentCommand {
 mod grep_find;
 #[cfg(test)]
 mod tests;
-#[cfg(test)]
-mod truncate_tests;

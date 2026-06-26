@@ -285,6 +285,4 @@ pub async fn spawn_headless_runtime() -> runie_core::headless_runtime::HeadlessR
 }
 
 #[cfg(test)]
-mod config_tests;
-#[cfg(test)]
 mod tests;

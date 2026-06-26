@@ -22,6 +22,7 @@ use runie_core::tool::{
     assign_tool_call_ids, build_assistant_message, parse_tool_calls_fallible,
     tool_parse_error_message, ParsedToolCall, ToolParseError,
 };
+use runie_core::event::headless::HeadlessEvent;
 use runie_core::tool_stream::ToolStream;
 use std::ops::ControlFlow;
 use std::sync::Arc;
@@ -49,6 +50,8 @@ pub struct HeadlessCliOptions {
     pub execute_tools: bool,
     pub max_tool_rounds: usize,
     pub on_chunk: Option<Box<dyn FnMut(&str) + Send>>,
+    /// Callback for each headless event (text, tool, permission, usage, etc.).
+    pub on_event: Option<Box<dyn FnMut(HeadlessEvent) + Send>>,
 }
 
 fn build_headless_options(
@@ -59,6 +62,7 @@ fn build_headless_options(
         execute_tools: opts.execute_tools,
         max_tool_rounds: opts.max_tool_rounds,
         on_chunk: opts.on_chunk,
+        on_event: opts.on_event,
         permission_gate: PermissionGate::new(PermissionManager::default(), sink),
     }
 }
@@ -84,6 +88,8 @@ pub struct HeadlessOptions {
     pub max_tool_rounds: usize,
     /// Callback for each text chunk received from the LLM.
     pub on_chunk: Option<Box<dyn FnMut(&str) + Send>>,
+    /// Callback for each structured headless event.
+    pub on_event: Option<Box<dyn FnMut(HeadlessEvent) + Send>>,
     /// Permission gate for tool execution.
     pub permission_gate: PermissionGate,
 }
@@ -155,6 +161,7 @@ impl HeadlessTurnState {
             &mut self.messages,
             &mut self.tool_outputs,
             &self.options.permission_gate,
+            self.options.on_event.as_mut(),
         )
         .await?;
         Ok(true)
@@ -195,14 +202,30 @@ impl<'a> HeadlessStreamState<'a> {
             ProviderEvent::TextDelta(delta) => self.on_text_delta(delta),
             ProviderEvent::ToolCallStart { id, name } => {
                 self.tool_stream.start(&id, &name);
+                self.emit(HeadlessEvent::ToolCallStart { id, name });
             }
             ProviderEvent::ToolCallInputDelta { id, delta } => {
                 self.tool_stream.append(&id, &delta);
+                self.emit(HeadlessEvent::ToolCallInputDelta { id, delta });
             }
             ProviderEvent::ToolCallEnd { id } => self.on_tool_end(id),
-            ProviderEvent::Finish { .. } => return ControlFlow::Break(()),
+            ProviderEvent::ThinkingDelta(content) => {
+                self.emit(HeadlessEvent::Thinking { data: content });
+            }
+            ProviderEvent::Usage { input_tokens, output_tokens } => {
+                self.emit(HeadlessEvent::Usage { input_tokens, output_tokens });
+            }
+            ProviderEvent::Finish { reason } => {
+                self.emit(HeadlessEvent::End {
+                    stop_reason: format!("{:?}", reason),
+                    session_id: None,
+                    request_id: None,
+                });
+                return ControlFlow::Break(());
+            }
             ProviderEvent::Error(e) => {
                 self.error = Some(format!("{:?}", e));
+                self.emit(HeadlessEvent::Error { message: format!("{:?}", e) });
                 return ControlFlow::Break(());
             }
             _ => {}
@@ -213,14 +236,22 @@ impl<'a> HeadlessStreamState<'a> {
     fn on_text_delta(&mut self, delta: String) {
         self.text.push_str(&delta);
         self.content.push_str(&delta);
+        self.emit(HeadlessEvent::Text { data: delta.clone() });
         if let Some(cb) = self.options.on_chunk.as_mut() {
             cb(&delta);
         }
     }
 
     fn on_tool_end(&mut self, id: String) {
+        self.emit(HeadlessEvent::ToolCallEnd { id: id.clone() });
         if let Some(call) = self.tool_stream.finish(&id) {
             self.tool_calls.push(call);
+        }
+    }
+
+    fn emit(&mut self, event: HeadlessEvent) {
+        if let Some(cb) = self.options.on_event.as_mut() {
+            cb(event);
         }
     }
 
@@ -282,6 +313,7 @@ async fn execute_headless_tools(
     messages: &mut Vec<ChatMessage>,
     tool_outputs: &mut Vec<ToolOutput>,
     gate: &PermissionGate,
+    mut on_event: Option<&mut Box<dyn FnMut(HeadlessEvent) + Send>>,
 ) -> Result<()> {
     let ctx = ToolContext::default();
     let registry = crate::tool::builtin_registry();
@@ -290,209 +322,15 @@ async fn execute_headless_tools(
         let output = execute_tool_call(&registry, tool_call, &ctx, gate).await;
         tool_outputs.push(output.clone());
         messages.push(tool_result_message(tool_call, &output));
+        if let Some(cb) = on_event.as_mut() {
+            cb(HeadlessEvent::ToolResult {
+                id: tool_call.id.clone().unwrap_or_default(),
+                output: output.content.clone(),
+            });
+        }
     }
     Ok(())
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::tests::ensure_mock_provider;
-    use runie_core::message::Role;
-    use runie_core::permissions::{AutoAllowSink, PermissionManager};
-    use runie_provider::MockProvider;
-    use runie_testing::allow_all_gate;
-
-    #[tokio::test]
-    async fn headless_runner_with_mock_returns_content() {
-        let provider = MockProvider::default();
-        let messages = vec![
-            ChatMessage::system("You are helpful."),
-            ChatMessage::user("hello world"),
-        ];
-        let options = HeadlessOptions {
-            execute_tools: false,
-            max_tool_rounds: 5,
-            on_chunk: None,
-            permission_gate: allow_all_gate(),
-        };
-        let result = run_headless_turn(messages, &provider, options)
-            .await
-            .unwrap();
-        assert!(!result.content.is_empty());
-        assert!(result.tool_outputs.is_empty());
-    }
-
-    #[tokio::test]
-    async fn headless_runner_executes_tool_and_returns_output() {
-        let _mock_guard = ensure_mock_provider().await;
-        let provider = MockProvider::default();
-        let messages = vec![
-            ChatMessage::system("You are helpful."),
-            ChatMessage::user("list files"),
-        ];
-        let options = HeadlessOptions {
-            execute_tools: true,
-            max_tool_rounds: 5,
-            on_chunk: None,
-            permission_gate: allow_all_gate(),
-        };
-        let result = run_headless_turn(messages, &provider, options)
-            .await
-            .unwrap();
-        assert!(!result.content.is_empty());
-        assert_eq!(result.tool_outputs.len(), 1);
-        assert_eq!(result.tool_outputs[0].tool_name, "list_dir");
-        assert!(result.tool_outputs[0].tool_args.get("path").is_some());
-        assert!(!result.tool_outputs[0].content.is_empty());
-    }
-
-    #[tokio::test]
-    async fn headless_runner_with_execute_tools_enabled() {
-        let _mock_guard = ensure_mock_provider().await;
-        let provider = MockProvider::default();
-        let messages = vec![
-            ChatMessage::system("You are helpful."),
-            ChatMessage::user("list files"),
-        ];
-        let options = HeadlessOptions {
-            execute_tools: true,
-            max_tool_rounds: 5,
-            on_chunk: None,
-            permission_gate: allow_all_gate(),
-        };
-        let result = run_headless_turn(messages, &provider, options)
-            .await
-            .unwrap();
-        assert!(result.tool_outputs.len() >= 1);
-    }
-
-    #[tokio::test]
-    async fn headless_runner_feeds_parse_errors_back_to_model() {
-        let _mock_guard = ensure_mock_provider().await;
-        let provider = MockProvider::default();
-        let messages = vec![
-            ChatMessage::system("You are helpful."),
-            ChatMessage::user("malformed tool call"),
-        ];
-        let options = HeadlessOptions {
-            execute_tools: true,
-            max_tool_rounds: 5,
-            on_chunk: None,
-            permission_gate: allow_all_gate(),
-        };
-        let result = run_headless_turn(messages, &provider, options)
-            .await
-            .unwrap();
-
-        assert!(
-            result.tool_outputs.is_empty(),
-            "malformed tool should not be executed"
-        );
-        let has_parse_error = result
-            .messages
-            .iter()
-            .any(|m| m.role == Role::Tool && m.content().contains("Could not parse tool call"));
-        assert!(has_parse_error, "parse error should be added to messages");
-    }
-
-    #[tokio::test]
-    async fn headless_runner_executes_tool_call_markup() {
-        let _mock_guard = ensure_mock_provider().await;
-        let provider = MockProvider::default();
-        let messages = vec![
-            ChatMessage::system("You are helpful."),
-            ChatMessage::user("use markup tool call"),
-        ];
-        let options = HeadlessOptions {
-            execute_tools: true,
-            max_tool_rounds: 5,
-            on_chunk: None,
-            permission_gate: allow_all_gate(),
-        };
-        let result = run_headless_turn(messages, &provider, options)
-            .await
-            .unwrap();
-
-        assert_eq!(result.tool_outputs.len(), 1);
-        assert_eq!(result.tool_outputs[0].tool_name, "list_dir");
-        assert!(result.tool_outputs[0].tool_args.get("path").is_some());
-        assert!(result.content.contains("[TOOL_CALL]"));
-    }
-
-    // Layer 1 — State/Logic: helper constructs a PermissionGate with the supplied sink.
-    #[tokio::test]
-    async fn headless_cli_helper_builds_gate() {
-        let sink: Arc<dyn runie_core::permissions::ApprovalSink> = Arc::new(AutoAllowSink);
-        let opts = HeadlessCliOptions {
-            execute_tools: true,
-            max_tool_rounds: 5,
-            on_chunk: None,
-        };
-        let gate = PermissionGate::new(PermissionManager::default(), sink.clone());
-        assert!(Arc::ptr_eq(gate.sink_ref(), &sink));
-    }
-
-    // Layer 4 — Smoke: run_headless_cli still works with a mock provider.
-    #[tokio::test]
-    async fn headless_cli_smoke_with_mock() {
-        let _mock_guard = crate::tests::ensure_mock_provider().await;
-        let sink: Arc<dyn runie_core::permissions::ApprovalSink> = Arc::new(AutoAllowSink);
-        let messages = vec![
-            ChatMessage::system("You are helpful."),
-            ChatMessage::user("hello"),
-        ];
-        let opts = HeadlessCliOptions {
-            execute_tools: false,
-            max_tool_rounds: 5,
-            on_chunk: None,
-        };
-        let result = run_headless_cli(Some("mock"), Some("echo"), messages, sink, opts)
-            .await
-            .unwrap();
-        assert!(!result.content.is_empty());
-    }
-
-    // Layer 4: provider error in a headless turn is still reported
-    #[tokio::test]
-    async fn headless_turn_error_propagates() {
-        use runie_core::provider_event::ModelError;
-
-        struct ErrorProvider;
-        impl Provider for ErrorProvider {
-            fn generate(
-                &self,
-                _messages: Vec<ChatMessage>,
-            ) -> std::pin::Pin<
-                Box<
-                    dyn futures::Stream<Item = anyhow::Result<ProviderEvent>>
-                        + Send
-                        + '_,
-                >,
-            > {
-                let events = vec![
-                    Ok(ProviderEvent::TextDelta("Before error. ".into())),
-                    Ok(ProviderEvent::Error(ModelError::RateLimit {
-                        retry_after_secs: Some(5),
-                    })),
-                ];
-                Box::pin(futures::stream::iter(events))
-            }
-        }
-
-        let messages = vec![
-            ChatMessage::system("You are helpful."),
-            ChatMessage::user("hello"),
-        ];
-        let options = HeadlessOptions {
-            execute_tools: false,
-            max_tool_rounds: 5,
-            on_chunk: None,
-            permission_gate: allow_all_gate(),
-        };
-
-        // The headless runner should propagate the error without panicking
-        let result = run_headless_turn(messages, &ErrorProvider, options).await;
-        assert!(result.is_err(), "expected error to propagate, got: {result:?}");
-    }
-}
+mod tests;

@@ -31,8 +31,6 @@ pub mod ui_actor;
 
 #[cfg(test)]
 mod tests;
-#[cfg(test)]
-mod theme_tests;
 
 pub use runie_core::{AppState, ChatMessage};
 pub use stylize::Stylize;

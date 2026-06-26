@@ -93,13 +93,16 @@ async fn run_json_turn(
     messages: Vec<ChatMessage>,
 ) -> Result<HeadlessResult> {
     let sink = build_sink(false);
-    let opts = build_options(Some(Box::new(|chunk: &str| {
-        let line = serde_json::to_string(&StreamChunk {
-            chunk: chunk.to_owned(),
-        })
-        .unwrap_or_default();
-        println!("{}", line);
-    })));
+    let opts = build_options(
+        Some(Box::new(|chunk: &str| {
+            let line = serde_json::to_string(&StreamChunk {
+                chunk: chunk.to_owned(),
+            })
+            .unwrap_or_default();
+            println!("{}", line);
+        })),
+        None,
+    );
 
     run_headless_cli(provider_name, model, messages, sink, opts).await
 }

@@ -147,6 +147,7 @@ fn headless_options() -> HeadlessCliOptions {
         execute_tools: false,
         max_tool_rounds: 1,
         on_chunk: None,
+        on_event: None,
     }
 }
 

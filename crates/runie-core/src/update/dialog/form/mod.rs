@@ -427,5 +427,4 @@ pub fn form_build_submit(panel: &mut Panel) -> Option<crate::Event> {
 }
 
 #[cfg(test)]
-#[path = "form_tests.rs"]
-mod form_tests;
+mod tests;

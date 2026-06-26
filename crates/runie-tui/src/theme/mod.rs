@@ -17,6 +17,9 @@ pub use glyph::*;
 pub use loader::list_builtin_themes;
 pub use styles::*;
 
+#[cfg(test)]
+mod tests;
+
 static CURRENT_THEME: RwLock<Option<Arc<opaline::Theme>>> = RwLock::new(None);
 static CURRENT_THEME_NAME: Mutex<String> = Mutex::new(String::new());
 static CURRENT_CAPS: RwLock<Option<crate::terminal::caps::TerminalCapabilities>> =

@@ -2,8 +2,7 @@ use crate::labels::{tool_done, tool_running};
 use crate::message::{now, Part};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::update::agent::thought::{plan_thought, ThoughtPlan};
-#[path = "core/tests.rs"]
-mod tests;
+
 impl AppState {
     pub(crate) fn set_thinking(&mut self, id: String) {
         self.agent_state_mut().streaming = true;
@@ -272,3 +271,6 @@ impl AppState {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

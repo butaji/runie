@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 
+use runie_core::event::headless::HeadlessEvent;
 use runie_core::message::ChatMessage;
 use runie_core::permissions::build_sink as core_sink;
 use runie_core::prompts::{
@@ -33,12 +34,17 @@ pub fn build_messages(user_prompt: &str) -> Vec<ChatMessage> {
 /// - `execute_tools: true` — run tools by default
 /// - `max_tool_rounds: 5` — conservative round limit for CLI use
 /// - `on_chunk: None` — caller supplies their own chunk handler
+/// - `on_event: None` — caller supplies their own headless event handler
 #[allow(clippy::type_complexity)]
-pub fn build_options(on_chunk: Option<Box<dyn FnMut(&str) + Send>>) -> HeadlessCliOptions {
+pub fn build_options(
+    on_chunk: Option<Box<dyn FnMut(&str) + Send>>,
+    on_event: Option<Box<dyn FnMut(HeadlessEvent) + Send>>,
+) -> HeadlessCliOptions {
     HeadlessCliOptions {
         execute_tools: true,
         max_tool_rounds: 5,
         on_chunk,
+        on_event,
     }
 }
 
@@ -57,7 +63,7 @@ pub async fn run_headless(
     on_chunk: Option<Box<dyn FnMut(&str) + Send>>,
 ) -> anyhow::Result<crate::HeadlessResult> {
     let sink = build_sink(yolo);
-    let opts = build_options(on_chunk);
+    let opts = build_options(on_chunk, None);
     crate::run_headless_cli(None, None, messages, sink, opts).await
 }
 
@@ -82,10 +88,11 @@ mod tests {
 
     #[test]
     fn test_build_options_defaults() {
-        let opts = build_options(None);
+        let opts = build_options(None, None);
         assert!(opts.execute_tools);
         assert_eq!(opts.max_tool_rounds, 5);
         assert!(opts.on_chunk.is_none());
+        assert!(opts.on_event.is_none());
     }
 
     #[test]
