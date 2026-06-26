@@ -25,7 +25,6 @@ fff-search = "0.9.5-nightly.ec57eb0"
 git2 = { version = "0.20.2", features = ["vendored-libgit2"], default-features = false }
 unicode-width = "0.2"
 textwrap = { version = "0.16", features = ["unicode-linebreak"] }
-nucleo-matcher = "0.3"
 similar = "3"
 diffy = "0.5"
 backon = "1.6"

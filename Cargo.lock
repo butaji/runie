@@ -316,10 +316,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aa79e62e7697b8e29b513a68abacf485adcd1fe8284a4316c5ae868e6633327"
 dependencies = [
  "iana-time-zone",
- "js-sys",
  "num-traits",
  "serde",
- "wasm-bindgen",
  "windows-link",
 ]
 
@@ -2118,16 +2116,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nucleo-matcher"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf33f538733d1a5a3494b836ba913207f14d9d4a1d3cd67030c5061bdd2cac85"
-dependencies = [
- "memchr",
- "unicode-segmentation",
-]
-
-[[package]]
 name = "num-conv"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3041,17 +3029,14 @@ dependencies = [
  "anyhow",
  "async-trait",
  "base64",
- "chrono",
  "criterion",
  "diffy",
  "dirs",
  "fff-search",
  "futures",
  "git2",
- "glob",
  "notify 7.0.0",
  "notify-debouncer-mini",
- "nucleo-matcher",
  "pulldown-cmark",
  "redb",
  "rmcp",

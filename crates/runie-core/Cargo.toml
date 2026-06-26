@@ -29,14 +29,11 @@ unicode-segmentation = "1.10"
 toml.workspace = true
 tokio.workspace = true
 futures.workspace = true
-chrono = "0.4"
 pulldown-cmark.workspace = true
 unicode-width.workspace = true
 textwrap.workspace = true
-nucleo-matcher.workspace = true
 notify = "7.0"
 notify-debouncer-mini = "0.5"
-glob = "0.3"
 strum = { version = "0.26", features = ["derive"] }
 fff-search.workspace = true
 git2.workspace = true

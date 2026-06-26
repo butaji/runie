@@ -402,7 +402,7 @@
   {
     "file": "drop-small-stdlib-replaceable-deps.md",
     "title": "Drop small stdlib-replaceable deps",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "built-in-subagent-types.md",

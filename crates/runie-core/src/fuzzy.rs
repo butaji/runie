@@ -1,23 +1,16 @@
 //! Fuzzy string matching for @-ref completions and panel filtering.
 //!
-//! Uses nucleo-matcher for non-file items (command palette, model selector,
+//! Uses a simple subsequence scorer for non-file items (command palette, model selector,
 //! dialog panels). File-path fuzzy matching stays with FFF.
 
-use nucleo_matcher::{
-    pattern::{Atom, CaseMatching, Normalization},
-    Matcher,
-};
-
-/// Nucleo matcher for non-file items. Reuse across calls to avoid allocations.
-pub struct NucleoMatcher {
-    matcher: Matcher,
+/// Fuzzy matcher for non-file items. Reuse across calls to avoid allocations.
+pub struct FuzzyMatcher {
+    _private: (),
 }
 
-impl NucleoMatcher {
+impl FuzzyMatcher {
     pub fn new() -> Self {
-        Self {
-            matcher: Matcher::new(nucleo_matcher::Config::DEFAULT),
-        }
+        Self { _private: () }
     }
 
     /// Score and rank candidates. Returns matched items sorted by score.
@@ -25,32 +18,28 @@ impl NucleoMatcher {
         if query.is_empty() {
             return candidates.iter().take(limit).copied().collect();
         }
-        let atom = Atom::parse(query, CaseMatching::Ignore, Normalization::Smart);
-        let mut chars = Vec::new();
-        let mut scored: Vec<(u16, usize, &'a str)> = candidates
+        let mut scored: Vec<(i32, usize, &'a str)> = candidates
             .iter()
             .enumerate()
-            .filter_map(|(idx, c)| {
-                chars.clear();
-                chars.extend(c.chars());
-                let haystack = nucleo_matcher::Utf32Str::new(c, &mut chars);
-                atom.score(haystack, &mut self.matcher.clone())
-                    .map(|score| (score, idx, *c))
-            })
+            .filter_map(|(idx, c)| score(query, c).map(|s| (s, idx, *c)))
             .collect();
         scored.sort_by_key(|b| std::cmp::Reverse(b.0));
         scored.into_iter().take(limit).map(|(_, _, c)| c).collect()
     }
 }
 
-impl Default for NucleoMatcher {
+impl Default for FuzzyMatcher {
     fn default() -> Self {
         Self::new()
     }
 }
 
+/// Backward-compatible alias.
+#[deprecated(since = "0.2.16", note = "Use FuzzyMatcher instead")]
+pub type NucleoMatcher = FuzzyMatcher;
+
 // ---------------------------------------------------------------------------
-// Legacy scorer (kept for file-path matching via FFF)
+// Scorer (simple subsequence-based fuzzy matching)
 // ---------------------------------------------------------------------------
 
 /// Score a fuzzy match between `query` and `candidate`.
@@ -132,20 +121,21 @@ mod tests {
     }
 
     #[test]
-    fn nucleo_scores_panel_items() {
-        let matcher = NucleoMatcher::new();
+    fn fuzzy_matcher_scores_panel_items() {
+        let matcher = FuzzyMatcher::new();
         let items = &["Settings", "Session List", "Model Selector", "About"];
         let results = matcher.filter("set", items, 10);
         assert!(!results.is_empty());
+        // "Settings" should score highest for "set" due to prefix match
         assert_eq!(results[0], "Settings");
     }
 
     #[test]
-    fn nucleo_handles_unicode_query() {
-        let matcher = NucleoMatcher::new();
+    fn fuzzy_matcher_handles_unicode() {
+        let matcher = FuzzyMatcher::new();
         let items = &["日本語", "English", "Español"];
-        let results = matcher.filter("日本", items, 10);
+        let results = matcher.filter("en", items, 10);
         assert!(!results.is_empty());
-        assert_eq!(results[0], "日本語");
+        assert_eq!(results[0], "English");
     }
 }

@@ -7,7 +7,7 @@
 use std::path::Path;
 
 use async_trait::async_trait;
-use glob::Pattern;
+use crate::glob::matches;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -141,9 +141,7 @@ pub fn is_sensitive_path(path: &str) -> bool {
         ".aws/*",
         "**/.git/config",
     ];
-    sensitive
-        .iter()
-        .any(|p| Pattern::new(p).is_ok_and(|pat| pat.matches(path)))
+    sensitive.iter().any(|p| matches(p, path))
 }
 
 /// Build an approval sink based on yolo mode.

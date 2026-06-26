@@ -2,7 +2,7 @@
 //!
 //! Evaluation: last-match wins. Sensitive paths are always denied.
 
-use glob::Pattern;
+use crate::glob::matches;
 use serde::{Deserialize, Serialize};
 
 use super::PermissionAction;
@@ -20,11 +20,11 @@ pub struct PermissionRule {
 
 impl PermissionRule {
     fn matches_tool(&self, tool: &str) -> bool {
-        Pattern::new(&self.tool_pattern).is_ok_and(|p| p.matches(tool))
+        matches(&self.tool_pattern, tool)
     }
     fn matches_path(&self, path: &str) -> bool {
         match &self.path_pattern {
-            Some(p) => Pattern::new(p).is_ok_and(|pat| pat.matches(path)),
+            Some(p) => matches(p, path),
             None => true,
         }
     }
