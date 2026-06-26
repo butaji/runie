@@ -1,6 +1,6 @@
 # Fold runie-testing into runie-agent tests
 
-**Status**: wontfix    
+**Status**: wontfix      
 *Task description was inaccurate: `runie-testing` has 4 consumers (runie-agent, runie-tui, runie-agent/tests, runie-provider/tests), not 1. Per the task's own notes, "if a second consumer is planned, keep the crate."*
 **Milestone**: R4
 **Category**: Configuration
