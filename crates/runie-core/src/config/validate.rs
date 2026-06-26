@@ -12,7 +12,7 @@ pub fn validate(value: &Value) -> Vec<String> {
     validate_object(value, &[
         "provider", "model", "theme", "ui", "models",
         "model_providers", "telemetry", "prompts", "truncation",
-        "keybindings", "hooks", "thinking_level",
+        "keybindings", "hooks", "thinking_level", "permissions",
     ], "", &mut errors);
     errors
 }
@@ -42,6 +42,7 @@ fn validate_object(value: &Value, allowed_keys: &[&str], prefix: &str, errors: &
     validate_keybindings(map, prefix, errors);
     validate_hooks(map, prefix, errors);
     validate_thinking_level(map, prefix, errors);
+    validate_permissions(map, prefix, errors);
 }
 
 fn validate_provider(map: &serde_json::Map<String, Value>, prefix: &str, errors: &mut Vec<String>) {
@@ -227,5 +228,98 @@ fn validate_thinking_level(map: &serde_json::Map<String, Value>, prefix: &str, e
         }
     } else if !tl_val.is_null() {
         errors.push(format!("{}thinking_level must be a string", prefix));
+    }
+}
+
+fn validate_permissions(map: &serde_json::Map<String, Value>, prefix: &str, errors: &mut Vec<String>) {
+    let Some(perm_val) = map.get("permissions") else { return };
+    if let Value::Object(perm_map) = perm_val {
+        validate_permission_mode(perm_map, prefix, errors);
+        validate_permission_rules(perm_map, prefix, errors);
+    } else if !perm_val.is_null() {
+        errors.push(format!("{}permissions must be an object", prefix));
+    }
+}
+
+const PERMISSION_MODES: [&str; 6] = ["default", "acceptEdits", "auto", "dontAsk", "bypassPermissions", "plan"];
+
+fn validate_permission_mode(map: &serde_json::Map<String, Value>, prefix: &str, errors: &mut Vec<String>) {
+    let Some(mode_val) = map.get("mode") else { return };
+    if let Value::String(s) = mode_val {
+        if !PERMISSION_MODES.contains(&s.as_str()) {
+            errors.push(format!(
+                "{}permissions.mode must be one of: default, acceptEdits, auto, dontAsk, bypassPermissions, plan",
+                prefix
+            ));
+        }
+    } else if !mode_val.is_null() {
+        errors.push(format!("{}permissions.mode must be a string", prefix));
+    }
+}
+
+fn validate_permission_rules(map: &serde_json::Map<String, Value>, prefix: &str, errors: &mut Vec<String>) {
+    let Some(rules_val) = map.get("rules") else { return };
+    if let Some(rules_arr) = rules_val.as_array() {
+        for (i, rule_val) in rules_arr.iter().enumerate() {
+            validate_permission_rule(rule_val, &format!("{}permissions.rules[{}]", prefix, i), errors);
+        }
+    } else if !rules_val.is_null() {
+        errors.push(format!("{}permissions.rules must be an array", prefix));
+    }
+}
+
+const PERMISSION_ACTIONS: [&str; 3] = ["Allow", "Ask", "Deny"];
+const PERMISSION_SCOPES: [&str; 3] = ["user", "project", "session"];
+
+fn validate_permission_rule(rule_val: &Value, prefix: &str, errors: &mut Vec<String>) {
+    let Value::Object(rule_map) = rule_val else {
+        errors.push(format!("{} must be an object", prefix));
+        return;
+    };
+
+    validate_permission_rule_action(rule_map, prefix, errors);
+    validate_permission_rule_tool(rule_map, prefix, errors);
+    validate_permission_rule_optional_string(rule_map, "path", prefix, errors);
+    validate_permission_rule_optional_string(rule_map, "pattern", prefix, errors);
+    validate_permission_rule_scope(rule_map, prefix, errors);
+}
+
+fn validate_permission_rule_action(map: &serde_json::Map<String, Value>, prefix: &str, errors: &mut Vec<String>) {
+    if let Some(val) = map.get("action") {
+        if let Value::String(s) = val {
+            if !PERMISSION_ACTIONS.contains(&s.as_str()) {
+                errors.push(format!("{}action must be one of: Allow, Ask, Deny", prefix));
+            }
+        } else {
+            errors.push(format!("{}action must be a string", prefix));
+        }
+    }
+}
+
+fn validate_permission_rule_tool(map: &serde_json::Map<String, Value>, prefix: &str, errors: &mut Vec<String>) {
+    if let Some(val) = map.get("tool") {
+        if !val.is_string() {
+            errors.push(format!("{}tool must be a string", prefix));
+        }
+    }
+}
+
+fn validate_permission_rule_optional_string(map: &serde_json::Map<String, Value>, field: &str, prefix: &str, errors: &mut Vec<String>) {
+    if let Some(val) = map.get(field) {
+        if !val.is_string() && !val.is_null() {
+            errors.push(format!("{}{} must be a string or null", prefix, field));
+        }
+    }
+}
+
+fn validate_permission_rule_scope(map: &serde_json::Map<String, Value>, prefix: &str, errors: &mut Vec<String>) {
+    if let Some(val) = map.get("scope") {
+        if let Value::String(s) = val {
+            if !PERMISSION_SCOPES.contains(&s.as_str()) {
+                errors.push(format!("{}scope must be one of: user, project, session", prefix));
+            }
+        } else if !val.is_null() {
+            errors.push(format!("{}scope must be a string or null", prefix));
+        }
     }
 }

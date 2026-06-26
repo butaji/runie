@@ -7,8 +7,10 @@ use serde_json::Value;
 use super::{
     ApprovalSink, AutoAllowSink, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove,
     PermissionAction, PermissionContext, PermissionManager, PermissionMode, PermissionPolicy,
-    PermissionResult, PermissionRule, PermissionSet, ScriptedSink,
+    PermissionResult, PermissionRule, PermissionScope, PermissionSet, ScriptedSink,
 };
+
+mod declarative_rules;
 
 fn ctx<'a>(tool: &'a str, path: Option<&'a Path>, cwd: Option<&'a Path>) -> PermissionContext<'a> {
     PermissionContext {
@@ -101,28 +103,22 @@ async fn file_access_ask_requires_approval() {
 
 #[test]
 fn wildcard_rule_matches_tool() {
-    let rules = PermissionSet::new(vec![PermissionRule {
-        tool_pattern: "*".into(),
-        path_pattern: None,
-        action: PermissionAction::Allow,
-    }]);
-    assert_eq!(rules.evaluate("bash", None), PermissionAction::Allow);
-    assert_eq!(rules.evaluate("read_file", None), PermissionAction::Allow);
+    let rules = PermissionSet::new(vec![PermissionRule::new(PermissionAction::Allow, "*")]);
+    assert_eq!(rules.evaluate("bash", None, None), PermissionAction::Allow);
+    assert_eq!(rules.evaluate("read_file", None, None), PermissionAction::Allow);
 }
 
 #[test]
 fn path_rule_matches_file() {
-    let rules = PermissionSet::new(vec![PermissionRule {
-        tool_pattern: "read_file".into(),
-        path_pattern: Some("src/**".into()),
-        action: PermissionAction::Allow,
-    }]);
+    let rules = PermissionSet::new(vec![
+        PermissionRule::new(PermissionAction::Allow, "read_file").with_path("src/**")
+    ]);
     assert_eq!(
-        rules.evaluate("read_file", Some("src/main.rs")),
+        rules.evaluate("read_file", Some("src/main.rs"), None),
         PermissionAction::Allow
     );
     assert_eq!(
-        rules.evaluate("read_file", Some("other/file.rs")),
+        rules.evaluate("read_file", Some("other/file.rs"), None),
         PermissionAction::Ask
     );
 }
@@ -130,18 +126,10 @@ fn path_rule_matches_file() {
 #[test]
 fn last_rule_wins() {
     let rules = PermissionSet::new(vec![
-        PermissionRule {
-            tool_pattern: "bash".into(),
-            path_pattern: None,
-            action: PermissionAction::Allow,
-        },
-        PermissionRule {
-            tool_pattern: "bash".into(),
-            path_pattern: None,
-            action: PermissionAction::Deny,
-        },
+        PermissionRule::new(PermissionAction::Allow, "bash"),
+        PermissionRule::new(PermissionAction::Deny, "bash"),
     ]);
-    assert_eq!(rules.evaluate("bash", None), PermissionAction::Deny);
+    assert_eq!(rules.evaluate("bash", None, None), PermissionAction::Deny);
 }
 
 #[test]
@@ -190,80 +178,68 @@ async fn scripted_sink_returns_decisions() {
 #[test]
 fn permission_set_default_is_ask() {
     let rules = PermissionSet::default();
-    assert_eq!(rules.evaluate("bash", None), PermissionAction::Ask);
+    assert_eq!(rules.evaluate("bash", None, None), PermissionAction::Ask);
 }
 
 #[test]
 fn permission_set_evaluates_rules() {
     let rules = PermissionSet::new(vec![
-        PermissionRule {
-            tool_pattern: "*".into(),
-            path_pattern: None,
-            action: PermissionAction::Deny,
-        },
-        PermissionRule {
-            tool_pattern: "read_*".into(),
-            path_pattern: None,
-            action: PermissionAction::Allow,
-        },
-        PermissionRule {
-            tool_pattern: "bash".into(),
-            path_pattern: None,
-            action: PermissionAction::Ask,
-        },
+        PermissionRule::new(PermissionAction::Deny, "*"),
+        PermissionRule::new(PermissionAction::Allow, "read_*"),
+        PermissionRule::new(PermissionAction::Ask, "bash"),
     ]);
-    assert_eq!(rules.evaluate("read_file", None), PermissionAction::Allow);
-    assert_eq!(rules.evaluate("bash", None), PermissionAction::Ask);
-    assert_eq!(rules.evaluate("unknown", None), PermissionAction::Deny);
+    assert_eq!(rules.evaluate("read_file", None, None), PermissionAction::Allow);
+    assert_eq!(rules.evaluate("bash", None, None), PermissionAction::Ask);
+    assert_eq!(rules.evaluate("unknown", None, None), PermissionAction::Deny);
 }
 
 #[test]
 fn default_rules_read_only_allowed_write_asks() {
     let rules = PermissionSet::default_rules();
     assert_eq!(
-        rules.effective_action("read_file", None),
+        rules.effective_action("read_file", None, None),
         PermissionAction::Allow
     );
     assert_eq!(
-        rules.effective_action("list_dir", None),
+        rules.effective_action("list_dir", None, None),
         PermissionAction::Allow
     );
     assert_eq!(
-        rules.effective_action("grep", None),
+        rules.effective_action("grep", None, None),
         PermissionAction::Allow
     );
     assert_eq!(
-        rules.effective_action("find", None),
+        rules.effective_action("find", None, None),
         PermissionAction::Allow
     );
     assert_eq!(
-        rules.effective_action("fetch_docs", None),
+        rules.effective_action("fetch_docs", None, None),
         PermissionAction::Allow
     );
     assert_eq!(
-        rules.effective_action("write_file", None),
+        rules.effective_action("write_file", None, None),
         PermissionAction::Ask
     );
     assert_eq!(
-        rules.effective_action("edit_file", None),
+        rules.effective_action("edit_file", None, None),
         PermissionAction::Ask
     );
-    assert_eq!(rules.effective_action("bash", None), PermissionAction::Ask);
+    assert_eq!(rules.effective_action("bash", None, None), PermissionAction::Ask);
 }
 
 #[test]
 fn effective_action_denies_sensitive_paths() {
     let rules = PermissionSet::default_rules();
     assert_eq!(
-        rules.effective_action("read_file", Some("/home/user/.ssh/id_rsa")),
+        rules.effective_action("read_file", Some("/home/user/.ssh/id_rsa"), None),
         PermissionAction::Deny
     );
     assert_eq!(
-        rules.effective_action("write_file", Some("/project/.env")),
+        rules.effective_action("write_file", Some("/project/.env"), None),
         PermissionAction::Deny
     );
     assert_eq!(
-        rules.effective_action("read_file", Some("/project/src/main.rs")),
+        rules.effective_action("read_file", Some("/project/src/main.rs"), None),
         PermissionAction::Allow
     );
 }
@@ -304,16 +280,3 @@ fn approval_decision_deny_maps_to_permission_deny() {
     assert_eq!(result, PermissionAction::Deny);
 }
 
-#[test]
-fn permission_action_canonical() {
-    // PermissionAction is the canonical type used throughout the codebase.
-    // The protocol's ApprovalDecision is converted at the protocol/core boundary.
-    let allow = PermissionAction::Allow;
-    let ask = PermissionAction::Ask;
-    let deny = PermissionAction::Deny;
-
-    // Verify all variants exist
-    assert_eq!(format!("{:?}", allow), "Allow");
-    assert_eq!(format!("{:?}", ask), "Ask");
-    assert_eq!(format!("{:?}", deny), "Deny");
-}

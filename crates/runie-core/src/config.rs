@@ -136,6 +136,32 @@ pub struct HooksConfig {
 // Permissions Section
 // ============================================================================
 
+/// Permissions configuration section.
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+#[derive(JsonSchema)]
+pub struct PermissionsSection {
+    /// Permission mode: default, acceptEdits, auto, dontAsk, bypassPermissions, plan.
+    pub mode: crate::permissions::PermissionMode,
+    /// Explicit permission rules.
+    pub rules: Vec<crate::permissions::PermissionRule>,
+}
+
+impl PermissionsSection {
+    /// Get the default permissions section.
+    pub fn default_section() -> Self {
+        Self {
+            mode: crate::permissions::PermissionMode::Default,
+            rules: Vec::new(),
+        }
+    }
+
+    /// Convert rules into a PermissionSet.
+    pub fn to_permission_set(&self) -> crate::permissions::PermissionSet {
+        crate::permissions::PermissionSet::new(self.rules.clone())
+    }
+}
+
 // ============================================================================
 // Main Config
 // ============================================================================
@@ -178,6 +204,9 @@ pub struct Config {
     /// Hook commands registered by event name.
     #[serde(default)]
     pub hooks: HooksConfig,
+    /// Permission settings.
+    #[serde(default)]
+    pub permissions: PermissionsSection,
 }
 
 impl Config {

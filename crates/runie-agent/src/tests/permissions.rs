@@ -15,7 +15,7 @@ fn policy_matches_core() {
 fn assert_read_only_tools_allowed(rules: &PermissionSet) {
     for tool in ["read_file", "list_dir", "grep", "find", "fetch_docs"] {
         assert_eq!(
-            rules.effective_action(tool, None),
+            rules.effective_action(tool, None, None),
             PermissionAction::Allow,
             "{} should be allowed by default",
             tool
@@ -31,7 +31,7 @@ fn assert_read_only_tools_allowed(rules: &PermissionSet) {
 fn assert_mutating_tools_ask(rules: &PermissionSet) {
     for tool in ["write_file", "edit_file", "bash"] {
         assert_eq!(
-            rules.effective_action(tool, None),
+            rules.effective_action(tool, None, None),
             PermissionAction::Ask,
             "{} should ask by default",
             tool
@@ -47,11 +47,11 @@ fn assert_mutating_tools_ask(rules: &PermissionSet) {
 fn assert_sensitive_paths_denied(rules: &PermissionSet) {
     assert!(is_sensitive_path("/home/user/.ssh/id_rsa"));
     assert_eq!(
-        rules.effective_action("read_file", Some("/home/user/.ssh/id_rsa")),
+        rules.effective_action("read_file", Some("/home/user/.ssh/id_rsa"), None),
         PermissionAction::Deny
     );
     assert_eq!(
-        rules.effective_action("write_file", Some("/project/.env")),
+        rules.effective_action("write_file", Some("/project/.env"), None),
         PermissionAction::Deny
     );
 }
@@ -59,7 +59,7 @@ fn assert_sensitive_paths_denied(rules: &PermissionSet) {
 fn assert_non_sensitive_paths_follow_rules(rules: &PermissionSet) {
     assert!(!is_sensitive_path("/project/src/main.rs"));
     assert_eq!(
-        rules.effective_action("read_file", Some("/project/src/main.rs")),
+        rules.effective_action("read_file", Some("/project/src/main.rs"), None),
         PermissionAction::Allow
     );
 }
