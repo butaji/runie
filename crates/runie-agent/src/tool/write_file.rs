@@ -1,39 +1,42 @@
 //! WriteFile tool — writes content to a file.
 
-use crate::define_tool;
 use crate::tool::{Tool, ToolContext, ToolOutput};
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::path::resolve_path_in;
+use schemars::JsonSchema;
+use serde::Deserialize;
+use serde::Serialize;
 use serde_json::Value;
 use tokio::fs;
 
+/// Input parameters for write_file tool.
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct WriteFileInput {
+    /// Path to the file to write
+    pub path: String,
+    /// Content to write to the file
+    pub content: String,
+}
+
 pub struct WriteFileTool;
 
-#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for WriteFileTool {
-    define_tool! {
-        name: "write_file",
-        description: "Write content to a file, creating parent directories as needed.",
-        read_only: false,
-        approval: true,
-        fields: {
-            "path": ("string", "Path to the file to write"),
-            "content": ("string", "Content to write to the file")
-        },
-        required: ["path", "content"]
+    fn name(&self) -> &str { "write_file" }
+    fn description(&self) -> &str {
+        "Write content to a file, creating parent directories as needed."
     }
+    fn input_schema(&self) -> Value {
+        runie_core::tool::generate_schema::<WriteFileInput>()
+    }
+    fn is_read_only(&self) -> bool { false }
+    fn requires_approval(&self, _input: &Value) -> bool { true }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
-        let path = input["path"]
-            .as_str()
-            .ok_or_else(|| anyhow::anyhow!("path is required"))?;
-        let content = input["content"]
-            .as_str()
-            .ok_or_else(|| anyhow::anyhow!("content is required"))?;
-        let full_path = resolve_path_in(path, &ctx.working_dir);
-        let tool_args = serde_json::json!({ "path": path, "content": "<redacted>" });
+        let typed: WriteFileInput = serde_json::from_value(input)?;
+        let full_path = resolve_path_in(&typed.path, &ctx.working_dir);
+        let tool_args = serde_json::json!({ "path": typed.path, "content": "<redacted>" });
 
         if let Err(e) = ensure_parent_dirs(&full_path).await {
             return Ok(ToolOutput::error(
@@ -43,12 +46,16 @@ impl Tool for WriteFileTool {
             ));
         }
 
-        match fs::write(&full_path, content).await {
+        match fs::write(&full_path, &typed.content).await {
             Ok(()) => Ok(ToolOutput::success_with_bytes(
                 "write_file",
                 tool_args,
-                format!("Wrote {} bytes to {}", content.len(), full_path.display()),
-                content.len() as u64,
+                format!(
+                    "Wrote {} bytes to {}",
+                    typed.content.len(),
+                    full_path.display()
+                ),
+                typed.content.len() as u64,
             )),
             Err(e) => Ok(ToolOutput::error(
                 "write_file",

@@ -1,6 +1,5 @@
 //! ListDir tool — lists directory contents.
 
-use crate::define_tool;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -11,7 +10,7 @@ use serde::Serialize;
 use serde_json::Value;
 use std::time::Instant;
 
-/// Input parameters for list_dir tool (schema-derived).
+/// Input parameters for list_dir tool.
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct ListDirInput {
     /// Directory path to list (default: current directory)
@@ -42,41 +41,32 @@ impl ListDirTool {
     pub fn input_schema() -> Value {
         runie_core::tool::generate_schema::<ListDirInput>()
     }
-
-    fn parse_path(input: Value) -> String {
-        let typed: Result<ListDirInput, _> = serde_json::from_value(input.clone());
-        match typed {
-            Ok(inp) => inp.path.unwrap_or_else(|| ".".to_string()),
-            Err(_) => input["path"]
-                .as_str()
-                .map(String::from)
-                .unwrap_or_else(|| ".".to_string()),
-        }
-    }
 }
 
 #[async_trait]
 impl Tool for ListDirTool {
-    define_tool! {
-        name: "list_dir",
-        description: "List files and directories in a given path.",
-        read_only: true,
-        approval: false,
-        fields: {
-            "path": ("string", "Directory path to list (default: current directory)")
-        },
-        required: []
+    fn name(&self) -> &str { "list_dir" }
+    fn description(&self) -> &str { "List files and directories in a given path." }
+    fn input_schema(&self) -> Value {
+        Self::input_schema()
     }
+    fn is_read_only(&self) -> bool { true }
+    fn requires_approval(&self, _input: &Value) -> bool { false }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
-        let path_str = Self::parse_path(input);
-        let full_path = resolve_path_in(&path_str, &ctx.working_dir);
+        let typed: ListDirInput = serde_json::from_value(input)?;
+        let path_str = typed.path.as_deref().unwrap_or(".");
+        let full_path = resolve_path_in(path_str, &ctx.working_dir);
         let tool_args = serde_json::json!({ "path": path_str });
 
         let dir = tokio::fs::read_dir(&full_path).await?;
         let names = Self::collect_entries(dir).await;
-        let content = if names.is_empty() { "(empty directory)" } else { &names.join("\n") };
+        let content = if names.is_empty() {
+            "(empty directory)"
+        } else {
+            &names.join("\n")
+        };
         Ok(ToolOutput {
             tool_name: "list_dir".into(),
             tool_args,

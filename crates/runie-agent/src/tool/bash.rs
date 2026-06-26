@@ -1,49 +1,54 @@
 //! Bash tool — executes shell commands.
 
-use crate::define_tool;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::bash_safety::check_bash_safety;
+use schemars::JsonSchema;
+use serde::Deserialize;
+use serde::Serialize;
 use serde_json::Value;
 use std::time::{Duration, Instant};
+
+/// Input parameters for bash tool.
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct BashInput {
+    /// Shell command to execute
+    pub command: String,
+    /// Maximum execution time in seconds (default: 60)
+    #[serde(default)]
+    pub timeout_seconds: Option<u64>,
+}
 
 pub struct BashTool;
 
 /// Default timeout for bash commands.
 const DEFAULT_TIMEOUT_SECS: u64 = 60;
 
-#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for BashTool {
-    define_tool! {
-        name: "bash",
-        description: "Execute a shell command. Commands are subject to safety checks.",
-        read_only: false,
-        approval: true,
-        fields: {
-            "command": ("string", "Shell command to execute"),
-            "timeout_seconds": ("integer", "Maximum execution time in seconds (default: 60)")
-        },
-        required: ["command"]
+    fn name(&self) -> &str { "bash" }
+    fn description(&self) -> &str {
+        "Execute a shell command. Commands are subject to safety checks."
     }
+    fn input_schema(&self) -> Value {
+        runie_core::tool::generate_schema::<BashInput>()
+    }
+    fn is_read_only(&self) -> bool { false }
+    fn requires_approval(&self, _input: &Value) -> bool { true }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
-        let command = input["command"]
-            .as_str()
-            .ok_or_else(|| anyhow::anyhow!("command is required"))?;
-        let tool_args = serde_json::json!({ "command": command });
+        let typed: BashInput = serde_json::from_value(input)?;
+        let tool_args = serde_json::json!({ "command": typed.command });
 
-        if let Some(reason) = check_bash_safety(command) {
+        if let Some(reason) = check_bash_safety(&typed.command) {
             return Ok(ToolOutput::blocked("bash", tool_args, reason.to_owned()));
         }
-        let timeout_secs = input["timeout_seconds"]
-            .as_u64()
-            .unwrap_or(DEFAULT_TIMEOUT_SECS);
+        let timeout_secs = typed.timeout_seconds.unwrap_or(DEFAULT_TIMEOUT_SECS);
         let timeout = Duration::from_secs(timeout_secs);
 
-        let result = run_bash_inner(command, &ctx.working_dir, &ctx.env, timeout).await;
+        let result = run_bash_inner(&typed.command, &ctx.working_dir, &ctx.env, timeout).await;
 
         Ok(ToolOutput {
             tool_name: "bash".to_owned(),

@@ -1,51 +1,47 @@
 //! EditFile tool — performs a single search-and-replace in a file.
 
-use crate::define_tool;
-use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus, tool_error};
+use crate::tool::{tool_error, Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::path::resolve_path_in;
+use schemars::JsonSchema;
+use serde::Deserialize;
+use serde::Serialize;
 use serde_json::Value;
 use std::time::Instant;
 use tokio::fs;
 
+/// Input parameters for edit_file tool.
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct EditFileInput {
+    /// Path to the file to edit
+    pub path: String,
+    /// Text to search for (must match exactly once)
+    pub search: String,
+    /// Text to replace the search text with
+    pub replace: String,
+}
+
 pub struct EditFileTool;
 
-#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for EditFileTool {
-    define_tool! {
-        name: "edit_file",
-        description: "Replace the first occurrence of search text with replace text in a file.",
-        read_only: false,
-        approval: true,
-        fields: {
-            "path": ("string", "Path to the file to edit"),
-            "search": ("string", "Text to search for (must match exactly once)"),
-            "replace": ("string", "Text to replace the search text with")
-        },
-        required: ["path", "search", "replace"]
+    fn name(&self) -> &str { "edit_file" }
+    fn description(&self) -> &str {
+        "Replace the first occurrence of search text with replace text in a file."
     }
+    fn input_schema(&self) -> Value {
+        runie_core::tool::generate_schema::<EditFileInput>()
+    }
+    fn is_read_only(&self) -> bool { false }
+    fn requires_approval(&self, _input: &Value) -> bool { true }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
-        let (path, search, replace) = parse_input(&input)?;
-        let full_path = resolve_path_in(&path, &ctx.working_dir);
-        edit_file_impl(&full_path, &search, &replace, start).await
+        let typed: EditFileInput = serde_json::from_value(input)?;
+        let full_path = resolve_path_in(&typed.path, &ctx.working_dir);
+        edit_file_impl(&full_path, &typed.search, &typed.replace, start).await
     }
-}
-
-fn parse_input(input: &Value) -> Result<(String, String, String)> {
-    let path = input["path"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("path is required"))?.to_owned();
-    let search = input["search"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("search is required"))?.to_owned();
-    let replace = input["replace"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("replace is required"))?.to_owned();
-    Ok((path, search, replace))
 }
 
 async fn edit_file_impl(

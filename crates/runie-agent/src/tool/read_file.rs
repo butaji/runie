@@ -1,6 +1,5 @@
 //! ReadFile tool — reads file contents with optional offset/limit.
 
-use crate::define_tool;
 use crate::tool::{Tool, ToolContext, ToolOutput};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -18,7 +17,7 @@ fn record_file_access(path: &std::path::Path) {
     }
 }
 
-/// Input parameters for read_file tool (schema-derived).
+/// Input parameters for read_file tool.
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct ReadFileInput {
     /// Path to the file to read
@@ -38,79 +37,12 @@ impl ReadFileTool {
     pub fn input_schema() -> Value {
         runie_core::tool::generate_schema::<ReadFileInput>()
     }
-}
 
-#[allow(clippy::use_self)]
-#[async_trait]
-impl Tool for ReadFileTool {
-    define_tool! {
-        name: "read_file",
-        description: "Read the contents of a file from disk. Supports optional offset and limit.",
-        read_only: true,
-        approval: false,
-        fields: {
-            "path": ("string", "Path to the file to read"),
-            "offset": ("integer", "Starting line number (0-based)"),
-            "limit": ("integer", "Maximum number of lines to read")
-        },
-        required: ["path"]
-    }
-
-    async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
-        let (path, offset, limit, tool_args) = Self::parse_input(input)?;
-
-        if path.is_empty() {
-            return Ok(ToolOutput::error(
-                "read_file",
-                tool_args,
-                "path is required".to_string(),
-            ));
-        }
-
-        let full_path = resolve_path_in(&path, &ctx.working_dir);
-        let content = match Self::read_file(&full_path).await {
-            Ok(c) => {
-                record_file_access(&full_path);
-                c
-            }
-            Err(e) => return Ok(e),
-        };
-
-        let output = Self::slice_content(&content, offset, limit);
-        Ok(ToolOutput::success_with_bytes(
-            "read_file",
-            tool_args,
-            output,
-            content.len() as u64,
-        ))
-    }
-}
-
-impl ReadFileTool {
-    /// Parse input from JSON, supporting both typed and raw access.
-    fn parse_input(
-        input: Value,
-    ) -> Result<(String, Option<usize>, Option<usize>, Value)> {
-        let typed: Result<ReadFileInput, _> = serde_json::from_value(input.clone());
-
-        match typed {
-            Ok(inp) => {
-                let tool_args = serde_json::to_value(&inp).unwrap_or(input.clone());
-                Ok((
-                    inp.path,
-                    inp.offset.map(|v| v as usize),
-                    inp.limit.map(|v| v as usize),
-                    tool_args,
-                ))
-            }
-            Err(_) => {
-                let path = input["path"].as_str().unwrap_or("");
-                let offset = input["offset"].as_u64().map(|v| v as usize);
-                let limit = input["limit"].as_u64().map(|v| v as usize);
-                let tool_args = serde_json::json!({ "path": path, "offset": offset, "limit": limit });
-                Ok((path.to_string(), offset, limit, tool_args))
-            }
-        }
+    /// Parse input from JSON into typed struct.
+    fn parse_input(input: Value) -> Result<(ReadFileInput, Value)> {
+        let typed: ReadFileInput = serde_json::from_value(input.clone())?;
+        let tool_args = serde_json::to_value(&typed)?;
+        Ok((typed, tool_args))
     }
 
     /// Read file contents from disk.
@@ -150,6 +82,50 @@ impl ReadFileTool {
         } else {
             format!("{}{}", header, selected)
         }
+    }
+}
+
+#[async_trait]
+impl Tool for ReadFileTool {
+    fn name(&self) -> &str { "read_file" }
+    fn description(&self) -> &str {
+        "Read the contents of a file from disk. Supports optional offset and limit."
+    }
+    fn input_schema(&self) -> Value {
+        Self::input_schema()
+    }
+    fn is_read_only(&self) -> bool { true }
+    fn requires_approval(&self, _input: &Value) -> bool { false }
+
+    async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
+        let (typed, tool_args) = Self::parse_input(input)?;
+
+        if typed.path.is_empty() {
+            return Ok(ToolOutput::error(
+                "read_file",
+                tool_args,
+                "path is required".to_string(),
+            ));
+        }
+
+        let full_path = resolve_path_in(&typed.path, &ctx.working_dir);
+        let content = match Self::read_file(&full_path).await {
+            Ok(c) => {
+                record_file_access(&full_path);
+                c
+            }
+            Err(e) => return Ok(e),
+        };
+
+        let offset = typed.offset.map(|v| v as usize);
+        let limit = typed.limit.map(|v| v as usize);
+        let output = Self::slice_content(&content, offset, limit);
+        Ok(ToolOutput::success_with_bytes(
+            "read_file",
+            tool_args,
+            output,
+            content.len() as u64,
+        ))
     }
 }
 

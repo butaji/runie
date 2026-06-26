@@ -1,79 +1,81 @@
 //! Grep tool — searches for patterns in files.
 
-use crate::define_tool;
 use crate::tool::which_tool_async;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::path::resolve_path_in;
 use runie_core::tool::tool_error;
+use schemars::JsonSchema;
+use serde::Deserialize;
+use serde::Serialize;
 use serde_json::Value;
 use std::time::Instant;
 use tokio::process::Command;
 
+/// Input parameters for grep tool.
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct GrepInput {
+    /// Search pattern
+    pub pattern: String,
+    /// Directory or file path to search
+    pub path: String,
+    /// File glob pattern (e.g., *.rs)
+    #[serde(default)]
+    pub glob: Option<String>,
+    /// Case-insensitive search
+    #[serde(default)]
+    pub ignore_case: Option<bool>,
+    /// Treat pattern as literal string
+    #[serde(default)]
+    pub literal: Option<bool>,
+    /// Maximum number of matches (default: 100)
+    #[serde(default)]
+    pub limit: Option<usize>,
+}
+
 pub struct GrepTool;
 
-#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for GrepTool {
-    define_tool! {
-        name: "grep",
-        description: "Search for patterns in files using ripgrep (rg) or grep.",
-        read_only: true,
-        approval: false,
-        fields: {
-            "pattern": ("string", "Search pattern"),
-            "path": ("string", "Directory or file path to search"),
-            "glob": ("string", "File glob pattern (e.g., *.rs)"),
-            "ignore_case": ("boolean", "Case-insensitive search"),
-            "literal": ("boolean", "Treat pattern as literal string"),
-            "limit": ("integer", "Maximum number of matches (default: 100)")
-        },
-        required: ["pattern", "path"]
+    fn name(&self) -> &str { "grep" }
+    fn description(&self) -> &str {
+        "Search for patterns in files using ripgrep (rg) or grep."
     }
+    fn input_schema(&self) -> Value {
+        runie_core::tool::generate_schema::<GrepInput>()
+    }
+    fn is_read_only(&self) -> bool { true }
+    fn requires_approval(&self, _input: &Value) -> bool { false }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
-        let (pattern, path, glob, ignore_case, literal, limit) = parse_grep_input(&input)?;
-        let full_path = resolve_path_in(&path, &ctx.working_dir);
+        let typed: GrepInput = serde_json::from_value(input)?;
+        let full_path = resolve_path_in(&typed.path, &ctx.working_dir);
         run_grep_impl(
-            &pattern,
+            &typed.pattern,
             &full_path,
-            glob,
-            ignore_case,
-            literal,
-            limit,
+            typed.glob.as_deref(),
+            typed.ignore_case.unwrap_or(false),
+            typed.literal.unwrap_or(false),
+            typed.limit.unwrap_or(100),
             start,
         )
         .await
     }
 }
 
-fn parse_grep_input(input: &Value) -> Result<(String, String, Option<String>, bool, bool, usize)> {
-    let pattern = input["pattern"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("pattern is required"))?.to_owned();
-    let path = input["path"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("path is required"))?.to_owned();
-    let glob = input["glob"].as_str().map(String::from);
-    let ignore_case = input["ignore_case"].as_bool().unwrap_or(false);
-    let literal = input["literal"].as_bool().unwrap_or(false);
-    let limit = input["limit"].as_u64().unwrap_or(100) as usize;
-    Ok((pattern, path, glob, ignore_case, literal, limit))
-}
-
 async fn run_grep_impl(
     pattern: &str,
     path: &std::path::Path,
-    glob: Option<String>,
+    glob: Option<&str>,
     ignore_case: bool,
     literal: bool,
     limit: usize,
     start: Instant,
 ) -> Result<ToolOutput> {
     let tool = select_grep_tool().await;
-    let args = build_grep_args(pattern, path, glob.as_deref(), ignore_case, literal, limit);
+    let args = build_grep_args(pattern, path, glob, ignore_case, literal, limit);
     let output = match run_grep_command(tool, &args).await {
         Ok(o) => o,
         Err(e) => {

@@ -1,36 +1,42 @@
 //! FetchDocs tool — fetches documentation from context7.com.
 
-use crate::define_tool;
 use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
+use schemars::JsonSchema;
+use serde::Deserialize;
+use serde::Serialize;
 use serde_json::Value;
 use std::time::Instant;
+
+/// Input parameters for fetch_docs tool.
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct FetchDocsInput {
+    /// Library name to fetch docs for (e.g., 'ramda', 'lodash')
+    pub library: String,
+}
 
 pub struct FetchDocsTool;
 
 const SEARCH_URL: &str = "https://context7.com/api/v2/libs/search";
 const DOC_BASE: &str = "https://context7.com";
 
-#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for FetchDocsTool {
-    define_tool! {
-        name: "fetch_docs",
-        description: "Fetch documentation for a library from context7.com.",
-        read_only: true,
-        approval: false,
-        fields: {
-            "library": ("string", "Library name to fetch docs for (e.g., 'ramda', 'lodash')")
-        },
-        required: ["library"]
+    fn name(&self) -> &str { "fetch_docs" }
+    fn description(&self) -> &str {
+        "Fetch documentation for a library from context7.com."
     }
+    fn input_schema(&self) -> Value {
+        runie_core::tool::generate_schema::<FetchDocsInput>()
+    }
+    fn is_read_only(&self) -> bool { true }
+    fn requires_approval(&self, _input: &Value) -> bool { false }
 
     async fn call(&self, input: Value, _ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
-        let library = input["library"]
-            .as_str()
-            .ok_or_else(|| anyhow::anyhow!("library is required"))?;
+        let typed: FetchDocsInput = serde_json::from_value(input)?;
+        let library = &typed.library;
 
         let result = fetch_docs(library).await;
 
@@ -44,7 +50,7 @@ impl Tool for FetchDocsTool {
 
         Ok(ToolOutput {
             tool_name: "fetch_docs".to_owned(),
-            tool_args: serde_json::json!({ "library": library }),
+            tool_args: serde_json::to_value(&typed)?,
             content,
             bytes_transferred: None,
             duration: start.elapsed(),

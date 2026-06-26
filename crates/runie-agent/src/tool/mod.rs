@@ -11,7 +11,6 @@ pub use runie_core::tool::{
 };
 
 mod bash;
-pub mod define;
 mod edit_file;
 mod fetch_docs;
 mod find;

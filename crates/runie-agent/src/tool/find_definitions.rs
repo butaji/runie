@@ -1,9 +1,5 @@
 //! `find_definitions` tool — locate symbol definitions using FFF's classifier.
-//!
-//! Uses FFF's content search with `classify_definitions: true` to find
-//! `struct`, `fn`, `class`, `def`, `impl`, etc. definitions.
 
-use crate::define_tool;
 use crate::tool::search::fff_helpers::{
     build_error_json, build_error_json_with_instant, with_picker,
 };
@@ -12,8 +8,27 @@ use anyhow::Result;
 use async_trait::async_trait;
 use fff_search::{FilePicker, GrepMatch, GrepMode, GrepResult, GrepSearchOptions, QueryParser};
 use runie_core::actors::FffSearchState;
+use schemars::JsonSchema;
+use serde::Deserialize;
+use serde::Serialize;
 use serde_json::Value;
 use std::time::Instant;
+
+/// Input parameters for find_definitions tool.
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct FindDefinitionsInput {
+    /// Symbol name or pattern to search for (e.g., 'MyStruct', 'handle_request')
+    pub symbol: String,
+    /// Optional glob pattern to restrict to file types (e.g., '*.rs', '**/*.go')
+    #[serde(default)]
+    pub glob: Option<String>,
+    /// Root directory to search (default: current directory)
+    #[serde(default)]
+    pub path: Option<String>,
+    /// Maximum number of results (default: 30)
+    #[serde(default)]
+    pub limit: Option<usize>,
+}
 
 /// Default max results.
 const DEFAULT_LIMIT: usize = 30;
@@ -112,32 +127,27 @@ struct DefResult {
     content: String,
 }
 
-#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for FindDefinitionsTool {
-    define_tool! {
-        name: "find_definitions",
-        description: "Find symbol definitions (struct, fn, class, def, impl, enum, trait, etc.) in the codebase using FFF's definition classifier.",
-        read_only: true,
-        approval: false,
-        fields: {
-            "symbol": ("string", "Symbol name or pattern to search for (e.g., 'MyStruct', 'handle_request')"),
-            "glob": ("string", "Optional glob pattern to restrict to file types (e.g., '*.rs', '*.py', '**/*.go')"),
-            "path": ("string", "Root directory to search (default: current directory)"),
-            "limit": ("integer", "Maximum number of results (default: 30)")
-        },
-        required: ["symbol"]
+    fn name(&self) -> &str { "find_definitions" }
+    fn description(&self) -> &str {
+        "Find symbol definitions (struct, fn, class, def, impl, enum, trait, etc.) in the codebase using FFF's definition classifier."
     }
+    fn input_schema(&self) -> Value {
+        runie_core::tool::generate_schema::<FindDefinitionsInput>()
+    }
+    fn is_read_only(&self) -> bool { true }
+    fn requires_approval(&self, _input: &Value) -> bool { false }
 
-    async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
+    async fn call(&self, input: Value, _ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
-        let (symbol, glob, _path, limit) = parse_input(&input, ctx)?;
+        let typed: FindDefinitionsInput = serde_json::from_value(input)?;
         let state = match FffSearchState::get() {
             Some(s) => s,
             None => {
                 return build_error_json_with_instant(
                     "find_definitions",
-                    serde_json::json!({ "symbol": symbol }),
+                    serde_json::json!({ "symbol": typed.symbol }),
                     "FFF indexer not initialized",
                     "results",
                     false,
@@ -147,27 +157,13 @@ impl Tool for FindDefinitionsTool {
         };
         with_picker(
             &state,
-            symbol.clone(),
+            typed.symbol.clone(),
             start,
             build_find_def_lock_error,
             build_find_def_not_initialized,
-            |picker| search_definitions(picker, &symbol, &glob, limit, start),
+            |picker| search_definitions(picker, &typed.symbol, &typed.glob, typed.limit.unwrap_or(DEFAULT_LIMIT), start),
         )
     }
-}
-
-fn parse_input(
-    input: &Value,
-    ctx: &ToolContext,
-) -> Result<(String, String, std::path::PathBuf, usize)> {
-    let symbol = input["symbol"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("symbol is required"))?.to_owned();
-    let glob = input["glob"].as_str().unwrap_or("").to_owned();
-    let path = input["path"].as_str().unwrap_or(".");
-    let limit = input["limit"].as_u64().unwrap_or(DEFAULT_LIMIT as u64) as usize;
-    let full_path = ctx.working_dir.join(path);
-    Ok((symbol, glob, full_path, limit))
 }
 
 fn build_find_def_lock_error(msg: String, duration: std::time::Duration) -> ToolOutput {
@@ -195,7 +191,7 @@ fn build_find_def_not_initialized(symbol: String, duration: std::time::Duration)
 fn search_definitions(
     picker: &FilePicker,
     symbol: &str,
-    glob: &str,
+    glob: &Option<String>,
     limit: usize,
     start: Instant,
 ) -> Result<ToolOutput> {
@@ -223,11 +219,10 @@ fn search_definitions(
     build_definitions_output(symbol, defs, indexed, start)
 }
 
-fn build_query(symbol: &str, glob: &str) -> String {
-    if glob.is_empty() {
-        symbol.to_owned()
-    } else {
-        format!("{} {}", symbol, glob)
+fn build_query(symbol: &str, glob: &Option<String>) -> String {
+    match glob {
+        Some(g) if !g.is_empty() => format!("{} {}", symbol, g),
+        _ => symbol.to_owned(),
     }
 }
 
@@ -357,7 +352,8 @@ mod tests {
         let tool = FindDefinitionsTool;
         let schema = tool.input_schema();
         assert!(schema.get("properties").is_some());
-        let props = schema["properties"].as_object().unwrap();
+        let obj = schema.as_object().unwrap();
+        let props = obj.get("properties").unwrap().as_object().unwrap();
         assert!(props.contains_key("symbol"));
         assert!(props.contains_key("glob"));
         assert!(props.contains_key("path"));

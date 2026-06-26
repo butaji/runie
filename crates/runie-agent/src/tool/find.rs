@@ -1,43 +1,53 @@
 //! Find tool — searches for files matching a pattern.
 
-use crate::define_tool;
 use crate::tool::{which_tool_async, Tool, ToolContext, ToolOutput, ToolStatus};
 use anyhow::Result;
 use async_trait::async_trait;
 use runie_core::path::resolve_path_in;
+use schemars::JsonSchema;
+use serde::Deserialize;
+use serde::Serialize;
 use serde_json::Value;
 use std::time::Instant;
 use tokio::process::Command;
 
+/// Input parameters for find tool.
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct FindInput {
+    /// File pattern to search for
+    pub pattern: String,
+    /// Root directory to search (default: current directory)
+    #[serde(default)]
+    pub path: Option<String>,
+    /// Maximum number of results (default: 100)
+    #[serde(default)]
+    pub limit: Option<usize>,
+}
+
 pub struct FindTool;
 
-#[allow(clippy::use_self)]
 #[async_trait]
 impl Tool for FindTool {
-    define_tool! {
-        name: "find",
-        description: "Find files matching a pattern using fd or find.",
-        read_only: true,
-        approval: false,
-        fields: {
-            "pattern": ("string", "File pattern to search for"),
-            "path": ("string", "Root directory to search (default: current directory)"),
-            "limit": ("integer", "Maximum number of results (default: 100)")
-        },
-        required: ["pattern"]
+    fn name(&self) -> &str { "find" }
+    fn description(&self) -> &str { "Find files matching a pattern using fd or find." }
+    fn input_schema(&self) -> Value {
+        runie_core::tool::generate_schema::<FindInput>()
     }
+    fn is_read_only(&self) -> bool { true }
+    fn requires_approval(&self, _input: &Value) -> bool { false }
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
-        let (pattern, path, limit) = parse_find_input(&input)?;
-        let full_path = resolve_path_in(&path, &ctx.working_dir);
-        let content = run_find(&pattern, &full_path, limit)
+        let typed: FindInput = serde_json::from_value(input)?;
+        let path_str = typed.path.as_deref().unwrap_or(".");
+        let full_path = resolve_path_in(path_str, &ctx.working_dir);
+        let content = run_find(&typed.pattern, &full_path, typed.limit.unwrap_or(100))
             .await
             .unwrap_or_else(|e| format!("Error running find: {}", e));
         let status = determine_find_status(&content);
         Ok(ToolOutput {
             tool_name: "find".to_owned(),
-            tool_args: serde_json::json!({ "path": path, "pattern": pattern }),
+            tool_args: serde_json::json!({ "path": path_str, "pattern": typed.pattern }),
             content,
             bytes_transferred: None,
             duration: start.elapsed(),
@@ -46,13 +56,12 @@ impl Tool for FindTool {
     }
 }
 
-fn parse_find_input(input: &Value) -> Result<(String, String, usize)> {
-    let pattern = input["pattern"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("pattern is required"))?.to_owned();
-    let path = input["path"].as_str().unwrap_or(".").to_owned();
-    let limit = input["limit"].as_u64().unwrap_or(100) as usize;
-    Ok((pattern, path, limit))
+fn determine_find_status(content: &str) -> ToolStatus {
+    if content.starts_with("Error") || content.is_empty() {
+        ToolStatus::Error
+    } else {
+        ToolStatus::Success
+    }
 }
 
 async fn run_find(
@@ -64,14 +73,6 @@ async fn run_find(
         run_fd(pattern, path, limit).await
     } else {
         run_find_fallback(pattern, path, limit).await
-    }
-}
-
-fn determine_find_status(content: &str) -> ToolStatus {
-    if content.starts_with("Error") || content.is_empty() {
-        ToolStatus::Error
-    } else {
-        ToolStatus::Success
     }
 }
 
