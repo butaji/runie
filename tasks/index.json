@@ -420,7 +420,7 @@
   },
   {
     "file": "frontmatter-based-skills-dsl.md",
-    "title": "Frontmatter-based skills and command DSL",
+    "title": "AGENTS.md and frontmatter-based declarative configuration",
     "status": "todo",
     "category": "Core / State",
     "priority": "P2",
@@ -999,5 +999,68 @@
       "ui-control-actor-owns-dialog-state"
     ],
     "blocks": []
+  },
+  {
+    "status": "todo",
+    "depends_on": [
+      "frontmatter-based-skills-dsl"
+    ],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Core / State",
+    "priority": "P1",
+    "title": "Add `runie inspect` command",
+    "file": "add-runie-inspect-command.md"
+  },
+  {
+    "status": "todo",
+    "depends_on": [
+      "leader-actor-shared-runtime"
+    ],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Agent",
+    "priority": "P1",
+    "title": "Built-in subagent types as declarative data",
+    "file": "built-in-subagent-types.md"
+  },
+  {
+    "status": "todo",
+    "depends_on": [
+      "permission-actor-owns-approvals"
+    ],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Core / State",
+    "priority": "P1",
+    "title": "Declarative permission rules",
+    "file": "declarative-permission-rules.md"
+  },
+  {
+    "status": "todo",
+    "depends_on": [
+      "make-mcp-the-only-tool-boundary"
+    ],
+    "blocks": [],
+    "milestone": "R4",
+    "category": "Tools",
+    "priority": "P1",
+    "title": "`runie mcp` server management CLI",
+    "file": "runie-mcp-server-management-cli.md"
+  },
+  {
+    "status": "todo",
+    "depends_on": [
+      "app-state-read-only-projection"
+    ],
+    "blocks": [
+      "expose-runie-via-acp-stdio",
+      "standardize-headless-output-streaming-json"
+    ],
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P0",
+    "title": "LeaderActor shared runtime with thin clients",
+    "file": "leader-actor-shared-runtime.md"
   }
 ]
