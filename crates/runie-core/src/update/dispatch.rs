@@ -1,5 +1,6 @@
 //! Central event dispatcher.
 
+use crate::actors::turn::TurnMsg;
 use crate::model::AppState;
 use crate::Event;
 
@@ -7,7 +8,7 @@ pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
     if try_handle_early_events(state, &event) { return; }
     match categorize(&event) {
         EventCategory::Input => super::input::input_event(state, event),
-        EventCategory::Agent => super::agent::agent_event(state, event),
+        EventCategory::Agent => handle_agent_event(state, event),
         EventCategory::Scroll => super::input::scroll_event(state, event),
         EventCategory::Control => super::system::control_event(state, event),
         EventCategory::ModelConfig => super::agent::model_config_event(state, event),
@@ -41,7 +42,37 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             state.apply_token_stats(*tokens_in, *tokens_out, *speed_tps);
             true
         }
+        // Agent events go through handle_agent_event for session message manipulation
         _ => false,
+    }
+}
+
+/// Route agent events through TurnActor and handle facts synchronously.
+fn handle_agent_event(state: &mut AppState, event: Event) {
+    // Send to TurnActor if available
+    if let Some(ref handles) = state.actor_handles() {
+        if let Some(ref turn) = handles.turn {
+            if let Some(turn_msg) = to_turn_msg(&event) {
+                turn.try_send(turn_msg);
+            }
+        }
+    }
+    // Also handle the event directly for immediate UI updates
+    super::agent::agent_event(state, event);
+}
+
+/// Convert Event to TurnMsg for routing through TurnActor.
+fn to_turn_msg(event: &Event) -> Option<TurnMsg> {
+    match event {
+        Event::Thinking { id } => Some(TurnMsg::Thinking { id: id.clone() }),
+        Event::ThoughtDone { id } => Some(TurnMsg::ThoughtDone { id: id.clone() }),
+        Event::ToolStart { id, name, .. } => Some(TurnMsg::ToolStart { id: id.clone(), name: name.clone() }),
+        Event::ToolEnd { id, duration_secs, output } => Some(TurnMsg::ToolEnd { id: id.clone(), duration_secs: *duration_secs, output: output.clone() }),
+        Event::ResponseDelta { id, content } => Some(TurnMsg::ResponseDelta { id: id.clone(), content: content.clone() }),
+        Event::TurnComplete { id, duration_secs } => Some(TurnMsg::TurnComplete { id: id.clone(), duration_secs: *duration_secs }),
+        Event::Done { id } => Some(TurnMsg::Done { id: id.clone() }),
+        Event::Error { id, message } => Some(TurnMsg::Error { id: id.clone(), message: message.clone() }),
+        _ => None,
     }
 }
 

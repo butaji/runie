@@ -23,6 +23,8 @@
   - ✅ abort_queue() routes through TurnActor::AbortQueue  
   - ✅ queue_follow_up() routes through TurnActor::QueueFollowUp
   - ✅ handle_vim_dialog_back() routes through TurnActor
+  - ✅ Agent events routed through TurnActor via handle_agent_event()
+  - ✅ to_turn_msg() converts Event to TurnMsg for TurnActor routing
 
 **Remaining work:**
 - Route remaining handlers through TurnActor:
@@ -86,6 +88,7 @@ Current violators:
 - `crates/runie-core/src/model/state/domain_ops.rs` — fact projection handlers.
 - `crates/runie-core/src/update/agent/mod.rs` — dispatcher routes `AgentEvent` to `TurnActor`.
 - `crates/runie-core/src/update/agent/core.rs` — agent lifecycle handlers.
+- `crates/runie-core/src/update/dispatch.rs` — added handle_agent_event() and to_turn_msg() for TurnActor routing.
 - `crates/runie-core/src/update/session.rs` — queue operations (partial).
 - `crates/runie-core/src/update/system.rs` — `stop_turn` routes to TurnActor.
 - `crates/runie-core/src/update/input/text.rs` — submit handler.
