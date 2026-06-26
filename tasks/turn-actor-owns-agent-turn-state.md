@@ -1,6 +1,6 @@
 # TurnActor owns agent turn lifecycle and queues
 
-**Status**: todo
+**Status**: in_progress
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0
@@ -14,8 +14,9 @@
 - ✅ TurnActor exists and owns TurnState with all required fields
 - ✅ TurnMsg enum covers all required messages
 - ✅ TurnActor emits facts: TurnStarted, TurnAborted, TurnCompleted, TurnErrored, TokenStatsUpdated, UserMessageSubmitted, QueueAborted, QueuesCleared
-- ✅ Fact projection handlers in AppState: apply_turn_aborted, apply_turn_completed, apply_turn_errored, apply_token_stats, apply_turn_started
+- ✅ Fact projection handlers in AppState: apply_turn_aborted, apply_turn_completed, apply_turn_errored, apply_token_stats, apply_turn_started, apply_user_message_submitted
 - ✅ Fact event handlers in dispatch module
+- ✅ Turn fact projections extracted to `model/state/turn_projections.rs`
 
 **In progress:**
 - Partial routing of handlers through TurnActor:
@@ -25,15 +26,19 @@
   - ✅ handle_vim_dialog_back() routes through TurnActor
   - ✅ Agent events routed through TurnActor via handle_agent_event()
   - ✅ to_turn_msg() converts Event to TurnMsg for TurnActor routing
+  - ✅ submit_user_message() routes through TurnActor::SubmitUserMessage
 
 **Remaining work:**
-- Route remaining handlers through TurnActor:
-  - `update/agent/core/mod.rs` - set_thinking, add_thought, start_tool, end_tool, etc.
-  - `update/agent/core_messages.rs` - AgentCoreMessage handlers
-  - `update/session.rs` - push_user_message, deliver_queued, dequeue, try_deliver_*
-  - `update/system.rs` - peek_queue, pop_queue, configure_token_tracker
-  - `update/input/submit.rs` - submit_user_message
-  - `update/input/mod.rs` - handle_escape
+- Queue delivery operations (deliver_queued, dequeue) - these need TurnActor coordination
+- `update/system.rs` - peek_queue, pop_queue, configure_token_tracker - need routing
+
+## Architecture Notes
+
+The split between TurnActor and AppState is:
+- **TurnActor**: owns queue state (request_queue, message_queue), turn lifecycle flags
+- **AppState**: owns session.messages for UI projection, handles via facts from actors
+
+Agent event handlers (set_thinking, start_tool, etc.) stay in AppState as they manage session.messages content.
 
 ## Description
 

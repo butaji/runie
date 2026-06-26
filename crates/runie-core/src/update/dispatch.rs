@@ -46,6 +46,10 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             state.apply_token_stats(*tokens_in, *tokens_out, *speed_tps);
             true
         }
+        Event::UserMessageSubmitted { id, content } => {
+            state.apply_user_message_submitted(id.clone(), content.clone());
+            true
+        }
         // Agent events go through handle_agent_event for session message manipulation
         _ => false,
     }

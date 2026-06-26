@@ -14,6 +14,7 @@ mod domain_ops;
 mod helpers;
 mod ranking;
 pub mod tests;
+pub mod turn_projections;
 pub mod types;
 
 // State types are crate-private — only re-exported within runie-core.

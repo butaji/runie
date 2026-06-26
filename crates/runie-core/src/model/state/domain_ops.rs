@@ -134,40 +134,7 @@ impl AppState {
         SPINNER_CHARS[(self.view().animation_frame % SPINNER_FRAMES) as usize]
     }
 
-    // ── Turn fact projection (from TurnActor) ──────────────────────────────
-
-    /// Project TurnStarted fact into AppState.
-    pub(crate) fn apply_turn_started(&mut self) {
-        self.agent_state_mut().turn_active = true;
-        self.agent_state_mut().inflight += 1;
-        self.agent_state_mut().streaming = true;
-        self.agent_state_mut().turn_started_at = Some(std::time::Instant::now());
-    }
-
-    /// Project TurnCompleted fact into AppState.
-    pub(crate) fn apply_turn_completed(&mut self) {
-        self.agent_state_mut().streaming = false;
-        self.agent_state_mut().turn_active = false;
-        self.agent_state_mut().inflight = self.agent_state_mut().inflight.saturating_sub(1);
-        self.agent_state_mut().current_tool_name = None;
-    }
-
-    /// Project TurnErrored fact into AppState.
-    pub(crate) fn apply_turn_errored(&mut self) {
-        self.agent_state_mut().streaming = false;
-        self.agent_state_mut().turn_active = false;
-        self.agent_state_mut().inflight = 0;
-    }
-
-    /// Project TokenStatsUpdated fact into AppState.
-    pub(crate) fn apply_token_stats(&mut self, tokens_in: usize, tokens_out: usize, speed_tps: f64) {
-        self.agent_state_mut().tokens_in = tokens_in;
-        self.agent_state_mut().tokens_out = tokens_out;
-        self.agent_state_mut().speed_tps = speed_tps;
-        self.agent_state_mut().turn_tokens_out = tokens_out;
-    }
-
-    // ── Session reset ───────────────────────────────────────────────────────
+    // ── Session reset ──────────────────────────────────────────────────────
 
     /// Reset session/input/agent state without clearing config,
     /// actor handles, or trust decisions.

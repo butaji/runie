@@ -115,6 +115,31 @@ impl AppState {
                 content.push(')');
             }
         }
+        // Route through TurnActor to maintain authoritative queue state
+        let handles = self.actor_handles().cloned();
+        if let Some(ref h) = handles {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                // Production mode: send to TurnActor
+                let id = format!("req.{}", self.agent_state().next_id);
+                self.agent_state_mut().next_id += 1;
+                let handles = h.clone();
+                tokio::spawn(async move {
+                    handles.try_send_turn_submit_user_message(content, id);
+                });
+            } else {
+                // Test mode: apply synchronously
+                self.apply_user_message_sync(content);
+            }
+        } else {
+            // Test mode without handles: apply synchronously
+            self.apply_user_message_sync(content);
+        }
+        self.view_mut().scroll = 0;
+        self.messages_changed();
+    }
+
+    /// Apply user message synchronously (for tests without actor handles).
+    fn apply_user_message_sync(&mut self, content: String) {
         let id = self.next_id();
         self.session_mut().messages.push(ChatMessage {
             role: Role::User,
@@ -126,8 +151,6 @@ impl AppState {
         self.agent_state_mut()
             .request_queue
             .push_back((content, id));
-        self.view_mut().scroll = 0;
-        self.messages_changed();
     }
 
     fn apply_command_result(&mut self, result: crate::commands::CommandResult) {
