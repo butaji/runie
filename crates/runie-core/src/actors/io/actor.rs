@@ -41,6 +41,15 @@ impl IoActor {
             IoMsg::RunBash { command } => self.run_bash(command).await,
             IoMsg::WriteFiles { edits } => self.write_files(edits).await,
             IoMsg::DetectEnv => self.detect_env().await,
+            IoMsg::ShareSession { messages, display_name } => {
+                self.share_session(messages, display_name).await;
+            }
+            IoMsg::OpenExternalEditor { text } => {
+                self.open_external_editor(text).await;
+            }
+            IoMsg::WriteClipboard { text } => self.write_clipboard(text).await,
+            IoMsg::ReadClipboard => self.read_clipboard().await,
+            IoMsg::SuspendProcess => self.suspend_process().await,
         }
     }
 
@@ -70,6 +79,65 @@ impl IoActor {
                 Err(_) => (None, String::new()),
             };
         self.emit(Event::EnvDetected { git_info, cwd_name });
+    }
+
+    async fn share_session(&self, messages: Vec<crate::ChatMessage>, display_name: Option<String>) {
+        let messages_clone = messages.clone();
+        let name_clone = display_name.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            super::effects::share_session_sync(&messages_clone, name_clone.as_deref())
+        })
+        .await
+        .unwrap_or_else(|e| Err(format!("join error: {}", e)));
+        self.emit(Event::GistShared { result });
+    }
+
+    async fn open_external_editor(&self, text: String) {
+        let result = tokio::task::spawn_blocking(move || super::effects::open_editor_sync(text))
+            .await
+            .unwrap_or_else(|e| Err(e.to_string()));
+        self.emit(Event::ExternalEditorClosed { result });
+    }
+
+    async fn write_clipboard(&self, text: String) {
+        let success = tokio::task::spawn_blocking(move || super::effects::write_clipboard_sync(&text))
+            .await
+            .unwrap_or(false);
+        self.emit(Event::ClipboardWritten { success });
+    }
+
+    async fn read_clipboard(&self) {
+        let result = tokio::task::spawn_blocking(super::effects::read_clipboard_sync)
+            .await
+            .unwrap_or_else(|e| Err(e.to_string()));
+        self.emit(Event::ClipboardRead { result });
+    }
+
+    #[cfg(unix)]
+    async fn suspend_process(&self) {
+        let bus = self.bus.clone();
+        tokio::task::spawn_blocking(move || {
+            let _ = crossterm::execute!(
+                std::io::stdout(),
+                crossterm::terminal::LeaveAlternateScreen,
+            );
+            let _ = crossterm::terminal::disable_raw_mode();
+            let _ = nix::sys::signal::kill(
+                nix::unistd::Pid::this(),
+                nix::sys::signal::Signal::SIGTSTP,
+            );
+            let _ = crossterm::terminal::enable_raw_mode();
+            let _ = crossterm::execute!(
+                std::io::stdout(),
+                crossterm::terminal::EnterAlternateScreen,
+            );
+            let _ = bus.publish(Event::ProcessResumed);
+        });
+    }
+
+    #[cfg(not(unix))]
+    async fn suspend_process(&self) {
+        // No-op on non-Unix platforms
     }
 
     fn emit(&self, event: Event) {

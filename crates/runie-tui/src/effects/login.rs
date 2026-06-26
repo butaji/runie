@@ -6,17 +6,23 @@ use runie_core::Event as CoreEvent;
 use tokio::sync::mpsc;
 
 /// Validate the API key asynchronously and emit the result.
+///
+/// # Arguments
+/// * `provider` - Provider name
+/// * `key` - API key
+/// * `tx` - Channel to send result events
+/// * `provider_tx` - Channel to send validation request to provider actor
 pub fn run(
     provider: String,
     key: String,
     tx: mpsc::Sender<CoreEvent>,
     provider_tx: mpsc::Sender<ProviderMsg>,
-) {
-    if provider.is_empty() || key.is_empty() {
-        return;
-    }
+) -> impl std::future::Future<Output = ()> + Send + 'static {
+    async move {
+        if provider.is_empty() || key.is_empty() {
+            return;
+        }
 
-    tokio::spawn(async move {
         let result = validate_provider_key(provider_tx, &provider, &key).await;
 
         match result {
@@ -39,7 +45,7 @@ pub fn run(
                     .await;
             }
         }
-    });
+    }
 }
 
 async fn validate_provider_key(

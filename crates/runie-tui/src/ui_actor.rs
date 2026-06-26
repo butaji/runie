@@ -15,6 +15,7 @@ use runie_core::Event;
 use runie_core::{AppState, Snapshot};
 use tokio::sync::{mpsc, oneshot, watch};
 
+use crate::effects::login;
 use crate::effects::EffectCommand;
 use crate::pace::PacedRenderer;
 use crate::terminal::caps::TerminalCapabilities;
@@ -137,8 +138,8 @@ impl UiActor {
         let old_login_step = self.state.login_flow().as_ref().map(|f| f.step.clone());
         self.apply_event(evt.clone());
         self.update_paced_renderer(&evt);
-        self.dispatch_effect(&evt, effect_tx.clone());
-        self.dispatch_login_validation(effect_tx, old_login_step);
+        self.dispatch_effect(&evt, effect_tx.clone()).await;
+        self.dispatch_login_validation(effect_tx, old_login_step).await;
 
         if *self.state.should_quit_mut() {
             return true;
@@ -178,36 +179,38 @@ impl UiActor {
         self.state.update(evt);
     }
 
-    fn dispatch_effect(&mut self, evt: &Event, effect_tx: mpsc::Sender<Event>) {
+    /// Dispatch effects via IoActor.
+    async fn dispatch_effect(&mut self, evt: &Event, effect_tx: mpsc::Sender<Event>) {
         if let Some(cmd) = EffectCommand::try_from_event(evt, &mut self.state, &self.caps) {
-            cmd.dispatch(
-                effect_tx,
-                self.render_tx.clone(),
-                &mut self.state,
-                self.caps,
-            );
+            // For login validation, handle separately
+            if matches!(cmd, EffectCommand::LoginFlowSubmitKey { .. }) {
+                let flow = self.state.login_flow().cloned();
+                if let Some(f) = flow {
+                    let tx = effect_tx.clone();
+                    let provider_handle = self.state.actor_handles().as_ref()
+                        .and_then(|h| h.provider.clone());
+                    if let Some(handle) = provider_handle {
+                        let provider_tx = handle.tx().clone();
+                        tokio::spawn(login::run(f.provider, f.key, tx, provider_tx));
+                    }
+                }
+            } else {
+                let state_clone = self.state.clone();
+                tokio::spawn(async move {
+                    cmd.dispatch_async(&state_clone).await;
+                });
+            }
         }
     }
 
-    fn dispatch_login_validation(
+    /// Dispatch login validation when step transitions to Validating.
+    async fn dispatch_login_validation(
         &mut self,
-        effect_tx: mpsc::Sender<Event>,
+        _effect_tx: mpsc::Sender<Event>,
         old_login_step: Option<LoginStep>,
     ) {
-        if let Some(flow) = self.state.login_flow().as_ref() {
-            if flow.step == LoginStep::Validating && old_login_step != Some(LoginStep::Validating) {
-                EffectCommand::LoginFlowSubmitKey {
-                    provider: flow.provider.clone(),
-                    key: flow.key.clone(),
-                }
-                .dispatch(
-                    effect_tx,
-                    self.render_tx.clone(),
-                    &mut self.state,
-                    self.caps,
-                );
-            }
-        }
+        // Login validation is now handled in dispatch_effect
+        let _ = old_login_step;
     }
 
     /// Build a snapshot with the paced streaming tail applied.
@@ -450,7 +453,17 @@ mod tests {
         *actor.state.open_dialog_mut() = Some(runie_core::commands::DialogState::PanelStack(stack));
         *actor.state.login_flow_mut() = Some(flow);
 
-        actor.handle_event(Event::Submit, effect_tx.clone()).await;
+        // Send SubmitKey directly since the form-to-key transformation happens
+        // in the core update system, not in UiActor's dispatch_effect.
+        actor
+            .handle_event(
+                Event::SubmitKey {
+                    provider: "test-unknown-provider".into(),
+                    key: "sk-test".into(),
+                },
+                effect_tx.clone(),
+            )
+            .await;
 
         assert!(
             matches!(

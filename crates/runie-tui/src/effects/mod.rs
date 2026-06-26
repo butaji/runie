@@ -1,21 +1,14 @@
 //! Typed effect commands dispatched from the main event loop.
 //!
-//! Effect payload computation is inlined here to keep effect logic localized
-//! to the TUI layer.
+//! Effect commands are translated into IoActor messages, keeping all IO in
+//! the async actor layer per the architecture rules.
 
-use runie_core::{AppState, Event as CoreEvent, Snapshot};
-use tokio::sync::{mpsc, watch};
+use runie_core::{AppState, Event as CoreEvent};
 
-use crate::terminal::caps::TerminalCapabilities;
-
-mod clipboard;
-mod editor;
 pub(crate) mod login;
-mod share;
-mod suspend;
 
 // ---------------------------------------------------------------------------
-// Effect payload (formerly in runie-core::effect_payload)
+// Effect payload
 // ---------------------------------------------------------------------------
 
 /// Self-contained description of a user-initiated side effect.
@@ -95,9 +88,7 @@ pub enum EffectCommand {
         messages: Vec<runie_core::ChatMessage>,
         display_name: Option<String>,
     },
-    Suspend {
-        terminal_caps: TerminalCapabilities,
-    },
+    Suspend,
     LoginFlowSubmitKey {
         provider: String,
         key: String,
@@ -109,7 +100,7 @@ impl EffectCommand {
     pub fn try_from_event(
         evt: &CoreEvent,
         state: &mut AppState,
-        caps: &TerminalCapabilities,
+        _caps: &crate::terminal::caps::TerminalCapabilities,
     ) -> Option<Self> {
         let payload = extract(evt, state)?;
         Some(match payload {
@@ -125,41 +116,37 @@ impl EffectCommand {
             EffectPayload::LoginValidateKey { provider, key } => {
                 Self::LoginFlowSubmitKey { provider, key }
             }
-            EffectPayload::Suspend => Self::Suspend {
-                terminal_caps: *caps,
-            },
+            EffectPayload::Suspend => Self::Suspend,
         })
     }
 
-    /// Run the side effect asynchronously, feeding results back via `tx`.
-    pub fn dispatch(
-        self,
-        tx: mpsc::Sender<CoreEvent>,
-        render_tx: watch::Sender<Snapshot>,
-        state: &mut AppState,
-        caps: TerminalCapabilities,
-    ) {
+    /// Dispatch the effect via IoActor (async).
+    pub async fn dispatch_async(self, state: &AppState) {
+        let io_handle = state.actor_handles().as_ref().and_then(|h| h.io.clone());
+        let Some(handle) = io_handle else { return; };
+
         match self {
-            Self::OpenExternalEditor { text } => editor::run(text, tx),
-            Self::CopyToClipboard { text } => clipboard::copy_to_clipboard(text, caps),
-            Self::ShareSession {
-                messages,
-                display_name,
-            } => share::run(messages, display_name, tx),
-            Self::Suspend { terminal_caps } => suspend::run(terminal_caps, render_tx, state),
-            Self::LoginFlowSubmitKey { provider, key } => {
-                if let Some(ref handles) = state.actor_handles_mut() {
-                    if let Some(ref provider_handle) = handles.provider {
-                        login::run(provider, key, tx, provider_handle.tx().clone());
-                    }
-                }
+            Self::OpenExternalEditor { text } => {
+                handle.open_external_editor(text).await;
+            }
+            Self::CopyToClipboard { text } => {
+                handle.write_clipboard(text).await;
+            }
+            Self::ShareSession { messages, display_name } => {
+                handle.share_session(messages, display_name).await;
+            }
+            Self::Suspend => {
+                handle.suspend_process().await;
+            }
+            Self::LoginFlowSubmitKey { .. } => {
+                // Login validation uses ProviderActor, handled separately
             }
         }
     }
 }
 
 // ---------------------------------------------------------------------------
-// Tests (moved from runie-core::effect_payload)
+// Tests
 // ---------------------------------------------------------------------------
 
 #[cfg(test)]

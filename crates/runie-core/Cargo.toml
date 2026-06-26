@@ -44,7 +44,13 @@ notify-debouncer-mini = "0.5"
 strum = { version = "0.26", features = ["derive"] }
 fff-search.workspace = true
 git2.workspace = true
+reqwest = { workspace = true, features = ["blocking"] }
+tempfile.workspace = true
 tracing = "0.1"
+
+[target.'cfg(unix)'.dependencies]
+crossterm.workspace = true
+nix.workspace = true
 uuid = { version = "1", features = ["v4"] }
 async-trait.workspace = true
 redb = { version = "2", optional = true }

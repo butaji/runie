@@ -340,6 +340,18 @@ pub enum Event {
         entry: String,
     },
 
+    // IO effects (results)
+    /// Gist URL or error from sharing session.
+    GistShared { result: Result<String, String> },
+    /// Text from external editor or error.
+    ExternalEditorClosed { result: Result<String, String> },
+    /// Clipboard write result.
+    ClipboardWritten { success: bool },
+    /// Clipboard read text.
+    ClipboardRead { result: Result<String, String> },
+    /// Process suspended/resumed.
+    ProcessResumed,
+
     // Session persistence results
     SessionLoaded {
         name: String,

@@ -269,6 +269,19 @@ fn dispatcher_handles_all_variants() {
                 query: String::new(),
                 indexed: false,
             },
+
+            // IO effects (results)
+            Event::GistShared { .. } => Event::GistShared {
+                result: Ok("https://gist.github.com/test".to_string()),
+            },
+            Event::ExternalEditorClosed { .. } => Event::ExternalEditorClosed {
+                result: Ok("edited content".to_string()),
+            },
+            Event::ClipboardWritten { .. } => Event::ClipboardWritten { success: true },
+            Event::ClipboardRead { .. } => Event::ClipboardRead {
+                result: Ok("clipboard content".to_string()),
+            },
+            Event::ProcessResumed => Event::ProcessResumed,
         }
     }
     let _ = assert_exhaustive(Event::Submit);
