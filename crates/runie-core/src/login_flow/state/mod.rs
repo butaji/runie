@@ -119,3 +119,6 @@ impl Default for LoginFlowState {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests;

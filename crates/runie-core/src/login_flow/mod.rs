@@ -26,9 +26,6 @@ mod panels;
 mod state;
 
 #[cfg(test)]
-mod state_tests;
-
-#[cfg(test)]
 mod validation;
 
 #[cfg(test)]
