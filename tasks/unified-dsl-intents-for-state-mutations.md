@@ -1,6 +1,6 @@
 # Unified DSL intents for all state mutations
 
-**Status**: in_progress
+**Status**: todo
 **Milestone**: R4
 **Category**: Input / Commands
 **Priority**: P0
