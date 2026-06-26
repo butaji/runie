@@ -1,6 +1,6 @@
 # Move TUI effects (IO) out of the rendering crate
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0
@@ -25,16 +25,16 @@ Architecture.md:18-21 states IO lives in `IoActor` behind async mockable interfa
 
 ## Acceptance Criteria
 
-- [ ] `crates/runie-tui/src/effects/share.rs` no longer calls `reqwest` directly; gist upload is an `IoActor` message (`ShareSession { messages, display_name }`) that emits `GistShared(Result<String>)`.
-- [ ] `crates/runie-tui/src/effects/editor.rs` no longer spawns `$EDITOR` or creates temp files directly; it sends an `OpenExternalEditor { text }` message to `IoActor` and renders the `EditorClosed { result }` event.
-- [ ] `crates/runie-tui/src/effects/clipboard.rs` reads/writes clipboard via `IoActor` messages (`ReadClipboard` / `WriteClipboard` / `ReadClipboardImage`), emitting `ClipboardRead` / `ClipboardWritten` / `ClipboardImageRead` events.
-- [ ] `crates/runie-tui/src/effects/login.rs` key validation runs through `ProviderActor` (it already owns `DynProvider` construction and key validation per `docs/Architecture.md:43`); TUI only sends `ValidateKey { provider, key }` and renders `KeyValidated`.
-- [ ] `crates/runie-tui/src/effects/suspend.rs` suspend/resume moves to `IoActor` (`SuspendProcess` / `ResumeProcess`) since it manipulates the process group.
-- [ ] `reqwest` and `tempfile` removed from `crates/runie-tui/Cargo.toml` non-dev dependencies.
-- [ ] `crates/runie-tui/src/effects/` is deleted or reduced to a thin `EffectCommand → IoActor message` mapping (one file, <40 LOC).
-- [ ] `IoActor` gains handlers for the new messages; existing `actors/io/` traits extended or a new `actors/io/effects.rs` added.
-- [ ] `cargo test --workspace` succeeds.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] `crates/runie-tui/src/effects/share.rs` no longer calls `reqwest` directly; gist upload is an `IoActor` message (`ShareSession { messages, display_name }`) that emits `GistShared(Result<String>)`.
+- [x] `crates/runie-tui/src/effects/editor.rs` no longer spawns `$EDITOR` or creates temp files directly; it sends an `OpenExternalEditor { text }` message to `IoActor` and renders the `EditorClosed { result }` event.
+- [x] `crates/runie-tui/src/effects/clipboard.rs` reads/writes clipboard via `IoActor` messages (`ReadClipboard` / `WriteClipboard` / `ReadClipboardImage`), emitting `ClipboardRead` / `ClipboardWritten` / `ClipboardImageRead` events.
+- [x] `crates/runie-tui/src/effects/login.rs` key validation runs through `ProviderActor` (it already owns `DynProvider` construction and key validation per `docs/Architecture.md:43`); TUI only sends `ValidateKey { provider, key }` and renders `KeyValidated`.
+- [x] `crates/runie-tui/src/effects/suspend.rs` suspend/resume moves to `IoActor` (`SuspendProcess` / `ResumeProcess`) since it manipulates the process group.
+- [x] `reqwest` and `tempfile` removed from `crates/runie-tui/Cargo.toml` non-dev dependencies.
+- [x] `crates/runie-tui/src/effects/` is deleted or reduced to a thin `EffectCommand → IoActor message` mapping (one file, <40 LOC).
+- [x] `IoActor` gains handlers for the new messages; existing `actors/io/` traits extended or a new `actors/io/effects.rs` added.
+- [x] `cargo test --workspace` succeeds.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 

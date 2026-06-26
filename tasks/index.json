@@ -232,7 +232,7 @@
   {
     "file": "move-tui-effects-into-io-actor.md",
     "title": "Move TUI effects (IO) out of the rendering crate",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "notification-actor-owns-transient-messages.md",
