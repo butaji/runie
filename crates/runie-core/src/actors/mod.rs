@@ -24,7 +24,7 @@ pub use handles::{ActorHandles, FffIndexerHandle};
 pub use config::{ConfigActor, ConfigActorHandle, ConfigMsg};
 pub use fff_indexer::{
     FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
-    FffSearchState,
+    FffSearchState, format_git_status,
 };
 pub use input::{InputActor, InputActorHandle, InputMsg};
 pub use io::{IoActor, IoActorHandle, IoMsg};

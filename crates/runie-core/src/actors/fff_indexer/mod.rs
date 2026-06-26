@@ -22,6 +22,10 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 
 mod search;
+
+// Re-export for use by other modules (e.g., file_pickers)
+pub use search::format_git_status;
+
 #[cfg(test)]
 mod tests;
 

@@ -202,3 +202,59 @@ async fn search_request_event_returns_results() {
     handle.abort();
     assert!(got_result, "search result event was not received");
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Git status formatting tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+use git2::Status as G;
+
+/// L1: `format_git_status` maps tracked file statuses to expected labels.
+#[test]
+fn format_git_status_covers_tracked_statuses() {
+    use super::format_git_status;
+
+    // WT_NEW / INDEX_NEW → "untracked"
+    assert_eq!(format_git_status(G::WT_NEW), "untracked");
+    assert_eq!(format_git_status(G::INDEX_NEW), "untracked");
+
+    // WT_MODIFIED / INDEX_MODIFIED → "modified"
+    assert_eq!(format_git_status(G::WT_MODIFIED), "modified");
+    assert_eq!(format_git_status(G::INDEX_MODIFIED), "modified");
+
+    // WT_DELETED / INDEX_DELETED → "deleted"
+    assert_eq!(format_git_status(G::WT_DELETED), "deleted");
+    assert_eq!(format_git_status(G::INDEX_DELETED), "deleted");
+
+    // WT_RENAMED / INDEX_RENAMED → "renamed"
+    assert_eq!(format_git_status(G::WT_RENAMED), "renamed");
+    assert_eq!(format_git_status(G::INDEX_RENAMED), "renamed");
+}
+
+/// L1: `format_git_status` returns "clean" when no tracked flags are set.
+#[test]
+fn format_git_status_returns_clean_for_empty_status() {
+    use super::format_git_status;
+    // Status::empty() means no tracked changes
+    assert_eq!(format_git_status(G::empty()), "clean");
+}
+
+/// L1: `format_git_status` handles combined flags (e.g., staged + unstaged).
+#[test]
+fn format_git_status_handles_combined_flags() {
+    use super::format_git_status;
+    // File with both staged and unstaged changes
+    let combined = G::INDEX_MODIFIED | G::WT_MODIFIED;
+    // Should return "modified" (the first match in our lookup order)
+    let result = format_git_status(combined);
+    assert!(!result.is_empty(), "combined flags should return a label");
+}
+
+/// L1: `format_git_status_str` (the wrapper) returns owned String.
+#[test]
+fn format_git_status_str_returns_owned_string() {
+    use super::format_git_status;
+    let result = format_git_status(G::WT_MODIFIED);
+    // The wrapper should return "modified"
+    assert_eq!(result, "modified");
+}

@@ -125,8 +125,10 @@ impl FffIndexerActor {
     }
 }
 
-/// Format a git2 Status as a human-readable string.
-fn format_git_status_str(status: git2::Status) -> String {
+/// Map a git2 Status to a human-readable label.
+///
+/// Returns `"clean"` if no tracked status flags are set.
+pub fn format_git_status(status: git2::Status) -> &'static str {
     use git2::Status as G;
     const STATUS_LABELS: &[(git2::Status, &str)] = &[
         (G::WT_NEW, "untracked"),
@@ -140,10 +142,15 @@ fn format_git_status_str(status: git2::Status) -> String {
     ];
     for (flag, label) in STATUS_LABELS {
         if status.contains(*flag) {
-            return (*label).to_owned();
+            return label;
         }
     }
-    "clean".to_owned()
+    "clean"
+}
+
+/// Format a git2 Status as a human-readable string (returns `"clean"` for clean state).
+fn format_git_status_str(status: git2::Status) -> String {
+    format_git_status(status).to_owned()
 }
 
 /// Build a result payload.

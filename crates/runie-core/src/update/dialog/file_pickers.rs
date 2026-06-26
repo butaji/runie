@@ -85,24 +85,15 @@ fn format_fff_results(
         .collect()
 }
 
+/// Format a git2 Status for FFF file picker results.
+/// Returns empty string for clean state (no tracked changes).
 fn format_fff_git_status(status: git2::Status) -> String {
-    use git2::Status as G;
-    const STATUS_LABELS: &[(git2::Status, &str)] = &[
-        (G::WT_NEW, "untracked"),
-        (G::INDEX_NEW, "untracked"),
-        (G::WT_MODIFIED, "modified"),
-        (G::INDEX_MODIFIED, "modified"),
-        (G::WT_DELETED, "deleted"),
-        (G::INDEX_DELETED, "deleted"),
-        (G::WT_RENAMED, "renamed"),
-        (G::INDEX_RENAMED, "renamed"),
-    ];
-    for (flag, label) in STATUS_LABELS {
-        if status.contains(*flag) {
-            return (*label).to_owned();
-        }
+    let label = crate::actors::format_git_status(status);
+    if label == "clean" {
+        String::new()
+    } else {
+        label.to_owned()
     }
-    String::new()
 }
 
 // ---------------------------------------------------------------------------
