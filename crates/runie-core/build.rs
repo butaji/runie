@@ -332,6 +332,8 @@ fn needs_appstate_lint(rel_path: &str) -> bool {
         "domain_ops.rs",
         "actors/config/actor.rs",
         "actors/permission/actor.rs",
+        "actors/input/actor.rs",
+        "actors/ui_control/actor.rs",
         "update/input/text.rs",
         "update/input/submit.rs",
         "retry.rs",

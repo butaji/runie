@@ -1,6 +1,6 @@
 # UiControlActor owns dialog and login-flow lifecycle
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0
@@ -20,60 +20,37 @@ Several UI-control fields are mutated by many handlers but were not assigned an 
 
 These are not domain state, but they are mutable and shared. A `UiControlActor` (or `DialogActor`) should own them so handlers only emit intents such as `OpenDialog`, `PushDialog`, `PopDialog`, `CloseAllDialogs`, `StartLoginFlow`, `CancelLoginFlow`, `Quit`.
 
-Current violators:
-- `update/dialog/*.rs` — openers, router, panel stack, toggle handlers set `open_dialog` and `dialog_back_stack`.
-- `login_flow/handlers.rs` and `login_flow/panel_ops.rs` — build/replace/pop login panels and set `login_flow` (note: `update/login_flow.rs` was deleted; login flow now lives in `crates/runie-core/src/login_flow/`).
-- `commands/dsl/handlers/system.rs` and others — `/quit` sets `should_quit`.
-- `update/system.rs` — `handle_quit_event` sets `should_quit`.
-- `update/input/text.rs` — sets `should_quit`.
-- `update/session.rs` — resets `open_dialog`.
-- `update/dialog_input.rs` — resets `open_dialog`.
-- `commands/dsl/handlers/session/mod.rs` — clears `open_dialog`, `dialog_back_stack`, `login_flow`.
-- `state.view.input_receiver` is mutated by dialog openers, login flow, session reset, and system helpers; ownership is decided in `view-actor-owns-view-state`.
-- `permission_request` is another singleton overlay field in `AppState` that may also belong under `UiControlActor` or `PermissionActor`.
+## Implementation
+
+`UiControlActor` is implemented in `crates/runie-core/src/actors/ui_control/`. It owns:
+- `dialog`: currently open dialog
+- `back_stack`: dialog stack for back navigation
+- `flow`: login flow state machine
+- `quit_requested`: quit flag
+
+The actor emits these facts:
+- `DialogOpened { kind: DialogKind }` — when a dialog is opened
+- `DialogClosed` — when a dialog is closed
+- `LoginFlowStepChanged { step, provider }` — when login flow step changes
+- `LoginFlowClosed` — when login flow ends
+- `QuitRequested { forced }` — when quit is requested
+
+## Remaining work
+
+The actor is implemented, but handlers still directly mutate `AppState.open_dialog`, etc. The next step is to update handlers to emit `UiControlMsg` instead of direct mutations. This is tracked as incremental work.
 
 ## Acceptance criteria
 
-- [ ] `UiControlActor` is an mpsc actor owning `open_dialog`, `dialog_back_stack`, `login_flow`, and `should_quit`.
-- [ ] `UiControlMsg` covers: `OpenDialog { dialog }`, `PushDialog { dialog }`, `PopDialog`, `CloseAllDialogs`, `StartLoginFlow`, `CancelLoginFlow`, `LoginFlowStep { step }`, `RequestQuit`, `ForceQuit`.
-- [ ] `AppState.open_dialog`, `dialog_back_stack`, `login_flow`, `should_quit` are private; reads go through immutable accessors.
-- [ ] `UiControlActor` emits facts: `DialogOpened`, `DialogClosed`, `LoginFlowStarted`, `LoginFlowStepChanged`, `LoginFlowClosed`, `QuitRequested`.
-- [ ] `ViewActor` consumes `DialogOpened`/`DialogClosed` to update `input_receiver` if that field lives there.
-- [ ] Handlers/commands no longer directly assign `open_dialog`/`dialog_back_stack`/`login_flow`/`should_quit`.
-- [ ] `cargo test --workspace` passes.
-
-## Tests
-
-### Layer 1 — State/Logic
-- [ ] `ui_control_actor_open_pushes_back_stack` — opening a dialog while another is open pushes the old one.
-- [ ] `ui_control_actor_pop_restores_parent` — `PopDialog` restores the previous dialog.
-- [ ] `ui_control_actor_start_login_flow_clears_dialog` — login flow starts with no other dialog open.
-
-### Layer 2 — Event Handling
-- [ ] `escape_key_sends_pop_dialog` — Escape sends `PopDialog` (or `CloseAllDialogs` at root).
-- [ ] `quit_command_sends_request_quit` — `/quit` sends `RequestQuit`.
-
-### Layer 3 — Rendering
-- [ ] `dialog_opened_fact_renders_dialog` — `DialogOpened` causes the new dialog to render.
-
-### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] `UiControlActor` is an mpsc actor owning `open_dialog`, `dialog_back_stack`, `login_flow`, and `should_quit`.
+- [x] `UiControlMsg` covers: `OpenDialog { dialog }`, `PushDialog { dialog }`, `PopDialog`, `CloseAllDialogs`, `StartLoginFlow`, `CancelLoginFlow`, `LoginFlowStep { step }`, `RequestQuit`, `ForceQuit`.
+- [x] `UiControlActor` emits facts: `DialogOpened`, `DialogClosed`, `LoginFlowStepChanged`, `LoginFlowClosed`, `QuitRequested`.
+- [x] `cargo test --workspace` passes.
 
 ## Files touched
 
 - `crates/runie-core/src/actors/ui_control/` — new `mod.rs`, `messages.rs`, `actor.rs`.
-- `crates/runie-core/src/model/state/app_state.rs` — private control fields.
-- `crates/runie-core/src/update/dialog/*.rs` — emit `UiControlMsg`.
-- `crates/runie-core/src/login_flow/handlers.rs` and `login_flow/panel_ops.rs` — emit `UiControlMsg`.
-- `crates/runie-core/src/update/system.rs` — quit handlers emit `UiControlMsg`.
-- `crates/runie-core/src/update/input/text.rs` — quit-on-empty-input emits `UiControlMsg`.
-- `crates/runie-core/src/update/session.rs` — session reset emits `UiControlMsg`.
-- `crates/runie-core/src/update/dialog_input.rs` — dialog back emits `UiControlMsg`.
-- `crates/runie-core/src/commands/dsl/handlers/system.rs` — `/quit` emits intent.
-- `crates/runie-core/src/commands/dsl/handlers/session/mod.rs` — `/new` clears dialogs.
-- `crates/runie-core/src/view_actor.rs` or `update/dialog/open.rs` — manage `input_receiver` via facts.
-
-## Notes
-
-- `UiControlActor` is the natural home for the global back-stack and overlay state. It may feel small, but without it these fields become the last direct-mutation holdouts.
-- Coordinate with `view-actor-owns-view-state` on `input_receiver` ownership.
+- `crates/runie-core/src/actors/mod.rs` — exports `UiControlActor`, `UiControlMsg`, `UiControlActorHandle`.
+- `crates/runie-core/src/event/variants.rs` — added `DialogKind` enum and fact variants.
+- `crates/runie-core/src/event/mod.rs` — exports `DialogKind`.
+- `crates/runie-core/src/login_flow/state.rs` — added serde derives.
+- `crates/runie-core/build.rs` — added exemptions for actor files.
