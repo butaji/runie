@@ -36,6 +36,8 @@ mod dsl;
 #[cfg(test)]
 mod file_refs;
 #[cfg(test)]
+mod file_refs_lookup;
+#[cfg(test)]
 mod flow;
 #[cfg(test)]
 mod focus_events;

@@ -87,8 +87,6 @@ pub mod update;
 pub mod view;
 
 #[cfg(test)]
-mod file_refs_lookup_tests;
-#[cfg(test)]
 mod tests;
 
 pub use actors::session::SessionActor;
