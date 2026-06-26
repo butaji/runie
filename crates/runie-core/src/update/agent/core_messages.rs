@@ -148,7 +148,9 @@ impl AppState {
     fn strip_tools_from_assistant(&mut self) {
         for msg in self.session_mut().messages.iter_mut() {
             if msg.role == Role::Assistant {
-                msg.set_text_part(strip_tool_markers(&msg.content()));
+                let stripped = strip_tool_markers(&msg.content());
+                let visible = crate::update::strip_thinking_tags(&stripped);
+                msg.set_text_part(visible);
             }
         }
     }

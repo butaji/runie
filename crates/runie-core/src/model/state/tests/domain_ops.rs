@@ -1,5 +1,7 @@
 //! Tests for domain_ops.
 
+#[allow(unused_imports)]
+use crate::model::AppState;
 
 #[test]
 fn active_provider_returns_login_flow_provider() {

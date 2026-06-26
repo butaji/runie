@@ -7,6 +7,36 @@ use crate::Event;
 pub use crate::tool_markers::has_tool_markers as content_has_tool_markers;
 pub use crate::tool_markers::strip_tool_markers;
 
+/// Strip `<think>...</think>` thinking tags from content.
+/// Returns only the visible text, dropping the reasoning content.
+pub fn strip_thinking_tags(content: &str) -> String {
+    let mut visible = String::new();
+    let mut in_reasoning = false;
+    let mut rest = content;
+    loop {
+        let marker = if in_reasoning { "</think>" } else { "<think>" };
+        match rest.find(marker) {
+            Some(idx) => {
+                if !in_reasoning {
+                    visible.push_str(&rest[..idx]);
+                }
+                rest = &rest[idx + marker.len()..];
+                in_reasoning = !in_reasoning;
+            }
+            None => {
+                if !in_reasoning {
+                    visible.push_str(rest);
+                }
+                break;
+            }
+        }
+    }
+    if in_reasoning {
+        // Unclosed thinking tag - drop the remaining content
+    }
+    visible
+}
+
 mod agent;
 pub(crate) mod command;
 pub(crate) mod dialog;
