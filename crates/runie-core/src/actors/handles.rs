@@ -295,6 +295,31 @@ impl ActorHandles {
         }
     }
 
+    // Queue delivery helpers
+    pub async fn send_turn_deliver_queued(&self, steering_mode: crate::model::DeliveryMode, follow_up_mode: crate::model::DeliveryMode) {
+        if let Some(ref h) = self.turn {
+            h.send(crate::actors::TurnMsg::DeliverQueued { steering_mode, follow_up_mode }).await;
+        }
+    }
+
+    pub fn try_send_turn_deliver_queued(&self, steering_mode: crate::model::DeliveryMode, follow_up_mode: crate::model::DeliveryMode) {
+        if let Some(ref h) = self.turn {
+            h.try_send(crate::actors::TurnMsg::DeliverQueued { steering_mode, follow_up_mode });
+        }
+    }
+
+    pub async fn send_turn_dequeue(&self) {
+        if let Some(ref h) = self.turn {
+            h.send(crate::actors::TurnMsg::Dequeue).await;
+        }
+    }
+
+    pub fn try_send_turn_dequeue(&self) {
+        if let Some(ref h) = self.turn {
+            h.try_send(crate::actors::TurnMsg::Dequeue);
+        }
+    }
+
     pub async fn send_turn_submit_user_message(&self, content: String, id: String) {
         if let Some(ref h) = self.turn {
             h.send(crate::actors::TurnMsg::SubmitUserMessage { content, id }).await;

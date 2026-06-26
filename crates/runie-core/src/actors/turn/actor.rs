@@ -70,6 +70,10 @@ impl TurnActor {
             TurnMsg::QueueFollowUp { content } => self.handle_queue_follow_up(content),
             TurnMsg::AbortQueue => self.handle_abort_queue(),
             TurnMsg::ClearQueues => self.handle_clear_queues(),
+            TurnMsg::DeliverQueued { steering_mode, follow_up_mode } => {
+                self.handle_deliver_queued(steering_mode, follow_up_mode);
+            }
+            TurnMsg::Dequeue => self.handle_dequeue(),
             TurnMsg::Thinking { id } => self.handle_thinking(id),
             TurnMsg::ThoughtDone { .. } => self.handle_thought_done(),
             TurnMsg::ToolStart { id, name } => self.handle_tool_start(id, name),
@@ -144,6 +148,109 @@ impl TurnActor {
         self.state.request_queue.clear();
         self.state.message_queue.clear();
         self.emit(Event::QueuesCleared);
+    }
+
+    fn handle_deliver_queued(&mut self, steering_mode: crate::model::DeliveryMode, follow_up_mode: crate::model::DeliveryMode) {
+        use crate::model::DeliveryMode;
+        if self.try_deliver_steering(steering_mode) {
+            if follow_up_mode == DeliveryMode::All && self.has_follow_ups() {
+                self.deliver_follow_ups_all();
+            }
+            return;
+        }
+        self.try_deliver_follow_up(follow_up_mode);
+    }
+
+    fn has_follow_ups(&self) -> bool {
+        self.state.message_queue.iter().any(|m| {
+            m.kind == crate::model::QueuedMessageKind::FollowUp
+        })
+    }
+
+    fn try_deliver_steering(&mut self, mode: crate::model::DeliveryMode) -> bool {
+        use crate::model::DeliveryMode;
+        let kind = crate::model::QueuedMessageKind::Steering;
+        match mode {
+            DeliveryMode::OneAtATime => {
+                let idx = self.state.message_queue.iter().position(|m| m.kind == kind);
+                let Some(idx) = idx else { return false };
+                let msg = self.state.message_queue.remove(idx);
+                let id = self.next_id();
+                self.state.request_queue.push_back((msg.content.clone(), id.clone()));
+                self.emit(Event::SteeringDelivered { content: msg.content, id });
+                true
+            }
+            DeliveryMode::All => {
+                let steerings: Vec<_> = self
+                    .state
+                    .message_queue
+                    .iter()
+                    .filter(|m| m.kind == kind)
+                    .cloned()
+                    .collect();
+                if steerings.is_empty() {
+                    return false;
+                }
+                let content = steerings.iter().map(|m| m.content.clone()).collect::<Vec<_>>().join("\n");
+                self.state.message_queue.retain(|m| m.kind != kind);
+                let id = self.next_id();
+                self.state.request_queue.push_back((content.clone(), id.clone()));
+                self.emit(Event::SteeringDelivered { content, id });
+                true
+            }
+        }
+    }
+
+    fn try_deliver_follow_up(&mut self, mode: crate::model::DeliveryMode) {
+        use crate::model::DeliveryMode;
+        match mode {
+            DeliveryMode::OneAtATime => {
+                if let Some(idx) = self
+                    .state
+                    .message_queue
+                    .iter()
+                    .position(|m| m.kind == crate::model::QueuedMessageKind::FollowUp)
+                {
+                    let msg = self.state.message_queue.remove(idx);
+                    let id = self.next_id();
+                    self.state.request_queue.push_back((msg.content.clone(), id.clone()));
+                    self.emit(Event::FollowUpDelivered { content: msg.content, id });
+                }
+            }
+            DeliveryMode::All => {
+                self.deliver_follow_ups_all();
+            }
+        }
+    }
+
+    fn deliver_follow_ups_all(&mut self) {
+        let follow_ups: Vec<_> = self
+            .state
+            .message_queue
+            .iter()
+            .filter(|m| m.kind == crate::model::QueuedMessageKind::FollowUp)
+            .cloned()
+            .collect();
+        if follow_ups.is_empty() {
+            return;
+        }
+        let content = follow_ups.iter().map(|m| m.content.clone()).collect::<Vec<_>>().join("\n");
+        self.state.message_queue.retain(|m| m.kind != crate::model::QueuedMessageKind::FollowUp);
+        let id = self.next_id();
+        self.state.request_queue.push_back((content.clone(), id.clone()));
+        self.emit(Event::FollowUpDelivered { content, id });
+    }
+
+    fn next_id(&mut self) -> String {
+        let id = format!("req.{}", self.state.next_id);
+        self.state.next_id += 1;
+        id
+    }
+
+    fn handle_dequeue(&mut self) {
+        if let Some(msg) = self.state.message_queue.pop() {
+            self.emit(Event::MessageDequeued { content: msg.content });
+        }
     }
 
     fn handle_thinking(&mut self, id: String) {
@@ -294,5 +401,87 @@ mod tests {
             }
         }
         assert!(found, "TurnErrored should be emitted");
+    }
+
+    #[tokio::test]
+    async fn deliver_queued_delivers_steering() {
+        use crate::model::DeliveryMode;
+        let bus = crate::bus::EventBus::new(16);
+        let (handle, _actor) = TurnActor::spawn(bus.clone());
+        let mut sub = bus.subscribe();
+
+        // Queue a steering message
+        handle.send(TurnMsg::QueueSteering {
+            content: "steer me".into(),
+        }).await;
+
+        // Deliver queued
+        handle.send(TurnMsg::DeliverQueued {
+            steering_mode: DeliveryMode::OneAtATime,
+            follow_up_mode: DeliveryMode::OneAtATime,
+        }).await;
+
+        // Should emit SteeringDelivered
+        let mut found = false;
+        while let Ok(evt) = sub.recv().await {
+            if matches!(evt, Event::SteeringDelivered { content, .. } if content == "steer me") {
+                found = true;
+                break;
+            }
+        }
+        assert!(found, "SteeringDelivered should be emitted");
+    }
+
+    #[tokio::test]
+    async fn deliver_queued_batches_all_steering() {
+        use crate::model::DeliveryMode;
+        let bus = crate::bus::EventBus::new(16);
+        let (handle, _actor) = TurnActor::spawn(bus.clone());
+        let mut sub = bus.subscribe();
+
+        // Queue multiple steering messages
+        handle.send(TurnMsg::QueueSteering { content: "a".into() }).await;
+        handle.send(TurnMsg::QueueSteering { content: "b".into() }).await;
+
+        // Deliver all at once
+        handle.send(TurnMsg::DeliverQueued {
+            steering_mode: DeliveryMode::All,
+            follow_up_mode: DeliveryMode::OneAtATime,
+        }).await;
+
+        // Should emit SteeringDelivered with batched content
+        let mut found = false;
+        while let Ok(evt) = sub.recv().await {
+            if matches!(evt, Event::SteeringDelivered { content, .. } if content == "a\nb") {
+                found = true;
+                break;
+            }
+        }
+        assert!(found, "SteeringDelivered with batched content should be emitted");
+    }
+
+    #[tokio::test]
+    async fn dequeue_emits_message_dequeued() {
+        let bus = crate::bus::EventBus::new(16);
+        let (handle, _actor) = TurnActor::spawn(bus.clone());
+        let mut sub = bus.subscribe();
+
+        // Queue a message
+        handle.send(TurnMsg::QueueSteering {
+            content: "queued content".into(),
+        }).await;
+
+        // Dequeue it
+        handle.send(TurnMsg::Dequeue).await;
+
+        // Should emit MessageDequeued
+        let mut found = false;
+        while let Ok(evt) = sub.recv().await {
+            if matches!(evt, Event::MessageDequeued { content } if content == "queued content") {
+                found = true;
+                break;
+            }
+        }
+        assert!(found, "MessageDequeued should be emitted");
     }
 }

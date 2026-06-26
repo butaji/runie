@@ -125,4 +125,59 @@ impl AppState {
             .push_back((content, id));
         self.messages_changed();
     }
+
+    /// Project SteeringDelivered fact into AppState.
+    /// Removes from message_queue and adds to session.messages.
+    pub(crate) fn apply_steering_delivered(&mut self, content: String, id: String) {
+        use crate::message::{now, ChatMessage, Part, Role};
+        // Remove from AppState mirror of message_queue (if present)
+        self.agent_state_mut()
+            .message_queue
+            .retain(|m| !(m.kind == crate::model::QueuedMessageKind::Steering && m.content != content));
+        // Add to session
+        self.session_mut().messages.push(ChatMessage {
+            role: Role::User,
+            timestamp: now(),
+            id: id.clone(),
+            parts: vec![Part::Text { content: content.clone() }],
+            ..Default::default()
+        });
+        // Add to request_queue (for agent to pick up)
+        self.agent_state_mut()
+            .request_queue
+            .push_back((content, id));
+        self.messages_changed();
+    }
+
+    /// Project FollowUpDelivered fact into AppState.
+    /// Removes from message_queue and adds to session.messages.
+    pub(crate) fn apply_follow_up_delivered(&mut self, content: String, id: String) {
+        use crate::message::{now, ChatMessage, Part, Role};
+        // Remove from AppState mirror of message_queue (if present)
+        self.agent_state_mut()
+            .message_queue
+            .retain(|m| !(m.kind == crate::model::QueuedMessageKind::FollowUp && m.content != content));
+        // Add to session
+        self.session_mut().messages.push(ChatMessage {
+            role: Role::User,
+            timestamp: now(),
+            id: id.clone(),
+            parts: vec![Part::Text { content: content.clone() }],
+            ..Default::default()
+        });
+        // Add to request_queue (for agent to pick up)
+        self.agent_state_mut()
+            .request_queue
+            .push_back((content, id));
+        self.messages_changed();
+    }
+
+    /// Project MessageDequeued fact into AppState.
+    /// Pops the last message from message_queue back to input.
+    pub(crate) fn apply_message_dequeued(&mut self, content: String) {
+        // Update input with dequeued content
+        self.input_mut().input = content;
+        self.input_mut().cursor_pos = self.input().input.len();
+        self.view_mut().dirty = true;
+    }
 }

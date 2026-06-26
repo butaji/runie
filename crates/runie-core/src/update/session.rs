@@ -187,16 +187,28 @@ impl AppState {
         if self.agent_state_mut().message_queue.is_empty() {
             return;
         }
-        // Try to deliver steering (batch or single depending on mode)
-        if self.try_deliver_steering() {
-            // Steering delivered - in "All" mode, also try follow-ups
-            if self.config_mut().follow_up_mode == DeliveryMode::All && self.has_follow_ups() {
-                self.try_deliver_follow_ups_all();
+        // Route through TurnActor to maintain authoritative queue state
+        let steering_mode = self.config().steering_mode;
+        let follow_up_mode = self.config().follow_up_mode;
+        let handles = self.actor_handles().cloned();
+        if let Some(ref h) = handles {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                // Production mode: send to TurnActor
+                let handles = h.clone();
+                tokio::spawn(async move {
+                    handles.try_send_turn_deliver_queued(steering_mode, follow_up_mode);
+                });
+                // Clear the AppState mirror - TurnActor will emit facts to update it
+                self.agent_state_mut().message_queue.clear();
+            } else {
+                // Test mode without runtime: apply synchronously
+                self.apply_deliver_queued_sync(steering_mode, follow_up_mode);
             }
-            return;
+        } else {
+            // Test mode without handles: apply synchronously
+            self.apply_deliver_queued_sync(steering_mode, follow_up_mode);
         }
-        // No steering in queue - try follow-ups
-        self.try_deliver_follow_up();
+        self.view_mut().scroll = 0;
     }
 
     fn has_follow_ups(&self) -> bool {
@@ -206,8 +218,23 @@ impl AppState {
             .any(|m| m.kind == crate::model::QueuedMessageKind::FollowUp)
     }
 
-    /// Deliver all follow-ups in batch mode.
-    fn try_deliver_follow_ups_all(&mut self) {
+    /// Synchronous delivery logic for test mode.
+    fn apply_deliver_queued_sync(&mut self, steering_mode: DeliveryMode, follow_up_mode: DeliveryMode) {
+        use crate::model::DeliveryMode;
+        // Try to deliver steering (batch or single depending on mode)
+        if self.try_deliver_steering_sync(steering_mode) {
+            // Steering delivered - in "All" mode, also try follow-ups
+            if follow_up_mode == DeliveryMode::All && self.has_follow_ups() {
+                self.try_deliver_follow_ups_all_sync();
+            }
+            return;
+        }
+        // No steering in queue - try follow-ups
+        self.try_deliver_follow_up_sync(follow_up_mode);
+    }
+
+    /// Deliver all follow-ups in batch mode (sync version for tests).
+    fn try_deliver_follow_ups_all_sync(&mut self) {
         let follow_ups: Vec<String> = self
             .agent
             .message_queue
@@ -227,12 +254,12 @@ impl AppState {
             .message_queue
             .retain(|m| m.kind != crate::model::QueuedMessageKind::FollowUp);
 
-        self.push_user_message(content);
+        self.push_user_message_sync(content);
         self.view_mut().scroll = 0;
         self.messages_changed();
     }
 
-    fn push_user_message(&mut self, content: String) {
+    fn push_user_message_sync(&mut self, content: String) {
         let id = self.next_id();
         self.session_mut().messages.push(ChatMessage {
             role: Role::User,
@@ -248,14 +275,15 @@ impl AppState {
             .push_back((content, id));
     }
 
-    fn try_deliver_steering(&mut self) -> bool {
-        match self.config_mut().steering_mode {
-            DeliveryMode::OneAtATime => self.try_steering_one(),
-            DeliveryMode::All => self.try_steering_all(),
+    fn try_deliver_steering_sync(&mut self, mode: DeliveryMode) -> bool {
+        use crate::model::DeliveryMode;
+        match mode {
+            DeliveryMode::OneAtATime => self.try_steering_one_sync(),
+            DeliveryMode::All => self.try_steering_all_sync(),
         }
     }
 
-    fn try_steering_one(&mut self) -> bool {
+    fn try_steering_one_sync(&mut self) -> bool {
         let kind = crate::model::QueuedMessageKind::Steering;
         let idx = match self
             .agent_state()
@@ -267,13 +295,13 @@ impl AppState {
             None => return false,
         };
         let content = self.agent_state_mut().message_queue.remove(idx).content;
-        self.push_user_message(content);
+        self.push_user_message_sync(content);
         self.view_mut().scroll = 0;
         self.messages_changed();
         true
     }
 
-    fn try_steering_all(&mut self) -> bool {
+    fn try_steering_all_sync(&mut self) -> bool {
         let kind = crate::model::QueuedMessageKind::Steering;
         let steerings: Vec<String> = self
             .agent_state()
@@ -289,7 +317,7 @@ impl AppState {
         self.agent_state_mut()
             .message_queue
             .retain(|m| m.kind != kind);
-        self.push_user_message(content);
+        self.push_user_message_sync(content);
         self.view_mut().scroll = 0;
         self.messages_changed();
         true
@@ -306,17 +334,25 @@ impl AppState {
         }
     }
 
-    fn try_deliver_follow_up(&mut self) {
-        if let Some(idx) = self
-            .agent
-            .message_queue
-            .iter()
-            .position(|m| m.kind == crate::model::QueuedMessageKind::FollowUp)
-        {
-            let content = self.agent_state_mut().message_queue.remove(idx).content;
-            self.push_user_message(content);
-            self.view_mut().scroll = 0;
-            self.messages_changed();
+    fn try_deliver_follow_up_sync(&mut self, mode: DeliveryMode) {
+        use crate::model::DeliveryMode;
+        match mode {
+            DeliveryMode::OneAtATime => {
+                if let Some(idx) = self
+                    .agent
+                    .message_queue
+                    .iter()
+                    .position(|m| m.kind == crate::model::QueuedMessageKind::FollowUp)
+                {
+                    let content = self.agent_state_mut().message_queue.remove(idx).content;
+                    self.push_user_message_sync(content);
+                    self.view_mut().scroll = 0;
+                    self.messages_changed();
+                }
+            }
+            DeliveryMode::All => {
+                self.try_deliver_follow_ups_all_sync();
+            }
         }
     }
 }

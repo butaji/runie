@@ -292,6 +292,17 @@ fn dispatcher_handles_all_variants() {
                 content: String::new(),
             },
             Event::QueuesCleared => Event::QueuesCleared,
+            Event::SteeringDelivered { .. } => Event::SteeringDelivered {
+                content: String::new(),
+                id: String::new(),
+            },
+            Event::FollowUpDelivered { .. } => Event::FollowUpDelivered {
+                content: String::new(),
+                id: String::new(),
+            },
+            Event::MessageDequeued { .. } => Event::MessageDequeued {
+                content: String::new(),
+            },
             Event::IdGenerated(_) => Event::IdGenerated(crate::actors::turn::NextIdResponse {
                 id: String::new(),
             }),

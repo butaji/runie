@@ -50,6 +50,18 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             state.apply_user_message_submitted(id.clone(), content.clone());
             true
         }
+        Event::SteeringDelivered { content, id } => {
+            state.apply_steering_delivered(content.clone(), id.clone());
+            true
+        }
+        Event::FollowUpDelivered { content, id } => {
+            state.apply_follow_up_delivered(content.clone(), id.clone());
+            true
+        }
+        Event::MessageDequeued { content } => {
+            state.apply_message_dequeued(content.clone());
+            true
+        }
         // Agent events go through handle_agent_event for session message manipulation
         _ => false,
     }

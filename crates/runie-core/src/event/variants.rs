@@ -130,6 +130,9 @@ pub enum Event {
     UserMessageSubmitted { id: String, content: String },
     QueueAborted { content: String },
     QueuesCleared,
+    SteeringDelivered { content: String, id: String },
+    FollowUpDelivered { content: String, id: String },
+    MessageDequeued { content: String },
     IdGenerated(crate::actors::turn::NextIdResponse),
 
     PermissionRequest {

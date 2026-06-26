@@ -29,6 +29,13 @@ pub enum TurnMsg {
     AbortQueue,
     /// Clear all queues.
     ClearQueues,
+    /// Deliver queued messages to the request queue.
+    DeliverQueued {
+        steering_mode: crate::model::DeliveryMode,
+        follow_up_mode: crate::model::DeliveryMode,
+    },
+    /// Dequeue the last message back to input.
+    Dequeue,
     /// LLM event: thinking started.
     Thinking {
         id: String,
