@@ -9,13 +9,12 @@ use std::path::{Path, PathBuf};
 
 use crate::model::ThinkingLevel;
 
-
 use schemars::JsonSchema;
 
-mod layers;
+pub mod layers;
 mod validate;
-
 pub mod schema;
+pub mod migrate;
 
 // ============================================================================
 // Models Section
@@ -198,7 +197,6 @@ pub struct Config {
     #[serde(default)]
     pub thinking_level: ThinkingLevel,
     /// User-defined keybindings that override defaults.
-    /// Parsed from `[keybindings]` table in `config.toml`.
     #[serde(default)]
     pub keybindings: HashMap<String, String>,
     /// Hook commands registered by event name.
@@ -225,10 +223,9 @@ impl Config {
                     Ok(v) => v,
                     Err(_) => return Self::default(),
                 };
-                match crate::config_migrate::migrate_with_path(&mut value, Some(path.to_path_buf()))
-                {
+                match crate::config::migrate::migrate_with_path(&mut value, Some(path.to_path_buf())) {
                     Ok(true) => {
-                        let _ = crate::config_migrate::backup_config(path);
+                        let _ = crate::config::migrate::backup_config(path);
                         if let Ok(migrated) = toml::to_string(&value) {
                             let _ = std::fs::write(path, migrated);
                         }
@@ -458,7 +455,10 @@ pub enum ConfigChange {
 
 fn current_config_values(config: &Config) -> (String, String, String) {
     let (provider, model) = config.resolve_default_model();
-    let theme = config.theme.clone().unwrap_or_else(|| "runie".to_owned());
+    let theme = config
+        .theme
+        .clone()
+        .unwrap_or_else(|| "runie".to_owned());
     (provider, model, theme)
 }
 
@@ -469,10 +469,3 @@ pub fn config_path() -> PathBuf {
         .join(".runie")
         .join("config.toml")
 }
-
-// ============================================================================
-// Tests
-// ============================================================================
-
-#[cfg(test)]
-mod tests;

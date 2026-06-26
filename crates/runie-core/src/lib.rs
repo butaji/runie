@@ -32,7 +32,6 @@ pub mod bus;
 pub mod channels;
 pub mod commands;
 pub mod config;
-pub mod config_migrate;
 pub mod dialog;
 pub mod diff;
 pub mod display_width;

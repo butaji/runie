@@ -317,7 +317,7 @@ fn keybindings_json_migration() {
     // Parse and migrate with the temp config path
     let mut value: toml::Value =
         toml::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
-    crate::config_migrate::migrate_with_path(&mut value, Some(config_path.clone())).unwrap();
+    crate::config::migrate::migrate_with_path(&mut value, Some(config_path.clone())).unwrap();
 
     // After migration, keybindings should be in config
     assert!(

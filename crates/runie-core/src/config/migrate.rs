@@ -59,7 +59,7 @@ fn v2_to_v3(
         return Ok(());
     }
 
-    let cfg_path = config_path.unwrap_or_else(crate::config::config_path);
+    let cfg_path = config_path.unwrap_or_else(super::config_path);
     let json_path = cfg_path.with_file_name("keybindings.json");
     if let Some(kb_table) = read_legacy_keybindings(&json_path) {
         map.insert("keybindings".into(), toml::Value::Table(kb_table));

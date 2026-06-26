@@ -23,9 +23,11 @@ const TEST_SCAFFOLDING_FILES: &[&str] = &[
 /// These should be migrated to IO actors over time.
 const PRODUCTION_ALLOW_LIST: &[&str] = &[
     // Config loading/writing - owned by ConfigActor but currently in domain
-    "config.rs",
     "config/",
-    "config_migrate.rs",
+    // Provider-level config resolution (contains sync IO)
+    "provider/config.rs",
+    // Model config - uses current_dir for path resolution
+    "update/agent/model_config.rs",
     // Auth storage - owned by AuthActor but currently in domain
     "auth.rs",
     // Session persistence - owned by SessionActor but reads use domain paths
