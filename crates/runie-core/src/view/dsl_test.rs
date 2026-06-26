@@ -243,4 +243,144 @@ mod tests {
             "A2 hidden during thinking, Thinking indicator at bottom"
         );
     }
+
+    // =========================================================================
+    // Layer 1 Tests: Model → Element mapping (generate-ui-elements-from-model)
+    // =========================================================================
+
+    /// `element_from_user_chat_message` — ChatMessage with Role::User produces Element::UserMessage.
+    #[test]
+    fn element_from_user_chat_message() {
+        let user_msg = ChatMessage {
+            role: Role::User,
+            parts: vec![Part::Text {
+                content: "Hello, world!".into(),
+            }],
+            timestamp: 1.0,
+            id: "u1".into(),
+            ..Default::default()
+        };
+
+        let mut state = AppState::default();
+        state.session.messages.push(user_msg);
+
+        let elements = LazyCache::rebuild(&state);
+
+        // Find the UserMessage element (skip spacers)
+        let user_elements: Vec<_> = elements
+            .iter()
+            .filter(|e| matches!(e, Element::UserMessage { .. }))
+            .collect();
+
+        assert_eq!(user_elements.len(), 1, "Expected exactly one UserMessage element");
+        if let Element::UserMessage { content, timestamp } = user_elements[0] {
+            assert_eq!(content, "Hello, world!");
+            assert_eq!(*timestamp, 1.0);
+        } else {
+            panic!("Expected UserMessage element");
+        }
+    }
+
+    /// `element_from_tool_output` — Tool message with success produces Element::ToolDone.
+    #[test]
+    fn element_from_tool_output() {
+        // Format expected by transform.rs: "Ran <tool_name> <duration>\n<output>"
+        let tool_msg = ChatMessage {
+            role: Role::Tool,
+            parts: vec![Part::Text {
+                content: "Ran bash 1.5s\nfile1.txt\nfile2.txt".into(),
+            }],
+            timestamp: 2.0,
+            id: "tool.0".into(),
+            tool_call_id: Some("call_abc".into()),
+            ..Default::default()
+        };
+
+        let mut state = AppState::default();
+        state.session.messages.push(tool_msg);
+
+        let elements = LazyCache::rebuild(&state);
+
+        // Find the ToolDone element
+        let tool_elements: Vec<_> = elements
+            .iter()
+            .filter(|e| matches!(e, Element::ToolDone { .. }))
+            .collect();
+
+        assert_eq!(tool_elements.len(), 1, "Expected exactly one ToolDone element");
+        if let Element::ToolDone { name, duration_secs, output, error, .. } = tool_elements[0] {
+            assert_eq!(name, "bash", "Tool name should be 'bash'");
+            assert!((duration_secs - 1.5).abs() < 0.01, "Expected duration ~1.5s");
+            assert!(output.contains("file1.txt"), "Output should contain file1.txt");
+            assert!(!error, "ToolDone should not be an error");
+        } else {
+            panic!("Expected ToolDone element");
+        }
+    }
+
+    /// `element_from_assistant_chat_message` — ChatMessage with Role::Assistant produces Element::AgentMessage.
+    #[test]
+    fn element_from_assistant_chat_message() {
+        let assistant_msg = ChatMessage {
+            role: Role::Assistant,
+            parts: vec![Part::Text {
+                content: "I'll help you with that.".into(),
+            }],
+            timestamp: 3.0,
+            id: "a1".into(),
+            provider: "openai".into(),
+            ..Default::default()
+        };
+
+        let mut state = AppState::default();
+        state.session.messages.push(assistant_msg);
+
+        let elements = LazyCache::rebuild(&state);
+
+        let agent_elements: Vec<_> = elements
+            .iter()
+            .filter(|e| matches!(e, Element::AgentMessage { .. }))
+            .collect();
+
+        assert_eq!(agent_elements.len(), 1, "Expected exactly one AgentMessage element");
+        if let Element::AgentMessage { content, timestamp, provider } = agent_elements[0] {
+            assert_eq!(content, "I'll help you with that.");
+            assert_eq!(*timestamp, 3.0);
+            assert_eq!(provider, "openai");
+        } else {
+            panic!("Expected AgentMessage element");
+        }
+    }
+
+    /// `element_from_thought_chat_message` — ChatMessage with Role::Thought produces Element::ThoughtMarker.
+    #[test]
+    fn element_from_thought_chat_message() {
+        let thought_msg = ChatMessage {
+            role: Role::Thought,
+            parts: vec![Part::Text {
+                content: "Let me think about this 2.0s".into(),
+            }],
+            timestamp: 4.0,
+            id: "thought.0".into(),
+            ..Default::default()
+        };
+
+        let mut state = AppState::default();
+        state.session.messages.push(thought_msg);
+
+        let elements = LazyCache::rebuild(&state);
+
+        let thought_elements: Vec<_> = elements
+            .iter()
+            .filter(|e| matches!(e, Element::ThoughtMarker { .. }))
+            .collect();
+
+        assert_eq!(thought_elements.len(), 1, "Expected exactly one ThoughtMarker element");
+        if let Element::ThoughtMarker { content, timestamp } = thought_elements[0] {
+            assert_eq!(content, "Let me think about this 2.0s");
+            assert_eq!(*timestamp, 4.0);
+        } else {
+            panic!("Expected ThoughtMarker element");
+        }
+    }
 }

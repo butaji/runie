@@ -1,10 +1,5 @@
 [
   {
-    "file": "README.md",
-    "title": "Tasks Directory",
-    "status": "unknown"
-  },
-  {
     "file": "actor-lifecycle-and-handle-registry.md",
     "title": "Actor Lifecycle and Handle Registry",
     "status": "done"
@@ -117,7 +112,7 @@
   {
     "file": "delete-async-io-bridge.md",
     "title": "Delete async_io.rs bridge helpers",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "delete-config-reload-shim.md",
@@ -202,7 +197,7 @@
   {
     "file": "generate-ui-elements-from-model.md",
     "title": "Generate UI elements from model types",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "generic-actor-reply.md",
