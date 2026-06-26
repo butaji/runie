@@ -42,7 +42,7 @@
   {
     "file": "bundle-default-resources-with-manifest.md",
     "title": "Bundle default resources with checksum manifest",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-error-type.md",

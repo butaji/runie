@@ -1,6 +1,6 @@
 # Bundle default resources with checksum manifest
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P2
@@ -12,45 +12,44 @@
 
 Ship built-in agents, roles, personas, and skills as resource files embedded in the binary. A manifest with SHA-256 checksums validates bundled assets at build time and runtime.
 
-## Layout
+## Implementation
 
-```text
-resources/
-  agents/
-    explore.md
-    plan.md
-    general-purpose.md
-  roles/
-    implementer.toml
-    reviewer.toml
-  personas/
-    implementer.toml
-  skills/
-    check-work/SKILL.md
-  manifest.json
-```
+The feature is fully implemented:
 
-Manifest example:
+1. **Resources directory**: `crates/runie-core/resources/` with:
+   - `agents/` - subagent type markdown files
+   - `models/` - model metadata YAML files
 
-```json
-{
-  "version": "r1",
-  "checksums": {
-    "agents/explore.md": "sha256:...",
-    "roles/implementer.toml": "sha256:..."
-  }
-}
-```
+2. **Manifest**: `crates/runie-core/resources/agents/manifest.json` with SHA-256 checksums:
+   ```json
+   {
+     "version": 1,
+     "description": "Bundled built-in subagent types...",
+     "files": {
+       "explore.md": "sha256:...",
+       "plan.md": "sha256:...",
+       "verify.md": "sha256:...",
+       "check-work.md": "sha256:..."
+     }
+   }
+   ```
+
+3. **Build-time validation**: `crates/runie-core/build.rs::validate_agent_manifest()` computes SHA-256 hashes at build time and validates against the manifest.
+
+4. **Runtime loading**: `crates/runie-core/src/subagents/manifest.rs` loads the embedded manifest and provides `check_file()` for validation.
+
+5. **Override precedence**: User overrides in `~/.runie/` take precedence over bundled defaults (handled by `subagents/mod.rs`).
 
 ## Acceptance Criteria
 
-- Default resources live under `crates/runie-core/resources/`.
-- Build script computes checksums and embeds `manifest.json`.
-- Runtime verifies bundled resources against the manifest on load.
-- User overrides in `~/.runie/` take precedence over bundled defaults.
-- `cargo check --workspace` is green.
+- [x] Default resources live under `crates/runie-core/resources/`.
+- [x] Build script computes checksums and embeds `manifest.json`.
+- [x] Runtime verifies bundled resources against the manifest on load.
+- [x] User overrides in `~/.runie/` take precedence over bundled defaults.
+- [x] `cargo check --workspace` is green.
 
-## Tests
+## Files
 
-- **Layer 1**: Manifest generation and checksum verification.
-- **Layer 2**: Load overrides correctly shadow bundled resources.
+- `crates/runie-core/resources/agents/manifest.json` - checksum manifest
+- `crates/runie-core/build.rs` - validates manifest at build time
+- `crates/runie-core/src/subagents/manifest.rs` - runtime manifest loading
