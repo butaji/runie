@@ -1,6 +1,6 @@
 # Remove direct AppState mutations
 
-**Status**: in_progress
+**Status**: todo
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0

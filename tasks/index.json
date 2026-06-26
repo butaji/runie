@@ -292,7 +292,7 @@
   {
     "file": "remove-direct-appstate-mutations.md",
     "title": "Remove direct AppState mutations",
-    "status": "in_progress"
+    "status": "todo"
   },
   {
     "file": "remove-login-config-test-shim.md",
@@ -382,7 +382,7 @@
   {
     "file": "turn-actor-owns-agent-turn-state.md",
     "title": "TurnActor owns agent turn lifecycle and queues",
-    "status": "in_progress"
+    "status": "todo"
   },
   {
     "file": "ui-control-actor-owns-dialog-state.md",
