@@ -23,7 +23,8 @@ nix = { version = "0.31", features = ["signal"] }
 base64 = "0.22"
 pulldown-cmark = "0.13"
 fff-search = "0.9.5-nightly.ec57eb0"
-git2 = { version = "0.20.2", features = ["vendored-libgit2"], default-features = false }
+# git2 is used transitively via fff-search; no vendored libgit2 needed.
+git2 = "0.20"
 unicode-width = "0.2"
 textwrap = { version = "0.16", features = ["unicode-linebreak"] }
 similar = "3"
