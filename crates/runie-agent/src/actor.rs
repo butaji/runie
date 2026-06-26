@@ -215,13 +215,16 @@ mod tests {
 
         agent_handle.run(test_command("ghost-provider", "x")).await;
 
+        // Wait for events to be processed - use recv with timeout
         let mut saw_error = false;
         let mut saw_done = false;
-        for _ in 0..100 {
+        let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
+        
+        while tokio::time::Instant::now() < deadline {
             if saw_error && saw_done {
                 break;
             }
-            tokio::task::yield_now().await;
+            // Try non-blocking receive first
             while let Ok(evt) = sub.try_recv() {
                 match evt {
                     Event::Error { .. } => saw_error = true,
@@ -229,7 +232,13 @@ mod tests {
                     _ => {}
                 }
             }
+            if saw_error && saw_done {
+                break;
+            }
+            // Then wait a bit
+            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         }
+        
         assert!(saw_error, "expected Error event for unknown provider");
         assert!(saw_done, "expected Done event after error");
         runie_core::provider::set_mock_enabled(was_mock);

@@ -362,7 +362,7 @@
   {
     "file": "standardize-headless-output-streaming-json.md",
     "title": "Standardize headless output as streaming JSON events",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "standardize-test-layout-inline.md",

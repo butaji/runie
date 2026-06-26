@@ -1,11 +1,12 @@
 //! JSON mode — structured JSON stdin/stdout for scripting.
 //!
-//! Reads a JSON request from stdin, streams response chunks as JSONL lines,
-//! and outputs a final JSON response object.
+//! Reads a JSON request from stdin, streams response chunks as JSONL lines
+//! using the unified HeadlessEvent format, and outputs a final JSON response object.
 
 use anyhow::Result;
 use runie_agent::headless_helper::{build_options, build_sink};
 use runie_agent::{run_headless_cli, HeadlessResult};
+use runie_core::event::headless::HeadlessEvent;
 use runie_core::message::ChatMessage;
 use serde::{Deserialize, Serialize};
 use std::io::Read;
@@ -20,14 +21,6 @@ struct JsonRequest {
     tools: Option<Vec<String>>,
 }
 
-/// A single tool call in the response.
-#[derive(Debug, Serialize)]
-struct ToolCall {
-    name: String,
-    arguments: serde_json::Value,
-    output: String,
-}
-
 /// Final JSON response written to stdout.
 #[derive(Debug, Serialize)]
 struct JsonResponse {
@@ -37,10 +30,12 @@ struct JsonResponse {
     duration_ms: u64,
 }
 
-/// JSONL streaming chunk.
+/// A single tool call in the response.
 #[derive(Debug, Serialize)]
-struct StreamChunk {
-    chunk: String,
+struct ToolCall {
+    name: String,
+    arguments: serde_json::Value,
+    output: String,
 }
 
 /// Run JSON mode: read request from stdin, stream chunks as JSONL, output final JSON.
@@ -94,14 +89,10 @@ async fn run_json_turn(
 ) -> Result<HeadlessResult> {
     let sink = build_sink(false);
     let opts = build_options(
-        Some(Box::new(|chunk: &str| {
-            let line = serde_json::to_string(&StreamChunk {
-                chunk: chunk.to_owned(),
-            })
-            .unwrap_or_default();
-            println!("{}", line);
-        })),
         None,
+        Some(Box::new(|event: HeadlessEvent| {
+            println!("{}", event.to_json_line());
+        })),
     );
 
     run_headless_cli(provider_name, model, messages, sink, opts).await
