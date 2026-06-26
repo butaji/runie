@@ -3,10 +3,12 @@
 //! Combines responsibilities from the former `PersistenceActor`,
 //! `SessionStoreActor`, and `session_actor.rs`.
 
+use std::ops::Deref;
 use std::path::PathBuf;
 
 use tokio::sync::mpsc;
 
+use crate::actors::GenericActorHandle;
 use crate::edit_preview::EditPreview;
 use crate::session::Session;
 use crate::trust::TrustDecision;
@@ -155,192 +157,183 @@ impl From<SessionStoreMsg> for SessionMsg {
 /// Handle for sending commands to a `SessionActor`.
 #[derive(Clone, Debug)]
 pub struct SessionActorHandle {
-    tx: mpsc::Sender<SessionMsg>,
+    inner: GenericActorHandle<SessionMsg>,
+}
+
+impl Deref for SessionActorHandle {
+    type Target = GenericActorHandle<SessionMsg>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl SessionActorHandle {
     /// Wrap an existing sender.
     pub fn new(tx: mpsc::Sender<SessionMsg>) -> Self {
-        Self { tx }
-    }
-
-    /// Access the underlying sender (for routing intents from the DSL).
-    pub fn tx(&self) -> &mpsc::Sender<SessionMsg> {
-        &self.tx
+        Self { inner: GenericActorHandle::new(tx) }
     }
 
     /// Request a trust decision change.
     pub async fn set_trust(&self, path: PathBuf, decision: TrustDecision) {
-        let _ = self.tx.send(SessionMsg::SetTrust { path, decision }).await;
+        self.send(SessionMsg::SetTrust { path, decision }).await;
     }
 
     /// Append an entry to the history file.
     pub async fn append_history(&self, entry: String) {
-        let _ = self.tx.send(SessionMsg::AppendHistory { entry }).await;
+        self.send(SessionMsg::AppendHistory { entry }).await;
     }
 
     /// Append an entry to the history file (sync fire-and-forget).
     pub fn try_append_history(&self, entry: String) {
-        let _ = self.tx.try_send(SessionMsg::AppendHistory { entry });
+        self.try_send(SessionMsg::AppendHistory { entry });
     }
 
     /// Request loading a named session.
     pub async fn load(&self, name: String) {
-        let _ = self.tx.send(SessionMsg::Load { name }).await;
+        self.send(SessionMsg::Load { name }).await;
     }
 
     /// Request saving a session snapshot.
     pub async fn save(&self, name: String, session: Session) {
-        let _ = self.tx.send(SessionMsg::Save { name, session }).await;
+        self.send(SessionMsg::Save { name, session }).await;
     }
 
     /// Request deleting a named session.
     pub async fn delete(&self, name: String) {
-        let _ = self.tx.send(SessionMsg::Delete { name }).await;
+        self.send(SessionMsg::Delete { name }).await;
     }
 
     /// Request importing a session from a file path.
     pub async fn import(&self, path: PathBuf) {
-        let _ = self.tx.send(SessionMsg::Import { path }).await;
+        self.send(SessionMsg::Import { path }).await;
     }
 
     /// Request exporting a session to a file path.
     pub async fn export(&self, path: PathBuf, session: Session) {
-        let _ = self.tx.send(SessionMsg::Export { path, session }).await;
+        self.send(SessionMsg::Export { path, session }).await;
     }
 
     /// Request listing saved sessions.
     pub async fn list(&self) {
-        let _ = self.tx.send(SessionMsg::List).await;
+        self.send(SessionMsg::List).await;
     }
 
     // ── Session state mutation methods (fire-and-forget) ──────────────────────
 
     /// Try to add a user message (fire-and-forget).
     pub fn try_add_user_message(&self, content: String, images: Vec<String>) {
-        let _ = self.tx.try_send(SessionMsg::AddUserMessage { content, images });
+        self.try_send(SessionMsg::AddUserMessage { content, images });
     }
 
     /// Try to add a system message (fire-and-forget).
     pub fn try_add_system_message(&self, content: String) {
-        let _ = self.tx.try_send(SessionMsg::AddSystemMessage { content });
+        self.try_send(SessionMsg::AddSystemMessage { content });
     }
 
     /// Try to add a tool message (fire-and-forget).
     pub fn try_add_tool_message(&self, id: String, name: String, content: String) {
-        let _ = self.tx.try_send(SessionMsg::AddToolMessage { id, name, content });
+        self.try_send(SessionMsg::AddToolMessage { id, name, content });
     }
 
     /// Try to update a tool message (fire-and-forget).
     pub fn try_update_tool_message(&self, id_contains: String, content: String) {
-        let _ = self.tx.try_send(SessionMsg::UpdateToolMessage { id_contains, content });
+        self.try_send(SessionMsg::UpdateToolMessage { id_contains, content });
     }
 
     /// Try to add a turn-complete message (fire-and-forget).
     pub fn try_add_turn_complete(&self, id: String, content: String) {
-        let _ = self.tx.try_send(SessionMsg::AddTurnComplete { id, content });
+        self.try_send(SessionMsg::AddTurnComplete { id, content });
     }
 
     /// Try to add an error message (fire-and-forget).
     pub fn try_add_error_message(&self, id: String, content: String) {
-        let _ = self.tx.try_send(SessionMsg::AddErrorMessage { id, content });
+        self.try_send(SessionMsg::AddErrorMessage { id, content });
     }
 
     /// Try to reset session (fire-and-forget).
     pub fn try_reset(&self) {
-        let _ = self.tx.try_send(SessionMsg::Reset);
+        self.try_send(SessionMsg::Reset);
     }
 
     /// Try to fork at message index (fire-and-forget).
     pub fn try_fork_at(&self, index: usize) {
-        let _ = self.tx.try_send(SessionMsg::ForkAt { index });
+        self.try_send(SessionMsg::ForkAt { index });
     }
 
     /// Try to clone branch (fire-and-forget).
     pub fn try_clone_branch(&self) {
-        let _ = self.tx.try_send(SessionMsg::CloneBranch);
+        self.try_send(SessionMsg::CloneBranch);
     }
 
     /// Try to push a pending edit (fire-and-forget).
     pub fn try_push_pending_edit(&self, edit: EditPreview) {
-        let _ = self.tx.try_send(SessionMsg::PushPendingEdit { edit });
+        self.try_send(SessionMsg::PushPendingEdit { edit });
     }
 
     /// Try to drain pending edits (fire-and-forget).
     pub fn try_drain_pending_edits(&self) {
-        let _ = self.tx.try_send(SessionMsg::DrainPendingEdits);
+        self.try_send(SessionMsg::DrainPendingEdits);
     }
 
     /// Try to clear pending edits (fire-and-forget).
     pub fn try_clear_pending_edits(&self) {
-        let _ = self.tx.try_send(SessionMsg::ClearPendingEdits);
-    }
-}
-
-impl From<SessionActorHandle> for PersistenceActorHandle {
-    fn from(h: SessionActorHandle) -> Self {
-        PersistenceActorHandle { tx: h.tx }
-    }
-}
-
-impl From<SessionActorHandle> for SessionStoreActorHandle {
-    fn from(h: SessionActorHandle) -> Self {
-        SessionStoreActorHandle { tx: h.tx }
+        self.try_send(SessionMsg::ClearPendingEdits);
     }
 }
 
 /// Backward-compatible handle for trust/history operations.
 #[derive(Clone, Debug)]
 pub struct PersistenceActorHandle {
-    pub(crate) tx: mpsc::Sender<SessionMsg>,
+    inner: GenericActorHandle<SessionMsg>,
 }
 
 impl PersistenceActorHandle {
     pub fn new(tx: mpsc::Sender<SessionMsg>) -> Self {
-        Self { tx }
+        Self { inner: GenericActorHandle::new(tx) }
     }
 
     pub async fn set_trust(&self, path: PathBuf, decision: TrustDecision) {
-        let _ = self.tx.send(SessionMsg::SetTrust { path, decision }).await;
+        self.inner.send(SessionMsg::SetTrust { path, decision }).await;
     }
 
     pub async fn append_history(&self, entry: String) {
-        let _ = self.tx.send(SessionMsg::AppendHistory { entry }).await;
+        self.inner.send(SessionMsg::AppendHistory { entry }).await;
     }
 }
 
 /// Backward-compatible handle for session store operations.
 #[derive(Clone, Debug)]
 pub struct SessionStoreActorHandle {
-    pub(crate) tx: mpsc::Sender<SessionMsg>,
+    inner: GenericActorHandle<SessionMsg>,
 }
 
 impl SessionStoreActorHandle {
     pub fn new(tx: mpsc::Sender<SessionMsg>) -> Self {
-        Self { tx }
+        Self { inner: GenericActorHandle::new(tx) }
     }
 
     pub async fn load(&self, name: String) {
-        let _ = self.tx.send(SessionMsg::Load { name }).await;
+        self.inner.send(SessionMsg::Load { name }).await;
     }
 
     pub async fn save(&self, name: String, session: Session) {
-        let _ = self.tx.send(SessionMsg::Save { name, session }).await;
+        self.inner.send(SessionMsg::Save { name, session }).await;
     }
 
     pub async fn delete(&self, name: String) {
-        let _ = self.tx.send(SessionMsg::Delete { name }).await;
+        self.inner.send(SessionMsg::Delete { name }).await;
     }
 
     pub async fn import(&self, path: PathBuf) {
-        let _ = self.tx.send(SessionMsg::Import { path }).await;
+        self.inner.send(SessionMsg::Import { path }).await;
     }
 
     pub async fn export(&self, path: PathBuf, session: Session) {
-        let _ = self.tx.send(SessionMsg::Export { path, session }).await;
+        self.inner.send(SessionMsg::Export { path, session }).await;
     }
 
     pub async fn list(&self) {
-        let _ = self.tx.send(SessionMsg::List).await;
+        self.inner.send(SessionMsg::List).await;
     }
 }

@@ -342,7 +342,7 @@
   {
     "file": "reduce-actor-handle-boilerplate.md",
     "title": "Reduce actor handle and message boilerplate",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "consolidate-config-modules-into-dir.md",

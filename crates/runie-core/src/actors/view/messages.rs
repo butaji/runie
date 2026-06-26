@@ -1,6 +1,6 @@
 //! Typed messages for `ViewActor`.
 
-use tokio::sync::mpsc;
+use crate::actors::GenericActorHandle;
 
 use crate::model::InputReceiver;
 
@@ -93,24 +93,4 @@ pub enum MouseButton {
 }
 
 /// Handle for sending messages to `ViewActor`.
-#[derive(Clone, Debug)]
-pub struct ViewActorHandle {
-    tx: mpsc::Sender<ViewMsg>,
-}
-
-impl ViewActorHandle {
-    /// Wrap an existing sender.
-    pub fn new(tx: mpsc::Sender<ViewMsg>) -> Self {
-        Self { tx }
-    }
-
-    /// Send a message to the actor (async fire-and-forget).
-    pub async fn send(&self, msg: ViewMsg) {
-        let _ = self.tx.send(msg).await;
-    }
-
-    /// Try to send a message (sync fire-and-forget).
-    pub fn try_send(&self, msg: ViewMsg) {
-        let _ = self.tx.try_send(msg);
-    }
-}
+pub type ViewActorHandle = GenericActorHandle<ViewMsg>;

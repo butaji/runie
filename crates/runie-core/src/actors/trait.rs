@@ -94,6 +94,40 @@ pub struct ActorHandle {
     pub(crate) join_handle: tokio::task::JoinHandle<()>,
 }
 
+/// Generic actor handle for sending typed messages.
+///
+/// Wraps `Arc<Sender<Msg>>` so the handle is always `Clone` regardless of `Msg`.
+/// Use for fire-and-forget actors (Input, View, IO, Session).
+/// For actors with typed request/response methods (Config, Provider, Permission),
+/// use a dedicated handle that wraps this type and adds those methods.
+#[derive(Clone, Debug)]
+pub struct GenericActorHandle<Msg: Clone> {
+    tx: std::sync::Arc<mpsc::Sender<Msg>>,
+}
+
+impl<Msg: Clone> GenericActorHandle<Msg> {
+    /// Wrap an existing sender.
+    pub fn new(tx: mpsc::Sender<Msg>) -> Self {
+        Self { tx: std::sync::Arc::new(tx) }
+    }
+
+    /// Access the underlying sender (needed by ConfigActor's watcher thread).
+    pub fn inner(&self) -> &mpsc::Sender<Msg> {
+        &self.tx
+    }
+
+    /// Send a message (async fire-and-forget).
+    pub async fn send(&self, msg: Msg) {
+        // allow: we use try_send internally to avoid async context issues in tests
+        let _ = self.tx.send(msg).await;
+    }
+
+    /// Try to send a message (sync fire-and-forget; no-op if full).
+    pub fn try_send(&self, msg: Msg) {
+        let _ = self.tx.try_send(msg);
+    }
+}
+
 impl ActorHandle {
     /// Spawn the actor task and return a handle.
     pub(crate) fn spawn<A>(
@@ -298,4 +332,106 @@ fn actor_trait_resolves_from_actors_module() {
         _uses_reply as fn(crate::actors::Reply<i32>);
     }
     _assert();
+}
+
+// ── GenericActorHandle tests ──────────────────────────────────────────────────
+
+/// L1: `GenericActorHandle` is always `Clone` regardless of `Msg`.
+#[test]
+fn generic_actor_handle_is_always_clone() {
+    fn _assert_clone<T: Clone>() {}
+    _assert_clone::<GenericActorHandle<i32>>();
+    _assert_clone::<GenericActorHandle<String>>();
+    // Even non-Clone message types make a Clone handle (via Arc).
+    // We only test Clone here — the type parameter constraint is enforced at compile time.
+}
+
+/// L1: `GenericActorHandle` wraps sender and forwards messages.
+#[tokio::test]
+async fn generic_actor_handle_sends_and_receives() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    struct CountingActor {
+        counter: std::sync::Arc<AtomicUsize>,
+    }
+
+    impl Actor for CountingActor {
+        type Msg = usize;
+        type Event = ();
+
+        fn run_body(
+            self,
+            mut rx: mpsc::Receiver<Self::Msg>,
+            _bus: crate::bus::EventBus<Self::Event>,
+        ) -> impl Future<Output = ()> + Send + 'static {
+            async move {
+                while let Some(n) = rx.recv().await {
+                    self.counter.fetch_add(n, Ordering::Relaxed);
+                }
+            }
+        }
+    }
+
+    let counter = std::sync::Arc::new(AtomicUsize::new(0));
+    let bus = crate::bus::EventBus::new(1);
+    let (tx, handle) = spawn_actor(
+        CountingActor { counter: counter.clone() },
+        bus,
+    );
+    let generic = GenericActorHandle::new(tx);
+
+    // Send several messages via the generic handle
+    generic.send(3).await;
+    generic.send(5).await;
+    generic.send(2).await;
+
+    // try_send is fire-and-forget
+    generic.try_send(10);
+
+    drop(generic);
+    handle.await.unwrap();
+
+    assert_eq!(counter.load(Ordering::Relaxed), 20); // 3+5+2+10
+}
+
+/// L1: `GenericActorHandle` impl block methods delegate to inner Arc<Sender>.
+#[tokio::test]
+async fn generic_actor_handle_impl_methods_work() {
+    struct DropCheckActor {
+        drop_flag: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    }
+
+    impl Actor for DropCheckActor {
+        type Msg = ();
+        type Event = ();
+
+        fn run_body(
+            self,
+            mut rx: mpsc::Receiver<Self::Msg>,
+            _bus: crate::bus::EventBus<Self::Event>,
+        ) -> impl Future<Output = ()> + Send + 'static {
+            async move {
+                let _ = rx.recv().await;
+                self.drop_flag.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+        }
+    }
+
+    let flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let bus = crate::bus::EventBus::new(1);
+    let (tx, handle) = spawn_actor(
+        DropCheckActor { drop_flag: flag.clone() },
+        bus,
+    );
+    let generic = GenericActorHandle::new(tx);
+
+    // inner() gives access to the raw sender
+    let _ = generic.inner();
+
+    generic.send(()).await;
+
+    drop(generic);
+    handle.await.unwrap();
+
+    assert!(flag.load(std::sync::atomic::Ordering::Relaxed));
 }

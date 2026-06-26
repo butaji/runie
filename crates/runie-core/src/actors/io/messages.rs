@@ -1,7 +1,8 @@
 //! Messages and handle for `IoActor`.
 
 use std::path::PathBuf;
-use tokio::sync::mpsc;
+
+use crate::actors::GenericActorHandle;
 
 /// Messages accepted by `IoActor`.
 #[derive(Debug, Clone)]
@@ -15,34 +16,21 @@ pub enum IoMsg {
 }
 
 /// Handle for sending commands to an `IoActor`.
-#[derive(Clone, Debug)]
-pub struct IoActorHandle {
-    tx: mpsc::Sender<IoMsg>,
-}
+pub type IoActorHandle = GenericActorHandle<IoMsg>;
 
 impl IoActorHandle {
-    /// Wrap an existing sender.
-    pub fn new(tx: mpsc::Sender<IoMsg>) -> Self {
-        Self { tx }
-    }
-
-    /// Access the underlying sender (for routing intents from the DSL).
-    pub fn tx(&self) -> &mpsc::Sender<IoMsg> {
-        &self.tx
-    }
-
     /// Request running a bash command.
     pub async fn run_bash(&self, command: String) {
-        let _ = self.tx.send(IoMsg::RunBash { command }).await;
+        self.send(IoMsg::RunBash { command }).await;
     }
 
     /// Request writing files.
     pub async fn write_files(&self, edits: Vec<(PathBuf, String)>) {
-        let _ = self.tx.send(IoMsg::WriteFiles { edits }).await;
+        self.send(IoMsg::WriteFiles { edits }).await;
     }
 
     /// Request environment detection (cwd name, git info).
     pub async fn detect_env(&self) {
-        let _ = self.tx.send(IoMsg::DetectEnv).await;
+        self.send(IoMsg::DetectEnv).await;
     }
 }

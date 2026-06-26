@@ -1,6 +1,6 @@
 //! Typed messages for `InputActor`.
 
-use tokio::sync::mpsc;
+use crate::actors::GenericActorHandle;
 
 /// All messages accepted by `InputActor`.
 ///
@@ -71,24 +71,4 @@ pub enum InputMsg {
 }
 
 /// Handle for sending messages to `InputActor`.
-#[derive(Clone, Debug)]
-pub struct InputActorHandle {
-    tx: mpsc::Sender<InputMsg>,
-}
-
-impl InputActorHandle {
-    /// Wrap an existing sender.
-    pub fn new(tx: mpsc::Sender<InputMsg>) -> Self {
-        Self { tx }
-    }
-
-    /// Send a message to the actor (async fire-and-forget).
-    pub async fn send(&self, msg: InputMsg) {
-        let _ = self.tx.send(msg).await;
-    }
-
-    /// Try to send a message (sync fire-and-forget).
-    pub fn try_send(&self, msg: InputMsg) {
-        let _ = self.tx.try_send(msg);
-    }
-}
+pub type InputActorHandle = GenericActorHandle<InputMsg>;
