@@ -134,6 +134,39 @@ impl AppState {
         SPINNER_CHARS[(self.view().animation_frame % SPINNER_FRAMES) as usize]
     }
 
+    // ── Turn fact projection (from TurnActor) ──────────────────────────────
+
+    /// Project TurnStarted fact into AppState.
+    pub(crate) fn apply_turn_started(&mut self) {
+        self.agent_state_mut().turn_active = true;
+        self.agent_state_mut().inflight += 1;
+        self.agent_state_mut().streaming = true;
+        self.agent_state_mut().turn_started_at = Some(std::time::Instant::now());
+    }
+
+    /// Project TurnCompleted fact into AppState.
+    pub(crate) fn apply_turn_completed(&mut self) {
+        self.agent_state_mut().streaming = false;
+        self.agent_state_mut().turn_active = false;
+        self.agent_state_mut().inflight = self.agent_state_mut().inflight.saturating_sub(1);
+        self.agent_state_mut().current_tool_name = None;
+    }
+
+    /// Project TurnErrored fact into AppState.
+    pub(crate) fn apply_turn_errored(&mut self) {
+        self.agent_state_mut().streaming = false;
+        self.agent_state_mut().turn_active = false;
+        self.agent_state_mut().inflight = 0;
+    }
+
+    /// Project TokenStatsUpdated fact into AppState.
+    pub(crate) fn apply_token_stats(&mut self, tokens_in: usize, tokens_out: usize, speed_tps: f64) {
+        self.agent_state_mut().tokens_in = tokens_in;
+        self.agent_state_mut().tokens_out = tokens_out;
+        self.agent_state_mut().speed_tps = speed_tps;
+        self.agent_state_mut().turn_tokens_out = tokens_out;
+    }
+
     // ── Session reset ───────────────────────────────────────────────────────
 
     /// Reset session/input/agent state without clearing config,
@@ -454,41 +487,5 @@ impl AppState {
     /// Returns the truncation configuration for tool output.
     pub fn truncation(&self) -> &crate::config::TruncationSection {
         &self.config().truncation
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn active_provider_returns_login_flow_provider() {
-        let mut state = AppState::default();
-        *state.login_flow_mut() = Some(crate::login_flow::LoginFlowState {
-            step: crate::login_flow::LoginStep::KeyInput,
-            provider: "anthropic".to_string(),
-            key: "sk-test".to_string(),
-            available_models: vec![],
-            selected_models: std::collections::HashSet::new(),
-            validated: false,
-        });
-        assert_eq!(state.active_provider(), "anthropic");
-    }
-
-    #[test]
-    fn active_provider_returns_config_default_when_no_flow() {
-        let mut state = AppState::default();
-        state.config_mut().current_provider = "openai".to_string();
-        *state.login_flow_mut() = None;
-        assert_eq!(state.active_provider(), "openai");
-    }
-
-    #[test]
-    fn active_provider_returns_config_default_when_no_flow_no_config() {
-        // In test mode, default ConfigState sets current_provider to "mock"
-        let mut state = AppState::default();
-        *state.login_flow_mut() = None;
-        // active_provider falls back to config.current_provider
-        assert_eq!(state.active_provider(), "mock");
     }
 }

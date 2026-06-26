@@ -27,7 +27,22 @@ fn try_handle_early_events(state: &mut AppState, event: &Event) -> bool {
         state.replay_message(id.clone(), role.clone(), content.clone(), *timestamp, provider.clone());
         return true;
     }
-    handle_persistence_events(state, event) || handle_session_store_events(state, event) || handle_io_events(state, event)
+    handle_turn_events(state, event) || handle_persistence_events(state, event) || handle_session_store_events(state, event) || handle_io_events(state, event)
+}
+
+fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
+    match event {
+        Event::TurnAborted => { state.apply_turn_aborted(); true }
+        Event::QueueAborted { content } => { state.apply_queue_aborted(content.clone()); true }
+        Event::TurnStarted { .. } => { state.apply_turn_started(); true }
+        Event::TurnCompleted => { state.apply_turn_completed(); true }
+        Event::TurnErrored { .. } => { state.apply_turn_errored(); true }
+        Event::TokenStatsUpdated { tokens_in, tokens_out, speed_tps } => {
+            state.apply_token_stats(*tokens_in, *tokens_out, *speed_tps);
+            true
+        }
+        _ => false,
+    }
 }
 
 fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {

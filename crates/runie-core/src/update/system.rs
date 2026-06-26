@@ -148,31 +148,53 @@ impl AppState {
     }
 
     pub(crate) fn stop_turn(&mut self) {
-        // Stop the current turn and abort any queued messages
+        // Route through TurnActor to maintain authoritative turn state
+        let handles = self.actor_handles().cloned();
+        if let Some(ref h) = handles {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let handles = h.clone();
+                tokio::spawn(async move {
+                    handles.send_turn_abort().await;
+                });
+            }
+        } else {
+            // Fallback for tests without actor handles
+            self.apply_turn_aborted();
+            // Also drain queue back to input (matches original behavior)
+            let messages: Vec<_> = self
+                .agent_state_mut()
+                .message_queue
+                .drain(..)
+                .rev()
+                .collect();
+            for msg in messages {
+                self.apply_queue_aborted(msg.content);
+            }
+        }
+    }
+
+    /// Handle TurnAborted fact — clear turn flags in AppState projection.
+    pub(crate) fn apply_turn_aborted(&mut self) {
         self.agent_state_mut().turn_active = false;
-        self.agent_state_mut().current_request_id = None;
         self.agent_state_mut().streaming = false;
+        self.agent_state_mut().inflight = 0;
+        self.agent_state_mut().current_request_id = None;
         self.agent_state_mut().current_tool_name = None;
         self.agent_state_mut().current_action = None;
-        self.agent_state_mut().inflight = 0;
         self.agent_state_mut().turn_started_at = None;
         self.agent_state_mut().thinking_started_at = None;
         self.agent_state_mut().tool_started_at = None;
-        // Drain the queue back to input
-        let messages: Vec<_> = self
-            .agent_state_mut()
-            .message_queue
-            .drain(..)
-            .rev()
-            .collect();
+        self.view_mut().dirty = true;
+    }
+
+    /// Handle QueueAborted fact — restore aborted message content to input.
+    pub(crate) fn apply_queue_aborted(&mut self, content: String) {
         let input = &mut self.input_mut().input;
-        for msg in messages {
-            if !input.is_empty() {
-                input.push('\n');
-            }
-            input.push_str(&msg.content);
+        if !input.is_empty() {
+            input.push('\n');
         }
-        self.input_mut().cursor_pos = self.input_mut().input.len();
+        input.push_str(&content);
+        self.input_mut().cursor_pos = input.len();
         self.view_mut().dirty = true;
     }
 }

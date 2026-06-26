@@ -112,12 +112,32 @@ impl AppState {
         if content.is_empty() {
             return;
         }
-        self.agent_state_mut()
-            .message_queue
-            .push(crate::model::QueuedMessage {
-                content,
-                kind: crate::model::QueuedMessageKind::FollowUp,
-            });
+        // Route through TurnActor to maintain authoritative queue state
+        let handles = self.actor_handles().cloned();
+        if let Some(ref h) = handles {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let handles = h.clone();
+                tokio::spawn(async move {
+                    handles.try_send_turn_queue_follow_up(content);
+                });
+            } else {
+                // Test mode: apply synchronously
+                self.agent_state_mut()
+                    .message_queue
+                    .push(crate::model::QueuedMessage {
+                        content,
+                        kind: crate::model::QueuedMessageKind::FollowUp,
+                    });
+            }
+        } else {
+            // Test mode without handles: apply synchronously
+            self.agent_state_mut()
+                .message_queue
+                .push(crate::model::QueuedMessage {
+                    content,
+                    kind: crate::model::QueuedMessageKind::FollowUp,
+                });
+        }
         self.view_mut().scroll = 0;
         self.view_mut().dirty = true;
     }
@@ -129,19 +149,38 @@ impl AppState {
             self.view_mut().dirty = true;
             return;
         }
-        let msgs: Vec<_> = self
-            .agent_state_mut()
-            .message_queue
-            .drain(..)
-            .rev()
-            .collect();
-        for msg in msgs {
-            if !self.input_mut().input.is_empty() {
-                self.input_mut().input.push('\n');
+        // Route through TurnActor to maintain authoritative queue state
+        let handles = self.actor_handles().cloned();
+        if let Some(ref h) = handles {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let handles = h.clone();
+                tokio::spawn(async move {
+                    handles.send_turn_abort_queue().await;
+                });
+            } else {
+                // Test mode: drain synchronously
+                let msgs: Vec<_> = self
+                    .agent_state_mut()
+                    .message_queue
+                    .drain(..)
+                    .rev()
+                    .collect();
+                for msg in msgs {
+                    self.apply_queue_aborted(msg.content);
+                }
             }
-            self.input_mut().input.push_str(&msg.content);
+        } else {
+            // Test mode without handles: drain synchronously
+            let msgs: Vec<_> = self
+                .agent_state_mut()
+                .message_queue
+                .drain(..)
+                .rev()
+                .collect();
+            for msg in msgs {
+                self.apply_queue_aborted(msg.content);
+            }
         }
-        self.view_mut().dirty = true;
     }
 
     pub(crate) fn deliver_queued(&mut self) {

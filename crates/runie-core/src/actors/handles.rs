@@ -257,6 +257,152 @@ impl ActorHandles {
     pub fn try_send_turn_clear_queues(&self) {
         if let Some(ref h) = self.turn { h.try_send(crate::actors::TurnMsg::ClearQueues); }
     }
+
+    // Queue helpers
+    pub async fn send_turn_queue_steering(&self, content: String) {
+        if let Some(ref h) = self.turn {
+            h.send(crate::actors::TurnMsg::QueueSteering { content }).await;
+        }
+    }
+
+    pub fn try_send_turn_queue_steering(&self, content: String) {
+        if let Some(ref h) = self.turn {
+            h.try_send(crate::actors::TurnMsg::QueueSteering { content });
+        }
+    }
+
+    pub async fn send_turn_queue_follow_up(&self, content: String) {
+        if let Some(ref h) = self.turn {
+            h.send(crate::actors::TurnMsg::QueueFollowUp { content }).await;
+        }
+    }
+
+    pub fn try_send_turn_queue_follow_up(&self, content: String) {
+        if let Some(ref h) = self.turn {
+            h.try_send(crate::actors::TurnMsg::QueueFollowUp { content });
+        }
+    }
+
+    pub async fn send_turn_abort_queue(&self) {
+        if let Some(ref h) = self.turn {
+            h.send(crate::actors::TurnMsg::AbortQueue).await;
+        }
+    }
+
+    pub fn try_send_turn_abort_queue(&self) {
+        if let Some(ref h) = self.turn {
+            h.try_send(crate::actors::TurnMsg::AbortQueue);
+        }
+    }
+
+    pub async fn send_turn_submit_user_message(&self, content: String, id: String) {
+        if let Some(ref h) = self.turn {
+            h.send(crate::actors::TurnMsg::SubmitUserMessage { content, id }).await;
+        }
+    }
+
+    pub fn try_send_turn_submit_user_message(&self, content: String, id: String) {
+        if let Some(ref h) = self.turn {
+            h.try_send(crate::actors::TurnMsg::SubmitUserMessage { content, id });
+        }
+    }
+
+    // Turn lifecycle helpers
+    pub async fn send_turn_thinking(&self, id: String) {
+        if let Some(ref h) = self.turn {
+            h.send(crate::actors::TurnMsg::Thinking { id }).await;
+        }
+    }
+
+    pub fn try_send_turn_thinking(&self, id: String) {
+        if let Some(ref h) = self.turn {
+            h.try_send(crate::actors::TurnMsg::Thinking { id });
+        }
+    }
+
+    pub async fn send_turn_tool_start(&self, id: String, name: String) {
+        if let Some(ref h) = self.turn {
+            h.send(crate::actors::TurnMsg::ToolStart { id, name }).await;
+        }
+    }
+
+    pub fn try_send_turn_tool_start(&self, id: String, name: String) {
+        if let Some(ref h) = self.turn {
+            h.try_send(crate::actors::TurnMsg::ToolStart { id, name });
+        }
+    }
+
+    pub async fn send_turn_tool_end(&self, id: String, duration_secs: f64, output: String) {
+        if let Some(ref h) = self.turn {
+            h.send(crate::actors::TurnMsg::ToolEnd { id, duration_secs, output }).await;
+        }
+    }
+
+    pub fn try_send_turn_tool_end(&self, id: String, duration_secs: f64, output: String) {
+        if let Some(ref h) = self.turn {
+            h.try_send(crate::actors::TurnMsg::ToolEnd { id, duration_secs, output });
+        }
+    }
+
+    pub async fn send_turn_response_delta(&self, id: String, content: String) {
+        if let Some(ref h) = self.turn {
+            h.send(crate::actors::TurnMsg::ResponseDelta { id, content }).await;
+        }
+    }
+
+    pub fn try_send_turn_response_delta(&self, id: String, content: String) {
+        if let Some(ref h) = self.turn {
+            h.try_send(crate::actors::TurnMsg::ResponseDelta { id, content });
+        }
+    }
+
+    pub async fn send_turn_complete(&self, id: String, duration_secs: f64) {
+        if let Some(ref h) = self.turn {
+            h.send(crate::actors::TurnMsg::TurnComplete { id, duration_secs }).await;
+        }
+    }
+
+    pub fn try_send_turn_complete(&self, id: String, duration_secs: f64) {
+        if let Some(ref h) = self.turn {
+            h.try_send(crate::actors::TurnMsg::TurnComplete { id, duration_secs });
+        }
+    }
+
+    pub async fn send_turn_done(&self, id: String) {
+        if let Some(ref h) = self.turn {
+            h.send(crate::actors::TurnMsg::Done { id }).await;
+        }
+    }
+
+    pub fn try_send_turn_done(&self, id: String) {
+        if let Some(ref h) = self.turn {
+            h.try_send(crate::actors::TurnMsg::Done { id });
+        }
+    }
+
+    pub async fn send_turn_error(&self, id: String, message: String) {
+        if let Some(ref h) = self.turn {
+            h.send(crate::actors::TurnMsg::Error { id, message }).await;
+        }
+    }
+
+    pub fn try_send_turn_error(&self, id: String, message: String) {
+        if let Some(ref h) = self.turn {
+            h.try_send(crate::actors::TurnMsg::Error { id, message });
+        }
+    }
+
+    pub async fn send_turn_update_speed(&self, tokens_out: usize) {
+        if let Some(ref h) = self.turn {
+            h.send(crate::actors::TurnMsg::UpdateSpeed { tokens_out }).await;
+        }
+    }
+
+    pub fn try_send_turn_update_speed(&self, tokens_out: usize) {
+        if let Some(ref h) = self.turn {
+            h.try_send(crate::actors::TurnMsg::UpdateSpeed { tokens_out });
+        }
+    }
 }
 
 #[cfg(test)]

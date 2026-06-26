@@ -91,11 +91,8 @@ impl AppState {
             self.view_mut().selected_post = self.current_bottom_post_index();
             return;
         }
-        if self.agent_state_mut().turn_active {
-            self.agent_state_mut().turn_active = false;
-            self.agent_state_mut().inflight = 0;
-            self.view_mut().vim_nav_pending = true;
-            self.view_mut().dirty = true;
+        if self.agent_state().turn_active {
+            self.abort_turn_for_vim_nav();
             return;
         }
         {
@@ -103,6 +100,23 @@ impl AppState {
             view.vim_nav_mode = true;
         }
         self.view_mut().selected_post = self.current_bottom_post_index();
+    }
+
+    /// Abort turn when entering vim nav mode.
+    fn abort_turn_for_vim_nav(&mut self) {
+        let handles = self.actor_handles().cloned();
+        if let Some(ref h) = handles {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let handles = h.clone();
+                tokio::spawn(async move {
+                    handles.send_turn_abort().await;
+                });
+            }
+        } else {
+            self.apply_turn_aborted();
+        }
+        self.view_mut().vim_nav_pending = true;
+        self.view_mut().dirty = true;
     }
 
     pub(crate) fn current_bottom_post_index(&mut self) -> Option<usize> {
