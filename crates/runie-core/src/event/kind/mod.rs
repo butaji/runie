@@ -99,6 +99,10 @@ fn is_input_intent(e: &Event) -> bool {
     )
 }
 
+fn is_input_fact(e: &Event) -> bool {
+    matches!(e, Event::InputChanged { .. } | Event::ViewChanged { .. })
+}
+
 // Fact aggregates (OR chains as helper functions to keep kind() complexity low)
 fn is_fact(e: &Event) -> bool {
     is_llm_agent_fact(e)
@@ -110,6 +114,7 @@ fn is_fact(e: &Event) -> bool {
         || is_login_flow_fact(e)
         || is_permission_fact(e)
         || is_replay_fact(e)
+        || is_input_fact(e)
 }
 
 fn is_intent(e: &Event) -> bool {

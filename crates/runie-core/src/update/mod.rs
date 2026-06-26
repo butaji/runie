@@ -30,6 +30,14 @@ pub(crate) use crate::message::now;
 impl AppState {
     /// Main event dispatcher — merged from update() and dispatch_event().
     pub fn update(&mut self, event: Event) {
+        if let Event::InputChanged { state } = event {
+            *self.input_mut() = *state;
+            return;
+        }
+        if let Event::ViewChanged { state } = event {
+            *self.view_mut() = *state;
+            return;
+        }
         if let Event::ConfigLoaded { config } = event {
             self.apply_config(&config);
             return;

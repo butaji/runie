@@ -126,9 +126,9 @@ pub(crate) enum HistoryNavMode {
 /// The logic is shared by both history-prev and history-next handlers;
 /// the caller maps the mode to up/down.
 pub(crate) fn get_history_nav_mode(state: &mut AppState) -> HistoryNavMode {
-    if state.completion_mut().path_suggestions.is_some() {
+    if state.completion().path_suggestions.is_some() {
         HistoryNavMode::PathComplete
-    } else if state.input_mut().input.contains('\n') {
+    } else if state.input().input.contains('\n') {
         HistoryNavMode::Cursor
     } else {
         HistoryNavMode::History

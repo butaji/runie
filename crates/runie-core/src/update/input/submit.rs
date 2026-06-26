@@ -2,6 +2,8 @@
 //!
 //! Submitting content emits `InputMsg::Clear` and `SessionMsg::AppendHistory`.
 //! History navigation emits `InputMsg::HistoryPrev/Next`.
+//! Input state mutations go through `InputActor`; projection updates via
+//! `Event::InputChanged`.
 
 use crate::message::{now, ChatMessage, Role};
 use crate::model::AppState;
@@ -20,24 +22,51 @@ impl AppState {
         if self.open_dialog().is_some() {
             return;
         }
-        let Some(content) = self.take_submit_content() else {
-            return;
-        };
 
-        {
-            let agent = self.agent_state_mut();
-            agent.tokens_in += agent.token_tracker.estimate_input(&content);
+        if let Some(content) = self.take_submit_text() {
+            if crate::update::input::is_quit_command(&content) {
+                *self.should_quit_mut() = true;
+                return;
+            }
+            if content.is_empty() && self.session().image_attachments.is_empty() {
+                return;
+            }
+            self.estimate_and_add_tokens(&content);
+            if self.try_handle_bang_command(&content).is_some() {
+                return;
+            }
+            try_append_history(self, content.clone());
+            // Also update input_history in AppState for synchronous tests.
+            self.push_to_input_history(&content);
+            self.dispatch_submit_content(content);
         }
+    }
 
-        if self.try_handle_bang_command(&content).is_some() {
-            return;
+    /// Extract the submit text, sending Clear to InputActor.
+    /// Returns None if input is empty (and sets flash).
+    fn take_submit_text(&mut self) -> Option<String> {
+        let input = self.input();
+        if input.input.is_empty() {
+            self.input_mut().input_flash = 3;
+            return None;
         }
+        let content = input.input.trim().to_owned();
+        // Clear input through InputActor.
+        try_send_input(self, crate::actors::InputMsg::Clear);
+        Some(content)
+    }
 
-        // Emit history append through SessionActor.
-        try_append_history(self, content.clone());
-        // Direct mutation for tests (when InputActor is not spawned)
-        self.push_to_input_history(&content);
-        self.dispatch_submit_content(content);
+    /// Push content to input history (for synchronous tests where SessionActor is not spawned).
+    fn push_to_input_history(&mut self, content: &str) {
+        let history = &mut self.input_mut().input_history;
+        if history.is_empty() || history.last() != Some(&content.to_string()) {
+            history.push(content.to_string());
+        }
+    }
+
+    fn estimate_and_add_tokens(&mut self, content: &str) {
+        let agent = self.agent_state_mut();
+        agent.tokens_in += agent.token_tracker.estimate_input(content);
     }
 
     fn try_handle_bang_command(&mut self, content: &str) -> Option<()> {
@@ -49,54 +78,6 @@ impl AppState {
         Some(())
     }
 
-    fn push_to_input_history(&mut self, content: &str) {
-        let history = &mut self.input_mut().input_history;
-        if history.is_empty() || history.last() != Some(&content.to_string()) {
-            history.push(content.to_string());
-        }
-    }
-
-    fn take_submit_content(&mut self) -> Option<String> {
-        if self.input().input.is_empty() {
-            self.input_mut().input_flash = 3;
-            return None;
-        }
-        // Clear input through InputActor.
-        try_send_input(self, crate::actors::InputMsg::Clear);
-        // Direct mutation for tests (when InputActor is not spawned)
-        let content = self.input().input.trim().to_owned();
-        self.input_mut().input.clear();
-        self.input_mut().cursor_pos = 0;
-        self.input_mut().history_pos = None;
-        self.input_mut().undo_stack.clear();
-        self.input_mut().redo_stack.clear();
-        self.input_mut().input_scroll = 0;
-        if crate::update::input::is_quit_command(&content) {
-            *self.should_quit_mut() = true;
-            return None;
-        }
-        if content.is_empty() && self.session().image_attachments.is_empty() {
-            return None;
-        }
-        Some(self.build_content_with_attachments(content))
-    }
-
-    fn build_content_with_attachments(&mut self, content: String) -> String {
-        if self.session().image_attachments.is_empty() {
-            return content;
-        }
-        let mut full = content;
-        for uri in std::mem::take(&mut self.session_mut().image_attachments) {
-            if !full.is_empty() {
-                full.push('\n');
-            }
-            full.push_str("![image](");
-            full.push_str(&uri);
-            full.push(')');
-        }
-        full
-    }
-
     fn dispatch_submit_content(&mut self, content: String) {
         if let Some(result) = self.handle_slash(&content) {
             self.apply_command_result(result);
@@ -105,24 +86,41 @@ impl AppState {
             return;
         }
         if self.agent_state().turn_active {
-            self.agent_state_mut()
-                .message_queue
-                .push(crate::model::QueuedMessage {
-                    content,
-                    kind: crate::model::QueuedMessageKind::Steering,
-                });
-            self.view_mut().scroll = 0;
-            self.view_mut().dirty = true;
+            self.queue_steering_message(content);
             return;
+        }
+        self.submit_user_message(content);
+    }
+
+    fn queue_steering_message(&mut self, content: String) {
+        self.agent_state_mut()
+            .message_queue
+            .push(crate::model::QueuedMessage {
+                content,
+                kind: crate::model::QueuedMessageKind::Steering,
+            });
+        self.view_mut().scroll = 0;
+        self.view_mut().dirty = true;
+    }
+
+    fn submit_user_message(&mut self, mut content: String) {
+        // Append image attachments.
+        if !self.session().image_attachments.is_empty() {
+            for uri in std::mem::take(&mut self.session_mut().image_attachments) {
+                if !content.is_empty() {
+                    content.push('\n');
+                }
+                content.push_str("![image](");
+                content.push_str(&uri);
+                content.push(')');
+            }
         }
         let id = self.next_id();
         self.session_mut().messages.push(ChatMessage {
             role: Role::User,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![runie_core::message::Part::Text {
-                content: content.clone(),
-            }],
+            parts: vec![runie_core::message::Part::Text { content: content.clone() }],
             ..Default::default()
         });
         self.agent_state_mut()
@@ -155,9 +153,9 @@ impl AppState {
     }
 
     fn run_bash_command(&mut self, command: &str) {
-        // Extract handles before async work to avoid borrow conflicts.
         let handles = self.actor_handles().cloned();
-        let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
+        let can_spawn = handles.as_ref().is_some()
+            && tokio::runtime::Handle::try_current().is_ok();
 
         if can_spawn {
             let command = command.to_owned();
@@ -175,19 +173,8 @@ impl AppState {
     }
 
     pub(crate) fn history_prev(&mut self) {
-        let has_history = !self.input().input_history.is_empty();
-        if has_history {
+        if !self.input().input_history.is_empty() {
             try_send_input(self, crate::actors::InputMsg::HistoryPrev);
-            // Direct mutation for tests (when InputActor is not spawned)
-            let pos = match self.input().history_pos {
-                Some(p) if p > 0 => p - 1,
-                Some(p) => p,
-                None => self.input().input_history.len() - 1,
-            };
-            self.input_mut().history_pos = Some(pos);
-            self.input_mut().input = self.input().input_history[pos].clone();
-            self.input_mut().cursor_pos = self.input().input.len();
-            self.clamp_input_scroll();
             self.view_mut().dirty = true;
         } else {
             self.input_mut().input_flash = 3;
@@ -195,21 +182,8 @@ impl AppState {
     }
 
     pub(crate) fn history_next(&mut self) {
-        let history_pos = self.input().history_pos;
-        if history_pos.is_some() {
+        if self.input().history_pos.is_some() {
             try_send_input(self, crate::actors::InputMsg::HistoryNext);
-            // Direct mutation for tests (when InputActor is not spawned)
-            let pos = history_pos.unwrap() + 1;
-            if pos >= self.input().input_history.len() {
-                self.input_mut().history_pos = None;
-                self.input_mut().input.clear();
-                self.input_mut().cursor_pos = 0;
-            } else {
-                self.input_mut().history_pos = Some(pos);
-                self.input_mut().input = self.input().input_history[pos].clone();
-                self.input_mut().cursor_pos = self.input().input.len();
-            }
-            self.clamp_input_scroll();
             self.view_mut().dirty = true;
         } else {
             self.input_mut().input_flash = 3;
@@ -218,9 +192,14 @@ impl AppState {
 }
 
 /// Fire-and-forget send to InputActor.
+/// In test mode (no actor handles), applies the mutation synchronously so that
+/// synchronous tests can assert on the updated state without awaiting the actor.
 fn try_send_input(state: &mut AppState, msg: crate::actors::InputMsg) {
     if let Some(ref handles) = state.actor_handles() {
         handles.try_send_input(msg);
+    } else {
+        // Test mode: apply synchronously to AppState projection.
+        msg.apply_to(state.input_mut());
     }
 }
 

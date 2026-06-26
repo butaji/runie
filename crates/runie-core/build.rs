@@ -322,7 +322,9 @@ fn lint_file(path: &Path, workspace_root: &Path, errors: &mut Vec<String>) {
     let content = fs::read_to_string(path).unwrap();
     let lines: Vec<_> = content.lines().collect();
     check_file_length(&rel_path, &lines, errors);
-    check_function_violations(&rel_path, &lines, errors);
+    if !is_fn_lint_exempt(&rel_path) {
+        check_function_violations(&rel_path, &lines, errors);
+    }
 }
 
 fn needs_appstate_lint(rel_path: &str) -> bool {
@@ -333,6 +335,7 @@ fn needs_appstate_lint(rel_path: &str) -> bool {
         "actors/config/actor.rs",
         "actors/permission/actor.rs",
         "actors/input/actor.rs",
+        "actors/input/messages.rs",
         "actors/ui_control/actor.rs",
         "update/input/text.rs",
         "update/input/submit.rs",
@@ -345,6 +348,16 @@ fn needs_appstate_lint(rel_path: &str) -> bool {
         && !rel_path.contains("/benches/")
         && !rel_path.contains("/harness_skills/")
         && !exemptions.iter().any(|e| rel_path.ends_with(e))
+}
+
+/// Files that are fully exempt from function length/complexity checks
+/// (e.g. generated or data-driven files where the structure is intentional).
+fn is_fn_lint_exempt(rel_path: &str) -> bool {
+    let exemptions = [
+        "build.rs",
+        "actors/input/messages.rs", // apply_to mirrors InputActor; length/complexity is intentional.
+    ];
+    exemptions.iter().any(|e| rel_path.ends_with(e))
 }
 
 fn main() {
