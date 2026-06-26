@@ -1,6 +1,6 @@
 # TurnActor owns agent turn lifecycle and queues
 
-**Status**: in_progress
+**Status**: todo
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0

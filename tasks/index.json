@@ -177,7 +177,7 @@
   {
     "file": "fold-testing-into-agent-tests.md",
     "title": "Fold runie-testing into runie-agent tests",
-    "status": "wontfix"
+    "status": "todo"
   },
   {
     "file": "frontmatter-based-skills-dsl.md",
