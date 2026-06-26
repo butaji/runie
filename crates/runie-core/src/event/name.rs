@@ -131,6 +131,7 @@ fn is_named_system_variant(event: &Event) -> bool {
             | Event::ForceQuit
             | Event::Reset
             | Event::Abort
+            | Event::ClearQueues
             | Event::FollowUp
             | Event::ToggleExpand
             | Event::Dequeue

@@ -94,6 +94,7 @@ fn dispatcher_handles_all_variants() {
             | Event::ForceQuit
             | Event::Reset
             | Event::Abort
+            | Event::ClearQueues
             | Event::FollowUp
             | Event::ToggleExpand
             | Event::Dequeue

@@ -130,7 +130,6 @@ pub enum Event {
         message: String,
     },
 
-    // TurnActor facts
     TurnStarted { id: String, request_id: String, content: String },
     TurnAborted,
     TurnCompleted,
@@ -172,6 +171,7 @@ pub enum Event {
     ForceQuit,
     Reset,
     Abort,
+    ClearQueues,
     FollowUp,
     ToggleExpand,
     Dequeue,

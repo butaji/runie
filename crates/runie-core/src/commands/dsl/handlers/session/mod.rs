@@ -209,8 +209,6 @@ fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     state.session_mut().messages.clear();
     state.input_mut().input.clear();
     state.input_mut().cursor_pos = 0;
-    state.agent_state_mut().message_queue.clear();
-    state.agent_state_mut().request_queue.clear();
     state.configure_token_tracker();
     state.session_mut().session_display_name = None;
     *state.open_dialog_mut() = None;
@@ -228,7 +226,10 @@ fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     state.session_mut().session_created_at = now;
     state.session_mut().session_updated_at = now;
     state.messages_changed();
-    CommandResult::Message("New session started".into())
+    // Add confirmation message
+    state.add_system_msg("New session started".into());
+    // Clear queues through TurnActor to maintain authoritative state
+    CommandResult::Event(crate::Event::ClearQueues)
 }
 
 fn handle_reset(state: &mut AppState, _: &str) -> CommandResult {

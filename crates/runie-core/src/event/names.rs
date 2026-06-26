@@ -83,6 +83,7 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("ForceQuit", ctor!(Control::ForceQuit)),
     ("Reset", ctor!(Control::Reset)),
     ("Abort", ctor!(Control::Abort)),
+    ("ClearQueues", ctor!(Control::ClearQueues)),
     ("FollowUp", ctor!(Control::FollowUp)),
     ("ToggleExpand", ctor!(Control::ToggleExpand)),
     ("Dequeue", ctor!(Control::Dequeue)),

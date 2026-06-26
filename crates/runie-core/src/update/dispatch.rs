@@ -170,7 +170,7 @@ fn is_agent_event(event: &Event) -> bool {
 }
 
 fn is_control_event(event: &Event) -> bool {
-    matches!(event, Event::Quit | Event::ForceQuit | Event::Reset | Event::Abort | Event::FollowUp | Event::ToggleExpand | Event::Dequeue | Event::OpenExternalEditor | Event::ExternalEditorDone { .. } | Event::ShareSession | Event::Suspend | Event::ToggleVimMode | Event::CopyLastResponse | Event::OpenSessionList | Event::NewSession | Event::ResumeSession | Event::SelectSession { .. } | Event::StarSession { .. } | Event::RenameSession { .. } | Event::DeleteSession { .. })
+    matches!(event, Event::Quit | Event::ForceQuit | Event::Reset | Event::Abort | Event::ClearQueues | Event::FollowUp | Event::ToggleExpand | Event::Dequeue | Event::OpenExternalEditor | Event::ExternalEditorDone { .. } | Event::ShareSession | Event::Suspend | Event::ToggleVimMode | Event::CopyLastResponse | Event::OpenSessionList | Event::NewSession | Event::ResumeSession | Event::SelectSession { .. } | Event::StarSession { .. } | Event::RenameSession { .. } | Event::DeleteSession { .. })
 }
 
 fn is_model_config_event(event: &Event) -> bool {

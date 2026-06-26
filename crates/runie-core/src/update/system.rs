@@ -189,6 +189,7 @@ pub fn control_event(state: &mut AppState, event: Event) {
         Event::Quit | Event::ForceQuit => handle_quit_event(state, event),
         Event::Reset => handle_reset(state),
         Event::Abort => handle_abort(state),
+        Event::ClearQueues => handle_clear_queues(state),
         Event::ExternalEditorDone { content } => handle_editor_done(state, content),
         Event::ToggleExpand => state.toggle_expand_all(),
         Event::FollowUp => state.queue_follow_up(),
@@ -234,6 +235,23 @@ fn handle_new_session(state: &mut AppState) {
     }
     // Ready for user input — welcome is gone
     state.view_mut().dirty = true;
+}
+
+fn handle_clear_queues(state: &mut AppState) {
+    // Route through TurnActor to maintain authoritative queue state
+    let handles = state.actor_handles().cloned();
+    if let Some(ref h) = handles {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            let handles = h.clone();
+            tokio::spawn(async move {
+                handles.send_turn_clear_queues().await;
+            });
+        }
+    } else {
+        // Fallback for tests without actor handles
+        state.agent_state_mut().request_queue.clear();
+        state.agent_state_mut().message_queue.clear();
+    }
 }
 
 fn handle_quit_event(state: &mut AppState, event: Event) {
