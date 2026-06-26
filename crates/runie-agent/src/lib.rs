@@ -21,7 +21,7 @@ pub use headless::{
 };
 pub use runie_core::permissions::PermissionGate;
 pub use runie_core::tool::ToolOutput;
-pub use runie_core::tool_parser::{has_tool_calls, parse_tool_calls, ParsedToolCall};
+pub use runie_core::tool::{has_tool_calls, parse_tool_calls, ParsedToolCall};
 pub use turn::{run_agent_turn, run_agent_turn_with_skills};
 
 #[derive(Debug, Clone)]

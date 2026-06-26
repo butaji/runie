@@ -1,16 +1,11 @@
-//! [TOOL_CALL] markup parsing.
+//! [TOOL_CALL] markup parser.
 
 use serde_json::Value;
 
-use crate::tool_parser::minimax::is_known_tool;
-
 use super::ParsedToolCall;
+use super::minimax::is_known_tool;
 
-const TOOL_CALL_START: &str = "[TOOL_CALL]";
-const TOOL_CALL_END: &str = "[/TOOL_CALL]";
-
-/// Parse [TOOL_CALL] markup from a line.
-pub fn parse_tool_call_markup(line: &str) -> Option<ParsedToolCall> {
+pub fn parse_markup_tool(line: &str) -> Option<ParsedToolCall> {
     let payload = extract_tool_call_payload(line)?;
     let json = arrow_to_json(payload);
     let value: Value = serde_json::from_str(&json).ok()?;
@@ -26,20 +21,14 @@ pub fn parse_tool_call_markup(line: &str) -> Option<ParsedToolCall> {
     })
 }
 
-fn extract_tool_call_payload(line: &str) -> Option<&str> {
-    let start = line.find(TOOL_CALL_START)?;
-    let after_start = &line[start + TOOL_CALL_START.len()..];
-    let end = after_start.find(TOOL_CALL_END)?;
+pub fn extract_tool_call_payload(line: &str) -> Option<&str> {
+    let start = line.find("[TOOL_CALL]")?;
+    let after_start = &line[start + "[TOOL_CALL]".len()..];
+    let end = after_start.find("[/TOOL_CALL]")?;
     Some(after_start[..end].trim())
 }
 
-/// Check if a line has [TOOL_CALL] markup.
-pub fn has_tool_call_markup(line: &str) -> bool {
-    line.contains("[TOOL_CALL]")
-}
-
-/// Convert arrow syntax (key => value) to JSON (key: value).
-fn arrow_to_json(input: &str) -> String {
+pub fn arrow_to_json(input: &str) -> String {
     let mut out = String::with_capacity(input.len());
     let mut chars = input.chars().peekable();
     let mut in_string = false;

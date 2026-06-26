@@ -58,8 +58,8 @@ impl From<crate::message::Part> for ToolCall {
     }
 }
 
-impl From<crate::tool_parser::ParsedToolCall> for ToolCall {
-    fn from(call: crate::tool_parser::ParsedToolCall) -> Self {
+impl From<crate::tool::ParsedToolCall> for ToolCall {
+    fn from(call: crate::tool::ParsedToolCall) -> Self {
         ToolCall {
             id: call.id.unwrap_or_default(),
             name: call.name,
@@ -466,7 +466,7 @@ mod tests {
     /// Layer 1: ParsedToolCall converts to canonical ToolCall.
     #[test]
     fn parsed_tool_call_maps_to_canonical() {
-        use crate::tool_parser::ParsedToolCall;
+        use crate::tool::parse::ParsedToolCall;
         let parsed = ParsedToolCall {
             name: "read_file".into(),
             args: serde_json::json!({"path": "Cargo.toml"}),

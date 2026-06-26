@@ -6,7 +6,7 @@ use runie_core::harness_skills::{SkillRegistry, ToolCallCtx, ToolCallPhase, Tool
 use runie_core::message::{ChatMessage, Part, Role};
 use runie_core::permissions::{PermissionAction, PermissionContext};
 use runie_core::tool::{ToolContext, ToolOutput, ToolStatus};
-use runie_core::tool_parser::ParsedToolCall;
+use runie_core::tool::ParsedToolCall;
 use std::time::Duration;
 use tokio::time::timeout;
 

@@ -18,7 +18,7 @@ use runie_core::permissions::PermissionManager;
 use runie_core::provider::Provider;
 use runie_core::provider_event::ProviderEvent;
 use runie_core::tool::{ToolContext, ToolOutput, ToolRegistry};
-use runie_core::tool_parser::{
+use runie_core::tool::{
     assign_tool_call_ids, build_assistant_message, parse_tool_calls_fallible,
     tool_parse_error_message, ParsedToolCall, ToolParseError,
 };

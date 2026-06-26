@@ -8,7 +8,7 @@
 use crate::event::Event;
 use crate::message::{ChatMessage, Part, Role};
 use crate::model::AppState;
-use crate::tool_parser::{build_assistant_message, ParsedToolCall};
+use crate::tool::{build_assistant_message, ParsedToolCall};
 
 // -----------------------------------------------------------------------------
 // Helpers (only used in tests, so dead_code is expected in lib check)

@@ -1,7 +1,7 @@
 //! Stripping helpers for tool-call artifacts.
 
 use super::{is_tool_call_value, TOOL_CALL_END, TOOL_CALL_START};
-use crate::tool_parser::minimax::is_known_tool;
+use crate::tool::parse::is_known_tool;
 use serde_json::Value;
 
 /// Run the full stripping pipeline.

@@ -11,7 +11,7 @@ use runie_core::permissions::PermissionGate;
 use runie_core::provider::Provider;
 use runie_core::sanitize::sanitize_messages;
 use runie_core::tool::ToolRegistry;
-use runie_core::tool_parser::{
+use runie_core::tool::{
     assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
 };
 use std::time::Instant;

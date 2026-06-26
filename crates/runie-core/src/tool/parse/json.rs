@@ -1,14 +1,10 @@
-//! Inline JSON tool-call parsing.
+//! Inline JSON tool-call parser.
 
 use serde_json::Value;
 
-use crate::tool_parser::minimax::is_known_tool;
-
 use super::{ParsedToolCall, ToolParseError};
+use super::minimax::is_known_tool;
 
-/// Parse inline JSON tool calls from a line.
-///
-/// Scans the line for JSON objects that match the tool call schema.
 pub fn parse_inline_json_tools(line: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
     let mut results = Vec::new();
     let bytes = line.as_bytes();
@@ -30,7 +26,7 @@ pub fn parse_inline_json_tools(line: &str) -> Vec<Result<ParsedToolCall, ToolPar
     results
 }
 
-fn parse_json_object_at(bytes: &[u8], start: usize) -> Option<(usize, Value)> {
+pub fn parse_json_object_at(bytes: &[u8], start: usize) -> Option<(usize, Value)> {
     let end = find_object_end(bytes, start)?;
     let slice = std::str::from_utf8(&bytes[start..=end]).ok()?;
     let value: Value = serde_json::from_str(slice).ok()?;
@@ -80,11 +76,16 @@ fn value_to_tool_call(value: &Value) -> Option<ParsedToolCall> {
     })
 }
 
-/// Check if a line has inline JSON tool calls.
-pub fn has_inline_json_tools(line: &str) -> bool {
-    if !line.contains('{') {
-        return false;
-    }
-    let results = parse_inline_json_tools(line);
-    !results.is_empty()
+/// Check if a trimmed line is a tool-call JSON object.
+pub fn is_tool_call_value_check(line: &str) -> bool {
+    serde_json::from_str::<Value>(line).ok().is_some_and(|v| is_tool_call_value(&v))
+}
+
+fn is_tool_call_value(value: &Value) -> bool {
+    value.get("name").is_some()
+        && value.get("arguments").is_some()
+        && value
+            .get("name")
+            .and_then(|v| v.as_str())
+            .is_some_and(is_known_tool)
 }

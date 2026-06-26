@@ -1,15 +1,33 @@
-//! MiniMax-specific tool-call parsing.
+//! MiniMax XML tool-call format parser.
+
+use serde_json::{Map, Value};
 
 use super::{ParsedToolCall, ToolParseError};
-use serde_json::Value;
 
-const OPEN_M2: &str = "<minimax:tool_call>";
-const CLOSE_M2: &str = "</minimax:tool_call>";
-const OPEN_M3: &str = "<tool_call>";
-const CLOSE_M3: &str = "</tool_call>";
+pub const OPEN_M2: &str = "<minimax:tool_call>";
+pub const CLOSE_M2: &str = "</minimax:tool_call>";
+pub const OPEN_M3: &str = "<tool_call>";
+pub const CLOSE_M3: &str = "</tool_call>";
 
-pub fn has_minimax_tool_calls(text: &str) -> bool {
-    text.contains(OPEN_M2) || text.contains(OPEN_M3) || text.contains("]<]minimax[>[<tool_call>")
+/// Known tool names for validation.
+pub const KNOWN_TOOLS: &[&str] = &[
+    "ask_user",
+    "bash",
+    "read_file",
+    "write_file",
+    "edit_file",
+    "list_dir",
+    "grep",
+    "find",
+    "fetch_docs",
+    "search",
+    "find_definitions",
+    "select_model",
+    "done",
+];
+
+pub fn is_known_tool(name: &str) -> bool {
+    KNOWN_TOOLS.contains(&name)
 }
 
 pub fn parse_minimax_tool_calls(text: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
@@ -23,7 +41,7 @@ pub fn parse_minimax_tool_calls(text: &str) -> Vec<Result<ParsedToolCall, ToolPa
     parse_minimax_invokes(block)
 }
 
-fn normalize_m3_delimiters(text: &str) -> String {
+pub fn normalize_m3_delimiters(text: &str) -> String {
     let mut out = text.to_owned();
     out = out.replace("]<]minimax[>[</", "</");
     out = out.replace("]<]minimax[>[<", "<");
@@ -37,7 +55,7 @@ fn extract_block<'a>(text: &'a str, open: &str, close: &str) -> Option<&'a str> 
     Some(&after_open[..end])
 }
 
-fn parse_minimax_invokes(block: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
+pub fn parse_minimax_invokes(block: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
     let mut results = Vec::new();
     let mut found_any = false;
     let mut rest = block;
@@ -62,7 +80,7 @@ fn parse_next_invoke(
     let after_tag_open = &rest[start + "<invoke".len()..];
     let close = after_tag_open.find('>')?;
     let tag = &after_tag_open[..close];
-    let name = extract_minimax_name_attr(tag)?;
+    let name = extract_xml_attr(tag, "name")?;
     let after_tag = &after_tag_open[close + 1..];
     let invoke_end = after_tag.find("</invoke>")?;
     let inner = &after_tag[..invoke_end];
@@ -79,10 +97,6 @@ fn parse_next_invoke(
         args: Value::Object(args),
         id: None,
     }))
-}
-
-fn extract_minimax_name_attr(tag: &str) -> Option<String> {
-    extract_xml_attr(tag, "name")
 }
 
 fn extract_xml_attr(tag: &str, key: &str) -> Option<String> {
@@ -102,8 +116,8 @@ fn extract_xml_attr(tag: &str, key: &str) -> Option<String> {
     None
 }
 
-fn parse_minimax_parameters(inner: &str) -> serde_json::Map<String, Value> {
-    let mut args = serde_json::Map::new();
+pub fn parse_minimax_parameters(inner: &str) -> Map<String, Value> {
+    let mut args = Map::new();
     let mut rest = inner;
     let mut found_parameter = false;
     while let Some(start) = rest.find("<parameter") {
@@ -121,7 +135,8 @@ fn parse_minimax_parameters(inner: &str) -> serde_json::Map<String, Value> {
             break;
         };
         let value_str = after_tag[..end].trim();
-        let value = serde_json::from_str(value_str).unwrap_or(Value::String(value_str.to_owned()));
+        let value =
+            serde_json::from_str(value_str).unwrap_or(Value::String(value_str.to_owned()));
         args.insert(name, value);
         found_parameter = true;
         rest = &after_tag[end + "</parameter>".len()..];
@@ -133,7 +148,7 @@ fn parse_minimax_parameters(inner: &str) -> serde_json::Map<String, Value> {
     args
 }
 
-fn parse_minimax_child_tags(inner: &str, args: &mut serde_json::Map<String, Value>) {
+fn parse_minimax_child_tags(inner: &str, args: &mut Map<String, Value>) {
     let mut rest = inner;
     while let Some(start) = rest.find('<') {
         let after_open = &rest[start + 1..];
@@ -152,27 +167,9 @@ fn parse_minimax_child_tags(inner: &str, args: &mut serde_json::Map<String, Valu
             break;
         };
         let value_str = after_tag[..end].trim();
-        let value = serde_json::from_str(value_str).unwrap_or(Value::String(value_str.to_owned()));
+        let value =
+            serde_json::from_str(value_str).unwrap_or(Value::String(value_str.to_owned()));
         args.insert(name.to_owned(), value);
         rest = &after_tag[end + end_tag.len()..];
     }
-}
-
-pub(crate) fn is_known_tool(name: &str) -> bool {
-    const KNOWN: &[&str] = &[
-        "ask_user",
-        "bash",
-        "read_file",
-        "write_file",
-        "edit_file",
-        "list_dir",
-        "grep",
-        "find",
-        "fetch_docs",
-        "search",
-        "find_definitions",
-        "select_model",
-        "done",
-    ];
-    KNOWN.contains(&name)
 }

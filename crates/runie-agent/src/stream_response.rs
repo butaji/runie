@@ -11,7 +11,7 @@ use runie_core::message::ChatMessage;
 use runie_core::provider::Provider;
 use runie_core::provider_event::ProviderEvent;
 use runie_core::tool_markers::strip_tool_markers;
-use runie_core::tool_parser::{parse_tool_calls_fallible, ParsedToolCall, ToolParseError};
+use runie_core::tool::{parse_tool_calls_fallible, ParsedToolCall, ToolParseError};
 use runie_core::tool_stream::ToolStream;
 use serde_json::Value;
 use std::ops::ControlFlow;

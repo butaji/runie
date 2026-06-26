@@ -1,4 +1,4 @@
-use runie_core::tool_parser::{has_tool_calls, parse_tool_calls, parse_tool_calls_fallible};
+use runie_core::tool::{has_tool_calls, parse_tool_calls, parse_tool_calls_fallible};
 
 #[test]
 fn test_parse_markup_bash_tool() {
@@ -245,7 +245,7 @@ TOOL:unknown_tool:arg
 #[test]
 fn parse_error_message_includes_raw_input() {
     use runie_core::message::Role;
-    use runie_core::tool_parser::{tool_parse_error_message, ToolParseError};
+    use runie_core::tool::{tool_parse_error_message, ToolParseError};
     let error = ToolParseError {
         raw: "{bad json".into(),
         reason: "invalid JSON".into(),

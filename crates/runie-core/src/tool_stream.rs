@@ -13,6 +13,7 @@
 //! let call = stream.finish("call_1"); // Some(ParsedToolCall { name: "read_file", ... })
 //! ```
 
+use crate::tool::types::{repair_partial_json, ParsedToolCall};
 use serde_json::Value;
 
 /// Accumulator for a single tool call's arguments.
@@ -52,14 +53,14 @@ impl ToolStream {
     /// Returns `None` if the id is not tracked or parsing fails.
     ///
     /// Uses partial JSON repair to handle truncated JSON from streaming.
-    pub fn finish(&mut self, id: &str) -> Option<crate::tool_parser::ParsedToolCall> {
+    pub fn finish(&mut self, id: &str) -> Option<ParsedToolCall> {
         let acc = self.pending.remove(id)?;
         let args = if acc.arguments.is_empty() {
             Value::Object(serde_json::Map::new())
         } else {
-            crate::tool_parser::repair_partial_json(&acc.arguments)?
+            repair_partial_json(&acc.arguments)?
         };
-        Some(crate::tool_parser::ParsedToolCall {
+        Some(ParsedToolCall {
             name: acc.name,
             args,
             id: Some(id.to_owned()),
@@ -67,7 +68,7 @@ impl ToolStream {
     }
 
     /// Finish all pending tool calls, draining the stream.
-    pub fn finish_all(&mut self) -> Vec<crate::tool_parser::ParsedToolCall> {
+    pub fn finish_all(&mut self) -> Vec<ParsedToolCall> {
         let ids: Vec<String> = self.pending.keys().cloned().collect();
         ids.into_iter().filter_map(|id| self.finish(&id)).collect()
     }

@@ -8,7 +8,7 @@ use runie_core::harness_skills::{
 use runie_core::message::ChatMessage;
 use runie_core::permissions::PermissionGate;
 use runie_core::tool::{ToolContext, ToolOutput, ToolStatus};
-use runie_core::tool_parser::ParsedToolCall;
+use runie_core::tool::ParsedToolCall;
 use crate::stream_response::EmitFn;
 
 pub async fn execute_tools(
