@@ -1,9 +1,10 @@
 //! runie-cli — Unified headless CLI for Runie
 //!
-//! Supports three modes:
+//! Supports modes:
 //! - `runie print <prompt>` — single-turn streaming to stdout
 //! - `runie json` — structured JSON stdin/stdout for scripting
 //! - `runie server` — TCP/stdio JSON-RPC server for IDE integration
+//! - `runie acp` — ACP (Agent Client Protocol) over stdio for programmatic control
 //!
 //! Dispatch is based on `argv[1]` (subcommand) or `--mode` flag.
 
@@ -12,6 +13,7 @@ use anyhow::Result;
 mod print;
 mod json;
 mod server;
+mod acp;
 
 fn print_usage() {
     eprintln!(
@@ -21,6 +23,7 @@ Commands:
   print <prompt>    Stream LLM response to stdout
   json              JSON stdin/stdout for scripting
   server            TCP/stdio JSON-RPC server
+  acp               ACP (Agent Client Protocol) over stdio
 
 Options:
   --help, -h        Show this help
@@ -56,6 +59,11 @@ fn main() {
             .build()
             .unwrap()
             .block_on(run_server(&args[2..])),
+        "acp" => tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(acp::run()),
         other => {
             eprintln!("Unknown command: {other}");
             print_usage();
@@ -89,3 +97,5 @@ async fn run_server(args: &[String]) -> Result<()> {
     let yolo = args.iter().any(|a| a == "--yolo");
     server::run(use_stdio, yolo).await
 }
+
+
