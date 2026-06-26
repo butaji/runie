@@ -42,6 +42,17 @@ impl ListDirTool {
     pub fn input_schema() -> Value {
         runie_core::tool::generate_schema::<ListDirInput>()
     }
+
+    fn parse_path(input: Value) -> String {
+        let typed: Result<ListDirInput, _> = serde_json::from_value(input.clone());
+        match typed {
+            Ok(inp) => inp.path.unwrap_or_else(|| ".".to_string()),
+            Err(_) => input["path"]
+                .as_str()
+                .map(String::from)
+                .unwrap_or_else(|| ".".to_string()),
+        }
+    }
 }
 
 #[async_trait]
@@ -59,43 +70,17 @@ impl Tool for ListDirTool {
 
     async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
         let start = Instant::now();
-
-        // Parse typed input, falling back to raw access for backward compat
-        let typed: Result<ListDirInput, _> = serde_json::from_value(input.clone());
-        let path_str = match typed {
-            Ok(inp) => inp.path.unwrap_or_else(|| ".".to_string()),
-            Err(_) => input["path"]
-                .as_str()
-                .map(String::from)
-                .unwrap_or_else(|| ".".to_string()),
-        };
-
+        let path_str = Self::parse_path(input);
         let full_path = resolve_path_in(&path_str, &ctx.working_dir);
         let tool_args = serde_json::json!({ "path": path_str });
 
-        let dir = match tokio::fs::read_dir(&full_path).await {
-            Ok(d) => d,
-            Err(e) => {
-                return Ok(ToolOutput {
-                    tool_name: "list_dir".into(),
-                    tool_args,
-                    content: format!("Error reading directory {}: {}", full_path.display(), e),
-                    bytes_transferred: None,
-                    duration: start.elapsed(),
-                    status: ToolStatus::Error,
-                })
-            }
-        };
+        let dir = tokio::fs::read_dir(&full_path).await?;
         let names = Self::collect_entries(dir).await;
-        let content = if names.is_empty() {
-            "(empty directory)".into()
-        } else {
-            names.join("\n")
-        };
+        let content = if names.is_empty() { "(empty directory)" } else { &names.join("\n") };
         Ok(ToolOutput {
             tool_name: "list_dir".into(),
             tool_args,
-            content,
+            content: content.to_string(),
             bytes_transferred: None,
             duration: start.elapsed(),
             status: ToolStatus::Success,

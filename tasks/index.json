@@ -1,15 +1,5 @@
 [
   {
-    "status": "unknown",
-    "depends_on": [],
-    "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
-    "title": "Tasks Directory",
-    "file": "README.md"
-  },
-  {
     "status": "done",
     "depends_on": [
       "actor-owned-state-ssot"
@@ -54,7 +44,7 @@
     "file": "actor-owned-state-ssot.md"
   },
   {
-    "status": "todo",
+    "status": "in_progress",
     "depends_on": [],
     "blocks": [],
     "milestone": "R4",

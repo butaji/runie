@@ -2,6 +2,7 @@
 
 use tokio::sync::mpsc;
 
+use crate::actors::Reply;
 use crate::permissions::PermissionAction;
 
 /// Messages accepted by `PermissionActor`.
@@ -13,7 +14,7 @@ pub enum PermissionMsg {
         request_id: String,
         tool: String,
         input: serde_json::Value,
-        reply: Option<tokio::sync::oneshot::Sender<PermissionAction>>,
+        reply: Reply<PermissionAction>,
     },
     /// User resolves a pending permission request.
     ResolvePermission {
@@ -28,15 +29,14 @@ pub enum PermissionMsg {
 
 impl Clone for PermissionMsg {
     fn clone(&self) -> Self {
-        // AskPermission cannot be cloned due to oneshot::Sender, so we drop the reply.
-        // This is only used for internal routing, not for cloning user messages.
+        // AskPermission's Reply is Clone via Arc, so we can clone the whole message.
         match self {
-            PermissionMsg::AskPermission { request_id, tool, input, .. } => {
+            PermissionMsg::AskPermission { request_id, tool, input, reply } => {
                 PermissionMsg::AskPermission {
                     request_id: request_id.clone(),
                     tool: tool.clone(),
                     input: input.clone(),
-                    reply: None,
+                    reply: reply.clone(),
                 }
             }
             PermissionMsg::ResolvePermission { request_id, action } => {
@@ -77,7 +77,7 @@ impl PermissionActorHandle {
             request_id,
             tool,
             input,
-            reply: Some(tx),
+            reply: Reply::new(tx),
         };
         let _ = self.tx.send(msg).await;
         rx

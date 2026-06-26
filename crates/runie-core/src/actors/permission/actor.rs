@@ -2,7 +2,7 @@
 
 use tokio::sync::mpsc;
 
-use crate::actors::Actor;
+use crate::actors::{Actor, Reply};
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::PermissionRequestState;
@@ -36,7 +36,7 @@ impl PermissionActor {
         (PermissionActorHandle::new(tx), handle)
     }
 
-    fn handle_ask_permission(&mut self, request_id: String, tool: String, input: serde_json::Value, reply: Option<tokio::sync::oneshot::Sender<PermissionAction>>, bus: &EventBus<Event>) {
+    fn handle_ask_permission(&mut self, request_id: String, tool: String, input: serde_json::Value, reply: Reply<PermissionAction>, bus: &EventBus<Event>) {
         self.registry.register(&request_id);
         self.current_request = Some(PermissionRequestState {
             request_id: request_id.clone(),
@@ -49,9 +49,7 @@ impl PermissionActor {
             input,
         });
         // Deny on timeout for now
-        if let Some(tx) = reply {
-            let _ = tx.send(PermissionAction::Deny);
-        }
+        reply.send(PermissionAction::Deny);
     }
 
     fn handle_resolve_permission(&mut self, request_id: String, action: PermissionAction, bus: &EventBus<Event>) {
@@ -120,7 +118,7 @@ mod tests {
             "req-1".into(),
             "bash".into(),
             serde_json::json!({}),
-            Some(tx),
+            Reply::new(tx),
             &bus,
         );
         assert!(actor.current_request.is_some());
