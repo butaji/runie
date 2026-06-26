@@ -61,11 +61,7 @@ static SYSTEM_COMMANDS: &[CommandSpec] = &[
         aliases: &[],
         category: CommandCategory::System,
         sub: true,
-        kind: CommandKind::FormWithHandler {
-            title: "Switch Prompt",
-            fields: &[("Prompt name", "prompt-name", "name")],
-            handler: run_prompt_handler,
-        },
+        kind: CommandKind::Handler(handle_prompt),
     },
     CommandSpec {
         name: "hotkeys",
@@ -232,22 +228,25 @@ fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::OpenPanelStack(Box::new(PanelStack::new(panel)))
 }
 
-// ── Form-submit handlers ──────────────────────────────────────────────────────
+// ── Prompt command handler ─────────────────────────────────────────────────────
 
-fn run_prompt_handler(state: &mut AppState, name: &str) -> CommandResult {
-    run_prompt(state, name);
-    CommandResult::None
+/// Handler for the `/prompt` command.
+/// Handles both direct invocation (`/prompt name`) and form submission.
+fn handle_prompt(state: &mut AppState, args: &str) -> CommandResult {
+    run_prompt(state, args)
 }
 
-
-
-pub fn run_prompt(state: &mut AppState, name: &str) {
+/// Implementation of `/prompt` command logic.
+/// Emits `Event::SetPrompt` for state mutation.
+/// Returns `CommandResult::Message` for confirmation/info messages.
+pub fn run_prompt(state: &mut AppState, name: &str) -> CommandResult {
     let name = name.trim();
     if name.is_empty() {
-        let current = if state.input_mut().current_prompt.is_empty() {
+        // No argument: show current and available prompts
+        let current = if state.input().current_prompt.is_empty() {
             "default"
         } else {
-            &state.input_mut().current_prompt
+            &state.input().current_prompt
         };
         let mut lines = vec![format!("Current prompt: {}", current)];
         if !state.prompts().is_empty() {
@@ -256,13 +255,13 @@ pub fn run_prompt(state: &mut AppState, name: &str) {
                 lines.push(format!("  {}", p.summary()));
             }
         }
-        state.add_system_msg(lines.join("\n"));
-        return;
+        return CommandResult::Message(lines.join("\n"));
     }
     if state.prompts().iter().any(|p| p.name == name) {
-        state.input_mut().current_prompt = name.to_owned();
-        state.add_system_msg(format!("Prompt switched to '{}'", name));
+        // Emit SetPrompt event for state mutation
+        state.update(crate::Event::SetPrompt { name: name.to_owned() });
+        CommandResult::Message(format!("Prompt switched to '{}'", name))
     } else {
-        state.add_system_msg(format!("Prompt '{}' not found.", name));
+        CommandResult::Message(format!("Prompt '{}' not found.", name))
     }
 }

@@ -28,6 +28,10 @@ fn try_handle_early_events(state: &mut AppState, event: &Event) -> bool {
         state.replay_message(id.clone(), role.clone(), content.clone(), *timestamp, provider.clone());
         return true;
     }
+    if let Event::SetPrompt { name } = event {
+        state.input_mut().current_prompt = name.clone();
+        return true;
+    }
     handle_turn_events(state, event) || handle_persistence_events(state, event) || handle_session_store_events(state, event) || handle_io_events(state, event)
 }
 

@@ -225,7 +225,8 @@ fn dispatcher_handles_all_variants() {
             | Event::SessionTreeSelect { .. } => Event::CloneSession,
 
             // Command
-            Event::RunLoadCommand { .. }
+            Event::SetPrompt { .. }
+            | Event::RunLoadCommand { .. }
             | Event::RunDeleteCommand { .. }
             | Event::RunImportCommand { .. }
             | Event::RunExportCommand { .. }

@@ -28,7 +28,15 @@ pub(super) fn handle_command_event(state: &mut AppState, event: crate::Event) {
         // Skill
         crate::Event::RunSkillCommand { name } => run_skill_command(state, name),
         // System
-        crate::Event::RunPromptCommand { name } => crate::commands::dsl::handlers::system::run_prompt(state, name),
+        crate::Event::RunPromptCommand { name } => {
+            // Emit SetPrompt event for state mutation before calling handler
+            let name_trimmed = name.trim();
+            if state.prompts().iter().any(|p| p.name == name_trimmed) {
+                state.update(crate::Event::SetPrompt { name: name_trimmed.to_owned() });
+            }
+            let result = crate::commands::dsl::handlers::system::run_prompt(state, name);
+            dispatch_result(state, result);
+        }
         crate::Event::RunThinkingCommand { level } => crate::commands::dsl::handlers::model::run_thinking(state, *level),
         // Registry dispatch (from command palette)
         crate::Event::RunPaletteCommand { name, args } => run_palette_command(state, name, args),

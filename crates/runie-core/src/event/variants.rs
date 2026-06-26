@@ -1,12 +1,4 @@
-//! Flat `Event` enum — every leaf variant lives at the top level.
-//!
-//! Sub-enums are reduced to type aliases for backward compatibility, so old
-//! code such as `crate::Event::Submit` still resolves to `Event::Submit`.
-//!
-//! ## Event taxonomy
-//!
-//! See [`kind.rs`](kind) for the `EventKind` enum and `Event::kind()` method
-//! that classifies each variant as **Fact**, **Intent**, or **Control**.
+//! Top-level Event enum. See [`kind.rs`](kind) for taxonomy.
 
 use serde::{Deserialize, Serialize};
 use strum::IntoStaticStr;
@@ -14,7 +6,6 @@ use strum::IntoStaticStr;
 use crate::model::ThinkingLevel;
 use crate::settings::SettingsCategory;
 
-/// The top-level event type for the entire application.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, IntoStaticStr)]
 #[serde(tag = "type", content = "data")]
 pub enum Event {
@@ -427,6 +418,9 @@ pub enum Event {
     },
 
     // Command
+    SetPrompt {
+        name: String,
+    },
     RunLoadCommand {
         name: String,
     },
