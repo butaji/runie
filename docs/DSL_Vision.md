@@ -215,49 +215,79 @@ Three small, independent declarations. No `AppState` edits, no dispatch boilerpl
 
 ## 7. Declarative runtime configuration
 
-Most of the runtime can be declared in files rather than Rust code. A generic loader reads frontmatter and emits facts:
+Most of the runtime can be declared in files rather than Rust code. A generic loader reads frontmatter and emits facts.
 
-```yaml
+### Skill
+
+```markdown
 # ~/.runie/skills/check-work/SKILL.md
 ---
 name: check-work
 description: Verify changes with a subagent.
+metadata:
+  short-description: "Verify changes with a subagent"
 triggers:
   - command: /check-work
   - command: /verify
 ---
 
-# Usage, prompt template, and steps go here.
+## Usage
+
+`/check-work [focus area]`
+
+## Steps
+
+1. Spawn a verifier subagent.
+2. Read the verdict.
+3. Fix issues if `VERDICT: FAIL`.
 ```
 
-```yaml
-# ~/.runie/agents/explore.md
+### Subagent type
+
+```markdown
+# resources/agents/explore.md
 ---
 name: explore
-description: Fast codebase exploration.
-model: fast
-input_schema: ExploreRequest
+description: Fast codebase exploration for patterns and architecture.
+prompt_mode: full
+model: inherit
+permission_mode: default
+agents_md: true
 ---
 
-You are an expert explorer. Search for files matching {{pattern}} and summarize.
+You are an expert explorer. Search broadly, then narrow down. Use absolute paths.
 ```
 
+### Slash command
+
 ```yaml
-# ~/.runie/commands/bookmark.yaml
----
+# .runie/commands/bookmark.yaml
 name: bookmark
 description: Bookmark the current assistant message
 intent: BookmarkMessage
----
+shortcut: Ctrl+b
 ```
 
-The loader emits `SkillLoaded`, `AgentTypeRegistered`, `CommandRegistered`, etc. The runtime never needs a new Rust branch to support a new skill, subagent type, or command.
+### Model metadata
+
+```yaml
+# resources/models/grok-build.yaml
+id: grok-build
+name: Grok Build
+base_url: https://api.x.ai/v1
+context_window: 512000
+api_backend: responses
+supports_backend_search: true
+auto_compact_threshold_percent: 80
+```
+
+The loader emits `SkillLoaded`, `AgentTypeRegistered`, `CommandRegistered`, `ModelCatalogUpdated`, etc. The runtime never needs a new Rust branch to support a new skill, subagent type, command, or model.
 
 ## 8. Permission rules as data
 
 Permissions are declarative rules evaluated by `PermissionActor`:
 
-```yaml
+```toml
 # ~/.runie/config.toml
 [[permissions]]
 action = "allow"
@@ -272,24 +302,52 @@ pattern = "rm -rf /"
 action = "ask"
 tool = "write_file"
 pattern = "*.rs"
+scope = "project"
 ```
+
+Permission modes:
+
+| Mode | Behavior |
+|---|---|
+| `default` | Apply rules; ask when no rule matches. |
+| `acceptEdits` | Auto-accept file edits; ask for shell commands. |
+| `auto` | Auto-approve safe operations; ask for risky ones. |
+| `dontAsk` | Approve unless a deny rule matches. |
+| `bypassPermissions` | Approve everything (dangerous). |
+| `plan` | Block write tools until a plan is approved. |
 
 CLI flags layer on top: `--allow read_file`, `--deny bash`, `--tools read_file,list_dir`, `--permission-mode plan`. No custom policy code per tool.
 
 ## 9. External interfaces as DSL consumers
 
-The same intent/fact stream that powers the TUI can be exposed to external clients. The DSL makes this trivial because every feature is already expressed as events:
+The same intent/fact stream that powers the TUI can be exposed to external clients. The DSL makes this trivial because every feature is already expressed as events.
+
+Headless streaming output:
+
+```json
+{"type":"text","data":"Hello, "}
+{"type":"text","data":"world!"}
+{"type":"tool_call_start","id":"call_1","name":"bash"}
+{"type":"tool_call_input_delta","id":"call_1","delta":"{\"cmd\":\"ls\"}"}
+{"type":"tool_call_end","id":"call_1"}
+{"type":"permission_request","id":"perm_1","tool":"bash","args":{}}
+{"type":"tool_result","id":"call_1","output":"Cargo.toml\nsrc/"}
+{"type":"usage","input_tokens":120,"output_tokens":45}
+{"type":"end","stopReason":"EndTurn","sessionId":"...","requestId":"..."}
+```
+
+Error event:
+
+```json
+{"type":"error","message":"Tool constraint violated: auto_background_on_timeout requires enabled_background"}
+```
+
+ACP JSON-RPC adapter:
 
 ```rust
-// ACP JSON-RPC adapter
 acp.on_request("run_intent", |intent: CoreIntent| {
     bus.emit(Event::Intent(intent));
 });
-
-// Headless streaming output
-for fact in bus.facts() {
-    println!("{}", serde_json::to_string(&fact)?);
-}
 ```
 
 The TUI, headless scripts, and IDE extensions all consume the same facts. Adding a new client does not require new Runie internals — only a new consumer of the event stream.

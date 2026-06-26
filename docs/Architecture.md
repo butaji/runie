@@ -117,23 +117,41 @@ A session is a persisted sequence of durable events. Loading a session replays t
 
 Slash commands (`/model`, `/save`, `/compact`, …) are registered in a typed `CommandRegistry`. Each command defines a form or direct handler and emits events.
 
-### Tool model
+### Tool model (MCP-first)
 
-Tools implement a shared `Tool` trait. The built-in tools live in `runie-agent::tool`; the registry and shared types live in `runie-core` so new tools can be added without depending on the engine.
+All tools are exposed through the Model Context Protocol (MCP). Tool input schemas are derived from Rust structs via `schemars`; execution is handled by the MCP runtime. The legacy `Tool` trait, `ToolRegistry`, and text/markup/inline-JSON tool parsers are deprecated.
 
 Execution flow:
 
-1. Provider emits `ToolCallStart` + `ToolCallInputDelta`.
-2. Agent parses and validates the input.
-3. Permission policy decides `Allow`, `Ask`, or `Deny`.
-4. `runie-agent` executes the tool.
+1. Provider emits a native `ToolCallStart` + input deltas.
+2. Agent forwards the call to the MCP runtime.
+3. Permission policy (an MCP interceptor) decides `Allow`, `Ask`, or `Deny`.
+4. MCP runtime executes the tool.
 5. Result is emitted as a durable `ToolResult` event.
+
+For text-only providers, a thin shim converts tool calls to/from plain text rather than maintaining a permanent parser stack.
 
 ### Harness skills
 
 Skills are default-on, configurable interceptors on the agent turn. They register hooks (`on_turn_start`, `on_tool_call`, `on_turn_end`) to implement cross-cutting harness behavior without changing the base model.
 
-Current skills:
+Skills are declared in markdown files with YAML frontmatter:
+
+```markdown
+---
+name: check-work
+description: Verify changes with a subagent.
+metadata:
+  short-description: "Verify changes with a subagent"
+triggers:
+  - command: /check-work
+  - command: /verify
+---
+```
+
+The generic loader parses frontmatter and emits `SkillLoaded`. Adding a new skill means adding a file, not editing the engine.
+
+Current built-in skills:
 
 - `HashlineEditSkill` — line-addressed edits with content-hash verification.
 - `VerificationLoopSkill` — runs a verification command after the model claims completion.
@@ -161,9 +179,27 @@ Query syntax:
 ## Execution modes
 
 - **Solo** (default): the user prompt goes directly to `AgentActor` with the session model.
+- **Plan-first** (R4): `PlanActor` owns a graph of proposed steps. The agent emits `PlanCreated`; write tools are blocked until the user emits `ApprovePlan`. `TurnActor` executes approved steps and emits `PlanStepCompleted` facts.
 - **Team** (R4): `OrchestratorActor` designs a workflow of roles and routes steps to subagents.
 
 Team mode uses the Orchestrator-Harness Protocol (OHP): a typed plan with roles, sequential/parallel steps, and model-trait preferences. The orchestrator resolves traits to concrete models via the catalog.
+
+## External interfaces
+
+Runie exposes its event bus to the outside world through thin clients that talk to the `LeaderActor`:
+
+1. **ACP over stdio** — JSON-RPC adapter (`runie agent stdio`).
+2. **Streaming JSON headless mode** — `runie -p "task"` emits newline-delimited facts.
+3. **WebSocket server** — `runie agent serve` for IDE/editor integrations.
+
+All clients send intents and receive the same fact stream. The TUI is just one consumer. Example headless event:
+
+```json
+{"type":"text","data":"Hello, "}
+{"type":"tool_call_start","id":"call_1","name":"bash"}
+{"type":"tool_call_end","id":"call_1"}
+{"type":"end","stopReason":"EndTurn","sessionId":"...","requestId":"..."}
+```
 
 ## Provider normalization
 
@@ -186,19 +222,69 @@ Provider-specific parsing (for example MiniMax XML tool-call delimiters) is isol
 
 ## Declarative configuration
 
-Most runtime behavior is declared in files rather than Rust code. The leader loads these at startup and publishes them as facts:
+Most runtime behavior is declared in files rather than Rust code. The leader loads these at startup and publishes them as facts.
 
-| Kind | Location | Declares |
-|---|---|---|
-| Project instructions | `AGENTS.md` (project root) | High-level rules, conventions, and context for the agent. |
-| Skills | `~/.runie/skills/<name>/SKILL.md` | Reusable behaviors with YAML frontmatter and markdown instructions. |
-| Slash commands | `~/.runie/commands/` or project `.runie/commands/` | `CommandDef` as frontmatter; no Rust enum edits. |
-| Subagent types | `resources/agents/` / `~/.runie/agents/` | Prompt templates, input schemas, and model preferences. |
-| Permission rules | `~/.runie/config.toml` / `./.runie/config.toml` | Allow/deny rules by tool, path, command, or scope. |
-| MCP servers | `~/.runie/config.toml` / `./.runie/config.toml` | stdio/http/sse server definitions managed by `runie mcp`. |
-| Agent profiles | `~/.runie/profiles/` | Model, effort, tool set, and system-prompt overrides. |
+### Subagent type
 
-A generic loader parses frontmatter and emits `SkillLoaded`, `CommandRegistered`, `PermissionRulesLoaded`, `McpServerLoaded`, etc. Adding a feature usually means adding a file, not editing the engine.
+```markdown
+# resources/agents/explore.md
+---
+name: explore
+description: Fast codebase exploration.
+prompt_mode: full
+model: inherit
+permission_mode: default
+agents_md: true
+---
+
+You are an expert explorer. Search broadly, then narrow down.
+```
+
+### Role / persona
+
+```toml
+# resources/roles/implementer.toml
+name = "implementer"
+description = "Implements the planned changes."
+model = "fast"
+effort = "high"
+system_prompt = "You write clean, tested code."
+allowed_tools = ["read_file", "write_file", "bash"]
+```
+
+### Model metadata
+
+```yaml
+# resources/models/grok-build.yaml
+id: grok-build
+name: Grok Build
+base_url: https://api.x.ai/v1
+context_window: 512000
+api_backend: responses
+supports_backend_search: true
+auto_compact_threshold_percent: 80
+```
+
+### Permission rule
+
+```toml
+[[permissions]]
+action = "allow"
+tool = "read_file"
+
+[[permissions]]
+action = "ask"
+tool = "bash"
+pattern = "git push"
+```
+
+### MCP server
+
+```bash
+runie mcp add filesystem npx -y @modelcontextprotocol/server-filesroot ~/Code --transport stdio
+```
+
+A generic loader parses frontmatter and emits `SkillLoaded`, `CommandRegistered`, `AgentTypeRegistered`, `PermissionRulesLoaded`, `McpServerLoaded`, etc. Adding a feature usually means adding a file, not editing the engine.
 
 ## Code layout
 
