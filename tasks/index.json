@@ -177,7 +177,7 @@
   {
     "file": "fold-state-into-model-state.md",
     "title": "Fold State into Model State",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fold-testing-into-agent-tests.md",
