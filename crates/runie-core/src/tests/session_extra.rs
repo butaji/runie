@@ -165,6 +165,8 @@ fn roundtrip_save_load_preserves_display_name() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let dir = std::env::temp_dir().join(format!("runie_roundtrip_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
+    // Create the directory before using it (SessionStore doesn't auto-create)
+    std::fs::create_dir_all(&dir).unwrap();
     // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", &dir) };
 
