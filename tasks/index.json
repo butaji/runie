@@ -1,146 +1,177 @@
 [
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "actor-owned-state-ssot"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P1",
     "title": "actor-lifecycle-and-handle-registry",
     "file": "actor-lifecycle-and-handle-registry.md"
   },
   {
-    "status": "unknown",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P0",
     "title": "actor-owned-state-ssot",
     "file": "actor-owned-state-ssot.md"
   },
   {
-    "status": "unknown",
+    "status": "in_progress",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Tools",
+    "priority": "P0",
     "title": "adopt-mcp-native-tool-calling",
     "file": "adopt-mcp-native-tool-calling.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Core / State",
+    "priority": "P0",
     "title": "app-state-read-only-projection",
     "file": "app-state-read-only-projection.md"
   },
   {
-    "status": "unknown",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Core / State",
+    "priority": "P2",
     "title": "centralize-error-type",
     "file": "centralize-error-type.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "extract-headless-cli-helper"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P1",
     "title": "collapse-headless-binaries-into-one-cli",
     "file": "collapse-headless-binaries-into-one-cli.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection",
+      "input-actor-owns-input-state"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Input / Commands",
+    "priority": "P1",
     "title": "completion-actor-owns-completion-state",
     "file": "completion-actor-owns-completion-state.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P0",
     "title": "config-ssot-via-configactor",
     "file": "config-ssot-via-configactor.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "delete-config-reload-shim",
+      "consolidate-login-flow-handlers",
+      "split-runie-core-into-domain-and-io-crates"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
     "title": "consolidate-config-modules-into-dir",
     "file": "consolidate-config-modules-into-dir.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
     "blocks": [],
-    "milestone": "unknown",
+    "milestone": "R4",
     "category": "Unknown",
-    "priority": "P3",
+    "priority": "P2",
     "title": "consolidate-dual-path-modules",
     "file": "consolidate-dual-path-modules.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
     "title": "consolidate-login-flow-handlers",
     "file": "consolidate-login-flow-handlers.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "consolidate-login-flow-handlers"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
+    "milestone": "R4",
+    "category": "Architecture / Testing",
     "priority": "P3",
     "title": "consolidate-login-logout-tests",
     "file": "consolidate-login-logout-tests.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "unify-provider-modules",
+      "actor-owned-state-ssot",
+      "config-ssot-via-configactor"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P1",
     "title": "consolidate-settings-providers-dialog",
     "file": "consolidate-settings-providers-dialog.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "rename-update-dialog-panel"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Refactoring",
+    "priority": "P2",
     "title": "consolidate-update-dialog-files",
     "file": "consolidate-update-dialog-files.md"
   },
   {
-    "status": "unknown",
+    "status": "todo",
     "depends_on": [],
     "blocks": [],
     "milestone": "unknown",
@@ -150,197 +181,227 @@
     "file": "declarative-actor-dsl.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "fold-state-into-model-state"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P0",
     "title": "decouple-appstate-from-view-cache",
     "file": "decouple-appstate-from-view-cache.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "replace-git2-with-cli"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Tools",
+    "priority": "P2",
     "title": "dedupe-git-status-formatter",
     "file": "dedupe-git-status-formatter.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "finish-io-migration"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P1",
     "title": "delete-async-io-bridge",
     "file": "delete-async-io-bridge.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "config-ssot-via-configactor"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
     "title": "delete-config-reload-shim",
     "file": "delete-config-reload-shim.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
     "blocks": [],
-    "milestone": "unknown",
+    "milestone": "R4",
     "category": "Unknown",
     "priority": "P3",
     "title": "drop-event-bus-replay-buffer",
     "file": "drop-event-bus-replay-buffer.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "drop-event-bus-replay-buffer"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
     "title": "drop-small-stdlib-replaceable-deps",
     "file": "drop-small-stdlib-replaceable-deps.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection",
+      "actor-lifecycle-and-handle-registry"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P1",
     "title": "env-actor-owns-git-cwd",
     "file": "env-actor-owns-git-cwd.md"
   },
   {
-    "status": "unknown",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P0",
     "title": "event-taxonomy-for-actor-state-sync",
     "file": "event-taxonomy-for-actor-state-sync.md"
   },
   {
-    "status": "unknown",
+    "status": "todo",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
     "title": "externalize-model-metadata-as-yaml",
     "file": "externalize-model-metadata-as-yaml.md"
   },
   {
-    "status": "unknown",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Refactoring",
+    "priority": "P1",
     "title": "extract-headless-cli-helper",
     "file": "extract-headless-cli-helper.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection",
+      "actor-lifecycle-and-handle-registry"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Tools",
+    "priority": "P1",
     "title": "fff-indexer-owns-file-picker-results",
     "file": "fff-indexer-owns-file-picker-results.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "remove-login-config-test-shim"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P0",
     "title": "finish-io-migration",
     "file": "finish-io-migration.md"
   },
   {
-    "status": "unknown",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P2",
     "title": "fold-runie-engine-into-agent",
     "file": "fold-runie-engine-into-agent.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Refactoring",
+    "priority": "P2",
     "title": "fold-state-into-model-state",
     "file": "fold-state-into-model-state.md"
   },
   {
-    "status": "unknown",
+    "status": "wontfix",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
+    "milestone": "R4",
+    "category": "Configuration",
     "priority": "P3",
     "title": "fold-testing-into-agent-tests",
     "file": "fold-testing-into-agent-tests.md"
   },
   {
-    "status": "unknown",
+    "status": "todo",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Core / State",
+    "priority": "P2",
     "title": "frontmatter-based-skills-dsl",
     "file": "frontmatter-based-skills-dsl.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "split-runie-core-into-domain-and-io-crates"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
     "title": "gate-or-move-single-consumer-core-modules",
     "file": "gate-or-move-single-consumer-core-modules.md"
   },
   {
-    "status": "unknown",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
     "title": "generate-config-schema-from-code",
     "file": "generate-config-schema-from-code.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "rename-core-ui-to-view"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "TUI / Rendering",
+    "priority": "P2",
     "title": "generate-ui-elements-from-model",
     "file": "generate-ui-elements-from-model.md"
   },
   {
-    "status": "unknown",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
     "milestone": "unknown",
@@ -350,87 +411,107 @@
     "file": "generic-actor-reply.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Input / Commands",
+    "priority": "P0",
     "title": "input-actor-owns-input-state",
     "file": "input-actor-owns-input-state.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "unify-provider-modules"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P0",
     "title": "move-provider-catalog-to-provider-crate",
     "file": "move-provider-catalog-to-provider-crate.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "finish-io-migration"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P0",
     "title": "move-tui-effects-into-io-actor",
     "file": "move-tui-effects-into-io-actor.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Core / State",
+    "priority": "P1",
     "title": "notification-actor-owns-transient-messages",
     "file": "notification-actor-owns-transient-messages.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Security",
+    "priority": "P0",
     "title": "permission-actor-owns-approvals",
     "file": "permission-actor-owns-approvals.md"
   },
   {
-    "status": "unknown",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R5",
+    "category": "TUI / Rendering",
+    "priority": "P2",
     "title": "r5-paced-text-rendering",
     "file": "r5-paced-text-rendering.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "r5-extract-tool-stream"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R5",
+    "category": "Tools",
+    "priority": "P1",
     "title": "r5-partial-json-repair",
     "file": "r5-partial-json-repair.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "r5-populate-parts-streaming"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R5",
+    "category": "Architecture / Actors",
+    "priority": "P2",
     "title": "r5-per-channel-decoders",
     "file": "r5-per-channel-decoders.md"
   },
   {
-    "status": "unknown",
+    "status": "todo",
     "depends_on": [],
     "blocks": [],
     "milestone": "unknown",
@@ -440,267 +521,335 @@
     "file": "r5-populate-parts-streaming.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "r5-extract-tool-stream"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R5",
+    "category": "Architecture / Actors",
+    "priority": "P0",
     "title": "r5-provider-protocol-trait",
     "file": "r5-provider-protocol-trait.md"
   },
   {
-    "status": "unknown",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
     "title": "reconsider-clipboard-image-deps",
     "file": "reconsider-clipboard-image-deps.md"
   },
   {
-    "status": "unknown",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Sessions",
+    "priority": "P2",
     "title": "reconsider-redb-session-store",
     "file": "reconsider-redb-session-store.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "generic-actor-reply"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P1",
     "title": "reduce-actor-handle-boilerplate",
     "file": "reduce-actor-handle-boilerplate.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "consolidate-dual-path-modules"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
     "title": "relocate-loose-tests-files",
     "file": "relocate-loose-tests-files.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "session-actor-owns-session-state",
+      "input-actor-owns-input-state",
+      "view-actor-owns-view-state",
+      "completion-actor-owns-completion-state",
+      "turn-actor-owns-agent-turn-state",
+      "permission-actor-owns-approvals",
+      "notification-actor-owns-transient-messages",
+      "trust-actor-owns-trust-decisions",
+      "env-actor-owns-git-cwd",
+      "fff-indexer-owns-file-picker-results",
+      "ui-control-actor-owns-dialog-state",
+      "config-ssot-via-configactor",
+      "actor-lifecycle-and-handle-registry"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P0",
     "title": "remove-direct-appstate-mutations",
     "file": "remove-direct-appstate-mutations.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "config-ssot-via-configactor"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P0",
     "title": "remove-login-config-test-shim",
     "file": "remove-login-config-test-shim.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "fold-state-into-model-state"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Refactoring",
+    "priority": "P2",
     "title": "rename-core-ui-to-view",
     "file": "rename-core-ui-to-view.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "actor-owned-state-ssot"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P1",
     "title": "replace-actor-runtime-with-ractor",
     "file": "replace-actor-runtime-with-ractor.md"
   },
   {
-    "status": "unknown",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Core / State",
+    "priority": "P1",
     "title": "replace-diff-parser-with-diffy",
     "file": "replace-diff-parser-with-diffy.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "finish-io-migration"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P1",
     "title": "replace-git2-with-cli",
     "file": "replace-git2-with-cli.md"
   },
   {
-    "status": "unknown",
+    "status": "todo",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "TUI / Rendering",
+    "priority": "P1",
     "title": "replace-markdown-renderer-with-tui-markdown",
     "file": "replace-markdown-renderer-with-tui-markdown.md"
   },
   {
-    "status": "unknown",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Core / State",
+    "priority": "P1",
     "title": "replace-retry-with-backon",
     "file": "replace-retry-with-backon.md"
   },
   {
-    "status": "unknown",
+    "status": "done",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
     "title": "replace-single-use-deps-with-stdlib",
     "file": "replace-single-use-deps-with-stdlib.md"
   },
   {
-    "status": "unknown",
+    "status": "todo",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Provider",
+    "priority": "P1",
     "title": "replace-sse-framing-with-reqwest-eventsource",
     "file": "replace-sse-framing-with-reqwest-eventsource.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Core / State",
+    "priority": "P0",
     "title": "session-actor-owns-session-state",
     "file": "session-actor-owns-session-state.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "unify-persistence-actors"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P2",
     "title": "simplify-actor-trait",
     "file": "simplify-actor-trait.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "finish-io-migration",
+      "delete-async-io-bridge",
+      "fold-state-into-model-state",
+      "rename-core-ui-to-view"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R5",
+    "category": "Architecture / Refactoring",
+    "priority": "P2",
     "title": "split-runie-core-into-domain-and-io-crates",
     "file": "split-runie-core-into-domain-and-io-crates.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "relocate-loose-tests-files"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
     "title": "standardize-test-layout-inline",
     "file": "standardize-test-layout-inline.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "actor-lifecycle-and-handle-registry",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Testing",
+    "priority": "P0",
     "title": "test-actor-harness",
     "file": "test-actor-harness.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Security",
+    "priority": "P1",
     "title": "trust-actor-owns-trust-decisions",
     "file": "trust-actor-owns-trust-decisions.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection",
+      "session-actor-owns-session-state",
+      "input-actor-owns-input-state"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P0",
     "title": "turn-actor-owns-agent-turn-state",
     "file": "turn-actor-owns-agent-turn-state.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Actors",
+    "priority": "P0",
     "title": "ui-control-actor-owns-dialog-state",
     "file": "ui-control-actor-owns-dialog-state.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "declarative-actor-dsl"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Input / Commands",
+    "priority": "P0",
     "title": "unified-dsl-intents-for-state-mutations",
     "file": "unified-dsl-intents-for-state-mutations.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "unify-permission-gate"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Architecture / Security",
+    "priority": "P1",
     "title": "unify-approval-decision",
     "file": "unify-approval-decision.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "split-runie-core-into-domain-and-io-crates"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P2",
     "title": "unify-duplicate-module-names-core-tui",
     "file": "unify-duplicate-module-names-core-tui.md"
   },
   {
-    "status": "unknown",
+    "status": "todo",
     "depends_on": [],
     "blocks": [],
     "milestone": "unknown",
@@ -710,32 +859,41 @@
     "file": "unify-persistence-actors.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "done",
+    "depends_on": [
+      "event-taxonomy-for-actor-state-sync"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Configuration",
+    "priority": "P1",
     "title": "unify-provider-modules",
     "file": "unify-provider-modules.md"
   },
   {
-    "status": "unknown",
+    "status": "todo",
     "depends_on": [],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "Provider",
+    "priority": "P0",
     "title": "unify-provider-stack-with-rig-core",
     "file": "unify-provider-stack-with-rig-core.md"
   },
   {
-    "status": "unknown",
-    "depends_on": [],
+    "status": "todo",
+    "depends_on": [
+      "actor-owned-state-ssot",
+      "event-taxonomy-for-actor-state-sync",
+      "app-state-read-only-projection",
+      "session-actor-owns-session-state",
+      "input-actor-owns-input-state",
+      "ui-control-actor-owns-dialog-state"
+    ],
     "blocks": [],
-    "milestone": "unknown",
-    "category": "Unknown",
-    "priority": "P3",
+    "milestone": "R4",
+    "category": "TUI / Rendering",
+    "priority": "P0",
     "title": "view-actor-owns-view-state",
     "file": "view-actor-owns-view-state.md"
   }
