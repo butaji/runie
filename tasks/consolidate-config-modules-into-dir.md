@@ -1,6 +1,6 @@
 # Consolidate config modules into one config/ dir
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2

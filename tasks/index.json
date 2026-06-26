@@ -62,7 +62,7 @@
   {
     "file": "consolidate-config-modules-into-dir.md",
     "title": "Consolidate config modules into one config/ dir",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "consolidate-dual-path-modules.md",
