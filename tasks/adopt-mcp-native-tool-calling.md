@@ -25,15 +25,17 @@ Replace the custom `Tool` trait, `ToolRegistry`, `define_tool!` macro, and text-
 - [x] `cargo check --workspace` is green
 
 ### Remaining
-- [ ] Remove `crates/runie-core/src/tool_parser/*` (text-based parsers)
-- [ ] Remove `crates/runie-agent/src/tool/define.rs` (macro)
-- [ ] Migrate remaining tools to typed schema approach
+- [ ] Remove `crates/runie-agent/src/tool/define.rs` (macro) — still used by bash, edit_file, grep, find_definitions, search/core
+- [ ] Migrate remaining tools (bash, edit_file, grep, find_definitions, search, fetch_docs, write_file) to typed schema approach
 - [ ] Update providers to use native function calling when available
+- [ ] Keep minimal text-based fallback parser for providers that don't emit structured tool calls
 
 ## Acceptance Criteria
 
 - [x] `rmcp` and `schemars` for tool schemas are added to workspace dependencies.
-- [ ] `crates/runie-core/src/tool_parser/*`, `tool/define.rs`, and `tool/registry.rs` are removed.
+- [x] `tool_parser` renamed to `tool/parse` (text-based fallback parser kept for non-native providers)
+- [ ] `tool/define.rs` macro is removed after all tools migrate to typed schemas
+- [ ] `tool/registry.rs` replaced with rmcp-based registry
 - [x] Tools are defined via derive macros or `rmcp` `#[tool]` with typed input structs.
 - [ ] Providers that support native function calling use it; a minimal fallback is kept only for text-only models.
 - [x] The approval/permission gate is preserved around tool execution.
@@ -65,6 +67,9 @@ N/A — no rendering changes
 - `crates/runie-agent/Cargo.toml` — added rmcp and schemars dependencies
 - `crates/runie-core/src/tool/mod.rs` — exports new schema module
 - `crates/runie-core/src/tool/schema.rs` — new schema-based tool definitions
+- `crates/runie-core/src/tool/types.rs` — ParsedToolCall and ToolParseError types
+- `crates/runie-core/src/tool/parse/mod.rs` — text-based fallback parser (moved from tool_parser)
+- `crates/runie-core/src/tool/parse/*.rs` — parser implementations
 - `crates/runie-agent/src/tool/list_dir.rs` — typed input with schemars
 - `crates/runie-agent/src/tool/read_file.rs` — typed input with schemars
 - `crates/runie-core/src/config.rs` — removed schema feature gates
