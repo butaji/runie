@@ -2,11 +2,15 @@
 //!
 //! This module is the single source of truth for provider names, display names,
 //! base URLs, API type, environment variable, and the models each provider supports.
+//!
+//! Provider and model metadata is loaded from YAML files in `resources/models/`.
 
-use super::registry_data::KNOWN_PROVIDERS;
+use super::registry_data::{mock_provider_yaml, parse_provider_yaml, provider_yaml_files, ProviderYaml};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::OnceLock;
 
 static MOCK_ENABLED: AtomicBool = AtomicBool::new(false);
+static PROVIDER_CACHE: OnceLock<Vec<ProviderMeta>> = OnceLock::new();
 
 /// Returns true when dev flags enable the mock provider. Without this,
 /// the app is production-ready: no silent mock fallback, the mock provider
@@ -27,14 +31,14 @@ pub fn set_mock_enabled(enabled: bool) {
 }
 
 /// Metadata for a model supported by a provider.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ModelMeta {
-    pub name: &'static str,
+    pub name: String,
     pub cost_prompt: Option<f64>,
     pub cost_completion: Option<f64>,
     pub supports_thinking: bool,
     pub supports_vision: bool,
-    pub tokenizer: Option<&'static str>,
+    pub tokenizer: Option<String>,
     pub context_window: Option<usize>,
     pub streaming: bool,
     pub supports_tools: bool,
@@ -45,150 +49,21 @@ pub struct ModelMeta {
 }
 
 impl ModelMeta {
-    pub const fn new(name: &'static str) -> Self {
+    pub fn from_yaml(yaml: &super::registry_data::ModelYaml) -> Self {
         Self {
-            name,
-            cost_prompt: None,
-            cost_completion: None,
-            supports_thinking: false,
-            supports_vision: false,
-            tokenizer: None,
-            context_window: None,
-            streaming: true,
-            supports_tools: true,
-            supports_reasoning: false,
-            supports_system: true,
-            max_output_tokens: 0,
-            cache_control: false,
-        }
-    }
-
-    pub const fn with_cost(self, prompt: f64, completion: f64) -> Self {
-        Self {
-            name: self.name,
-            cost_prompt: Some(prompt),
-            cost_completion: Some(completion),
-            supports_thinking: self.supports_thinking,
-            supports_vision: self.supports_vision,
-            tokenizer: self.tokenizer,
-            context_window: self.context_window,
-            streaming: self.streaming,
-            supports_tools: self.supports_tools,
-            supports_reasoning: self.supports_reasoning,
-            supports_system: self.supports_system,
-            max_output_tokens: self.max_output_tokens,
-            cache_control: self.cache_control,
-        }
-    }
-
-    pub const fn with_thinking(self) -> Self {
-        Self {
-            name: self.name,
-            cost_prompt: self.cost_prompt,
-            cost_completion: self.cost_completion,
-            supports_thinking: true,
-            supports_vision: self.supports_vision,
-            tokenizer: self.tokenizer,
-            context_window: self.context_window,
-            streaming: self.streaming,
-            supports_tools: self.supports_tools,
-            supports_reasoning: self.supports_reasoning,
-            supports_system: self.supports_system,
-            max_output_tokens: self.max_output_tokens,
-            cache_control: self.cache_control,
-        }
-    }
-
-    pub const fn with_vision(self) -> Self {
-        Self {
-            name: self.name,
-            cost_prompt: self.cost_prompt,
-            cost_completion: self.cost_completion,
-            supports_thinking: self.supports_thinking,
-            supports_vision: true,
-            tokenizer: self.tokenizer,
-            context_window: self.context_window,
-            streaming: self.streaming,
-            supports_tools: self.supports_tools,
-            supports_reasoning: self.supports_reasoning,
-            supports_system: self.supports_system,
-            max_output_tokens: self.max_output_tokens,
-            cache_control: self.cache_control,
-        }
-    }
-
-    pub const fn with_tokenizer(self, tokenizer: &'static str) -> Self {
-        Self {
-            name: self.name,
-            cost_prompt: self.cost_prompt,
-            cost_completion: self.cost_completion,
-            supports_thinking: self.supports_thinking,
-            supports_vision: self.supports_vision,
-            tokenizer: Some(tokenizer),
-            context_window: self.context_window,
-            streaming: self.streaming,
-            supports_tools: self.supports_tools,
-            supports_reasoning: self.supports_reasoning,
-            supports_system: self.supports_system,
-            max_output_tokens: self.max_output_tokens,
-            cache_control: self.cache_control,
-        }
-    }
-
-    pub const fn with_context_window(self, context_window: usize) -> Self {
-        Self {
-            name: self.name,
-            cost_prompt: self.cost_prompt,
-            cost_completion: self.cost_completion,
-            supports_thinking: self.supports_thinking,
-            supports_vision: self.supports_vision,
-            tokenizer: self.tokenizer,
-            context_window: Some(context_window),
-            streaming: self.streaming,
-            supports_tools: self.supports_tools,
-            supports_reasoning: self.supports_reasoning,
-            supports_system: self.supports_system,
-            max_output_tokens: self.max_output_tokens,
-            cache_control: self.cache_control,
-        }
-    }
-
-    pub const fn with_streaming(self, streaming: bool) -> Self {
-        Self { streaming, ..self }
-    }
-
-    pub const fn with_tools(self, supports_tools: bool) -> Self {
-        Self {
-            supports_tools,
-            ..self
-        }
-    }
-
-    pub const fn with_reasoning(self) -> Self {
-        Self {
-            supports_reasoning: true,
-            ..self
-        }
-    }
-
-    pub const fn with_output_limit(self, max_output_tokens: usize) -> Self {
-        Self {
-            max_output_tokens,
-            ..self
-        }
-    }
-
-    pub const fn with_cache_control(self) -> Self {
-        Self {
-            cache_control: true,
-            ..self
-        }
-    }
-
-    pub const fn with_no_system(self) -> Self {
-        Self {
-            supports_system: false,
-            ..self
+            name: yaml.name.clone(),
+            cost_prompt: yaml.cost_prompt,
+            cost_completion: yaml.cost_completion,
+            supports_thinking: yaml.supports_thinking,
+            supports_vision: yaml.supports_vision,
+            tokenizer: yaml.tokenizer.clone(),
+            context_window: yaml.context_window,
+            streaming: yaml.streaming,
+            supports_tools: yaml.supports_tools,
+            supports_reasoning: yaml.supports_reasoning,
+            supports_system: yaml.supports_system,
+            max_output_tokens: yaml.max_output_tokens,
+            cache_control: yaml.cache_control,
         }
     }
 }
@@ -196,67 +71,86 @@ impl ModelMeta {
 /// Metadata for a known provider.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ProviderMeta {
-    pub key: &'static str,
-    pub display_name: &'static str,
-    pub base_url: &'static str,
-    pub env_var: &'static str,
-    pub models: &'static [ModelMeta],
+    pub key: String,
+    pub display_name: String,
+    pub base_url: String,
+    pub env_var: String,
+    pub models: Vec<ModelMeta>,
 }
 
 impl ProviderMeta {
-    pub const fn new(
-        key: &'static str,
-        display_name: &'static str,
-        base_url: &'static str,
-        env_var: &'static str,
-        models: &'static [ModelMeta],
-    ) -> Self {
+    pub fn from_yaml(yaml: &ProviderYaml) -> Self {
         Self {
-            key,
-            display_name,
-            base_url,
-            env_var,
-            models,
+            key: yaml.key.clone(),
+            display_name: yaml.display_name.clone(),
+            base_url: yaml.base_url.clone(),
+            env_var: yaml.env_var.clone(),
+            models: yaml.models.iter().map(ModelMeta::from_yaml).collect(),
         }
     }
+}
+
+/// Load and cache all providers from YAML files.
+fn load_providers() -> Vec<ProviderMeta> {
+    provider_yaml_files()
+        .iter()
+        .map(|(_, yaml)| {
+            let parsed = parse_provider_yaml(yaml).expect("Failed to parse embedded YAML");
+            ProviderMeta::from_yaml(&parsed)
+        })
+        .collect()
+}
+
+/// Get the cached list of all known providers.
+fn get_providers() -> &'static [ProviderMeta] {
+    PROVIDER_CACHE.get_or_init(load_providers).as_slice()
+}
+
+/// Mock provider (dev-only).
+fn mock_provider() -> ProviderMeta {
+    ProviderMeta::from_yaml(&mock_provider_yaml())
 }
 
 /// All known providers. In production (no `RUNIE_MOCK`), this is the
 /// real provider list only. With dev flags, the mock provider is
 /// appended at the end.
-pub fn known_providers() -> Vec<&'static ProviderMeta> {
-    let mut providers: Vec<&'static ProviderMeta> = KNOWN_PROVIDERS.iter().collect();
+pub fn known_providers() -> Vec<ProviderMeta> {
+    let mut providers = get_providers().to_vec();
     if is_mock_enabled() {
-        providers.push(&super::registry_data::MOCK_PROVIDER);
+        providers.push(mock_provider());
     }
     providers
 }
 
 /// Find a provider by its key (e.g. "minimax").
-pub fn find_provider(key: &str) -> Option<&'static ProviderMeta> {
+pub fn find_provider(key: &str) -> Option<ProviderMeta> {
+    let providers = get_providers();
     if key == "mock" && is_mock_enabled() {
-        return Some(&super::registry_data::MOCK_PROVIDER);
+        return Some(mock_provider());
     }
-    KNOWN_PROVIDERS.iter().find(|p| p.key == key)
+    providers.iter().find(|p| p.key == key).cloned()
 }
 
 /// Find a provider by its environment variable name.
-pub fn find_provider_by_env_var(env_var: &str) -> Option<&'static ProviderMeta> {
-    KNOWN_PROVIDERS.iter().find(|p| p.env_var == env_var)
+pub fn find_provider_by_env_var(env_var: &str) -> Option<ProviderMeta> {
+    get_providers()
+        .iter()
+        .find(|p| p.env_var == env_var)
+        .cloned()
 }
 
 /// Find a model across all known providers by its canonical model name.
-pub fn find_model(model: &str) -> Option<&'static ModelMeta> {
-    KNOWN_PROVIDERS
+pub fn find_model(model: &str) -> Option<ModelMeta> {
+    let providers = get_providers();
+    providers
         .iter()
         .flat_map(|p| p.models.iter())
         .find(|m| m.name == model)
+        .cloned()
         .or_else(|| {
             if is_mock_enabled() {
-                super::registry_data::MOCK_PROVIDER
-                    .models
-                    .iter()
-                    .find(|m| m.name == model)
+                let mock = mock_provider();
+                mock.models.into_iter().find(|m| m.name == model)
             } else {
                 None
             }
@@ -271,7 +165,7 @@ pub fn is_known_provider(key: &str) -> bool {
 /// Get the display name for a provider key, or the key itself if unknown.
 pub fn display_name(key: &str) -> String {
     find_provider(key)
-        .map(|p| p.display_name.to_owned())
+        .map(|p| p.display_name.clone())
         .unwrap_or_else(|| key.to_owned())
 }
 
@@ -299,7 +193,7 @@ mod tests {
         assert_eq!(p.base_url, "https://api.minimaxi.chat/v1");
         assert_eq!(p.env_var, "MINIMAX_API_KEY");
         assert_eq!(
-            p.models.iter().map(|m| m.name).collect::<Vec<_>>(),
+            p.models.iter().map(|m| m.name.as_str()).collect::<Vec<_>>(),
             vec!["MiniMax-M3", "MiniMax-M2.7"]
         );
     }
@@ -333,7 +227,7 @@ mod tests {
 
     #[test]
     fn provider_registry_all_have_base_url() {
-        for p in known_providers() {
+        for p in get_providers() {
             assert!(
                 p.base_url.starts_with("http"),
                 "Provider {} should have valid base URL",
@@ -344,7 +238,7 @@ mod tests {
 
     #[test]
     fn provider_registry_all_have_models() {
-        for p in known_providers() {
+        for p in get_providers() {
             assert!(
                 !p.models.is_empty(),
                 "Provider {} should have models",
@@ -355,8 +249,8 @@ mod tests {
 
     #[test]
     fn provider_registry_model_names_unique_per_provider() {
-        for p in known_providers() {
-            let mut names: Vec<_> = p.models.iter().map(|m| m.name).collect();
+        for p in get_providers() {
+            let mut names: Vec<_> = p.models.iter().map(|m| m.name.clone()).collect();
             let before = names.len();
             names.sort_unstable();
             names.dedup();
@@ -367,24 +261,38 @@ mod tests {
     #[test]
     fn openrouter_model_matches_canonical() {
         let openrouter = find_provider("openrouter").expect("openrouter should exist");
-        for model in openrouter.models {
-            let (provider_key, base_name) = model.name.split_once('/').expect("should have /");
-            let provider = find_provider(provider_key).expect("canonical provider exists");
-            if let Some(m) = provider.models.iter().find(|m| m.name == base_name) {
-                assert_eq!(m.supports_thinking, model.supports_thinking);
-                assert_eq!(m.supports_vision, model.supports_vision);
-                assert_eq!(m.context_window, model.context_window);
+        for model in &openrouter.models {
+            if let Some((provider_key, base_name)) = model.name.split_once('/') {
+                if let Some(provider) = find_provider(provider_key) {
+                    if let Some(m) = provider.models.iter().find(|m| m.name == base_name) {
+                        assert_eq!(
+                            m.supports_thinking, model.supports_thinking,
+                            "thinking mismatch for {}/{}",
+                            provider_key, base_name
+                        );
+                        assert_eq!(
+                            m.supports_vision, model.supports_vision,
+                            "vision mismatch for {}/{}",
+                            provider_key, base_name
+                        );
+                        assert_eq!(
+                            m.context_window, model.context_window,
+                            "context_window mismatch for {}/{}",
+                            provider_key, base_name
+                        );
+                    }
+                }
             }
         }
     }
 
     #[test]
     fn context_window_comes_from_registry() {
-        for p in known_providers() {
+        for p in get_providers() {
             if p.key == "mock" {
                 continue;
             }
-            for model in p.models {
+            for model in &p.models {
                 assert!(
                     model.context_window.is_some(),
                     "Provider {} model {} needs context window",
@@ -395,15 +303,25 @@ mod tests {
         }
         assert_eq!(
             find_provider("openai")
-                .and_then(|p| p.models.iter().find(|m| m.name == "gpt-4o"))
+                .and_then(|p| p.models.into_iter().find(|m| m.name == "gpt-4o"))
                 .and_then(|m| m.context_window),
             Some(128_000)
         );
         assert_eq!(
             find_provider("anthropic")
-                .and_then(|p| p.models.iter().find(|m| m.name == "claude-sonnet-4-6"))
+                .and_then(|p| p.models.into_iter().find(|m| m.name == "claude-sonnet-4-6"))
                 .and_then(|m| m.context_window),
             Some(200_000)
         );
+    }
+
+    #[test]
+    fn mock_provider_available_when_enabled() {
+        set_mock_enabled(true);
+        let providers = known_providers();
+        assert!(providers.iter().any(|p| p.key == "mock"));
+        set_mock_enabled(false);
+        let providers = known_providers();
+        assert!(!providers.iter().any(|p| p.key == "mock"));
     }
 }

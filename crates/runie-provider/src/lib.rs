@@ -147,7 +147,7 @@ fn resolve_credentials(
         let api_key = if meta.env_var.is_empty() {
             String::new()
         } else {
-            std::env::var(meta.env_var).unwrap_or_default()
+            std::env::var(&meta.env_var).unwrap_or_default()
         };
         (api_key, meta.base_url.to_owned())
     };
@@ -170,7 +170,7 @@ pub fn build_provider(
     let meta = find_provider(key)
         .ok_or_else(|| ProviderError::UnknownProvider(key.to_owned()))?;
 
-    let (api_key, base_url) = resolve_credentials(key, meta, config);
+    let (api_key, base_url) = resolve_credentials(key, &meta, config);
     if api_key.is_empty() && !is_mock_enabled() {
         return Err(ProviderError::MissingApiKey(meta.env_var.to_owned()));
     }

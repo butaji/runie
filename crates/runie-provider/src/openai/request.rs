@@ -258,8 +258,22 @@ mod tests {
 
     #[test]
     fn thinking_model_uses_max_completion_tokens() {
-        static META: ModelMeta = ModelMeta::new("o1").with_thinking().with_output_limit(4096);
-        let p = OpenAiProvider::new("sk".to_string(), "o1").with_model_meta(&META);
+        let meta = ModelMeta {
+            name: "o1".to_string(),
+            cost_prompt: None,
+            cost_completion: None,
+            supports_thinking: true,
+            supports_vision: false,
+            tokenizer: None,
+            context_window: None,
+            streaming: true,
+            supports_tools: true,
+            supports_reasoning: false,
+            supports_system: true,
+            max_output_tokens: 4096,
+            cache_control: false,
+        };
+        let p = OpenAiProvider::new("sk".to_string(), "o1").with_model_meta(meta);
         let body = build_request_body(
             &p,
             &[
@@ -273,8 +287,22 @@ mod tests {
 
     #[test]
     fn no_system_model_maps_system_to_user() {
-        static META: ModelMeta = ModelMeta::new("custom").with_no_system();
-        let p = OpenAiProvider::new("sk".to_string(), "custom").with_model_meta(&META);
+        let meta = ModelMeta {
+            name: "custom".to_string(),
+            cost_prompt: None,
+            cost_completion: None,
+            supports_thinking: false,
+            supports_vision: false,
+            tokenizer: None,
+            context_window: None,
+            streaming: true,
+            supports_tools: true,
+            supports_reasoning: false,
+            supports_system: false,
+            max_output_tokens: 0,
+            cache_control: false,
+        };
+        let p = OpenAiProvider::new("sk".to_string(), "custom").with_model_meta(meta);
         let body = build_request_body(&p, &[ChatMessage::system("sys".to_string())]);
         let serialized = body["messages"].as_array().unwrap();
         assert_eq!(serialized[0]["role"], "user");
@@ -283,8 +311,22 @@ mod tests {
 
     #[test]
     fn non_thinking_model_with_output_limit_uses_max_tokens() {
-        static META: ModelMeta = ModelMeta::new("gpt-4o").with_output_limit(2048);
-        let p = OpenAiProvider::new("sk".to_string(), "gpt-4o").with_model_meta(&META);
+        let meta = ModelMeta {
+            name: "gpt-4o".to_string(),
+            cost_prompt: None,
+            cost_completion: None,
+            supports_thinking: false,
+            supports_vision: false,
+            tokenizer: None,
+            context_window: None,
+            streaming: true,
+            supports_tools: true,
+            supports_reasoning: false,
+            supports_system: true,
+            max_output_tokens: 2048,
+            cache_control: false,
+        };
+        let p = OpenAiProvider::new("sk".to_string(), "gpt-4o").with_model_meta(meta);
         let body = build_request_body(&p, &[ChatMessage::user("hi".to_string())]);
         assert_eq!(body["max_tokens"], 2048);
         assert!(body["max_completion_tokens"].is_null());
@@ -292,13 +334,27 @@ mod tests {
 
     #[test]
     fn supports_tools_emits_tools_and_tool_choice() {
-        static META: ModelMeta = ModelMeta::new("gpt-4o").with_tools(true);
+        let meta = ModelMeta {
+            name: "gpt-4o".to_string(),
+            cost_prompt: None,
+            cost_completion: None,
+            supports_thinking: false,
+            supports_vision: false,
+            tokenizer: None,
+            context_window: None,
+            streaming: true,
+            supports_tools: true,
+            supports_reasoning: false,
+            supports_system: true,
+            max_output_tokens: 0,
+            cache_control: false,
+        };
         let tools = vec![serde_json::json!({
             "type": "function",
             "function": { "name": "bash", "description": "run shell commands" }
         })];
         let p = OpenAiProvider::new("sk".to_string(), "gpt-4o")
-            .with_model_meta(&META)
+            .with_model_meta(meta)
             .with_tools(tools);
         let body = build_request_body(&p, &[ChatMessage::user("hi".to_string())]);
         assert!(body["tools"].is_array());
@@ -307,13 +363,27 @@ mod tests {
 
     #[test]
     fn unsupported_tools_omits_tools_and_tool_choice() {
-        static META: ModelMeta = ModelMeta::new("custom").with_tools(false);
+        let meta = ModelMeta {
+            name: "custom".to_string(),
+            cost_prompt: None,
+            cost_completion: None,
+            supports_thinking: false,
+            supports_vision: false,
+            tokenizer: None,
+            context_window: None,
+            streaming: true,
+            supports_tools: false,
+            supports_reasoning: false,
+            supports_system: true,
+            max_output_tokens: 0,
+            cache_control: false,
+        };
         let tools = vec![serde_json::json!({
             "type": "function",
             "function": { "name": "bash" }
         })];
         let p = OpenAiProvider::new("sk".to_string(), "custom")
-            .with_model_meta(&META)
+            .with_model_meta(meta)
             .with_tools(tools);
         let body = build_request_body(&p, &[ChatMessage::user("hi".to_string())]);
         assert!(body["tools"].is_null());

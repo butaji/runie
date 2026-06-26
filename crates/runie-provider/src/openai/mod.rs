@@ -10,7 +10,7 @@ pub struct OpenAiProvider {
     api_key: String,
     model: String,
     base_url: String,
-    model_meta: Option<&'static crate::ModelMeta>,
+    model_meta: Option<crate::ModelMeta>,
     tools: Vec<serde_json::Value>,
     tool_choice: Option<serde_json::Value>,
     client: reqwest::Client,
@@ -39,7 +39,7 @@ impl OpenAiProvider {
         self
     }
 
-    pub fn with_model_meta(mut self, meta: &'static crate::ModelMeta) -> Self {
+    pub fn with_model_meta(mut self, meta: crate::ModelMeta) -> Self {
         self.model_meta = Some(meta);
         self
     }
@@ -59,7 +59,7 @@ impl OpenAiProvider {
     }
 
     pub fn model_meta(&self) -> Option<&crate::ModelMeta> {
-        self.model_meta
+        self.model_meta.as_ref()
     }
 
     pub fn tools(&self) -> &[serde_json::Value] {

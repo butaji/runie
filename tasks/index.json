@@ -162,7 +162,7 @@
   {
     "file": "externalize-model-metadata-as-yaml.md",
     "title": "Externalize provider/model metadata as YAML",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "move-provider-catalog-to-provider-crate.md",

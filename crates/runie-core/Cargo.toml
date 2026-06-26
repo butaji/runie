@@ -16,6 +16,7 @@ redb-migration = ["dep:redb"]
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+serde_yaml.workspace = true
 rmcp.workspace = true
 schemars.workspace = true
 

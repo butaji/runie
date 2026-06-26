@@ -115,7 +115,7 @@ impl ModelInfo {
 pub fn model_catalog() -> Vec<ModelInfo> {
     let mut models = Vec::new();
     for provider in crate::provider::known_providers() {
-        for model in provider.models {
+        for model in &provider.models {
             let capabilities = ModelCapabilities {
                 streaming: model.streaming,
                 supports_vision: model.supports_vision,
@@ -126,14 +126,14 @@ pub fn model_catalog() -> Vec<ModelInfo> {
                 cache_control: model.cache_control,
             };
             models.push(ModelInfo {
-                provider: provider.key.to_owned(),
-                name: model.name.to_owned(),
-                display_name: model.name.to_owned(),
+                provider: provider.key.clone(),
+                name: model.name.clone(),
+                display_name: model.name.clone(),
                 cost_prompt: model.cost_prompt,
                 cost_completion: model.cost_completion,
                 supports_thinking: model.supports_thinking,
                 supports_vision: model.supports_vision,
-                tokenizer: model.tokenizer.map(String::from),
+                tokenizer: model.tokenizer.clone(),
                 context_window: model.context_window,
                 capabilities,
             });
@@ -284,7 +284,7 @@ mod tests {
     fn model_catalog_contains_all_provider_default_models() {
         let catalog = model_catalog();
         for provider in crate::provider::known_providers() {
-            for model in provider.models {
+            for model in &provider.models {
                 assert!(
                     catalog
                         .iter()
@@ -300,16 +300,16 @@ mod tests {
     #[test]
     fn registry_model_has_consistent_provider() {
         for provider in crate::provider::known_providers() {
-            for model in provider.models {
+            for model in &provider.models {
                 let info = ModelInfo {
-                    provider: provider.key.to_string(),
-                    name: model.name.to_string(),
-                    display_name: model.name.to_string(),
+                    provider: provider.key.clone(),
+                    name: model.name.clone(),
+                    display_name: model.name.clone(),
                     cost_prompt: model.cost_prompt,
                     cost_completion: model.cost_completion,
                     supports_thinking: model.supports_thinking,
                     supports_vision: model.supports_vision,
-                    tokenizer: model.tokenizer.map(String::from),
+                    tokenizer: model.tokenizer.clone(),
                     context_window: model.context_window,
                     capabilities: ModelCapabilities {
                         streaming: model.streaming,

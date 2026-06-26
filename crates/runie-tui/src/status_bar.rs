@@ -193,8 +193,12 @@ const DEFAULT_CONTEXT_WINDOW: usize = 128_000;
 
 pub(crate) fn context_window_for(provider: &str, model: &str) -> usize {
     runie_core::provider::find_provider(provider)
-        .and_then(|p| p.models.iter().find(|m| m.name == model))
-        .and_then(|m| m.context_window)
+        .and_then(|p| {
+            p.models
+                .iter()
+                .find(|m| m.name == model)
+                .and_then(|m| m.context_window)
+        })
         .unwrap_or(DEFAULT_CONTEXT_WINDOW)
 }
 
