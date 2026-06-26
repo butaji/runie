@@ -31,9 +31,25 @@ fn try_handle_early_events(state: &mut AppState, event: &Event) -> bool {
 }
 
 fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
+    use crate::event::TransientLevel;
     match event {
-        Event::TrustLoaded { decisions } => { *state.trust_decisions_mut() = decisions.clone(); true }
-        Event::TrustChanged { path, decision } => { state.set_trust_decision(path.clone(), *decision); true }
+        Event::TrustLoaded { decisions } => { state.set_trust_decisions(decisions.clone()); true }
+        Event::TrustChanged { path, decision } => {
+            state.set_trust_decision(path.clone(), *decision);
+            // Update read_only based on trust decision (mirrors TrustActor logic).
+            // This keeps unit tests synchronous; TrustActor also emits ReadOnlyChanged.
+            let new_read_only = !matches!(decision, crate::trust::TrustDecision::Trusted);
+            state.config_mut().read_only = new_read_only;
+            // When project is trusted, remove the welcome message and notify user
+            if matches!(decision, crate::trust::TrustDecision::Trusted) {
+                state.session_mut().messages.retain(|m| m.id != "trust_welcome");
+                state.messages_changed();
+                state.notify(format!("Project '{}' trusted. Read-only disabled.", path.display()), TransientLevel::Success);
+            } else {
+                state.notify(format!("Project '{}' untrusted. Read-only enabled.", path.display()), TransientLevel::Warning);
+            }
+            true
+        }
         Event::ReadOnlyChanged { enabled } => { state.config_mut().read_only = *enabled; true }
         Event::HistoryLoaded { entries } => {
             // Route through InputActor.

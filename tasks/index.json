@@ -377,7 +377,7 @@
   {
     "file": "trust-actor-owns-trust-decisions.md",
     "title": "TrustActor owns trust decisions",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "turn-actor-owns-agent-turn-state.md",

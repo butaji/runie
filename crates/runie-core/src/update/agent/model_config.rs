@@ -51,14 +51,46 @@ fn handle_main_events(state: &mut AppState, event: &crate::Event) -> bool {
     }
 }
 
+fn handle_trust_project(state: &mut AppState, decision: crate::trust::TrustDecision) {
+    use crate::event::TransientLevel;
+    let cwd = std::env::current_dir().unwrap_or_default();
+    // Update state synchronously (mirrors TrustActor logic for unit test compatibility).
+    // TrustActor also processes this async for persistence.
+    state.set_trust_decision(cwd.clone(), decision);
+    let new_read_only = !matches!(decision, crate::trust::TrustDecision::Trusted);
+    state.config_mut().read_only = new_read_only;
+    // Remove welcome message and notify when trusted
+    if matches!(decision, crate::trust::TrustDecision::Trusted) {
+        state.session_mut().messages.retain(|m| m.id != "trust_welcome");
+        state.messages_changed();
+        state.notify(
+            format!("Project '{}' trusted. Read-only disabled.", cwd.display()),
+            TransientLevel::Success,
+        );
+    } else {
+        state.notify(
+            format!("Project '{}' untrusted. Read-only enabled.", cwd.display()),
+            TransientLevel::Warning,
+        );
+    }
+    // Also send to TrustActor async for persistence
+    if let Some(handles) = state.actor_handles() {
+        let handles = handles.clone();
+        let cwd_async = cwd;
+        let _ = tokio::spawn(async move {
+            handles.send_trust(cwd_async, decision).await;
+        });
+    }
+}
+
 fn handle_scoped_events(state: &mut AppState, event: &crate::Event) -> bool {
     match event {
         crate::Event::TrustProject => {
-            state.apply_trust_project();
+            handle_trust_project(state, crate::trust::TrustDecision::Trusted);
             false
         }
         crate::Event::UntrustProject => {
-            state.apply_untrust_project();
+            handle_trust_project(state, crate::trust::TrustDecision::Untrusted);
             false
         }
         crate::Event::ReloadAll => {

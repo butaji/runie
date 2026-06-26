@@ -147,16 +147,27 @@ impl UiActor {
         if was_config_loaded {
             let _ = self.kb_tx.send(self.state.config().keybindings().clone());
         }
-        if was_trust_loaded {
-            let cwd = std::env::current_dir().unwrap_or_default();
-            runie_core::update::apply_initial_trust(&mut self.state, &cwd);
-        }
+        self.handle_trust_loaded(was_trust_loaded);
         handle_persistence_messages(self.persistence_handle.clone(), evt, submitted_text).await;
         if was_submit || was_followup || was_agent_done {
             self.agent_handle.run_if_queued(&mut self.state).await;
         }
 
         false
+    }
+
+    /// Send InitReadOnly to TrustActor after trust decisions are loaded.
+    fn handle_trust_loaded(&self, was_trust_loaded: bool) {
+        if !was_trust_loaded {
+            return;
+        }
+        let cwd = std::env::current_dir().unwrap_or_default();
+        if let Some(handles) = self.state.actor_handles() {
+            let handles = handles.clone();
+            let _ = tokio::spawn(async move {
+                handles.send_init_read_only(cwd).await;
+            });
+        }
     }
 
     /// Update the paced renderer based on the received event.

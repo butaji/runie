@@ -54,6 +54,14 @@ impl AppState {
         self.trust_decisions_mut().insert(path, decision);
     }
 
+    /// Set all trust decisions at once (used when loading from persistence).
+    pub(crate) fn set_trust_decisions(
+        &mut self,
+        decisions: std::collections::HashMap<std::path::PathBuf, crate::trust::TrustDecision>,
+    ) {
+        *self.trust_decisions_mut() = decisions;
+    }
+
     // ── Actor handles ───────────────────────────────────────────────────────
 
     /// Install a complete `ActorHandles` registry.

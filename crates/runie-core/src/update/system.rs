@@ -38,17 +38,6 @@ impl AppState {
         self.view_mut().dirty = true;
     }
 
-    /// Send trust decision to TrustActor for persistence (async).
-    fn try_send_trust(&self, path: std::path::PathBuf, decision: crate::trust::TrustDecision) {
-        let handles = self.actor_handles().cloned();
-        if let Some(h) = handles {
-            if tokio::runtime::Handle::try_current().is_ok() {
-                tokio::spawn(async move {
-                    h.send_trust(path, decision).await;
-                });
-            }
-        }
-    }
     pub(crate) fn add_system_msg(&mut self, content: String) {
         self.session_mut().messages.push(ChatMessage {
             role: Role::System,
@@ -161,32 +150,6 @@ impl AppState {
         );
     }
 
-    pub(crate) fn apply_trust_project(&mut self) {
-        let cwd = std::env::current_dir().unwrap_or_default();
-        self.config_mut().read_only = false;
-        self.session_mut()
-            .messages
-            .retain(|m| m.id != "trust_welcome");
-        self.messages_changed();
-        self.notify(
-            format!("Project '{}' trusted. Read-only disabled.", cwd.display()),
-            TransientLevel::Success,
-        );
-        // Send to TrustActor for persistence
-        self.try_send_trust(cwd, crate::trust::TrustDecision::Trusted);
-    }
-
-    pub(crate) fn apply_untrust_project(&mut self) {
-        let cwd = std::env::current_dir().unwrap_or_default();
-        self.config_mut().read_only = true;
-        self.notify(
-            format!("Project '{}' untrusted. Read-only enabled.", cwd.display()),
-            TransientLevel::Warning,
-        );
-        // Send to TrustActor for persistence
-        self.try_send_trust(cwd, crate::trust::TrustDecision::Untrusted);
-    }
-
     pub(crate) fn stop_turn(&mut self) {
         // Stop the current turn and abort any queued messages
         self.agent_state_mut().turn_active = false;
@@ -214,38 +177,6 @@ impl AppState {
         }
         self.input_mut().cursor_pos = self.input_mut().input.len();
         self.view_mut().dirty = true;
-    }
-}
-
-/// Apply the trust decision for the given directory after it has been loaded.
-pub fn apply_initial_trust(state: &mut AppState, cwd: &std::path::Path) {
-    match state.trust_decisions().get(cwd).copied() {
-        Some(crate::trust::TrustDecision::Untrusted) => {
-            state.config_mut().read_only = true;
-        }
-        Some(crate::trust::TrustDecision::Trusted) => {
-            state.config_mut().read_only = false;
-        }
-        None => {
-            state.config_mut().read_only = false;
-            state.session_mut().messages.push(ChatMessage {
-                role: Role::System,
-                timestamp: std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_secs_f64())
-                    .unwrap_or(0.0),
-                id: "trust_welcome".to_owned(),
-                parts: vec![runie_core::message::Part::Text {
-                    content: format!(
-                        "Welcome to runie in {}.\n\nThis project is not yet trusted. \
-                    Run /trust to enable write tools, or /untrust to enforce read-only mode.",
-                        cwd.display()
-                    ),
-                }],
-                ..Default::default()
-            });
-            state.messages_changed();
-        }
     }
 }
 
@@ -403,8 +334,6 @@ pub(super) fn handle_system_event(state: &mut AppState, event: Event) {
         Event::ClearTransient => state.clear_transient(),
         Event::ShowDiagnostics => state.show_diagnostics(),
         Event::ToggleReadOnly => state.toggle_read_only(),
-        Event::TrustProject => state.apply_trust_project(),
-        Event::UntrustProject => state.apply_untrust_project(),
         // intentionally ignored: other SystemEvent variants fall through
         _ => {}
     }
