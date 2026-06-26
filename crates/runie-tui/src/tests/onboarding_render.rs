@@ -18,7 +18,7 @@ fn clean_config() {
     let _ = std::fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     let _ = std::fs::remove_file(&path);
-    runie_core::login_config::set_test_config_path(path);
+    runie_core::provider::config::set_test_config_path(path);
 }
 
 fn render_content(state: &mut AppState) -> String {

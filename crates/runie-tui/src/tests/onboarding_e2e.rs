@@ -18,7 +18,7 @@ fn clean_config() {
     let _ = std::fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     let _ = std::fs::remove_file(&path);
-    runie_core::login_config::set_test_config_path(path);
+    runie_core::provider::config::set_test_config_path(path);
 }
 
 fn render_content(state: &mut AppState) -> String {
@@ -139,7 +139,7 @@ fn add_second_provider_keeps_first_active() {
     });
     state.update(Event::Save);
 
-    let configured: Vec<String> = runie_core::login_config::list_configured_providers()
+    let configured: Vec<String> = runie_core::provider::config::list_configured_providers()
         .into_iter()
         .map(|(name, _, _)| name)
         .collect();

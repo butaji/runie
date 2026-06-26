@@ -1,6 +1,7 @@
 use super::exec;
+use crate::config::ModelProvider;
 use crate::model::Role;
-use crate::tests::{fresh_state, type_str};
+use crate::tests::{fresh_state, seed_providers, type_str};
 use crate::Event;
 
 /// Open palette and select a command by name
@@ -79,11 +80,11 @@ fn help_clears_input() {
 
 #[test]
 fn model_switches_provider_and_model() {
-    crate::login_config::set_test_config_with_providers(&[(
-        "openai".into(),
-        vec!["gpt-4o".into()],
-    )]);
     let mut state = fresh_state();
+    seed_providers(
+        &mut state,
+        &[("openai".into(), String::new(), String::new(), vec!["gpt-4o".into()])],
+    );
     exec(&mut state, "/model openai/gpt-4o");
 
     assert_eq!(state.config.current_provider, "openai");
@@ -92,11 +93,16 @@ fn model_switches_provider_and_model() {
 
 #[test]
 fn model_shows_confirmation_message() {
-    crate::login_config::set_test_config_with_providers(&[(
-        "anthropic".into(),
-        vec!["claude-3-sonnet".into()],
-    )]);
     let mut state = fresh_state();
+    seed_providers(
+        &mut state,
+        &[(
+            "anthropic".into(),
+            String::new(),
+            String::new(),
+            vec!["claude-3-sonnet".into()],
+        )],
+    );
     exec(&mut state, "/model anthropic/claude-3-sonnet");
 
     let sys_msgs: Vec<_> = state
@@ -111,11 +117,16 @@ fn model_shows_confirmation_message() {
 
 #[test]
 fn model_just_model_name_keeps_provider() {
-    crate::login_config::set_test_config_with_providers(&[(
-        "openai".into(),
-        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
-    )]);
     let mut state = fresh_state();
+    seed_providers(
+        &mut state,
+        &[(
+            "openai".into(),
+            String::new(),
+            String::new(),
+            vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+        )],
+    );
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
     exec(&mut state, "/model gpt-4o-mini");

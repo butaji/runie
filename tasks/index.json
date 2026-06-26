@@ -680,7 +680,7 @@
   {
     "file": "remove-login-config-test-shim.md",
     "title": "Remove login_config cfg(test) shim from production AppState",
-    "status": "todo",
+    "status": "done",
     "category": "Architecture / Actors",
     "priority": "P0",
     "milestone": "R4",

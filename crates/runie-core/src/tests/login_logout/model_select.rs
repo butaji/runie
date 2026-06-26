@@ -227,7 +227,7 @@ fn saving_after_deselecting_model_persists_two_models() {
     state.update(crate::Event::ToggleModel { model: "M1".into() });
     save_login_flow(&mut state);
 
-    let configured = crate::login_config::list_configured_providers();
+    let configured = crate::provider::config::list_configured_providers();
     let (_, _, models) = configured
         .into_iter()
         .find(|(p, _, _)| p == "minimax")

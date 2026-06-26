@@ -196,8 +196,7 @@ pub fn toggle_provider_model(state: &mut AppState, provider: &str, model: &str) 
     let model = model.to_owned();
     let current_models: Vec<String> = state
         .provider_config(&provider)
-        .map(|p| p.models)
-        .or_else(|| crate::login_config::get_provider_config(&provider).map(|(_, _, m)| m))
+        .map(|p| p.models.clone())
         .unwrap_or_default();
     let mut models = current_models;
     let pos = models.iter().position(|m| m == &model);
@@ -219,8 +218,9 @@ pub fn toggle_provider_model(state: &mut AppState, provider: &str, model: &str) 
 
 fn sync_provider_models(state: &mut AppState, provider: &str, models: &[String]) {
     // Update ConfigState for immediate UI feedback
-    let (base_url, api_key) = crate::login_config::get_provider_config(provider)
-        .map(|(b, k, _)| (b, k))
+    let (base_url, api_key) = state
+        .provider_config(provider)
+        .map(|p| (p.base_url.clone(), p.api_key.clone()))
         .unwrap_or_else(|| {
             (
                 crate::provider::find_provider(provider)

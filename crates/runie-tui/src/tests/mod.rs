@@ -73,15 +73,15 @@ pub fn configure_test_providers(providers: &[(String, Vec<String>)]) {
         std::process::id(),
         n
     ));
-    runie_core::login_config::set_test_config_path(path);
+    runie_core::provider::config::set_test_config_path(path);
     for (name, models) in providers {
-        let _ = runie_core::login_config::save_provider_config(name, "http://test", "key", models);
+        let _ = runie_core::provider::config::save_provider_config(name, "http://test", "key", models);
     }
 }
 
 /// Helper: load the current thread's test config into `AppState`.
 pub fn apply_test_config_to_state(state: &mut runie_core::AppState) {
-    let path = runie_core::login_config::config_path();
+    let path = runie_core::provider::config::config_path();
     let config = runie_core::config::Config::load(Some(&path));
     *state.config_mut().model_providers_mut() = config.model_providers;
 }

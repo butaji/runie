@@ -71,31 +71,4 @@ impl AppState {
         self.messages_changed();
     }
 
-    /// Populate `model_providers` from `login_config` — used by tests that call
-    /// `login_config::set_test_config_with_providers` before creating AppState.
-    /// Sets ConfigState.model_providers directly without calling apply_config
-    /// (which would trigger apply_scoped_models and populate scoped_models from the catalog).
-    #[cfg(test)]
-    pub fn populate_cache_from_login_config(&mut self) {
-        use crate::login_config;
-        let providers = login_config::list_configured_providers();
-        let mut cfg = crate::config::Config::default();
-        for (name, base_url, models) in providers {
-            let api_key = login_config::get_provider_config(&name)
-                .map(|(_, k, _)| k)
-                .unwrap_or_default();
-            cfg.model_providers.insert(
-                name.clone(),
-                crate::config::ModelProvider {
-                    provider_type: None,
-                    base_url,
-                    api_key,
-                    models,
-                },
-            );
-        }
-        if !cfg.model_providers.is_empty() {
-            *self.config_mut().model_providers_mut() = cfg.model_providers;
-        }
-    }
 }

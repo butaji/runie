@@ -1,18 +1,27 @@
 use crate::commands::{CommandResult, DialogState};
+use crate::config::ModelProvider;
 use crate::model::AppState;
 use crate::Event;
 
 use super::{exec_handler, run_slash};
 
+fn seed_provider(state: &mut AppState, name: &str, models: Vec<String>) {
+    state.config_mut().model_providers_mut().insert(
+        name.into(),
+        ModelProvider {
+            provider_type: None,
+            base_url: String::new(),
+            api_key: String::new(),
+            models,
+        },
+    );
+}
+
 #[test]
 fn handler_model_switches() {
     let mut state = AppState::default();
     state.config.current_provider = "openai".into();
-    crate::login_config::set_test_config_with_providers(&[(
-        "openai".into(),
-        vec!["gpt-4o".into()],
-    )]);
-    state.populate_cache_from_login_config();
+    seed_provider(&mut state, "openai", vec!["gpt-4o".into()]);
     let result = exec_handler(&mut state, "model", "gpt-4o");
     assert_eq!(state.config.current_model, "gpt-4o");
     assert!(matches!(result, CommandResult::Message(_)));

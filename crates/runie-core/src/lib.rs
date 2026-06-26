@@ -52,7 +52,6 @@ pub mod labels;
 pub mod layout;
 pub mod lifecycle;
 pub mod location;
-pub mod login_config;
 pub mod login_flow;
 pub mod markdown;
 pub mod message;
@@ -112,10 +111,6 @@ pub use keybindings::{
 };
 pub use labels::{format_timestamp, thinking_with_time, thought_with_time, THINKING_LOADING};
 pub use lifecycle::LifecycleState;
-pub use login_config::{
-    config_path as login_config_path, list_configured_providers, remove_provider_config,
-    save_provider_config,
-};
 pub use login_flow::{
     build_key_input, build_login_root, build_model_selector, build_provider_picker, LoginFlowState,
     LoginStep,

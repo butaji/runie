@@ -1,5 +1,6 @@
 //! Model selector tests (Layer 1 + Layer 2)
 
+use crate::config::ModelProvider;
 use crate::Event;
 
 use crate::commands::DialogState;
@@ -33,20 +34,24 @@ fn sample_catalog() -> Vec<ModelInfo> {
     ]
 }
 
+/// Seed providers directly into state.config.model_providers.
 fn configure(state: &mut AppState, providers: &[(String, Vec<String>)]) {
-    crate::login_config::set_test_config_with_providers(providers);
-    state.populate_cache_from_login_config();
+    for (name, models) in providers {
+        state.config_mut().model_providers_mut().insert(
+            name.clone(),
+            ModelProvider {
+                provider_type: None,
+                base_url: String::new(),
+                api_key: String::new(),
+                models: models.clone(),
+            },
+        );
+    }
 }
 
-fn reset_config() {
-    use std::path::PathBuf;
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-    crate::login_config::set_test_config_path(PathBuf::from(format!(
-        "/tmp/runie_selector_test_reset_{}.toml",
-        n
-    )));
+/// Reset config by clearing model_providers.
+fn reset_config(state: &mut AppState) {
+    state.config_mut().model_providers_mut().clear();
 }
 
 // === Layer 1: State/Logic ===
@@ -201,8 +206,8 @@ fn esc_closes_selector() {
 
 #[test]
 fn empty_current_marker_when_no_active_model() {
-    reset_config();
     let mut state = AppState::default();
+    reset_config(&mut state);
     state.config.current_provider.clear();
     state.config.current_model.clear();
     state.update(crate::Event::ToggleModelSelector);

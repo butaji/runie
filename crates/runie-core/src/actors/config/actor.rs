@@ -28,7 +28,7 @@ impl ConfigActor {
         test_path: Option<PathBuf>,
     ) -> (ConfigActorHandle, ActorHandle) {
         let (tx, rx) = mpsc::channel(32);
-        let path = test_path.unwrap_or_else(crate::login_config::config_path);
+        let path = test_path.unwrap_or_else(crate::config::config_path);
         let actor = Self {
             config: Config::default(),
             path,

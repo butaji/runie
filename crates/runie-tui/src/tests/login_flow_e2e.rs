@@ -16,7 +16,7 @@ fn clean_config() {
     let _ = std::fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     let _ = std::fs::remove_file(&path);
-    runie_core::login_config::set_test_config_path(path);
+    runie_core::provider::config::set_test_config_path(path);
 }
 
 fn render_content(state: &mut AppState) -> String {
@@ -128,7 +128,7 @@ fn e2e_login_flow_save_activates_first_model() {
 #[test]
 fn e2e_providers_select_model_renders_input_box() {
     clean_config();
-    runie_core::login_config::save_provider_config(
+    runie_core::provider::config::save_provider_config(
         "minimax",
         "https://api.minimaxi.chat/v1",
         "sk-test",

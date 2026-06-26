@@ -3,7 +3,7 @@
 //! Verifies that a provider whose API key was saved during onboarding can be
 //! rebuilt from the config file at message-send time.
 
-use runie_core::login_config;
+use runie_core::provider::config as login_config;
 
 fn isolated_config() -> std::path::PathBuf {
     let dir = std::env::temp_dir().join(format!(

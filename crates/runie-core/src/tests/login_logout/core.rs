@@ -48,9 +48,12 @@ fn slash_provider_alias_opens_dialog() {
 #[test]
 fn edit_models_opens_dedicated_panel() {
     clean_config();
-    crate::login_config::save_provider_config("openai", "https://api.openai.com/v1", "sk-test", &[
-        "gpt-4o".into(),
-    ])
+    crate::provider::config::save_provider_config(
+        "openai",
+        "https://api.openai.com/v1",
+        "sk-test",
+        &["gpt-4o".into()],
+    )
     .unwrap();
     let mut state = AppState::default();
     state.update(crate::Event::ProvidersDialog);

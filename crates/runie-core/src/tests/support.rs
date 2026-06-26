@@ -7,6 +7,7 @@
 
 use std::sync::Mutex;
 
+use crate::config::ModelProvider;
 use crate::event::Event;
 use crate::model::AppState;
 use crate::session::store::SessionStore;
@@ -15,11 +16,32 @@ use crate::session::Session;
 /// Global lock to serialize tests that touch environment variables.
 pub static ENV_LOCK: Mutex<()> = Mutex::new(());
 
-/// Returns a fresh `AppState` with default values and config cache populated
-/// from the current test config (set by `set_test_config_with_providers`).
+/// Seed `state.config.model_providers` with the given provider configurations.
+/// Each entry is `(Name, base_url, api_key, models)`.
+pub fn seed_providers(
+    state: &mut AppState,
+    providers: &[(String, String, String, Vec<String>)],
+) {
+    for (name, base_url, api_key, models) in providers {
+        state.config_mut().model_providers_mut().insert(
+            name.clone(),
+            ModelProvider {
+                provider_type: None,
+                base_url: base_url.clone(),
+                api_key: api_key.clone(),
+                models: models.clone(),
+            },
+        );
+    }
+}
+
+/// Returns a fresh `AppState` with default values and mock provider configured.
 pub fn fresh_state() -> AppState {
     let mut state = AppState::default();
-    state.populate_cache_from_login_config();
+    seed_providers(
+        &mut state,
+        &[("mock".into(), "".into(), "".into(), vec!["echo".into()])],
+    );
     state
 }
 

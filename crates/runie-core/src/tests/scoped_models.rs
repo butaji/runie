@@ -1,6 +1,7 @@
 //! Scoped models tests (Layer 1 + Layer 2)
 
 use crate::commands::DialogState;
+use crate::config::ModelProvider;
 use crate::model::{AppState, ScopedModel};
 use crate::Event;
 
@@ -12,9 +13,19 @@ fn sm(provider: &str, name: &str, enabled: bool) -> ScopedModel {
     }
 }
 
+/// Seed providers directly into state.config.model_providers.
 fn configure(state: &mut AppState, providers: &[(String, Vec<String>)]) {
-    crate::login_config::set_test_config_with_providers(providers);
-    state.populate_cache_from_login_config();
+    for (name, models) in providers {
+        state.config_mut().model_providers_mut().insert(
+            name.clone(),
+            ModelProvider {
+                provider_type: None,
+                base_url: String::new(),
+                api_key: String::new(),
+                models: models.clone(),
+            },
+        );
+    }
 }
 
 /// Open palette and select a command by name
@@ -222,12 +233,14 @@ fn toggle_scoped_model_uses_provider_and_name() {
 
 #[test]
 fn scoped_models_dialog_populates_from_configured_providers() {
-    crate::login_config::set_test_config_with_providers(&[(
-        "minimax".into(),
-        vec!["MiniMax-M3".into(), "MiniMax-M2.7".into()],
-    )]);
     let mut state = AppState::default();
-    state.populate_cache_from_login_config();
+    configure(
+        &mut state,
+        &[(
+            "minimax".into(),
+            vec!["MiniMax-M3".into(), "MiniMax-M2.7".into()],
+        )],
+    );
     state.config.scoped_models.clear();
 
     state.update(crate::Event::ToggleScopedModelsDialog);

@@ -3,7 +3,7 @@ mod support;
 
 // Re-export shared test helpers for backward compatibility
 #[cfg(test)]
-pub use support::{ENV_LOCK, exec, fresh_state, minimal_session, tmp_store, type_str};
+pub use support::{ENV_LOCK, exec, fresh_state, minimal_session, seed_providers, tmp_store, type_str};
 
 #[cfg(test)]
 mod agent;

@@ -34,7 +34,7 @@ fn reset_config() {
     use std::sync::atomic::{AtomicU64, Ordering};
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-    crate::login_config::set_test_config_path(PathBuf::from(format!(
+    crate::provider::config::set_test_config_path(PathBuf::from(format!(
         "/tmp/runie_model_test_reset_{}.toml",
         n
     )));

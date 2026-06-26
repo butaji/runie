@@ -21,7 +21,7 @@ pub(super) fn clean_config() {
     let _ = std::fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     let _ = std::fs::remove_file(&path);
-    crate::login_config::set_test_config_path(path);
+    crate::provider::config::set_test_config_path(path);
 }
 
 pub(super) fn default_models_for_provider(provider: &str) -> Vec<String> {

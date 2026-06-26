@@ -34,8 +34,8 @@ fn parse_settings_toggle_key_rejects_malformed_keys() {
 #[test]
 fn toggle_provider_model_disables_model_and_switches_active() {
     let path = temp_config_path();
-    crate::login_config::set_test_config_path(path);
-    crate::login_config::save_provider_config(
+    crate::provider::config::set_test_config_path(path);
+    crate::provider::config::save_provider_config(
         "openai",
         "https://api.openai.com/v1",
         "sk-test",
@@ -75,8 +75,8 @@ fn toggle_provider_model_disables_model_and_switches_active() {
 #[test]
 fn toggle_provider_model_enables_missing_model() {
     let path = temp_config_path();
-    crate::login_config::set_test_config_path(path);
-    crate::login_config::save_provider_config(
+    crate::provider::config::set_test_config_path(path);
+    crate::provider::config::save_provider_config(
         "openai",
         "https://api.openai.com/v1",
         "sk-test",

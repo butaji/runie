@@ -1,6 +1,6 @@
 use super::{exec, tmp_store, ENV_LOCK};
 use crate::model::Role;
-use crate::tests::{fresh_state, type_str};
+use crate::tests::{fresh_state, seed_providers, type_str};
 use crate::Event;
 
 /// Open palette and select a command by name
@@ -14,11 +14,16 @@ fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
 
 #[test]
 fn model_gpt4o_just_model_name() {
-    crate::login_config::set_test_config_with_providers(&[(
-        "openai".into(),
-        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
-    )]);
     let mut state = fresh_state();
+    seed_providers(
+        &mut state,
+        &[(
+            "openai".into(),
+            String::new(),
+            String::new(),
+            vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+        )],
+    );
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o-mini".into();
     exec(&mut state, "/model gpt-4o");
@@ -41,11 +46,16 @@ fn model_gpt4o_just_model_name() {
 
 #[test]
 fn model_leading_slash_ignored_for_model_name() {
-    crate::login_config::set_test_config_with_providers(&[(
-        "openai".into(),
-        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
-    )]);
     let mut state = fresh_state();
+    seed_providers(
+        &mut state,
+        &[(
+            "openai".into(),
+            String::new(),
+            String::new(),
+            vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+        )],
+    );
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
     let initial_provider = state.config.current_provider.clone();
@@ -91,11 +101,16 @@ fn model_only_slashes_shows_usage() {
 #[test]
 fn slash_opens_palette_and_typing_filters_commands() {
     // Typing "/" opens command palette, then typing filters commands
-    crate::login_config::set_test_config_with_providers(&[(
-        "openai".into(),
-        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
-    )]);
     let mut state = fresh_state();
+    seed_providers(
+        &mut state,
+        &[(
+            "openai".into(),
+            String::new(),
+            String::new(),
+            vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+        )],
+    );
     state.config.vim_mode = false;
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o-mini".into();
@@ -120,11 +135,11 @@ fn slash_opens_palette_and_typing_filters_commands() {
 
 #[test]
 fn model_no_args_opens_selector() {
-    crate::login_config::set_test_config_with_providers(&[(
-        "openai".into(),
-        vec!["gpt-4o".into()],
-    )]);
     let mut state = fresh_state();
+    seed_providers(
+        &mut state,
+        &[("openai".into(), String::new(), String::new(), vec!["gpt-4o".into()])],
+    );
     palette_select(&mut state, "model");
 
     assert!(
@@ -138,11 +153,16 @@ fn model_no_args_opens_selector() {
 
 #[test]
 fn provider_dialog_shows_edit_models_action() {
-    crate::login_config::set_test_config_with_providers(&[(
-        "openai".into(),
-        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
-    )]);
     let mut state = fresh_state();
+    seed_providers(
+        &mut state,
+        &[(
+            "openai".into(),
+            String::new(),
+            String::new(),
+            vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+        )],
+    );
     exec(&mut state, "/provider");
 
     let dialog = state.open_dialog.expect("dialog should be open");
