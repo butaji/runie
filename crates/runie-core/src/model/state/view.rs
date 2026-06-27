@@ -2,20 +2,18 @@ use std::sync::Arc;
 
 use crate::model::InputReceiver;
 use crate::model::ModelSelectorItem;
-use crate::view::elements::Element;
 
-/// View/cache state — scroll, elements, animation.
-/// Fields are public for test setup; production code should use accessors.
+/// View state — scroll, animation, and UI dimensions.
+///
+/// NOTE: View cache (elements, posts) has been moved out of `ViewState` into
+/// `Snapshot` and `UiActor`. This eliminates the coupling between domain state
+/// and view AST. However, scroll-computed values (total_lines, line_counts) are
+/// kept here for the `ViewActor` to use in scroll calculations.
 #[derive(Clone, Debug)]
 pub struct ViewState {
     pub scroll: usize,
-    pub elements_cache: Arc<[Element]>,
-    pub line_counts: Arc<[usize]>,
-    pub total_lines: usize,
     pub dirty: bool,
-    pub cached_gen: u64,
     pub message_gen: u64,
-    pub element_count: usize,
     // Animation/scroll state
     pub animation_frame: u32,
     pub all_collapsed: bool,
@@ -32,6 +30,12 @@ pub struct ViewState {
     /// thought, a tool call). Independent of scroll; used to highlight
     /// the selected post and to drive post-level navigation.
     pub selected_post: Option<usize>,
+    /// Total rendered lines in the feed. Updated when feed cache rebuilds.
+    /// Used for scroll bound calculations.
+    pub total_lines: usize,
+    /// Cumulative line counts per element. Updated when feed cache rebuilds.
+    /// Used for element-level scroll jumps.
+    pub line_counts: Arc<[usize]>,
     // Cached palette items (for command palette dialog)
     pub cached_palette_items: Arc<[(String, String, String)]>,
     pub cached_palette_filter: Option<String>,
@@ -47,8 +51,6 @@ pub struct ViewState {
     // Cached auth provider names
     pub cached_auth_providers: Arc<[String]>,
     pub cached_auth_valid: bool,
-    /// Navigable posts in the feed. Rebuilt alongside `elements_cache`.
-    pub posts: Arc<[crate::view::elements::Post]>,
     /// Last known mouse position from `MouseMove` events. Used by the TUI
     /// to compute `MouseTarget` for hover styling and click routing.
     pub mouse_position: Option<(u16, u16)>,
@@ -78,22 +80,6 @@ impl PartialEq for ViewState {
 }
 
 impl ViewState {
-    pub fn elements_cache(&self) -> &[Element] {
-        self.elements_cache.as_ref()
-    }
-
-    pub fn line_counts(&self) -> &[usize] {
-        self.line_counts.as_ref()
-    }
-
-    pub fn total_lines(&self) -> usize {
-        self.total_lines
-    }
-
-    pub fn element_count(&self) -> usize {
-        self.element_count
-    }
-
     // Mutable accessors for tests
     pub fn scroll_mut(&mut self) -> &mut usize {
         &mut self.scroll
@@ -120,17 +106,15 @@ impl Default for ViewState {
     fn default() -> Self {
         Self {
             scroll: 0,
-            elements_cache: Arc::new([]),
-            line_counts: Arc::new([]),
-            total_lines: 0,
             dirty: true,
-            cached_gen: 0,
             message_gen: 1,
-            element_count: 0,
             animation_frame: 0,
             all_collapsed: false,
             last_visible_height: 20,
             last_content_width: 80,
+            selected_post: None,
+            total_lines: 0,
+            line_counts: Arc::new([]),
             cached_palette_items: Arc::new([]),
             cached_palette_filter: None,
             cached_model_items: Arc::new([]),
@@ -141,8 +125,6 @@ impl Default for ViewState {
             cached_session_tree_valid: false,
             cached_auth_providers: Arc::new([]),
             cached_auth_valid: false,
-            selected_post: None,
-            posts: Arc::new([]),
             mouse_position: None,
             vim_nav_mode: false,
             vim_nav_pending: false,

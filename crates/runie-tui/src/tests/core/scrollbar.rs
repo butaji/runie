@@ -20,7 +20,7 @@ fn scrollbar_no_scrollbar_when_content_fits() {
     }
     state.refresh_after_message_change();
 
-    let (thumb, offset) = state.scrollbar_metrics(10);
+    let (thumb, offset) = state.snapshot().scrollbar_metrics(10);
     assert_eq!(thumb, 0, "No scrollbar when content fits");
     assert_eq!(offset, 0);
 }
@@ -41,11 +41,11 @@ fn scrollbar_shows_when_content_overflows() {
     }
     state.refresh_after_message_change();
 
-    let (thumb, _offset) = state.scrollbar_metrics(10);
+    let (thumb, _offset) = state.snapshot().scrollbar_metrics(10);
     assert!(
         thumb > 0,
         "Scrollbar thumb should be visible when content overflows, count={}",
-        state.count()
+        state.snapshot().element_count()
     );
 }
 
@@ -66,7 +66,7 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
     state.refresh_after_message_change();
 
     state.view.scroll = 0; // at bottom
-    let (thumb, offset) = state.scrollbar_metrics(10);
+    let (thumb, offset) = state.snapshot().scrollbar_metrics(10);
     assert_eq!(offset, 10 - thumb, "Thumb at bottom when scroll=0");
 }
 
@@ -87,7 +87,7 @@ fn scrollbar_thumb_at_top_when_fully_scrolled() {
     state.refresh_after_message_change();
 
     state.view.scroll = 200; // way up, clamped to max_scroll
-    let (_thumb, offset) = state.scrollbar_metrics(10);
+    let (_thumb, offset) = state.snapshot().scrollbar_metrics(10);
     assert_eq!(offset, 0, "Thumb at top when fully scrolled");
 }
 
@@ -110,7 +110,7 @@ fn scrollbar_thumb_in_middle_when_half_scrolled() {
     // 30 messages = 120 lines (30*3 messages + 30 spacers)
     // max_scroll = 110, thumb = max(1, 10*10/120) = 1
     state.view.scroll = 25; // halfway
-    let (thumb, offset) = state.scrollbar_metrics(10);
+    let (thumb, offset) = state.snapshot().scrollbar_metrics(10);
     // position = 110 - 25 = 85
     // thumb_start = round(85 * 10 / 120) = 7, thumb_end = round(95 * 10 / 120) = 8
     assert_eq!(thumb, 1, "Thumb size");
@@ -134,7 +134,7 @@ fn scroll_clamped_to_max() {
     state.refresh_after_message_change();
 
     state.view.scroll = 500;
-    let (_thumb, offset) = state.scrollbar_metrics(10);
+    let (_thumb, offset) = state.snapshot().scrollbar_metrics(10);
     assert_eq!(offset, 0, "Scroll should be clamped to max");
 }
 
@@ -157,12 +157,12 @@ fn visible_uses_scroll_offset() {
     // 10 messages = 40 lines (10*3 messages + 10 spacers), max_scroll = 35
 
     // At scroll=0 (bottom), we see newest 5 lines worth of elements
-    let visible_bottom = crate::tests::core::visible_helper::compute_viewport(&state, 5);
+    let visible_bottom = crate::tests::core::visible_helper::compute_viewport(&mut state, 5);
     assert!(visible_bottom.elements.iter().any(|e| matches!(e, runie_core::view::elements::Element::UserMessage { content, .. } if content == "msg9")), "Bottom should show latest");
 
     // At scroll=35 (top), we see oldest: first is msg0
     state.view.scroll = 35;
-    let visible_top = crate::tests::core::visible_helper::compute_viewport(&state, 5);
+    let visible_top = crate::tests::core::visible_helper::compute_viewport(&mut state, 5);
     assert!(visible_top.elements.iter().any(|e| matches!(e, runie_core::view::elements::Element::UserMessage { content, .. } if content == "msg0")), "Top should show oldest");
 }
 
@@ -184,7 +184,7 @@ fn scrollbar_thumb_never_exceeds_track() {
 
     for scroll in [0, 5, 10, 20, 50, 100] {
         state.view.scroll = scroll;
-        let (thumb, offset) = state.scrollbar_metrics(10);
+        let (thumb, offset) = state.snapshot().scrollbar_metrics(10);
         assert!(
             thumb <= 10,
             "thumb={} must not exceed track=10 at scroll={}",
@@ -220,8 +220,9 @@ fn scrollbar_consistent_between_offset_and_metrics() {
 
     for scroll in [0, 5, 10, 25, 50, 100] {
         state.view.scroll = scroll;
-        let offset = state.scroll_offset(10) as usize;
-        let max_scroll = state.view.total_lines.saturating_sub(10);
+        let offset = state.snapshot().scroll_offset(10) as usize;
+        // View cache is now built into Snapshot
+        let max_scroll = state.snapshot().total_lines.saturating_sub(10);
         let clamped_scroll = scroll.min(max_scroll);
         let expected_offset = max_scroll.saturating_sub(clamped_scroll);
         assert_eq!(
@@ -248,8 +249,9 @@ fn compute_viewport_handles_partial_element_at_top() {
     }
     state.refresh_after_message_change();
 
-    state.view.scroll = state.view.total_lines.saturating_sub(3);
-    let visible = crate::tests::core::visible_helper::compute_viewport(&state, 3);
+    // View cache is now built into Snapshot
+    state.view.scroll = state.snapshot().total_lines.saturating_sub(3);
+    let visible = crate::tests::core::visible_helper::compute_viewport(&mut state, 3);
     assert!(!visible.elements.is_empty(), "Should have visible elements");
 }
 
@@ -380,8 +382,9 @@ fn scrollbar_with_single_message() {
     });
     state.refresh_after_message_change();
 
-    let (thumb, offset) = state.scrollbar_metrics(1);
-    let total = state.view.total_lines;
+    let (thumb, offset) = state.snapshot().scrollbar_metrics(1);
+    // View cache is now built into Snapshot
+    let total = state.snapshot().total_lines;
     if total > 1 {
         assert!(
             thumb > 0,
@@ -412,7 +415,8 @@ fn page_down_scrolls_by_rendered_lines() {
     state.refresh_after_message_change();
 
     // Start at the top of the feed so PageDown has room to move.
-    let max_scroll = state.view.total_lines.saturating_sub(10);
+    // View cache is now built into Snapshot
+    let max_scroll = state.snapshot().total_lines.saturating_sub(10);
     state.view.scroll = max_scroll;
 
     let before = state.view.scroll;
@@ -442,24 +446,24 @@ fn scrollbar_thumb_position_matches_line_count() {
     }
     state.refresh_after_message_change();
 
+    let snap = state.snapshot();
     let width = state.view.last_content_width;
-    let expected_total: usize = state
-        .view
-        .elements_cache()
+    let expected_total: usize = snap
+        .elements
         .iter()
         .map(|e| runie_core::layout::element_line_count(e, width))
         .sum();
     assert_eq!(
-        state.view.total_lines, expected_total,
+        snap.total_lines, expected_total,
         "Snapshot total_lines must match sum of rendered element line counts"
     );
 
     let visible_height = 10;
-    let (thumb, offset) = state.scrollbar_metrics(visible_height);
+    let (thumb, offset) = state.snapshot().scrollbar_metrics(visible_height);
     let max_scroll = state.view.total_lines.saturating_sub(visible_height);
     let position = max_scroll.saturating_sub(state.view.scroll.min(max_scroll));
     let track = visible_height as f64;
-    let expected_start = (position as f64 * track / state.view.total_lines as f64)
+    let expected_start = (position as f64 * track / snap.total_lines as f64)
         .round()
         .clamp(0.0, track - 1.0) as usize;
     assert_eq!(offset, expected_start, "Scrollbar thumb offset mismatch");

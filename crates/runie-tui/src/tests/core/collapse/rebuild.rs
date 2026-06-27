@@ -49,14 +49,15 @@ fn toggle_thought_rebuilds_cache() {
         ..Default::default()
     });
     state.ensure_fresh();
-    let before = state.view.elements_cache().to_vec();
+    // View cache is now built into Snapshot, not stored in ViewState
+    let before = state.snapshot().elements.to_vec();
     assert!(before
         .iter()
         .any(|e| matches!(e, Element::ThoughtMarker { .. })));
 
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
-    let after = state.view.elements_cache().to_vec();
+    let after = state.snapshot().elements.to_vec();
     assert!(
         after
             .iter()
@@ -81,7 +82,7 @@ fn toggle_thought_twice_restores_cache() {
     state.ensure_fresh();
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
-    let cache = state.view.elements_cache().to_vec();
+    let cache = state.snapshot().elements.to_vec();
     assert!(
         cache
             .iter()
@@ -103,12 +104,12 @@ fn toggle_tool_rebuilds_cache() {
         ..Default::default()
     });
     state.ensure_fresh();
-    let before = state.view.elements_cache().to_vec();
+    let before = state.snapshot().elements.to_vec();
     assert!(before.iter().any(|e| matches!(e, Element::ToolDone { .. })));
 
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
-    let after = state.view.elements_cache().to_vec();
+    let after = state.snapshot().elements.to_vec();
     assert!(
         after
             .iter()
@@ -133,7 +134,7 @@ fn toggle_tool_twice_restores_cache() {
     state.ensure_fresh();
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
-    let cache = state.view.elements_cache().to_vec();
+    let cache = state.snapshot().elements.to_vec();
     assert!(
         cache.iter().any(|e| matches!(e, Element::ToolDone { .. })),
         "Cache should restore ToolDone after second toggle"

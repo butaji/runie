@@ -57,7 +57,7 @@ fn user_message_is_one_line() {
     state.refresh_after_message_change();
 
     assert_eq!(
-        state.view.total_lines(),
+        state.view.total_lines,
         4,
         "UserMessage (3: margins+content) + Spacer (1) = 4 lines"
     );
@@ -70,7 +70,7 @@ fn thought_line_count_matches_content() {
     state.session.messages.push(thought_msg("t1", 5));
     state.refresh_after_message_change();
 
-    let total = state.view.total_lines();
+    let total = state.view.total_lines;
     // ThoughtMarker has 6 lines (header + 5), + leading spacer + trailing spacer = 8
     assert_eq!(
         total, 8,
@@ -84,7 +84,7 @@ fn tool_line_count_matches_output() {
     state.session.messages.push(tool_msg("x1", 3));
     state.refresh_after_message_change();
 
-    let total = state.view.total_lines();
+    let total = state.view.total_lines;
     // ToolDone: header (1) + output (3) = 4, + leading spacer + trailing spacer = 6
     assert_eq!(
         total, 6,
@@ -112,7 +112,7 @@ fn visible_shows_latest_element_at_bottom() {
 
     state.view.scroll = 0; // at bottom
 
-    let region = crate::tests::core::visible_helper::compute_viewport(&state, 3); // 3 lines viewport
+    let region = crate::tests::core::visible_helper::compute_viewport(&mut state, 3); // 3 lines viewport
                                                                                   // 3 messages = 3*3 UserMessage + 3 Spacer = 12 lines total
     assert!(
         region
@@ -148,7 +148,7 @@ fn visible_skips_lines_from_first_element_when_overflow() {
     state.refresh_after_message_change();
 
     state.view.scroll = 0;
-    let region = crate::tests::core::visible_helper::compute_viewport(&state, 10);
+    let region = crate::tests::core::visible_helper::compute_viewport(&mut state, 10);
     assert!(
         region
             .elements
@@ -188,7 +188,7 @@ fn scroll_up_shows_older_content() {
     // 5 messages = 20 lines total (5*3 messages + 5 spacers). Viewport of 3 lines.
     // scroll=8: viewport [9, 12) — msg2 visible, msg4 hidden
     state.view.scroll = 8;
-    let region = crate::tests::core::visible_helper::compute_viewport(&state, 3);
+    let region = crate::tests::core::visible_helper::compute_viewport(&mut state, 3);
     assert!(
         region
             .elements
@@ -221,7 +221,7 @@ fn scrollbar_no_scrollbar_when_lines_fit() {
     });
     state.refresh_after_message_change();
 
-    let (thumb, offset) = state.scrollbar_metrics(10);
+    let (thumb, offset) = state.snapshot().scrollbar_metrics(10);
     assert_eq!(thumb, 0, "No scrollbar when total lines fit in viewport");
     assert_eq!(offset, 0);
 }
@@ -243,7 +243,7 @@ fn scrollbar_shows_when_lines_overflow() {
     }
     state.refresh_after_message_change();
 
-    let (thumb, _offset) = state.scrollbar_metrics(10);
+    let (thumb, _offset) = state.snapshot().scrollbar_metrics(10);
     assert!(
         thumb > 0,
         "Scrollbar thumb should show when line count exceeds viewport"
@@ -268,7 +268,7 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
 
     state.view.scroll = 0;
 
-    let (_thumb, offset) = state.scrollbar_metrics(10);
+    let (_thumb, offset) = state.snapshot().scrollbar_metrics(10);
     // 80 lines total (20 msgs × 4), viewport 10, position = 70
     // thumb_start = round(70 * 10 / 80) = 9, thumb_end = round(80 * 10 / 80) = 10
     // thumb = 1, offset = 9 (bottom of 10-row track)
@@ -293,7 +293,7 @@ fn scrollbar_thumb_at_top_when_fully_scrolled() {
 
     state.view.scroll = 100; // clamped
 
-    let (_thumb, offset) = state.scrollbar_metrics(10);
+    let (_thumb, offset) = state.snapshot().scrollbar_metrics(10);
     assert_eq!(offset, 0, "Thumb at top track edge when fully scrolled");
 }
 
@@ -325,7 +325,7 @@ fn large_thought_overflows_viewport() {
 
     state.view.scroll = 0;
 
-    let region = crate::tests::core::visible_helper::compute_viewport(&state, 10);
+    let region = crate::tests::core::visible_helper::compute_viewport(&mut state, 10);
 
     assert!(
         region
@@ -363,7 +363,7 @@ fn multi_line_tool_at_bottom_visible() {
     state.view.scroll = 0;
 
     // Total: 3*4 + 7 = 19 lines (3 users with margins + 3 spacers + tool 6 lines + spacer)
-    let region = crate::tests::core::visible_helper::compute_viewport(&state, 5);
+    let region = crate::tests::core::visible_helper::compute_viewport(&mut state, 5);
 
     assert!(
         region
@@ -407,7 +407,7 @@ fn new_message_at_bottom_auto_shows() {
     });
     state.refresh_after_message_change();
 
-    let region = crate::tests::core::visible_helper::compute_viewport(&state, 5);
+    let region = crate::tests::core::visible_helper::compute_viewport(&mut state, 5);
     assert!(
         region
             .elements

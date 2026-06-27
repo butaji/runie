@@ -18,49 +18,50 @@ pub fn scroll_event(state: &mut AppState, event: crate::Event) {
 }
 
 pub fn element_jump_up(state: &mut AppState) {
-    if state.view_mut().posts.is_empty() {
+    let snap = state.snapshot();
+    if snap.posts.is_empty() {
         return;
     }
     let selected = state
         .view
         .selected_post
-        .unwrap_or_else(|| current_top_post(state));
+        .unwrap_or_else(|| current_top_post(&snap));
     if selected == 0 {
         state.input_mut().input_flash = 3;
-        scroll_to_post(state, 0);
+        scroll_to_post(state, &snap, 0);
         return;
     }
     let target = selected - 1;
     state.view_mut().selected_post = Some(target);
-    scroll_to_post(state, target);
+    scroll_to_post(state, &snap, target);
 }
 
 pub fn element_jump_down(state: &mut AppState) {
-    if state.view_mut().posts.is_empty() {
+    let snap = state.snapshot();
+    if snap.posts.is_empty() {
         return;
     }
     let selected = state
         .view
         .selected_post
-        .unwrap_or_else(|| current_top_post(state));
-    let last = state.view_mut().posts.len().saturating_sub(1);
+        .unwrap_or_else(|| current_top_post(&snap));
+    let last = snap.posts.len().saturating_sub(1);
     if selected >= last {
         state.view_mut().selected_post = Some(last);
-        scroll_to_post(state, last);
+        scroll_to_post(state, &snap, last);
         return;
     }
     let target = selected + 1;
     state.view_mut().selected_post = Some(target);
-    scroll_to_post(state, target);
+    scroll_to_post(state, &snap, target);
 }
 
-fn scroll_to_post(state: &mut AppState, post_index: usize) {
+fn scroll_to_post(state: &mut AppState, snap: &crate::Snapshot, post_index: usize) {
     let visible = state.view_mut().last_visible_height.max(3) as usize;
-    let total = state.view_mut().total_lines;
+    let total = snap.total_lines;
     let max_scroll = total.saturating_sub(visible);
-    let cum = cumulative_line_counts(&state.view_mut().line_counts);
-    let first_element = state
-        .view
+    let cum = cumulative_line_counts(&snap.line_counts);
+    let first_element = snap
         .posts
         .get(post_index)
         .map(|p| p.start)
@@ -73,23 +74,20 @@ fn scroll_to_post(state: &mut AppState, post_index: usize) {
     state.view_mut().scroll = max_scroll.saturating_sub(target_top);
 }
 
-fn current_top_post(state: &mut AppState) -> usize {
-    let view = state.view();
+fn current_top_post(snap: &crate::Snapshot) -> usize {
     crate::snapshot::compute_current_top_element(
-        &view.elements_cache,
-        &view.line_counts,
-        view.total_lines,
-        view.scroll,
-        view.last_visible_height,
+        &snap.elements,
+        &snap.line_counts,
+        snap.total_lines,
+        snap.scroll,
+        snap.last_visible_height,
     )
-    .and_then(|elem| post_for_element(state, elem))
+    .and_then(|elem| post_for_element(snap, elem))
     .unwrap_or(0)
 }
 
-fn post_for_element(state: &AppState, element_index: usize) -> Option<usize> {
-    state
-        .view
-        .posts
+fn post_for_element(snap: &crate::Snapshot, element_index: usize) -> Option<usize> {
+    snap.posts
         .iter()
         .find(|p| p.start <= element_index && element_index < p.end)
         .map(|p| p.index)
@@ -137,8 +135,9 @@ fn go_to_top(state: &mut AppState) {
     if state.session_mut().messages.is_empty() && !state.agent_state_mut().turn_active {
         state.input_mut().input_flash = 3;
     }
+    let snap = state.snapshot();
     let visible = state.view_mut().last_visible_height.max(3) as usize;
-    let max_scroll = state.view_mut().total_lines.saturating_sub(visible);
+    let max_scroll = snap.total_lines.saturating_sub(visible);
     state.view_mut().scroll = max_scroll;
     if state.view_mut().vim_nav_mode {
         state.view_mut().selected_post = Some(0);
@@ -146,9 +145,10 @@ fn go_to_top(state: &mut AppState) {
 }
 
 fn go_to_bottom(state: &mut AppState) {
+    let snap = state.snapshot();
     state.view_mut().scroll = 0;
     if state.view_mut().vim_nav_mode {
-        let len = state.view_mut().posts.len();
+        let len = snap.posts.len();
         state.view_mut().selected_post = len.checked_sub(1);
     }
 }

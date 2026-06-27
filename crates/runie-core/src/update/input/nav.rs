@@ -204,7 +204,7 @@ impl AppState {
     }
 
     pub(crate) fn try_vim_nav_motion(&mut self, c: char) -> Option<bool> {
-        let last = self.view_mut().posts.len().saturating_sub(1);
+        let last = self.snapshot().posts.len().saturating_sub(1);
         match c {
             'j' => Some(self.handle_vim_jump_down(last)),
             'k' => Some(self.handle_vim_jump_up()),
@@ -289,7 +289,7 @@ impl AppState {
     }
 
     pub(crate) fn vim_nav_down(&mut self) -> bool {
-        let last = self.view_mut().posts.len().saturating_sub(1);
+        let last = self.snapshot().posts.len().saturating_sub(1);
         if self.view_mut().selected_post.unwrap_or(0) >= last {
             self.view_mut().vim_nav_mode = false;
             self.view_mut().dirty = true;

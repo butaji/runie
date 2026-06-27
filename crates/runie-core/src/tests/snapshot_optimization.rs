@@ -231,5 +231,7 @@ fn test_refresh_after_message_change_updates_flags() {
 
     // Verify ensure_fresh was called: cache should be rebuilt, dirty should be cleared
     assert!(!state.view().dirty);
-    assert!(!state.view().elements_cache.is_empty());
+    // View cache is now built into Snapshot, not stored in ViewState
+    let snap = state.snapshot();
+    assert!(!snap.elements.is_empty());
 }

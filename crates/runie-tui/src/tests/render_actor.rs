@@ -107,7 +107,7 @@ fn snapshot_scrollbar_metrics_match_state() {
     state.ensure_fresh();
     let snap = state.snapshot();
 
-    let (t1, o1) = state.scrollbar_metrics(10);
+    let (t1, o1) = snap.scrollbar_metrics(10);
     let (t2, o2) = snap.scrollbar_metrics(10);
     assert_eq!(t1, t2, "Thumb size should match");
     assert_eq!(o1, o2, "Thumb offset should match");

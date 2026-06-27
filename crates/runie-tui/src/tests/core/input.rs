@@ -16,11 +16,12 @@ fn push_user_msg(state: &mut AppState, content: &str, id: &str) {
     });
 }
 
-fn thinking_started(state: &AppState) -> std::time::Instant {
+fn thinking_started(state: &mut AppState) -> std::time::Instant {
     use runie_core::view::Element;
+    // View cache is now built into Snapshot, not stored in ViewState
     state
-        .view
-        .elements_cache()
+        .snapshot()
+        .elements
         .iter()
         .find_map(|e| match e {
             Element::Thinking { started, .. } => Some(*started),
@@ -152,11 +153,12 @@ fn ensure_fresh_skips_rebuild_when_only_input_changed() {
         ..Default::default()
     });
     state.ensure_fresh();
-    let cache_before = state.view.elements_cache().len();
+    // View cache is now built into Snapshot, not stored in ViewState
+    let cache_before = state.snapshot().elements.len();
     state.update(Event::Input('x'));
     state.ensure_fresh();
     assert_eq!(
-        state.view.elements_cache().len(),
+        state.snapshot().elements.len(),
         cache_before,
         "Only input change should skip cache rebuild"
     );
@@ -180,9 +182,10 @@ fn thinking_element_stores_instant_not_elapsed() {
     state.agent.turn_active = true;
     state.refresh_after_message_change();
 
+    // View cache is now built into Snapshot, not stored in ViewState
     let started = state
-        .view
-        .elements_cache()
+        .snapshot()
+        .elements
         .iter()
         .find_map(|e| match e {
             Element::Thinking { started, .. } => Some(*started),
@@ -216,9 +219,10 @@ fn tool_running_element_stores_instant_not_elapsed() {
     state.agent.turn_active = true;
     state.refresh_after_message_change();
 
+    // View cache is now built into Snapshot, not stored in ViewState
     let started = state
-        .view
-        .elements_cache()
+        .snapshot()
+        .elements
         .iter()
         .find_map(|e| match e {
             Element::ToolRunning { started, .. } => Some(*started),
@@ -254,7 +258,7 @@ fn timer_advances_without_cache_rebuild() {
         state.is_dirty(),
         "tick_animation must mark dirty for render"
     );
-    let elapsed = thinking_started(&state).elapsed().as_secs_f64();
+    let elapsed = thinking_started(&mut state).elapsed().as_secs_f64();
     assert!(
         elapsed >= 4.9,
         "Timer should advance without cache rebuild: {:.1}s",

@@ -3,28 +3,27 @@
 use runie_core::model::AppState;
 use runie_core::view::elements::Element;
 
-#[derive(Clone, Copy)]
-pub struct TestViewport<'a> {
-    pub elements: &'a [Element],
+pub struct TestViewport {
+    pub elements: Vec<Element>,
     pub skip_lines: usize,
 }
 
-pub fn compute_viewport(state: &AppState, visible_height: usize) -> TestViewport<'_> {
-    let cache = state.view.elements_cache();
-    if cache.is_empty() || visible_height == 0 {
+pub fn compute_viewport(state: &mut AppState, visible_height: usize) -> TestViewport {
+    let snap = state.snapshot();
+    if snap.elements.is_empty() || visible_height == 0 {
         return TestViewport {
-            elements: &[],
+            elements: vec![],
             skip_lines: 0,
         };
     }
 
-    let total = state.view.total_lines();
-    let (viewport_start, viewport_end) = viewport_bounds(total, visible_height, state.view.scroll);
-    let (start_idx, skip_lines) = find_start_index(state.view.line_counts(), viewport_start);
-    let end_idx = find_end_index(state.view.line_counts(), viewport_end, cache.len());
+    let total = snap.total_lines;
+    let (viewport_start, viewport_end) = viewport_bounds(total, visible_height, snap.scroll);
+    let (start_idx, skip_lines) = find_start_index(&snap.line_counts, viewport_start);
+    let end_idx = find_end_index(&snap.line_counts, viewport_end, snap.elements.len());
 
     TestViewport {
-        elements: &cache[start_idx..end_idx.min(cache.len())],
+        elements: snap.elements[start_idx..end_idx.min(snap.elements.len())].to_vec(),
         skip_lines,
     }
 }

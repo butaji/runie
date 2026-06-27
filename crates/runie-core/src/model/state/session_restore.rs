@@ -8,11 +8,12 @@ impl AppState {
     /// Returns None if no post is selected or if the selection is empty.
     pub fn copy_selected_post_text(&mut self) -> Option<String> {
         let post_idx = self.view_mut().selected_post?;
+        let snap = self.snapshot();
         let (start, end) = {
-            let post = self.view_mut().posts.get(post_idx)?;
+            let post = snap.posts.get(post_idx)?;
             (post.start, post.end)
         };
-        let elements = &self.view_mut().elements_cache;
+        let elements = &snap.elements;
         let mut lines = Vec::new();
         for i in start..end {
             if let Some(elem) = elements.get(i) {
@@ -31,11 +32,12 @@ impl AppState {
     /// Extract metadata from the currently selected post for `Y` (copy metadata).
     pub fn copy_selected_post_metadata(&mut self) -> Option<String> {
         let post_idx = self.view_mut().selected_post?;
+        let snap = self.snapshot();
         let (start, end) = {
-            let post = self.view_mut().posts.get(post_idx)?;
+            let post = snap.posts.get(post_idx)?;
             (post.start, post.end)
         };
-        let elements = &self.view_mut().elements_cache;
+        let elements = &snap.elements;
         let mut parts = Vec::new();
         for i in start..end.min(elements.len()) {
             if let Some(elem) = elements.get(i) {

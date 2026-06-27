@@ -7,7 +7,6 @@ use super::ranking;
 use super::{AppState, CommandUsage, ModelSource};
 use crate::actors::ActorHandles;
 use crate::event::TransientLevel;
-use crate::view::elements::Element;
 
 impl AppState {
     // ── Initialization setters ──────────────────────────────────────────────
@@ -308,41 +307,7 @@ impl AppState {
         !self.config().current_provider.is_empty() && !self.config().current_model.is_empty()
     }
 
-    /// Visible elements slice — O(1), zero allocation.
-    pub fn visible(&self, skip: usize, take: usize) -> &[Element] {
-        crate::snapshot::visible_slice(&self.view().elements_cache, skip, take)
-    }
-
-    pub fn count(&self) -> usize {
-        self.view()
-            .element_count
-            .max(self.view().elements_cache.len())
-    }
-
-    pub fn element_count(&self) -> usize {
-        self.view().element_count
-    }
-
-    pub fn total_lines(&self) -> usize {
-        self.view().total_lines
-    }
-
-    pub fn scroll_offset(&self, visible_height: usize) -> u16 {
-        crate::snapshot::scroll_offset(self.view().total_lines, self.view().scroll, visible_height)
-    }
-
-    pub fn scrollbar_metrics(&self, visible_height: usize) -> (usize, usize) {
-        crate::snapshot::scrollbar_metrics(
-            self.view().total_lines,
-            self.view().scroll,
-            visible_height,
-        )
-    }
-
-    pub fn elements_cache(&self) -> &[Element] {
-        self.view().elements_cache.as_ref()
-    }
-
+    /// True when the view cache needs to be rebuilt.
     pub fn is_dirty(&self) -> bool {
         self.view().dirty
     }

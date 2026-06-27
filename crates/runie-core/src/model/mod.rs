@@ -29,3 +29,4 @@ pub type ModelSelectorItem = (String, String, String, bool, bool);
 mod cache;
 mod compaction;
 pub mod state;
+mod view_cache;

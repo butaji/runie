@@ -7,9 +7,13 @@
 //! The `take()` method supports `reset_session()` without requiring a full
 //! struct reassignment.
 
+use std::sync::Arc;
+
 use super::{
     AgentState, CompletionState, ConfigState, FffFileEntry, InputState, SessionState, ViewState,
 };
+use crate::event::TransientLevel;
+use crate::model::view_cache::ViewCache;
 
 /// Application state — a read-only UI projection of actor-owned state.
 ///
@@ -48,6 +52,9 @@ pub struct AppState {
     pub fff_debounce: u64,
     pub perm_req: Option<crate::model::PermissionRequestState>,
     pub actor_handles: Option<crate::actors::ActorHandles>,
+    // Cached view cache: built lazily when message_gen changes, reused across snapshots.
+    pub(crate) cached_view: Option<ViewCache>,
+    pub(crate) cached_view_gen: u64,
 }
 
 impl Default for AppState {
@@ -76,11 +83,44 @@ impl Default for AppState {
             fff_debounce: 0u64,
             perm_req: None,
             actor_handles: None,
+            cached_view: None,
+            cached_view_gen: 0,
         }
     }
 }
 
 impl AppState {
+    /// Create AppState with initialized cache fields for tests.
+    #[doc(hidden)]
+    pub fn __with_cache_for_test() -> Self {
+        let mut state = Self::default();
+        state.cached_view = Some(ViewCache {
+            elements: Arc::new([]),
+            posts: Arc::new([]),
+            line_counts: Arc::new([]),
+            total_lines: 0,
+            cached_gen: 0,
+        });
+        state.cached_view_gen = 0;
+        state
+    }
+
+    /// Create a test AppState with specific transient message.
+    #[doc(hidden)]
+    pub fn __with_transient_test(msg: Option<String>, level: Option<crate::event::TransientLevel>) -> Self {
+        let mut state = Self::__with_cache_for_test();
+        *state.transient_message_mut() = msg;
+        *state.transient_level_mut() = level;
+        state
+    }
+
+    /// Set transient message and level for tests.
+    #[doc(hidden)]
+    pub fn __set_transient_for_test(&mut self, msg: Option<String>, level: Option<crate::event::TransientLevel>) {
+        *self.transient_message_mut() = msg;
+        *self.transient_level_mut() = level;
+    }
+
     /// Swap out all fields to `Default`, returning the old values.
     /// Used by `reset_session()` to preserve select fields.
     pub(crate) fn take(&mut self) -> AppState {

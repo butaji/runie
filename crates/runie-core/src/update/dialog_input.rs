@@ -120,16 +120,16 @@ impl AppState {
     }
 
     pub(crate) fn current_bottom_post_index(&mut self) -> Option<usize> {
+        let snap = self.snapshot();
         let view = self.view_mut();
         let bottom = crate::snapshot::compute_current_bottom_element(
-            &view.elements_cache,
-            &view.line_counts,
-            view.total_lines,
-            view.scroll,
+            &snap.elements,
+            &snap.line_counts,
+            snap.total_lines,
+            snap.scroll,
             view.last_visible_height,
         )?;
-        let posts = view.posts.clone();
-        posts
+        snap.posts
             .iter()
             .find(|p| p.start <= bottom && bottom < p.end)
             .map(|p| p.index)
