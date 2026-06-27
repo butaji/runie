@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 use strum::IntoStaticStr;
 
+use crate::event::plan::PlanEvent;
 use crate::model::ThinkingLevel;
 use crate::settings::SettingsCategory;
 
@@ -287,7 +288,6 @@ pub enum Event {
     },
     ApproveEdit,
     RejectEdit,
-
     // System
     SystemMessage {
         content: String,
@@ -469,7 +469,6 @@ pub enum Event {
         name: String,
         args: String,
     },
-
     // LoginFlow
     Start,
     SelectProvider {
@@ -494,4 +493,6 @@ pub enum Event {
     },
     Save,
     Cancel,
+    // Plan events (delegated to plan module)
+    Plan(PlanEvent),
 }

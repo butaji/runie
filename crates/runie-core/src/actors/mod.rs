@@ -6,6 +6,7 @@
 
 mod r#trait;
 
+pub mod plan;
 pub mod turn;
 
 // Re-exports from the actor trait (lives in trait.rs).
@@ -30,6 +31,7 @@ pub use handles::{ActorHandles, FffIndexerHandle};
 
 pub use completion::{CompletionActor, CompletionActorHandle, CompletionMsg};
 pub use turn::{TurnActor, TurnActorHandle, TurnMsg};
+pub use plan::{PlanActor, PlanActorHandle, PlanMsg, PlanState, PlanStepStatus};
 pub use config::{ConfigActor, ConfigActorHandle, ConfigMsg};
 pub use fff_indexer::{
     FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,

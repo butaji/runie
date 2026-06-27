@@ -23,6 +23,7 @@ use strum::IntoStaticStr;
 use crate::event::TransientLevel;
 use crate::settings::SettingsCategory;
 use crate::trust::TrustDecision;
+use crate::actors::plan::PlanStepStatus;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Intent enum
@@ -419,4 +420,38 @@ pub enum Intent {
         request_id: String,
         action: crate::permissions::PermissionAction,
     },
+
+    // ── Plan intents ──────────────────────────────────────────────────────
+    /// Create a new plan.
+    CreatePlan {
+        id: String,
+        title: String,
+    },
+    /// Add a step to the current plan.
+    AddPlanStep {
+        description: String,
+        depends_on: Vec<usize>,
+    },
+    /// Submit the plan for approval.
+    SubmitPlan,
+    /// Approve the plan.
+    ApprovePlan,
+    /// Reject the plan.
+    RejectPlan,
+    /// Update a step's status.
+    UpdatePlanStep {
+        step_id: usize,
+        status: PlanStepStatus,
+    },
+    /// Mark a step as completed.
+    CompletePlanStep {
+        step_id: usize,
+    },
+    /// Mark a step as failed.
+    FailPlanStep {
+        step_id: usize,
+        error: String,
+    },
+    /// Clear/reset the plan.
+    ClearPlan,
 }

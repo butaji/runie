@@ -90,6 +90,7 @@ mod tests;
 
 pub use actors::session::SessionActor;
 pub use actors::turn::TurnActor;
+pub use actors::plan::{PlanActor, PlanActorHandle, PlanState, PlanStepStatus};
 pub use agent_phase::{elapsed_secs, format_elapsed, AgentPhase};
 pub use auth::{AuthStorage, AuthToken};
 pub use config::{Config, ConfigChange, ModelProvider, ModelsSection, TruncationSection};
