@@ -302,7 +302,7 @@
   {
     "file": "replace-actor-runtime-with-ractor.md",
     "title": "Replace custom actor runtime with `ractor`",
-    "status": "in_progress"
+    "status": "todo"
   },
   {
     "file": "replace-diff-parser-with-diffy.md",
@@ -402,7 +402,7 @@
   {
     "file": "unify-provider-stack-with-rig-core.md",
     "title": "Unify provider stack with `rig-core`",
-    "status": "in_progress"
+    "status": "todo"
   },
   {
     "file": "validate-tool-constraints-at-session-build.md",

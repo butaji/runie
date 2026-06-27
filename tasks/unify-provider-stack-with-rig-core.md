@@ -1,6 +1,6 @@
 # Unify provider stack with `rig-core`
 
-**Status**: in_progress
+**Status**: todo
 **Milestone**: R4
 **Category**: Provider
 **Priority**: P0
