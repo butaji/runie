@@ -1,64 +1,70 @@
 # Move provider registry and model catalog into runie-provider
 
-**Status**: todo
+**Status**: blocked
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0
 
-**Depends on**: unify-provider-modules
+**Depends on**: unify-provider-modules, move-chatmessage-to-shared-crate
 **Blocks**: none
 
-## Description
+## Blocked Reason
+
+This task creates a circular dependency:
+
+1. `runie-provider` implements `Provider` trait which uses `ChatMessage` from `runie-core`
+2. `model_catalog` in `runie-core` calls `crate::provider::known_providers()`
+3. Moving catalog to `runie-provider` would require `runie-core` to depend on `runie-provider`
+4. `runie-provider` already depends on `runie-core` for `ChatMessage`
+
+This creates: `runie-core` → `runie-provider` → `runie-core` (cycle)
+
+## Alternative Approach
+
+To complete this task, `ChatMessage` must move to a shared location:
+
+**Option A**: Move `ChatMessage` to `runie-protocol`
+- `runie-protocol` already exists for shared IPC types
+- Add `ChatMessage`, `Part`, `Role`, `ToolCall` to `runie-protocol`
+- `runie-provider` depends on `runie-protocol` (not `runie-core`) for message types
+- `runie-core` depends on `runie-protocol` for message types
+- `runie-core` can now depend on `runie-provider` for registry/catalog
+- No circular dependency
+
+**Option B**: Create new `runie-message` crate
+- Similar to Option A but cleaner separation
+- More work than using existing `runie-protocol`
+
+## Description (when unblocked)
 
 The domain crate `runie-core` carries ~840 LOC of provider/model knowledge that belongs in `runie-provider`:
 
 | File | LOC | Content |
 |------|-----|---------|
-| `provider_registry.rs` | 435 | `ProviderMeta`, `find_provider`, known-provider metadata table |
-| `model_catalog.rs` | 405 | Model catalog, trait resolution, capability flags |
+| `provider/registry.rs` | 327 | `ProviderMeta`, `find_provider`, known-provider metadata table |
+| `provider/registry_data.rs` | 145 | YAML loading |
+| `model_catalog/mod.rs` | 404 | Model catalog, trait resolution, capability flags |
 
-`runie-provider` already exists and owns the `Provider` trait, concrete clients, and model definitions. The registry and catalog are provider-crate concerns (they describe provider capabilities and model traits), not domain concerns. Keeping them in core means the domain crate depends on provider-specific metadata it doesn't use for state transitions — a layering smell. Move both into `runie-provider`; `runie-core` keeps only the `Provider` trait + `DynProvider` + `ResponseChunk` (the abstract interface the domain needs to talk to).
+`runie-provider` already exists and owns the `Provider` trait, concrete clients, and model definitions. The registry and catalog are provider-crate concerns (they describe provider capabilities and model traits), not domain concerns. Keeping them in core means the domain crate depends on provider-specific metadata it doesn't use for state transitions — a layering smell. Move both into `runie-provider`; `runie-core` re-exports from `runie-provider`.
 
-This is deeper than `unify-provider-modules` (which consolidates core's own 4 provider files into a `provider/` dir). Do that consolidation first, then move the result into `runie-provider`.
+## Acceptance Criteria (when unblocked)
 
-## Acceptance Criteria
+- [ ] `ChatMessage` moved to `runie-protocol` (prerequisite)
+- [ ] `crates/runie-core/src/provider/registry.rs` deleted; contents moved to `crates/runie-provider/src/registry/`
+- [ ] `crates/runie-core/src/model_catalog/` deleted; contents moved to `crates/runie-provider/src/catalog/`
+- [ ] `runie-core` re-exports from `runie-provider`: `ProviderMeta`, `find_provider`, `model_catalog`, etc.
+- [ ] `runie-provider` re-exports from local modules
+- [ ] No circular dependency: `runie-provider` → `runie-protocol` → `runie-core`, and `runie-core` → `runie-provider`
+- [ ] `cargo test --workspace` succeeds
+- [ ] `cargo check --workspace` succeeds with no new warnings
 
-- [ ] `crates/runie-core/src/provider_registry.rs` deleted; contents moved to `crates/runie-provider/src/registry.rs`.
-- [ ] `crates/runie-core/src/model_catalog.rs` deleted; contents moved to `crates/runie-provider/src/catalog.rs`.
-- [ ] `runie-core` retains only: `Provider` trait, `DynProvider`, `ProviderError`, `ResponseChunk`, `Message` (the abstract interface).
-- [ ] `runie-provider` re-exports `ProviderMeta`, `find_provider`, `ModelCatalog`, capability flags, trait resolution.
-- [ ] `runie-core` and `runie-agent` depend on `runie-provider` for catalog/registry access (or receive them via dependency injection if circular-dep concerns arise).
-- [ ] No circular dependency introduced: `runie-provider` does not depend on `runie-core` for these types (it may already depend on core for the `Provider` trait — that direction is fine).
-- [ ] `cargo test --workspace` succeeds.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+## Files to touch (when unblocked)
 
-## Tests
-
-### Layer 1 — State/Logic
-- [ ] `find_provider_returns_meta_from_provider_crate` — `runie_provider::find_provider("openai")` returns correct `ProviderMeta` after move.
-- [ ] `model_catalog_resolves_traits` — trait resolution (e.g. "reasoning" → concrete model) works from `runie_provider::catalog`.
-
-### Layer 2 — Event Handling
-- [ ] N/A — pure module move, no event logic.
-
-### Layer 3 — Rendering
-- [ ] N/A — catalog/registry are data; rendering tests in runie-tui cover indirectly.
-
-### Layer 4 — Smoke / Crash
-- [ ] `cargo test --workspace` green confirms no broken imports or circular deps.
-
-## Files touched
-
-- `crates/runie-core/src/provider_registry.rs` → delete (move to `runie-provider/src/registry.rs`)
-- `crates/runie-core/src/model_catalog.rs` → delete (move to `runie-provider/src/catalog.rs`)
-- `crates/runie-provider/src/lib.rs` — declare new modules + re-exports
-- `crates/runie-provider/src/registry.rs` → new
-- `crates/runie-provider/src/catalog.rs` → new
-- `crates/runie-core/src/lib.rs` — remove `pub mod provider_registry;`, `pub mod model_catalog;`, update re-exports
-- `crates/runie-core/Cargo.toml` — add `runie-provider` dep if not present (for trait only)
-- All files importing `runie_core::provider_registry::` / `runie_core::model_catalog::` (grep-driven)
-- `crates/runie-core/tests/arch_guardrails.rs` — update path strings
-
-## Notes
-
-Depends on `unify-provider-modules` so the move starts from the consolidated `provider/` dir, not 4 scattered root files. If `runie-agent` needs the catalog for trait resolution during team-mode orchestration, it should depend on `runie-provider` directly (it likely already does for the `Provider` trait). The ~840 LOC reduction in `runie-core` is the largest single domain-shrink available. Rejected alternative: keep catalog in core "for trait resolution" — rejected because trait resolution is a provider-capability question, not a domain-state question.
+- `crates/runie-protocol/src/` — add `ChatMessage`, `Part`, `Role`, `ToolCall` modules
+- `crates/runie-core/src/message/` → delete (moved to protocol)
+- `crates/runie-core/src/provider/` — remove registry files
+- `crates/runie-core/src/model_catalog/` → delete (moved)
+- `crates/runie-provider/src/registry/` → new
+- `crates/runie-provider/src/catalog/` → new
+- All files importing `ChatMessage` from `runie_core::message` → update to `runie_protocol::message`
+- All files importing registry/catalog from `runie_core` → update to `runie_provider`
