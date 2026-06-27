@@ -25,6 +25,7 @@ Replace the home-grown `Actor` trait, `spawn_actor`, `ActorHandle`, and `Reply` 
 ### Phase 2: Actor Migration (IN PROGRESS)
 - [x] InputActor migrated to ractor
 - [x] PermissionActor migrated to ractor
+- [x] ViewActor migrated to ractor
 - [ ] Migrate remaining actors to ractor (can proceed incrementally)
 - [ ] Event-bus integration and request/response patterns preserved
 - [ ] Update task list to reflect progress
@@ -37,6 +38,7 @@ Replace the home-grown `Actor` trait, `spawn_actor`, `ActorHandle`, and `Reply` 
 - [x] `cargo check --workspace` is green with no new warnings.
 - [x] InputActor fully migrated to ractor.
 - [x] PermissionActor fully migrated to ractor.
+- [x] ViewActor migrated to ractor.
 - [ ] Remaining actors migrated incrementally to ractor.
 - [ ] Event-bus integration and request/response patterns preserved.
 
@@ -54,6 +56,8 @@ Replace the home-grown `Actor` trait, `spawn_actor`, `ActorHandle`, and `Reply` 
 - `crates/runie-core/src/actors/input/actor.rs` - InputActor migrated to ractor
 - `crates/runie-core/src/actors/permission/ractor_permission.rs` - New ractor-based PermissionActor
 - `crates/runie-core/src/actors/permission/mod.rs` - Export ractor-based PermissionActor
+- `crates/runie-core/src/actors/view/ractor_view.rs` - New ractor-based ViewActor
+- `crates/runie-core/src/actors/view/mod.rs` - Export ractor-based ViewActor
 - `crates/runie-core/src/actors/leader/actor.rs` - Updated to use RactorPermissionActor
 - `crates/runie-tui/src/main.rs` - Updated to use RactorPermissionActor
 - `crates/runie-cli/src/acp.rs` - Updated to use RactorPermissionActor
@@ -90,3 +94,10 @@ The migration is being done incrementally:
 - RactorPermissionHandle wraps RactorHandle<PermissionMsg> with convenience methods
 - Convenience methods: ask_permission, resolve_permission, cancel_permission, dismiss, and their try_* variants
 - Tests verify AskPermission emits PermissionRequest and ResolvePermission emits PermissionResponse
+
+### ViewActor Migration Details
+- RactorViewActor uses ractor's Actor trait with async_trait
+- State (`ViewState`, `animation_accum`) protected by Mutex for interior mutability
+- EventBusBridge publishes `Event::ViewChanged` after each message handling
+- RactorViewHandle provides send/try_send interface matching old ViewActorHandle
+- Tests verify TerminalSized emits ViewChanged event

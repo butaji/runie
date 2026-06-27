@@ -52,6 +52,6 @@ pub use permission::{PermissionActor, PermissionActorHandle, PermissionMsg, Ract
 pub use session::{
     PersistenceActorHandle, SessionActor, SessionActorHandle, SessionMsg, SessionStoreActorHandle,
 };
-pub use view::{ViewActor, ViewActorHandle, ViewMsg};
+pub use view::{ViewActor, ViewActorHandle, ViewMsg, RactorViewActor, RactorViewHandle};
 pub use trust::{TrustActor, TrustActorHandle, TrustMsg};
 pub use leader::{Leader, LeaderHandle, LeaderCommand, LeaderStatus};
