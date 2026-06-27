@@ -217,7 +217,7 @@
   {
     "file": "move-provider-catalog-to-provider-crate.md",
     "title": "Move provider registry and model catalog into runie-provider",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "move-tui-effects-into-io-actor.md",
