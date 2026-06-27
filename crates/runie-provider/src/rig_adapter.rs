@@ -23,12 +23,11 @@
 //!
 //! ## Status
 //!
-//! Phase 1 (Foundation): Complete - event mapping infrastructure is in place.
-//! Phase 2 (Full Migration): TODO - streaming integration pending rig-core API compatibility.
+//! Phase 1 (Foundation): Complete - event mapping infrastructure in place.
+//! Phase 2 (Streaming): Foundation ready; uses existing SSE parsing internally.
+//! Full rig-core streaming integration requires resolving HTTP client version conflicts.
 
-#![allow(dead_code)] // Placeholder for future streaming implementation
-
-use futures::Stream;
+use futures::{Stream, StreamExt};
 use rig_core::completion::message::{
     AssistantContent, Message, ReasoningContent, Text as RigText, ToolCall as RigToolCall,
     ToolFunction, ToolResult, ToolResultContent, UserContent,
@@ -42,8 +41,6 @@ use std::pin::Pin;
 
 // ---------------------------------------------------------------------------
 // Event mapping: rig-core StreamedAssistantContent → ProviderEvent
-// ---------------------------------------------------------------------------
-// Helper functions for streaming content mapping
 // ---------------------------------------------------------------------------
 
 fn map_text_content(text: String) -> Vec<ProviderEvent> {
@@ -61,7 +58,6 @@ fn map_tool_call_content(
         id: internal_call_id.clone(),
         name: tool_call.function.name.clone(),
     }];
-    // Parse arguments from the tool call
     if let Ok(args) = serde_json::to_string(&tool_call.function.arguments) {
         if !args.is_empty() && args != "null" {
             events.push(ProviderEvent::ToolCallInputDelta {
@@ -93,7 +89,6 @@ fn map_reasoning_content(reasoning: &rig_core::completion::message::Reasoning) -
     let mut events = vec![
         ProviderEvent::ThinkingStart { id: rid.clone() },
     ];
-    // Extract text from reasoning content blocks
     for block in &reasoning.content {
         if let ReasoningContent::Text { text, .. } = block {
             events.push(ProviderEvent::ThinkingDelta(text.clone()));
@@ -113,16 +108,20 @@ fn map_reasoning_delta(id: Option<String>, reasoning: String) -> Vec<ProviderEve
 }
 
 /// Maps rig-core streaming content to one or more runie ProviderEvents.
-fn map_streamed_content(
+pub fn map_streamed_content(
     content: StreamedAssistantContent<StreamingCompletionResponse>,
 ) -> Vec<ProviderEvent> {
     use StreamedAssistantContent::*;
     match content {
         Text(text) => map_text_content(text.text),
-        ToolCall { tool_call, internal_call_id } => map_tool_call_content(tool_call, internal_call_id),
-        ToolCallDelta { id: _, internal_call_id, content } => {
-            map_tool_call_delta(internal_call_id, content)
+        ToolCall { tool_call, internal_call_id } => {
+            map_tool_call_content(tool_call, internal_call_id)
         }
+        ToolCallDelta {
+            id: _,
+            internal_call_id,
+            content,
+        } => map_tool_call_delta(internal_call_id, content),
         Reasoning(reasoning) => map_reasoning_content(&reasoning),
         ReasoningDelta { id, reasoning } => map_reasoning_delta(id, reasoning),
         Final(_) => vec![],
@@ -134,7 +133,7 @@ fn map_streamed_content(
 // ---------------------------------------------------------------------------
 
 /// Convert a runie ChatMessage to a rig-core completion Message.
-fn chat_message_to_rig(msg: &ChatMessage) -> Option<Message> {
+pub fn chat_message_to_rig(msg: &ChatMessage) -> Option<Message> {
     match msg.role.as_str() {
         "system" => convert_system_message(msg),
         "user" => convert_user_message(msg),
@@ -184,7 +183,9 @@ fn build_assistant_content(text: &str, tool_calls: Vec<RigToolCall>) -> Assistan
     if content_items.is_empty() {
         AssistantContent::Text(RigText::new(String::new()))
     } else {
-        content_items.pop().unwrap_or(AssistantContent::Text(RigText::new(String::new())))
+        content_items
+            .pop()
+            .unwrap_or(AssistantContent::Text(RigText::new(String::new())))
     }
 }
 
@@ -201,7 +202,6 @@ fn convert_assistant_message(msg: &ChatMessage) -> Option<Message> {
 fn convert_tool_message(msg: &ChatMessage) -> Option<Message> {
     let text = msg.content();
     let tool_call_id = msg.tool_call_id.clone().unwrap_or_default();
-    // Tool results are represented as User messages with ToolResult content
     Some(Message::User {
         content: OneOrMany::one(UserContent::ToolResult(ToolResult {
             id: tool_call_id,
@@ -217,8 +217,8 @@ fn convert_tool_message(msg: &ChatMessage) -> Option<Message> {
 
 /// Adapter that wraps rig-core's OpenAI provider and implements runie's `Provider` trait.
 ///
-/// This allows using rig-core's provider implementations while maintaining
-/// compatibility with runie's existing `Provider` interface.
+/// This provides integration points for rig-core while using the existing
+/// SSE streaming implementation internally.
 #[derive(Clone)]
 pub struct RigOpenAiProvider {
     api_key: String,
@@ -266,7 +266,7 @@ impl RigOpenAiProvider {
     }
 
     /// Convert ChatMessages to rig-core messages.
-    fn build_messages(&self, messages: &[ChatMessage]) -> Vec<Message> {
+    pub fn build_messages(&self, messages: &[ChatMessage]) -> Vec<Message> {
         messages.iter().filter_map(chat_message_to_rig).collect()
     }
 }
@@ -274,24 +274,45 @@ impl RigOpenAiProvider {
 impl crate::Provider for RigOpenAiProvider {
     fn generate(
         &self,
-        _messages: Vec<ChatMessage>,
+        messages: Vec<ChatMessage>,
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
-        // TODO: Full rig-core streaming integration pending Phase 2 completion.
-        // See crates/runie-provider/src/rig_adapter.rs for event mapping infrastructure.
+        // Use the existing OpenAI streaming implementation
+        // which handles SSE parsing correctly
+        // Clone the data we need since we can't borrow from self
+        let api_key = self.api_key.clone();
+        let model = self.model.clone();
+        let base_url = self.base_url.clone();
+
         Box::pin(async_stream::stream! {
-            yield Err(anyhow::anyhow!(
-                "RigOpenAiProvider::generate - rig-core streaming integration pending (see task: unify-provider-stack-with-rig-core)"
-            ));
+            let provider = crate::openai::OpenAiProvider::new(api_key, model)
+                .with_base_url(base_url);
+            let mut stream = provider.generate(messages);
+            while let Some(item) = stream.next().await {
+                yield item;
+            }
         })
     }
 
     fn generate_with_tools(
         &self,
         messages: Vec<ChatMessage>,
-        _tools: Vec<serde_json::Value>,
+        tools: Vec<serde_json::Value>,
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
-        // Delegate to generate for now - full tool support requires more setup
-        self.generate(messages)
+        // Use the existing OpenAI streaming implementation
+        let api_key = self.api_key.clone();
+        let model = self.model.clone();
+        let base_url = self.base_url.clone();
+
+        Box::pin(async_stream::stream! {
+            let provider = crate::openai::OpenAiProvider::new(api_key, model)
+                .with_base_url(base_url)
+                .with_tools(tools)
+                .with_tool_choice(serde_json::json!("auto"));
+            let mut stream = provider.generate(messages);
+            while let Some(item) = stream.next().await {
+                yield item;
+            }
+        })
     }
 }
 
@@ -305,10 +326,7 @@ mod tests {
 
     #[test]
     fn streaming_text_mapping() {
-        use rig_core::message::Text;
-
-        // Text content - use Default for additional_params
-        let events = map_streamed_content(StreamedAssistantContent::Text(Text {
+        let events = map_streamed_content(StreamedAssistantContent::Text(RigText {
             text: "Hello".to_string(),
             additional_params: Default::default(),
         }));
@@ -321,11 +339,8 @@ mod tests {
 
     #[test]
     fn streaming_tool_call_mapping() {
-        use rig_core::completion::message::ToolCall;
-
-        // Tool call
         let events = map_streamed_content(StreamedAssistantContent::ToolCall {
-            tool_call: ToolCall {
+            tool_call: RigToolCall {
                 id: "call_1".to_string(),
                 call_id: None,
                 function: rig_core::completion::message::ToolFunction {
@@ -341,20 +356,17 @@ mod tests {
             e,
             ProviderEvent::ToolCallStart { id, name } if id == "call_abc" && name == "read_file"
         )));
-        assert!(events.iter().any(|e| matches!(
-            e,
-            ProviderEvent::ToolCallEnd { id } if id == "call_abc"
-        )));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::ToolCallEnd { id } if id == "call_abc")));
     }
 
     #[test]
     fn streaming_tool_call_delta_name() {
-        use rig_core::streaming::ToolCallDeltaContent;
-
         let events = map_streamed_content(StreamedAssistantContent::ToolCallDelta {
             id: "call_1".to_string(),
             internal_call_id: "call_xyz".to_string(),
-            content: ToolCallDeltaContent::Name("bash".to_string()),
+            content: rig_core::streaming::ToolCallDeltaContent::Name("bash".to_string()),
         });
         assert!(events.iter().any(|e| matches!(
             e,
@@ -364,12 +376,10 @@ mod tests {
 
     #[test]
     fn streaming_tool_call_delta_args() {
-        use rig_core::streaming::ToolCallDeltaContent;
-
         let events = map_streamed_content(StreamedAssistantContent::ToolCallDelta {
             id: "call_1".to_string(),
             internal_call_id: "call_xyz".to_string(),
-            content: ToolCallDeltaContent::Delta("{\"cmd\":\"ls\"}".to_string()),
+            content: rig_core::streaming::ToolCallDeltaContent::Delta("{\"cmd\":\"ls\"}".to_string()),
         });
         assert!(events.iter().any(|e| matches!(
             e,
@@ -379,7 +389,6 @@ mod tests {
 
     #[test]
     fn streaming_reasoning_mapping() {
-        // Test ReasoningDelta directly since Reasoning struct is non-exhaustive
         let events = map_streamed_content(StreamedAssistantContent::ReasoningDelta {
             id: Some("reason_1".to_string()),
             reasoning: "thinking...".to_string(),
@@ -392,18 +401,15 @@ mod tests {
             e,
             ProviderEvent::ThinkingDelta(t) if t == "thinking..."
         )));
-        assert!(events.iter().any(|e| matches!(
-            e,
-            ProviderEvent::ThinkingEnd { id } if id == "reason_1"
-        )));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::ThinkingEnd { id } if id == "reason_1")));
     }
 
     #[test]
     fn streaming_final_mapping() {
-        // Final event should produce no additional events
-        // Use correct Usage type from the openai provider
         let events = map_streamed_content(StreamedAssistantContent::Final(
-            rig_core::providers::openai::completion::streaming::StreamingCompletionResponse {
+            StreamingCompletionResponse {
                 usage: rig_core::providers::openai::Usage::default(),
             },
         ));
@@ -437,7 +443,6 @@ mod tests {
         let msg = ChatMessage::user("Hello, world!".to_string());
         let rig_msg = chat_message_to_rig(&msg);
         assert!(rig_msg.is_some());
-        // Just verify it doesn't panic
     }
 
     #[test]
@@ -449,7 +454,6 @@ mod tests {
 
     #[test]
     fn chat_message_conversion_tool() {
-        // Create a tool message directly with tool_call_id
         let msg = ChatMessage {
             role: runie_core::message::Role::Tool,
             timestamp: 0.0,
@@ -476,5 +480,12 @@ mod tests {
         let provider = RigOpenAiProvider::new("sk-test".to_string(), "gpt-4o");
         let rig_messages = provider.build_messages(&messages);
         assert_eq!(rig_messages.len(), 2);
+    }
+
+    #[test]
+    fn provider_delegates_to_openai() {
+        let provider = RigOpenAiProvider::new("sk-test".to_string(), "gpt-4o");
+        // Just verify it compiles and has the expected interface
+        assert_eq!(provider.model(), "gpt-4o");
     }
 }
