@@ -21,6 +21,7 @@ mod fff_indexer;
 mod handles;
 mod input;
 mod io;
+pub mod leader;
 pub mod permission;
 pub mod provider;
 pub mod session;
@@ -48,3 +49,4 @@ pub use session::{
 };
 pub use view::{ViewActor, ViewActorHandle, ViewMsg};
 pub use trust::{TrustActor, TrustActorHandle, TrustMsg};
+pub use leader::{Leader, LeaderHandle, LeaderCommand, LeaderStatus};

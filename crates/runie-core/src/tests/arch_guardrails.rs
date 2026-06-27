@@ -70,6 +70,8 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     "actors/session/actor.rs",
     // Command handlers with file/dir access
     "commands/dsl/handlers/session/",
+    // Leader - coordination layer that manages actor lifecycle
+    "actors/leader/",
 ];
 
 /// Patterns that indicate sync IO in production domain code.
