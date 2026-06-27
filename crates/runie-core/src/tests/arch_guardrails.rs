@@ -50,6 +50,8 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     "hooks.rs",
     // Harness skills with file operations
     "harness_skills/",
+    // Declarative config loading for skills and commands
+    "declarative/",
     // Tool formatting and context
     "tool/",
     // File references
