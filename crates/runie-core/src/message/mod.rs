@@ -1,61 +1,20 @@
 //! Message types shared across the application.
+//!
+//! The canonical definitions live in `runie_protocol::message`. This module
+//! re-exports them for compatibility and adds runie-core-specific `From`
+//! conversions.
 
-pub mod parts;
-pub use parts::Part;
+// Re-export from runie-protocol for compatibility.
+pub use runie_protocol::message::{
+    ChatMessage, MessageMetadata, Part, Role, ToolCall,
+};
 
+/// Wall-clock timestamp for message creation.
 pub fn now() -> f64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs_f64())
         .unwrap_or(0.0)
-}
-
-/// A first-class tool invocation carried by an assistant message.
-///
-/// `args` is the structured argument object. Use `arguments_string()` to get
-/// the JSON-encoded wire format expected by OpenAI-compatible APIs.
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct ToolCall {
-    pub id: String,
-    pub name: String,
-    /// Structured arguments. Serializes to JSON string for OpenAI wire format.
-    #[serde(default)]
-    pub args: serde_json::Value,
-}
-
-impl ToolCall {
-    pub fn new(id: impl Into<String>, name: impl Into<String>, args: serde_json::Value) -> Self {
-        Self {
-            id: id.into(),
-            name: name.into(),
-            args,
-        }
-    }
-
-    /// Construct a ToolCall from a JSON string for the arguments field.
-    pub fn with_json_args(
-        id: impl Into<String>,
-        name: impl Into<String>,
-        arguments: impl AsRef<str>,
-    ) -> Self {
-        let args: serde_json::Value =
-            serde_json::from_str(arguments.as_ref()).unwrap_or(serde_json::Value::Null);
-        Self::new(id, name, args)
-    }
-
-    /// Serialize arguments to a JSON string for the OpenAI wire format.
-    pub fn arguments_string(&self) -> String {
-        serde_json::to_string(&self.args).unwrap_or_else(|_| "{}".to_owned())
-    }
-}
-
-impl From<crate::message::Part> for ToolCall {
-    fn from(part: crate::message::Part) -> Self {
-        match part {
-            crate::message::Part::ToolCall { id, name, args } => ToolCall { id, name, args },
-            _ => ToolCall::new(String::new(), String::new(), serde_json::Value::Null),
-        }
-    }
 }
 
 impl From<crate::tool::ParsedToolCall> for ToolCall {
@@ -64,204 +23,6 @@ impl From<crate::tool::ParsedToolCall> for ToolCall {
             id: call.id.unwrap_or_default(),
             name: call.name,
             args: call.args,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
-pub enum Role {
-    #[default]
-    User,
-    Thought,
-    Assistant,
-    Tool,
-    TurnComplete,
-    System,
-}
-
-impl Role {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Role::User => "user",
-            Role::Thought => "thought",
-            Role::Assistant => "assistant",
-            Role::Tool => "tool",
-            Role::TurnComplete => "turn_complete",
-            Role::System => "system",
-        }
-    }
-
-    /// Convert from API string representation.
-    pub fn parse(s: &str) -> Option<Self> {
-        match s {
-            "user" => Some(Role::User),
-            "thought" => Some(Role::Thought),
-            "assistant" => Some(Role::Assistant),
-            "tool" => Some(Role::Tool),
-            "turn_complete" => Some(Role::TurnComplete),
-            "system" => Some(Role::System),
-            _ => None,
-        }
-    }
-}
-
-impl ChatMessage {
-    /// Returns the concatenated text content from all `Part::Text` variants.
-    pub fn content(&self) -> String {
-        self.parts
-            .iter()
-            .filter_map(|p| match p {
-                Part::Text { content } => Some(content.as_str()),
-                _ => None,
-            })
-            .collect::<Vec<_>>()
-            .join("")
-    }
-
-    /// Returns tool calls extracted from `Part::ToolCall` variants.
-    pub fn tool_calls(&self) -> Vec<ToolCall> {
-        self.parts
-            .iter()
-            .filter_map(|p| match p {
-                Part::ToolCall { id, name, args } => Some(ToolCall {
-                    id: id.clone(),
-                    name: name.clone(),
-                    args: args.clone(),
-                }),
-                _ => None,
-            })
-            .collect()
-    }
-
-    /// Push a text part, or append to the last text part if one exists.
-    pub fn push_text_part(&mut self, content: &str) {
-        if content.is_empty() {
-            return;
-        }
-        if let Some(Part::Text { content: last }) = self.parts.last_mut() {
-            last.push_str(content);
-        } else {
-            self.parts.push(Part::Text {
-                content: content.to_owned(),
-            });
-        }
-    }
-
-    /// Set the last text part's content (or push a new text part).
-    pub fn set_text_part(&mut self, content: String) {
-        if let Some(Part::Text { content: last }) = self.parts.last_mut() {
-            *last = content;
-        } else {
-            self.parts.push(Part::Text { content });
-        }
-    }
-}
-
-/// Metadata for chat messages (compaction and visibility control).
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize, PartialEq)]
-pub struct MessageMetadata {
-    /// Message is pinned and won't be compacted.
-    #[serde(default)]
-    pub pinned: bool,
-    /// Message is hidden from user display but still sent to the model.
-    #[serde(default)]
-    pub hidden_from_user: bool,
-    /// Message is omitted from persistence (ephemeral).
-    #[serde(default)]
-    pub ephemeral: bool,
-    /// This message is a compaction summary (replaces older messages).
-    #[serde(default)]
-    pub compacted: bool,
-}
-
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize, PartialEq)]
-pub struct ChatMessage {
-    pub role: Role,
-    pub timestamp: f64,
-    pub id: String,
-    #[serde(default)]
-    pub provider: String,
-    #[serde(default)]
-    pub metadata: MessageMetadata,
-    /// For `Role::Tool` messages, the id of the assistant tool call this
-    /// result answers. Required by OpenAI-compatible APIs.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub tool_call_id: Option<String>,
-    /// Provider-specific round-trip state (signatures, reasoning format, etc.)
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub provider_metadata: Option<serde_json::Value>,
-    /// Typed parts of this message (text, reasoning, tool calls, results).
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub parts: Vec<Part>,
-}
-
-impl ChatMessage {
-    pub fn system(content: impl Into<String>) -> Self {
-        Self::new(Role::System, content)
-    }
-
-    pub fn user(content: impl Into<String>) -> Self {
-        Self::new(Role::User, content)
-    }
-
-    pub fn assistant(content: impl Into<String>) -> Self {
-        Self::new(Role::Assistant, content)
-    }
-
-    pub fn tool_result(content: impl Into<String>) -> Self {
-        Self::new(Role::Tool, content)
-    }
-
-    pub fn tool(content: impl Into<String>) -> Self {
-        Self::new(Role::Tool, content)
-    }
-
-    pub fn with_id(mut self, id: impl Into<String>) -> Self {
-        self.id = id.into();
-        self
-    }
-
-    pub fn with_timestamp(mut self, timestamp: f64) -> Self {
-        self.timestamp = timestamp;
-        self
-    }
-
-    pub fn with_tool_call_id(mut self, id: impl Into<String>) -> Self {
-        self.tool_call_id = Some(id.into());
-        self
-    }
-
-    pub fn with_tool_calls(mut self, calls: Vec<ToolCall>) -> Self {
-        for tc in calls {
-            self.parts.push(Part::ToolCall {
-                id: tc.id,
-                name: tc.name,
-                args: tc.args,
-            });
-        }
-        self
-    }
-
-    pub fn with_parts(mut self, parts: Vec<Part>) -> Self {
-        self.parts = parts;
-        self
-    }
-
-    pub fn new(role: Role, content: impl Into<String>) -> Self {
-        let content = content.into();
-        Self {
-            role,
-            timestamp: now(),
-            id: String::new(),
-            provider: String::new(),
-            metadata: MessageMetadata::default(),
-            tool_call_id: None,
-            provider_metadata: None,
-            parts: if content.is_empty() {
-                Vec::new()
-            } else {
-                vec![Part::Text { content }]
-            },
         }
     }
 }
@@ -282,15 +43,9 @@ mod tests {
     fn chat_message_content_getter_concatenates_text_parts() {
         let msg = ChatMessage {
             parts: vec![
-                Part::Text {
-                    content: "a".into(),
-                },
-                Part::Reasoning {
-                    content: "r".into(),
-                },
-                Part::Text {
-                    content: "b".into(),
-                },
+                Part::Text { content: "a".into() },
+                Part::Reasoning { content: "r".into() },
+                Part::Text { content: "b".into() },
             ],
             ..Default::default()
         };
@@ -301,9 +56,7 @@ mod tests {
     fn chat_message_tool_calls_getter_extracts_from_parts() {
         let msg = ChatMessage {
             parts: vec![
-                Part::Text {
-                    content: "hi".into(),
-                },
+                Part::Text { content: "hi".into() },
                 Part::ToolCall {
                     id: "c1".into(),
                     name: "bash".into(),
@@ -347,9 +100,7 @@ mod tests {
             metadata: MessageMetadata::default(),
             tool_call_id: None,
             provider_metadata: None,
-            parts: vec![Part::Text {
-                content: "hello".into(),
-            }],
+            parts: vec![Part::Text { content: "hello".into() }],
         };
         let json = serde_json::to_string(&msg).unwrap();
         let parsed: ChatMessage = serde_json::from_str(&json).unwrap();
@@ -358,7 +109,6 @@ mod tests {
         assert_eq!(parsed.id, "msg-1");
     }
 
-    /// Layer 1: ChatMessage serializes and deserializes unchanged.
     #[test]
     fn chat_message_serializes_round_trip() {
         let msg = ChatMessage {
@@ -366,9 +116,7 @@ mod tests {
             timestamp: 1.0,
             id: "a1".into(),
             parts: vec![
-                Part::Text {
-                    content: "hello".into(),
-                },
+                Part::Text { content: "hello".into() },
                 Part::ToolCall {
                     id: "call_1".into(),
                     name: "list_dir".into(),
@@ -385,15 +133,12 @@ mod tests {
         assert_eq!(parsed.tool_calls()[0].name, "list_dir");
     }
 
-    /// Layer 1: Canonical message parts are well-formed for all roles.
     #[test]
     fn provider_view_from_chat_message() {
         let msg = ChatMessage {
             role: Role::Assistant,
             parts: vec![
-                Part::Text {
-                    content: "hi".into(),
-                },
+                Part::Text { content: "hi".into() },
                 Part::ToolCall {
                     id: "c1".into(),
                     name: "bash".into(),
@@ -420,15 +165,37 @@ mod tests {
     }
 
     #[test]
+    fn canonical_tool_call_round_trips_through_json() {
+        let tc = ToolCall::new("call_abc", "bash", serde_json::json!({"cmd": "ls -la"}));
+        let json = serde_json::to_string(&tc).unwrap();
+        let parsed: ToolCall = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.id, "call_abc");
+        assert_eq!(parsed.name, "bash");
+        assert_eq!(parsed.args["cmd"], "ls -la");
+    }
+
+    #[test]
+    fn parsed_tool_call_maps_to_canonical() {
+        use crate::tool::parse::ParsedToolCall;
+        let parsed = ParsedToolCall {
+            name: "read_file".into(),
+            args: serde_json::json!({"path": "Cargo.toml"}),
+            id: Some("call_123".into()),
+        };
+        let tc: ToolCall = parsed.into();
+        assert_eq!(tc.id, "call_123");
+        assert_eq!(tc.name, "read_file");
+        assert_eq!(tc.args["path"], "Cargo.toml");
+    }
+
+    #[test]
     fn chat_message_with_parts_round_trips_json() {
         let msg = ChatMessage {
             role: Role::Assistant,
             timestamp: 1.0,
             id: "a1".into(),
             parts: vec![
-                Part::Text {
-                    content: "hello".into(),
-                },
+                Part::Text { content: "hello".into() },
                 Part::ToolCall {
                     id: "call_1".into(),
                     name: "list_dir".into(),
@@ -444,37 +211,9 @@ mod tests {
 
     #[test]
     fn chat_message_without_parts_deserializes_empty_vec() {
-        // Old format with content field deserializes to empty parts
         let json = r#"{"role":"Assistant","content":"hi","timestamp":1.0,"id":"a1"}"#;
         let parsed: ChatMessage = serde_json::from_str(json).unwrap();
-        // Legacy format has no parts - content getter returns empty for backward compat
         assert!(parsed.parts.is_empty());
         assert_eq!(parsed.content(), "");
-    }
-
-    /// Layer 1: Canonical ToolCall serializes and deserializes unchanged.
-    #[test]
-    fn canonical_tool_call_round_trips_through_json() {
-        let tc = ToolCall::new("call_abc", "bash", serde_json::json!({"cmd": "ls -la"}));
-        let json = serde_json::to_string(&tc).unwrap();
-        let parsed: ToolCall = serde_json::from_str(&json).unwrap();
-        assert_eq!(parsed.id, "call_abc");
-        assert_eq!(parsed.name, "bash");
-        assert_eq!(parsed.args["cmd"], "ls -la");
-    }
-
-    /// Layer 1: ParsedToolCall converts to canonical ToolCall.
-    #[test]
-    fn parsed_tool_call_maps_to_canonical() {
-        use crate::tool::parse::ParsedToolCall;
-        let parsed = ParsedToolCall {
-            name: "read_file".into(),
-            args: serde_json::json!({"path": "Cargo.toml"}),
-            id: Some("call_123".into()),
-        };
-        let tc: ToolCall = parsed.into();
-        assert_eq!(tc.id, "call_123");
-        assert_eq!(tc.name, "read_file");
-        assert_eq!(tc.args["path"], "Cargo.toml");
     }
 }

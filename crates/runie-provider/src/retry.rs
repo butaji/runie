@@ -143,7 +143,7 @@ where
 {
     fn generate(
         &self,
-        messages: Vec<runie_core::message::ChatMessage>,
+        messages: Vec<runie_protocol::message::ChatMessage>,
     ) -> std::pin::Pin<
         Box<
             dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
@@ -201,7 +201,7 @@ where
 mod tests {
     use super::*;
     use futures::stream;
-    use runie_core::message::ChatMessage;
+    use runie_protocol::message::ChatMessage;
     use crate::Provider;
     use runie_core::provider_event::StopReason;
     use std::sync::atomic::{AtomicUsize, Ordering};

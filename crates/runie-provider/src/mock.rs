@@ -1,5 +1,5 @@
 use futures::Stream;
-use runie_core::message::{ChatMessage, Role};
+use runie_protocol::message::{ChatMessage, Role};
 use crate::Provider;
 use runie_core::provider_event::{ProviderEvent, StopReason};
 use std::pin::Pin;

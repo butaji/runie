@@ -27,6 +27,7 @@ pub use runie_core::model_catalog::{filter_models, model_catalog, ModelCapabilit
 pub use runie_core::model_catalog::configured::configured_models_catalog;
 
 pub use config::Config;
+pub use runie_protocol::ProviderConfigBox;
 pub use factory::DynProviderFactory;
 pub use mock::{MockProvider, MockStreamingProvider};
 pub use openai::OpenAiProvider;
@@ -78,7 +79,7 @@ impl std::ops::Deref for DynProvider {
 impl Provider for DynProvider {
     fn generate(
         &self,
-        messages: Vec<runie_core::message::ChatMessage>,
+        messages: Vec<runie_protocol::message::ChatMessage>,
     ) -> std::pin::Pin<
         Box<
             dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
@@ -91,7 +92,7 @@ impl Provider for DynProvider {
 
     fn generate_with_tools(
         &self,
-        messages: Vec<runie_core::message::ChatMessage>,
+        messages: Vec<runie_protocol::message::ChatMessage>,
         tools: Vec<serde_json::Value>,
     ) -> std::pin::Pin<
         Box<
@@ -112,7 +113,8 @@ impl DynProvider {
         model: &str,
         config: &runie_core::config::Config,
     ) -> Result<Self, ProviderError> {
-        build_provider(key, model, Some(config)).map(DynProvider)
+        build_provider(key, model, Some(ProviderConfigBox::new(config.clone())))
+            .map(DynProvider)
     }
 
     /// Wrap an arbitrary provider implementation.
@@ -134,10 +136,10 @@ pub fn is_known(key: &str) -> bool {
 fn resolve_credentials(
     key: &str,
     meta: &ProviderMeta,
-    config: Option<&runie_core::config::Config>,
+    config: Option<ProviderConfigBox>,
 ) -> (String, String) {
     let (api_key, base_url) = if let Some(cfg) = config {
-        let resolver = config::ProviderConfigResolver::from_config(cfg);
+        let resolver = config::ProviderConfigResolver::new(cfg);
         (
             resolver.resolve_api_key(key).unwrap_or_default(),
             resolver
@@ -162,7 +164,7 @@ fn resolve_credentials(
 pub fn build_provider(
     key: &str,
     model: &str,
-    config: Option<&runie_core::config::Config>,
+    config: Option<ProviderConfigBox>,
 ) -> Result<BuiltProvider, ProviderError> {
     if key == "mock" && is_mock_enabled() {
         return Ok(build_mock_provider(key, model));
@@ -203,11 +205,11 @@ fn build_openai_provider(api_key: String, model: &str, base_url: &str) -> Box<dy
 pub fn build_provider_with_fallback(
     chain: &[&str],
     model: &str,
-    config: &runie_core::config::Config,
+    config: ProviderConfigBox,
 ) -> Result<BuiltProvider, ProviderError> {
     let mut last_err = None;
     for key in chain {
-        match build_provider(key, model, Some(config)) {
+        match build_provider(key, model, Some(config.clone())) {
             Ok(provider) => return Ok(provider),
             Err(e) => last_err = Some(e),
         }

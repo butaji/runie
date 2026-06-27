@@ -3592,6 +3592,7 @@ dependencies = [
  "reqwest-eventsource",
  "rig-core",
  "runie-core",
+ "runie-protocol",
  "runie-testing",
  "serde",
  "serde_json",

@@ -35,7 +35,7 @@ use rig_core::completion::message::{
 use rig_core::providers::openai::completion::streaming::StreamingCompletionResponse;
 use rig_core::streaming::StreamedAssistantContent;
 use rig_core::OneOrMany;
-use runie_core::message::ChatMessage;
+use runie_protocol::message::ChatMessage;
 use runie_core::provider_event::ProviderEvent;
 use std::pin::Pin;
 
@@ -455,14 +455,14 @@ mod tests {
     #[test]
     fn chat_message_conversion_tool() {
         let msg = ChatMessage {
-            role: runie_core::message::Role::Tool,
+            role: runie_protocol::message::Role::Tool,
             timestamp: 0.0,
             id: "tool_result".to_string(),
             provider: String::new(),
             metadata: Default::default(),
             tool_call_id: Some("call_abc".to_string()),
             provider_metadata: None,
-            parts: vec![runie_core::message::Part::Text {
+            parts: vec![runie_protocol::message::Part::Text {
                 content: "File contents here".to_string(),
             }],
         };

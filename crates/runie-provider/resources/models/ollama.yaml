@@ -1,0 +1,12 @@
+# Ollama (local) provider metadata
+key: ollama
+display_name: Ollama (local)
+base_url: http://localhost:11434/v1
+env_var: OLLAMA_HOST
+models:
+  - name: llama3.1
+    context_window: 128000
+  - name: qwen2.5-coder:7b
+    context_window: 128000
+  - name: mistral
+    context_window: 128000

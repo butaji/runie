@@ -16,6 +16,7 @@ mod validate;
 pub mod schema;
 pub mod migrate;
 pub mod mcp;
+mod provider_config;
 
 // Re-export MCP types for convenience
 pub use mcp::{McpSection, McpServer, McpTransport};
@@ -476,3 +477,5 @@ pub fn config_path() -> PathBuf {
         .join(".runie")
         .join("config.toml")
 }
+
+

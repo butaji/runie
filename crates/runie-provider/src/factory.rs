@@ -5,7 +5,9 @@ use std::pin::Pin;
 
 use runie_core::actors::provider::{BuiltProvider, ProviderFactory};
 use runie_core::config::Config;
+use crate::config::ProviderConfigResolver;
 use crate::{find_provider, build_provider, validate_api_key, ProviderError};
+use runie_protocol::ProviderConfigBox;
 
 /// The production provider factory.
 ///
@@ -20,7 +22,7 @@ impl ProviderFactory for DynProviderFactory {
         model: &str,
         config: &Config,
     ) -> Result<BuiltProvider, ProviderError> {
-        build_provider(provider, model, Some(config))
+        build_provider(provider, model, Some(ProviderConfigBox::new(config.clone())))
     }
 
     fn validate_key(
@@ -34,7 +36,7 @@ impl ProviderFactory for DynProviderFactory {
     }
 
     fn resolve_credentials(&self, provider: &str, config: &Config) -> (String, String) {
-        let resolver = crate::config::ProviderConfigResolver::from_config(config);
+        let resolver = ProviderConfigResolver::new(ProviderConfigBox::new(config.clone()));
         let base_url = resolver
             .resolve_base_url(provider)
             .or_else(|| default_base_url(provider))
