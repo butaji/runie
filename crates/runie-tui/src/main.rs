@@ -14,9 +14,10 @@
 use futures::StreamExt;
 use runie_agent::AgentActor;
 use runie_core::actors::{
-    ActorHandles, ConfigActor, FffIndexerActor, FffIndexerHandle, IoActor, PermissionActor,
+    ActorHandles, ConfigActor, FffIndexerActor, FffIndexerHandle, IoActor,
     ProviderActor, SessionActor, TurnActor,
 };
+use runie_core::actors::permission::RactorPermissionActor;
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::{AppState, Snapshot};
@@ -81,7 +82,7 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
     // Unified SessionActor: owns trust, history, session CRUD, and durable event append
     let (session_handle, _session_actor) = SessionActor::spawn(bus.clone());
     let (io_handle, _io_actor) = IoActor::spawn(bus.clone());
-    let (permission_handle, _permission_actor) = PermissionActor::spawn(bus.clone());
+    let (permission_handle, _permission_actor) = RactorPermissionActor::spawn(bus.clone()).await;
     // InputActor owns the input buffer, cursor, history, undo/redo.
     let (input_handle, _input_actor) = runie_core::actors::InputActor::spawn(bus.clone()).await;
     // TurnActor owns turn lifecycle, queues, and token tracking.

@@ -48,7 +48,7 @@ pub use io::{IoActor, IoActorHandle, IoMsg};
 pub use provider::{
     BuiltProvider, ProviderActor, ProviderActorHandle, ProviderFactory, ProviderMsg,
 };
-pub use permission::{PermissionActor, PermissionActorHandle, PermissionMsg};
+pub use permission::{PermissionActor, PermissionActorHandle, PermissionMsg, RactorPermissionActor, RactorPermissionHandle};
 pub use session::{
     PersistenceActorHandle, SessionActor, SessionActorHandle, SessionMsg, SessionStoreActorHandle,
 };

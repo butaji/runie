@@ -12,10 +12,12 @@ use tokio::sync::{broadcast, mpsc};
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::actors::{
-    ConfigActor, IoActor, PermissionActor, SessionActor, TurnActor,
-    ConfigActorHandle, IoActorHandle, PermissionActorHandle, SessionActorHandle, TurnActorHandle,
+    ConfigActor, IoActor, SessionActor, TurnActor,
+    ConfigActorHandle, IoActorHandle, SessionActorHandle, TurnActorHandle,
     ProviderActor, ProviderActorHandle,
 };
+use crate::actors::permission::RactorPermissionActor;
+use crate::actors::PermissionActorHandle;
 
 use super::messages::{LeaderCommand, LeaderStatus};
 
@@ -49,7 +51,7 @@ impl Leader {
         let bus = EventBus::<Event>::new(100);
         let (cmd_tx, cmd_rx) = mpsc::channel(32);
 
-        let handles = Self::spawn_actors(&bus, provider_factory)?;
+        let handles = Self::spawn_actors(&bus, provider_factory).await?;
         tokio::spawn(Self::coordinator(cmd_rx, bus.clone()));
 
         if let Some(ref addr) = self.tcp_addr {
@@ -74,7 +76,7 @@ impl Leader {
     }
 
     /// Spawn all child actors.
-    fn spawn_actors(
+    async fn spawn_actors(
         bus: &EventBus<Event>,
         factory: Arc<dyn crate::actors::provider::ProviderFactory>,
     ) -> anyhow::Result<SpawnedHandles> {
@@ -82,7 +84,7 @@ impl Leader {
         let (provider, _) = ProviderActor::spawn(bus.clone(), config.clone(), factory);
         let (io, _) = IoActor::spawn(bus.clone());
         let (session, _) = SessionActor::spawn(bus.clone());
-        let (permission, _) = PermissionActor::spawn(bus.clone());
+        let (permission, _) = RactorPermissionActor::spawn(bus.clone()).await;
         let (turn, _) = TurnActor::spawn(bus.clone());
 
         Ok(SpawnedHandles { config, provider, io, session, permission, turn })

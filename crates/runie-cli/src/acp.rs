@@ -29,8 +29,9 @@
 use anyhow::Result;
 use runie_agent::AgentActor;
 use runie_core::actors::{
-    ConfigActor, IoActor, PermissionActor, ProviderActor, SessionActor,
+    ConfigActor, IoActor, ProviderActor, SessionActor,
 };
+use runie_core::actors::permission::RactorPermissionActor;
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_protocol::Notification;
@@ -149,7 +150,7 @@ async fn spawn_runtime(bus: EventBus<Event>) -> Result<AcpRuntime> {
     );
     let (_session_handle, _session_actor) = SessionActor::spawn(bus.clone());
     let (_io_handle, _io_actor) = IoActor::spawn(bus.clone());
-    let (permission_handle, _permission_actor) = PermissionActor::spawn(bus.clone());
+    let (permission_handle, _permission_actor) = RactorPermissionActor::spawn(bus.clone()).await;
 
     // Spawn agent actor
     let (_agent_handle, _agent_actor) = AgentActor::spawn(

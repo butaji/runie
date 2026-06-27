@@ -172,6 +172,7 @@ mod tests {
 
     #[tokio::test]
     async fn actor_publishes_error_when_provider_unknown() {
+        use runie_core::actors::permission::RactorPermissionActor;
         let _lock = crate::tests::MOCK_STATE_LOCK.lock().await;
         let was_mock = runie_core::provider::is_mock_enabled();
         runie_core::provider::set_mock_enabled(false);
@@ -181,7 +182,7 @@ mod tests {
         let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
         let (provider_handle, _provider_actor) =
             ProviderActor::spawn(bus.clone(), config_handle, Arc::new(DynProviderFactory));
-        let (permission_handle, _permission_actor) = PermissionActor::spawn(bus.clone());
+        let (permission_handle, _permission_actor) = RactorPermissionActor::spawn(bus.clone()).await;
         let (agent_handle, _agent_actor) =
             AgentActor::spawn(bus, provider_handle, permission_handle);
 
