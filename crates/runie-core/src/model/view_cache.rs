@@ -1,10 +1,8 @@
-//! Shared view cache type used by AppState and cache/mod.rs.
+//! View cache type for the Element/Post projection.
 //!
-//! This is a separate module to avoid circular dependencies:
-//! - cache/mod.rs imports AppState (to access view.message_gen)
-//! - AppState needs to store ViewCache (to cache feed data)
-//!
-//! By keeping ViewCache in its own module, neither import creates a cycle.
+//! This module contains the `ViewCache` struct which holds the projection
+//! results (elements, posts, line counts). Used by `cache/mod.rs` when
+//! building the view projection.
 
 use std::sync::Arc;
 
@@ -13,10 +11,11 @@ use crate::view::elements::{Element, Post};
 /// Intermediate view cache built from LazyCache.
 /// Stored in AppState and only rebuilt when message_gen changes.
 #[derive(Clone)]
+#[allow(dead_code)] // cached_gen is written by view_cache(); read by UiActor after decouple
 pub(crate) struct ViewCache {
+    pub cached_gen: u64,
     pub elements: Arc<[Element]>,
     pub posts: Arc<[Post]>,
     pub line_counts: Arc<[usize]>,
     pub total_lines: usize,
-    pub cached_gen: u64,
 }

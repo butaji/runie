@@ -71,8 +71,7 @@ fn transient_success_has_1_symbol_margin_on_both_sides() {
 #[test]
 fn transient_warning_renders_amber_background_with_warn_prefix() {
     let _lock = crate::theme::test_lock();
-    let mut state = AppState::__with_cache_for_test();
-    state.__set_transient_for_test(
+    let mut state = AppState::__with_transient_test(
         Some("Read-only on".to_string()),
         Some(runie_core::event::TransientLevel::Warning),
     );

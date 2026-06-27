@@ -1,8 +1,8 @@
 //! Cached view data and animation state.
 //!
 //! View feed cache (elements, posts, line_counts, total_lines) is built
-//! directly into `Snapshot` via a cached `ViewCache` in `AppState`.
-//! This decouples domain state (ViewState) from the view projection.
+//! on-demand when building Snapshot. The projection is owned by UiActor;
+//! AppState holds raw domain state and computes derived values on-demand.
 
 use std::sync::Arc;
 
@@ -27,18 +27,11 @@ struct ViewValues {
     selected_post: Option<usize>,
 }
 
-/// Extracted cache data to avoid borrow conflicts.
-#[derive(Clone)]
-struct CacheData {
-    elements: Arc<[crate::view::Element]>,
-    line_counts: Arc<[usize]>,
-    total_lines: usize,
-    posts: Arc<[crate::view::Post]>,
-}
-
 /// Pure computation of mouse targeting without needing AppState borrow.
 fn snapshot_mouse_impl(
-    cache: &ViewCache,
+    elements: &[crate::view::Element],
+    line_counts: &[usize],
+    total_lines: usize,
     mouse_position: (u16, u16),
     last_content_width: u16,
     last_visible_height: u16,
@@ -58,9 +51,9 @@ fn snapshot_mouse_impl(
         last_content_width,
         last_visible_height,
         input,
-        &cache.elements,
-        &cache.line_counts,
-        cache.total_lines,
+        elements,
+        line_counts,
+        total_lines,
         has_models,
     );
     (target, hovered)
@@ -228,28 +221,24 @@ impl AppState {
         self.view_mut().cached_auth_providers = providers.into();
     }
 
-    /// Returns the cached view cache, rebuilding it if the generation changed.
-    fn view_cache(&mut self) -> &ViewCache {
-        let gen = self.view().message_gen;
-        if self.cached_view_gen != gen {
-            let feed = crate::view::LazyCache::feed(self);
-            let width = self.view().last_content_width.max(1);
-            let line_counts: Vec<usize> = feed
-                .elements
-                .iter()
-                .map(|e| crate::layout::element_line_count(e, width))
-                .collect();
-            let total_lines: usize = line_counts.iter().sum();
-            self.cached_view = Some(ViewCache {
-                elements: feed.elements.into(),
-                posts: feed.posts.into(),
-                line_counts: line_counts.into(),
-                total_lines,
-                cached_gen: gen,
-            });
-            self.cached_view_gen = gen;
+    /// Build a view cache on-demand from the current state.
+    /// This is called by ensure_fresh and snapshot methods.
+    fn build_view_cache(&mut self) -> ViewCache {
+        let feed = crate::view::LazyCache::feed(self);
+        let width = self.view().last_content_width.max(1);
+        let line_counts: Vec<usize> = feed
+            .elements
+            .iter()
+            .map(|e| crate::layout::element_line_count(e, width))
+            .collect();
+        let total_lines: usize = line_counts.iter().sum();
+        ViewCache {
+            elements: feed.elements.into(),
+            posts: feed.posts.into(),
+            line_counts: line_counts.into(),
+            total_lines,
+            cached_gen: self.view().message_gen,
         }
-        self.cached_view.as_ref().unwrap()
     }
 
     /// Rebuild caches when inputs changed — O(n) but gated.
@@ -260,8 +249,8 @@ impl AppState {
         let prev_scroll = self.view().scroll;
         let prev_selected_post = self.view().selected_post;
 
-        // Build/rebuild the view cache first.
-        let cache = self.view_cache();
+        // Build the view cache on-demand.
+        let cache = self.build_view_cache();
 
         // Extract needed values before any other mutable operations.
         let posts_len = cache.posts.len();
@@ -312,29 +301,33 @@ impl AppState {
 
     fn snapshot_feed(&mut self) -> Snapshot {
         let view_values = self.extract_view_values();
-        let cache_data = self.extract_cache_data();
-        let (mouse_target, hovered_element) = self.compute_mouse_target(
-            cache_data.clone(),
+        let cache = self.build_view_cache();
+        let (mouse_target, hovered_element) = snapshot_mouse_impl(
+            &cache.elements,
+            &cache.line_counts,
+            cache.total_lines,
             view_values.mouse_position_tuple,
             view_values.last_content_width,
             view_values.last_visible_height,
+            &self.input().input,
+            self.has_models(),
         );
         let current_top = compute_current_top_element(
-            &cache_data.elements,
-            &cache_data.line_counts,
-            cache_data.total_lines,
+            &cache.elements,
+            &cache.line_counts,
+            cache.total_lines,
             view_values.scroll,
             view_values.last_visible_height,
         );
 
         Snapshot {
-            elements: cache_data.elements,
-            line_counts: cache_data.line_counts,
-            total_lines: cache_data.total_lines,
+            elements: cache.elements,
+            line_counts: cache.line_counts,
+            total_lines: cache.total_lines,
             scroll: view_values.scroll,
             content_width: view_values.last_content_width,
             current_top_element: current_top,
-            posts: cache_data.posts,
+            posts: cache.posts,
             selected_post: view_values.selected_post,
             last_visible_height: view_values.last_visible_height,
             mouse_target,
@@ -354,57 +347,5 @@ impl AppState {
             scroll: view.scroll,
             selected_post: view.selected_post,
         }
-    }
-
-    fn extract_cache_data(&mut self) -> CacheData {
-        let cache = self.view_cache();
-        CacheData {
-            elements: Arc::clone(&cache.elements),
-            line_counts: Arc::clone(&cache.line_counts),
-            total_lines: cache.total_lines,
-            posts: Arc::clone(&cache.posts),
-        }
-    }
-
-    fn compute_mouse_target(
-        &mut self,
-        cache: CacheData,
-        mouse_position: (u16, u16),
-        last_content_width: u16,
-        last_visible_height: u16,
-    ) -> (crate::snapshot::MouseTarget, Option<usize>) {
-        // Rebuild a minimal ViewCache from the extracted data.
-        let view_cache = ViewCache {
-            elements: cache.elements,
-            posts: cache.posts,
-            line_counts: cache.line_counts,
-            total_lines: cache.total_lines,
-            cached_gen: 0, // Not used in pure computation
-        };
-        let has_models = self.has_models();
-        let input = self.input();
-        snapshot_mouse_impl(
-            &view_cache,
-            mouse_position,
-            last_content_width,
-            last_visible_height,
-            &input.input,
-            has_models,
-        )
-    }
-
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn view_cache_returns_cached_elements() {
-        let mut state = AppState::__with_cache_for_test();
-        let cache = state.view_cache();
-        // Cache should be initialized (even if empty).
-        assert!(cache.elements.is_empty());
-        assert_eq!(cache.total_lines, 0);
     }
 }

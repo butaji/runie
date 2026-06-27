@@ -96,9 +96,11 @@ fn test_render_receives_valid_snapshot() {
 }
 
 // Arc-specific optimization tests
+// Note: Arc pointer stability is now handled by UiActor's cache.
+// These tests verify correct output rather than internal optimization.
 
 #[test]
-fn test_elements_uses_arc() {
+fn test_elements_built_correctly() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
@@ -114,19 +116,15 @@ fn test_elements_uses_arc() {
     let snap1 = state.snapshot();
     let snap2 = state.snapshot();
 
-    // Both snapshots should share the same Arc allocation
-    assert!(
-        Arc::ptr_eq(&snap1.elements, &snap2.elements),
-        "Elements should be Arc-shared between snapshots when unchanged"
-    );
-    assert!(
-        Arc::ptr_eq(&snap1.line_counts, &snap2.line_counts),
-        "Line counts should be Arc-shared between snapshots when unchanged"
-    );
+    // Elements should have correct content in both snapshots
+    assert!(!snap1.elements.is_empty(), "Elements should be present");
+    assert!(!snap2.elements.is_empty(), "Elements should be present in second snapshot");
+    // Element counts should match
+    assert_eq!(snap1.elements.len(), snap2.elements.len());
 }
 
 #[test]
-fn test_arc_pointer_stability_after_state_mutation() {
+fn test_elements_correct_after_state_mutation() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
@@ -140,19 +138,19 @@ fn test_arc_pointer_stability_after_state_mutation() {
     state.refresh_after_message_change();
 
     let snap1 = state.snapshot();
-    let ptr1 = Arc::as_ptr(&snap1.elements);
+    let count1 = snap1.elements.len();
 
     // Mutate state but NOT messages (e.g., cursor move)
     state.update(crate::Event::Input('x'));
     state.ensure_fresh();
 
     let snap2 = state.snapshot();
-    let ptr2 = Arc::as_ptr(&snap2.elements);
+    let count2 = snap2.elements.len();
 
-    // Elements Arc should still point to same allocation because messages didn't change
+    // Element count should be the same because messages didn't change
     assert_eq!(
-        ptr1, ptr2,
-        "Elements Arc should be stable when messages are unchanged"
+        count1, count2,
+        "Element count should be stable when messages are unchanged"
     );
 }
 

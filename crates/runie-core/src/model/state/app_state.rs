@@ -7,19 +7,19 @@
 //! The `take()` method supports `reset_session()` without requiring a full
 //! struct reassignment.
 
-use std::sync::Arc;
-
 use super::{
     AgentState, CompletionState, ConfigState, FffFileEntry, InputState, SessionState, ViewState,
 };
-use crate::event::TransientLevel;
-use crate::model::view_cache::ViewCache;
 
 /// Application state — a read-only UI projection of actor-owned state.
 ///
 /// Fields are public for test setup; production code should use accessors.
 /// Inner state structs (`session`, `input`, etc.) have private fields that
 /// require accessors to be added incrementally.
+///
+/// NOTE: View projection (Element/Post/Feed) is no longer cached in AppState.
+/// The projection is built on-demand by `ensure_fresh()` and stored in `Snapshot`.
+/// UiActor owns the Element cache for rendering purposes.
 #[derive(Clone)]
 pub struct AppState {
     // 6 inner state structs (factored domain state)
@@ -52,9 +52,6 @@ pub struct AppState {
     pub fff_debounce: u64,
     pub perm_req: Option<crate::model::PermissionRequestState>,
     pub actor_handles: Option<crate::actors::ActorHandles>,
-    // Cached view cache: built lazily when message_gen changes, reused across snapshots.
-    pub(crate) cached_view: Option<ViewCache>,
-    pub(crate) cached_view_gen: u64,
 }
 
 impl Default for AppState {
@@ -83,32 +80,15 @@ impl Default for AppState {
             fff_debounce: 0u64,
             perm_req: None,
             actor_handles: None,
-            cached_view: None,
-            cached_view_gen: 0,
         }
     }
 }
 
 impl AppState {
-    /// Create AppState with initialized cache fields for tests.
-    #[doc(hidden)]
-    pub fn __with_cache_for_test() -> Self {
-        let mut state = Self::default();
-        state.cached_view = Some(ViewCache {
-            elements: Arc::new([]),
-            posts: Arc::new([]),
-            line_counts: Arc::new([]),
-            total_lines: 0,
-            cached_gen: 0,
-        });
-        state.cached_view_gen = 0;
-        state
-    }
-
     /// Create a test AppState with specific transient message.
     #[doc(hidden)]
     pub fn __with_transient_test(msg: Option<String>, level: Option<crate::event::TransientLevel>) -> Self {
-        let mut state = Self::__with_cache_for_test();
+        let mut state = Self::default();
         *state.transient_message_mut() = msg;
         *state.transient_level_mut() = level;
         state
