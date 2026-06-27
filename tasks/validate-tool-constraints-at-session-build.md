@@ -1,6 +1,6 @@
 # Validate tool constraints at session build time
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Tools
 **Priority**: P2
@@ -33,11 +33,23 @@ A call with `auto_background_on_timeout=true` and `enabled_background=false` is 
 
 ## Acceptance Criteria
 
-- Tool schemas can declare parameter constraints in JSON Schema or a small DSL.
-- `TurnActor` validates tool calls against constraints when building the turn.
-- Violations emit a clear `ToolConstraintError` fact and stop the turn early.
-- No per-tool imperative validation code remains.
-- `cargo check --workspace` is green.
+- [x] Tool schemas can declare parameter constraints in JSON Schema or a small DSL.
+- [x] `TurnActor` validates tool calls against constraints when building the turn.
+- [x] Violations emit a clear `ToolConstraintError` fact and stop the turn early.
+- [x] No per-tool imperative validation code remains.
+- [x] `cargo check --workspace` is green.
+
+## Implementation
+
+- Added `crates/runie-core/src/tool/constraints.rs` with DSL for constraint types:
+  - `Constraint::implication(a, b)` - if A is truthy, B must be present
+  - `Constraint::mutex([a, b, c])` - only one field can be set
+  - `Constraint::require_one([a, b])` - at least one field must be set
+  - `Constraint::range(field, min, max)` - numeric range validation
+  - `Constraint::pattern(field, regex)` - regex pattern matching
+- Added `ToolConstraintError` and `TurnConstraintError` events to `event/variants.rs`
+- Integrated constraint validation into event dispatcher
+- Added comprehensive unit tests (Layer 1)
 
 ## Tests
 

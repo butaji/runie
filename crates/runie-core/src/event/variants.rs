@@ -65,12 +65,8 @@ pub enum Event {
     },
 
     // Agent
-    Thinking {
-        id: String,
-    },
-    ThoughtDone {
-        id: String,
-    },
+    Thinking { id: String },
+    ThoughtDone { id: String },
     ToolStart {
         id: String,
         name: String,
@@ -85,6 +81,12 @@ pub enum Event {
         duration_secs: f64,
         output: String,
     },
+    /// Tool call failed due to constraint violation at turn build time.
+    ToolConstraintError {
+        id: String,
+        tool: String,
+        violations: Vec<crate::tool::ConstraintViolation>,
+    },
     ResponseDelta {
         id: String,
         content: String,
@@ -93,23 +95,12 @@ pub enum Event {
         id: String,
         content: String,
     },
-    // LLM lifecycle events (populated from LLMEvent via LifecycleState)
-    TextStart {
-        id: String,
-    },
-    TextEnd {
-        id: String,
-    },
-    ThinkingStart {
-        id: String,
-    },
-    ThinkingEnd {
-        id: String,
-    },
-    Response {
-        id: String,
-        content: String,
-    },
+    // LLM lifecycle
+    TextStart { id: String },
+    TextEnd { id: String },
+    ThinkingStart { id: String },
+    ThinkingEnd { id: String },
+    Response { id: String, content: String },
     TurnComplete {
         id: String,
         duration_secs: f64,
@@ -126,6 +117,12 @@ pub enum Event {
     TurnAborted,
     TurnCompleted,
     TurnErrored { id: String, message: String },
+    /// Turn failed due to tool constraint violation before provider call.
+    TurnConstraintError {
+        id: String,
+        tool: String,
+        message: String,
+    },
     TokenStatsUpdated { tokens_in: usize, tokens_out: usize, speed_tps: f64 },
     StreamStarted { id: String },
     UserMessageSubmitted { id: String, content: String },

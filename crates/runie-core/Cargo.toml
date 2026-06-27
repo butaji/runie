@@ -41,6 +41,7 @@ unicode-width.workspace = true
 textwrap.workspace = true
 notify = "7.0"
 notify-debouncer-mini = "0.5"
+regex = { workspace = true }
 strum = { version = "0.26", features = ["derive"] }
 fff-search.workspace = true
 git2.workspace = true

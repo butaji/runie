@@ -74,6 +74,7 @@ fn dispatcher_handles_all_variants() {
             | Event::ToolStart { .. }
             | Event::ToolInputDelta { .. }
             | Event::ToolEnd { .. }
+            | Event::ToolConstraintError { .. }
             | Event::ResponseDelta { .. }
             | Event::ThinkingDelta { .. }
             | Event::TextStart { .. }
@@ -274,6 +275,11 @@ fn dispatcher_handles_all_variants() {
             Event::TurnCompleted => Event::TurnCompleted,
             Event::TurnErrored { .. } => Event::TurnErrored {
                 id: String::new(),
+                message: String::new(),
+            },
+            Event::TurnConstraintError { .. } => Event::TurnConstraintError {
+                id: String::new(),
+                tool: String::new(),
                 message: String::new(),
             },
             Event::TokenStatsUpdated { .. } => Event::TokenStatsUpdated {

@@ -92,6 +92,7 @@ fn to_turn_msg(event: &Event) -> Option<TurnMsg> {
         Event::TurnComplete { id, duration_secs } => Some(TurnMsg::TurnComplete { id: id.clone(), duration_secs: *duration_secs }),
         Event::Done { id } => Some(TurnMsg::Done { id: id.clone() }),
         Event::Error { id, message } => Some(TurnMsg::Error { id: id.clone(), message: message.clone() }),
+        Event::TurnConstraintError { id, .. } => Some(TurnMsg::Error { id: id.clone(), message: "Tool constraint violation".to_string() }),
         _ => None,
     }
 }

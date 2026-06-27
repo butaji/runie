@@ -10,6 +10,7 @@
 //! and handles execution. There is no separate `Tool` trait or `ToolRegistry`;
 //! tools are MCP tools by definition.
 
+mod constraints;
 mod context;
 mod format;
 pub mod parse;
@@ -19,6 +20,10 @@ pub mod types;
 #[cfg(test)]
 mod tests;
 
+pub use constraints::{
+    validate as validate_constraints, validate_constraint, Constraint, ConstraintViolation,
+    ValidationResult,
+};
 pub use context::{ToolContext, ToolOutput, ToolStatus};
 pub use format::{
     compact_json_args, format_bytes, format_duration, format_tool_label, tool_error,

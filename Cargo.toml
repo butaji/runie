@@ -32,6 +32,7 @@ diffy = "0.5"
 backon = "1.6"
 rmcp = { version = "1.8", features = ["schemars", "server"] }
 schemars = "1.0"
+regex = "1.10"
 
 insta = { version = "1.41", features = ["yaml"] }
 tempfile = "3"
