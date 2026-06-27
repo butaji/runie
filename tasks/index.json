@@ -332,7 +332,7 @@
   {
     "file": "runie-mcp-server-management-cli.md",
     "title": "Runie Mcp Server Management Cli",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "session-actor-owns-session-state.md",

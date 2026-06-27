@@ -16,6 +16,7 @@ mod json;
 mod server;
 mod acp;
 mod inspect;
+mod mcp;
 
 fn print_usage() {
     eprintln!(
@@ -26,7 +27,8 @@ Commands:
   inspect           Show runtime configuration for current directory
   json              JSON stdin/stdout for scripting
   server            TCP/stdio JSON-RPC server
-  acp               ACP (Agent Client Protocol) over stdio
+  acp               ACP (Agent Client Protocol) over stdio for programmatic control
+  mcp               Manage MCP servers (list, add, remove)
 
 Options:
   --help, -h        Show this help
@@ -48,6 +50,7 @@ fn main() {
         "json" => block_on(run_json()),
         "server" => block_on(run_server(&args[2..])),
         "acp" => block_on(acp::run()),
+        "mcp" => mcp::run(&args[2..]),
         other => { eprintln!("Unknown command: {other}"); print_usage(); std::process::exit(1); }
     };
     if let Err(e) = result {

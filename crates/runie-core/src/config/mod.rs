@@ -15,6 +15,10 @@ pub mod layers;
 mod validate;
 pub mod schema;
 pub mod migrate;
+pub mod mcp;
+
+// Re-export MCP types for convenience
+pub use mcp::{McpSection, McpServer, McpTransport};
 
 // ============================================================================
 // Models Section
@@ -205,6 +209,9 @@ pub struct Config {
     /// Permission settings.
     #[serde(default)]
     pub permissions: PermissionsSection,
+    /// MCP server configurations.
+    #[serde(default)]
+    pub mcp: mcp::McpSection,
 }
 
 impl Config {
