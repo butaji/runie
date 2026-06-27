@@ -57,7 +57,7 @@
   {
     "file": "decouple-appstate-from-view-cache.md",
     "title": "Decouple AppState from view-AST cache",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "generic-actor-reply.md",
