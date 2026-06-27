@@ -2,87 +2,87 @@
   {
     "file": "actor-lifecycle-and-handle-registry.md",
     "title": "Actor Lifecycle And Handle Registry",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "actor-owned-state-ssot.md",
     "title": "Actor Owned State Ssot",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-runie-inspect-command.md",
     "title": "Add Runie Inspect Command",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "adopt-mcp-native-tool-calling.md",
     "title": "Adopt Mcp Native Tool Calling",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "app-state-read-only-projection.md",
     "title": "App State Read Only Projection",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "built-in-subagent-types.md",
     "title": "Built In Subagent Types",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "bundle-default-resources-with-manifest.md",
     "title": "Bundle Default Resources With Manifest",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-error-type.md",
     "title": "Centralize Error Type",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "collapse-headless-binaries-into-one-cli.md",
     "title": "Collapse Headless Binaries Into One Cli",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "completion-actor-owns-completion-state.md",
     "title": "Completion Actor Owns Completion State",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "config-ssot-via-configactor.md",
     "title": "Config Ssot Via Configactor",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "consolidate-config-modules-into-dir.md",
     "title": "Consolidate Config Modules Into Dir",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "consolidate-dual-path-modules.md",
     "title": "Consolidate Dual Path Modules",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "consolidate-login-flow-handlers.md",
     "title": "Consolidate Login Flow Handlers",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "consolidate-login-logout-tests.md",
     "title": "Consolidate Login Logout Tests",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "consolidate-settings-providers-dialog.md",
     "title": "Consolidate Settings Providers Dialog",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "consolidate-update-dialog-files.md",
     "title": "Consolidate Update Dialog Files",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "declarative-actor-dsl.md",
@@ -92,87 +92,87 @@
   {
     "file": "declarative-permission-rules.md",
     "title": "Declarative Permission Rules",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "decouple-appstate-from-view-cache.md",
     "title": "Decouple Appstate From View Cache",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "dedupe-git-status-formatter.md",
     "title": "Dedupe Git Status Formatter",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-async-io-bridge.md",
     "title": "Delete Async Io Bridge",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-config-reload-shim.md",
     "title": "Delete Config Reload Shim",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "drop-event-bus-replay-buffer.md",
     "title": "Drop Event Bus Replay Buffer",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "drop-small-stdlib-replaceable-deps.md",
     "title": "Drop Small Stdlib Replaceable Deps",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "env-actor-owns-git-cwd.md",
     "title": "Env Actor Owns Git Cwd",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "event-taxonomy-for-actor-state-sync.md",
     "title": "Event Taxonomy For Actor State Sync",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "expose-runie-via-acp-stdio.md",
     "title": "Expose Runie Via Acp Stdio",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "externalize-model-metadata-as-yaml.md",
     "title": "Externalize Model Metadata As Yaml",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "extract-headless-cli-helper.md",
     "title": "Extract Headless Cli Helper",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fff-indexer-owns-file-picker-results.md",
     "title": "Fff Indexer Owns File Picker Results",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "finish-io-migration.md",
     "title": "Finish Io Migration",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fold-runie-engine-into-agent.md",
     "title": "Fold Runie Engine Into Agent",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fold-state-into-model-state.md",
     "title": "Fold State Into Model State",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fold-testing-into-agent-tests.md",
     "title": "Fold Testing Into Agent Tests",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "frontmatter-based-skills-dsl.md",
@@ -187,27 +187,27 @@
   {
     "file": "generate-config-schema-from-code.md",
     "title": "Generate Config Schema From Code",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "generate-ui-elements-from-model.md",
     "title": "Generate Ui Elements From Model",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "generic-actor-reply.md",
     "title": "Generic Actor Reply",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "input-actor-owns-input-state.md",
     "title": "Input Actor Owns Input State",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "leader-actor-shared-runtime.md",
     "title": "Leader Actor Shared Runtime",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "make-mcp-the-only-tool-boundary.md",
@@ -222,77 +222,77 @@
   {
     "file": "move-tui-effects-into-io-actor.md",
     "title": "Move Tui Effects Into Io Actor",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "notification-actor-owns-transient-messages.md",
     "title": "Notification Actor Owns Transient Messages",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "permission-actor-owns-approvals.md",
     "title": "Permission Actor Owns Approvals",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "r5-paced-text-rendering.md",
     "title": "R5 Paced Text Rendering",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "r5-partial-json-repair.md",
     "title": "R5 Partial Json Repair",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "r5-per-channel-decoders.md",
     "title": "R5 Per Channel Decoders",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "r5-populate-parts-streaming.md",
     "title": "R5 Populate Parts Streaming",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "r5-provider-protocol-trait.md",
     "title": "R5 Provider Protocol Trait",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "reconsider-clipboard-image-deps.md",
     "title": "Reconsider Clipboard Image Deps",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "reconsider-redb-session-store.md",
     "title": "Reconsider Redb Session Store",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "reduce-actor-handle-boilerplate.md",
     "title": "Reduce Actor Handle Boilerplate",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "relocate-loose-tests-files.md",
     "title": "Relocate Loose Tests Files",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-direct-appstate-mutations.md",
     "title": "Remove Direct Appstate Mutations",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-login-config-test-shim.md",
     "title": "Remove Login Config Test Shim",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "rename-core-ui-to-view.md",
     "title": "Rename Core Ui To View",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-actor-runtime-with-ractor.md",
@@ -302,32 +302,32 @@
   {
     "file": "replace-diff-parser-with-diffy.md",
     "title": "Replace Diff Parser With Diffy",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-git2-with-cli.md",
     "title": "Replace Git2 With Cli",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-markdown-renderer-with-tui-markdown.md",
     "title": "Replace Markdown Renderer With Tui Markdown",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-retry-with-backon.md",
     "title": "Replace Retry With Backon",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-single-use-deps-with-stdlib.md",
     "title": "Replace Single Use Deps With Stdlib",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-sse-framing-with-reqwest-eventsource.md",
     "title": "Replace Sse Framing With Reqwest Eventsource",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "runie-mcp-server-management-cli.md",
@@ -337,12 +337,12 @@
   {
     "file": "session-actor-owns-session-state.md",
     "title": "Session Actor Owns Session State",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "simplify-actor-trait.md",
     "title": "Simplify Actor Trait",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "split-runie-core-into-domain-and-io-crates.md",
@@ -352,42 +352,42 @@
   {
     "file": "standardize-headless-output-streaming-json.md",
     "title": "Standardize Headless Output Streaming Json",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "standardize-test-layout-inline.md",
     "title": "Standardize Test Layout Inline",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "test-actor-harness.md",
     "title": "Test Actor Harness",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "trust-actor-owns-trust-decisions.md",
     "title": "Trust Actor Owns Trust Decisions",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "turn-actor-owns-agent-turn-state.md",
     "title": "Turn Actor Owns Agent Turn State",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "ui-control-actor-owns-dialog-state.md",
     "title": "Ui Control Actor Owns Dialog State",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unified-dsl-intents-for-state-mutations.md",
     "title": "Unified Dsl Intents For State Mutations",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-approval-decision.md",
     "title": "Unify Approval Decision",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-duplicate-module-names-core-tui.md",
@@ -397,12 +397,12 @@
   {
     "file": "unify-persistence-actors.md",
     "title": "Unify Persistence Actors",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-provider-modules.md",
     "title": "Unify Provider Modules",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-provider-stack-with-rig-core.md",
@@ -417,6 +417,6 @@
   {
     "file": "view-actor-owns-view-state.md",
     "title": "View Actor Owns View State",
-    "status": "todo"
+    "status": "done"
   }
 ]
