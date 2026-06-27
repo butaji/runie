@@ -1,6 +1,6 @@
 # Move provider registry and model catalog into runie-provider
 
-**Status**: blocked
+**Status**: todo
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0

@@ -122,7 +122,7 @@
   {
     "file": "fold-testing-into-agent-tests.md",
     "title": "Fold runie-testing into runie-agent tests",
-    "status": "cancelled"
+    "status": "todo"
   },
   {
     "file": "fff-indexer-owns-file-picker-results.md",
@@ -162,7 +162,7 @@
   {
     "file": "move-provider-catalog-to-provider-crate.md",
     "title": "Move provider registry and model catalog into runie-provider",
-    "status": "blocked"
+    "status": "todo"
   },
   {
     "file": "delete-config-reload-shim.md",

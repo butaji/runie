@@ -1,6 +1,6 @@
 # Tasks Directory
 
-**Status**: done
+**Status**: todo
 
 This directory contains the active task list for Runie development.
 
