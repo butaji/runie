@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use crate::actors::{
-    CompletionActorHandle, ConfigActorHandle, FffSearchRequest, InputActorHandle,
+    CompletionActorHandle, ConfigActorHandle, FffSearchRequest, RactorInputHandle,
     IoActorHandle, PermissionActorHandle, ProviderActorHandle, SessionActorHandle,
     TrustActorHandle, TurnActorHandle, ViewActorHandle,
 };
@@ -19,7 +19,7 @@ pub struct ActorHandles {
     pub session: Option<SessionActorHandle>,
     pub io: Option<IoActorHandle>,
     pub fff_indexer: Option<FffIndexerHandle>,
-    pub input: Option<InputActorHandle>,
+    pub input: Option<RactorInputHandle>,
     pub permission: Option<PermissionActorHandle>,
     pub view: Option<ViewActorHandle>,
     pub completion: Option<CompletionActorHandle>,
@@ -194,7 +194,7 @@ impl ActorHandles {
     }
 
     pub fn try_send_input(&self, msg: crate::actors::InputMsg) {
-        if let Some(ref h) = self.input { h.try_send(msg); }
+        if let Some(ref h) = self.input { let _ = h.try_send(msg); }
     }
 
     pub async fn send_resolve_permission(&self, request_id: String, action: crate::permissions::PermissionAction) {

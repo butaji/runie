@@ -1,340 +1,83 @@
 //! `InputActor` — owns the authoritative `InputState`.
+//!
+//! This actor uses the ractor framework for actor supervision and message handling.
 
-use tokio::sync::mpsc;
+use ractor::{Actor, ActorProcessingErr, ActorRef};
+use ractor::async_trait;
+use std::sync::Mutex;
 
-use crate::actors::{spawn_actor, Actor, ActorHandle};
+use crate::actors::ractor_adapter::{EventBusBridge, RactorHandle, spawn_ractor};
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::InputState;
 
-use super::messages::{InputActorHandle, InputMsg};
+use super::messages::InputMsg;
 
-/// Actor that owns input state.
+/// Handle type for InputActor using ractor.
+pub type RactorInputHandle = RactorHandle<InputMsg>;
+
+/// Ractor-based InputActor.
 ///
 /// Text editing, cursor navigation, history, and undo/redo are all mutations
 /// that live here. The actor processes `InputMsg` messages and emits
 /// `InputChanged` facts when state changes.
 pub struct InputActor {
-    /// The authoritative input state.
-    state: InputState,
+    /// The authoritative input state (protected by mutex for interior mutability).
+    state: Mutex<InputState>,
+    /// Bridge to the event bus for publishing facts.
+    bus_bridge: EventBusBridge<Event>,
+}
+
+#[async_trait]
+impl Actor for InputActor {
+    type Msg = InputMsg;
+    type State = ();
+    type Arguments = EventBus<Event>;
+
+    async fn pre_start(
+        &self,
+        _myself: ActorRef<Self::Msg>,
+        _args: Self::Arguments,
+    ) -> Result<Self::State, ActorProcessingErr> {
+        Ok(())
+    }
+
+    async fn handle(
+        &self,
+        _myself: ActorRef<Self::Msg>,
+        msg: Self::Msg,
+        _state: &mut Self::State,
+    ) -> Result<(), ActorProcessingErr> {
+        let (new_state, emit) = {
+            let mut state = self.state.lock().unwrap();
+            // Delegate to the apply_to method which handles all state mutations
+            InputMsg::apply_to(&msg, &mut state);
+            let should_emit = true;
+            (state.clone(), should_emit)
+        };
+        if emit {
+            self.bus_bridge.publish(Event::InputChanged {
+                state: Box::new(new_state),
+            });
+        }
+        Ok(())
+    }
 }
 
 impl InputActor {
-    /// Spawn an `InputActor` on the given event bus.
-    pub fn spawn(bus: EventBus<Event>) -> (InputActorHandle, ActorHandle) {
+    /// Spawn an `InputActor` on the given event bus using ractor.
+    pub async fn spawn(bus: EventBus<Event>) -> (RactorInputHandle, ractor::ActorCell) {
         let actor = Self {
-            state: InputState::default(),
+            state: Mutex::new(InputState::default()),
+            bus_bridge: EventBusBridge::new(bus.clone()),
         };
-        let (tx, handle) = spawn_actor(actor, bus);
-        (InputActorHandle::new(tx), handle)
-    }
-
-    /// Dispatch an incoming message to the appropriate handler.
-    fn handle_msg(&mut self, msg: InputMsg) {
-        match msg {
-            InputMsg::InsertChar(c) => self.insert_char(c),
-            InputMsg::Backspace => self.backspace(),
-            InputMsg::Newline => self.newline(),
-            InputMsg::DeleteWord => self.delete_word(),
-            InputMsg::DeleteToEnd => self.delete_to_end(),
-            InputMsg::DeleteToStart => self.delete_to_start(),
-            InputMsg::KillChar => self.kill_char(),
-            InputMsg::Paste(text) => self.paste(&text),
-            InputMsg::PasteImage => self.paste_image(),
-            InputMsg::CursorLeft => self.cursor_left(),
-            InputMsg::CursorRight => self.cursor_right(),
-            InputMsg::CursorStart => self.cursor_start(),
-            InputMsg::CursorEnd => self.cursor_end(),
-            InputMsg::CursorWordLeft => self.cursor_word_left(),
-            InputMsg::CursorWordRight => self.cursor_word_right(),
-            InputMsg::MoveCursor { pos } => self.move_cursor_to(pos),
-            InputMsg::HistoryPrev => self.history_prev(),
-            InputMsg::HistoryNext => self.history_next(),
-            InputMsg::Undo => self.undo(),
-            InputMsg::Redo => self.redo(),
-            InputMsg::SetText { text } => self.set_text(text),
-            InputMsg::SetPrompt { name } => self.state.current_prompt = name,
-            InputMsg::Clear => self.clear(),
-            InputMsg::HistoryLoaded { entries } => self.state.input_history = entries,
-            InputMsg::DrainQueue { messages } => self.drain_queue(messages),
-            InputMsg::InsertAtRef { text } => self.insert_at_ref(&text),
-            InputMsg::FilePickerAbort => self.file_picker_abort(),
-        }
-    }
-
-    // ── Text editing ───────────────────────────────────────────────────────
-
-    fn insert_char(&mut self, c: char) {
-        self.push_undo();
-        if self.state.cursor_pos == self.state.input.len() {
-            self.state.input.push(c);
-        } else {
-            self.state.input.insert(self.state.cursor_pos, c);
-        }
-        self.state.cursor_pos += c.len_utf8();
-        self.clear_redo();
-    }
-
-    fn backspace(&mut self) {
-        if self.state.cursor_pos > 0 {
-            self.push_undo();
-            let new_pos = self.state.cursor_pos - 1;
-            self.state.input.remove(new_pos);
-            self.state.cursor_pos = new_pos;
-            self.clear_redo();
-        }
-    }
-
-    fn newline(&mut self) {
-        self.push_undo();
-        if self.state.cursor_pos == self.state.input.len() {
-            self.state.input.push('\n');
-        } else {
-            self.state.input.insert(self.state.cursor_pos, '\n');
-        }
-        self.state.cursor_pos += 1;
-        self.clear_redo();
-    }
-
-    fn delete_word(&mut self) {
-        if self.state.cursor_pos == 0 {
-            return;
-        }
-        let start = crate::update::input::find_word_boundary_left(
-            &self.state.input,
-            self.state.cursor_pos,
-        );
-        self.push_undo();
-        self.state.input.drain(start..self.state.cursor_pos);
-        self.state.cursor_pos = start;
-        self.clear_redo();
-    }
-
-    fn delete_to_end(&mut self) {
-        if self.state.cursor_pos < self.state.input.len() {
-            self.push_undo();
-            self.state.input.truncate(self.state.cursor_pos);
-            self.clear_redo();
-        }
-    }
-
-    fn delete_to_start(&mut self) {
-        if self.state.cursor_pos > 0 {
-            self.push_undo();
-            self.state.input.drain(..self.state.cursor_pos);
-            self.state.cursor_pos = 0;
-            self.clear_redo();
-        }
-    }
-
-    fn kill_char(&mut self) {
-        if self.state.cursor_pos < self.state.input.len() {
-            let end = crate::update::input::next_grapheme_boundary(
-                &self.state.input,
-                self.state.cursor_pos,
-            );
-            self.push_undo();
-            self.state.input.drain(self.state.cursor_pos..end);
-            self.clear_redo();
-        }
-    }
-
-    fn paste(&mut self, text: &str) {
-        let clean = text
-            .replace("\r\n", "")
-            .replace(['\r', '\n'], "")
-            .replace('\t', "    ");
-        if clean.is_empty() {
-            return;
-        }
-        self.push_undo();
-        self.state.input.insert_str(self.state.cursor_pos, &clean);
-        self.state.cursor_pos += clean.len();
-        self.clear_redo();
-    }
-
-    fn paste_image(&mut self) {
-        // Image paste was removed — just flash.
-        self.state.input_flash = 3;
-    }
-
-    // ── Cursor navigation ──────────────────────────────────────────────────
-
-    fn cursor_left(&mut self) {
-        if self.state.cursor_pos > 0 {
-            let pos = self.state.cursor_pos;
-            self.state.cursor_pos =
-                crate::update::input::prev_grapheme_boundary(&self.state.input, pos);
-        }
-    }
-
-    fn cursor_right(&mut self) {
-        if self.state.cursor_pos < self.state.input.len() {
-            let pos = self.state.cursor_pos;
-            self.state.cursor_pos =
-                crate::update::input::next_grapheme_boundary(&self.state.input, pos);
-        }
-    }
-
-    fn cursor_start(&mut self) {
-        self.state.cursor_pos = 0;
-    }
-
-    fn cursor_end(&mut self) {
-        self.state.cursor_pos = self.state.input.len();
-    }
-
-    fn cursor_word_left(&mut self) {
-        if self.state.cursor_pos > 0 {
-            let pos = self.state.cursor_pos;
-            self.state.cursor_pos =
-                crate::update::input::find_word_boundary_left(&self.state.input, pos);
-        }
-    }
-
-    fn cursor_word_right(&mut self) {
-        if self.state.cursor_pos < self.state.input.len() {
-            let pos = self.state.cursor_pos;
-            self.state.cursor_pos =
-                crate::update::input::find_word_boundary_right(&self.state.input, pos);
-        }
-    }
-
-    fn move_cursor_to(&mut self, pos: usize) {
-        self.state.cursor_pos = pos.min(self.state.input.len());
-    }
-
-    // ── History & undo/redo ────────────────────────────────────────────────
-
-    fn push_undo(&mut self) {
-        self.state
-            .undo_stack
-            .push((self.state.input.clone(), self.state.cursor_pos));
-    }
-
-    fn clear_redo(&mut self) {
-        self.state.redo_stack.clear();
-    }
-
-    fn undo(&mut self) {
-        if let Some((text, pos)) = self.state.undo_stack.pop() {
-            self.state
-                .redo_stack
-                .push((self.state.input.clone(), self.state.cursor_pos));
-            self.state.input = text;
-            self.state.cursor_pos = pos;
-        }
-    }
-
-    fn redo(&mut self) {
-        if let Some((text, pos)) = self.state.redo_stack.pop() {
-            self.state
-                .undo_stack
-                .push((self.state.input.clone(), self.state.cursor_pos));
-            self.state.input = text;
-            self.state.cursor_pos = pos;
-        }
-    }
-
-    fn history_prev(&mut self) {
-        if self.state.input_history.is_empty() {
-            self.state.input_flash = 3;
-            return;
-        }
-        let pos = match self.state.history_pos {
-            Some(p) if p > 0 => p - 1,
-            Some(p) => p,
-            None => self.state.input_history.len() - 1,
-        };
-        self.state.history_pos = Some(pos);
-        self.state.input = self.state.input_history[pos].clone();
-        self.state.cursor_pos = self.state.input.len();
-    }
-
-    fn history_next(&mut self) {
-        let pos = match self.state.history_pos {
-            Some(p) => p + 1,
-            None => return,
-        };
-        if pos >= self.state.input_history.len() {
-            self.state.history_pos = None;
-            self.state.input.clear();
-            self.state.cursor_pos = 0;
-        } else {
-            self.state.history_pos = Some(pos);
-            self.state.input = self.state.input_history[pos].clone();
-            self.state.cursor_pos = self.state.input.len();
-        }
-    }
-
-    // ── State mutations ────────────────────────────────────────────────────
-
-    fn set_text(&mut self, text: String) {
-        self.push_undo();
-        self.state.input = text;
-        self.state.cursor_pos = self.state.input.len();
-        self.clear_redo();
-    }
-
-    fn clear(&mut self) {
-        self.state.input.clear();
-        self.state.cursor_pos = 0;
-        self.state.history_pos = None;
-        self.state.undo_stack.clear();
-        self.state.redo_stack.clear();
-        self.state.input_scroll = 0;
-    }
-
-    fn drain_queue(&mut self, messages: Vec<String>) {
-        let mut combined = String::new();
-        for msg in messages {
-            if !combined.is_empty() {
-                combined.push('\n');
-            }
-            combined.push_str(&msg);
-        }
-        if !combined.is_empty() {
-            self.push_undo();
-            if !self.state.input.is_empty() && !self.state.input.ends_with('\n') {
-                self.state.input.push('\n');
-            }
-            self.state.input.push_str(&combined);
-            self.state.cursor_pos = self.state.input.len();
-            self.clear_redo();
-        }
-    }
-
-    fn insert_at_ref(&mut self, text: &str) {
-        self.push_undo();
-        self.state.input.insert_str(self.state.cursor_pos, text);
-        self.state.cursor_pos += text.len();
-        self.clear_redo();
-    }
-
-    fn file_picker_abort(&mut self) {
-        if let Some((input, cursor, _, _)) = self.state.file_picker_backup.take() {
-            self.state.input = input;
-            self.state.cursor_pos = cursor;
-        }
+        let (handle, _join, cell) = spawn_ractor(None, actor, bus).await.unwrap();
+        (handle, cell)
     }
 
     #[cfg(test)]
-    pub fn state(&self) -> &InputState {
-        &self.state
-    }
-}
-
-impl Actor for InputActor {
-    type Msg = InputMsg;
-    type Event = Event;
-
-    async fn run_body(mut self, mut rx: mpsc::Receiver<Self::Msg>, bus: EventBus<Event>) {
-        while let Some(msg) = rx.recv().await {
-            self.handle_msg(msg.clone());
-            bus.publish(Event::InputChanged {
-                state: Box::new(self.state.clone()),
-            });
-        }
+    pub fn state(&self) -> InputState {
+        self.state.lock().unwrap().clone()
     }
 }
 
@@ -347,13 +90,16 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let mut sub = bus.subscribe();
 
-        let (handle, _actor) = InputActor::spawn(bus);
+        let (handle, _cell) = InputActor::spawn(bus.clone()).await;
         handle.send(InputMsg::InsertChar('h')).await;
         handle.send(InputMsg::InsertChar('i')).await;
         drop(handle);
 
+        // Give the actor time to process
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
         let mut events = Vec::new();
-        while let Ok(e) = sub.recv().await {
+        while let Ok(e) = sub.try_recv() {
             if matches!(e, Event::InputChanged { .. }) {
                 events.push(e);
             }
@@ -373,7 +119,7 @@ mod tests {
     #[tokio::test]
     async fn history_prev_cycles() {
         let bus = EventBus::<Event>::new(16);
-        let (handle, _actor) = InputActor::spawn(bus);
+        let (handle, _cell) = InputActor::spawn(bus).await;
 
         handle
             .send(InputMsg::HistoryLoaded {
@@ -387,7 +133,7 @@ mod tests {
     #[tokio::test]
     async fn clear_resets_everything() {
         let bus = EventBus::<Event>::new(16);
-        let (handle, _actor) = InputActor::spawn(bus);
+        let (handle, _cell) = InputActor::spawn(bus).await;
 
         handle.send(InputMsg::InsertChar('t')).await;
         handle.send(InputMsg::InsertChar('e')).await;

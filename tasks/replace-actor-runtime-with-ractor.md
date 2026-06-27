@@ -22,7 +22,8 @@ Replace the home-grown `Actor` trait, `spawn_actor`, `ActorHandle`, and `Reply` 
 - [x] Ractor-based InputActor receives messages
 - [x] `cargo check --workspace` is green with no new warnings
 
-### Phase 2: Actor Migration (PENDING)
+### Phase 2: Actor Migration (IN PROGRESS)
+- [ ] InputActor migrated to ractor (COMPLETE)
 - [ ] Migrate remaining actors to ractor (can proceed incrementally)
 - [ ] Event-bus integration and request/response patterns preserved
 - [ ] Update task list to reflect progress
@@ -33,6 +34,7 @@ Replace the home-grown `Actor` trait, `spawn_actor`, `ActorHandle`, and `Reply` 
 - [x] `crates/runie-core/src/actors/ractor_adapter.rs` provides thin wrapper layer.
 - [x] Proof-of-concept: InputActor can spawn and receive messages via ractor.
 - [x] `cargo check --workspace` is green with no new warnings.
+- [x] InputActor fully migrated to ractor.
 - [ ] Remaining actors migrated incrementally to ractor.
 - [ ] Event-bus integration and request/response patterns preserved.
 
@@ -62,6 +64,13 @@ The migration is being done incrementally:
 4. Existing actors remain unchanged; they can be migrated one at a time
 
 ### Migration Strategy
-1. Start with InputActor (POC already exists)
+1. Start with InputActor (COMPLETE - fully migrated to ractor)
 2. Migrate one actor at a time, ensuring tests pass
 3. Maintain backward compatibility during transition
+
+### InputActor Migration Details
+- InputActor now uses ractor's Actor trait with async_trait
+- State is protected by Mutex for interior mutability in async context
+- EventBusBridge integrates with the shared EventBus
+- RactorInputHandle provides the same send/try_send interface as the old GenericActorHandle
+- All existing tests pass with the new implementation

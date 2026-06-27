@@ -83,7 +83,7 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
     let (io_handle, _io_actor) = IoActor::spawn(bus.clone());
     let (permission_handle, _permission_actor) = PermissionActor::spawn(bus.clone());
     // InputActor owns the input buffer, cursor, history, undo/redo.
-    let (input_handle, _input_actor) = runie_core::actors::InputActor::spawn(bus.clone());
+    let (input_handle, _input_actor) = runie_core::actors::InputActor::spawn(bus.clone()).await;
     // TurnActor owns turn lifecycle, queues, and token tracking.
     let (turn_handle, _turn_actor) = TurnActor::spawn(bus.clone());
     let mut state = AppState::default();

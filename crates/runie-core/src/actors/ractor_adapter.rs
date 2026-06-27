@@ -101,7 +101,7 @@ pub struct RactorHandle<Msg: ractor::Message> {
 }
 
 impl<Msg: ractor::Message> RactorHandle<Msg> {
-    /// Send a message to the actor.
+    /// Send a message to the actor (fire-and-forget).
     pub async fn send(&self, msg: Msg) {
         let _ = self.actor_ref.send_message(msg);
     }
@@ -110,6 +110,11 @@ impl<Msg: ractor::Message> RactorHandle<Msg> {
     /// Returns Ok(()) if the message was sent, Err(MessagingErr) if the channel is closed.
     pub fn try_send(&self, msg: Msg) -> Result<(), ractor::MessagingErr<Msg>> {
         self.actor_ref.send_message(msg)
+    }
+
+    /// Get the actor cell for supervision.
+    pub fn cell(&self) -> ractor::ActorCell {
+        self.actor_ref.get_cell()
     }
 }
 

@@ -41,7 +41,9 @@ pub use fff_indexer::{
     FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
     FffSearchState, format_git_status,
 };
-pub use input::{InputActor, InputActorHandle, InputMsg};
+pub use input::{InputActor, RactorInputHandle, InputMsg};
+#[allow(deprecated)]
+pub use input::InputActorHandle;
 pub use io::{IoActor, IoActorHandle, IoMsg};
 pub use provider::{
     BuiltProvider, ProviderActor, ProviderActorHandle, ProviderFactory, ProviderMsg,

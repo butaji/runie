@@ -43,74 +43,90 @@ use std::pin::Pin;
 // ---------------------------------------------------------------------------
 // Event mapping: rig-core StreamedAssistantContent → ProviderEvent
 // ---------------------------------------------------------------------------
+// Helper functions for streaming content mapping
+// ---------------------------------------------------------------------------
+
+fn map_text_content(text: String) -> Vec<ProviderEvent> {
+    vec![
+        ProviderEvent::TextStart { id: "text".to_string() },
+        ProviderEvent::TextDelta(text),
+    ]
+}
+
+fn map_tool_call_content(
+    tool_call: rig_core::completion::message::ToolCall,
+    internal_call_id: String,
+) -> Vec<ProviderEvent> {
+    let mut events = vec![ProviderEvent::ToolCallStart {
+        id: internal_call_id.clone(),
+        name: tool_call.function.name.clone(),
+    }];
+    // Parse arguments from the tool call
+    if let Ok(args) = serde_json::to_string(&tool_call.function.arguments) {
+        if !args.is_empty() && args != "null" {
+            events.push(ProviderEvent::ToolCallInputDelta {
+                id: internal_call_id.clone(),
+                delta: args,
+            });
+        }
+    }
+    events.push(ProviderEvent::ToolCallEnd { id: internal_call_id });
+    events
+}
+
+fn map_tool_call_delta(
+    internal_call_id: String,
+    content: rig_core::streaming::ToolCallDeltaContent,
+) -> Vec<ProviderEvent> {
+    match content {
+        rig_core::streaming::ToolCallDeltaContent::Name(name) => {
+            vec![ProviderEvent::ToolCallStart { id: internal_call_id, name }]
+        }
+        rig_core::streaming::ToolCallDeltaContent::Delta(args) => {
+            vec![ProviderEvent::ToolCallInputDelta { id: internal_call_id, delta: args }]
+        }
+    }
+}
+
+fn map_reasoning_content(reasoning: &rig_core::completion::message::Reasoning) -> Vec<ProviderEvent> {
+    let rid = reasoning.id.clone().unwrap_or_else(|| "reasoning".to_string());
+    let mut events = vec![
+        ProviderEvent::ThinkingStart { id: rid.clone() },
+    ];
+    // Extract text from reasoning content blocks
+    for block in &reasoning.content {
+        if let ReasoningContent::Text { text, .. } = block {
+            events.push(ProviderEvent::ThinkingDelta(text.clone()));
+        }
+    }
+    events.push(ProviderEvent::ThinkingEnd { id: rid });
+    events
+}
+
+fn map_reasoning_delta(id: Option<String>, reasoning: String) -> Vec<ProviderEvent> {
+    let rid = id.unwrap_or_else(|| "reasoning".to_string());
+    vec![
+        ProviderEvent::ThinkingStart { id: rid.clone() },
+        ProviderEvent::ThinkingDelta(reasoning),
+        ProviderEvent::ThinkingEnd { id: rid },
+    ]
+}
 
 /// Maps rig-core streaming content to one or more runie ProviderEvents.
 fn map_streamed_content(
     content: StreamedAssistantContent<StreamingCompletionResponse>,
 ) -> Vec<ProviderEvent> {
     use StreamedAssistantContent::*;
-    let mut events = Vec::new();
-
     match content {
-        Text(text) => {
-            events.push(ProviderEvent::TextStart { id: "text".to_string() });
-            events.push(ProviderEvent::TextDelta(text.text));
-        }
-        ToolCall { tool_call, internal_call_id } => {
-            events.push(ProviderEvent::ToolCallStart {
-                id: internal_call_id.clone(),
-                name: tool_call.function.name.clone(),
-            });
-            // Parse arguments from the tool call
-            if let Ok(args) = serde_json::to_string(&tool_call.function.arguments) {
-                if !args.is_empty() && args != "null" {
-                    events.push(ProviderEvent::ToolCallInputDelta {
-                        id: internal_call_id.clone(),
-                        delta: args,
-                    });
-                }
-            }
-            events.push(ProviderEvent::ToolCallEnd { id: internal_call_id });
-        }
+        Text(text) => map_text_content(text.text),
+        ToolCall { tool_call, internal_call_id } => map_tool_call_content(tool_call, internal_call_id),
         ToolCallDelta { id: _, internal_call_id, content } => {
-            match content {
-                rig_core::streaming::ToolCallDeltaContent::Name(name) => {
-                    events.push(ProviderEvent::ToolCallStart {
-                        id: internal_call_id,
-                        name,
-                    });
-                }
-                rig_core::streaming::ToolCallDeltaContent::Delta(args) => {
-                    events.push(ProviderEvent::ToolCallInputDelta {
-                        id: internal_call_id,
-                        delta: args,
-                    });
-                }
-            }
+            map_tool_call_delta(internal_call_id, content)
         }
-        Reasoning(reasoning) => {
-            let rid = reasoning.id.clone().unwrap_or_else(|| "reasoning".to_string());
-            events.push(ProviderEvent::ThinkingStart { id: rid.clone() });
-            // Extract text from reasoning content blocks
-            for block in &reasoning.content {
-                if let ReasoningContent::Text { text, .. } = block {
-                    events.push(ProviderEvent::ThinkingDelta(text.clone()));
-                }
-            }
-            events.push(ProviderEvent::ThinkingEnd { id: rid });
-        }
-        ReasoningDelta { id, reasoning } => {
-            let rid = id.unwrap_or_else(|| "reasoning".to_string());
-            events.push(ProviderEvent::ThinkingStart { id: rid.clone() });
-            events.push(ProviderEvent::ThinkingDelta(reasoning));
-            events.push(ProviderEvent::ThinkingEnd { id: rid });
-        }
-        Final(_) => {
-            // Final event - handled by the Finish event emission
-        }
+        Reasoning(reasoning) => map_reasoning_content(&reasoning),
+        ReasoningDelta { id, reasoning } => map_reasoning_delta(id, reasoning),
+        Final(_) => vec![],
     }
-
-    events
 }
 
 // ---------------------------------------------------------------------------
@@ -120,64 +136,79 @@ fn map_streamed_content(
 /// Convert a runie ChatMessage to a rig-core completion Message.
 fn chat_message_to_rig(msg: &ChatMessage) -> Option<Message> {
     match msg.role.as_str() {
-        "system" => {
-            let text = msg.content();
-            Some(Message::System { content: text })
-        }
-        "user" => {
-            let text = msg.content();
-            Some(Message::User {
-                content: OneOrMany::one(UserContent::Text(RigText::new(text))),
-            })
-        }
-        "assistant" => {
-            let text = msg.content();
-            let tool_calls: Vec<RigToolCall> = msg
-                .tool_calls()
-                .iter()
-                .map(|tc| RigToolCall {
-                    id: tc.id.clone(),
-                    call_id: None,
-                    function: ToolFunction {
-                        name: tc.name.clone(),
-                        arguments: tc.args.clone(),
-                    },
-                    additional_params: None,
-                    signature: None,
-                })
-                .collect();
-
-            let mut content_items = Vec::new();
-            if !text.is_empty() {
-                content_items.push(AssistantContent::Text(RigText::new(text)));
-            }
-            for tc in tool_calls {
-                content_items.push(AssistantContent::ToolCall(tc));
-            }
-
-            // Create content with OneOrMany
-            let content = if content_items.is_empty() {
-                OneOrMany::one(AssistantContent::Text(RigText::new(String::new())))
-            } else {
-                OneOrMany::one(content_items.pop().unwrap_or(AssistantContent::Text(RigText::new(String::new()))))
-            };
-
-            Some(Message::Assistant { id: None, content })
-        }
-        "tool" => {
-            let text = msg.content();
-            let tool_call_id = msg.tool_call_id.clone().unwrap_or_default();
-            // Tool results are represented as User messages with ToolResult content
-            Some(Message::User {
-                content: OneOrMany::one(UserContent::ToolResult(ToolResult {
-                    id: tool_call_id,
-                    call_id: None,
-                    content: OneOrMany::one(ToolResultContent::Text(RigText::new(text))),
-                })),
-            })
-        }
+        "system" => convert_system_message(msg),
+        "user" => convert_user_message(msg),
+        "assistant" => convert_assistant_message(msg),
+        "tool" => convert_tool_message(msg),
         _ => None,
     }
+}
+
+fn convert_system_message(msg: &ChatMessage) -> Option<Message> {
+    let text = msg.content();
+    Some(Message::System { content: text })
+}
+
+fn convert_user_message(msg: &ChatMessage) -> Option<Message> {
+    let text = msg.content();
+    Some(Message::User {
+        content: OneOrMany::one(UserContent::Text(RigText::new(text))),
+    })
+}
+
+fn tool_calls_to_rig(msg: &ChatMessage) -> Vec<RigToolCall> {
+    msg.tool_calls()
+        .iter()
+        .map(|tc| RigToolCall {
+            id: tc.id.clone(),
+            call_id: None,
+            function: ToolFunction {
+                name: tc.name.clone(),
+                arguments: tc.args.clone(),
+            },
+            additional_params: None,
+            signature: None,
+        })
+        .collect()
+}
+
+fn build_assistant_content(text: &str, tool_calls: Vec<RigToolCall>) -> AssistantContent {
+    let mut content_items = Vec::new();
+    if !text.is_empty() {
+        content_items.push(AssistantContent::Text(RigText::new(text.to_string())));
+    }
+    for tc in tool_calls {
+        content_items.push(AssistantContent::ToolCall(tc));
+    }
+
+    if content_items.is_empty() {
+        AssistantContent::Text(RigText::new(String::new()))
+    } else {
+        content_items.pop().unwrap_or(AssistantContent::Text(RigText::new(String::new())))
+    }
+}
+
+fn convert_assistant_message(msg: &ChatMessage) -> Option<Message> {
+    let text = msg.content();
+    let tool_calls = tool_calls_to_rig(msg);
+    let content = build_assistant_content(&text, tool_calls);
+    Some(Message::Assistant {
+        id: None,
+        content: OneOrMany::one(content),
+    })
+}
+
+fn convert_tool_message(msg: &ChatMessage) -> Option<Message> {
+    let text = msg.content();
+    let tool_call_id = msg.tool_call_id.clone().unwrap_or_default();
+    // Tool results are represented as User messages with ToolResult content
+    Some(Message::User {
+        content: OneOrMany::one(UserContent::ToolResult(ToolResult {
+            id: tool_call_id,
+            call_id: None,
+            content: OneOrMany::one(ToolResultContent::Text(RigText::new(text))),
+        })),
+    })
 }
 
 // ---------------------------------------------------------------------------

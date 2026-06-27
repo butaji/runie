@@ -75,6 +75,9 @@ pub enum InputMsg {
 }
 
 /// Handle for sending messages to `InputActor`.
+// Deprecated: kept for backward compatibility during migration.
+#[allow(dead_code)]
+#[deprecated(since = "0.2.16", note = "Use RactorInputHandle from actor.rs")]
 pub type InputActorHandle = GenericActorHandle<InputMsg>;
 
 /// Synchronous application of an `InputMsg` to `InputState`.
