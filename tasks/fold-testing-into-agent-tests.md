@@ -1,6 +1,6 @@
 # Fold runie-testing into runie-agent tests
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P3

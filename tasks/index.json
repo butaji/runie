@@ -122,7 +122,7 @@
   {
     "file": "fold-testing-into-agent-tests.md",
     "title": "Fold runie-testing into runie-agent tests",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fff-indexer-owns-file-picker-results.md",
