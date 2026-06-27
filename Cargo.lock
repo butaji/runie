@@ -3068,6 +3068,7 @@ dependencies = [
  "notify-debouncer-mini",
  "pulldown-cmark",
  "redb",
+ "regex",
  "reqwest",
  "rmcp",
  "runie-macros",

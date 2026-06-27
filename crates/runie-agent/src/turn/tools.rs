@@ -21,7 +21,6 @@ pub async fn execute_tools(
     gate: &PermissionGate,
 ) {
     let ctx = ToolContext::default();
-    let registry = crate::tool::builtin_registry();
 
     for tool_call in tools {
         *tool_call_count += 1;
@@ -31,7 +30,6 @@ pub async fn execute_tools(
             emit.clone(),
             skills,
             &ctx,
-            &registry,
             gate,
         )
         .await;
@@ -54,7 +52,6 @@ pub async fn execute_single_tool(
     emit: EmitFn,
     skills: Option<&SkillRegistry>,
     ctx: &ToolContext,
-    registry: &runie_core::tool::ToolRegistry,
     gate: &PermissionGate,
 ) -> ToolOutput {
     emit_tool_start(cmd_id, tool_call, &emit);
@@ -63,7 +60,7 @@ pub async fn execute_single_tool(
         return output;
     }
 
-    let output = execute_tool_call(registry, tool_call, ctx, gate).await;
+    let output = execute_tool_call(tool_call, ctx, gate).await;
     fire_tool_after_hook(skills, tool_call, &output);
 
     output

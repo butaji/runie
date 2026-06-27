@@ -9,7 +9,9 @@ use crate::tool::{
 };
 use crate::PermissionGate;
 use runie_core::harness_skills::{SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult};
-use runie_core::message::{ChatMessage, Part, Role};
+use runie_core::message::{ChatMessage, Part};
+#[cfg(test)]
+use runie_core::message::Role;
 use runie_core::permissions::{PermissionAction, PermissionContext};
 use runie_core::tool::{parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus};
 use runie_core::tool::ParsedToolCall;

@@ -64,6 +64,7 @@ pub trait ToolDef: Send + Sync {
     const REQUIRES_APPROVAL: bool = true;
 
     /// Execute the tool with typed input and context.
+    #[allow(async_fn_in_trait)]
     async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput;
 }
 
