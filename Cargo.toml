@@ -45,3 +45,4 @@ runie-provider = { path = "crates/runie-provider" }
 runie-testing = { path = "crates/runie-testing" }
 runie-protocol = { path = "crates/runie-protocol" }
 runie-macros = { path = "crates/runie-macros" }
+rig-core = "0.39"

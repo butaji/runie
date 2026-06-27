@@ -412,7 +412,7 @@
   {
     "file": "unify-provider-stack-with-rig-core.md",
     "title": "Unify provider stack with `rig-core`",
-    "status": "todo"
+    "status": "in_progress"
   },
   {
     "file": "validate-tool-constraints-at-session-build.md",

@@ -20,6 +20,8 @@ rand = "0.8"
 async-stream = "0.3"
 bytes = "1.0"
 reqwest-eventsource = "0.6"
+rig-core.workspace = true
+pin-project = "1.1"
 
 [dev-dependencies]
 insta.workspace = true
