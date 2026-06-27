@@ -1,16 +1,51 @@
 //! Tests for canonical tool execution via `runie_core::tool`.
 
-use runie_core::tool::{ToolContext, ToolStatus};
-use crate::tool::builtin_registry;
+use runie_core::tool::{parse_input, ToolContext, ToolDef, ToolStatus, ToolOutput};
+use crate::tool::{
+    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool,
+    ListDirTool, ReadFileTool, SearchTool, WriteFileTool,
+};
 
-async fn call_tool(name: &str, args: serde_json::Value) -> runie_core::tool::ToolOutput {
-    let registry = builtin_registry();
-    let tool = registry
-        .get(name)
-        .unwrap_or_else(|| panic!("unknown tool: {}", name));
-    tool.call(args, &ToolContext::default())
-        .await
-        .unwrap_or_else(|e| panic!("tool {} failed: {}", name, e))
+async fn call_tool(name: &str, args: serde_json::Value) -> ToolOutput {
+    dispatch_tool(name, &args).await
+}
+
+/// Dispatch a tool call by name using static dispatch.
+async fn dispatch_tool(name: &str, args: &serde_json::Value) -> ToolOutput {
+    match name {
+        "bash" => run_tool::<BashTool>(args).await,
+        "read_file" => run_tool::<ReadFileTool>(args).await,
+        "write_file" => run_tool::<WriteFileTool>(args).await,
+        "edit_file" => run_tool::<EditFileTool>(args).await,
+        "list_dir" => run_tool::<ListDirTool>(args).await,
+        "grep" => run_tool::<GrepTool>(args).await,
+        "find" => run_tool::<FindTool>(args).await,
+        "fetch_docs" => run_tool::<FetchDocsTool>(args).await,
+        "search" => run_tool::<SearchTool>(args).await,
+        "find_definitions" => run_tool::<FindDefinitionsTool>(args).await,
+        _ => ToolOutput {
+            tool_name: name.to_string(),
+            tool_args: args.clone(),
+            content: format!("Unknown tool: {}", name),
+            bytes_transferred: None,
+            duration: std::time::Duration::from_millis(0),
+            status: ToolStatus::Error,
+        },
+    }
+}
+
+async fn run_tool<T: ToolDef>(args: &serde_json::Value) -> ToolOutput {
+    match parse_input::<T::Input>(args) {
+        Ok(i) => T::execute(i, &ToolContext::default()).await,
+        Err(e) => ToolOutput {
+            tool_name: T::NAME.to_string(),
+            tool_args: args.clone(),
+            content: format!("Failed to parse tool input: {}", e),
+            bytes_transferred: None,
+            duration: std::time::Duration::from_millis(0),
+            status: ToolStatus::Error,
+        },
+    }
 }
 
 #[tokio::test]

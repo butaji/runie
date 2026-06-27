@@ -1,13 +1,11 @@
 //! ListDir tool — lists directory contents.
 
-use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
-use anyhow::Result;
-use async_trait::async_trait;
+use crate::tool::{ToolContext, ToolOutput, ToolStatus};
 use runie_core::path::resolve_path_in;
+use runie_core::tool::ToolDef;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::Value;
 use std::time::Instant;
 
 /// Input parameters for list_dir tool.
@@ -36,45 +34,46 @@ impl ListDirTool {
         names.sort();
         names
     }
-
-    /// Generate JSON schema for this tool's input.
-    pub fn input_schema() -> Value {
-        runie_core::tool::generate_schema::<ListDirInput>()
-    }
 }
 
-#[async_trait]
-impl Tool for ListDirTool {
-    fn name(&self) -> &str { "list_dir" }
-    fn description(&self) -> &str { "List files and directories in a given path." }
-    fn input_schema(&self) -> Value {
-        Self::input_schema()
-    }
-    fn is_read_only(&self) -> bool { true }
-    fn requires_approval(&self, _input: &Value) -> bool { false }
+impl ToolDef for ListDirTool {
+    type Input = ListDirInput;
 
-    async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
+    const NAME: &'static str = "list_dir";
+    const DESCRIPTION: &'static str = "List files and directories in a given path.";
+    const READ_ONLY: bool = true;
+    const REQUIRES_APPROVAL: bool = false;
+
+    async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput {
         let start = Instant::now();
-        let typed: ListDirInput = serde_json::from_value(input)?;
-        let path_str = typed.path.as_deref().unwrap_or(".");
+        let path_str = input.path.as_deref().unwrap_or(".");
         let full_path = resolve_path_in(path_str, &ctx.working_dir);
         let tool_args = serde_json::json!({ "path": path_str });
 
-        let dir = tokio::fs::read_dir(&full_path).await?;
+        let dir = match tokio::fs::read_dir(&full_path).await {
+            Ok(d) => d,
+            Err(e) => {
+                return ToolOutput::error(
+                    "list_dir",
+                    tool_args,
+                    format!("Error reading directory {}: {}", full_path.display(), e),
+                );
+            }
+        };
         let names = Self::collect_entries(dir).await;
         let content = if names.is_empty() {
             "(empty directory)"
         } else {
             &names.join("\n")
         };
-        Ok(ToolOutput {
+        ToolOutput {
             tool_name: "list_dir".into(),
             tool_args,
             content: content.to_string(),
             bytes_transferred: None,
             duration: start.elapsed(),
             status: ToolStatus::Success,
-        })
+        }
     }
 }
 
@@ -98,16 +97,15 @@ mod tests {
 
     #[test]
     fn input_schema_generates() {
-        let schema = ListDirTool::input_schema();
+        let schema = runie_core::tool::generate_schema::<ListDirInput>();
         assert!(schema.is_object());
     }
 
     #[tokio::test]
     async fn tool_call_executes() {
-        let input = serde_json::json!({ "path": "." });
+        let input = ListDirInput { path: Some(".".to_string()) };
         let ctx = ToolContext::default();
-        let tool = ListDirTool;
-        let result = tool.call(input, &ctx).await;
-        assert!(result.is_ok());
+        let result = ListDirTool::execute(input, &ctx).await;
+        assert_eq!(result.status, ToolStatus::Success);
     }
 }

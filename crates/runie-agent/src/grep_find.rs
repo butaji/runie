@@ -1,5 +1,4 @@
 use runie_core::tool::parse_tool_calls;
-use crate::tool::builtin_registry;
 
 #[test]
 fn parse_grep_tool_json() {
@@ -21,11 +20,4 @@ fn parse_find_tool_json() {
     assert_eq!(tools[0].name, "find");
     assert_eq!(tools[0].args["pattern"], "*.rs");
     assert_eq!(tools[0].args["path"], "src");
-}
-
-#[test]
-fn grep_and_find_registered() {
-    let registry = builtin_registry();
-    assert!(registry.get("grep").is_some());
-    assert!(registry.get("find").is_some());
 }

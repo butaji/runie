@@ -1,12 +1,10 @@
 //! FetchDocs tool — fetches documentation from context7.com.
 
-use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
-use anyhow::Result;
-use async_trait::async_trait;
+use crate::tool::{ToolContext, ToolOutput, ToolStatus};
+use runie_core::tool::ToolDef;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::Value;
 use std::time::Instant;
 
 /// Input parameters for fetch_docs tool.
@@ -21,41 +19,34 @@ pub struct FetchDocsTool;
 const SEARCH_URL: &str = "https://context7.com/api/v2/libs/search";
 const DOC_BASE: &str = "https://context7.com";
 
-#[async_trait]
-impl Tool for FetchDocsTool {
-    fn name(&self) -> &str { "fetch_docs" }
-    fn description(&self) -> &str {
-        "Fetch documentation for a library from context7.com."
-    }
-    fn input_schema(&self) -> Value {
-        runie_core::tool::generate_schema::<FetchDocsInput>()
-    }
-    fn is_read_only(&self) -> bool { true }
-    fn requires_approval(&self, _input: &Value) -> bool { false }
+impl ToolDef for FetchDocsTool {
+    type Input = FetchDocsInput;
 
-    async fn call(&self, input: Value, _ctx: &ToolContext) -> Result<ToolOutput> {
+    const NAME: &'static str = "fetch_docs";
+    const DESCRIPTION: &'static str = "Fetch documentation for a library from context7.com.";
+    const READ_ONLY: bool = true;
+    const REQUIRES_APPROVAL: bool = false;
+
+    async fn execute(input: Self::Input, _ctx: &ToolContext) -> ToolOutput {
         let start = Instant::now();
-        let typed: FetchDocsInput = serde_json::from_value(input)?;
-        let library = &typed.library;
-
-        let result = fetch_docs(library).await;
+        let result = fetch_docs(&input.library).await;
 
         let (content, status) = match result {
             Ok(output) => (output, ToolStatus::Success),
             Err(e) => (
-                format!("Error fetching docs for '{}': {}", library, e),
+                format!("Error fetching docs for '{}': {}", input.library, e),
                 ToolStatus::Error,
             ),
         };
 
-        Ok(ToolOutput {
+        ToolOutput {
             tool_name: "fetch_docs".to_owned(),
-            tool_args: serde_json::to_value(&typed)?,
+            tool_args: serde_json::to_value(&input).unwrap_or_default(),
             content,
             bytes_transferred: None,
             duration: start.elapsed(),
             status,
-        })
+        }
     }
 }
 

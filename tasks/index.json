@@ -212,7 +212,7 @@
   {
     "file": "make-mcp-the-only-tool-boundary.md",
     "title": "Make Mcp The Only Tool Boundary",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "move-provider-catalog-to-provider-crate.md",

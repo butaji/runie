@@ -18,7 +18,7 @@ pub(crate) fn search_files(
     limit: usize,
     indexed: bool,
     start: Instant,
-) -> anyhow::Result<ToolOutput> {
+) -> ToolOutput {
     let parsed = QueryParser::default().parse(query);
     let results = picker.fuzzy_search(
         &parsed,
@@ -53,7 +53,7 @@ pub(crate) fn search_content(
     limit: usize,
     indexed: bool,
     start: Instant,
-) -> anyhow::Result<ToolOutput> {
+) -> ToolOutput {
     let parsed = QueryParser::default().parse(query);
     let results = picker.grep(
         &parsed,
@@ -93,7 +93,7 @@ pub(crate) fn search_glob(
     limit: usize,
     indexed: bool,
     start: Instant,
-) -> anyhow::Result<ToolOutput> {
+) -> ToolOutput {
     let results = picker.glob(
         pattern,
         FuzzySearchOptions {
@@ -150,7 +150,7 @@ fn build_search_output(
     items: Vec<SearchItem>,
     indexed: bool,
     start: Instant,
-) -> anyhow::Result<ToolOutput> {
+) -> ToolOutput {
     let result = SearchResult {
         total,
         items,
@@ -161,12 +161,12 @@ fn build_search_output(
     } else {
         serde_json::json!({ "query": query })
     };
-    Ok(ToolOutput {
+    ToolOutput {
         tool_name: "search".to_owned(),
         tool_args,
-        content: serde_json::to_string_pretty(&result)?,
+        content: serde_json::to_string_pretty(&result).unwrap_or_default(),
         bytes_transferred: None,
         duration: start.elapsed(),
         status: ToolStatus::Success,
-    })
+    }
 }

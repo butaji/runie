@@ -1,114 +1,81 @@
-use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::Result;
-use async_trait::async_trait;
 use serde_json::Value;
 
 use crate::path::resolve_path_in as resolve_path;
 use crate::tool::{
-    format_bytes, format_duration, format_tool_label, tool_error, tool_status_line, Tool,
-    ToolContext, ToolOutput, ToolRegistry, ToolStatus,
+    format_bytes, format_duration, format_tool_label, tool_error, tool_status_line, ToolContext,
+    ToolDef, ToolOutput, ToolStatus,
 };
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
+// Test tool definition
 struct TestTool;
 
-#[async_trait]
-impl Tool for TestTool {
-    fn name(&self) -> &str {
-        "test_tool"
-    }
-    fn description(&self) -> &str {
-        "A test tool"
-    }
-    fn input_schema(&self) -> Value {
-        serde_json::json!({
-            "type": "object",
-            "properties": {
-                "input": {"type": "string"}
-            }
-        })
-    }
-    async fn call(&self, _input: Value, _ctx: &ToolContext) -> Result<ToolOutput> {
-        Ok(ToolOutput {
-            tool_name: "noop".to_string(),
-            tool_args: serde_json::Value::Null,
-            content: "done".to_string(),
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+struct TestToolInput {
+    input: String,
+}
+
+#[derive(Debug, Default)]
+struct TestToolOutput {
+    content: String,
+}
+
+impl TestTool {
+    fn execute_impl(input: TestToolInput) -> ToolOutput {
+        ToolOutput {
+            tool_name: "test_tool".to_string(),
+            tool_args: serde_json::to_value(&input).unwrap_or_default(),
+            content: format!("processed: {}", input.input),
             bytes_transferred: None,
             duration: Duration::from_millis(1),
             status: ToolStatus::Success,
-        })
+        }
     }
 }
 
+impl ToolDef for TestTool {
+    type Input = TestToolInput;
+
+    const NAME: &'static str = "test_tool";
+    const DESCRIPTION: &'static str = "A test tool";
+    const READ_ONLY: bool = false;
+    const REQUIRES_APPROVAL: bool = false;
+
+    async fn execute(input: Self::Input, _ctx: &ToolContext) -> ToolOutput {
+        Self::execute_impl(input)
+    }
+}
+
+// Read-only test tool
 struct ReadOnlyTestTool;
 
-#[async_trait]
-impl Tool for ReadOnlyTestTool {
-    fn name(&self) -> &str {
-        "read_only_test"
-    }
-    fn description(&self) -> &str {
-        "A read-only tool"
-    }
-    fn input_schema(&self) -> Value {
-        serde_json::json!({"type": "object", "properties": {}})
-    }
-    fn is_read_only(&self) -> bool {
-        true
-    }
-    async fn call(&self, _input: Value, _ctx: &ToolContext) -> Result<ToolOutput> {
-        Ok(ToolOutput {
+#[derive(Debug, Deserialize, JsonSchema)]
+struct ReadOnlyToolInput {}
+
+impl ToolDef for ReadOnlyTestTool {
+    type Input = ReadOnlyToolInput;
+
+    const NAME: &'static str = "read_only_test";
+    const DESCRIPTION: &'static str = "A read-only tool";
+    const READ_ONLY: bool = true;
+    const REQUIRES_APPROVAL: bool = false;
+
+    async fn execute(_input: Self::Input, _ctx: &ToolContext) -> ToolOutput {
+        ToolOutput {
             tool_name: "read_only_test".to_string(),
             tool_args: serde_json::Value::Null,
             content: "read done".to_string(),
             bytes_transferred: None,
             duration: Duration::from_millis(1),
             status: ToolStatus::Success,
-        })
+        }
     }
 }
 
-#[tokio::test]
-async fn registry_registers_and_retrieves_tool() {
-    let mut registry = ToolRegistry::new();
-    registry.register(Arc::new(TestTool));
-    let tool = registry.get("test_tool");
-    assert!(tool.is_some());
-    assert_eq!(tool.unwrap().name(), "test_tool");
-}
-
-#[tokio::test]
-async fn registry_schemas_include_name_and_description() {
-    let mut registry = ToolRegistry::new();
-    registry.register(Arc::new(TestTool));
-    let schemas = registry.schemas();
-    assert_eq!(schemas.len(), 1);
-    assert_eq!(schemas[0]["name"], "test_tool");
-    assert_eq!(schemas[0]["description"], "A test tool");
-    assert!(schemas[0]["input_schema"].is_object());
-}
-
-#[tokio::test]
-async fn read_only_tool_returns_true() {
-    let ro = ReadOnlyTestTool;
-    assert!(ro.is_read_only());
-    let rw = TestTool;
-    assert!(!rw.is_read_only());
-}
-
-#[tokio::test]
-async fn tool_output_records_bytes_and_duration() {
-    let tool = TestTool;
-    let ctx = ToolContext::default();
-    let output = tool
-        .call(serde_json::json!({"input": "test"}), &ctx)
-        .await
-        .unwrap();
-    assert!(output.duration.as_millis() >= 1);
-    assert_eq!(output.status, ToolStatus::Success);
-    assert_eq!(output.content, "done");
-}
+// ── format helpers ────────────────────────────────────────────────────────
 
 #[test]
 fn format_tool_label_with_args() {
@@ -261,4 +228,26 @@ fn tool_error_warning_flag_reports_success() {
     let start = std::time::Instant::now();
     let out = tool_error("grep", "no matches", start, true);
     assert_eq!(out.status, ToolStatus::Success);
+}
+
+// ── ToolDef trait tests ─────────────────────────────────────────────────
+
+#[tokio::test]
+async fn tool_def_executes_and_returns_output() {
+    let input = TestToolInput {
+        input: "hello".to_string(),
+    };
+    let ctx = ToolContext::default();
+    let output = TestTool::execute(input, &ctx).await;
+    assert_eq!(output.tool_name, "test_tool");
+    assert_eq!(output.status, ToolStatus::Success);
+    assert!(output.content.contains("processed: hello"));
+}
+
+#[test]
+fn tool_def_constants_are_accessible() {
+    assert_eq!(TestTool::NAME, "test_tool");
+    assert_eq!(ReadOnlyTestTool::NAME, "read_only_test");
+    assert!(!TestTool::READ_ONLY);
+    assert!(ReadOnlyTestTool::READ_ONLY);
 }

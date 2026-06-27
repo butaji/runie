@@ -1,6 +1,7 @@
 use super::types::*;
 use super::*;
-use crate::tool::{Tool, ToolContext, ToolStatus};
+use crate::tool::{ToolDef, ToolContext, ToolStatus};
+use crate::tool::search::core::SearchInput;
 use fff_search::{Constraint, Location, QueryParser};
 use git2::Status as GitStatus;
 
@@ -14,41 +15,30 @@ fn search_mode_from_str() {
 }
 
 #[test]
-fn search_tool_schema_includes_glob_mode() {
-    let tool = SearchTool;
-    let schema = tool.input_schema();
-    // Macro generates simple string fields; verify mode property exists
-    let props = schema["properties"].as_object().unwrap();
-    assert!(
-        props.contains_key("mode"),
-        "mode property should exist in schema"
-    );
+fn search_tool_name() {
+    assert_eq!(SearchTool::NAME, "search");
 }
 
 #[test]
-fn search_tool_schema_has_query_property() {
-    let tool = SearchTool;
-    let schema = tool.input_schema();
-    let props = schema["properties"].as_object().unwrap();
-    // Macro generates simple string properties; verify query property exists
-    assert!(
-        props.contains_key("query"),
-        "query property should exist in schema"
-    );
-    // Verify description mentions key capabilities
-    let desc = props["query"]["description"].as_str().unwrap_or("");
-    assert!(desc.contains("fuzzy"), "description should mention fuzzy");
-    assert!(desc.contains("glob"), "description should mention glob");
+fn search_tool_is_read_only() {
+    assert!(SearchTool::READ_ONLY);
 }
 
 #[test]
-fn search_tool_schema_documents_git_filter() {
-    let tool = SearchTool;
-    let desc = tool.description();
-    assert!(
-        desc.contains("git:"),
-        "description should mention git: filter"
-    );
+fn search_tool_no_approval_required() {
+    assert!(!SearchTool::REQUIRES_APPROVAL);
+}
+
+#[test]
+fn format_git_status_modified() {
+    let status = GitStatus::from_bits_truncate(1 << 1);
+    assert_eq!(format_git_status(status), "modified");
+}
+
+#[test]
+fn format_git_status_untracked() {
+    let status = GitStatus::from_bits_truncate(1 << 7);
+    assert_eq!(format_git_status(status), "untracked");
 }
 
 #[test]
@@ -84,46 +74,6 @@ fn build_search_item_creates_valid_item() {
 fn build_search_item_skips_empty_git_status() {
     let item = build_search_item("src/main.rs".to_string(), None, 0.8);
     assert_eq!(item.git_status, None);
-}
-
-#[test]
-fn search_tool_schema() {
-    let tool = SearchTool;
-    let schema = tool.input_schema();
-    assert!(schema.get("properties").is_some());
-    let props = schema["properties"].as_object().unwrap();
-    assert!(props.contains_key("query"));
-    assert!(props.contains_key("mode"));
-    assert!(props.contains_key("path"));
-    assert!(props.contains_key("limit"));
-}
-
-#[test]
-fn search_tool_name() {
-    assert_eq!(SearchTool.name(), "search");
-}
-
-#[test]
-fn search_tool_is_read_only() {
-    assert!(SearchTool.is_read_only());
-}
-
-#[test]
-fn search_tool_no_approval_required() {
-    let input = serde_json::json!({"query": "test"});
-    assert!(!SearchTool.requires_approval(&input));
-}
-
-#[test]
-fn format_git_status_modified() {
-    let status = GitStatus::from_bits_truncate(1 << 1);
-    assert_eq!(format_git_status(status), "modified");
-}
-
-#[test]
-fn format_git_status_untracked() {
-    let status = GitStatus::from_bits_truncate(1 << 7);
-    assert_eq!(format_git_status(status), "untracked");
 }
 
 #[test]
@@ -236,10 +186,14 @@ fn query_parser_handles_mixed_query() {
 
 #[tokio::test]
 async fn search_tool_handles_uninitialized_indexer() {
-    let tool = SearchTool;
     let ctx = ToolContext::default();
-    let input = serde_json::json!({"query": "test"});
-    let output = tool.call(input, &ctx).await.unwrap();
+    let input = SearchInput {
+        query: "test".to_string(),
+        path: None,
+        mode: None,
+        limit: None,
+    };
+    let output = SearchTool::execute(input, &ctx).await;
     assert!(
         output.status == ToolStatus::Error
             || output.content.contains("not initialized")

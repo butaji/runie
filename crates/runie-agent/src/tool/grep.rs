@@ -1,15 +1,12 @@
 //! Grep tool — searches for patterns in files.
 
 use crate::tool::which_tool_async;
-use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
-use anyhow::Result;
-use async_trait::async_trait;
+use crate::tool::{ToolContext, ToolOutput, ToolStatus};
 use runie_core::path::resolve_path_in;
-use runie_core::tool::tool_error;
+use runie_core::tool::{tool_error, ToolDef};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::Value;
 use std::time::Instant;
 use tokio::process::Command;
 
@@ -36,29 +33,24 @@ pub struct GrepInput {
 
 pub struct GrepTool;
 
-#[async_trait]
-impl Tool for GrepTool {
-    fn name(&self) -> &str { "grep" }
-    fn description(&self) -> &str {
-        "Search for patterns in files using ripgrep (rg) or grep."
-    }
-    fn input_schema(&self) -> Value {
-        runie_core::tool::generate_schema::<GrepInput>()
-    }
-    fn is_read_only(&self) -> bool { true }
-    fn requires_approval(&self, _input: &Value) -> bool { false }
+impl ToolDef for GrepTool {
+    type Input = GrepInput;
 
-    async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
+    const NAME: &'static str = "grep";
+    const DESCRIPTION: &'static str = "Search for patterns in files using ripgrep (rg) or grep.";
+    const READ_ONLY: bool = true;
+    const REQUIRES_APPROVAL: bool = false;
+
+    async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput {
         let start = Instant::now();
-        let typed: GrepInput = serde_json::from_value(input)?;
-        let full_path = resolve_path_in(&typed.path, &ctx.working_dir);
+        let full_path = resolve_path_in(&input.path, &ctx.working_dir);
         run_grep_impl(
-            &typed.pattern,
+            &input.pattern,
             &full_path,
-            typed.glob.as_deref(),
-            typed.ignore_case.unwrap_or(false),
-            typed.literal.unwrap_or(false),
-            typed.limit.unwrap_or(100),
+            input.glob.as_deref(),
+            input.ignore_case.unwrap_or(false),
+            input.literal.unwrap_or(false),
+            input.limit.unwrap_or(100),
             start,
         )
         .await
@@ -73,31 +65,31 @@ async fn run_grep_impl(
     literal: bool,
     limit: usize,
     start: Instant,
-) -> Result<ToolOutput> {
+) -> ToolOutput {
     let tool = select_grep_tool().await;
     let args = build_grep_args(pattern, path, glob, ignore_case, literal, limit);
     let output = match run_grep_command(tool, &args).await {
         Ok(o) => o,
         Err(e) => {
-            return Ok(tool_error(
+            return tool_error(
                 "grep",
                 &format!("Error running grep: {}", e),
                 start,
                 false,
-            ))
+            )
         }
     };
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     let (content, status) = parse_grep_output(&stdout, &stderr, output.status.code());
-    Ok(build_grep_output(
+    build_grep_output(
         pattern,
         path,
         content,
         status,
         stdout.len(),
         start,
-    ))
+    )
 }
 
 async fn select_grep_tool() -> &'static str {

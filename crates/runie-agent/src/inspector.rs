@@ -1,14 +1,17 @@
 //! Tool inspector pipeline — middleware for tool execution.
 //!
-//! Chains `Inspector` hooks around calls to the canonical [`runie_core::tool::Tool`]
-//! registry: `before_call` runs before the tool, `after_call` runs after (with the
+//! Chains `Inspector` hooks around calls to built-in tools via the `ToolDef`
+//! trait: `before_call` runs before the tool, `after_call` runs after (with the
 //! output).
 
 use std::sync::Arc;
 use std::time::Instant;
 
-use runie_core::tool::{ToolContext, ToolOutput, ToolRegistry, ToolStatus};
-use crate::tool::builtin_registry;
+use runie_core::tool::{parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus};
+use crate::tool::{
+    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool,
+    ListDirTool, ReadFileTool, SearchTool, WriteFileTool,
+};
 
 /// A single hook in the inspector pipeline.
 pub trait Inspector: Send + Sync {
@@ -22,19 +25,15 @@ pub trait Inspector: Send + Sync {
     fn after_call(&self, _tool_name: &str, _output: &ToolOutput) {}
 }
 
-/// Pipeline that runs a sequence of inspectors around a canonical tool call.
+/// Pipeline that runs a sequence of inspectors around a tool call.
 pub struct ToolPipeline {
     inspectors: Vec<Arc<dyn Inspector>>,
-    registry: ToolRegistry,
 }
 
 impl ToolPipeline {
     /// Create a new pipeline from a vec of boxed inspectors.
     pub fn new(inspectors: Vec<Arc<dyn Inspector>>) -> Self {
-        Self {
-            inspectors,
-            registry: builtin_registry(),
-        }
+        Self { inspectors }
     }
 
     /// Add an inspector to the end of the pipeline.
@@ -58,7 +57,7 @@ impl ToolPipeline {
             }
         }
 
-        let output = dispatch_tool(&self.registry, name, input, ctx).await;
+        let output = dispatch_tool(name, input, ctx).await;
 
         for insp in &self.inspectors {
             insp.after_call(name, &output);
@@ -79,29 +78,49 @@ fn blocked_output(name: &str, input: serde_json::Value, msg: &str) -> ToolOutput
     }
 }
 
+/// Dispatch a tool call by name using static dispatch.
 async fn dispatch_tool(
-    registry: &ToolRegistry,
     name: &str,
     input: serde_json::Value,
     ctx: &ToolContext,
 ) -> ToolOutput {
-    match registry.get(name) {
-        Some(tool) => tool.call(input, ctx).await.unwrap_or_else(|e| ToolOutput {
-            tool_name: name.to_owned(),
-            tool_args: serde_json::Value::Null,
-            content: format!("Tool execution failed: {}", e),
-            bytes_transferred: None,
-            duration: Instant::now().elapsed(),
-            status: ToolStatus::Error,
-        }),
-        None => ToolOutput {
-            tool_name: name.to_owned(),
-            tool_args: serde_json::Value::Null,
-            content: format!("Error: unknown tool '{}'", name),
+    match name {
+        "bash" => run_tool::<BashTool>(&input, ctx).await,
+        "read_file" => run_tool::<ReadFileTool>(&input, ctx).await,
+        "write_file" => run_tool::<WriteFileTool>(&input, ctx).await,
+        "edit_file" => run_tool::<EditFileTool>(&input, ctx).await,
+        "list_dir" => run_tool::<ListDirTool>(&input, ctx).await,
+        "grep" => run_tool::<GrepTool>(&input, ctx).await,
+        "find" => run_tool::<FindTool>(&input, ctx).await,
+        "fetch_docs" => run_tool::<FetchDocsTool>(&input, ctx).await,
+        "search" => run_tool::<SearchTool>(&input, ctx).await,
+        "find_definitions" => run_tool::<FindDefinitionsTool>(&input, ctx).await,
+        _ => unknown_tool_output(name, input),
+    }
+}
+
+async fn run_tool<T: ToolDef>(input: &serde_json::Value, ctx: &ToolContext) -> ToolOutput {
+    match parse_input::<T::Input>(input) {
+        Ok(i) => T::execute(i, ctx).await,
+        Err(e) => ToolOutput {
+            tool_name: T::NAME.to_string(),
+            tool_args: input.clone(),
+            content: format!("Failed to parse tool input: {}", e),
             bytes_transferred: None,
             duration: Instant::now().elapsed(),
             status: ToolStatus::Error,
         },
+    }
+}
+
+fn unknown_tool_output(name: &str, input: serde_json::Value) -> ToolOutput {
+    ToolOutput {
+        tool_name: name.to_owned(),
+        tool_args: input,
+        content: format!("Error: unknown tool '{}'", name),
+        bytes_transferred: None,
+        duration: Instant::now().elapsed(),
+        status: ToolStatus::Error,
     }
 }
 

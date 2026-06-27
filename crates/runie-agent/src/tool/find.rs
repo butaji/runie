@@ -1,13 +1,11 @@
 //! Find tool — searches for files matching a pattern.
 
-use crate::tool::{which_tool_async, Tool, ToolContext, ToolOutput, ToolStatus};
-use anyhow::Result;
-use async_trait::async_trait;
+use crate::tool::{which_tool_async, ToolContext, ToolOutput, ToolStatus};
 use runie_core::path::resolve_path_in;
+use runie_core::tool::ToolDef;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::Value;
 use std::time::Instant;
 use tokio::process::Command;
 
@@ -26,33 +24,30 @@ pub struct FindInput {
 
 pub struct FindTool;
 
-#[async_trait]
-impl Tool for FindTool {
-    fn name(&self) -> &str { "find" }
-    fn description(&self) -> &str { "Find files matching a pattern using fd or find." }
-    fn input_schema(&self) -> Value {
-        runie_core::tool::generate_schema::<FindInput>()
-    }
-    fn is_read_only(&self) -> bool { true }
-    fn requires_approval(&self, _input: &Value) -> bool { false }
+impl ToolDef for FindTool {
+    type Input = FindInput;
 
-    async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
+    const NAME: &'static str = "find";
+    const DESCRIPTION: &'static str = "Find files matching a pattern using fd or find.";
+    const READ_ONLY: bool = true;
+    const REQUIRES_APPROVAL: bool = false;
+
+    async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput {
         let start = Instant::now();
-        let typed: FindInput = serde_json::from_value(input)?;
-        let path_str = typed.path.as_deref().unwrap_or(".");
+        let path_str = input.path.as_deref().unwrap_or(".");
         let full_path = resolve_path_in(path_str, &ctx.working_dir);
-        let content = run_find(&typed.pattern, &full_path, typed.limit.unwrap_or(100))
+        let content = run_find(&input.pattern, &full_path, input.limit.unwrap_or(100))
             .await
             .unwrap_or_else(|e| format!("Error running find: {}", e));
         let status = determine_find_status(&content);
-        Ok(ToolOutput {
+        ToolOutput {
             tool_name: "find".to_owned(),
-            tool_args: serde_json::json!({ "path": path_str, "pattern": typed.pattern }),
+            tool_args: serde_json::json!({ "path": path_str, "pattern": input.pattern }),
             content,
             bytes_transferred: None,
             duration: start.elapsed(),
             status,
-        })
+        }
     }
 }
 

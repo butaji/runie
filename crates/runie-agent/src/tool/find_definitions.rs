@@ -3,15 +3,13 @@
 use crate::tool::search::fff_helpers::{
     build_error_json, build_error_json_with_instant, with_picker,
 };
-use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
-use anyhow::Result;
-use async_trait::async_trait;
+use crate::tool::{ToolContext, ToolOutput, ToolStatus};
 use fff_search::{FilePicker, GrepMatch, GrepMode, GrepResult, GrepSearchOptions, QueryParser};
 use runie_core::actors::FffSearchState;
+use runie_core::tool::ToolDef;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::Value;
 use std::time::Instant;
 
 /// Input parameters for find_definitions tool.
@@ -127,42 +125,51 @@ struct DefResult {
     content: String,
 }
 
-#[async_trait]
-impl Tool for FindDefinitionsTool {
-    fn name(&self) -> &str { "find_definitions" }
-    fn description(&self) -> &str {
-        "Find symbol definitions (struct, fn, class, def, impl, enum, trait, etc.) in the codebase using FFF's definition classifier."
-    }
-    fn input_schema(&self) -> Value {
-        runie_core::tool::generate_schema::<FindDefinitionsInput>()
-    }
-    fn is_read_only(&self) -> bool { true }
-    fn requires_approval(&self, _input: &Value) -> bool { false }
+impl ToolDef for FindDefinitionsTool {
+    type Input = FindDefinitionsInput;
 
-    async fn call(&self, input: Value, _ctx: &ToolContext) -> Result<ToolOutput> {
+    const NAME: &'static str = "find_definitions";
+    const DESCRIPTION: &'static str = "Find symbol definitions (struct, fn, class, def, impl, enum, trait, etc.) in the codebase using FFF's definition classifier.";
+    const READ_ONLY: bool = true;
+    const REQUIRES_APPROVAL: bool = false;
+
+    async fn execute(input: Self::Input, _ctx: &ToolContext) -> ToolOutput {
         let start = Instant::now();
-        let typed: FindDefinitionsInput = serde_json::from_value(input)?;
         let state = match FffSearchState::get() {
             Some(s) => s,
             None => {
                 return build_error_json_with_instant(
                     "find_definitions",
-                    serde_json::json!({ "symbol": typed.symbol }),
+                    serde_json::json!({ "symbol": input.symbol }),
                     "FFF indexer not initialized",
                     "results",
                     false,
                     start,
-                )
+                ).unwrap_or_else(|_| ToolOutput {
+                    tool_name: "find_definitions".to_owned(),
+                    tool_args: serde_json::json!({ "symbol": input.symbol }),
+                    content: "FFF indexer not initialized".to_owned(),
+                    bytes_transferred: None,
+                    duration: start.elapsed(),
+                    status: ToolStatus::Error,
+                })
             }
         };
         with_picker(
             &state,
-            typed.symbol.clone(),
+            input.symbol.clone(),
             start,
             build_find_def_lock_error,
             build_find_def_not_initialized,
-            |picker| search_definitions(picker, &typed.symbol, &typed.glob, typed.limit.unwrap_or(DEFAULT_LIMIT), start),
-        )
+            |picker| Ok(search_definitions(picker, &input.symbol, &input.glob, input.limit.unwrap_or(DEFAULT_LIMIT), start)),
+        ).unwrap_or_else(|e| ToolOutput {
+            tool_name: "find_definitions".to_owned(),
+            tool_args: serde_json::json!({ "symbol": input.symbol }),
+            content: format!("find_definitions error: {}", e),
+            bytes_transferred: None,
+            duration: start.elapsed(),
+            status: ToolStatus::Error,
+        })
     }
 }
 
@@ -194,7 +201,7 @@ fn search_definitions(
     glob: &Option<String>,
     limit: usize,
     start: Instant,
-) -> Result<ToolOutput> {
+) -> ToolOutput {
     let query_str = build_query(symbol, glob);
     let parsed = QueryParser::default().parse(&query_str);
     let results = picker.grep(
@@ -261,19 +268,19 @@ fn build_definitions_output(
     defs: Vec<DefResult>,
     indexed: bool,
     start: Instant,
-) -> Result<ToolOutput> {
-    Ok(ToolOutput {
+) -> ToolOutput {
+    ToolOutput {
         tool_name: "find_definitions".to_owned(),
         tool_args: serde_json::json!({ "symbol": symbol }),
         content: serde_json::to_string_pretty(&serde_json::json!({
             "results": defs,
             "total": defs.len(),
             "indexed": indexed,
-        }))?,
+        })).unwrap_or_default(),
         bytes_transferred: None,
         duration: start.elapsed(),
         status: ToolStatus::Success,
-    })
+    }
 }
 
 #[cfg(test)]
@@ -333,24 +340,22 @@ mod tests {
 
     #[test]
     fn find_definitions_tool_name() {
-        assert_eq!(FindDefinitionsTool.name(), "find_definitions");
+        assert_eq!(FindDefinitionsTool::NAME, "find_definitions");
     }
 
     #[test]
     fn find_definitions_tool_is_read_only() {
-        assert!(FindDefinitionsTool.is_read_only());
+        assert!(FindDefinitionsTool::READ_ONLY);
     }
 
     #[test]
     fn find_definitions_tool_no_approval() {
-        let input = serde_json::json!({"symbol": "Foo"});
-        assert!(!FindDefinitionsTool.requires_approval(&input));
+        assert!(!FindDefinitionsTool::REQUIRES_APPROVAL);
     }
 
     #[test]
     fn find_definitions_tool_schema() {
-        let tool = FindDefinitionsTool;
-        let schema = tool.input_schema();
+        let schema = runie_core::tool::generate_schema::<FindDefinitionsInput>();
         assert!(schema.get("properties").is_some());
         let obj = schema.as_object().unwrap();
         let props = obj.get("properties").unwrap().as_object().unwrap();
@@ -362,20 +367,23 @@ mod tests {
 
     #[test]
     fn find_definitions_tool_description_mentions_classifier() {
-        let desc = FindDefinitionsTool.description();
         assert!(
-            desc.contains("definition classifier"),
+            FindDefinitionsTool::DESCRIPTION.contains("definition classifier"),
             "description: {}",
-            desc
+            FindDefinitionsTool::DESCRIPTION
         );
     }
 
     #[tokio::test]
     async fn find_definitions_uninitialized_returns_error() {
-        let tool = FindDefinitionsTool;
+        let input = FindDefinitionsInput {
+            symbol: "Foo_xyz_nonexistent".to_string(),
+            glob: None,
+            path: None,
+            limit: None,
+        };
         let ctx = ToolContext::default();
-        let input = serde_json::json!({"symbol": "Foo_xyz_nonexistent"});
-        let output = tool.call(input, &ctx).await.unwrap();
+        let output = FindDefinitionsTool::execute(input, &ctx).await;
         assert!(
             output.status == ToolStatus::Error
                 || output.content.contains("not initialized")

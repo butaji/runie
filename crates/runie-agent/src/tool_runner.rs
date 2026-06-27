@@ -1,11 +1,17 @@
 //! Shared tool execution helpers for agent turn and headless runners.
+//!
+//! Tools are executed via the MCP `ToolDef` trait. Each tool is called directly
+//! with typed input parsed from the `ParsedToolCall`.
 
-#![allow(unused_imports)]
+use crate::tool::{
+    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool,
+    ListDirTool, ReadFileTool, SearchTool, WriteFileTool,
+};
 use crate::PermissionGate;
 use runie_core::harness_skills::{SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult};
 use runie_core::message::{ChatMessage, Part, Role};
 use runie_core::permissions::{PermissionAction, PermissionContext};
-use runie_core::tool::{ToolContext, ToolOutput, ToolStatus};
+use runie_core::tool::{parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus};
 use runie_core::tool::ParsedToolCall;
 use std::time::Duration;
 use tokio::time::timeout;
@@ -15,30 +21,48 @@ const DEFAULT_TOOL_TIMEOUT_SECS: u64 = 30;
 
 /// Execute a single parsed tool call, respecting the permission gate.
 pub async fn execute_tool_call(
-    registry: &runie_core::tool::ToolRegistry,
     tool_call: &ParsedToolCall,
     ctx: &ToolContext,
     gate: &PermissionGate,
 ) -> ToolOutput {
     let tool_name = &tool_call.name;
-    match registry.get(tool_name) {
-        Some(tool) => {
-            let perm_ctx = build_permission_context(tool_name, &tool_call.args, &ctx.working_dir);
-            match gate.evaluate(&perm_ctx).await {
-                PermissionAction::Allow => {
-                    let duration = Duration::from_secs(DEFAULT_TOOL_TIMEOUT_SECS);
-                    match timeout(duration, run_tool(tool, tool_call, ctx)).await {
-                        Ok(output) => output,
-                        Err(_) => timeout_error(tool_name),
-                    }
-                }
-                PermissionAction::Deny | PermissionAction::Ask => {
-                    blocked_output(tool_name, tool_call)
-                }
+    let perm_ctx = build_permission_context(tool_name, &tool_call.args, &ctx.working_dir);
+    match gate.evaluate(&perm_ctx).await {
+        PermissionAction::Allow => {
+            let duration = Duration::from_secs(DEFAULT_TOOL_TIMEOUT_SECS);
+            match timeout(duration, dispatch_tool(tool_name, &tool_call.args, ctx)).await {
+                Ok(output) => output,
+                Err(_) => timeout_error(tool_name),
             }
         }
-        None => unknown_tool_output(tool_name, tool_call),
+        PermissionAction::Deny | PermissionAction::Ask => blocked_output(tool_name, tool_call.args.clone()),
     }
+}
+
+/// Dispatch a tool call by name using static dispatch.
+async fn dispatch_tool(name: &str, args: &serde_json::Value, ctx: &ToolContext) -> ToolOutput {
+    match name {
+        "bash" => run_tool::<BashTool>(args, ctx).await,
+        "read_file" => run_tool::<ReadFileTool>(args, ctx).await,
+        "write_file" => run_tool::<WriteFileTool>(args, ctx).await,
+        "edit_file" => run_tool::<EditFileTool>(args, ctx).await,
+        "list_dir" => run_tool::<ListDirTool>(args, ctx).await,
+        "grep" => run_tool::<GrepTool>(args, ctx).await,
+        "find" => run_tool::<FindTool>(args, ctx).await,
+        "fetch_docs" => run_tool::<FetchDocsTool>(args, ctx).await,
+        "search" => run_tool::<SearchTool>(args, ctx).await,
+        "find_definitions" => run_tool::<FindDefinitionsTool>(args, ctx).await,
+        _ => unknown_tool_output(name, args.clone()),
+    }
+}
+
+/// Check if a tool name is known.
+pub fn is_known_tool(name: &str) -> bool {
+    matches!(
+        name,
+        "bash" | "read_file" | "write_file" | "edit_file" | "list_dir"
+            | "grep" | "find" | "fetch_docs" | "search" | "find_definitions"
+    )
 }
 
 fn timeout_error(tool_name: &str) -> ToolOutput {
@@ -60,10 +84,7 @@ pub fn build_permission_context<'a>(
     input: &'a serde_json::Value,
     cwd: &'a std::path::Path,
 ) -> PermissionContext<'a> {
-    let path = input
-        .get("path")
-        .and_then(|v| v.as_str())
-        .map(std::path::Path::new);
+    let path = input.get("path").and_then(|v| v.as_str()).map(std::path::Path::new);
     PermissionContext {
         tool,
         path,
@@ -72,27 +93,28 @@ pub fn build_permission_context<'a>(
     }
 }
 
-async fn run_tool(
-    tool: &std::sync::Arc<dyn runie_core::tool::Tool>,
-    tool_call: &ParsedToolCall,
-    ctx: &ToolContext,
-) -> ToolOutput {
-    tool.call(tool_call.args.clone(), ctx)
-        .await
-        .unwrap_or_else(|e| ToolOutput {
-            tool_name: tool_call.name.clone(),
-            tool_args: tool_call.args.clone(),
-            content: format!("Tool execution failed: {}", e),
-            bytes_transferred: None,
-            duration: Duration::from_millis(0),
-            status: ToolStatus::Error,
-        })
+async fn run_tool<T: ToolDef>(args: &serde_json::Value, ctx: &ToolContext) -> ToolOutput {
+    // Parse the input into the tool's typed input
+    let input = match parse_input::<T::Input>(args) {
+        Ok(i) => i,
+        Err(e) => {
+            return ToolOutput {
+                tool_name: T::NAME.to_string(),
+                tool_args: args.clone(),
+                content: format!("Failed to parse tool input: {}", e),
+                bytes_transferred: None,
+                duration: Duration::from_millis(0),
+                status: ToolStatus::Error,
+            };
+        }
+    };
+    T::execute(input, ctx).await
 }
 
-fn blocked_output(tool_name: &str, tool_call: &ParsedToolCall) -> ToolOutput {
+fn blocked_output(tool_name: &str, args: serde_json::Value) -> ToolOutput {
     ToolOutput {
         tool_name: tool_name.to_owned(),
-        tool_args: tool_call.args.clone(),
+        tool_args: args,
         content: format!("Permission denied for tool '{}'", tool_name),
         bytes_transferred: None,
         duration: Duration::from_millis(0),
@@ -100,10 +122,10 @@ fn blocked_output(tool_name: &str, tool_call: &ParsedToolCall) -> ToolOutput {
     }
 }
 
-fn unknown_tool_output(tool_name: &str, tool_call: &ParsedToolCall) -> ToolOutput {
+fn unknown_tool_output(tool_name: &str, args: serde_json::Value) -> ToolOutput {
     ToolOutput {
         tool_name: tool_name.to_owned(),
-        tool_args: tool_call.args.clone(),
+        tool_args: args,
         content: format!("Error: unknown tool '{}'", tool_name),
         bytes_transferred: None,
         duration: Duration::from_millis(0),
@@ -140,11 +162,10 @@ pub async fn execute_tools_with_observer(
     observer: &mut dyn ToolExecutorObserver,
     hooks: Option<&SkillRegistry>,
 ) -> Vec<ToolOutput> {
-    let registry = crate::tool::builtin_registry();
     let mut outputs = Vec::with_capacity(tools.len());
     for tool_call in tools {
         let output =
-            execute_single_with_observer(tool_call, ctx, &registry, gate, observer, hooks).await;
+            execute_single_with_observer(tool_call, ctx, gate, observer, hooks).await;
         outputs.push(output);
     }
     outputs
@@ -153,16 +174,15 @@ pub async fn execute_tools_with_observer(
 async fn execute_single_with_observer(
     tool_call: &ParsedToolCall,
     ctx: &ToolContext,
-    registry: &runie_core::tool::ToolRegistry,
     gate: &PermissionGate,
     observer: &mut dyn ToolExecutorObserver,
     hooks: Option<&SkillRegistry>,
 ) -> ToolOutput {
     observer.on_tool_start(&tool_call.name, &tool_call.args);
     let output = if let Some(skills) = hooks {
-        execute_with_skill_hooks(tool_call, ctx, registry, gate, skills).await
+        execute_with_skill_hooks(tool_call, ctx, gate, skills).await
     } else {
-        execute_tool_call(registry, tool_call, ctx, gate).await
+        execute_tool_call(tool_call, ctx, gate).await
     };
     observer.on_tool_end(output.duration.as_secs_f64(), &output.content);
     output
@@ -171,19 +191,21 @@ async fn execute_single_with_observer(
 async fn execute_with_skill_hooks(
     tool_call: &ParsedToolCall,
     ctx: &ToolContext,
-    registry: &runie_core::tool::ToolRegistry,
     gate: &PermissionGate,
     skills: &SkillRegistry,
 ) -> ToolOutput {
     if let Some(output) = check_before_hook(skills, tool_call) {
         return output;
     }
-    let output = execute_tool_call(registry, tool_call, ctx, gate).await;
+    let output = execute_tool_call(tool_call, ctx, gate).await;
     fire_after_hook(skills, tool_call, &output);
     output
 }
 
-fn check_before_hook(skills: &SkillRegistry, tool_call: &ParsedToolCall) -> Option<ToolOutput> {
+fn check_before_hook(
+    skills: &SkillRegistry,
+    tool_call: &ParsedToolCall,
+) -> Option<ToolOutput> {
     let tool_ctx = ToolCallCtx {
         tool_name: tool_call.name.clone(),
         tool_input: tool_call.args.clone(),
@@ -272,8 +294,13 @@ mod tests {
         assert_eq!(msg.tool_call_id, Some("call_1".to_string()));
         // Check that the message has a ToolResult part with the output
         let has_tool_result = msg.parts.iter().any(|p| {
-            matches!(p, runie_core::message::Part::ToolResult { output, .. }
-                if output.contains("[Lines"))
+            matches!(
+                p,
+                runie_core::message::Part::ToolResult {
+                    output,
+                    ..
+                } if output.contains("[Lines")
+            )
         });
         assert!(
             has_tool_result,
@@ -306,7 +333,9 @@ mod tests {
             id: Some("call_1".to_string()),
         }];
         let ctx = ToolContext::default();
-        let mut observer = TestObserver { events: Vec::new() };
+        let mut observer = TestObserver {
+            events: Vec::new(),
+        };
 
         execute_tools_with_observer(&tools, "req.0", &ctx, &gate, &mut observer, None).await;
 

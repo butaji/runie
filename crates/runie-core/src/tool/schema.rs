@@ -4,6 +4,9 @@
 //! schemars for JSON schema generation. Tools are defined by implementing the
 //! [`ToolDef`] trait with typed input/output structs.
 //!
+//! All tools are MCP tools. The [`ToolDef`] trait is the single interface for
+//! tool definitions, schema generation, and execution.
+//!
 //! # Example
 //!
 //! ```ignore
@@ -25,6 +28,10 @@
 //!     const DESCRIPTION: &'static str = "Read file contents";
 //!     const READ_ONLY: bool = true;
 //!     const REQUIRES_APPROVAL: bool = false;
+//!     
+//!     async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput {
+//!         // implementation
+//!     }
 //! }
 
 use std::sync::Arc;
@@ -34,10 +41,12 @@ use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
+use super::context::{ToolContext, ToolOutput};
+
 /// A typed tool definition.
 ///
-/// Implement this trait to define a tool with typed input using schemars
-/// for automatic JSON schema generation.
+/// This is the single interface for tool definitions, schema generation, and execution.
+/// All tools implement this trait; there is no separate `Tool` trait.
 pub trait ToolDef: Send + Sync {
     /// The input parameters type, must implement `Deserialize` and `JsonSchema`.
     type Input: DeserializeOwned + JsonSchema + Send + Sync + 'static;
@@ -54,17 +63,8 @@ pub trait ToolDef: Send + Sync {
     /// Whether this tool requires explicit approval.
     const REQUIRES_APPROVAL: bool = true;
 
-    /// Execute the tool with typed input.
-    fn call(input: Self::Input) -> impl std::future::Future<Output = Result<ToolResult, anyhow::Error>> + Send
-    where
-        Self: Sized;
-}
-
-/// Result of a tool execution.
-#[derive(Debug, Clone)]
-pub struct ToolResult {
-    pub content: String,
-    pub bytes_transferred: Option<u64>,
+    /// Execute the tool with typed input and context.
+    async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput;
 }
 
 /// Generate JSON schema for a type implementing `JsonSchema`.

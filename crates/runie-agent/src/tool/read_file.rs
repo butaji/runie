@@ -1,13 +1,11 @@
 //! ReadFile tool — reads file contents with optional offset/limit.
 
-use crate::tool::{Tool, ToolContext, ToolOutput};
-use anyhow::Result;
-use async_trait::async_trait;
+use crate::tool::{ToolContext, ToolOutput};
 use runie_core::path::resolve_path_in;
+use runie_core::tool::ToolDef;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::Value;
 use tokio::fs;
 
 /// Update frecency when a file is successfully read.
@@ -33,18 +31,6 @@ pub struct ReadFileInput {
 pub struct ReadFileTool;
 
 impl ReadFileTool {
-    /// Generate JSON schema for this tool's input.
-    pub fn input_schema() -> Value {
-        runie_core::tool::generate_schema::<ReadFileInput>()
-    }
-
-    /// Parse input from JSON into typed struct.
-    fn parse_input(input: Value) -> Result<(ReadFileInput, Value)> {
-        let typed: ReadFileInput = serde_json::from_value(input.clone())?;
-        let tool_args = serde_json::to_value(&typed)?;
-        Ok((typed, tool_args))
-    }
-
     /// Read file contents from disk.
     async fn read_file(path: &std::path::Path) -> Result<String, ToolOutput> {
         fs::read_to_string(path)
@@ -85,47 +71,41 @@ impl ReadFileTool {
     }
 }
 
-#[async_trait]
-impl Tool for ReadFileTool {
-    fn name(&self) -> &str { "read_file" }
-    fn description(&self) -> &str {
-        "Read the contents of a file from disk. Supports optional offset and limit."
-    }
-    fn input_schema(&self) -> Value {
-        Self::input_schema()
-    }
-    fn is_read_only(&self) -> bool { true }
-    fn requires_approval(&self, _input: &Value) -> bool { false }
+impl ToolDef for ReadFileTool {
+    type Input = ReadFileInput;
 
-    async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
-        let (typed, tool_args) = Self::parse_input(input)?;
+    const NAME: &'static str = "read_file";
+    const DESCRIPTION: &'static str = "Read the contents of a file from disk. Supports optional offset and limit.";
+    const READ_ONLY: bool = true;
+    const REQUIRES_APPROVAL: bool = false;
 
-        if typed.path.is_empty() {
-            return Ok(ToolOutput::error(
+    async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput {
+        if input.path.is_empty() {
+            return ToolOutput::error(
                 "read_file",
-                tool_args,
+                serde_json::json!({ "path": "" }),
                 "path is required".to_string(),
-            ));
+            );
         }
 
-        let full_path = resolve_path_in(&typed.path, &ctx.working_dir);
+        let full_path = resolve_path_in(&input.path, &ctx.working_dir);
         let content = match Self::read_file(&full_path).await {
             Ok(c) => {
                 record_file_access(&full_path);
                 c
             }
-            Err(e) => return Ok(e),
+            Err(e) => return e,
         };
 
-        let offset = typed.offset.map(|v| v as usize);
-        let limit = typed.limit.map(|v| v as usize);
+        let offset = input.offset.map(|v| v as usize);
+        let limit = input.limit.map(|v| v as usize);
         let output = Self::slice_content(&content, offset, limit);
-        Ok(ToolOutput::success_with_bytes(
+        ToolOutput::success_with_bytes(
             "read_file",
-            tool_args,
+            serde_json::json!({ "path": input.path }),
             output,
             content.len() as u64,
-        ))
+        )
     }
 }
 
@@ -157,7 +137,7 @@ mod tests {
 
     #[test]
     fn input_schema_generates() {
-        let schema = ReadFileTool::input_schema();
+        let schema = runie_core::tool::generate_schema::<ReadFileInput>();
         assert!(schema.is_object());
     }
 

@@ -10,7 +10,7 @@ use runie_core::message::{ChatMessage, Role};
 use runie_core::permissions::PermissionGate;
 use runie_core::provider::Provider;
 use runie_core::sanitize::sanitize_messages;
-use runie_core::tool::ToolRegistry;
+use runie_core::tool::to_openai_function;
 use runie_core::tool::{
     assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
 };
@@ -192,7 +192,7 @@ async fn run_agent_iteration(
             id: command.id.clone(),
         },
     );
-    let tools = build_tool_registry(command.read_only).to_openai_functions();
+    let tools = build_tool_registry(command.read_only);
     let response = stream_response(provider, &command.id, messages, tools, emit.clone()).await?;
     emit_now(
         &emit,
@@ -235,13 +235,29 @@ fn collect_parsed_tool_calls(
     tools
 }
 
-fn build_tool_registry(read_only: bool) -> ToolRegistry {
-    let registry = crate::tool::builtin_registry();
-    if read_only {
-        registry.read_only_subset()
-    } else {
-        registry
+fn build_tool_registry(read_only: bool) -> Vec<serde_json::Value> {
+    use crate::tool::{
+        BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool,
+        ListDirTool, ReadFileTool, SearchTool, WriteFileTool,
+    };
+
+    let mut tools = vec![
+        to_openai_function::<ReadFileTool>(),
+        to_openai_function::<ListDirTool>(),
+        to_openai_function::<GrepTool>(),
+        to_openai_function::<FindTool>(),
+        to_openai_function::<SearchTool>(),
+        to_openai_function::<FetchDocsTool>(),
+        to_openai_function::<FindDefinitionsTool>(),
+    ];
+
+    if !read_only {
+        tools.push(to_openai_function::<WriteFileTool>());
+        tools.push(to_openai_function::<EditFileTool>());
+        tools.push(to_openai_function::<BashTool>());
     }
+
+    tools
 }
 
 pub(crate) fn build_initial_messages(command: &AgentCommand) -> Vec<ChatMessage> {

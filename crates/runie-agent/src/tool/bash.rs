@@ -1,13 +1,11 @@
 //! Bash tool — executes shell commands.
 
-use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
-use anyhow::Result;
-use async_trait::async_trait;
+use crate::tool::{ToolContext, ToolOutput, ToolStatus};
 use runie_core::bash_safety::check_bash_safety;
+use runie_core::tool::ToolDef;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::Value;
 use std::time::{Duration, Instant};
 
 /// Input parameters for bash tool.
@@ -25,39 +23,34 @@ pub struct BashTool;
 /// Default timeout for bash commands.
 const DEFAULT_TIMEOUT_SECS: u64 = 60;
 
-#[async_trait]
-impl Tool for BashTool {
-    fn name(&self) -> &str { "bash" }
-    fn description(&self) -> &str {
-        "Execute a shell command. Commands are subject to safety checks."
-    }
-    fn input_schema(&self) -> Value {
-        runie_core::tool::generate_schema::<BashInput>()
-    }
-    fn is_read_only(&self) -> bool { false }
-    fn requires_approval(&self, _input: &Value) -> bool { true }
+impl ToolDef for BashTool {
+    type Input = BashInput;
 
-    async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
+    const NAME: &'static str = "bash";
+    const DESCRIPTION: &'static str = "Execute a shell command. Commands are subject to safety checks.";
+    const READ_ONLY: bool = false;
+    const REQUIRES_APPROVAL: bool = true;
+
+    async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput {
         let start = Instant::now();
-        let typed: BashInput = serde_json::from_value(input)?;
-        let tool_args = serde_json::json!({ "command": typed.command });
+        let tool_args = serde_json::json!({ "command": input.command });
 
-        if let Some(reason) = check_bash_safety(&typed.command) {
-            return Ok(ToolOutput::blocked("bash", tool_args, reason.to_owned()));
+        if let Some(reason) = check_bash_safety(&input.command) {
+            return ToolOutput::blocked("bash", tool_args, reason.to_owned());
         }
-        let timeout_secs = typed.timeout_seconds.unwrap_or(DEFAULT_TIMEOUT_SECS);
+        let timeout_secs = input.timeout_seconds.unwrap_or(DEFAULT_TIMEOUT_SECS);
         let timeout = Duration::from_secs(timeout_secs);
 
-        let result = run_bash_inner(&typed.command, &ctx.working_dir, &ctx.env, timeout).await;
+        let result = run_bash_inner(&input.command, &ctx.working_dir, &ctx.env, timeout).await;
 
-        Ok(ToolOutput {
+        ToolOutput {
             tool_name: "bash".to_owned(),
             tool_args,
             content: result.output,
             bytes_transferred: result.bytes_transferred,
             duration: start.elapsed(),
             status: result.status,
-        })
+        }
     }
 }
 
@@ -179,39 +172,36 @@ mod tests {
 
     #[tokio::test]
     async fn bash_timeout_kills_child() {
-        let tool = BashTool;
-        let input = serde_json::json!({
-            "command": "sleep 30",
-            "timeout_seconds": 1,
-        });
+        let input = BashInput {
+            command: "sleep 30".to_string(),
+            timeout_seconds: Some(1),
+        };
         let ctx = ToolContext::default();
-        let output = tool.call(input, &ctx).await.unwrap();
+        let output = BashTool::execute(input, &ctx).await;
         assert_eq!(output.status, ToolStatus::TimedOut);
         assert!(output.content.contains("timed out"));
     }
 
     #[tokio::test]
     async fn bash_command_succeeds() {
-        let tool = BashTool;
-        let input = serde_json::json!({
-            "command": "echo hello",
-            "timeout_seconds": 5,
-        });
+        let input = BashInput {
+            command: "echo hello".to_string(),
+            timeout_seconds: Some(5),
+        };
         let ctx = ToolContext::default();
-        let output = tool.call(input, &ctx).await.unwrap();
+        let output = BashTool::execute(input, &ctx).await;
         assert_eq!(output.status, ToolStatus::Success);
         assert!(output.content.contains("hello"));
     }
 
     #[tokio::test]
     async fn bash_command_fails() {
-        let tool = BashTool;
-        let input = serde_json::json!({
-            "command": "exit 1",
-            "timeout_seconds": 5,
-        });
+        let input = BashInput {
+            command: "exit 1".to_string(),
+            timeout_seconds: Some(5),
+        };
         let ctx = ToolContext::default();
-        let output = tool.call(input, &ctx).await.unwrap();
+        let output = BashTool::execute(input, &ctx).await;
         assert_eq!(output.status, ToolStatus::Error);
     }
 }
