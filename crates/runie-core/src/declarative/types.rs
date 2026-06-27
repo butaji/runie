@@ -1,4 +1,8 @@
 //! Types for declarative configuration.
+//!
+//! This module defines the types for loading skills and commands from
+//! markdown/YAML files. The actual registration into the command registry
+//! is handled by the `declarative::register` module.
 
 use std::path::PathBuf;
 
