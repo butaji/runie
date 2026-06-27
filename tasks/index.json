@@ -40,11 +40,6 @@
     "status": "done"
   },
   {
-    "file": "add-plan-actor-for-plan-first-execution.md",
-    "title": "Add PlanActor for plan-first execution",
-    "status": "done"
-  },
-  {
     "file": "reconsider-clipboard-image-deps.md",
     "title": "Reconsider clipboard-image deps (arboard + png)",
     "status": "done"
