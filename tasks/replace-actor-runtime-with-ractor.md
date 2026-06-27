@@ -1,6 +1,6 @@
 # Replace custom actor runtime with `ractor`
 
-**Status**: todo
+**Status**: in-progress
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P1
@@ -62,6 +62,21 @@ Replace the home-grown `Actor` trait, `spawn_actor`, `ActorHandle`, and `Reply` 
 - `crates/runie-tui/src/main.rs` - Updated to use RactorPermissionActor
 - `crates/runie-cli/src/acp.rs` - Updated to use RactorPermissionActor
 - `crates/runie-agent/src/actor.rs` - Updated to use RactorPermissionActor in tests
+
+## Remaining Actors to Migrate
+
+The following actors still use the custom runtime and can be migrated incrementally:
+
+1. ConfigActor - owns config state and file IO
+2. SessionActor - owns session state and durability
+3. IoActor - owns file/network/process operations
+4. TurnActor - owns agent turn lifecycle
+5. ProviderActor - owns provider construction
+6. CompletionActor - owns completion state
+7. TrustActor - owns trust decisions
+8. FffIndexerActor - owns file search index
+9. PlanActor - owns plan state
+10. UiControlActor - owns dialog/lifecycle state
 
 ## Notes
 

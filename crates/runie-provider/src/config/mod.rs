@@ -6,7 +6,9 @@
 
 use std::collections::HashMap;
 
-use runie_protocol::{ProviderConfig, ProviderConfigBox};
+use runie_protocol::ProviderConfigBox;
+#[cfg(test)]
+use runie_protocol::ProviderConfig;
 
 /// Resolves provider configuration from multiple sources with priority:
 /// 1. Environment variables
@@ -49,6 +51,13 @@ impl ProviderConfigResolver {
             env.insert(key, val);
         }
         Self { env, dotenv: HashMap::new(), provider_config: None }
+    }
+
+    /// Create a resolver with a config but no environment variable capture.
+    /// Use this for tests that need isolation from the actual environment.
+    #[cfg(test)]
+    pub fn with_config<C: runie_protocol::ProviderConfig + 'static>(config: C) -> Self {
+        Self { env: HashMap::new(), dotenv: HashMap::new(), provider_config: Some(ProviderConfigBox::new(config)) }
     }
 
     fn load_dotenv() -> HashMap<String, String> {
@@ -136,8 +145,6 @@ mod tests {
 
     #[test]
     fn resolve_env_takes_priority() {
-        // Clean up first to ensure test isolation
-        std::env::remove_var("TESTPROVIDER_API_KEY");
         // Set env var BEFORE creating resolver (env is captured at construction)
         std::env::set_var("TESTPROVIDER_API_KEY", "env-key");
         let test_config = TestConfig {
@@ -156,14 +163,12 @@ mod tests {
 
     #[test]
     fn resolve_config_fallback() {
-        // Clean up first to ensure test isolation
-        std::env::remove_var("TESTPROVIDER_API_KEY");
         let test_config = TestConfig {
             api_key: Some("config-key".to_string()),
             base_url: Some("http://example.com".to_string()),
         };
-        let resolver =
-            ProviderConfigResolver::new(ProviderConfigBox::new(test_config));
+        // Use with_config to avoid environment variable interference
+        let resolver = ProviderConfigResolver::with_config(test_config);
 
         // Without env var, should use config
         let result = resolver.resolve_api_key("testprovider");
@@ -173,14 +178,12 @@ mod tests {
 
     #[test]
     fn empty_config_returns_none() {
-        // Clean up first to ensure test isolation
-        std::env::remove_var("TESTPROVIDER_API_KEY");
         let test_config = TestConfig {
             api_key: None,
             base_url: None,
         };
-        let resolver =
-            ProviderConfigResolver::new(ProviderConfigBox::new(test_config));
+        // Use with_config to avoid environment variable interference
+        let resolver = ProviderConfigResolver::with_config(test_config);
 
         assert_eq!(resolver.resolve_api_key("testprovider"), None);
         assert_eq!(resolver.resolve_base_url("testprovider"), None);
@@ -188,14 +191,12 @@ mod tests {
 
     #[test]
     fn dotenv_fallback() {
-        // Clean up first to ensure test isolation
-        std::env::remove_var("TESTPROVIDER_API_KEY");
         let test_config = TestConfig {
             api_key: None,
             base_url: None,
         };
-        let resolver =
-            ProviderConfigResolver::new(ProviderConfigBox::new(test_config));
+        // Use with_config to avoid environment variable interference
+        let resolver = ProviderConfigResolver::with_config(test_config);
 
         // dotenv should be used when config doesn't have the value
         assert_eq!(resolver.resolve_api_key("nonexistent"), None);
