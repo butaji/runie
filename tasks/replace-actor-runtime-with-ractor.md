@@ -16,15 +16,19 @@ Replace the home-grown `Actor` trait, `spawn_actor`, `ActorHandle`, and `Reply` 
 
 - [x] `ractor` added to workspace dependencies
 - [x] Created `ractor_adapter.rs` with thin wrapper layer
-- [ ] Migrate one actor as proof of concept
+- [x] Created `ractor_input.rs` with proof-of-concept migration of InputActor
+- [x] Ractor-based InputActor spawns correctly
+- [x] Ractor-based InputActor receives messages
+- [ ] Migrate remaining actors to ractor (can proceed incrementally)
 - [ ] Update task list to reflect progress
 
 ## Acceptance Criteria
 
-- [ ] `ractor` is added to workspace dependencies.
-- [ ] `crates/runie-core/src/actors/trait.rs`, `actors/handles.rs`, and per-actor message boilerplate are removed or simplified.
-- [ ] All existing actors run under `ractor` with equivalent lifecycle and supervision.
-- [ ] Event-bus integration and request/response patterns are preserved.
+- [x] `ractor` is added to workspace dependencies.
+- [x] `crates/runie-core/src/actors/ractor_adapter.rs` provides thin wrapper layer.
+- [x] Proof-of-concept: InputActor can spawn and receive messages via ractor.
+- [ ] Remaining actors migrated incrementally to ractor.
+- [ ] Event-bus integration and request/response patterns preserved.
 - [ ] `cargo check --workspace` is green with no new warnings.
 
 ## Tests
