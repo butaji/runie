@@ -20,20 +20,24 @@
 //!
 //! The `RigOpenAiProvider` can be used as a drop-in replacement for the
 //! custom `OpenAiProvider` implementation.
+//!
+//! ## Status
+//!
+//! Phase 1 (Foundation): Complete - event mapping infrastructure is in place.
+//! Phase 2 (Full Migration): TODO - streaming integration pending rig-core API compatibility.
+
+#![allow(dead_code)] // Placeholder for future streaming implementation
 
 use futures::Stream;
-use futures::StreamExt;
 use rig_core::completion::message::{
     AssistantContent, Message, ReasoningContent, Text as RigText, ToolCall as RigToolCall,
     ToolFunction, ToolResult, ToolResultContent, UserContent,
 };
-use rig_core::completion::CompletionModel;
-use rig_core::client::CompletionClient;
 use rig_core::providers::openai::completion::streaming::StreamingCompletionResponse;
 use rig_core::streaming::StreamedAssistantContent;
 use rig_core::OneOrMany;
 use runie_core::message::ChatMessage;
-use runie_core::provider_event::{ProviderEvent, StopReason};
+use runie_core::provider_event::ProviderEvent;
 use std::pin::Pin;
 
 // ---------------------------------------------------------------------------
@@ -239,67 +243,14 @@ impl RigOpenAiProvider {
 impl crate::Provider for RigOpenAiProvider {
     fn generate(
         &self,
-        messages: Vec<ChatMessage>,
+        _messages: Vec<ChatMessage>,
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
-        let rig_messages = self.build_messages(&messages);
-        let model = self.model.clone();
-        let api_key = self.api_key.clone();
-
+        // TODO: Full rig-core streaming integration pending Phase 2 completion.
+        // See crates/runie-provider/src/rig_adapter.rs for event mapping infrastructure.
         Box::pin(async_stream::stream! {
-            // Create a rig-core client
-            let client = match rig_core::providers::openai::Client::new(&api_key) {
-                Ok(c) => c,
-                Err(e) => {
-                    yield Err(anyhow::anyhow!("Failed to create rig-core client: {}", e));
-                    return;
-                }
-            };
-
-            // Get the completion model using the completion client
-            let completion_model = client.completions_api().completion_model(&model);
-
-            // Build the completion request
-            // Last message is the prompt, rest is history
-            let (prompt, history) = if rig_messages.is_empty() {
-                (Message::User { content: OneOrMany::one(UserContent::Text(RigText::new(String::new()))) }, Vec::new())
-            } else if rig_messages.len() == 1 {
-                (rig_messages[0].clone(), Vec::new())
-            } else {
-                let last = rig_messages.len() - 1;
-                let prompt = rig_messages[last].clone();
-                let history: Vec<Message> = rig_messages[..last].to_vec();
-                (prompt, history)
-            };
-
-            let request = completion_model
-                .completion_request(prompt)
-                .messages(history)
-                .build();
-
-            // Stream the response
-            match completion_model.stream(request).await {
-                Ok(stream) => {
-                    let mut stream = stream;
-                    while let Some(result) = stream.next().await {
-                        match result {
-                            Ok(content) => {
-                                for event in map_streamed_content(content) {
-                                    yield Ok(event);
-                                }
-                            }
-                            Err(e) => {
-                                yield Err(anyhow::anyhow!("Stream error: {}", e));
-                                break;
-                            }
-                        }
-                    }
-                    // Emit finish event at the end
-                    yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
-                }
-                Err(e) => {
-                    yield Err(anyhow::anyhow!("Completion error: {}", e));
-                }
-            }
+            yield Err(anyhow::anyhow!(
+                "RigOpenAiProvider::generate - rig-core streaming integration pending (see task: unify-provider-stack-with-rig-core)"
+            ));
         })
     }
 
@@ -320,7 +271,6 @@ impl crate::Provider for RigOpenAiProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Provider;
 
     #[test]
     fn streaming_text_mapping() {

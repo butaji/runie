@@ -359,7 +359,7 @@ mod tests {
         let protocol = OpenAiProtocol::new();
         let state = OpenAiState::default();
         let frame = chunk_with_content("hi");
-        let (new_state, events) = protocol.step(state, frame);
+        let (_new_state, events) = protocol.step(state, frame);
 
         assert!(events
             .iter()
@@ -413,7 +413,7 @@ mod tests {
         let protocol = OpenAiProtocol::new();
         let state = OpenAiState::default();
         let frame = chunk_with_reasoning("thinking...");
-        let (new_state, events) = protocol.step(state, frame);
+        let (_new_state, events) = protocol.step(state, frame);
 
         assert!(events.iter().any(|e| matches!(
             e, ProviderEvent::ThinkingDelta(t) if t == "thinking..."
@@ -481,7 +481,7 @@ mod tests {
         assert!(state.tools[&0].id.is_empty());
 
         // Then: id arrives
-        let (state, events) = protocol.step(state, chunk_with_tool_start("call_2", "read_file"));
+        let (_state, events) = protocol.step(state, chunk_with_tool_start("call_2", "read_file"));
         // Should emit ToolCallStart
         assert!(events.iter().any(|e| matches!(
             e, ProviderEvent::ToolCallStart { id, name } if id == "call_2"

@@ -108,7 +108,7 @@ impl crate::Provider for OpenAiProvider {
 mod tests {
     use super::*;
     use request::build_request_body;
-    use runie_core::message::{ChatMessage, Part, Role, ToolCall};
+    use runie_core::message::{ChatMessage, Part, Role};
     use runie_core::provider_event::{ProviderEvent, StopReason};
     use stream::{parse_sse_event, SseEvent};
 

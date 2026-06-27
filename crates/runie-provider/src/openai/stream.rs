@@ -281,7 +281,6 @@ pub mod tests {
     /// Layer 4: OpenAI SSE stream accumulates to canonical ToolCall.
     #[test]
     fn openai_stream_accumulates_canonical_tool_calls() {
-        use runie_core::message::ToolCall;
         let lines = &[
             r#"data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_abc","type":"function","function":{"name":"read_file","arguments":""}}]}}]}"#,
             r#"data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"path\":\"C"}}]}}]}"#,
