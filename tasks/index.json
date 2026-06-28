@@ -72,7 +72,7 @@
   {
     "file": "replace-custom-helpers-with-crates.md",
     "title": "Replace custom path/glob/fuzzy/keybinding helpers with crates",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "unify-tui-render-test-helpers.md",
@@ -157,6 +157,61 @@
   {
     "file": "unify-permission-system-rules.md",
     "title": "Unify permission-system rule engines",
+    "status": "todo"
+  },
+  {
+    "file": "unify-session-store-and-index-with-rusqlite.md",
+    "title": "Unify session store and replay index with rusqlite",
+    "status": "todo"
+  },
+  {
+    "file": "unify-markdown-processing-around-pulldown-cmark.md",
+    "title": "Unify markdown processing around pulldown-cmark",
+    "status": "todo"
+  },
+  {
+    "file": "deduplicate-turn-queue-delivery-logic.md",
+    "title": "Deduplicate turn-queue delivery logic",
+    "status": "todo"
+  },
+  {
+    "file": "type-and-unify-provider-model-layer.md",
+    "title": "Type and unify provider/model layer",
+    "status": "todo"
+  },
+  {
+    "file": "extract-shared-streaming-response-parser.md",
+    "title": "Extract shared streaming response parser",
+    "status": "todo"
+  },
+  {
+    "file": "delete-or-merge-inspector-tool-pipeline.md",
+    "title": "Delete or merge inspector tool pipeline",
+    "status": "todo"
+  },
+  {
+    "file": "simplify-terminal-capability-detection.md",
+    "title": "Simplify terminal capability detection",
+    "status": "todo"
+  },
+  {
+    "file": "unify-core-and-tui-line-count-computation.md",
+    "title": "Unify core and TUI line-count computation",
+    "status": "todo"
+  },
+  {
+    "file": "collapse-dialogstate-variants.md",
+    "title": "Collapse DialogState variants",
+    "status": "todo"
+  },
+  {
+    "file": "replace-think-filter-with-regex.md",
+    "title": "Replace think-block filter with regex",
+    "status": "todo"
+  },
+  {
+    "file": "use-channels-for-subagent-result-collection.md",
+    "title": "Use channels for subagent result collection",
     "status": "todo"
   }
 ]

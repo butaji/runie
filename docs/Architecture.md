@@ -391,14 +391,14 @@ Tests are exempt from function-length and complexity checks so they can stay com
 
 ## Current cleanup roadmap
 
-The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. A third five-round review focused on replacing custom code with crates, unification, and Pareto simplification; its findings are recorded in [`docs/superpowers/plans/2026-06-28-less-code-crate-replacements.md`](superpowers/plans/2026-06-28-less-code-crate-replacements.md). A fourth five-round review dug deeper into provider/config/auth, message/session/state, dispatch/commands/permissions, TUI/widgets, and testing/build/DSL; its findings are recorded in [`docs/superpowers/plans/2026-06-28-third-pass-crate-review.md`](superpowers/plans/2026-06-28-third-pass-crate-review.md). The remaining active work is tracked in `tasks/index.json` (30 active cleanup tasks) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
+The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. A third five-round review focused on replacing custom code with crates, unification, and Pareto simplification; its findings are recorded in [`docs/superpowers/plans/2026-06-28-less-code-crate-replacements.md`](superpowers/plans/2026-06-28-less-code-crate-replacements.md). A fourth five-round review dug deeper into provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, and DSL/view/dialog/commands; its findings are recorded in [`docs/superpowers/plans/2026-06-28-fourth-pass-crate-review.md`](superpowers/plans/2026-06-28-fourth-pass-crate-review.md). The remaining active work is tracked in `tasks/index.json` (33 active cleanup tasks) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
 
 ### Active tasks
 
 #### Phase 1 — Actor foundation (P0/P1)
 
 1. **Migrate production actors to `ractor`** (`tasks/migrate-production-actors-to-ractor.md`) — `partial`. `InputActor`, `RactorPermissionActor`, and `RactorConfigActor` are already migrated and wired; migrate `ProviderActor`, `IoActor`, `SessionActor`, `FffIndexerActor`, and `AgentActor`. Also update `testing/actor_harness.rs` off the custom trait.
-2. **Delete dead actor modules and custom trait** (`tasks/delete-dead-actor-modules-and-custom-trait.md`) — remove the legacy `Actor` trait, both legacy and ractor variants of dead actors (`ViewActor`, `PlanActor`, `TrustActor`, `CompletionActor`, `UiControlActor`), move `Reply` out of `trait.rs`, replace `GenericActorHandle` usage, fix the non-functional `RactorHandle::rpc`, and clean dead fields/helpers in `ActorHandles`.
+2. **Delete dead actor modules and custom trait** (`tasks/delete-dead-actor-modules-and-custom-trait.md`) — `done`. Removed the legacy `Actor` trait, dead actor modules and aliases, non-functional `RactorHandle::rpc`, and cleaned `ActorHandles` helpers.
 3. **Collapse `ActorHandles` to a typed map** (`tasks/collapse-actor-handles-to-typed-map.md`) — replace the helper façade with typed `ractor::ActorRef` handles and reconcile `LeaderHandle`.
 
 #### Phase 2 — Shared bootstrap (P1)
@@ -463,6 +463,26 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 31. **Replace custom bash-safety heuristic with `shell-words`** (`tasks/replace-bash-safety-with-shell-words.md`) — tokenize with `shell-words` and apply a static deny-list.
 32. **Replace custom build linter with Clippy / CI** (`tasks/replace-build-linter-with-clippy-ci.md`) — move guardrails into `[workspace.lints.clippy]` and a CI file-limit check.
 
+#### Phase 13 — Fourth-pass provider / model / session unification (P0/P1)
+
+33. **Unify session store and replay index with `rusqlite`** (`tasks/unify-session-store-and-index-with-rusqlite.md`) — replace JSON file dumps and custom replay index with a single SQLite schema.
+34. **Type and unify provider/model layer** (`tasks/type-and-unify-provider-model-layer.md`) — replace stringly typed provider/model config with typed structs and a single model catalog.
+35. **Deduplicate turn-queue delivery logic** (`tasks/deduplicate-turn-queue-delivery-logic.md`) — collapse overlapping queue/dispatch buffering into one queue with explicit delivery ids.
+36. **Use channels for subagent result collection** (`tasks/use-channels-for-subagent-result-collection.md`) — replace callbacks/polling with `tokio::sync::mpsc`/`oneshot`.
+
+#### Phase 14 — Fourth-pass parser / markdown unification (P0/P1)
+
+37. **Unify markdown processing around `pulldown-cmark`** (`tasks/unify-markdown-processing-around-pulldown-cmark.md`) — consolidate all markdown parsing on one event stream.
+38. **Replace think-block filter with regex** (`tasks/replace-think-filter-with-regex.md`) — replace custom streaming matcher with `regex` and the shared markdown stream.
+39. **Extract shared streaming response parser** (`tasks/extract-shared-streaming-response-parser.md`) — provider-agnostic SSE/JSON/delta parser used by all providers.
+40. **Delete or merge inspector tool pipeline** (`tasks/delete-or-merge-inspector-tool-pipeline.md`) — remove the duplicate `inspect` rendering path.
+
+#### Phase 15 — Fourth-pass TUI simplification (P2)
+
+41. **Simplify terminal capability detection** (`tasks/simplify-terminal-capability-detection.md`) — use `supports-color`/`supports-hyperlinks` and a single `TermCaps` snapshot.
+42. **Unify core and TUI line-count computation** (`tasks/unify-core-and-tui-line-count-computation.md`) — one source of truth for wrapped line counts.
+43. **Collapse `DialogState` variants** (`tasks/collapse-dialogstate-variants.md`) — refactor to a small, mutually exclusive state machine.
+
 ### Archived completed tasks
 
 The following 2026-06-28 review tasks were already complete on disk and are now in `tasks/archive/`:
@@ -497,6 +517,9 @@ The plan is phased so that **every merged task leaves `cargo check --workspace` 
 11. Land CLI/commands/permissions simplifications (Tasks 24–27), after `use-clap-derive-for-cli` for the slash-command DSL.
 12. Land TUI/macros/testing cleanup (Tasks 28–30).
 13. Run final tooling simplification (Tasks 31–32).
+14. Land fourth-pass provider/model/session unification (Tasks 33–36); `deduplicate-turn-queue-delivery-logic` must precede `use-channels-for-subagent-result-collection`.
+15. Land fourth-pass parser/markdown unification (Tasks 37–40); `unify-markdown-processing-around-pulldown-cmark` must precede `replace-think-filter-with-regex`, and `type-and-unify-provider-model-layer` must precede `extract-shared-streaming-response-parser`.
+16. Land fourth-pass TUI simplification (Tasks 41–43).
 
 ## Testing philosophy
 

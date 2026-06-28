@@ -1,39 +1,50 @@
-# Extract a shared streaming-response parser
+# Extract shared streaming response parser
 
 **Status**: todo
-**Milestone**: R2
-**Category**: Agent / Provider
+**Milestone**: R4
+**Category**: Core / State
 **Priority**: P1
 
-**Depends on**: migrate-production-actors-to-ractor
+**Depends on**: type-and-unify-provider-model-layer
 **Blocks**: none
 
 ## Description
 
-`crates/runie-agent/src/stream_response.rs` and `crates/runie-agent/src/headless/mod.rs` both consume `ProviderEvent` streams and perform nearly identical work: accumulate text/thinking deltas, route tool-call events through `ToolStream`, fall back to `parse_tool_calls_fallible`, and strip tool markers. `ToolStream` was already extracted, but the surrounding event loop, fallback parsing, and finish handling are still duplicated. A shared pure `StreamingResponseParser` would remove ~150–200 lines and ensure streaming fixes only need to happen once.
+Every provider currently reimplements SSE framing, JSON extraction, delta accumulation, and tool-call fragment collection. Extract one provider-agnostic streaming parser that yields a common stream of typed events (text deltas, tool-call start/fragments/finish, errors).
 
 ## Acceptance Criteria
 
-- [ ] Extract a shared parser (in `runie-core` or `runie-agent`) that transforms a `ProviderEvent` stream into `(text, reasoning, tool_calls, parse_errors)`.
-- [ ] Update `stream_response.rs` to feed its `EmitFn` from the parser.
-- [ ] Update `headless/mod.rs` to feed its `HeadlessEvent` callbacks from the parser.
-- [ ] Preserve all existing fallback and tool-marker-stripping behavior.
+- [ ] A shared streaming parser exists in `runie-provider`.
+- [ ] All providers consume the shared parser; duplicated streaming code is deleted.
+- [ ] Parser handles SSE `data:` lines, partial JSON, and invalid UTF-8 boundaries.
+- [ ] Tool-call fragments are assembled into complete calls by the parser, not by providers.
 - [ ] `cargo test --workspace` succeeds after the change.
 - [ ] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
+### Layer 1 — State/Logic
+- [ ] `parser_assembles_tool_call` — fragmented tool-call JSON is assembled into one event.
+- [ ] `parser_handles_partial_sse_line` — incomplete SSE chunks are buffered until complete.
+
+### Layer 2 — Event Handling
+- [ ] N/A — parser is a pure stream transform.
+
+### Layer 3 — Rendering
+- [ ] N/A — parser has no TUI output.
+
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `stream_response_and_headless_produce_same_output` — the same provider replay fixture produces the same text/tools/errors in both paths.
-- [ ] `fallback_parsing_still_works` — when structured tool events are absent, fallback parsing still extracts tool calls.
+- [ ] `minimax_m3_streaming_parser` — replay fixture streams through the shared parser and produces correct agent events.
+- [ ] `openai_streaming_parser` — second provider fixture exercises the same parser path.
 
 ## Files touched
 
-- `crates/runie-agent/src/stream_response.rs`
-- `crates/runie-agent/src/headless/mod.rs`
-- New shared parser module (e.g., `crates/runie-agent/src/stream_parser.rs` or `crates/runie-core/src/tool/stream_parser.rs`)
+- `crates/runie-provider/src/stream.rs` (new)
+- `crates/runie-provider/src/minimax.rs`
+- `crates/runie-provider/src/openai.rs`
+- `crates/runie-provider/src/anthropic.rs`
 
 ## Notes
 
-- The parser should be pure/async-agnostic so it can be driven by both production and headless runtimes.
-- Coordinate with `migrate-production-actors-to-ractor.md` so the event contracts are stable before unifying the parser.
+- Keep the parser synchronous or `async` via `futures::Stream`; do not mix both APIs.
+- Use `serde_json::StreamDeserializer` only if it fits the fragment model; otherwise use a manual buffered state machine.

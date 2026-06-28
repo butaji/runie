@@ -1,6 +1,7 @@
 # Replace custom path/glob/fuzzy/keybinding helpers with crates
 
 **Status**: todo
+**Note**: Replacement crates are adopted but the legacy modules still exist; this task tracks their actual deletion.
 **Milestone**: R1
 **Category**: Core / State
 **Priority**: P1

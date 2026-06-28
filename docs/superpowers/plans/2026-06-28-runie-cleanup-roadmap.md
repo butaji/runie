@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Resolve the unify/simplify/reduce findings from the 2026-06-28 architecture & code review so the workspace builds cleanly, dead/duplicate code is removed, and the actual crate structure matches the documented `IO | Domain (pure) | UI (pure/MVU)` layering. A third five-round review added a crate-replacement angle, and a fourth five-round review dug deeper into provider/config/auth, message/session/state, dispatch/commands/permissions, TUI/widgets, and testing/build/DSL. Wherever a custom helper mirrors a standard crate, the plan is to use the crate.
+**Goal:** Resolve the unify/simplify/reduce findings from the 2026-06-28 architecture & code review so the workspace builds cleanly, dead/duplicate code is removed, and the actual crate structure matches the documented `IO | Domain (pure) | UI (pure/MVU)` layering. A third five-round review added a crate-replacement angle. A fourth five-round review dug deeper into provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, and DSL/view/dialog/commands. Wherever a custom helper mirrors a standard crate, the plan is to use the crate.
 
 **Architecture:** The second-pass review showed that several "todo" tasks were already completed on disk (dialog module repaired, empty facade crates deleted, dead provider code removed, IPC layers gone). Those tasks have been archived. The remaining active work is concentrated in the actor runtime, runtime bootstrap, event taxonomy, tool-parser shim, public API boundary, CLI config routing, and a final sweep of small duplicates. A third review found that many small `runie-core` helpers (`glob`, `fuzzy`, `path`, keybinding parsing, frontmatter scanning, tool-marker stripping) can be replaced by `pulldown-cmark`, `strum`, `shellexpand`, `ignore`, and other standard crates. A fourth review found additional crate replacements in provider/config/auth (`backon`, `keyring`, `jsonschema`, `dotenvy`), CLI (`clap`), TUI widgets (`tui-textarea`, `tui-input`, `ansi_colours`), and tooling (`shell-words`, Clippy/CI). The big actor/bootstrap tasks have been split into sequential sub-tasks so that every intermediate commit leaves `cargo check --workspace` green.
 
@@ -12,7 +12,7 @@
 
 ## File structure
 
-- `tasks/index.json` — canonical registry of the 30 active cleanup tasks.
+- `tasks/index.json` — canonical registry of the 33 active cleanup tasks.
 - **Actor runtime (split into three sequential tasks):**
   - `tasks/migrate-production-actors-to-ractor.md`
   - `tasks/delete-dead-actor-modules-and-custom-trait.md`
@@ -51,7 +51,22 @@
   - `tasks/unify-provider-config-persistence.md` — single config persistence helper.
   - `tasks/simplify-slash-command-dsl.md` — collapse `CommandSpec`/`CommandDef`.
   - `tasks/unify-permission-system-rules.md` — merge permission rule engines.
+- **Fourth-pass provider / model / session unification (P0/P1):**
+  - `tasks/unify-session-store-and-index-with-rusqlite.md` — single SQLite store for sessions and replay index.
+  - `tasks/type-and-unify-provider-model-layer.md` — typed provider/model structs + single catalog.
+  - `tasks/deduplicate-turn-queue-delivery-logic.md` — one queue with explicit delivery ids.
+  - `tasks/use-channels-for-subagent-result-collection.md` — channels for subagent results.
+- **Fourth-pass parser / markdown unification (P0/P1):**
+  - `tasks/unify-markdown-processing-around-pulldown-cmark.md` — single pulldown-cmark event stream.
+  - `tasks/replace-think-filter-with-regex.md` — regex-based think-block stripping.
+  - `tasks/extract-shared-streaming-response-parser.md` — provider-agnostic streaming parser.
+  - `tasks/delete-or-merge-inspector-tool-pipeline.md` — merge or remove duplicate inspector path.
+- **Fourth-pass TUI simplification (P2):**
+  - `tasks/simplify-terminal-capability-detection.md` — `supports-color`/`supports-hyperlinks`.
+  - `tasks/unify-core-and-tui-line-count-computation.md` — one line-count source of truth.
+  - `tasks/collapse-dialogstate-variants.md` — small mutually exclusive dialog state machine.
 - `docs/Architecture.md` — updated with a "Current cleanup roadmap" section.
+- `docs/superpowers/plans/2026-06-28-fourth-pass-crate-review.md` — detailed fourth-pass findings.
 - `tasks/archive/` — completed tasks from this and earlier reviews.
 
 ## Active task map
@@ -71,7 +86,7 @@
 | 11 | `unify-declarative-resource-loader` | P2 | Extract shared directory-scan/frontmatter logic; unify frontmatter-vs-section-fallback policy. |
 | 12 | `use-pulldown-cmark-frontmatter-for-resource-loader` | P2 | Replace custom frontmatter/body scanner with `pulldown-cmark-frontmatter` + `serde_yaml`. |
 | 13 | `route-cli-config-through-configactor` | P2 | Extend `RactorConfigActor` for global+project paths, layered config, and MCP ops; route CLI inspect/MCP through it. |
-| 14 | `replace-custom-helpers-with-crates` | P2 | Delete `glob.rs`, `fuzzy.rs`, `path.rs`, and custom keybinding parsing; use `glob`/`globset`, `nucleo-matcher`/`sublime-fuzzy`, `shellexpand`, `crossterm`, `tracing`. |
+| 14 | `replace-custom-helpers-with-crates` | P2 | `reopened`. Replacement crates are adopted but the legacy modules still exist; finish deleting them. |
 | 15 | `narrow-runie-core-public-api` | P2 | Usage-audit first; move `display_width`, `labels`, `sanitize` to `runie-util`; delete `path`/`fuzzy`/`glob` if helper-crate task lands first; narrow the rest. |
 | 16 | `unify-tui-render-test-helpers` | P3 | Move duplicated TUI render helpers into a shared test module. |
 | 17 | `fix-keybindings-dead-code` | P3 | Convert `parse_key_combo` to `#[cfg(test)]` or document it. |
@@ -90,6 +105,17 @@
 | 30 | `centralize-test-fixtures-and-mocks` | P1 | Shared MiniMax fixtures and mock helpers. |
 | 31 | `replace-bash-safety-with-shell-words` | P2 | Tokenize with `shell-words` + deny-list. |
 | 32 | `replace-build-linter-with-clippy-ci` | P2 | Clippy lints + CI file-limit check. |
+| 33 | `unify-session-store-and-index-with-rusqlite` | P0 | Single SQLite store for sessions, messages, checkpoints, and replay index. |
+| 34 | `type-and-unify-provider-model-layer` | P0 | Typed `Provider`/`Model` structs and a single model catalog. |
+| 35 | `deduplicate-turn-queue-delivery-logic` | P1 | One turn queue with explicit delivery ids; no duplicate `TurnComplete`. |
+| 36 | `use-channels-for-subagent-result-collection` | P0 | Subagent actor sends results on `tokio::sync` channels. |
+| 37 | `unify-markdown-processing-around-pulldown-cmark` | P0 | All markdown parsing through one event stream. |
+| 38 | `replace-think-filter-with-regex` | P1 | Replace custom `<think>` matcher with `regex`. |
+| 39 | `extract-shared-streaming-response-parser` | P1 | Provider-agnostic SSE/JSON/delta parser. |
+| 40 | `delete-or-merge-inspector-tool-pipeline` | P1 | Remove or merge the duplicate `inspect` tool path. |
+| 41 | `simplify-terminal-capability-detection` | P2 | `supports-color`/`supports-hyperlinks` + single `TermCaps` snapshot. |
+| 42 | `unify-core-and-tui-line-count-computation` | P2 | One source of truth for wrapped line counts. |
+| 43 | `collapse-dialogstate-variants` | P2 | Small mutually exclusive `DialogState` state machine. |
 
 ## Archived completed tasks
 
@@ -156,6 +182,20 @@ The goal is a **stable phase**: after every merged task the workspace builds and
 12. **Phase 12 — Final tooling simplification.**
     - `replace-bash-safety-with-shell-words`
     - `replace-build-linter-with-clippy-ci`
+13. **Phase 13 — Fourth-pass provider / model / session unification.**
+    - `unify-session-store-and-index-with-rusqlite`
+    - `type-and-unify-provider-model-layer`
+    - `deduplicate-turn-queue-delivery-logic` (before subagent channels)
+    - `use-channels-for-subagent-result-collection`
+14. **Phase 14 — Fourth-pass parser / markdown unification.**
+    - `unify-markdown-processing-around-pulldown-cmark` (before think-filter)
+    - `replace-think-filter-with-regex`
+    - `extract-shared-streaming-response-parser` (after typed provider/model layer)
+    - `delete-or-merge-inspector-tool-pipeline`
+15. **Phase 15 — Fourth-pass TUI simplification.**
+    - `simplify-terminal-capability-detection`
+    - `unify-core-and-tui-line-count-computation`
+    - `collapse-dialogstate-variants`
 
 ## Verification
 
@@ -182,4 +222,5 @@ The final state must satisfy:
 - The plan has been rebased on the actual workspace state; tasks that were already done on disk are now archived and removed from the active registry.
 - Crate-replacement rationale and cross-agent lessons are documented in [`2026-06-28-less-code-crate-replacements.md`](2026-06-28-less-code-crate-replacements.md).
 - Deeper provider/config/auth, CLI/commands/permissions, TUI/widgets, and testing/build findings are documented in [`2026-06-28-third-pass-crate-review.md`](2026-06-28-third-pass-crate-review.md).
+- The fourth-pass review (provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, DSL/view/dialog/commands) is documented in [`2026-06-28-fourth-pass-crate-review.md`](2026-06-28-fourth-pass-crate-review.md).
 - If any task proves larger than expected, split it further and update `tasks/index.json` and this roadmap.
