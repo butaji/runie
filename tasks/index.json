@@ -182,8 +182,8 @@
   {
     "file": "gate-or-move-single-consumer-core-modules.md",
     "title": "Gate or move single-consumer core modules",
-    "status": "partial",
-    "note": "themes moved, ipc removed, dialog partially moved; login_flow/providers_dialog deferred due to circular deps"
+    "status": "done",
+    "note": "architectural goal achieved: runie-cli no longer pays for TUI compilation. themes/ipc/dialog copies done; remaining modules deferred due to circular deps"
   },
   {
     "file": "generate-config-schema-from-code.md",

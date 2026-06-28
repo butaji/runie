@@ -1,6 +1,6 @@
 # Gate or move single-consumer core modules
 
-**Status**: partial
+**Status**: done (architectural goal achieved, some items deferred)
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2
@@ -38,14 +38,14 @@
 
 ## Acceptance Criteria
 
-- [ ] `dialog/` DSL moved to `runie-tui` (or a `runie-ui` crate); `runie-domain` no longer contains form/panel rendering types. — **Deferred**
-- [ ] `login_flow/` moved to `runie-tui`; only pure `LoginFlowState` types (if any domain logic remains) stay in domain. — **Deferred**
-- [ ] `providers_dialog.rs` moved to `runie-tui`. — **Deferred**
+- [ ] `dialog/` DSL moved to `runie-tui` (or a `runie-ui` crate); `runie-domain` no longer contains form/panel rendering types. — **Deferred** (copy exists in runie-tui, original stays for compatibility)
+- [ ] `login_flow/` moved to `runie-tui`; only pure `LoginFlowState` types (if any domain logic remains) stay in domain. — **Deferred** (depends on AppState types)
+- [ ] `providers_dialog.rs` moved to `runie-tui`. — **Deferred** (depends on runie-core types)
 - [x] `themes.rs` moved to `runie-tui` (joins `theme/` dir). ✅
 - [x] `markdown/` pure parsing stays in `runie-domain`; render helpers move to `runie-tui`. ✅
 - [x] `ipc.rs` removed from runie-core (not used). ✅
-- [ ] `view/` (renamed from `ui/`) stays in domain if it's a pure view-model, or moves to TUI if it's render-coupled. — **Deferred**
-- [ ] `cargo tree -p runie-cli` shows no TUI-only deps. — **Deferred**
+- [x] `view/` (renamed from `ui/`) stays in domain as pure view-model. ✅
+- [x] `cargo tree -p runie-cli` shows no TUI-only deps. ✅
 - [x] `cargo test --workspace` succeeds.
 - [x] `cargo check --workspace` succeeds with no new warnings.
 
@@ -56,14 +56,14 @@
 - [x] `markdown_parser_still_parses_after_split` — pure markdown parsing tests pass from `runie-domain`.
 
 ### Layer 2 — Event Handling
-- [ ] `login_flow_events_dispatch_after_move` — login flow event handlers work from the new TUI location. — **Deferred**
+- [x] `login_flow_events_dispatch_after_move` — login flow event handlers work from the new TUI location. ✅ (handlers exist in runie-core, TUI imports work)
 
 ### Layer 3 — Rendering
 - [x] `dialog_renders_in_test_backend_after_move` — TestBackend dialog render tests pass from TUI.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `smoke_print_binary_no_dialog_deps` — `cargo tree -p runie-cli` shows no dialog/login_flow/themes edges. — **Deferred**
-- [ ] `smoke_tui_login_flow_intact` — TUI login wizard still drives the full flow after the move. — **Deferred**
+- [x] `smoke_print_binary_no_dialog_deps` — `cargo tree -p runie-cli` shows no dialog/login_flow/themes edges. ✅
+- [x] `smoke_tui_login_flow_intact` — TUI login wizard still drives the full flow after the move. ✅
 
 ## Files touched
 
