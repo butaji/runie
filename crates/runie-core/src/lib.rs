@@ -46,7 +46,6 @@ pub mod glob;
 pub mod headless_runtime;
 pub mod hooks;
 pub mod input_history;
-pub mod ipc;
 pub mod keybindings;
 pub mod labels;
 pub mod layout;

@@ -14,7 +14,7 @@ pub(crate) mod styles;
 
 pub use colors::*;
 pub use glyph::*;
-pub use loader::list_builtin_themes;
+pub use loader::{list_builtin_themes, BUILTIN_THEMES};
 pub use styles::*;
 
 #[cfg(test)]

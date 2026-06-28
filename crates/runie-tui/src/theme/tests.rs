@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use crate::terminal::caps::{MouseCapability, TerminalCapabilities};
-use crate::theme::{current_theme, set_current_theme, set_current_theme_with_caps, test_lock};
+use crate::theme::{BUILTIN_THEMES, current_theme, set_current_theme, set_current_theme_with_caps, test_lock};
 
 #[test]
 fn theme_cache_returns_same_instance() {
@@ -91,7 +91,7 @@ fn quantization_is_idempotent() {
 #[test]
 fn builtin_theme_names_load_from_opaline() {
     let _lock = test_lock();
-    for name in runie_core::themes::BUILTIN_THEMES {
+    for name in BUILTIN_THEMES {
         set_current_theme(name);
         let theme = current_theme();
         assert!(

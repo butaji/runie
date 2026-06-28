@@ -6,6 +6,7 @@
 //! (`keymap`), side-effect handlers (`effects/`), and all rendering widgets.
 
 pub mod diff;
+pub mod dialog;
 pub mod markdown_render;
 pub mod message;
 pub mod pace;
@@ -33,3 +34,11 @@ mod tests;
 
 pub use runie_core::{AppState, ChatMessage};
 pub use stylize::Stylize;
+
+// Re-export dialog types for convenience
+pub use dialog::{EventLabel, ItemAction, Panel, PanelItem, PanelStack, PanelId};
+pub use dialog::dsl::{form, panel, get_field, FormPanel};
+pub use dialog::builders::{
+    command_palette, file_picker, model_selector, scoped_models, session_list, session_tree,
+    settings, theme_picker, SessionRow,
+};

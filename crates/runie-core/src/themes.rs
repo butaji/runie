@@ -1,4 +1,7 @@
 /// All built-in theme names available in Runie.
+///
+/// This module exists for backward compatibility. The canonical source is
+/// `runie_tui::theme::BUILTIN_THEMES`.
 pub const BUILTIN_THEMES: &[&str] = &[
     "runie",
     "silkcircuit-neon",
