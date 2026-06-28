@@ -3,6 +3,7 @@
 **Status**: todo
 **Milestone**: R4
 **Category**: Core / State
+**Priority**: P0/P1
 **Depends on**: consolidate-actor-runtime-on-ractor
 **Blocks**: none
 
