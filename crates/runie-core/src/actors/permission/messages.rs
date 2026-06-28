@@ -2,7 +2,7 @@
 
 use tokio::sync::mpsc;
 
-use crate::actors::Reply;
+use crate::actors::ractor_adapter::Reply;
 use crate::permissions::PermissionAction;
 
 /// Messages accepted by `PermissionActor`.

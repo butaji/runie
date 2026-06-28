@@ -1,9 +1,8 @@
 [workspace]
-members = ["crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-cli", "crates/runie-testing", "crates/runie-protocol", "crates/runie-macros"]
+members = ["crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-cli", "crates/runie-testing", "crates/runie-protocol"]
 resolver = "2"
 
 # Default test timeout: 120 seconds. Tests exceeding this are killed.
-# Controlled via RUST_TEST_TIMEOUT env var; not configurable in Cargo.toml.
 # Override with: RUST_TEST_TIMEOUT=60 cargo test
 
 [workspace.package]
@@ -60,5 +59,5 @@ runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }
 runie-testing = { path = "crates/runie-testing" }
 runie-protocol = { path = "crates/runie-protocol" }
-runie-macros = { path = "crates/runie-macros" }
+
 

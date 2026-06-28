@@ -8,19 +8,19 @@
 //! The TUI resolves the request by sending `PermissionMsg::ResolvePermission` to the actor.
 
 use async_trait::async_trait;
-use runie_core::actors::PermissionActorHandle;
+use runie_core::actors::permission::RactorPermissionHandle;
 use runie_core::permissions::{ApprovalSink, PermissionAction};
 use serde_json::Value;
 use std::time::Duration;
 
 /// Approval sink that delegates to `PermissionActor`.
 pub struct EmitApprovalSink {
-    permission_handle: PermissionActorHandle,
+    permission_handle: RactorPermissionHandle,
 }
 
 impl EmitApprovalSink {
     /// Create a new sink backed by the given permission actor handle.
-    pub fn new(permission_handle: PermissionActorHandle) -> Self {
+    pub fn new(permission_handle: RactorPermissionHandle) -> Self {
         Self { permission_handle }
     }
 }

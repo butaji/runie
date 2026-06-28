@@ -27,13 +27,13 @@
 //!   end                → { "stopReason": "...", "sessionId": "...", "responseId": "..." }
 
 use anyhow::Result;
-use runie_agent::AgentActor;
-use runie_core::actors::{
-    IoActor, RactorConfigActor, SessionActor,
-};
+use runie_core::actors::RactorConfigActor;
 use runie_core::actors::provider::RactorProviderActor;
 use runie_core::actors::permission::RactorPermissionActor;
+use runie_core::actors::session::RactorSessionActor;
+use runie_core::actors::io::RactorIoActor;
 use runie_core::bus::EventBus;
+use runie_agent::spawn_ractor_agent;
 use runie_core::event::Event;
 use runie_protocol::Notification;
 use runie_protocol::{Error, Message, Request, Response};
@@ -149,16 +149,16 @@ async fn spawn_runtime(bus: EventBus<Event>) -> Result<AcpRuntime> {
         config_handle.clone(),
         Arc::new(runie_provider::DynProviderFactory),
     ).await;
-    let (_session_handle, _session_actor) = SessionActor::spawn(bus.clone());
-    let (_io_handle, _io_actor) = IoActor::spawn(bus.clone());
+    let (_session_handle, _session_actor) = RactorSessionActor::spawn(bus.clone()).await?;
+    let (_io_handle, _io_actor) = RactorIoActor::spawn(bus.clone()).await?;
     let (permission_handle, _permission_actor) = RactorPermissionActor::spawn(bus.clone()).await;
 
     // Spawn agent actor
-    let (_agent_handle, _agent_actor) = AgentActor::spawn(
+    let (_agent_handle, _agent_actor, _agent_cell) = spawn_ractor_agent(
         bus.clone(),
         provider_handle.clone(),
         permission_handle.clone(),
-    );
+    ).await?;
 
     Ok(AcpRuntime { event_tx })
 }

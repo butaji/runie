@@ -3,9 +3,10 @@
 use std::path::PathBuf;
 
 use crate::actors::{
-    CompletionActorHandle, FffSearchRequest, RactorInputHandle,
-    RactorIoHandle, PermissionActorHandle, RactorConfigHandle,
-    RactorSessionHandle, RactorFffIndexerHandle, TrustActorHandle, RactorTurnHandle, ViewActorHandle,
+    FffSearchRequest, RactorInputHandle,
+    RactorIoHandle, RactorConfigHandle,
+    RactorSessionHandle, RactorFffIndexerHandle, RactorTurnHandle,
+    permission::RactorPermissionHandle,
 };
 use crate::actors::provider::RactorProviderHandle;
 use crate::config::TruncationSection;
@@ -21,10 +22,7 @@ pub struct ActorHandles {
     pub io: Option<RactorIoHandle>,
     pub fff_indexer: Option<RactorFffIndexerHandle>,
     pub input: Option<RactorInputHandle>,
-    pub permission: Option<PermissionActorHandle>,
-    pub view: Option<ViewActorHandle>,
-    pub completion: Option<CompletionActorHandle>,
-    pub trust: Option<TrustActorHandle>,
+    pub permission: Option<RactorPermissionHandle>,
     pub turn: Option<RactorTurnHandle>,
 }
 
@@ -73,18 +71,6 @@ impl ActorHandles {
     // Session helpers
     pub async fn send_set_trust(&self, path: PathBuf, decision: TrustDecision) {
         if let Some(ref h) = self.session { h.set_trust(path, decision).await; }
-    }
-
-    pub async fn send_trust(&self, path: PathBuf, decision: TrustDecision) {
-        if let Some(ref h) = self.trust {
-            h.send(crate::actors::TrustMsg::SetTrust { path, decision }).await;
-        }
-    }
-
-    pub async fn send_init_read_only(&self, path: PathBuf) {
-        if let Some(ref h) = self.trust {
-            h.send(crate::actors::TrustMsg::InitReadOnly { path }).await;
-        }
     }
 
     pub async fn send_append_history(&self, entry: String) {
@@ -203,14 +189,6 @@ impl ActorHandles {
 
     pub fn try_dismiss_permission(&self) {
         if let Some(ref h) = self.permission { h.try_dismiss(); }
-    }
-
-    pub async fn send_view(&self, msg: crate::actors::ViewMsg) {
-        if let Some(ref h) = self.view { h.send(msg).await; }
-    }
-
-    pub fn try_send_view(&self, msg: crate::actors::ViewMsg) {
-        if let Some(ref h) = self.view { h.try_send(msg); }
     }
 
     pub async fn run_bash(&self, command: String) {
@@ -428,9 +406,6 @@ mod tests {
         assert!(handles.fff_indexer.is_none());
         assert!(handles.input.is_none());
         assert!(handles.permission.is_none());
-        assert!(handles.view.is_none());
-        assert!(handles.completion.is_none());
-        assert!(handles.trust.is_none());
         assert!(handles.turn.is_none());
     }
 

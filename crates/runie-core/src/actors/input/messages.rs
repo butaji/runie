@@ -4,7 +4,7 @@
 //! - Asynchronously in `InputActor` (production)
 //! - Synchronously via `apply_to()` (tests without a spawned actor)
 
-use crate::actors::GenericActorHandle;
+use crate::actors::ractor_adapter::GenericActorHandle;
 
 /// All messages accepted by `InputActor`.
 ///

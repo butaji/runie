@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use tokio::sync::mpsc;
 
-use crate::actors::GenericActorHandle;
+use crate::actors::ractor_adapter::GenericActorHandle;
 use crate::edit_preview::EditPreview;
 use crate::session::Session;
 use crate::trust::TrustDecision;

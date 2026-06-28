@@ -13,8 +13,8 @@ extern crate self as runie_core;
 
 pub mod actors;
 pub use actors::{
-    spawn_actor, Actor, ActorFuture, ActorHandle, FffFileItem, FffSearchRequest,
-    FffSearchResult, FffSearchResultPayload, FffSearchState, PersistenceActor, Reply,
+    FffFileItem, FffSearchRequest,
+    FffSearchResult, FffSearchResultPayload, FffSearchState, PersistenceActor,
 };
 pub use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
 // Inner state structs are pub(crate) — accessible within runie-core but not exported externally.
@@ -89,9 +89,7 @@ pub mod view;
 #[cfg(test)]
 mod tests;
 
-pub use actors::session::SessionActor;
-pub use actors::turn::TurnActor;
-pub use actors::plan::{PlanActor, PlanActorHandle, PlanState, PlanStepStatus};
+pub use actors::session::RactorSessionActor;
 pub use agent_phase::{elapsed_secs, format_elapsed, AgentPhase};
 pub use auth::{AuthStorage, AuthToken};
 pub use config::{Config, ConfigChange, ModelProvider, ModelsSection, TruncationSection};

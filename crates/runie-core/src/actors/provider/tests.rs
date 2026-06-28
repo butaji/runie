@@ -4,8 +4,8 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use crate::actors::config::ConfigActor;
-use crate::actors::provider::{BuiltProvider, ProviderActor, ProviderActorHandle, ProviderFactory};
+use crate::actors::config::RactorConfigActor as ConfigActor;
+use crate::actors::provider::{BuiltProvider, RactorProviderActor as ProviderActor, ProviderActorHandle, ProviderFactory};
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::event::Event;
@@ -92,14 +92,14 @@ impl ProviderFactory for MockFactory {
 fn spawn_actor(
     factory: Arc<dyn ProviderFactory>,
 ) -> (
-    ProviderActorHandle,
-    crate::actors::ActorHandle,
-    crate::actors::ActorHandle,
+    crate::actors::provider::RactorProviderHandle,
+    ractor::ActorCell,
+    ractor::ActorCell,
 ) {
     let bus = EventBus::<Event>::new(1);
-    let (config_handle, config_actor) = ConfigActor::spawn(bus.clone(), None);
-    let (provider_handle, provider_actor) = ProviderActor::spawn(bus, config_handle, factory);
-    (provider_handle, provider_actor, config_actor)
+    let (config_handle, config_cell) = futures::executor::block_on(ConfigActor::spawn(bus.clone(), None));
+    let (provider_handle, provider_cell) = futures::executor::block_on(ProviderActor::spawn(bus, config_handle, factory));
+    (provider_handle, provider_cell, config_cell)
 }
 
 #[tokio::test]

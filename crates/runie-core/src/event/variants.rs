@@ -3,7 +3,6 @@
 use serde::{Deserialize, Serialize};
 use strum::IntoStaticStr;
 
-use crate::event::plan::PlanEvent;
 use crate::model::ThinkingLevel;
 use crate::settings::SettingsCategory;
 
@@ -490,6 +489,4 @@ pub enum Event {
     },
     Save,
     Cancel,
-    // Plan events (delegated to plan module)
-    Plan(PlanEvent),
 }

@@ -3138,7 +3138,6 @@ dependencies = [
  "regex",
  "reqwest",
  "rmcp",
- "runie-macros",
  "runie-protocol",
  "schemars",
  "serde",
@@ -3157,15 +3156,6 @@ dependencies = [
  "unicode-segmentation",
  "unicode-width",
  "uuid",
-]
-
-[[package]]
-name = "runie-macros"
-version = "0.2.16"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.118",
 ]
 
 [[package]]
@@ -3209,6 +3199,7 @@ dependencies = [
  "runie-core",
  "runie-provider",
  "tempfile",
+ "thiserror 2.0.18",
  "tokio",
 ]
 

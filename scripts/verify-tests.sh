@@ -4,7 +4,7 @@ set -euo pipefail
 echo "=== Runie Test Verification Script ==="
 echo ""
 
-EXPECTED_TOTAL=2414
+EXPECTED_TOTAL=2657
 MIN_TESTS=100
 
 # Test timeout: tests exceeding this are killed (seconds).

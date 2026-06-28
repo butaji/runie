@@ -12,7 +12,7 @@
 //!   - SessionActor subscribes to bus, persists durable events to JSONL
 
 use futures::StreamExt;
-use runie_agent::AgentActor;
+use runie_agent::spawn_ractor_agent;
 use runie_core::actors::{
     ActorHandles, RactorFffIndexerActor, RactorIoActor,
     RactorConfigActor, RactorConfigHandle, RactorSessionActor, RactorTurnActor,
@@ -156,11 +156,11 @@ async fn spawn_background_tasks(
 struct ActorChannels {
     input_tx: mpsc::Sender<Event>,
     input_rx: mpsc::Receiver<Event>,
-    agent_handle: runie_agent::AgentActorHandle,
-    agent_actor: runie_core::actors::ActorHandle,
+    agent_handle: runie_tui::ui_actor::AgentActorHandle,
+    agent_actor: ractor::concurrency::JoinHandle<()>,
     persistence_handle: runie_core::actors::RactorSessionHandle,
     turn_handle: runie_core::actors::RactorTurnHandle,
-    turn_actor: tokio::task::JoinHandle<()>,
+    turn_actor: ractor::concurrency::JoinHandle<()>,
 }
 
 async fn setup_actor_channels(
@@ -169,16 +169,19 @@ async fn setup_actor_channels(
     bus: &EventBus<Event>,
 ) -> ActorChannels {
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
-    let (agent_handle, agent_actor) = AgentActor::spawn(
+    let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
+    let (_agent_handle, agent_actor, _agent_cell) = spawn_ractor_agent(
         bus.clone(),
         handles.provider.clone().expect("ProviderActor must be spawned"),
         handles.permission.clone().expect("PermissionActor must be spawned"),
-    );
+    ).await.expect("AgentActor must spawn");
+    // Store the mpsc channel sender as the UiActor's handle
+    let ui_agent_handle = runie_tui::ui_actor::AgentActorHandle::new(agent_tx);
     let (turn_handle, _, turn_actor) = RactorTurnActor::spawn(bus.clone()).await;
     ActorChannels {
         input_tx,
         input_rx,
-        agent_handle,
+        agent_handle: ui_agent_handle,
         agent_actor,
         persistence_handle: handles.session.clone().expect("SessionActor must be spawned"),
         turn_handle,
@@ -269,7 +272,7 @@ fn render_loop(
 fn spawn_ui_actor(
     state: AppState,
     render_tx: watch::Sender<Snapshot>,
-    agent_handle: runie_agent::AgentActorHandle,
+    agent_handle: runie_tui::ui_actor::AgentActorHandle,
     persistence_handle: runie_core::actors::RactorSessionHandle,
     turn_handle: runie_core::actors::RactorTurnHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,

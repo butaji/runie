@@ -22,7 +22,6 @@ pub mod kind;
 mod level;
 pub mod name;
 mod names;
-pub mod plan;
 pub mod to_durable;
 mod variants;
 

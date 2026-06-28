@@ -15,7 +15,7 @@ pub mod tool_runner;
 pub mod truncate;
 pub mod turn;
 
-pub use actor::{AgentActor, AgentActorHandle, AgentMsg, RactorAgentHandle, spawn_ractor_agent, RactorAgentHandleExt};
+pub use actor::{RactorAgentHandle, spawn_ractor_agent, RactorAgentHandleExt, AgentMsg};
 pub use headless::{
     run_headless_cli, run_headless_turn, HeadlessCliOptions, HeadlessOptions, HeadlessResult,
 };

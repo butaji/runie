@@ -5,13 +5,15 @@
 default:
     just --list
 
-# Run all workspace tests
+# Run all workspace tests with 120s timeout (tests hanging >120s are killed)
+# Override timeout: RUST_TEST_TIMEOUT=60 just test
+# Pass through to cargo: just test -- --nocapture
 test:
-    cargo test --workspace
+    RUST_TEST_TIMEOUT=120 cargo test --workspace
 
-# Run tests with output visible
+# Run tests with output visible (still respects timeout)
 test-verbose:
-    cargo test --workspace -- --nocapture
+    RUST_TEST_TIMEOUT=120 cargo test --workspace -- --nocapture
 
 # Run clippy lints
 lint:

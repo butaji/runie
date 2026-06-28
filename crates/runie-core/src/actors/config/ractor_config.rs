@@ -10,7 +10,7 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 use tokio::sync::mpsc;
 
 use crate::actors::ractor_adapter::{spawn_ractor, EventBusBridge};
-use crate::actors::Reply;
+use crate::actors::ractor_adapter::Reply;
 use crate::bus::EventBus;
 use crate::config::{Config, TruncationSection};
 use crate::event::Event;

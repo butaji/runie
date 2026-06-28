@@ -73,12 +73,12 @@ fn handle_trust_project(state: &mut AppState, decision: crate::trust::TrustDecis
             TransientLevel::Warning,
         );
     }
-    // Also send to TrustActor async for persistence
+    // Also send to SessionActor async for persistence
     if let Some(handles) = state.actor_handles() {
         let handles = handles.clone();
         let cwd_async = cwd;
         let _ = tokio::spawn(async move {
-            handles.send_trust(cwd_async, decision).await;
+            handles.send_set_trust(cwd_async, decision).await;
         });
     }
 }

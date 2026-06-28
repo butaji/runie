@@ -17,7 +17,7 @@ use crate::actors::{
 };
 use crate::actors::permission::RactorPermissionActor;
 use crate::actors::turn::RactorTurnActor;
-use crate::actors::PermissionActorHandle;
+use crate::actors::permission::RactorPermissionHandle;
 
 use super::messages::{LeaderCommand, LeaderStatus};
 
@@ -167,7 +167,7 @@ struct SpawnedHandles {
     provider: ProviderActorHandle,
     io: RactorIoHandle,
     session: RactorSessionHandle,
-    permission: PermissionActorHandle,
+    permission: RactorPermissionHandle,
     turn: crate::actors::turn::RactorTurnHandle,
 }
 
@@ -217,7 +217,7 @@ pub struct LeaderHandle {
     pub provider: ProviderActorHandle,
     pub io: RactorIoHandle,
     pub session: RactorSessionHandle,
-    pub permission: PermissionActorHandle,
+    pub permission: RactorPermissionHandle,
     pub turn: crate::actors::turn::RactorTurnHandle,
 }
 

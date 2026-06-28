@@ -336,9 +336,6 @@ fn dispatcher_handles_all_variants() {
                 result: Ok("clipboard content".to_string()),
             },
             Event::ProcessResumed => Event::ProcessResumed,
-
-            // Plan
-            Event::Plan(_) => Event::Plan(crate::event::plan::PlanEvent::PlanCleared),
         }
     }
     let _ = assert_exhaustive(Event::Submit);

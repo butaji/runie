@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use crate::actors::GenericActorHandle;
+use crate::actors::ractor_adapter::GenericActorHandle;
 use crate::ChatMessage;
 
 /// Messages accepted by `IoActor`.

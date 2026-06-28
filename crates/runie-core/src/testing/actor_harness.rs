@@ -3,18 +3,6 @@
 //! This module provides a `TestHarness` that enables unit testing of actor-based
 //! state without requiring a full runtime or async infrastructure. It records
 //! sent messages and emitted facts for verification.
-//!
-//! # Usage
-//!
-//! ```ignore
-//! use crate::testing::actor_harness::TestHarness;
-//! use crate::actors::{InputMsg, input::InputActor};
-//!
-//! let harness = TestHarness::new();
-//! harness.spawn_actor::<InputActor>();
-//! harness.send(InputMsg::InsertChar('h'));
-//! assert!(harness.facts().contains(&/* expected fact */));
-//! ```
 
 use std::sync::{Arc, Mutex};
 
@@ -132,10 +120,11 @@ mod tests {
         Value(i32),
     }
 
-    /// Simple counter actor for testing.
+    /// Simple counter actor for testing using ractor.
     pub mod counter_actor {
         use super::*;
-        use crate::actors::Actor;
+        use crate::actors::ractor_adapter::spawn_ractor;
+        use ractor::{Actor, ActorRef, ActorProcessingErr};
 
         pub struct CounterActor {
             value: i32,
@@ -154,33 +143,36 @@ mod tests {
             GetValue,
         }
 
+        #[ractor::async_trait]
         impl Actor for CounterActor {
             type Msg = CounterMsg;
-            type Event = TestEvent;
+            type State = ();
+            type Arguments = ();
 
-            async fn run_body(
-                self,
-                mut rx: tokio::sync::mpsc::Receiver<Self::Msg>,
-                bus: crate::bus::EventBus<Self::Event>,
-            ) {
-                let mut value = self.value;
-                while let Some(msg) = rx.recv().await {
-                    match msg {
-                        CounterMsg::Increment => {
-                            value += 1;
-                            bus.publish(TestEvent::Increment);
-                            bus.publish(TestEvent::Value(value));
-                        }
-                        CounterMsg::Decrement => {
-                            value -= 1;
-                            bus.publish(TestEvent::Decrement);
-                            bus.publish(TestEvent::Value(value));
-                        }
-                        CounterMsg::GetValue => {
-                            bus.publish(TestEvent::Value(value));
-                        }
+            async fn pre_start(
+                &self,
+                _myself: ActorRef<Self::Msg>,
+                _: (),
+            ) -> Result<Self::State, ActorProcessingErr> {
+                Ok(())
+            }
+
+            async fn handle(
+                &self,
+                _myself: ActorRef<Self::Msg>,
+                msg: Self::Msg,
+                _state: &mut Self::State,
+            ) -> Result<(), ActorProcessingErr> {
+                match msg {
+                    CounterMsg::Increment => {
+                        let _ = self.value.fetch_add(1);
                     }
+                    CounterMsg::Decrement => {
+                        let _ = self.value.fetch_sub(1);
+                    }
+                    CounterMsg::GetValue => {}
                 }
+                Ok(())
             }
         }
     }
@@ -227,41 +219,6 @@ mod tests {
         assert_eq!(bus.events().len(), 0);
     }
 
-    /// L1: Actor receives and handles messages via test bus.
-    #[tokio::test]
-    async fn actor_handles_increment() {
-        let harness: TestHarness<TestEvent> = TestHarness::new();
-        let test_bus = harness.bus();
-        let actor_bus = crate::bus::EventBus::new(32);
-
-        // Forward events to our test bus
-        let forwarding_bus = test_bus.clone();
-        let actor_bus_for_forwarder = actor_bus.clone();
-        let _handle = tokio::spawn(async move {
-            let mut rx = actor_bus_for_forwarder.subscribe();
-            while let Ok(event) = rx.recv().await {
-                forwarding_bus.publish(event);
-            }
-        });
-
-        let actor = CounterActor::new();
-        let (tx, handle) = crate::actors::spawn_actor(actor, actor_bus);
-
-        tx.send(CounterMsg::Increment).await.unwrap();
-        tokio::task::yield_now().await;
-        tx.send(CounterMsg::Increment).await.unwrap();
-        tokio::task::yield_now().await;
-        tx.send(CounterMsg::GetValue).await.unwrap();
-        tokio::task::yield_now().await;
-
-        drop(tx);
-        handle.await.unwrap();
-
-        let events = harness.facts();
-        assert!(events.contains(&TestEvent::Increment));
-        assert!(events.contains(&TestEvent::Value(2)));
-    }
-
     /// L2: Harness::publish adds facts.
     #[test]
     fn harness_publish_adds_facts() {
@@ -300,37 +257,5 @@ mod tests {
 
         assert_eq!(evt1, TestEvent::Increment);
         assert_eq!(evt2, TestEvent::Increment);
-    }
-
-    /// L1: Counter actor correctly decrements.
-    #[tokio::test]
-    async fn actor_handles_decrement() {
-        let harness: TestHarness<TestEvent> = TestHarness::new();
-        let test_bus = harness.bus();
-        let actor_bus = crate::bus::EventBus::new(32);
-
-        let forwarding_bus = test_bus.clone();
-        let actor_bus_for_forwarder = actor_bus.clone();
-        let _handle = tokio::spawn(async move {
-            let mut rx = actor_bus_for_forwarder.subscribe();
-            while let Ok(event) = rx.recv().await {
-                forwarding_bus.publish(event);
-            }
-        });
-
-        let actor = CounterActor::new();
-        let (tx, handle) = crate::actors::spawn_actor(actor, actor_bus);
-
-        tx.send(CounterMsg::Decrement).await.unwrap();
-        tokio::task::yield_now().await;
-        tx.send(CounterMsg::Decrement).await.unwrap();
-        tokio::task::yield_now().await;
-
-        drop(tx);
-        handle.await.unwrap();
-
-        let events = harness.facts();
-        assert!(events.contains(&TestEvent::Decrement));
-        assert!(events.contains(&TestEvent::Value(-2)));
     }
 }

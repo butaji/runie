@@ -6,13 +6,31 @@
 
 use std::collections::HashMap;
 use std::time::Duration;
-use runie_agent::AgentActorHandle;
+use runie_agent::{AgentMsg, AgentCommand};
 use runie_core::actors::RactorSessionHandle;
 use runie_core::bus::{EventBus, Receiver};
 use runie_core::login_flow::LoginStep;
 use runie_core::{AppState, Snapshot, Event};
 use tokio::sync::{mpsc, oneshot, watch};
 use crate::effects::{login, EffectCommand};
+
+/// Simple handle for sending commands to the agent.
+#[derive(Clone)]
+pub struct AgentActorHandle {
+    tx: mpsc::Sender<AgentMsg>,
+}
+
+impl AgentActorHandle {
+    pub fn new(tx: mpsc::Sender<AgentMsg>) -> Self { Self { tx } }
+
+    pub async fn run(&self, command: AgentCommand) {
+        let _ = self.tx.send(AgentMsg::Run { command }).await;
+    }
+
+    pub async fn run_if_queued(&self, turn_handle: &runie_core::actors::RactorTurnHandle) {
+        turn_handle.send(runie_core::actors::TurnMsg::RunIfQueued).await;
+    }
+}
 use crate::pace::PacedRenderer;
 use crate::terminal::caps::TerminalCapabilities;
 
@@ -126,7 +144,6 @@ impl UiActor {
         let was_followup = matches!(evt, Event::FollowUp);
         let was_config_loaded = matches!(&evt, Event::ConfigLoaded { .. });
         let was_agent_done = matches!(&evt, Event::Done { .. } | Event::Error { .. });
-        let was_trust_loaded = matches!(&evt, Event::TrustLoaded { .. });
 
         let submitted_text = if was_submit {
             Some(self.state.input().input().to_string())
@@ -146,27 +163,12 @@ impl UiActor {
         if was_config_loaded {
             let _ = self.kb_tx.send(self.state.config().keybindings().clone());
         }
-        self.handle_trust_loaded(was_trust_loaded);
         handle_persistence_messages(self.persistence_handle.clone(), evt, submitted_text).await;
         if was_submit || was_followup || was_agent_done {
             self.agent_handle.run_if_queued(&self.turn_handle).await;
         }
 
         false
-    }
-
-    /// Send InitReadOnly to TrustActor after trust decisions are loaded.
-    fn handle_trust_loaded(&self, was_trust_loaded: bool) {
-        if !was_trust_loaded {
-            return;
-        }
-        let cwd = std::env::current_dir().unwrap_or_default();
-        if let Some(handles) = self.state.actor_handles() {
-            let handles = handles.clone();
-            let _ = tokio::spawn(async move {
-                handles.send_init_read_only(cwd).await;
-            });
-        }
     }
 
     /// Update the paced renderer based on the received event.

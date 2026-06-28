@@ -65,7 +65,6 @@ redb = { version = "2", optional = true }
 [dev-dependencies]
 tempfile.workspace = true
 criterion = "0.5"
-runie-macros.workspace = true
 
 [[bench]]
 name = "snapshot"

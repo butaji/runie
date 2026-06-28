@@ -2,7 +2,7 @@
 
 use crate::{DynProvider, DynProviderFactory, MockProvider, MockStreamingProvider, Provider, ProviderError};
 use futures::StreamExt;
-use runie_core::actors::{ConfigActor, ProviderActor};
+use runie_core::actors::{RactorConfigActor as ConfigActor, provider::RactorProviderActor as ProviderActor};
 use runie_core::bus::EventBus;
 use runie_core::config::Config;
 use runie_core::event::Event;
@@ -406,9 +406,9 @@ async fn provider_actor_builds_mock_provider_with_runie_mock() {
     std::env::set_var("RUNIE_MOCK", "1");
 
     let bus = EventBus::<Event>::new(1);
-    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
+    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None).await;
     let (provider_handle, _provider_actor) =
-        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory));
+        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory)).await;
 
     let built = provider_handle
         .build("mock".into(), "echo".into())
@@ -424,9 +424,9 @@ async fn provider_actor_builds_mock_provider_with_runie_mock() {
 #[tokio::test]
 async fn provider_actor_rejects_unknown_provider_real_factory() {
     let bus = EventBus::<Event>::new(1);
-    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
+    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None).await;
     let (provider_handle, _provider_actor) =
-        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory));
+        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory)).await;
 
     let err = provider_handle
         .build("ghost-provider".into(), "x".into())
@@ -475,9 +475,9 @@ api_key = "sk-test"
     std::fs::write(&config_path, config).unwrap();
 
     let bus = EventBus::<Event>::new(1);
-    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), Some(config_path));
+    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), Some(config_path)).await;
     let (provider_handle, _provider_actor) =
-        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory));
+        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory)).await;
 
     let models = provider_handle
         .validate_key("test".into(), "sk-test".into())

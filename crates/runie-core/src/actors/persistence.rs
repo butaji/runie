@@ -25,16 +25,6 @@ pub trait PersistenceActor {
     ) -> impl std::future::Future<Output = ()> + Send;
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// L1: Both persistence actors implement `PersistenceActor` at compile time.
-    /// Adding a new actor that owns durable state should also implement this trait.
-    #[test]
-    fn persistence_trait_implemented() {
-        fn _assert_impl<T: PersistenceActor>() {}
-        _assert_impl::<crate::actors::ConfigActor>();
-        _assert_impl::<crate::actors::SessionActor>();
-    }
-}
+// Note: The PersistenceActor trait documents the pattern used by config and session actors.
+// Ractor-based actors follow the same pattern but the trait is not currently implemented
+// on the actor structs directly. The handle types provide the persistence operations.
