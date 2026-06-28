@@ -22,7 +22,7 @@
   - `tasks/migrate-tui-and-cli-to-leader-bootstrap.md`
 - **Remaining active tasks:**
   - `tasks/collapse-event-intent-kind-taxonomies.md` — derive `Intent`/`EventKind` from `Event` without restructuring the enum.
-  - `tasks/replace-legacy-tool-parsers-with-thin-shim.md` — `partial`. Parser-shim is done; collapse `tool_markers/strip.rs`, reconcile MiniMax parsing ownership, and fix the one `cargo check` warning.
+  - `tasks/replace-legacy-tool-parsers-with-thin-shim.md` — `partial`. Shim routes parsing but still embeds `legacy`/`markup` submodules; inline/delete them, collapse `tool_markers/strip.rs`, reconcile MiniMax ownership, and fix the one `cargo check` warning.
   - `tasks/narrow-runie-core-public-api.md` — usage-audit-first narrowing/moving of internal modules.
   - `tasks/route-cli-config-through-configactor.md` — add ConfigActor messages for CLI inspect/MCP.
   - `tasks/cleanup-small-duplicates-and-dead-code.md` — `partial`. Final sweep after architecture is stable; includes the duplicated built-in tool name list in `tool/shim/minimax.rs`.
@@ -40,7 +40,7 @@
 | 4 | `expand-leader-start-for-tui-and-cli` | P1 | Make `Leader::start` spawn the full actor set (Input/Agent/FffIndexer) and expose channels/shutdown. |
 | 5 | `migrate-tui-and-cli-to-leader-bootstrap` | P1 | Replace manual TUI/CLI bootstrap with `Leader::start`; route CLI input through `InputMsg`. |
 | 6 | `collapse-event-intent-kind-taxonomies` | P1 | Derive `Intent`/`EventKind` from flat `Event`; delete manual mirrors. |
-| 7 | `replace-legacy-tool-parsers-with-thin-shim` | P2 | `partial`. Parser-shim is done; collapse `tool_markers/strip.rs`, reconcile MiniMax parsing ownership, fix the one `cargo check` warning. |
+| 7 | `replace-legacy-tool-parsers-with-thin-shim` | P2 | `partial`. Shim routes parsing but still embeds `legacy`/`markup` submodules; inline/delete them, collapse `tool_markers/strip.rs` to two semantic passes, reconcile MiniMax ownership, fix the one `cargo check` warning. |
 | 8 | `route-cli-config-through-configactor` | P2 | Add `RactorConfigActor` messages for inspect/MCP; route CLI commands through the actor. |
 | 9 | `narrow-runie-core-public-api` | P2 | Usage-audit first; move shared helpers to a new `runie-util` crate, narrow the rest. |
 | 10 | `cleanup-small-duplicates-and-dead-code` | P3 | `partial`. Skill hooks, tool registry (including duplicated name list in `tool/shim/minimax.rs`), TUI render helpers, and the one `cargo check` warning. |

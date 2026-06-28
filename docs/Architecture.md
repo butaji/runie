@@ -412,7 +412,7 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 
 #### Phase 4 — Tool/provider shims (P2)
 
-7. **Finish tool-parser shim: marker stripping and MiniMax ownership** (`tasks/replace-legacy-tool-parsers-with-thin-shim.md`) — `partial`. The parser-shim portion is done; collapse the 8-stage `tool_markers/strip.rs` pipeline, decide who owns MiniMax XML parsing, and fix the one `cargo check` warning.
+7. **Finish tool-parser shim: collapse legacy modules and marker stripping** (`tasks/replace-legacy-tool-parsers-with-thin-shim.md`) — `partial`. The shim routes parsing through `quick-xml` MiniMax and single-pass JSON, but still embeds `legacy`/`markup` submodules; inline/delete them, collapse `tool_markers/strip.rs` to two semantic passes, reconcile MiniMax ownership, and fix the one `cargo check` warning.
 
 #### Phase 5 — CLI config (P2)
 
