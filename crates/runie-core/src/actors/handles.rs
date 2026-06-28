@@ -341,7 +341,7 @@ impl ActorHandles {
 
     pub fn try_send_turn_thinking(&self, id: String) {
         if let Some(ref h) = self.turn {
-            h.try_send(crate::actors::TurnMsg::Thinking { id });
+            let _ = h.try_send(crate::actors::TurnMsg::Thinking { id });
         }
     }
 
@@ -353,7 +353,7 @@ impl ActorHandles {
 
     pub fn try_send_turn_tool_start(&self, id: String, name: String) {
         if let Some(ref h) = self.turn {
-            h.try_send(crate::actors::TurnMsg::ToolStart { id, name });
+            let _ = h.try_send(crate::actors::TurnMsg::ToolStart { id, name });
         }
     }
 
@@ -365,7 +365,7 @@ impl ActorHandles {
 
     pub fn try_send_turn_tool_end(&self, id: String, duration_secs: f64, output: String) {
         if let Some(ref h) = self.turn {
-            h.try_send(crate::actors::TurnMsg::ToolEnd { id, duration_secs, output });
+            let _ = h.try_send(crate::actors::TurnMsg::ToolEnd { id, duration_secs, output });
         }
     }
 
@@ -377,7 +377,7 @@ impl ActorHandles {
 
     pub fn try_send_turn_response_delta(&self, id: String, content: String) {
         if let Some(ref h) = self.turn {
-            h.try_send(crate::actors::TurnMsg::ResponseDelta { id, content });
+            let _ = h.try_send(crate::actors::TurnMsg::ResponseDelta { id, content });
         }
     }
 
@@ -389,7 +389,7 @@ impl ActorHandles {
 
     pub fn try_send_turn_complete(&self, id: String, duration_secs: f64) {
         if let Some(ref h) = self.turn {
-            h.try_send(crate::actors::TurnMsg::TurnComplete { id, duration_secs });
+            let _ = h.try_send(crate::actors::TurnMsg::TurnComplete { id, duration_secs });
         }
     }
 
@@ -401,7 +401,7 @@ impl ActorHandles {
 
     pub fn try_send_turn_done(&self, id: String) {
         if let Some(ref h) = self.turn {
-            h.try_send(crate::actors::TurnMsg::Done { id });
+            let _ = h.try_send(crate::actors::TurnMsg::Done { id });
         }
     }
 
@@ -413,7 +413,7 @@ impl ActorHandles {
 
     pub fn try_send_turn_error(&self, id: String, message: String) {
         if let Some(ref h) = self.turn {
-            h.try_send(crate::actors::TurnMsg::Error { id, message });
+            let _ = h.try_send(crate::actors::TurnMsg::Error { id, message });
         }
     }
 
@@ -425,7 +425,7 @@ impl ActorHandles {
 
     pub fn try_send_turn_update_speed(&self, tokens_out: usize) {
         if let Some(ref h) = self.turn {
-            h.try_send(crate::actors::TurnMsg::UpdateSpeed { tokens_out });
+            let _ = h.try_send(crate::actors::TurnMsg::UpdateSpeed { tokens_out });
         }
     }
 }

@@ -92,7 +92,7 @@
   {
     "file": "declarative-actor-dsl.md",
     "title": "Declarative Actor DSL",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "declarative-permission-rules.md",

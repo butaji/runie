@@ -2,6 +2,7 @@
 
 use proc_macro::TokenStream;
 
+mod actor;
 mod command;
 mod event;
 mod hook;
@@ -29,4 +30,12 @@ pub fn define_hook(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn define_policy(input: TokenStream) -> TokenStream {
     policy::expand(input)
+}
+
+/// Defines a ractor-based actor with declarative message handling.
+///
+/// See `crates/runie-macros/src/actor.rs` for full documentation.
+#[proc_macro]
+pub fn define_actor(input: TokenStream) -> TokenStream {
+    actor::expand(input)
 }

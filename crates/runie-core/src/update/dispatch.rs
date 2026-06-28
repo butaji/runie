@@ -73,7 +73,7 @@ fn handle_agent_event(state: &mut AppState, event: Event) {
     if let Some(ref handles) = state.actor_handles() {
         if let Some(ref turn) = handles.turn {
             if let Some(turn_msg) = to_turn_msg(&event) {
-                turn.try_send(turn_msg);
+                let _ = turn.try_send(turn_msg);
             }
         }
     }
