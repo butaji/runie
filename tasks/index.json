@@ -182,7 +182,8 @@
   {
     "file": "gate-or-move-single-consumer-core-modules.md",
     "title": "Gate or move single-consumer core modules",
-    "status": "todo"
+    "status": "partial",
+    "note": "themes moved, ipc removed, dialog partially moved; login_flow/providers_dialog deferred due to circular deps"
   },
   {
     "file": "generate-config-schema-from-code.md",
@@ -392,8 +393,8 @@
   {
     "file": "unify-duplicate-module-names-core-tui.md",
     "title": "Unify duplicate module names across core and TUI",
-    "status": "partial",
-    "note": "markdown collision resolved; themes blocked by gate-or-move"
+    "status": "done",
+    "note": "themes done (moved to runie-tui), markdown done (renamed)"
   },
   {
     "file": "unify-persistence-actors.md",
