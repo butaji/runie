@@ -1,4 +1,5 @@
 use super::*;
+use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::FffFileEntry;
 
@@ -51,23 +52,23 @@ async fn indexer_initializes_in_temp_dir() {
     // Subscribe BEFORE spawning so we don't miss any events
     let mut sub = bus.subscribe();
 
-    // Spawn the indexer
-    let (tx, handle) =
-        FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
+    // Spawn the indexer using ractor version
+    let (handle, _cell) =
+        RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
+            .await
+            .expect("spawn succeeds");
 
     // Wait for the actor to finish initialization
     wait_for_indexed(500).await;
 
     // Send a search request
     let request_id = 1;
-    let send_result = tx
-        .send(FffSearchRequest {
-            request_id,
-            query: "lib".to_string(),
-            limit: Some(10),
-            project_path: root.clone(),
-        })
-        .await;
+    handle.search(FffSearchRequest {
+        request_id,
+        query: "lib".to_string(),
+        limit: Some(10),
+        project_path: root.clone(),
+    }).await;
 
     // Collect results using deterministic sync
     let mut result_entries: Option<Vec<FffFileEntry>> = None;
@@ -81,14 +82,7 @@ async fn indexer_initializes_in_temp_dir() {
         tokio::task::yield_now().await;
     }
 
-    handle.abort();
-
-    // Send should succeed (or gracefully fail if actor exited)
-    assert!(
-        send_result.is_ok() || send_result.is_err(),
-        "send should not panic"
-    );
-
+    // Send should succeed
     assert!(result_entries.is_some(), "should have received search result");
 }
 
@@ -111,22 +105,22 @@ async fn indexer_answers_file_search() {
     // Subscribe BEFORE spawning so we don't miss any events
     let mut sub = bus.subscribe();
 
-    let (tx, handle) =
-        FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
+    let (handle, _cell) =
+        RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
+            .await
+            .expect("spawn succeeds");
 
     // Wait for the actor to finish initialization
     wait_for_indexed(500).await;
 
     // Search for "cli"
     let request_id = 2;
-    tx.send(FffSearchRequest {
+    handle.search(FffSearchRequest {
         request_id,
         query: "cli".to_string(),
         limit: Some(5),
         project_path: root.clone(),
-    })
-    .await
-    .expect("send succeeds");
+    }).await;
 
     // Wait for result
     let mut result_entries: Option<Vec<FffFileEntry>> = None;
@@ -139,8 +133,6 @@ async fn indexer_answers_file_search() {
         }
         tokio::task::yield_now().await;
     }
-
-    handle.abort();
 
     let entries = result_entries.expect("got a result for request_id 2");
     // Should find src/cli/main.rs
@@ -168,21 +160,21 @@ async fn search_request_event_returns_results() {
     // Subscribe BEFORE spawning so we don't miss any events
     let mut sub = bus.subscribe();
 
-    let (tx, handle) =
-        FffIndexerActor::spawn(root.clone(), data_dir, bus.clone()).expect("spawn succeeds");
+    let (handle, _cell) =
+        RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
+            .await
+            .expect("spawn succeeds");
 
     // Wait for the actor to finish initialization
     wait_for_indexed(500).await;
 
     let request_id = 3;
-    tx.send(FffSearchRequest {
+    handle.search(FffSearchRequest {
         request_id,
         query: "readme".to_string(),
         limit: Some(5),
         project_path: root,
-    })
-    .await
-    .expect("send succeeds");
+    }).await;
 
     // Drain events using deterministic sync
     let mut got_result = false;
@@ -199,7 +191,6 @@ async fn search_request_event_returns_results() {
         tokio::task::yield_now().await;
     }
 
-    handle.abort();
     assert!(got_result, "search result event was not received");
 }
 

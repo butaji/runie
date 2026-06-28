@@ -1,6 +1,6 @@
 # Migrate production actors to `ractor`
 
-**Status**: partial (ProviderActor complete, FffIndexerActor and AgentActor remain)
+**Status**: partial (ProviderActor and FffIndexerActor complete, AgentActor remains)
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0/P1
@@ -18,7 +18,7 @@ Current state as of Round 2 (2026-06-28):
   - `RactorConfigActor` is spawned in `runie-tui/src/main.rs`, `runie-cli/src/acp.rs`, `crates/runie-core/src/headless_runtime.rs`, and `crates/runie-core/src/actors/leader/actor.rs`.
   - `RactorIoActor` is spawned in `runie-tui/src/main.rs` and `crates/runie-core/src/actors/leader/actor.rs`.
   - `RactorSessionActor` is spawned in `runie-tui/src/main.rs` and `crates/runie-core/src/actors/leader/actor.rs`.
-- **Still custom-trait in production:** `FffIndexerActor`, and `AgentActor` (`crates/runie-agent/src/actor.rs`).
+- **Still custom-trait in production:** `AgentActor` (`crates/runie-agent/src/actor.rs`).
 
 As of Round 3 (2026-06-28), `ProviderActor` has been fully migrated to `RactorProviderActor`. The following production spawn sites now use `RactorProviderActor`:
 - `runie-tui/src/main.rs`
@@ -42,13 +42,13 @@ This task finishes the migration in phases so that `cargo check --workspace` sta
 | IoActor | ✓ `RactorIoActor` | ✓ |
 | SessionActor | ✓ `RactorSessionActor` | ✓ |
 | ProviderActor | ✓ `RactorProviderActor` | ✓ (TUI, Leader, HeadlessRuntime, CLI, AgentActor) |
-| FffIndexerActor | ✗ | ✗ |
+| FffIndexerActor | ✓ `RactorFffIndexerActor` | ✓ (TUI) |
 | AgentActor | ✗ (uses `RactorProviderHandle`) | ✓ (updated to use ractor provider handle) |
 
 ### Suggested phases (Pareto ordering)
 
-1. **Migrate `ProviderActor`** — highest-impact remaining actor; referenced by leader, headless runtime, TUI, and CLI.
-2. **Migrate `FffIndexerActor`**; keep a small wrapper if the static `FffSearchState` service-locator remains.
+1. **Migrate `ProviderActor`** — highest-impact remaining actor; referenced by leader, headless runtime, TUI, and CLI. ✓
+2. **Migrate `FffIndexerActor`**; keep a small wrapper if the static `FffSearchState` service-locator remains. ✓
 3. **Migrate `AgentActor`** in `runie-agent`; introduce a factory trait in `runie-core` to avoid a crate-dependency cycle.
 
 ## Acceptance Criteria
@@ -57,7 +57,7 @@ This task finishes the migration in phases so that `cargo check --workspace` sta
 - [x] `RactorIoActor` is wired into production spawn sites (TUI, Leader).
 - [x] `RactorSessionActor` is wired into production spawn sites (TUI, Leader).
 - [x] `ProviderActor` has a `ractor`-based implementation used in production.
-- [ ] `FffIndexerActor` has a `ractor`-based implementation used in production.
+- [x] `FffIndexerActor` has a `ractor`-based implementation used in production.
 - [ ] `AgentActor` has a `ractor`-based implementation used in production.
 - [x] All production spawn sites (`runie-tui/src/main.rs`, `runie-cli/src/acp.rs`, `Leader::start`, `HeadlessRuntime`) use the ractor-based versions for all migrated actors.
 - [x] `HeadlessRuntime` (`crates/runie-core/src/headless_runtime.rs`) is updated to use the ractor-based actors instead of the legacy ones.
@@ -77,7 +77,7 @@ This task finishes the migration in phases so that `cargo check --workspace` sta
 - [x] `ractor_provider_actor_spawns` — `RactorProviderActor` spawns successfully.
 - [x] `ractor_provider_handle_build` — `RactorProviderHandle` builds a provider.
 - [x] `ractor_provider_handle_validate_key` — `RactorProviderHandle` validates API keys.
-- [ ] `ractor_fff_indexer_actor_searches` — `FffIndexerActor` accepts a search request through ractor and returns results.
+- [x] `ractor_fff_indexer_actor_searches` — `FffIndexerActor` accepts a search request through ractor and returns results.
 
 ### Layer 2 — Event Handling
 - [x] `leader_start_uses_ractor_io` — `Leader::start` instantiates `RactorIoActor`.

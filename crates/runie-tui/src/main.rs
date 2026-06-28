@@ -14,7 +14,7 @@
 use futures::StreamExt;
 use runie_agent::AgentActor;
 use runie_core::actors::{
-    ActorHandles, FffIndexerActor, FffIndexerHandle, RactorIoActor,
+    ActorHandles, RactorFffIndexerActor, RactorIoActor,
     RactorConfigActor, RactorConfigHandle, RactorSessionActor, RactorTurnActor,
 };
 use runie_core::actors::permission::RactorPermissionActor;
@@ -105,10 +105,10 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
     // Spawn FffIndexerActor with the current working directory as the project root.
     let project_root = std::env::current_dir().unwrap_or_default();
     let data_dir = dirs::data_dir().unwrap_or_else(std::env::temp_dir);
-    if let Ok((tx, _actor_handle)) =
-        FffIndexerActor::spawn(project_root, data_dir, bus.clone())
+    if let Ok((handle, _actor_cell)) =
+        RactorFffIndexerActor::spawn(project_root, data_dir, bus.clone()).await
     {
-        handles.fff_indexer = Some(FffIndexerHandle::new(tx));
+        handles.fff_indexer = Some(handle);
         state.set_actor_handles(handles.clone());
     }
     (state, handles)

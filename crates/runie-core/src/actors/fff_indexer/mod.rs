@@ -10,21 +10,21 @@
 //! The actor registers its shared handles in a process-wide registry so that
 //! tools can also access the index without going through the event bus.
 
-use crate::actors::{Actor, ActorHandle};
-use crate::bus::EventBus;
-use crate::event::Event;
-use crate::model::FffFileEntry;
-use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
-use std::sync::RwLock;
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::mpsc;
+use std::sync::RwLock;
 
-mod search;
+use serde::{Deserialize, Serialize};
+
+use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
+
+pub use self::ractor_fff_indexer::RactorFffIndexerHandle;
+pub use self::ractor_fff_indexer::RactorFffIndexerActor;
+
+mod ractor_fff_indexer;
 
 // Re-export for use by other modules (e.g., file_pickers)
-pub use search::format_git_status;
+pub use ractor_fff_indexer::format_git_status;
 
 #[cfg(test)]
 mod tests;
@@ -175,109 +175,10 @@ impl FffSearchRequest {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FffIndexerActor
-// ─────────────────────────────────────────────────────────────────────────────
+// Re-export types for backward compatibility during migration.
+// Production code should use RactorFffIndexerActor and RactorFffIndexerHandle.
+#[deprecated(since = "0.2.16", note = "Use RactorFffIndexerActor instead")]
+pub type FffIndexerActor = ractor_fff_indexer::RactorFffIndexerActor;
 
-/// Long-lived actor that owns the FFF file index.
-///
-/// `FffIndexerActor` is spawned once per workspace session. It:
-/// - Initializes the FFF `FilePicker` on startup and waits for the initial scan.
-/// - Handles `FffSearchRequest` messages by querying the shared picker.
-/// - Emits `FffSearchResult` events back on the bus.
-pub struct FffIndexerActor {
-    /// Filesystem root to index.
-    root: PathBuf,
-    /// LMDB path for frecency data (under `~/.cache/runie/fff/`).
-    frecency_path: PathBuf,
-    /// LMDB path for query tracker data.
-    query_path: PathBuf,
-    /// Shared FFF picker handle.
-    shared_picker: SharedFilePicker,
-    /// Shared frecency tracker.
-    shared_frecency: SharedFrecency,
-    /// Shared query tracker.
-    shared_query_tracker: SharedQueryTracker,
-    /// Whether the initial scan has completed.
-    indexed: bool,
-}
-
-impl FffIndexerActor {
-    /// Construct a new actor for the given workspace root.
-    pub fn new(root: PathBuf, data_dir: PathBuf) -> anyhow::Result<Self> {
-        let fff_dir = data_dir.join("runie").join("fff");
-        Ok(Self {
-            root,
-            frecency_path: fff_dir.join("frecency"),
-            query_path: fff_dir.join("queries"),
-            shared_picker: SharedFilePicker::default(),
-            shared_frecency: SharedFrecency::default(),
-            shared_query_tracker: SharedQueryTracker::default(),
-            indexed: false,
-        })
-    }
-
-    /// Spawn the indexer actor and return a handle + bus tx.
-    ///
-    /// Returns `(tx, actor_handle)` — send `FffSearchRequest` via `tx`.
-    /// The actor emits `Event::FffSearchResult` events on `bus`.
-    pub fn spawn(
-        root: PathBuf,
-        data_dir: PathBuf,
-        bus: EventBus<Event>,
-    ) -> anyhow::Result<(mpsc::Sender<FffSearchRequest>, ActorHandle)> {
-        let actor = Self::new(root, data_dir)?;
-        let (tx, rx) = mpsc::channel(64);
-        let handle = ActorHandle::spawn(actor, rx, bus);
-        Ok((tx, handle))
-    }
-}
-
-impl Actor for FffIndexerActor {
-    type Msg = FffSearchRequest;
-    type Event = Event;
-
-    async fn run_body(self, rx: mpsc::Receiver<Self::Msg>, bus: EventBus<Event>) {
-        self.run_inner(rx, bus).await;
-    }
-}
-
-impl FffIndexerActor {
-    /// Main event loop.
-    async fn run_inner(
-        mut self,
-        mut rx: mpsc::Receiver<FffSearchRequest>,
-        bus: EventBus<Event>,
-    ) {
-        // Initialize FFF shared state
-        if let Err(e) = self.init_fff().await {
-            tracing::error!("fff indexer init failed: {e}");
-            return;
-        }
-
-        // Process messages until the channel closes
-        while let Some(request) = rx.recv().await {
-            let payload = self.handle_search(request).await;
-            let entries: Vec<FffFileEntry> = payload
-                .items
-                .iter()
-                .map(|item| FffFileEntry {
-                    name: std::path::Path::new(&item.relative_path)
-                        .file_name()
-                        .map(|n| n.to_string_lossy().into_owned())
-                        .unwrap_or_else(|| item.relative_path.clone()),
-                    path: item.relative_path.clone(),
-                    is_dir: item.relative_path.ends_with('/'),
-                    score: item.score,
-                    git_status: item.git_status.clone(),
-                })
-                .collect();
-            bus.publish(Event::FffSearchResult {
-                request_id: payload.request_id,
-                entries,
-                query: payload.query,
-                indexed: payload.indexed,
-            });
-        }
-    }
-}
+#[deprecated(since = "0.2.16", note = "Use RactorFffIndexerHandle instead")]
+pub type FffIndexerHandle = ractor_fff_indexer::RactorFffIndexerHandle;

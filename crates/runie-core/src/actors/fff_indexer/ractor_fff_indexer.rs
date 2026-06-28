@@ -1,22 +1,149 @@
+//! Ractor-based `FffIndexerActor` implementation.
+//!
+//! Migrated from custom Actor trait to ractor for consistency with the rest
+//! of the actor system.
+
+use std::path::PathBuf;
+
+use ractor::{Actor, ActorProcessingErr, ActorRef, async_trait};
 use fff_search::{
     ContentCacheBudget, FFFMode, FilePickerOptions, FrecencyTracker, FuzzySearchOptions,
     PaginationArgs, QueryParser, QueryTracker, SearchResult as FffRawSearchResult,
 };
-use git2;
 use std::time::Duration;
 
+use crate::actors::ractor_adapter::{spawn_ractor, EventBusBridge, RactorHandle};
+use crate::bus::EventBus;
+use crate::event::Event;
+use crate::model::FffFileEntry;
+
 use super::{
-    FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResultPayload, FffSearchState,
+    FffFileItem, FffSearchRequest, FffSearchResultPayload, FffSearchState,
     FffSearchStateInner, DEFAULT_LIMIT, SCAN_TIMEOUT_SECS,
 };
 
-impl FffIndexerActor {
+/// Ractor-based FffIndexerActor handle.
+#[derive(Clone, Debug)]
+pub struct RactorFffIndexerHandle {
+    inner: RactorHandle<FffSearchRequest>,
+}
+
+impl RactorFffIndexerHandle {
+    /// Create a new handle wrapping the inner RactorHandle.
+    pub fn new(inner: RactorHandle<FffSearchRequest>) -> Self {
+        Self { inner }
+    }
+
+    /// Send a search request to the indexer.
+    pub async fn search(&self, request: FffSearchRequest) {
+        self.inner.send(request).await;
+    }
+
+    /// Try to send a search request (non-blocking).
+    pub fn try_search(&self, request: FffSearchRequest) {
+        let _ = self.inner.try_send(request);
+    }
+}
+
+/// Ractor-based FffIndexerActor.
+pub struct RactorFffIndexerActor {
+    root: PathBuf,
+    frecency_path: PathBuf,
+    query_path: PathBuf,
+    bus_bridge: EventBusBridge<Event>,
+    shared_picker: fff_search::SharedFilePicker,
+    shared_frecency: fff_search::SharedFrecency,
+    shared_query_tracker: fff_search::SharedQueryTracker,
+    indexed: bool,
+    init_done: bool,
+}
+
+impl RactorFffIndexerActor {
+    fn new(root: PathBuf, data_dir: PathBuf, bus: EventBus<Event>) -> Self {
+        let fff_dir = data_dir.join("runie").join("fff");
+        Self {
+            root,
+            frecency_path: fff_dir.join("frecency"),
+            query_path: fff_dir.join("queries"),
+            bus_bridge: EventBusBridge::new(bus),
+            shared_picker: fff_search::SharedFilePicker::default(),
+            shared_frecency: fff_search::SharedFrecency::default(),
+            shared_query_tracker: fff_search::SharedQueryTracker::default(),
+            indexed: false,
+            init_done: false,
+        }
+    }
+
+    /// Spawn a `RactorFffIndexerActor` and return a handle + cell.
+    /// Initializes the FFF stores and waits for initial scan before returning.
+    pub async fn spawn(
+        root: PathBuf,
+        data_dir: PathBuf,
+        bus: EventBus<Event>,
+    ) -> Result<(RactorFffIndexerHandle, ractor::ActorCell), ractor::SpawnErr> {
+        let mut actor = Self::new(root, data_dir, bus.clone());
+        // Initialize FFF stores synchronously before spawning
+        if let Err(e) = actor.init_fff().await {
+            tracing::error!("fff indexer init failed: {e}");
+        }
+        let (handle, _join, cell) = spawn_ractor(None, actor, bus).await?;
+        Ok((RactorFffIndexerHandle::new(handle), cell))
+    }
+}
+
+#[async_trait]
+impl Actor for RactorFffIndexerActor {
+    type Msg = FffSearchRequest;
+    type State = ();
+    type Arguments = EventBus<Event>;
+
+    async fn pre_start(
+        &self,
+        _myself: ActorRef<Self::Msg>,
+        _args: Self::Arguments,
+    ) -> Result<Self::State, ActorProcessingErr> {
+        Ok(())
+    }
+
+    async fn handle(
+        &self,
+        _myself: ActorRef<Self::Msg>,
+        msg: Self::Msg,
+        _state: &mut Self::State,
+    ) -> Result<(), ActorProcessingErr> {
+        let payload = self.handle_search(msg).await;
+        let entries = payload
+            .items
+            .iter()
+            .map(|item| FffFileEntry {
+                name: std::path::Path::new(&item.relative_path)
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| item.relative_path.clone()),
+                path: item.relative_path.clone(),
+                is_dir: item.relative_path.ends_with('/'),
+                score: item.score,
+                git_status: item.git_status.clone(),
+            })
+            .collect();
+        self.emit(Event::FffSearchResult {
+            request_id: payload.request_id,
+            entries,
+            query: payload.query,
+            indexed: payload.indexed,
+        });
+        Ok(())
+    }
+}
+
+impl RactorFffIndexerActor {
     /// Initialize FFF: open LMDB stores, start the picker, and register globally.
-    pub(super) async fn init_fff(&mut self) -> anyhow::Result<()> {
+    async fn init_fff(&mut self) -> anyhow::Result<()> {
         self.open_fff_stores()?;
         self.create_fff_picker()?;
         self.register_fff_state();
         self.wait_for_fff_scan().await;
+        self.init_done = true;
         Ok(())
     }
 
@@ -96,7 +223,7 @@ impl FffIndexerActor {
     }
 
     /// Handle a search request.
-    pub(super) async fn handle_search(&self, req: FffSearchRequest) -> FffSearchResultPayload {
+    async fn handle_search(&self, req: FffSearchRequest) -> FffSearchResultPayload {
         let limit = req.limit.unwrap_or(DEFAULT_LIMIT);
 
         let picker_guard = match self.shared_picker.read() {
@@ -123,34 +250,10 @@ impl FffIndexerActor {
         let items = convert_fff_results(&req, picker, &results);
         result_payload(&req, items, results.total_matched, self.indexed)
     }
-}
 
-/// Map a git2 Status to a human-readable label.
-///
-/// Returns `"clean"` if no tracked status flags are set.
-pub fn format_git_status(status: git2::Status) -> &'static str {
-    use git2::Status as G;
-    const STATUS_LABELS: &[(git2::Status, &str)] = &[
-        (G::WT_NEW, "untracked"),
-        (G::INDEX_NEW, "untracked"),
-        (G::WT_MODIFIED, "modified"),
-        (G::INDEX_MODIFIED, "modified"),
-        (G::WT_DELETED, "deleted"),
-        (G::INDEX_DELETED, "deleted"),
-        (G::WT_RENAMED, "renamed"),
-        (G::INDEX_RENAMED, "renamed"),
-    ];
-    for (flag, label) in STATUS_LABELS {
-        if status.contains(*flag) {
-            return label;
-        }
+    fn emit(&self, event: Event) {
+        self.bus_bridge.publish(event);
     }
-    "clean"
-}
-
-/// Format a git2 Status as a human-readable string (returns `"clean"` for clean state).
-fn format_git_status_str(status: git2::Status) -> String {
-    format_git_status(status).to_owned()
 }
 
 /// Build a result payload.
@@ -213,5 +316,54 @@ fn result_payload(
         items,
         total_matched,
         indexed,
+    }
+}
+
+/// Map a git2 Status to a human-readable label.
+///
+/// Returns `"clean"` if no tracked status flags are set.
+pub fn format_git_status(status: git2::Status) -> &'static str {
+    use git2::Status as G;
+    const STATUS_LABELS: &[(git2::Status, &str)] = &[
+        (G::WT_NEW, "untracked"),
+        (G::INDEX_NEW, "untracked"),
+        (G::WT_MODIFIED, "modified"),
+        (G::INDEX_MODIFIED, "modified"),
+        (G::WT_DELETED, "deleted"),
+        (G::INDEX_DELETED, "deleted"),
+        (G::WT_RENAMED, "renamed"),
+        (G::INDEX_RENAMED, "renamed"),
+    ];
+    for (flag, label) in STATUS_LABELS {
+        if status.contains(*flag) {
+            return label;
+        }
+    }
+    "clean"
+}
+
+/// Format a git2 Status as a human-readable string (returns `"clean"` for clean state).
+fn format_git_status_str(status: git2::Status) -> String {
+    format_git_status(status).to_owned()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn ractor_fff_indexer_actor_spawns() {
+        use crate::bus::EventBus;
+        use crate::event::Event;
+        
+        FffSearchState::reset_for_test();
+        let bus = EventBus::<Event>::new(16);
+        let temp_dir = tempfile::tempdir().unwrap();
+        let result = RactorFffIndexerActor::spawn(
+            temp_dir.path().to_path_buf(),
+            temp_dir.path().to_path_buf(),
+            bus,
+        ).await;
+        assert!(result.is_ok());
     }
 }

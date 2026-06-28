@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use crate::actors::{
     CompletionActorHandle, FffSearchRequest, RactorInputHandle,
     RactorIoHandle, PermissionActorHandle, RactorConfigHandle,
-    RactorSessionHandle, TrustActorHandle, RactorTurnHandle, ViewActorHandle,
+    RactorSessionHandle, RactorFffIndexerHandle, TrustActorHandle, RactorTurnHandle, ViewActorHandle,
 };
 use crate::actors::provider::RactorProviderHandle;
 use crate::config::TruncationSection;
@@ -19,30 +19,13 @@ pub struct ActorHandles {
     pub provider: Option<RactorProviderHandle>,
     pub session: Option<RactorSessionHandle>,
     pub io: Option<RactorIoHandle>,
-    pub fff_indexer: Option<FffIndexerHandle>,
+    pub fff_indexer: Option<RactorFffIndexerHandle>,
     pub input: Option<RactorInputHandle>,
     pub permission: Option<PermissionActorHandle>,
     pub view: Option<ViewActorHandle>,
     pub completion: Option<CompletionActorHandle>,
     pub trust: Option<TrustActorHandle>,
     pub turn: Option<RactorTurnHandle>,
-}
-
-#[derive(Clone, Debug)]
-pub struct FffIndexerHandle {
-    tx: tokio::sync::mpsc::Sender<FffSearchRequest>,
-}
-
-impl FffIndexerHandle {
-    pub fn new(tx: tokio::sync::mpsc::Sender<FffSearchRequest>) -> Self {
-        Self { tx }
-    }
-    pub async fn search(&self, request: FffSearchRequest) {
-        let _ = self.tx.send(request).await;
-    }
-    pub fn try_search(&self, request: FffSearchRequest) {
-        let _ = self.tx.try_send(request);
-    }
 }
 
 impl ActorHandles {
@@ -454,7 +437,7 @@ mod tests {
     #[test]
     fn fff_indexer_handle_is_cloneable() {
         fn _assert_clone<T: Clone>() {}
-        _assert_clone::<FffIndexerHandle>();
+        _assert_clone::<RactorFffIndexerHandle>();
     }
 
     #[tokio::test]

@@ -31,7 +31,7 @@ pub mod session;
 pub mod trust;
 pub mod view;
 
-pub use handles::{ActorHandles, FffIndexerHandle};
+pub use handles::ActorHandles;
 
 pub use completion::{CompletionActor, CompletionActorHandle, CompletionMsg};
 pub use turn::{TurnMsg, RactorTurnActor, RactorTurnHandle};
@@ -42,7 +42,7 @@ pub use plan::{PlanActor, PlanActorHandle, PlanMsg, PlanState, PlanStepStatus, R
 pub use config::{RactorConfigActor, RactorConfigHandle, ConfigActor, ConfigActorHandle, ConfigMsg};
 pub use fff_indexer::{
     FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
-    FffSearchState, format_git_status,
+    FffSearchState, format_git_status, RactorFffIndexerHandle, RactorFffIndexerActor,
 };
 pub use input::{InputActor, RactorInputHandle, InputMsg};
 #[allow(deprecated)]
