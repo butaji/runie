@@ -21,6 +21,7 @@ use super::{
 /// The projection is built on-demand by `ensure_fresh()` and stored in `Snapshot`.
 /// UiActor owns the Element cache for rendering purposes.
 #[derive(Clone)]
+#[derive(Default)]
 pub struct AppState {
     // 6 inner state structs (factored domain state)
     // `session` transitions to private once all direct mutations are removed
@@ -54,35 +55,6 @@ pub struct AppState {
     pub actor_handles: Option<crate::actors::ActorHandles>,
 }
 
-impl Default for AppState {
-    fn default() -> Self {
-        Self {
-            session: SessionState::default(),
-            input: InputState::default(),
-            agent: AgentState::default(),
-            view: ViewState::default(),
-            config: ConfigState::default(),
-            completion: CompletionState::default(),
-            should_quit: false,
-            open_dialog: None,
-            dialog_back_stack: Vec::new(),
-            login_flow: None,
-            registry: crate::commands::CommandRegistry::new(),
-            skills: Vec::new(),
-            prompts: Vec::new(),
-            trust_decisions: std::collections::HashMap::new(),
-            transient_message: None,
-            transient_until: None,
-            transient_level: None,
-            git_info: None,
-            cwd_name: String::new(),
-            fff_file_results: Vec::new(),
-            fff_debounce: 0u64,
-            perm_req: None,
-            actor_handles: None,
-        }
-    }
-}
 
 impl AppState {
     /// Create a test AppState with specific transient message.

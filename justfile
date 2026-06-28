@@ -37,11 +37,11 @@ build-release:
 
 # Run the schema generator example to regenerate config.schema.json
 write-config-schema:
-    cargo run -p runie-core --example write_config_schema --features schema -- config.schema.json
+    cargo run -p runie-core --example write_config_schema -- config.schema.json
 
 # Run clippy with auto-fix suggestions
 lint-fix:
-    cargo clippy --all-targets --all-features -- -D warnings -A clippy::all
+    cargo clippy --fix --allow-dirty --allow-staged -- -A clippy::all
 
 # Clean build artifacts
 clean:

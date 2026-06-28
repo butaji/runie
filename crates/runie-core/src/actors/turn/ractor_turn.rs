@@ -3,7 +3,7 @@
 //! Migrated from custom Actor trait to ractor for consistency with the rest
 //! of the actor system.
 
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 
@@ -91,7 +91,7 @@ impl RactorTurnActor {
     }
 
     fn handle_run_if_queued(&self) {
-        let mut state = self.state.lock().unwrap();
+        let mut state = self.state.lock();
         if state.turn_active {
             return;
         }
@@ -109,7 +109,7 @@ impl RactorTurnActor {
 
     fn handle_abort_turn(&self) {
         {
-            let mut state = self.state.lock().unwrap();
+            let mut state = self.state.lock();
             let messages: Vec<_> = state.message_queue.drain(..).rev().collect();
             for msg in &messages {
                 self.emit(Event::QueueAborted { content: msg.content.clone() });
@@ -124,12 +124,12 @@ impl RactorTurnActor {
             id: id.clone(),
             content: content.clone(),
         });
-        let mut state = self.state.lock().unwrap();
+        let mut state = self.state.lock();
         state.request_queue.push_back((content, id));
     }
 
     fn handle_queue_steering(&self, content: String) {
-        let mut state = self.state.lock().unwrap();
+        let mut state = self.state.lock();
         state.message_queue.push(QueuedMessage {
             content,
             kind: QueuedMessageKind::Steering,
@@ -137,7 +137,7 @@ impl RactorTurnActor {
     }
 
     fn handle_queue_follow_up(&self, content: String) {
-        let mut state = self.state.lock().unwrap();
+        let mut state = self.state.lock();
         state.message_queue.push(QueuedMessage {
             content,
             kind: QueuedMessageKind::FollowUp,
@@ -146,7 +146,7 @@ impl RactorTurnActor {
 
     fn handle_abort_queue(&self) {
         {
-            let mut state = self.state.lock().unwrap();
+            let mut state = self.state.lock();
             let messages: Vec<_> = state.message_queue.drain(..).rev().collect();
             for msg in &messages {
                 self.emit(Event::QueueAborted { content: msg.content.clone() });
@@ -155,7 +155,7 @@ impl RactorTurnActor {
     }
 
     fn handle_clear_queues(&self) {
-        let mut state = self.state.lock().unwrap();
+        let mut state = self.state.lock();
         state.request_queue.clear();
         state.message_queue.clear();
         drop(state);
@@ -173,7 +173,7 @@ impl RactorTurnActor {
     }
 
     fn has_follow_ups(&self) -> bool {
-        let state = self.state.lock().unwrap();
+        let state = self.state.lock();
         state.message_queue.iter().any(|m| m.kind == QueuedMessageKind::FollowUp)
     }
 
@@ -182,7 +182,7 @@ impl RactorTurnActor {
         let kind = QueuedMessageKind::Steering;
         match mode {
             OneAtATime => {
-                let mut state = self.state.lock().unwrap();
+                let mut state = self.state.lock();
                 let idx = state.message_queue.iter().position(|m| m.kind == kind);
                 let Some(idx) = idx else { return false };
                 let msg = state.message_queue.remove(idx);
@@ -194,7 +194,7 @@ impl RactorTurnActor {
             }
             All => {
                 let (content, id) = {
-                    let mut state = self.state.lock().unwrap();
+                    let mut state = self.state.lock();
                     let steerings: Vec<_> = state
                         .message_queue
                         .iter()
@@ -221,7 +221,7 @@ impl RactorTurnActor {
         match mode {
             OneAtATime => {
                 let (content, id) = {
-                    let mut state = self.state.lock().unwrap();
+                    let mut state = self.state.lock();
                     if let Some(idx) = state.message_queue.iter().position(|m| m.kind == QueuedMessageKind::FollowUp) {
                         let msg = state.message_queue.remove(idx);
                         let id = self.next_id_internal(&mut state);
@@ -239,7 +239,7 @@ impl RactorTurnActor {
 
     fn deliver_follow_ups_all(&self) {
         let (content, id) = {
-            let mut state = self.state.lock().unwrap();
+            let mut state = self.state.lock();
             let follow_ups: Vec<_> = state
                 .message_queue
                 .iter()
@@ -266,7 +266,7 @@ impl RactorTurnActor {
 
     fn handle_dequeue(&self) {
         let content = {
-            let mut state = self.state.lock().unwrap();
+            let mut state = self.state.lock();
             state.message_queue.pop().map(|m| m.content)
         };
         if let Some(content) = content {
@@ -276,20 +276,20 @@ impl RactorTurnActor {
 
     fn handle_thinking(&self, id: String) {
         {
-            let mut state = self.state.lock().unwrap();
+            let mut state = self.state.lock();
             state.thinking_started_at = Some(std::time::Instant::now());
         }
         self.emit(Event::Thinking { id });
     }
 
     fn handle_thought_done(&self) {
-        let mut state = self.state.lock().unwrap();
+        let mut state = self.state.lock();
         state.thinking_started_at = None;
     }
 
     fn handle_tool_start(&self, id: String, name: String) {
         {
-            let mut state = self.state.lock().unwrap();
+            let mut state = self.state.lock();
             state.tool_started_at = Some(std::time::Instant::now());
             state.current_tool_name = Some(name.clone());
             state.intermediate_step_count += 1;
@@ -303,7 +303,7 @@ impl RactorTurnActor {
 
     fn handle_tool_end(&self, id: String, duration_secs: f64, output: String) {
         {
-            let mut state = self.state.lock().unwrap();
+            let mut state = self.state.lock();
             state.tool_started_at = None;
             state.current_tool_name = None;
         }
@@ -311,15 +311,15 @@ impl RactorTurnActor {
     }
 
     fn handle_response_delta(&self, id: String, content: String) {
-        if {
-            let mut state = self.state.lock().unwrap();
+        let res = {
+            let mut state = self.state.lock();
             if !state.streaming {
                 state.streaming = true;
                 true
             } else {
                 false
             }
-        } {
+        }; if res {
             self.emit(Event::StreamStarted { id: id.clone() });
         }
         self.emit(Event::ResponseDelta { id, content });
@@ -327,7 +327,7 @@ impl RactorTurnActor {
 
     fn handle_turn_complete(&self, id: String, duration_secs: f64) {
         {
-            let mut state = self.state.lock().unwrap();
+            let mut state = self.state.lock();
             state.turn_started_at = None;
             state.turn_tokens_out = 0;
         }
@@ -336,7 +336,7 @@ impl RactorTurnActor {
 
     fn handle_done(&self) {
         {
-            let mut state = self.state.lock().unwrap();
+            let mut state = self.state.lock();
             state.streaming = false;
             state.turn_active = false;
             state.inflight = state.inflight.saturating_sub(1);
@@ -347,7 +347,7 @@ impl RactorTurnActor {
 
     fn handle_error(&self, id: String, message: String) {
         {
-            let mut state = self.state.lock().unwrap();
+            let mut state = self.state.lock();
             state.streaming = false;
             state.turn_active = false;
             state.inflight = 0;
@@ -357,7 +357,7 @@ impl RactorTurnActor {
 
     fn handle_update_speed(&self, tokens_out: usize) {
         let (tokens_in, speed_tps) = {
-            let mut state = self.state.lock().unwrap();
+            let mut state = self.state.lock();
             state.tokens_out = tokens_out;
             state.turn_tokens_out = tokens_out;
             state.speed_window.record(tokens_out);
@@ -371,7 +371,7 @@ impl RactorTurnActor {
 
     fn handle_next_id(&self) {
         let id = {
-            let mut state = self.state.lock().unwrap();
+            let mut state = self.state.lock();
             self.next_id_internal(&mut state)
         };
         self.emit(Event::IdGenerated(NextIdResponse { id }));

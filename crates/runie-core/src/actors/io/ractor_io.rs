@@ -204,7 +204,7 @@ impl RactorIoActor {
                 std::io::stdout(),
                 crossterm::terminal::EnterAlternateScreen,
             );
-            let _ = bus.publish(Event::ProcessResumed);
+            bus.publish(Event::ProcessResumed);
         });
     }
 

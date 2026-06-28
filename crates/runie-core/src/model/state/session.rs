@@ -104,8 +104,8 @@ pub struct ConfigState {
     pub steering_mode: crate::model::DeliveryMode,
     pub follow_up_mode: crate::model::DeliveryMode,
     pub recent_models: Vec<String>,
-    /// Telemetry/analytics tracking.
-    pub telemetry: crate::telemetry::Telemetry,
+    /// Telemetry settings. Loaded from `[telemetry]` in `config.toml`.
+    pub telemetry: crate::config::TelemetrySection,
     /// Per-session command usage tracking for palette ranking.
     pub command_usage: std::collections::HashMap<String, CommandUsage>,
     /// Why the current provider/model is active.
@@ -145,7 +145,7 @@ impl Default for ConfigState {
             steering_mode: crate::model::DeliveryMode::default(),
             follow_up_mode: crate::model::DeliveryMode::default(),
             recent_models: Vec::new(),
-            telemetry: crate::telemetry::Telemetry::new(false),
+            telemetry: crate::config::TelemetrySection::default(),
             command_usage: std::collections::HashMap::new(),
             model_source: ModelSource::ConfigDefault,
             model_providers: std::collections::HashMap::new(),
@@ -237,6 +237,16 @@ impl ConfigState {
     /// Mutable access to model_providers.
     pub fn model_providers_mut(&mut self) -> &mut std::collections::HashMap<String, crate::config::ModelProvider> {
         &mut self.model_providers
+    }
+
+    /// Whether telemetry is enabled (mirrors `TelemetrySection.enabled`).
+    pub fn telemetry_enabled(&self) -> bool {
+        self.telemetry.enabled
+    }
+
+    /// Mutable access to telemetry enabled flag.
+    pub fn telemetry_enabled_mut(&mut self) -> &mut bool {
+        &mut self.telemetry.enabled
     }
 }
 

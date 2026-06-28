@@ -222,7 +222,7 @@ fn telemetry_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         "telemetry_enabled",
         "Telemetry",
-        SettingValue::Bool(state.config().telemetry.is_enabled()),
+        SettingValue::Bool(state.config().telemetry_enabled()),
         "Anonymous usage analytics",
         SettingsCategory::Safety,
     )

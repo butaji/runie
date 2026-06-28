@@ -25,6 +25,7 @@ use runie_provider::DynProviderFactory;
 use runie_tui::{app_init, keymap, terminal, terminal_setup, theme, ui, ui_actor::UiActor};
 use std::{collections::HashMap, io, time::Duration};
 use tokio::sync::{mpsc, oneshot, watch};
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 struct Cleanup;
 
@@ -45,6 +46,14 @@ impl Drop for Cleanup {
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> io::Result<()> {
+    // Initialize tracing subscriber with EnvFilter from RUST_LOG (defaults to info).
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info"));
+    tracing_subscriber::registry()
+        .with(fmt::layer().with_target(true).with_thread_ids(true))
+        .with(filter)
+        .init();
+
     let args: Vec<String> = std::env::args().collect();
     if let Some(report) = runie_tui::dry_run_cmd::run_from_args(&args) {
         println!("{report}");

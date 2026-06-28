@@ -86,11 +86,9 @@ impl AppState {
             }],
             ..Default::default()
         });
-        self.config_mut().telemetry.track_event("tool_usage", {
-            let mut m = std::collections::HashMap::new();
-            m.insert("tool".into(), name);
-            m
-        });
+        if self.config().telemetry_enabled() {
+            tracing::info!(tool = %name, "tool_usage");
+        }
         self.messages_changed();
     }
     pub(crate) fn end_tool(&mut self, duration_secs: f64, output: String) {

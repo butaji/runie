@@ -74,6 +74,7 @@ pub mod snapshot;
 // state types moved to model::state
 pub mod streaming_buffer;
 pub mod subagents;
+// telemetry module kept for tests and config integration
 pub mod telemetry;
 pub mod theme_tokens;
 
@@ -141,7 +142,7 @@ pub use session::tree::{SessionTree, SessionTreeFilter, TreeNode};
 pub use session::{format_as_markdown, Session};
 pub use skills::{build_skills_context, load_all, load_from_dir, Skill};
 pub use snapshot::{GitInfo, Snapshot};
-pub use telemetry::Telemetry;
+
 pub use tokens::{
     estimate_tokens, estimate_tokens_for_model, estimate_tokens_with_tokenizer, token_tracker_for,
     TokenTracker,

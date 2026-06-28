@@ -3181,7 +3181,6 @@ dependencies = [
  "anyhow",
  "clap",
  "dirs",
- "futures",
  "runie-agent",
  "runie-core",
  "runie-protocol",
@@ -3189,6 +3188,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3210,6 +3210,7 @@ dependencies = [
  "nix 0.31.3",
  "notify 7.0.0",
  "notify-debouncer-mini",
+ "parking_lot",
  "pulldown-cmark",
  "quick-xml 0.37.5",
  "ractor",
@@ -3310,6 +3311,7 @@ dependencies = [
  "serde_json",
  "syntect",
  "tokio",
+ "tracing-subscriber",
  "tui-markdown",
  "unicode-width",
 ]

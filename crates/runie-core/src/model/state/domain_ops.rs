@@ -167,7 +167,6 @@ impl AppState {
         self.config_mut().truncation = config.truncation.clone();
         self.config_mut().thinking_level = config.thinking_level;
         self.config_mut().vim_mode = config.vim_mode();
-        self.config_mut().telemetry = crate::telemetry::Telemetry::new(config.telemetry_enabled());
         let prompts_section = config.prompts();
         *self.prompts_mut() = crate::prompts::load_prompts(
             prompts_section.default.as_deref(),

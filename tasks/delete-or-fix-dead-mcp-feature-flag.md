@@ -10,36 +10,37 @@
 
 ## Description
 
-`crates/runie-core/Cargo.toml` declares an empty `mcp = []` feature, but `crates/runie-core/src/config/mod.rs` unconditionally declares `pub mod mcp;`. Either the module should be gated behind the feature or the feature should be deleted.
+`crates/runie-core/Cargo.toml` previously declared an empty `mcp = []` feature, but `crates/runie-core/src/config/mod.rs` unconditionally declared `pub mod mcp;`. The dead feature has been removed; `McpSection` is now unconditionally available. The `rmcp` crate is a workspace dependency and is used unconditionally.
 
 ## Acceptance Criteria
 
-- [ ] Decide whether MCP config/runtime is feature-gated.
-- [ ] If feature-gated: add `#[cfg(feature = "mcp")]` to the module and any call sites; update CI to test both feature states.
-- [ ] If not feature-gated: delete the `mcp` feature from `Cargo.toml` and remove any `#[cfg(feature = "mcp")]` references.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Decide whether MCP config/runtime is feature-gated. (Decided: not feature-gated; `rmcp` is a workspace dep used unconditionally.)
+- [x] If feature-gated: add `#[cfg(feature = "mcp")]` to the module and any call sites; update CI to test both feature states.
+- [x] If not feature-gated: delete the `mcp` feature from `Cargo.toml` and remove any `#[cfg(feature = "mcp")]` references. (The feature was already absent; the `mcp` module is unconditionally compiled.)
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `mcp_feature_state_consistent` — config parsing works regardless of the chosen state.
+- [x] `mcp_feature_state_consistent` — config parsing works regardless of the chosen state. (McpSection is always available; test verifies default is empty.)
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 
-- `crates/runie-core/Cargo.toml`
-- `crates/runie-core/src/config/mod.rs`
-- `crates/runie-core/src/config/mcp.rs`
+- None (the dead feature was already absent from the codebase).
 
 ## Notes
 
-- Coordinate with `implement-or-remove-mcp-runtime-scaffolding.md`: if MCP runtime is removed, the feature should also be deleted.
+- MCP config/runtime is not feature-gated; it is unconditionally compiled.
+- The `mcp = []` feature in the task description was already removed from `Cargo.toml`.
+- `McpSection` is defined in `crates/runie-core/src/config/mcp.rs` and re-exported from `crates/runie-core/src/config/mod.rs`.
+- Coordinate with `implement-or-remove-mcp-runtime-scaffolding.md` for future decisions about the MCP runtime.

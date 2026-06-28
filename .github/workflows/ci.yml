@@ -67,11 +67,11 @@ jobs:
       - name: Check config schema is up to date
         run: |
           # Generate the schema to a temp file
-          cargo run -p runie-core --example write_config_schema --features schema -- config.schema.gen.json
+          cargo run -p runie-core --example write_config_schema -- config.schema.gen.json
           # Compare with the checked-in schema
           if ! diff -q config.schema.json config.schema.gen.json; then
             echo "ERROR: config.schema.json is out of date with Config type."
-            echo "Run 'cargo run -p runie-core --example write_config_schema --features schema' to regenerate."
+            echo "Run 'cargo run -p runie-core --example write_config_schema' to regenerate."
             diff config.schema.json config.schema.gen.json
             exit 1
           fi

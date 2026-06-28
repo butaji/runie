@@ -71,12 +71,14 @@ pub struct CommandDef {
 
 /// Command category for organization.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum CommandCategory {
     Session,
     Model,
     Tool,
     System,
     Help,
+    #[default]
     Unknown,
 }
 
@@ -94,11 +96,6 @@ impl CommandCategory {
     }
 }
 
-impl Default for CommandCategory {
-    fn default() -> Self {
-        CommandCategory::Unknown
-    }
-}
 
 #[cfg(test)]
 mod tests {

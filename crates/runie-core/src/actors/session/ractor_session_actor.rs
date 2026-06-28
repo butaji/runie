@@ -1,7 +1,7 @@
 //! Ractor-based SessionActor.
 
 use std::path::PathBuf;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use ractor::async_trait;
@@ -70,7 +70,7 @@ impl RactorSessionActor {
     }
 
     fn emit_changed(&self) {
-        let state = self.session_state.lock().unwrap().clone();
+        let state = self.session_state.lock().clone();
         self.emit(Event::SessionChanged { state: Box::new(state) });
     }
 
@@ -81,9 +81,9 @@ impl RactorSessionActor {
 
 impl RactorSessionActor {
     fn handle_add_user_message(&self, content: String, images: Vec<String>) {
-        let mut state = self.session_state.lock().unwrap();
+        let mut state = self.session_state.lock();
         let id = {
-            let mut next_id = self.next_id.lock().unwrap();
+            let mut next_id = self.next_id.lock();
             let id = format!("req.{}", *next_id);
             *next_id += 1;
             id
@@ -102,7 +102,7 @@ impl RactorSessionActor {
     }
 
     fn handle_add_system_message(&self, content: String) {
-        let mut state = self.session_state.lock().unwrap();
+        let mut state = self.session_state.lock();
         state.messages.push(ChatMessage {
             role: Role::System,
             timestamp: now(),
@@ -116,7 +116,7 @@ impl RactorSessionActor {
     }
 
     fn handle_add_tool_message(&self, id: String, name: String, content: String) {
-        let mut state = self.session_state.lock().unwrap();
+        let mut state = self.session_state.lock();
         state.messages.push(ChatMessage {
             role: Role::Tool,
             timestamp: now(),
@@ -131,7 +131,7 @@ impl RactorSessionActor {
     }
 
     fn handle_update_tool_message(&self, id_contains: &str, content: &str) {
-        let mut state = self.session_state.lock().unwrap();
+        let mut state = self.session_state.lock();
         if let Some(idx) = state.messages.iter().rposition(|m| m.role == Role::Tool && m.id.contains(id_contains)) {
             if let Some(msg) = state.messages.get_mut(idx) {
                 msg.set_text_part(content.to_owned());
@@ -144,7 +144,7 @@ impl RactorSessionActor {
     }
 
     fn handle_add_turn_complete(&self, id: String, content: String) {
-        let mut state = self.session_state.lock().unwrap();
+        let mut state = self.session_state.lock();
         if let Some(idx) = state.messages.iter().position(|m| m.role == Role::TurnComplete && m.id == id) {
             if let Some(msg) = state.messages.get_mut(idx) {
                 msg.set_text_part(content);
@@ -165,7 +165,7 @@ impl RactorSessionActor {
     }
 
     fn handle_add_error_message(&self, id: String, content: String) {
-        let mut state = self.session_state.lock().unwrap();
+        let mut state = self.session_state.lock();
         state.messages.push(ChatMessage {
             role: Role::Assistant,
             timestamp: now(),
@@ -179,14 +179,14 @@ impl RactorSessionActor {
     }
 
     fn handle_reset(&self) {
-        let mut state = self.session_state.lock().unwrap();
+        let mut state = self.session_state.lock();
         *state = SessionState::default();
         drop(state);
         self.emit_changed();
     }
 
     fn handle_fork_at(&self, index: usize) {
-        let mut state = self.session_state.lock().unwrap();
+        let mut state = self.session_state.lock();
         match state.session_tree.as_mut() {
             Some(tree) => {
                 if let Some(path) = tree.fork_at(index) {
@@ -208,7 +208,7 @@ impl RactorSessionActor {
     }
 
     fn handle_clone_branch(&self) {
-        let mut state = self.session_state.lock().unwrap();
+        let mut state = self.session_state.lock();
         let tree = state.session_tree.clone()
             .unwrap_or_else(|| SessionTree::from_messages(&state.messages));
         state.session_tree = Some(tree);
@@ -218,21 +218,21 @@ impl RactorSessionActor {
     }
 
     fn handle_push_pending_edit(&self, edit: EditPreview) {
-        let mut state = self.session_state.lock().unwrap();
+        let mut state = self.session_state.lock();
         state.pending_edits.push(edit);
         drop(state);
         self.emit_changed();
     }
 
     fn handle_drain_pending_edits(&self) {
-        let mut state = self.session_state.lock().unwrap();
+        let mut state = self.session_state.lock();
         state.pending_edits.clear();
         drop(state);
         self.emit_changed();
     }
 
     fn handle_clear_pending_edits(&self) {
-        let mut state = self.session_state.lock().unwrap();
+        let mut state = self.session_state.lock();
         state.pending_edits.clear();
         drop(state);
         self.emit_changed();
@@ -240,10 +240,10 @@ impl RactorSessionActor {
 
     async fn handle_set_trust(&self, path: PathBuf, decision: TrustDecision) {
         {
-            let mut trust = self.trust.lock().unwrap();
+            let mut trust = self.trust.lock();
             trust.set(&path, decision);
         }
-        let trust = self.trust.lock().unwrap().clone();
+        let trust = self.trust.lock().clone();
         let path_clone = path.clone();
         let decision_clone = decision;
         let _ = tokio::task::spawn_blocking(move || trust.save()).await;

@@ -99,7 +99,7 @@ fn permission_input_event(state: &mut AppState, event: crate::Event) {
         _ => PermissionAction::Deny,
     };
     // Emit intent to PermissionActor instead of direct registry mutation
-    if let Some(ref handles) = state.actor_handles() {
+    if let Some(handles) = state.actor_handles() {
         handles.try_resolve_permission(req.request_id.clone(), action);
     }
 }

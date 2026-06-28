@@ -3,6 +3,8 @@
 use std::fmt;
 use std::sync::Arc;
 
+use parking_lot::Mutex;
+
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
@@ -11,14 +13,14 @@ use crate::provider::ProviderError;
 use super::factory::BuiltProvider;
 
 /// Arc-wrapped reply sender for `Clone` compatibility.
-type Reply<T> = Arc<std::sync::Mutex<Option<oneshot::Sender<T>>>>;
+type Reply<T> = Arc<Mutex<Option<oneshot::Sender<T>>>>;
 
 pub(crate) fn make_reply<T>(tx: oneshot::Sender<T>) -> Reply<T> {
-    Arc::new(std::sync::Mutex::new(Some(tx)))
+    Arc::new(Mutex::new(Some(tx)))
 }
 
 pub(crate) fn take_reply<T>(r: &Reply<T>) -> Option<oneshot::Sender<T>> {
-    r.lock().unwrap_or_else(|e| e.into_inner()).take()
+    r.lock().take()
 }
 
 /// Messages accepted by `ProviderActor`.

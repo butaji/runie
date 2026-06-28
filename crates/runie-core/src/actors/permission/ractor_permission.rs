@@ -4,7 +4,7 @@
 //! following the same pattern as the InputActor migration.
 
 use ractor::{Actor, ActorProcessingErr, ActorRef};
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 use crate::actors::ractor_adapter::{spawn_ractor, EventBusBridge, RactorHandle};
 use crate::bus::EventBus;
@@ -131,8 +131,8 @@ impl Actor for RactorPermissionActor {
                 input,
                 reply,
             } => {
-                self.registry.lock().unwrap().register(&request_id);
-                *self.current_request.lock().unwrap() = Some(PermissionRequestState {
+                self.registry.lock().register(&request_id);
+                *self.current_request.lock() = Some(PermissionRequestState {
                     request_id: request_id.clone(),
                     tool: tool.clone(),
                     input: input.clone(),
@@ -145,19 +145,18 @@ impl Actor for RactorPermissionActor {
                 reply.send(PermissionAction::Deny);
             }
             PermissionMsg::ResolvePermission { request_id, action } => {
-                self.registry.lock().unwrap().resolve(&request_id, action);
+                self.registry.lock().resolve(&request_id, action);
                 self.clear_request_if_matches(&request_id);
                 self.bus_bridge.publish(Event::PermissionResponse { request_id, action });
             }
             PermissionMsg::CancelPermission { request_id } => {
                 self.registry
                     .lock()
-                    .unwrap()
                     .resolve(&request_id, PermissionAction::Deny);
                 self.clear_request_if_matches(&request_id);
             }
             PermissionMsg::DismissRequest => {
-                *self.current_request.lock().unwrap() = None;
+                *self.current_request.lock() = None;
                 self.bus_bridge.publish(Event::PermissionRequestDismissed);
             }
         }
@@ -178,7 +177,7 @@ impl RactorPermissionActor {
     }
 
     fn clear_request_if_matches(&self, request_id: &str) {
-        let mut current = self.current_request.lock().unwrap();
+        let mut current = self.current_request.lock();
         if current
             .as_ref()
             .map(|r| r.request_id == request_id)

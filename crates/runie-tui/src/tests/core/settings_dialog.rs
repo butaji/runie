@@ -312,12 +312,13 @@ fn settings_includes_telemetry_toggle() {
 #[test]
 fn settings_select_toggles_telemetry() {
     let mut state = AppState::default();
-    assert!(!state.config.telemetry.is_enabled());
+    // TelemetrySection defaults to enabled=true.
+    assert!(state.config.telemetry_enabled());
     state.update(Event::ToggleSettingsDialog);
     select_by_label(&mut state, "Telemetry");
     assert!(
-        state.config.telemetry.is_enabled(),
-        "select should turn telemetry on"
+        !state.config.telemetry_enabled(),
+        "select should turn telemetry off"
     );
 }
 

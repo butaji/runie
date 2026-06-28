@@ -70,7 +70,7 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
 /// Route agent events through TurnActor and handle facts synchronously.
 fn handle_agent_event(state: &mut AppState, event: Event) {
     // Send to TurnActor if available
-    if let Some(ref handles) = state.actor_handles() {
+    if let Some(handles) = state.actor_handles() {
         if let Some(ref turn) = handles.turn {
             if let Some(turn_msg) = to_turn_msg(&event) {
                 let _ = turn.try_send(turn_msg);
@@ -120,7 +120,7 @@ fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
         Event::ReadOnlyChanged { enabled } => { state.config_mut().read_only = *enabled; true }
         Event::HistoryLoaded { entries } => {
             // Route through InputActor.
-            if let Some(ref handles) = state.actor_handles() {
+            if let Some(handles) = state.actor_handles() {
                 handles.try_send_input(crate::actors::InputMsg::HistoryLoaded {
                     entries: entries.clone(),
                 });

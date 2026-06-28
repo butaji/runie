@@ -70,7 +70,7 @@ pub trait ToolDef: Send + Sync {
 
 /// Generate JSON schema for a type implementing `JsonSchema`.
 pub fn generate_schema<T: JsonSchema>() -> Value {
-    serde_json::to_value(&schemars::schema_for!(T)).unwrap_or_default()
+    serde_json::to_value(schemars::schema_for!(T)).unwrap_or_default()
 }
 
 /// Generate MCP tool definition from a `ToolDef` implementation.

@@ -4,7 +4,7 @@
 
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use ractor::async_trait;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 use crate::actors::ractor_adapter::{EventBusBridge, RactorHandle, spawn_ractor};
 use crate::bus::EventBus;
@@ -49,7 +49,7 @@ impl Actor for InputActor {
         _state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         let (new_state, emit) = {
-            let mut state = self.state.lock().unwrap();
+            let mut state = self.state.lock();
             // Delegate to the apply_to method which handles all state mutations
             InputMsg::apply_to(&msg, &mut state);
             let should_emit = true;
@@ -77,7 +77,7 @@ impl InputActor {
 
     #[cfg(test)]
     pub fn state(&self) -> InputState {
-        self.state.lock().unwrap().clone()
+        self.state.lock().clone()
     }
 }
 

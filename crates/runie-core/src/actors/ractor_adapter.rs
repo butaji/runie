@@ -228,18 +228,18 @@ pub type Reply<T> = RpcReply<T>;
 /// Uses Arc<Mutex<Option<oneshot::Sender<T>>>> to allow cloning.
 #[derive(Debug)]
 pub struct RpcReply<T>(
-    std::sync::Arc<std::sync::Mutex<Option<oneshot::Sender<T>>>>
+    std::sync::Arc<parking_lot::Mutex<Option<oneshot::Sender<T>>>>
 );
 
 impl<T> RpcReply<T> {
     /// Create a new reply handle from a oneshot sender.
     pub fn new(sender: oneshot::Sender<T>) -> Self {
-        Self(std::sync::Arc::new(std::sync::Mutex::new(Some(sender))))
+        Self(std::sync::Arc::new(parking_lot::Mutex::new(Some(sender))))
     }
 
     /// Send the reply value.
     pub fn send(self, value: T) {
-        if let Some(sender) = self.0.lock().unwrap_or_else(|e| e.into_inner()).take() {
+        if let Some(sender) = self.0.lock().take() {
             let _ = sender.send(value);
         }
     }

@@ -1,6 +1,6 @@
 # Fix broken `schema` feature usage in CI and justfile
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: Build / CI
 **Priority**: P0
@@ -10,30 +10,30 @@
 
 ## Description
 
-The CI workflow and `justfile` invoke `cargo run -p runie-core --example write_config_schema --features schema`, but `runie-core` does not declare a `schema` feature. `schemars` is already a normal dependency and the schema example is ungated, so the flag should be removed.
+The CI workflow and `justfile` invoked `cargo run -p runie-core --example write_config_schema --features schema`, but `runie-core` did not declare a `schema` feature. `schemars` was already a normal dependency and the schema example is ungated, so the flag was removed.
 
 ## Acceptance Criteria
 
-- [ ] Remove `--features schema` from `.github/workflows/ci.yml` schema job.
-- [ ] Remove `--features schema` from the `justfile` schema recipe.
-- [ ] Remove or update the comment in `crates/runie-core/examples/write_config_schema.rs` that references the flag.
-- [ ] The schema job/recipe runs successfully without the flag.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Remove `--features schema` from `.github/workflows/ci.yml` schema job.
+- [x] Remove `--features schema` from the `justfile` schema recipe.
+- [x] Remove or update the comment in `crates/runie-core/examples/write_config_schema.rs` that references the flag.
+- [x] The schema job/recipe runs successfully without the flag.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `schema_example_runs_without_feature_flag` — invoking the example without `--features schema` produces `config.schema.json`.
+- [x] `schema_example_runs_without_feature_flag` — invoking the example without `--features schema` produces `config.schema.json`.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 

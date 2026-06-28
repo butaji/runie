@@ -77,12 +77,12 @@
   {
     "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
     "title": "Fix broken `schema` feature usage in CI and justfile",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-dev-automation-recipes.md",
     "title": "Fix dev automation recipes",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-dry-run-tool-names-discrepancy.md",
@@ -102,7 +102,7 @@
   {
     "file": "harden-actors-against-mutex-poisoning.md",
     "title": "Harden async actors against mutex poisoning and startup panics",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "implement-or-remove-mcp-runtime-scaffolding.md",
@@ -112,7 +112,7 @@
   {
     "file": "initialize-tracing-subscriber-in-binaries.md",
     "title": "Initialize `tracing` subscriber in CLI and TUI binaries",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
@@ -147,7 +147,7 @@
   {
     "file": "remove-unused-dependencies-and-normalize-workspace-deps.md",
     "title": "Remove unused dependencies and normalize workspace deps",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-bash-safety-with-shell-words.md",
@@ -177,7 +177,7 @@
   {
     "file": "replace-custom-telemetry-with-tracing-layer.md",
     "title": "Replace custom telemetry module with a `tracing` layer",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",

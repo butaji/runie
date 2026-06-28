@@ -9,6 +9,7 @@
 
 use anyhow::Result;
 use clap::Parser;
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 mod print;
 mod json;
@@ -79,6 +80,14 @@ enum McpCommand {
 }
 
 fn main() {
+    // Initialize tracing subscriber with EnvFilter from RUST_LOG (defaults to info).
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info"));
+    tracing_subscriber::registry()
+        .with(fmt::layer().with_target(true).with_thread_ids(true))
+        .with(filter)
+        .init();
+
     let cli = Cli::parse();
 
     let result = match cli.command {

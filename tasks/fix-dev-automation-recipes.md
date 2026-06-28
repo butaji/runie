@@ -1,6 +1,6 @@
 # Fix dev automation recipes
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: Dev automation
 **Priority**: P1
@@ -10,38 +10,38 @@
 
 ## Description
 
-`bacon.toml` and the `justfile` have broken or confusing recipes: `bacon.toml`'s `test` job actually runs the TUI binary, and `just lint-fix` passes contradictory Clippy flags. Fix them so developer tooling is reliable.
+`bacon.toml` and the `justfile` had broken or confusing recipes: `bacon.toml`'s `test` job ran the TUI binary instead of running tests, and `just lint-fix` passed contradictory Clippy flags (`-D warnings` with `-A clippy::all`). These have been fixed.
 
 ## Acceptance Criteria
 
-- [ ] Fix `bacon.toml` `test` job to run `cargo test -p runie-tui` (or the appropriate test command), not `cargo run`.
-- [ ] Fix `just lint-fix` to use `cargo clippy --fix --allow-dirty` or remove the recipe.
-- [ ] Remove the `check-skip` bacon job if the custom build linter is replaced; otherwise document why it is needed.
-- [ ] `just test` and bacon `test` produce the expected behavior.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Fix `bacon.toml` `test` job to run `cargo test -p runie-tui` (or the appropriate test command), not `cargo run`.
+- [x] Fix `just lint-fix` to use `cargo clippy --fix --allow-dirty` (removed contradictory flags).
+- [x] Remove the `check-skip` bacon job if the custom build linter is replaced; otherwise document why it is needed. (Kept: build linter still present in `crates/runie-core/build.rs`.)
+- [x] `just test` and bacon `test` produce the expected behavior.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 
 - `bacon.toml`
 - `justfile`
-- `dev.sh` (if circular delegation is resolved)
 
 ## Notes
 
 - This task is about correctness of recipes, not adding new functionality.
-- Coordinate with `replace-build-linter-with-clippy-ci.md` to remove the `check-skip` job.
+- Coordinate with `replace-build-linter-with-clippy-ci.md` to remove the `check-skip` job when the build linter is replaced.
+- The `check-skip` job is kept because `crates/runie-core/build.rs` still contains the custom linter. Once `replace-build-linter-with-clippy-ci` lands, this job can be removed.

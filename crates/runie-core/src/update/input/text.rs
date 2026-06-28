@@ -216,7 +216,7 @@ impl AppState {
 /// In test mode (no actor handles), applies the mutation synchronously so that
 /// synchronous tests can assert on the updated state without awaiting the actor.
 fn try_send_input(state: &mut AppState, msg: crate::actors::InputMsg) {
-    if let Some(ref handles) = state.actor_handles() {
+    if let Some(handles) = state.actor_handles() {
         handles.try_send_input(msg);
     } else {
         // Test mode: apply synchronously to AppState projection.

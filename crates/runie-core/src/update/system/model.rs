@@ -28,12 +28,9 @@ impl AppState {
         self.config_mut().model_source = source;
         self.configure_token_tracker();
         self.record_model_usage(&provider, &model);
-        self.config_mut().telemetry.track_event("model_switch", {
-            let mut m = std::collections::HashMap::new();
-            m.insert("provider".into(), provider.clone());
-            m.insert("model".into(), model.clone());
-            m
-        });
+        if self.config().telemetry_enabled() {
+            tracing::info!(provider = %provider, model = %model, "model_switch");
+        }
     }
 
     fn persist_current_model(&self) {

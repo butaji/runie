@@ -434,8 +434,8 @@ fn toggle_vim_mode(state: &mut AppState) {
 }
 
 fn toggle_telemetry(state: &mut AppState) {
-    let new_enabled = !state.config().telemetry.is_enabled();
-    state.config_mut().telemetry = crate::telemetry::Telemetry::new(new_enabled);
+    let new_enabled = !state.config().telemetry_enabled();
+    state.config_mut().telemetry.enabled = new_enabled;
     let handles = state.actor_handles().cloned();
     if let Some(h) = handles {
         if tokio::runtime::Handle::try_current().is_ok() {

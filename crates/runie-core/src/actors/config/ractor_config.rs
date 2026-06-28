@@ -4,7 +4,7 @@
 //! of the actor system.
 
 use std::path::PathBuf;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use tokio::sync::mpsc;
@@ -154,7 +154,7 @@ impl RactorConfigActor {
             ConfigMsg::SetTruncation { limits } => self.set_truncation(&limits).await,
             ConfigMsg::SetThinkingLevel { level } => self.set_thinking_level(&level).await,
             ConfigMsg::GetConfig(reply) => {
-                let cfg = self.config.lock().unwrap().clone();
+                let cfg = self.config.lock().clone();
                 reply.send(cfg);
             }
             ConfigMsg::GetConfiguredProviders(reply) => {
@@ -166,7 +166,7 @@ impl RactorConfigActor {
     async fn load_and_emit(&self) {
         let config = Config::load_async(Some(self.path.clone())).await;
         {
-            let mut guard = self.config.lock().unwrap();
+            let mut guard = self.config.lock();
             *guard = config.clone();
         }
         self.bus_bridge.publish(Event::ConfigLoaded { config: Box::new(config) });
@@ -175,7 +175,7 @@ impl RactorConfigActor {
     async fn reload_and_emit(&self) {
         let new_config = Config::load_async(Some(self.path.clone())).await;
         let changed = {
-            let mut guard = self.config.lock().unwrap();
+            let mut guard = self.config.lock();
             if new_config != *guard {
                 *guard = new_config.clone();
                 true
@@ -251,7 +251,7 @@ impl RactorConfigActor {
 
     async fn set_thinking_level(&self, level: &ThinkingLevel) {
         let path = self.path.clone();
-        let level = level.clone();
+        let level = *level;
         let result = tokio::task::spawn_blocking(move || file_helpers::set_thinking_level_at_path(&path, level)).await;
         self.handle_write_result(result).await;
     }
@@ -277,7 +277,7 @@ impl RactorConfigActor {
     }
 
     fn list_configured_providers(&self) -> Vec<(String, String, Vec<String>)> {
-        let guard = self.config.lock().unwrap();
+        let guard = self.config.lock();
         let mut result: Vec<_> = guard
             .model_providers
             .iter()
@@ -311,12 +311,12 @@ impl Actor for RactorConfigActor {
         let (_bus, path) = args;
         let config = Config::load_async(Some(path)).await;
         {
-            let mut guard = self.config.lock().unwrap();
+            let mut guard = self.config.lock();
             *guard = config;
         }
         let (tx, rx) = mpsc::channel(32);
         {
-            let mut guard = self.watcher_tx.lock().unwrap();
+            let mut guard = self.watcher_tx.lock();
             *guard = Some(tx.clone());
         }
         self.spawn_watcher(tx.clone());
@@ -346,7 +346,7 @@ impl RactorConfigActor {
     }
 
     fn emit_current_config(&self) {
-        let config_to_emit = self.config.lock().unwrap().clone();
+        let config_to_emit = self.config.lock().clone();
         self.bus_bridge.publish(Event::ConfigLoaded { config: Box::new(config_to_emit) });
     }
 
@@ -370,7 +370,7 @@ impl RactorConfigActor {
     ) {
         let new_config = Config::load_async(Some(path.clone())).await;
         let changed = {
-            let mut guard = config.lock().unwrap();
+            let mut guard = config.lock();
             if new_config != *guard {
                 *guard = new_config.clone();
                 true
