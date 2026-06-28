@@ -31,7 +31,7 @@
   },
   {
     "file": "replace-legacy-tool-parsers-with-thin-shim.md",
-    "title": "Replace legacy tool parsers with a thin shim",
+    "title": "Finish tool-parser shim: marker stripping and MiniMax ownership",
     "status": "partial"
   },
   {
@@ -53,5 +53,10 @@
     "file": "unify-duplicate-module-names-core-tui.md",
     "title": "Unify duplicate module names across core and TUI",
     "status": "partial"
+  },
+  {
+    "file": "unify-declarative-resource-loader.md",
+    "title": "Unify declarative resource loader",
+    "status": "todo"
   }
 ]

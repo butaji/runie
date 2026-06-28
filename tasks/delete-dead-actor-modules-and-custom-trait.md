@@ -18,7 +18,7 @@ Once every production actor runs on `ractor`, the legacy custom `Actor` trait an
 - `TrustActor` and its ractor counterpart (`crates/runie-core/src/actors/trust/`)
 - `CompletionActor` and its ractor counterpart (`crates/runie-core/src/actors/completion/`)
 - The legacy custom `TurnActor` and `PermissionActor` implementations, keeping only the ractor-based `RactorTurnActor` and `RactorPermissionActor`
-- The broken, unwired `UiControlActor` subtree (`crates/runie-core/src/actors/ui_control/`)
+- The unwired `UiControlActor` subtree (`crates/runie-core/src/actors/ui_control/`). It is not included in `actors/mod.rs`, so it does not affect compilation, but it should still be removed.
 - Dead fields/helpers in `ActorHandles` (`view`, `completion`, `trust`, `send_view`, `send_trust`, `send_init_read_only`, etc.)
 
 ## Acceptance Criteria
@@ -63,6 +63,6 @@ Once every production actor runs on `ractor`, the legacy custom `Actor` trait an
 ## Notes
 
 - This task is purely mechanical once `migrate-production-actors-to-ractor` is complete. If the build breaks, it means a production actor was missed.
-- `UiControlActor` references `Event::DialogOpened`, `Event::DialogClosed`, etc., which do not exist. Rather than fixing it here, delete it and let a future task reintroduce a working UI-control actor if needed.
-- `Reply` and `GenericActorHandle` are re-exported by `actors/mod.rs` and used by several message modules. Deleting the trait requires replacing those request/reply patterns with ractor's oneshot or call patterns.
+- `UiControlActor` references `Event::DialogOpened`, `Event::DialogClosed`, etc., which do not exist. It is not compiled today because `ui_control` is not declared in `actors/mod.rs`. Delete the directory rather than fixing it.
+- `Reply` and `GenericActorHandle` are re-exported by `actors/mod.rs` and used by several message modules. Move `Reply` to `actors/ractor_adapter.rs` (or a new `actors/reply.rs`) before deleting `trait.rs`, and migrate callers from `GenericActorHandle` to `ractor::ActorRef`.
 - Rejected alternative: keeping the custom trait as a thin wrapper. It adds no value and still requires maintenance.

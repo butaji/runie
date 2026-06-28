@@ -391,7 +391,7 @@ Tests are exempt from function-length and complexity checks so they can stay com
 
 ## Current cleanup roadmap
 
-The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. The remaining active work is tracked in `tasks/index.json` (11 active cleanup tasks) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
+The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. The remaining active work is tracked in `tasks/index.json` (12 active cleanup tasks) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
 
 ### Active tasks
 
@@ -412,7 +412,7 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 
 #### Phase 4 — Tool/provider shims (P2)
 
-7. **Replace legacy tool parsers with a thin shim** (`tasks/replace-legacy-tool-parsers-with-thin-shim.md`) — `partial`. A `tool/shim/` module exists and `tool/parse` already routes through it; finish by removing the embedded legacy submodules, collapsing `tool_markers/strip.rs`, fixing build-guardrail violations, and proving equivalence with `runie-testing` fixtures.
+7. **Finish tool-parser shim: marker stripping and MiniMax ownership** (`tasks/replace-legacy-tool-parsers-with-thin-shim.md`) — `partial`. The parser-shim portion is done; collapse the 8-stage `tool_markers/strip.rs` pipeline, decide who owns MiniMax XML parsing, and fix the one `cargo check` warning.
 
 #### Phase 5 — CLI config (P2)
 
@@ -424,8 +424,9 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 
 #### Phase 7 — Final sweep (P3)
 
-10. **Clean up small duplicates and dead code** (`tasks/cleanup-small-duplicates-and-dead-code.md`) — skill hooks, built-in tool registry, TUI render helpers, and justified `#[allow(dead_code)]` items.
+10. **Clean up small duplicates and dead code** (`tasks/cleanup-small-duplicates-and-dead-code.md`) — `partial`. Skill hooks, built-in tool registry (including the duplicated name list in `tool/shim/minimax.rs`), TUI render helpers, and the one `cargo check` warning in `tool/shim/minimax.rs`.
 11. **Unify duplicate module names across core and TUI** (`tasks/unify-duplicate-module-names-core-tui.md`) — `partial`. The `markdown` collision is resolved and the core `themes.rs` → `theme_tokens.rs` rename is done in code; remaining work is removing the stale `theme` ignore from the guardrail test.
+12. **Unify declarative resource loader** (`tasks/unify-declarative-resource-loader.md`) — extract the shared directory-scan/frontmatter logic used by both `skills/load.rs` and `declarative/loader.rs` into a single module.
 
 ### Archived completed tasks
 
@@ -452,7 +453,7 @@ The plan is phased so that **every merged task leaves `cargo check --workspace` 
 3. Land the event-taxonomy derivation (Task 6).
 4. Run tool-parser and CLI-config tasks in either order (Tasks 7–8).
 5. Narrow the public API last (Task 9).
-6. Run the final sweep and module-name cleanup (Tasks 10–11).
+6. Run the final sweep, module-name cleanup, and declarative-loader unification (Tasks 10–12). The declarative-loader task can run in parallel with the others because it has no actor-runtime dependencies.
 
 ## Testing philosophy
 

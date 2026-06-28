@@ -12,7 +12,7 @@
 
 ## File structure
 
-- `tasks/index.json` — canonical registry of the 11 active cleanup tasks.
+- `tasks/index.json` — canonical registry of the 12 active cleanup tasks.
 - **Actor runtime (split into three sequential tasks):**
   - `tasks/migrate-production-actors-to-ractor.md`
   - `tasks/delete-dead-actor-modules-and-custom-trait.md`
@@ -22,10 +22,11 @@
   - `tasks/migrate-tui-and-cli-to-leader-bootstrap.md`
 - **Remaining active tasks:**
   - `tasks/collapse-event-intent-kind-taxonomies.md` — derive `Intent`/`EventKind` from `Event` without restructuring the enum.
-  - `tasks/replace-legacy-tool-parsers-with-thin-shim.md` — `partial`. `tool/shim/` already exists and `tool/parse` routes through it; finish collapsing the shim, deleting embedded legacy submodules, and shrinking `tool_markers/strip.rs`.
+  - `tasks/replace-legacy-tool-parsers-with-thin-shim.md` — `partial`. Parser-shim is done; collapse `tool_markers/strip.rs`, reconcile MiniMax parsing ownership, and fix the one `cargo check` warning.
   - `tasks/narrow-runie-core-public-api.md` — usage-audit-first narrowing/moving of internal modules.
   - `tasks/route-cli-config-through-configactor.md` — add ConfigActor messages for CLI inspect/MCP.
-  - `tasks/cleanup-small-duplicates-and-dead-code.md` — final sweep after architecture is stable.
+  - `tasks/cleanup-small-duplicates-and-dead-code.md` — `partial`. Final sweep after architecture is stable; includes the duplicated built-in tool name list in `tool/shim/minimax.rs`.
+  - `tasks/unify-declarative-resource-loader.md` — extract shared directory-scan/frontmatter logic used by `skills/load.rs` and `declarative/loader.rs`.
 - `docs/Architecture.md` — updated with a "Current cleanup roadmap" section.
 - `tasks/archive/` — completed tasks from this and earlier reviews.
 
@@ -39,11 +40,12 @@
 | 4 | `expand-leader-start-for-tui-and-cli` | P1 | Make `Leader::start` spawn the full actor set (Input/Agent/FffIndexer) and expose channels/shutdown. |
 | 5 | `migrate-tui-and-cli-to-leader-bootstrap` | P1 | Replace manual TUI/CLI bootstrap with `Leader::start`; route CLI input through `InputMsg`. |
 | 6 | `collapse-event-intent-kind-taxonomies` | P1 | Derive `Intent`/`EventKind` from flat `Event`; delete manual mirrors. |
-| 7 | `replace-legacy-tool-parsers-with-thin-shim` | P2 | `partial`. `tool/shim/` exists and `tool/parse` already routes through it; remove embedded legacy submodules, collapse `tool_markers/strip.rs`, fix build-guardrail violations, and prove equivalence with `runie-testing` fixtures. |
+| 7 | `replace-legacy-tool-parsers-with-thin-shim` | P2 | `partial`. Parser-shim is done; collapse `tool_markers/strip.rs`, reconcile MiniMax parsing ownership, fix the one `cargo check` warning. |
 | 8 | `route-cli-config-through-configactor` | P2 | Add `RactorConfigActor` messages for inspect/MCP; route CLI commands through the actor. |
 | 9 | `narrow-runie-core-public-api` | P2 | Usage-audit first; move shared helpers to a new `runie-util` crate, narrow the rest. |
-| 10 | `cleanup-small-duplicates-and-dead-code` | P3 | Skill hooks, tool registry, TUI render helpers, justified dead-code allows. |
+| 10 | `cleanup-small-duplicates-and-dead-code` | P3 | `partial`. Skill hooks, tool registry (including duplicated name list in `tool/shim/minimax.rs`), TUI render helpers, and the one `cargo check` warning. |
 | 11 | `unify-duplicate-module-names-core-tui` | P2 | `partial`. Markdown rename done; core `themes.rs` → `theme_tokens.rs` rename done in code; remove stale `theme` ignore from guardrail test. |
+| 12 | `unify-declarative-resource-loader` | P2 | Extract shared directory-scan/frontmatter logic used by `skills/load.rs` and `declarative/loader.rs`. |
 
 ## Archived completed tasks
 
@@ -83,6 +85,7 @@ The goal is a **stable phase**: after every merged task the workspace builds and
 7. **Phase 7 — Final sweep.**
    - `cleanup-small-duplicates-and-dead-code`
    - `unify-duplicate-module-names-core-tui`
+   - `unify-declarative-resource-loader` (parallel-safe; no actor-runtime dependencies)
 
 ## Verification
 
