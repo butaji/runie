@@ -1,52 +1,12 @@
 [
   {
-    "file": "TEMPLATE.md",
-    "title": "Task Title",
-    "status": "todo"
-  },
-  {
-    "file": "expand-leader-start-for-tui-and-cli.md",
-    "title": "Expand `Leader::start` for the full TUI and CLI runtime",
-    "status": "todo"
-  },
-  {
-    "file": "cleanup-small-duplicates-and-dead-code.md",
-    "title": "Clean up small duplicates and dead code",
-    "status": "partial"
-  },
-  {
-    "file": "collapse-event-intent-kind-taxonomies.md",
-    "title": "Collapse `Event`/`Intent`/`EventKind` taxonomies",
-    "status": "todo"
-  },
-  {
     "file": "migrate-production-actors-to-ractor.md",
     "title": "Migrate production actors to `ractor`",
     "status": "todo"
   },
   {
-    "file": "narrow-runie-core-public-api.md",
-    "title": "Narrow `runie-core` public API",
-    "status": "todo"
-  },
-  {
-    "file": "replace-legacy-tool-parsers-with-thin-shim.md",
-    "title": "Replace legacy tool parsers with a thin shim",
-    "status": "todo"
-  },
-  {
-    "file": "route-cli-config-through-configactor.md",
-    "title": "Route CLI config operations through `ConfigActor`",
-    "status": "todo"
-  },
-  {
-    "file": "unify-duplicate-module-names-core-tui.md",
-    "title": "Unify duplicate module names across core and TUI",
-    "status": "partial"
-  },
-  {
     "file": "delete-dead-actor-modules-and-custom-trait.md",
-    "title": "Delete dead actor modules and the custom `Actor` trait",
+    "title": "Delete dead actor modules and custom `Actor` trait",
     "status": "todo"
   },
   {
@@ -55,8 +15,43 @@
     "status": "todo"
   },
   {
+    "file": "expand-leader-start-for-tui-and-cli.md",
+    "title": "Expand `Leader::start` for the full TUI and CLI runtime",
+    "status": "todo"
+  },
+  {
     "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
     "title": "Migrate TUI and CLI to `Leader::start`",
     "status": "todo"
+  },
+  {
+    "file": "collapse-event-intent-kind-taxonomies.md",
+    "title": "Collapse `Event`/`Intent`/`EventKind` taxonomies",
+    "status": "todo"
+  },
+  {
+    "file": "replace-legacy-tool-parsers-with-thin-shim.md",
+    "title": "Replace legacy tool parsers with a thin shim",
+    "status": "todo"
+  },
+  {
+    "file": "narrow-runie-core-public-api.md",
+    "title": "Narrow `runie-core` public API",
+    "status": "todo"
+  },
+  {
+    "file": "route-cli-config-through-configactor.md",
+    "title": "Route CLI config operations through `ConfigActor`",
+    "status": "todo"
+  },
+  {
+    "file": "cleanup-small-duplicates-and-dead-code.md",
+    "title": "Clean up small duplicates and dead code",
+    "status": "partial"
+  },
+  {
+    "file": "unify-duplicate-module-names-core-tui.md",
+    "title": "Unify duplicate module names across core and TUI",
+    "status": "partial"
   }
 ]

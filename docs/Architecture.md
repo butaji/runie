@@ -391,40 +391,41 @@ Tests are exempt from function-length and complexity checks so they can stay com
 
 ## Current cleanup roadmap
 
-The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. The remaining active work is tracked in `tasks/index.json` and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
+The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. The remaining active work is tracked in `tasks/index.json` (11 active cleanup tasks) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
 
 ### Active tasks
 
 #### Phase 1 — Actor foundation (P1)
 
-1. **Migrate production actors to `ractor`** (`tasks/migrate-production-actors-to-ractor.md`) — convert the remaining custom-trait actors before deleting the trait.
-2. **Delete dead actor modules and custom trait** (`tasks/delete-dead-actor-modules-and-custom-trait.md`) — remove the legacy `Actor` trait and actors only used in tests.
-3. **Collapse `ActorHandles` to a typed map** (`tasks/collapse-actor-handles-to-typed-map.md`) — replace the helper façade with typed `ractor::ActorRef` handles.
+1. **Migrate production actors to `ractor`** (`tasks/migrate-production-actors-to-ractor.md`) — `InputActor` and `RactorPermissionActor` are already migrated; wire the existing `RactorConfigActor` to production and migrate `ProviderActor`, `IoActor`, `SessionActor`, `FffIndexerActor`, and `AgentActor`.
+2. **Delete dead actor modules and custom trait** (`tasks/delete-dead-actor-modules-and-custom-trait.md`) — remove the legacy `Actor` trait, dead actors (`ViewActor`, `PlanActor`, `TrustActor`, `CompletionActor`, `UiControlActor`), and their fields/helpers in `ActorHandles`.
+3. **Collapse `ActorHandles` to a typed map** (`tasks/collapse-actor-handles-to-typed-map.md`) — replace the helper façade with typed `ractor::ActorRef` handles and reconcile `LeaderHandle`.
 
 #### Phase 2 — Shared bootstrap (P1)
 
-4. **Expand `Leader::start` for TUI and CLI** (`tasks/expand-leader-start-for-tui-and-cli.md`) — make the leader spawn the full actor set and expose channels/shutdown.
-5. **Migrate TUI and CLI to `Leader::start`** (`tasks/migrate-tui-and-cli-to-leader-bootstrap.md`) — replace duplicated manual bootstrap.
+4. **Expand `Leader::start` for TUI and CLI** (`tasks/expand-leader-start-for-tui-and-cli.md`) — make the leader spawn the full actor set (including `InputActor`, `AgentActor`, and `FffIndexerActor`), expose actor refs, event subscription, a render snapshot channel, and graceful shutdown.
+5. **Migrate TUI and CLI to `Leader::start`** (`tasks/migrate-tui-and-cli-to-leader-bootstrap.md`) — replace duplicated manual bootstrap in `runie-tui/src/main.rs` and `runie-cli`.
 
 #### Phase 3 — Event taxonomy (P1)
 
-6. **Derive `Intent` and `EventKind` from `Event`** (`tasks/collapse-event-intent-kind-taxonomies.md`) — delete manual mirrors without restructuring the flat `Event` enum in one risky pass.
+6. **Derive `Intent` and `EventKind` from `Event`** (`tasks/collapse-event-intent-kind-taxonomies.md`) — delete manual mirrors (`intent_impl.rs`, `kind/mod.rs`) without restructuring the flat `Event` enum in one risky pass.
 
 #### Phase 4 — Tool/provider shims (P2)
 
-7. **Replace legacy tool parsers with a thin shim** (`tasks/replace-legacy-tool-parsers-with-thin-shim.md`) — introduce `quick-xml` shim alongside legacy parsers, prove equivalence with fixtures, then delete legacy files.
+7. **Replace legacy tool parsers with a thin shim** (`tasks/replace-legacy-tool-parsers-with-thin-shim.md`) — introduce a `quick-xml`-based shim alongside legacy parsers, prove equivalence with `runie-testing` fixtures, then delete legacy files and collapse the marker-stripping pipeline.
 
 #### Phase 5 — CLI config (P2)
 
-8. **Route CLI config through `ConfigActor`** (`tasks/route-cli-config-through-configactor.md`) — add ConfigActor messages for inspect/MCP and route CLI commands through the actor.
+8. **Route CLI config through `ConfigActor`** (`tasks/route-cli-config-through-configactor.md`) — add `RactorConfigActor` messages for layered config load and MCP server management, wrap CLI commands in a runtime, and route `inspect`/`mcp` through the actor.
 
 #### Phase 6 — Public API boundary (P2)
 
-9. **Narrow the `runie-core` public API** (`tasks/narrow-runie-core-public-api.md`) — usage-audit first; move shared helpers to a utility crate, narrow the rest.
+9. **Narrow the `runie-core` public API** (`tasks/narrow-runie-core-public-api.md`) — usage-audit first; move shared helpers (`display_width`, `path`, `sanitize`) to a new `runie-util` crate, narrow the rest.
 
 #### Phase 7 — Final sweep (P3)
 
 10. **Clean up small duplicates and dead code** (`tasks/cleanup-small-duplicates-and-dead-code.md`) — skill hooks, built-in tool registry, TUI render helpers, and justified `#[allow(dead_code)]` items.
+11. **Unify duplicate module names across core and TUI** (`tasks/unify-duplicate-module-names-core-tui.md`) — the `markdown` collision is resolved; rename core `themes.rs` to `theme_tokens.rs` to remove the remaining `theme`/`themes` collision.
 
 ### Archived completed tasks
 
@@ -435,6 +436,10 @@ The following 2026-06-28 review tasks were already complete on disk and are now 
 - `prune-dead-provider-code-and-rig-core-dependency`
 - `deduplicate-provider-registry-data`
 - `remove-dead-ipc-event-abstractions`
+- `merge-diff-modules`
+- `rename-core-ui-to-view`
+- `inline-tui-ipc-reexport`
+- `fold-protocol-into-core`
 
 Earlier completed architectural work (actor SSOT, config SSOT, MCP adoption, etc.) is also preserved in `tasks/archive/`.
 
@@ -447,7 +452,7 @@ The plan is phased so that **every merged task leaves `cargo check --workspace` 
 3. Land the event-taxonomy derivation (Task 6).
 4. Run tool-parser and CLI-config tasks in either order (Tasks 7–8).
 5. Narrow the public API last (Task 9).
-6. Run the final sweep (Task 10).
+6. Run the final sweep and module-name cleanup (Tasks 10–11).
 
 ## Testing philosophy
 

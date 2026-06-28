@@ -18,14 +18,16 @@ Once every production actor runs on `ractor`, the legacy custom `Actor` trait an
 - `TrustActor` and its ractor counterpart (`crates/runie-core/src/actors/trust/`)
 - `CompletionActor` and its ractor counterpart (`crates/runie-core/src/actors/completion/`)
 - The legacy custom `TurnActor` and `PermissionActor` implementations, keeping only the ractor-based `RactorTurnActor` and `RactorPermissionActor`
-- The broken, unwired `UiControlActor` subtree (`crates/runie-core/src/actors/ui_control/`) unless a separate task decides to revive and fix it
+- The broken, unwired `UiControlActor` subtree (`crates/runie-core/src/actors/ui_control/`)
+- Dead fields/helpers in `ActorHandles` (`view`, `completion`, `trust`, `send_view`, `send_trust`, `send_init_read_only`, etc.)
 
 ## Acceptance Criteria
 
-- [ ] `crates/runie-core/src/actors/trait.rs` is deleted and no code references its types.
+- [ ] `crates/runie-core/src/actors/trait.rs` is deleted and no production code references its types.
 - [ ] All actor modules listed above are deleted.
 - [ ] `crates/runie-core/src/actors/mod.rs` exports only ractor-based production actor types.
-- [ ] Test-only actor harnesses are updated to use `ractor` or gated with `#[cfg(test)]`.
+- [ ] `crates/runie-core/src/actors/handles.rs` no longer contains fields or helpers for deleted actors.
+- [ ] `crates/runie-core/src/testing/actor_harness.rs` is updated to use `ractor` or kept under `#[cfg(test)]` without referencing the deleted trait.
 - [ ] `cargo test --workspace` succeeds after the change.
 - [ ] `cargo check --workspace` succeeds with no new warnings.
 
@@ -33,6 +35,7 @@ Once every production actor runs on `ractor`, the legacy custom `Actor` trait an
 
 ### Layer 1 — State/Logic
 - [ ] `no_custom_actor_trait_references` — workspace grep shows no imports of `runie_core::actors::{Actor, spawn_actor, GenericActorHandle, Reply}` in production code.
+- [ ] `actor_handles_has_no_dead_fields` — `ActorHandles` exposes only production actor refs.
 
 ### Layer 2 — Event Handling
 - [ ] N/A — deletion task; no new event routing.
@@ -50,14 +53,16 @@ Once every production actor runs on `ractor`, the legacy custom `Actor` trait an
 - `crates/runie-core/src/actors/plan/` (delete)
 - `crates/runie-core/src/actors/trust/` (delete)
 - `crates/runie-core/src/actors/completion/` (delete)
-- `crates/runie-core/src/actors/ui_control/` (delete or fix in a separate task)
+- `crates/runie-core/src/actors/ui_control/` (delete)
 - `crates/runie-core/src/actors/turn/actor.rs` (delete legacy custom impl, keep `ractor_turn.rs`)
 - `crates/runie-core/src/actors/permission/actor.rs` (delete legacy custom impl, keep `ractor_permission.rs`)
 - `crates/runie-core/src/actors/mod.rs`
-- `crates/runie-core/src/testing/actor_harness.rs` (if it uses the custom trait)
+- `crates/runie-core/src/actors/handles.rs`
+- `crates/runie-core/src/testing/actor_harness.rs`
 
 ## Notes
 
 - This task is purely mechanical once `migrate-production-actors-to-ractor` is complete. If the build breaks, it means a production actor was missed.
 - `UiControlActor` references `Event::DialogOpened`, `Event::DialogClosed`, etc., which do not exist. Rather than fixing it here, delete it and let a future task reintroduce a working UI-control actor if needed.
+- `Reply` and `GenericActorHandle` are re-exported by `actors/mod.rs` and used by several message modules. Deleting the trait requires replacing those request/reply patterns with ractor's oneshot or call patterns.
 - Rejected alternative: keeping the custom trait as a thin wrapper. It adds no value and still requires maintenance.

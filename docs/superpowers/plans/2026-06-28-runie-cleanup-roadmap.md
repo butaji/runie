@@ -12,7 +12,7 @@
 
 ## File structure
 
-- `tasks/index.json` — canonical registry of the 12 active cleanup tasks.
+- `tasks/index.json` — canonical registry of the 11 active cleanup tasks.
 - **Actor runtime (split into three sequential tasks):**
   - `tasks/migrate-production-actors-to-ractor.md`
   - `tasks/delete-dead-actor-modules-and-custom-trait.md`
@@ -33,16 +33,17 @@
 
 | # | Task ID | Priority | What to do |
 |---|---------|----------|------------|
-| 1 | `migrate-production-actors-to-ractor` | P0/P1 | Migrate Config/Provider/Io/Session/Input/Turn/Agent actors to ractor while keeping the custom trait temporarily. |
-| 2 | `delete-dead-actor-modules-and-custom-trait` | P1 | Delete custom `Actor` trait and dead actor modules after migration. |
-| 3 | `collapse-actor-handles-to-typed-map` | P1 | Collapse `ActorHandles` to a typed `ractor::ActorRef` map. |
-| 4 | `expand-leader-start-for-tui-and-cli` | P1 | Make `Leader::start` spawn the full actor set and expose channels/shutdown. |
-| 5 | `migrate-tui-and-cli-to-leader-bootstrap` | P1 | Replace manual TUI/CLI bootstrap with `Leader::start`. |
+| 1 | `migrate-production-actors-to-ractor` | P0/P1 | `InputActor`/`RactorPermissionActor` already migrated; wire `RactorConfigActor` and migrate Provider/Io/Session/FffIndexer/Agent actors. |
+| 2 | `delete-dead-actor-modules-and-custom-trait` | P1 | Delete custom `Actor` trait, dead actor modules, and their `ActorHandles` fields after migration. |
+| 3 | `collapse-actor-handles-to-typed-map` | P1 | Collapse `ActorHandles` to a typed `ractor::ActorRef` map; reconcile with `LeaderHandle`. |
+| 4 | `expand-leader-start-for-tui-and-cli` | P1 | Make `Leader::start` spawn the full actor set (Input/Agent/FffIndexer) and expose channels/shutdown. |
+| 5 | `migrate-tui-and-cli-to-leader-bootstrap` | P1 | Replace manual TUI/CLI bootstrap with `Leader::start`; route CLI input through `InputMsg`. |
 | 6 | `collapse-event-intent-kind-taxonomies` | P1 | Derive `Intent`/`EventKind` from flat `Event`; delete manual mirrors. |
-| 7 | `replace-legacy-tool-parsers-with-thin-shim` | P2 | Add `quick-xml` shim, prove equivalence with fixtures, delete legacy parsers. |
-| 8 | `route-cli-config-through-configactor` | P2 | Add ConfigActor messages for inspect/MCP; route CLI commands through actor. |
-| 9 | `narrow-runie-core-public-api` | P2 | Usage-audit first; move shared helpers to utility crate, narrow the rest. |
+| 7 | `replace-legacy-tool-parsers-with-thin-shim` | P2 | Add `quick-xml` shim, prove equivalence with `runie-testing` fixtures, delete legacy parsers, reconcile MiniMax parsing with `runie-provider`. |
+| 8 | `route-cli-config-through-configactor` | P2 | Add `RactorConfigActor` messages for inspect/MCP; route CLI commands through the actor. |
+| 9 | `narrow-runie-core-public-api` | P2 | Usage-audit first; move shared helpers to a new `runie-util` crate, narrow the rest. |
 | 10 | `cleanup-small-duplicates-and-dead-code` | P3 | Skill hooks, tool registry, TUI render helpers, justified dead-code allows. |
+| 11 | `unify-duplicate-module-names-core-tui` | P2 | Markdown rename done; rename core `themes.rs` to `theme_tokens.rs` to remove the remaining collision. |
 
 ## Archived completed tasks
 
@@ -53,6 +54,10 @@ The following tasks from the 2026-06-28 review were already complete on disk and
 - `prune-dead-provider-code-and-rig-core-dependency`
 - `deduplicate-provider-registry-data`
 - `remove-dead-ipc-event-abstractions`
+- `merge-diff-modules`
+- `rename-core-ui-to-view`
+- `inline-tui-ipc-reexport`
+- `fold-protocol-into-core`
 
 Earlier completed work (actor SSOT, config SSOT, MCP adoption, actor migrations, etc.) is also preserved in `tasks/archive/`.
 
@@ -77,6 +82,7 @@ The goal is a **stable phase**: after every merged task the workspace builds and
    - `narrow-runie-core-public-api` (must be last architectural change)
 7. **Phase 7 — Final sweep.**
    - `cleanup-small-duplicates-and-dead-code`
+   - `unify-duplicate-module-names-core-tui`
 
 ## Verification
 

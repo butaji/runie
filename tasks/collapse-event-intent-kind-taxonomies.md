@@ -14,12 +14,19 @@
 
 Rather than restructuring `Event` in one risky pass, this task keeps the flat `Event` enum as the canonical source of truth and introduces derive macros (or a build-time generator) that produce `Intent` and `EventKind`/`EventCategory` from it. The manual mirrors in `intent_impl.rs` and `kind/mod.rs` are deleted, but existing `match` sites are left untouched until a follow-up task decides whether to nest domain sub-enums.
 
+Current state as of this review:
+
+- `event/mod.rs` still declares `pub(crate) mod intent_impl;`.
+- `variants.rs` has no generation attributes.
+- `kind/mod.rs` does not classify newer lifecycle variants such as `TurnStarted`, `TurnAborted`, `TurnCompleted`, and `TurnErrored`; they fall through to the default "intent" branch. The generator must either preserve this accidental behavior or deliberately fix it with tests.
+
 ## Acceptance Criteria
 
 - [ ] A derive macro or build script generates `Intent` and `EventKind` from `Event` variants and their attributes.
 - [ ] `crates/runie-core/src/event/intent_impl.rs` is deleted; no manual `Event → Intent` mapping remains.
 - [ ] `crates/runie-core/src/event/kind/mod.rs` is reduced to re-exports or thin wrappers around the generated classification.
 - [ ] All existing call sites for `event.into_intent()`, `event.kind()`, and dispatch categorization continue to compile without changes.
+- [ ] Generated output is split by domain so that no generated file exceeds the 500-line build guardrail.
 - [ ] `cargo test --workspace` succeeds after the change.
 - [ ] `cargo check --workspace` succeeds with no new warnings.
 
@@ -28,6 +35,7 @@ Rather than restructuring `Event` in one risky pass, this task keeps the flat `E
 ### Layer 1 — State/Logic
 - [ ] `event_to_intent_roundtrip` — verifies that every `Event` variant round-trips to the generated `Intent` and back without manual mapping tables.
 - [ ] `event_kind_classification_matches_legacy` — compares generated `EventKind` values against the old `matches!` predicates for a representative set of variants.
+- [ ] `lifecycle_variants_classified` — explicitly asserts the classification of `TurnStarted`, `TurnAborted`, `TurnCompleted`, and `TurnErrored` rather than relying on the accidental default.
 
 ### Layer 2 — Event Handling
 - [ ] `dispatch_routes_generated_intent` — verifies the update dispatcher routes a generated `Intent` to the correct handler.

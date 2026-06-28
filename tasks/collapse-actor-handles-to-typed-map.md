@@ -12,10 +12,19 @@
 
 `crates/runie-core/src/actors/handles.rs` is a 473-line bag of per-actor helper methods built on the legacy abstraction. After the custom trait and dead actors are removed, refactor `ActorHandles` into a small typed map of `ractor::ActorRef<ActorType>` keyed by the production actor set. This makes actor lifetimes explicit and removes the last large façade between callers and the runtime.
 
+Current state as of this review:
+
+- `InputActor` and `PermissionActor` handles are already ractor-based (`RactorInputHandle`, `RactorPermissionHandle`).
+- `FffIndexerHandle` is still a custom `mpsc::Sender<FffSearchRequest>` wrapper because `FffIndexerActor` is not yet ractor-based.
+- `ActorHandles` still contains dead fields (`view`, `completion`, `trust`) that will be removed by the preceding task.
+- `LeaderHandle` currently duplicates a subset of the handles returned by `Leader::start`.
+
 ## Acceptance Criteria
 
 - [ ] `ActorHandles` exposes only the production actors: `config`, `provider`, `io`, `session`, `permission`, `turn`, `input`, `agent`, and `fff_indexer`.
 - [ ] Each handle is a `ractor::ActorRef<Msg>` (or a thin newtype around it) rather than a custom helper struct.
+- [ ] If `FffIndexerActor` is not yet migrated to ractor, its handle remains a small dedicated wrapper located next to the actor, not in the global `handles.rs`.
+- [ ] `LeaderHandle` is reconciled with `ActorHandles` so the leader can return the collapsed map directly.
 - [ ] All callers in `runie-tui/src/main.rs`, `runie-cli/src/acp.rs`, `runie-agent/src/actor.rs`, and tests are updated to use the new map.
 - [ ] `cargo test --workspace` succeeds after the change.
 - [ ] `cargo check --workspace` succeeds with no new warnings.
@@ -39,6 +48,7 @@
 - `crates/runie-core/src/actors/handles.rs`
 - `crates/runie-core/src/actors/mod.rs`
 - `crates/runie-core/src/actors/leader/actor.rs`
+- `crates/runie-core/src/actors/fff_indexer/mod.rs`
 - `crates/runie-tui/src/main.rs`
 - `crates/runie-cli/src/acp.rs`
 - `crates/runie-agent/src/actor.rs`
@@ -47,5 +57,6 @@
 ## Notes
 
 - This task must not change actor message protocols; it only changes how callers obtain actor references.
-- If `FffIndexerHandle` cannot be expressed as a plain `ractor::ActorRef` (it has custom `search`/`try_search` methods), keep a small dedicated wrapper but move it next to the actor instead of in the global `handles.rs`.
+- If `FffIndexerActor` cannot be migrated to ractor in the preceding task, keep a small dedicated wrapper but move it next to the actor instead of in the global `handles.rs`.
+- `LeaderHandle` should probably become a thin wrapper around `ActorHandles` plus the event bus and shutdown sender.
 - Rejected alternative: keeping the large helper struct for backward compatibility. It ossifies the runtime surface and makes adding or removing actors expensive.
