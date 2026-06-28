@@ -11,6 +11,7 @@ pub mod turn;
 
 // Ractor adapter for incremental migration.
 pub mod ractor_adapter;
+pub use ractor_adapter::{RactorHandle, spawn_ractor};
 
 // Re-exports from the actor trait (lives in trait.rs).
 pub use r#trait::{spawn_actor, Actor, ActorFuture, ActorHandle, GenericActorHandle, Reply};

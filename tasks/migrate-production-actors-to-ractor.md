@@ -1,6 +1,6 @@
 # Migrate production actors to `ractor`
 
-**Status**: partial (ProviderActor and FffIndexerActor complete, AgentActor remains)
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0/P1
@@ -43,13 +43,13 @@ This task finishes the migration in phases so that `cargo check --workspace` sta
 | SessionActor | ✓ `RactorSessionActor` | ✓ |
 | ProviderActor | ✓ `RactorProviderActor` | ✓ (TUI, Leader, HeadlessRuntime, CLI, AgentActor) |
 | FffIndexerActor | ✓ `RactorFffIndexerActor` | ✓ (TUI) |
-| AgentActor | ✗ (uses `RactorProviderHandle`) | ✓ (updated to use ractor provider handle) |
+| AgentActor | ✓ `RactorAgentActor` | ✓ (RactorAgentHandle exported from runie-agent) |
 
 ### Suggested phases (Pareto ordering)
 
 1. **Migrate `ProviderActor`** — highest-impact remaining actor; referenced by leader, headless runtime, TUI, and CLI. ✓
 2. **Migrate `FffIndexerActor`**; keep a small wrapper if the static `FffSearchState` service-locator remains. ✓
-3. **Migrate `AgentActor`** in `runie-agent`; introduce a factory trait in `runie-core` to avoid a crate-dependency cycle.
+3. **Migrate `AgentActor`** in `runie-agent`; introduce a factory trait in `runie-core` to avoid a crate-dependency cycle. ✓
 
 ## Acceptance Criteria
 
@@ -58,7 +58,7 @@ This task finishes the migration in phases so that `cargo check --workspace` sta
 - [x] `RactorSessionActor` is wired into production spawn sites (TUI, Leader).
 - [x] `ProviderActor` has a `ractor`-based implementation used in production.
 - [x] `FffIndexerActor` has a `ractor`-based implementation used in production.
-- [ ] `AgentActor` has a `ractor`-based implementation used in production.
+- [x] `AgentActor` has a `ractor`-based implementation used in production.
 - [x] All production spawn sites (`runie-tui/src/main.rs`, `runie-cli/src/acp.rs`, `Leader::start`, `HeadlessRuntime`) use the ractor-based versions for all migrated actors.
 - [x] `HeadlessRuntime` (`crates/runie-core/src/headless_runtime.rs`) is updated to use the ractor-based actors instead of the legacy ones.
 - [x] The legacy custom trait and helpers still exist but are no longer used by production code.
@@ -78,6 +78,8 @@ This task finishes the migration in phases so that `cargo check --workspace` sta
 - [x] `ractor_provider_handle_build` — `RactorProviderHandle` builds a provider.
 - [x] `ractor_provider_handle_validate_key` — `RactorProviderHandle` validates API keys.
 - [x] `ractor_fff_indexer_actor_searches` — `FffIndexerActor` accepts a search request through ractor and returns results.
+- [x] `ractor_agent_spawns_and_handles_run` — `RactorAgentActor` spawns and enters Running state.
+- [x] `ractor_agent_runs_if_queued` — `RactorAgentHandle` can trigger turn via `run_if_queued`.
 
 ### Layer 2 — Event Handling
 - [x] `leader_start_uses_ractor_io` — `Leader::start` instantiates `RactorIoActor`.

@@ -2,7 +2,7 @@
   {
     "file": "migrate-production-actors-to-ractor.md",
     "title": "Migrate production actors to ractor",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "delete-dead-actor-modules-and-custom-trait.md",

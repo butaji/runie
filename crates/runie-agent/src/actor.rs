@@ -6,9 +6,13 @@
 
 use std::sync::{Arc, Mutex};
 
+use ractor::{Actor, ActorRef, ActorProcessingErr};
+use ractor::async_trait;
+
 use runie_core::actors::PermissionActorHandle;
 use runie_core::actors::provider::RactorProviderHandle;
-use runie_core::actors::{spawn_actor, Actor, ActorHandle};
+use runie_core::actors::ractor_adapter::{EventBusBridge, RactorHandle, spawn_ractor};
+use runie_core::actors::{spawn_actor, Actor as CustomActor, ActorHandle};
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::permissions::{
@@ -28,6 +32,8 @@ pub enum AgentMsg {
     /// Execute one agent turn.
     Run { command: AgentCommand },
 }
+
+// ── Legacy AgentActor (custom trait) ───────────────────────────────────────────
 
 /// Ergonomic handle for sending commands to an `AgentActor`.
 #[derive(Clone, Debug)]
@@ -57,6 +63,8 @@ impl AgentActorHandle {
 }
 
 /// Actor that executes agent turns and publishes progress to the event bus.
+/// (Legacy implementation using custom Actor trait)
+#[allow(deprecated)]
 pub struct AgentActor {
     bus: EventBus<Event>,
     provider_handle: RactorProviderHandle,
@@ -65,6 +73,7 @@ pub struct AgentActor {
 
 impl AgentActor {
     /// Spawn an `AgentActor` on the given event bus.
+    #[allow(deprecated)]
     pub fn spawn(
         bus: EventBus<Event>,
         provider_handle: RactorProviderHandle,
@@ -81,7 +90,7 @@ impl AgentActor {
     }
 }
 
-impl Actor for AgentActor {
+impl CustomActor for AgentActor {
     type Msg = AgentMsg;
     type Event = Event;
 
@@ -142,6 +151,149 @@ impl AgentActor {
         });
         self.bus
             .publish(runie_core::Event::Done { id: id.to_owned() });
+    }
+}
+
+// ── Ractor-based AgentActor ────────────────────────────────────────────────────
+
+/// Ractor-based AgentActor state.
+struct RactorAgentActor {
+    provider_handle: std::sync::Arc<Mutex<Option<RactorProviderHandle>>>,
+    permission_handle: std::sync::Arc<Mutex<Option<PermissionActorHandle>>>,
+    bus_bridge: EventBusBridge<Event>,
+}
+
+/// Spawn arguments for RactorAgentActor.
+pub struct RactorAgentArgs {
+    pub provider_handle: RactorProviderHandle,
+    pub permission_handle: PermissionActorHandle,
+}
+
+#[async_trait]
+impl Actor for RactorAgentActor {
+    type Msg = AgentMsg;
+    type State = ();
+    type Arguments = RactorAgentArgs;
+
+    async fn pre_start(
+        &self,
+        _myself: ActorRef<Self::Msg>,
+        args: Self::Arguments,
+    ) -> Result<Self::State, ActorProcessingErr> {
+        // Initialize handles using interior mutability
+        *self.provider_handle.lock().unwrap() = Some(args.provider_handle);
+        *self.permission_handle.lock().unwrap() = Some(args.permission_handle);
+        Ok(())
+    }
+
+    async fn handle(
+        &self,
+        _myself: ActorRef<Self::Msg>,
+        msg: Self::Msg,
+        _state: &mut Self::State,
+    ) -> Result<(), ActorProcessingErr> {
+        match msg {
+            AgentMsg::Run { command } => self.run_turn(&command).await,
+        }
+        Ok(())
+    }
+}
+
+impl RactorAgentActor {
+    async fn run_turn(&self, command: &AgentCommand) {
+        let provider_handle = self.provider_handle.lock().unwrap().clone();
+        let permission_handle = self.permission_handle.lock().unwrap().clone();
+        
+        let provider_handle = match provider_handle {
+            Some(h) => h,
+            None => {
+                self.emit_error_and_done(&command.id, "Provider not initialized".into());
+                return;
+            }
+        };
+        let permission_handle = match permission_handle {
+            Some(h) => h,
+            None => {
+                self.emit_error_and_done(&command.id, "Permission handle not initialized".into());
+                return;
+            }
+        };
+
+        let (provider_key, model) = if runie_core::provider::is_mock_enabled() {
+            ("mock".to_owned(), "echo".to_owned())
+        } else {
+            (command.provider.clone(), command.model.clone())
+        };
+        let built = match provider_handle.build(provider_key, model).await {
+            Ok(built) => built,
+            Err(e) => {
+                self.emit_error_and_done(&command.id, format!("Provider error: {e}"));
+                return;
+            }
+        };
+
+        let emit = Arc::new(Mutex::new({
+            let bus = self.bus_bridge.bus().clone();
+            move |evt: Event| {
+                bus.publish(evt);
+            }
+        }));
+        let permissions = PermissionManager::default().with_policies(vec![
+            Box::new(DefaultToolApprove::new()),
+            Box::new(GitTrackedWriteApprove::new()),
+            Box::new(FileAccessAsk::new()),
+        ]);
+        let gate = PermissionGate::new(
+            permissions,
+            Arc::new(EmitApprovalSink::new(permission_handle)),
+        );
+
+        if let Err(e) = run_agent_turn(&built, command, emit, 5, gate).await {
+            self.emit_error_and_done(&command.id, format!("Agent error: {e}"));
+        }
+    }
+
+    fn emit_error_and_done(&self, id: &str, message: String) {
+        self.bus_bridge.publish(runie_core::Event::Error {
+            id: id.to_owned(),
+            message,
+        });
+        self.bus_bridge
+            .publish(runie_core::Event::Done { id: id.to_owned() });
+    }
+}
+
+/// Handle for the ractor-based AgentActor.
+pub type RactorAgentHandle = RactorHandle<AgentMsg>;
+
+/// Spawn a ractor-based AgentActor.
+pub async fn spawn_ractor_agent(
+    bus: runie_core::bus::EventBus<Event>,
+    provider_handle: RactorProviderHandle,
+    permission_handle: PermissionActorHandle,
+) -> Result<(RactorAgentHandle, ractor::concurrency::JoinHandle<()>, ractor::ActorCell), ractor::SpawnErr> {
+    let actor = RactorAgentActor {
+        provider_handle: std::sync::Arc::new(Mutex::new(None)),
+        permission_handle: std::sync::Arc::new(Mutex::new(None)),
+        bus_bridge: EventBusBridge::new(bus.clone()),
+    };
+    let args = RactorAgentArgs {
+        provider_handle,
+        permission_handle,
+    };
+    spawn_ractor(None, actor, args).await
+}
+
+/// Extension trait for RactorAgentHandle to add helper methods.
+#[allow(async_fn_in_trait)]
+pub trait RactorAgentHandleExt {
+    /// Pop the next queued message and run a turn for it, if one is waiting.
+    async fn run_if_queued(&self, turn_handle: &runie_core::actors::RactorTurnHandle);
+}
+
+impl RactorAgentHandleExt for RactorAgentHandle {
+    async fn run_if_queued(&self, turn_handle: &runie_core::actors::RactorTurnHandle) {
+        turn_handle.send(runie_core::actors::TurnMsg::RunIfQueued).await;
     }
 }
 
@@ -299,5 +451,68 @@ mod tests {
             }
         }
         assert_eq!(turn_started_count, 1, "only one TurnStarted should be emitted");
+    }
+
+    #[tokio::test]
+    async fn ractor_agent_spawns_and_handles_run() {
+        use crate::RactorAgentHandleExt;
+        let _lock = crate::tests::MOCK_STATE_LOCK.lock().await;
+        let was_mock = runie_core::provider::is_mock_enabled();
+        runie_core::provider::set_mock_enabled(false);
+        let bus = EventBus::<Event>::new(10);
+
+        let (config_handle, _config_actor) = RactorConfigActor::spawn(bus.clone(), None).await;
+        let (provider_handle, _provider_actor) =
+            RactorProviderActor::spawn(bus.clone(), config_handle, Arc::new(DynProviderFactory)).await;
+        let (permission_handle, _permission_actor) = RactorPermissionActor::spawn(bus.clone()).await;
+
+        let result = crate::spawn_ractor_agent(bus, provider_handle, permission_handle).await;
+        assert!(result.is_ok(), "RactorAgentActor should spawn successfully");
+        
+        let (handle, _join, cell) = result.unwrap();
+        // Check actor is running (not stopped/unstarted)
+        let status = cell.get_status();
+        assert!(!matches!(status, ractor::ActorStatus::Unstarted));
+
+        runie_core::provider::set_mock_enabled(was_mock);
+    }
+
+    #[tokio::test]
+    async fn ractor_agent_runs_if_queued() {
+        use crate::RactorAgentHandleExt;
+        let bus = runie_core::bus::EventBus::<Event>::new(16);
+        let (turn_handle, _, _) = runie_core::actors::RactorTurnActor::spawn(bus.clone()).await;
+        
+        let (config_handle, _config_actor) = RactorConfigActor::spawn(bus.clone(), None).await;
+        let (provider_handle, _provider_actor) =
+            RactorProviderActor::spawn(bus.clone(), config_handle, Arc::new(DynProviderFactory)).await;
+        let (permission_handle, _permission_actor) = RactorPermissionActor::spawn(bus.clone()).await;
+
+        let (handle, _join, _cell) = crate::spawn_ractor_agent(
+            bus.clone(), provider_handle, permission_handle
+        ).await.unwrap();
+
+        // Subscribe BEFORE operations so we can receive events
+        let mut sub = bus.subscribe();
+
+        // Queue a message via TurnActor
+        turn_handle.send(runie_core::actors::TurnMsg::SubmitUserMessage {
+            content: "hello".into(),
+            id: "req.0".into(),
+        }).await;
+
+        // Call run_if_queued
+        handle.run_if_queued(&turn_handle).await;
+
+        // Verify TurnStarted was emitted
+        let mut found = false;
+        while let Ok(evt) = sub.recv().await {
+            if let Event::TurnStarted { content, .. } = evt {
+                found = true;
+                assert_eq!(content.as_str(), "hello");
+                break;
+            }
+        }
+        assert!(found, "TurnStarted should be emitted");
     }
 }

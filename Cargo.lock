@@ -3082,6 +3082,7 @@ dependencies = [
  "fff-search",
  "futures",
  "git2",
+ "ractor",
  "reqwest",
  "rmcp",
  "runie-core",

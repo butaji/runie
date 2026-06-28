@@ -173,6 +173,11 @@ impl<E: Clone + Send + 'static> EventBusBridge<E> {
         Self { bus }
     }
 
+    /// Get a clone of the underlying event bus.
+    pub fn bus(&self) -> &EventBus<E> {
+        &self.bus
+    }
+
     /// Publish an event to the bus.
     pub fn publish(&self, event: E) {
         self.bus.publish(event);

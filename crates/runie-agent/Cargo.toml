@@ -20,6 +20,7 @@ fff-search.workspace = true
 git2.workspace = true
 rmcp.workspace = true
 schemars.workspace = true
+ractor.workspace = true
 
 [dev-dependencies]
 runie-testing.workspace = true
