@@ -64,6 +64,10 @@ The following items are **explicitly out of scope** because they are already res
 - Do not move helpers to `runie-io` or `runie-domain`; those crates were deleted as empty facades.
 - `telemetry.rs` should be revisited here: if it is only collecting events that `tracing` spans/events can model, replace it with `tracing` and delete the module.
 - Any remaining custom keybinding parsing should be replaced by `crossterm` (already covered in `replace-custom-helpers-with-crates`); this task only cleans up leftover allows.
+- Permission-rule duplication is handled by `unify-permission-system-rules`; this task only removes any leftover allows or dead fields after that lands.
+- Slash-command DSL duplication is handled by `simplify-slash-command-dsl`; this task only cleans up leftovers.
+- Bash-safety replacement is handled by `replace-bash-safety-with-shell-words`; this task only removes any leftover custom-parser references.
+- Build-lint replacement is handled by `replace-build-linter-with-clippy-ci`; this task only removes leftover allow-list entries.
 - Out of scope: `DynProvider`, `now()` (already resolved), manual derives with intentional semantics, large refactorings of the provider factory, the agent turn state machine, or the TUI widget tree.
 
 ## Round 6 (2026-06-28) Changes

@@ -391,7 +391,7 @@ Tests are exempt from function-length and complexity checks so they can stay com
 
 ## Current cleanup roadmap
 
-The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. A third five-round review focused on replacing custom code with crates, unification, and Pareto simplification; its findings are recorded in [`docs/superpowers/plans/2026-06-28-less-code-crate-replacements.md`](superpowers/plans/2026-06-28-less-code-crate-replacements.md). The remaining active work is tracked in `tasks/index.json` (18 active cleanup tasks) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
+The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. A third five-round review focused on replacing custom code with crates, unification, and Pareto simplification; its findings are recorded in [`docs/superpowers/plans/2026-06-28-less-code-crate-replacements.md`](superpowers/plans/2026-06-28-less-code-crate-replacements.md). A fourth five-round review dug deeper into provider/config/auth, message/session/state, dispatch/commands/permissions, TUI/widgets, and testing/build/DSL; its findings are recorded in [`docs/superpowers/plans/2026-06-28-third-pass-crate-review.md`](superpowers/plans/2026-06-28-third-pass-crate-review.md). The remaining active work is tracked in `tasks/index.json` (30 active cleanup tasks) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
 
 ### Active tasks
 
@@ -437,6 +437,32 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 17. **Fix keybindings dead-code warning** (`tasks/fix-keybindings-dead-code.md`) — convert `parse_key_combo` to `#[cfg(test)]` or document it.
 18. **Clean up small duplicates and dead code** (`tasks/cleanup-small-duplicates-and-dead-code.md`) — `partial`. Remaining items: consolidate skill hooks, remove dead actor-handle fields, clean stale `#[allow(dead_code)]` and repetitive `FIXME` comments, and revisit `telemetry.rs` against `tracing`.
 
+#### Phase 9 — Provider / config / auth crate replacements (P0/P1)
+
+19. **Replace custom retry module with `backon`** (`tasks/replace-custom-retry-with-backon.md`) — delete `runie-provider/src/retry.rs` and use `backon`/`reqwest-retry` while preserving pre-stream retry semantics.
+20. **Replace XOR-obfuscated auth storage with OS keyring** (`tasks/replace-xor-auth-with-keyring.md`) — use `keyring` for tokens with a headless/CI fallback.
+21. **Replace custom config validator with `jsonschema`** (`tasks/replace-config-validator-with-jsonschema.md`) — validate serialized `Config` against the `schemars`-generated schema.
+22. **Unify provider credential resolution with `dotenvy`** (`tasks/unify-provider-credential-resolution-with-dotenvy.md`) — load `.env` once and consolidate env-var fallback logic.
+23. **Unify provider-config persistence helpers** (`tasks/unify-provider-config-persistence.md`) — route save/remove/list through a single helper or `RactorConfigActor`.
+
+#### Phase 10 — CLI / commands / permissions simplification (P0/P1)
+
+24. **Use `clap` derive macros for CLI argument parsing** (`tasks/use-clap-derive-for-cli.md`) — replace manual `args[1]` matching with typed subcommands.
+25. **Use `notify` directly in `RactorConfigActor`** (`tasks/use-notify-directly-in-config-actor.md`) — remove the std-thread watcher bridge.
+26. **Simplify slash-command DSL** (`tasks/simplify-slash-command-dsl.md`) — collapse `CommandSpec`/`CommandDef` into one representation.
+27. **Unify permission-system rule engines** (`tasks/unify-permission-system-rules.md`) — merge `PermissionSet` and `PermissionManager` into a single ruleset.
+
+#### Phase 11 — TUI / macros / testing cleanup (P0/P2)
+
+28. **Replace custom TUI widgets with ratatui ecosystem crates** (`tasks/replace-custom-tui-widgets-with-ratatui-ecosystem.md`) — delete custom `Stylize`, input box, popup list, terminal setup sequences, and ANSI quantization in favor of `tui-textarea`, `tui-input`, `ratatui::widgets::List`, `crossterm`, and `ansi_colours`.
+29. **Delete the dead `runie-macros` crate** (`tasks/delete-dead-runie-macros-crate.md`) — remove the unused proc-macro crate.
+30. **Centralize test fixtures and mocks** (`tasks/centralize-test-fixtures-and-mocks.md`) — move MiniMax fixtures, `MockToolSkill`, `ReplayProvider`, and `capture_events` into `runie-testing`.
+
+#### Phase 12 — Final tooling simplification (P2/P3)
+
+31. **Replace custom bash-safety heuristic with `shell-words`** (`tasks/replace-bash-safety-with-shell-words.md`) — tokenize with `shell-words` and apply a static deny-list.
+32. **Replace custom build linter with Clippy / CI** (`tasks/replace-build-linter-with-clippy-ci.md`) — move guardrails into `[workspace.lints.clippy]` and a CI file-limit check.
+
 ### Archived completed tasks
 
 The following 2026-06-28 review tasks were already complete on disk and are now in `tasks/archive/`:
@@ -466,7 +492,11 @@ The plan is phased so that **every merged task leaves `cargo check --workspace` 
 6. Route CLI config through the actor (Task 13).
 7. Replace custom helpers with crates (Task 14) before narrowing the public API.
 8. Narrow the public API (Task 15).
-9. Run the final small cleanups (Tasks 16–18).
+9. Run the small cleanups (Tasks 16–18).
+10. Land provider/config/auth crate replacements (Tasks 19–23), after `route-cli-config-through-configactor` for the config-related ones.
+11. Land CLI/commands/permissions simplifications (Tasks 24–27), after `use-clap-derive-for-cli` for the slash-command DSL.
+12. Land TUI/macros/testing cleanup (Tasks 28–30).
+13. Run final tooling simplification (Tasks 31–32).
 
 ## Testing philosophy
 

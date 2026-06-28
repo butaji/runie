@@ -88,5 +88,75 @@
     "file": "cleanup-small-duplicates-and-dead-code.md",
     "title": "Clean up small duplicates and dead code",
     "status": "partial"
+  },
+  {
+    "file": "replace-custom-retry-with-backon.md",
+    "title": "Replace custom retry module with backon",
+    "status": "todo"
+  },
+  {
+    "file": "replace-xor-auth-with-keyring.md",
+    "title": "Replace XOR-obfuscated auth storage with keyring",
+    "status": "todo"
+  },
+  {
+    "file": "replace-config-validator-with-jsonschema.md",
+    "title": "Replace custom config validator with jsonschema",
+    "status": "todo"
+  },
+  {
+    "file": "use-clap-derive-for-cli.md",
+    "title": "Use clap derive macros for CLI argument parsing",
+    "status": "todo"
+  },
+  {
+    "file": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",
+    "title": "Replace custom TUI widgets with ratatui ecosystem crates",
+    "status": "todo"
+  },
+  {
+    "file": "delete-dead-runie-macros-crate.md",
+    "title": "Delete dead runie-macros crate",
+    "status": "todo"
+  },
+  {
+    "file": "centralize-test-fixtures-and-mocks.md",
+    "title": "Centralize test fixtures and mocks in runie-testing",
+    "status": "todo"
+  },
+  {
+    "file": "unify-provider-credential-resolution-with-dotenvy.md",
+    "title": "Unify provider credential resolution with dotenvy",
+    "status": "todo"
+  },
+  {
+    "file": "replace-bash-safety-with-shell-words.md",
+    "title": "Replace custom bash-safety heuristic with shell-words",
+    "status": "todo"
+  },
+  {
+    "file": "replace-build-linter-with-clippy-ci.md",
+    "title": "Replace custom build.rs linter with Clippy / CI",
+    "status": "todo"
+  },
+  {
+    "file": "use-notify-directly-in-config-actor.md",
+    "title": "Use notify directly in RactorConfigActor",
+    "status": "todo"
+  },
+  {
+    "file": "unify-provider-config-persistence.md",
+    "title": "Unify provider-config persistence helpers",
+    "status": "todo"
+  },
+  {
+    "file": "simplify-slash-command-dsl.md",
+    "title": "Simplify slash-command DSL",
+    "status": "todo"
+  },
+  {
+    "file": "unify-permission-system-rules.md",
+    "title": "Unify permission-system rule engines",
+    "status": "todo"
   }
 ]

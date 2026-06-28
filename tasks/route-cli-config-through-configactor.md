@@ -6,7 +6,7 @@
 **Priority**: P2
 
 **Depends on**: migrate-tui-and-cli-to-leader-bootstrap
-**Blocks**: none
+**Blocks**: unify-provider-credential-resolution-with-dotenvy, use-notify-directly-in-config-actor, unify-provider-config-persistence
 
 ## Description
 
@@ -70,5 +70,6 @@ This task extends `RactorConfigActor` with the messages that standalone CLI comm
 - The preferred implementation is to reuse an existing `RactorConfigActor` handle when the CLI is already running inside the actor system; for standalone CLI commands, spawn a short-lived headless runtime with a single `RactorConfigActor`.
 - `inspect` needs **layered** config (`global + local`). The actor must grow layered-load support; do not flatten the layers inside the actor.
 - Decide whether the actor resolves the project path once at spawn time or whether each MCP message carries an absolute path.
+- Load `.env` once at startup using `dotenvy` so provider env-var fallback is resolved before config is read; this unblocks `unify-provider-credential-resolution-with-dotenvy`.
 - Rejected alternative: keeping direct file reads in `inspect` for performance. This violates the single-owner invariant and creates race conditions with a running TUI session.
 - Out of scope: changing the `Config` serialization format or the on-disk layout. Only the call sites and actor message protocol move.

@@ -2,17 +2,17 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Resolve the unify/simplify/reduce findings from the 2026-06-28 architecture & code review so the workspace builds cleanly, dead/duplicate code is removed, and the actual crate structure matches the documented `IO | Domain (pure) | UI (pure/MVU)` layering. A third five-round review added a crate-replacement angle: wherever a custom helper mirrors a standard crate, plan to use the crate.
+**Goal:** Resolve the unify/simplify/reduce findings from the 2026-06-28 architecture & code review so the workspace builds cleanly, dead/duplicate code is removed, and the actual crate structure matches the documented `IO | Domain (pure) | UI (pure/MVU)` layering. A third five-round review added a crate-replacement angle, and a fourth five-round review dug deeper into provider/config/auth, message/session/state, dispatch/commands/permissions, TUI/widgets, and testing/build/DSL. Wherever a custom helper mirrors a standard crate, the plan is to use the crate.
 
-**Architecture:** The second-pass review showed that several "todo" tasks were already completed on disk (dialog module repaired, empty facade crates deleted, dead provider code removed, IPC layers gone). Those tasks have been archived. The remaining active work is concentrated in the actor runtime, runtime bootstrap, event taxonomy, tool-parser shim, public API boundary, CLI config routing, and a final sweep of small duplicates. A third review found that many small `runie-core` helpers (`glob`, `fuzzy`, `path`, keybinding parsing, frontmatter scanning, tool-marker stripping) can be replaced by `pulldown-cmark`, `strum`, `shellexpand`, `ignore`, and other standard crates. The big actor/bootstrap tasks have been split into sequential sub-tasks so that every intermediate commit leaves `cargo check --workspace` green.
+**Architecture:** The second-pass review showed that several "todo" tasks were already completed on disk (dialog module repaired, empty facade crates deleted, dead provider code removed, IPC layers gone). Those tasks have been archived. The remaining active work is concentrated in the actor runtime, runtime bootstrap, event taxonomy, tool-parser shim, public API boundary, CLI config routing, and a final sweep of small duplicates. A third review found that many small `runie-core` helpers (`glob`, `fuzzy`, `path`, keybinding parsing, frontmatter scanning, tool-marker stripping) can be replaced by `pulldown-cmark`, `strum`, `shellexpand`, `ignore`, and other standard crates. A fourth review found additional crate replacements in provider/config/auth (`backon`, `keyring`, `jsonschema`, `dotenvy`), CLI (`clap`), TUI widgets (`tui-textarea`, `tui-input`, `ansi_colours`), and tooling (`shell-words`, Clippy/CI). The big actor/bootstrap tasks have been split into sequential sub-tasks so that every intermediate commit leaves `cargo check --workspace` green.
 
-**Tech Stack:** Rust, Tokio, Ratatui, ractor, reqwest, pulldown-cmark, strum, glob/globset, nucleo-matcher/sublime-fuzzy, shellexpand, etcetera, ignore, walkdir, tracing.
+**Tech Stack:** Rust, Tokio, Ratatui, ractor, reqwest, pulldown-cmark, strum, glob/globset, nucleo-matcher/sublime-fuzzy, shellexpand, etcetera, ignore, walkdir, tracing, backon, keyring, jsonschema, clap, dotenvy, shell-words, tui-textarea, tui-input, ansi_colours, notify.
 
 ---
 
 ## File structure
 
-- `tasks/index.json` — canonical registry of the 18 active cleanup tasks.
+- `tasks/index.json` — canonical registry of the 30 active cleanup tasks.
 - **Actor runtime (split into three sequential tasks):**
   - `tasks/migrate-production-actors-to-ractor.md`
   - `tasks/delete-dead-actor-modules-and-custom-trait.md`
@@ -35,6 +35,22 @@
   - `tasks/unify-tui-render-test-helpers.md` — move duplicated TUI render helpers into a shared test module.
   - `tasks/fix-keybindings-dead-code.md` — convert `parse_key_combo` to `#[cfg(test)]` or document it.
   - `tasks/cleanup-small-duplicates-and-dead-code.md` — `partial`. Final sweep; remaining items are skill-hook consolidation, dead actor-handle fields, stale allows, repetitive `FIXME` comments, and telemetry-vs-tracing decision.
+- **Third-pass crate-replacement tasks (P0/P1):**
+  - `tasks/replace-custom-retry-with-backon.md` — delete `runie-provider/src/retry.rs` and use `backon`/`reqwest-retry`.
+  - `tasks/replace-xor-auth-with-keyring.md` — store tokens in the OS keyring with a headless fallback.
+  - `tasks/replace-config-validator-with-jsonschema.md` — validate `Config` against the generated schema.
+  - `tasks/use-clap-derive-for-cli.md` — typed CLI parsing.
+  - `tasks/replace-custom-tui-widgets-with-ratatui-ecosystem.md` — `tui-textarea`, `tui-input`, `List`, `ansi_colours`, `crossterm`.
+  - `tasks/delete-dead-runie-macros-crate.md` — remove unused proc-macro crate.
+  - `tasks/centralize-test-fixtures-and-mocks.md` — shared MiniMax fixtures and mock helpers.
+  - `tasks/unify-provider-credential-resolution-with-dotenvy.md` — single `.env` load + provider credential resolution.
+  - `tasks/replace-bash-safety-with-shell-words.md` — tokenize with `shell-words` + deny-list.
+  - `tasks/replace-build-linter-with-clippy-ci.md` — Clippy lints + CI file-limit check.
+- **Third-pass simplification tasks (P1/P2):**
+  - `tasks/use-notify-directly-in-config-actor.md` — remove watcher thread bridge.
+  - `tasks/unify-provider-config-persistence.md` — single config persistence helper.
+  - `tasks/simplify-slash-command-dsl.md` — collapse `CommandSpec`/`CommandDef`.
+  - `tasks/unify-permission-system-rules.md` — merge permission rule engines.
 - `docs/Architecture.md` — updated with a "Current cleanup roadmap" section.
 - `tasks/archive/` — completed tasks from this and earlier reviews.
 
@@ -60,6 +76,20 @@
 | 16 | `unify-tui-render-test-helpers` | P3 | Move duplicated TUI render helpers into a shared test module. |
 | 17 | `fix-keybindings-dead-code` | P3 | Convert `parse_key_combo` to `#[cfg(test)]` or document it. |
 | 18 | `cleanup-small-duplicates-and-dead-code` | P3 | `partial`. Skill-hook consolidation, dead actor-handle fields, stale allows, repetitive `FIXME` comments, telemetry-vs-tracing decision. |
+| 19 | `replace-custom-retry-with-backon` | P0 | Delete `runie-provider/src/retry.rs`; use `backon`/`reqwest-retry`. |
+| 20 | `replace-xor-auth-with-keyring` | P0 | Store tokens in OS keyring with headless fallback. |
+| 21 | `replace-config-validator-with-jsonschema` | P0 | Validate `Config` against generated schema. |
+| 22 | `unify-provider-credential-resolution-with-dotenvy` | P1 | Load `.env` once; consolidate provider credential resolution. |
+| 23 | `unify-provider-config-persistence` | P1 | Single config persistence helper or `RactorConfigActor` owner. |
+| 24 | `use-clap-derive-for-cli` | P0 | Typed CLI parsing with `clap`. |
+| 25 | `use-notify-directly-in-config-actor` | P1 | Remove watcher thread bridge. |
+| 26 | `simplify-slash-command-dsl` | P1 | Collapse `CommandSpec`/`CommandDef`. |
+| 27 | `unify-permission-system-rules` | P1 | Merge permission rule engines. |
+| 28 | `replace-custom-tui-widgets-with-ratatui-ecosystem` | P0 | `tui-textarea`, `tui-input`, `List`, `ansi_colours`, `crossterm`. |
+| 29 | `delete-dead-runie-macros-crate` | P1 | Remove unused proc-macro crate. |
+| 30 | `centralize-test-fixtures-and-mocks` | P1 | Shared MiniMax fixtures and mock helpers. |
+| 31 | `replace-bash-safety-with-shell-words` | P2 | Tokenize with `shell-words` + deny-list. |
+| 32 | `replace-build-linter-with-clippy-ci` | P2 | Clippy lints + CI file-limit check. |
 
 ## Archived completed tasks
 
@@ -108,6 +138,24 @@ The goal is a **stable phase**: after every merged task the workspace builds and
    - `unify-tui-render-test-helpers`
    - `fix-keybindings-dead-code`
    - `cleanup-small-duplicates-and-dead-code`
+9. **Phase 9 — Provider / config / auth crate replacements.**
+   - `replace-custom-retry-with-backon`
+   - `replace-xor-auth-with-keyring`
+   - `replace-config-validator-with-jsonschema`
+   - `unify-provider-credential-resolution-with-dotenvy`
+   - `unify-provider-config-persistence`
+10. **Phase 10 — CLI / commands / permissions simplification.**
+    - `use-clap-derive-for-cli`
+    - `use-notify-directly-in-config-actor`
+    - `simplify-slash-command-dsl`
+    - `unify-permission-system-rules`
+11. **Phase 11 — TUI / macros / testing cleanup.**
+    - `replace-custom-tui-widgets-with-ratatui-ecosystem`
+    - `delete-dead-runie-macros-crate`
+    - `centralize-test-fixtures-and-mocks`
+12. **Phase 12 — Final tooling simplification.**
+    - `replace-bash-safety-with-shell-words`
+    - `replace-build-linter-with-clippy-ci`
 
 ## Verification
 
@@ -133,4 +181,5 @@ The final state must satisfy:
 - The two largest refactorings (actor runtime and event taxonomy) are deliberately incremental. Do not attempt to delete `trait.rs` or restructure the flat `Event` enum in a single commit.
 - The plan has been rebased on the actual workspace state; tasks that were already done on disk are now archived and removed from the active registry.
 - Crate-replacement rationale and cross-agent lessons are documented in [`2026-06-28-less-code-crate-replacements.md`](2026-06-28-less-code-crate-replacements.md).
+- Deeper provider/config/auth, CLI/commands/permissions, TUI/widgets, and testing/build findings are documented in [`2026-06-28-third-pass-crate-review.md`](2026-06-28-third-pass-crate-review.md).
 - If any task proves larger than expected, split it further and update `tasks/index.json` and this roadmap.
