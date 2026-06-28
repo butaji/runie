@@ -29,6 +29,8 @@ Replace the home-grown `Actor` trait, `spawn_actor`, `ActorHandle`, and `Reply` 
 - [x] CompletionActor migrated to ractor
 - [x] TrustActor migrated to ractor
 - [x] UiControlActor migrated to ractor
+- [x] PlanActor migrated to ractor
+- [x] TurnActor migrated to ractor
 - [ ] Migrate remaining actors to ractor (can proceed incrementally)
 - [ ] Event-bus integration and request/response patterns preserved
 - [ ] Update task list to reflect progress
@@ -45,6 +47,8 @@ Replace the home-grown `Actor` trait, `spawn_actor`, `ActorHandle`, and `Reply` 
 - [x] CompletionActor migrated to ractor.
 - [x] TrustActor migrated to ractor.
 - [x] UiControlActor migrated to ractor.
+- [x] PlanActor migrated to ractor.
+- [x] TurnActor migrated to ractor.
 - [ ] Remaining actors migrated incrementally to ractor.
 - [ ] Event-bus integration and request/response patterns preserved.
 
@@ -70,6 +74,10 @@ Replace the home-grown `Actor` trait, `spawn_actor`, `ActorHandle`, and `Reply` 
 - `crates/runie-core/src/actors/trust/mod.rs` - Export ractor-based TrustActor
 - `crates/runie-core/src/actors/ui_control/ractor_ui_control.rs` - New ractor-based UiControlActor
 - `crates/runie-core/src/actors/ui_control/mod.rs` - Export ractor-based UiControlActor
+- `crates/runie-core/src/actors/plan/ractor_plan.rs` - New ractor-based PlanActor
+- `crates/runie-core/src/actors/plan/mod.rs` - Export ractor-based PlanActor
+- `crates/runie-core/src/actors/turn/ractor_turn.rs` - New ractor-based TurnActor
+- `crates/runie-core/src/actors/turn/mod.rs` - Export ractor-based TurnActor
 - `crates/runie-core/src/actors/leader/actor.rs` - Updated to use RactorPermissionActor
 - `crates/runie-tui/src/main.rs` - Updated to use RactorPermissionActor
 - `crates/runie-cli/src/acp.rs` - Updated to use RactorPermissionActor
@@ -118,6 +126,8 @@ Each actor migration follows this pattern:
 | CompletionActor | `ractor_completion.rs` | COMPLETE |
 | TrustActor | `ractor_trust.rs` | COMPLETE |
 | UiControlActor | `ractor_ui_control.rs` | COMPLETE |
+| PlanActor | `ractor_plan.rs` | COMPLETE |
+| TurnActor | `ractor_turn.rs` | COMPLETE |
 
 ### Pending Migrations
 
@@ -126,8 +136,6 @@ Each actor migration follows this pattern:
 | ConfigActor | High | Has file watcher thread |
 | SessionActor | Medium | Session persistence |
 | IoActor | High | Async effects system |
-| TurnActor | Medium | Agent turn lifecycle |
 | ProviderActor | Medium | Provider construction |
 | FffIndexerActor | Medium | File search index |
-| PlanActor | Medium | Plan state management |
 | Leader | Medium | Coordinator actor |

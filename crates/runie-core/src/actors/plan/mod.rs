@@ -7,3 +7,7 @@ mod state;
 pub use actor::{PlanActor, PlanActorHandle};
 pub use messages::PlanMsg;
 pub use state::{PlanState, PlanStatus, PlanStep, PlanStepStatus};
+
+// Ractor-based implementation for migration
+mod ractor_plan;
+pub use ractor_plan::{RactorPlanActor, RactorPlanHandle};
