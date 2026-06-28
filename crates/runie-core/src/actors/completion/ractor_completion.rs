@@ -47,6 +47,7 @@ impl From<RactorHandle<CompletionMsg>> for RactorCompletionHandle {
 /// Ractor-based CompletionActor.
 ///
 /// Owns completion state for path completion and @ mention suggestions.
+#[allow(dead_code)] // Only constructed via spawn() in tests.
 pub struct RactorCompletionActor {
     /// The authoritative completion state (protected by mutex).
     state: Mutex<CompletionState>,
@@ -98,6 +99,7 @@ impl Actor for RactorCompletionActor {
     }
 }
 
+#[allow(dead_code)] // Only used in tests.
 impl RactorCompletionActor {
     /// Spawn a `RactorCompletionActor` on the given event bus.
     pub async fn spawn(bus: EventBus<Event>) -> (RactorCompletionHandle, ractor::ActorCell) {
