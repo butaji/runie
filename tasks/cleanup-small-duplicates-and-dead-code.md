@@ -5,27 +5,18 @@
 **Category**: Architecture / Refactoring
 **Priority**: P3
 
-**Depends on**: collapse-actor-handles-to-typed-map, expand-leader-start-for-tui-and-cli, replace-legacy-tool-parsers-with-thin-shim, narrow-runie-core-public-api, route-cli-config-through-configactor
+**Depends on**: collapse-actor-handles-to-typed-map, expand-leader-start-for-tui-and-cli, replace-legacy-tool-parsers-with-thin-shim, narrow-runie-core-public-api, route-cli-config-through-configactor, centralize-built-in-tool-names, unify-tui-render-test-helpers, fix-keybindings-dead-code
 **Blocks**: none
 
 ## Description
 
-The codebase has accumulated several small duplicates, repeated registries, and stale `#[allow(dead_code)]` attributes. This task cleans them up in a series of small, safe commits **after** the larger architectural tasks are stable.
+This task captures the remaining cleanup items that are blocked until the larger architectural tasks settle. Quick wins that can be done independently (built-in tool names, TUI render helpers, keybindings dead code) are split out into their own tasks.
 
-Current state as of this review:
+Remaining blocked items:
 
-- **Skill hooks duplicated:** `crates/runie-agent/src/tool_runner.rs:193–255` (`execute_with_skill_hooks`, `check_before_hook`, `fire_after_hook`) and `crates/runie-agent/src/turn/tools.rs:57–130` (`skill_override_output`, `check_tool_call_before_hook`, `fire_tool_after_hook`). The two paths do the same semantic work with different return types.
-- **Built-in tool registry repeated:** the same 10 built-in tool names and dispatch matches appear in:
-  - `crates/runie-agent/src/tool/mod.rs:34–45` (`BUILTIN_TOOL_NAMES`)
-  - `crates/runie-agent/src/tool_runner.rs:46–68` (`dispatch_tool` + `is_known_tool`)
-  - `crates/runie-agent/src/headless/mod.rs:307–325` (`build_tool_registry`)
-  - `crates/runie-agent/src/turn/mod.rs:238–258` (`build_tool_registry` with read-only filtering)
-  - `crates/runie-agent/src/inspector.rs:82–99` (`dispatch_tool`)
-  - `crates/runie-agent/src/tests/tools.rs:14–35` (`dispatch_tool` test helper)
-  - `crates/runie-core/src/tool/shim/minimax.rs:22` (`KNOWN_TOOLS` used by parsers)
-- **TUI render helpers duplicated:** `render_content(&mut AppState) -> String` is copy-pasted in at least `onboarding_e2e.rs:24`, `login_flow_form.rs:22`, `login_flow_e2e.rs:22`, `line_scroll.rs:4`, `providers_e2e.rs:23`, `sticky_bottom.rs:4`, `vim_mode.rs:44`, `onboarding_render.rs:24`, `toggle_e2e.rs:4`. `render_chat(&mut AppState, u16, u16) -> String` is duplicated in `autoscroll_render.rs:4` and `tests/render/tool_truncation.rs:8`. Several tests also re-implement buffer-to-string loops (`smoke.rs:162–167`, `vim_mode.rs:54–57`, `render/mod.rs:58–62`) that could use shared helpers.
-- **Dead-code allow:** `crates/runie-core/src/keybindings/mod.rs:23` — `#[allow(dead_code)] fn parse_key_combo` is only used in tests (`keybindings/tests.rs:62–84`). Should be `#[cfg(test)]` or documented `pub(crate)`.
-- **Tool-shim warning:** `crates/runie-core/src/tool/shim/minimax.rs:47` has an unused `close_len` parameter that produces the only `cargo check` warning in `runie-core`.
+- **Skill hooks duplicated:** `crates/runie-agent/src/tool_runner.rs:193–255` (`execute_with_skill_hooks`, `check_before_hook`, `fire_after_hook`) and `crates/runie-agent/src/turn/tools.rs:57–130` (`skill_override_output`, `check_tool_call_before_hook`, `fire_tool_after_hook`). The two paths do the same semantic work with different return types. This is blocked until the tool-parser-shim task finalizes what "built-in tool" means in the MCP-only boundary.
+- **Dead actor handle fields:** after `ActorHandles` is collapsed and dead actors are deleted, remove any remaining dead fields and helper methods.
+- **Remaining `#[allow(dead_code)]` items:** review any leftover allows after the quick-win tasks and the actor/tool refactors.
 
 The following items are **explicitly out of scope** because they are already resolved or unsafe to change:
 
@@ -36,25 +27,15 @@ The following items are **explicitly out of scope** because they are already res
 ## Acceptance Criteria
 
 - [ ] Skill hook logic is consolidated into a single helper called from both `turn/tools.rs` and `tool_runner.rs`.
-- [ ] Built-in tool names/schema/dispatch are defined in exactly one registry and referenced by `tool/mod.rs`, `tool_runner.rs`, `headless/mod.rs`, `turn/mod.rs`, `inspector.rs`, `tests/tools.rs`, and `tool/shim/minimax.rs`.
-- [ ] TUI render helpers are moved to a shared test helper module and imported by the test modules that previously duplicated them.
-- [ ] `parse_key_combo` in `crates/runie-core/src/keybindings/mod.rs` is either `#[cfg(test)]` or documented as `pub(crate)` with a justified `allow(dead_code)`.
-- [ ] The unused `close_len` warning in `crates/runie-core/src/tool/shim/minimax.rs:47` is fixed (rename to `_close_len` or use it).
-- [ ] Every remaining `#[allow(dead_code)]` in the listed files is either removed because the item is used, converted to `#[cfg(test)]`, or replaced with a documented `pub(crate)` justification.
+- [ ] Dead actor handle fields are removed after the actor-runtime and handle-collapse tasks.
+- [ ] Every remaining `#[allow(dead_code)]` is either removed because the item is used, converted to `#[cfg(test)]`, or replaced with a documented `pub(crate)` justification.
 - [ ] `cargo test --workspace` succeeds after the change.
 - [ ] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `builtin_tools_registered_once` — verifies that the built-in tool registry is defined in exactly one place and that `tool_runner`, `headless`, and the public `tool` module all reference that single registry.
 - [ ] `manual_impls_left_intact` — asserts that the manual `PartialEq`/`Clone`/`Default` impls in `session/tree.rs`, `model/state/view.rs`, and `config/mod.rs` are still present and still pass their existing tests.
-
-### Layer 2 — Event Handling
-- [ ] N/A — this task focuses on code deduplication and cleanup rather than event routing.
-
-### Layer 3 — Rendering
-- [ ] `render_helpers_shared` — adds a shared `test_helpers` module in `runie-tui` and updates at least two previously duplicated test modules to import helpers from it, confirming identical rendered output.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
 - [ ] `skill_hook_unified_still_invokes_hooks` — runs a mock-tool turn that triggers skill hooks and verifies the unified hook helper still dispatches correctly from both the turn path and the tool-runner path.
@@ -64,23 +45,13 @@ The following items are **explicitly out of scope** because they are already res
 
 - `crates/runie-agent/src/turn/tools.rs`
 - `crates/runie-agent/src/tool_runner.rs`
-- `crates/runie-agent/src/tool/mod.rs`
-- `crates/runie-agent/src/headless/mod.rs`
-- `crates/runie-agent/src/turn/mod.rs`
-- `crates/runie-agent/src/inspector.rs`
-- `crates/runie-agent/src/tests/tools.rs`
-- `crates/runie-core/src/tool/shim/minimax.rs`
-- `crates/runie-tui/src/tests/*.rs` (render helper consolidation)
-- `crates/runie-tui/src/tests/helpers.rs` or `crates/runie-tui/src/test_helpers.rs` (new shared test helpers)
-- `crates/runie-core/src/keybindings/mod.rs`
+- `crates/runie-core/src/actors/handles.rs`
 - `crates/runie-core/src/model/view_cache.rs`
 - `crates/runie-core/src/actors/input/mod.rs`
 - `crates/runie-core/src/actors/completion/ractor_completion.rs`
 
 ## Notes
 
-- Each cleanup item should be its own commit; the task is intentionally a grab-bag of small safe refactors.
-- The skill-hook and tool-registry consolidations are blocked until the tool-parser-shim task settles what "built-in tool" means in the MCP-only boundary.
-- Do not move helpers to `runie-io` or `runie-domain`; those crates were deleted as empty facades. Use `runie-protocol` for shared protocol-level helpers or create a new tiny utility crate if necessary.
-- Rejected alternative: leaving the duplication in place to minimize churn. The repeated registry and hook logic already causes inconsistent updates and increases review burden.
+- This task is intentionally the final sweep after the independent quick wins and the larger architectural changes land.
+- Do not move helpers to `runie-io` or `runie-domain`; those crates were deleted as empty facades.
 - Out of scope: `DynProvider`, `now()` (already resolved), manual derives with intentional semantics, large refactorings of the provider factory, the agent turn state machine, or the TUI widget tree.

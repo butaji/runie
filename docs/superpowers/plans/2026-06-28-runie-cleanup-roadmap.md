@@ -12,7 +12,7 @@
 
 ## File structure
 
-- `tasks/index.json` — canonical registry of the 12 active cleanup tasks.
+- `tasks/index.json` — canonical registry of the 15 active cleanup tasks.
 - **Actor runtime (split into three sequential tasks):**
   - `tasks/migrate-production-actors-to-ractor.md`
   - `tasks/delete-dead-actor-modules-and-custom-trait.md`
@@ -20,13 +20,18 @@
 - **Runtime bootstrap (split into two sequential tasks):**
   - `tasks/expand-leader-start-for-tui-and-cli.md`
   - `tasks/migrate-tui-and-cli-to-leader-bootstrap.md`
+- **Tooling and DSL quick wins (parallel-safe):**
+  - `tasks/replace-legacy-tool-parsers-with-thin-shim.md` — `partial`. Shim routes parsing but still embeds `legacy`/`markup` submodules; inline/delete them, collapse `tool_markers/strip.rs`, reconcile MiniMax ownership, and fix the one `cargo check` warning.
+  - `tasks/centralize-built-in-tool-names.md` — define the canonical built-in tool list once and reference it from the 7+ locations that repeat it.
+  - `tasks/unify-declarative-resource-loader.md` — extract shared directory-scan/frontmatter logic used by `skills/load.rs` and `declarative/loader.rs`.
+  - `tasks/unify-duplicate-module-names-core-tui.md` — `partial`. Remove the stale `theme` collision ignore from the guardrail test.
 - **Remaining active tasks:**
   - `tasks/collapse-event-intent-kind-taxonomies.md` — derive `Intent`/`EventKind` from `Event` without restructuring the enum.
-  - `tasks/replace-legacy-tool-parsers-with-thin-shim.md` — `partial`. Shim routes parsing but still embeds `legacy`/`markup` submodules; inline/delete them, collapse `tool_markers/strip.rs`, reconcile MiniMax ownership, and fix the one `cargo check` warning.
   - `tasks/narrow-runie-core-public-api.md` — usage-audit-first narrowing/moving of internal modules.
   - `tasks/route-cli-config-through-configactor.md` — add ConfigActor messages for CLI inspect/MCP.
-  - `tasks/cleanup-small-duplicates-and-dead-code.md` — `partial`. Final sweep after architecture is stable; includes the duplicated built-in tool name list in `tool/shim/minimax.rs`.
-  - `tasks/unify-declarative-resource-loader.md` — extract shared directory-scan/frontmatter logic used by `skills/load.rs` and `declarative/loader.rs`.
+  - `tasks/unify-tui-render-test-helpers.md` — move duplicated TUI render helpers into a shared test module.
+  - `tasks/fix-keybindings-dead-code.md` — convert `parse_key_combo` to `#[cfg(test)]` or document it.
+  - `tasks/cleanup-small-duplicates-and-dead-code.md` — `partial`. Final sweep after architecture is stable; remaining items are skill-hook consolidation and dead actor-handle fields.
 - `docs/Architecture.md` — updated with a "Current cleanup roadmap" section.
 - `tasks/archive/` — completed tasks from this and earlier reviews.
 
@@ -41,11 +46,14 @@
 | 5 | `migrate-tui-and-cli-to-leader-bootstrap` | P1 | Replace manual TUI/CLI bootstrap with `Leader::start`; route CLI input through `InputMsg`. |
 | 6 | `collapse-event-intent-kind-taxonomies` | P1 | Derive `Intent`/`EventKind` from flat `Event`; delete manual mirrors. |
 | 7 | `replace-legacy-tool-parsers-with-thin-shim` | P2 | `partial`. Shim routes parsing but still embeds `legacy`/`markup` submodules; inline/delete them, collapse `tool_markers/strip.rs` to two semantic passes, reconcile MiniMax ownership, fix the one `cargo check` warning. |
-| 8 | `route-cli-config-through-configactor` | P2 | Add `RactorConfigActor` messages for inspect/MCP; route CLI commands through the actor. |
-| 9 | `narrow-runie-core-public-api` | P2 | Usage-audit first; move shared helpers to a new `runie-util` crate, narrow the rest. |
-| 10 | `cleanup-small-duplicates-and-dead-code` | P3 | `partial`. Skill hooks, tool registry (including duplicated name list in `tool/shim/minimax.rs`), TUI render helpers, and the one `cargo check` warning. |
-| 11 | `unify-duplicate-module-names-core-tui` | P2 | `partial`. Markdown rename done; core `themes.rs` → `theme_tokens.rs` rename done in code; remove stale `theme` ignore from guardrail test. |
-| 12 | `unify-declarative-resource-loader` | P2 | Extract shared directory-scan/frontmatter logic used by `skills/load.rs` and `declarative/loader.rs`. |
+| 8 | `centralize-built-in-tool-names` | P2 | Define the canonical built-in tool list once; reference it from the 7+ duplicated locations. |
+| 9 | `unify-declarative-resource-loader` | P2 | Extract shared directory-scan/frontmatter logic used by `skills/load.rs` and `declarative/loader.rs`. |
+| 10 | `unify-duplicate-module-names-core-tui` | P2 | `partial`. Markdown rename and `themes.rs` → `theme_tokens.rs` rename done; remove stale `theme` ignore from guardrail test. |
+| 11 | `route-cli-config-through-configactor` | P2 | Add `RactorConfigActor` messages for inspect/MCP; route CLI commands through the actor. |
+| 12 | `narrow-runie-core-public-api` | P2 | Usage-audit first; move shared helpers to a new `runie-util` crate, narrow the rest. |
+| 13 | `unify-tui-render-test-helpers` | P3 | Move duplicated TUI render helpers into a shared test module. |
+| 14 | `fix-keybindings-dead-code` | P3 | Convert `parse_key_combo` to `#[cfg(test)]` or document it. |
+| 15 | `cleanup-small-duplicates-and-dead-code` | P3 | `partial`. Final sweep; remaining items are skill-hook consolidation and dead actor-handle fields. |
 
 ## Archived completed tasks
 
@@ -78,14 +86,18 @@ The goal is a **stable phase**: after every merged task the workspace builds and
    - `collapse-event-intent-kind-taxonomies` (derive-first; do not restructure `Event` yet)
 4. **Phase 4 — Tool/provider shims (parallel-safe).**
    - `replace-legacy-tool-parsers-with-thin-shim`
-5. **Phase 5 — CLI config (parallel-safe after bootstrap).**
-   - `route-cli-config-through-configactor`
-6. **Phase 6 — Public API boundary.**
-   - `narrow-runie-core-public-api` (must be last architectural change)
-7. **Phase 7 — Final sweep.**
-   - `cleanup-small-duplicates-and-dead-code`
+   - `centralize-built-in-tool-names`
+5. **Phase 5 — Declarative DSL quick wins (parallel-safe).**
+   - `unify-declarative-resource-loader`
    - `unify-duplicate-module-names-core-tui`
-   - `unify-declarative-resource-loader` (parallel-safe; no actor-runtime dependencies)
+6. **Phase 6 — CLI config (parallel-safe after bootstrap).**
+   - `route-cli-config-through-configactor`
+7. **Phase 7 — Public API boundary.**
+   - `narrow-runie-core-public-api` (must be last architectural change)
+8. **Phase 8 — Small safe cleanups.**
+   - `unify-tui-render-test-helpers`
+   - `fix-keybindings-dead-code`
+   - `cleanup-small-duplicates-and-dead-code`
 
 ## Verification
 

@@ -11,7 +11,7 @@
   },
   {
     "file": "collapse-actor-handles-to-typed-map.md",
-    "title": "Collapse `ActorHandles` to a typed `rator::ActorRef` map",
+    "title": "Collapse `ActorHandles` to a typed `ractor::ActorRef` map",
     "status": "todo"
   },
   {
@@ -31,12 +31,17 @@
   },
   {
     "file": "replace-legacy-tool-parsers-with-thin-shim.md",
-    "title": "Finish tool-parser shim: marker stripping and MiniMax ownership",
+    "title": "Finish tool-parser shim: collapse legacy modules and marker stripping",
     "status": "partial"
   },
   {
-    "file": "narrow-runie-core-public-api.md",
-    "title": "Narrow `runie-core` public API",
+    "file": "centralize-built-in-tool-names.md",
+    "title": "Centralize built-in tool names",
+    "status": "todo"
+  },
+  {
+    "file": "unify-declarative-resource-loader.md",
+    "title": "Unify declarative resource loader",
     "status": "todo"
   },
   {
@@ -45,18 +50,28 @@
     "status": "todo"
   },
   {
-    "file": "cleanup-small-duplicates-and-dead-code.md",
-    "title": "Clean up small duplicates and dead code",
-    "status": "partial"
+    "file": "narrow-runie-core-public-api.md",
+    "title": "Narrow `runie-core` public API",
+    "status": "todo"
   },
   {
     "file": "unify-duplicate-module-names-core-tui.md",
     "title": "Unify duplicate module names across core and TUI",
-    "status": "done"
+    "status": "partial"
   },
   {
-    "file": "unify-declarative-resource-loader.md",
-    "title": "Unify declarative resource loader",
+    "file": "unify-tui-render-test-helpers.md",
+    "title": "Unify TUI render test helpers",
     "status": "todo"
+  },
+  {
+    "file": "fix-keybindings-dead-code.md",
+    "title": "Fix keybindings dead-code warning",
+    "status": "todo"
+  },
+  {
+    "file": "cleanup-small-duplicates-and-dead-code.md",
+    "title": "Clean up small duplicates and dead code",
+    "status": "partial"
   }
 ]
