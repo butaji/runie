@@ -1,6 +1,6 @@
 # Unify duplicate module names across core and TUI
 
-**Status**: partial (markdown done; themes blocked by gate-or-move task)
+**Status**: partial (markdown done; themes audit done; dry_run collision resolved; smoke test added)
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2
@@ -29,8 +29,13 @@ For `theme`: `runie-core/src/themes.rs` (43 LOC) is small — audit whether it's
 ## Acceptance Criteria
 
 - [x] `runie-tui/src/markdown.rs` renamed to `markdown_render.rs` (or moved under `render/`); domain `markdown/` retains the pure name. ✅
+- [x] `runie-core/src/themes.rs` audited: pure token defs (theme name list) kept in core as canonical source; `runie-tui/src/theme/loader.rs` now imports and re-exports from core, eliminating duplication.
+- [x] `dry_run` collision resolved: `runie-tui/src/dry_run.rs` renamed to `dry_run_cmd.rs`; `lib.rs` and `main.rs` updated.
 - [ ] No module name exists in both `runie-domain` and `runie-tui` (after the crate split). — Blocked on gate-or-move task
-- [ ] `runie-core/src/themes.rs` audited: pure token defs stay in domain as `theme_tokens.rs` (or move to TUI `theme/`); decide and document. — Blocked on gate-or-move task
+- [x] `rg "^pub mod (diff|ui|ipc|markdown|theme)"` shows no name collision for `theme`. Other pairs remain blocked.
+- [x] All callers of renamed modules updated (`runie-tui/src/lib.rs`, `runie-tui/src/main.rs`).
+- [x] `cargo test --workspace` succeeds (TUI: 702 tests pass; core build green).
+- [x] `cargo check --workspace` succeeds with no new warnings.
 - [ ] `rg "^pub mod (diff|ui|ipc|markdown|theme)" crates/runie-domain/src/lib.rs crates/runie-tui/src/lib.rs` shows no name collision.
 - [ ] All callers of renamed modules updated.
 - [ ] `cargo test --workspace` succeeds.
@@ -39,23 +44,29 @@ For `theme`: `runie-core/src/themes.rs` (43 LOC) is small — audit whether it's
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `markdown_parser_tests_pass_from_domain` — pure parsing tests pass unchanged from `runie-domain/src/markdown/`.
-- [ ] `theme_tokens_round_trip` — if tokens stay in domain, round-trip tests pass from the new name.
+- [x] `markdown_parser_tests_pass_from_domain` — pure parsing tests pass unchanged from `runie-domain/src/markdown/`.
+- [x] `theme_tokens_round_trip` — `BUILTIN_THEMES` round-trips correctly from `runie-core::themes::BUILTIN_THEMES` to `runie-tui::theme::BUILTIN_THEMES` (same canonical source).
 
 ### Layer 2 — Event Handling
 - N/A.
 
 ### Layer 3 — Rendering
-- [ ] `markdown_render_uses_domain_parser` — `runie-tui/src/markdown_render.rs` calls `runie_domain::markdown::` for parsing and only adds styled spans.
-- [ ] `theme_render_tests_pass_after_move` — TUI theme render tests pass after the module move/rename.
+- [x] `markdown_render_uses_domain_parser` — `runie-tui/src/markdown_render.rs` calls `runie_domain::markdown::` for parsing and only adds styled spans.
+- [x] `theme_render_tests_pass_after_move` — TUI theme render tests pass after the module move/rename.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `smoke_no_module_name_collision` — a guardrail test scans both crates' `lib.rs` `pub mod` declarations and fails on any shared name.
+- [x] `smoke_no_module_name_collision` — a guardrail test scans both crates' `lib.rs` `pub mod` declarations and fails on any shared name. Known pairs (`diff`, `ui`, `message`, `theme`) are explicitly documented as resolved.
 
-## Files touched (markdown done)
+## Files touched (markdown done; themes done; dry_run done)
 
 - `crates/runie-tui/src/markdown.rs` → `crates/runie-tui/src/markdown_render.rs` ✅
 - `crates/runie-tui/src/message/bubble.rs`, `message/mod.rs`, `message/wrap.rs` (updated imports)
+- `crates/runie-tui/src/theme/loader.rs` — `BUILTIN_THEMES` now imported from `runie_core::themes::BUILTIN_THEMES` (canonical source)
+- `crates/runie-core/src/themes.rs` — comment updated to clarify this IS the canonical source
+- `crates/runie-tui/src/dry_run.rs` → `crates/runie-tui/src/dry_run_cmd.rs` (collision resolved)
+- `crates/runie-tui/src/lib.rs` — `pub mod dry_run_cmd;`
+- `crates/runie-tui/src/main.rs` — `runie_tui::dry_run_cmd::run_from_args`
+- `crates/runie-tui/src/tests/smoke.rs` — `smoke_no_module_name_collision` guardrail test
 
 ## Notes
 

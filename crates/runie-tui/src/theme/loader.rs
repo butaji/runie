@@ -1,48 +1,7 @@
 use crate::semantic_tokens::DEFAULT_THEME_TOML;
 
-/// All built-in theme names available in Runie.
-pub const BUILTIN_THEMES: &[&str] = &[
-    "runie",
-    "silkcircuit-neon",
-    "silkcircuit-glow",
-    "silkcircuit-soft",
-    "silkcircuit-vibrant",
-    "silkcircuit-dawn",
-    "catppuccin-mocha",
-    "catppuccin-macchiato",
-    "catppuccin-frappe",
-    "catppuccin-latte",
-    "dracula",
-    "nord",
-    "gruvbox-dark",
-    "gruvbox-light",
-    "tokyo-night",
-    "tokyo-night-storm",
-    "tokyo-night-moon",
-    "rose-pine",
-    "rose-pine-moon",
-    "rose-pine-dawn",
-    "kanagawa-wave",
-    "kanagawa-dragon",
-    "kanagawa-lotus",
-    "everforest-dark",
-    "everforest-light",
-    "ayu-dark",
-    "ayu-light",
-    "ayu-mirage",
-    "one-dark",
-    "one-light",
-    "github-dark-dimmed",
-    "github-light",
-    "night-owl",
-    "light-owl",
-    "monokai-pro",
-    "palenight",
-    "solarized-dark",
-    "solarized-light",
-    "flexoki-dark",
-    "flexoki-light",
-];
+// Canonical source for built-in theme names; also used by runie-core for the CLI.
+pub use runie_core::themes::BUILTIN_THEMES;
 
 /// List all available builtin theme names.
 pub fn list_builtin_themes() -> Vec<&'static str> {

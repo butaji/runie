@@ -46,7 +46,7 @@ impl Drop for Cleanup {
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
-    if let Some(report) = runie_tui::dry_run::run_from_args(&args) {
+    if let Some(report) = runie_tui::dry_run_cmd::run_from_args(&args) {
         println!("{report}");
         return Ok(());
     }

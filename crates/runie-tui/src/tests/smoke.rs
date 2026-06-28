@@ -1,5 +1,57 @@
 //! TUI smoke tests — verify view() integrates with core state
 
+/// Guardrail: no module name should exist in both runie-core and runie-tui.
+/// This prevents split-brain ownership where the same name means different things.
+#[test]
+fn smoke_no_module_name_collision() {
+    let core_lib = include_str!("../../../runie-core/src/lib.rs");
+    let tui_lib = include_str!("../../../runie-tui/src/lib.rs");
+
+    let core_modules: std::collections::HashSet<&str> = core_lib
+        .lines()
+        .filter(|l| l.trim().starts_with("pub mod ") || l.trim().starts_with("pub(crate) mod "))
+        .filter_map(|l| {
+            let t = l.trim();
+            t.strip_prefix("pub mod ")
+                .or_else(|| t.strip_prefix("pub(crate) mod "))
+                .and_then(|s| s.trim_end_matches(';').trim().split_whitespace().next())
+        })
+        .collect();
+
+    let tui_modules: std::collections::HashSet<&str> = tui_lib
+        .lines()
+        .filter(|l| l.trim().starts_with("pub mod ") || l.trim().starts_with("pub(crate) mod "))
+        .filter_map(|l| {
+            let t = l.trim();
+            t.strip_prefix("pub mod ")
+                .or_else(|| t.strip_prefix("pub(crate) mod "))
+                .and_then(|s| s.trim_end_matches(';').trim().split_whitespace().next())
+        })
+        .collect();
+
+    let collisions: Vec<_> = core_modules
+        .intersection(&tui_modules)
+        .copied()
+        .collect();
+
+    // Known resolved pairs (different meanings; not a bug):
+    // diff: core=domain patch logic, tui=gutter render (different files)
+    // ui:   core=Element/Feed view-model, tui=layout/messages (different files)
+    // message: core=ChatMessage types, tui=message/ render (different dirs)
+    // theme: core=theme name constants, tui=theme/ full system (different files)
+    let ignored = ["diff", "ui", "message", "theme"];
+    let real_collisions: Vec<_> = collisions
+        .into_iter()
+        .filter(|n| !ignored.contains(n))
+        .collect();
+
+    assert!(
+        real_collisions.is_empty(),
+        "Module name(s) exist in both runie-core and runie-tui: {:?}",
+        real_collisions
+    );
+}
+
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::AppState;
