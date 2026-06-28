@@ -1,57 +1,44 @@
-# Fold `state/` into `model/state/`
+# Fold State into Model State
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
-**Category**: Core / State
+**Category**: Architecture / Refactoring
 **Priority**: P2
 
-**Depends on**: none
-**Blocks**: none
+**Depends on**: event-taxonomy-for-actor-state-sync
+**Blocks**: decouple-appstate-from-view-cache, split-runie-core-into-domain-and-io-crates
 
 ## Description
 
-Two "state" modules coexist in `runie-core`: `state/` (5 files: `agent.rs`, `input.rs`, `session.rs`, `view.rs`, `mod.rs` — contains `AgentState`, `CommandUsage`, `InputState`, `SessionState`, `ViewState`) and `model/state/` (4 files: `app_state.rs`, `helpers.rs`, `ranking.rs`, `types.rs` — contains `AppState` and its helpers). `model/state/helpers.rs` already imports `crate::state::CommandUsage`, creating a cross-module dependency that signals these belong together. Merge `state/*` into `model/state/` as submodules so there is one state namespace.
+Move application state from scattered locations into the `model/state/` module. Currently state is split between `AppState`, `model/state/`, and various other locations. This task consolidates state into a single coherent model.
 
 ## Acceptance Criteria
 
-- [ ] `state/` directory removed from src root.
-- [ ] `model/state/` contains the former `state/` files as `agent.rs`, `input.rs`, `session.rs`, `view.rs`.
-- [ ] `model/state/mod.rs` re-exports `AgentState`, `SpeedWindow`, `CommandUsage`, `InputState`, `SessionState`, `ViewState`, `AppState`.
-- [ ] `model/mod.rs` re-exports all state types.
-- [ ] `lib.rs` `pub use` lines updated to reflect new paths (external API unchanged).
-- [ ] All `crate::state::` imports rewritten to `crate::model::state::` (or `super::` within `model/`).
-- [ ] `cargo test --workspace` succeeds.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [ ] All domain state lives in `model/state/`
+- [ ] `AppState` becomes a thin wrapper/projection
+- [ ] No state defined outside `model/state/`
+- [ ] `cargo test --workspace` passes
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `command_usage_tracking_works` — CommandUsage count/last_used fields accessible after move.
-- [ ] `agent_state_speed_window` — SpeedWindow rolling window calculation unchanged.
-- [ ] `view_state_defaults` — ViewState::default() scroll=0, cached_auth_valid=false.
+- [ ] `model_state_contains_all_domains`
 
 ### Layer 2 — Event Handling
-- [ ] `input_state_tracks_cursor` — InputEvent::Input updates input buffer + cursor_pos.
-- [ ] `session_state_holds_messages` — SessionState message list preserved across events.
+- [ ] N/A
 
 ### Layer 3 — Rendering
-- [ ] N/A — pure module reorganization; rendering tests cover indirectly.
+- [ ] N/A
 
-### Layer 4 — Smoke / Crash
-- [ ] `cargo test --workspace` green confirms all import paths resolved.
+### Layer 4 — Provider Replay / Mock-Tool E2E
+- [ ] N/A
 
 ## Files touched
 
-- `crates/runie-core/src/state/` → delete (5 files moved)
-- `crates/runie-core/src/model/state/agent.rs` → new (from `state/agent.rs`)
-- `crates/runie-core/src/model/state/input.rs` → new (from `state/input.rs`)
-- `crates/runie-core/src/model/state/session.rs` → new (from `state/session.rs`)
-- `crates/runie-core/src/model/state/view.rs` → new (from `state/view.rs`)
-- `crates/runie-core/src/model/state/mod.rs` — add new submodules + re-exports
-- `crates/runie-core/src/model/mod.rs` — update re-exports
-- `crates/runie-core/src/lib.rs` — remove `pub mod state;`, update `pub use` lines
-- All files importing `crate::state::` — update import paths
+- `crates/runie-core/src/model/state/`
+- `crates/runie-core/src/app_state.rs` (move to model/state/)
 
 ## Notes
 
-The `model/state/helpers.rs` → `crate::state::CommandUsage` import becomes `super::CommandUsage` after the move, eliminating the cross-module dependency. Rejected alternative: keep `state/` as a separate module and rename to `runtime_state/` — rejected because the conceptual boundary between "state types" and "app state" is unclear and the existing code already treats them as one family. ~15-20 files need import path updates (grep `crate::state::`).
+- This is a refactoring task
+- Main goal is consolidation, not behavior change

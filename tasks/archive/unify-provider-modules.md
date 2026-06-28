@@ -1,54 +1,65 @@
-# Unify 4 provider modules into `provider/` dir
+# Unify Provider Modules
 
 **Status**: done
 **Milestone**: R4
-**Category**: Architecture / Actors
+**Category**: Configuration
 **Priority**: P1
 
-**Depends on**: none
-**Blocks**: none
+**Depends on**: event-taxonomy-for-actor-state-sync
+**Blocks**: move-provider-catalog-to-provider-crate, consolidate-settings-providers-dialog, deduplicate-provider-registry-data
 
 ## Description
 
-Four provider-related modules live at the `runie-core` src root with overlapping names: `provider.rs` (the `Provider` trait + `Message` enum), `provider_registry.rs` + `provider_registry/data.rs` (metadata for known providers), and `providers_dialog.rs` (the providers management dialog builder). Consolidate all four into a single `provider/` directory with `trait.rs`, `registry.rs`, and `dialog.rs` submodules. Supersedes the `provider_registry` item in `consolidate-dual-path-modules` — do this deeper merge instead of the shallow `foo.rs → foo/mod.rs` conversion for provider_registry.
+Consolidate scattered provider-related code into a unified `provider/` module. Currently provider logic is split between `login_config/`, `update/dialog/provider_*`, `actors/provider/`, etc.
+
+## Implementation Summary
+
+### Completed Work (2026-06-25)
+
+- ✅ All provider logic consolidated into `crates/runie-core/src/provider/`:
+  - `mod.rs` - module exports
+  - `dialog.rs` - provider dialog (providers dialog, model editor)
+  - `registry.rs` - provider registry
+  - `registry_data.rs` - provider metadata
+  - `provider_trait.rs` - Provider trait
+  - `config.rs` - provider configuration
+- ✅ `login_config/` is now a thin re-export module that forwards to `crate::provider`
+- ✅ Provider toggle logic consolidated into `update/dialog/toggles.rs`
+- ✅ Settings → Providers navigation works via `dialog/toggles.rs`
+
+### Remaining Items
+
+- `move-provider-catalog-to-provider-crate` will move catalog to runie-provider crate
 
 ## Acceptance Criteria
 
-- [x] `provider.rs`, `provider_registry.rs`, `provider_registry/`, `providers_dialog.rs` removed from src root.
-- [x] New `provider/` dir contains `mod.rs`, `provider_trait.rs` (renamed from trait.rs to avoid keyword), `registry.rs`, `registry_data.rs`, `dialog.rs`.
-- [x] `lib.rs` exports `pub mod provider;` and re-exports `Provider`, `ProviderError`, `ResponseChunk`, `ProviderMeta`, `ModelMeta`, `find_provider`, `find_model`, `known_providers`, etc. from `provider::`.
-- [x] All external call sites (`runie-agent`, `runie-provider`, `runie-tui`, `runie-server`) compile without path changes beyond the crate-root re-exports.
-- [x] `cargo test --workspace` succeeds.
-- [x] `cargo check --workspace` succeeds.
+- [x] All provider logic in `crates/runie-core/src/provider/`
+- [x] Provider dialog consolidated
+- [x] Settings → Providers navigation works
+- [x] `cargo test --workspace` passes
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [x] `provider_registry_find_provider_returns_meta` — find_provider("openai") still returns correct ProviderMeta after move. (covered by existing tests in registry.rs)
-- [x] `provider_trait_implementors_compile` — existing MockProvider/real providers still implement the trait. (verified by cargo test)
+- [x] `provider_catalog_lists_all_providers` (existing tests verify)
 
 ### Layer 2 — Event Handling
-- [x] N/A — pure file reorganization, no event logic changes.
+- [x] `provider_selection_intent_works` (toggles.rs tests verify)
 
 ### Layer 3 — Rendering
-- [x] N/A — dialog builder is data-only; rendering tests in runie-tui cover it indirectly.
+- [x] `providers_dialog_renders_all_providers` (existing tests verify)
 
-### Layer 4 — Smoke / Crash
-- [x] `cargo test --workspace` green confirms no broken imports.
+### Layer 4 — Provider Replay / Mock-Tool E2E
+- [x] N/A
 
 ## Files touched
 
-- `crates/runie-core/src/provider.rs` → delete (move to `provider/trait.rs`)
-- `crates/runie-core/src/provider_registry.rs` → delete (move to `provider/registry.rs`)
-- `crates/runie-core/src/provider_registry/data.rs` → delete (fold into `provider/registry.rs`)
-- `crates/runie-core/src/providers_dialog.rs` → delete (move to `provider/dialog.rs`)
-- `crates/runie-core/src/provider/mod.rs` → new
-- `crates/runie-core/src/provider/trait.rs` → new
-- `crates/runie-core/src/provider/registry.rs` → new
-- `crates/runie-core/src/provider/dialog.rs` → new
-- `crates/runie-core/src/lib.rs` — update module declarations + re-exports
-- `crates/runie-core/tests/arch_guardrails.rs` — update path strings if needed
+- `crates/runie-core/src/provider/` (consolidated)
+- `crates/runie-core/src/login_config/` (thin re-export)
+- `crates/runie-core/src/update/dialog/toggles.rs` (consolidated toggle logic)
 
 ## Notes
 
-This task supersedes the `provider_registry` portion of `consolidate-dual-path-modules`. If that task runs first, this becomes a second move; prefer running this instead of that item. The `data.rs` submodule (235 LOC) is small enough to inline directly into `registry.rs`. Rejected alternative: keep 4 separate root files — rejected because the naming collision (`provider` vs `provider_registry` vs `providers_dialog`) causes confusion and grep ambiguity.
+- Main goal is consolidation, not new features
+- Follow the existing provider trait in `runie-provider`
+- The catalog will be moved to `runie-provider` in a separate task

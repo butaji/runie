@@ -5,7 +5,7 @@
 **Category**: Configuration
 **Priority**: P2
 
-**Depends on**: config-ssot-via-configactor, migrate-tui-and-cli-to-leader-bootstrap
+**Depends on**: migrate-tui-and-cli-to-leader-bootstrap
 **Blocks**: none
 
 ## Description

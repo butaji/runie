@@ -5,7 +5,7 @@
 **Category**: Tools
 **Priority**: P2
 
-**Depends on**: make-mcp-the-only-tool-boundary
+**Depends on**: none
 **Blocks**: none
 
 ## Description

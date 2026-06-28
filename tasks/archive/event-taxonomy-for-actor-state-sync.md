@@ -1,68 +1,114 @@
-# Event taxonomy for actor state sync
+# Event Taxonomy for Actor State Sync
 
 **Status**: done
 **Milestone**: R4
-**Category**: Core / State
+**Category**: Architecture / Actors
 **Priority**: P0
 
-**Depends on**: actor-owned-state-ssot
-**Blocks**: config-ssot-via-configactor, session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results, unified-dsl-intents-for-state-mutations, app-state-read-only-projection
+**Depends on**: none
+**Blocks**: app-state-read-only-projection, input-actor-owns-input-state, session-actor-owns-session-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results
 
 ## Description
 
-The `Event` enum was a flat 109-variant bag that mixed user intents, actor facts, UI control, and IO results. This task defined a clear taxonomy: **Intents** (requests to actors) and **Facts** (broadcast state changes), plus **Control** events for lifecycle/IO. This allows the compiler and conventions to enforce that handlers do not mutate state directly.
+Document and enforce the event taxonomy for state synchronization. Events are classified into three categories: **Intents** (requests), **Facts** (state changes), and **Control** (app lifecycle).
 
-## Acceptance criteria
+## Event Taxonomy
 
-- [x] Documented taxonomy: every `Event` variant is classified as Intent, Fact, or Control (lifecycle/IO).
-- [x] Event classification via `Event::kind()` method returning `EventKind` enum.
-- [x] Intent types are designed for the declarative DSL: `Intent` enum in `event/intent.rs` with typed variants per actor domain.
-- [x] `Event::into_intent()` converts Intent events to typed `Intent`.
-- [x] Control events (`Quit`, `Abort`, terminal resize, etc.) are classified as `EventKind::Control`.
-- [x] Naming convention documented and enforced: intents are imperative (`SetTheme`, `SubmitInput`), facts are past-tense/descriptive (`ConfigLoaded`, `SessionChanged`).
-- [x] `cargo test --workspace` passes.
+### Intents (requests to actors)
+- Fire-and-forget requests
+- Handlers emit intents → actors receive and process
+- Examples: `SetTheme`, `TrustProject`, `SubmitInput`, `RunCompact`
+- Location: `crates/runie-core/src/event/intent.rs`
+
+### Facts (state changes from actors)
+- Produced by actors after processing intents
+- Projected into `AppState` by the UI layer
+- Examples: `ConfigLoaded`, `SessionChanged`, `TurnProgress`
+- Location: `crates/runie-core/src/event/variants.rs` (Event enum with Fact variants)
+
+### Control (app lifecycle)
+- System-level events
+- Handled by the main event loop
+- Examples: `Quit`, `Suspend`, `TerminalSize`
+
+## Implementation Status
+
+| Category | Location | Status |
+|----------|---------|--------|
+| Intent enum | `event/intent.rs` | ✅ Implemented |
+| Event enum (with Fact/Control variants) | `event/variants.rs` | ✅ Implemented |
+| EventKind classification | `event/kind/mod.rs` | ✅ Implemented |
+| Intent → Actor routing | `update/dispatch.rs` | ✅ Implemented |
+
+### Fact Types (Event Variants)
+
+| Fact | Description | Producer |
+|------|-------------|----------|
+| `ConfigLoaded` | Config loaded from disk | ConfigActor |
+| `TrustLoaded` | Trust decisions loaded | SessionActor |
+| `TrustChanged` | Trust decision changed | SessionActor |
+| `HistoryLoaded` | Input history loaded | SessionActor |
+| `HistoryAppend` | Input history appended | SessionActor |
+| `SessionLoaded` | Session loaded from disk | SessionActor |
+| `SessionSaved` | Session saved to disk | SessionActor |
+| `SessionDeleted` | Session deleted | SessionActor |
+| `SessionImported` | Session imported | SessionActor |
+| `SessionExported` | Session exported | SessionActor |
+| `SessionList` | Session list retrieved | SessionActor |
+| `BashOutput` | Bash command output | IoActor |
+| `FilesWritten` | Files written | IoActor |
+| `EnvDetected` | Environment detected | EnvActor |
+| `FffSearchResult` | FFF search results | FffIndexerActor |
+| `Thinking`, `ToolStart`, `ToolEnd`, etc. | Agent lifecycle events | AgentActor |
+| `PermissionRequest`, `PermissionResponse` | Permission events | PermissionActor |
+| `ValidationFailed`, `ModelsFetched` | Login flow events | ProviderActor |
+| `MessageReplayed` | Replay event | SessionActor |
+
+### Planned Fact Types (Future)
+
+| Fact | Description | Producer |
+|------|-------------|----------|
+| `InputStateChanged` | InputActor state changes | InputActor (planned) |
+| `ViewChanged` | ViewActor cache invalidated | ViewActor (planned) |
+| `TurnStarted`, `TurnProgress`, `TurnEnded` | Turn lifecycle | TurnActor (planned) |
+| `DialogStateChanged` | UiControlActor state | UiControlActor (planned) |
+
+## Acceptance Criteria
+
+- [x] Event taxonomy documented
+- [x] `Intent` enum covers all actor requests
+- [x] `Event` variants cover all state changes (Facts)
+- [x] `EventKind` classifies each event correctly
+- [x] Intent → Actor routing documented
+- [x] Missing fact types documented with planned actors
+- [x] `cargo test --workspace` passes
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [x] `intent_fact_partition_is_exhaustive` — every variant is classified as Intent, Fact, or Control.
-- [x] `intent_events_convert_to_intent` — Intent events return Some(Intent) from into_intent().
-- [x] `fact_events_return_none_from_into_intent` — Fact events return None from into_intent().
-- [x] `fact_events_are_classified` — Fact events are correctly classified.
-- [x] `control_events_are_classified` — Control events are correctly classified.
+- [x] `event_kind_classifies_intents_correctly` (in kind_tests.rs)
+- [x] `event_kind_classifies_facts_correctly` (in kind_tests.rs)
+- [x] `event_kind_classifies_control_correctly` (in kind_tests.rs)
 
 ### Layer 2 — Event Handling
-- [x] `intent_events_have_typed_intent_conversion` — Intent events convert to typed Intent and route correctly.
-- [x] `fact_events_do_not_convert_to_intent` — Fact events correctly skip intent conversion.
-- [x] `all_input_events_dispatch` — input events reach the input handler.
-- [x] `all_agent_events_dispatch` — agent events reach the agent handler.
+- N/A (documentation task)
 
 ### Layer 3 — Rendering
-- N/A (event taxonomy is logic-layer only).
+- N/A
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- N/A.
+- N/A
 
 ## Files touched
 
-- `crates/runie-core/src/event/kind/mod.rs` — `EventKind` enum and `Event::kind()` implementation.
-- `crates/runie-core/src/event/intent.rs` — typed `Intent` enum for declarative DSL.
-- `crates/runie-core/src/event/intent_impl.rs` — `Event::into_intent()` implementation.
-- `crates/runie-core/src/event/variants_tests.rs` — Layer 1/2 tests.
-- `crates/runie-core/src/event/kind/mod.rs` — Layer 1 tests for taxonomy.
+- `crates/runie-core/src/event/intent.rs` — typed intent enum
+- `crates/runie-core/src/event/variants.rs` — Event enum with all variants
+- `crates/runie-core/src/event/kind/mod.rs` — EventKind classification
+- `crates/runie-core/src/event/kind/kind_tests.rs` — classification tests
+- `crates/runie-core/src/update/dispatch.rs` — event routing
 
 ## Notes
 
-The taxonomy is implemented via:
-- `EventKind` enum: `Intent`, `Fact`, `Control`
-- `Event::kind()` method: classifies each variant
-- `Intent` enum: typed intents per actor domain
-- `Event::into_intent()` method: converts Intent events to typed Intent
-
-The flat `Event` enum is retained for backward compatibility. The `EventKind` and `Intent` types provide the type-level taxonomy without requiring a wrapper enum.
-
-## Related
-
-- `actor-owned-state-ssot` (done) — prerequisite for actor ownership
-- `declarative-actor-dsl` (todo) — builds on this taxonomy
-- `app-state-read-only-projection` (todo) — consumes Facts only
+- This task documents the existing architecture
+- Missing fact types will be implemented as actors are created (ViewActor, TurnActor, InputActor, UiControlActor)
+- The event taxonomy enables a clean separation between UI handlers and actor state

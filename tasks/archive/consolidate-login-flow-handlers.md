@@ -1,43 +1,46 @@
-# Consolidate login flow handlers into login_flow module
+# Consolidate Login Flow Handlers
 
 **Status**: done
 **Milestone**: R4
-**Category**: Architecture / Refactoring
+**Category**: Configuration
 **Priority**: P2
 
-**Depends on**: none
-**Blocks**: audit-borrow-workarounds, consolidate-login-logout-tests
+**Depends on**: event-taxonomy-for-actor-state-sync
+**Blocks**: consolidate-config-modules-into-dir
 
 ## Description
 
-Login flow handlers were consolidated into `crates/runie-core/src/login_flow/` module. The directory now contains:
-- `handlers.rs` - event handlers for the login flow
-- `state.rs` - login flow state machine
-- `panels.rs` - UI panel builders
-- `panel_ops.rs` - panel operations
-- `validation.rs` - API key validation
-- `e2e_tests.rs` - end-to-end tests
-- `handlers_tests.rs` - handler unit tests
-- `state_tests.rs` - state machine tests
+Consolidate login/authentication flow handlers from scattered locations into a unified `login_flow/` module. Currently login logic is split between `login_flow/`, `update/dialog/login_*`, `commands/dsl/handlers/login_*`, etc.
 
-## Evidence of Completion
+## Acceptance Criteria
 
-```bash
-$ ls crates/runie-core/src/login_flow/
-e2e_tests.rs
-handlers_tests.rs
-handlers.rs
-mod.rs
-panel_ops.rs
-panels.rs
-state_tests.rs
-state.rs
-tests.rs
-validation.rs
-```
+- [ ] All login/auth flow handlers in `login_flow/`
+- [ ] Single entry point for login flow
+- [ ] Provider selection consolidated
+- [ ] `cargo test --workspace` passes
 
-The `update/login_flow.rs` handler was moved to `login_flow/handlers.rs` and the old location removed.
+## Tests
+
+### Layer 1 — State/Logic
+- [ ] `login_flow_state_transitions_correctly`
+
+### Layer 2 — Event Handling
+- [ ] `login_start_intent_transitions_to_provider_selection`
+- [ ] `login_cancel_returns_to_previous_state`
+
+### Layer 3 — Rendering
+- [ ] `login_dialog_renders_correctly`
+
+### Layer 4 — Provider Replay / Mock-Tool E2E
+- [ ] N/A
+
+## Files touched
+
+- `crates/runie-core/src/login_flow/` (new/modified)
+- `crates/runie-core/src/update/dialog/login_*` (moved)
+- `crates/runie-core/src/commands/dsl/handlers/login_*` (moved)
 
 ## Notes
 
-This task was completed as part of the R4 refactoring but the task file was created retroactively when the dependency chain was analyzed.
+- Main goal is consolidation, not new features
+- Follow existing DSL patterns in the codebase

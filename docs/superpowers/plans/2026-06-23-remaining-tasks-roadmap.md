@@ -2,7 +2,7 @@
 
 **Generated:** 2026-06-23
 **Total remaining tasks:** 3
-**Completed tasks removed:** 3 root files + full `tasks/archive/` directory
+**Completed tasks removed:** 3 root files + full `tasks/archive/archive/` directory
 
 ## Notes on dependency cleanup
 
@@ -80,7 +80,7 @@ The following dependencies point to completed/removed tasks and are treated as s
 - `reconsider-tiktoken-rs` — R4/P2 — `tiktoken-rs` was adopted in the done task `adopt-tiktoken-rs` for accurate BPE token counts. Reversal argument under the YAGNI / stdlib posture: - Only one consumer: `crates/runie
 - `rename-update-dialog-panel` — R4/P3 — Two files named `panel.rs` exist in the dialog subsystem: `dialog/panel.rs` (500 LOC — the `Panel` struct, its builder methods, `PanelView`, `PanelItem`) and `update/dialog/panel.r
 - `replace-single-use-deps-with-stdlib` — R4/P2 — Several workspace deps are used in only 1-3 files for functionality the stdlib or a few lines of code can provide. `remove-unused-cargo-deps` targets truly unused deps; this task t
-- `shrink-tasks-planning-debt` — R4/P2 — `tasks/` has 76 `.md` files at the root (excluding TEMPLATE), 216 done, 48 todo, 3 superseded. The task system has become its own maintenance surface — finding active work requires
+- `shrink-tasks-planning-debt` — R4/P2 — `tasks/archive/` has 76 `.md` files at the root (excluding TEMPLATE), 216 done, 48 todo, 3 superseded. The task system has become its own maintenance surface — finding active work requires
 - `single-source-dev-commands` — R4/P3 — `cargo test --workspace`, `cargo clippy --workspace`, and `cargo fmt` appear in `README.md`, `.github/workflows/ci.yml`, `dev.sh`, and `bacon.toml`. These entry points drift out of
 - `single-source-testing-docs` — R4/P1 — The 4-layer testing strategy (L1 state, L2 event handling, L3 TestBackend, L4 provider replay) is written out in full in `AGENTS.md` and `docs/Architecture.md`, summarized in `docs
 - `use-workspace-deps-in-runie-testing` — R4/P3 — `crates/runie-testing/Cargo.toml` uses `runie-core = { path = "../runie-core" }` for internal crates, while every other crate uses `runie-core.workspace = true`. This inconsistency
@@ -271,153 +271,153 @@ The following dependencies point to completed/removed tasks and are treated as s
 
 ## Appendix: task inventory
 
-- `fix-render-task-blocking-io` — R3 P1 — [TUI / Rendering] — `tasks/fix-render-task-blocking-io.md`
-- `fix-session-store-load-alignment` — R3 P1 — [Sessions] — `tasks/fix-session-store-load-alignment.md`
-- `remove-sleeps-from-automatic-tests` — R3 P1 — [Core / State] — `tasks/remove-sleeps-from-automatic-tests.md`
-- `fix-headless-runtime-spinwait` — R3 P2 — [Architecture / Actors] — `tasks/fix-headless-runtime-spinwait.md`
-- `fix-main-unix-epoch-unwrap` — R3 P2 — [TUI / Rendering] — `tasks/fix-main-unix-epoch-unwrap.md`
-- `actor-lifecycle-and-handle-registry` — R4 P0 — [Architecture / Actors] — `tasks/actor-lifecycle-and-handle-registry.md` | depends: actor-owned-state-ssot | blocks: config-ssot-via-configactor, session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results, ui-control-actor-owns-dialog-state
-- `actor-owned-state-ssot` — R4 P0 — [Architecture / Actors] — `tasks/actor-owned-state-ssot.md` | blocks: declarative-actor-dsl, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, actor-lifecycle-and-handle-registry, test-actor-harness, config-ssot-via-configactor, session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results, ui-control-actor-owns-dialog-state, unified-dsl-intents-for-state-mutations, remove-direct-appstate-mutations
-- `app-state-read-only-projection` — R4 P0 — [Core / State] — `tasks/app-state-read-only-projection.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync | blocks: session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results
-- `audit-simplify-reduce-roadmap` — R4 P0 — [Architecture / Actors] — `tasks/audit-simplify-reduce-roadmap.md`
-- `canonicalize-chat-message` — R4 P0 — [Core / State] — `tasks/canonicalize-chat-message.md`
-- `canonicalize-tool-call` — R4 P0 — [Core / State] — `tasks/canonicalize-tool-call.md` | blocks: extract-streaming-tool-parser
-- `centralize-test-verification` — R4 P0 — [Architecture / Testing] — `tasks/centralize-test-verification.md` | blocks: extract-ci-setup-action
-- `collapse-provider-wrappers` — R4 P0 — [Architecture / Actors] — `tasks/collapse-provider-wrappers.md`
-- `config-ssot-via-configactor` — R4 P0 — [Configuration] — `tasks/config-ssot-via-configactor.md` | depends: event-taxonomy-for-actor-state-sync, app-state-read-only-projection
-- `declarative-actor-dsl` — R4 P0 — [Architecture / Actors] — `tasks/declarative-actor-dsl.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync | blocks: config-ssot-via-configactor, session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results, unified-dsl-intents-for-state-mutations
-- `decouple-appstate-from-view-cache` — R4 P0 — [Architecture / Actors] — `tasks/decouple-appstate-from-view-cache.md` | depends: fold-state-into-model-state | blocks: rename-core-ui-to-view
-- `delete-tui-ipc-reexport-shim` — R4 P0 — [Configuration] — `tasks/delete-tui-ipc-reexport-shim.md`
-- `event-taxonomy-for-actor-state-sync` — R4 P0 — [Core / State] — `tasks/event-taxonomy-for-actor-state-sync.md` | depends: actor-owned-state-ssot | blocks: config-ssot-via-configactor, session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results, unified-dsl-intents-for-state-mutations, app-state-read-only-projection
-- `finish-io-migration` — R4 P0 — [Architecture / Actors] — `tasks/finish-io-migration.md` | depends: remove-login-config-test-shim | blocks: delete-async-io-bridge
-- `fix-runie-tui-dead-code-warnings` — R4 P0 — [TUI / Rendering] — `tasks/fix-runie-tui-dead-code-warnings.md`
-- `input-actor-owns-input-state` — R4 P0 — [Input / Commands] — `tasks/input-actor-owns-input-state.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection | blocks: turn-actor-owns-agent-turn-state, completion-actor-owns-completion-state
-- `move-provider-catalog-to-provider-crate` — R4 P0 — [Architecture / Actors] — `tasks/move-provider-catalog-to-provider-crate.md` | depends: unify-provider-modules
-- `move-tui-effects-into-io-actor` — R4 P0 — [Architecture / Actors] — `tasks/move-tui-effects-into-io-actor.md` | depends: finish-io-migration | blocks: collapse-effect-payload-indirection
-- `permission-actor-owns-approvals` — R4 P0 — [Architecture / Security] — `tasks/permission-actor-owns-approvals.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection
-- `remove-direct-appstate-mutations` — R4 P0 — [Architecture / Actors] — `tasks/remove-direct-appstate-mutations.md` | depends: session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results, ui-control-actor-owns-dialog-state, config-ssot-via-configactor, actor-lifecycle-and-handle-registry
-- `remove-login-config-test-shim` — R4 P0 — [Architecture / Actors] — `tasks/remove-login-config-test-shim.md` | depends: actor-owned-state-ssot, config-ssot-via-configactor
-- `session-actor-owns-session-state` — R4 P0 — [Core / State] — `tasks/session-actor-owns-session-state.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection | blocks: turn-actor-owns-agent-turn-state
-- `split-runie-core-into-domain-and-io-crates` — R4 P0 — [Architecture / Actors] — `tasks/split-runie-core-into-domain-and-io-crates.md` | depends: finish-io-migration, delete-async-io-bridge, fold-state-into-model-state, rename-core-ui-to-view | blocks: gate-or-move-single-consumer-core-modules, unify-duplicate-module-names-core-tui, consolidate-config-modules-into-dir
-- `test-actor-harness` — R4 P0 — [Architecture / Testing] — `tasks/test-actor-harness.md` | depends: actor-lifecycle-and-handle-registry, event-taxonomy-for-actor-state-sync, app-state-read-only-projection | blocks: session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions
-- `turn-actor-owns-agent-turn-state` — R4 P0 — [Architecture / Actors] — `tasks/turn-actor-owns-agent-turn-state.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, session-actor-owns-session-state, input-actor-owns-input-state
-- `ui-control-actor-owns-dialog-state` — R4 P0 — [Architecture / Actors] — `tasks/ui-control-actor-owns-dialog-state.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection | blocks: view-actor-owns-view-state, input-actor-owns-input-state, turn-actor-owns-agent-turn-state, remove-direct-appstate-mutations
-- `unified-dsl-intents-for-state-mutations` — R4 P0 — [Input / Commands] — `tasks/unified-dsl-intents-for-state-mutations.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, declarative-actor-dsl
-- `unify-event-vocabulary` — R4 P0 — [Architecture / Actors] — `tasks/unify-event-vocabulary.md`
-- `unify-permission-gate` — R4 P0 — [Architecture / Security] — `tasks/unify-permission-gate.md` | blocks: unify-approval-decision, derive-confirmation-from-permissions
-- `unify-persistence-actors` — R4 P0 — [Architecture / Actors] — `tasks/unify-persistence-actors.md`
-- `view-actor-owns-view-state` — R4 P0 — [TUI / Rendering] — `tasks/view-actor-owns-view-state.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, session-actor-owns-session-state, input-actor-owns-input-state, ui-control-actor-owns-dialog-state
-- `add-engine-tool-tests` — R4 P1 — [Tools] — `tasks/add-engine-tool-tests.md`
-- `add-tool-output-constructors` — R4 P1 — [Tools] — `tasks/add-tool-output-constructors.md`
-- `aggressive-event-consolidation` — R4 P1 — [Core / State] — `tasks/aggressive-event-consolidation.md`
-- `collapse-headless-binaries-into-one-cli` — R4 P1 — [Configuration] — `tasks/collapse-headless-binaries-into-one-cli.md`
-- `collapse-tool-runtime-traits` — R4 P1 — [Tools] — `tasks/collapse-tool-runtime-traits.md`
-- `completion-actor-owns-completion-state` — R4 P1 — [Input / Commands] — `tasks/completion-actor-owns-completion-state.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, input-actor-owns-input-state
-- `consolidate-dual-path-modules` — R4 P1 — [Configuration] — `tasks/consolidate-dual-path-modules.md`
-- `consolidate-login-flow-all-files` — R4 P1 — [Core / State] — `tasks/consolidate-login-flow-all-files.md` | depends: consolidate-login-flow-handlers
-- `consolidate-login-flow-handlers` — R4 P1 — [Core / State] — `tasks/consolidate-login-flow-handlers.md`
-- `consolidate-settings-providers-dialog` — R4 P1 — [Configuration] — `tasks/consolidate-settings-providers-dialog.md` | depends: unify-provider-modules, actor-owned-state-ssot, config-ssot-via-configactor
-- `dedupe-tool-execution-loop` — R4 P1 — [Core / State] — `tasks/dedupe-tool-execution-loop.md` | depends: extract-streaming-tool-parser
-- `delete-async-io-bridge` — R4 P1 — [Architecture / Actors] — `tasks/delete-async-io-bridge.md` | depends: finish-io-migration
-- `delete-dead-history-action-vimnav` — R4 P1 — [Core / State] — `tasks/delete-dead-history-action-vimnav.md`
-- `delete-dead-theme-async-loaders` — R4 P1 — [Configuration] — `tasks/delete-dead-theme-async-loaders.md`
-- `delete-dead-tuple-actor-handles-fields` — R4 P1 — [Architecture / Actors] — `tasks/delete-dead-tuple-actor-handles-fields.md`
-- `delete-runie-core-confirmation` — R4 P1 — [Core / State] — `tasks/delete-runie-core-confirmation.md`
-- `delete-runie-core-skill-module` — R4 P1 — [Core / State] — `tasks/delete-runie-core-skill-module.md`
-- `env-actor-owns-git-cwd` — R4 P1 — [Configuration] — `tasks/env-actor-owns-git-cwd.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, actor-lifecycle-and-handle-registry
-- `extract-ci-setup-action` — R4 P1 — [Configuration] — `tasks/extract-ci-setup-action.md` | depends: centralize-test-verification
-- `extract-streaming-tool-parser` — R4 P1 — [Core / State] — `tasks/extract-streaming-tool-parser.md` | depends: canonicalize-tool-call | blocks: dedupe-tool-execution-loop
-- `fff-indexer-owns-file-picker-results` — R4 P1 — [Tools] — `tasks/fff-indexer-owns-file-picker-results.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, actor-lifecycle-and-handle-registry
-- `fix-duplicate-cargo-toml-keys` — R4 P1 — [Configuration] — `tasks/fix-duplicate-cargo-toml-keys.md`
-- `fix-permission-gate-rename-in-testing` — R4 P1 — [Architecture / Testing] — `tasks/fix-permission-gate-rename-in-testing.md`
-- `generic-actor-reply` — R4 P1 — [Architecture / Actors] — `tasks/generic-actor-reply.md` | blocks: reduce-actor-handle-boilerplate
-- `group-session-modules-into-dir` — R4 P1 — [Sessions] — `tasks/group-session-modules-into-dir.md` | depends: consolidate-dual-path-modules
-- `hoist-cargo-workspace-deps` — R4 P1 — [Configuration] — `tasks/hoist-cargo-workspace-deps.md`
-- `introduce-tool-definition-macro` — R4 P1 — [Tools] — `tasks/introduce-tool-definition-macro.md`
-- `move-actor-trait-into-actors-dir` — R4 P1 — [Architecture / Actors] — `tasks/move-actor-trait-into-actors-dir.md`
-- `notification-actor-owns-transient-messages` — R4 P1 — [Core / State] — `tasks/notification-actor-owns-transient-messages.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection
-- `reduce-actor-handle-boilerplate` — R4 P1 — [Architecture / Actors] — `tasks/reduce-actor-handle-boilerplate.md` | depends: generic-actor-reply
-- `remove-appstate-cfg-test-branches` — R4 P1 — [Core / State] — `tasks/remove-appstate-cfg-test-branches.md`
-- `rename-core-ui-to-view` — R4 P1 — [Architecture / Actors] — `tasks/rename-core-ui-to-view.md` | depends: fold-state-into-model-state
-- `replace-git2-with-cli` — R4 P1 — [Architecture / Actors] — `tasks/replace-git2-with-cli.md` | depends: finish-io-migration
-- `share-fff-error-helpers` — R4 P1 — [Tools] — `tasks/share-fff-error-helpers.md`
-- `share-minimax-sse-fixtures` — R4 P1 — [Architecture / Testing] — `tasks/share-minimax-sse-fixtures.md`
-- `single-source-testing-docs` — R4 P1 — [Configuration] — `tasks/single-source-testing-docs.md`
-- `trust-actor-owns-trust-decisions` — R4 P1 — [Architecture / Security] — `tasks/trust-actor-owns-trust-decisions.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection
-- `unify-approval-decision` — R4 P1 — [Architecture / Security] — `tasks/unify-approval-decision.md` | depends: unify-permission-gate
-- `unify-provider-modules` — R4 P1 — [Architecture / Actors] — `tasks/unify-provider-modules.md`
-- `arch-review-2026-06` — R4 P2 — [Architecture / Actors] — `tasks/arch-review-2026-06.md`
-- `centralize-error-type` — R4 P2 — [Core / State] — `tasks/centralize-error-type.md`
-- `collapse-effect-payload-indirection` — R4 P2 — [Architecture / Actors] — `tasks/collapse-effect-payload-indirection.md`
-- `collapse-event-aliases` — R4 P2 — [Core / State] — `tasks/collapse-event-aliases.md`
-- `collapse-event-variants-subdir` — R4 P2 — [Core / State] — `tasks/collapse-event-variants-subdir.md`
-- `consolidate-config-modules-into-dir` — R4 P2 — [Configuration] — `tasks/consolidate-config-modules-into-dir.md` | depends: consolidate-login-flow-handlers, split-runie-core-into-domain-and-io-crates
-- `consolidate-mark-dirty-calls` — R4 P2 — [Core / State] — `tasks/consolidate-mark-dirty-calls.md`
-- `consolidate-slash-command-handlers` — R4 P2 — [Input / Commands] — `tasks/consolidate-slash-command-handlers.md`
-- `consolidate-tiny-binary-crates` — R4 P2 — [Architecture / Actors] — `tasks/consolidate-tiny-binary-crates.md`
-- `consolidate-update-dialog-files` — R4 P2 — [Architecture / Refactoring] — `tasks/consolidate-update-dialog-files.md` | depends: rename-update-dialog-panel
-- `dedupe-config-actor-mutations` — R4 P2 — [Architecture / Actors] — `tasks/dedupe-config-actor-mutations.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection | blocks: config-ssot-via-configactor
-- `dedupe-fresh-state-test-helper` — R4 P2 — [Architecture / Testing] — `tasks/dedupe-fresh-state-test-helper.md`
-- `dedupe-git-status-formatter` — R4 P2 — [Tools] — `tasks/dedupe-git-status-formatter.md` | depends: replace-git2-with-cli
-- `dedupe-scoped-model-toggle` — R4 P2 — [Core / State] — `tasks/dedupe-scoped-model-toggle.md`
-- `dedupe-turn-complete-last-calls` — R4 P2 — [Core / State] — `tasks/dedupe-turn-complete-last-calls.md`
-- `dedupe-update-input-history` — R4 P2 — [Input / Commands] — `tasks/dedupe-update-input-history.md`
-- `dedupe-yolo-sink-setup` — R4 P2 — [Architecture / Actors] — `tasks/dedupe-yolo-sink-setup.md`
-- `delete-provider-message-enum` — R4 P2 — [Core / State] — `tasks/delete-provider-message-enum.md`
-- `delete-runie-core-utils` — R4 P2 — [Core / State] — `tasks/delete-runie-core-utils.md`
-- `derive-confirmation-from-permissions` — R4 P2 — [Architecture / Security] — `tasks/derive-confirmation-from-permissions.md` | depends: unify-permission-gate
-- `drop-event-aliases` — R4 P2 — [Architecture / Actors] — `tasks/drop-event-aliases.md`
-- `drop-event-bus-replay-buffer` — R4 P2 — [Architecture / Actors] — `tasks/drop-event-bus-replay-buffer.md` | blocks: drop-small-stdlib-replaceable-deps
-- `drop-small-stdlib-replaceable-deps` — R4 P2 — [Configuration] — `tasks/drop-small-stdlib-replaceable-deps.md` | depends: drop-event-bus-replay-buffer
-- `drop-thiserror-and-async-trait-deps` — R4 P2 — [Configuration] — `tasks/drop-thiserror-and-async-trait-deps.md`
-- `flatten-update-login-flow-tests-dir` — R4 P2 — [Configuration] — `tasks/flatten-update-login-flow-tests-dir.md` | depends: consolidate-dual-path-modules
-- `fold-protocol-into-core` — R4 P2 — [Architecture / Actors] — `tasks/fold-protocol-into-core.md`
-- `fold-runie-engine-into-agent` — R4 P2 — [Architecture / Actors] — `tasks/fold-runie-engine-into-agent.md`
-- `fold-state-into-model-state` — R4 P2 — [Core / State] — `tasks/fold-state-into-model-state.md`
-- `gate-or-move-single-consumer-core-modules` — R4 P2 — [Configuration] — `tasks/gate-or-move-single-consumer-core-modules.md` | depends: split-runie-core-into-domain-and-io-crates
-- `generate-config-schema-from-code` — R4 P2 — [Configuration] — `tasks/generate-config-schema-from-code.md`
-- `generate-ui-elements-from-model` — R4 P2 — [TUI / Rendering] — `tasks/generate-ui-elements-from-model.md` | depends: rename-core-ui-to-view
-- `inline-or-document-core-ui-shim` — R4 P2 — [Configuration] — `tasks/inline-or-document-core-ui-shim.md`
-- `inline-tui-ipc-reexport` — R4 P2 — [Configuration] — `tasks/inline-tui-ipc-reexport.md`
-- `merge-diff-modules` — R4 P2 — [TUI / Rendering] — `tasks/merge-diff-modules.md`
-- `merge-tool-status-state` — R4 P2 — [Core / State] — `tasks/merge-tool-status-state.md`
-- `reconsider-clipboard-image-deps` — R4 P2 — [Configuration] — `tasks/reconsider-clipboard-image-deps.md`
-- `reconsider-notify-config-watcher` — R4 P2 — [Configuration] — `tasks/reconsider-notify-config-watcher.md`
-- `reconsider-redb-session-store` — R4 P2 — [Sessions] — `tasks/reconsider-redb-session-store.md`
-- `reconsider-schemars-jsonschema` — R4 P2 — [Configuration] — `tasks/reconsider-schemars-jsonschema.md`
-- `reconsider-tiktoken-rs` — R4 P2 — [Configuration] — `tasks/reconsider-tiktoken-rs.md`
-- `relocate-loose-tests-files` — R4 P2 — [Configuration] — `tasks/relocate-loose-tests-files.md` | depends: consolidate-dual-path-modules
-- `relocate-stray-tool-parser-tests` — R4 P2 — [Configuration] — `tasks/relocate-stray-tool-parser-tests.md` | depends: consolidate-dual-path-modules
-- `rename-model-snapshot-to-compaction` — R4 P2 — [Core / State] — `tasks/rename-model-snapshot-to-compaction.md`
-- `rename-test-submission-id` — R4 P2 — [Architecture / Testing] — `tasks/rename-test-submission-id.md`
-- `replace-single-use-deps-with-stdlib` — R4 P2 — [Configuration] — `tasks/replace-single-use-deps-with-stdlib.md`
-- `shrink-tasks-planning-debt` — R4 P2 — [Configuration] — `tasks/shrink-tasks-planning-debt.md`
-- `simplify-actor-trait` — R4 P2 — [Architecture / Actors] — `tasks/simplify-actor-trait.md` | depends: unify-persistence-actors
-- `split-files-at-limit-round-2` — R4 P2 — [Architecture / Refactoring] — `tasks/split-files-at-limit-round-2.md`
-- `standardize-test-layout-inline` — R4 P2 — [Configuration] — `tasks/standardize-test-layout-inline.md` | depends: relocate-loose-tests-files
-- `sweep-allow-suppressions` — R4 P2 — [Core / State] — `tasks/sweep-allow-suppressions.md`
-- `unify-build-system-prompt` — R4 P2 — [Core / State] — `tasks/unify-build-system-prompt.md`
-- `unify-duplicate-module-names-core-tui` — R4 P2 — [Configuration] — `tasks/unify-duplicate-module-names-core-tui.md` | depends: split-runie-core-into-domain-and-io-crates
-- `audit-borrow-workarounds` — R4 P3 — [Core / State] — `tasks/audit-borrow-workarounds.md` | depends: consolidate-login-flow-handlers
-- `consolidate-login-logout-tests` — R4 P3 — [Architecture / Testing] — `tasks/consolidate-login-logout-tests.md` | depends: consolidate-login-flow-handlers
-- `dedupe-messages-changed-ensure-fresh` — R4 P3 — [Architecture / Testing] — `tasks/dedupe-messages-changed-ensure-fresh.md`
-- `extract-appstate-helpers` — R4 P3 — [Core / State] — `tasks/extract-appstate-helpers.md`
-- `fold-testing-into-agent-tests` — R4 P3 — [Configuration] — `tasks/fold-testing-into-agent-tests.md`
-- `remove-empty-match-arms` — R4 P3 — [Core / State] — `tasks/remove-empty-match-arms.md`
-- `rename-update-dialog-panel` — R4 P3 — [Configuration] — `tasks/rename-update-dialog-panel.md`
-- `single-source-dev-commands` — R4 P3 — [Configuration] — `tasks/single-source-dev-commands.md`
-- `sweep-to-string-allocs` — R4 P3 — [Core / State] — `tasks/sweep-to-string-allocs.md`
-- `theme-color-accessor-macro` — R4 P3 — [TUI / Rendering] — `tasks/theme-color-accessor-macro.md`
-- `tighten-build-lint-complexity-heuristic` — R4 P3 — [Architecture / Refactoring] — `tasks/tighten-build-lint-complexity-heuristic.md`
-- `unify-markdown-rendering` — R4 P3 — [TUI / Rendering] — `tasks/unify-markdown-rendering.md`
-- `use-workspace-deps-in-runie-testing` — R4 P3 — [Configuration] — `tasks/use-workspace-deps-in-runie-testing.md`
-- `r5-extract-tool-stream` — R5 P0 — [Tools] — `tasks/r5-extract-tool-stream.md` | blocks: r5-provider-protocol-trait, r5-partial-json-repair
-- `r5-provider-protocol-trait` — R5 P0 — [Architecture / Actors] — `tasks/r5-provider-protocol-trait.md` | depends: r5-extract-tool-stream
-- `r5-conversation-sanitize-pipeline` — R5 P1 — [Core / State] — `tasks/r5-conversation-sanitize-pipeline.md`
-- `r5-markdown-healing-stream` — R5 P1 — [TUI / Rendering] — `tasks/r5-markdown-healing-stream.md`
-- `r5-partial-json-repair` — R5 P1 — [Tools] — `tasks/r5-partial-json-repair.md` | depends: r5-extract-tool-stream
-- `r5-populate-parts-streaming` — R5 P1 — [Core / State] — `tasks/r5-populate-parts-streaming.md` | blocks: r5-per-channel-decoders, r5-parts-canonical-migration
-- `r5-think-filter` — R5 P1 — [Core / State] — `tasks/r5-think-filter.md`
-- `r5-paced-text-rendering` — R5 P2 — [TUI / Rendering] — `tasks/r5-paced-text-rendering.md`
-- `r5-parts-canonical-migration` — R5 P2 — [Core / State] — `tasks/r5-parts-canonical-migration.md` | depends: r5-populate-parts-streaming
-- `r5-per-channel-decoders` — R5 P2 — [Architecture / Actors] — `tasks/r5-per-channel-decoders.md` | depends: r5-populate-parts-streaming
+- `fix-render-task-blocking-io` — R3 P1 — [TUI / Rendering] — `tasks/archive/fix-render-task-blocking-io.md`
+- `fix-session-store-load-alignment` — R3 P1 — [Sessions] — `tasks/archive/fix-session-store-load-alignment.md`
+- `remove-sleeps-from-automatic-tests` — R3 P1 — [Core / State] — `tasks/archive/remove-sleeps-from-automatic-tests.md`
+- `fix-headless-runtime-spinwait` — R3 P2 — [Architecture / Actors] — `tasks/archive/fix-headless-runtime-spinwait.md`
+- `fix-main-unix-epoch-unwrap` — R3 P2 — [TUI / Rendering] — `tasks/archive/fix-main-unix-epoch-unwrap.md`
+- `actor-lifecycle-and-handle-registry` — R4 P0 — [Architecture / Actors] — `tasks/archive/actor-lifecycle-and-handle-registry.md` | depends: actor-owned-state-ssot | blocks: config-ssot-via-configactor, session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results, ui-control-actor-owns-dialog-state
+- `actor-owned-state-ssot` — R4 P0 — [Architecture / Actors] — `tasks/archive/actor-owned-state-ssot.md` | blocks: declarative-actor-dsl, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, actor-lifecycle-and-handle-registry, test-actor-harness, config-ssot-via-configactor, session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results, ui-control-actor-owns-dialog-state, unified-dsl-intents-for-state-mutations, remove-direct-appstate-mutations
+- `app-state-read-only-projection` — R4 P0 — [Core / State] — `tasks/archive/app-state-read-only-projection.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync | blocks: session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results
+- `audit-simplify-reduce-roadmap` — R4 P0 — [Architecture / Actors] — `tasks/archive/audit-simplify-reduce-roadmap.md`
+- `canonicalize-chat-message` — R4 P0 — [Core / State] — `tasks/archive/canonicalize-chat-message.md`
+- `canonicalize-tool-call` — R4 P0 — [Core / State] — `tasks/archive/canonicalize-tool-call.md` | blocks: extract-streaming-tool-parser
+- `centralize-test-verification` — R4 P0 — [Architecture / Testing] — `tasks/archive/centralize-test-verification.md` | blocks: extract-ci-setup-action
+- `collapse-provider-wrappers` — R4 P0 — [Architecture / Actors] — `tasks/archive/collapse-provider-wrappers.md`
+- `config-ssot-via-configactor` — R4 P0 — [Configuration] — `tasks/archive/config-ssot-via-configactor.md` | depends: event-taxonomy-for-actor-state-sync, app-state-read-only-projection
+- `declarative-actor-dsl` — R4 P0 — [Architecture / Actors] — `tasks/archive/declarative-actor-dsl.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync | blocks: config-ssot-via-configactor, session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results, unified-dsl-intents-for-state-mutations
+- `decouple-appstate-from-view-cache` — R4 P0 — [Architecture / Actors] — `tasks/archive/decouple-appstate-from-view-cache.md` | depends: fold-state-into-model-state | blocks: rename-core-ui-to-view
+- `delete-tui-ipc-reexport-shim` — R4 P0 — [Configuration] — `tasks/archive/delete-tui-ipc-reexport-shim.md`
+- `event-taxonomy-for-actor-state-sync` — R4 P0 — [Core / State] — `tasks/archive/event-taxonomy-for-actor-state-sync.md` | depends: actor-owned-state-ssot | blocks: config-ssot-via-configactor, session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results, unified-dsl-intents-for-state-mutations, app-state-read-only-projection
+- `finish-io-migration` — R4 P0 — [Architecture / Actors] — `tasks/archive/finish-io-migration.md` | depends: remove-login-config-test-shim | blocks: delete-async-io-bridge
+- `fix-runie-tui-dead-code-warnings` — R4 P0 — [TUI / Rendering] — `tasks/archive/fix-runie-tui-dead-code-warnings.md`
+- `input-actor-owns-input-state` — R4 P0 — [Input / Commands] — `tasks/archive/input-actor-owns-input-state.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection | blocks: turn-actor-owns-agent-turn-state, completion-actor-owns-completion-state
+- `move-provider-catalog-to-provider-crate` — R4 P0 — [Architecture / Actors] — `tasks/archive/move-provider-catalog-to-provider-crate.md` | depends: unify-provider-modules
+- `move-tui-effects-into-io-actor` — R4 P0 — [Architecture / Actors] — `tasks/archive/move-tui-effects-into-io-actor.md` | depends: finish-io-migration | blocks: collapse-effect-payload-indirection
+- `permission-actor-owns-approvals` — R4 P0 — [Architecture / Security] — `tasks/archive/permission-actor-owns-approvals.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection
+- `remove-direct-appstate-mutations` — R4 P0 — [Architecture / Actors] — `tasks/archive/remove-direct-appstate-mutations.md` | depends: session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results, ui-control-actor-owns-dialog-state, config-ssot-via-configactor, actor-lifecycle-and-handle-registry
+- `remove-login-config-test-shim` — R4 P0 — [Architecture / Actors] — `tasks/archive/remove-login-config-test-shim.md` | depends: actor-owned-state-ssot, config-ssot-via-configactor
+- `session-actor-owns-session-state` — R4 P0 — [Core / State] — `tasks/archive/session-actor-owns-session-state.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection | blocks: turn-actor-owns-agent-turn-state
+- `split-runie-core-into-domain-and-io-crates` — R4 P0 — [Architecture / Actors] — `tasks/archive/split-runie-core-into-domain-and-io-crates.md` | depends: finish-io-migration, delete-async-io-bridge, fold-state-into-model-state, rename-core-ui-to-view | blocks: gate-or-move-single-consumer-core-modules, unify-duplicate-module-names-core-tui, consolidate-config-modules-into-dir
+- `test-actor-harness` — R4 P0 — [Architecture / Testing] — `tasks/archive/test-actor-harness.md` | depends: actor-lifecycle-and-handle-registry, event-taxonomy-for-actor-state-sync, app-state-read-only-projection | blocks: session-actor-owns-session-state, input-actor-owns-input-state, view-actor-owns-view-state, completion-actor-owns-completion-state, turn-actor-owns-agent-turn-state, permission-actor-owns-approvals, notification-actor-owns-transient-messages, trust-actor-owns-trust-decisions
+- `turn-actor-owns-agent-turn-state` — R4 P0 — [Architecture / Actors] — `tasks/archive/turn-actor-owns-agent-turn-state.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, session-actor-owns-session-state, input-actor-owns-input-state
+- `ui-control-actor-owns-dialog-state` — R4 P0 — [Architecture / Actors] — `tasks/archive/ui-control-actor-owns-dialog-state.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection | blocks: view-actor-owns-view-state, input-actor-owns-input-state, turn-actor-owns-agent-turn-state, remove-direct-appstate-mutations
+- `unified-dsl-intents-for-state-mutations` — R4 P0 — [Input / Commands] — `tasks/archive/unified-dsl-intents-for-state-mutations.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, declarative-actor-dsl
+- `unify-event-vocabulary` — R4 P0 — [Architecture / Actors] — `tasks/archive/unify-event-vocabulary.md`
+- `unify-permission-gate` — R4 P0 — [Architecture / Security] — `tasks/archive/unify-permission-gate.md` | blocks: unify-approval-decision, derive-confirmation-from-permissions
+- `unify-persistence-actors` — R4 P0 — [Architecture / Actors] — `tasks/archive/unify-persistence-actors.md`
+- `view-actor-owns-view-state` — R4 P0 — [TUI / Rendering] — `tasks/archive/view-actor-owns-view-state.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, session-actor-owns-session-state, input-actor-owns-input-state, ui-control-actor-owns-dialog-state
+- `add-engine-tool-tests` — R4 P1 — [Tools] — `tasks/archive/add-engine-tool-tests.md`
+- `add-tool-output-constructors` — R4 P1 — [Tools] — `tasks/archive/add-tool-output-constructors.md`
+- `aggressive-event-consolidation` — R4 P1 — [Core / State] — `tasks/archive/aggressive-event-consolidation.md`
+- `collapse-headless-binaries-into-one-cli` — R4 P1 — [Configuration] — `tasks/archive/collapse-headless-binaries-into-one-cli.md`
+- `collapse-tool-runtime-traits` — R4 P1 — [Tools] — `tasks/archive/collapse-tool-runtime-traits.md`
+- `completion-actor-owns-completion-state` — R4 P1 — [Input / Commands] — `tasks/archive/completion-actor-owns-completion-state.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, input-actor-owns-input-state
+- `consolidate-dual-path-modules` — R4 P1 — [Configuration] — `tasks/archive/consolidate-dual-path-modules.md`
+- `consolidate-login-flow-all-files` — R4 P1 — [Core / State] — `tasks/archive/consolidate-login-flow-all-files.md` | depends: consolidate-login-flow-handlers
+- `consolidate-login-flow-handlers` — R4 P1 — [Core / State] — `tasks/archive/consolidate-login-flow-handlers.md`
+- `consolidate-settings-providers-dialog` — R4 P1 — [Configuration] — `tasks/archive/consolidate-settings-providers-dialog.md` | depends: unify-provider-modules, actor-owned-state-ssot, config-ssot-via-configactor
+- `dedupe-tool-execution-loop` — R4 P1 — [Core / State] — `tasks/archive/dedupe-tool-execution-loop.md` | depends: extract-streaming-tool-parser
+- `delete-async-io-bridge` — R4 P1 — [Architecture / Actors] — `tasks/archive/delete-async-io-bridge.md` | depends: finish-io-migration
+- `delete-dead-history-action-vimnav` — R4 P1 — [Core / State] — `tasks/archive/delete-dead-history-action-vimnav.md`
+- `delete-dead-theme-async-loaders` — R4 P1 — [Configuration] — `tasks/archive/delete-dead-theme-async-loaders.md`
+- `delete-dead-tuple-actor-handles-fields` — R4 P1 — [Architecture / Actors] — `tasks/archive/delete-dead-tuple-actor-handles-fields.md`
+- `delete-runie-core-confirmation` — R4 P1 — [Core / State] — `tasks/archive/delete-runie-core-confirmation.md`
+- `delete-runie-core-skill-module` — R4 P1 — [Core / State] — `tasks/archive/delete-runie-core-skill-module.md`
+- `env-actor-owns-git-cwd` — R4 P1 — [Configuration] — `tasks/archive/env-actor-owns-git-cwd.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, actor-lifecycle-and-handle-registry
+- `extract-ci-setup-action` — R4 P1 — [Configuration] — `tasks/archive/extract-ci-setup-action.md` | depends: centralize-test-verification
+- `extract-streaming-tool-parser` — R4 P1 — [Core / State] — `tasks/archive/extract-streaming-tool-parser.md` | depends: canonicalize-tool-call | blocks: dedupe-tool-execution-loop
+- `fff-indexer-owns-file-picker-results` — R4 P1 — [Tools] — `tasks/archive/fff-indexer-owns-file-picker-results.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection, actor-lifecycle-and-handle-registry
+- `fix-duplicate-cargo-toml-keys` — R4 P1 — [Configuration] — `tasks/archive/fix-duplicate-cargo-toml-keys.md`
+- `fix-permission-gate-rename-in-testing` — R4 P1 — [Architecture / Testing] — `tasks/archive/fix-permission-gate-rename-in-testing.md`
+- `generic-actor-reply` — R4 P1 — [Architecture / Actors] — `tasks/archive/generic-actor-reply.md` | blocks: reduce-actor-handle-boilerplate
+- `group-session-modules-into-dir` — R4 P1 — [Sessions] — `tasks/archive/group-session-modules-into-dir.md` | depends: consolidate-dual-path-modules
+- `hoist-cargo-workspace-deps` — R4 P1 — [Configuration] — `tasks/archive/hoist-cargo-workspace-deps.md`
+- `introduce-tool-definition-macro` — R4 P1 — [Tools] — `tasks/archive/introduce-tool-definition-macro.md`
+- `move-actor-trait-into-actors-dir` — R4 P1 — [Architecture / Actors] — `tasks/archive/move-actor-trait-into-actors-dir.md`
+- `notification-actor-owns-transient-messages` — R4 P1 — [Core / State] — `tasks/archive/notification-actor-owns-transient-messages.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection
+- `reduce-actor-handle-boilerplate` — R4 P1 — [Architecture / Actors] — `tasks/archive/reduce-actor-handle-boilerplate.md` | depends: generic-actor-reply
+- `remove-appstate-cfg-test-branches` — R4 P1 — [Core / State] — `tasks/archive/remove-appstate-cfg-test-branches.md`
+- `rename-core-ui-to-view` — R4 P1 — [Architecture / Actors] — `tasks/archive/rename-core-ui-to-view.md` | depends: fold-state-into-model-state
+- `replace-git2-with-cli` — R4 P1 — [Architecture / Actors] — `tasks/archive/replace-git2-with-cli.md` | depends: finish-io-migration
+- `share-fff-error-helpers` — R4 P1 — [Tools] — `tasks/archive/share-fff-error-helpers.md`
+- `share-minimax-sse-fixtures` — R4 P1 — [Architecture / Testing] — `tasks/archive/share-minimax-sse-fixtures.md`
+- `single-source-testing-docs` — R4 P1 — [Configuration] — `tasks/archive/single-source-testing-docs.md`
+- `trust-actor-owns-trust-decisions` — R4 P1 — [Architecture / Security] — `tasks/archive/trust-actor-owns-trust-decisions.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection
+- `unify-approval-decision` — R4 P1 — [Architecture / Security] — `tasks/archive/unify-approval-decision.md` | depends: unify-permission-gate
+- `unify-provider-modules` — R4 P1 — [Architecture / Actors] — `tasks/archive/unify-provider-modules.md`
+- `arch-review-2026-06` — R4 P2 — [Architecture / Actors] — `tasks/archive/arch-review-2026-06.md`
+- `centralize-error-type` — R4 P2 — [Core / State] — `tasks/archive/centralize-error-type.md`
+- `collapse-effect-payload-indirection` — R4 P2 — [Architecture / Actors] — `tasks/archive/collapse-effect-payload-indirection.md`
+- `collapse-event-aliases` — R4 P2 — [Core / State] — `tasks/archive/collapse-event-aliases.md`
+- `collapse-event-variants-subdir` — R4 P2 — [Core / State] — `tasks/archive/collapse-event-variants-subdir.md`
+- `consolidate-config-modules-into-dir` — R4 P2 — [Configuration] — `tasks/archive/consolidate-config-modules-into-dir.md` | depends: consolidate-login-flow-handlers, split-runie-core-into-domain-and-io-crates
+- `consolidate-mark-dirty-calls` — R4 P2 — [Core / State] — `tasks/archive/consolidate-mark-dirty-calls.md`
+- `consolidate-slash-command-handlers` — R4 P2 — [Input / Commands] — `tasks/archive/consolidate-slash-command-handlers.md`
+- `consolidate-tiny-binary-crates` — R4 P2 — [Architecture / Actors] — `tasks/archive/consolidate-tiny-binary-crates.md`
+- `consolidate-update-dialog-files` — R4 P2 — [Architecture / Refactoring] — `tasks/archive/consolidate-update-dialog-files.md` | depends: rename-update-dialog-panel
+- `dedupe-config-actor-mutations` — R4 P2 — [Architecture / Actors] — `tasks/archive/dedupe-config-actor-mutations.md` | depends: actor-owned-state-ssot, event-taxonomy-for-actor-state-sync, app-state-read-only-projection | blocks: config-ssot-via-configactor
+- `dedupe-fresh-state-test-helper` — R4 P2 — [Architecture / Testing] — `tasks/archive/dedupe-fresh-state-test-helper.md`
+- `dedupe-git-status-formatter` — R4 P2 — [Tools] — `tasks/archive/dedupe-git-status-formatter.md` | depends: replace-git2-with-cli
+- `dedupe-scoped-model-toggle` — R4 P2 — [Core / State] — `tasks/archive/dedupe-scoped-model-toggle.md`
+- `dedupe-turn-complete-last-calls` — R4 P2 — [Core / State] — `tasks/archive/dedupe-turn-complete-last-calls.md`
+- `dedupe-update-input-history` — R4 P2 — [Input / Commands] — `tasks/archive/dedupe-update-input-history.md`
+- `dedupe-yolo-sink-setup` — R4 P2 — [Architecture / Actors] — `tasks/archive/dedupe-yolo-sink-setup.md`
+- `delete-provider-message-enum` — R4 P2 — [Core / State] — `tasks/archive/delete-provider-message-enum.md`
+- `delete-runie-core-utils` — R4 P2 — [Core / State] — `tasks/archive/delete-runie-core-utils.md`
+- `derive-confirmation-from-permissions` — R4 P2 — [Architecture / Security] — `tasks/archive/derive-confirmation-from-permissions.md` | depends: unify-permission-gate
+- `drop-event-aliases` — R4 P2 — [Architecture / Actors] — `tasks/archive/drop-event-aliases.md`
+- `drop-event-bus-replay-buffer` — R4 P2 — [Architecture / Actors] — `tasks/archive/drop-event-bus-replay-buffer.md` | blocks: drop-small-stdlib-replaceable-deps
+- `drop-small-stdlib-replaceable-deps` — R4 P2 — [Configuration] — `tasks/archive/drop-small-stdlib-replaceable-deps.md` | depends: drop-event-bus-replay-buffer
+- `drop-thiserror-and-async-trait-deps` — R4 P2 — [Configuration] — `tasks/archive/drop-thiserror-and-async-trait-deps.md`
+- `flatten-update-login-flow-tests-dir` — R4 P2 — [Configuration] — `tasks/archive/flatten-update-login-flow-tests-dir.md` | depends: consolidate-dual-path-modules
+- `fold-protocol-into-core` — R4 P2 — [Architecture / Actors] — `tasks/archive/fold-protocol-into-core.md`
+- `fold-runie-engine-into-agent` — R4 P2 — [Architecture / Actors] — `tasks/archive/fold-runie-engine-into-agent.md`
+- `fold-state-into-model-state` — R4 P2 — [Core / State] — `tasks/archive/fold-state-into-model-state.md`
+- `gate-or-move-single-consumer-core-modules` — R4 P2 — [Configuration] — `tasks/archive/gate-or-move-single-consumer-core-modules.md` | depends: split-runie-core-into-domain-and-io-crates
+- `generate-config-schema-from-code` — R4 P2 — [Configuration] — `tasks/archive/generate-config-schema-from-code.md`
+- `generate-ui-elements-from-model` — R4 P2 — [TUI / Rendering] — `tasks/archive/generate-ui-elements-from-model.md` | depends: rename-core-ui-to-view
+- `inline-or-document-core-ui-shim` — R4 P2 — [Configuration] — `tasks/archive/inline-or-document-core-ui-shim.md`
+- `inline-tui-ipc-reexport` — R4 P2 — [Configuration] — `tasks/archive/inline-tui-ipc-reexport.md`
+- `merge-diff-modules` — R4 P2 — [TUI / Rendering] — `tasks/archive/merge-diff-modules.md`
+- `merge-tool-status-state` — R4 P2 — [Core / State] — `tasks/archive/merge-tool-status-state.md`
+- `reconsider-clipboard-image-deps` — R4 P2 — [Configuration] — `tasks/archive/reconsider-clipboard-image-deps.md`
+- `reconsider-notify-config-watcher` — R4 P2 — [Configuration] — `tasks/archive/reconsider-notify-config-watcher.md`
+- `reconsider-redb-session-store` — R4 P2 — [Sessions] — `tasks/archive/reconsider-redb-session-store.md`
+- `reconsider-schemars-jsonschema` — R4 P2 — [Configuration] — `tasks/archive/reconsider-schemars-jsonschema.md`
+- `reconsider-tiktoken-rs` — R4 P2 — [Configuration] — `tasks/archive/reconsider-tiktoken-rs.md`
+- `relocate-loose-tests-files` — R4 P2 — [Configuration] — `tasks/archive/relocate-loose-tests-files.md` | depends: consolidate-dual-path-modules
+- `relocate-stray-tool-parser-tests` — R4 P2 — [Configuration] — `tasks/archive/relocate-stray-tool-parser-tests.md` | depends: consolidate-dual-path-modules
+- `rename-model-snapshot-to-compaction` — R4 P2 — [Core / State] — `tasks/archive/rename-model-snapshot-to-compaction.md`
+- `rename-test-submission-id` — R4 P2 — [Architecture / Testing] — `tasks/archive/rename-test-submission-id.md`
+- `replace-single-use-deps-with-stdlib` — R4 P2 — [Configuration] — `tasks/archive/replace-single-use-deps-with-stdlib.md`
+- `shrink-tasks-planning-debt` — R4 P2 — [Configuration] — `tasks/archive/shrink-tasks-planning-debt.md`
+- `simplify-actor-trait` — R4 P2 — [Architecture / Actors] — `tasks/archive/simplify-actor-trait.md` | depends: unify-persistence-actors
+- `split-files-at-limit-round-2` — R4 P2 — [Architecture / Refactoring] — `tasks/archive/split-files-at-limit-round-2.md`
+- `standardize-test-layout-inline` — R4 P2 — [Configuration] — `tasks/archive/standardize-test-layout-inline.md` | depends: relocate-loose-tests-files
+- `sweep-allow-suppressions` — R4 P2 — [Core / State] — `tasks/archive/sweep-allow-suppressions.md`
+- `unify-build-system-prompt` — R4 P2 — [Core / State] — `tasks/archive/unify-build-system-prompt.md`
+- `unify-duplicate-module-names-core-tui` — R4 P2 — [Configuration] — `tasks/archive/unify-duplicate-module-names-core-tui.md` | depends: split-runie-core-into-domain-and-io-crates
+- `audit-borrow-workarounds` — R4 P3 — [Core / State] — `tasks/archive/audit-borrow-workarounds.md` | depends: consolidate-login-flow-handlers
+- `consolidate-login-logout-tests` — R4 P3 — [Architecture / Testing] — `tasks/archive/consolidate-login-logout-tests.md` | depends: consolidate-login-flow-handlers
+- `dedupe-messages-changed-ensure-fresh` — R4 P3 — [Architecture / Testing] — `tasks/archive/dedupe-messages-changed-ensure-fresh.md`
+- `extract-appstate-helpers` — R4 P3 — [Core / State] — `tasks/archive/extract-appstate-helpers.md`
+- `fold-testing-into-agent-tests` — R4 P3 — [Configuration] — `tasks/archive/fold-testing-into-agent-tests.md`
+- `remove-empty-match-arms` — R4 P3 — [Core / State] — `tasks/archive/remove-empty-match-arms.md`
+- `rename-update-dialog-panel` — R4 P3 — [Configuration] — `tasks/archive/rename-update-dialog-panel.md`
+- `single-source-dev-commands` — R4 P3 — [Configuration] — `tasks/archive/single-source-dev-commands.md`
+- `sweep-to-string-allocs` — R4 P3 — [Core / State] — `tasks/archive/sweep-to-string-allocs.md`
+- `theme-color-accessor-macro` — R4 P3 — [TUI / Rendering] — `tasks/archive/theme-color-accessor-macro.md`
+- `tighten-build-lint-complexity-heuristic` — R4 P3 — [Architecture / Refactoring] — `tasks/archive/tighten-build-lint-complexity-heuristic.md`
+- `unify-markdown-rendering` — R4 P3 — [TUI / Rendering] — `tasks/archive/unify-markdown-rendering.md`
+- `use-workspace-deps-in-runie-testing` — R4 P3 — [Configuration] — `tasks/archive/use-workspace-deps-in-runie-testing.md`
+- `r5-extract-tool-stream` — R5 P0 — [Tools] — `tasks/archive/r5-extract-tool-stream.md` | blocks: r5-provider-protocol-trait, r5-partial-json-repair
+- `r5-provider-protocol-trait` — R5 P0 — [Architecture / Actors] — `tasks/archive/r5-provider-protocol-trait.md` | depends: r5-extract-tool-stream
+- `r5-conversation-sanitize-pipeline` — R5 P1 — [Core / State] — `tasks/archive/r5-conversation-sanitize-pipeline.md`
+- `r5-markdown-healing-stream` — R5 P1 — [TUI / Rendering] — `tasks/archive/r5-markdown-healing-stream.md`
+- `r5-partial-json-repair` — R5 P1 — [Tools] — `tasks/archive/r5-partial-json-repair.md` | depends: r5-extract-tool-stream
+- `r5-populate-parts-streaming` — R5 P1 — [Core / State] — `tasks/archive/r5-populate-parts-streaming.md` | blocks: r5-per-channel-decoders, r5-parts-canonical-migration
+- `r5-think-filter` — R5 P1 — [Core / State] — `tasks/archive/r5-think-filter.md`
+- `r5-paced-text-rendering` — R5 P2 — [TUI / Rendering] — `tasks/archive/r5-paced-text-rendering.md`
+- `r5-parts-canonical-migration` — R5 P2 — [Core / State] — `tasks/archive/r5-parts-canonical-migration.md` | depends: r5-populate-parts-streaming
+- `r5-per-channel-decoders` — R5 P2 — [Architecture / Actors] — `tasks/archive/r5-per-channel-decoders.md` | depends: r5-populate-parts-streaming

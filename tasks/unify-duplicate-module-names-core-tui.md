@@ -5,7 +5,7 @@
 **Category**: Configuration
 **Priority**: P2
 
-**Depends on**: split-runie-core-into-domain-and-io-crates
+**Depends on**: none
 **Blocks**: none
 
 ## Description
