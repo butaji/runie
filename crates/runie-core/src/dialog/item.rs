@@ -101,15 +101,20 @@ impl ItemAction {
             Self::Push(id) => format!("Go to {}", id),
             Self::Pop => "Back".into(),
             Self::Close => "Close".into(),
-            Self::Emit(e) => e.default_label(),
+            Self::Emit(e) => EventLabel::default_label(e),
             Self::Toggle(_) => "Toggle".into(),
             Self::Cycle(_) => "Change".into(),
         }
     }
 }
 
-impl Event {
-    pub(crate) fn default_label(&self) -> String {
+/// Trait for getting a human-readable label for an event.
+pub trait EventLabel {
+    fn default_label(&self) -> String;
+}
+
+impl EventLabel for Event {
+    fn default_label(&self) -> String {
         match self {
             crate::Event::Quit => "Quit".into(),
             crate::Event::Submit => "Submit".into(),

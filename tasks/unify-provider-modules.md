@@ -6,7 +6,7 @@
 **Priority**: P1
 
 **Depends on**: event-taxonomy-for-actor-state-sync
-**Blocks**: move-provider-catalog-to-provider-crate, consolidate-settings-providers-dialog
+**Blocks**: move-provider-catalog-to-provider-crate, consolidate-settings-providers-dialog, deduplicate-provider-registry-data
 
 ## Description
 

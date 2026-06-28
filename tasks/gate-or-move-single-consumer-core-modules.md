@@ -5,12 +5,12 @@
 **Category**: Configuration
 **Priority**: P2
 
-**Depends on**: split-runie-core-into-domain-and-io-crates
+**Depends on**: split-runie-core-into-domain-and-io-crates, repair-and-canonicalize-dialog-module
 **Blocks**: none
 
 ## Description
 
-`runie-core` carries modules that only one downstream consumer (always the TUI) actually uses. Every binary pays to compile them:
+`runie-core` carries modules that only one downstream consumer (always the TUI) actually uses. The immediate prerequisite is `repair-and-canonicalize-dialog-module`, which fixes the broken build caused by `crate::dialog` references and deletes the duplicate `crates/runie-tui/src/dialog/` subtree. Every binary pays to compile them:
 
 | Module | LOC | Only consumer | Status |
 |--------|-----|---------------|--------|

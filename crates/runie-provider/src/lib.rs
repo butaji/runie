@@ -8,7 +8,6 @@ pub mod mock;
 pub mod openai;
 pub mod protocol;
 pub mod retry;
-pub mod rig_adapter;
 
 // ---------------------------------------------------------------------------
 // Re-exports from runie-core

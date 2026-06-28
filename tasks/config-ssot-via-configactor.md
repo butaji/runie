@@ -6,7 +6,7 @@
 **Priority**: P0
 
 **Depends on**: event-taxonomy-for-actor-state-sync, app-state-read-only-projection
-**Blocks**: none
+**Blocks**: route-cli-config-through-configactor
 
 ## Description
 
@@ -34,6 +34,7 @@ The following are acknowledged violations but deferred as lower priority:
 - `apply_trust_project`, `apply_untrust_project` — same as above, trust-derived state
 - `handle_toggle_vim_mode` in system.rs — duplicate of toggles.rs handler (toggles.rs version is the active one)
 - `handle_theme` in system.rs — already calls ConfigActor; direct mutation is for immediate UI feedback
+- `runie-cli/src/inspect.rs` and `runie-cli/src/mcp.rs` still read/write `Config` directly instead of using `ConfigActor`; this is now tracked as `route-cli-config-through-configactor`.
 
 ## Acceptance criteria
 

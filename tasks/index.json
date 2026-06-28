@@ -1,5 +1,10 @@
 [
   {
+    "file": "TEMPLATE.md",
+    "title": "Task Title",
+    "status": "todo"
+  },
+  {
     "file": "actor-lifecycle-and-handle-registry.md",
     "title": "Actor Lifecycle and Handle Registry",
     "status": "done"
@@ -40,6 +45,21 @@
     "status": "done"
   },
   {
+    "file": "centralize-runtime-bootstrap-in-leaderactor.md",
+    "title": "Centralize runtime bootstrap in `LeaderActor`",
+    "status": "todo"
+  },
+  {
+    "file": "cleanup-small-duplicates-and-dead-code.md",
+    "title": "Clean up small duplicates and dead code",
+    "status": "todo"
+  },
+  {
+    "file": "collapse-event-intent-kind-taxonomies.md",
+    "title": "Collapse `Event`/`Intent`/`EventKind` taxonomies",
+    "status": "todo"
+  },
+  {
     "file": "collapse-headless-binaries-into-one-cli.md",
     "title": "Collapse three headless binaries into one CLI crate",
     "status": "done"
@@ -53,6 +73,11 @@
     "file": "config-ssot-via-configactor.md",
     "title": "Config SSOT via ConfigActor",
     "status": "done"
+  },
+  {
+    "file": "consolidate-actor-runtime-on-ractor.md",
+    "title": "Consolidate actor runtime on `ractor`",
+    "status": "todo"
   },
   {
     "file": "consolidate-config-modules-into-dir.md",
@@ -105,6 +130,11 @@
     "status": "done"
   },
   {
+    "file": "deduplicate-provider-registry-data.md",
+    "title": "Deduplicate provider registry data",
+    "status": "todo"
+  },
+  {
     "file": "delete-async-io-bridge.md",
     "title": "Delete async_io.rs bridge helpers",
     "status": "done"
@@ -113,6 +143,11 @@
     "file": "delete-config-reload-shim.md",
     "title": "Delete Config Reload Shim",
     "status": "done"
+  },
+  {
+    "file": "delete-empty-runie-domain-and-runie-io-crates.md",
+    "title": "Delete empty `runie-domain` and `runie-io` facade crates",
+    "status": "todo"
   },
   {
     "file": "drop-event-bus-replay-buffer.md",
@@ -182,8 +217,7 @@
   {
     "file": "gate-or-move-single-consumer-core-modules.md",
     "title": "Gate or move single-consumer core modules",
-    "status": "done",
-    "note": "architectural goal achieved: runie-cli no longer pays for TUI compilation. themes/ipc/dialog copies done; remaining modules deferred due to circular deps"
+    "status": "done"
   },
   {
     "file": "generate-config-schema-from-code.md",
@@ -226,6 +260,11 @@
     "status": "done"
   },
   {
+    "file": "narrow-runie-core-public-api.md",
+    "title": "Narrow `runie-core` public API",
+    "status": "todo"
+  },
+  {
     "file": "notification-actor-owns-transient-messages.md",
     "title": "NotificationActor owns transient messages",
     "status": "done"
@@ -233,6 +272,11 @@
   {
     "file": "permission-actor-owns-approvals.md",
     "title": "PermissionActor owns approval registry and request UI",
+    "status": "done"
+  },
+  {
+    "file": "prune-dead-provider-code-and-rig-core-dependency.md",
+    "title": "Prune dead provider code and the `rig-core` dependency",
     "status": "done"
   },
   {
@@ -281,6 +325,11 @@
     "status": "done"
   },
   {
+    "file": "remove-dead-ipc-event-abstractions.md",
+    "title": "Remove dead IPC/event-shaping abstractions",
+    "status": "todo"
+  },
+  {
     "file": "remove-direct-appstate-mutations.md",
     "title": "Remove direct AppState mutations",
     "status": "done"
@@ -296,6 +345,11 @@
     "status": "done"
   },
   {
+    "file": "repair-and-canonicalize-dialog-module.md",
+    "title": "Repair and canonicalize the dialog module",
+    "status": "todo"
+  },
+  {
     "file": "replace-actor-runtime-with-ractor.md",
     "title": "Replace custom actor runtime with `ractor`",
     "status": "done"
@@ -309,6 +363,11 @@
     "file": "replace-git2-with-cli.md",
     "title": "Replace git2 crate with git CLI via IoActor",
     "status": "done"
+  },
+  {
+    "file": "replace-legacy-tool-parsers-with-thin-shim.md",
+    "title": "Replace legacy tool parsers with a thin shim",
+    "status": "todo"
   },
   {
     "file": "replace-markdown-renderer-with-tui-markdown.md",
@@ -329,6 +388,11 @@
     "file": "replace-sse-framing-with-reqwest-eventsource.md",
     "title": "Replace custom SSE framing with `reqwest-eventsource`",
     "status": "done"
+  },
+  {
+    "file": "route-cli-config-through-configactor.md",
+    "title": "Route CLI config operations through `ConfigActor`",
+    "status": "todo"
   },
   {
     "file": "runie-mcp-server-management-cli.md",
@@ -393,8 +457,7 @@
   {
     "file": "unify-duplicate-module-names-core-tui.md",
     "title": "Unify duplicate module names across core and TUI",
-    "status": "done",
-    "note": "themes done (moved to runie-tui), markdown done (renamed)"
+    "status": "partial"
   },
   {
     "file": "unify-persistence-actors.md",

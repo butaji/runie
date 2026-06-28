@@ -6,7 +6,7 @@
 **Priority**: P1
 
 **Depends on**: actor-owned-state-ssot
-**Blocks**: test-actor-harness, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results, remove-direct-appstate-mutations
+**Blocks**: test-actor-harness, env-actor-owns-git-cwd, fff-indexer-owns-file-picker-results, remove-direct-appstate-mutations, consolidate-actor-runtime-on-ractor, centralize-runtime-bootstrap-in-leaderactor
 
 ## Description
 

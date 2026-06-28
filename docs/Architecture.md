@@ -389,6 +389,38 @@ Rules:
 
 Tests are exempt from function-length and complexity checks so they can stay comprehensive.
 
+## Current cleanup roadmap
+
+The 2026-06-28 architecture and code review found that the implementation has drifted from the documented three-layer model. The highest-priority work is tracked in `tasks/` and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
+
+### Immediate blockers (P0)
+
+1. **Repair the dialog module** (`tasks/repair-and-canonicalize-dialog-module.md`) — `cargo check --workspace` is failing because `crate::dialog` is no longer declared in `runie-core/src/lib.rs`. The duplicate `runie-tui/src/dialog/` subtree must be removed and the TUI must import dialog types from `runie_core`.
+2. **Delete empty facade crates** (`tasks/delete-empty-runie-domain-and-runie-io-crates.md`) — `runie-domain` and `runie-io` are currently empty re-export shells.
+3. **Collapse the event taxonomy** (`tasks/collapse-event-intent-kind-taxonomies.md`) — `Event`/`Intent`/`EventKind` are near-mirrors maintained by hand; unify them once the actor runtime is stable.
+
+### High-impact simplification (P1)
+
+4. **Prune dead provider code** (`tasks/prune-dead-provider-code-and-rig-core-dependency.md`) — remove the unused `catalog/`, `registry/`, and `rig_adapter.rs` modules and drop the `rig-core` dependency.
+5. **Consolidate the actor runtime on `ractor`** (`tasks/consolidate-actor-runtime-on-ractor.md`) — delete the custom `Actor` trait and actors that are only spawned in tests.
+6. **Centralize runtime bootstrap** (`tasks/centralize-runtime-bootstrap-in-leaderactor.md`) — route the TUI and CLI through `Leader::start` instead of manual spawn code.
+
+### Medium-risk consolidation (P2)
+
+7. **Deduplicate provider registry data** (`tasks/deduplicate-provider-registry-data.md`).
+8. **Replace legacy tool parsers with a thin shim** (`tasks/replace-legacy-tool-parsers-with-thin-shim.md`).
+9. **Narrow the `runie-core` public API** (`tasks/narrow-runie-core-public-api.md`).
+10. **Route CLI config through `ConfigActor`** (`tasks/route-cli-config-through-configactor.md`).
+11. **Remove dead IPC/event-shaping abstractions** (`tasks/remove-dead-ipc-event-abstractions.md`).
+
+### Background sweep (P3)
+
+12. **Clean up small duplicates and dead code** (`tasks/cleanup-small-duplicates-and-dead-code.md`) — `DynProvider`, duplicate `now()`, skill hooks, built-in tool registry, TUI test helpers, `#[allow(dead_code)]` items, and manual derives.
+
+### Execution order
+
+Start with the P0 items (the build cannot be verified until the dialog module is repaired). P1 actor-runtime work should land before the event-taxonomy consolidation because routing tables depend on it. P2 and P3 tasks can mostly run in parallel once the build is green.
+
 ## Testing philosophy
 
 See [AGENTS.md §Testing Strategy](../AGENTS.md#testing-strategy-4-layers) for the full 4-layer test taxonomy.
