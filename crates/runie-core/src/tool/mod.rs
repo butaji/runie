@@ -15,6 +15,7 @@ mod context;
 mod format;
 pub mod parse;
 pub mod schema;
+pub mod shim;
 mod state;
 pub mod types;
 #[cfg(test)]

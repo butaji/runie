@@ -37,6 +37,7 @@ toml.workspace = true
 tokio.workspace = true
 futures.workspace = true
 pulldown-cmark.workspace = true
+quick-xml.workspace = true
 unicode-width.workspace = true
 textwrap.workspace = true
 notify = "7.0"

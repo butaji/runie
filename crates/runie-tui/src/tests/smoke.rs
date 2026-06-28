@@ -38,8 +38,7 @@ fn smoke_no_module_name_collision() {
     // diff: core=domain patch logic, tui=gutter render (different files)
     // ui:   core=Element/Feed view-model, tui=layout/messages (different files)
     // message: core=ChatMessage types, tui=message/ render (different dirs)
-    // theme: core=theme name constants, tui=theme/ full system (different files)
-    let ignored = ["diff", "ui", "message", "theme"];
+    let ignored = ["diff", "ui", "message"];
     let real_collisions: Vec<_> = collisions
         .into_iter()
         .filter(|n| !ignored.contains(n))

@@ -73,7 +73,7 @@ pub mod snapshot;
 pub mod streaming_buffer;
 pub mod subagents;
 pub mod telemetry;
-pub mod themes;
+pub mod theme_tokens;
 
 pub mod tokens;
 pub mod tool;

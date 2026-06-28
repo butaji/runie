@@ -46,6 +46,7 @@ tempfile = "3"
 async-trait = "0.1"
 futures-util = "0.3"
 ractor = "0.9"
+quick-xml = "0.37"
 runie-core = { path = "crates/runie-core" }
 runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }

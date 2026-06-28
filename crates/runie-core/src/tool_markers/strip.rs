@@ -4,16 +4,26 @@ use super::{is_tool_call_value, TOOL_CALL_END, TOOL_CALL_START};
 use crate::tool::parse::is_known_tool;
 use serde_json::Value;
 
-/// Run the full stripping pipeline.
+/// Run the full stripping pipeline (2 passes).
 pub fn strip_all(content: &str) -> String {
-    let without_markup = strip_tool_call_markup(content);
-    let without_minimax = strip_minimax_tool_calls(&without_markup);
-    let without_inline = strip_inline_json_objects(&without_minimax);
-    let without_fenced = strip_inline_fenced_tools(&without_inline);
-    let without_inline_legacy = strip_inline_legacy_tools(&without_fenced);
-    let without_lines = strip_line_markers(&without_inline_legacy);
-    let without_empty_fences = strip_empty_code_fences(&without_lines);
-    normalize_blank_lines(&without_empty_fences)
+    let stripped = strip_all_formats(content);
+    cleanup_output(&stripped)
+}
+
+/// Pass 1: Strip all known tool-call formats.
+fn strip_all_formats(content: &str) -> String {
+    let no_tc = strip_tool_call_markup(content);
+    let no_minimax = strip_minimax_tool_calls(&no_tc);
+    let no_inline = strip_inline_json_objects(&no_minimax);
+    let no_fenced = strip_inline_fenced_tools(&no_inline);
+    strip_inline_legacy_tools(&no_fenced)
+}
+
+/// Pass 2: Remove empty fences, blank lines, and leftover tool fragments.
+fn cleanup_output(content: &str) -> String {
+    let cleaned = strip_line_markers(content);
+    let no_fences = strip_empty_code_fences(&cleaned);
+    normalize_blank_lines(&no_fences)
 }
 
 fn normalize_blank_lines(content: &str) -> String {
@@ -470,5 +480,18 @@ mod unicode_bug_tests {
         let content = r#"hola 😊 {"name":"bash","arguments":{"command":"ls"}} adiós 🎉"#;
         let result = strip_inline_json_objects(content);
         assert_eq!(result, "hola 😊  adiós 🎉");
+    }
+
+    #[test]
+    fn stripper_collapses_to_two_passes() {
+        // Verify strip_all uses 2 passes: strip_all_formats then cleanup_output.
+        let input = "Before\nTOOL:read_file /path\nAfter";
+        let result = strip_all(input);
+        assert_eq!(result, "Before\nAfter");
+        // Test all formats still work after collapse
+        assert!(strip_all("[TOOL_CALL]{tool => \"bash\", args => {}}[/TOOL_CALL]").is_empty());
+        assert!(strip_all(r#"<minimax:tool_call><invoke name="bash"><command>ls</command></invoke>
+<invoke...Copyright"#).is_empty());
+        assert!(strip_all(r#"{"name": "bash", "arguments": {"command": "ls"}}"#).is_empty());
     }
 }

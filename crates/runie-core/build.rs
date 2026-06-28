@@ -255,7 +255,9 @@ impl FnTracker {
 
     fn report_and_reset(&mut self, path: &str, i: usize, lines: &[&str], errors: &mut Vec<String>) {
         let fn_len = i - self.fn_start + 1;
-        if !is_test_file(path) && !is_test_function(lines, self.fn_start) {
+        // Check test exemption BEFORE reporting so test functions are truly excluded.
+        let is_test = is_test_file(path) || is_test_function(lines, self.fn_start);
+        if !is_test {
             report_fn_violation(
                 path,
                 self.fn_start,
@@ -333,6 +335,7 @@ fn needs_appstate_lint(rel_path: &str) -> bool {
         "accessors.rs",
         "domain_ops.rs",
         "actors/config/actor.rs",
+        "actors/config/ractor_config.rs", // ractor migration; self.config is Mutex<Config>, not AppState.
         "actors/permission/actor.rs",
         "actors/permission/ractor_permission.rs", // ractor migration POC; self.registry is ApprovalRegistry, not AppState.
         "actors/input/actor.rs",

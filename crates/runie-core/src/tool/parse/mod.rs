@@ -1,122 +1,16 @@
 //! Text-based fallback parser for tool calls.
 //!
-//! This module provides parsing for tool calls embedded in plain-text LLM output.
-//! It handles inline JSON, MiniMax XML, legacy `TOOL:` format, and `[TOOL_CALL]`
-//! markup. This is a fallback for providers that don't emit structured
-//! `ProviderEvent::ToolCall*` events.
+//! Routes through the thin shim in [`super::shim`] which uses `quick-xml`
+//! for MiniMax XML parsing and a single-pass JSON detector.
 
-mod legacy;
-mod json;
-mod markup;
-mod minimax;
-
-pub use legacy::{
-    build_legacy_args, parse_legacy_tool, parse_legacy_tools_in_line,
+pub use super::shim::{
+    assign_tool_call_ids, build_legacy_args, has_tool_calls, is_known_tool,
+    is_tool_call_value, is_tool_call_value_check, parse_inline_json_tools,
+    parse_legacy_tool, parse_legacy_tools_in_line, parse_markup_tool,
+    parse_minimax_tool_calls, parse_tool_calls, parse_tool_calls_fallible,
+    arrow_to_json, extract_tool_call_payload, OPEN_M2, OPEN_M3,
 };
-pub use json::{parse_inline_json_tools, parse_json_object_at};
-pub use markup::{arrow_to_json, extract_tool_call_payload, parse_markup_tool};
-pub use minimax::{
-    is_known_tool, parse_minimax_invokes, parse_minimax_parameters, parse_minimax_tool_calls,
-};
-
 pub use super::types::{ParsedToolCall, ToolParseError};
-
-/// Parse tool calls from LLM text output.
-pub fn parse_tool_calls(text: &str) -> Vec<ParsedToolCall> {
-    parse_tool_calls_fallible(text)
-        .into_iter()
-        .filter_map(|r| r.ok())
-        .collect()
-}
-
-/// Parse tool calls, returning both successes and errors.
-pub fn parse_tool_calls_fallible(text: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
-    let minimax = parse_minimax_tool_calls(text);
-    if !minimax.is_empty() {
-        return minimax;
-    }
-    let mut results = Vec::new();
-    for line in text.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        results.extend(parse_line_strategies(trimmed, line));
-    }
-    results
-}
-
-/// Parse a trimmed line with all strategies.
-fn parse_line_strategies(
-    trimmed: &str,
-    original_line: &str,
-) -> Vec<Result<ParsedToolCall, ToolParseError>> {
-    let mut results = Vec::new();
-    results.extend(parse_legacy_tools_in_line(trimmed));
-    if trimmed.contains('{') {
-        let inline = parse_inline_json_tools(trimmed);
-        if !inline.is_empty() {
-            results.extend(inline);
-        } else if trimmed.starts_with('{') {
-            results.push(Err(ToolParseError {
-                raw: original_line.to_owned(),
-                reason: "invalid JSON tool call or unknown tool name".into(),
-            }));
-        }
-    }
-    if trimmed.contains("[TOOL_CALL]") {
-        match parse_markup_tool(trimmed) {
-            Some(t) => results.push(Ok(t)),
-            None => results.push(Err(ToolParseError {
-                raw: original_line.to_owned(),
-                reason: "invalid [TOOL_CALL] markup or unknown tool name".into(),
-            })),
-        }
-    }
-    results
-}
-
-/// Check if text contains any tool call markers.
-pub fn has_tool_calls(text: &str) -> bool {
-    if text.contains("[TOOL_CALL]") && text.contains("[/TOOL_CALL]") {
-        return true;
-    }
-    if text.contains(minimax::OPEN_M2) || text.contains(minimax::OPEN_M3) {
-        return true;
-    }
-    text.lines().any(has_tool_calls_in_line)
-}
-
-fn has_tool_calls_in_line(line: &str) -> bool {
-    let trimmed = line.trim();
-    if trimmed.starts_with("TOOL:") {
-        return true;
-    }
-    if trimmed.starts_with('{') && json::is_tool_call_value_check(trimmed) {
-        return true;
-    }
-    line.match_indices("TOOL:")
-        .any(|(idx, _)| parse_legacy_tool(&line[idx + 5..]).is_some())
-}
-
-/// Check if a JSON value is a tool call.
-pub fn is_tool_call_value(value: &serde_json::Value) -> bool {
-    value.get("name").is_some()
-        && value.get("arguments").is_some()
-        && value
-            .get("name")
-            .and_then(|v| v.as_str())
-            .is_some_and(minimax::is_known_tool)
-}
-
-/// Assign synthetic ids to parsed tool calls.
-pub fn assign_tool_call_ids(tools: &mut [ParsedToolCall]) {
-    for tool in tools.iter_mut() {
-        if tool.id.is_none() {
-            tool.id = Some(format!("call_{}", 0));
-        }
-    }
-}
 
 /// Build an assistant message from parsed tool calls.
 pub fn build_assistant_message(

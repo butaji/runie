@@ -1,7 +1,7 @@
 use crate::semantic_tokens::DEFAULT_THEME_TOML;
 
 // Canonical source for built-in theme names; also used by runie-core for the CLI.
-pub use runie_core::themes::BUILTIN_THEMES;
+pub use runie_core::theme_tokens::BUILTIN_THEMES;
 
 /// List all available builtin theme names.
 pub fn list_builtin_themes() -> Vec<&'static str> {

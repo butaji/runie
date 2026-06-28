@@ -113,7 +113,7 @@ pub fn open_theme_selector(state: &mut AppState) {
     let mut panel = Panel::new("theme", "Choose Theme")
         .header("available themes")
         .keep_open();
-    for theme in crate::themes::BUILTIN_THEMES {
+    for theme in crate::theme_tokens::BUILTIN_THEMES {
         panel = panel.item(
             *theme,
             ItemAction::Emit(crate::Event::SwitchTheme {

@@ -287,7 +287,7 @@ fn model_options(state: &AppState, provider: &str) -> Vec<String> {
 }
 
 fn theme_options() -> Vec<String> {
-    crate::themes::BUILTIN_THEMES
+    crate::theme_tokens::BUILTIN_THEMES
         .iter()
         .map(|t| t.to_string())
         .collect()
