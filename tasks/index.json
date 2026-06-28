@@ -392,7 +392,8 @@
   {
     "file": "unify-duplicate-module-names-core-tui.md",
     "title": "Unify duplicate module names across core and TUI",
-    "status": "todo"
+    "status": "partial",
+    "note": "markdown collision resolved; themes blocked by gate-or-move"
   },
   {
     "file": "unify-persistence-actors.md",

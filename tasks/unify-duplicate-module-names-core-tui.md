@@ -1,6 +1,6 @@
 # Unify duplicate module names across core and TUI
 
-**Status**: todo
+**Status**: partial (markdown done; themes blocked by gate-or-move task)
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2
@@ -28,9 +28,9 @@ For `theme`: `runie-core/src/themes.rs` (43 LOC) is small — audit whether it's
 
 ## Acceptance Criteria
 
-- [ ] No module name exists in both `runie-domain` and `runie-tui` (after the crate split).
-- [ ] `runie-tui/src/markdown.rs` renamed to `markdown_render.rs` (or moved under `render/`); domain `markdown/` retains the pure name.
-- [ ] `runie-core/src/themes.rs` audited: pure token defs stay in domain as `theme_tokens.rs` (or move to TUI `theme/`); decide and document.
+- [x] `runie-tui/src/markdown.rs` renamed to `markdown_render.rs` (or moved under `render/`); domain `markdown/` retains the pure name. ✅
+- [ ] No module name exists in both `runie-domain` and `runie-tui` (after the crate split). — Blocked on gate-or-move task
+- [ ] `runie-core/src/themes.rs` audited: pure token defs stay in domain as `theme_tokens.rs` (or move to TUI `theme/`); decide and document. — Blocked on gate-or-move task
 - [ ] `rg "^pub mod (diff|ui|ipc|markdown|theme)" crates/runie-domain/src/lib.rs crates/runie-tui/src/lib.rs` shows no name collision.
 - [ ] All callers of renamed modules updated.
 - [ ] `cargo test --workspace` succeeds.
@@ -52,12 +52,10 @@ For `theme`: `runie-core/src/themes.rs` (43 LOC) is small — audit whether it's
 ### Layer 4 — Smoke / Crash
 - [ ] `smoke_no_module_name_collision` — a guardrail test scans both crates' `lib.rs` `pub mod` declarations and fails on any shared name.
 
-## Files touched
+## Files touched (markdown done)
 
-- `crates/runie-tui/src/markdown.rs` → `crates/runie-tui/src/markdown_render.rs` (rename + update imports)
-- `crates/runie-core/src/themes.rs` → `crates/runie-tui/src/theme/tokens.rs` (or `crates/runie-domain/src/theme_tokens.rs`)
-- Callers of both modules
-- `crates/runie-domain/src/lib.rs`, `crates/runie-tui/src/lib.rs` (module declarations)
+- `crates/runie-tui/src/markdown.rs` → `crates/runie-tui/src/markdown_render.rs` ✅
+- `crates/runie-tui/src/message/bubble.rs`, `message/mod.rs`, `message/wrap.rs` (updated imports)
 
 ## Notes
 
