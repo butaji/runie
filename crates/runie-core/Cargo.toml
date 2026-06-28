@@ -15,7 +15,6 @@ path = "src/lib.rs"
 
 [features]
 default = []
-mcp = []
 # Enable migration from redb session files (can be disabled to reduce dependencies)
 redb-migration = ["dep:redb"]
 

@@ -52,7 +52,7 @@
   {
     "file": "delete-or-fix-dead-mcp-feature-flag.md",
     "title": "Delete or fix dead `mcp` feature flag",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-or-merge-inspector-tool-pipeline.md",

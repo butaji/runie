@@ -287,6 +287,31 @@ async fn load_async_reads_file() {
 }
 
 #[test]
+fn mcp_feature_state_consistent() {
+    // Verify the mcp module is always compiled (feature flag removed — see
+    // tasks/delete-or-fix-dead-mcp-feature-flag.md). The `mcp = []` feature
+    // in Cargo.toml was empty/dead, so McpSection is unconditionally available.
+    let section = McpSection::default();
+    assert!(section.is_empty());
+
+    let dir = tempfile::tempdir().unwrap();
+    let path = make_test_config(
+        &dir,
+        r#"
+[model_providers.openai]
+type = "openai"
+base_url = "https://api.openai.com"
+api_key = "sk-test"
+"#,
+    );
+    let config = Config::load(Some(&path));
+    // McpSection is always present in Config, no #[cfg(feature)] gating needed.
+    assert!(config.mcp.is_empty());
+    let provider = config.provider_for_model("openai/gpt-4").unwrap();
+    assert_eq!(provider.base_url, "https://api.openai.com");
+}
+
+#[test]
 fn save_nonblocking_writes_file() {
     let _guard = HOME_LOCK.lock().unwrap();
     let dir = tempfile::tempdir().unwrap();

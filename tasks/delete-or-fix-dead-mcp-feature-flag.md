@@ -1,6 +1,6 @@
 # Delete or fix dead `mcp` feature flag
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: Dependencies
 **Priority**: P0
