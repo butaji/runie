@@ -24,10 +24,13 @@ Once every production actor runs on `ractor`, the legacy custom `Actor` trait an
 ## Acceptance Criteria
 
 - [ ] `crates/runie-core/src/actors/trait.rs` is deleted and no production code references its types.
-- [ ] All actor modules listed above are deleted.
+- [ ] Both legacy and ractor implementations of `ViewActor`, `PlanActor`, `TrustActor`, `CompletionActor`, and `UiControlActor` are deleted.
 - [ ] `crates/runie-core/src/actors/mod.rs` exports only ractor-based production actor types.
 - [ ] `crates/runie-core/src/actors/handles.rs` no longer contains fields or helpers for deleted actors.
+- [ ] `Reply` is moved out of `trait.rs` to `actors/ractor_adapter.rs` or a new `actors/reply.rs`, and all callers are updated before `trait.rs` is deleted.
+- [ ] `GenericActorHandle` usage in `SessionActorHandle`, `PersistenceActorHandle`, `SessionStoreActorHandle`, and `TrustActorHandle` is replaced with `ractor::ActorRef` or dedicated mpsc wrappers.
 - [ ] `crates/runie-core/src/testing/actor_harness.rs` is updated to use `ractor` or kept under `#[cfg(test)]` without referencing the deleted trait.
+- [ ] The non-functional `RactorHandle::rpc` in `crates/runie-core/src/actors/ractor_adapter.rs` is either implemented with a message-carrying reply sender or deleted.
 - [ ] `cargo test --workspace` succeeds after the change.
 - [ ] `cargo check --workspace` succeeds with no new warnings.
 
@@ -65,4 +68,5 @@ Once every production actor runs on `ractor`, the legacy custom `Actor` trait an
 - This task is purely mechanical once `migrate-production-actors-to-ractor` is complete. If the build breaks, it means a production actor was missed.
 - `UiControlActor` references `Event::DialogOpened`, `Event::DialogClosed`, etc., which do not exist. It is not compiled today because `ui_control` is not declared in `actors/mod.rs`. Delete the directory rather than fixing it.
 - `Reply` and `GenericActorHandle` are re-exported by `actors/mod.rs` and used by several message modules. Move `Reply` to `actors/ractor_adapter.rs` (or a new `actors/reply.rs`) before deleting `trait.rs`, and migrate callers from `GenericActorHandle` to `ractor::ActorRef`.
+- `crates/runie-core/src/actors/ractor_adapter.rs:123` has a non-functional `rpc` method (creates a oneshot receiver but never sends the reply). Delete it or replace it with a message variant carrying an `RpcReply` sender before this task is complete.
 - Rejected alternative: keeping the custom trait as a thin wrapper. It adds no value and still requires maintenance.

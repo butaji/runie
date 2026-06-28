@@ -5,7 +5,7 @@
 **Category**: Architecture / Refactoring
 **Priority**: P2
 
-**Depends on**: none
+**Depends on**: migrate-production-actors-to-ractor, collapse-actor-handles-to-typed-map
 **Blocks**: none
 
 ## Description
@@ -19,15 +19,18 @@ Current state as of this review:
   - `display_width` — used by `runie-tui` → candidate for `runie-util`.
   - `path` — used by `runie-agent` → candidate for `runie-util`.
   - `sanitize` — used by `runie-agent`, `runie-provider` → candidate for `runie-util`.
-  - `build_lint`, `declarative`, `dry_run`, `edit_preview`, `file_refs`, `fuzzy`, `glob`, `input_history`, `labels`, `notification`, `scoped_model`, `streaming_buffer`, `telemetry` — internal-only or lightly used → candidates for `pub(crate)`.
+  - `labels` — used by `runie-tui` production code (`status_bar.rs`) and tests → candidate for `runie-util`.
+  - `display_width`, `path`, `sanitize` — used by downstream crates → candidates for `runie-util`.
+  - `build_lint`, `declarative`, `dry_run`, `edit_preview`, `file_refs`, `fuzzy`, `glob`, `input_history`, `notification`, `scoped_model`, `streaming_buffer`, `telemetry` — internal-only or lightly used → candidates for `pub(crate)`.
   - `actors`, `event`, `model`, `tool`, `view`, `provider`, `config`, `permissions`, `message` — heavily used → must stay public.
 - Many public actor-handle types (`ActorHandles`, `Ractor*Handle`, etc.) are still being migrated to `ractor`. Narrowing visibility before the actor migration finishes will create churn.
 
 ## Acceptance Criteria
 
 - [ ] Produce an explicit "keep public / move to util / pub(crate)" table and record the rationale for each decision.
-- [ ] Create `crates/runie-util/` (or a similarly named lightweight utility crate) and move `display_width`, `path`, and `sanitize` there.
+- [ ] Create `crates/runie-util/` (or a similarly named lightweight utility crate) and move `display_width`, `labels`, `path`, and `sanitize` there.
 - [ ] Keep modules public that are used by `runie-tui`, `runie-provider`, `runie-cli`, or `runie-macros`.
+- [ ] Keep `runie-core::config` public because `runie-provider` re-exports `Config`, `ModelProvider`, and `ModelsSection` from it.
 - [ ] Convert modules that have no external consumers to `pub(crate)`.
 - [ ] Keep the documented public surface exported and stable: `AppState`, `Event`, actor handles, provider trait, session types, and commands registry.
 - [ ] Update downstream crates so that `cargo test --workspace` succeeds after the change.

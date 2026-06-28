@@ -21,7 +21,7 @@ Current state as of this review:
 - `tool/shim/mod.rs` is ~130 lines and within the build guardrails, but it still re-exports embedded `legacy` and `markup` submodules.
 - The legacy parser files have been removed from `tool/parse/` but still exist inside `tool/shim/`.
 - `tool_markers/strip.rs` now exposes `strip_all` as two documented passes, but the first pass still chains `strip_tc_markup`, `strip_minimax_blocks`, `strip_inline_json_objects`, `strip_legacy_tool_markers`, and `strip_fenced_json_tools`.
-- There is one `cargo check` warning: unused `close_len` in `tool/shim/minimax.rs:47`.
+- There is one `cargo check` warning: unused `close_len` in `tool/shim/minimax.rs:59` (reported as `_close_len` in some snapshots but still unused).
 - `docs/Architecture.md:221` says MiniMax XML parsing is isolated in `runie-provider`, but it now lives in `runie-core/src/tool/shim/minimax.rs`.
 - The Layer-4 fixtures are Rust constants in `runie-testing::fixtures::minimax`, consumed by `crates/runie-provider/tests/minimax_replay.rs` and `crates/runie-agent/tests/minimax_turn.rs`.
 - `cargo test -p runie-agent --lib tests::parser` passes (34 parser tests).
@@ -31,6 +31,8 @@ Current state as of this review:
 - [ ] Fix the unused `close_len` warning in `crates/runie-core/src/tool/shim/minimax.rs`.
 - [ ] Inline or delete the `legacy` and `markup` submodules in `crates/runie-core/src/tool/shim/` so the shim is the canonical parser, not a wrapper around moved legacy files.
 - [ ] Collapse `crates/runie-core/src/tool_markers/strip.rs` to at most two semantic passes (e.g., strip known tool-call formats, then cleanup). Remove the intermediate single-purpose helpers if they are no longer needed.
+- [ ] Fix the `strip_empty_code_fences` guardrail violation (currently ~50 lines, limit is 40) by extracting helper loops.
+- [ ] Remove or document the `normalize_m3` dead code in `tool/shim/minimax.rs`; if no fixture requires the string replacement, delete it.
 - [ ] Keep all currently supported provider/tool output shapes working under the collapsed stripper.
 - [ ] Reconcile MiniMax XML parsing ownership with `runie-provider` and `docs/Architecture.md` (either move it all to `runie-provider` or keep the text shim in `runie-core` and document the split).
 - [ ] Run the existing MiniMax SSE replay fixtures from `runie-testing::fixtures::minimax`; fix any semantic drift.

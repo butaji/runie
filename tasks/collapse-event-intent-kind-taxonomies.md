@@ -1,4 +1,4 @@
-# Derive `Intent` and `EventKind` from the canonical `Event` enum
+# Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`
 
 **Status**: todo
 **Milestone**: R4
@@ -10,35 +10,33 @@
 
 ## Description
 
-`crates/runie-core/src/event/variants.rs` defines a flat `Event` enum with approximately 431 variants. `crates/runie-core/src/event/intent.rs` defines an `Intent` enum with approximately 286 variants that mirrors `Event`, and `crates/runie-core/src/event/intent_impl.rs` (438 lines) manually maps every `Event` variant to its `Intent` twin. `crates/runie-core/src/event/kind/mod.rs` (404 lines) repeats the same variant lists in `matches!` predicates, and `crates/runie-core/src/update/dispatch.rs` adds another `EventCategory` taxonomy.
+`crates/runie-core/src/event/variants.rs` defines a flat `Event` enum (~113 variants). `crates/runie-core/src/event/intent.rs` defines an `Intent` enum (~88 variants) that is a **semantic projection** of `Event`, not a mechanical mirror: many variants are renamed (`Event::Start` → `Intent::LoginStart`, `Event::SwitchTheme` → `Intent::SetTheme`) and Facts have no `Intent` counterpart. `crates/runie-core/src/event/intent_impl.rs` (438 lines) manually maps `Event` to `Intent`, `crates/runie-core/src/event/kind/mod.rs` manually classifies `EventKind`, and `crates/runie-core/src/update/dispatch.rs` maintains a parallel 13-way `EventCategory` taxonomy. Additionally, `event/names.rs` and `event/name.rs` are manual mirrors used for keybinding/command names.
 
-Rather than restructuring `Event` in one risky pass, this task keeps the flat `Event` enum as the canonical source of truth and introduces derive macros (or a build-time generator) that produce `Intent` and `EventKind`/`EventCategory` from it. The manual mirrors in `intent_impl.rs` and `kind/mod.rs` are deleted, but existing `match` sites are left untouched until a follow-up task decides whether to nest domain sub-enums.
-
-Current state as of this review:
-
-- `event/mod.rs` still declares `pub(crate) mod intent_impl;`.
-- `variants.rs` has no generation attributes.
-- `kind/mod.rs` does not classify newer lifecycle variants such as `TurnStarted`, `TurnAborted`, `TurnCompleted`, and `TurnErrored`; they fall through to the default "intent" branch. The generator must either preserve this accidental behavior or deliberately fix it with tests.
+The goal is to keep the flat `Event` enum as the canonical source of truth, annotate its variants with metadata that describes their `Intent` projection, `EventKind`, `EventCategory`, and whether they are bindable/named, and generate the derivative taxonomies from those annotations.
 
 ## Acceptance Criteria
 
-- [ ] A derive macro or build script generates `Intent` and `EventKind` from `Event` variants and their attributes.
-- [ ] `crates/runie-core/src/event/intent_impl.rs` is deleted; no manual `Event → Intent` mapping remains.
-- [ ] `crates/runie-core/src/event/kind/mod.rs` is reduced to re-exports or thin wrappers around the generated classification.
-- [ ] All existing call sites for `event.into_intent()`, `event.kind()`, and dispatch categorization continue to compile without changes.
-- [ ] Generated output is split by domain so that no generated file exceeds the 500-line build guardrail.
+- [ ] Add attributes to `Event` variants (e.g. `#[event(intent = "LoginStart", kind = "Intent", category = "LoginFlow", named = true)]`) that encode the current manual classification.
+- [ ] Generate `EventKind` and `EventCategory` from the attributes; delete the manual `matches!` tables in `kind/mod.rs`.
+- [ ] Generate the `Event → Intent` projection from the attributes; delete `intent_impl.rs`.
+- [ ] Generate the bindable/named-variant predicates and the `EVENT_NAMES` table from the same attributes; delete or thin `names.rs` and `name.rs`.
+- [ ] Explicitly classify newer lifecycle variants (`TurnStarted`, `TurnAborted`, `TurnCompleted`, `TurnErrored`) so that `event.kind() == EventKind::Intent` iff `event.into_intent().is_some()`.
+- [ ] Resolve `PlanEvent`: either add top-level `Event` plan variants that map to the existing `Intent` plan variants, or implement `Event::Plan(...) → Intent` conversion.
+- [ ] Split `variants.rs` into per-domain submodules (or generated files) so it stays below the 500-line build guardrail after annotations are added.
+- [ ] All existing call sites for `event.into_intent()`, `event.kind()`, dispatch categorization, and keybinding name lookup continue to compile without changes.
 - [ ] `cargo test --workspace` succeeds after the change.
 - [ ] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `event_to_intent_roundtrip` — verifies that every `Event` variant round-trips to the generated `Intent` and back without manual mapping tables.
-- [ ] `event_kind_classification_matches_legacy` — compares generated `EventKind` values against the old `matches!` predicates for a representative set of variants.
-- [ ] `lifecycle_variants_classified` — explicitly asserts the classification of `TurnStarted`, `TurnAborted`, `TurnCompleted`, and `TurnErrored` rather than relying on the accidental default.
+- [ ] `event_to_intent_projection_matches_legacy` — compares generated `Intent` values against the old manual mapping for every variant that has one.
+- [ ] `event_kind_classification_matches_legacy` — compares generated `EventKind` values against the old `matches!` predicates.
+- [ ] `lifecycle_variants_classified` — asserts the classification of `TurnStarted`, `TurnAborted`, `TurnCompleted`, and `TurnErrored` and that `kind == Intent` iff `into_intent()` returns `Some`.
+- [ ] `plan_event_has_intent_or_is_fact` — asserts every `PlanEvent` payload maps to a deterministic `Intent` or is classified as `Fact`/`Control`.
 
 ### Layer 2 — Event Handling
-- [ ] `dispatch_routes_generated_intent` — verifies the update dispatcher routes a generated `Intent` to the correct handler.
+- [ ] `dispatch_routes_generated_category` — verifies the update dispatcher routes a generated `EventCategory` to the correct handler.
 
 ### Layer 3 — Rendering
 - [ ] N/A — `Event` shape is unchanged; rendering code is unaffected.
@@ -48,10 +46,12 @@ Current state as of this review:
 
 ## Files touched
 
-- `crates/runie-core/src/event/variants.rs` (add attributes to drive generation)
-- `crates/runie-core/src/event/intent.rs` (becomes a generated or re-exported type)
+- `crates/runie-core/src/event/variants.rs` (annotate; split if needed)
+- `crates/runie-core/src/event/intent.rs` (becomes generated or re-exported)
 - `crates/runie-core/src/event/intent_impl.rs` (delete)
 - `crates/runie-core/src/event/kind/mod.rs` (becomes a thin wrapper)
+- `crates/runie-core/src/event/names.rs` (delete or generate)
+- `crates/runie-core/src/event/name.rs` (delete or generate)
 - `crates/runie-core/src/update/dispatch.rs` (consume generated classification)
 - `crates/runie-macros/src/event.rs` or a new generator module
 - `crates/runie-core/build.rs` (if generation happens at build time)
@@ -59,6 +59,7 @@ Current state as of this review:
 ## Notes
 
 - This task intentionally does **not** restructure the flat `Event` enum. Nesting domain sub-enums is a useful future cleanup but it changes every `match` site; keep it separate.
-- The derive macro should respect the build guardrails (file/function length, complexity). If a generated file would exceed limits, split the generated output by domain.
+- The derive macro/generator must respect the build guardrails (file/function length, complexity). If a generated file would exceed limits, split the generated output by domain.
+- `EventCategory` is currently a 13-way dispatcher taxonomy. Decide whether to collapse it to a smaller set derived from `EventKind` + domain tags, or keep it as a generated separate enum.
 - Rejected alternative: deleting `Intent` and routing on `Event` directly. Many DSL sites already speak in terms of `Intent`, so removing it would force a larger rewrite.
-- Out of scope: changing the actor runtime (handled by `migrate-production-actors-to-ractor` and its children) or adding new event variants.
+- Out of scope: changing the actor runtime or adding new event variants.

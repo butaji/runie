@@ -26,7 +26,7 @@
   },
   {
     "file": "collapse-event-intent-kind-taxonomies.md",
-    "title": "Collapse `Event`/`Intent`/`EventKind` taxonomies",
+    "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
     "status": "todo"
   },
   {
@@ -55,19 +55,14 @@
     "status": "todo"
   },
   {
-    "file": "unify-duplicate-module-names-core-tui.md",
-    "title": "Unify duplicate module names across core and TUI",
-    "status": "partial"
-  },
-  {
     "file": "unify-tui-render-test-helpers.md",
     "title": "Unify TUI render test helpers",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "fix-keybindings-dead-code.md",
     "title": "Fix keybindings dead-code warning",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "cleanup-small-duplicates-and-dead-code.md",
