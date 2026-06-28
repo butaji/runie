@@ -1,7 +1,7 @@
 //! Path resolution utilities shared across the workspace.
 //!
 //! Resolves relative paths against a working directory, expands `~` to the home
-//! directory, and normalizes `.` and `..`.
+//! directory, and normalizes `.` and `..`. Uses `shellexpand` for tilde expansion.
 
 use std::path::{Path, PathBuf};
 
@@ -14,7 +14,7 @@ pub fn resolve_path(raw: &str) -> PathBuf {
 /// Resolve a raw path string to an absolute, normalized path relative to the
 /// given working directory.
 pub fn resolve_path_in(raw: &str, working_dir: &Path) -> PathBuf {
-    let expanded = expand_tilde(raw);
+    let expanded = shellexpand::tilde(raw).into_owned();
     let path = Path::new(&expanded);
     let absolute = if path.is_absolute() {
         path.to_path_buf()
@@ -22,20 +22,6 @@ pub fn resolve_path_in(raw: &str, working_dir: &Path) -> PathBuf {
         working_dir.join(path)
     };
     normalize_path(&absolute)
-}
-
-fn expand_tilde(path: &str) -> String {
-    if let Some(rest) = path.strip_prefix("~/") {
-        if let Some(home) = dirs::home_dir() {
-            return format!("{}/{}", home.display(), rest);
-        }
-    }
-    if path == "~" {
-        if let Some(home) = dirs::home_dir() {
-            return home.to_string_lossy().to_string();
-        }
-    }
-    path.to_owned()
 }
 
 fn normalize_path(path: &Path) -> PathBuf {

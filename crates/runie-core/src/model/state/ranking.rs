@@ -28,8 +28,8 @@ pub fn rank_commands_with_query(
     let mut ranked: Vec<_> = all
         .iter()
         .filter_map(|cmd| {
-            let base = crate::fuzzy::fuzzy_match(query, &cmd.name)
-                .or_else(|| crate::fuzzy::fuzzy_match(query, &cmd.desc))?;
+            let base = crate::fuzzy::score(query, &cmd.name)
+                .or_else(|| crate::fuzzy::score(query, &cmd.desc))?;
             let usage = command_usage.get(&cmd.name);
             let score = compute_ranking_score(query, cmd, usage) + base * 100;
             Some((cmd.name.clone(), score))

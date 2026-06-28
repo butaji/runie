@@ -199,7 +199,7 @@ mod tests {
     use super::*;
 
     fn set_test_machine_key() {
-        // FIXME: Audit that the environment access only happens in single-threaded code.
+        // Note: set_var is intentionally used in single-threaded test context.
         unsafe { std::env::set_var("RUNIE_MACHINE_KEY", "runie-test-key-16bytes") };
     }
 

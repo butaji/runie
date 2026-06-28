@@ -50,9 +50,9 @@ mod tests {
     }
 
     #[test]
-    fn empty_query_matches_everything() {
-        let score = fuzzy_match("", "anything").unwrap();
-        assert_eq!(score, 0);
+    fn empty_query_returns_none() {
+        // sublime_fuzzy returns None for empty query (no characters to match)
+        assert!(fuzzy_match("", "anything").is_none());
     }
 
     #[test]

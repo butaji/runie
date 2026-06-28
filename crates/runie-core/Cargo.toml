@@ -43,6 +43,9 @@ textwrap.workspace = true
 notify = "7.0"
 notify-debouncer-mini = "0.5"
 regex = { workspace = true }
+glob.workspace = true
+shellexpand.workspace = true
+sublime_fuzzy.workspace = true
 strum = { version = "0.26", features = ["derive"] }
 fff-search.workspace = true
 git2.workspace = true

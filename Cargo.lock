@@ -3125,6 +3125,7 @@ dependencies = [
  "fff-search",
  "futures",
  "git2",
+ "glob",
  "hex",
  "nix 0.31.3",
  "notify 7.0.0",
@@ -3143,8 +3144,10 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha2",
+ "shellexpand",
  "similar 3.1.1",
  "strum 0.26.3",
+ "sublime_fuzzy",
  "tempfile",
  "textwrap",
  "tokio",
@@ -3496,6 +3499,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "shellexpand"
+version = "3.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32824fab5e16e6c4d86dc1ba84489390419a39f97699852b66480bb87d297ed8"
+dependencies = [
+ "dirs",
+]
+
+[[package]]
 name = "shlex"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3653,6 +3665,12 @@ dependencies = [
  "quote",
  "syn 2.0.118",
 ]
+
+[[package]]
+name = "sublime_fuzzy"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa7986063f7c0ab374407e586d7048a3d5aac94f103f751088bf398e07cd5400"
 
 [[package]]
 name = "subtle"

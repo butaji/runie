@@ -72,17 +72,17 @@
   {
     "file": "replace-custom-helpers-with-crates.md",
     "title": "Replace custom path/glob/fuzzy/keybinding helpers with crates",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-tui-render-test-helpers.md",
     "title": "Unify TUI render test helpers",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-keybindings-dead-code.md",
     "title": "Fix keybindings dead-code warning",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "cleanup-small-duplicates-and-dead-code.md",

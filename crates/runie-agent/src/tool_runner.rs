@@ -250,6 +250,40 @@ fn fire_after_hook(skills: &SkillRegistry, tool_call: &ParsedToolCall, output: &
     });
 }
 
+// ── Unified skill hook helpers (shared with turn/tools) ─────────────────────────
+
+/// Run before-hook for skill interception. Returns Some(output) if a skill
+/// intercepted the call (skip or abort), None to continue.
+pub(crate) fn run_skill_before_hook(
+    skills: Option<&SkillRegistry>,
+    tool_call: &ParsedToolCall,
+) -> Option<ToolOutput> {
+    let skills = skills?;
+    let tool_ctx = ToolCallCtx {
+        tool_name: tool_call.name.clone(),
+        tool_input: tool_call.args.clone(),
+        phase: ToolCallPhase::Before,
+        tool_output: None,
+        success: None,
+    };
+    match skills.on_tool_call(&tool_ctx) {
+        ToolCallResult::SkipWithOutput(output) => Some(skip_output(tool_call, output)),
+        ToolCallResult::Abort(reason) => Some(abort_output(tool_call, &reason)),
+        ToolCallResult::Continue => None,
+    }
+}
+
+/// Fire after-hook for skill notification.
+pub(crate) fn fire_skill_after_hook(
+    skills: Option<&SkillRegistry>,
+    tool_call: &ParsedToolCall,
+    output: &ToolOutput,
+) {
+    if let Some(skills) = skills {
+        fire_after_hook(skills, tool_call, output);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
