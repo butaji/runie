@@ -8,10 +8,23 @@ use runie_core::config::{Config, McpServer, McpTransport};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::McpCommand;
+
 const PROJECT_CONFIG_DIR: &str = ".runie";
 const PROJECT_CONFIG_FILE: &str = "config.toml";
 
-/// Run the MCP CLI command.
+/// Run the MCP CLI command (for clap-based CLI).
+pub fn run_mcp(subcommand: Option<&McpCommand>) -> Result<()> {
+    match subcommand {
+        Some(McpCommand::List) => run_list_internal("user"),
+        Some(McpCommand::Add { name, command }) => run_add_internal(name, command, "user", McpTransport::Stdio),
+        Some(McpCommand::Remove { name }) => run_remove_internal(name, "user"),
+        None => run_list_internal("user"),
+    }
+}
+
+/// Run the MCP CLI command (legacy argv-based CLI).
+#[allow(dead_code)]
 pub fn run(args: &[String]) -> Result<()> {
     // Handle --help / -h before subcommand
     if args.iter().any(|a| a == "--help" || a == "-h") {
@@ -23,9 +36,9 @@ pub fn run(args: &[String]) -> Result<()> {
     let rest = if args.len() > 1 { &args[1..] } else { &[] };
 
     match subcmd {
-        "list" => run_list(rest),
-        "add" => run_add(rest),
-        "remove" | "rm" => run_remove(rest),
+        "list" => run_list_internal_from_args(rest),
+        "add" => run_add_from_args(rest),
+        "remove" | "rm" => run_remove_from_args(rest),
         _ => {
             eprintln!("Unknown MCP command: {subcmd}");
             print_usage();
@@ -34,6 +47,7 @@ pub fn run(args: &[String]) -> Result<()> {
     }
 }
 
+#[allow(dead_code)]
 fn print_usage() {
     eprintln!(
         "Usage: runie mcp <command> [args]\n\n\
@@ -48,9 +62,8 @@ Options:\n\
     );
 }
 
-fn run_list(args: &[String]) -> Result<()> {
-    let scope = parse_scope(args).unwrap_or_else(|| "user".to_string());
-    let config = load_config_for_scope(&scope)?;
+fn run_list_internal(scope: &str) -> Result<()> {
+    let config = load_config_for_scope(scope)?;
     let servers = &config.mcp.servers;
 
     if servers.is_empty() {
@@ -75,6 +88,12 @@ fn run_list(args: &[String]) -> Result<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
+fn run_list_internal_from_args(args: &[String]) -> Result<()> {
+    let scope = parse_scope(args).unwrap_or_else(|| "user".to_string());
+    run_list_internal(&scope)
+}
+
 fn transport_name(t: &McpTransport) -> &'static str {
     match t {
         McpTransport::Stdio => "stdio",
@@ -83,32 +102,41 @@ fn transport_name(t: &McpTransport) -> &'static str {
     }
 }
 
-fn run_add(args: &[String]) -> Result<()> {
-    let parsed = parse_add_args(args)?;
-    let mut config = load_config_for_scope(&parsed.scope)?;
-    config.mcp.servers.insert(parsed.name.clone(), parsed.server);
-    save_config_for_scope(&config, &parsed.scope)?;
-    println!("Added MCP server '{}' to [{}] scope.", parsed.name, parsed.scope);
+fn run_add_internal(name: &str, command: &str, scope: &str, transport: McpTransport) -> Result<()> {
+    let server = build_server(transport, command, HashMap::new(), scope);
+    let mut config = load_config_for_scope(scope)?;
+    config.mcp.servers.insert(name.to_string(), server);
+    save_config_for_scope(&config, scope)?;
+    println!("Added MCP server '{}' to [{}] scope.", name, scope);
     Ok(())
 }
 
+#[allow(dead_code)]
+fn run_add_from_args(args: &[String]) -> Result<()> {
+    let parsed = parse_add_args(args)?;
+    run_add_internal(&parsed.name, &parsed.command, &parsed.scope, parsed.transport)
+}
+
+#[allow(dead_code)]
 struct AddArgs {
     name: String,
-    server: McpServer,
+    command: String,
     scope: String,
+    transport: McpTransport,
 }
 
+#[allow(dead_code)]
 fn parse_add_args(args: &[String]) -> Result<AddArgs> {
-    let (name, scope, transport, headers, positional) = parse_add_arg_pairs(args)?;
+    let (name, scope, transport, _headers, positional) = parse_add_arg_pairs(args)?;
     let name = name.context("Server name required")?;
-    let cmd_or_url = positional.join(" ");
-    if cmd_or_url.is_empty() {
+    let command = positional.join(" ");
+    if command.is_empty() {
         anyhow::bail!("Command or URL required");
     }
-    let server = build_server(transport, &cmd_or_url, headers, &scope);
-    Ok(AddArgs { name, server, scope })
+    Ok(AddArgs { name, command, scope, transport })
 }
 
+#[allow(dead_code)]
 fn parse_add_arg_pairs(args: &[String]) -> Result<(Option<String>, String, McpTransport, HashMap<String, String>, Vec<String>)> {
     let mut name = None;
     let mut scope = "user".to_string();
@@ -129,6 +157,7 @@ fn parse_add_arg_pairs(args: &[String]) -> Result<(Option<String>, String, McpTr
     Ok((name, scope, transport, headers, positional))
 }
 
+#[allow(dead_code)]
 fn add_header(kv: &str, headers: &mut HashMap<String, String>) -> Result<()> {
     if let Some((k, v)) = kv.split_once('=') {
         headers.insert(k.to_string(), v.to_string());
@@ -138,6 +167,7 @@ fn add_header(kv: &str, headers: &mut HashMap<String, String>) -> Result<()> {
     }
 }
 
+#[allow(dead_code)]
 fn ensure_arg(args: &[String], idx: usize, flag: &str) -> Result<()> {
     if idx >= args.len() {
         anyhow::bail!("{flag} requires a value");
@@ -145,6 +175,7 @@ fn ensure_arg(args: &[String], idx: usize, flag: &str) -> Result<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 fn parse_transport(s: &str) -> Result<McpTransport> {
     match s.to_lowercase().as_str() {
         "stdio" => Ok(McpTransport::Stdio),
@@ -178,7 +209,21 @@ fn build_server(
     }
 }
 
-fn run_remove(args: &[String]) -> Result<()> {
+fn run_remove_internal(name: &str, scope: &str) -> Result<()> {
+    let mut config = load_config_for_scope(scope)?;
+
+    if config.mcp.servers.remove(name).is_some() {
+        save_config_for_scope(&config, scope)?;
+        println!("Removed MCP server '{name}' from [{scope}] scope.");
+    } else {
+        anyhow::bail!("MCP server '{name}' not found in [{scope}] scope.");
+    }
+
+    Ok(())
+}
+
+#[allow(dead_code)]
+fn run_remove_from_args(args: &[String]) -> Result<()> {
     let mut name = None;
     let mut scope = "user".to_string();
 
@@ -200,18 +245,10 @@ fn run_remove(args: &[String]) -> Result<()> {
     }
 
     let name = name.context("Server name required")?;
-    let mut config = load_config_for_scope(&scope)?;
-
-    if config.mcp.servers.remove(&name).is_some() {
-        save_config_for_scope(&config, &scope)?;
-        println!("Removed MCP server '{name}' from [{scope}] scope.");
-    } else {
-        anyhow::bail!("MCP server '{name}' not found in [{scope}] scope.");
-    }
-
-    Ok(())
+    run_remove_internal(&name, &scope)
 }
 
+#[allow(dead_code)]
 fn parse_scope(args: &[String]) -> Option<String> {
     for (i, arg) in args.iter().enumerate() {
         if arg == "--scope" && i + 1 < args.len() {
@@ -368,6 +405,6 @@ mod tests {
         let result = parse_add_args(args).unwrap();
         assert_eq!(result.name, "my-server");
         assert_eq!(result.scope, "project");
-        assert!(matches!(result.server.transport, McpTransport::Http));
+        assert!(matches!(result.transport, McpTransport::Http));
     }
 }

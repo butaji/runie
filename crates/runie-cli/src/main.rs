@@ -6,10 +6,9 @@
 //! - `runie json` — structured JSON stdin/stdout for scripting
 //! - `runie server` — TCP/stdio JSON-RPC server for IDE integration
 //! - `runie acp` — ACP (Agent Client Protocol) over stdio for programmatic control
-//!
-//! Dispatch is based on `argv[1]` (subcommand) or `--mode` flag.
 
 use anyhow::Result;
+use clap::Parser;
 
 mod print;
 mod json;
@@ -18,41 +17,79 @@ mod acp;
 mod inspect;
 mod mcp;
 
-fn print_usage() {
-    eprintln!(
-        "Usage: runie <command> [args]
+/// Runie CLI — Terminal-native coding agent harness
+#[derive(Parser, Debug)]
+#[command(name = "runie")]
+#[command(about = "Terminal-native coding agent harness", long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Command,
+}
 
-Commands:
-  print <prompt>    Stream LLM response to stdout
-  inspect           Show runtime configuration for current directory
-  json              JSON stdin/stdout for scripting
-  server            TCP/stdio JSON-RPC server
-  acp               ACP (Agent Client Protocol) over stdio for programmatic control
-  mcp               Manage MCP servers (list, add, remove)
+#[derive(Parser, Debug)]
+enum Command {
+    /// Stream LLM response to stdout
+    Print {
+        /// The prompt to send to the LLM
+        prompt: String,
+    },
+    /// Show runtime configuration discovered for current directory
+    Inspect {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// JSON stdin/stdout for scripting
+    Json,
+    /// TCP/stdio JSON-RPC server
+    Server {
+        /// Use stdio transport instead of TCP
+        #[arg(long)]
+        stdio: bool,
+        /// Skip permission checks (for testing/automation)
+        #[arg(long)]
+        yolo: bool,
+    },
+    /// ACP (Agent Client Protocol) over stdio
+    Acp,
+    /// Manage MCP servers
+    Mcp {
+        /// MCP subcommand
+        #[command(subcommand)]
+        subcommand: Option<McpCommand>,
+    },
+}
 
-Options:
-  --help, -h        Show this help
-  --version         Show version"
-    );
+#[derive(Parser, Debug)]
+enum McpCommand {
+    /// List configured MCP servers
+    List,
+    /// Add an MCP server
+    Add {
+        /// Server name
+        name: String,
+        /// Command to run
+        command: String,
+    },
+    /// Remove an MCP server
+    Remove {
+        /// Server name
+        name: String,
+    },
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() < 2 {
-        print_usage();
-        std::process::exit(1);
-    }
-    let result = match args[1].as_str() {
-        "--help" | "-h" => { print_usage(); return; }
-        "--version" => { println!("runie-cli {}", env!("CARGO_PKG_VERSION")); return; }
-        "print" => run_print(&args[2..]),
-        "inspect" => run_inspect(&args[2..]),
-        "json" => block_on(run_json()),
-        "server" => block_on(run_server(&args[2..])),
-        "acp" => block_on(acp::run()),
-        "mcp" => mcp::run(&args[2..]),
-        other => { eprintln!("Unknown command: {other}"); print_usage(); std::process::exit(1); }
+    let cli = Cli::parse();
+
+    let result = match cli.command {
+        Command::Print { prompt } => run_print(&prompt),
+        Command::Inspect { json } => run_inspect(json),
+        Command::Json => block_on(run_json()),
+        Command::Server { stdio, yolo } => block_on(run_server(stdio, yolo)),
+        Command::Acp => block_on(acp::run()),
+        Command::Mcp { subcommand } => mcp::run_mcp(subcommand.as_ref()),
     };
+
     if let Err(e) = result {
         eprintln!("Error: {}", e);
         std::process::exit(1);
@@ -67,19 +104,11 @@ fn block_on<F: std::future::Future>(fut: F) -> F::Output {
         .block_on(fut)
 }
 
-fn run_inspect(args: &[String]) -> Result<()> {
-    let json = args.iter().any(|a| a == "--json");
+fn run_inspect(json: bool) -> Result<()> {
     inspect::run(json)
 }
 
-fn run_print(args: &[String]) -> Result<()> {
-    let prompt = match args.first() {
-        Some(p) => p.as_str(),
-        None => {
-            eprintln!("Usage: runie print <prompt>");
-            std::process::exit(1);
-        }
-    };
+fn run_print(prompt: &str) -> Result<()> {
     print::run(prompt)
 }
 
@@ -87,8 +116,6 @@ async fn run_json() -> Result<()> {
     json::run().await
 }
 
-async fn run_server(args: &[String]) -> Result<()> {
-    let use_stdio = args.iter().any(|a| a == "--stdio");
-    let yolo = args.iter().any(|a| a == "--yolo");
+async fn run_server(use_stdio: bool, yolo: bool) -> Result<()> {
     server::run(use_stdio, yolo).await
 }

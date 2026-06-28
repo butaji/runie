@@ -1,6 +1,6 @@
 # Use `clap` derive macros for CLI argument parsing
 
-**Status**: todo
+**Status**: done
 **Milestone**: R1
 **Category**: Input / Commands
 **Priority**: P0
@@ -14,34 +14,35 @@
 
 ## Acceptance Criteria
 
-- [ ] Replace manual argument parsing in `crates/runie-cli/src/main.rs` with a `clap` derive `Cli` struct and subcommand enums.
-- [ ] Preserve all existing commands and flags (`run`, `inspect`, `config`, `mcp`, `--provider`, `--model`, etc.).
-- [ ] Add typed validation where it is free (e.g., numeric ports, existing file paths).
-- [ ] Ensure `--help` and `--version` work.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Replace manual argument parsing in `crates/runie-cli/src/main.rs` with a `clap` derive `Cli` struct and subcommand enums.
+- [x] Preserve all existing commands and flags (`run`, `inspect`, `config`, `mcp`, `--provider`, `--model`, etc.).
+- [x] Add typed validation where it is free (e.g., numeric ports, existing file paths).
+- [x] Ensure `--help` and `--version` work.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `cli_parses_run_subcommand` — `runie run "prompt" --provider x --model y` parses into the expected struct.
-- [ ] `cli_rejects_unknown_subcommand` — unknown subcommands produce a typed error.
-- [ ] `cli_help_includes_all_commands` — help text mentions every documented command.
+- [x] `cli_parses_run_subcommand` — `runie run "prompt" --provider x --model y` parses into the expected struct.
+- [x] `cli_rejects_unknown_subcommand` — unknown subcommands produce a typed error.
+- [x] `cli_help_includes_all_commands` — help text mentions every documented command.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 
 - `crates/runie-cli/src/main.rs`
+- `crates/runie-cli/src/mcp.rs` (updated to use clap subcommand enum)
 - `crates/runie-cli/Cargo.toml`
-- `crates/runie-cli/src/lib.rs` (if commands are exposed)
+- `Cargo.toml` (workspace)
 
 ## Notes
 

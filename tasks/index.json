@@ -107,7 +107,7 @@
   {
     "file": "use-clap-derive-for-cli.md",
     "title": "Use clap derive macros for CLI argument parsing",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",
