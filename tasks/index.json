@@ -1,10 +1,5 @@
 [
   {
-    "file": "TEMPLATE.md",
-    "title": "Task Title",
-    "status": "todo"
-  },
-  {
     "file": "actor-lifecycle-and-handle-registry.md",
     "title": "Actor Lifecycle and Handle Registry",
     "status": "done"
