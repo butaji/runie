@@ -8,8 +8,10 @@ mod loader_tests {
     // Re-export types for tests
     use crate::declarative::types::{CommandCategory, CommandDef, SkillDef, Trigger};
     use crate::declarative::loader::{
-        extract_frontmatter, parse_command_yaml, parse_skill_md, parse_triggers,
-        parse_yaml_line, strip_quotes,
+        load_skills_from_dir, parse_command_yaml, parse_triggers,
+    };
+    use crate::resource_loader::{
+        extract_frontmatter, parse_yaml_line, strip_quotes,
     };
 
     // ── Frontmatter parsing tests ───────────────────────────────────────────────
@@ -23,7 +25,7 @@ description: A test skill
 
 # Content
 "#;
-        let fm = extract_frontmatter(content).unwrap();
+        let fm = extract_frontmatter(content);
         assert_eq!(fm.get("name"), Some(&"my-skill".to_owned()));
         assert_eq!(fm.get("description"), Some(&"A test skill".to_owned()));
     }
@@ -37,7 +39,7 @@ description: 'single quoted'
 
 Content
 "#;
-        let fm = extract_frontmatter(content).unwrap();
+        let fm = extract_frontmatter(content);
         assert_eq!(fm.get("name"), Some(&"quoted name".to_owned()));
         assert_eq!(fm.get("description"), Some(&"single quoted".to_owned()));
     }
@@ -51,7 +53,7 @@ context: This is a simple context value
 
 Content
 "#;
-        let fm = extract_frontmatter(content).unwrap();
+        let fm = extract_frontmatter(content);
         let ctx = fm.get("context").unwrap();
         assert!(ctx.contains("simple context"));
     }
@@ -59,7 +61,7 @@ Content
     #[test]
     fn frontmatter_returns_none_without_delimiters() {
         let content = "# No frontmatter\n\nContent";
-        assert!(extract_frontmatter(content).is_none());
+        assert!(extract_frontmatter(content).is_empty());
     }
 
     #[test]
@@ -71,7 +73,7 @@ empty:
 
 Content
 "#;
-        let fm = extract_frontmatter(content).unwrap();
+        let fm = extract_frontmatter(content);
         assert_eq!(fm.get("name"), Some(&"test".to_owned()));
         // Empty values should be empty strings
         assert_eq!(fm.get("empty"), Some(&"".to_owned()));
@@ -87,7 +89,7 @@ description: desc
 
 Content
 "#;
-        let fm = extract_frontmatter(content).unwrap();
+        let fm = extract_frontmatter(content);
         assert_eq!(fm.len(), 2);
         assert!(fm.contains_key("name"));
         assert!(fm.contains_key("description"));
@@ -266,7 +268,7 @@ invocation: user can invoke this with /check-work
 1. Spawn verifier
 2. Read verdict
 "#;
-        let fm = extract_frontmatter(content).unwrap();
+        let fm = extract_frontmatter(content);
         assert_eq!(fm.get("name"), Some(&"check-work".to_owned()));
         assert!(fm.get("context").unwrap().contains("verifies"));
     }

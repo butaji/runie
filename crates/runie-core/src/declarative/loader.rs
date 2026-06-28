@@ -3,6 +3,10 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use crate::resource_loader::{
+    derive_name_from_path, is_user_invocable, load_resources_from_dir,
+};
+
 use super::types::{CommandCategory, CommandDef, SkillDef, Trigger};
 
 /// Generic loader for declarative configuration.
@@ -65,64 +69,38 @@ impl Default for DeclarativeLoader {
 
 /// Load all skills from a directory.
 pub fn load_skills_from_dir(dir: &Path) -> Vec<SkillDef> {
-    let entries = match std::fs::read_dir(dir) {
-        Ok(e) => e,
-        Err(_) => return Vec::new(),
-    };
-
-    let subdir_skills = load_subdir_skills(entries);
-    let subdir_names: HashMap<String, ()> = subdir_skills
-        .iter()
-        .map(|s| (s.name.clone(), ()))
-        .collect();
-
-    let flat_skills = load_flat_skills(dir, &subdir_names);
-    subdir_skills
+    let records = load_resources_from_dir(dir);
+    records
         .into_iter()
-        .chain(flat_skills)
+        .filter_map(record_to_skill_def)
         .collect()
 }
 
-fn load_subdir_skills(entries: std::fs::ReadDir) -> Vec<SkillDef> {
-    let mut skills = Vec::new();
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-        let skill_md = path.join("SKILL.md");
-        if skill_md.exists() {
-            if let Some(skill) = parse_skill_md(&skill_md) {
-                skills.push(skill);
-            }
-        }
-    }
-    skills
+/// Convert a ResourceRecord to a SkillDef.
+/// Unlike skills/load.rs, this requires frontmatter (no markdown fallback).
+fn record_to_skill_def(record: crate::resource_loader::ResourceRecord) -> Option<SkillDef> {
+    let frontmatter = record.frontmatter;
+
+    let name = frontmatter
+        .get("name")
+        .cloned()
+        .or_else(|| derive_name_from_path(&record.file_path))?;
+
+    let invocation = frontmatter.get("invocation").cloned().unwrap_or_default();
+
+    Some(SkillDef {
+        name,
+        description: frontmatter.get("description").cloned().unwrap_or_default(),
+        context: frontmatter.get("context").cloned(),
+        triggers: parse_triggers(&frontmatter),
+        file_path: record.file_path,
+        user_invocable: is_user_invocable(&invocation),
+    })
 }
 
-fn load_flat_skills(dir: &Path, subdir_names: &HashMap<String, ()>) -> Vec<SkillDef> {
-    let entries = match std::fs::read_dir(dir) {
-        Ok(e) => e,
-        Err(_) => return Vec::new(),
-    };
-
-    let mut skills = Vec::new();
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) != Some("md") {
-            continue;
-        }
-        // Skip SKILL.md files and files matching subdirectory names
-        let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-        if file_name == "SKILL.md" || subdir_names.contains_key(file_name.trim_end_matches(".md")) {
-            continue;
-        }
-        if let Some(skill) = parse_skill_md(&path) {
-            skills.push(skill);
-        }
-    }
-    skills
-}
+// ---------------------------------------------------------------------------
+// Command loading
+// ---------------------------------------------------------------------------
 
 /// Load all commands from a directory.
 pub fn load_commands_from_dir(dir: &Path) -> Vec<CommandDef> {
@@ -142,32 +120,6 @@ pub fn load_commands_from_dir(dir: &Path) -> Vec<CommandDef> {
     }
     commands
 }
-
-/// Parse a skill markdown file with YAML frontmatter.
-pub(crate) fn parse_skill_md(path: &Path) -> Option<SkillDef> {
-    let content = std::fs::read_to_string(path).ok()?;
-    let frontmatter = extract_frontmatter(&content)?;
-
-    let name = frontmatter
-        .get("name")
-        .cloned()
-        .or_else(|| derive_name_from_path(path))?;
-
-    Some(SkillDef {
-        name,
-        description: frontmatter.get("description").cloned().unwrap_or_default(),
-        context: frontmatter.get("context").cloned(),
-        triggers: parse_triggers(&frontmatter),
-        file_path: path.to_owned(),
-        user_invocable: is_user_invocable(
-            frontmatter.get("invocation").cloned().unwrap_or_default(),
-        ),
-    })
-}
-
-// ---------------------------------------------------------------------------
-// Command loading
-// ---------------------------------------------------------------------------
 
 /// Parse a command YAML file.
 pub(crate) fn parse_command_yaml(path: &Path) -> Option<CommandDef> {
@@ -190,73 +142,8 @@ pub(crate) fn parse_command_yaml(path: &Path) -> Option<CommandDef> {
 }
 
 // ---------------------------------------------------------------------------
-// Frontmatter parsing
+// Trigger parsing
 // ---------------------------------------------------------------------------
-
-/// Extract YAML frontmatter from markdown content.
-pub(crate) fn extract_frontmatter(content: &str) -> Option<HashMap<String, String>> {
-    if !content.starts_with("---\n") {
-        return None;
-    }
-    let after_opening = content.strip_prefix("---\n")?;
-    let end_pos = after_opening.find("\n---")?;
-    let fm_text = &after_opening[..end_pos];
-    Some(parse_frontmatter_yaml(fm_text))
-}
-
-/// Parse simple YAML frontmatter: "key: value" lines.
-fn parse_frontmatter_yaml(fm_text: &str) -> HashMap<String, String> {
-    let mut result = HashMap::new();
-    for line in fm_text.lines() {
-        if let Some((k, v)) = parse_yaml_line(line) {
-            result.insert(k, v);
-        }
-    }
-    result
-}
-
-/// Parse a single YAML "key: value" line.
-pub(crate) fn parse_yaml_line(line: &str) -> Option<(String, String)> {
-    let line = line.trim();
-    if line.is_empty() || line.starts_with('#') {
-        return None;
-    }
-    let colon_pos = line.find(':')?;
-    let key = line[..colon_pos].trim().to_owned();
-    if key.is_empty() {
-        return None;
-    }
-    Some((key, strip_quotes(line[colon_pos + 1..].trim())))
-}
-
-/// Strip surrounding quotes from a YAML value.
-pub(crate) fn strip_quotes(s: &str) -> String {
-    let s = s.trim();
-    if (s.starts_with('\'') && s.ends_with('\'')) || (s.starts_with('"') && s.ends_with('"')) {
-        s[1..s.len() - 1].to_owned()
-    } else {
-        s.to_owned()
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Helper functions
-// ---------------------------------------------------------------------------
-
-/// Derive skill name from file path.
-fn derive_name_from_path(path: &Path) -> Option<String> {
-    if path.file_name().and_then(|s| s.to_str()) == Some("SKILL.md") {
-        path.parent()?.file_name()?.to_str().map(String::from)
-    } else {
-        path.file_stem()?.to_str().map(String::from)
-    }
-}
-
-/// Check if invocation string indicates user can invoke.
-fn is_user_invocable(invocation: String) -> bool {
-    let lower = invocation.to_lowercase();
-    lower.contains("user can invoke") || lower.contains("/skill")
-}
 
 /// Parse triggers from frontmatter.
 pub(crate) fn parse_triggers(frontmatter: &HashMap<String, String>) -> Vec<Trigger> {
@@ -294,6 +181,10 @@ fn parse_single_command(frontmatter: &HashMap<String, String>) -> Vec<Trigger> {
         .unwrap_or_default()
 }
 
+// ---------------------------------------------------------------------------
+// YAML helpers (command parsing only)
+// ---------------------------------------------------------------------------
+
 /// Get a string value from a YAML mapping.
 fn get_string(map: &serde_yaml::Mapping, key: &str) -> Option<String> {
     let key_value = serde_yaml::Value::String(key.to_owned());
@@ -311,19 +202,6 @@ fn get_bool(map: &serde_yaml::Mapping, key: &str) -> Option<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn parse_frontmatter_basic() {
-        let content = r#"---
-name: test-skill
-description: A test skill
----
-
-# Body content
-"#;
-        let fm = extract_frontmatter(content).unwrap();
-        assert_eq!(fm.get("name"), Some(&"test-skill".to_owned()));
-    }
 
     #[test]
     fn parse_triggers_list() {
@@ -347,8 +225,8 @@ description: A test skill
 
     #[test]
     fn is_user_invocable_checks_keyword() {
-        assert!(is_user_invocable("user can invoke this skill".to_owned()));
-        assert!(is_user_invocable("Try /skill name".to_owned()));
-        assert!(!is_user_invocable("automatic".to_owned()));
+        assert!(is_user_invocable("user can invoke this skill"));
+        assert!(is_user_invocable("Try /skill name"));
+        assert!(!is_user_invocable("automatic"));
     }
 }
