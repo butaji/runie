@@ -6,7 +6,7 @@ use super::protocol::{OpenAiFrame, OpenAiProtocol, OpenAiState};
 use super::request::build_request_body;
 use super::OpenAiProvider;
 use crate::protocol::ProviderProtocol;
-use reqwest_eventsource::retry::Never;
+use reqwest_eventsource::retry::ExponentialBackoff;
 use reqwest_eventsource::EventSource;
 use runie_protocol::message::ChatMessage;
 use runie_core::provider_event::ProviderEvent;
@@ -78,7 +78,14 @@ fn openai_event_stream(
             Err(e) => { yield Err(e); return; }
         };
 
-        es.set_retry_policy(Box::new(Never));
+        // Use exponential backoff with max 3 retries for transient errors
+        let backoff = ExponentialBackoff::new(
+            std::time::Duration::from_millis(500),
+            2.0,
+            Some(std::time::Duration::from_secs(10)),
+            Some(3),
+        );
+        es.set_retry_policy(Box::new(backoff));
         let mut es = Box::pin(es);
         let protocol = OpenAiProtocol::new();
         let mut state = OpenAiState::default();

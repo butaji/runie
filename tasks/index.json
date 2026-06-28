@@ -92,7 +92,7 @@
   {
     "file": "replace-custom-retry-with-backon.md",
     "title": "Replace custom retry module with backon",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-xor-auth-with-keyring.md",

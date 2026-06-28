@@ -197,7 +197,8 @@ fn build_openai_provider(api_key: String, model: &str, base_url: &str) -> Box<dy
     } else {
         p
     };
-    Box::new(retry::RetryProvider::new(p))
+    // Retries are handled by reqwest_eventsource's ExponentialBackoff policy
+    Box::new(p)
 }
 
 /// Try each provider until one builds successfully.
