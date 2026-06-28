@@ -9,15 +9,19 @@
 //! - Leading/trailing whitespace in assistant content
 
 use crate::message::{ChatMessage, Part, Role};
+use thiserror::Error;
 
 /// Error produced by a sanitizer when it removes or repairs content.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum SanitizeError {
     /// A tool call had no matching tool result.
+    #[error("dangling tool call: {tool_call_id}")]
     DanglingToolCall { tool_call_id: String },
     /// A tool result had no matching tool call.
+    #[error("orphan tool result: {tool_call_id}")]
     OrphanToolResult { tool_call_id: String },
     /// A message was removed entirely.
+    #[error("removed {role:?} message: {reason}")]
     RemovedMessage { role: Role, reason: &'static str },
 }
 

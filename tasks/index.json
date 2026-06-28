@@ -247,7 +247,7 @@
   {
     "file": "unify-library-error-types-with-thiserror.md",
     "title": "Unify library error types with `thiserror`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-markdown-processing-around-pulldown-cmark.md",

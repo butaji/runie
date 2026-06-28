@@ -26,21 +26,13 @@ use runie_core::provider::Provider;
 use runie_core::subagents::{PermissionMode as SubPermissionMode, SubagentRegistry, SubagentType};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum SubagentError {
-    Source(anyhow::Error),
+    #[error("agent turn failed: {0}")]
+    Source(#[source] anyhow::Error),
 }
-
-impl std::fmt::Display for SubagentError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SubagentError::Source(e) => write!(f, "agent turn failed: {e}"),
-        }
-    }
-}
-
-impl std::error::Error for SubagentError {}
 
 impl From<anyhow::Error> for SubagentError {
     fn from(e: anyhow::Error) -> Self {

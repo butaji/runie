@@ -5,6 +5,7 @@ use crate::provider_event::ProviderEvent;
 use anyhow::Result;
 use futures::Stream;
 use std::pin::Pin;
+use thiserror::Error;
 
 /// A chunk of streaming response (legacy type, prefer ProviderEvent).
 #[derive(Debug, Clone)]
@@ -19,16 +20,60 @@ impl From<ResponseChunk> for ProviderEvent {
 }
 
 /// Error constructing or operating a provider.
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ProviderError {
     /// The provider key was not found in the registry.
+    #[error("Unknown provider: {0}")]
     UnknownProvider(String),
     /// The API key is missing or invalid for this provider.
-    MissingApiKey(String),
+    #[error(transparent)]
+    MissingApiKey(MissingApiKeyError),
     /// Configuration has not been loaded yet.
+    #[error("Configuration not loaded")]
     ConfigNotLoaded,
     /// An underlying error from the provider or network layer.
-    Source(anyhow::Error),
+    #[error("Provider error: {0}")]
+    Source(#[source] anyhow::Error),
+}
+
+/// Helper error for displaying missing API key errors.
+#[derive(Debug, Error)]
+pub struct MissingApiKeyError {
+    pub env_var: String,
+    pub provider: String,
+}
+
+impl std::fmt::Display for MissingApiKeyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Missing API key for {}. Set {} or add [model_providers.{}] api_key to ~/.runie/config.toml",
+            self.provider, self.env_var, self.provider
+        )
+    }
+}
+
+impl From<String> for MissingApiKeyError {
+    fn from(k: String) -> Self {
+        let env_var = k.clone();
+        let provider = k
+            .strip_suffix("_API_KEY")
+            .map(|p| p.to_lowercase())
+            .unwrap_or_else(|| k.to_lowercase());
+        MissingApiKeyError { env_var, provider }
+    }
+}
+
+impl From<&str> for MissingApiKeyError {
+    fn from(k: &str) -> Self {
+        k.to_string().into()
+    }
+}
+
+impl From<String> for ProviderError {
+    fn from(k: String) -> Self {
+        ProviderError::MissingApiKey(k.into())
+    }
 }
 
 impl From<anyhow::Error> for ProviderError {
@@ -36,29 +81,6 @@ impl From<anyhow::Error> for ProviderError {
         ProviderError::Source(e)
     }
 }
-
-impl std::fmt::Display for ProviderError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ProviderError::UnknownProvider(k) => write!(f, "Unknown provider: {}", k),
-            ProviderError::MissingApiKey(k) => {
-                let provider = k
-                    .strip_suffix("_API_KEY")
-                    .map(|p| p.to_lowercase())
-                    .unwrap_or_else(|| k.to_lowercase());
-                write!(
-                    f,
-                    "Missing API key for {}. Set {} or add [model_providers.{}] api_key to ~/.runie/config.toml",
-                    provider, k, provider
-                )
-            }
-            ProviderError::ConfigNotLoaded => write!(f, "Configuration not loaded"),
-            ProviderError::Source(e) => write!(f, "Provider error: {e}"),
-        }
-    }
-}
-
-impl std::error::Error for ProviderError {}
 
 /// Provider trait — implemented by LLM backends.
 /// Returns a `Stream` of `ProviderEvent`s.

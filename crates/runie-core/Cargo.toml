@@ -27,6 +27,7 @@ schemars.workspace = true
 
 runie-protocol.workspace = true
 anyhow.workspace = true
+thiserror.workspace = true
 similar.workspace = true
 diffy.workspace = true
 dirs.workspace = true

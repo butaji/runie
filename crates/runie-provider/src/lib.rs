@@ -174,7 +174,7 @@ pub fn build_provider(
 
     let (api_key, base_url) = resolve_credentials(key, &meta, config);
     if api_key.is_empty() && !is_mock_enabled() {
-        return Err(ProviderError::MissingApiKey(meta.env_var.to_owned()));
+        return Err(ProviderError::MissingApiKey(meta.env_var.to_owned().into()));
     }
 
     let provider = build_openai_provider(api_key, model, &base_url);

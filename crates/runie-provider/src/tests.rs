@@ -207,7 +207,7 @@ fn test_dyn_provider_missing_api_key_returns_err() {
     std::env::remove_var("OPENAI_API_KEY");
     let result = DynProvider::new_with_config("openai", "gpt-4o-mini", &Config::default());
     match result {
-        Err(ProviderError::MissingApiKey(var)) => assert_eq!(var, "OPENAI_API_KEY"),
+        Err(ProviderError::MissingApiKey(ref err)) => assert_eq!(err.env_var, "OPENAI_API_KEY"),
         other => panic!("expected MissingApiKey error, got: {:?}", other),
     }
 }

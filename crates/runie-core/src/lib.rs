@@ -39,6 +39,7 @@ pub mod display_width;
 pub mod dry_run;
 pub mod dsl;
 pub mod edit_preview;
+pub mod error;
 pub mod event;
 pub mod file_refs;
 pub mod fuzzy;
@@ -132,6 +133,7 @@ pub use provider::{
     display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
     known_providers, Provider, ProviderError, ProviderMeta, ResponseChunk,
 };
+pub use error::{RunieError, RunieErrorKind};
 pub use provider_event::{ModelError, ProviderEvent, StopReason};
 pub use session::index::{SessionIndex, SessionMetadata};
 pub use session::store::SessionStore;

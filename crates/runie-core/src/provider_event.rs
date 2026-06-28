@@ -90,12 +90,6 @@ pub enum ModelError {
     Other(String),
 }
 
-impl From<anyhow::Error> for ModelError {
-    fn from(e: anyhow::Error) -> Self {
-        ModelError::Other(e.to_string())
-    }
-}
-
 impl std::fmt::Display for ModelError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -113,6 +107,14 @@ impl std::fmt::Display for ModelError {
             }
             ModelError::Other(msg) => write!(f, "{msg}"),
         }
+    }
+}
+
+impl std::error::Error for ModelError {}
+
+impl From<anyhow::Error> for ModelError {
+    fn from(e: anyhow::Error) -> Self {
+        ModelError::Other(e.to_string())
     }
 }
 

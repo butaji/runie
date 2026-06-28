@@ -5,6 +5,7 @@
 //! do not emit structured `ProviderEvent::ToolCall*` events.
 
 use serde_json::{Map, Value};
+use thiserror::Error;
 
 /// A parsed tool invocation: name, JSON arguments, and an optional call id.
 #[derive(Debug, Clone, PartialEq)]
@@ -15,7 +16,8 @@ pub struct ParsedToolCall {
 }
 
 /// A tool-call parse error: the raw line and a human-readable reason.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Error)]
+#[error("tool parse error: {reason}")]
 pub struct ToolParseError {
     pub raw: String,
     pub reason: String,
