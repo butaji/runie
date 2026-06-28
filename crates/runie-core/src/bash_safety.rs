@@ -1,182 +1,183 @@
 //! Bash command safety checks.
 //!
-//! These checks are heuristic — they catch common destructive patterns and
-//! obvious evasions, but they are not a sandbox. Destructive commands that
-//! cannot be proven safe should require explicit user approval.
+//! Uses `shell-words` for proper shell tokenization, then applies a static
+//! deny-list of known destructive command patterns.
+
+use shell_words;
 
 /// Check whether a bash command is unsafe to run automatically.
 ///
 /// Returns `Some(reason)` when the command matches a known destructive
 /// pattern; returns `None` when no pattern matched.
 pub fn check_bash_safety(command: &str) -> Option<&'static str> {
-    let normalized = normalize_command(command);
-    if let Some(reason) = check_fork_bomb(&normalized) {
-        return Some(reason);
-    }
-    for segment in split_segments(&normalized) {
-        if let Some(reason) = check_segment(segment) {
+    let tokens = match shell_words::split(command) {
+        Ok(t) => t,
+        Err(_) => return None,
+    };
+    check_destructive_tokens(&tokens)
+}
+
+/// Check tokens for destructive patterns.
+fn check_destructive_tokens(tokens: &[String]) -> Option<&'static str> {
+    // Look for dangerous commands anywhere in the line (handles &&, ; etc).
+    if let Some(idx) = tokens.iter().position(|t| t.to_lowercase() == "rm") {
+        if let Some(reason) = check_rm_at_idx(tokens, idx) {
             return Some(reason);
+        }
+    }
+    if let Some(idx) = tokens.iter().position(|t| t.to_lowercase() == "dd") {
+        if let Some(reason) = check_dd_at_idx(tokens, idx) {
+            return Some(reason);
+        }
+    }
+    if let Some(idx) = tokens.iter().position(|t| t.to_lowercase() == "chmod") {
+        if let Some(reason) = check_chmod_at_idx(tokens, idx) {
+            return Some(reason);
+        }
+    }
+
+    // Generic checks for commands that don't need positional analysis.
+    check_generic_dangerous(tokens)
+}
+
+fn check_rm_at_idx(tokens: &[String], idx: usize) -> Option<&'static str> {
+    let has_rf = tokens[idx..].iter().any(|t| t == "-rf" || t == "-fr" || t == "-r" || t == "-R");
+    if !has_rf {
+        return None;
+    }
+    for token in &tokens[idx..] {
+        if is_blocked_rm_target(token) {
+            return Some("rm -rf on system/home directories is blocked");
         }
     }
     None
 }
 
-fn normalize_command(command: &str) -> String {
-    let mut out = String::with_capacity(command.len());
-    let mut chars = command.chars().peekable();
-    while let Some(c) = chars.next() {
-        match c {
-            '"' | '\'' => {
-                // Drop quotes so "rm -rf /" is treated the same as rm -rf /.
-            }
-            '$' => {
-                // Expand simple variable names to common values for matching.
-                let mut name = String::new();
-                while let Some(&n) = chars.peek() {
-                    if n.is_alphanumeric() || n == '_' {
-                        name.push(n);
-                        chars.next();
-                    } else {
-                        break;
-                    }
-                }
-                out.push_str(expand_var(&name));
-            }
-            _ => out.push(c),
+fn check_dd_at_idx(tokens: &[String], idx: usize) -> Option<&'static str> {
+    for token in &tokens[idx..] {
+        if token.starts_with("of=/dev/") {
+            return Some("dd writing to block devices is blocked");
         }
     }
-    out.to_lowercase()
+    None
 }
 
-fn expand_var(name: &str) -> &str {
-    if name.eq_ignore_ascii_case("home") {
-        "~"
-    } else {
-        "$"
-    }
-}
-
-fn split_segments(cmd: &str) -> Vec<&str> {
-    cmd.split(&[';', '&', '|', '\n'])
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
-        .collect()
-}
-
-fn check_segment(seg: &str) -> Option<&'static str> {
-    check_rm_rf(seg)
-        .or_else(|| check_dd(seg))
-        .or_else(|| check_block_write(seg))
-        .or_else(|| check_mkfs(seg))
-        .or_else(|| check_fork_bomb(seg))
-        .or_else(|| check_chmod_root(seg))
-        .or_else(|| check_sudo_destructive(seg))
-        .or_else(|| check_shred(seg))
-        .or_else(|| check_interpreter_destructive(seg))
-        .or_else(|| check_find_exec_rm(seg))
-}
-
-fn check_rm_rf(seg: &str) -> Option<&'static str> {
-    if !seg.contains("rm") || !seg.contains(" -rf ") && !seg.contains(" -fr ") {
+fn check_chmod_at_idx(tokens: &[String], idx: usize) -> Option<&'static str> {
+    let has_recursive = tokens[idx..].iter().any(|t| t == "-r" || t == "-R");
+    if !has_recursive {
         return None;
     }
-    let after = seg.rsplit_once("rm").map(|(_, rest)| rest).unwrap_or(seg);
-    if has_system_path(after) || after.contains("--no-preserve-root") {
-        Some("rm -rf on system directories or home is blocked")
-    } else {
-        None
+    for (i, token) in tokens.iter().enumerate().skip(idx + 1) {
+        if matches!(token.as_str(), "777" | "000") && i + 1 < tokens.len() {
+            let next = &tokens[i + 1];
+            if next.starts_with('/') {
+                return Some("recursive chmod on root is blocked");
+            }
+        }
     }
+    None
 }
 
-fn has_system_path(seg: &str) -> bool {
-    if seg.contains(" /") || seg.contains("~") || seg.contains("*") {
-        return true;
+fn check_generic_dangerous(tokens: &[String]) -> Option<&'static str> {
+    // Block dangerous commands anywhere in line.
+    if let Some(reason) = check_block_tools(tokens) {
+        return Some(reason);
     }
-    let system_dirs = [" /boot", " /etc", " /home", " /root", " /usr", " /var"];
-    system_dirs.iter().any(|dir| seg.contains(dir))
+    if let Some(reason) = check_interpreter_attack(tokens) {
+        return Some(reason);
+    }
+    if let Some(reason) = check_fork_bomb(tokens) {
+        return Some(reason);
+    }
+    if has_device_redirect(tokens) {
+        return Some("writing directly to block devices is blocked");
+    }
+    check_find_exec_rm(tokens)
 }
 
-fn check_dd(seg: &str) -> Option<&'static str> {
-    if seg.starts_with("dd ") && seg.contains("of=/dev/") {
-        Some("dd writing to block devices is blocked")
-    } else {
-        None
+fn check_block_tools(tokens: &[String]) -> Option<&'static str> {
+    for token in tokens {
+        let t = token.to_lowercase();
+        if t.starts_with("mkfs") {
+            return Some("mkfs is blocked");
+        }
+        if t == "shred" && tokens.iter().any(|t| t.starts_with("/dev/")) {
+            return Some("shred on block devices is blocked");
+        }
+        if matches!(t.as_str(), "fdisk" | "sfdisk" | "parted") {
+            return Some("partitioning tools are blocked");
+        }
     }
+    None
 }
 
-fn check_block_write(seg: &str) -> Option<&'static str> {
-    if seg.contains("> /dev/sd")
-        || seg.contains("> /dev/nvme")
-        || seg.contains("> /dev/hd")
-        || seg.contains("> /dev/vd")
-        || seg.contains("> /dev/mmc")
-    {
-        Some("writing directly to block devices is blocked")
-    } else {
-        None
-    }
-}
-
-fn check_mkfs(seg: &str) -> Option<&'static str> {
-    if seg.starts_with("mkfs") || seg.starts_with("mkfs.") {
-        Some("mkfs is blocked")
-    } else {
-        None
-    }
-}
-
-fn check_fork_bomb(seg: &str) -> Option<&'static str> {
-    if seg.contains(":|:") && (seg.contains("};") || seg.contains(":|&")) {
-        Some("fork bombs are blocked")
-    } else {
-        None
-    }
-}
-
-fn check_chmod_root(seg: &str) -> Option<&'static str> {
-    if seg.contains("chmod -r 777 /") || seg.contains("chmod -r 000 /") {
-        Some("recursive chmod on root is blocked")
-    } else {
-        None
-    }
-}
-
-fn check_sudo_destructive(seg: &str) -> Option<&'static str> {
-    if seg.starts_with("sudo ") && contains_destructive(seg) {
-        Some("sudo with destructive commands is blocked")
-    } else {
-        None
-    }
-}
-
-fn check_shred(seg: &str) -> Option<&'static str> {
-    if seg.starts_with("shred ") && seg.contains("/dev/") {
-        Some("shred on block devices is blocked")
-    } else {
-        None
-    }
-}
-
-fn check_interpreter_destructive(seg: &str) -> Option<&'static str> {
-    let interpreters = ["python", "python3", "ruby", "node", "perl"];
-    for interp in interpreters {
-        if seg.starts_with(interp) && contains_destructive(seg) {
+fn check_interpreter_attack(tokens: &[String]) -> Option<&'static str> {
+    let interpreters = ["python", "python3", "ruby", "node", "perl", "bash", "sh"];
+    if let Some(idx) = tokens.iter().position(|t| {
+        let lower = t.to_lowercase();
+        interpreters.iter().any(|i| lower == *i)
+    }) {
+        let joined: String = tokens.iter().skip(idx).cloned().collect::<Vec<_>>().join(" ");
+        if contains_destructive(&joined) {
             return Some("interpreter executing destructive code is blocked");
         }
     }
     None
 }
 
-fn check_find_exec_rm(seg: &str) -> Option<&'static str> {
-    if seg.starts_with("find ") && seg.contains("-exec") && seg.contains("rm") {
-        Some("find with rm exec is blocked")
-    } else {
-        None
+fn check_fork_bomb(tokens: &[String]) -> Option<&'static str> {
+    let joined: String = tokens.join("");
+    if joined.contains(":|:") && (joined.contains("};") || joined.contains(":|&")) {
+        return Some("fork bombs are blocked");
     }
+    None
 }
 
-fn contains_destructive(seg: &str) -> bool {
-    seg.contains(" rm ") || seg.contains(" dd ") || seg.contains(" mkfs") || seg.contains(" shred")
+fn check_find_exec_rm(tokens: &[String]) -> Option<&'static str> {
+    if let Some(idx) = tokens.iter().position(|t| t.to_lowercase() == "find") {
+        let rest = &tokens[idx..];
+        if rest.iter().any(|t| t.contains("-exec")) && rest.iter().any(|t| t.contains("rm")) {
+            return Some("find with rm exec is blocked");
+        }
+    }
+    None
+}
+
+fn has_device_redirect(tokens: &[String]) -> bool {
+    tokens.iter().any(|t| {
+        t.starts_with("> /dev/sd")
+            || t.starts_with("> /dev/nvme")
+            || t.starts_with("> /dev/hd")
+            || t.starts_with("> /dev/vd")
+            || t.starts_with("> /dev/mmc")
+    })
+}
+
+fn is_blocked_rm_target(token: &str) -> bool {
+    let lower = token.to_lowercase();
+    matches!(
+        token,
+        "~" | "/" | "/boot" | "/etc" | "/home" | "/root" | "/usr" | "/var" | "/dev"
+    ) || token.starts_with("/dev/")
+        || token.starts_with("~$")
+        || token == "--no-preserve-root"
+        || token == "--no-preserve-root=all"
+        || token.contains('*')
+        || token.contains('?')
+        || lower == "$home"
+        || lower.starts_with("~${")
+        || lower.starts_with("$home")
+}
+
+fn contains_destructive(text: &str) -> bool {
+    text.contains("rm -rf")
+        || text.contains("rm ")
+        || text.contains(" dd ")
+        || text.contains("mkfs")
+        || text.contains("shred")
+        || text.contains("fdisk")
+        || text.contains("sfdisk")
+        || text.contains("parted")
 }
 
 #[cfg(test)]
@@ -212,5 +213,11 @@ mod tests {
         assert!(check_bash_safety("cat file.txt").is_none());
         assert!(check_bash_safety("git status").is_none());
         assert!(check_bash_safety("rm -rf build/").is_none());
+    }
+
+    #[test]
+    fn quoted_arguments_parsed() {
+        assert!(check_bash_safety("echo \"hello world\"").is_none());
+        assert!(check_bash_safety("ls 'my documents'").is_none());
     }
 }

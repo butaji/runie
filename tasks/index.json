@@ -132,7 +132,7 @@
   {
     "file": "replace-bash-safety-with-shell-words.md",
     "title": "Replace custom bash-safety heuristic with shell-words",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-build-linter-with-clippy-ci.md",

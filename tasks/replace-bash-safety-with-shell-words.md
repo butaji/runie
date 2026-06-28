@@ -1,6 +1,6 @@
 # Replace custom bash-safety heuristic with `shell-words`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Tools
 **Priority**: P2
@@ -14,33 +14,34 @@
 
 ## Acceptance Criteria
 
-- [ ] Replace the custom parser in `bash_safety.rs` with `shell_words::split` for tokenization.
-- [ ] Preserve the existing destructive-command detection logic as a static deny-list applied to tokens.
-- [ ] Remove the hand-rolled quote stripping / variable expansion / segment splitting code.
-- [ ] All existing bash-safety tests pass.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Replace the custom parser in `bash_safety.rs` with `shell_words::split` for tokenization.
+- [x] Preserve the existing destructive-command detection logic as a static deny-list applied to tokens.
+- [x] Remove the hand-rolled quote stripping / variable expansion / segment splitting code.
+- [x] All existing bash-safety tests pass.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `destructive_commands_still_flagged` — `rm -rf /`, `> file`, etc. are rejected.
-- [ ] `safe_commands_allowed` — `ls`, `git status`, etc. are allowed.
-- [ ] `quoted_arguments_parsed` — `echo "hello world"` is treated as one argument.
+- [x] `destructive_commands_still_flagged` — `rm -rf /`, `> file`, etc. are rejected.
+- [x] `safe_commands_allowed` — `ls`, `git status`, etc. are allowed.
+- [x] `quoted_arguments_parsed` — `echo "hello world"` is treated as one argument.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 
 - `crates/runie-core/src/bash_safety.rs`
 - `crates/runie-core/Cargo.toml`
+- `Cargo.toml` (workspace)
 
 ## Notes
 
