@@ -391,7 +391,7 @@ Tests are exempt from function-length and complexity checks so they can stay com
 
 ## Current cleanup roadmap
 
-The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. The remaining active work is tracked in `tasks/index.json` (14 active cleanup tasks) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
+The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. A third five-round review focused on replacing custom code with crates, unification, and Pareto simplification; its findings are recorded in [`docs/superpowers/plans/2026-06-28-less-code-crate-replacements.md`](superpowers/plans/2026-06-28-less-code-crate-replacements.md). The remaining active work is tracked in `tasks/index.json` (18 active cleanup tasks) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
 
 ### Active tasks
 
@@ -409,28 +409,33 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 #### Phase 3 — Event taxonomy (P1)
 
 6. **Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`** (`tasks/collapse-event-intent-kind-taxonomies.md`) — `Intent` is a semantic projection, not a mechanical mirror. Add attributes to `Event`, generate the taxonomies, delete `intent_impl.rs`, thin `kind/mod.rs`, and generate `names.rs`/`name.rs`.
+7. **Use `strum` to derive `Event`/`Intent` names** (`tasks/use-strum-for-event-intent-names.md`) — replace manual `names.rs`/`name.rs`/`EVENT_NAMES` tables with `strum` derives after the taxonomy annotation task lands.
 
 #### Phase 4 — Tool/provider shims (P2)
 
-7. **Finish tool-parser shim: collapse legacy modules and marker stripping** (`tasks/replace-legacy-tool-parsers-with-thin-shim.md`) — `partial`. The shim routes parsing through `quick-xml` MiniMax and single-pass JSON, but still embeds `legacy`/`markup` submodules; inline/delete them, collapse `tool_markers/strip.rs` to two semantic passes, fix the `strip_empty_code_fences` guardrail violation, reconcile MiniMax ownership, and fix the one `cargo check` warning.
-8. **Centralize built-in tool names** (`tasks/centralize-built-in-tool-names.md`) — `partial`. The canonical list already exists in `runie-core::tool::BUILTIN_TOOL_NAMES`; switch the remaining consumers to reference it.
+8. **Finish tool-parser shim: collapse legacy modules and marker stripping** (`tasks/replace-legacy-tool-parsers-with-thin-shim.md`) — `partial`. The shim routes parsing through `quick-xml` MiniMax and single-pass JSON, but still embeds `legacy`/`markup` submodules; inline/delete them, collapse `tool_markers/strip.rs` to two semantic passes, fix the `strip_empty_code_fences` guardrail violation, reconcile MiniMax ownership, and fix the one `cargo check` warning.
+9. **Use `pulldown-cmark` for tool-marker stripping** (`tasks/use-pulldown-cmark-for-tool-marker-stripping.md`) — rewrite the stripper as a single `pulldown-cmark` event pass instead of regex passes.
+10. **Centralize built-in tool names** (`tasks/centralize-built-in-tool-names.md`) — `done`. The canonical list already exists in `runie-core::tool::BUILTIN_TOOL_NAMES`; switch the remaining consumers to reference it.
 
 #### Phase 5 — Declarative DSL quick wins (P2)
 
-9. **Unify declarative resource loader** (`tasks/unify-declarative-resource-loader.md`) — extract shared directory-scan/frontmatter logic from `skills/load.rs` and `declarative/loader.rs`; decide and unify the frontmatter-vs-section-fallback policy.
+11. **Unify declarative resource loader** (`tasks/unify-declarative-resource-loader.md`) — extract shared directory-scan/frontmatter logic from `skills/load.rs` and `declarative/loader.rs`; decide and unify the frontmatter-vs-section-fallback policy.
+12. **Use `pulldown-cmark-frontmatter` for resource loader** (`tasks/use-pulldown-cmark-frontmatter-for-resource-loader.md`) — replace the custom frontmatter/body scanner with `pulldown-cmark-frontmatter` + `serde_yaml` after the loader is unified.
+
 #### Phase 6 — CLI config (P2)
 
-10. **Route CLI config through `ConfigActor`** (`tasks/route-cli-config-through-configactor.md`) — extend `RactorConfigActor` to hold global + project paths, add layered-load and MCP messages, wrap CLI commands in a runtime, and route `inspect`/`mcp` through the actor.
+13. **Route CLI config through `ConfigActor`** (`tasks/route-cli-config-through-configactor.md`) — extend `RactorConfigActor` to hold global + project paths, add layered-load and MCP messages, wrap CLI commands in a runtime, and route `inspect`/`mcp` through the actor.
 
-#### Phase 7 — Public API boundary (P2)
+#### Phase 7 — Public API boundary and helper crates (P2)
 
-11. **Narrow the `runie-core` public API** (`tasks/narrow-runie-core-public-api.md`) — usage-audit first; move shared helpers (`display_width`, `labels`, `path`, `sanitize`) to a new `runie-util` crate, narrow the rest.
+14. **Replace custom path/glob/fuzzy/keybinding helpers with crates** (`tasks/replace-custom-helpers-with-crates.md`) — delete `glob.rs`, `fuzzy.rs`, `path.rs`, and custom keybinding parsing; use `glob`/`globset`, `nucleo-matcher`/`sublime-fuzzy`, `shellexpand`, `crossterm`, and `tracing`.
+15. **Narrow the `runie-core` public API** (`tasks/narrow-runie-core-public-api.md`) — usage-audit first; move shared helpers (`display_width`, `labels`, `sanitize`) to a new `runie-util` crate, delete `path`/`fuzzy`/`glob` if the helper-crate task lands first, and narrow the rest.
 
 #### Phase 8 — Small safe cleanups (P3)
 
-12. **Unify TUI render test helpers** (`tasks/unify-tui-render-test-helpers.md`) — move duplicated `render_content`, `render_chat`, and buffer-to-string loops into a shared test helper module.
-13. **Fix keybindings dead-code warning** (`tasks/fix-keybindings-dead-code.md`) — convert `parse_key_combo` to `#[cfg(test)]` or document it.
-14. **Clean up small duplicates and dead code** (`tasks/cleanup-small-duplicates-and-dead-code.md`) — `partial`. Remaining items: consolidate skill hooks, remove dead actor-handle fields, clean stale `#[allow(dead_code)]` and repetitive `FIXME` comments.
+16. **Unify TUI render test helpers** (`tasks/unify-tui-render-test-helpers.md`) — move duplicated `render_content`, `render_chat`, and buffer-to-string loops into a shared test helper module.
+17. **Fix keybindings dead-code warning** (`tasks/fix-keybindings-dead-code.md`) — convert `parse_key_combo` to `#[cfg(test)]` or document it.
+18. **Clean up small duplicates and dead code** (`tasks/cleanup-small-duplicates-and-dead-code.md`) — `partial`. Remaining items: consolidate skill hooks, remove dead actor-handle fields, clean stale `#[allow(dead_code)]` and repetitive `FIXME` comments, and revisit `telemetry.rs` against `tracing`.
 
 ### Archived completed tasks
 
@@ -455,12 +460,13 @@ The plan is phased so that **every merged task leaves `cargo check --workspace` 
 
 1. Run the actor-runtime sequence in order (Tasks 1 → 2 → 3).
 2. Run the bootstrap sequence in order (Tasks 4 → 5).
-3. Land the event-taxonomy annotation/generation (Task 6).
-4. Run the tool-parser and centralize-tool-names tasks in either order (Tasks 7–8).
-5. Run the declarative-loader task (Task 9) in parallel with the above.
-6. Route CLI config through the actor (Task 10).
-7. Narrow the public API last (Task 11).
-8. Run the final small cleanups (Tasks 12–14).
+3. Land the event-taxonomy annotation/generation (Task 6), then adopt `strum` names (Task 7).
+4. Run the tool-parser and centralize-tool-names tasks in either order (Tasks 8–10).
+5. Run the declarative-loader tasks in order (Task 11 → 12) in parallel with the above.
+6. Route CLI config through the actor (Task 13).
+7. Replace custom helpers with crates (Task 14) before narrowing the public API.
+8. Narrow the public API (Task 15).
+9. Run the final small cleanups (Tasks 16–18).
 
 ## Testing philosophy
 

@@ -62,4 +62,5 @@ The goal is to keep the flat `Event` enum as the canonical source of truth, anno
 - The derive macro/generator must respect the build guardrails (file/function length, complexity). If a generated file would exceed limits, split the generated output by domain.
 - `EventCategory` is currently a 13-way dispatcher taxonomy. Decide whether to collapse it to a smaller set derived from `EventKind` + domain tags, or keep it as a generated separate enum.
 - Rejected alternative: deleting `Intent` and routing on `Event` directly. Many DSL sites already speak in terms of `Intent`, so removing it would force a larger rewrite.
+- After the attribute-based generator is in place, replace hand-written `names.rs`/`name.rs`/`EVENT_NAMES` with `strum` derives in `use-strum-for-event-intent-names`. `goose` already uses `strum` for this purpose.
 - Out of scope: changing the actor runtime or adding new event variants.

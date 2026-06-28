@@ -71,4 +71,5 @@ Current state as of Round 3 (2026-06-28):
 - The goal is a thin shim, not a wrapper around moved legacy files. `legacy.rs` and `markup.rs` should either disappear or be reduced to tiny inline helpers.
 - `tool_markers/strip.rs` has extensive tests for edge cases (unicode, fenced code, legitimate JSON preservation). Retain those tests while collapsing the implementation.
 - Rejected alternative: leaving the 8-stage pipeline in place. It is the remaining complexity hotspot in the text tool boundary.
+- The next simplification is `use-pulldown-cmark-for-tool-marker-stripping`: rewrite the stripper as a single `pulldown-cmark` event pass instead of regex passes. `goose` and `jcode` already use `pulldown-cmark` as their markdown authority.
 - Out of scope: adding new tool schemas or changing the MCP boundary itself.

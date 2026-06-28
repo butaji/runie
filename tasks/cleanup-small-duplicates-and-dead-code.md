@@ -62,4 +62,6 @@ The following items are **explicitly out of scope** because they are already res
 - This task is intentionally the final sweep after the independent quick wins and the larger architectural changes land.
 - The skill-hook consolidation is no longer blocked on tool-parser work because the canonical `BUILTIN_TOOL_NAMES` is in place.
 - Do not move helpers to `runie-io` or `runie-domain`; those crates were deleted as empty facades.
+- `telemetry.rs` should be revisited here: if it is only collecting events that `tracing` spans/events can model, replace it with `tracing` and delete the module.
+- Any remaining custom keybinding parsing should be replaced by `crossterm` (already covered in `replace-custom-helpers-with-crates`); this task only cleans up leftover allows.
 - Out of scope: `DynProvider`, `now()` (already resolved), manual derives with intentional semantics, large refactorings of the provider factory, the agent turn state machine, or the TUI widget tree.

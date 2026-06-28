@@ -17,18 +17,18 @@ Current state as of this review:
 - `lib.rs` re-exports ~43 `pub mod` declarations plus many `pub use` items.
 - Rough workspace usage audit:
   - `display_width` — used by `runie-tui` → candidate for `runie-util`.
-  - `path` — used by `runie-agent` → candidate for `runie-util`.
+  - `path` — used by `runie-agent` → candidate for `runie-util`, but prefer deleting it in favor of `shellexpand` + `std::path::absolute` (see `replace-custom-helpers-with-crates`).
   - `sanitize` — used by `runie-agent`, `runie-provider` → candidate for `runie-util`.
   - `labels` — used by `runie-tui` production code (`status_bar.rs`) and tests → candidate for `runie-util`.
-  - `display_width`, `path`, `sanitize` — used by downstream crates → candidates for `runie-util`.
-  - `build_lint`, `declarative`, `dry_run`, `edit_preview`, `file_refs`, `fuzzy`, `glob`, `input_history`, `notification`, `scoped_model`, `streaming_buffer`, `telemetry` — internal-only or lightly used → candidates for `pub(crate)`.
+  - `fuzzy`, `glob` — internal-only → delete and use crates (`replace-custom-helpers-with-crates`).
+  - `build_lint`, `declarative`, `dry_run`, `edit_preview`, `file_refs`, `input_history`, `notification`, `scoped_model`, `streaming_buffer`, `telemetry` — internal-only or lightly used → candidates for `pub(crate)`.
   - `actors`, `event`, `model`, `tool`, `view`, `provider`, `config`, `permissions`, `message` — heavily used → must stay public.
 - Many public actor-handle types (`ActorHandles`, `Ractor*Handle`, etc.) are still being migrated to `ractor`. Narrowing visibility before the actor migration finishes will create churn.
 
 ## Acceptance Criteria
 
 - [ ] Produce an explicit "keep public / move to util / pub(crate)" table and record the rationale for each decision.
-- [ ] Create `crates/runie-util/` (or a similarly named lightweight utility crate) and move `display_width`, `labels`, `path`, and `sanitize` there.
+- [ ] Create `crates/runie-util/` (or a similarly named lightweight utility crate) and move `display_width`, `labels`, and `sanitize` there. `path` should be removed if `replace-custom-helpers-with-crates` lands first.
 - [ ] Keep modules public that are used by `runie-tui`, `runie-provider`, `runie-cli`, or `runie-macros`.
 - [ ] Keep `runie-core::config` public because `runie-provider` re-exports `Config`, `ModelProvider`, and `ModelsSection` from it.
 - [ ] Convert modules that have no external consumers to `pub(crate)`.
@@ -64,4 +64,6 @@ Current state as of this review:
 - Defer aggressive narrowing until after `migrate-production-actors-to-ractor` and `collapse-actor-handles-to-typed-map` so that handle types stop moving.
 - If a downstream crate legitimately needs a helper, move it to a dedicated utility crate rather than leaving it in `runie-core`. Do not recreate `runie-io`/`runie-domain`; those were deleted as empty facades.
 - Rejected alternative: using a `#[doc(hidden)]` attribute on internal items. Hiding items does not provide the same compile-time API contract as `pub(crate)` and still permits accidental public dependence.
+- Coordinate with `replace-custom-helpers-with-crates`: any helper deleted there does not need to move to `runie-util`.
+- Consider `etcetera` for config-dir resolution and `ignore`/`walkdir` for project traversal when narrowing public file-system helpers; `goose` uses `etcetera`, `jcode` uses `ignore`/`walkdir`.
 - Out of scope: changing function bodies, renaming items, or modifying the provider trait surface. Visibility changes only.

@@ -6,7 +6,7 @@
 **Priority**: P2
 
 **Depends on**: none
-**Blocks**: none
+**Blocks**: use-pulldown-cmark-frontmatter-for-resource-loader
 
 ## Description
 
@@ -61,4 +61,6 @@ This task extracts the common scanning/frontmatter logic into a single loader mo
 - The shared loader should not know about `Skill` vs `SkillDef`; it should return generic frontmatter + file-path records that the two callers map into their own types.
 - If the product intends to ship bundled `resources/` directories, seed them in a separate commit before or alongside this task. Otherwise, update tasks/docs that assume they exist.
 - This is a high-Pareto change: small, safe, and removes a clear duplication hotspot that will grow as more declarative resource types are added.
+- Once unified, replace the custom frontmatter/body scanner with `pulldown-cmark-frontmatter` + `serde_yaml` in `use-pulldown-cmark-frontmatter-for-resource-loader`. Use `walkdir`/`ignore` for directory traversal instead of manual `fs::read_dir` loops.
+- `thClaws` and `OpenFang` both use YAML-frontmatter `SKILL.md` resources; aligning the loader makes Runie skills portable across agents.
 - Out of scope: unifying the command YAML loader, fixing the declarative `Box::leak`/`CommandCategory` issues, or changing the resource file format.

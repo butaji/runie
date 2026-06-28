@@ -30,9 +30,19 @@
     "status": "todo"
   },
   {
+    "file": "use-strum-for-event-intent-names.md",
+    "title": "Use strum to derive Event/Intent names",
+    "status": "todo"
+  },
+  {
     "file": "replace-legacy-tool-parsers-with-thin-shim.md",
     "title": "Finish tool-parser shim: collapse legacy modules",
     "status": "partial"
+  },
+  {
+    "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
+    "title": "Use pulldown-cmark event stream for tool-marker stripping",
+    "status": "todo"
   },
   {
     "file": "centralize-built-in-tool-names.md",
@@ -45,6 +55,11 @@
     "status": "todo"
   },
   {
+    "file": "use-pulldown-cmark-frontmatter-for-resource-loader.md",
+    "title": "Use pulldown-cmark-frontmatter for resource loader",
+    "status": "todo"
+  },
+  {
     "file": "route-cli-config-through-configactor.md",
     "title": "Route CLI config through ConfigActor",
     "status": "todo"
@@ -52,6 +67,11 @@
   {
     "file": "narrow-runie-core-public-api.md",
     "title": "Narrow runie-core public API",
+    "status": "todo"
+  },
+  {
+    "file": "replace-custom-helpers-with-crates.md",
+    "title": "Replace custom path/glob/fuzzy/keybinding helpers with crates",
     "status": "todo"
   },
   {
