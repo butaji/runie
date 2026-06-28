@@ -11,6 +11,8 @@ pub mod turn;
 pub mod config;
 pub mod fff_indexer;
 pub mod handles;
+#[cfg(test)]
+mod handles_tests;
 pub mod input;
 pub mod io;
 pub mod leader;

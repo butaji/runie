@@ -341,6 +341,7 @@ fn needs_appstate_lint(rel_path: &str) -> bool {
         "actors/input/actor.rs",
         "actors/input/messages.rs",
         "actors/ui_control/actor.rs",
+        "actors/handles.rs", // ActorHandles has typed actor handles, not AppState fields.
         "update/input/text.rs",
         "update/input/submit.rs",
         "retry.rs",

@@ -77,39 +77,47 @@ fn openai_event_stream(
             Ok(es) => es,
             Err(e) => { yield Err(e); return; }
         };
-
-        // Use exponential backoff with max 3 retries for transient errors
-        let backoff = ExponentialBackoff::new(
-            std::time::Duration::from_millis(500),
-            2.0,
-            Some(std::time::Duration::from_secs(10)),
-            Some(3),
-        );
-        es.set_retry_policy(Box::new(backoff));
+        configure_backoff(&mut es);
         let mut es = Box::pin(es);
-        let protocol = OpenAiProtocol::new();
-        let mut state = OpenAiState::default();
-
-        while let Some(result) = futures::StreamExt::next(&mut es).await {
-            match parse_sse_result(result) {
-                Some(Ok(event)) => {
-                    let frame = match OpenAiFrame::from_line(&event) {
-                        Some(f) => f,
-                        None => continue,
-                    };
-                    let is_terminal = protocol.terminal(&frame);
-                    let (new_state, events) = protocol.step(state, frame);
-                    state = new_state;
-                    for event in events { yield Ok(event); }
-                    if is_terminal { break; }
-                }
-                Some(Err(e)) => { yield Err(e); break; }
-                None => continue,
-            }
-        }
-
-        for event in protocol.on_halt(state) { yield Ok(event); }
+        let state = stream_sse_events(&mut es).await;
+        for event in OpenAiProtocol::new().on_halt(state) { yield Ok(event); }
     }
+}
+
+/// Configure exponential backoff with max 3 retries for transient errors.
+fn configure_backoff(es: &mut EventSource) {
+    let backoff = ExponentialBackoff::new(
+        std::time::Duration::from_millis(500),
+        2.0,
+        Some(std::time::Duration::from_secs(10)),
+        Some(3),
+    );
+    es.set_retry_policy(Box::new(backoff));
+}
+
+/// Process SSE events and yield provider events.
+async fn stream_sse_events(
+    es: &mut (impl futures::Stream<Item = Result<reqwest_eventsource::Event, reqwest_eventsource::Error>> + Unpin),
+) -> OpenAiState {
+    let protocol = OpenAiProtocol::new();
+    let mut state = OpenAiState::default();
+
+    while let Some(result) = futures::StreamExt::next(&mut *es).await {
+        let event = match parse_sse_result(result) {
+            Some(Ok(e)) => e,
+            Some(Err(_)) => return state,
+            None => continue,
+        };
+        let frame = match OpenAiFrame::from_line(&event) {
+            Some(f) => f,
+            None => continue,
+        };
+        let is_terminal = protocol.terminal(&frame);
+        let (new_state, _) = protocol.step(state, frame);
+        state = new_state;
+        if is_terminal { break; }
+    }
+    state
 }
 
 fn build_eventsource(
