@@ -10,7 +10,7 @@ use runie_core::message::{ChatMessage, Role};
 use runie_core::permissions::PermissionGate;
 use runie_core::provider::Provider;
 use runie_core::sanitize::sanitize_messages;
-use runie_core::tool::to_openai_function;
+use runie_core::tool::{to_openai_function, BUILTIN_TOOL_NAMES};
 use runie_core::tool::{
     assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
 };
@@ -260,12 +260,20 @@ fn build_tool_registry(read_only: bool) -> Vec<serde_json::Value> {
     tools
 }
 
+/// Build the comma-separated tools-list string from BUILTIN_TOOL_NAMES.
+/// Read-only tools are filtered out when `read_only` is true.
+fn build_tools_list(read_only: bool) -> String {
+    let readonly_tools = ["bash", "write_file", "edit_file"];
+    BUILTIN_TOOL_NAMES
+        .iter()
+        .filter(|name| !read_only || !readonly_tools.contains(name))
+        .copied()
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 pub(crate) fn build_initial_messages(command: &AgentCommand) -> Vec<ChatMessage> {
-    let tools_list = if command.read_only {
-        "read_file, list_dir, grep, find, search, fetch_docs"
-    } else {
-        "read_file, list_dir, write_file, edit_file, bash, grep, find, search, fetch_docs"
-    };
+    let tools_list = build_tools_list(command.read_only);
     let base = if command.system_prompt.is_empty() {
         runie_core::prompts::DEFAULT_PROMPT
     } else {
@@ -273,7 +281,7 @@ pub(crate) fn build_initial_messages(command: &AgentCommand) -> Vec<ChatMessage>
     };
     let mut system = runie_core::prompts::build_system_prompt(
         base,
-        tools_list,
+        &tools_list,
         command.read_only,
         command.thinking_level.prompt_suffix(),
     );

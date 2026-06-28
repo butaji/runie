@@ -10,7 +10,8 @@ async fn call_tool(name: &str, args: serde_json::Value) -> ToolOutput {
     dispatch_tool(name, &args).await
 }
 
-/// Dispatch a tool call by name using static dispatch.
+/// Dispatch a tool call by name.
+/// Match arms are kept in the same order as `BUILTIN_TOOL_NAMES`.
 async fn dispatch_tool(name: &str, args: &serde_json::Value) -> ToolOutput {
     match name {
         "bash" => run_tool::<BashTool>(args).await,

@@ -1,43 +1,43 @@
 [
   {
     "file": "migrate-production-actors-to-ractor.md",
-    "title": "Migrate production actors to `ractor`",
+    "title": "Migrate production actors to ractor",
     "status": "partial"
   },
   {
     "file": "delete-dead-actor-modules-and-custom-trait.md",
-    "title": "Delete dead actor modules and custom `Actor` trait",
+    "title": "Delete dead actor modules and custom Actor trait",
     "status": "todo"
   },
   {
     "file": "collapse-actor-handles-to-typed-map.md",
-    "title": "Collapse `ActorHandles` to a typed `ractor::ActorRef` map",
+    "title": "Collapse ActorHandles to typed ractor ActorRef map",
     "status": "todo"
   },
   {
     "file": "expand-leader-start-for-tui-and-cli.md",
-    "title": "Expand `Leader::start` for the full TUI and CLI runtime",
+    "title": "Expand Leader::start for TUI and CLI runtime",
     "status": "todo"
   },
   {
     "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
-    "title": "Migrate TUI and CLI to `Leader::start`",
+    "title": "Migrate TUI and CLI to Leader::start",
     "status": "todo"
   },
   {
     "file": "collapse-event-intent-kind-taxonomies.md",
-    "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
+    "title": "Annotate Event variants to generate taxonomies",
     "status": "todo"
   },
   {
     "file": "replace-legacy-tool-parsers-with-thin-shim.md",
-    "title": "Finish tool-parser shim: collapse legacy modules and marker stripping",
+    "title": "Finish tool-parser shim: collapse legacy modules",
     "status": "partial"
   },
   {
     "file": "centralize-built-in-tool-names.md",
     "title": "Centralize built-in tool names",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "unify-declarative-resource-loader.md",
@@ -46,12 +46,12 @@
   },
   {
     "file": "route-cli-config-through-configactor.md",
-    "title": "Route CLI config operations through `ConfigActor`",
+    "title": "Route CLI config through ConfigActor",
     "status": "todo"
   },
   {
     "file": "narrow-runie-core-public-api.md",
-    "title": "Narrow `runie-core` public API",
+    "title": "Narrow runie-core public API",
     "status": "todo"
   },
   {

@@ -7,11 +7,36 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use runie_core::tool::{parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus};
+use runie_core::tool::{
+    parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus,
+};
 use crate::tool::{
     BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool,
     ListDirTool, ReadFileTool, SearchTool, WriteFileTool,
 };
+
+/// Dispatch a tool call by name.
+/// The match arms are generated from BUILTIN_TOOL_NAMES to keep the list canonical.
+async fn dispatch_tool(
+    name: &str,
+    input: serde_json::Value,
+    ctx: &ToolContext,
+) -> ToolOutput {
+    // NOTE: arms are kept in the same order as BUILTIN_TOOL_NAMES.
+    match name {
+        "bash" => run_tool::<BashTool>(&input, ctx).await,
+        "read_file" => run_tool::<ReadFileTool>(&input, ctx).await,
+        "write_file" => run_tool::<WriteFileTool>(&input, ctx).await,
+        "edit_file" => run_tool::<EditFileTool>(&input, ctx).await,
+        "list_dir" => run_tool::<ListDirTool>(&input, ctx).await,
+        "grep" => run_tool::<GrepTool>(&input, ctx).await,
+        "find" => run_tool::<FindTool>(&input, ctx).await,
+        "fetch_docs" => run_tool::<FetchDocsTool>(&input, ctx).await,
+        "search" => run_tool::<SearchTool>(&input, ctx).await,
+        "find_definitions" => run_tool::<FindDefinitionsTool>(&input, ctx).await,
+        _ => unknown_tool_output(name, input),
+    }
+}
 
 /// A single hook in the inspector pipeline.
 pub trait Inspector: Send + Sync {
@@ -75,27 +100,6 @@ fn blocked_output(name: &str, input: serde_json::Value, msg: &str) -> ToolOutput
         bytes_transferred: None,
         duration: Instant::now().elapsed(),
         status: ToolStatus::Blocked,
-    }
-}
-
-/// Dispatch a tool call by name using static dispatch.
-async fn dispatch_tool(
-    name: &str,
-    input: serde_json::Value,
-    ctx: &ToolContext,
-) -> ToolOutput {
-    match name {
-        "bash" => run_tool::<BashTool>(&input, ctx).await,
-        "read_file" => run_tool::<ReadFileTool>(&input, ctx).await,
-        "write_file" => run_tool::<WriteFileTool>(&input, ctx).await,
-        "edit_file" => run_tool::<EditFileTool>(&input, ctx).await,
-        "list_dir" => run_tool::<ListDirTool>(&input, ctx).await,
-        "grep" => run_tool::<GrepTool>(&input, ctx).await,
-        "find" => run_tool::<FindTool>(&input, ctx).await,
-        "fetch_docs" => run_tool::<FetchDocsTool>(&input, ctx).await,
-        "search" => run_tool::<SearchTool>(&input, ctx).await,
-        "find_definitions" => run_tool::<FindDefinitionsTool>(&input, ctx).await,
-        _ => unknown_tool_output(name, input),
     }
 }
 

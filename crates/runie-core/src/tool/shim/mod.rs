@@ -5,21 +5,124 @@
 //! detector. Replaces the legacy parser stack.
 
 pub mod json;
-pub mod legacy;
-pub mod markup;
 pub mod minimax;
 
 pub use json::{is_tool_call_value, is_tool_call_value_check, parse_inline_json_tools};
-pub use legacy::{build_legacy_args, parse_legacy_tool, parse_legacy_tools_in_line};
-pub use markup::{arrow_to_json, extract_tool_call_payload, parse_markup_tool};
 pub use minimax::{
     is_known_tool, parse_minimax_tool_calls, OPEN_M2, OPEN_M3,
 };
 
 use super::types::{ParsedToolCall, ToolParseError};
+use serde_json::{Map, Value};
 
 const TC_START: &str = "[TOOL_CALL]";
 const TC_END: &str = "[/TOOL_CALL]";
+
+// ─── Legacy TOOL: parser ──────────────────────────────────────────────────────
+
+pub(crate) fn parse_legacy_tools_in_line(line: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
+    let mut results = Vec::new();
+    let trimmed = line.trim();
+    if let Some(rest) = trimmed.strip_prefix("TOOL:") {
+        match parse_legacy_tool(rest) {
+            Some(t) => results.push(Ok(t)),
+            None if !rest.trim().is_empty() => {
+                results.push(Err(ToolParseError { raw: line.to_owned(), reason: "invalid legacy TOOL syntax".into() }));
+            }
+            None => {}
+        }
+    }
+    for (idx, _) in line.match_indices("TOOL:") {
+        if idx == 0 { continue; }
+        if let Some(t) = parse_legacy_tool(&line[idx + 5..]) { results.push(Ok(t)); }
+    }
+    results
+}
+
+pub(crate) fn parse_legacy_tool(payload: &str) -> Option<ParsedToolCall> {
+    let t = payload.trim();
+    if t.is_empty() { return None; }
+    let (name, a1, a2) = if t.contains(':') { parse_legacy_colon(t) } else { parse_legacy_space(t) };
+    if name.is_empty() { return None; }
+    let args = build_legacy_args(name, a1, a2)?;
+    Some(ParsedToolCall { name: name.to_owned(), args, id: None })
+}
+
+fn parse_legacy_colon(t: &str) -> (&str, String, String) {
+    let p: Vec<&str> = t.splitn(3, ':').collect();
+    (p[0], p.get(1).unwrap_or(&"").to_string(), p.get(2).unwrap_or(&"").to_string())
+}
+
+fn parse_legacy_space(t: &str) -> (&str, String, String) {
+    let mut tok = t.split_whitespace();
+    let name = tok.next().unwrap_or("");
+    let first = tok.next().unwrap_or("").to_owned();
+    let rest = tok.collect::<Vec<_>>().join(" ");
+    (name, first, rest)
+}
+
+pub(crate) fn build_legacy_args(name: &str, a1: String, a2: String) -> Option<Value> {
+    let mut args = Map::new();
+    match name {
+        "read_file" | "list_dir" => { args.insert("path".into(), Value::String(a1)); }
+        "write_file" => { args.insert("path".into(), Value::String(a1)); args.insert("content".into(), Value::String(a2)); }
+        "bash" => { args.insert("command".into(), Value::String(a1)); }
+        _ => return None,
+    }
+    Some(Value::Object(args))
+}
+
+// ─── [TOOL_CALL] markup parser ────────────────────────────────────────────────
+
+pub(crate) fn parse_markup_tool(line: &str) -> Option<ParsedToolCall> {
+    let payload = extract_tool_call_payload(line)?;
+    let json = arrow_to_json(payload);
+    let v: Value = serde_json::from_str(&json).ok()?;
+    let name = v.get("tool")?.as_str()?;
+    let args = v.get("args")?.as_object()?;
+    if !is_known_tool(name) { return None; }
+    Some(ParsedToolCall { name: name.to_owned(), args: Value::Object(args.clone()), id: None })
+}
+
+pub(crate) fn extract_tool_call_payload(line: &str) -> Option<&str> {
+    let start = line.find("[TOOL_CALL]")?;
+    let after = &line[start + "[TOOL_CALL]".len()..];
+    let end = after.find("[/TOOL_CALL]")?;
+    Some(after[..end].trim())
+}
+
+pub(crate) fn arrow_to_json(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut chars = input.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '"' || ch == '\'' { out.push('"'); continue; }
+        if !in_str(&out) && ch == '=' && chars.peek() == Some(&'>') {
+            chars.next();
+            out.push(':');
+            if chars.peek() == Some(&' ') { chars.next(); out.push(' '); }
+            continue;
+        }
+        if !in_str(&out) && (ch.is_alphabetic() || ch == '_') {
+            let mut word = String::new();
+            word.push(ch);
+            while let Some(&c) = chars.peek() {
+                if c.is_alphanumeric() || c == '_' { word.push(c); chars.next(); }
+                else { break; }
+            }
+            let last = out.trim_end().chars().last();
+            let is_key = last == Some('{') || last == Some(',');
+            if is_key { out.push('"'); out.push_str(&word); out.push('"'); }
+            else { out.push_str(&word); }
+            continue;
+        }
+        out.push(ch);
+    }
+    out
+}
+
+fn in_str(s: &str) -> bool {
+    s.matches('"').count() % 2 == 1
+}
 
 pub fn parse_tool_calls(text: &str) -> Vec<ParsedToolCall> {
     parse_tool_calls_fallible(text).into_iter().filter_map(|r| r.ok()).collect()

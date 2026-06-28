@@ -1,6 +1,6 @@
 # Centralize built-in tool names
 
-**Status**: partial
+**Status**: done
 **Milestone**: R4
 **Category**: Tools
 **Priority**: P2

@@ -50,6 +50,8 @@ impl ToolSchemaEnricherSkill {
             "grep" => vec![serde_json::json!({"pattern": "TODO", "path": "."})],
             "find" => vec![serde_json::json!({"pattern": "*.rs", "path": "."})],
             "fetch_docs" => vec![serde_json::json!({"library": "serde"})],
+            "search" => vec![serde_json::json!({"query": "function name", "path": "."})],
+            "find_definitions" => vec![serde_json::json!({"symbol": "fn main", "path": "."})],
             _ => Vec::new(),
         }
     }

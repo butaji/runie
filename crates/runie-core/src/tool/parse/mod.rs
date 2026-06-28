@@ -4,11 +4,10 @@
 //! for MiniMax XML parsing and a single-pass JSON detector.
 
 pub use super::shim::{
-    assign_tool_call_ids, build_legacy_args, has_tool_calls, is_known_tool,
+    assign_tool_call_ids, has_tool_calls, is_known_tool,
     is_tool_call_value, is_tool_call_value_check, parse_inline_json_tools,
-    parse_legacy_tool, parse_legacy_tools_in_line, parse_markup_tool,
     parse_minimax_tool_calls, parse_tool_calls, parse_tool_calls_fallible,
-    arrow_to_json, extract_tool_call_payload, OPEN_M2, OPEN_M3,
+    OPEN_M2, OPEN_M3,
 };
 pub use super::types::{ParsedToolCall, ToolParseError};
 

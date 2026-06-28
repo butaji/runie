@@ -5,7 +5,7 @@
 **Category**: Architecture / Refactoring
 **Priority**: P3
 
-**Depends on**: collapse-actor-handles-to-typed-map, expand-leader-start-for-tui-and-cli, replace-legacy-tool-parsers-with-thin-shim, narrow-runie-core-public-api, route-cli-config-through-configactor, centralize-built-in-tool-names, unify-tui-render-test-helpers, fix-keybindings-dead-code
+**Depends on**: collapse-actor-handles-to-typed-map, expand-leader-start-for-tui-and-cli, replace-legacy-tool-parsers-with-thin-shim, narrow-runie-core-public-api, route-cli-config-through-configactor, unify-tui-render-test-helpers, fix-keybindings-dead-code
 **Blocks**: none
 
 ## Description

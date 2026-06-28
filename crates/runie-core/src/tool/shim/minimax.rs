@@ -36,9 +36,9 @@ pub fn is_known_tool(name: &str) -> bool {
 pub fn parse_minimax_tool_calls(text: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
     let norm = normalize_m3(text);
     if let Some(b) = extract_block(&norm, OPEN_M2, CLOSE_M2) {
-        parse_invoke_blocks(b, CLOSE_M2.len())
+        parse_invoke_blocks(b)
     } else if let Some(b) = extract_block(&norm, OPEN_M3, CLOSE_M3) {
-        parse_invoke_blocks(b, CLOSE_M3.len())
+        parse_invoke_blocks(b)
     } else {
         Vec::new()
     }
@@ -56,7 +56,7 @@ fn extract_block<'a>(text: &'a str, open: &str, close: &str) -> Option<&'a str> 
 }
 
 /// Parse all `<invoke>` blocks inside the extracted wrapper.
-fn parse_invoke_blocks(block: &str, _close_len: usize) -> Vec<Result<ParsedToolCall, ToolParseError>> {
+fn parse_invoke_blocks(block: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
     let mut reader = Reader::from_str(block);
     reader.config_mut().trim_text(true);
     let mut results = Vec::new();
