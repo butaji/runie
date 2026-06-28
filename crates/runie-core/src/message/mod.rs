@@ -1,16 +1,13 @@
 //! Message types shared across the application.
 //!
-//! The canonical definitions live in `runie_protocol::message`. This module
-//! re-exports them for compatibility and adds runie-core-specific `From`
-//! conversions.
+//! Canonical definitions live in `crate::proto::message`. This module re-exports
+//! them for backward compatibility and adds runie-core-specific `From` conversions.
 
-// Re-export from runie-protocol for compatibility.
-pub use runie_protocol::message::{
+pub use crate::proto::message::{
     ChatMessage, MessageMetadata, Part, Role, ToolCall,
 };
 
-// Re-export timestamp helper.
-pub use runie_protocol::message::now;
+pub use crate::proto::message::now;
 
 impl From<crate::tool::ParsedToolCall> for ToolCall {
     fn from(call: crate::tool::ParsedToolCall) -> Self {
@@ -172,12 +169,12 @@ mod tests {
     #[test]
     fn parsed_tool_call_maps_to_canonical() {
         use crate::tool::parse::ParsedToolCall;
-        let parsed = ParsedToolCall {
+        let parsed_call = ParsedToolCall {
             name: "read_file".into(),
             args: serde_json::json!({"path": "Cargo.toml"}),
             id: Some("call_123".into()),
         };
-        let tc: ToolCall = parsed.into();
+        let tc: ToolCall = parsed_call.into();
         assert_eq!(tc.id, "call_123");
         assert_eq!(tc.name, "read_file");
         assert_eq!(tc.args["path"], "Cargo.toml");
@@ -206,7 +203,7 @@ mod tests {
 
     #[test]
     fn chat_message_without_parts_deserializes_empty_vec() {
-        let json = r#"{"role":"Assistant","content":"hi","timestamp":1.0,"id":"a1"}"#;
+        let json = r#"{"role":"Assistant","timestamp":1.0,"id":"a1"}"#;
         let parsed: ChatMessage = serde_json::from_str(json).unwrap();
         assert!(parsed.parts.is_empty());
         assert_eq!(parsed.content(), "");

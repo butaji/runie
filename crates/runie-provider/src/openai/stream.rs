@@ -8,7 +8,7 @@ use super::OpenAiProvider;
 use crate::protocol::ProviderProtocol;
 use reqwest_eventsource::retry::ExponentialBackoff;
 use reqwest_eventsource::EventSource;
-use runie_protocol::message::ChatMessage;
+use runie_core::proto::message::ChatMessage;
 use runie_core::provider_event::ProviderEvent;
 
 /// Re-export types for testing and external consumers.
@@ -38,14 +38,14 @@ pub struct ToolCallDelta {
     pub arguments: Option<String>,
 }
 
-impl From<ToolCallDelta> for runie_protocol::message::ToolCall {
+impl From<ToolCallDelta> for runie_core::proto::message::ToolCall {
     fn from(delta: ToolCallDelta) -> Self {
         let args: serde_json::Value = delta
             .arguments
             .as_ref()
             .and_then(|a| serde_json::from_str(a).ok())
             .unwrap_or(serde_json::Value::Null);
-        runie_protocol::message::ToolCall {
+        runie_core::proto::message::ToolCall {
             id: delta.id.unwrap_or_default(),
             name: delta.name.unwrap_or_default(),
             args,

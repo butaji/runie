@@ -1,4 +1,4 @@
-//! Minimal provider configuration trait for breaking circular dependencies.
+//! Minimal provider configuration trait.
 //!
 //! This trait provides credential resolution for LLM providers without requiring
 //! either crate to depend on the other's configuration types.

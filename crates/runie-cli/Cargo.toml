@@ -12,7 +12,6 @@ path = "src/main.rs"
 runie-core.workspace = true
 runie-agent.workspace = true
 runie-provider.workspace = true
-runie-protocol.workspace = true
 tokio = { workspace = true, features = ["io-std", "signal"] }
 anyhow.workspace = true
 serde.workspace = true

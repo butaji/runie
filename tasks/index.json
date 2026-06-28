@@ -1,10 +1,5 @@
 [
   {
-    "file": "TEMPLATE.md",
-    "title": "Task Title",
-    "status": "todo"
-  },
-  {
     "file": "centralize-built-in-tool-names.md",
     "title": "Centralize built-in tool names",
     "status": "done"
@@ -30,11 +25,6 @@
     "status": "done"
   },
   {
-    "file": "collapse-event-intent-kind-taxonomies.md",
-    "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
-    "status": "todo"
-  },
-  {
     "file": "dedupe-turn-queue-delivery-logic.md",
     "title": "Dedupe turn-queue delivery logic",
     "status": "done"
@@ -53,26 +43,6 @@
     "file": "delete-or-fix-dead-mcp-feature-flag.md",
     "title": "Delete or fix dead `mcp` feature flag",
     "status": "done"
-  },
-  {
-    "file": "delete-or-merge-inspector-tool-pipeline.md",
-    "title": "Delete or merge the inspector tool pipeline",
-    "status": "todo"
-  },
-  {
-    "file": "eliminate-production-unwrap-expect.md",
-    "title": "Eliminate production `unwrap`/`expect` that should be recoverable errors",
-    "status": "todo"
-  },
-  {
-    "file": "expand-leader-start-for-tui-and-cli.md",
-    "title": "Expand `Leader::start` for the full TUI and CLI runtime",
-    "status": "todo"
-  },
-  {
-    "file": "extract-shared-streaming-response-parser.md",
-    "title": "Extract shared streaming response parser",
-    "status": "todo"
   },
   {
     "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
@@ -97,7 +67,7 @@
   {
     "file": "fold-runie-protocol-into-core.md",
     "title": "Fold `runie-protocol` crate into `runie-core`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "harden-actors-against-mutex-poisoning.md",
@@ -105,19 +75,9 @@
     "status": "done"
   },
   {
-    "file": "implement-or-remove-mcp-runtime-scaffolding.md",
-    "title": "Implement MCP client runtime or remove config scaffolding",
-    "status": "todo"
-  },
-  {
     "file": "initialize-tracing-subscriber-in-binaries.md",
     "title": "Initialize `tracing` subscriber in CLI and TUI binaries",
     "status": "done"
-  },
-  {
-    "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
-    "title": "Introduce `cargo-deny` and `cargo-machete` CI checks",
-    "status": "todo"
   },
   {
     "file": "migrate-production-actors-to-ractor.md",
@@ -125,13 +85,93 @@
     "status": "done"
   },
   {
-    "file": "migrate-subagent-loader-to-resource-loader.md",
-    "title": "Migrate subagent loader to unified resource loader",
+    "file": "remove-unused-dependencies-and-normalize-workspace-deps.md",
+    "title": "Remove unused dependencies and normalize workspace deps",
+    "status": "done"
+  },
+  {
+    "file": "replace-bash-safety-with-shell-words.md",
+    "title": "Replace custom bash-safety heuristic with `shell-words`",
+    "status": "done"
+  },
+  {
+    "file": "replace-custom-retry-with-backon.md",
+    "title": "Replace custom retry module with `backon`",
+    "status": "done"
+  },
+  {
+    "file": "replace-custom-telemetry-with-tracing-layer.md",
+    "title": "Replace custom telemetry module with a `tracing` layer",
+    "status": "done"
+  },
+  {
+    "file": "unify-tui-render-test-helpers.md",
+    "title": "Unify TUI render test helpers",
+    "status": "done"
+  },
+  {
+    "file": "unify-declarative-resource-loader.md",
+    "title": "Unify declarative resource loader",
+    "status": "done"
+  },
+  {
+    "file": "unify-library-error-types-with-thiserror.md",
+    "title": "Unify library error types with `thiserror`",
+    "status": "done"
+  },
+  {
+    "file": "use-clap-derive-for-cli.md",
+    "title": "Use `clap` derive macros for CLI argument parsing",
+    "status": "done"
+  },
+  {
+    "file": "replace-legacy-tool-parsers-with-thin-shim.md",
+    "title": "Finish tool-parser shim: collapse legacy modules and marker stripping",
+    "status": "done"
+  },
+  {
+    "file": "collapse-event-intent-kind-taxonomies.md",
+    "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
+    "status": "todo"
+  },
+  {
+    "file": "delete-or-merge-inspector-tool-pipeline.md",
+    "title": "Delete or merge the inspector tool pipeline",
+    "status": "todo"
+  },
+  {
+    "file": "eliminate-production-unwrap-expect.md",
+    "title": "Eliminate production `unwrap`/`expect` that should be recoverable errors",
+    "status": "todo"
+  },
+  {
+    "file": "expand-leader-start-for-tui-and-cli.md",
+    "title": "Expand `Leader::start` for the full TUI and CLI runtime",
+    "status": "todo"
+  },
+  {
+    "file": "extract-shared-streaming-response-parser.md",
+    "title": "Extract shared streaming response parser",
+    "status": "todo"
+  },
+  {
+    "file": "implement-or-remove-mcp-runtime-scaffolding.md",
+    "title": "Implement MCP client runtime or remove config scaffolding",
+    "status": "todo"
+  },
+  {
+    "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
+    "title": "Introduce `cargo-deny` and `cargo-machete` CI checks",
     "status": "todo"
   },
   {
     "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
     "title": "Migrate TUI and CLI to `Leader::start`",
+    "status": "todo"
+  },
+  {
+    "file": "migrate-subagent-loader-to-resource-loader.md",
+    "title": "Migrate subagent loader to unified resource loader",
     "status": "todo"
   },
   {
@@ -145,14 +185,19 @@
     "status": "todo"
   },
   {
-    "file": "remove-unused-dependencies-and-normalize-workspace-deps.md",
-    "title": "Remove unused dependencies and normalize workspace deps",
-    "status": "done"
+    "file": "replace-xor-auth-with-keyring.md",
+    "title": "Replace XOR-obfuscated auth storage with OS keyring",
+    "status": "todo"
   },
   {
-    "file": "replace-bash-safety-with-shell-words.md",
-    "title": "Replace custom bash-safety heuristic with `shell-words`",
-    "status": "done"
+    "file": "replace-tmux-test-with-ratatui-tests.md",
+    "title": "Replace `scripts/tmux-test.sh` with Ratatui `TestBackend` tests",
+    "status": "todo"
+  },
+  {
+    "file": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",
+    "title": "Replace custom TUI widgets with ratatui ecosystem crates",
+    "status": "todo"
   },
   {
     "file": "replace-build-linter-with-clippy-ci.md",
@@ -170,26 +215,6 @@
     "status": "todo"
   },
   {
-    "file": "replace-custom-retry-with-backon.md",
-    "title": "Replace custom retry module with `backon`",
-    "status": "done"
-  },
-  {
-    "file": "replace-custom-telemetry-with-tracing-layer.md",
-    "title": "Replace custom telemetry module with a `tracing` layer",
-    "status": "done"
-  },
-  {
-    "file": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",
-    "title": "Replace custom TUI widgets with ratatui ecosystem crates",
-    "status": "todo"
-  },
-  {
-    "file": "replace-legacy-tool-parsers-with-thin-shim.md",
-    "title": "Finish tool-parser shim: collapse legacy modules and marker stripping",
-    "status": "done"
-  },
-  {
     "file": "replace-remaining-custom-parsers-and-macros-with-strum.md",
     "title": "Replace remaining custom parsers and macros with `strum`",
     "status": "todo"
@@ -197,16 +222,6 @@
   {
     "file": "replace-think-filter-with-regex.md",
     "title": "Replace think-block filter with regex",
-    "status": "todo"
-  },
-  {
-    "file": "replace-tmux-test-with-ratatui-tests.md",
-    "title": "Replace `scripts/tmux-test.sh` with Ratatui `TestBackend` tests",
-    "status": "todo"
-  },
-  {
-    "file": "replace-xor-auth-with-keyring.md",
-    "title": "Replace XOR-obfuscated auth storage with OS keyring",
     "status": "todo"
   },
   {
@@ -240,16 +255,6 @@
     "status": "todo"
   },
   {
-    "file": "unify-declarative-resource-loader.md",
-    "title": "Unify declarative resource loader",
-    "status": "done"
-  },
-  {
-    "file": "unify-library-error-types-with-thiserror.md",
-    "title": "Unify library error types with `thiserror`",
-    "status": "done"
-  },
-  {
     "file": "unify-markdown-processing-around-pulldown-cmark.md",
     "title": "Unify markdown processing around `pulldown-cmark`",
     "status": "todo"
@@ -260,13 +265,13 @@
     "status": "todo"
   },
   {
-    "file": "unify-provider-config-persistence.md",
-    "title": "Unify provider-config persistence helpers",
+    "file": "unify-provider-credential-resolution-with-dotenvy.md",
+    "title": "Unify provider credential resolution with `dotenvy`",
     "status": "todo"
   },
   {
-    "file": "unify-provider-credential-resolution-with-dotenvy.md",
-    "title": "Unify provider credential resolution with `dotenvy`",
+    "file": "unify-provider-config-persistence.md",
+    "title": "Unify provider-config persistence helpers",
     "status": "todo"
   },
   {
@@ -275,28 +280,8 @@
     "status": "todo"
   },
   {
-    "file": "unify-tui-render-test-helpers.md",
-    "title": "Unify TUI render test helpers",
-    "status": "done"
-  },
-  {
-    "file": "use-channels-for-subagent-result-collection.md",
-    "title": "Use channels for subagent result collection",
-    "status": "todo"
-  },
-  {
-    "file": "use-clap-derive-for-cli.md",
-    "title": "Use `clap` derive macros for CLI argument parsing",
-    "status": "done"
-  },
-  {
     "file": "use-notify-directly-in-config-actor.md",
     "title": "Use `notify` directly in `RactorConfigActor`",
-    "status": "todo"
-  },
-  {
-    "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
-    "title": "Use `pulldown-cmark` event stream for tool-marker stripping",
     "status": "todo"
   },
   {
@@ -305,8 +290,18 @@
     "status": "todo"
   },
   {
+    "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
+    "title": "Use `pulldown-cmark` event stream for tool-marker stripping",
+    "status": "todo"
+  },
+  {
     "file": "use-strum-for-event-intent-names.md",
     "title": "Use `strum` to derive `Event`/`Intent`/`EventKind` names",
+    "status": "todo"
+  },
+  {
+    "file": "use-channels-for-subagent-result-collection.md",
+    "title": "Use channels for subagent result collection",
     "status": "todo"
   }
 ]

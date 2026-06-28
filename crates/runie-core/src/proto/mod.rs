@@ -1,4 +1,7 @@
-//! Shared protocol types for Runie IPC.
+//! Wire-protocol types for Runie IPC.
+//!
+//! These types define the JSON-RPC envelope and submission-queue types used by
+//! the TUI, CLI headless mode, and ACP/stdio interface.
 
 pub mod error;
 pub mod message;

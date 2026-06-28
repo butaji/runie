@@ -55,6 +55,8 @@ pub mod location;
 pub mod login_flow;
 pub mod markdown;
 pub mod message;
+/// Wire-protocol types (JSON-RPC envelope, submission-queue types).
+pub mod proto;
 pub mod provider_event;
 pub use message::Part;
 pub mod harness_skills;

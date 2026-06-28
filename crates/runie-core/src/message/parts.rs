@@ -1,3 +1,3 @@
-//! Typed parts — re-exported from `runie_protocol::message::parts`.
+//! Typed parts — re-exported from `crate::proto::message::parts`.
 
-pub use runie_protocol::message::parts::Part;
+pub use crate::proto::message::parts::Part;

@@ -268,14 +268,14 @@ async fn build_sink_yolo_false_denies_all() {
 
 #[test]
 fn approval_decision_allow_maps_to_permission_allow() {
-    use runie_protocol::op::ApprovalDecision;
+    use crate::proto::op::ApprovalDecision;
     let result = PermissionAction::from(ApprovalDecision::Allow);
     assert_eq!(result, PermissionAction::Allow);
 }
 
 #[test]
 fn approval_decision_deny_maps_to_permission_deny() {
-    use runie_protocol::op::ApprovalDecision;
+    use crate::proto::op::ApprovalDecision;
     let result = PermissionAction::from(ApprovalDecision::Deny);
     assert_eq!(result, PermissionAction::Deny);
 }

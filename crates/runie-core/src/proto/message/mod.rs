@@ -1,4 +1,4 @@
-//! Message types for Runie IPC.
+//! Message types shared across the application.
 
 use serde::{Deserialize, Serialize};
 
@@ -362,37 +362,6 @@ mod tests {
         assert_eq!(parsed.content(), "hello");
         assert_eq!(parsed.tool_calls().len(), 1);
         assert_eq!(parsed.tool_calls()[0].name, "list_dir");
-    }
-
-    #[test]
-    fn provider_view_from_chat_message() {
-        let msg = ChatMessage {
-            role: Role::Assistant,
-            parts: vec![
-                Part::Text { content: "hi".into() },
-                Part::ToolCall {
-                    id: "c1".into(),
-                    name: "bash".into(),
-                    args: serde_json::json!({"cmd": "ls"}),
-                },
-            ],
-            ..Default::default()
-        };
-        assert_eq!(msg.content(), "hi");
-        let tcs = msg.tool_calls();
-        assert_eq!(tcs.len(), 1);
-        assert_eq!(tcs[0].name, "bash");
-        assert_eq!(tcs[0].id, "c1");
-        assert_eq!(tcs[0].args["cmd"], "ls");
-    }
-
-    #[test]
-    fn role_from_str_round_trip() {
-        for role in [Role::User, Role::Assistant, Role::System, Role::Tool] {
-            let s = role.as_str();
-            let parsed = Role::parse(s).unwrap();
-            assert_eq!(parsed, role);
-        }
     }
 
     #[test]

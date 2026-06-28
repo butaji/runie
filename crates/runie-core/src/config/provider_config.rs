@@ -1,9 +1,6 @@
-//! ProviderConfig implementation for runie-protocol.
-//!
-//! This module provides the bridge between runie-core's Config and
-//! runie-protocol's ProviderConfig trait.
+//! ProviderConfig implementation for `crate::proto::provider::ProviderConfig`.
 
-impl runie_protocol::ProviderConfig for crate::config::Config {
+impl crate::proto::provider::ProviderConfig for crate::config::Config {
     fn resolve_api_key(&self, provider: &str) -> Option<String> {
         let env_key = format!("{}_API_KEY", provider.to_uppercase());
         if let Ok(val) = std::env::var(&env_key) {

@@ -2,10 +2,11 @@
 
 use serde_json::Value;
 
-use crate::{
-    error::Error, notification::Notification, request::Request, response::Response,
-    version::Version,
-};
+use super::error::Error;
+use super::notification::Notification;
+use super::request::Request;
+use super::response::Response;
+use super::version::Version;
 
 /// Any protocol message on the wire.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

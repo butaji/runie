@@ -45,7 +45,7 @@ mod tests;
 ///
 /// This is the canonical enum for permission decisions throughout the codebase.
 /// The protocol's `ApprovalDecision` (Allow/Deny only) is converted to this type
-/// at the protocol/core boundary via `From<runie_protocol::op::ApprovalDecision>`.
+/// at the protocol/core boundary via `From<crate::proto::op::ApprovalDecision>`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum PermissionAction {
     Allow,
@@ -53,11 +53,11 @@ pub enum PermissionAction {
     Deny,
 }
 
-impl From<runie_protocol::op::ApprovalDecision> for PermissionAction {
-    fn from(decision: runie_protocol::op::ApprovalDecision) -> Self {
+impl From<crate::proto::op::ApprovalDecision> for PermissionAction {
+    fn from(decision: crate::proto::op::ApprovalDecision) -> Self {
         match decision {
-            runie_protocol::op::ApprovalDecision::Allow => PermissionAction::Allow,
-            runie_protocol::op::ApprovalDecision::Deny => PermissionAction::Deny,
+            crate::proto::op::ApprovalDecision::Allow => PermissionAction::Allow,
+            crate::proto::op::ApprovalDecision::Deny => PermissionAction::Deny,
         }
     }
 }

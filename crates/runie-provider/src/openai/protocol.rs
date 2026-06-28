@@ -40,11 +40,11 @@ pub struct ToolAccum {
     pub arguments: String,
 }
 
-impl From<ToolAccum> for runie_protocol::message::ToolCall {
+impl From<ToolAccum> for runie_core::proto::message::ToolCall {
     fn from(acc: ToolAccum) -> Self {
         let args: serde_json::Value =
             serde_json::from_str(&acc.arguments).unwrap_or(serde_json::Value::Null);
-        runie_protocol::message::ToolCall {
+        runie_core::proto::message::ToolCall {
             id: acc.id,
             name: acc.name,
             args,

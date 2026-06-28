@@ -5,7 +5,7 @@
 //! messages with the same role, or histories that do not start with a user
 //! or system message. This module repairs the most common issues.
 
-use runie_protocol::message::ChatMessage;
+use runie_core::proto::message::ChatMessage;
 use runie_core::sanitize::sanitize_messages;
 
 /// Normalize a message list for an OpenAI-compatible request.
@@ -31,7 +31,7 @@ fn strip_provider_metadata(messages: Vec<ChatMessage>) -> Vec<ChatMessage> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runie_protocol::message::Role;
+    use runie_core::proto::message::Role;
 
     #[test]
     fn strips_provider_metadata() {
@@ -57,12 +57,12 @@ mod tests {
     fn does_not_merge_consecutive_tool_results() {
         // Need an assistant message with matching tool calls for tool results to be preserved
         let mut assistant = ChatMessage::assistant("call tools".to_string());
-        assistant.parts.push(runie_protocol::message::Part::ToolCall {
+        assistant.parts.push(runie_core::proto::message::Part::ToolCall {
             id: "call_1".into(),
             name: "tool1".into(),
             args: serde_json::json!({}),
         });
-        assistant.parts.push(runie_protocol::message::Part::ToolCall {
+        assistant.parts.push(runie_core::proto::message::Part::ToolCall {
             id: "call_2".into(),
             name: "tool2".into(),
             args: serde_json::json!({}),

@@ -13,13 +13,13 @@ use anyhow::Result;
 use runie_agent::headless_helper::build_sink;
 use runie_agent::{run_headless_cli, HeadlessCliOptions};
 use runie_core::message::ChatMessage;
-use runie_protocol::{Error, Message, Request, Response};
+use runie_core::proto::{Error, Message, Request, Response};
 use serde_json::Value;
 use std::collections::HashMap;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 
-const CURRENT_VERSION: &str = runie_protocol::PROTOCOL_VERSION;
+const CURRENT_VERSION: &str = runie_core::proto::PROTOCOL_VERSION;
 
 /// Run server mode.
 pub async fn run(use_stdio: bool, _yolo: bool) -> Result<()> {
@@ -203,7 +203,7 @@ async fn handle_list_sessions() -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runie_protocol::{Message, Version};
+    use runie_core::proto::{Message, Version};
 
     #[test]
     fn rpc_parses_request() {

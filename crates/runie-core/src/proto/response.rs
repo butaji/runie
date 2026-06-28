@@ -2,7 +2,8 @@
 
 use serde_json::Value;
 
-use crate::{error::Error, version::Version};
+use super::error::Error;
+use super::version::Version;
 
 /// A response sent from the server to a client.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

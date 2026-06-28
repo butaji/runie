@@ -74,7 +74,7 @@ impl OpenAiProvider {
 impl crate::Provider for OpenAiProvider {
     fn generate(
         &self,
-        messages: Vec<runie_protocol::message::ChatMessage>,
+        messages: Vec<runie_core::proto::message::ChatMessage>,
     ) -> std::pin::Pin<
         Box<
             dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
@@ -87,7 +87,7 @@ impl crate::Provider for OpenAiProvider {
 
     fn generate_with_tools(
         &self,
-        messages: Vec<runie_protocol::message::ChatMessage>,
+        messages: Vec<runie_core::proto::message::ChatMessage>,
         tools: Vec<serde_json::Value>,
     ) -> std::pin::Pin<
         Box<
@@ -108,7 +108,7 @@ impl crate::Provider for OpenAiProvider {
 mod tests {
     use super::*;
     use request::build_request_body;
-    use runie_protocol::message::{ChatMessage, Part, Role};
+    use runie_core::proto::message::{ChatMessage, Part, Role};
     use runie_core::provider_event::{ProviderEvent, StopReason};
     use stream::{parse_sse_event, SseEvent};
 

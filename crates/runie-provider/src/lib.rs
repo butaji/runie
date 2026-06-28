@@ -26,7 +26,7 @@ pub use runie_core::model_catalog::{filter_models, model_catalog, ModelCapabilit
 pub use runie_core::model_catalog::configured::configured_models_catalog;
 
 pub use config::Config;
-pub use runie_protocol::ProviderConfigBox;
+pub use runie_core::proto::ProviderConfigBox;
 pub use factory::DynProviderFactory;
 pub use mock::{MockProvider, MockStreamingProvider};
 pub use openai::OpenAiProvider;
@@ -78,7 +78,7 @@ impl std::ops::Deref for DynProvider {
 impl Provider for DynProvider {
     fn generate(
         &self,
-        messages: Vec<runie_protocol::message::ChatMessage>,
+        messages: Vec<runie_core::proto::message::ChatMessage>,
     ) -> std::pin::Pin<
         Box<
             dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
@@ -91,7 +91,7 @@ impl Provider for DynProvider {
 
     fn generate_with_tools(
         &self,
-        messages: Vec<runie_protocol::message::ChatMessage>,
+        messages: Vec<runie_core::proto::message::ChatMessage>,
         tools: Vec<serde_json::Value>,
     ) -> std::pin::Pin<
         Box<

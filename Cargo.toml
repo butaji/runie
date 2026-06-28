@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-cli", "crates/runie-testing", "crates/runie-protocol"]
+members = ["crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-cli", "crates/runie-testing"]
 resolver = "2"
 
 # Default test timeout: 120 seconds. Tests exceeding this are killed.
@@ -35,6 +35,7 @@ diffy = "0.5"
 backon = "1.6"
 rmcp = { version = "1.8", features = ["schemars", "server"] }
 schemars = "1.0"
+jsonschema = "0.7"
 regex = "1.10"
 glob = "0.3"
 shellexpand = "3.0"
@@ -63,6 +64,6 @@ runie-core = { path = "crates/runie-core" }
 runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }
 runie-testing = { path = "crates/runie-testing" }
-runie-protocol = { path = "crates/runie-protocol" }
+
 
 

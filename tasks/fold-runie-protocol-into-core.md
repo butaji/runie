@@ -1,6 +1,6 @@
 # Fold `runie-protocol` crate into `runie-core`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: Architecture / Actors
 **Priority**: P1

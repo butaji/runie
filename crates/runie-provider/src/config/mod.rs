@@ -1,14 +1,14 @@
 //! Provider configuration resolver.
 //!
 //! This module provides credential resolution for LLM providers.
-//! It uses the `ProviderConfig` trait from `runie-protocol` to break
+//! It uses the `ProviderConfig` trait from `` to break
 //! circular dependencies between runie-core and runie-provider.
 
 use std::collections::HashMap;
 
-use runie_protocol::ProviderConfigBox;
+use runie_core::proto::ProviderConfigBox;
 #[cfg(test)]
-use runie_protocol::ProviderConfig;
+use runie_core::proto::ProviderConfig;
 
 /// Resolves provider configuration from multiple sources with priority:
 /// 1. Environment variables
@@ -56,7 +56,7 @@ impl ProviderConfigResolver {
     /// Create a resolver with a config but no environment variable capture.
     /// Use this for tests that need isolation from the actual environment.
     #[cfg(test)]
-    pub fn with_config<C: runie_protocol::ProviderConfig + 'static>(config: C) -> Self {
+    pub fn with_config<C: runie_core::proto::ProviderConfig + 'static>(config: C) -> Self {
         Self { env: HashMap::new(), dotenv: HashMap::new(), provider_config: Some(ProviderConfigBox::new(config)) }
     }
 

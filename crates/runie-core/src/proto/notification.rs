@@ -2,7 +2,7 @@
 
 use serde_json::Value;
 
-use crate::version::Version;
+use super::version::Version;
 
 /// A one-way notification from server to client.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

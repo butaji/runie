@@ -7,7 +7,7 @@ use runie_core::actors::provider::{BuiltProvider, ProviderFactory};
 use runie_core::config::Config;
 use crate::config::ProviderConfigResolver;
 use crate::{find_provider, build_provider, validate_api_key, ProviderError};
-use runie_protocol::ProviderConfigBox;
+use runie_core::proto::ProviderConfigBox;
 
 /// The production provider factory.
 ///
