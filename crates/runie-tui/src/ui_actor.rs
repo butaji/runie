@@ -267,11 +267,19 @@ async fn handle_persistence_messages(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runie_core::actors::{ActorHandles, ProviderActorHandle, RactorTurnActor};
+    use runie_core::actors::{
+        ActorHandles, ProviderActorHandle, RactorSessionActor, RactorTurnActor,
+    };
 
     async fn test_turn_handle() -> runie_core::actors::RactorTurnHandle {
         let bus = EventBus::<Event>::new(10);
         let (handle, _, _) = RactorTurnActor::spawn(bus).await;
+        handle
+    }
+
+    async fn test_session_handle() -> RactorSessionHandle {
+        let bus = EventBus::<Event>::new(10);
+        let (handle, _) = RactorSessionActor::spawn(bus).await.unwrap();
         handle
     }
 
@@ -282,8 +290,7 @@ mod tests {
         let (render_tx, mut render_rx) = watch::channel(Snapshot::default());
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
         let agent_handle = AgentActorHandle::new(agent_tx);
-        let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::SessionMsg>(1);
-        let persistence_handle = RactorSessionHandle::new(persist_tx);
+        let persistence_handle = test_session_handle().await;
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let turn_handle = test_turn_handle().await;
@@ -341,13 +348,13 @@ mod tests {
         let state = AppState::default();
         let (render_tx, _render_rx) = watch::channel(Snapshot::default());
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
-        let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::SessionMsg>(1);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
         let turn_handle = test_turn_handle().await;
+        let persistence_handle = test_session_handle().await;
         let mut actor = UiActor::new(state, render_tx, AgentActorHandle::new(agent_tx),
-            RactorSessionHandle::new(persist_tx), turn_handle, kb_tx,
+            persistence_handle, turn_handle, kb_tx,
             EventBus::new(4), shutdown_tx, TerminalCapabilities::default());
 
         // Simulate a streaming message: TextStart -> ResponseDelta -> tick.
@@ -375,13 +382,13 @@ mod tests {
         let state = AppState::default();
         let (render_tx, _render_rx) = watch::channel(Snapshot::default());
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
-        let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::SessionMsg>(1);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
         let turn_handle = test_turn_handle().await;
+        let persistence_handle = test_session_handle().await;
         let mut actor = UiActor::new(state, render_tx, AgentActorHandle::new(agent_tx),
-            RactorSessionHandle::new(persist_tx), turn_handle, kb_tx,
+            persistence_handle, turn_handle, kb_tx,
             EventBus::new(4), shutdown_tx, TerminalCapabilities::default());
 
         actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
@@ -416,8 +423,7 @@ mod tests {
         let (render_tx, _render_rx) = watch::channel(Snapshot::default());
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
         let agent_handle = AgentActorHandle::new(agent_tx);
-        let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::SessionMsg>(1);
-        let persistence_handle = RactorSessionHandle::new(persist_tx);
+        let persistence_handle = test_session_handle().await;
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, mut effect_rx) = mpsc::channel::<Event>(16);
