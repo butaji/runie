@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-cli", "crates/runie-testing", "crates/runie-protocol", "crates/runie-macros"]
+members = ["crates/runie-domain", "crates/runie-io", "crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-cli", "crates/runie-testing", "crates/runie-protocol", "crates/runie-macros"]
 resolver = "2"
 
 [workspace.package]
@@ -38,7 +38,10 @@ insta = { version = "1.41", features = ["yaml"] }
 tempfile = "3"
 
 async-trait = "0.1"
+futures-util = "0.3"
 ractor = "0.9"
+runie-domain = { path = "crates/runie-domain" }
+runie-io = { path = "crates/runie-io" }
 runie-core = { path = "crates/runie-core" }
 runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }

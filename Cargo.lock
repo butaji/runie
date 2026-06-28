@@ -3560,6 +3560,73 @@ dependencies = [
 ]
 
 [[package]]
+name = "runie-domain"
+version = "0.2.16"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64",
+ "diffy",
+ "dirs",
+ "fff-search",
+ "futures",
+ "futures-util",
+ "git2",
+ "pulldown-cmark",
+ "regex",
+ "runie-protocol",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "similar 3.1.1",
+ "strum 0.26.3",
+ "textwrap",
+ "toml",
+ "unicode-segmentation",
+ "unicode-width",
+]
+
+[[package]]
+name = "runie-io"
+version = "0.2.16"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64",
+ "crossterm",
+ "diffy",
+ "dirs",
+ "fff-search",
+ "futures",
+ "git2",
+ "nix 0.31.3",
+ "notify 7.0.0",
+ "notify-debouncer-mini",
+ "pulldown-cmark",
+ "ractor",
+ "redb",
+ "regex",
+ "reqwest 0.12.28",
+ "runie-domain",
+ "runie-macros",
+ "runie-protocol",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "similar 3.1.1",
+ "strum 0.26.3",
+ "tempfile",
+ "textwrap",
+ "tokio",
+ "toml",
+ "tracing",
+ "unicode-width",
+ "uuid",
+]
+
+[[package]]
 name = "runie-macros"
 version = "0.2.16"
 dependencies = [

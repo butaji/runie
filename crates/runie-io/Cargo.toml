@@ -1,0 +1,52 @@
+[package]
+name = "runie-io"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = []
+# Enable migration from redb session files (can be disabled to reduce dependencies)
+redb-migration = ["dep:redb"]
+
+[dependencies]
+runie-domain = { path = "../runie-domain" }
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+futures.workspace = true
+ractor.workspace = true
+async-trait.workspace = true
+notify = "7.0"
+notify-debouncer-mini = "0.5"
+reqwest = { version = "0.12", features = ["json", "stream", "blocking"] }
+tempfile.workspace = true
+tracing = "0.1"
+runie-protocol.workspace = true
+schemars.workspace = true
+similar.workspace = true
+diffy.workspace = true
+base64.workspace = true
+fff-search.workspace = true
+git2.workspace = true
+dirs.workspace = true
+regex = { workspace = true }
+strum = { version = "0.26", features = ["derive"] }
+toml.workspace = true
+pulldown-cmark.workspace = true
+unicode-width.workspace = true
+textwrap = { version = "0.16", features = ["unicode-linebreak"] }
+redb = { version = "2", optional = true }
+
+[target.'cfg(unix)'.dependencies]
+crossterm.workspace = true
+nix.workspace = true
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+runie-macros.workspace = true
