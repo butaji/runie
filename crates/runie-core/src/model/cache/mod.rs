@@ -10,6 +10,7 @@ use crate::model::state::AppState;
 use crate::model::view_cache::ViewCache;
 use crate::model::{build_model_selector_items, ModelSelectorItem};
 use crate::model_catalog::configured_models_catalog;
+use crate::commands::DialogKind;
 use crate::snapshot::{
     compute_current_top_element, compute_hovered_element, compute_mouse_target, Snapshot,
 };
@@ -131,7 +132,7 @@ impl AppState {
 
     fn refresh_session_tree_items(&mut self) {
         let filter = match self.open_dialog() {
-            Some(crate::commands::DialogState::SessionTree(_)) => {
+            Some(crate::commands::DialogState::Active { kind: DialogKind::SessionTree, panels: _ }) => {
                 crate::session::tree::SessionTreeFilter::All
             }
             _ => {

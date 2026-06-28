@@ -3,52 +3,11 @@ use crate::tests::ensure_mock_provider;
 use crate::{
     run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages, AgentCommand,
 };
-use runie_core::harness_skills::{
-    HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult,
-};
+use runie_core::harness_skills::{HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase};
 use runie_core::Event;
-use runie_testing::{allow_all_gate, mock_provider};
-use std::collections::HashMap;
+use runie_testing::mock_tool_skill;
+use runie_testing::{allow_all_gate, mock_provider, RecordingSkill};
 use std::sync::{Arc, Mutex};
-
-struct MockToolSkill {
-    outputs: HashMap<String, String>,
-}
-
-impl MockToolSkill {
-    fn new(outputs: HashMap<String, String>) -> Self {
-        Self { outputs }
-    }
-}
-
-impl HarnessSkill for MockToolSkill {
-    fn name(&self) -> &str {
-        "mock_tools"
-    }
-
-    fn on_tool_call(&self, ctx: &ToolCallCtx) -> ToolCallResult {
-        if ctx.phase != ToolCallPhase::Before {
-            return ToolCallResult::Continue;
-        }
-        self.outputs
-            .get(&ctx.tool_name)
-            .cloned()
-            .map(ToolCallResult::SkipWithOutput)
-            .unwrap_or(ToolCallResult::Continue)
-    }
-}
-
-pub(crate) fn mock_tool_skill() -> SkillRegistry {
-    let mut outputs = HashMap::new();
-    outputs.insert(
-        "list_dir".to_string(),
-        "Cargo.toml\nREADME.md\n".to_string(),
-    );
-    outputs.insert("bash".to_string(), "hello\n".to_string());
-    let mut registry = SkillRegistry::new();
-    registry.register(MockToolSkill::new(outputs));
-    registry
-}
 
 #[tokio::test]
 async fn test_agent_loop_simple_response() {
@@ -429,27 +388,10 @@ async fn tool_call_event_matches_mock_output() {
     }
 }
 
-struct RecordingSkill {
-    ctx: Arc<Mutex<Option<ToolCallCtx>>>,
-}
-
-impl HarnessSkill for RecordingSkill {
-    fn name(&self) -> &str {
-        "recording"
-    }
-
-    fn on_tool_call(&self, ctx: &ToolCallCtx) -> ToolCallResult {
-        *self.ctx.lock().unwrap() = Some(ctx.clone());
-        ToolCallResult::Continue
-    }
-}
-
 #[test]
 fn tool_call_hook_receives_input() {
-    let recorded = Arc::new(Mutex::new(None));
-    let skill = RecordingSkill {
-        ctx: recorded.clone(),
-    };
+    let skill = RecordingSkill::new();
+    let ctx_ref = skill.ctx.clone();
     let mut registry = SkillRegistry::new();
     registry.register(skill);
 
@@ -462,6 +404,6 @@ fn tool_call_hook_receives_input() {
         success: None,
     });
 
-    let ctx = recorded.lock().unwrap().take().unwrap();
+    let ctx = ctx_ref.lock().unwrap().take().unwrap();
     assert_eq!(ctx.tool_input, input);
 }

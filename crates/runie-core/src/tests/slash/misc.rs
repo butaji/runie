@@ -1,4 +1,5 @@
 use super::exec;
+use crate::commands::DialogKind;
 use crate::config::ModelProvider;
 use crate::model::Role;
 use crate::tests::{fresh_state, seed_providers, type_str};
@@ -65,7 +66,7 @@ fn help_opens_reference_panel() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(crate::commands::DialogState::PanelStack(_))
+            Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: _ })
         ),
         "/help should open the reference panel"
     );

@@ -1,4 +1,4 @@
-use crate::commands::DialogState;
+use crate::commands::{DialogKind, DialogState};
 use crate::model::AppState;
 
 use super::run_slash;
@@ -8,7 +8,7 @@ fn hotkeys_opens_panel() {
     let mut state = AppState::default();
     run_slash(&mut state, "/hotkeys");
     assert!(
-        matches!(state.open_dialog, Some(DialogState::PanelStack(_))),
+        matches!(state.open_dialog, Some(DialogState::Active { kind: DialogKind::Generic, panels: _ })),
         "/hotkeys should open a panel"
     );
 }
@@ -18,7 +18,7 @@ fn hotkeys_alias_keys_works() {
     let mut state = AppState::default();
     run_slash(&mut state, "/keys");
     assert!(
-        matches!(state.open_dialog, Some(DialogState::PanelStack(_))),
+        matches!(state.open_dialog, Some(DialogState::Active { kind: DialogKind::Generic, panels: _ })),
         "/keys alias should open hotkeys panel"
     );
 }

@@ -1,6 +1,6 @@
 //! Panel stack navigation and item activation (merged from dialog_panel.rs).
 
-use crate::commands::DialogState;
+use crate::commands::{DialogKind, DialogState};
 use crate::dialog::{ItemAction, Panel, PanelItem, PanelStack};
 use crate::model::AppState;
 use crate::Event;
@@ -197,7 +197,7 @@ fn update_form_panel(
 
     let keep_open = matches!(&action, FormAction::KeepOpen);
     if keep_open && state.open_dialog().is_none() {
-        *state.open_dialog_mut() = Some(DialogState::PanelStack(stack.clone()));
+        *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack.clone() });
     }
     super::form::apply_form_action(state, action);
     if keep_open {
@@ -210,7 +210,7 @@ fn update_form_panel(
 fn handle_back_action(state: &mut AppState, stack: &mut PanelStack) -> bool {
     if stack.len() > 1 {
         stack.pop();
-        *state.open_dialog_mut() = Some(DialogState::PanelStack(stack.clone()));
+        *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack.clone() });
         false
     } else {
         let root_closable = stack.root().map(|p| p.closable).unwrap_or(true);

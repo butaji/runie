@@ -1,4 +1,5 @@
 use super::dialog::open_session_tree_dialog;
+use crate::commands::DialogKind;
 use crate::model::AppState;
 
 impl AppState {
@@ -6,7 +7,7 @@ impl AppState {
 
     pub(super) fn toggle_session_tree_dialog(&mut self) {
         use crate::commands::DialogState;
-        if matches!(self.open_dialog, Some(DialogState::SessionTree(_))) {
+        if matches!(self.open_dialog, Some(DialogState::Active { kind: DialogKind::SessionTree, panels: _ })) {
             *self.open_dialog_mut() = None;
             self.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
             self.view_mut().dirty = true;
@@ -18,7 +19,7 @@ impl AppState {
 
     pub(super) fn cycle_session_tree_filter(&mut self) {
         use crate::commands::DialogState;
-        if let Some(DialogState::SessionTree(stack)) = &mut *self.open_dialog_mut() {
+        if let Some(DialogState::Active { kind: DialogKind::SessionTree, panels: stack }) = &mut *self.open_dialog_mut() {
             if let Some(_panel) = stack.current_mut() {
                 // cycle through filter variants based on panel id or custom logic
                 // For now just mark dirty so the panel re-renders

@@ -1,6 +1,7 @@
 //! Theme slash command tests
 
 use super::slash::{exec, tmp_store, ENV_LOCK};
+use crate::commands::DialogKind;
 use crate::model::Role;
 use crate::tests::fresh_state;
 use crate::Event;
@@ -81,7 +82,7 @@ fn theme_no_args_opens_selector_dialog() {
         .as_ref()
         .expect("theme selector dialog should be open");
     assert!(
-        matches!(dialog, crate::commands::DialogState::PanelStack(stack) if stack.current().unwrap().id == "theme"),
+        matches!(dialog, crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack } if stack.current().unwrap().id == "theme"),
         "should open theme panel dialog"
     );
 }

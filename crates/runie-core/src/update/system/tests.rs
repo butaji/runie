@@ -26,7 +26,7 @@ fn resume_session_opens_session_tree_dialog() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(crate::commands::DialogState::SessionTree(_))
+            Some(crate::commands::DialogState::Active { kind: DialogKind::SessionTree, panels: _ })
         ),
         "ResumeSession should open the session tree dialog, got {:?}",
         state.open_dialog

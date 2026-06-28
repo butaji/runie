@@ -1,5 +1,6 @@
 //! Session tree tests — fork, clone, filter
 
+use crate::commands::DialogKind;
 use crate::message::{ChatMessage, Part, Role};
 use crate::model::AppState;
 use crate::session::tree::{SessionTree, SessionTreeFilter};
@@ -131,7 +132,7 @@ fn slash_tree_opens_dialog() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(crate::commands::DialogState::SessionTree(_))
+            Some(crate::commands::DialogState::Active { kind: DialogKind::SessionTree, panels: _ })
         ),
         "/tree should open session tree dialog"
     );
@@ -150,7 +151,7 @@ fn tree_navigates_up_down() {
     // Up should decrement selected
     state.update(crate::Event::HistoryPrev);
     let selected = match &state.open_dialog {
-        Some(crate::commands::DialogState::SessionTree(stack)) => {
+        Some(crate::commands::DialogState::Active { kind: DialogKind::SessionTree, panels: stack }) => {
             stack.current().map(|p| p.selected)
         }
         _ => None,
@@ -160,7 +161,7 @@ fn tree_navigates_up_down() {
     // Down should increment selected
     state.update(crate::Event::HistoryNext);
     let selected = match &state.open_dialog {
-        Some(crate::commands::DialogState::SessionTree(stack)) => {
+        Some(crate::commands::DialogState::Active { kind: DialogKind::SessionTree, panels: stack }) => {
             stack.current().map(|p| p.selected)
         }
         _ => None,
@@ -183,7 +184,7 @@ fn tree_filter_cycle_event() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(crate::commands::DialogState::SessionTree(_))
+            Some(crate::commands::DialogState::Active { kind: DialogKind::SessionTree, panels: _ })
         ),
         "dialog should stay open"
     );
@@ -336,7 +337,7 @@ fn tree_select_branch_switches_conversation() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(crate::commands::DialogState::SessionTree(_))
+            Some(crate::commands::DialogState::Active { kind: DialogKind::SessionTree, panels: _ })
         ),
         "tree dialog should be open"
     );

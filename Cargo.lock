@@ -3274,9 +3274,12 @@ name = "runie-testing"
 version = "0.2.16"
 dependencies = [
  "anyhow",
+ "async-trait",
+ "futures",
  "runie-agent",
  "runie-core",
  "runie-provider",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.18",
  "tokio",

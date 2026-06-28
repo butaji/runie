@@ -29,7 +29,7 @@ mod registry;
 mod tests;
 
 pub use dsl::{CommandCategory, CommandDef, CommandFlow, CommandResult, DialogType};
-pub use registry::{filter_commands, CommandRegistry, DialogState};
+pub use registry::{filter_commands, CommandRegistry, DialogKind, DialogState};
 
 /// Shorthand for creating commands
 pub use dsl::cmd;

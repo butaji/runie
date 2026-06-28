@@ -1,4 +1,5 @@
 use super::{exec, tmp_store, ENV_LOCK};
+use crate::commands::DialogKind;
 use crate::message::Part;
 use crate::model::Role;
 use crate::tests::{fresh_state, type_str};
@@ -20,7 +21,7 @@ fn delete_no_args_opens_form() {
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
-    if let Some(crate::commands::DialogState::PanelStack(stack)) = &state.open_dialog {
+    if let Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
         let panel = stack.current().expect("should have panel");
         assert_eq!(panel.id, "delete", "should be delete form");
     } else {

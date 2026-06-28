@@ -1,6 +1,6 @@
 //! Dialog toggle event handlers (merged from toggle.rs, provider_model_toggle.rs, model_selector.rs).
 
-use crate::commands::DialogState;
+use crate::commands::{DialogKind, DialogState};
 use crate::model::AppState;
 
 use super::{
@@ -51,7 +51,7 @@ fn handle_welcome_toggle(state: &mut AppState) {
 fn handle_model_selector_toggle(state: &mut AppState) {
     do_toggle_dialog(
         state,
-        matches!(state.open_dialog(), Some(&DialogState::ModelSelector(_))),
+        matches!(state.open_dialog(), Some(&DialogState::Active { kind: DialogKind::ModelSelector, panels: _ })),
         open_model_selector,
     );
 }
@@ -59,7 +59,7 @@ fn handle_model_selector_toggle(state: &mut AppState) {
 fn handle_scoped_models_toggle(state: &mut AppState) {
     do_toggle_dialog(
         state,
-        matches!(state.open_dialog(), Some(&DialogState::ScopedModels(_))),
+        matches!(state.open_dialog(), Some(&DialogState::Active { kind: DialogKind::ScopedModels, panels: _ })),
         open_scoped_models_dialog,
     );
 }
@@ -67,7 +67,7 @@ fn handle_scoped_models_toggle(state: &mut AppState) {
 fn handle_settings_toggle(state: &mut AppState) {
     do_toggle_dialog(
         state,
-        matches!(state.open_dialog(), Some(&DialogState::Settings(_))),
+        matches!(state.open_dialog(), Some(&DialogState::Active { kind: DialogKind::Settings, panels: _ })),
         open_settings_dialog,
     );
 }
@@ -123,7 +123,7 @@ fn set_scoped_models_enabled(state: &mut AppState, enabled: bool) {
 
 fn handle_providers_dialog(state: &mut AppState) {
     use crate::provider::dialog::build_providers_dialog;
-    *state.open_dialog_mut() = Some(DialogState::PanelStack(build_providers_dialog(state)));
+    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: build_providers_dialog(state) });
     state.view_mut().dirty = true;
 }
 
@@ -148,12 +148,12 @@ fn handle_providers_select_model(state: &mut AppState, event: &crate::Event) {
 fn handle_providers_edit_models(state: &mut AppState, event: &crate::Event) {
     if let crate::Event::ProvidersEditModels { provider } = event {
         let stack = crate::provider::dialog::build_provider_models_editor(state, provider);
-        if let Some(DialogState::PanelStack(current)) = state.open_dialog_mut().as_mut() {
+        if let Some(DialogState::Active { kind: DialogKind::Generic, panels: current }) = state.open_dialog_mut().as_mut() {
             if let Some(panel) = stack.current() {
                 current.push(panel.clone());
             }
         } else {
-            *state.open_dialog_mut() = Some(DialogState::PanelStack(stack));
+            *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack });
         }
         state.view_mut().dirty = true;
     }

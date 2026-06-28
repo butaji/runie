@@ -1,4 +1,5 @@
 use super::{exec, tmp_store, ENV_LOCK};
+use crate::commands::DialogKind;
 use crate::model::Role;
 use crate::tests::{fresh_state, seed_providers, type_str};
 use crate::Event;
@@ -120,7 +121,7 @@ fn slash_opens_palette_and_typing_filters_commands() {
 
     // Verify the palette is open with "model" as filter
     let stack = match &state.open_dialog {
-        Some(crate::commands::DialogState::CommandPalette(s)) => s,
+        Some(crate::commands::DialogState::Active { kind: DialogKind::CommandPalette, panels: s }) => s,
         _ => panic!("Expected command palette"),
     };
     let panel = stack.current().expect("panel");
@@ -145,7 +146,7 @@ fn model_no_args_opens_selector() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(crate::commands::DialogState::ModelSelector { .. })
+            Some(crate::commands::DialogState::Active { kind: DialogKind::ModelSelector, .. })
         ),
         "no args should open model selector dialog"
     );
@@ -245,7 +246,7 @@ fn save_no_args_opens_form() {
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
-    if let Some(crate::commands::DialogState::PanelStack(stack)) = &state.open_dialog {
+    if let Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
         let panel = stack.current().expect("should have panel");
         assert_eq!(panel.id, "save", "should be save form");
     } else {

@@ -5,6 +5,7 @@
 
 #[cfg(test)]
 mod tests {
+    use crate::commands::DialogKind;
     use crate::login_flow::state::LoginStep;
     use crate::model::AppState;
     use crate::Event;
@@ -71,7 +72,7 @@ mod tests {
             provider: "minimax".into(),
         });
         match &state.open_dialog_mut() {
-            Some(crate::commands::DialogState::PanelStack(s)) => {
+            Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: s }) => {
                 assert_eq!(s.len(), 2, "stack should be [provider, key_input]");
                 assert_eq!(s.current().unwrap().id, "login-key");
             }
@@ -79,7 +80,7 @@ mod tests {
         }
         state.update(Event::dialog_back());
         match &state.open_dialog_mut() {
-            Some(crate::commands::DialogState::PanelStack(s)) => {
+            Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: s }) => {
                 assert_eq!(s.len(), 1, "Esc must pop to root, not close");
                 assert_eq!(s.current().unwrap().id, "login-provider");
             }
@@ -120,7 +121,7 @@ mod tests {
         });
         assert_flow_step(&state, LoginStep::Validating);
         match &state.open_dialog_mut() {
-            Some(crate::commands::DialogState::PanelStack(s)) => {
+            Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: s }) => {
                 assert_eq!(s.current().unwrap().id, "login-validating");
             }
             other => panic!("expected validating panel, got {other:?}"),

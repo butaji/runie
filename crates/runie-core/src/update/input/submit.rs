@@ -169,7 +169,7 @@ impl AppState {
                 DialogType::ThemeSelector => crate::update::dialog::open_theme_selector(self),
             },
             crate::commands::CommandResult::OpenPanelStack(stack) => {
-                *self.open_dialog_mut() = Some(crate::commands::DialogState::PanelStack(*stack));
+                *self.open_dialog_mut() = Some(crate::commands::DialogState::Active { kind: crate::commands::DialogKind::Generic, panels: (*stack).clone() });
                 self.view_mut().dirty = true;
             }
             crate::commands::CommandResult::None => {}

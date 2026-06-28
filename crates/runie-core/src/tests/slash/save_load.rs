@@ -1,4 +1,5 @@
 use super::{exec, minimal_session, tmp_store, ENV_LOCK};
+use crate::commands::DialogKind;
 use crate::message::Part;
 use crate::model::{ChatMessage, Role};
 use crate::session::replay::save_snapshot;
@@ -120,7 +121,7 @@ fn load_no_args_opens_form() {
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
-    if let Some(crate::commands::DialogState::PanelStack(stack)) = &state.open_dialog {
+    if let Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
         let panel = stack.current().expect("should have panel");
         assert_eq!(panel.id, "load", "should be load form");
     } else {

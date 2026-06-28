@@ -39,7 +39,7 @@ fn find_line(buf: &ratatui::buffer::Buffer, text: &str) -> Option<String> {
 
 /// Open a panel dialog on top of AppState.
 fn open_panel(state: &mut AppState, panel: Panel) {
-    state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
+    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
 }
 
 /// Build a file picker panel using the same label logic as `build_file_picker_panel`.

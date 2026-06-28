@@ -1,7 +1,7 @@
 //! /model command tests — the selector must only offer models from connected
 //! providers and the provider's chosen model list.
 
-use crate::commands::{CommandResult, DialogType};
+use crate::commands::{DialogKind, CommandResult, DialogType};
 use crate::config::{Config, ModelProvider};
 use crate::model::AppState;
 use crate::update::dialog::process_command_result;
@@ -101,7 +101,7 @@ fn model_opens_selector_with_only_configured_models() {
     process_command_result(&mut state, result);
 
     let items = match &state.open_dialog {
-        Some(crate::commands::DialogState::ModelSelector(stack)) => {
+        Some(crate::commands::DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
             stack.current().map(|p| p.items.clone()).unwrap_or_default()
         }
         other => panic!("expected ModelSelector dialog, got {:?}", other),
@@ -176,7 +176,7 @@ fn model_selector_includes_unknown_configured_models() {
     process_command_result(&mut state, result);
 
     let items = match &state.open_dialog {
-        Some(crate::commands::DialogState::ModelSelector(stack)) => {
+        Some(crate::commands::DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
             stack.current().map(|p| p.items.clone()).unwrap_or_default()
         }
         other => panic!("expected ModelSelector dialog, got {:?}", other),

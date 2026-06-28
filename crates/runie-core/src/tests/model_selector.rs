@@ -3,13 +3,13 @@
 use crate::config::ModelProvider;
 use crate::Event;
 
-use crate::commands::DialogState;
+use crate::commands::{DialogKind, DialogState};
 use crate::model::{AppState, ScopedModel};
 use crate::model_catalog::{build_model_selector_items, filter_models, model_catalog, ModelInfo};
 
 fn selector_state(state: &AppState) -> Option<(String, usize)> {
     match &state.open_dialog {
-        Some(DialogState::ModelSelector(stack)) => {
+        Some(DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
             stack.current().map(|p| (p.filter.clone(), p.selected))
         }
         _ => None,
@@ -213,7 +213,7 @@ fn empty_current_marker_when_no_active_model() {
     state.update(crate::Event::ToggleModelSelector);
 
     let items = match &state.open_dialog {
-        Some(DialogState::ModelSelector(stack)) => {
+        Some(DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
             stack.current().map(|p| p.items.clone()).unwrap_or_default()
         }
         _ => Vec::new(),
@@ -288,7 +288,7 @@ fn selector_wraps_down() {
     );
     state.update(crate::Event::ToggleModelSelector);
     let count = match &state.open_dialog {
-        Some(DialogState::ModelSelector(stack)) => {
+        Some(DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
             stack.current().map(|p| p.navigable_count()).unwrap_or(0)
         }
         _ => 0,

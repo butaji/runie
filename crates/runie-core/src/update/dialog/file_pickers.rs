@@ -1,7 +1,7 @@
 //! File picker helpers — panel building and rebuilding.
 //! FFF search results come exclusively via `Event::FffSearchResult` from `FffIndexerActor`.
 
-use crate::commands::DialogState;
+use crate::commands::{DialogKind, DialogState};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::{AppState, FffFileEntry};
 
@@ -60,7 +60,7 @@ fn file_picker_insert_name(entry: &FffFileEntry) -> String {
 /// Rebuild the file picker panel with the current FFF results and panel filter.
 /// Results are populated asynchronously via `Event::FffSearchResult`.
 pub(crate) fn rebuild_file_picker(state: &mut AppState) {
-    let Some(DialogState::PanelStack(stack)) = state.open_dialog() else {
+    let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = state.open_dialog() else {
         return;
     };
     let Some(panel) = stack.current() else {
@@ -75,7 +75,7 @@ pub(crate) fn rebuild_file_picker(state: &mut AppState) {
     // Use current results (may be stale until actor responds).
     let entries = state.fff_file_results();
     let new_panel = build_picker_panel_with_results(&filter, entries);
-    *state.open_dialog_mut() = Some(DialogState::PanelStack(PanelStack::new(new_panel)));
+    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(new_panel) });
     state.view_mut().dirty = true;
 }
 

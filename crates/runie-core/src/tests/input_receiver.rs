@@ -5,7 +5,7 @@
 //! entering vim-nav mode. Only when the chat input is active should Esc
 //! enter vim-nav mode.
 
-use crate::commands::DialogState;
+use crate::commands::{DialogKind, DialogState};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::{AppState, InputReceiver};
 use crate::Event;
@@ -96,9 +96,9 @@ fn esc_closes_settings_dialog_without_triggering_vim_nav() {
     let mut state = state_with_vim();
 
     // Open settings dialog directly
-    state.open_dialog = Some(DialogState::Settings(PanelStack::new(
+    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Settings, panels: PanelStack::new(
         Panel::new("settings", "Settings").item("Done", ItemAction::Close),
-    )));
+    ) });
     state.view.input_receiver = InputReceiver::Dialog;
 
     // Press Esc to close

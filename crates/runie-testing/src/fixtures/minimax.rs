@@ -32,3 +32,17 @@ pub const ALL_FIXTURES: &[&str] = &[
     "m3_list_files_call.sse",
     "m27_multi_tool_readme.sse",
 ];
+
+/// Load a fixture by name. Panics if the name is unknown.
+pub fn fixture(name: &str) -> String {
+    match name {
+        "m3_list_files_call.sse" => M3_LIST_FILES_CALL.to_string(),
+        "m3_list_files_final.sse" => M3_LIST_FILES_FINAL.to_string(),
+        "m3_read_file_call.sse" => M3_READ_FILE_CALL.to_string(),
+        "m3_read_file_final.sse" => M3_READ_FILE_FINAL.to_string(),
+        "m3_multi_tool_list_dir.sse" => M3_MULTI_TOOL_LIST_DIR.to_string(),
+        "m3_multi_tool_readme.sse" => M3_MULTI_TOOL_README.to_string(),
+        "m27_multi_tool_readme.sse" => M27_MULTI_TOOL_README.to_string(),
+        _ => unreachable!(),
+    }
+}

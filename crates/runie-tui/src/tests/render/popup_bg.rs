@@ -1,6 +1,7 @@
 use super::*;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
+use runie_core::commands::DialogKind;
 use runie_core::Event;
 
 /// Helper: check if the given text string appears anywhere in the rect.
@@ -206,7 +207,7 @@ fn panel_dialog_hides_underlying_messages() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(runie_core::commands::DialogState::PanelStack(_))
+            Some(runie_core::commands::DialogState::Active { kind: DialogKind::Generic, panels: _ })
         ),
         "PanelStack dialog should be open"
     );

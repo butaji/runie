@@ -3,7 +3,7 @@
 use crate::dialog::dsl::get_field;
 use crate::Event;
 
-use crate::commands::DialogState;
+use crate::commands::{DialogKind, DialogState};
 use crate::message::Part;
 use crate::tests::slash::ENV_LOCK;
 use crate::tests::{fresh_state, tmp_store, type_str};
@@ -27,7 +27,7 @@ fn save_no_args_opens_form() {
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
-    if let Some(DialogState::PanelStack(stack)) = &state.open_dialog {
+    if let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
         let panel = stack.current().expect("should have panel");
         assert_eq!(panel.id, "save", "should be save form");
     } else {
@@ -42,7 +42,7 @@ fn load_no_args_opens_form() {
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
-    if let Some(DialogState::PanelStack(stack)) = &state.open_dialog {
+    if let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
         let panel = stack.current().expect("should have panel");
         assert_eq!(panel.id, "load", "should be load form");
     } else {
@@ -57,7 +57,7 @@ fn delete_no_args_opens_form() {
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
-    if let Some(DialogState::PanelStack(stack)) = &state.open_dialog {
+    if let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
         let panel = stack.current().expect("should have panel");
         assert_eq!(panel.id, "delete", "should be delete form");
     } else {
@@ -72,7 +72,7 @@ fn form_save_accepts_input() {
 
     // Should open form
     assert!(state.open_dialog.is_some());
-    if let Some(DialogState::PanelStack(stack)) = &state.open_dialog {
+    if let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
         let panel = stack.current().expect("panel");
         assert!(panel.is_form(), "should be form");
     }
@@ -93,7 +93,7 @@ fn form_submit_executes_command() {
     );
     // Check the dialog type - take dialog to inspect, then restore
     let form_is_form =
-        if let Some(crate::commands::DialogState::PanelStack(stack)) = &state.open_dialog {
+        if let Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
             if let Some(panel) = stack.current() {
                 panel.is_form()
             } else {
@@ -130,13 +130,13 @@ fn form_panel_id_maps_to_known_form_command() {
     let _guard = UNKNOWN_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let mut state = fresh_state();
-    use crate::commands::DialogState;
+    use crate::commands::{DialogKind, DialogState};
     use crate::dialog::{Panel, PanelStack};
     let mut panel = Panel::new("unknown_command_xyz", "T").form_field("Field", "ph", "name");
     panel
         .form_values
         .insert("name".into(), "should-not-fire".into());
-    state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
+    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
 
     state.update(Event::CommandFormSubmit);
 
@@ -160,7 +160,7 @@ fn all_form_commands_are_listed() {
     // table. This list is the contract — when a new form command is added,
     // this test must be updated to include it. Commands marked `.sub()`
     // wrap their flow in `CommandFlow::Sub`; we unwrap to find the PanelStack.
-    use crate::commands::{CommandFlow, CommandRegistry};
+    use crate::commands::{DialogKind, CommandFlow, CommandRegistry};
     let mut reg = CommandRegistry::new();
     crate::commands::dsl::handlers::register_all(&mut reg);
     let form_commands: Vec<String> = reg
@@ -186,7 +186,7 @@ fn all_form_commands_are_listed() {
 fn invalid_fork_index_shows_error_for_out_of_range() {
     // /fork with an out-of-range index must surface a clear error, not
     // silently dispatch with a default.
-    use crate::commands::DialogState;
+    use crate::commands::{DialogKind, DialogState};
     use crate::dialog::{Panel, PanelStack};
     use crate::model::Role;
     let mut state = fresh_state();
@@ -204,7 +204,7 @@ fn invalid_fork_index_shows_error_for_out_of_range() {
         message_index: crate::dialog::dsl::get_field(values, "index"),
     });
     panel.form_values.insert("index".into(), "999".into());
-    state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
+    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
 
     state.update(Event::CommandFormSubmit);
 
@@ -227,7 +227,7 @@ fn invalid_fork_index_shows_error_for_out_of_range() {
 fn compact_with_invalid_keep_shows_error() {
     // /compact with a non-numeric keep value must surface a clear error,
     // not silently fall back to 2000.
-    use crate::commands::DialogState;
+    use crate::commands::{DialogKind, DialogState};
     use crate::dialog::{Panel, PanelStack};
     use crate::model::Role;
     let mut state = fresh_state();
@@ -242,7 +242,7 @@ fn compact_with_invalid_keep_shows_error() {
         .form_values
         .insert("keep".into(), "not-a-number".into());
     panel.form_values.insert("focus".into(), "".into());
-    state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
+    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
 
     state.update(Event::CommandFormSubmit);
 

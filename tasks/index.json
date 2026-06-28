@@ -7,7 +7,7 @@
   {
     "file": "centralize-test-fixtures-and-mocks.md",
     "title": "Centralize test fixtures and mocks in `runie-testing`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "cleanup-small-duplicates-and-dead-code.md",
@@ -22,7 +22,7 @@
   {
     "file": "collapse-dialogstate-variants.md",
     "title": "Collapse `DialogState` variants",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "collapse-event-intent-kind-taxonomies.md",

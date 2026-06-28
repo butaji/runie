@@ -2,8 +2,8 @@
 
 // Re-export types used by child test modules so they can `use super::*;`
 pub use super::{
-    AppState, ChatMessage, Element, Event, Part, PermissionRequestState, Role, ScopedModel,
-    Snapshot,
+    AppState, ChatMessage, DialogKind, Element, Event, Part, PermissionRequestState, Role,
+    ScopedModel, Snapshot,
 };
 
 /// Inject mock file entries for file picker tests.

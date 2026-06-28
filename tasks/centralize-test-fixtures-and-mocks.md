@@ -1,6 +1,6 @@
 # Centralize test fixtures and mocks in `runie-testing`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R1
 **Category**: Testing
 **Priority**: P1

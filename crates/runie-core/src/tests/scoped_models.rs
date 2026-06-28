@@ -1,6 +1,6 @@
 //! Scoped models tests (Layer 1 + Layer 2)
 
-use crate::commands::DialogState;
+use crate::commands::{DialogKind, DialogState};
 use crate::config::ModelProvider;
 use crate::model::{AppState, ScopedModel};
 use crate::Event;
@@ -108,7 +108,7 @@ fn provider_toggle_re_enables_all() {
 
 fn scoped_selected(state: &AppState) -> Option<usize> {
     match &state.open_dialog {
-        Some(DialogState::ScopedModels(stack)) => stack.current().map(|p| p.selected),
+        Some(DialogState::Active { kind: DialogKind::ScopedModels, panels: stack }) => stack.current().map(|p| p.selected),
         _ => None,
     }
 }
@@ -246,7 +246,7 @@ fn scoped_models_dialog_populates_from_configured_providers() {
     state.update(crate::Event::ToggleScopedModelsDialog);
 
     let items = match &state.open_dialog {
-        Some(DialogState::ScopedModels(stack)) => {
+        Some(DialogState::Active { kind: DialogKind::ScopedModels, panels: stack }) => {
             stack.current().map(|p| p.items.clone()).unwrap_or_default()
         }
         _ => Vec::new(),

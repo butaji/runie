@@ -3,6 +3,7 @@ use super::*;
 use crate::tests::connect_model;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
+use runie_core::commands::DialogKind;
 use runie_core::AppState;
 use runie_core::Event;
 
@@ -56,7 +57,7 @@ fn theme_selector_renders_theme_list() {
     state.update(Event::Submit);
     assert!(matches!(
         state.open_dialog,
-        Some(runie_core::commands::DialogState::PanelStack(_))
+        Some(runie_core::commands::DialogState::Active { kind: DialogKind::Generic, panels: _ })
     ));
 
     let backend = TestBackend::new(60, 24);

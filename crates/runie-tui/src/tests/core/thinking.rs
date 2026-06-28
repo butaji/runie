@@ -147,13 +147,13 @@ fn slash_thinking_no_args_shows_panel() {
 
 #[test]
 fn thinking_panel_contains_all_levels() {
-    use runie_core::commands::DialogState;
+    use runie_core::commands::{DialogKind, DialogState};
     let mut state = AppState::default();
     state.config.thinking_level = ThinkingLevel::Medium;
     state.input.input.push_str("/thinking");
     state.update(Event::submit());
 
-    let Some(DialogState::PanelStack(stack)) = &state.open_dialog else {
+    let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog else {
         panic!("expected PanelStack dialog");
     };
     let panel = stack.current().expect("current panel");
@@ -186,11 +186,11 @@ fn thinking_panel_uses_thinking_level_all() {
 fn thinking_panel_has_cli_usage_hint() {
     // After moving /thinking to a panel selector, the CLI form
     // ("/thinking off|low|medium|high") should still be discoverable.
-    use runie_core::commands::DialogState;
+    use runie_core::commands::{DialogKind, DialogState};
     let mut state = AppState::default();
     state.input.input.push_str("/thinking");
     state.update(Event::submit());
-    let Some(DialogState::PanelStack(stack)) = &state.open_dialog else {
+    let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog else {
         panic!("expected panel");
     };
     let panel = stack.current().expect("panel");
@@ -211,7 +211,7 @@ fn thinking_panel_has_cli_usage_hint() {
 fn thinking_does_not_create_a_form_panel() {
     // /thinking must use a select panel, not a form. Forms are for free-text
     // input; thinking levels are a fixed enum.
-    use runie_core::commands::{CommandRegistry, CommandResult};
+    use runie_core::commands::{DialogKind, CommandRegistry, CommandResult};
     let mut reg = CommandRegistry::new();
     runie_core::commands::dsl::handlers::register_all(&mut reg);
     let cmd = reg.get("thinking").expect("thinking command");

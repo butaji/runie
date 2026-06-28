@@ -10,6 +10,8 @@ use runie_agent::{AgentMsg, AgentCommand};
 use runie_core::actors::RactorSessionHandle;
 use runie_core::bus::{EventBus, Receiver};
 use runie_core::login_flow::LoginStep;
+#[cfg(test)]
+use runie_core::commands::DialogKind;
 use runie_core::{AppState, Snapshot, Event};
 use tokio::sync::{mpsc, oneshot, watch};
 use crate::effects::{login, EffectCommand};
@@ -466,7 +468,7 @@ mod tests {
         flow.key = "sk-test".into();
         let panel = build_key_input(&flow);
         let stack = runie_core::dialog::PanelStack::new(panel);
-        *actor.state.open_dialog_mut() = Some(runie_core::commands::DialogState::PanelStack(stack));
+        *actor.state.open_dialog_mut() = Some(runie_core::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack });
         *actor.state.login_flow_mut() = Some(flow);
 
         // Send SubmitKey directly since the form-to-key transformation happens
