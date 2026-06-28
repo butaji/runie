@@ -2,25 +2,20 @@
 
 //! Runie IO — Async actors and IO operations.
 //!
-//! This crate contains all tokio-based actors, async file/network operations,
-//! and business logic that requires async runtime.
+//! This crate provides async IO actors and file/network operations.
+//! It re-exports everything from `runie_domain` (which includes `runie_core`).
 
 extern crate self as runie_io;
 
-// Re-export domain types for convenience.
+// Re-export domain types for convenience
 pub use runie_domain;
 
-/// Placeholder module to verify the crate compiles
-pub mod placeholder {
-    use crate::runie_domain::placeholder::is_domain as domain_is_domain;
-    
-    /// Returns true - this is just a placeholder
-    pub fn is_io() -> bool {
-        true
-    }
-    
-    /// Returns true from domain
-    pub fn has_domain() -> bool {
-        domain_is_domain()
+#[cfg(test)]
+mod tests {
+    /// Verify the IO crate works.
+    #[test]
+    fn io_crate_works() {
+        // Can use types from runie_domain through this crate
+        let _config = runie_domain::config::Config::default();
     }
 }

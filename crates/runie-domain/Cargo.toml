@@ -10,25 +10,29 @@ path = "src/lib.rs"
 default = []
 
 [dependencies]
+# Re-export runie-core for backward compatibility
+runie-core.workspace = true
+
+# Workspace dependencies
 serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
 schemars.workspace = true
-runie-protocol.workspace = true
 anyhow.workspace = true
 similar.workspace = true
 diffy.workspace = true
 dirs.workspace = true
 base64.workspace = true
-unicode-segmentation = "1.10"
 toml.workspace = true
 pulldown-cmark.workspace = true
 unicode-width.workspace = true
-textwrap = { version = "0.16", features = ["unicode-linebreak"] }
+textwrap.workspace = true
 fff-search.workspace = true
 git2.workspace = true
-regex = { workspace = true }
-strum = { version = "0.26", features = ["derive"] }
+regex.workspace = true
+strum.workspace = true
 futures.workspace = true
 futures-util.workspace = true
-async-trait = "0.1"
+tokio.workspace = true
+runie-protocol.workspace = true
+unicode-segmentation.workspace = true

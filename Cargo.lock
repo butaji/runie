@@ -3564,7 +3564,6 @@ name = "runie-domain"
 version = "0.2.16"
 dependencies = [
  "anyhow",
- "async-trait",
  "base64",
  "diffy",
  "dirs",
@@ -3574,6 +3573,7 @@ dependencies = [
  "git2",
  "pulldown-cmark",
  "regex",
+ "runie-core",
  "runie-protocol",
  "schemars",
  "serde",
@@ -3582,6 +3582,7 @@ dependencies = [
  "similar 3.1.1",
  "strum 0.26.3",
  "textwrap",
+ "tokio",
  "toml",
  "unicode-segmentation",
  "unicode-width",
@@ -3608,6 +3609,8 @@ dependencies = [
  "redb",
  "regex",
  "reqwest 0.12.28",
+ "rmcp",
+ "runie-core",
  "runie-domain",
  "runie-macros",
  "runie-protocol",
@@ -3622,6 +3625,7 @@ dependencies = [
  "tokio",
  "toml",
  "tracing",
+ "unicode-segmentation",
  "unicode-width",
  "uuid",
 ]

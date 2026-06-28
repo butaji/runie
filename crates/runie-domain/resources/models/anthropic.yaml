@@ -1,0 +1,23 @@
+# Anthropic provider metadata
+key: anthropic
+display_name: Anthropic
+base_url: https://api.anthropic.com/v1
+env_var: ANTHROPIC_API_KEY
+models:
+  - name: claude-sonnet-4-6
+    cost_prompt: 3.0
+    cost_completion: 15.0
+    supports_thinking: true
+    supports_vision: true
+    context_window: 200000
+  - name: claude-opus-4-7
+    cost_prompt: 15.0
+    cost_completion: 75.0
+    supports_thinking: true
+    supports_vision: true
+    context_window: 200000
+  - name: claude-haiku-4-5
+    cost_prompt: 0.25
+    cost_completion: 1.25
+    supports_vision: true
+    context_window: 200000

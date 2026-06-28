@@ -347,7 +347,7 @@
   {
     "file": "split-runie-core-into-domain-and-io-crates.md",
     "title": "Split runie-core into domain and io crates",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "standardize-headless-output-streaming-json.md",

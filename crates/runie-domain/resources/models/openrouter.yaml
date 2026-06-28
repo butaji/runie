@@ -1,0 +1,32 @@
+# OpenRouter provider metadata
+key: openrouter
+display_name: OpenRouter
+base_url: https://openrouter.ai/api/v1
+env_var: OPENROUTER_API_KEY
+models:
+  - name: anthropic/claude-sonnet-4-6
+    cost_prompt: 3.0
+    cost_completion: 15.0
+    supports_thinking: true
+    supports_vision: true
+    context_window: 200000
+  - name: openai/gpt-4o
+    cost_prompt: 5.0
+    cost_completion: 15.0
+    supports_vision: true
+    context_window: 128000
+  - name: google/gemini-2.5-pro
+    cost_prompt: 1.25
+    cost_completion: 10.0
+    supports_thinking: true
+    supports_vision: true
+    context_window: 1000000
+  - name: deepseek/deepseek-chat
+    cost_prompt: 0.5
+    cost_completion: 2.0
+    context_window: 64000
+  - name: deepseek/deepseek-r1
+    cost_prompt: 0.55
+    cost_completion: 2.19
+    supports_thinking: true
+    context_window: 64000

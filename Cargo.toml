@@ -33,6 +33,12 @@ backon = "1.6"
 rmcp = { version = "1.8", features = ["schemars", "server"] }
 schemars = "1.0"
 regex = "1.10"
+tracing = "0.1"
+notify = "7.0"
+notify-debouncer-mini = "0.5"
+unicode-segmentation = "1.10"
+strum = { version = "0.26", features = ["derive"] }
+uuid = { version = "1", features = ["v4"] }
 
 insta = { version = "1.41", features = ["yaml"] }
 tempfile = "3"
