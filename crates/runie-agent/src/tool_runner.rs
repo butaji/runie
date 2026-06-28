@@ -13,7 +13,7 @@ use runie_core::message::{ChatMessage, Part};
 #[cfg(test)]
 use runie_core::message::Role;
 use runie_core::permissions::{PermissionAction, PermissionContext};
-use runie_core::tool::{parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus};
+use runie_core::tool::{is_builtin_tool, parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus};
 use runie_core::tool::ParsedToolCall;
 use std::time::Duration;
 use tokio::time::timeout;
@@ -60,11 +60,7 @@ async fn dispatch_tool(name: &str, args: &serde_json::Value, ctx: &ToolContext) 
 
 /// Check if a tool name is known.
 pub fn is_known_tool(name: &str) -> bool {
-    matches!(
-        name,
-        "bash" | "read_file" | "write_file" | "edit_file" | "list_dir"
-            | "grep" | "find" | "fetch_docs" | "search" | "find_definitions"
-    )
+    is_builtin_tool(name)
 }
 
 fn timeout_error(tool_name: &str) -> ToolOutput {

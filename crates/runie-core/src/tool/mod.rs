@@ -39,3 +39,31 @@ pub use parse::{
     parse_tool_calls_fallible, tool_parse_error_message,
 };
 pub use types::{repair_partial_json, ParsedToolCall, ToolParseError};
+
+/// Canonical list of all implemented built-in tool names.
+///
+/// This list is the single source of truth for:
+/// - Tool registration in `runie-agent`
+/// - Parsing validation in tool shims
+/// - Dispatch validation in tool runners
+///
+/// Protocol-level names like `ask_user`, `select_model`, `done` are NOT
+/// included here because they are signals, not implemented tools.
+pub const BUILTIN_TOOL_NAMES: &[&str] = &[
+    "bash",
+    "read_file",
+    "write_file",
+    "edit_file",
+    "list_dir",
+    "grep",
+    "find",
+    "fetch_docs",
+    "search",
+    "find_definitions",
+];
+
+/// Check if a tool name is a known built-in.
+#[inline]
+pub fn is_builtin_tool(name: &str) -> bool {
+    BUILTIN_TOOL_NAMES.contains(&name)
+}

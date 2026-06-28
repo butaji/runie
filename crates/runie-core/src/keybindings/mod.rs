@@ -20,7 +20,7 @@ pub use defaults::{default_keybindings, VALID_KEYS};
 
 /// Parse a key combination string to components
 /// Examples: "ctrl+c", "alt+enter", "shift+up"
-#[allow(dead_code)]
+#[cfg(test)]
 fn parse_key_combo(combo: &str) -> (Vec<String>, String) {
     let lower = combo.to_lowercase();
     let parts: Vec<&str> = lower.split('+').collect();

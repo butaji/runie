@@ -1,6 +1,6 @@
 # Fix keybindings dead-code warning
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P3

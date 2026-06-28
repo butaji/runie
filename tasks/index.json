@@ -37,7 +37,7 @@
   {
     "file": "centralize-built-in-tool-names.md",
     "title": "Centralize built-in tool names",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "unify-declarative-resource-loader.md",
@@ -57,7 +57,7 @@
   {
     "file": "unify-duplicate-module-names-core-tui.md",
     "title": "Unify duplicate module names across core and TUI",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "unify-tui-render-test-helpers.md",
@@ -67,7 +67,7 @@
   {
     "file": "fix-keybindings-dead-code.md",
     "title": "Fix keybindings dead-code warning",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "cleanup-small-duplicates-and-dead-code.md",

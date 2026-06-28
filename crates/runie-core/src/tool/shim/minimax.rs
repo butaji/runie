@@ -6,20 +6,32 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use serde_json::{Map, Value};
 use super::{ParsedToolCall, ToolParseError};
+use crate::tool::BUILTIN_TOOL_NAMES;
 
 pub const OPEN_M2: &str = "<invoke";  // M2 open marker
 pub const CLOSE_M2: &str = "</minimax:tool_call>";  // M2 close marker
 pub const OPEN_M3: &str = "<tool_call>";
 pub const CLOSE_M3: &str = "</tool_call>";
 
-/// Known tool names for validation.
-const KNOWN_TOOLS: &[&str] = &[
-    "ask_user", "bash", "read_file", "write_file", "edit_file", "list_dir",
-    "grep", "find", "fetch_docs", "search", "find_definitions", "select_model", "done",
+/// Protocol-level tool names recognized by the parser but not implemented as full tools.
+/// These are signals/messages in the MiniMax protocol, not MCP tools.
+const PROTOCOL_TOOL_NAMES: &[&str] = &[
+    "ask_user", "select_model", "done",
 ];
 
-/// Check if a tool name is known.
-pub fn is_known_tool(name: &str) -> bool { KNOWN_TOOLS.contains(&name) }
+/// All known tool names for validation (canonical built-ins + protocol names).
+fn known_tools() -> Vec<&'static str> {
+    BUILTIN_TOOL_NAMES
+        .iter()
+        .chain(PROTOCOL_TOOL_NAMES.iter())
+        .copied()
+        .collect()
+}
+
+/// Check if a tool name is known (built-in or protocol-level).
+pub fn is_known_tool(name: &str) -> bool {
+    known_tools().contains(&name)
+}
 
 pub fn parse_minimax_tool_calls(text: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
     let norm = normalize_m3(text);
