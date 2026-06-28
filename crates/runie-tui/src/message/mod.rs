@@ -8,7 +8,7 @@ use ratatui::{
 use runie_core::display_width;
 use runie_core::format_timestamp;
 
-use crate::markdown::{
+use crate::markdown_render::{
     apply_color_to_inlines, extract_code_blocks, md_to_spans, parse_inline_spans, CodeBlock,
     MdInline, MdSpan,
 };

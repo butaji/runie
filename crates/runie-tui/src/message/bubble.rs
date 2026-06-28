@@ -5,14 +5,14 @@ use ratatui::{
     text::{Line, Span},
 };
 
-use crate::markdown::{md_to_spans, MdSpan};
+use crate::markdown_render::{md_to_spans, MdSpan};
 use crate::theme::color_fg_bright;
 
 use super::span_width;
 
 /// Compute the bubble width: text width plus horizontal padding, capped at the
 /// available inner width so the right margin is always preserved.
-pub fn compute_width(rows: &[Vec<crate::markdown::MdSpan>], inner_width: u16) -> u16 {
+pub fn compute_width(rows: &[Vec<crate::markdown_render::MdSpan>], inner_width: u16) -> u16 {
     let pad = super::BUBBLE_H_PAD * 2;
     let max_text = rows
         .iter()

@@ -6,7 +6,7 @@
 //! (`keymap`), side-effect handlers (`effects/`), and all rendering widgets.
 
 pub mod diff;
-pub mod markdown;
+pub mod markdown_render;
 pub mod message;
 pub mod pace;
 pub mod popups;
