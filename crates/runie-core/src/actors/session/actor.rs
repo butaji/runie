@@ -13,7 +13,6 @@ use tokio::sync::mpsc;
 
 use crate::actors::{spawn_actor, Actor, ActorHandle, PersistenceActor};
 use crate::bus::EventBus;
-use crate::event::DurableCoreEvent;
 use crate::message::now;
 use crate::model::SessionState;
 use crate::session::index::{SessionIndex, SessionMetadata};
@@ -38,29 +37,39 @@ pub struct SessionActor {
     pub store: SessionStore,
     #[cfg(not(test))]
     store: SessionStore,
-    /// Current session id for durable appends
+    /// Current session id for durable appends (reserved for future use)
+    #[allow(dead_code)]
     #[cfg(test)]
     pub session_id: String,
+    #[allow(dead_code)]
     #[cfg(not(test))]
     session_id: String,
-    /// Display name for current session
+    /// Display name for current session (reserved for future use)
+    #[allow(dead_code)]
     #[cfg(test)]
     pub display_name: String,
+    #[allow(dead_code)]
     #[cfg(not(test))]
     display_name: String,
-    /// Message count for summary generation
+    /// Message count for summary generation (reserved for future use)
+    #[allow(dead_code)]
     #[cfg(test)]
     pub message_count: usize,
+    #[allow(dead_code)]
     #[cfg(not(test))]
     message_count: usize,
-    /// Summary buffer (first 500 chars of content)
+    /// Summary buffer (first 500 chars of content) (reserved for future use)
+    #[allow(dead_code)]
     #[cfg(test)]
     pub summary_buffer: String,
+    #[allow(dead_code)]
     #[cfg(not(test))]
     summary_buffer: String,
-    /// Started timestamp
+    /// Started timestamp (reserved for future use)
+    #[allow(dead_code)]
     #[cfg(test)]
     pub started_at: f64,
+    #[allow(dead_code)]
     #[cfg(not(test))]
     started_at: f64,
     /// Authoritative session state (messages, tree, pending edits)
@@ -330,53 +339,6 @@ impl SessionActor {
         }
     }
 
-    #[allow(dead_code)]
-    fn build_meta(&self) -> SessionMetadata {
-        SessionMetadata {
-            id: self.session_id.clone(),
-            display_name: self.display_name.clone(),
-            created_at: self.started_at,
-            updated_at: now(),
-            message_count: self.message_count,
-            summary: Some(self.generate_summary()),
-            is_starred: false,
-            is_system: false,
-        }
-    }
-
-    #[allow(dead_code)]
-    fn generate_summary(&self) -> String {
-        let chars: Vec<char> = self.summary_buffer.chars().take(500).collect();
-        let truncated: String = chars.into_iter().collect();
-        if truncated.len() < self.summary_buffer.len() {
-            format!("{}…", truncated)
-        } else {
-            truncated
-        }
-    }
-
-    #[allow(dead_code)]
-    async fn persist(&self, durable: &DurableCoreEvent) -> anyhow::Result<()> {
-        let store = self.store.clone();
-        let session_id = self.session_id.clone();
-        let event = durable.clone();
-        tokio::task::spawn_blocking(move || store.append(&session_id, &event))
-            .await
-            .map_err(|e| anyhow::anyhow!("spawn_blocking failed: {}", e))?
-    }
-
-    #[allow(dead_code)]
-    async fn update_index(&self) {
-        let store = self.store.clone();
-        let meta = self.build_meta();
-        if let Err(e) = tokio::task::spawn_blocking(move || store.update_index(&meta))
-            .await
-            .map_err(|e| anyhow::anyhow!("spawn_blocking failed: {}", e))
-            .and_then(|r| r)
-        {
-            eprintln!("SessionActor: failed to update index: {}", e);
-        }
-    }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
 

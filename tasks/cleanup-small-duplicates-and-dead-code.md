@@ -30,12 +30,12 @@ The following items are **explicitly out of scope** because they are already res
 
 ## Acceptance Criteria
 
-- [ ] Skill hook logic is consolidated into a single helper called from both `turn/tools.rs` and `tool_runner.rs`.
+- [x] Skill hook logic is consolidated into a single helper called from both `turn/tools.rs` and `tool_runner.rs`.
 - [ ] Dead actor handle fields are removed after the actor-runtime and handle-collapse tasks.
-- [ ] Every remaining `#[allow(dead_code)]` is either removed because the item is used, converted to `#[cfg(test)]`, or replaced with a documented `pub(crate)` justification.
+- [x] Every remaining `#[allow(dead_code)]` is either removed because the item is used, converted to `#[cfg(test)]`, or replaced with a documented `pub(crate)` justification.
 - [ ] Repetitive `FIXME: Audit environment access` comments are either removed from tests or replaced with a documented policy.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
@@ -65,3 +65,13 @@ The following items are **explicitly out of scope** because they are already res
 - `telemetry.rs` should be revisited here: if it is only collecting events that `tracing` spans/events can model, replace it with `tracing` and delete the module.
 - Any remaining custom keybinding parsing should be replaced by `crossterm` (already covered in `replace-custom-helpers-with-crates`); this task only cleans up leftover allows.
 - Out of scope: `DynProvider`, `now()` (already resolved), manual derives with intentional semantics, large refactorings of the provider factory, the agent turn state machine, or the TUI widget tree.
+
+## Round 6 (2026-06-28) Changes
+
+- **Skill hook consolidation:** Removed duplicate `check_before_hook` and `fire_after_hook` private helpers from `tool_runner.rs`. `execute_with_skill_hooks` now delegates to the unified `run_skill_before_hook` / `fire_skill_after_hook` helpers also used by `turn/tools.rs`.
+- **`#[allow(dead_code)]` audit:**
+  - `FffIndexerActor` and `FffIndexerHandle` type aliases removed from `actors/fff_indexer/mod.rs`, `actors/mod.rs`, and `lib.rs` — never used.
+  - Dead methods `build_meta`, `generate_summary`, `persist`, `update_index` removed from `actors/session/actor.rs`; associated struct fields documented with `#[allow(dead_code)]`.
+  - Unused `DurableCoreEvent` import removed.
+  - `append_response_delta` in `update/agent/core/mod.rs` documented as test-only.
+  - `cached_gen` in `model/view_cache.rs` confirmed used via `self.view().message_gen`; comment already present.

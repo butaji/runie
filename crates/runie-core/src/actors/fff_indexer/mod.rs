@@ -175,10 +175,4 @@ impl FffSearchRequest {
     }
 }
 
-// Re-export types for backward compatibility during migration.
-// Production code should use RactorFffIndexerActor and RactorFffIndexerHandle.
-#[deprecated(since = "0.2.16", note = "Use RactorFffIndexerActor instead")]
-pub type FffIndexerActor = ractor_fff_indexer::RactorFffIndexerActor;
 
-#[deprecated(since = "0.2.16", note = "Use RactorFffIndexerHandle instead")]
-pub type FffIndexerHandle = ractor_fff_indexer::RactorFffIndexerHandle;

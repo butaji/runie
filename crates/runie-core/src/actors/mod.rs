@@ -41,7 +41,7 @@ pub use turn::{TurnActor, TurnActorHandle};
 pub use plan::{PlanActor, PlanActorHandle, PlanMsg, PlanState, PlanStepStatus, RactorPlanActor, RactorPlanHandle};
 pub use config::{RactorConfigActor, RactorConfigHandle, ConfigActor, ConfigActorHandle, ConfigMsg};
 pub use fff_indexer::{
-    FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
+    FffFileItem, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
     FffSearchState, format_git_status, RactorFffIndexerHandle, RactorFffIndexerActor,
 };
 pub use input::{InputActor, RactorInputHandle, InputMsg};

@@ -192,31 +192,14 @@ async fn execute_with_skill_hooks(
     gate: &PermissionGate,
     skills: &SkillRegistry,
 ) -> ToolOutput {
-    if let Some(output) = check_before_hook(skills, tool_call) {
+    if let Some(output) = run_skill_before_hook(Some(skills), tool_call) {
         return output;
     }
     let output = execute_tool_call(tool_call, ctx, gate).await;
-    fire_after_hook(skills, tool_call, &output);
+    fire_skill_after_hook(Some(skills), tool_call, &output);
     output
 }
 
-fn check_before_hook(
-    skills: &SkillRegistry,
-    tool_call: &ParsedToolCall,
-) -> Option<ToolOutput> {
-    let tool_ctx = ToolCallCtx {
-        tool_name: tool_call.name.clone(),
-        tool_input: tool_call.args.clone(),
-        phase: ToolCallPhase::Before,
-        tool_output: None,
-        success: None,
-    };
-    match skills.on_tool_call(&tool_ctx) {
-        ToolCallResult::SkipWithOutput(output) => Some(skip_output(tool_call, output)),
-        ToolCallResult::Abort(reason) => Some(abort_output(tool_call, &reason)),
-        ToolCallResult::Continue => None,
-    }
-}
 
 fn skip_output(tool_call: &ParsedToolCall, output: String) -> ToolOutput {
     ToolOutput {
@@ -238,16 +221,6 @@ fn abort_output(tool_call: &ParsedToolCall, reason: &str) -> ToolOutput {
         duration: Duration::from_millis(0),
         status: ToolStatus::Error,
     }
-}
-
-fn fire_after_hook(skills: &SkillRegistry, tool_call: &ParsedToolCall, output: &ToolOutput) {
-    skills.on_tool_call(&ToolCallCtx {
-        tool_name: tool_call.name.clone(),
-        tool_input: tool_call.args.clone(),
-        phase: ToolCallPhase::After,
-        tool_output: Some(output.content.clone()),
-        success: Some(output.status == ToolStatus::Success),
-    });
 }
 
 // ── Unified skill hook helpers (shared with turn/tools) ─────────────────────────
@@ -280,7 +253,13 @@ pub(crate) fn fire_skill_after_hook(
     output: &ToolOutput,
 ) {
     if let Some(skills) = skills {
-        fire_after_hook(skills, tool_call, output);
+        skills.on_tool_call(&ToolCallCtx {
+            tool_name: tool_call.name.clone(),
+            tool_input: tool_call.args.clone(),
+            phase: ToolCallPhase::After,
+            tool_output: Some(output.content.clone()),
+            success: Some(output.status == ToolStatus::Success),
+        });
     }
 }
 

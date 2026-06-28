@@ -13,7 +13,7 @@ extern crate self as runie_core;
 
 pub mod actors;
 pub use actors::{
-    spawn_actor, Actor, ActorFuture, ActorHandle, FffFileItem, FffIndexerActor, FffSearchRequest,
+    spawn_actor, Actor, ActorFuture, ActorHandle, FffFileItem, FffSearchRequest,
     FffSearchResult, FffSearchResultPayload, FffSearchState, PersistenceActor, Reply,
 };
 pub use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
