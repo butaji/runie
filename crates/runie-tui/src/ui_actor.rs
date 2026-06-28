@@ -3,7 +3,6 @@
 //! The actor subscribes to the shared `EventBus<Event>`, applies every event to
 //! `AppState`, sends fresh `Snapshot`s to the render task via a `watch` channel,
 //! and triggers side-effects (agent spawns, clipboard, etc.) without blocking.
-
 use std::collections::HashMap;
 use std::time::Duration;
 use runie_agent::{AgentMsg, AgentCommand};

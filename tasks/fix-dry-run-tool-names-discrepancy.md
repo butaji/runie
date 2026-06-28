@@ -1,6 +1,6 @@
 # Fix dry-run tool-name discrepancy
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: Core / State
 **Priority**: P0

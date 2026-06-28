@@ -1,5 +1,10 @@
 [
   {
+    "file": "TEMPLATE.md",
+    "title": "Task Title",
+    "status": "todo"
+  },
+  {
     "file": "centralize-built-in-tool-names.md",
     "title": "Centralize built-in tool names",
     "status": "done"
@@ -82,7 +87,7 @@
   {
     "file": "fix-dry-run-tool-names-discrepancy.md",
     "title": "Fix dry-run tool-name discrepancy",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-keybindings-dead-code.md",

@@ -88,8 +88,8 @@ fn resolve_provider_model(config: &Config) -> Result<(String, String), String> {
     Ok((provider, model))
 }
 
-fn core_tool_names() -> Vec<&'static str> {
-    vec!["read", "write", "edit", "bash", "glob", "grep", "search"]
+fn core_tool_names() -> &'static [&'static str] {
+    crate::tool::BUILTIN_TOOL_NAMES
 }
 
 #[cfg(test)]
@@ -144,5 +144,10 @@ mod tests {
             .lines
             .iter()
             .any(|l| l.contains("No model calls made")));
+    }
+
+    #[test]
+    fn dry_run_tool_names_match_canonical() {
+        assert_eq!(core_tool_names(), crate::tool::BUILTIN_TOOL_NAMES);
     }
 }
