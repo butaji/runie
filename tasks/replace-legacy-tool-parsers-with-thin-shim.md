@@ -29,7 +29,7 @@ Current state as of Round 3 (2026-06-28):
 - [x] Fix the unused `close_len` warning in `crates/runie-core/src/tool/shim/minimax.rs`.
 - [x] Inline or delete the `legacy` and `markup` submodules in `crates/runie-core/src/tool/shim/` so the shim is the canonical parser, not a wrapper around moved legacy files.
 - [ ] Collapse `crates/runie-core/src/tool_markers/strip.rs` to at most two semantic passes (e.g., strip known tool-call formats, then cleanup). Remove the intermediate single-purpose helpers if they are no longer needed.
-- [ ] Fix the `strip_empty_code_fences` guardrail violation (currently ~50 lines, limit is 40) by extracting helper loops.
+- [x] Fix the `strip_empty_code_fences` guardrail violation (now 27 lines, limit is 40) by extracting helper functions (`is_fence_line`, `emit_fence_if_valid`, `push`).
 - [x] Remove or document the `normalize_m3` dead code in `tool/shim/minimax.rs` — it is NOT dead; it is used internally in `parse_minimax_tool_calls`. This AC is addressed by documenting the use.
 - [x] Keep all currently supported provider/tool output shapes working under the collapsed stripper.
 - [ ] Reconcile MiniMax XML parsing ownership with `runie-provider` and `docs/Architecture.md` (either move it all to `runie-provider` or keep the text shim in `runie-core` and document the split).

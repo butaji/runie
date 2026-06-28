@@ -289,23 +289,9 @@ fn strip_empty_code_fences(content: &str) -> String {
     let mut buf: Vec<String> = Vec::new();
     let mut in_fence = false;
     for line in content.lines() {
-        let is_fence = line.trim_start().starts_with("```") || line.contains(" ```");
-        if is_fence {
+        if is_fence_line(line) {
             if in_fence {
-                let body: String = buf.iter().skip(1).flat_map(|s| s.chars()).collect();
-                let body_trim = body.trim();
-                if !body_trim.is_empty() && !is_tool_call_json(body_trim) {
-                    for l in &buf {
-                        if !result.is_empty() {
-                            result.push('\n');
-                        }
-                        result.push_str(l);
-                    }
-                    if !result.is_empty() {
-                        result.push('\n');
-                    }
-                    result.push_str(line);
-                }
+                emit_fence_if_valid(&buf, line, &mut result);
                 buf.clear();
                 in_fence = false;
             } else {
@@ -313,26 +299,39 @@ fn strip_empty_code_fences(content: &str) -> String {
                 buf.push(line.to_owned());
                 in_fence = true;
             }
-            continue;
-        }
-        if in_fence {
+        } else if in_fence {
             buf.push(line.to_owned());
         } else {
-            if !result.is_empty() {
-                result.push('\n');
-            }
-            result.push_str(line);
+            push(&mut result, line);
         }
     }
     if in_fence {
         for l in &buf {
-            if !result.is_empty() {
-                result.push('\n');
-            }
-            result.push_str(l);
+            push(&mut result, l);
         }
     }
     result
+}
+
+fn is_fence_line(line: &str) -> bool {
+    line.trim_start().starts_with("```") || line.contains(" ```")
+}
+
+fn push(result: &mut String, line: &str) {
+    if !result.is_empty() {
+        result.push('\n');
+    }
+    result.push_str(line);
+}
+
+fn emit_fence_if_valid(buf: &[String], end_line: &str, result: &mut String) {
+    let body = buf.iter().skip(1).flat_map(|s| s.chars()).collect::<String>();
+    if !body.trim().is_empty() && !is_tool_call_json(body.trim()) {
+        for l in buf {
+            push(result, l);
+        }
+        push(result, end_line);
+    }
 }
 
 fn is_tool_call_json(text: &str) -> bool {
