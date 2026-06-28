@@ -4,9 +4,10 @@ use std::path::PathBuf;
 
 use crate::actors::{
     CompletionActorHandle, FffSearchRequest, RactorInputHandle,
-    RactorIoHandle, PermissionActorHandle, ProviderActorHandle, RactorConfigHandle,
+    RactorIoHandle, PermissionActorHandle, RactorConfigHandle,
     RactorSessionHandle, TrustActorHandle, RactorTurnHandle, ViewActorHandle,
 };
+use crate::actors::provider::RactorProviderHandle;
 use crate::config::TruncationSection;
 use crate::model::ThinkingLevel;
 use crate::session::Session;
@@ -15,7 +16,7 @@ use crate::trust::TrustDecision;
 #[derive(Clone, Debug, Default)]
 pub struct ActorHandles {
     pub config: Option<RactorConfigHandle>,
-    pub provider: Option<ProviderActorHandle>,
+    pub provider: Option<RactorProviderHandle>,
     pub session: Option<RactorSessionHandle>,
     pub io: Option<RactorIoHandle>,
     pub fff_indexer: Option<FffIndexerHandle>,

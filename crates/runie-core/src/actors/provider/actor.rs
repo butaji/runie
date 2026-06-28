@@ -12,7 +12,7 @@ use crate::event::Event;
 use crate::provider::ProviderError;
 
 use super::factory::{BuiltProvider, ProviderFactory};
-use super::messages::{ProviderActorHandle, ProviderMsg};
+use super::messages::{take_reply, ProviderActorHandle, ProviderMsg};
 
 /// Actor that owns provider construction and API-key validation.
 pub struct ProviderActor<H: ConfigHandle> {
@@ -33,7 +33,7 @@ impl<H: ConfigHandle + 'static> ProviderActor<H> {
             factory,
         };
         let handle = ActorHandle::spawn(actor, rx, bus);
-        (ProviderActorHandle::new(tx), handle)
+        (ProviderActorHandle::from_legacy_tx(tx), handle)
     }
 }
 
@@ -77,14 +77,27 @@ impl<H: ConfigHandle + 'static> ProviderActor<H> {
                 provider,
                 model,
                 reply,
-            } => reply.send(self.build_provider(&provider, &model).await),
+            } => {
+                let result = self.build_provider(&provider, &model).await;
+                if let Some(tx) = take_reply(&reply) {
+                    let _ = tx.send(result);
+                }
+            }
             ProviderMsg::ValidateKey {
                 provider,
                 api_key,
                 reply,
-            } => reply.send(self.validate_key(&provider, &api_key).await),
+            } => {
+                let result = self.validate_key(&provider, &api_key).await;
+                if let Some(tx) = take_reply(&reply) {
+                    let _ = tx.send(result);
+                }
+            }
             ProviderMsg::ListModels { provider, reply } => {
-                reply.send(self.list_models(&provider).await)
+                let result = self.list_models(&provider).await;
+                if let Some(tx) = take_reply(&reply) {
+                    let _ = tx.send(result);
+                }
             }
         }
     }

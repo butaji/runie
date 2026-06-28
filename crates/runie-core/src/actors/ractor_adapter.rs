@@ -116,6 +116,11 @@ impl<Msg: ractor::Message> RactorHandle<Msg> {
     pub fn cell(&self) -> ractor::ActorCell {
         self.actor_ref.get_cell()
     }
+
+    /// Access the underlying actor ref.
+    pub fn actor_ref(&self) -> &ActorRef<Msg> {
+        &self.actor_ref
+    }
 }
 
 impl<Msg: ractor::Message + Clone> RactorHandle<Msg> {

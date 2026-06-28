@@ -13,7 +13,7 @@ use crate::bus::EventBus;
 use crate::event::Event;
 use crate::actors::{
     RactorIoActor, RactorIoHandle, RactorSessionActor, RactorSessionHandle, RactorConfigActor, RactorConfigHandle,
-    ProviderActor, ProviderActorHandle,
+    provider::RactorProviderActor, ProviderActorHandle,
 };
 use crate::actors::permission::RactorPermissionActor;
 use crate::actors::turn::RactorTurnActor;
@@ -81,7 +81,8 @@ impl Leader {
         factory: Arc<dyn crate::actors::provider::ProviderFactory>,
     ) -> anyhow::Result<SpawnedHandles> {
         let (config, _) = RactorConfigActor::spawn(bus.clone(), None).await;
-        let (provider, _) = ProviderActor::spawn_with_ractor_handle(bus.clone(), config.clone(), factory);
+        let (provider, _) = RactorProviderActor::spawn(bus.clone(), config.clone(), factory).await;
+        let provider: ProviderActorHandle = provider.into();
         let (io, _) = RactorIoActor::spawn(bus.clone()).await?;
         let (session, _) = RactorSessionActor::spawn(bus.clone()).await?;
         let (permission, _) = RactorPermissionActor::spawn(bus.clone()).await;

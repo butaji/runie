@@ -1,13 +1,13 @@
 //! `AgentActor` — owns interactive agent-turn execution.
 //!
 //! The actor receives `AgentMsg::Run` commands, builds the provider via the
-//! shared `ProviderActor`, executes `run_agent_turn`, and publishes all progress
+//! shared `RactorProviderActor`, executes `run_agent_turn`, and publishes all progress
 //! back to the `EventBus<Event>` so `UiActor` and `SessionActor` can react.
 
 use std::sync::{Arc, Mutex};
 
 use runie_core::actors::PermissionActorHandle;
-use runie_core::actors::ProviderActorHandle;
+use runie_core::actors::provider::RactorProviderHandle;
 use runie_core::actors::{spawn_actor, Actor, ActorHandle};
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
@@ -59,7 +59,7 @@ impl AgentActorHandle {
 /// Actor that executes agent turns and publishes progress to the event bus.
 pub struct AgentActor {
     bus: EventBus<Event>,
-    provider_handle: ProviderActorHandle,
+    provider_handle: RactorProviderHandle,
     permission_handle: PermissionActorHandle,
 }
 
@@ -67,7 +67,7 @@ impl AgentActor {
     /// Spawn an `AgentActor` on the given event bus.
     pub fn spawn(
         bus: EventBus<Event>,
-        provider_handle: ProviderActorHandle,
+        provider_handle: RactorProviderHandle,
         permission_handle: PermissionActorHandle,
     ) -> (AgentActorHandle, ActorHandle) {
         let actor_bus = bus.clone();
@@ -148,7 +148,9 @@ impl AgentActor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runie_core::actors::{ConfigActor, PermissionActor, ProviderActor};
+    use runie_core::actors::RactorConfigActor;
+    use runie_core::actors::permission::RactorPermissionActor;
+    use runie_core::actors::provider::RactorProviderActor;
     use runie_provider::DynProviderFactory;
 
     fn test_command(provider: &str, model: &str) -> AgentCommand {
@@ -179,9 +181,9 @@ mod tests {
         let bus = EventBus::<Event>::new(10);
         let mut sub = bus.subscribe();
 
-        let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
+        let (config_handle, _config_actor) = RactorConfigActor::spawn(bus.clone(), None).await;
         let (provider_handle, _provider_actor) =
-            ProviderActor::spawn(bus.clone(), config_handle, Arc::new(DynProviderFactory));
+            RactorProviderActor::spawn(bus.clone(), config_handle, Arc::new(DynProviderFactory)).await;
         let (permission_handle, _permission_actor) = RactorPermissionActor::spawn(bus.clone()).await;
         let (agent_handle, _agent_actor) =
             AgentActor::spawn(bus, provider_handle, permission_handle);

@@ -1,6 +1,6 @@
 //! Shared headless runtime for non-interactive binaries.
 //!
-//! `HeadlessRuntime` owns a small actor system (ConfigActor + ProviderActor) so
+//! `HeadlessRuntime` owns a small actor system (RactorConfigActor + RactorProviderActor) so
 //! CLI/server processes never call `Config::load` or build providers directly.
 //!
 //! ```ignore
@@ -14,11 +14,10 @@ use std::time::Duration;
 
 use tokio::time::timeout;
 
-use crate::actors::provider::{BuiltProvider, ProviderFactory};
+use crate::actors::provider::{BuiltProvider, ProviderFactory, RactorProviderActor};
+use crate::actors::provider::RactorProviderHandle;
 use crate::actors::RactorConfigActor;
 use crate::actors::RactorConfigHandle;
-use crate::actors::ProviderActor;
-use crate::actors::ProviderActorHandle;
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::event::Event;
@@ -27,9 +26,9 @@ use crate::provider::ProviderError;
 /// Non-interactive runtime backed by the same actors as the TUI.
 pub struct HeadlessRuntime {
     config_handle: RactorConfigHandle,
-    provider_handle: ProviderActorHandle,
+    provider_handle: RactorProviderHandle,
     _config_actor: ractor::ActorCell,
-    _provider_actor: crate::actors::ActorHandle,
+    _provider_actor: ractor::ActorCell,
 }
 
 impl HeadlessRuntime {
@@ -41,7 +40,7 @@ impl HeadlessRuntime {
         let mut sub = bus.subscribe();
         let (config_handle, config_actor) = RactorConfigActor::spawn(bus.clone(), None).await;
         let (provider_handle, provider_actor) =
-            ProviderActor::spawn_with_ractor_handle(bus, config_handle.clone(), factory);
+            RactorProviderActor::spawn(bus.clone(), config_handle.clone(), factory).await;
 
         // Wait until the config actor has loaded (or failed to load) so callers
         // can resolve provider/model defaults immediately.

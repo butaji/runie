@@ -15,7 +15,7 @@ use futures::StreamExt;
 use runie_agent::AgentActor;
 use runie_core::actors::{
     ActorHandles, FffIndexerActor, FffIndexerHandle, RactorIoActor,
-    ProviderActor, RactorConfigActor, RactorConfigHandle, RactorSessionActor, RactorTurnActor,
+    RactorConfigActor, RactorConfigHandle, RactorSessionActor, RactorTurnActor,
 };
 use runie_core::actors::permission::RactorPermissionActor;
 use runie_core::bus::EventBus;
@@ -78,7 +78,7 @@ async fn main() -> io::Result<()> {
 
 async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
     let (config_handle, _) = RactorConfigActor::spawn(bus.clone(), None).await;
-    let (provider_handle, _provider_actor) = spawn_provider_actor(&bus, &config_handle);
+    let (provider_handle, _provider_actor) = spawn_provider_actor(&bus, &config_handle).await;
     // Unified SessionActor: owns trust, history, session CRUD, and durable event append
     let (session_handle, _) = RactorSessionActor::spawn(bus.clone()).await.expect("SessionActor must spawn");
     let (io_handle, _) = RactorIoActor::spawn(bus.clone()).await.expect("IoActor must spawn");
@@ -114,18 +114,18 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
     (state, handles)
 }
 
-fn spawn_provider_actor(
+async fn spawn_provider_actor(
     bus: &EventBus<Event>,
     config_handle: &RactorConfigHandle,
 ) -> (
-    runie_core::actors::ProviderActorHandle,
-    runie_core::actors::ActorHandle,
+    runie_core::actors::provider::RactorProviderHandle,
+    ractor::ActorCell,
 ) {
-    ProviderActor::spawn_with_ractor_handle(
+    runie_core::actors::provider::RactorProviderActor::spawn(
         bus.clone(),
         config_handle.clone(),
         std::sync::Arc::new(DynProviderFactory),
-    )
+    ).await
 }
 
 fn init_terminal_state(state: &mut AppState) {

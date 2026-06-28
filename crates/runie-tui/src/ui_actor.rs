@@ -200,8 +200,7 @@ impl UiActor {
                     let provider_handle = self.state.actor_handles().as_ref()
                         .and_then(|h| h.provider.clone());
                     if let Some(handle) = provider_handle {
-                        let provider_tx = handle.tx().clone();
-                        tokio::spawn(login::run(f.provider, f.key, tx, provider_tx));
+                        tokio::spawn(login::run(f.provider, f.key, tx, handle.clone()));
                     }
                 }
             } else {
@@ -268,8 +267,9 @@ async fn handle_persistence_messages(
 mod tests {
     use super::*;
     use runie_core::actors::{
-        ActorHandles, ProviderActorHandle, RactorSessionActor, RactorTurnActor,
+        ActorHandles, RactorSessionActor, RactorTurnActor, RactorConfigActor,
     };
+    use runie_core::actors::provider::{RactorProviderActor, RactorProviderHandle};
 
     async fn test_turn_handle() -> runie_core::actors::RactorTurnHandle {
         let bus = EventBus::<Event>::new(10);
@@ -280,6 +280,19 @@ mod tests {
     async fn test_session_handle() -> RactorSessionHandle {
         let bus = EventBus::<Event>::new(10);
         let (handle, _) = RactorSessionActor::spawn(bus).await.unwrap();
+        handle
+    }
+
+    async fn test_provider_handle() -> RactorProviderHandle {
+        use std::sync::Arc;
+        use runie_provider::DynProviderFactory;
+        let bus = EventBus::<Event>::new(10);
+        let (config_handle, _) = RactorConfigActor::spawn(bus.clone(), None).await;
+        let (handle, _) = RactorProviderActor::spawn(
+            bus.clone(),
+            config_handle,
+            Arc::new(DynProviderFactory),
+        ).await;
         handle
     }
 
@@ -417,7 +430,6 @@ mod tests {
 
     #[tokio::test]
     async fn login_key_submit_triggers_validation_effect() {
-        use runie_core::actors::ProviderMsg;
         use runie_core::login_flow::{build_key_input, LoginFlowState};
 
         let (render_tx, _render_rx) = watch::channel(Snapshot::default());
@@ -427,18 +439,12 @@ mod tests {
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, mut effect_rx) = mpsc::channel::<Event>(16);
-        let (provider_tx, mut provider_rx) = mpsc::channel::<ProviderMsg>(1);
-
-        tokio::spawn(async move {
-            if let Some(ProviderMsg::ValidateKey { reply, .. }) = provider_rx.recv().await {
-                reply.send(Ok(vec!["model".into()]));
-            }
-        });
+        let provider_handle = test_provider_handle().await;
 
         let mut state = AppState::default();
         // Set up actor_handles with provider handle so effects can route through it.
         let mut handles = ActorHandles::default();
-        handles.provider = Some(ProviderActorHandle::new(provider_tx));
+        handles.provider = Some(provider_handle);
         state.set_actor_handles(handles);
         let turn_handle = test_turn_handle().await;
 

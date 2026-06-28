@@ -1,7 +1,6 @@
 //! Login API-key validation effect handler.
 
-use runie_core::actors::ProviderMsg;
-use runie_core::actors::Reply;
+use runie_core::actors::provider::RactorProviderHandle;
 use runie_core::Event as CoreEvent;
 use tokio::sync::mpsc;
 
@@ -11,19 +10,19 @@ use tokio::sync::mpsc;
 /// * `provider` - Provider name
 /// * `key` - API key
 /// * `tx` - Channel to send result events
-/// * `provider_tx` - Channel to send validation request to provider actor
+/// * `provider_handle` - Handle to the provider actor
 pub fn run(
     provider: String,
     key: String,
     tx: mpsc::Sender<CoreEvent>,
-    provider_tx: mpsc::Sender<ProviderMsg>,
+    provider_handle: RactorProviderHandle,
 ) -> impl std::future::Future<Output = ()> + Send + 'static {
     async move {
         if provider.is_empty() || key.is_empty() {
             return;
         }
 
-        let result = validate_provider_key(provider_tx, &provider, &key).await;
+        let result = provider_handle.validate_key(provider.clone(), key.clone()).await;
 
         match result {
             Ok(models) => {
@@ -46,23 +45,4 @@ pub fn run(
             }
         }
     }
-}
-
-async fn validate_provider_key(
-    provider_tx: mpsc::Sender<ProviderMsg>,
-    provider: &str,
-    key: &str,
-) -> anyhow::Result<Vec<String>> {
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    provider_tx
-        .send(ProviderMsg::ValidateKey {
-            provider: provider.into(),
-            api_key: key.into(),
-            reply: Reply::new(reply_tx),
-        })
-        .await
-        .map_err(|_| anyhow::anyhow!("provider actor unavailable"))?;
-    reply_rx
-        .await
-        .map_err(|_| anyhow::anyhow!("provider actor dropped"))?
 }
