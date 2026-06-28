@@ -392,14 +392,21 @@ mod tests {
     async fn spawn_and_load_config() {
         let bus = EventBus::<Event>::new(16);
         let temp_path = std::env::temp_dir().join("runie_test_config.toml");
-        let (_handle, _cell) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone())).await;
+        // Subscribe BEFORE spawning so we don't miss pre_start's ConfigLoaded
         let mut sub = bus.subscribe();
+        let (_handle, _cell) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone())).await;
 
+        // Wait for ConfigLoaded with timeout to prevent hanging forever
+        let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
         let mut found = false;
-        while let Ok(evt) = sub.recv().await {
-            if matches!(evt, Event::ConfigLoaded { .. }) {
-                found = true;
-                break;
+        while !found && tokio::time::Instant::now() < deadline {
+            match tokio::time::timeout(tokio::time::Duration::from_millis(100), sub.recv()).await {
+                Ok(Ok(evt)) => {
+                    if matches!(evt, Event::ConfigLoaded { .. }) {
+                        found = true;
+                    }
+                }
+                Ok(Err(_)) | Err(_) => break, // Channel closed or timeout
             }
         }
         assert!(found, "ConfigLoaded should be emitted on spawn");
