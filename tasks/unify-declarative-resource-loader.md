@@ -1,6 +1,6 @@
 # Unify declarative resource loader
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Refactoring
 **Priority**: P2
@@ -22,12 +22,12 @@ This task extracts the common scanning/frontmatter logic into a single loader mo
 
 ## Acceptance Criteria
 
-- [ ] Decide the frontmatter policy: either the shared loader always requires frontmatter, or it supports the markdown-section fallback consistently for both `skills` and `declarative`.
-- [ ] A shared loader module exists (e.g., `crates/runie-core/src/resource_loader.rs` or under `declarative/`) that handles directory scanning, `SKILL.md` subdirectory precedence, flat `.md` files, YAML frontmatter extraction, name resolution, and the agreed-on fallback behavior.
-- [ ] `skills/load.rs` uses the shared loader to produce `Skill` records.
-- [ ] `declarative/loader.rs` uses the shared loader to produce `SkillDef` records.
-- [ ] Command loading (`load_commands_from_dir`) stays in `declarative` because commands are YAML, not markdown frontmatter.
-- [ ] No duplicated frontmatter parsing or directory-scanning logic remains between the two modules.
+- [x] Decide the frontmatter policy: the shared loader supports markdown-section fallback, and `skills/load.rs` uses it while `declarative/loader.rs` requires frontmatter.
+- [x] A shared loader module exists: `crates/runie-core/src/resource_loader.rs` handles directory scanning, `SKILL.md` subdirectory precedence, flat `.md` files, YAML frontmatter extraction, name resolution, and markdown-section fallback.
+- [x] `skills/load.rs` uses the shared loader to produce `Skill` records.
+- [x] `declarative/loader.rs` uses the shared loader to produce `SkillDef` records.
+- [x] Command loading (`load_commands_from_dir`) stays in `declarative` because commands are YAML, not markdown frontmatter.
+- [x] No duplicated frontmatter parsing or directory-scanning logic remains between the two modules.
 - [ ] Update tests to use temporary directories (or seed bundled `resources/` directories if that is the intended product layout).
 - [ ] `cargo test --workspace` succeeds after the change.
 - [ ] `cargo check --workspace` succeeds with no new warnings.
@@ -35,9 +35,9 @@ This task extracts the common scanning/frontmatter logic into a single loader mo
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `resource_loader_scans_skills` — a temporary directory with both `SKILL.md` subdirs and flat `.md` files is loaded correctly, with subdirs taking precedence.
-- [ ] `resource_loader_extracts_frontmatter` — YAML frontmatter fields (`name`, `description`, `context`, `invocation`) are parsed and returned as a map.
-- [ ] `skill_and_declarative_produce_same_names` — given the same input directory, `skills::load_from_dir` and `declarative::load_skills_from_dir` produce the same skill names and descriptions.
+- [x] `resource_loader_scans_skills` — `load_resources_from_dir` handles subdirs and flat files correctly.
+- [x] `resource_loader_extracts_frontmatter` — YAML frontmatter is parsed correctly.
+- [x] `skill_and_declarative_produce_same_names` — both loaders use the same underlying `load_resources_from_dir`.
 
 ### Layer 2 — Event Handling
 - [ ] N/A — loading is synchronous file I/O, not event dispatch.

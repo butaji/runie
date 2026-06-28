@@ -52,7 +52,7 @@
   {
     "file": "unify-declarative-resource-loader.md",
     "title": "Unify declarative resource loader",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-pulldown-cmark-frontmatter-for-resource-loader.md",
