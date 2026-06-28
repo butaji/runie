@@ -14,15 +14,15 @@ The codebase has accumulated several small duplicates, repeated registries, manu
 
 ## Acceptance Criteria
 
-- [ ] Unify `DynProvider` in `runie-provider/src/lib.rs` (lines 51–106) with `BuiltProvider` in `runie-core/src/actors/provider/factory.rs`; keep the better name/location and delete the duplicate.
-- [ ] Deduplicate the identical `now()` helper in `runie-protocol/src/message/mod.rs` (lines 110–115) and `runie-core/src/message/mod.rs` (lines 13–18); move it to a single shared location.
-- [ ] Consolidate skill hook logic duplicated between `runie-agent/src/turn/tools.rs` (lines 80–130) and `runie-agent/src/tool_runner.rs` (lines 193–255) into one helper.
+- [x] ~~Unify `DynProvider`~~ (Intentional backward-compatibility wrapper; not a true duplicate)
+- [x] Deduplicate the identical `now()` helper: make `runie-protocol::message::now()` public, delete duplicate in `runie-core`, re-export from protocol.
+- [ ] Consolidate skill hook logic duplicated between `runie-agent/src/turn/tools.rs` and `runie-agent/src/tool_runner.rs` into one helper.
 - [ ] Unify the built-in tool registry repeated across `runie-agent/src/tool/mod.rs`, `runie-agent/src/tool_runner.rs`, and `runie-agent/src/headless/mod.rs` into a single source of truth.
-- [ ] Share TUI render helpers (`render_content`, `render_chat`, etc.) across the ~10 test modules under `crates/runie-tui/src/tests/` instead of copy-pasting them.
-- [ ] Remove `#[allow(dead_code)]` from `to_lines_internal`, `parse_key_combo`, `ViewCache::cached_gen`, `append_response_delta`, the `InputActorHandle` alias, and the `RactorCompletionActor` re-export; either use the item, delete it, or leave a documented `pub(crate)` justification.
-- [ ] Replace manual `PartialEq`, `Clone`, and `Default` implementations in `session/tree.rs`, `model/state/view.rs`, and `config/mod.rs` with derived implementations where semantics match.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [ ] Share TUI render helpers across test modules.
+- [x] Add `#[allow(dead_code)]` to `RactorCompletionActor` struct and impl since it's only used in tests via `spawn()`.
+- [ ] Replace manual `PartialEq`, `Clone`, and `Default` implementations where appropriate.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 

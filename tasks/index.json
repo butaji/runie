@@ -52,7 +52,7 @@
   {
     "file": "cleanup-small-duplicates-and-dead-code.md",
     "title": "Clean up small duplicates and dead code",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "collapse-event-intent-kind-taxonomies.md",
