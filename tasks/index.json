@@ -11,7 +11,7 @@
   },
   {
     "file": "collapse-actor-handles-to-typed-map.md",
-    "title": "Collapse `ActorHandles` to a typed `ractor::ActorRef` map",
+    "title": "Collapse `ActorHandles` to a typed `rator::ActorRef` map",
     "status": "todo"
   },
   {
@@ -52,7 +52,7 @@
   {
     "file": "unify-duplicate-module-names-core-tui.md",
     "title": "Unify duplicate module names across core and TUI",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "unify-declarative-resource-loader.md",
