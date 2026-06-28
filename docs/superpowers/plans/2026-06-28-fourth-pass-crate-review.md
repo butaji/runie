@@ -56,7 +56,7 @@ It builds on the earlier three passes recorded in [`2026-06-28-runie-cleanup-roa
 
 | Custom code | Replacement | Task |
 |-------------|-------------|------|
-| JSON session store + custom replay index | Single SQLite database via `rusqlite` | `unify-session-store-and-index` |
+| JSON session store + custom replay index | Single headered JSONL file with `fs2` advisory locks (SQLite deferred) | `unify-session-store-and-index` |
 
 ### Key design points
 
@@ -152,7 +152,7 @@ The fourth pass added the following tasks to `tasks/index.json`:
 
 | Task | Priority | Area |
 |------|----------|------|
-| `unify-session-store-and-index` | P0 | Sessions |
+| `unify-session-store-and-index` | P0 | Sessions — single headered JSONL + `fs2` locks; SQLite deferred. |
 | `unify-markdown-processing-around-pulldown-cmark` | P0 | Core / State |
 | `dedupe-turn-queue-delivery-logic` | P1 | Architecture / Actors |
 | `type-and-unify-provider-model-layer` | P0 | Configuration |

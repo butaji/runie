@@ -52,7 +52,7 @@
   - `tasks/simplify-slash-command-dsl.md` — collapse `CommandSpec`/`CommandDef`.
   - `tasks/unify-permission-system-rules.md` — merge permission rule engines.
 - **Fourth-pass provider / model / session unification (P0/P1):**
-  - `tasks/unify-session-store-and-index.md` — single SQLite store for sessions and replay index.
+  - `tasks/unify-session-store-and-index.md` — single headered JSONL file with `fs2` advisory locks for sessions and replay index. SQLite is deferred.
   - `tasks/type-and-unify-provider-model-layer.md` — typed provider/model structs + single catalog.
   - `tasks/dedupe-turn-queue-delivery-logic.md` — one queue with explicit delivery ids.
   - `tasks/use-channels-for-subagent-result-collection.md` — channels for subagent results.
@@ -130,7 +130,7 @@
 | 30 | `centralize-test-fixtures-and-mocks` | P1 | Shared MiniMax fixtures and mock helpers; also consolidate env-lock/temp-config helpers. |
 | 31 | `replace-bash-safety-with-shell-words` | P2 | Tokenize with `shell-words` + deny-list. |
 | 32 | `replace-build-linter-with-clippy-ci` | P2 | Clippy lints + CI file-limit check. |
-| 33 | `unify-session-store-and-index` | P0 | Single SQLite store for sessions, messages, checkpoints, and replay index. |
+| 33 | `unify-session-store-and-index` | P0 | Single headered JSONL file with `fs2` advisory locks for sessions and replay index. SQLite deferred. |
 | 34 | `type-and-unify-provider-model-layer` | P0 | Typed `Provider`/`Model` structs and a single model catalog. |
 | 35 | `dedupe-turn-queue-delivery-logic` | P1 | One turn queue with explicit delivery ids; no duplicate `TurnComplete`. |
 | 36 | `use-channels-for-subagent-result-collection` | P0 | Subagent actor sends results on `tokio::sync` channels. |

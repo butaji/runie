@@ -337,7 +337,7 @@ We prefer maintained crates over custom code when they reduce complexity and imp
 | Color helpers | `palette` | Color-space correct blending |
 | Fuzzy matching | `nucleo-matcher` | Better Unicode/ranking |
 | Word wrapping | `textwrap` | Better line breaking |
-| Session store | `redb` | ACID + indexing |
+| Session store | headered JSONL + `fs2` locks | Single file, advisory locking; SQLite deferred for now |
 
 Custom code is kept where it is project-specific or where a drop-in crate does not exist: the text-input widget, command-palette DSL, dialog/form DSL, update dispatcher, actor runtime, and streaming stable/tail buffer.
 
@@ -465,7 +465,7 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 
 #### Phase 13 — Fourth-pass provider / model / session unification (P0/P1)
 
-33. **Unify session store and replay index with `rusqlite`** (`tasks/unify-session-store-and-index.md`) — replace JSON file dumps and custom replay index with a single SQLite schema.
+33. **Unify session store and replay index into a single persistence backend** (`tasks/unify-session-store-and-index.md`) — replace the two-file JSONL store + `sessions.json` index with one headered JSONL file and `fs2` advisory locks. SQLite is deferred for now.
 34. **Type and unify provider/model layer** (`tasks/type-and-unify-provider-model-layer.md`) — replace stringly typed provider/model config with typed structs and a single model catalog.
 35. **Deduplicate turn-queue delivery logic** (`tasks/dedupe-turn-queue-delivery-logic.md`) — collapse overlapping queue/dispatch buffering into one queue with explicit delivery ids.
 36. **Use channels for subagent result collection** (`tasks/use-channels-for-subagent-result-collection.md`) — replace callbacks/polling with `tokio::sync::mpsc`/`oneshot`.
