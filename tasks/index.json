@@ -37,7 +37,7 @@
   {
     "file": "dedupe-turn-queue-delivery-logic.md",
     "title": "Dedupe turn-queue delivery logic",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-dead-actor-modules-and-custom-trait.md",

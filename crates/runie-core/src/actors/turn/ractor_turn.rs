@@ -10,6 +10,7 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 use crate::actors::ractor_adapter::{spawn_ractor, EventBusBridge};
 use crate::bus::EventBus;
 use crate::model::{DeliveryMode, QueuedMessage, QueuedMessageKind};
+use crate::session::turn_queue::TurnQueue;
 use crate::Event;
 
 use super::messages::{NextIdResponse, TurnMsg};
@@ -164,98 +165,50 @@ impl RactorTurnActor {
 
     fn handle_deliver_queued(&self, steering_mode: DeliveryMode, follow_up_mode: DeliveryMode) {
         if self.try_deliver_steering(steering_mode) {
-            if follow_up_mode == DeliveryMode::All && self.has_follow_ups() {
-                self.deliver_follow_ups_all();
+            // Steering delivered - in "All" mode, also try follow-ups via pop_follow_up
+            if follow_up_mode == DeliveryMode::All {
+                self.try_deliver_follow_up(follow_up_mode);
             }
             return;
         }
         self.try_deliver_follow_up(follow_up_mode);
     }
 
-    fn has_follow_ups(&self) -> bool {
-        let state = self.state.lock();
-        state.message_queue.iter().any(|m| m.kind == QueuedMessageKind::FollowUp)
-    }
-
     fn try_deliver_steering(&self, mode: DeliveryMode) -> bool {
-        use DeliveryMode::*;
-        let kind = QueuedMessageKind::Steering;
-        match mode {
-            OneAtATime => {
-                let mut state = self.state.lock();
-                let idx = state.message_queue.iter().position(|m| m.kind == kind);
-                let Some(idx) = idx else { return false };
-                let msg = state.message_queue.remove(idx);
-                let id = self.next_id_internal(&mut state);
-                state.request_queue.push_back((msg.content.clone(), id.clone()));
-                drop(state);
-                self.emit(Event::SteeringDelivered { content: msg.content, id });
-                true
-            }
-            All => {
-                let (content, id) = {
-                    let mut state = self.state.lock();
-                    let steerings: Vec<_> = state
-                        .message_queue
-                        .iter()
-                        .filter(|m| m.kind == kind)
-                        .cloned()
-                        .collect();
-                    if steerings.is_empty() {
-                        return false;
-                    }
-                    let content = steerings.iter().map(|m| m.content.clone()).collect::<Vec<_>>().join("\n");
-                    state.message_queue.retain(|m| m.kind != kind);
+        let id = {
+            let mut state = self.state.lock();
+            let mut queue = TurnQueue::new(std::mem::take(&mut state.message_queue));
+            let result = queue.pop_steering(mode);
+            state.message_queue = queue.into_inner();
+            match result {
+                None => return false,
+                Some(r) => {
                     let id = self.next_id_internal(&mut state);
-                    state.request_queue.push_back((content.clone(), id.clone()));
-                    (content, id)
-                };
-                self.emit(Event::SteeringDelivered { content, id });
-                true
+                    state.request_queue.push_back((r.content.clone(), id.clone()));
+                    (r.content, id)
+                }
             }
-        }
+        };
+        self.emit(Event::SteeringDelivered { content: id.0, id: id.1 });
+        true
     }
 
     fn try_deliver_follow_up(&self, mode: DeliveryMode) {
-        use DeliveryMode::*;
-        match mode {
-            OneAtATime => {
-                let (content, id) = {
-                    let mut state = self.state.lock();
-                    if let Some(idx) = state.message_queue.iter().position(|m| m.kind == QueuedMessageKind::FollowUp) {
-                        let msg = state.message_queue.remove(idx);
-                        let id = self.next_id_internal(&mut state);
-                        state.request_queue.push_back((msg.content.clone(), id.clone()));
-                        (msg.content, id)
-                    } else {
-                        return;
-                    }
-                };
-                self.emit(Event::FollowUpDelivered { content, id });
-            }
-            All => self.deliver_follow_ups_all(),
-        }
-    }
-
-    fn deliver_follow_ups_all(&self) {
-        let (content, id) = {
+        let id = {
             let mut state = self.state.lock();
-            let follow_ups: Vec<_> = state
-                .message_queue
-                .iter()
-                .filter(|m| m.kind == QueuedMessageKind::FollowUp)
-                .cloned()
-                .collect();
-            if follow_ups.is_empty() {
-                return;
+            let mut queue = TurnQueue::new(std::mem::take(&mut state.message_queue));
+            let result = queue.pop_follow_up(mode);
+            state.message_queue = queue.into_inner();
+            match result {
+                None => return,
+                Some(r) => {
+                    let id = self.next_id_internal(&mut state);
+                    state.request_queue.push_back((r.content.clone(), id.clone()));
+                    (r.content, id)
+                }
             }
-            let content = follow_ups.iter().map(|m| m.content.clone()).collect::<Vec<_>>().join("\n");
-            state.message_queue.retain(|m| m.kind != QueuedMessageKind::FollowUp);
-            let id = self.next_id_internal(&mut state);
-            state.request_queue.push_back((content.clone(), id.clone()));
-            (content, id)
         };
-        self.emit(Event::FollowUpDelivered { content, id });
+        self.emit(Event::FollowUpDelivered { content: id.0, id: id.1 });
     }
 
     fn next_id_internal(&self, state: &mut TurnState) -> String {

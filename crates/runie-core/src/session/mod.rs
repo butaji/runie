@@ -6,6 +6,7 @@ pub mod index;
 pub mod replay;
 pub mod store;
 pub mod tree;
+pub mod turn_queue;
 
 use crate::model::ChatMessage;
 use serde::{Deserialize, Serialize};

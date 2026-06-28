@@ -236,28 +236,16 @@ impl AppState {
 
     /// Deliver all follow-ups in batch mode (sync version for tests).
     fn try_deliver_follow_ups_all_sync(&mut self) {
-        let follow_ups: Vec<String> = self
-            .agent
-            .message_queue
-            .iter()
-            .filter(|m| m.kind == crate::model::QueuedMessageKind::FollowUp)
-            .map(|m| m.content.clone())
-            .collect();
-
-        if follow_ups.is_empty() {
-            return;
+        use crate::session::turn_queue::TurnQueue;
+        let mut queue = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
+        if let Some(r) = queue.pop_all_follow_ups() {
+            self.agent_state_mut().message_queue = queue.into_inner();
+            self.push_user_message_sync(r.content);
+            self.view_mut().scroll = 0;
+            self.messages_changed();
+        } else {
+            self.agent_state_mut().message_queue = queue.into_inner();
         }
-
-        let content = follow_ups.join("\n");
-
-        // Remove all follow-ups from queue
-        self.agent
-            .message_queue
-            .retain(|m| m.kind != crate::model::QueuedMessageKind::FollowUp);
-
-        self.push_user_message_sync(content);
-        self.view_mut().scroll = 0;
-        self.messages_changed();
     }
 
     fn push_user_message_sync(&mut self, content: String) {
@@ -277,51 +265,18 @@ impl AppState {
     }
 
     fn try_deliver_steering_sync(&mut self, mode: DeliveryMode) -> bool {
-        use crate::model::DeliveryMode;
-        match mode {
-            DeliveryMode::OneAtATime => self.try_steering_one_sync(),
-            DeliveryMode::All => self.try_steering_all_sync(),
+        use crate::session::turn_queue::TurnQueue;
+        let mut queue = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
+        let result = queue.pop_steering(mode);
+        self.agent_state_mut().message_queue = queue.into_inner();
+        if let Some(r) = result {
+            self.push_user_message_sync(r.content);
+            self.view_mut().scroll = 0;
+            self.messages_changed();
+            true
+        } else {
+            false
         }
-    }
-
-    fn try_steering_one_sync(&mut self) -> bool {
-        let kind = crate::model::QueuedMessageKind::Steering;
-        let idx = match self
-            .agent_state()
-            .message_queue
-            .iter()
-            .position(|m| m.kind == kind)
-        {
-            Some(idx) => idx,
-            None => return false,
-        };
-        let content = self.agent_state_mut().message_queue.remove(idx).content;
-        self.push_user_message_sync(content);
-        self.view_mut().scroll = 0;
-        self.messages_changed();
-        true
-    }
-
-    fn try_steering_all_sync(&mut self) -> bool {
-        let kind = crate::model::QueuedMessageKind::Steering;
-        let steerings: Vec<String> = self
-            .agent_state()
-            .message_queue
-            .iter()
-            .filter(|m| m.kind == kind)
-            .map(|m| m.content.clone())
-            .collect();
-        if steerings.is_empty() {
-            return false;
-        }
-        let content = steerings.join("\n");
-        self.agent_state_mut()
-            .message_queue
-            .retain(|m| m.kind != kind);
-        self.push_user_message_sync(content);
-        self.view_mut().scroll = 0;
-        self.messages_changed();
-        true
     }
 
     pub(crate) fn dequeue(&mut self) {
@@ -336,24 +291,14 @@ impl AppState {
     }
 
     fn try_deliver_follow_up_sync(&mut self, mode: DeliveryMode) {
-        use crate::model::DeliveryMode;
-        match mode {
-            DeliveryMode::OneAtATime => {
-                if let Some(idx) = self
-                    .agent
-                    .message_queue
-                    .iter()
-                    .position(|m| m.kind == crate::model::QueuedMessageKind::FollowUp)
-                {
-                    let content = self.agent_state_mut().message_queue.remove(idx).content;
-                    self.push_user_message_sync(content);
-                    self.view_mut().scroll = 0;
-                    self.messages_changed();
-                }
-            }
-            DeliveryMode::All => {
-                self.try_deliver_follow_ups_all_sync();
-            }
+        use crate::session::turn_queue::TurnQueue;
+        let mut queue = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
+        let result = queue.pop_follow_up(mode);
+        self.agent_state_mut().message_queue = queue.into_inner();
+        if let Some(r) = result {
+            self.push_user_message_sync(r.content);
+            self.view_mut().scroll = 0;
+            self.messages_changed();
         }
     }
 }

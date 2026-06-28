@@ -1,6 +1,6 @@
 # Dedupe turn-queue delivery logic
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Architecture / Actors
 **Priority**: P1
@@ -14,18 +14,18 @@
 
 ## Acceptance Criteria
 
-- [ ] Extract a pure, tested `TurnQueue` struct that owns `pop_steering(mode)`, `pop_follow_up(mode)`, and `pop_all_follow_ups()`.
-- [ ] Use the same `TurnQueue` from both `RactorTurnActor` and the sync test fallback, or drop the sync fallback and spawn `RactorTurnActor` in tests.
-- [ ] Preserve `DeliveryMode` semantics (OneAtATime vs All, Steering vs FollowUp priority).
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Extract a pure, tested `TurnQueue` struct that owns `pop_steering(mode)`, `pop_follow_up(mode)`, and `pop_all_follow_ups()`.
+- [x] Use the same `TurnQueue` from both `RactorTurnActor` and the sync test fallback, or drop the sync fallback and spawn `RactorTurnActor` in tests.
+- [x] Preserve `DeliveryMode` semantics (OneAtATime vs All, Steering vs FollowUp priority).
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `turn_queue_pop_steering_one_at_a_time` — only the highest-priority steering item is popped.
-- [ ] `turn_queue_pop_all_follow_ups` — all follow-ups are returned in priority order.
-- [ ] `turn_queue_empty_after_clear` — no items remain after clearing.
+- [x] `turn_queue_pop_steering_one_at_a_time` — only the highest-priority steering item is popped.
+- [x] `turn_queue_pop_all_follow_ups` — all follow-ups are returned in priority order.
+- [x] `turn_queue_empty_after_clear` — no items remain after clearing.
 
 ### Layer 2 — Event Handling
 - [ ] N/A.
