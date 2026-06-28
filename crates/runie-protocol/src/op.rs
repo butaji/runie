@@ -154,15 +154,6 @@ impl Submission {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Event, EventMsg};
-
-    #[test]
-    fn submission_id_correlates_event() {
-        let id = SubmissionId::new(42);
-        let sub = Submission::new(id, Op::Interrupt);
-        let event = Event::correlated(id, EventMsg::TurnStarted { turn_id: 1 });
-        assert_eq!(event.id, Some(sub.id));
-    }
 
     #[test]
     fn op_variant_roundtrip() {

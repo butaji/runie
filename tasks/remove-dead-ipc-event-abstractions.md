@@ -14,12 +14,12 @@ Several IPC and event-shaping abstractions are no longer used by the active runt
 
 ## Acceptance Criteria
 
-- [ ] Delete `crates/runie-protocol/src/event.rs` and remove its module declaration and exports from `crates/runie-protocol/src/lib.rs`.
-- [ ] Delete `crates/runie-core/src/ipc.rs` and remove `CoreIpc` / `TuiQueueEnds` from the `runie-core` public API.
-- [ ] Delete `crates/runie-core/src/channels.rs` or merge its useful concepts into the TUI render path; remove the `subscribe_channel` entry point in `bus.rs` if it becomes unused.
-- [ ] Update all call sites, re-exports, tests, and documentation that reference the deleted types.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Delete `crates/runie-protocol/src/event.rs` and remove its module declaration and exports from `crates/runie-protocol/src/lib.rs`.
+- [x] Delete `crates/runie-core/src/ipc.rs` and remove `CoreIpc` / `TuiQueueEnds` from the `runie-core` public API. (already deleted)
+- [x] Delete `crates/runie-core/src/channels.rs` or merge its useful concepts into the TUI render path; remove the `subscribe_channel` entry point in `bus.rs` if it becomes unused.
+- [x] Update all call sites, re-exports, tests, and documentation that reference the deleted types.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
@@ -37,13 +37,13 @@ Several IPC and event-shaping abstractions are no longer used by the active runt
 
 ## Files touched
 
-- `crates/runie-protocol/src/event.rs` (delete)
-- `crates/runie-protocol/src/lib.rs`
-- `crates/runie-core/src/ipc.rs` (delete)
-- `crates/runie-core/src/channels.rs` (delete or partially merge)
-- `crates/runie-core/src/bus.rs`
-- `crates/runie-core/src/lib.rs`
-- Any tests or documentation referencing the deleted types.
+- `crates/runie-protocol/src/event.rs` (deleted)
+- `crates/runie-protocol/src/lib.rs` (removed `event` module and exports)
+- `crates/runie-protocol/src/op.rs` (removed test using deleted types)
+- `crates/runie-core/src/ipc.rs` (already deleted)
+- `crates/runie-core/src/channels.rs` (deleted)
+- `crates/runie-core/src/bus.rs` (removed `subscribe_channel` method and `EventBus<Event>` impl block)
+- `crates/runie-core/src/lib.rs` (removed `pub mod channels`)
 
 ## Notes
 

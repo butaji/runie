@@ -5,9 +5,6 @@
 
 use tokio::sync::broadcast;
 
-use crate::channels::ChannelDecoder;
-use crate::event::Event;
-
 /// Typed event bus for actor communication.
 ///
 /// Uses tokio's broadcast channel internally to allow multiple subscribers.
@@ -64,39 +61,6 @@ impl<E: Send + Clone + 'static> EventBus<E> {
     /// Get the number of active subscribers.
     pub fn subscriber_count(&self) -> usize {
         self.sender.receiver_count()
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Specialized impl for EventBus<Event> to support channel decoders
-// ─────────────────────────────────────────────────────────────────────────────
-
-impl EventBus<Event> {
-    /// Subscribe a channel decoder that processes events and forwards outputs.
-    ///
-    /// The decoder runs in a background thread, processing events and sending
-    /// outputs through the returned channel.
-    pub fn subscribe_channel<C: ChannelDecoder + 'static>(
-        &self,
-        mut decoder: C,
-        output_tx: std::sync::mpsc::Sender<C::Output>,
-    ) {
-        let mut rx = self.subscribe();
-        std::thread::spawn(move || loop {
-            match rx.try_recv() {
-                Ok(event) => {
-                    if let Some(output) = decoder.process(&event) {
-                        if output_tx.send(output).is_err() {
-                            break;
-                        }
-                    }
-                }
-                Err(broadcast::error::TryRecvError::Closed) => break,
-                Err(broadcast::error::TryRecvError::Lagged(_))
-                | Err(broadcast::error::TryRecvError::Empty) => {}
-            }
-            std::thread::sleep(std::time::Duration::from_millis(10));
-        });
     }
 }
 

@@ -147,7 +147,7 @@
   {
     "file": "delete-empty-runie-domain-and-runie-io-crates.md",
     "title": "Delete empty `runie-domain` and `runie-io` facade crates",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "drop-event-bus-replay-buffer.md",
@@ -327,7 +327,7 @@
   {
     "file": "remove-dead-ipc-event-abstractions.md",
     "title": "Remove dead IPC/event-shaping abstractions",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-direct-appstate-mutations.md",
@@ -347,7 +347,7 @@
   {
     "file": "repair-and-canonicalize-dialog-module.md",
     "title": "Repair and canonicalize the dialog module",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-actor-runtime-with-ractor.md",
