@@ -52,41 +52,22 @@ impl Parse for ActorDef {
         let name = input.parse()?;
         input.parse::<Token![,]>()?;
 
-        // Parse `msg: Ident`
-        let msg_keyword = input.parse::<Ident>()?;
-        if msg_keyword != "msg" {
-            return Err(syn::Error::new_spanned(msg_keyword, "expected `msg`"));
-        }
-        input.parse::<Token![:]>()?;
-        let msg_type = input.parse()?;
+        let msg_type = parse_named_field(input, "msg")?;
         input.parse::<Token![,]>()?;
 
-        // Parse `state: Ident`
-        let state_keyword = input.parse::<Ident>()?;
-        if state_keyword != "state" {
-            return Err(syn::Error::new_spanned(state_keyword, "expected `state`"));
-        }
-        input.parse::<Token![:]>()?;
-        let state_type = input.parse()?;
+        let state_type = parse_named_field(input, "state")?;
         input.parse::<Token![,]>()?;
 
-        // Parse `events: Ident`
-        let events_keyword = input.parse::<Ident>()?;
-        if events_keyword != "events" {
-            return Err(syn::Error::new_spanned(events_keyword, "expected `events`"));
-        }
-        input.parse::<Token![:]>()?;
-        let events_type = input.parse()?;
+        let events_type = parse_named_field(input, "events")?;
         input.parse::<Token![,]>()?;
 
         // Parse `impl handle(...) { ... }`
         input.parse::<Token![impl]>()?;
-        let _ = input.parse::<Ident>()?; // "handle"
+        let _ = input.parse::<Ident>()?;
         let handle_content;
         braced!(handle_content in input);
         let handlers_str = handle_content.to_string();
 
-        // Parse match arms from the handler body
         let handlers = parse_match_arms(&handlers_str);
 
         Ok(Self {
@@ -97,6 +78,15 @@ impl Parse for ActorDef {
             handlers,
         })
     }
+}
+
+fn parse_named_field(input: ParseStream, keyword: &str) -> syn::Result<Ident> {
+    let key = input.parse::<Ident>()?;
+    if key != keyword {
+        return Err(syn::Error::new_spanned(key, format!("expected `{keyword}`")));
+    }
+    input.parse::<Token![:]>()?;
+    input.parse()
 }
 
 struct MatchArm {
@@ -123,7 +113,6 @@ fn parse_match_arms(input: &str) -> Vec<MatchArm> {
                 brace_depth -= 1;
                 current_arm.push(ch);
                 if brace_depth == 0 && !current_arm.trim().is_empty() {
-                    // Parse the arm: extract pattern and body
                     if let Some(eq_pos) = current_arm.find("=>") {
                         let pattern = current_arm[..eq_pos].trim().to_string();
                         let body = current_arm[eq_pos + 2..].trim().to_string();
@@ -152,20 +141,7 @@ fn generate_actor(def: &ActorDef) -> TokenStream {
     let events_type = &def.events_type;
     let event_var = syn::Ident::new("events", proc_macro2::Span::call_site());
 
-    // Generate match arms for handle method
-    // (handle_arms used in handle method - kept for documentation)
-    let _handle_arms: Vec<_> = def.handlers.iter().map(|arm| {
-        let pattern = &arm.pattern;
-        let body = &arm.body;
-        quote! {
-            #pattern => {
-                #body
-            }
-        }
-    }).collect();
-
-    // Generate apply_to arms for synchronous testing
-    let apply_arms: Vec<_> = def.handlers.iter().map(|arm| {
+    let apply_arms = def.handlers.iter().map(|arm| {
         let pattern = &arm.pattern;
         let body = strip_bus_from_body(&arm.body);
         quote! {
@@ -173,81 +149,117 @@ fn generate_actor(def: &ActorDef) -> TokenStream {
                 #body
             }
         }
-    }).collect();
+    }).collect::<Vec<_>>();
+
+    let struct_tokens = actor_struct(name, state_type, events_type);
+    let impl_tokens = actor_impl(name, msg_type, state_type, events_type, event_var);
+    let apply_tokens = apply_impl(msg_type, state_type, events_type, apply_arms);
 
     quote! {
-        // ── Actor struct ────────────────────────────────────────────────────────
+        #struct_tokens
+        #impl_tokens
+        #apply_tokens
+    }.into()
+}
 
+fn actor_struct(name: &Ident, state_type: &Ident, events_type: &Ident) -> proc_macro2::TokenStream {
+    quote! {
         /// Actor struct for #name.
         pub struct #name {
             state: std::sync::Mutex<#state_type>,
             bus_bridge: crate::actors::ractor_adapter::EventBusBridge<#events_type>,
         }
+    }
+}
 
+fn actor_impl(
+    name: &Ident,
+    msg_type: &Ident,
+    state_type: &Ident,
+    events_type: &Ident,
+    event_var: syn::Ident,
+) -> proc_macro2::TokenStream {
+    let spawn_tokens = spawn_fn(name, msg_type, state_type, events_type);
+    let ractor_tokens = ractor_trait_impl(name, msg_type, events_type, event_var);
+
+    quote! {
         impl #name {
-            /// Spawn the actor on the given event bus.
-            pub async fn spawn(
-                bus: crate::bus::EventBus<#events_type>,
-            ) -> Result<(crate::actors::RactorHandle<#msg_type>, ractor::ActorCell), ractor::SpawnErr> {
-                let actor = Self {
-                    state: std::sync::Mutex::new(#state_type::default()),
-                    bus_bridge: crate::actors::ractor_adapter::EventBusBridge::new(bus.clone()),
-                };
-                let (handle, _, cell) = crate::actors::ractor_adapter::spawn_ractor(
-                    Some(ractor::ActorName::new(stringify!(#name))),
-                    actor,
-                    bus,
-                ).await?;
-                Ok((handle, cell))
-            }
+            #spawn_tokens
+        }
+        #ractor_tokens
+    }
+}
 
-            /// Access the current state (for testing).
-            #[cfg(test)]
-            pub fn state(&self) -> #state_type {
-                self.state.lock().unwrap().clone()
-            }
+fn spawn_fn(
+    name: &Ident,
+    msg_type: &Ident,
+    state_type: &Ident,
+    events_type: &Ident,
+) -> proc_macro2::TokenStream {
+    let name_str = format!("{}", name);
+    let bridge_type = quote! { crate::actors::ractor_adapter::EventBusBridge<#events_type> };
+    let handle_type = quote! { crate::actors::RactorHandle<#msg_type> };
+
+    quote! {
+        /// Spawn the actor on the given event bus.
+        pub async fn spawn(
+            bus: crate::bus::EventBus<#events_type>,
+        ) -> Result<(#handle_type, ractor::ActorCell), ractor::SpawnErr> {
+            let actor = Self {
+                state: std::sync::Mutex::new(#state_type::default()),
+                bus_bridge: #bridge_type::new(bus.clone()),
+            };
+            let (handle, _, cell) = crate::actors::ractor_adapter::spawn_ractor(
+                Some(ractor::ActorName::new(#name_str)),
+                actor,
+                bus,
+            ).await?;
+            Ok((handle, cell))
         }
 
+        /// Access the current state (for testing).
+        #[cfg(test)]
+        pub fn state(&self) -> #state_type {
+            self.state.lock().unwrap().clone()
+        }
+    }
+}
+
+fn ractor_trait_impl(
+    name: &Ident,
+    msg_type: &Ident,
+    events_type: &Ident,
+    event_var: syn::Ident,
+) -> proc_macro2::TokenStream {
+    quote! {
         #[ractor::async_trait]
         impl ractor::Actor for #name {
             type Msg = #msg_type;
             type State = ();
             type Arguments = crate::bus::EventBus<#events_type>;
 
-            async fn pre_start(
-                &self,
-                _myself: ractor::ActorRef<Self::Msg>,
-                _args: Self::Arguments,
-            ) -> Result<Self::State, ractor::ActorProcessingErr> {
-                Ok(())
-            }
+            async fn pre_start(&self, _: ractor::ActorRef<Self::Msg>, _: Self::Arguments)
+                -> Result<Self::State, ractor::ActorProcessingErr> { Ok(()) }
 
-            async fn handle(
-                &self,
-                _myself: ractor::ActorRef<Self::Msg>,
-                msg: Self::Msg,
-                _state: &mut Self::State,
-            ) -> Result<(), ractor::ActorProcessingErr> {
-                let (#event_var, emit) = {
-                    let mut state = self.state.lock().unwrap();
-                    let result = #msg_type::apply_to(&msg, &mut state, &self.bus_bridge);
-                    (result.0, result.1)
-                };
-                if emit {
-                    self.bus_bridge.publish(#event_var);
-                }
+            async fn handle(&self, _: ractor::ActorRef<Self::Msg>, msg: Self::Msg, _: &mut Self::State)
+                -> Result<(), ractor::ActorProcessingErr> {
+                let (evt, emit) = { let mut s = self.state.lock().unwrap(); #msg_type::apply_to(&msg, &mut s, &self.bus_bridge) };
+                if emit { self.bus_bridge.publish(#event_var(evt)); }
                 Ok(())
             }
         }
+    }
+}
 
-        // ── Message apply_to for synchronous testing ─────────────────────────────
-
+fn apply_impl(
+    msg_type: &Ident,
+    state_type: &Ident,
+    events_type: &Ident,
+    apply_arms: Vec<proc_macro2::TokenStream>,
+) -> proc_macro2::TokenStream {
+    quote! {
         impl #msg_type {
             /// Apply a message to state synchronously (for tests without spawned actor).
-            ///
-            /// Returns `(event, should_emit)` where:
-            /// - `event` is the event to publish if should_emit is true
-            /// - `should_emit` indicates whether to broadcast the event
             pub fn apply_to(
                 &self,
                 state: &mut #state_type,
@@ -258,7 +270,7 @@ fn generate_actor(def: &ActorDef) -> TokenStream {
                 }
             }
         }
-    }.into()
+    }
 }
 
 /// Strip bus.publish() calls from body since apply_to is sync.
