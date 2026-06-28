@@ -51,7 +51,7 @@ impl AgentActorHandle {
     /// This method sends `TurnMsg::RunIfQueued` to the TurnActor, which owns
     /// the authoritative queue state. The TurnActor will emit `TurnStarted`
     /// when it pops a message and starts a turn.
-    pub async fn run_if_queued(&self, turn_handle: &runie_core::actors::TurnActorHandle) {
+    pub async fn run_if_queued(&self, turn_handle: &runie_core::actors::RactorTurnHandle) {
         turn_handle.send(runie_core::actors::TurnMsg::RunIfQueued).await;
     }
 }
@@ -220,7 +220,7 @@ mod tests {
     #[tokio::test]
     async fn run_if_queued_sends_run_if_queued_to_turn_actor() {
         let bus = runie_core::bus::EventBus::<Event>::new(16);
-        let (turn_handle, _turn_actor) = runie_core::actors::TurnActor::spawn(bus.clone());
+        let (turn_handle, _, _) = runie_core::actors::RactorTurnActor::spawn(bus.clone()).await;
         let (tx, _rx) = tokio::sync::mpsc::channel::<AgentMsg>(10);
         let agent_handle = AgentActorHandle::new(tx);
 
@@ -253,7 +253,7 @@ mod tests {
     #[tokio::test]
     async fn run_if_queued_noop_when_turn_active() {
         let bus = runie_core::bus::EventBus::<Event>::new(16);
-        let (turn_handle, _turn_actor) = runie_core::actors::TurnActor::spawn(bus.clone());
+        let (turn_handle, _, _) = runie_core::actors::RactorTurnActor::spawn(bus.clone()).await;
         let (tx, _rx) = tokio::sync::mpsc::channel::<AgentMsg>(10);
         let agent_handle = AgentActorHandle::new(tx);
 

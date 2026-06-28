@@ -1,5 +1,10 @@
 [
   {
+    "file": "TEMPLATE.md",
+    "title": "Task Title",
+    "status": "todo"
+  },
+  {
     "file": "actor-lifecycle-and-handle-registry.md",
     "title": "Actor Lifecycle and Handle Registry",
     "status": "done"
@@ -297,7 +302,7 @@
   {
     "file": "replace-actor-runtime-with-ractor.md",
     "title": "Replace custom actor runtime with `ractor`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-diff-parser-with-diffy.md",

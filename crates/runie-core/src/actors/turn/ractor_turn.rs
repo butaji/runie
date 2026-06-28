@@ -405,10 +405,10 @@ impl Actor for RactorTurnActor {
 
 impl RactorTurnActor {
     /// Spawn a `RactorTurnActor` on the given event bus.
-    pub async fn spawn(bus: EventBus<Event>) -> (RactorTurnHandle, ractor::ActorCell) {
+    pub async fn spawn(bus: EventBus<Event>) -> (RactorTurnHandle, ractor::ActorCell, tokio::task::JoinHandle<()>) {
         let actor = Self::new(bus.clone());
-        let (handle, _join, cell) = spawn_ractor(None, actor, bus).await.unwrap();
-        (RactorTurnHandle::new(handle), cell)
+        let (handle, join, cell) = spawn_ractor(None, actor, bus).await.unwrap();
+        (RactorTurnHandle::new(handle), cell, join)
     }
 }
 
@@ -419,7 +419,7 @@ mod tests {
     #[tokio::test]
     async fn run_if_queued_starts_turn() {
         let bus = EventBus::<Event>::new(16);
-        let (handle, _cell) = RactorTurnActor::spawn(bus.clone()).await;
+        let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await;
         let mut sub = bus.subscribe();
         handle.send(TurnMsg::SubmitUserMessage { content: "hello".into(), id: "req.0".into() }).await;
         handle.send(TurnMsg::RunIfQueued).await;
@@ -433,7 +433,7 @@ mod tests {
     #[tokio::test]
     async fn abort_turn_clears_state() {
         let bus = EventBus::<Event>::new(16);
-        let (handle, _cell) = RactorTurnActor::spawn(bus.clone()).await;
+        let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await;
         let mut sub = bus.subscribe();
         handle.send(TurnMsg::SubmitUserMessage { content: "hello".into(), id: "req.0".into() }).await;
         handle.send(TurnMsg::RunIfQueued).await;
@@ -448,7 +448,7 @@ mod tests {
     #[tokio::test]
     async fn error_emits_turned_errored() {
         let bus = EventBus::<Event>::new(16);
-        let (handle, _cell) = RactorTurnActor::spawn(bus.clone()).await;
+        let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await;
         let mut sub = bus.subscribe();
         handle.send(TurnMsg::Error { id: "req.0".into(), message: "oops".into() }).await;
         let mut found = false;

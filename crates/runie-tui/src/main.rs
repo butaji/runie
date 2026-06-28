@@ -15,7 +15,7 @@ use futures::StreamExt;
 use runie_agent::AgentActor;
 use runie_core::actors::{
     ActorHandles, ConfigActor, FffIndexerActor, FffIndexerHandle, IoActor,
-    ProviderActor, SessionActor, TurnActor,
+    ProviderActor, SessionActor, RactorTurnActor,
 };
 use runie_core::actors::permission::RactorPermissionActor;
 use runie_core::bus::EventBus;
@@ -68,7 +68,7 @@ async fn main() -> io::Result<()> {
         bus,
         shutdown_tx,
         actor_handles,
-    );
+    ).await;
 
     shutdown_rx
         .await
@@ -86,7 +86,7 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
     // InputActor owns the input buffer, cursor, history, undo/redo.
     let (input_handle, _input_actor) = runie_core::actors::InputActor::spawn(bus.clone()).await;
     // TurnActor owns turn lifecycle, queues, and token tracking.
-    let (turn_handle, _turn_actor) = TurnActor::spawn(bus.clone());
+    let (turn_handle, _, _) = RactorTurnActor::spawn(bus.clone()).await;
     let mut state = AppState::default();
     // Build the ActorHandles registry — this is the single source of truth
     // for all actor senders. It replaces the old loose config_tx/provider_tx/... fields.
@@ -135,7 +135,7 @@ fn init_terminal_state(state: &mut AppState) {
     }
 }
 
-fn spawn_background_tasks(
+async fn spawn_background_tasks(
     terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
     mut state: AppState,
     caps: terminal::caps::TerminalCapabilities,
@@ -143,7 +143,7 @@ fn spawn_background_tasks(
     shutdown_tx: oneshot::Sender<()>,
     handles: ActorHandles,
 ) {
-    let handles = setup_actor_channels(&handles, &mut state, &bus);
+    let handles = setup_actor_channels(&handles, &mut state, &bus).await;
     let (render_tx, render_rx) = watch::channel(state.snapshot());
     let (kb_tx, kb_rx) = watch::channel(state.config().keybindings().clone());
     spawn_input_forwarder(handles.input_rx, bus.clone());
@@ -159,11 +159,11 @@ struct ActorChannels {
     agent_handle: runie_agent::AgentActorHandle,
     agent_actor: runie_core::actors::ActorHandle,
     persistence_handle: runie_core::actors::SessionActorHandle,
-    turn_handle: runie_core::actors::TurnActorHandle,
-    turn_actor: runie_core::actors::ActorHandle,
+    turn_handle: runie_core::actors::RactorTurnHandle,
+    turn_actor: tokio::task::JoinHandle<()>,
 }
 
-fn setup_actor_channels(
+async fn setup_actor_channels(
     handles: &ActorHandles,
     _state: &mut AppState,
     bus: &EventBus<Event>,
@@ -174,7 +174,7 @@ fn setup_actor_channels(
         handles.provider.clone().expect("ProviderActor must be spawned"),
         handles.permission.clone().expect("PermissionActor must be spawned"),
     );
-    let (turn_handle, turn_actor) = TurnActor::spawn(bus.clone());
+    let (turn_handle, _, turn_actor) = RactorTurnActor::spawn(bus.clone()).await;
     ActorChannels {
         input_tx,
         input_rx,
@@ -271,7 +271,7 @@ fn spawn_ui_actor(
     render_tx: watch::Sender<Snapshot>,
     agent_handle: runie_agent::AgentActorHandle,
     persistence_handle: runie_core::actors::SessionActorHandle,
-    turn_handle: runie_core::actors::TurnActorHandle,
+    turn_handle: runie_core::actors::RactorTurnHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: oneshot::Sender<()>,

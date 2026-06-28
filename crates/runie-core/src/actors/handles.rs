@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use crate::actors::{
     CompletionActorHandle, ConfigActorHandle, FffSearchRequest, RactorInputHandle,
     IoActorHandle, PermissionActorHandle, ProviderActorHandle, SessionActorHandle,
-    TrustActorHandle, TurnActorHandle, ViewActorHandle,
+    TrustActorHandle, RactorTurnHandle, ViewActorHandle,
 };
 use crate::config::TruncationSection;
 use crate::model::ThinkingLevel;
@@ -24,7 +24,7 @@ pub struct ActorHandles {
     pub view: Option<ViewActorHandle>,
     pub completion: Option<CompletionActorHandle>,
     pub trust: Option<TrustActorHandle>,
-    pub turn: Option<TurnActorHandle>,
+    pub turn: Option<RactorTurnHandle>,
 }
 
 #[derive(Clone, Debug)]
@@ -251,11 +251,11 @@ impl ActorHandles {
     }
 
     pub fn try_send_turn_abort(&self) {
-        if let Some(ref h) = self.turn { h.try_send(crate::actors::TurnMsg::AbortTurn); }
+        if let Some(ref h) = self.turn { let _ = h.try_send(crate::actors::TurnMsg::AbortTurn); }
     }
 
     pub fn try_send_turn_clear_queues(&self) {
-        if let Some(ref h) = self.turn { h.try_send(crate::actors::TurnMsg::ClearQueues); }
+        if let Some(ref h) = self.turn { let _ = h.try_send(crate::actors::TurnMsg::ClearQueues); }
     }
 
     // Queue helpers
@@ -267,7 +267,7 @@ impl ActorHandles {
 
     pub fn try_send_turn_queue_steering(&self, content: String) {
         if let Some(ref h) = self.turn {
-            h.try_send(crate::actors::TurnMsg::QueueSteering { content });
+            let _ = h.try_send(crate::actors::TurnMsg::QueueSteering { content });
         }
     }
 
@@ -279,7 +279,7 @@ impl ActorHandles {
 
     pub fn try_send_turn_queue_follow_up(&self, content: String) {
         if let Some(ref h) = self.turn {
-            h.try_send(crate::actors::TurnMsg::QueueFollowUp { content });
+            let _ = h.try_send(crate::actors::TurnMsg::QueueFollowUp { content });
         }
     }
 
@@ -291,7 +291,7 @@ impl ActorHandles {
 
     pub fn try_send_turn_abort_queue(&self) {
         if let Some(ref h) = self.turn {
-            h.try_send(crate::actors::TurnMsg::AbortQueue);
+            let _ = h.try_send(crate::actors::TurnMsg::AbortQueue);
         }
     }
 
@@ -304,7 +304,7 @@ impl ActorHandles {
 
     pub fn try_send_turn_deliver_queued(&self, steering_mode: crate::model::DeliveryMode, follow_up_mode: crate::model::DeliveryMode) {
         if let Some(ref h) = self.turn {
-            h.try_send(crate::actors::TurnMsg::DeliverQueued { steering_mode, follow_up_mode });
+            let _ = h.try_send(crate::actors::TurnMsg::DeliverQueued { steering_mode, follow_up_mode });
         }
     }
 
@@ -316,7 +316,7 @@ impl ActorHandles {
 
     pub fn try_send_turn_dequeue(&self) {
         if let Some(ref h) = self.turn {
-            h.try_send(crate::actors::TurnMsg::Dequeue);
+            let _ = h.try_send(crate::actors::TurnMsg::Dequeue);
         }
     }
 
@@ -328,7 +328,7 @@ impl ActorHandles {
 
     pub fn try_send_turn_submit_user_message(&self, content: String, id: String) {
         if let Some(ref h) = self.turn {
-            h.try_send(crate::actors::TurnMsg::SubmitUserMessage { content, id });
+            let _ = h.try_send(crate::actors::TurnMsg::SubmitUserMessage { content, id });
         }
     }
 

@@ -24,7 +24,7 @@ pub struct UiActor {
     render_tx: watch::Sender<Snapshot>,
     agent_handle: AgentActorHandle,
     persistence_handle: SessionActorHandle,
-    turn_handle: runie_core::actors::TurnActorHandle,
+    turn_handle: runie_core::actors::RactorTurnHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: Option<oneshot::Sender<()>>,
@@ -41,7 +41,7 @@ impl UiActor {
         render_tx: watch::Sender<Snapshot>,
         agent_handle: AgentActorHandle,
         persistence_handle: SessionActorHandle,
-        turn_handle: runie_core::actors::TurnActorHandle,
+        turn_handle: runie_core::actors::RactorTurnHandle,
         kb_tx: watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
         shutdown_tx: oneshot::Sender<()>,
@@ -267,10 +267,12 @@ async fn handle_persistence_messages(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runie_core::actors::{ActorHandles, ProviderActorHandle, TurnActorHandle};
+    use runie_core::actors::{ActorHandles, ProviderActorHandle, RactorTurnActor};
 
-    fn test_turn_handle() -> TurnActorHandle {
-        TurnActorHandle::new(tokio::sync::mpsc::channel(1).0)
+    async fn test_turn_handle() -> runie_core::actors::RactorTurnHandle {
+        let bus = EventBus::<Event>::new(10);
+        let (handle, _, _) = RactorTurnActor::spawn(bus).await;
+        handle
     }
 
     #[tokio::test]
@@ -284,7 +286,7 @@ mod tests {
         let persistence_handle = SessionActorHandle::new(persist_tx);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
-        let turn_handle = test_turn_handle();
+        let turn_handle = test_turn_handle().await;
 
         let ui_sub = bus.subscribe();
         tokio::spawn(
@@ -343,8 +345,9 @@ mod tests {
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
+        let turn_handle = test_turn_handle().await;
         let mut actor = UiActor::new(state, render_tx, AgentActorHandle::new(agent_tx),
-            SessionActorHandle::new(persist_tx), test_turn_handle(), kb_tx,
+            SessionActorHandle::new(persist_tx), turn_handle, kb_tx,
             EventBus::new(4), shutdown_tx, TerminalCapabilities::default());
 
         // Simulate a streaming message: TextStart -> ResponseDelta -> tick.
@@ -376,8 +379,9 @@ mod tests {
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
+        let turn_handle = test_turn_handle().await;
         let mut actor = UiActor::new(state, render_tx, AgentActorHandle::new(agent_tx),
-            SessionActorHandle::new(persist_tx), test_turn_handle(), kb_tx,
+            SessionActorHandle::new(persist_tx), turn_handle, kb_tx,
             EventBus::new(4), shutdown_tx, TerminalCapabilities::default());
 
         actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
@@ -430,7 +434,7 @@ mod tests {
         let mut handles = ActorHandles::default();
         handles.provider = Some(ProviderActorHandle::new(provider_tx));
         state.set_actor_handles(handles);
-        let turn_handle = test_turn_handle();
+        let turn_handle = test_turn_handle().await;
 
         let mut actor = UiActor::new(
             state,

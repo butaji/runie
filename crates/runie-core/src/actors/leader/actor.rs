@@ -12,11 +12,12 @@ use tokio::sync::{broadcast, mpsc};
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::actors::{
-    ConfigActor, IoActor, SessionActor, TurnActor,
-    ConfigActorHandle, IoActorHandle, SessionActorHandle, TurnActorHandle,
+    ConfigActor, IoActor, SessionActor,
+    ConfigActorHandle, IoActorHandle, SessionActorHandle,
     ProviderActor, ProviderActorHandle,
 };
 use crate::actors::permission::RactorPermissionActor;
+use crate::actors::turn::RactorTurnActor;
 use crate::actors::PermissionActorHandle;
 
 use super::messages::{LeaderCommand, LeaderStatus};
@@ -85,7 +86,7 @@ impl Leader {
         let (io, _) = IoActor::spawn(bus.clone());
         let (session, _) = SessionActor::spawn(bus.clone());
         let (permission, _) = RactorPermissionActor::spawn(bus.clone()).await;
-        let (turn, _) = TurnActor::spawn(bus.clone());
+        let (turn, _, _) = RactorTurnActor::spawn(bus.clone()).await;
 
         Ok(SpawnedHandles { config, provider, io, session, permission, turn })
     }
@@ -167,7 +168,7 @@ struct SpawnedHandles {
     io: IoActorHandle,
     session: SessionActorHandle,
     permission: PermissionActorHandle,
-    turn: TurnActorHandle,
+    turn: crate::actors::turn::RactorTurnHandle,
 }
 
 /// Process a line from a client.
@@ -217,7 +218,7 @@ pub struct LeaderHandle {
     pub io: IoActorHandle,
     pub session: SessionActorHandle,
     pub permission: PermissionActorHandle,
-    pub turn: TurnActorHandle,
+    pub turn: crate::actors::turn::RactorTurnHandle,
 }
 
 impl LeaderHandle {

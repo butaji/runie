@@ -34,7 +34,10 @@ pub mod view;
 pub use handles::{ActorHandles, FffIndexerHandle};
 
 pub use completion::{CompletionActor, CompletionActorHandle, CompletionMsg};
-pub use turn::{TurnActor, TurnActorHandle, TurnMsg, RactorTurnActor, RactorTurnHandle};
+pub use turn::{TurnMsg, RactorTurnActor, RactorTurnHandle};
+// Legacy exports for backward compatibility during migration.
+#[allow(deprecated)]
+pub use turn::{TurnActor, TurnActorHandle};
 pub use plan::{PlanActor, PlanActorHandle, PlanMsg, PlanState, PlanStepStatus, RactorPlanActor, RactorPlanHandle};
 pub use config::{ConfigActor, ConfigActorHandle, ConfigMsg};
 pub use fff_indexer::{
