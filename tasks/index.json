@@ -35,11 +35,6 @@
     "status": "todo"
   },
   {
-    "file": "deduplicate-turn-queue-delivery-logic.md",
-    "title": "Deduplicate turn-queue delivery logic",
-    "status": "todo"
-  },
-  {
     "file": "delete-dead-actor-modules-and-custom-trait.md",
     "title": "Delete dead actor modules and the custom `Actor` trait",
     "status": "done"
@@ -47,11 +42,21 @@
   {
     "file": "delete-dead-runie-macros-crate.md",
     "title": "Delete the dead `runie-macros` crate",
+    "status": "done"
+  },
+  {
+    "file": "delete-or-fix-dead-mcp-feature-flag.md",
+    "title": "Delete or fix dead `mcp` feature flag",
     "status": "todo"
   },
   {
     "file": "delete-or-merge-inspector-tool-pipeline.md",
     "title": "Delete or merge the inspector tool pipeline",
+    "status": "todo"
+  },
+  {
+    "file": "eliminate-production-unwrap-expect.md",
+    "title": "Eliminate production `unwrap`/`expect` that should be recoverable errors",
     "status": "todo"
   },
   {
@@ -65,14 +70,59 @@
     "status": "todo"
   },
   {
+    "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
+    "title": "Fix broken `schema` feature usage in CI and justfile",
+    "status": "todo"
+  },
+  {
+    "file": "fix-dev-automation-recipes.md",
+    "title": "Fix dev automation recipes",
+    "status": "todo"
+  },
+  {
+    "file": "fix-dry-run-tool-names-discrepancy.md",
+    "title": "Fix dry-run tool-name discrepancy",
+    "status": "todo"
+  },
+  {
     "file": "fix-keybindings-dead-code.md",
     "title": "Fix keybindings dead-code warning",
     "status": "done"
   },
   {
+    "file": "fold-runie-protocol-into-core.md",
+    "title": "Fold `runie-protocol` crate into `runie-core`",
+    "status": "todo"
+  },
+  {
+    "file": "harden-actors-against-mutex-poisoning.md",
+    "title": "Harden async actors against mutex poisoning and startup panics",
+    "status": "todo"
+  },
+  {
+    "file": "implement-or-remove-mcp-runtime-scaffolding.md",
+    "title": "Implement MCP client runtime or remove config scaffolding",
+    "status": "todo"
+  },
+  {
+    "file": "initialize-tracing-subscriber-in-binaries.md",
+    "title": "Initialize `tracing` subscriber in CLI and TUI binaries",
+    "status": "todo"
+  },
+  {
+    "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
+    "title": "Introduce `cargo-deny` and `cargo-machete` CI checks",
+    "status": "todo"
+  },
+  {
     "file": "migrate-production-actors-to-ractor.md",
     "title": "Migrate production actors to `ractor`",
     "status": "done"
+  },
+  {
+    "file": "migrate-subagent-loader-to-resource-loader.md",
+    "title": "Migrate subagent loader to unified resource loader",
+    "status": "todo"
   },
   {
     "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
@@ -82,6 +132,16 @@
   {
     "file": "narrow-runie-core-public-api.md",
     "title": "Narrow `runie-core` public API",
+    "status": "todo"
+  },
+  {
+    "file": "remove-sleep-from-automatic-tests.md",
+    "title": "Remove `sleep()` from automatic tests",
+    "status": "todo"
+  },
+  {
+    "file": "remove-unused-dependencies-and-normalize-workspace-deps.md",
+    "title": "Remove unused dependencies and normalize workspace deps",
     "status": "todo"
   },
   {
@@ -110,6 +170,11 @@
     "status": "done"
   },
   {
+    "file": "replace-custom-telemetry-with-tracing-layer.md",
+    "title": "Replace custom telemetry module with a `tracing` layer",
+    "status": "todo"
+  },
+  {
     "file": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",
     "title": "Replace custom TUI widgets with ratatui ecosystem crates",
     "status": "todo"
@@ -120,8 +185,18 @@
     "status": "done"
   },
   {
+    "file": "replace-remaining-custom-parsers-and-macros-with-strum.md",
+    "title": "Replace remaining custom parsers and macros with `strum`",
+    "status": "todo"
+  },
+  {
     "file": "replace-think-filter-with-regex.md",
     "title": "Replace think-block filter with regex",
+    "status": "todo"
+  },
+  {
+    "file": "replace-tmux-test-with-ratatui-tests.md",
+    "title": "Replace `scripts/tmux-test.sh` with Ratatui `TestBackend` tests",
     "status": "todo"
   },
   {
@@ -150,6 +225,11 @@
     "status": "todo"
   },
   {
+    "file": "unify-cli-json-rpc-transport-and-remove-dead-acp.md",
+    "title": "Unify CLI JSON-RPC transport and remove dead ACP plumbing",
+    "status": "todo"
+  },
+  {
     "file": "unify-core-and-tui-line-count-computation.md",
     "title": "Unify core and TUI line-count computation",
     "status": "todo"
@@ -158,6 +238,11 @@
     "file": "unify-declarative-resource-loader.md",
     "title": "Unify declarative resource loader",
     "status": "done"
+  },
+  {
+    "file": "unify-library-error-types-with-thiserror.md",
+    "title": "Unify library error types with `thiserror`",
+    "status": "todo"
   },
   {
     "file": "unify-markdown-processing-around-pulldown-cmark.md",
@@ -177,11 +262,6 @@
   {
     "file": "unify-provider-credential-resolution-with-dotenvy.md",
     "title": "Unify provider credential resolution with `dotenvy`",
-    "status": "todo"
-  },
-  {
-    "file": "unify-session-store-and-index-with-rusqlite.md",
-    "title": "Unify session store and replay index with `rusqlite`",
     "status": "todo"
   },
   {

@@ -49,4 +49,7 @@
 
 - Depends on `use-clap-derive-for-cli.md` because the CLI and slash-command models should converge.
 - The TUI command palette needs display names, descriptions, and aliases; ensure the new representation can produce them.
+- Remove the redundant `cmd!` macro in `commands/dsl/mod.rs` and migrate call sites to the existing `commands::dsl::cmd(...)` function.
+- Eliminate the leaked global intent map (`INTENT_EVENTS` in `declarative/register.rs`) used to map declarative commands to intent events.
+- Unify the two `CommandCategory` enums (`commands/dsl/category.rs` and `declarative/types.rs`).
 - Rejected: keep both `CommandSpec` and `CommandDef` for “flexibility” — the duplication is the main source of complexity.

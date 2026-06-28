@@ -50,4 +50,5 @@
 ## Notes
 
 - `pulldown-cmark-frontmatter` uses the first Markdown code block as frontmatter by default. Ensure YAML frontmatter blocks are fenced with `---`/`---` or `yaml` language tags depending on what the crate expects; add a thin normalizer if Runie's existing resources use a different convention.
+- `subagents/mod.rs:203-251` still implements its own frontmatter/body scanner; migrate subagent types to the same loader as part of this change.
 - `OpenFang` and `thClaws` both treat `SKILL.md` as markdown with YAML frontmatter; aligning the loader means skills become portable across agents.

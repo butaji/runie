@@ -46,4 +46,6 @@ MiniMax SSE fixtures and mock helpers are duplicated across `runie-agent` and `r
 
 - The fixtures themselves were already centralized in a prior task; this task focuses on the *helper code* around them.
 - Keep helpers generic enough for future provider replay tests, not just MiniMax.
+- Also consolidate duplicated `ENV_LOCK` mutexes and temp-dir/config-loading patterns from `runie-core/src/tests/support.rs` and `runie-provider/src/tests.rs` into `runie-testing`.
+- `scripts/tmux-test.sh` is a shell/tmux test that violates AGENTS.md; any coverage it provides should be ported to Ratatui `TestBackend` tests in `runie-tui/src/tests/`.
 - Rejected: leave duplication because the tests are in different crates — `runie-testing` exists precisely to prevent this.

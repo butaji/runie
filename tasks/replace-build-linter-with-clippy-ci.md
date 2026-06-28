@@ -48,4 +48,7 @@
 
 - `clippy::cognitive_complexity` is deprecated in some versions; use the equivalent lint or a `dylint` plugin if precise complexity counting is required.
 - This task requires CI/workflow changes; it is not a pure code change.
+- The agent manifest SHA-256 checksum validation in `build.rs` is a legitimate release integrity check; move it to a CI step or small helper, not the linter.
+- `scripts/check-field-access.sh` overlaps with the AppState field-access lint; consolidate them into the same CI check.
+- `RUNIE_SKIP_BUILD_CHECKS=1` in `bacon.toml` is a sign the linter is a pain point; the Clippy/CI replacement should not need a bypass.
 - Rejected: keep the custom linter for exact control — the maintenance cost exceeds the precision benefit.

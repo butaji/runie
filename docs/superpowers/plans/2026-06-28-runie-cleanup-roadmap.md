@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Resolve the unify/simplify/reduce findings from the 2026-06-28 architecture & code review so the workspace builds cleanly, dead/duplicate code is removed, and the actual crate structure matches the documented `IO | Domain (pure) | UI (pure/MVU)` layering. A third five-round review added a crate-replacement angle. A fourth five-round review dug deeper into provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, and DSL/view/dialog/commands. Wherever a custom helper mirrors a standard crate, the plan is to use the crate.
+**Goal:** Resolve the unify/simplify/reduce findings from the 2026-06-28 architecture & code review so the workspace builds cleanly, dead/duplicate code is removed, and the actual crate structure matches the documented `IO | Domain (pure) | UI (pure/MVU)` layering. A third five-round review added a crate-replacement angle. A fourth five-round review dug deeper into provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, and DSL/view/dialog/commands. A fifth five-round review focused on build/CI/test harness, error handling/tracing/telemetry, protocol/IPC leftovers, declarative loaders/DSLs, and macros/codegen. Wherever a custom helper mirrors a standard crate, the plan is to use the crate.
 
-**Architecture:** The second-pass review showed that several "todo" tasks were already completed on disk (dialog module repaired, empty facade crates deleted, dead provider code removed, IPC layers gone). Those tasks have been archived. The remaining active work is concentrated in the actor runtime, runtime bootstrap, event taxonomy, tool-parser shim, public API boundary, CLI config routing, and a final sweep of small duplicates. A third review found that many small `runie-core` helpers (`glob`, `fuzzy`, `path`, keybinding parsing, frontmatter scanning, tool-marker stripping) can be replaced by `pulldown-cmark`, `strum`, `shellexpand`, `ignore`, and other standard crates. A fourth review found additional crate replacements in provider/config/auth (`backon`, `keyring`, `jsonschema`, `dotenvy`), CLI (`clap`), TUI widgets (`tui-textarea`, `tui-input`, `ansi_colours`), and tooling (`shell-words`, Clippy/CI). The big actor/bootstrap tasks have been split into sequential sub-tasks so that every intermediate commit leaves `cargo check --workspace` green.
+**Architecture:** The second-pass review showed that several "todo" tasks were already completed on disk (dialog module repaired, empty facade crates deleted, dead provider code removed, IPC layers gone). Those tasks have been archived. The remaining active work is concentrated in the actor runtime, runtime bootstrap, event taxonomy, tool-parser shim, public API boundary, CLI config routing, and a final sweep of small duplicates. A third review found that many small `runie-core` helpers (`glob`, `fuzzy`, `path`, keybinding parsing, frontmatter scanning, tool-marker stripping) can be replaced by `pulldown-cmark`, `strum`, `shellexpand`, `ignore`, and other standard crates. A fourth review found additional crate replacements in provider/config/auth (`backon`, `keyring`, `jsonschema`, `dotenvy`), CLI (`clap`), TUI widgets (`tui-textarea`, `tui-input`, `ansi_colours`), and tooling (`shell-words`, Clippy/CI). A fifth review found broken CI feature flags, dead MCP feature flag, dependency hygiene issues, library-wide `anyhow` usage without typed errors, missing `tracing` subscriber, custom telemetry with no backend, broken ACP plumbing, a still-existing `runie-protocol` crate, and many macros/small parsers that should use `strum`. The big actor/bootstrap tasks have been split into sequential sub-tasks so that every intermediate commit leaves `cargo check --workspace` green.
 
 **Tech Stack:** Rust, Tokio, Ratatui, ractor, reqwest, pulldown-cmark, strum, glob/globset, nucleo-matcher/sublime-fuzzy, shellexpand, etcetera, ignore, walkdir, tracing, backon, keyring, jsonschema, clap, dotenvy, shell-words, tui-textarea, tui-input, ansi_colours, notify.
 
@@ -12,7 +12,7 @@
 
 ## File structure
 
-- `tasks/index.json` — canonical registry of the 33 active cleanup tasks.
+- `tasks/index.json` — canonical registry of the 48 active cleanup tasks.
 - **Actor runtime (split into three sequential tasks):**
   - `tasks/migrate-production-actors-to-ractor.md`
   - `tasks/delete-dead-actor-modules-and-custom-trait.md`
@@ -41,7 +41,7 @@
   - `tasks/replace-config-validator-with-jsonschema.md` — validate `Config` against the generated schema.
   - `tasks/use-clap-derive-for-cli.md` — typed CLI parsing.
   - `tasks/replace-custom-tui-widgets-with-ratatui-ecosystem.md` — `tui-textarea`, `tui-input`, `List`, `ansi_colours`, `crossterm`.
-  - `tasks/delete-dead-runie-macros-crate.md` — remove unused proc-macro crate.
+  - `tasks/delete-dead-runie-macros-crate.md` — `done`. The crate no longer exists in the workspace.
   - `tasks/centralize-test-fixtures-and-mocks.md` — shared MiniMax fixtures and mock helpers.
   - `tasks/unify-provider-credential-resolution-with-dotenvy.md` — single `.env` load + provider credential resolution.
   - `tasks/replace-bash-safety-with-shell-words.md` — tokenize with `shell-words` + deny-list.
@@ -52,9 +52,9 @@
   - `tasks/simplify-slash-command-dsl.md` — collapse `CommandSpec`/`CommandDef`.
   - `tasks/unify-permission-system-rules.md` — merge permission rule engines.
 - **Fourth-pass provider / model / session unification (P0/P1):**
-  - `tasks/unify-session-store-and-index-with-rusqlite.md` — single SQLite store for sessions and replay index.
+  - `tasks/unify-session-store-and-index.md` — single SQLite store for sessions and replay index.
   - `tasks/type-and-unify-provider-model-layer.md` — typed provider/model structs + single catalog.
-  - `tasks/deduplicate-turn-queue-delivery-logic.md` — one queue with explicit delivery ids.
+  - `tasks/dedupe-turn-queue-delivery-logic.md` — one queue with explicit delivery ids.
   - `tasks/use-channels-for-subagent-result-collection.md` — channels for subagent results.
 - **Fourth-pass parser / markdown unification (P0/P1):**
   - `tasks/unify-markdown-processing-around-pulldown-cmark.md` — single pulldown-cmark event stream.
@@ -65,8 +65,33 @@
   - `tasks/simplify-terminal-capability-detection.md` — `supports-color`/`supports-hyperlinks`.
   - `tasks/unify-core-and-tui-line-count-computation.md` — one line-count source of truth.
   - `tasks/collapse-dialogstate-variants.md` — small mutually exclusive dialog state machine.
+- **Fifth-pass CI / build / dependency hygiene (P0/P1):**
+  - `tasks/fix-broken-schema-feature-in-ci-and-justfile.md` — remove broken `--features schema` usage.
+  - `tasks/delete-or-fix-dead-mcp-feature-flag.md` — gate or delete the empty `mcp` feature.
+  - `tasks/remove-unused-dependencies-and-normalize-workspace-deps.md` — remove `futures`, dedupe `tempfile`, workspace-inherit inline deps.
+  - `tasks/fix-dev-automation-recipes.md` — fix `bacon.toml` `test` job and `just lint-fix`.
+  - `tasks/replace-build-linter-with-clippy-ci.md` — Clippy + CI file-limit check.
+  - `tasks/introduce-cargo-deny-and-cargo-machete-ci.md` — dependency audits in CI.
+- **Fifth-pass error handling / observability (P0/P1):**
+  - `tasks/unify-library-error-types-with-thiserror.md` — typed library errors.
+  - `tasks/initialize-tracing-subscriber-in-binaries.md` — initialize `tracing-subscriber`.
+  - `tasks/replace-custom-telemetry-with-tracing-layer.md` — replace telemetry collector with tracing layer.
+  - `tasks/harden-actors-against-mutex-poisoning.md` — safe mutex usage in actors.
+  - `tasks/eliminate-production-unwrap-expect.md` — recoverable errors instead of panics.
+- **Fifth-pass protocol / IPC cleanup (P1):**
+  - `tasks/fold-runie-protocol-into-core.md` — fold the still-existing protocol crate into `runie-core`.
+  - `tasks/unify-cli-json-rpc-transport-and-remove-dead-acp.md` — shared transport; fix/delete ACP.
+- **Fifth-pass declarative loaders / DSL / parser cleanup (P1/P2):**
+  - `tasks/migrate-subagent-loader-to-resource-loader.md` — use shared loader for subagent types.
+  - `tasks/fix-dry-run-tool-names-discrepancy.md` — align dry-run tool list with canonical names.
+  - `tasks/replace-remaining-custom-parsers-and-macros-with-strum.md` — strum derives for small enums/macros.
+  - `tasks/implement-or-remove-mcp-runtime-scaffolding.md` — implement `rmcp` client or delete scaffolding.
+- **Fifth-pass test harness hardening (P2):**
+  - `tasks/replace-tmux-test-with-ratatui-tests.md` — delete shell/tmux test.
+  - `tasks/remove-sleep-from-automatic-tests.md` — deterministic waits.
 - `docs/Architecture.md` — updated with a "Current cleanup roadmap" section.
 - `docs/superpowers/plans/2026-06-28-fourth-pass-crate-review.md` — detailed fourth-pass findings.
+- `docs/superpowers/plans/2026-06-28-fifth-pass-crate-review.md` — detailed fifth-pass findings.
 - `tasks/archive/` — completed tasks from this and earlier reviews.
 
 ## Active task map
@@ -101,13 +126,13 @@
 | 26 | `simplify-slash-command-dsl` | P1 | Collapse `CommandSpec`/`CommandDef`. |
 | 27 | `unify-permission-system-rules` | P1 | Merge permission rule engines. |
 | 28 | `replace-custom-tui-widgets-with-ratatui-ecosystem` | P0 | `tui-textarea`, `tui-input`, `List`, `ansi_colours`, `crossterm`. |
-| 29 | `delete-dead-runie-macros-crate` | P1 | Remove unused proc-macro crate. |
-| 30 | `centralize-test-fixtures-and-mocks` | P1 | Shared MiniMax fixtures and mock helpers. |
+| 29 | `delete-dead-runie-macros-crate` | P1 | `done`. The crate no longer exists in the workspace. |
+| 30 | `centralize-test-fixtures-and-mocks` | P1 | Shared MiniMax fixtures and mock helpers; also consolidate env-lock/temp-config helpers. |
 | 31 | `replace-bash-safety-with-shell-words` | P2 | Tokenize with `shell-words` + deny-list. |
 | 32 | `replace-build-linter-with-clippy-ci` | P2 | Clippy lints + CI file-limit check. |
-| 33 | `unify-session-store-and-index-with-rusqlite` | P0 | Single SQLite store for sessions, messages, checkpoints, and replay index. |
+| 33 | `unify-session-store-and-index` | P0 | Single SQLite store for sessions, messages, checkpoints, and replay index. |
 | 34 | `type-and-unify-provider-model-layer` | P0 | Typed `Provider`/`Model` structs and a single model catalog. |
-| 35 | `deduplicate-turn-queue-delivery-logic` | P1 | One turn queue with explicit delivery ids; no duplicate `TurnComplete`. |
+| 35 | `dedupe-turn-queue-delivery-logic` | P1 | One turn queue with explicit delivery ids; no duplicate `TurnComplete`. |
 | 36 | `use-channels-for-subagent-result-collection` | P0 | Subagent actor sends results on `tokio::sync` channels. |
 | 37 | `unify-markdown-processing-around-pulldown-cmark` | P0 | All markdown parsing through one event stream. |
 | 38 | `replace-think-filter-with-regex` | P1 | Replace custom `<think>` matcher with `regex`. |
@@ -116,6 +141,25 @@
 | 41 | `simplify-terminal-capability-detection` | P2 | `supports-color`/`supports-hyperlinks` + single `TermCaps` snapshot. |
 | 42 | `unify-core-and-tui-line-count-computation` | P2 | One source of truth for wrapped line counts. |
 | 43 | `collapse-dialogstate-variants` | P2 | Small mutually exclusive `DialogState` state machine. |
+| 44 | `fix-broken-schema-feature-in-ci-and-justfile` | P0 | Remove broken `--features schema` from CI and justfile. |
+| 45 | `delete-or-fix-dead-mcp-feature-flag` | P0 | Gate or delete the empty `mcp` feature. |
+| 46 | `remove-unused-dependencies-and-normalize-workspace-deps` | P1 | Remove `futures`, dedupe `tempfile`, workspace-inherit inline deps. |
+| 47 | `fix-dev-automation-recipes` | P1 | Fix `bacon.toml` `test` job and `just lint-fix`. |
+| 48 | `replace-build-linter-with-clippy-ci` | P2 | Clippy lints + CI file-limit check. |
+| 49 | `unify-library-error-types-with-thiserror` | P0 | Typed library errors via `thiserror`. |
+| 50 | `initialize-tracing-subscriber-in-binaries` | P0 | Initialize `tracing-subscriber` in CLI/TUI. |
+| 51 | `replace-custom-telemetry-with-tracing-layer` | P1 | Replace telemetry collector with `tracing` layer. |
+| 52 | `harden-actors-against-mutex-poisoning` | P1 | Safe mutex usage in actors. |
+| 53 | `fold-runie-protocol-into-core` | P1 | Fold the still-existing protocol crate into `runie-core`. |
+| 54 | `unify-cli-json-rpc-transport-and-remove-dead-acp` | P1 | Shared transport; fix or delete ACP. |
+| 55 | `migrate-subagent-loader-to-resource-loader` | P1 | Use shared loader for subagent types. |
+| 56 | `fix-dry-run-tool-names-discrepancy` | P0 | Align dry-run tool list with `BUILTIN_TOOL_NAMES`. |
+| 57 | `replace-remaining-custom-parsers-and-macros-with-strum` | P2 | `strum` derives for small enums/macros. |
+| 58 | `implement-or-remove-mcp-runtime-scaffolding` | P2 | Implement `rmcp` client or delete scaffolding. |
+| 59 | `replace-tmux-test-with-ratatui-tests` | P2 | Delete shell/tmux test; port coverage to Rust. |
+| 60 | `remove-sleep-from-automatic-tests` | P2 | Deterministic waits instead of `sleep()`. |
+| 61 | `eliminate-production-unwrap-expect` | P2 | Recoverable errors instead of production panics. |
+| 62 | `introduce-cargo-deny-and-cargo-machete-ci` | P2 | Dependency audits in CI. |
 
 ## Archived completed tasks
 
@@ -183,9 +227,9 @@ The goal is a **stable phase**: after every merged task the workspace builds and
     - `replace-bash-safety-with-shell-words`
     - `replace-build-linter-with-clippy-ci`
 13. **Phase 13 — Fourth-pass provider / model / session unification.**
-    - `unify-session-store-and-index-with-rusqlite`
+    - `unify-session-store-and-index`
     - `type-and-unify-provider-model-layer`
-    - `deduplicate-turn-queue-delivery-logic` (before subagent channels)
+    - `dedupe-turn-queue-delivery-logic` (before subagent channels)
     - `use-channels-for-subagent-result-collection`
 14. **Phase 14 — Fourth-pass parser / markdown unification.**
     - `unify-markdown-processing-around-pulldown-cmark` (before think-filter)
@@ -196,6 +240,30 @@ The goal is a **stable phase**: after every merged task the workspace builds and
     - `simplify-terminal-capability-detection`
     - `unify-core-and-tui-line-count-computation`
     - `collapse-dialogstate-variants`
+16. **Phase 16 — Fifth-pass CI / build / dependency hygiene.**
+    - `fix-broken-schema-feature-in-ci-and-justfile`
+    - `delete-or-fix-dead-mcp-feature-flag`
+    - `remove-unused-dependencies-and-normalize-workspace-deps`
+    - `fix-dev-automation-recipes`
+    - `replace-build-linter-with-clippy-ci`
+    - `introduce-cargo-deny-and-cargo-machete-ci`
+17. **Phase 17 — Fifth-pass error handling / observability.**
+    - `unify-library-error-types-with-thiserror` (before unwrap cleanup)
+    - `initialize-tracing-subscriber-in-binaries`
+    - `replace-custom-telemetry-with-tracing-layer`
+    - `harden-actors-against-mutex-poisoning`
+    - `eliminate-production-unwrap-expect`
+18. **Phase 18 — Fifth-pass protocol / IPC cleanup.**
+    - `fold-runie-protocol-into-core` (before transport unification)
+    - `unify-cli-json-rpc-transport-and-remove-dead-acp`
+19. **Phase 19 — Fifth-pass declarative loaders / DSL / parser cleanup.**
+    - `migrate-subagent-loader-to-resource-loader`
+    - `fix-dry-run-tool-names-discrepancy`
+    - `replace-remaining-custom-parsers-and-macros-with-strum`
+    - `implement-or-remove-mcp-runtime-scaffolding`
+20. **Phase 20 — Fifth-pass test harness hardening.**
+    - `replace-tmux-test-with-ratatui-tests`
+    - `remove-sleep-from-automatic-tests`
 
 ## Verification
 
@@ -223,4 +291,5 @@ The final state must satisfy:
 - Crate-replacement rationale and cross-agent lessons are documented in [`2026-06-28-less-code-crate-replacements.md`](2026-06-28-less-code-crate-replacements.md).
 - Deeper provider/config/auth, CLI/commands/permissions, TUI/widgets, and testing/build findings are documented in [`2026-06-28-third-pass-crate-review.md`](2026-06-28-third-pass-crate-review.md).
 - The fourth-pass review (provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, DSL/view/dialog/commands) is documented in [`2026-06-28-fourth-pass-crate-review.md`](2026-06-28-fourth-pass-crate-review.md).
+- The fifth-pass review (build/CI/test harness, error handling/tracing/telemetry, protocol/IPC leftovers, declarative loaders/DSLs, macros/codegen) is documented in [`2026-06-28-fifth-pass-crate-review.md`](2026-06-28-fifth-pass-crate-review.md).
 - If any task proves larger than expected, split it further and update `tasks/index.json` and this roadmap.

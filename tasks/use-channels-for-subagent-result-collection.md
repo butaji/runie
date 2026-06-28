@@ -5,7 +5,7 @@
 **Category**: Architecture / Actors
 **Priority**: P0
 
-**Depends on**: deduplicate-turn-queue-delivery-logic
+**Depends on**: dedupe-turn-queue-delivery-logic
 **Blocks**: none
 
 ## Description

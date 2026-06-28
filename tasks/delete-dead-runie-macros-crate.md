@@ -1,6 +1,7 @@
 # Delete the dead `runie-macros` crate
 
-**Status**: todo
+**Status**: done
+**Note**: The `crates/runie-macros/` directory no longer exists in the workspace; the crate has already been removed. This task records the completion.
 **Milestone**: R1
 **Category**: Architecture / Refactoring
 **Priority**: P1

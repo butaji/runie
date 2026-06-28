@@ -47,5 +47,7 @@
 
 ## Notes
 
+- `PermissionManager::new(_mode)` currently ignores its mode argument; use `PermissionMode` to assemble the default policy chain.
+- `PermissionResult` is redundant with `PermissionAction`; keep one enum.
 - This is a conceptual unification, not a security policy change. Keep the same external behavior.
 - Coordinate with `collapse-actor-handles-to-typed-map.md` because `PermissionActor` handle wiring may change.

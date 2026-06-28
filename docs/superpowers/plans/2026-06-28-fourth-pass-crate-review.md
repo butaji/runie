@@ -56,7 +56,7 @@ It builds on the earlier three passes recorded in [`2026-06-28-runie-cleanup-roa
 
 | Custom code | Replacement | Task |
 |-------------|-------------|------|
-| JSON session store + custom replay index | Single SQLite database via `rusqlite` | `unify-session-store-and-index-with-rusqlite` |
+| JSON session store + custom replay index | Single SQLite database via `rusqlite` | `unify-session-store-and-index` |
 
 ### Key design points
 
@@ -80,7 +80,7 @@ It builds on the earlier three passes recorded in [`2026-06-28-runie-cleanup-roa
 
 | Custom code | Replacement | Task |
 |-------------|-------------|------|
-| Overlapping queue/dispatch | Single queue with explicit delivery ids | `deduplicate-turn-queue-delivery-logic` |
+| Overlapping queue/dispatch | Single queue with explicit delivery ids | `dedupe-turn-queue-delivery-logic` |
 | Callback/polling subagent results | `tokio::sync::mpsc` / `oneshot` channels | `use-channels-for-subagent-result-collection` |
 | Custom `<think>` matcher | `regex` (and eventually the shared markdown stream) | `replace-think-filter-with-regex` |
 | Separate inspector tool pipeline | Merge with shared tool loop or delete | `delete-or-merge-inspector-tool-pipeline` |
@@ -152,9 +152,9 @@ The fourth pass added the following tasks to `tasks/index.json`:
 
 | Task | Priority | Area |
 |------|----------|------|
-| `unify-session-store-and-index-with-rusqlite` | P0 | Sessions |
+| `unify-session-store-and-index` | P0 | Sessions |
 | `unify-markdown-processing-around-pulldown-cmark` | P0 | Core / State |
-| `deduplicate-turn-queue-delivery-logic` | P1 | Architecture / Actors |
+| `dedupe-turn-queue-delivery-logic` | P1 | Architecture / Actors |
 | `type-and-unify-provider-model-layer` | P0 | Configuration |
 | `extract-shared-streaming-response-parser` | P1 | Core / State |
 | `delete-or-merge-inspector-tool-pipeline` | P1 | Tools |
@@ -173,7 +173,7 @@ One previously marked-done task, `replace-custom-helpers-with-crates`, was reope
 - The new tasks are independent of the big actor/bootstrap sequence and can land once the earlier crate-replacement foundation is in place.
 - `unify-markdown-processing-around-pulldown-cmark` should land before `replace-think-filter-with-regex` so think-block stripping can reuse the shared markdown stream.
 - `type-and-unify-provider-model-layer` should land before `extract-shared-streaming-response-parser` so the parser can operate on typed model metadata.
-- `deduplicate-turn-queue-delivery-logic` should land before `use-channels-for-subagent-result-collection` so subagent results feed a clean queue.
+- `dedupe-turn-queue-delivery-logic` should land before `use-channels-for-subagent-result-collection` so subagent results feed a clean queue.
 - Every task must include the 4-layer test coverage required by `AGENTS.md`.
 
 ## Cross-agent lessons

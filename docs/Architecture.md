@@ -391,7 +391,7 @@ Tests are exempt from function-length and complexity checks so they can stay com
 
 ## Current cleanup roadmap
 
-The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. A third five-round review focused on replacing custom code with crates, unification, and Pareto simplification; its findings are recorded in [`docs/superpowers/plans/2026-06-28-less-code-crate-replacements.md`](superpowers/plans/2026-06-28-less-code-crate-replacements.md). A fourth five-round review dug deeper into provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, and DSL/view/dialog/commands; its findings are recorded in [`docs/superpowers/plans/2026-06-28-fourth-pass-crate-review.md`](superpowers/plans/2026-06-28-fourth-pass-crate-review.md). The remaining active work is tracked in `tasks/index.json` (33 active cleanup tasks) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
+The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. A third five-round review focused on replacing custom code with crates, unification, and Pareto simplification; its findings are recorded in [`docs/superpowers/plans/2026-06-28-less-code-crate-replacements.md`](superpowers/plans/2026-06-28-less-code-crate-replacements.md). A fourth five-round review dug deeper into provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, and DSL/view/dialog/commands; its findings are recorded in [`docs/superpowers/plans/2026-06-28-fourth-pass-crate-review.md`](superpowers/plans/2026-06-28-fourth-pass-crate-review.md). A fifth five-round review focused on build/CI/test harness, error handling/tracing/telemetry, protocol/IPC leftovers, declarative loaders/DSLs, and macros/codegen; its findings are recorded in [`docs/superpowers/plans/2026-06-28-fifth-pass-crate-review.md`](superpowers/plans/2026-06-28-fifth-pass-crate-review.md). The remaining active work is tracked in `tasks/index.json` (48 active cleanup tasks) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
 
 ### Active tasks
 
@@ -455,7 +455,7 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 #### Phase 11 — TUI / macros / testing cleanup (P0/P2)
 
 28. **Replace custom TUI widgets with ratatui ecosystem crates** (`tasks/replace-custom-tui-widgets-with-ratatui-ecosystem.md`) — delete custom `Stylize`, input box, popup list, terminal setup sequences, and ANSI quantization in favor of `tui-textarea`, `tui-input`, `ratatui::widgets::List`, `crossterm`, and `ansi_colours`.
-29. **Delete the dead `runie-macros` crate** (`tasks/delete-dead-runie-macros-crate.md`) — remove the unused proc-macro crate.
+29. **Delete the dead `runie-macros` crate** (`tasks/delete-dead-runie-macros-crate.md`) — `done`. The crate no longer exists in the workspace.
 30. **Centralize test fixtures and mocks** (`tasks/centralize-test-fixtures-and-mocks.md`) — move MiniMax fixtures, `MockToolSkill`, `ReplayProvider`, and `capture_events` into `runie-testing`.
 
 #### Phase 12 — Final tooling simplification (P2/P3)
@@ -465,9 +465,9 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 
 #### Phase 13 — Fourth-pass provider / model / session unification (P0/P1)
 
-33. **Unify session store and replay index with `rusqlite`** (`tasks/unify-session-store-and-index-with-rusqlite.md`) — replace JSON file dumps and custom replay index with a single SQLite schema.
+33. **Unify session store and replay index with `rusqlite`** (`tasks/unify-session-store-and-index.md`) — replace JSON file dumps and custom replay index with a single SQLite schema.
 34. **Type and unify provider/model layer** (`tasks/type-and-unify-provider-model-layer.md`) — replace stringly typed provider/model config with typed structs and a single model catalog.
-35. **Deduplicate turn-queue delivery logic** (`tasks/deduplicate-turn-queue-delivery-logic.md`) — collapse overlapping queue/dispatch buffering into one queue with explicit delivery ids.
+35. **Deduplicate turn-queue delivery logic** (`tasks/dedupe-turn-queue-delivery-logic.md`) — collapse overlapping queue/dispatch buffering into one queue with explicit delivery ids.
 36. **Use channels for subagent result collection** (`tasks/use-channels-for-subagent-result-collection.md`) — replace callbacks/polling with `tokio::sync::mpsc`/`oneshot`.
 
 #### Phase 14 — Fourth-pass parser / markdown unification (P0/P1)
@@ -482,6 +482,40 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 41. **Simplify terminal capability detection** (`tasks/simplify-terminal-capability-detection.md`) — use `supports-color`/`supports-hyperlinks` and a single `TermCaps` snapshot.
 42. **Unify core and TUI line-count computation** (`tasks/unify-core-and-tui-line-count-computation.md`) — one source of truth for wrapped line counts.
 43. **Collapse `DialogState` variants** (`tasks/collapse-dialogstate-variants.md`) — refactor to a small, mutually exclusive state machine.
+
+#### Phase 16 — Fifth-pass CI / build / dependency hygiene (P0/P1)
+
+44. **Fix broken `schema` feature usage in CI and justfile** (`tasks/fix-broken-schema-feature-in-ci-and-justfile.md`) — remove `--features schema` from CI/recipes; `schemars` is already a normal dependency.
+45. **Delete or fix dead `mcp` feature flag** (`tasks/delete-or-fix-dead-mcp-feature-flag.md`) — gate `config/mcp.rs` behind the feature or delete the feature.
+46. **Remove unused dependencies and normalize workspace deps** (`tasks/remove-unused-dependencies-and-normalize-workspace-deps.md`) — remove `futures` from `runie-cli`, dedupe `tempfile`, and move inline `strum`/`notify`/`tracing`/etc. to workspace inheritance.
+47. **Fix dev automation recipes** (`tasks/fix-dev-automation-recipes.md`) — fix `bacon.toml`'s `test` job and `just lint-fix`.
+48. **Replace custom build linter with Clippy / CI** (`tasks/replace-build-linter-with-clippy-ci.md`) — port file/function/complexity checks to Clippy and a CI file-limit script.
+
+#### Phase 17 — Fifth-pass error handling and observability (P0/P1)
+
+49. **Unify library error types with `thiserror`** (`tasks/unify-library-error-types-with-thiserror.md`) — convert hand-written errors and library `anyhow` usage to typed `thiserror` enums.
+50. **Initialize `tracing` subscriber in CLI/TUI binaries** (`tasks/initialize-tracing-subscriber-in-binaries.md`) — add `tracing-subscriber` and initialize it at startup.
+51. **Replace custom telemetry with a `tracing` layer** (`tasks/replace-custom-telemetry-with-tracing-layer.md`) — delete the in-memory telemetry collector; emit model/tool events via `tracing`.
+52. **Harden async actors against mutex poisoning** (`tasks/harden-actors-against-mutex-poisoning.md`) — replace `std::sync::Mutex` + `.unwrap()` in actors with `tokio::sync::Mutex` or `parking_lot`.
+
+#### Phase 18 — Fifth-pass protocol / IPC cleanup (P1)
+
+53. **Fold `runie-protocol` into `runie-core`** (`tasks/fold-runie-protocol-into-core.md`) — move the still-existing protocol crate's types into `runie-core` and delete the crate.
+54. **Unify CLI JSON-RPC transport and remove dead ACP plumbing** (`tasks/unify-cli-json-rpc-transport-and-remove-dead-acp.md`) — shared transport module; fix or delete the broken ACP path.
+
+#### Phase 19 — Fifth-pass declarative loaders / DSL / small parser cleanup (P1/P2)
+
+55. **Migrate subagent loader to unified resource loader** (`tasks/migrate-subagent-loader-to-resource-loader.md`) — replace the custom subagent frontmatter scanner with the shared loader.
+56. **Fix dry-run tool-name discrepancy** (`tasks/fix-dry-run-tool-names-discrepancy.md`) — align `dry_run::core_tool_names()` with `BUILTIN_TOOL_NAMES`.
+57. **Replace remaining custom parsers and macros with `strum`** (`tasks/replace-remaining-custom-parsers-and-macros-with-strum.md`) — delete `cmd!`, `with_ordering!`, theme macros; derive `FromStr`/`Display` for small enums.
+58. **Implement MCP client runtime or remove config scaffolding** (`tasks/implement-or-remove-mcp-runtime-scaffolding.md`) — either wire up `rmcp` or delete unused MCP config.
+
+#### Phase 20 — Fifth-pass test harness hardening (P2)
+
+59. **Replace `scripts/tmux-test.sh` with Ratatui `TestBackend` tests** (`tasks/replace-tmux-test-with-ratatui-tests.md`) — delete the shell/tmux test and port coverage to Rust.
+60. **Remove `sleep()` from automatic tests** (`tasks/remove-sleep-from-automatic-tests.md`) — replace sleeps in session actor tests with deterministic waits.
+61. **Eliminate production `unwrap`/`expect`** (`tasks/eliminate-production-unwrap-expect.md`) — convert recoverable panics to typed errors.
+62. **Introduce `cargo-deny` and `cargo-machete` CI checks** (`tasks/introduce-cargo-deny-and-cargo-machete-ci.md`) — audit dependencies and duplicates automatically.
 
 ### Archived completed tasks
 
@@ -517,9 +551,14 @@ The plan is phased so that **every merged task leaves `cargo check --workspace` 
 11. Land CLI/commands/permissions simplifications (Tasks 24–27), after `use-clap-derive-for-cli` for the slash-command DSL.
 12. Land TUI/macros/testing cleanup (Tasks 28–30).
 13. Run final tooling simplification (Tasks 31–32).
-14. Land fourth-pass provider/model/session unification (Tasks 33–36); `deduplicate-turn-queue-delivery-logic` must precede `use-channels-for-subagent-result-collection`.
+14. Land fourth-pass provider/model/session unification (Tasks 33–36); `dedupe-turn-queue-delivery-logic` must precede `use-channels-for-subagent-result-collection`.
 15. Land fourth-pass parser/markdown unification (Tasks 37–40); `unify-markdown-processing-around-pulldown-cmark` must precede `replace-think-filter-with-regex`, and `type-and-unify-provider-model-layer` must precede `extract-shared-streaming-response-parser`.
 16. Land fourth-pass TUI simplification (Tasks 41–43).
+17. Land fifth-pass CI/build/dependency hygiene (Tasks 44–48); `fix-broken-schema-feature-in-ci-and-justfile` should land early so CI stays green.
+18. Land fifth-pass error handling and observability (Tasks 49–52); `unify-library-error-types-with-thiserror` must precede `eliminate-production-unwrap-expect`.
+19. Land fifth-pass protocol/IPC cleanup (Tasks 53–54); `fold-runie-protocol-into-core` must precede `unify-cli-json-rpc-transport-and-remove-dead-acp`.
+20. Land fifth-pass declarative loaders / DSL / parser cleanup (Tasks 55–58).
+21. Land fifth-pass test harness hardening (Tasks 59–62).
 
 ## Testing philosophy
 
