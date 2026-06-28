@@ -2,7 +2,7 @@
   {
     "file": "migrate-production-actors-to-ractor.md",
     "title": "Migrate production actors to `ractor`",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "delete-dead-actor-modules-and-custom-trait.md",
@@ -32,7 +32,7 @@
   {
     "file": "replace-legacy-tool-parsers-with-thin-shim.md",
     "title": "Replace legacy tool parsers with a thin shim",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "narrow-runie-core-public-api.md",

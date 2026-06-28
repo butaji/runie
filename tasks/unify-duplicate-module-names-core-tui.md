@@ -18,46 +18,50 @@ Duplicate module names in `runie-core` and `runie-tui` create split-brain owners
 | `ui` | `ui/` (Element/Feed/Transform view-model) | `ui/` (layout/messages/scroll render) | Resolved in `tasks/archive/rename-core-ui-to-view.md` |
 | `ipc` | `ipc.rs` (TuiIpc) | `ipc.rs` (re-export shim) | Resolved in archived `inline-tui-ipc-reexport` / `fold-protocol-into-core` |
 | `markdown` | `markdown/` (pure parsing) | `markdown_render.rs` (render adapter) | **Resolved** — TUI module was renamed |
-| `theme`/`themes` | `themes.rs` (token list) | `theme/` (colors/glyph/loader/styles) | **Remaining** |
+| `theme`/`themes` | `themes.rs` (token list) | `theme/` (colors/glyph/loader/styles) | **Resolved in code** — core renamed to `theme_tokens.rs`; guardrail ignore list still stale |
 
-The remaining work is the `theme`/`themes` collision. `runie-core/src/themes.rs` defines the canonical `BUILTIN_THEMES` constant, which is used by core itself for validation (`crates/runie-core/src/settings/dialog.rs:290`, `crates/runie-core/src/update/dialog/open.rs:116`, `crates/runie-core/src/update/system.rs:121`) and re-exported by `runie-tui/src/theme/loader.rs:4`. Because core still owns the canonical list, moving it to TUI would create a circular dependency. The fix is to rename the core module so the names are unambiguous: core keeps the token list as `theme_tokens.rs`; TUI keeps `theme/` for render logic.
+Current state as of this review:
+
+- `crates/runie-core/src/themes.rs` has been renamed to `crates/runie-core/src/theme_tokens.rs` in the working tree.
+- Core callers (`settings/dialog.rs:290`, `update/dialog/open.rs:116`, `update/system.rs:121`) and the TUI loader (`crates/runie-tui/src/theme/loader.rs:4`) have been updated to `runie_core::theme_tokens::BUILTIN_THEMES`.
+- The guardrail test in `crates/runie-tui/src/tests/smoke.rs` still includes `"theme"` in its ignore list. Since the collision no longer exists, that ignore entry is stale and should be removed.
 
 ## Acceptance Criteria
 
 - [x] `runie-tui/src/markdown.rs` renamed to `markdown_render.rs`; domain `markdown/` retains the pure name.
-- [ ] `crates/runie-core/src/themes.rs` is renamed to `crates/runie-core/src/theme_tokens.rs`.
-- [ ] All core callers of `runie_core::themes::BUILTIN_THEMES` are updated to `runie_core::theme_tokens::BUILTIN_THEMES`.
-- [ ] `runie-tui/src/theme/loader.rs` continues to re-export the constant from the new core module path.
+- [x] `crates/runie-core/src/themes.rs` renamed to `crates/runie-core/src/theme_tokens.rs`.
+- [x] All core callers of `runie_core::themes::BUILTIN_THEMES` updated to `runie_core::theme_tokens::BUILTIN_THEMES`.
+- [ ] Remove the stale `"theme"` entry from the `ignored` array in `crates/runie-tui/src/tests/smoke.rs`.
 - [ ] `rg "^pub mod (diff|ui|ipc|markdown|themes|theme)" crates/runie-core/src/lib.rs crates/runie-tui/src/lib.rs` shows no name collision.
-- [ ] All callers of renamed modules updated.
 - [ ] `cargo test --workspace` succeeds.
 - [ ] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `theme_tokens_round_trip` — the renamed module still exports the same `BUILTIN_THEMES` list.
+- [x] `theme_tokens_round_trip` — the renamed module still exports the same `BUILTIN_THEMES` list.
 
 ### Layer 2 — Event Handling
 - N/A.
 
 ### Layer 3 — Rendering
-- [ ] `theme_render_tests_pass_after_move` — TUI theme render tests pass after the module rename.
+- [x] `theme_render_tests_pass_after_move` — TUI theme render tests pass after the module rename.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `smoke_no_module_name_collision` — a guardrail test scans `crates/runie-core/src/lib.rs` and `crates/runie-tui/src/lib.rs` `pub mod` declarations and fails on any shared name.
+- [ ] `smoke_no_module_name_collision` — a guardrail test scans `crates/runie-core/src/lib.rs` and `crates/runie-tui/src/lib.rs` `pub mod` declarations and fails on any shared name, with no stale ignores.
 
 ## Files touched
 
-- `crates/runie-core/src/themes.rs` → `crates/runie-core/src/theme_tokens.rs`
-- `crates/runie-core/src/lib.rs` (update `pub mod themes`)
+- `crates/runie-core/src/themes.rs` → `crates/runie-core/src/theme_tokens.rs` ✅
+- `crates/runie-core/src/lib.rs`
 - `crates/runie-core/src/settings/dialog.rs`
 - `crates/runie-core/src/update/dialog/open.rs`
 - `crates/runie-core/src/update/system.rs`
 - `crates/runie-tui/src/theme/loader.rs`
+- `crates/runie-tui/src/tests/smoke.rs` (remove stale ignore)
 
 ## Notes
 
-- The other module-name pairs (`diff`, `ui`, `ipc`) are already resolved and archived; this task covers only the `theme`/`themes` remainder.
+- The other module-name pairs (`diff`, `ui`, `ipc`) are already resolved and archived; this task covers only the `markdown` + `theme` remainder.
 - Do not move the token list into `runie-tui`; core uses it for validation and would need to depend on TUI.
-- Rejected alternative: keeping `themes.rs` in core and accepting the semantic collision. The names are already distinct (`themes` vs `theme`), but a reader still has to know which crate owns which concept. Renaming to `theme_tokens.rs` makes the ownership obvious.
+- Rejected alternative: keeping `themes.rs` in core and accepting the semantic collision. Renaming to `theme_tokens.rs` makes the ownership obvious.

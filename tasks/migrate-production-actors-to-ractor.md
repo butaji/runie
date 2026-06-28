@@ -1,6 +1,6 @@
 # Migrate production actors to `ractor`
 
-**Status**: todo
+**Status**: partial
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0/P1
@@ -15,10 +15,10 @@ The codebase still mixes the legacy custom `Actor` trait (`crates/runie-core/src
 Current state as of this review:
 
 - **Already migrated:** `InputActor` (`crates/runie-core/src/actors/input/actor.rs`) and `RactorPermissionActor` (`crates/runie-core/src/actors/permission/ractor_permission.rs`).
-- **Ractor implementation exists but is not wired to production:** `RactorConfigActor` (`crates/runie-core/src/actors/config/ractor_config.rs`) is exported but every spawn site still uses the legacy `ConfigActor::spawn`.
+- **Ractor implementation exists but is not wired to production:** `RactorConfigActor` (`crates/runie-core/src/actors/config/ractor_config.rs`) is implemented and exported (`crates/runie-core/src/actors/config/mod.rs`, `crates/runie-core/src/actors/mod.rs`), but every production spawn site still uses the legacy `ConfigActor::spawn`.
 - **Still custom-trait in production:** `ProviderActor`, `IoActor`, `SessionActor`, `FffIndexerActor`, and `AgentActor` (`crates/runie-agent/src/actor.rs`).
 
-This task converts the remaining custom-trait production actors while keeping `cargo check --workspace` green at each step. The legacy `Actor` trait, `spawn_actor`, `GenericActorHandle`, and `Reply` are **left in place** temporarily so that unmigrated code continues to compile. Dead actors (`ViewActor`, `PlanActor`, `TrustActor`, `CompletionActor`, `UiControlActor`) are explicitly out of scope.
+This task finishes the migration: wire the existing `RactorConfigActor` to production, convert the remaining custom-trait actors, and keep `cargo check --workspace` green at each step. The legacy `Actor` trait, `spawn_actor`, `GenericActorHandle`, and `Reply` are **left in place** temporarily so that unmigrated code continues to compile. Dead actors (`ViewActor`, `PlanActor`, `TrustActor`, `CompletionActor`, `UiControlActor`) are explicitly out of scope.
 
 ## Acceptance Criteria
 
@@ -73,4 +73,5 @@ This task converts the remaining custom-trait production actors while keeping `c
 - `AgentActor` lives in `runie-agent`, so this task crosses crate boundaries. Keep `runie-agent` depending on the ractor adapter in `runie-core`.
 - `UiControlActor` is currently unwired and references `Event` variants that do not exist. Leave it untouched here.
 - The switch from legacy `ConfigActor` to `RactorConfigActor` is the highest-impact single change because it is spawned in the TUI, CLI, leader, and headless runtime.
+- `RactorConfigActor` already exists; this task is partially complete. The remaining work is wiring it to production and migrating the other actors.
 - Rejected alternative: deleting the custom trait first and fixing everything at once. That creates a long-lived broken branch and conflicts with parallel work.

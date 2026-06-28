@@ -14,7 +14,7 @@
 
 Current state as of this review:
 
-- The legacy `ConfigActor` still exists but is deprecated. The target actor is `RactorConfigActor` (`crates/runie-core/src/actors/config/ractor_config.rs`).
+- The legacy `ConfigActor` still exists but is deprecated. The target actor is `RactorConfigActor` (`crates/runie-core/src/actors/config/ractor_config.rs`), which is already implemented but not yet wired to production.
 - `ConfigMsg` (`crates/runie-core/src/actors/config/messages.rs:11–43`) has no `LoadLayers`, `AddMcpServer`, `RemoveMcpServer`, or `ListMcpServers` variants.
 - `RactorConfigHandle` (`crates/runie-core/src/actors/config/ractor_config.rs:22–54`) exposes only `send`, `try_send`, `get_config`, and `get_configured_providers`.
 - `runie-cli/src/main.rs:49,53` runs `inspect` and `mcp` synchronously; routing through an async actor requires a short-lived Tokio runtime.
@@ -63,5 +63,6 @@ This task extends `RactorConfigActor` with the messages that standalone CLI comm
 
 - The preferred implementation is to reuse an existing `RactorConfigActor` handle when the CLI is already running inside the actor system; for standalone CLI commands, spawn a short-lived headless runtime with a single `RactorConfigActor`.
 - `inspect` needs **layered** config (`global + local`). The actor must grow layered-load support; do not flatten the layers inside the actor.
+- `RactorConfigActor` already exists, so this task builds on top of it rather than creating a new actor.
 - Rejected alternative: keeping direct file reads in `inspect` for performance. This violates the single-owner invariant and creates race conditions with a running TUI session.
 - Out of scope: changing the `Config` serialization format, the on-disk layout, or the `RactorConfigActor`'s internal message protocol. Only the call sites move.

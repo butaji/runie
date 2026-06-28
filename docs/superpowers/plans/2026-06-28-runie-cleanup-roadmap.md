@@ -22,7 +22,7 @@
   - `tasks/migrate-tui-and-cli-to-leader-bootstrap.md`
 - **Remaining active tasks:**
   - `tasks/collapse-event-intent-kind-taxonomies.md` — derive `Intent`/`EventKind` from `Event` without restructuring the enum.
-  - `tasks/replace-legacy-tool-parsers-with-thin-shim.md` — introduce `quick-xml` shim alongside legacy parsers, then delete legacy files.
+  - `tasks/replace-legacy-tool-parsers-with-thin-shim.md` — `partial`. `tool/shim/` already exists and `tool/parse` routes through it; finish collapsing the shim, deleting embedded legacy submodules, and shrinking `tool_markers/strip.rs`.
   - `tasks/narrow-runie-core-public-api.md` — usage-audit-first narrowing/moving of internal modules.
   - `tasks/route-cli-config-through-configactor.md` — add ConfigActor messages for CLI inspect/MCP.
   - `tasks/cleanup-small-duplicates-and-dead-code.md` — final sweep after architecture is stable.
@@ -33,17 +33,17 @@
 
 | # | Task ID | Priority | What to do |
 |---|---------|----------|------------|
-| 1 | `migrate-production-actors-to-ractor` | P0/P1 | `InputActor`/`RactorPermissionActor` already migrated; wire `RactorConfigActor` and migrate Provider/Io/Session/FffIndexer/Agent actors. |
+| 1 | `migrate-production-actors-to-ractor` | P0/P1 | `partial`. `InputActor`/`RactorPermissionActor` already migrated; `RactorConfigActor` is implemented but unwired; finish wiring and migrate Provider/Io/Session/FffIndexer/Agent actors. |
 | 2 | `delete-dead-actor-modules-and-custom-trait` | P1 | Delete custom `Actor` trait, dead actor modules, and their `ActorHandles` fields after migration. |
 | 3 | `collapse-actor-handles-to-typed-map` | P1 | Collapse `ActorHandles` to a typed `ractor::ActorRef` map; reconcile with `LeaderHandle`. |
 | 4 | `expand-leader-start-for-tui-and-cli` | P1 | Make `Leader::start` spawn the full actor set (Input/Agent/FffIndexer) and expose channels/shutdown. |
 | 5 | `migrate-tui-and-cli-to-leader-bootstrap` | P1 | Replace manual TUI/CLI bootstrap with `Leader::start`; route CLI input through `InputMsg`. |
 | 6 | `collapse-event-intent-kind-taxonomies` | P1 | Derive `Intent`/`EventKind` from flat `Event`; delete manual mirrors. |
-| 7 | `replace-legacy-tool-parsers-with-thin-shim` | P2 | Add `quick-xml` shim, prove equivalence with `runie-testing` fixtures, delete legacy parsers, reconcile MiniMax parsing with `runie-provider`. |
+| 7 | `replace-legacy-tool-parsers-with-thin-shim` | P2 | `partial`. `tool/shim/` exists and `tool/parse` already routes through it; remove embedded legacy submodules, collapse `tool_markers/strip.rs`, fix build-guardrail violations, and prove equivalence with `runie-testing` fixtures. |
 | 8 | `route-cli-config-through-configactor` | P2 | Add `RactorConfigActor` messages for inspect/MCP; route CLI commands through the actor. |
 | 9 | `narrow-runie-core-public-api` | P2 | Usage-audit first; move shared helpers to a new `runie-util` crate, narrow the rest. |
 | 10 | `cleanup-small-duplicates-and-dead-code` | P3 | Skill hooks, tool registry, TUI render helpers, justified dead-code allows. |
-| 11 | `unify-duplicate-module-names-core-tui` | P2 | Markdown rename done; rename core `themes.rs` to `theme_tokens.rs` to remove the remaining collision. |
+| 11 | `unify-duplicate-module-names-core-tui` | P2 | `partial`. Markdown rename done; core `themes.rs` → `theme_tokens.rs` rename done in code; remove stale `theme` ignore from guardrail test. |
 
 ## Archived completed tasks
 

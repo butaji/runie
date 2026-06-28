@@ -397,7 +397,7 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 
 #### Phase 1 — Actor foundation (P1)
 
-1. **Migrate production actors to `ractor`** (`tasks/migrate-production-actors-to-ractor.md`) — `InputActor` and `RactorPermissionActor` are already migrated; wire the existing `RactorConfigActor` to production and migrate `ProviderActor`, `IoActor`, `SessionActor`, `FffIndexerActor`, and `AgentActor`.
+1. **Migrate production actors to `ractor`** (`tasks/migrate-production-actors-to-ractor.md`) — `partial`. `InputActor` and `RactorPermissionActor` are already migrated; `RactorConfigActor` is implemented but not wired to production; wire it and migrate `ProviderActor`, `IoActor`, `SessionActor`, `FffIndexerActor`, and `AgentActor`.
 2. **Delete dead actor modules and custom trait** (`tasks/delete-dead-actor-modules-and-custom-trait.md`) — remove the legacy `Actor` trait, dead actors (`ViewActor`, `PlanActor`, `TrustActor`, `CompletionActor`, `UiControlActor`), and their fields/helpers in `ActorHandles`.
 3. **Collapse `ActorHandles` to a typed map** (`tasks/collapse-actor-handles-to-typed-map.md`) — replace the helper façade with typed `ractor::ActorRef` handles and reconcile `LeaderHandle`.
 
@@ -412,7 +412,7 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 
 #### Phase 4 — Tool/provider shims (P2)
 
-7. **Replace legacy tool parsers with a thin shim** (`tasks/replace-legacy-tool-parsers-with-thin-shim.md`) — introduce a `quick-xml`-based shim alongside legacy parsers, prove equivalence with `runie-testing` fixtures, then delete legacy files and collapse the marker-stripping pipeline.
+7. **Replace legacy tool parsers with a thin shim** (`tasks/replace-legacy-tool-parsers-with-thin-shim.md`) — `partial`. A `tool/shim/` module exists and `tool/parse` already routes through it; finish by removing the embedded legacy submodules, collapsing `tool_markers/strip.rs`, fixing build-guardrail violations, and proving equivalence with `runie-testing` fixtures.
 
 #### Phase 5 — CLI config (P2)
 
@@ -425,7 +425,7 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 #### Phase 7 — Final sweep (P3)
 
 10. **Clean up small duplicates and dead code** (`tasks/cleanup-small-duplicates-and-dead-code.md`) — skill hooks, built-in tool registry, TUI render helpers, and justified `#[allow(dead_code)]` items.
-11. **Unify duplicate module names across core and TUI** (`tasks/unify-duplicate-module-names-core-tui.md`) — the `markdown` collision is resolved; rename core `themes.rs` to `theme_tokens.rs` to remove the remaining `theme`/`themes` collision.
+11. **Unify duplicate module names across core and TUI** (`tasks/unify-duplicate-module-names-core-tui.md`) — `partial`. The `markdown` collision is resolved and the core `themes.rs` → `theme_tokens.rs` rename is done in code; remaining work is removing the stale `theme` ignore from the guardrail test.
 
 ### Archived completed tasks
 
