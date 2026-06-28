@@ -4,6 +4,7 @@ pub mod events;
 pub mod fixtures;
 pub mod runner;
 pub mod tests;
+pub mod timeout;
 
 #[macro_use]
 pub mod macros;

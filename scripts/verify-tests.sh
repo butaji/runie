@@ -7,6 +7,12 @@ echo ""
 EXPECTED_TOTAL=2414
 MIN_TESTS=100
 
+# Test timeout: tests exceeding this are killed (seconds).
+# Override with: RUST_TEST_TIMEOUT=60 ./scripts/verify-tests.sh
+RUST_TEST_TIMEOUT="${RUST_TEST_TIMEOUT:-120}"
+export RUST_TEST_TIMEOUT
+echo "Test timeout: ${RUST_TEST_TIMEOUT}s"
+
 # List tests
 echo "Listing tests..."
 cargo test --workspace -- --list > /tmp/test_list.txt 2>&1
@@ -31,7 +37,7 @@ fi
 
 # Run tests
 echo ""
-echo "=== Running Tests ==="
+echo "=== Running Tests (timeout: ${RUST_TEST_TIMEOUT}s) ==="
 set +e
 cargo test --workspace > /tmp/test_output.txt 2>&1
 TEST_EXIT=$?

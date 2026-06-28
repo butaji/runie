@@ -2,6 +2,10 @@
 members = ["crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-cli", "crates/runie-testing", "crates/runie-protocol", "crates/runie-macros"]
 resolver = "2"
 
+# Default test timeout: 120 seconds. Tests exceeding this are killed.
+# Controlled via RUST_TEST_TIMEOUT env var; not configurable in Cargo.toml.
+# Override with: RUST_TEST_TIMEOUT=60 cargo test
+
 [workspace.package]
 version = "0.2.16"
 edition = "2021"
@@ -45,6 +49,7 @@ uuid = { version = "1", features = ["v4"] }
 
 insta = { version = "1.41", features = ["yaml"] }
 tempfile = "3"
+thiserror = "2"
 
 async-trait = "0.1"
 futures-util = "0.3"

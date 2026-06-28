@@ -10,5 +10,6 @@ runie-provider.workspace = true
 anyhow.workspace = true
 tokio.workspace = true
 tempfile.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]

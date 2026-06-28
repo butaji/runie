@@ -8,6 +8,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # Kill tests that hang longer than 120 seconds.
+  RUST_TEST_TIMEOUT: "120"
 
 jobs:
   test:
