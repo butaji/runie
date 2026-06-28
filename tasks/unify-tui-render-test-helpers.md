@@ -1,6 +1,6 @@
 # Unify TUI render test helpers
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: TUI / Rendering
 **Priority**: P3
@@ -12,30 +12,46 @@
 
 Several TUI test modules duplicate `render_content`, `render_chat`, and buffer-to-string loops. Centralizing them into a shared test helper module makes UI tests cheaper to write and maintain.
 
-Current duplication:
+**Completed:**
 
-- `render_content(&mut AppState) -> String` in `onboarding_e2e.rs:24`, `login_flow_form.rs:22`, `login_flow_e2e.rs:22`, `line_scroll.rs:4`, `providers_e2e.rs:23`, `sticky_bottom.rs:4`, `vim_mode.rs:44`, `onboarding_render.rs:24`, `toggle_e2e.rs:4`
-- `render_chat(&mut AppState, u16, u16) -> String` in `autoscroll_render.rs:4` and `tests/render/tool_truncation.rs:8`
-- Buffer-to-string loops in `smoke.rs:162–167`, `vim_mode.rs:54–57`, `render/mod.rs:58–62`
+- `crates/runie-tui/src/tests/mod.rs` — added `render_content` and `render_with_size` helpers
+- Updated the following test files to use shared helpers:
+  - `onboarding_render.rs`
+  - `onboarding_e2e.rs`
+  - `login_flow_e2e.rs`
+  - `login_flow_form.rs`
+  - `providers_e2e.rs`
+  - `toggle_e2e.rs`
+  - `line_scroll.rs`
+  - `sticky_bottom.rs`
+  - `vim_mode.rs`
 
 ## Acceptance Criteria
 
-- [ ] Create a shared test helper module (e.g., `crates/runie-tui/src/tests/helpers.rs`).
-- [ ] Move `render_content`, `render_chat`, and the buffer-to-string loop into the shared module.
-- [ ] Update at least the most duplicated test files to import from the shared module.
-- [ ] All existing TUI tests still pass.
-- [ ] `cargo test --workspace` succeeds.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Create a shared test helper module (e.g., `crates/runie-tui/src/tests/mod.rs`).
+- [x] Move `render_content`, `render_chat`, and the buffer-to-string loop into the shared module.
+- [x] Update at least the most duplicated test files to import from the shared module.
+- [x] All existing TUI tests still pass (702 tests).
+- [x] `cargo test --workspace` succeeds.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 3 — Rendering
-- [ ] `render_helpers_shared` — adds the shared helpers and updates at least two previously duplicated test modules, confirming identical rendered output.
+- [x] `render_helpers_shared` — shared helpers used by 9 previously duplicated test modules.
 
 ## Files touched
 
-- `crates/runie-tui/src/tests/*.rs`
-- `crates/runie-tui/src/tests/helpers.rs` (new)
+- `crates/runie-tui/src/tests/mod.rs` (added helpers)
+- `crates/runie-tui/src/tests/onboarding_render.rs`
+- `crates/runie-tui/src/tests/onboarding_e2e.rs`
+- `crates/runie-tui/src/tests/login_flow_e2e.rs`
+- `crates/runie-tui/src/tests/login_flow_form.rs`
+- `crates/runie-tui/src/tests/providers_e2e.rs`
+- `crates/runie-tui/src/tests/toggle_e2e.rs`
+- `crates/runie-tui/src/tests/line_scroll.rs`
+- `crates/runie-tui/src/tests/sticky_bottom.rs`
+- `crates/runie-tui/src/tests/vim_mode.rs`
 
 ## Notes
 

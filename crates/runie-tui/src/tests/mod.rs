@@ -61,6 +61,35 @@ pub fn connect_model(state: &mut AppState) {
     state.config.current_model = "gpt-4o".to_string();
 }
 
+/// Helper: render AppState to String using the default 80x24 terminal size.
+/// Use this instead of duplicating the terminal/buffer boilerplate in each test.
+pub fn render_content(state: &mut AppState) -> String {
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    terminal.draw(|f| view(f, state)).expect("draw");
+    terminal
+        .backend()
+        .buffer()
+        .content
+        .iter()
+        .map(|c| c.symbol())
+        .collect()
+}
+
+/// Helper: render AppState with a custom terminal size.
+pub fn render_with_size(state: &mut AppState, width: u16, height: u16) -> String {
+    let backend = TestBackend::new(width, height);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    terminal.draw(|f| view(f, state)).expect("draw");
+    terminal
+        .backend()
+        .buffer()
+        .content
+        .iter()
+        .map(|c| c.symbol())
+        .collect()
+}
+
 /// Helper: configure connected providers for tests in this crate.
 pub fn configure_test_providers(providers: &[(String, Vec<String>)]) {
     use std::path::PathBuf;

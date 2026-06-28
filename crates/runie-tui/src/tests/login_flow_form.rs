@@ -3,10 +3,7 @@
 //! Covers typing, pasting, and cursor navigation inside the API key form field.
 
 use super::*;
-use ratatui::{backend::TestBackend, Terminal};
 use runie_core::Event;
-
-use crate::tests::view;
 
 fn clean_config() {
     let dir = std::env::temp_dir().join(format!(
@@ -17,19 +14,6 @@ fn clean_config() {
     let path = dir.join("config.toml");
     let _ = std::fs::remove_file(&path);
     runie_core::provider::config::set_test_config_path(path);
-}
-
-fn render_content(state: &mut AppState) -> String {
-    let backend = TestBackend::new(80, 24);
-    let mut terminal = Terminal::new(backend).expect("terminal");
-    terminal.draw(|f| view(f, state)).expect("draw");
-    terminal
-        .backend()
-        .buffer()
-        .content
-        .iter()
-        .map(|c| c.symbol())
-        .collect()
 }
 
 #[test]

@@ -2,15 +2,7 @@ use super::*;
 use runie_core::Event;
 
 fn render_content(state: &mut AppState) -> String {
-    render_with_height(state, 10)
-}
-
-fn render_with_height(state: &mut AppState, height: u16) -> String {
-    let backend = TestBackend::new(60, height);
-    let mut terminal = Terminal::new(backend).expect("terminal");
-    terminal.draw(|f| view(f, state)).expect("draw");
-    let buf = terminal.backend().buffer();
-    buf.content.iter().map(|c| c.symbol()).collect()
+    render_with_size(state, 60, 10)
 }
 
 #[test]
@@ -56,7 +48,7 @@ fn large_thought_clipped_from_top_not_bottom() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let out = render_with_height(&mut state, 30);
+    let out = render_with_size(&mut state, 60, 30);
     assert!(
         out.contains("after"),
         "Latest content (after) must be visible"
@@ -81,7 +73,7 @@ fn scroll_up_shows_older_content() {
     // Scroll up enough to see oldest content.
     state.view.scroll = 100; // auto-clamped to max_scroll
 
-    let out = render_with_height(&mut state, 15);
+    let out = render_with_size(&mut state, 60, 15);
     assert!(
         out.contains("msg0"),
         "Oldest message should be visible after scrolling up"
@@ -131,7 +123,7 @@ fn tool_output_latest_lines_visible() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let out = render_with_height(&mut state, 30);
+    let out = render_with_size(&mut state, 60, 30);
     assert!(
         out.contains("file10"),
         "Latest tool output (file10) must be visible"
@@ -149,7 +141,7 @@ fn new_message_pushes_old_upward() {
         });
     }
     state.ensure_fresh();
-    let before = render_with_height(&mut state, 30);
+    let before = render_with_size(&mut state, 60, 30);
     assert!(before.contains("msg0"), "msg0 visible before overflow");
 
     // Add more messages to overflow
@@ -192,7 +184,7 @@ fn partial_element_at_top_when_overflow() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let out = render_with_height(&mut state, 30);
+    let out = render_with_size(&mut state, 60, 30);
     assert!(out.contains("last"), "Latest message must be visible");
     assert!(out.contains("line20"), "Bottom of thought visible");
 }

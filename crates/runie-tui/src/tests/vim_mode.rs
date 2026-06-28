@@ -1,11 +1,8 @@
 //! End-to-end-ish render tests for vim navigation mode.
 
 use super::*;
-use crate::tests::connect_model;
-use ratatui::backend::TestBackend;
 use ratatui::buffer::Buffer;
 use ratatui::style::Style;
-use ratatui::Terminal;
 use runie_core::Event;
 use runie_core::Part;
 
@@ -39,14 +36,6 @@ fn add_messages(state: &mut AppState, count: usize) {
             ..Default::default()
         });
     }
-}
-
-fn render_content(state: &mut AppState) -> String {
-    let backend = TestBackend::new(80, 24);
-    let mut terminal = Terminal::new(backend).expect("terminal");
-    terminal.draw(|f| view(f, state)).expect("draw");
-    let buf = terminal.backend().buffer();
-    buf.content().iter().map(|c| c.symbol()).collect()
 }
 
 fn find_prompt_pos(buf: &Buffer) -> Option<(u16, u16)> {

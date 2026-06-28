@@ -57,12 +57,12 @@
   {
     "file": "unify-duplicate-module-names-core-tui.md",
     "title": "Unify duplicate module names across core and TUI",
-    "status": "done"
+    "status": "partial"
   },
   {
     "file": "unify-tui-render-test-helpers.md",
     "title": "Unify TUI render test helpers",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-keybindings-dead-code.md",

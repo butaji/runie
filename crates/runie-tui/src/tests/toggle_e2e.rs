@@ -2,11 +2,7 @@ use super::*;
 use runie_core::Event;
 
 fn render_content(state: &mut AppState) -> String {
-    let backend = TestBackend::new(60, 20);
-    let mut terminal = Terminal::new(backend).expect("terminal");
-    terminal.draw(|f| view(f, state)).expect("draw");
-    let buf = terminal.backend().buffer();
-    buf.content.iter().map(|c| c.symbol()).collect()
+    render_with_size(state, 60, 20)
 }
 
 fn dispatch(state: &mut AppState, events: &[Event]) {
