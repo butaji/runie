@@ -5,31 +5,38 @@
 **Category**: Architecture / Refactoring
 **Priority**: P3
 
-**Depends on**: none
+**Depends on**: collapse-actor-handles-to-typed-map, expand-leader-start-for-tui-and-cli, replace-legacy-tool-parsers-with-thin-shim, narrow-runie-core-public-api, route-cli-config-through-configactor
 **Blocks**: none
 
 ## Description
 
-The codebase has accumulated several small duplicates, repeated registries, manual trait implementations that could be derived, and stale `#[allow(dead_code)]` attributes. This task cleans them up in a single pass (or a series of small commits): unify the `DynProvider` and `BuiltProvider` provider wrappers; deduplicate the `now()` timestamp helper; consolidate skill-hook logic and the built-in tool registry; share TUI render helpers across test modules; remove dead-code allows; and replace hand-written `PartialEq`, `Clone`, and `Default` impls with derives where possible.
+The codebase has accumulated several small duplicates, repeated registries, and stale `#[allow(dead_code)]` attributes. This task cleans them up in a series of small, safe commits **after** the larger architectural tasks are stable:
+
+- Consolidate skill-hook logic duplicated between `runie-agent/src/turn/tools.rs` and `runie-agent/src/tool_runner.rs`.
+- Unify the built-in tool registry repeated across `runie-agent/src/tool/mod.rs`, `runie-agent/src/tool_runner.rs`, and `runie-agent/src/headless/mod.rs`.
+- Share TUI render helpers across test modules under `crates/runie-tui/src/tests/`.
+- Convert justified `#[allow(dead_code)]` attributes to `#[cfg(test)]` gates or documented `pub(crate)` items.
+
+The following items are **explicitly out of scope** because they are already resolved or unsafe to change:
+
+- `DynProvider` is an intentional backward-compatibility wrapper used by tests and downstream crates; do not unify it.
+- `now()` is already defined once in `runie-protocol` and re-exported by `runie-core`; no duplication remains.
+- Manual `PartialEq`/`Clone`/`Default` impls in `session/tree.rs`, `model/state/view.rs`, and `config/mod.rs` are intentional (cache fields, non-trivial defaults); do not replace them with derives.
 
 ## Acceptance Criteria
 
-- [x] ~~Unify `DynProvider`~~ (Intentional backward-compatibility wrapper; not a true duplicate)
-- [x] Deduplicate the identical `now()` helper: make `runie-protocol::message::now()` public, delete duplicate in `runie-core`, re-export from protocol.
-- [ ] Consolidate skill hook logic duplicated between `runie-agent/src/turn/tools.rs` and `runie-agent/src/tool_runner.rs` into one helper.
-- [ ] Unify the built-in tool registry repeated across `runie-agent/src/tool/mod.rs`, `runie-agent/src/tool_runner.rs`, and `runie-agent/src/headless/mod.rs` into a single source of truth.
-- [ ] Share TUI render helpers across test modules.
-- [x] Add `#[allow(dead_code)]` to `RactorCompletionActor` struct and impl since it's only used in tests via `spawn()`.
-- [ ] Replace manual `PartialEq`, `Clone`, and `Default` implementations where appropriate.
-- [x] `cargo test --workspace` succeeds after the change.
-- [x] `cargo check --workspace` succeeds with no new warnings.
+- [ ] Skill hook logic is consolidated into a single helper called from both `turn/tools.rs` and `tool_runner.rs`.
+- [ ] Built-in tool names/schema/dispatch are defined in exactly one registry and referenced by `tool/mod.rs`, `tool_runner.rs`, and `headless/mod.rs`.
+- [ ] TUI render helpers (`render_content`, `render_chat`, etc.) are moved to a shared test helper module and imported by the test modules that previously duplicated them.
+- [ ] Every remaining `#[allow(dead_code)]` in the listed files is either removed because the item is used, converted to `#[cfg(test)]`, or replaced with a documented `pub(crate)` justification.
+- [ ] `cargo test --workspace` succeeds after the change.
+- [ ] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `no_duplicate_now_helper` — asserts that only one `now()` definition exists in the workspace and that both protocol and core message modules delegate to it.
 - [ ] `builtin_tools_registered_once` — verifies that the built-in tool registry is defined in exactly one place and that `tool_runner`, `headless`, and the public `tool` module all reference that single registry.
-- [ ] `manual_impls_replaced_with_derives` — compiles a test that exercises `PartialEq`, `Clone`, and `Default` on the affected types and asserts equivalent behavior after switching to derives.
+- [ ] `manual_impls_left_intact` — asserts that the manual `PartialEq`/`Clone`/`Default` impls in `session/tree.rs`, `model/state/view.rs`, and `config/mod.rs` are still present and still pass their existing tests.
 
 ### Layer 2 — Event Handling
 - [ ] N/A — this task focuses on code deduplication and cleanup rather than event routing.
@@ -39,29 +46,24 @@ The codebase has accumulated several small duplicates, repeated registries, manu
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
 - [ ] `skill_hook_unified_still_invokes_hooks` — runs a mock-tool turn that triggers skill hooks and verifies the unified hook helper still dispatches correctly from both the turn path and the tool-runner path.
-- [ ] `dead_code_allows_removed` — runs `cargo check --workspace` programmatically and asserts no `dead_code` allows remain for the listed items.
+- [ ] `dead_code_allows_justified` — runs `cargo check --workspace` and asserts that no new `dead_code` warnings are introduced and that every remaining allow is documented.
 
 ## Files touched
 
-- `crates/runie-provider/src/lib.rs`
-- `crates/runie-core/src/actors/provider/factory.rs`
-- `crates/runie-protocol/src/message/mod.rs`
-- `runie-core/src/message/mod.rs`
 - `crates/runie-agent/src/turn/tools.rs`
 - `crates/runie-agent/src/tool_runner.rs`
 - `crates/runie-agent/src/tool/mod.rs`
 - `crates/runie-agent/src/headless/mod.rs`
 - `crates/runie-tui/src/tests/*.rs` (render helper consolidation)
 - `crates/runie-tui/src/tests/helpers.rs` or `crates/runie-tui/src/test_helpers.rs` (new shared test helpers)
-- `crates/runie-core/src/session/tree.rs`
-- `crates/runie-core/src/model/state/view.rs`
-- `crates/runie-core/src/config/mod.rs`
-- Files containing the `#[allow(dead_code)]` items listed above.
+- `crates/runie-core/src/keybindings/mod.rs`
+- `crates/runie-core/src/model/view_cache.rs`
+- `crates/runie-core/src/actors/input/mod.rs`
+- `crates/runie-core/src/actors/completion/ractor_completion.rs`
 
 ## Notes
 
-- Each cleanup item can be its own commit; the task is intentionally a grab-bag of small safe refactors.
-- When unifying `DynProvider` / `BuiltProvider`, prefer the version that depends on fewer crates and exposes the clearest trait bounds.
-- For the shared `now()` helper, `runie-protocol` is the lower-level crate; if `runie-core` can depend on it, move the helper there. Otherwise create a tiny helper module in `runie-io` or a new `runie-time` utility crate.
-- Rejected alternative: leaving the duplication in place to minimize churn. The repeated code already causes inconsistent updates and increases review burden.
-- Out of scope: large refactorings of the provider factory, the agent turn state machine, or the TUI widget tree. Only the listed duplicates and dead code.
+- Each cleanup item should be its own commit; the task is intentionally a grab-bag of small safe refactors.
+- Do not move helpers to `runie-io` or `runie-domain`; those crates were deleted as empty facades. Use `runie-protocol` for shared protocol-level helpers or create a new tiny utility crate if necessary.
+- Rejected alternative: leaving the duplication in place to minimize churn. The repeated registry and hook logic already causes inconsistent updates and increases review burden.
+- Out of scope: `DynProvider`, `now()` (already resolved), manual derives with intentional semantics, large refactorings of the provider factory, the agent turn state machine, or the TUI widget tree.

@@ -1,51 +1,56 @@
-# Collapse `Event`/`Intent`/`EventKind` taxonomies
+# Derive `Intent` and `EventKind` from the canonical `Event` enum
 
 **Status**: todo
 **Milestone**: R4
 **Category**: Core / State
-**Priority**: P0/P1
-**Depends on**: consolidate-actor-runtime-on-ractor
+**Priority**: P1
+
+**Depends on**: collapse-actor-handles-to-typed-map
 **Blocks**: none
 
 ## Description
 
-`crates/runie-core/src/event/variants.rs` defines an `Event` enum with approximately 431 variants across 495 lines. `crates/runie-core/src/event/intent.rs` defines an `Intent` enum with approximately 286 variants across 457 lines, serving as a near 1:1 mirror of `Event`. `crates/runie-core/src/event/intent_impl.rs` (438 lines) manually maps every `Event` variant to its corresponding `Intent`. On top of that, `crates/runie-core/src/event/kind/mod.rs` (404 lines) classifies events with `matches!` predicates, and `crates/runie-core/src/update/dispatch.rs` adds yet another `EventCategory` taxonomy. This redundancy is error-prone and expensive to maintain. This task collapses the taxonomies by choosing a single canonical representation: either (a) nesting domain sub-enums inside `Event` and deriving `Intent`/`EventKind` from one source, or (b) making `Intent` the canonical request type and wrapping it in `Event`. The manual mirror is removed, all match sites are updated, and the workspace remains compiling.
+`crates/runie-core/src/event/variants.rs` defines a flat `Event` enum with approximately 431 variants. `crates/runie-core/src/event/intent.rs` defines an `Intent` enum with approximately 286 variants that mirrors `Event`, and `crates/runie-core/src/event/intent_impl.rs` (438 lines) manually maps every `Event` variant to its `Intent` twin. `crates/runie-core/src/event/kind/mod.rs` (404 lines) repeats the same variant lists in `matches!` predicates, and `crates/runie-core/src/update/dispatch.rs` adds another `EventCategory` taxonomy.
+
+Rather than restructuring `Event` in one risky pass, this task keeps the flat `Event` enum as the canonical source of truth and introduces derive macros (or a build-time generator) that produce `Intent` and `EventKind`/`EventCategory` from it. The manual mirrors in `intent_impl.rs` and `kind/mod.rs` are deleted, but existing `match` sites are left untouched until a follow-up task decides whether to nest domain sub-enums.
 
 ## Acceptance Criteria
 
-- [ ] A single canonical taxonomy is chosen and documented in the task notes.
-- [ ] The manual `Event` → `Intent` mapping in `intent_impl.rs` is removed.
-- [ ] `EventKind` and `EventCategory` classifications are derived from or folded into the canonical taxonomy.
-- [ ] All `match` and `matches!` sites across `crates/runie-core` and downstream crates are updated to use the new structure.
+- [ ] A derive macro or build script generates `Intent` and `EventKind` from `Event` variants and their attributes.
+- [ ] `crates/runie-core/src/event/intent_impl.rs` is deleted; no manual `Event → Intent` mapping remains.
+- [ ] `crates/runie-core/src/event/kind/mod.rs` is reduced to re-exports or thin wrappers around the generated classification.
+- [ ] All existing call sites for `event.into_intent()`, `event.kind()`, and dispatch categorization continue to compile without changes.
 - [ ] `cargo test --workspace` succeeds after the change.
 - [ ] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `event_to_intent_roundtrip` — Verifies that every `Event` variant round-trips to the expected `Intent` (or canonical equivalent) and back without manual mapping tables.
+- [ ] `event_to_intent_roundtrip` — verifies that every `Event` variant round-trips to the generated `Intent` and back without manual mapping tables.
+- [ ] `event_kind_classification_matches_legacy` — compares generated `EventKind` values against the old `matches!` predicates for a representative set of variants.
 
 ### Layer 2 — Event Handling
-- [ ] `dispatch_routes_nested_event` — Verifies that the update dispatcher routes a nested domain event to the correct handler after the taxonomy collapse.
+- [ ] `dispatch_routes_generated_intent` — verifies the update dispatcher routes a generated `Intent` to the correct handler.
 
 ### Layer 3 — Rendering
-- [ ] N/A — Rendering code consumes the canonical event type unchanged; no widget-level changes are required.
+- [ ] N/A — `Event` shape is unchanged; rendering code is unaffected.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `all_events_have_intent_or_kind` — Smoke test that enumerates the generated event taxonomy and asserts every variant has a deterministic classification and no variant is orphaned.
+- [ ] `all_events_have_intent_or_kind` — enumerates the generated taxonomy and asserts every variant has a deterministic classification and no variant is orphaned.
 
 ## Files touched
 
-- `crates/runie-core/src/event/variants.rs`
-- `crates/runie-core/src/event/intent.rs`
-- `crates/runie-core/src/event/intent_impl.rs`
-- `crates/runie-core/src/event/kind/mod.rs`
-- `crates/runie-core/src/update/dispatch.rs`
-- `crates/runie-core/src/lib.rs` (if module structure changes)
-- `crates/runie-core/src/**/*.rs` (all match sites)
-- `crates/runie-tui/src/**/*.rs` (if it matches on `Event`/`Intent`)
-- `crates/runie-provider/src/**/*.rs` (if it matches on `Event`/`Intent`)
+- `crates/runie-core/src/event/variants.rs` (add attributes to drive generation)
+- `crates/runie-core/src/event/intent.rs` (becomes a generated or re-exported type)
+- `crates/runie-core/src/event/intent_impl.rs` (delete)
+- `crates/runie-core/src/event/kind/mod.rs` (becomes a thin wrapper)
+- `crates/runie-core/src/update/dispatch.rs` (consume generated classification)
+- `crates/runie-macros/src/event.rs` or a new generator module
+- `crates/runie-core/build.rs` (if generation happens at build time)
 
 ## Notes
 
-Option (a) is preferred if most match sites already operate on `Event`, because nested sub-enums preserve exhaustiveness checking while letting macros derive `Intent` and `EventKind`. Option (b) is preferred if most callers already produce `Intent` values and only the dispatcher wraps them. Rejected alternative: keeping all three enums and adding a fourth generated taxonomy — that would increase maintenance burden. Out of scope: changing the actor runtime itself (handled by `consolidate-actor-runtime-on-ractor`) or adding new event variants.
+- This task intentionally does **not** restructure the flat `Event` enum. Nesting domain sub-enums is a useful future cleanup but it changes every `match` site; keep it separate.
+- The derive macro should respect the build guardrails (file/function length, complexity). If a generated file would exceed limits, split the generated output by domain.
+- Rejected alternative: deleting `Intent` and routing on `Event` directly. Many DSL sites already speak in terms of `Intent`, so removing it would force a larger rewrite.
+- Out of scope: changing the actor runtime (handled by `migrate-production-actors-to-ractor` and its children) or adding new event variants.

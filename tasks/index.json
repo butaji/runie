@@ -45,8 +45,8 @@
     "status": "done"
   },
   {
-    "file": "centralize-runtime-bootstrap-in-leaderactor.md",
-    "title": "Centralize runtime bootstrap in `LeaderActor`",
+    "file": "expand-leader-start-for-tui-and-cli.md",
+    "title": "Expand `Leader::start` for the full TUI and CLI runtime",
     "status": "todo"
   },
   {
@@ -75,8 +75,8 @@
     "status": "done"
   },
   {
-    "file": "consolidate-actor-runtime-on-ractor.md",
-    "title": "Consolidate actor runtime on `ractor`",
+    "file": "migrate-production-actors-to-ractor.md",
+    "title": "Migrate production actors to `ractor`",
     "status": "todo"
   },
   {
@@ -132,7 +132,7 @@
   {
     "file": "deduplicate-provider-registry-data.md",
     "title": "Deduplicate provider registry data",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-async-io-bridge.md",
@@ -483,5 +483,20 @@
     "file": "view-actor-owns-view-state.md",
     "title": "ViewActor owns ViewState",
     "status": "done"
+  },
+  {
+    "file": "delete-dead-actor-modules-and-custom-trait.md",
+    "title": "Delete dead actor modules and the custom `Actor` trait",
+    "status": "todo"
+  },
+  {
+    "file": "collapse-actor-handles-to-typed-map.md",
+    "title": "Collapse `ActorHandles` to a typed `ractor::ActorRef` map",
+    "status": "todo"
+  },
+  {
+    "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
+    "title": "Migrate TUI and CLI to `Leader::start`",
+    "status": "todo"
   }
 ]

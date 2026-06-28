@@ -1,6 +1,6 @@
 # Delete empty `runie-domain` and `runie-io` facade crates
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Refactoring
 **Priority**: P1
@@ -13,12 +13,12 @@
 
 ## Acceptance Criteria
 
-- [ ] The `crates/runie-domain/` directory is removed in its entirety.
-- [ ] The `crates/runie-io/` directory is removed in its entirety.
-- [ ] Workspace `Cargo.toml` no longer lists `runie-domain` or `runie-io` in `workspace.members` or `workspace.dependencies`.
-- [ ] No crate manifest, `use` statement, README, or build script references `runie-domain` or `runie-io`.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] The `crates/runie-domain/` directory is removed in its entirety.
+- [x] The `crates/runie-io/` directory is removed in its entirety.
+- [x] Workspace `Cargo.toml` no longer lists `runie-domain` or `runie-io` in `workspace.members` or `workspace.dependencies`.
+- [x] No crate manifest, `use` statement, README, or build script references `runie-domain` or `runie-io`.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
@@ -32,7 +32,7 @@
 - N/A — No rendering changes.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `workspace_compiles_without_domain_io_crates` — Builds the workspace and asserts `runie-domain`/`runie-io` crates are gone and all tests pass.
+- [x] `workspace_compiles_without_domain_io_crates` — Builds the workspace and asserts `runie-domain`/`runie-io` crates are gone and all tests pass.
 
 ## Files touched
 

@@ -10,12 +10,14 @@
 
 ## Description
 
-`crates/runie-core/src/lib.rs` currently re-exports roughly forty modules, exposing many internal utilities that downstream crates do not need and that are not part of the documented public surface. This makes API evolution risky and hides the true boundaries of the crate. This task audits every `pub mod` and `pub use` declaration in `runie-core`, converts implementation-only modules to `pub(crate)`, and keeps only the documented public surface (`AppState`, `Event`, actor handles, the provider trait, session types, and the commands registry) visible to other crates.
+`crates/runie-core/src/lib.rs` currently re-exports roughly forty modules, exposing many internal utilities. Some of those utilities are legitimately used by downstream crates (`runie-tui`, `runie-provider`, `runie-cli`, and proc-macros in `runie-macros`), so narrowing visibility blindly will break the workspace. This task first does a workspace-wide usage audit, then either (a) keeps a module public if it has external consumers, (b) moves it to a new lightweight utility crate if it is shared but not core-domain, or (c) narrows it to `pub(crate)` if it is purely internal.
 
 ## Acceptance Criteria
 
-- [ ] Audit all `pub mod` and `pub use` declarations in `crates/runie-core/src/lib.rs` and nested module roots.
-- [ ] Convert implementation-only modules (`glob`, `fuzzy`, `sanitize`, `layout`, `labels`, `path`, `display_width`, `edit_preview`, and similar helpers) to `pub(crate)` or move them behind feature gates.
+- [ ] Run a workspace-wide usage pass (e.g., `cargo check --workspace` after tentatively changing each export) and document which `runie-core` modules are imported by which downstream crates.
+- [ ] Keep modules public that are used by `runie-tui`, `runie-provider`, `runie-cli`, or `runie-macros`.
+- [ ] Move shared helpers that are not core-domain (e.g., `sanitize`, `display_width`, `path`) to a new lightweight utility crate rather than leaving them in `runie-core`.
+- [ ] Convert modules that have no external consumers to `pub(crate)`.
 - [ ] Keep the documented public surface exported and stable: `AppState`, `Event`, actor handles, provider trait, session types, and commands registry.
 - [ ] Update downstream crates so that `cargo test --workspace` succeeds after the change.
 - [ ] `cargo check --workspace` succeeds with no new warnings.
@@ -23,7 +25,8 @@
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `documented_exports_are_present` — verifies that the documented public items (`AppState`, `Event`, actor handle types, provider trait, session types, and commands registry) remain reachable through `runie-core` from an external crate context.
+- [ ] `documented_exports_are_present` — verifies that the documented public items remain reachable through `runie-core` from an external crate context.
+- [ ] `workspace_usage_audit_documented` — asserts that every `runie-core` module import from another workspace crate is either kept public or moved to a utility crate with a recorded rationale.
 
 ### Layer 2 — Event Handling
 - [ ] N/A — this task changes module visibility, not event dispatch or input handling.
@@ -32,7 +35,7 @@
 - [ ] N/A — this task changes crate-level API boundaries, not widget rendering.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `public_api_does_not_expose_internals` — compiles a small external-crate smoke test that attempts to import former internal utilities and confirms the build fails, while documented public items resolve successfully.
+- [ ] `public_api_does_not_expose_internals` — compiles a small external-crate smoke test that attempts to import former internal utilities and confirms the build fails or resolves from the new utility crate, while documented public items resolve successfully.
 
 ## Files touched
 
@@ -43,6 +46,6 @@
 ## Notes
 
 - Prefer `pub(crate)` over private modules so that internal tests and sibling modules in `runie-core` can still access helpers without expanding the public API.
-- If a downstream crate legitimately needs a helper, consider promoting it to a dedicated utility crate (e.g., `runie-io` or a new `runie-text`) rather than leaving it in `runie-core`.
+- If a downstream crate legitimately needs a helper, move it to a dedicated utility crate (e.g., a new `runie-text` or `runie-util` crate) rather than leaving it in `runie-core`. Do not recreate `runie-io`/`runie-domain`; those were deleted as empty facades.
 - Rejected alternative: using a `#[doc(hidden)]` attribute on internal items. Hiding items does not provide the same compile-time API contract as `pub(crate)` and still permits accidental public dependence.
 - Out of scope: changing function bodies, renaming items, or modifying the provider trait surface. Visibility changes only.

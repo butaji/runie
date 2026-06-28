@@ -5,17 +5,21 @@
 **Category**: Configuration
 **Priority**: P2
 
-**Depends on**: config-ssot-via-configactor
+**Depends on**: config-ssot-via-configactor, migrate-tui-and-cli-to-leader-bootstrap
 **Blocks**: none
 
 ## Description
 
-`runie-cli` currently performs direct configuration file I/O in at least two places: `runie-cli/src/inspect.rs` calls `Config::load_layers` directly, and `runie-cli/src/mcp.rs` calls `Config::load` and `Config::save_to` directly. Both `docs/Architecture.md` and `AGENTS.md` establish `ConfigActor` as the single owner of `~/.runie/config.toml`. This task routes all CLI inspect and MCP config operations through `ConfigActor` so that no CLI command reads from or writes to the config file directly.
+`runie-cli` currently performs direct configuration file I/O in at least two places: `runie-cli/src/inspect.rs` calls `Config::load_layers` directly, and `runie-cli/src/mcp.rs` calls `Config::load` and `Config::save_to` directly. Both `docs/Architecture.md` and `AGENTS.md` establish `ConfigActor` as the single owner of `~/.runie/config.toml`.
+
+This task extends `ConfigActor` with the messages that standalone CLI commands need (`LoadLayers`, `AddMcpServer`, `RemoveMcpServer`, `ListMcpServers`), spawns a short-lived Tokio runtime for synchronous CLI subcommands, and routes all inspect/MCP config operations through the actor.
 
 ## Acceptance Criteria
 
-- [ ] Identify every direct `Config::load`, `Config::load_layers`, and `Config::save_to` call in `runie-cli/src/inspect.rs` and `runie-cli/src/mcp.rs`.
-- [ ] Replace direct file I/O with either an intent sent to an existing `ConfigActor` handle or a headless `ractor` runtime that spawns a `ConfigActor` and exposes its handle for the duration of the command.
+- [ ] Add `ConfigMsg` variants: `LoadLayers { reply }`, `AddMcpServer { scope, name, server }`, `RemoveMcpServer { scope, name }`, `ListMcpServers { scope, reply }`.
+- [ ] Implement the corresponding handlers in `ConfigActor` so layered config loading and MCP server add/remove/list work atomically.
+- [ ] Update `runie-cli/src/main.rs` to spawn a short-lived Tokio runtime for `inspect` and `mcp` subcommands (similar to `run_json`/`run_server`).
+- [ ] Replace direct `Config::load`, `Config::load_layers`, and `Config::save_to` calls in `runie-cli/src/inspect.rs` and `runie-cli/src/mcp.rs` with `ConfigActorHandle` requests.
 - [ ] Ensure CLI inspect still produces identical output and that MCP config read/write operations remain atomic from the caller's perspective.
 - [ ] Remove any now-unused direct config-loading helper imports in the CLI crate.
 - [ ] `cargo test --workspace` succeeds after the change.
@@ -24,10 +28,10 @@
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `config_actor_owns_loaded_layers` — verifies that the `ConfigActor` state contains the same effective configuration layers that `inspect` previously obtained through `Config::load_layers`.
+- [ ] `config_actor_loads_layers` — verifies that `ConfigMsg::LoadLayers` returns the same effective configuration that `Config::load_layers` previously returned.
 
 ### Layer 2 — Event Handling
-- [ ] `cli_mcp_config_intent_reaches_config_actor` — constructs a CLI MCP config event, routes it through the handler, and asserts that the `ConfigActor` mailbox receives the corresponding intent instead of the command touching the filesystem directly.
+- [ ] `cli_mcp_config_intent_reaches_config_actor` — constructs a CLI MCP config request, routes it through the handler, and asserts that the `ConfigActor` mailbox receives the corresponding message instead of the command touching the filesystem directly.
 
 ### Layer 3 — Rendering
 - [ ] N/A — this task changes command-side routing, not TUI rendering.
@@ -40,7 +44,8 @@
 - `crates/runie-cli/src/inspect.rs`
 - `crates/runie-cli/src/mcp.rs`
 - `crates/runie-cli/src/main.rs` (runtime setup if headless `ConfigActor` is introduced)
-- `crates/runie-core/src/actors/config.rs` (or equivalent `ConfigActor` implementation)
+- `crates/runie-core/src/actors/config/messages.rs`
+- `crates/runie-core/src/actors/config/actor.rs`
 - `docs/Architecture.md` (update any CLI/config diagrams or descriptions if they still show direct file access)
 
 ## Notes

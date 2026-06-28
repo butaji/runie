@@ -1,6 +1,6 @@
 # Remove dead IPC/event-shaping abstractions
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P2
@@ -24,16 +24,16 @@ Several IPC and event-shaping abstractions are no longer used by the active runt
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `no_ipc_types_in_public_api` — enumerates the `runie-core` and `runie-protocol` public exports and asserts that `CoreIpc`, `TuiQueueEnds`, `TextChannel`, `ToolCallChannel`, `ReasoningChannel`, and `ChannelDecoder` are no longer present.
+- [x] `no_ipc_types_in_public_api` — enumerates the `runie-core` and `runie-protocol` public exports and asserts that `CoreIpc`, `TuiQueueEnds`, `TextChannel`, `ToolCallChannel`, `ReasoningChannel`, and `ChannelDecoder` are no longer present.
 
 ### Layer 2 — Event Handling
-- [ ] N/A — the removed types are not part of the live event-dispatch path.
+- [x] N/A — the removed types are not part of the live event-dispatch path.
 
 ### Layer 3 — Rendering
-- [ ] N/A unless useful `channels.rs` helpers are merged into TUI rendering, in which case add `channel_facts_render_without_decoder` — verifies that the same TUI output is produced after the merge.
+- [x] N/A unless useful `channels.rs` helpers are merged into TUI rendering, in which case add `channel_facts_render_without_decoder` — verifies that the same TUI output is produced after the merge.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `bus_facts_still_reach_tui_without_channel_decoder` — runs a full provider replay turn that emits text, tool-call, and reasoning facts and asserts that the TUI still receives and renders them correctly after `ChannelDecoder` is removed.
+- [x] `bus_facts_still_reach_tui_without_channel_decoder` — runs a full provider replay turn that emits text, tool-call, and reasoning facts and asserts that the TUI still receives and renders them correctly after `ChannelDecoder` is removed.
 
 ## Files touched
 

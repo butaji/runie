@@ -1,6 +1,6 @@
 # Deduplicate provider registry data
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Provider
 **Priority**: P2
@@ -14,27 +14,27 @@ Eliminate the near-identical copies of provider registry data in `runie-core` an
 
 ## Acceptance Criteria
 
-- [ ] Choose `crates/runie-provider/src/registry/registry_data.rs` as the canonical source of truth.
-- [ ] Re-export the registry data module from `runie-core` instead of maintaining a second copy.
-- [ ] Delete `crates/runie-core/src/provider/registry_data.rs`.
-- [ ] Update any `include_str!` paths in the canonical file so embedded YAML models load correctly from both crates.
-- [ ] Preserve all existing model structs and the embedded `resources/models/*.yaml` list.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Choose `crates/runie-provider/src/registry/registry_data.rs` as the canonical source of truth.
+- [x] Re-export the registry data module from `runie-core` instead of maintaining a second copy.
+- [x] Delete `crates/runie-core/src/provider/registry_data.rs`.
+- [x] Update any `include_str!` paths in the canonical file so embedded YAML models load correctly from both crates.
+- [x] Preserve all existing model structs and the embedded `resources/models/*.yaml` list.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `registry_data_loads_same_models_from_both_crates` — loads the embedded model list through the `runie-core` re-export and the `runie-provider` original and asserts identical IDs, display names, and capabilities.
+- [x] `registry_data_loads_same_models_from_both_crates` — loads the embedded model list through the `runie-core` re-export and the `runie-provider` original and asserts identical IDs, display names, and capabilities.
 
 ### Layer 2 — Event Handling
-- [ ] N/A — registry data is pure configuration; no input events are handled.
+- [x] N/A — registry data is pure configuration; no input events are handled.
 
 ### Layer 3 — Rendering
-- [ ] N/A — no TUI rendering is involved.
+- [x] N/A — no TUI rendering is involved.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `provider_registry_roundtrip` — starts the runtime, resolves a provider by registry key, and confirms the model metadata returned matches the canonical registry data.
+- [x] `provider_registry_roundtrip` — starts the runtime, resolves a provider by registry key, and confirms the model metadata returned matches the canonical registry data.
 
 ## Files touched
 

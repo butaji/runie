@@ -1,6 +1,6 @@
 # Prune dead provider code and the `rig-core` dependency
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Provider
 **Priority**: P1
@@ -13,20 +13,20 @@
 
 ## Acceptance Criteria
 
-- [ ] `crates/runie-provider/src/catalog/` is deleted.
-- [ ] `crates/runie-provider/src/registry/` is deleted.
-- [ ] `crates/runie-provider/src/rig_adapter.rs` is deleted.
-- [ ] `rig-core` is removed from workspace `Cargo.toml` `[dependencies]`/`[workspace.dependencies]`.
-- [ ] `rig-core` is removed from `crates/runie-provider/Cargo.toml`.
-- [ ] `crates/runie-provider/src/lib.rs` no longer exports or references the deleted modules or `RigOpenAiProvider`.
-- [ ] No production or test code references `RigOpenAiProvider`, `rig_adapter`, `catalog`, or `registry`.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] `crates/runie-provider/src/catalog/` is deleted.
+- [x] `crates/runie-provider/src/registry/` is deleted.
+- [x] `crates/runie-provider/src/rig_adapter.rs` is deleted.
+- [x] `rig-core` is removed from workspace `Cargo.toml` `[dependencies]`/`[workspace.dependencies]`.
+- [x] `rig-core` is removed from `crates/runie-provider/Cargo.toml`.
+- [x] `crates/runie-provider/src/lib.rs` no longer exports or references the deleted modules or `RigOpenAiProvider`.
+- [x] No production or test code references `RigOpenAiProvider`, `rig_adapter`, `catalog`, or `registry`.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `no_rig_adapter_references` — Greps the workspace and asserts no references to `RigOpenAiProvider`, `rig_adapter`, `catalog`, or `registry` remain.
+- [x] `no_rig_adapter_references` — Greps the workspace and asserts no references to `RigOpenAiProvider`, `rig_adapter`, `catalog`, or `registry` remain.
 
 ### Layer 2 — Event Handling
 - N/A — No event handling changes.
@@ -35,7 +35,7 @@
 - N/A — No rendering changes.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `provider_crate_builds_without_rig_core` — Builds the workspace and asserts `cargo tree` no longer contains `rig-core`.
+- [x] `provider_crate_builds_without_rig_core` — Builds the workspace and asserts `cargo tree` no longer contains `rig-core`.
 
 ## Files touched
 

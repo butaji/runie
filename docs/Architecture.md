@@ -391,35 +391,45 @@ Tests are exempt from function-length and complexity checks so they can stay com
 
 ## Current cleanup roadmap
 
-The 2026-06-28 architecture and code review found that the implementation has drifted from the documented three-layer model. The highest-priority work is tracked in `tasks/` and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
+The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk. The remaining work is tracked in `tasks/` and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
 
-### Immediate blockers (P0)
+### Already completed (verified by `cargo check --workspace`)
 
-1. **Repair the dialog module** (`tasks/repair-and-canonicalize-dialog-module.md`) — `cargo check --workspace` is failing because `crate::dialog` is no longer declared in `runie-core/src/lib.rs`. The duplicate `runie-tui/src/dialog/` subtree must be removed and the TUI must import dialog types from `runie_core`.
-2. **Delete empty facade crates** (`tasks/delete-empty-runie-domain-and-runie-io-crates.md`) — `runie-domain` and `runie-io` are currently empty re-export shells.
-3. **Collapse the event taxonomy** (`tasks/collapse-event-intent-kind-taxonomies.md`) — `Event`/`Intent`/`EventKind` are near-mirrors maintained by hand; unify them once the actor runtime is stable.
+1. **Repair the dialog module** (`tasks/repair-and-canonicalize-dialog-module.md`) — `crate::dialog` is wired, the duplicate TUI subtree is gone, and the workspace builds.
+2. **Delete empty facade crates** (`tasks/delete-empty-runie-domain-and-runie-io-crates.md`) — `runie-domain` and `runie-io` are removed.
+3. **Prune dead provider code** (`tasks/prune-dead-provider-code-and-rig-core-dependency.md`) — unused `catalog/`, `registry/`, `rig_adapter.rs` deleted and `rig-core` dropped.
+4. **Deduplicate provider registry data** (`tasks/deduplicate-provider-registry-data.md`) — only one `registry_data.rs` remains.
+5. **Remove dead IPC/event-shaping abstractions** (`tasks/remove-dead-ipc-event-abstractions.md`) — unused protocol/IPC layers deleted.
 
 ### High-impact simplification (P1)
 
-4. **Prune dead provider code** (`tasks/prune-dead-provider-code-and-rig-core-dependency.md`) — remove the unused `catalog/`, `registry/`, and `rig_adapter.rs` modules and drop the `rig-core` dependency.
-5. **Consolidate the actor runtime on `ractor`** (`tasks/consolidate-actor-runtime-on-ractor.md`) — delete the custom `Actor` trait and actors that are only spawned in tests.
-6. **Centralize runtime bootstrap** (`tasks/centralize-runtime-bootstrap-in-leaderactor.md`) — route the TUI and CLI through `Leader::start` instead of manual spawn code.
+6. **Migrate production actors to `ractor`** (`tasks/migrate-production-actors-to-ractor.md`) — convert the remaining custom-trait actors before deleting the trait.
+7. **Delete dead actor modules and custom trait** (`tasks/delete-dead-actor-modules-and-custom-trait.md`) — remove the legacy `Actor` trait and actors only used in tests.
+8. **Collapse `ActorHandles` to a typed map** (`tasks/collapse-actor-handles-to-typed-map.md`) — replace the 473-line helper façade with typed `ractor::ActorRef` handles.
+9. **Expand `Leader::start` for TUI and CLI** (`tasks/expand-leader-start-for-tui-and-cli.md`) — make the leader spawn the full actor set and expose channels/shutdown.
+10. **Migrate TUI and CLI to `Leader::start`** (`tasks/migrate-tui-and-cli-to-leader-bootstrap.md`) — replace duplicated manual bootstrap.
+11. **Derive `Intent` and `EventKind` from `Event`** (`tasks/collapse-event-intent-kind-taxonomies.md`) — delete manual mirrors without restructuring the flat `Event` enum in one risky pass.
 
 ### Medium-risk consolidation (P2)
 
-7. **Deduplicate provider registry data** (`tasks/deduplicate-provider-registry-data.md`).
-8. **Replace legacy tool parsers with a thin shim** (`tasks/replace-legacy-tool-parsers-with-thin-shim.md`).
-9. **Narrow the `runie-core` public API** (`tasks/narrow-runie-core-public-api.md`).
-10. **Route CLI config through `ConfigActor`** (`tasks/route-cli-config-through-configactor.md`).
-11. **Remove dead IPC/event-shaping abstractions** (`tasks/remove-dead-ipc-event-abstractions.md`).
+12. **Replace legacy tool parsers with a thin shim** (`tasks/replace-legacy-tool-parsers-with-thin-shim.md`) — introduce `quick-xml` shim alongside legacy parsers, prove equivalence with fixtures, then delete legacy files.
+13. **Route CLI config through `ConfigActor`** (`tasks/route-cli-config-through-configactor.md`) — add ConfigActor messages for inspect/MCP and route CLI commands through the actor.
+14. **Narrow the `runie-core` public API** (`tasks/narrow-runie-core-public-api.md`) — usage-audit first; move shared helpers to a utility crate, narrow the rest.
 
 ### Background sweep (P3)
 
-12. **Clean up small duplicates and dead code** (`tasks/cleanup-small-duplicates-and-dead-code.md`) — `DynProvider`, duplicate `now()`, skill hooks, built-in tool registry, TUI test helpers, `#[allow(dead_code)]` items, and manual derives.
+15. **Clean up small duplicates and dead code** (`tasks/cleanup-small-duplicates-and-dead-code.md`) — skill hooks, built-in tool registry, TUI render helpers, and justified `#[allow(dead_code)]` items.
 
 ### Execution order
 
-Start with the P0 items (the build cannot be verified until the dialog module is repaired). P1 actor-runtime work should land before the event-taxonomy consolidation because routing tables depend on it. P2 and P3 tasks can mostly run in parallel once the build is green.
+The plan is phased so that **every merged task leaves `cargo check --workspace` green**:
+
+1. Verify/close the already-done Tasks 1–5.
+2. Run the actor-runtime sequence in order (Tasks 6 → 7 → 8).
+3. Run the bootstrap sequence in order (Tasks 9 → 10).
+4. Land the event-taxonomy derivation (Task 11).
+5. Run tool-parser, CLI-config, and public-API tasks in any order, but keep public-API narrowing last.
+6. Run the final sweep (Task 15).
 
 ## Testing philosophy
 
