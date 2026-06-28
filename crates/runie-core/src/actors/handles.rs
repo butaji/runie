@@ -3,9 +3,9 @@
 use std::path::PathBuf;
 
 use crate::actors::{
-    CompletionActorHandle, ConfigActorHandle, FffSearchRequest, RactorInputHandle,
-    IoActorHandle, PermissionActorHandle, ProviderActorHandle, SessionActorHandle,
-    TrustActorHandle, RactorTurnHandle, ViewActorHandle,
+    CompletionActorHandle, FffSearchRequest, RactorInputHandle,
+    RactorIoHandle, PermissionActorHandle, ProviderActorHandle, RactorConfigHandle,
+    RactorSessionHandle, TrustActorHandle, RactorTurnHandle, ViewActorHandle,
 };
 use crate::config::TruncationSection;
 use crate::model::ThinkingLevel;
@@ -14,10 +14,10 @@ use crate::trust::TrustDecision;
 
 #[derive(Clone, Debug, Default)]
 pub struct ActorHandles {
-    pub config: Option<ConfigActorHandle>,
+    pub config: Option<RactorConfigHandle>,
     pub provider: Option<ProviderActorHandle>,
-    pub session: Option<SessionActorHandle>,
-    pub io: Option<IoActorHandle>,
+    pub session: Option<RactorSessionHandle>,
+    pub io: Option<RactorIoHandle>,
     pub fff_indexer: Option<FffIndexerHandle>,
     pub input: Option<RactorInputHandle>,
     pub permission: Option<PermissionActorHandle>,
@@ -458,12 +458,12 @@ mod tests {
 
     #[tokio::test]
     async fn actor_handles_send_save_provider_via_actor() {
-        use crate::actors::ConfigActor;
+        use crate::actors::RactorConfigActor;
         use crate::bus::EventBus;
         use crate::Event;
 
         let bus = EventBus::<Event>::new(16);
-        let (handle, _actor) = ConfigActor::spawn(bus.clone(), None);
+        let (handle, _actor) = RactorConfigActor::spawn(bus.clone(), None).await;
         let mut handles = ActorHandles::default();
         handles.config = Some(handle);
         handles.send_save_provider("test", "http://localhost", "key", vec!["model".into()]).await;

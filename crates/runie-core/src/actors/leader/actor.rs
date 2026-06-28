@@ -12,8 +12,7 @@ use tokio::sync::{broadcast, mpsc};
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::actors::{
-    ConfigActor, IoActor, SessionActor,
-    ConfigActorHandle, IoActorHandle, SessionActorHandle,
+    RactorIoActor, RactorIoHandle, RactorSessionActor, RactorSessionHandle, RactorConfigActor, RactorConfigHandle,
     ProviderActor, ProviderActorHandle,
 };
 use crate::actors::permission::RactorPermissionActor;
@@ -81,10 +80,10 @@ impl Leader {
         bus: &EventBus<Event>,
         factory: Arc<dyn crate::actors::provider::ProviderFactory>,
     ) -> anyhow::Result<SpawnedHandles> {
-        let (config, _) = ConfigActor::spawn(bus.clone(), None);
-        let (provider, _) = ProviderActor::spawn(bus.clone(), config.clone(), factory);
-        let (io, _) = IoActor::spawn(bus.clone());
-        let (session, _) = SessionActor::spawn(bus.clone());
+        let (config, _) = RactorConfigActor::spawn(bus.clone(), None).await;
+        let (provider, _) = ProviderActor::spawn_with_ractor_handle(bus.clone(), config.clone(), factory);
+        let (io, _) = RactorIoActor::spawn(bus.clone()).await?;
+        let (session, _) = RactorSessionActor::spawn(bus.clone()).await?;
         let (permission, _) = RactorPermissionActor::spawn(bus.clone()).await;
         let (turn, _, _) = RactorTurnActor::spawn(bus.clone()).await;
 
@@ -163,10 +162,10 @@ impl Default for Leader {
 }
 
 struct SpawnedHandles {
-    config: ConfigActorHandle,
+    config: RactorConfigHandle,
     provider: ProviderActorHandle,
-    io: IoActorHandle,
-    session: SessionActorHandle,
+    io: RactorIoHandle,
+    session: RactorSessionHandle,
     permission: PermissionActorHandle,
     turn: crate::actors::turn::RactorTurnHandle,
 }
@@ -213,10 +212,10 @@ pub struct LeaderHandle {
     cmd_tx: mpsc::Sender<LeaderCommand>,
     event_bus: EventBus<Event>,
     tcp_addr: Option<String>,
-    pub config: ConfigActorHandle,
+    pub config: RactorConfigHandle,
     pub provider: ProviderActorHandle,
-    pub io: IoActorHandle,
-    pub session: SessionActorHandle,
+    pub io: RactorIoHandle,
+    pub session: RactorSessionHandle,
     pub permission: PermissionActorHandle,
     pub turn: crate::actors::turn::RactorTurnHandle,
 }

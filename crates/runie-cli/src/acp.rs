@@ -29,7 +29,7 @@
 use anyhow::Result;
 use runie_agent::AgentActor;
 use runie_core::actors::{
-    ConfigActor, IoActor, ProviderActor, SessionActor,
+    IoActor, ProviderActor, RactorConfigActor, SessionActor,
 };
 use runie_core::actors::permission::RactorPermissionActor;
 use runie_core::bus::EventBus;
@@ -142,8 +142,8 @@ struct AcpRuntime {
 async fn spawn_runtime(bus: EventBus<Event>) -> Result<AcpRuntime> {
     let (event_tx, _event_rx) = mpsc::channel::<Event>(100);
     // Spawn actors
-    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
-    let (provider_handle, _provider_actor) = ProviderActor::spawn(
+    let (config_handle, _) = RactorConfigActor::spawn(bus.clone(), None).await;
+    let (provider_handle, _provider_actor) = ProviderActor::spawn_with_ractor_handle(
         bus.clone(),
         config_handle.clone(),
         Arc::new(runie_provider::DynProviderFactory),

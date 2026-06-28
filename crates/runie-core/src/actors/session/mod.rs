@@ -9,6 +9,16 @@ mod mutations;
 #[cfg(test)]
 mod tests;
 
+// Ractor-based implementation
+mod ractor_session_actor;
+mod ractor_session_handle;
+
+// Ractor-based SessionActor (recommended).
+pub use ractor_session_actor::RactorSessionActor;
+pub use ractor_session_handle::RactorSessionHandle;
+
+// Legacy SessionActor using custom trait (deprecated).
+#[deprecated(since = "0.3.0", note = "Use RactorSessionActor instead")]
 pub use actor::SessionActor;
 pub use messages::{
     PersistenceActorHandle, SessionActorHandle, SessionMsg, SessionStoreActorHandle,

@@ -39,7 +39,7 @@ pub use turn::{TurnMsg, RactorTurnActor, RactorTurnHandle};
 #[allow(deprecated)]
 pub use turn::{TurnActor, TurnActorHandle};
 pub use plan::{PlanActor, PlanActorHandle, PlanMsg, PlanState, PlanStepStatus, RactorPlanActor, RactorPlanHandle};
-pub use config::{RactorConfigActor, ConfigActor, ConfigActorHandle, ConfigMsg};
+pub use config::{RactorConfigActor, RactorConfigHandle, ConfigActor, ConfigActorHandle, ConfigMsg};
 pub use fff_indexer::{
     FffFileItem, FffIndexerActor, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
     FffSearchState, format_git_status,
@@ -47,13 +47,13 @@ pub use fff_indexer::{
 pub use input::{InputActor, RactorInputHandle, InputMsg};
 #[allow(deprecated)]
 pub use input::InputActorHandle;
-pub use io::{IoActor, IoActorHandle, IoMsg};
+pub use io::{IoActor, IoActorHandle, IoMsg, RactorIoActor, RactorIoHandle};
 pub use provider::{
     BuiltProvider, ProviderActor, ProviderActorHandle, ProviderFactory, ProviderMsg,
 };
 pub use permission::{PermissionActor, PermissionActorHandle, PermissionMsg, RactorPermissionActor, RactorPermissionHandle};
 pub use session::{
-    PersistenceActorHandle, SessionActor, SessionActorHandle, SessionMsg, SessionStoreActorHandle,
+    PersistenceActorHandle, RactorSessionActor, RactorSessionHandle, SessionActor, SessionActorHandle, SessionMsg, SessionStoreActorHandle,
 };
 pub use view::{ViewActor, ViewActorHandle, ViewMsg, RactorViewActor, RactorViewHandle};
 pub use trust::{TrustActor, TrustActorHandle, TrustMsg};

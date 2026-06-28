@@ -193,7 +193,7 @@ pub fn run_export(state: &mut AppState, path: &str) -> CommandResult {
 /// Helper: send an async message to the session store if the actor is available.
 fn send_to_session_store<F, Fut>(state: &AppState, f: F, name: &str) -> bool
 where
-    F: FnOnce(crate::actors::SessionActorHandle, String) -> Fut + Send + 'static,
+    F: FnOnce(crate::actors::RactorSessionHandle, String) -> Fut + Send + 'static,
     Fut: std::future::Future<Output = ()> + Send + 'static,
 {
     if let Some(handles) = state.actor_handles() {

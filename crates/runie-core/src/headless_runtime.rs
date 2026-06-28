@@ -15,8 +15,10 @@ use std::time::Duration;
 use tokio::time::timeout;
 
 use crate::actors::provider::{BuiltProvider, ProviderFactory};
-use crate::actors::ActorHandle;
-use crate::actors::{ConfigActor, ConfigActorHandle, ProviderActor, ProviderActorHandle};
+use crate::actors::RactorConfigActor;
+use crate::actors::RactorConfigHandle;
+use crate::actors::ProviderActor;
+use crate::actors::ProviderActorHandle;
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::event::Event;
@@ -24,10 +26,10 @@ use crate::provider::ProviderError;
 
 /// Non-interactive runtime backed by the same actors as the TUI.
 pub struct HeadlessRuntime {
-    config_handle: ConfigActorHandle,
+    config_handle: RactorConfigHandle,
     provider_handle: ProviderActorHandle,
-    _config_actor: ActorHandle,
-    _provider_actor: ActorHandle,
+    _config_actor: ractor::ActorCell,
+    _provider_actor: crate::actors::ActorHandle,
 }
 
 impl HeadlessRuntime {
@@ -37,9 +39,9 @@ impl HeadlessRuntime {
         factory: Arc<dyn ProviderFactory>,
     ) -> anyhow::Result<Self> {
         let mut sub = bus.subscribe();
-        let (config_handle, config_actor) = ConfigActor::spawn(bus.clone(), None);
+        let (config_handle, config_actor) = RactorConfigActor::spawn(bus.clone(), None).await;
         let (provider_handle, provider_actor) =
-            ProviderActor::spawn(bus, config_handle.clone(), factory);
+            ProviderActor::spawn_with_ractor_handle(bus, config_handle.clone(), factory);
 
         // Wait until the config actor has loaded (or failed to load) so callers
         // can resolve provider/model defaults immediately.

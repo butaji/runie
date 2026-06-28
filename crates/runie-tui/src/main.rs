@@ -14,8 +14,8 @@
 use futures::StreamExt;
 use runie_agent::AgentActor;
 use runie_core::actors::{
-    ActorHandles, ConfigActor, FffIndexerActor, FffIndexerHandle, IoActor,
-    ProviderActor, SessionActor, RactorTurnActor,
+    ActorHandles, FffIndexerActor, FffIndexerHandle, RactorIoActor,
+    ProviderActor, RactorConfigActor, RactorConfigHandle, RactorSessionActor, RactorTurnActor,
 };
 use runie_core::actors::permission::RactorPermissionActor;
 use runie_core::bus::EventBus;
@@ -77,11 +77,11 @@ async fn main() -> io::Result<()> {
 }
 
 async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
-    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
+    let (config_handle, _) = RactorConfigActor::spawn(bus.clone(), None).await;
     let (provider_handle, _provider_actor) = spawn_provider_actor(&bus, &config_handle);
     // Unified SessionActor: owns trust, history, session CRUD, and durable event append
-    let (session_handle, _session_actor) = SessionActor::spawn(bus.clone());
-    let (io_handle, _io_actor) = IoActor::spawn(bus.clone());
+    let (session_handle, _) = RactorSessionActor::spawn(bus.clone()).await.expect("SessionActor must spawn");
+    let (io_handle, _) = RactorIoActor::spawn(bus.clone()).await.expect("IoActor must spawn");
     let (permission_handle, _permission_actor) = RactorPermissionActor::spawn(bus.clone()).await;
     // InputActor owns the input buffer, cursor, history, undo/redo.
     let (input_handle, _input_actor) = runie_core::actors::InputActor::spawn(bus.clone()).await;
@@ -116,12 +116,12 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
 
 fn spawn_provider_actor(
     bus: &EventBus<Event>,
-    config_handle: &runie_core::actors::ConfigActorHandle,
+    config_handle: &RactorConfigHandle,
 ) -> (
     runie_core::actors::ProviderActorHandle,
     runie_core::actors::ActorHandle,
 ) {
-    ProviderActor::spawn(
+    ProviderActor::spawn_with_ractor_handle(
         bus.clone(),
         config_handle.clone(),
         std::sync::Arc::new(DynProviderFactory),
@@ -158,7 +158,7 @@ struct ActorChannels {
     input_rx: mpsc::Receiver<Event>,
     agent_handle: runie_agent::AgentActorHandle,
     agent_actor: runie_core::actors::ActorHandle,
-    persistence_handle: runie_core::actors::SessionActorHandle,
+    persistence_handle: runie_core::actors::RactorSessionHandle,
     turn_handle: runie_core::actors::RactorTurnHandle,
     turn_actor: tokio::task::JoinHandle<()>,
 }
@@ -270,7 +270,7 @@ fn spawn_ui_actor(
     state: AppState,
     render_tx: watch::Sender<Snapshot>,
     agent_handle: runie_agent::AgentActorHandle,
-    persistence_handle: runie_core::actors::SessionActorHandle,
+    persistence_handle: runie_core::actors::RactorSessionHandle,
     turn_handle: runie_core::actors::RactorTurnHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,

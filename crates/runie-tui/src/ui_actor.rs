@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 use runie_agent::AgentActorHandle;
-use runie_core::actors::SessionActorHandle;
+use runie_core::actors::RactorSessionHandle;
 use runie_core::bus::{EventBus, Receiver};
 use runie_core::login_flow::LoginStep;
 use runie_core::{AppState, Snapshot, Event};
@@ -23,7 +23,7 @@ pub struct UiActor {
     state: AppState,
     render_tx: watch::Sender<Snapshot>,
     agent_handle: AgentActorHandle,
-    persistence_handle: SessionActorHandle,
+    persistence_handle: RactorSessionHandle,
     turn_handle: runie_core::actors::RactorTurnHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
@@ -40,7 +40,7 @@ impl UiActor {
         state: AppState,
         render_tx: watch::Sender<Snapshot>,
         agent_handle: AgentActorHandle,
-        persistence_handle: SessionActorHandle,
+        persistence_handle: RactorSessionHandle,
         turn_handle: runie_core::actors::RactorTurnHandle,
         kb_tx: watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
@@ -239,7 +239,7 @@ impl UiActor {
 }
 
 async fn handle_persistence_messages(
-    handle: SessionActorHandle,
+    handle: RactorSessionHandle,
     evt: Event,
     submitted_text: Option<String>,
 ) {
@@ -283,7 +283,7 @@ mod tests {
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
         let agent_handle = AgentActorHandle::new(agent_tx);
         let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::SessionMsg>(1);
-        let persistence_handle = SessionActorHandle::new(persist_tx);
+        let persistence_handle = RactorSessionHandle::new(persist_tx);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let turn_handle = test_turn_handle().await;
@@ -347,7 +347,7 @@ mod tests {
         let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
         let turn_handle = test_turn_handle().await;
         let mut actor = UiActor::new(state, render_tx, AgentActorHandle::new(agent_tx),
-            SessionActorHandle::new(persist_tx), turn_handle, kb_tx,
+            RactorSessionHandle::new(persist_tx), turn_handle, kb_tx,
             EventBus::new(4), shutdown_tx, TerminalCapabilities::default());
 
         // Simulate a streaming message: TextStart -> ResponseDelta -> tick.
@@ -381,7 +381,7 @@ mod tests {
         let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
         let turn_handle = test_turn_handle().await;
         let mut actor = UiActor::new(state, render_tx, AgentActorHandle::new(agent_tx),
-            SessionActorHandle::new(persist_tx), turn_handle, kb_tx,
+            RactorSessionHandle::new(persist_tx), turn_handle, kb_tx,
             EventBus::new(4), shutdown_tx, TerminalCapabilities::default());
 
         actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
@@ -417,7 +417,7 @@ mod tests {
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
         let agent_handle = AgentActorHandle::new(agent_tx);
         let (persist_tx, _persist_rx) = mpsc::channel::<runie_core::actors::SessionMsg>(1);
-        let persistence_handle = SessionActorHandle::new(persist_tx);
+        let persistence_handle = RactorSessionHandle::new(persist_tx);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, mut effect_rx) = mpsc::channel::<Event>(16);

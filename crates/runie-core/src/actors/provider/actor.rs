@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use tokio::sync::mpsc;
 
-use crate::actors::config::ConfigActorHandle;
+use crate::actors::config::{ConfigActorHandle, ConfigHandle, RactorConfigHandle};
 use crate::actors::{Actor, ActorHandle};
 use crate::bus::EventBus;
 use crate::config::Config;
@@ -15,16 +15,16 @@ use super::factory::{BuiltProvider, ProviderFactory};
 use super::messages::{ProviderActorHandle, ProviderMsg};
 
 /// Actor that owns provider construction and API-key validation.
-pub struct ProviderActor {
-    config_handle: ConfigActorHandle,
+pub struct ProviderActor<H: ConfigHandle> {
+    config_handle: H,
     factory: Arc<dyn ProviderFactory>,
 }
 
-impl ProviderActor {
+impl<H: ConfigHandle + 'static> ProviderActor<H> {
     /// Spawn a `ProviderActor` on the given event bus.
     pub fn spawn(
         bus: EventBus<Event>,
-        config_handle: ConfigActorHandle,
+        config_handle: H,
         factory: Arc<dyn ProviderFactory>,
     ) -> (ProviderActorHandle, ActorHandle) {
         let (tx, rx) = mpsc::channel(32);
@@ -37,7 +37,29 @@ impl ProviderActor {
     }
 }
 
-impl Actor for ProviderActor {
+/// Spawn with legacy ConfigActorHandle (for tests).
+impl ProviderActor<ConfigActorHandle> {
+    pub fn spawn_with_legacy_handle(
+        bus: EventBus<Event>,
+        config_handle: ConfigActorHandle,
+        factory: Arc<dyn ProviderFactory>,
+    ) -> (ProviderActorHandle, ActorHandle) {
+        Self::spawn(bus, config_handle, factory)
+    }
+}
+
+/// Spawn with RactorConfigHandle (for production).
+impl ProviderActor<RactorConfigHandle> {
+    pub fn spawn_with_ractor_handle(
+        bus: EventBus<Event>,
+        config_handle: RactorConfigHandle,
+        factory: Arc<dyn ProviderFactory>,
+    ) -> (ProviderActorHandle, ActorHandle) {
+        Self::spawn(bus, config_handle, factory)
+    }
+}
+
+impl<H: ConfigHandle + 'static> Actor for ProviderActor<H> {
     type Msg = ProviderMsg;
     type Event = Event;
 
@@ -48,7 +70,7 @@ impl Actor for ProviderActor {
     }
 }
 
-impl ProviderActor {
+impl<H: ConfigHandle + 'static> ProviderActor<H> {
     async fn handle_msg(&mut self, msg: ProviderMsg) {
         match msg {
             ProviderMsg::Build {
