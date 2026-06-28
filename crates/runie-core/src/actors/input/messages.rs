@@ -4,8 +4,6 @@
 //! - Asynchronously in `InputActor` (production)
 //! - Synchronously via `apply_to()` (tests without a spawned actor)
 
-use crate::actors::ractor_adapter::GenericActorHandle;
-
 /// All messages accepted by `InputActor`.
 ///
 /// Covers text editing, cursor navigation, history, undo/redo, and clipboard.
@@ -73,12 +71,6 @@ pub enum InputMsg {
     /// Abort file picker — restore backup.
     FilePickerAbort,
 }
-
-/// Handle for sending messages to `InputActor`.
-// Deprecated: kept for backward compatibility during migration.
-#[allow(dead_code)]
-#[deprecated(since = "0.2.16", note = "Use RactorInputHandle from actor.rs")]
-pub type InputActorHandle = GenericActorHandle<InputMsg>;
 
 /// Synchronous application of an `InputMsg` to `InputState`.
 ///

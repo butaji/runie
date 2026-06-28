@@ -123,18 +123,6 @@ impl<Msg: ractor::Message> RactorHandle<Msg> {
     }
 }
 
-impl<Msg: ractor::Message + Clone> RactorHandle<Msg> {
-    /// Send a message and wait for a reply.
-    pub async fn rpc<R: serde::Serialize + serde::de::DeserializeOwned>(
-        &self,
-        msg: Msg,
-    ) -> Option<R> {
-        let (_tx, rx) = oneshot::channel();
-        let _ = self.actor_ref.send_message(msg);
-        rx.await.ok()
-    }
-}
-
 impl<Msg: ractor::Message> std::fmt::Debug for RactorHandle<Msg> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RactorHandle")

@@ -7,7 +7,7 @@
   {
     "file": "delete-dead-actor-modules-and-custom-trait.md",
     "title": "Delete dead actor modules and custom Actor trait",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "collapse-actor-handles-to-typed-map.md",
@@ -37,7 +37,7 @@
   {
     "file": "replace-legacy-tool-parsers-with-thin-shim.md",
     "title": "Finish tool-parser shim: collapse legacy modules",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
@@ -87,7 +87,7 @@
   {
     "file": "cleanup-small-duplicates-and-dead-code.md",
     "title": "Clean up small duplicates and dead code",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "replace-custom-retry-with-backon.md",

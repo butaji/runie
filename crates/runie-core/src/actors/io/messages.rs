@@ -2,7 +2,6 @@
 
 use std::path::PathBuf;
 
-use crate::actors::ractor_adapter::GenericActorHandle;
 use crate::ChatMessage;
 
 /// Messages accepted by `IoActor`.
@@ -29,47 +28,4 @@ pub enum IoMsg {
     SuspendProcess,
 }
 
-/// Handle for sending commands to an `IoActor`.
-pub type IoActorHandle = GenericActorHandle<IoMsg>;
 
-impl IoActorHandle {
-    /// Request running a bash command.
-    pub async fn run_bash(&self, command: String) {
-        self.send(IoMsg::RunBash { command }).await;
-    }
-
-    /// Request writing files.
-    pub async fn write_files(&self, edits: Vec<(PathBuf, String)>) {
-        self.send(IoMsg::WriteFiles { edits }).await;
-    }
-
-    /// Request environment detection (cwd name, git info).
-    pub async fn detect_env(&self) {
-        self.send(IoMsg::DetectEnv).await;
-    }
-
-    /// Request sharing session to gist.
-    pub async fn share_session(&self, messages: Vec<ChatMessage>, display_name: Option<String>) {
-        self.send(IoMsg::ShareSession { messages, display_name }).await;
-    }
-
-    /// Request opening external editor.
-    pub async fn open_external_editor(&self, text: String) {
-        self.send(IoMsg::OpenExternalEditor { text }).await;
-    }
-
-    /// Request clipboard write.
-    pub async fn write_clipboard(&self, text: String) {
-        self.send(IoMsg::WriteClipboard { text }).await;
-    }
-
-    /// Request clipboard read.
-    pub async fn read_clipboard(&self) {
-        self.send(IoMsg::ReadClipboard).await;
-    }
-
-    /// Request process suspend.
-    pub async fn suspend_process(&self) {
-        self.send(IoMsg::SuspendProcess).await;
-    }
-}
