@@ -183,7 +183,7 @@ fn after_flush() {
 #[test]
 fn multiple_chunks() {
     let mut f = ThinkFilter::new();
-    f.feed(ev("<tool_call>first"))
+    let _ = f.feed(ev("<tool_call>first"))
         .into_iter()
         .collect::<Vec<_>>();
     let out2: Vec<_> = f.feed(ev(" second")).into_iter().collect();
@@ -233,7 +233,7 @@ fn text_before_and_after() {
 #[test]
 fn flush_with_open() {
     let mut f = ThinkFilter::new();
-    f.feed(ev("<thinking>")).into_iter().collect::<Vec<_>>();
+    let _ = f.feed(ev("<thinking>")).into_iter().collect::<Vec<_>>();
     let flushed: Vec<_> = f.flush().into_iter().collect();
     assert_eq!(flushed.len(), 3);
     assert!(matches!(&flushed[0], ProviderEvent::ThinkingStart { .. }));
