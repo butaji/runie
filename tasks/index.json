@@ -292,7 +292,7 @@
   {
     "file": "replace-session-tree-with-arena-crate.md",
     "title": "Replace hand-rolled session tree with an arena tree crate",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-think-filter-with-regex.md",
@@ -372,7 +372,7 @@
   {
     "file": "unify-markdown-block-parsing-on-pulldown-cmark-events.md",
     "title": "Unify markdown block parsing and healing on `pulldown-cmark` events",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-markdown-processing-around-pulldown-cmark.md",

@@ -140,7 +140,7 @@ pub use error::{RunieError, RunieErrorKind};
 pub use provider_event::{ModelError, ProviderEvent, StopReason};
 pub use session::index::{SessionIndex, SessionMetadata};
 pub use session::store::SessionStore;
-pub use session::tree::{SessionTree, SessionTreeFilter, TreeNode};
+pub use session::tree::{SessionTree, SessionTreeFilter, TreeNodeData};
 pub use session::{format_as_markdown, Session};
 pub use skills::{build_skills_context, load_all, load_from_dir, Skill};
 pub use snapshot::{GitInfo, Snapshot};

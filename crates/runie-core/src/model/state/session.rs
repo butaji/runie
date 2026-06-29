@@ -12,15 +12,27 @@ use super::CommandUsage;
 
 /// Session state — messages, tree, pending edits.
 /// Fields are public for test setup; production code should use accessors.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SessionState {
     pub messages: Vec<ChatMessage>,
+    #[serde(skip)]
     pub session_tree: Option<SessionTree>,
     pub session_display_name: Option<String>,
     pub session_created_at: f64,
     pub session_updated_at: f64,
     pub pending_edits: Vec<EditPreview>,
     pub image_attachments: Vec<String>,
+}
+
+impl PartialEq for SessionState {
+    fn eq(&self, other: &Self) -> bool {
+        self.messages == other.messages
+            && self.session_display_name == other.session_display_name
+            && self.session_created_at == other.session_created_at
+            && self.session_updated_at == other.session_updated_at
+            && self.pending_edits == other.pending_edits
+            && self.image_attachments == other.image_attachments
+    }
 }
 
 impl Default for SessionState {

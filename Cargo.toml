@@ -70,6 +70,7 @@ insta = { version = "1.41", features = ["yaml"] }
 tempfile = "3"
 thiserror = "2"
 secrecy = "0.8"
+indextree = "4.1"
 keyring = { version = "3", features = ["vendored"] }
 dotenvy = "0.15"
 fs2 = "0.4"

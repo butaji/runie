@@ -160,7 +160,8 @@ pub fn open_session_tree_dialog(state: &mut AppState) {
         Some(tree) => tree
             .filtered_walk(crate::session::tree::SessionTreeFilter::All)
             .into_iter()
-            .map(|(depth, node)| {
+            .map(|(depth, node_id)| {
+                let node = tree.arena()[node_id].get();
                 let preview = format!(
                     "[{}] {}",
                     node.message.role.as_str(),

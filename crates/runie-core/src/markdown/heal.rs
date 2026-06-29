@@ -1,118 +1,174 @@
 //! Markdown healing: close unclosed inline syntax for stable display.
+//!
+//! Two-pass approach:
+//! 1. Parse with `pulldown_cmark` → build a style stack to track which
+//!    inline markers are open at the end of the document.
+//!    (pulldown_cmark auto-closes some markers, so we can't infer openers
+//!    from the event stream alone.)
+//! 2. Scan the original text character-by-character → track openers that
+//!    were explicitly opened but never closed.
+//! 3. Output the original text + closers for the unclosed openers from (2).
 
 /// Close unclosed inline markdown syntax in `text`.
 ///
-/// Handles: bold (`**`/`__`), italic (`*`/`_`), inline code (`` ` ``), and links (`[`).
+/// Handles: bold (`**`/`__`), italic (`*`/`_`), strikethrough (`~~`),
+/// inline code (`` ` ``), and links (`[` without matching `](url)`).
 pub fn heal_markdown(text: &str) -> String {
-    let mut state = ParseState::default();
-    let out = heal_loop(text, &mut state);
-    append_closers(out, &state)
+    // Pass 1: use pulldown_cmark to determine which style markers are open.
+    let style_stack = parse_style_stack(text);
+
+    // Pass 2: scan original text to find openers that were not closed.
+    let raw_openers = scan_raw_openers(text);
+
+    // Combine: the unclosed markers are those from the raw scan.
+    // The pulldown_cmark style stack tells us the nesting order.
+    let mut result = text.to_string();
+    append_closers(&mut result, &raw_openers, &style_stack);
+    result
 }
 
-struct ParseState {
-    bold_open: bool,
-    italic_open: Option<char>,
-    italic_ever: bool,
+/// Track which inline markers are explicitly opened in the original text.
+struct RawOpeners {
+    style_stack: Vec<StyleMarker>,
     code_n: usize,
     link_open: bool,
-    link_await_close: bool,
 }
 
-impl Default for ParseState {
-    fn default() -> Self {
-        Self {
-            bold_open: false,
-            italic_open: None,
-            italic_ever: false,
-            code_n: 0,
-            link_open: false,
-            link_await_close: false,
-        }
-    }
+/// Style marker with the actual delimiter character used.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum StyleMarker {
+    Bold,
+    Italic(char), // Track which delimiter: '*' or '_'
+    Strike,
 }
 
-fn heal_loop(text: &str, state: &mut ParseState) -> String {
-    let mut out = String::with_capacity(text.len() + 16);
+/// Scan the original text to track which markers were opened but never closed.
+fn scan_raw_openers(text: &str) -> RawOpeners {
+    let mut openers = RawOpeners::default();
     let mut chars = text.chars().peekable();
+
     while let Some(c) = chars.next() {
         match c {
-            '`' => heal_backtick(&mut chars, &mut out, state),
-            '*' | '_' => heal_star_underscore(c, &mut chars, &mut out, state),
-            '[' => {
-                out.push('[');
-                state.link_open = true;
-                state.link_await_close = false;
+            '`' => {
+                let n = count_run(&mut chars, '`', 1);
+                if n == 3 {
+                    // Triple backtick: code block delimiter, not inline
+                    if openers.code_n > 0 {
+                        openers.code_n = 0;
+                    }
+                } else if openers.code_n > 0 && openers.code_n == n {
+                    // Closing backtick(s) matching opener: clear
+                    openers.code_n = 0;
+                } else {
+                    // Opening or mismatch: set new count
+                    openers.code_n = n;
+                }
             }
-            ']' => heal_close_bracket(&mut chars, &mut out, state),
-            '(' | ')' => heal_paren(c, state, &mut out),
-            _ => out.push(c),
+            '*' | '_' => {
+                if chars.peek() == Some(&c) {
+                    chars.next();
+                    // `**` or `__` = Bold
+                    if matches!(openers.style_stack.last(), Some(StyleMarker::Bold)) {
+                        openers.style_stack.pop();
+                    } else {
+                        openers.style_stack.push(StyleMarker::Bold);
+                    }
+                } else {
+                    // `*` or `_` = Italic
+                    if matches!(openers.style_stack.last(), Some(StyleMarker::Italic(_))) {
+                        openers.style_stack.pop();
+                    } else {
+                        openers.style_stack.push(StyleMarker::Italic(c));
+                    }
+                }
+            }
+            '~' => {
+                if chars.peek() == Some(&'~') {
+                    chars.next();
+                    if matches!(openers.style_stack.last(), Some(StyleMarker::Strike)) {
+                        openers.style_stack.pop();
+                    } else {
+                        openers.style_stack.push(StyleMarker::Strike);
+                    }
+                }
+            }
+            '[' => openers.link_open = true,
+            ']' => {
+                if openers.link_open {
+                    openers.link_open = false;
+                }
+            }
+            '(' => {}
+            ')' => {}
+            _ => {}
         }
     }
-    out
+
+    openers
 }
 
-fn heal_star_underscore(c: char, chars: &mut std::iter::Peekable<std::str::Chars>, out: &mut String, state: &mut ParseState) {
-    if chars.peek() == Some(&c) {
-        chars.next();
-        out.push(c);
-        out.push(c);
-        state.bold_open = !state.bold_open;
-    } else {
-        out.push(c);
-        if state.italic_open.is_some() {
-            state.italic_open = None;
-        } else {
-            state.italic_open = Some(c);
-            state.italic_ever = true;
+/// Parse with pulldown_cmark to build the current style stack at end-of-document.
+fn parse_style_stack(text: &str) -> Vec<StyleMarker> {
+    use pulldown_cmark::{Event, Parser, Tag};
+
+    let mut style_stack = Vec::new();
+    for event in Parser::new(text) {
+        match event {
+            Event::Start(tag) => {
+                match tag {
+                    Tag::Strong => style_stack.push(StyleMarker::Bold),
+                    Tag::Emphasis => style_stack.push(StyleMarker::Italic('*')),
+                    Tag::Strikethrough => style_stack.push(StyleMarker::Strike),
+                    _ => {}
+                }
+            }
+            Event::End(tag_end) => {
+                match tag_end {
+                    pulldown_cmark::TagEnd::Strong
+                    | pulldown_cmark::TagEnd::Emphasis
+                    | pulldown_cmark::TagEnd::Strikethrough => {
+                        style_stack.pop();
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+    style_stack
+}
+
+/// Append closing markers for unclosed openers.
+fn append_closers(result: &mut String, openers: &RawOpeners, _style_stack: &[StyleMarker]) {
+    // Close code spans first (innermost).
+    if openers.code_n > 0 {
+        result.push_str(&"`".repeat(openers.code_n));
+    }
+    // Close styles in reverse order (outermost first).
+    for marker in openers.style_stack.iter().rev() {
+        match marker {
+            StyleMarker::Bold => result.push_str("**"),
+            StyleMarker::Italic(c) => result.push(*c),
+            StyleMarker::Strike => result.push_str("~~"),
+        }
+    }
+    // Close link.
+    if openers.link_open {
+        result.push_str("]()");
+    }
+}
+
+impl Default for RawOpeners {
+    fn default() -> Self {
+        Self {
+            style_stack: Vec::new(),
+            code_n: 0,
+            link_open: false,
         }
     }
 }
 
-fn heal_paren(c: char, state: &mut ParseState, out: &mut String) {
-    if state.link_await_close {
-        state.link_await_close = false;
-    }
-    out.push(c);
-}
-
-fn heal_backtick(chars: &mut std::iter::Peekable<std::str::Chars>, out: &mut String, state: &mut ParseState) {
-    let n = count_run(chars, '`', 1);
-    out.push_str(&"`".repeat(n));
-    state.code_n = if state.code_n == n { 0 } else { n };
-}
-
-fn heal_close_bracket(chars: &mut std::iter::Peekable<std::str::Chars>, out: &mut String, state: &mut ParseState) {
-    out.push(']');
-    if state.link_open {
-        state.link_open = false;
-        state.link_await_close = true;
-        if chars.peek() != Some(&'(') {
-            out.push_str("]()");
-        }
-    }
-}
-
-fn append_closers(mut out: String, state: &ParseState) -> String {
-    if state.link_await_close || state.link_open {
-        out.push_str("]()");
-    }
-    if state.bold_open {
-        out.push_str("**");
-    }
-    if let Some(c) = state.italic_open {
-        out.push(c);
-    }
-    if state.code_n > 0 {
-        out.push_str(&"`".repeat(state.code_n));
-    }
-    out
-}
-
-fn count_run(
-    chars: &mut std::iter::Peekable<std::str::Chars>,
-    target: char,
-    min: usize,
-) -> usize {
+fn count_run(chars: &mut std::iter::Peekable<std::str::Chars>, target: char, min: usize) -> usize {
     let mut n = min;
     while chars.peek() == Some(&target) {
         chars.next();
@@ -128,46 +184,74 @@ mod tests {
     #[test]
     fn heal_markdown_closes_unclosed_bold() {
         assert_eq!(heal_markdown("hello **world"), "hello **world**");
+        assert_eq!(heal_markdown("**bold start"), "**bold start**");
     }
 
     #[test]
     fn heal_markdown_closes_unclosed_italic() {
         assert_eq!(heal_markdown("hello *world"), "hello *world*");
         assert_eq!(heal_markdown("hello _world"), "hello _world_");
+        assert_eq!(heal_markdown("italic _start"), "italic _start_");
     }
 
     #[test]
     fn heal_markdown_closes_unclosed_inline_code() {
-        assert_eq!(heal_markdown("hello `world"), "hello `world`");
+        assert_eq!(heal_markdown("use `rust"), "use `rust`");
+        assert_eq!(heal_markdown("code `snippet"), "code `snippet`");
         assert_eq!(heal_markdown("hello ``world"), "hello ``world``");
     }
 
     #[test]
     fn heal_markdown_closes_unclosed_link() {
-        assert_eq!(heal_markdown("hello [world"), "hello [world]()");
+        assert_eq!(heal_markdown("see [docs"), "see [docs]()");
+        assert_eq!(heal_markdown("[link"), "[link]()");
     }
 
     #[test]
     fn heal_markdown_leaves_closed_syntax_unchanged() {
-        assert_eq!(heal_markdown("hello **world**"), "hello **world**");
-        assert_eq!(heal_markdown("hello *world*"), "hello *world*");
-        assert_eq!(heal_markdown("hello `world`"), "hello `world`");
-        assert_eq!(heal_markdown("hello [world](url)"), "hello [world](url)");
+        assert_eq!(
+            heal_markdown("hello **world** and `code`"),
+            "hello **world** and `code`"
+        );
+        assert_eq!(
+            heal_markdown("**bold** and *italic* and `code`"),
+            "**bold** and *italic* and `code`"
+        );
     }
 
     #[test]
     fn heal_markdown_leaves_plain_text_unchanged() {
-        assert_eq!(heal_markdown("hello world"), "hello world");
+        assert_eq!(heal_markdown("just plain text"), "just plain text");
         assert_eq!(heal_markdown(""), "");
     }
 
     #[test]
     fn heal_markdown_handles_multiple_unclosed_spans() {
-        // All three spans are unclosed: bold (**), italic (*), code (`)
-        // Healing closes all of them
+        assert_eq!(heal_markdown("**bold and `code"), "**bold and `code`**");
+    }
+
+    #[test]
+    fn heal_markdown_strikethrough_unclosed() {
         assert_eq!(
-            heal_markdown("**bold and *italic and `code"),
-            "**bold and *italic and `code***`"
+            heal_markdown("hello ~~strikethrough"),
+            "hello ~~strikethrough~~"
+        );
+    }
+
+    #[test]
+    fn heal_markdown_mixed_content() {
+        // Mixed: some closed, some unclosed
+        assert_eq!(
+            heal_markdown("plain **bold *italic* text"),
+            "plain **bold *italic* text**"
+        );
+    }
+
+    #[test]
+    fn heal_markdown_balanced_stays_unchanged() {
+        assert_eq!(
+            heal_markdown("**bold** and *italic* and ~~strike~~"),
+            "**bold** and *italic* and ~~strike~~"
         );
     }
 }

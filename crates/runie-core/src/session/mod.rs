@@ -13,7 +13,7 @@ use crate::model::ChatMessage;
 use serde::{Deserialize, Serialize};
 
 /// Session snapshot — serializable conversation state.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Session {
     pub name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -26,8 +26,24 @@ pub struct Session {
     pub theme_name: String,
     pub thinking_level: crate::model::ThinkingLevel,
     pub read_only: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Session tree is not serialized; it's reconstructed from messages on load.
+    #[serde(skip)]
     pub session_tree: Option<crate::session::tree::SessionTree>,
+}
+
+impl PartialEq for Session {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self.display_name == other.display_name
+            && self.created_at == other.created_at
+            && self.updated_at == other.updated_at
+            && self.messages == other.messages
+            && self.provider == other.provider
+            && self.model == other.model
+            && self.theme_name == other.theme_name
+            && self.thinking_level == other.thinking_level
+            && self.read_only == other.read_only
+    }
 }
 
 impl Session {

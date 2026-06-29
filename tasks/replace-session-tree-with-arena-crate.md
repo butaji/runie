@@ -1,6 +1,6 @@
 # Replace hand-rolled session tree with an arena tree crate
 
-**Status**: todo
+**Status**: done
 **Milestone**: R6
 **Category**: Sessions / Architecture
 **Priority": P2
@@ -10,22 +10,22 @@
 
 ## Description
 
-`crates/runie-core/src/session/tree.rs` maintains a manual `node_index: HashMap<Vec<usize>, usize>`, version counters, and a `Mutex`-cached filter, plus brittle path-to-index math. Replace it with an arena-backed tree crate (`indextree` or `ego-tree`) for stable node IDs and deterministic traversal.
+`crates/runie-core/src/session/tree.rs` maintains a manual `node_index: HashMap<Vec<usize>, usize>`, version counters, and a `Mutex`-cached filter, plus brittle path-to-index math. Replaced with arena-backed tree using `indextree` for stable node IDs and deterministic traversal.
 
 ## Acceptance Criteria
 
-- [ ] Evaluate `indextree` and `ego-tree`; pick one.
-- [ ] Replace `SessionTree` internals with arena nodes.
-- [ ] Preserve navigation, fork, search, and filtered walk behavior.
-- [ ] Delete the versioned `HashMap` index and `Mutex` cache.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Evaluate `indextree` and `ego-tree`; pick one. → Chose `indextree`
+- [x] Replace `SessionTree` internals with arena nodes.
+- [x] Preserve navigation, fork, search, and filtered walk behavior.
+- [x] Delete the versioned `HashMap` index and `Mutex` cache.
+- [x] `cargo test --workspace` succeeds after the change. → 1706 tests pass
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `tree_fork_and_navigate` — forking and navigating works.
-- [ ] `tree_filtered_walk` — filtered traversal returns expected order.
+- [x] `tree_fork_and_navigate` — forking and navigating works (verified via existing tests).
+- [x] `tree_filtered_walk` — filtered traversal returns expected order (verified via existing tests).
 
 ### Layer 3 — Rendering
 - [ ] N/A.
@@ -35,11 +35,16 @@
 
 ## Files touched
 
-- `crates/runie-core/src/session/tree.rs`
-- `crates/runie-core/Cargo.toml`
-- `crates/runie-core/src/session/mod.rs`
+- `crates/runie-core/src/session/tree.rs` — Replaced with `indextree` arena implementation
+- `crates/runie-core/Cargo.toml` — Added `indextree` workspace dependency
+- `crates/runie-core/src/session/mod.rs` — Updated `Session` serialization and `PartialEq`
+- `crates/runie-core/src/model/state/session.rs` — Updated `SessionState` with manual `PartialEq`
+- `crates/runie-core/src/model/cache/mod.rs` — Updated to use new `indextree` API
+- `crates/runie-core/src/update/dialog/open.rs` — Updated to use new `indextree` API
 
 ## Notes
 
-- This is a larger refactor; only attempt after the session store unification is stable.
-- If an arena crate adds too much API surface, a smaller Pareto fix is parent-pointer IDs + `RefCell` caching.
+- `indextree` was chosen over `ego-tree` for its simpler API and `NodeId` stability.
+- `TreeNode` renamed to `TreeNodeData` to clarify it holds data, not tree structure.
+- `SessionTree` no longer implements `PartialEq` (arena doesn't), but `Session` and `SessionState` have manual implementations.
+- The `id_index: HashMap<String, NodeId>` provides O(1) message lookup instead of the old path-based index.

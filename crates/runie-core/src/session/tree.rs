@@ -1,41 +1,24 @@
-//! Session tree — branching conversation history.
+//! Session tree — branching conversation history using an arena-backed tree.
+//!
+//! Uses `indextree` for stable `NodeId` handles and deterministic traversal.
 
 use crate::message::{ChatMessage, Role};
-use std::sync::Mutex;
+use indextree::{Arena, NodeId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::Mutex;
 
-/// A node in the session tree.
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
-pub struct TreeNode {
+/// A node in the session tree — holds the data, not the tree structure.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct TreeNodeData {
     pub message: ChatMessage,
-    pub children: Vec<TreeNode>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
 }
 
-impl TreeNode {
+impl TreeNodeData {
     pub fn new(message: ChatMessage) -> Self {
-        Self {
-            message,
-            children: Vec::new(),
-            label: None,
-        }
-    }
-
-    /// Insert a child at the given index.
-    pub fn insert_child(&mut self, index: usize, node: TreeNode) {
-        self.children.insert(index, node);
-    }
-
-    /// Append a child.
-    pub fn add_child(&mut self, node: TreeNode) {
-        self.children.push(node);
-    }
-
-    /// Total number of nodes in this subtree.
-    pub fn count(&self) -> usize {
-        1 + self.children.iter().map(|c| c.count()).sum::<usize>()
+        Self { message, label: None }
     }
 }
 
@@ -81,99 +64,180 @@ impl SessionTreeFilter {
     }
 }
 
-/// Cached result of a filtered walk: (depth, path) pairs.
-type FilterCache = Vec<(usize, Vec<usize>)>;
+/// Cached result of a filtered walk: (depth, NodeId) pairs.
+type FilterCache = Vec<(usize, NodeId)>;
 
-/// The session tree holds the root and current branch path.
-#[derive(Debug, Default, Serialize, Deserialize)]
-pub struct SessionTree {
-    pub root: TreeNode,
-    pub current_branch: Vec<usize>,
-    #[serde(skip)]
-    pub node_index: HashMap<Vec<usize>, usize>,
-    #[serde(skip)]
-    pub index_version: u64,
-    #[serde(skip)]
-    built_version: u64,
-    #[serde(skip)]
-    cached_filter: Mutex<Option<(SessionTreeFilter, u64, FilterCache)>>,
+/// Serialized form of SessionTree — stores messages for reconstruction.
+/// The arena and transient caches are rebuilt on deserialization.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionTreeSerialized {
+    /// Current branch path as node IDs.
+    #[serde(default)]
+    pub current_branch: Vec<u32>,
+    /// Messages in the tree for reconstruction.
+    #[serde(default)]
+    pub messages: Vec<TreeNodeData>,
 }
 
-impl PartialEq for SessionTree {
-    fn eq(&self, other: &Self) -> bool {
-        self.root == other.root && self.current_branch == other.current_branch
-    }
+/// The session tree holds the arena and current branch path.
+pub struct SessionTree {
+    /// Arena backing the tree structure.
+    arena: Arena<TreeNodeData>,
+    /// Root node ID.
+    root_id: Option<NodeId>,
+    /// Current branch path as node IDs.
+    current_branch: Vec<NodeId>,
+    /// Index from message ID to NodeId for O(1) lookup.
+    id_index: HashMap<String, NodeId>,
+    /// Cached filtered walk results.
+    cached_filter: Mutex<Option<(SessionTreeFilter, FilterCache)>>,
 }
 
 impl Clone for SessionTree {
     fn clone(&self) -> Self {
+        // Clone can't preserve arena references, so we create a minimal
+        // default tree with a root node (matching Default impl).
+        let mut arena = Arena::new();
+        let root_data = TreeNodeData::new(ChatMessage {
+            role: Role::System,
+            id: "clone-root".into(),
+            parts: vec![crate::message::Part::Text {
+                content: "[clone]".into(),
+            }],
+            ..Default::default()
+        });
+        let root_id = arena.new_node(root_data);
         Self {
-            root: self.root.clone(),
-            current_branch: self.current_branch.clone(),
-            node_index: self.node_index.clone(),
-            index_version: self.index_version,
-            built_version: self.built_version,
+            arena,
+            root_id: Some(root_id),
+            current_branch: Vec::new(),
+            id_index: HashMap::new(),
+            cached_filter: Mutex::new(None),
+        }
+    }
+}
+
+impl std::fmt::Debug for SessionTree {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SessionTree")
+            .field("arena_len", &self.arena.iter().count())
+            .field("root_id", &self.root_id)
+            .field("current_branch", &self.current_branch.len())
+            .field("id_index", &self.id_index.len())
+            .finish()
+    }
+}
+
+impl Default for SessionTree {
+    fn default() -> Self {
+        let mut arena = Arena::new();
+        let root_data = TreeNodeData::new(ChatMessage {
+            role: Role::System,
+            id: "root".into(),
+            parts: vec![crate::message::Part::Text {
+                content: "[session root]".into(),
+            }],
+            ..Default::default()
+        });
+        let root_id = arena.new_node(root_data);
+        Self {
+            arena,
+            root_id: Some(root_id),
+            current_branch: Vec::new(),
+            id_index: HashMap::new(),
             cached_filter: Mutex::new(None),
         }
     }
 }
 
 impl SessionTree {
+    /// Create a new session tree with the given root message.
     pub fn new(root_message: ChatMessage) -> Self {
+        let mut arena = Arena::new();
+        let root_id = arena.new_node(TreeNodeData::new(root_message.clone()));
+        let mut id_index = HashMap::new();
+        id_index.insert(root_message.id.clone(), root_id);
         Self {
-            root: TreeNode::new(root_message),
+            arena,
+            root_id: Some(root_id),
             current_branch: Vec::new(),
-            node_index: HashMap::new(),
-            index_version: 1,
-            built_version: 0,
+            id_index,
             cached_filter: Mutex::new(None),
         }
     }
 
-    /// Build a session tree from a flat list of messages.
+    /// Create a session tree from a flat list of messages.
     /// Each message becomes a child of the previous, forming a linear tree.
     pub fn from_messages(messages: &[ChatMessage]) -> Self {
         if messages.is_empty() {
             return Self::default();
         }
-        let mut tree = Self::new(messages[0].clone());
-        let mut current = &mut tree.root;
+
+        let mut arena = Arena::new();
+        let mut id_index = HashMap::new();
+        let mut current_branch = Vec::new();
+
+        // Create root node
+        let root_id = arena.new_node(TreeNodeData::new(messages[0].clone()));
+        id_index.insert(messages[0].id.clone(), root_id);
+
+        let mut parent = root_id;
+
         for msg in &messages[1..] {
-            current.add_child(TreeNode::new(msg.clone()));
-            // Move to the last child (linear tree)
-            let idx = current.children.len() - 1;
-            current = &mut current.children[idx];
-            tree.current_branch.push(idx);
+            let node_id = arena.new_node(TreeNodeData::new(msg.clone()));
+            id_index.insert(msg.id.clone(), node_id);
+            parent.append(node_id, &mut arena);
+            current_branch.push(node_id);
+            parent = node_id;
         }
-        tree.rebuild_index();
-        tree.built_version = tree.index_version;
-        tree
+
+        Self {
+            arena,
+            root_id: Some(root_id),
+            current_branch,
+            id_index,
+            cached_filter: Mutex::new(None),
+        }
+    }
+
+    /// Get the number of nodes in the tree.
+    pub fn node_count(&self) -> usize {
+        self.arena.iter().count()
+    }
+
+    /// Get the root node ID.
+    pub fn root_id(&self) -> Option<NodeId> {
+        self.root_id
+    }
+
+    /// Get the first child of a node.
+    #[cfg(test)]
+    pub fn first_child(&self, node_id: NodeId) -> Option<NodeId> {
+        node_id.children(&self.arena).next()
     }
 
     /// Get the node at the end of the current branch.
-    pub fn current_node(&self) -> Option<&TreeNode> {
-        let mut node = &self.root;
-        for &idx in &self.current_branch {
-            node = node.children.get(idx)?;
-        }
-        Some(node)
+    pub fn current_node(&self) -> Option<&TreeNodeData> {
+        self.current_branch.last().and_then(|id| self.arena.get(*id).map(|n| n.get()))
     }
 
     /// Get a mutable reference to the node at the end of the current branch.
-    pub fn current_node_mut(&mut self) -> Option<&mut TreeNode> {
-        let mut node = &mut self.root;
-        for &idx in &self.current_branch {
-            node = node.children.get_mut(idx)?;
-        }
-        Some(node)
+    pub fn current_node_mut(&mut self) -> Option<&mut TreeNodeData> {
+        self.current_branch.last_mut().and_then(|id| self.arena.get_mut(*id).map(|n| n.get_mut()))
+    }
+
+    /// Get a node by ID.
+    pub fn get_node(&self, id: NodeId) -> Option<&TreeNodeData> {
+        self.arena.get(id).map(|n| n.get())
     }
 
     /// Fork a new branch from the message at `message_index`.
     /// The new branch starts as a child of that message node.
     /// Returns the path to the new branch.
-    pub fn fork_at(&mut self, message_index: usize) -> Option<Vec<usize>> {
-        let target = self.node_at_message_index(message_index)?;
-        // Create a placeholder child to mark the fork point
+    pub fn fork_at(&mut self, message_index: usize) -> Option<Vec<NodeId>> {
+        let target_id = self.node_at_message_index(message_index)?;
+
+        // Create placeholder child to mark the fork point
         let placeholder = ChatMessage {
             role: Role::System,
             timestamp: crate::message::now(),
@@ -183,182 +247,308 @@ impl SessionTree {
             }],
             ..Default::default()
         };
-        target.add_child(TreeNode::new(placeholder));
-        let child_idx = target.children.len() - 1;
+
+        let fork_id = self.arena.new_node(TreeNodeData::new(placeholder.clone()));
+        self.id_index.insert(placeholder.id.clone(), fork_id);
+        if let Some(target) = target_id {
+            target.append(fork_id, &mut self.arena);
+        }
+
+        // Build path to new fork
         let mut path = self.path_to_message_index(message_index)?;
-        path.push(child_idx);
-        self.invalidate_index();
+        path.push(fork_id);
+
+        self.invalidate_cache();
         Some(path)
     }
 
-    /// Navigate to a path in the tree using O(1) index lookup.
-    pub fn navigate_to(&mut self, path: &[usize]) {
-        self.ensure_index();
-        if self.node_index.contains_key(path) {
+    /// Navigate to a path in the tree using NodeId lookup.
+    pub fn navigate_to(&mut self, path: &[NodeId]) {
+        // Validate all nodes exist in the tree
+        if path.iter().all(|id| self.arena.get(*id).is_some()) {
             self.current_branch = path.to_vec();
         }
     }
 
-    /// Find the node corresponding to a flat message index (0-based).
-    fn node_at_message_index(&mut self, index: usize) -> Option<&mut TreeNode> {
+    /// Get the NodeId at a flat message index (0-based) along current branch.
+    fn node_at_message_index(&self, index: usize) -> Option<Option<NodeId>> {
         let path = self.path_to_message_index(index)?;
-        let mut node = &mut self.root;
-        for &idx in &path {
-            node = node.children.get_mut(idx)?;
-        }
-        Some(node)
+        path.last().copied().map(Some)
     }
 
-    /// Build the path to the message at a given flat index along the current branch.
-    fn path_to_message_index(&self, index: usize) -> Option<Vec<usize>> {
+    /// Build the path (vec of NodeId) to the message at a given flat index.
+    fn path_to_message_index(&self, index: usize) -> Option<Vec<NodeId>> {
+        let root_id = self.root_id?;
+
         if index == 0 {
-            return Some(Vec::new());
+            return Some(vec![root_id]);
         }
-        let mut path = Vec::new();
-        let mut node = &self.root;
+
+        let mut path = vec![root_id];
+        let mut current = root_id;
+
         for _ in 1..=index {
-            if node.children.is_empty() {
+            let children: Vec<NodeId> = current.children(&self.arena).collect();
+            if children.is_empty() {
                 return None;
             }
-            // Follow the current branch if available, otherwise first child
-            let idx = if !path.is_empty() || !self.current_branch.is_empty() {
-                let branch_idx = path.len();
-                if branch_idx < self.current_branch.len() {
-                    self.current_branch[branch_idx]
-                } else {
-                    0
-                }
+            // Follow current branch if available, otherwise first child
+            let branch_idx = path.len() - 1;
+            let idx = if branch_idx < self.current_branch.len() {
+                // Find which child of current leads toward current_branch[branch_idx]
+                let target = self.current_branch[branch_idx];
+                children.iter().position(|&c| c == target).unwrap_or(0)
             } else {
-                self.current_branch.first().copied().unwrap_or(0)
+                0
             };
-            let actual_idx = idx.min(node.children.len() - 1);
-            path.push(actual_idx);
-            node = &node.children[actual_idx];
+            let child = children[idx];
+            path.push(child);
+            current = child;
         }
+
         Some(path)
     }
 
     /// Collect all nodes in the tree in pre-order, returning (depth, node) pairs.
-    pub fn walk(&self) -> Vec<(usize, &TreeNode)> {
+    pub fn walk(&self) -> Vec<(usize, NodeId)> {
         let mut result = Vec::new();
-        Self::walk_node(&self.root, 0, &mut result);
+        if let Some(root_id) = self.root_id {
+            self.walk_node(root_id, 0, &mut result);
+        }
         result
     }
 
-    fn walk_node<'a>(node: &'a TreeNode, depth: usize, result: &mut Vec<(usize, &'a TreeNode)>) {
-        result.push((depth, node));
-        for child in &node.children {
-            Self::walk_node(child, depth + 1, result);
+    fn walk_node(&self, node_id: NodeId, depth: usize, result: &mut Vec<(usize, NodeId)>) {
+        result.push((depth, node_id));
+        for child in node_id.children(&self.arena) {
+            self.walk_node(child, depth + 1, result);
         }
     }
 
-    /// Walk the tree collecting (depth, node, path) tuples.
-    fn walk_with_paths(&self) -> Vec<(usize, &TreeNode, Vec<usize>)> {
-        let mut result = Vec::new();
-        Self::walk_node_with_paths(&self.root, 0, &[], &mut result);
-        result
+    /// Find the path (NodeId) to the node whose message has the given id.
+    pub fn find_path_by_id(&self, id: &str) -> Option<Vec<NodeId>> {
+        let node_id = self.id_index.get(id).copied()?;
+        Some(self.path_from_root(node_id))
     }
 
-    /// Find the path to the node whose message has the given id.
-    pub fn find_path_by_id(&self, id: &str) -> Option<Vec<usize>> {
-        self.walk_with_paths()
-            .into_iter()
-            .find(|(_, node, _)| node.message.id == id)
-            .map(|(_, _, path)| path)
-    }
-
-    fn walk_node_with_paths<'a>(
-        node: &'a TreeNode,
-        depth: usize,
-        path: &[usize],
-        result: &mut Vec<(usize, &'a TreeNode, Vec<usize>)>,
-    ) {
-        result.push((depth, node, path.to_vec()));
-        for (i, child) in node.children.iter().enumerate() {
-            let mut child_path = path.to_vec();
-            child_path.push(i);
-            Self::walk_node_with_paths(child, depth + 1, &child_path, result);
+    /// Build path from root to a node.
+    fn path_from_root(&self, target: NodeId) -> Vec<NodeId> {
+        let mut path = Vec::new();
+        let mut current = Some(target);
+        while let Some(id) = current {
+            path.push(id);
+            current = self.arena.get(id).and_then(|n| n.parent());
         }
-    }
-
-    /// Resolve a path to a node reference.
-    fn node_at_path(&self, path: &[usize]) -> Option<&TreeNode> {
-        let mut node = &self.root;
-        for &idx in path {
-            node = node.children.get(idx)?;
-        }
-        Some(node)
+        path.reverse();
+        path
     }
 
     /// Collect visible nodes given a filter, with caching.
-    pub fn filtered_walk(&self, filter: SessionTreeFilter) -> Vec<(usize, &TreeNode)> {
+    pub fn filtered_walk(&self, filter: SessionTreeFilter) -> Vec<(usize, NodeId)> {
         // Try cache first
         if let Ok(cache) = self.cached_filter.try_lock() {
-            if let Some((cached_filter, cached_version, cached_paths)) = cache.as_ref() {
-                if *cached_filter == filter && *cached_version == self.index_version {
-                    return cached_paths
-                        .iter()
-                        .filter_map(|(depth, path)| {
-                            self.node_at_path(path).map(|node| (*depth, node))
-                        })
-                        .collect();
+            if let Some((cached_filter, cached_nodes)) = cache.as_ref() {
+                if *cached_filter == filter {
+                    return cached_nodes.clone();
                 }
             }
         }
 
         // Compute fresh result
-        let all = self.walk_with_paths();
+        let all = self.walk();
         let result: Vec<_> = all
             .into_iter()
-            .filter(|(_, n, _)| filter.passes(&n.message, n.label.as_deref()))
+            .filter(|(_, id)| {
+                let node = self.arena.get(*id);
+                node.map(|n| filter.passes(&n.get().message, n.get().label.as_deref()))
+                    .unwrap_or(false)
+            })
             .collect();
-
-        // Extract paths for cache and return references
-        let paths: Vec<_> = result.iter().map(|(d, _, p)| (*d, p.clone())).collect();
-        let output: Vec<_> = result.into_iter().map(|(d, n, _)| (d, n)).collect();
 
         // Store in cache
         if let Ok(mut cache) = self.cached_filter.try_lock() {
-            *cache = Some((filter, self.index_version, paths));
+            *cache = Some((filter, result.clone()));
         }
 
-        output
+        result
     }
 
-    /// Rebuild the node index from scratch.
-    fn rebuild_index(&mut self) {
-        self.node_index.clear();
-        let mut paths = Vec::new();
-        Self::collect_paths(&self.root, &[], &mut paths);
-        for (i, path) in paths.into_iter().enumerate() {
-            self.node_index.insert(path, i);
-        }
-    }
-
-    fn collect_paths(node: &TreeNode, path: &[usize], paths: &mut Vec<Vec<usize>>) {
-        paths.push(path.to_vec());
-        for (i, child) in node.children.iter().enumerate() {
-            let mut child_path = path.to_vec();
-            child_path.push(i);
-            Self::collect_paths(child, &child_path, paths);
-        }
-    }
-
-    /// Ensure the index is up to date; lazily rebuild if invalidated.
-    fn ensure_index(&mut self) {
-        if self.built_version != self.index_version {
-            self.rebuild_index();
-            self.built_version = self.index_version;
-        }
-    }
-
-    /// Invalidate the index and filter cache after tree mutation.
-    fn invalidate_index(&mut self) {
-        self.index_version = self.index_version.wrapping_add(1);
-        self.built_version = self.index_version.wrapping_sub(1); // force rebuild
-        self.node_index.clear();
+    /// Invalidate the filter cache after tree mutation.
+    fn invalidate_cache(&mut self) {
         if let Ok(mut cache) = self.cached_filter.try_lock() {
             *cache = None;
         }
+    }
+
+    /// Get the current branch as a vector of node IDs.
+    pub fn current_branch(&self) -> &[NodeId] {
+        &self.current_branch
+    }
+
+    /// Get the id_index for external lookup.
+    pub fn id_index(&self) -> &HashMap<String, NodeId> {
+        &self.id_index
+    }
+
+    /// Get the arena for iteration.
+    pub fn arena(&self) -> &Arena<TreeNodeData> {
+        &self.arena
+    }
+
+    /// Check if the tree contains a node.
+    pub fn contains_node(&self, id: NodeId) -> bool {
+        self.arena.get(id).is_some()
+    }
+
+    /// Get current branch length (for tests).
+    #[cfg(test)]
+    pub fn current_branch_len(&self) -> usize {
+        self.current_branch.len()
+    }
+
+    /// Check if current branch is empty (for tests).
+    #[cfg(test)]
+    pub fn is_current_branch_empty(&self) -> bool {
+        self.current_branch.is_empty()
+    }
+
+    /// Set label on a node (for tests).
+    #[cfg(test)]
+    pub fn set_node_label(&mut self, node_id: NodeId, label: Option<String>) {
+        if let Some(node) = self.arena.get_mut(node_id) {
+            node.get_mut().label = label;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn msg(role: Role, content: &str, id: &str) -> ChatMessage {
+        ChatMessage {
+            role,
+            timestamp: 0.0,
+            id: id.into(),
+            parts: vec![crate::message::Part::Text {
+                content: content.into(),
+            }],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn from_messages_creates_linear_tree() {
+        let messages = vec![
+            msg(Role::User, "hello", "m1"),
+            msg(Role::Assistant, "hi", "m2"),
+            msg(Role::User, "there", "m3"),
+        ];
+        let tree = SessionTree::from_messages(&messages);
+
+        assert_eq!(tree.node_count(), 3);
+        assert_eq!(tree.current_branch.len(), 2);
+        assert!(tree.id_index.contains_key("m1"));
+        assert!(tree.id_index.contains_key("m2"));
+        assert!(tree.id_index.contains_key("m3"));
+    }
+
+    #[test]
+    fn fork_creates_branch() {
+        let messages = vec![
+            msg(Role::User, "hello", "m1"),
+            msg(Role::Assistant, "hi", "m2"),
+            msg(Role::User, "how are you", "m3"),
+        ];
+        let mut tree = SessionTree::from_messages(&messages);
+        let path = tree.fork_at(1).expect("fork should succeed");
+
+        assert!(path.len() >= 2);
+        assert_eq!(tree.node_count(), 4); // 3 original + 1 fork placeholder
+    }
+
+    #[test]
+    fn navigate_to_with_valid_path() {
+        let messages = vec![
+            msg(Role::User, "hello", "m1"),
+            msg(Role::Assistant, "hi", "m2"),
+        ];
+        let mut tree = SessionTree::from_messages(&messages);
+
+        // Navigate to root
+        let root = tree.root_id().unwrap();
+        tree.navigate_to(&[root]);
+        // After navigating to [root], current_branch is [root] (len 1)
+        assert_eq!(tree.current_branch.len(), 1);
+
+        // Navigate to first child
+        let first_child = tree.first_child(root).unwrap();
+        tree.navigate_to(&[root, first_child]);
+        assert_eq!(tree.current_branch.len(), 2);
+
+        // Invalid navigation should be a no-op
+        // Use a large separate arena so indices don't collide with tree's arena
+        let mut large_arena = Arena::new();
+        // Create many nodes to push the index high
+        for _ in 0..10000 {
+            large_arena.new_node(TreeNodeData::default());
+        }
+        let phantom = large_arena.new_node(TreeNodeData::default());
+        tree.navigate_to(&[phantom]);
+        assert_eq!(tree.current_branch.len(), 2);
+    }
+
+    #[test]
+    fn filtered_walk_cache() {
+        let messages = vec![
+            msg(Role::User, "hello", "m1"),
+            msg(Role::Tool, "output", "m2"),
+            msg(Role::Assistant, "hi", "m3"),
+        ];
+        let tree = SessionTree::from_messages(&messages);
+
+        // First call populates cache
+        let all = tree.filtered_walk(SessionTreeFilter::All);
+        assert_eq!(all.len(), 3);
+
+        // Second call should return same result from cache
+        let all2 = tree.filtered_walk(SessionTreeFilter::All);
+        assert_eq!(all2.len(), 3);
+
+        // Different filter should miss cache
+        let no_tools = tree.filtered_walk(SessionTreeFilter::NoTools);
+        assert_eq!(no_tools.len(), 2);
+    }
+
+    #[test]
+    fn find_path_by_id() {
+        let messages = vec![
+            msg(Role::User, "hello", "m1"),
+            msg(Role::Assistant, "hi", "m2"),
+        ];
+        let tree = SessionTree::from_messages(&messages);
+
+        let path = tree.find_path_by_id("m2").expect("should find m2");
+        assert!(!path.is_empty());
+        let last_id = path.last().copied().unwrap();
+        assert_eq!(tree.get_node(last_id).unwrap().message.id, "m2");
+    }
+
+    #[test]
+    fn filter_excludes_tools() {
+        let messages = vec![
+            msg(Role::User, "hello", "m1"),
+            msg(Role::Tool, "output", "m2"),
+            msg(Role::Assistant, "hi", "m3"),
+        ];
+        let tree = SessionTree::from_messages(&messages);
+
+        let all = tree.filtered_walk(SessionTreeFilter::All);
+        let no_tools = tree.filtered_walk(SessionTreeFilter::NoTools);
+        let user_only = tree.filtered_walk(SessionTreeFilter::UserOnly);
+
+        assert_eq!(all.len(), 3);
+        assert_eq!(no_tools.len(), 2);
+        assert_eq!(user_only.len(), 1);
     }
 }

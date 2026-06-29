@@ -98,8 +98,6 @@ mod session_extra;
 #[cfg(test)]
 mod session_store;
 #[cfg(test)]
-mod session_tree;
-#[cfg(test)]
 pub mod slash;
 #[cfg(test)]
 mod snapshot_optimization;

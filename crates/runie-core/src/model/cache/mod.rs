@@ -150,7 +150,8 @@ impl AppState {
                     Some(tree) => tree
                         .filtered_walk(filter)
                         .into_iter()
-                        .map(|(depth, node)| {
+                        .map(|(depth, node_id)| {
+                            let node = tree.arena()[node_id].get();
                             let preview = format!(
                                 "[{}] {}",
                                 node.message.role.as_str(),

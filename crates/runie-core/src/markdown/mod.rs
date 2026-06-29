@@ -5,12 +5,14 @@
 //! so line counts in core stay in sync with rendered output in the TUI.
 
 mod blocks;
+mod heal;
 mod inline;
 #[cfg(test)]
 mod tests;
 
 pub use blocks::extract_blocks;
 pub(crate) use inline::md_options;
+pub use heal::heal_markdown;
 pub use inline::{inlines_to_text, parse_inline_spans};
 
 // ── Inline spans ─────────────────────────────────────────────────────────────
