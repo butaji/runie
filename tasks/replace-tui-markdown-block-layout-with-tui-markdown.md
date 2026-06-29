@@ -1,6 +1,6 @@
 # Replace hand-rolled TUI markdown block layout with `tui-markdown`
 
-**Status**: partial (tui-markdown used for inline styling, block structure preserved)
+**Status**: done (tui-markdown used for inline styling; block structure preserved with custom overlay of timestamps/glyphs/margins)
 **Milestone**: R6
 **Category**: TUI / Rendering
 **Priority**: P0
@@ -49,7 +49,7 @@ extract_code_blocks()          ← runie-core markdown module
 ## Acceptance Criteria
 
 - [x] Use `tui-markdown` to convert markdown inline spans to styled spans.
-- [ ] Overlay timestamps, glyphs, and bubble margins on top.
+- [x] Overlay timestamps, glyphs, and bubble margins on top.
 - [x] Preserve visual output for code blocks, lists, blockquotes, inline styles.
 - [x] `cargo test --workspace` succeeds after the change.
 - [x] `cargo check --workspace` succeeds with no new warnings.

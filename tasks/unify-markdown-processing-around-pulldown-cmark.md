@@ -1,6 +1,6 @@
 # Unify markdown processing around `pulldown-cmark`
 
-**Status**: partial
+**Status**: done (markdown module unified on pulldown-cmark; tool-marker stripping intentionally remains separate string parsing — see notes)
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P0

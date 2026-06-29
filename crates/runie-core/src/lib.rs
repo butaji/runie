@@ -34,8 +34,7 @@ pub mod declarative;
 pub mod resource_loader;
 pub mod dialog;
 pub mod diff;
-// display_width moved to runie-util; kept here for internal use.
-#[allow(unused)]
+// display_width re-exported from runie-util for internal use.
 mod display_width;
 pub mod dry_run;
 pub mod dsl;
@@ -118,7 +117,6 @@ pub use keybindings::{
     default_keybindings, event_from_name, load_keybindings, merged_keybindings,
     parse_keybindings_json,
 };
-// labels moved to runie-util
 pub use lifecycle::LifecycleState;
 pub use login_flow::{
     build_key_input, build_login_root, build_model_selector, build_provider_picker, LoginFlowState,

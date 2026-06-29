@@ -202,7 +202,7 @@
   {
     "file": "narrow-runie-core-public-api.md",
     "title": "Narrow `runie-core` public API",
-    "status": "partial (runie-util created, display_width and labels moved)"
+    "status": "done"
   },
   {
     "file": "normalize-remaining-std-mutex-to-parking-lot.md",
@@ -312,7 +312,7 @@
   {
     "file": "replace-tui-markdown-block-layout-with-tui-markdown.md",
     "title": "Replace hand-rolled TUI markdown block layout with `tui-markdown`",
-    "status": "partial (tui-markdown used for inline styling, block structure preserved)"
+    "status": "done"
   },
   {
     "file": "replace-xor-auth-with-keyring.md",
@@ -342,7 +342,7 @@
   {
     "file": "store-provider-api-keys-in-keyring-not-config.md",
     "title": "Store provider API keys in OS keyring, not plain `config.toml`",
-    "status": "partial (keyring integration done)"
+    "status": "done"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",
@@ -377,7 +377,7 @@
   {
     "file": "unify-markdown-processing-around-pulldown-cmark.md",
     "title": "Unify markdown processing around `pulldown-cmark`",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "unify-permission-system-rules.md",

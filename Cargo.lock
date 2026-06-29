@@ -3588,6 +3588,7 @@ dependencies = [
  "regex",
  "reqwest",
  "rmcp",
+ "runie-util",
  "schemars",
  "secrecy",
  "serde",

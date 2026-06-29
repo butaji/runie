@@ -1,6 +1,6 @@
 # Store provider API keys in OS keyring, not plain `config.toml`
 
-**Status**: partial (keyring integration done)
+**Status**: done (keyring integration done; SecretString used in Token wrapper; env var and config fallback implemented; migrate_legacy_auth() provided; resolve_api_key() implements priority resolution)
 **Milestone**: R6
 **Category**: Security / Configuration
 **Priority": P1

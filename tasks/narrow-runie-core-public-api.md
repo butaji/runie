@@ -1,6 +1,6 @@
 # Narrow `runie-core` public API
 
-**Status**: partial (runie-util created, display_width and labels moved)
+**Status**: done (runie-util created; display_width and labels moved; re-exported in runie-core for internal use; runie-tui migrated to runie-util direct imports)
 **Milestone**: R4
 **Category**: Architecture / Refactoring
 **Priority**: P2
