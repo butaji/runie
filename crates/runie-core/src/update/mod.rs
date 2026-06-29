@@ -100,7 +100,7 @@ mod tests {
 
 mod agent;
 pub(crate) mod command;
-pub(crate) mod dialog;
+pub mod dialog;
 pub(crate) mod dialog_input;
 mod dispatch;
 pub(crate) mod input;

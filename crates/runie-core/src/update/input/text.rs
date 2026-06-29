@@ -50,6 +50,9 @@ impl AppState {
     }
 
     pub(crate) fn insert_char(&mut self, c: char) {
+        // In test mode (no actor handles), apply synchronously so tests work.
+        // In production, UiActor sends InputMsg to InputActor and applies via
+        // InputChanged; this synchronous call is then a no-op (actor handles exist).
         try_send_input(self, crate::actors::InputMsg::InsertChar(c));
         self.handle_at_trigger();
         self.view_mut().dirty = true;
@@ -119,8 +122,7 @@ impl AppState {
     }
 
     pub(crate) fn undo(&mut self) {
-        let has_undo = !self.input().undo_stack.is_empty();
-        if has_undo {
+        if !self.input().undo_stack.is_empty() {
             try_send_input(self, crate::actors::InputMsg::Undo);
             self.handle_at_trigger();
             self.view_mut().dirty = true;
@@ -128,8 +130,7 @@ impl AppState {
     }
 
     pub(crate) fn redo(&mut self) {
-        let has_redo = !self.input().redo_stack.is_empty();
-        if has_redo {
+        if !self.input().redo_stack.is_empty() {
             try_send_input(self, crate::actors::InputMsg::Redo);
             self.handle_at_trigger();
             self.view_mut().dirty = true;
@@ -192,9 +193,6 @@ impl AppState {
 
     fn open_command_palette_from_input(&mut self) {
         let initial_filter = self.input().input.clone();
-        try_send_input(self, crate::actors::InputMsg::SetText {
-            text: String::new(),
-        });
         crate::update::dialog::open_command_palette_with_filter(self, &initial_filter);
         self.view_mut().dirty = true;
     }
@@ -204,9 +202,6 @@ impl AppState {
             let input = self.input();
             (input.input.clone(), input.cursor_pos)
         };
-        try_send_input(self, crate::actors::InputMsg::SetText {
-            text: String::new(),
-        });
         self.input_mut().file_picker_backup = Some((input_text, cursor, cursor, false));
         crate::update::dialog::open_at_file_picker_all(self);
     }

@@ -48,18 +48,17 @@ impl Actor for InputActor {
         msg: Self::Msg,
         _state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        let (new_state, emit) = {
+        let (new_state,) = {
             let mut state = self.state.lock();
-            // Delegate to the apply_to method which handles all state mutations
             InputMsg::apply_to(&msg, &mut state);
-            let should_emit = true;
-            (state.clone(), should_emit)
+            (state.clone(),)
         };
-        if emit {
-            self.bus.publish(Event::InputChanged {
-                state: Box::new(new_state),
-            });
-        }
+        // Always emit InputChanged: UiActor uses this as the single source of
+        // truth for input state, enabling autocomplete trigger detection and
+        // clean state synchronization without dual updates.
+        self.bus.publish(Event::InputChanged {
+            state: Box::new(new_state),
+        });
         Ok(())
     }
 }

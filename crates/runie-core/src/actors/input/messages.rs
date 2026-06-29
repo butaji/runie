@@ -56,6 +56,8 @@ pub enum InputMsg {
     Redo,
 
     // ── State mutations ────────────────────────────────────────────────────
+    /// Submit content — clears input and publishes InputChanged.
+    Submit { content: String },
     /// Replace all input text and reset cursor.
     SetText { text: String },
     /// Set the current prompt name.
@@ -240,14 +242,9 @@ impl InputMsg {
                     state.cursor_pos = pos;
                 }
             }
-            InputMsg::SetText { text } => {
-                state.input = text.clone();
-                state.cursor_pos = state.input.len();
-            }
-            InputMsg::SetPrompt { name } => {
-                state.current_prompt = name.clone();
-            }
-            InputMsg::Clear => {
+            InputMsg::Submit { .. } | InputMsg::SetText { .. } | InputMsg::SetPrompt { .. } | InputMsg::Clear => {
+                // These all clear input state. For Submit, the content is
+                // dispatched by UiActor directly (captured before sending).
                 state.input.clear();
                 state.cursor_pos = 0;
                 state.history_pos = None;

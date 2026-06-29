@@ -80,16 +80,15 @@ fn init_terminal_state(state: &mut AppState) {
     }
 }
 
-/// Forwarder: raw events come in via `input_rx`, get mapped to InputMsg and sent to
-/// the leader's InputActor, and the raw event is also published on the bus.
+/// Forwarder: raw events come in via `input_rx` and are routed through InputMsg
+/// to the leader's InputActor. InputActor is the single source of truth for input
+/// state; UiActor applies state from InputChanged events.
 async fn input_forwarder_task(
     mut input_rx: mpsc::Receiver<Event>,
     input_handle: runie_core::actors::RactorInputHandle,
-    bus: EventBus<Event>,
 ) {
     use runie_core::actors::InputMsg;
     while let Some(evt) = input_rx.recv().await {
-        bus.publish(evt.clone());
         match &evt {
             Event::Input(c) => { input_handle.send(InputMsg::InsertChar(*c)).await; }
             Event::Backspace => { input_handle.send(InputMsg::Backspace).await; }
@@ -127,7 +126,7 @@ async fn spawn_background_tasks(
     let agent_handle = LeaderAgentActorHandle::new(leader_handle.agent.clone());
 
     let (kb_tx, kb_rx) = watch::channel(state.config().keybindings().clone());
-    tokio::spawn(input_forwarder_task(input_rx, leader_handle.input.clone(), bus.clone()));
+    tokio::spawn(input_forwarder_task(input_rx, leader_handle.input.clone()));
 
     // UiActor creates its own watch channel for snapshots; take the receiver for the render task.
     let mut ui_actor = spawn_ui_actor(
