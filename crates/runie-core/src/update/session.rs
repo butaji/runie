@@ -111,8 +111,7 @@ impl AppState {
 
 // ── Message queue (merged from queue.rs) ─────────────────────────────────────
 
-use super::now;
-use crate::model::{ChatMessage, DeliveryMode, Role};
+use crate::model::DeliveryMode;
 
 impl AppState {
     pub(crate) fn queue_follow_up(&mut self) {
@@ -179,68 +178,86 @@ impl AppState {
         let follow_up_mode = self.config().follow_up_mode;
         let handles = self.actor_handles().cloned();
         if let Some(ref h) = handles {
-            if tokio::runtime::Handle::try_current().is_ok() {
-                let _ = h.turn.try_send(TurnMsg::DeliverQueued {
-                    steering_mode,
-                    follow_up_mode,
-                });
-                self.agent_state_mut().message_queue.clear();
-            } else {
-                // Test mode without runtime: use TurnQueue directly
-                self.deliver_via_turn_queue(steering_mode, follow_up_mode);
-            }
+            let _ = h.turn.try_send(TurnMsg::DeliverQueued {
+                steering_mode,
+                follow_up_mode,
+            });
+            self.agent_state_mut().message_queue.clear();
+            self.view_mut().scroll = 0;
         } else {
-            // Test mode without handles: use TurnQueue directly
-            self.deliver_via_turn_queue(steering_mode, follow_up_mode);
+            // Test mode: apply via projection methods directly
+            self.apply_queue_delivery_sync(steering_mode, follow_up_mode);
         }
-        self.view_mut().scroll = 0;
     }
 
-    /// Sync delivery via TurnQueue — replaces the old sync fallback methods.
-    fn deliver_via_turn_queue(
+    /// Sync delivery via TurnQueue for test mode — applies state changes directly.
+    /// NOTE: Does NOT call projection methods to avoid double-removing from queue.
+    fn apply_queue_delivery_sync(
         &mut self,
         steering_mode: DeliveryMode,
         follow_up_mode: DeliveryMode,
     ) {
+        use crate::message::{now, ChatMessage, Part, Role};
+
         let mut queue = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
-        // Try steering first
+
         if let Some(r) = queue.pop_steering(steering_mode) {
+            // Steering was delivered
             self.agent_state_mut().message_queue = queue.into_inner();
-            self.push_user_from_queue(r.content);
+            let id = self.next_id();
+            self.session_mut().messages.push(ChatMessage {
+                role: Role::User,
+                timestamp: now(),
+                id: id.clone(),
+                parts: vec![Part::Text { content: r.content.clone() }],
+                ..Default::default()
+            });
+            self.agent_state_mut()
+                .request_queue
+                .push_back((r.content, id));
+            self.messages_changed();
+
             if follow_up_mode == DeliveryMode::All {
-                // Also deliver follow-ups in All mode
                 let mut q =
                     TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
                 if let Some(r) = q.pop_all_follow_ups() {
                     self.agent_state_mut().message_queue = q.into_inner();
-                    self.push_user_from_queue(r.content);
+                    let id = self.next_id();
+                    self.session_mut().messages.push(ChatMessage {
+                        role: Role::User,
+                        timestamp: now(),
+                        id: id.clone(),
+                        parts: vec![Part::Text { content: r.content.clone() }],
+                        ..Default::default()
+                    });
+                    self.agent_state_mut()
+                        .request_queue
+                        .push_back((r.content, id));
+                    self.messages_changed();
                 } else {
                     self.agent_state_mut().message_queue = q.into_inner();
                 }
             }
         } else if let Some(r) = queue.pop_follow_up(follow_up_mode) {
+            // Follow-up was delivered
             self.agent_state_mut().message_queue = queue.into_inner();
-            self.push_user_from_queue(r.content);
+            let id = self.next_id();
+            self.session_mut().messages.push(ChatMessage {
+                role: Role::User,
+                timestamp: now(),
+                id: id.clone(),
+                parts: vec![Part::Text { content: r.content.clone() }],
+                ..Default::default()
+            });
+            self.agent_state_mut()
+                .request_queue
+                .push_back((r.content, id));
+            self.messages_changed();
         } else {
             self.agent_state_mut().message_queue = queue.into_inner();
         }
-    }
 
-    fn push_user_from_queue(&mut self, content: String) {
-        let id = self.next_id();
-        self.session_mut().messages.push(ChatMessage {
-            role: Role::User,
-            timestamp: now(),
-            id: id.clone(),
-            parts: vec![runie_core::message::Part::Text {
-                content: content.clone(),
-            }],
-            ..Default::default()
-        });
-        self.agent_state_mut()
-            .request_queue
-            .push_back((content, id));
-        self.messages_changed();
+        self.view_mut().scroll = 0;
     }
 
     pub(crate) fn dequeue(&mut self) {

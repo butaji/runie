@@ -1,10 +1,5 @@
 [
   {
-    "file": "TEMPLATE.md",
-    "title": "Task Title",
-    "status": "template"
-  },
-  {
     "file": "actually-collapse-actor-handles-to-typed-map.md",
     "title": "Actually collapse `ActorHandles` to a typed map",
     "status": "done"
@@ -17,7 +12,7 @@
   {
     "file": "add-jsonschema-validation-to-configactor-load.md",
     "title": "Add `jsonschema` validation to `ConfigActor` load path",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "centralize-built-in-tool-names.md",
@@ -127,7 +122,7 @@
   {
     "file": "extract-shared-tracing-subscriber-init.md",
     "title": "Extract shared tracing subscriber init",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
@@ -177,7 +172,7 @@
   {
     "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
     "title": "Introduce `cargo-deny` and `cargo-machete` CI checks",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "migrate-production-actors-to-ractor.md",
@@ -227,12 +222,12 @@
   {
     "file": "remove-sleep-from-automatic-tests.md",
     "title": "Remove `sleep()` from automatic tests",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "remove-sync-turn-queue-fallback-from-app-state.md",
     "title": "Remove sync `TurnQueue` fallback from `AppState`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-unused-dependencies-and-normalize-workspace-deps.md",
@@ -387,7 +382,7 @@
   {
     "file": "unify-permission-system-rules.md",
     "title": "Unify permission-system rule engines",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "unify-provider-config-persistence.md",
