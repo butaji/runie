@@ -60,7 +60,7 @@ parking_lot = "0.12"
 notify = "7.0"
 notify-debouncer-mini = "0.5"
 unicode-segmentation = "1.10"
-strum = { version = "0.26", features = ["derive"] }
+strum = { version = "0.26", features = ["derive", "std"] }
 uuid = { version = "1", features = ["v4"] }
 clap = { version = "4.5", features = ["derive"] }
 supports-color = "3"

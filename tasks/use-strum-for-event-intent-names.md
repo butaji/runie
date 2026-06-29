@@ -1,6 +1,6 @@
 # Use `strum` to derive `Event`/`Intent`/`EventKind` names
 
-**Status**: todo
+**Status**: done
 **Milestone**: R1
 **Category**: Core / State
 **Priority**: P1

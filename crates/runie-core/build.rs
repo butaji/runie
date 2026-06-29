@@ -131,7 +131,7 @@ fn generate_category_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<
     out.push_str("use super::super::variants::Event;\n\n");
     out.push_str("// ── EventCategory enum ─────────────────────────────────────────────────────────\n\n");
     out.push_str("/// Event category — routing taxonomy for the dispatcher.\n");
-    out.push_str("#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]\n");
+    out.push_str("#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::Display, strum::IntoStaticStr, strum::VariantNames)]\n");
     out.push_str("pub enum EventCategory {\n");
     let mut cats: Vec<_> = categories.keys().collect();
     cats.sort();

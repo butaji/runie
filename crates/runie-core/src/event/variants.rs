@@ -1,15 +1,17 @@
 //! Top-level Event enum. See [`kind.rs`](kind) for taxonomy.
 
 use serde::{Deserialize, Serialize};
-use strum::IntoStaticStr;
+use strum::{Display, IntoStaticStr, VariantNames};
 
 use crate::model::ThinkingLevel;
 use crate::settings::SettingsCategory;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, IntoStaticStr)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Display, IntoStaticStr, VariantNames)]
 #[serde(tag = "type", content = "data")]
+#[strum(serialize_all = "PascalCase")]
 pub enum Event {
-    // Input
+    // Input (parameterized — use from_name("Input:char") for this variant)
+    #[strum(message = "Input")]
     Input(char),
     Backspace,
     Newline,
