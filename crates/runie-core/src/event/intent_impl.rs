@@ -1,10 +1,11 @@
 //! `Event::into_intent()` implementation.
 //!
-//! Split from [`variants`](super::variants) to keep files under the 500-line limit.
-//! Each helper is ≤ 40 lines and has low complexity.
+//! Delegates to the generated `is_fact_variant()` from `generated.rs` for the
+//! fast-path check, then uses typed helper functions to convert to `Intent`.
 
 use super::intent::Intent;
 use super::variants::Event;
+use super::generated::is_fact_variant;
 
 // ── Category helpers (each ≤ 40 lines, low complexity) ────────────────────────
 
@@ -359,14 +360,6 @@ fn group_c(e: &Event) -> Option<Intent> {
 
 fn try_intent_helpers(e: &Event) -> Option<Intent> {
     group_a(e).or_else(|| group_b(e)).or_else(|| group_c(e))
-}
-
-// ── Fact sentinel (all non-intent events) ─────────────────────────────────────
-
-/// Returns true if this event is a Fact (not an Intent).
-/// Listed explicitly so the compiler catches new Fact variants that aren't handled.
-fn is_fact_variant(e: &Event) -> bool {
-    matches!(e, Event::Thinking { .. } | Event::ThoughtDone { .. } | Event::ToolStart { .. } | Event::ToolEnd { .. } | Event::ResponseDelta { .. } | Event::ThinkingDelta { .. } | Event::TextStart { .. } | Event::TextEnd { .. } | Event::ThinkingStart { .. } | Event::ThinkingEnd { .. } | Event::Response { .. } | Event::TurnComplete { .. } | Event::Done { .. } | Event::Error { .. } | Event::AssistantMessageReady { .. } | Event::MessageReplayed { .. } | Event::ConfigLoaded { .. } | Event::TrustLoaded { .. } | Event::TrustChanged { .. } | Event::TrustSet { .. } | Event::HistoryLoaded { .. } | Event::HistoryAppend { .. } | Event::SessionLoaded { .. } | Event::SessionSaved { .. } | Event::SessionDeleted { .. } | Event::SessionImported { .. } | Event::SessionExported { .. } | Event::SessionList { .. } | Event::SessionOperationFailed { .. } | Event::BashOutput { .. } | Event::FilesWritten { .. } | Event::EnvDetected { .. } | Event::SystemMessage { .. } | Event::ValidationFailed { .. } | Event::ModelsFetched { .. } | Event::PermissionRequest { .. })
 }
 
 // ── Public impl (delegates to helpers) ────────────────────────────────────────

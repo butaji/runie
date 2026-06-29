@@ -6,7 +6,7 @@
 //!
 //! Durable events for JSONL persistence: [`DurableCoreEvent`](durable::DurableCoreEvent)
 
-pub use names::EVENT_NAMES;
+
 pub use variants::Event;
 
 pub use durable::DurableCoreEvent;
@@ -21,10 +21,13 @@ pub(crate) mod intent_impl;
 pub mod kind;
 mod level;
 pub mod name;
-mod names;
 pub mod to_durable;
 mod variants;
+mod generated;
 
+pub use generated::EventCategory;
+pub use generated::EVENT_NAMES;
+pub use generated::EventCtor;
 pub use kind::EventKind;
 #[cfg(test)]
 mod tests;
