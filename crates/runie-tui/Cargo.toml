@@ -19,6 +19,7 @@ runie-agent.workspace = true
 runie-provider.workspace = true
 ratatui.workspace = true
 crossterm.workspace = true
+ansi_colours.workspace = true
 tokio.workspace = true
 futures.workspace = true
 opaline = "0.4"

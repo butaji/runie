@@ -13,7 +13,6 @@ pub mod popups;
 pub mod quantize;
 pub mod semantic_tokens;
 pub mod status_bar;
-pub mod stylize;
 pub mod syntax;
 pub mod theme;
 pub mod ui;
@@ -32,7 +31,8 @@ pub mod ui_actor;
 mod tests;
 
 pub use runie_core::{AppState, ChatMessage};
-pub use stylize::Stylize;
+/// Re-export [`Stylize`] from ratatui for backward compatibility.
+pub use ratatui::style::Stylize;
 
 // Re-export dialog types from runie_core for convenience
 pub use runie_core::dialog::{EventLabel, ItemAction, Panel, PanelItem, PanelStack, PanelId};
