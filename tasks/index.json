@@ -322,7 +322,7 @@
   {
     "file": "rescope-terminal-capability-task-to-current-module.md",
     "title": "Rescope terminal capability task to current module layout",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "route-cli-config-through-configactor.md",
