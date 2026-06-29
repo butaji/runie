@@ -49,6 +49,12 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
+impl From<anyhow::Error> for Error {
+    fn from(e: anyhow::Error) -> Self {
+        Error::internal(e.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

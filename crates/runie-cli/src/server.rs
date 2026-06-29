@@ -13,11 +13,13 @@ use anyhow::Result;
 use runie_agent::headless_helper::build_sink;
 use runie_agent::{run_headless_cli, HeadlessCliOptions};
 use runie_core::message::ChatMessage;
-use runie_core::proto::{Error, Message, Request, Response};
+use runie_core::proto::{Error, Message, Request};
 use serde_json::Value;
 use std::collections::HashMap;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
+
+use crate::transport::{build_response, parse_request};
 
 const CURRENT_VERSION: &str = runie_core::proto::PROTOCOL_VERSION;
 
@@ -91,15 +93,15 @@ where
 }
 
 async fn process_request(line: &str) -> Message {
-    let req = match serde_json::from_str::<Request>(line) {
+    let req = match parse_request(line) {
         Ok(r) => r,
-        Err(e) => return Message::error(None, Error::parse(format!("Parse error: {e}"))),
+        Err((data, err)) => return Message::error(data, err),
     };
 
     let id = req.id.clone();
     match dispatch_method(&req).await {
-        Ok(result) => Message::Response(Response::ok(id, result.unwrap_or(Value::Null))),
-        Err(e) => Message::Response(Response::err(id, e)),
+        Ok(result) => build_response(Some(id.into()), Ok(result.unwrap_or(Value::Null))),
+        Err(e) => build_response(Some(id.into()), Err(anyhow::Error::new(e))),
     }
 }
 

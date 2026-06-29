@@ -41,6 +41,8 @@ use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::time::timeout;
 
+use crate::transport::{parse_request, write_message};
+
 const ACP_PROTOCOL_VERSION: &str = "1.0.0";
 
 /// Run the ACP stdio adapter.
@@ -89,11 +91,11 @@ async fn process_stdin_loop(
         if line.trim().is_empty() {
             continue;
         }
-        let req = match serde_json::from_str::<Request>(&line) {
+        let req = match parse_request(&line) {
             Ok(r) => r,
-            Err(e) => {
-                let err = Message::error(Some(Value::String(line)), Error::parse(format!("Parse error: {e}")));
-                write_message(stdout, &err).await?;
+            Err((data, err)) => {
+                let msg = Message::error(data, err);
+                write_message(stdout, &msg).await?;
                 continue;
             }
         };
@@ -109,17 +111,6 @@ async fn process_stdin_loop(
             }
         }
     }
-    Ok(())
-}
-
-async fn write_message<W>(writer: &mut W, msg: &Message) -> Result<()>
-where
-    W: AsyncWriteExt + Unpin,
-{
-    let json = serde_json::to_string(msg)?;
-    writer.write_all(json.as_bytes()).await?;
-    writer.write_all(b"\n").await?;
-    writer.flush().await?;
     Ok(())
 }
 
