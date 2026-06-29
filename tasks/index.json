@@ -302,7 +302,7 @@
   {
     "file": "replace-tmux-test-with-ratatui-tests.md",
     "title": "Replace `scripts/tmux-test.sh` with Ratatui `TestBackend` tests",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-tui-keymap-combo-stringification-with-crokey.md",

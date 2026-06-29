@@ -235,3 +235,63 @@ fn empty_state_shows_hint() {
         "Empty state should show hint text"
     );
 }
+
+// ─── tmux-test.sh replacement ────────────────────────────────────────────────
+//
+// `scripts/tmxtest.sh` was deleted. It verified three startup behaviors:
+//   1. Binary starts — covered by `cargo build` passing in CI.
+//   2. "Type a message" placeholder — already covered by `empty_state_shows_hint`.
+//   3. Help/keybinding hints render — covered by the two tests below.
+
+/// Layer 3: verify the hint bar renders keybinding hints in the startup buffer.
+/// Replaces: "tmux capture-pane" grep for "ctrl+o" in `scripts/tmux-test.sh`.
+#[test]
+fn startup_render_contains_keybinding_hints() {
+    let mut state = AppState::default();
+    connect_model(&mut state);
+    state.config.vim_mode = false;
+    // hint_text() produces "ctrl+o expand/collapse · [mode hints] · ctrl+c quit"
+    // Render at a wide size so the hint bar is not truncated.
+    let backend = TestBackend::new(100, 24);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let content: String = (0..buf.area().height)
+        .map(|y| (0..buf.area().width).map(|x| buf[(x, y)].symbol()).collect::<String>())
+        .collect();
+    assert!(
+        content.contains("ctrl+o"),
+        "Hint bar should contain ctrl+o hint: {}",
+        content
+    );
+    assert!(
+        content.contains("ctrl+c quit"),
+        "Hint bar should contain ctrl+c quit: {}",
+        content
+    );
+}
+
+/// Layer 3: verify the startup render buffer contains both the input placeholder
+/// and the hint bar. This catches rendering regressions without needing tmux.
+#[test]
+fn startup_render_buffer_has_placeholder_and_hints() {
+    let mut state = AppState::default();
+    connect_model(&mut state);
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let all_content: String = (0..buf.area().height)
+        .map(|y| (0..buf.area().width).map(|x| buf[(x, y)].symbol()).collect::<String>())
+        .collect();
+    assert!(
+        all_content.contains("Type a message"),
+        "Startup render must show placeholder text"
+    );
+    // The hint bar always shows ctrl+o (expand/collapse).
+    assert!(
+        all_content.contains("ctrl+o"),
+        "Startup render must show ctrl+o hint: {}",
+        all_content
+    );
+}
