@@ -29,6 +29,7 @@ syntect = "5"
 unicode-width.workspace = true
 base64.workspace = true
 tui-markdown = "0.3.7"
+tui-textarea = "0.7"
 ractor.workspace = true
 tracing-subscriber.workspace = true
 

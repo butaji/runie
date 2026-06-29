@@ -320,3 +320,87 @@ fn space_toggles_checkbox_render_state() {
         line_after
     );
 }
+
+#[test]
+fn popup_list_renders_selection() {
+    // Verifies that the popup list renders the selected item with highlight style.
+    // This produces the same visual output as a `List` widget with highlight style:
+    // - Full-width background with accent color
+    // - Inverted foreground (dark text on light background)
+    // - Bold name, dimmed description
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+
+    // Create a panel with multiple items
+    let panel = Panel::new("cmds", "Commands")
+        .item("help Show help", runie_core::dialog::ItemAction::Close)
+        .item("settings Configure settings", runie_core::dialog::ItemAction::Close)
+        .item("quit Quit application", runie_core::dialog::ItemAction::Close);
+    open_panel(&mut state, panel);
+
+    let buf = render(&mut state);
+    let accent = color_accent();
+    let bg = color_bg();
+    let r = content_rect();
+
+    // Find the first item (selected by default)
+    let first_item_y = item_y(&buf, "help").expect("should find 'help' item");
+
+    // Selected item should have accent background
+    let selected_has_accent_bg = (r.x..r.x + r.width)
+        .any(|x| buf[(x, first_item_y)].style().bg == Some(accent));
+    assert!(
+        selected_has_accent_bg,
+        "Selected item should have accent background color"
+    );
+
+    // Find the glyph prefix position
+    let glyph_x = find_symbol_x(&buf, first_item_y, '▸')
+        .expect("should find selection glyph '▸'");
+
+    // Glyph should be inverted (dark on accent)
+    let glyph_cell = &buf[(glyph_x, first_item_y)];
+    assert_eq!(
+        glyph_cell.style().fg,
+        Some(bg),
+        "Selection glyph should be inverted (dark on accent bg)"
+    );
+    assert_eq!(
+        glyph_cell.style().bg,
+        Some(accent),
+        "Selection glyph should have accent background"
+    );
+
+    // Name "help" should be bold and inverted
+    let name_x = glyph_x + 1;
+    let name_cell = &buf[(name_x, first_item_y)];
+    assert_eq!(
+        name_cell.style().fg,
+        Some(bg),
+        "Selected name should be inverted (dark on accent bg)"
+    );
+    assert_eq!(
+        name_cell.style().bg,
+        Some(accent),
+        "Selected name should have accent background"
+    );
+    assert!(
+        name_cell.style().add_modifier.contains(Modifier::BOLD),
+        "Selected name should be bold"
+    );
+
+    // Description "Show help" should be dimmer (panel bg as fg)
+    let desc_x = name_x + 4; // "help" is 4 chars
+    let desc_cell = &buf[(desc_x, first_item_y)];
+    let panel_bg = color_bg_panel();
+    assert_eq!(
+        desc_cell.style().fg,
+        Some(panel_bg),
+        "Selected description should use dimmed color (panel bg as fg)"
+    );
+    assert_eq!(
+        desc_cell.style().bg,
+        Some(accent),
+        "Selected description should have accent background"
+    );
+}
