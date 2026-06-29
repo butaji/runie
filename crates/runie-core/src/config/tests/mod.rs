@@ -336,3 +336,24 @@ fn save_nonblocking_writes_file() {
         unsafe { std::env::remove_var("HOME") };
     }
 }
+
+#[test]
+fn config_validation_rejects_unknown_field() {
+    // This test verifies that validation catches unknown fields.
+    // We validate a JSON value directly to avoid serde ignoring unknown TOML fields.
+    let value = serde_json::json!({
+        "provider": "openai",
+        "unknown_field": "this should trigger validation error"
+    });
+    let errors = crate::config::validate::validate(&value);
+    assert!(
+        !errors.is_empty(),
+        "unknown field should produce validation errors: {:?}",
+        errors
+    );
+    assert!(
+        errors.iter().any(|e| e.contains("unknown_field")),
+        "errors should mention unknown_field: {:?}",
+        errors
+    );
+}

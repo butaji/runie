@@ -7,12 +7,12 @@
   {
     "file": "actually-replace-runie-provider-backoff-with-backon.md",
     "title": "Actually replace `runie-provider` custom backoff with `backon`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "add-jsonschema-validation-to-configactor-load.md",
     "title": "Add `jsonschema` validation to `ConfigActor` load path",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-built-in-tool-names.md",
@@ -32,11 +32,11 @@
   {
     "file": "cleanup-verify-tests-and-just-recipes.md",
     "title": "Clean up `verify-tests.sh` and `just lint-fix`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "collapse-actor-handles-to-typed-map.md",
-    "title": ":ActorRef` map",
+    "title": "Collapse `ActorHandles` to a typed `ractor::ActorRef` map",
     "status": "done"
   },
   {
@@ -97,7 +97,7 @@
   {
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
     "title": "Deserialize declarative command YAML with typed structs",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "drop-unused-rand-from-runie-provider.md",
@@ -111,7 +111,7 @@
   },
   {
     "file": "expand-leader-start-for-tui-and-cli.md",
-    "title": ":start` for the full TUI and CLI runtime",
+    "title": "Expand `Leader::start` for the full TUI and CLI runtime",
     "status": "done"
   },
   {
@@ -186,7 +186,7 @@
   },
   {
     "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
-    "title": ":start`",
+    "title": "Migrate TUI and CLI to `Leader::start`",
     "status": "todo"
   },
   {
@@ -206,7 +206,7 @@
   },
   {
     "file": "normalize-remaining-std-mutex-to-parking-lot.md",
-    "title": ":sync::Mutex`/`RwLock` to `parking_lot`",
+    "title": "Normalize remaining `std::sync::Mutex`/`RwLock` to `parking_lot`",
     "status": "done"
   },
   {
@@ -257,7 +257,7 @@
   {
     "file": "replace-custom-nanoid-in-test-runner.md",
     "title": "Replace custom nanoid in test runner",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-custom-retry-with-backon.md",
@@ -277,11 +277,11 @@
   {
     "file": "replace-leftover-macros-with-functions.md",
     "title": "Replace leftover macros with functions",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-legacy-tool-parsers-with-thin-shim.md",
-    "title": "collapse legacy modules and marker stripping",
+    "title": "Finish tool-parser shim: collapse legacy modules and marker stripping",
     "status": "done"
   },
   {
@@ -297,7 +297,7 @@
   {
     "file": "replace-think-filter-with-regex.md",
     "title": "Replace think-block filter with regex",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-tmux-test-with-ratatui-tests.md",

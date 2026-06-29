@@ -257,6 +257,31 @@ impl Config {
             .unwrap_or_default()
     }
 
+    /// Load and validate config asynchronously.
+    ///
+    /// Returns `(config, errors)` where errors is empty on success.
+    /// The config is always the raw loaded value; the caller must decide
+    /// whether to apply it based on `errors.is_empty()`.
+    pub async fn load_async_strict(path: Option<PathBuf>) -> (Self, Vec<String>) {
+        let path_clone = path.clone();
+        match tokio::task::spawn_blocking(move || Self::load_strict(path_clone.as_deref())).await {
+            Ok(Ok(config)) => (config, Vec::new()),
+            Ok(Err(errors)) => (Self::default(), errors),
+            Err(_) => (Self::default(), vec!["load task failed".into()]),
+        }
+    }
+
+    /// Load config asynchronously, returning `None` if validation fails.
+    ///
+    /// Use this when you want to keep the old config on validation failure.
+    pub async fn load_async_checked(path: Option<PathBuf>) -> Option<Self> {
+        let path_clone = path.clone();
+        match tokio::task::spawn_blocking(move || Self::load_strict(path_clone.as_deref())).await {
+            Ok(Ok(config)) => Some(config),
+            _ => None,
+        }
+    }
+
     /// Load configuration from layered sources: defaults → global config →
     /// local project config → environment variables.
     pub fn load_layers() -> Self {
