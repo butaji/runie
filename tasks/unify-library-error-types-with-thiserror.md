@@ -1,9 +1,10 @@
 # Unify library error types with `thiserror`
 
-**Status**: done
+**Status**: todo
 **Milestone**: R5
 **Category**: Architecture / Error Handling
 **Priority**: P0
+**Note**: RunieError is an unused anyhow::Error newtype; anyhow::Result still pervades library APIs.
 
 **Depends on**: none
 **Blocks**: eliminate-production-unwrap-expect

@@ -4,6 +4,7 @@
 **Milestone**: R2
 **Category**: Provider / Configuration
 **Priority**: P1
+**Note**: runie-provider/src/config/mod.rs still manually re-parses .env after dotenvy::dotenv.
 
 **Depends on**: route-cli-config-through-configactor
 **Blocks**: none

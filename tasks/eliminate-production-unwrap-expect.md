@@ -2,8 +2,9 @@
 
 **Status**: done
 **Milestone**: R5
-**Category": Reliability
-**Priority": P2
+**Category**: Reliability
+**Priority**: P2
+**Note**: Actor-spawn unwraps remain in ractor_config.rs, ractor_permission.rs, ractor_turn.rs; Leader::spawn_actors returns Result but still panics.
 
 **Depends on**: unify-library-error-types-with-thiserror
 **Blocks**: none

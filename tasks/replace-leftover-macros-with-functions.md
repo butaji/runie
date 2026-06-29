@@ -4,6 +4,7 @@
 **Milestone**: R6
 **Category**: Core / Refactoring
 **Priority**: P3
+**Note**: Targeted macros were removed; task file checkboxes now reflect completion.
 
 **Depends on**: collapse-dialogstate-variants
 **Blocks**: none

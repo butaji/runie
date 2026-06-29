@@ -3,7 +3,7 @@
 **Status**: done
 **Milestone**: R6
 **Category**: Sessions / Architecture
-**Priority": P2
+**Priority**: P2
 
 **Depends on**: unify-session-store-and-index
 **Blocks**: none

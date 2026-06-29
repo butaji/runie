@@ -4,6 +4,7 @@
 **Milestone**: R5
 **Category**: Architecture / Actors
 **Priority**: P1
+**Note**: runie-protocol crate deleted; types moved to runie-core/src/proto/.
 
 **Depends on**: none
 **Blocks**: unify-cli-json-rpc-transport-and-remove-dead-acp

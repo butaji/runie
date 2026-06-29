@@ -1,9 +1,10 @@
 # Harden async actors against mutex poisoning and startup panics
 
-**Status**: done
+**Status**: todo
 **Milestone**: R5
 **Category**: Architecture / Actors
 **Priority**: P1
+**Note**: runie-agent/src/actor.rs still panics on missing provider/permission handles after emitting Event::Error.
 
 **Depends on**: migrate-production-actors-to-ractor
 **Blocks**: none

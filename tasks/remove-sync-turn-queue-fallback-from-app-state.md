@@ -4,6 +4,7 @@
 **Milestone**: R6
 **Category**: Architecture / Actors
 **Priority**: P1
+**Note**: apply_queue_delivery_sync still exists in update/session.rs as a sync fallback used in test mode.
 
 **Depends on**: dedupe-turn-queue-delivery-logic
 **Blocks**: use-channels-for-subagent-result-collection

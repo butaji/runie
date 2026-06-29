@@ -4,6 +4,7 @@
 **Milestone**: R4
 **Category**: Architecture / Refactoring
 **Priority**: P3
+**Note**: Dozens of repetitive FIXME: Audit environment access comments remain; undocumented #[allow(dead_code)] items remain.
 
 **Depends on**: collapse-actor-handles-to-typed-map, expand-leader-start-for-tui-and-cli, replace-legacy-tool-parsers-with-thin-shim, narrow-runie-core-public-api, route-cli-config-through-configactor, unify-tui-render-test-helpers, fix-keybindings-dead-code
 **Blocks**: none

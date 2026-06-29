@@ -2,8 +2,8 @@
 
 **Status**: done
 **Milestone**: R6
-**Category": Build / CI
-**Priority": P2
+**Category**: Build / CI
+**Priority**: P2
 
 **Depends on**: introduce-cargo-deny-and-cargo-machete-ci
 **Blocks**: none

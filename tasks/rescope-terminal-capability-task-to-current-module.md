@@ -2,8 +2,8 @@
 
 **Status**: done
 **Milestone**: R6
-**Category": TUI / Rendering
-**Priority": P2
+**Category**: TUI / Rendering
+**Priority**: P2
 
 **Depends on**: none
 **Blocks**: none

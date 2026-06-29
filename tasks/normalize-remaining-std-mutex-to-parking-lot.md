@@ -8,6 +8,8 @@
 **Depends on**: migrate-production-actors-to-ractor
 **Blocks**: none
 
+**Note**: Production std::sync::Mutex/RwLock remain in session/tree.rs, provider/config.rs, declarative/register.rs, harness_skills, and runie-tui theme/caps.
+
 ## Description
 
 All files listed in the task already use `parking_lot`:

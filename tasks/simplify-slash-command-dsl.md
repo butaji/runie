@@ -2,8 +2,8 @@
 
 **Status**: done
 **Milestone**: R2
-**Category": Input / Commands
-**Priority": P1
+**Category**: Input / Commands
+**Priority**: P1
 
 **Depends on**: use-clap-derive-for-cli
 **Blocks**: none

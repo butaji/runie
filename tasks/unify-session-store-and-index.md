@@ -4,6 +4,7 @@
 **Milestone**: R1
 **Category**: Sessions
 **Priority**: P0
+**Note**: sessions.json index is still read by /resume and SessionActor::Load, but no longer written.
 
 **Depends on**: delete-dead-actor-modules-and-custom-trait
 **Blocks**: none

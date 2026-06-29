@@ -5,6 +5,7 @@
 **Category**: TUI / Rendering
 **Priority**: P0
 **Note**: Markdown block layout uses tui-markdown for inline spans with a custom overlay for timestamps/glyphs/margins.
+**Note**: tui-markdown is only used in a test helper; production rendering still hand-rolls blocks via message/mod.rs, code.rs, support.rs.
 
 **Depends on**: unify-markdown-processing-around-pulldown-cmark
 **Blocks**: none

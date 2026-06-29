@@ -3,7 +3,7 @@
 **Status**: done
 **Milestone**: R6
 **Category**: Commands / DSL
-**Priority": P2
+**Priority**: P2
 
 **Depends on**: deserialize-declarative-command-yaml-with-typed-structs
 **Blocks**: simplify-slash-command-dsl

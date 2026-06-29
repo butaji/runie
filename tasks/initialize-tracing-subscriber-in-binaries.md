@@ -28,7 +28,7 @@
 - [x] `subscriber_rejects_invalid_filter` — an invalid `RUST_LOG` value is handled gracefully. (Handled by `EnvFilter::try_from_default_env` which returns an error that is converted to `info` fallback.)
 
 ### Layer 2 — Event Handling
-- [ ] `tracing_event_emitted_on_config_load` — a `ConfigLoaded` fact produces a matching `tracing` event in a test subscriber.
+- [x] `tracing_event_emitted_on_config_load` — a `ConfigLoaded` fact produces a matching `tracing::info!` event in a test subscriber. The test uses a `tracing::dispatcher` with a `CaptureLayer` that captures event levels into an `mpsc` channel. `RactorConfigActor` now emits `tracing::info!("config loaded")` alongside each `Event::ConfigLoaded` emission.
 
 ### Layer 3 — Rendering
 - [x] N/A.
@@ -43,6 +43,8 @@
 - `crates/runie-tui/Cargo.toml`
 - `crates/runie-cli/src/main.rs`
 - `crates/runie-tui/src/main.rs`
+- `crates/runie-core/src/actors/config/ractor_config.rs` — added `tracing::info!("config loaded")` alongside `Event::ConfigLoaded` emissions
+- `crates/runie-core/src/actors/config/tests.rs` — added `tracing_event_emitted_on_config_load` test
 
 ## Notes
 

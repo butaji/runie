@@ -4,6 +4,7 @@
 **Milestone**: R6
 **Category**: Configuration
 **Priority**: P2
+**Note**: RactorConfigActor::pre_start emits ConfigLoaded without validating the config; validation only in load_and_emit.
 
 **Depends on**: replace-config-validator-with-jsonschema
 **Blocks**: route-cli-config-through-configactor

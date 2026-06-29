@@ -12,7 +12,7 @@
 
 ## File structure
 
-- `tasks/index.json` — canonical registry of the 24 active cleanup tasks (plus 1 wontfix).
+- `tasks/index.json` — canonical registry of the 22 active cleanup tasks and 1 `wontfix`.
 - **Actor runtime (split into three sequential tasks):**
   - `tasks/migrate-production-actors-to-ractor.md`
   - `tasks/delete-dead-actor-modules-and-custom-trait.md`
@@ -146,14 +146,14 @@
 | 11 | `unify-declarative-resource-loader` | P2 | Extract shared directory-scan/frontmatter logic; unify frontmatter-vs-section-fallback policy. |
 | 12 | `use-pulldown-cmark-frontmatter-for-resource-loader` | P2 | Replace custom frontmatter/body scanner with `pulldown-cmark-frontmatter` + `serde_yaml`. |
 | 13 | `route-cli-config-through-configactor` | P2 | Extend `RactorConfigActor` for global+project paths, layered config, and MCP ops; route CLI inspect/MCP through it. |
-| 14 | `replace-custom-helpers-with-crates` | P2 | `reopened`. Replacement crates are adopted but the legacy modules still exist; finish deleting them. |
+| 14 | `replace-custom-helpers-with-crates` | P2 | `done`. `glob.rs`, `fuzzy.rs`, `path.rs` deleted; `shellexpand`/`nucleo-matcher`/`sublime-fuzzy`/`glob` used directly; `parse_key_combo` moved to `#[cfg(test)]`. |
 | 15 | `narrow-runie-core-public-api` | P2 | Usage-audit first; move `display_width`, `labels`, `sanitize` to `runie-util`; delete `path`/`fuzzy`/`glob` if helper-crate task lands first; narrow the rest. |
 | 16 | `unify-tui-render-test-helpers` | P3 | Move duplicated TUI render helpers into a shared test module. |
 | 17 | `fix-keybindings-dead-code` | P3 | Convert `parse_key_combo` to `#[cfg(test)]` or document it. |
 | 18 | `cleanup-small-duplicates-and-dead-code` | P3 | `partial`. Skill-hook consolidation, dead actor-handle fields, stale allows, repetitive `FIXME` comments, telemetry-vs-tracing decision. |
 | 19 | `replace-custom-retry-with-backon` | P0 | Delete `runie-provider/src/retry.rs`; use `backon`/`reqwest-retry`. |
 | 20 | `replace-xor-auth-with-keyring` | P0 | Store tokens in OS keyring with headless fallback. |
-| 21 | `replace-config-validator-with-jsonschema` | P0 | Validate `Config` against generated schema. |
+| 21 | `replace-config-validator-with-jsonschema` | P0 | `partial`. Hand-written validator replaced with `jsonschema`; `validate_registry` remains inline. |
 | 22 | `unify-provider-credential-resolution-with-dotenvy` | P1 | Load `.env` once; consolidate provider credential resolution. |
 | 23 | `unify-provider-config-persistence` | P1 | Single config persistence helper or `RactorConfigActor` owner. |
 | 24 | `use-clap-derive-for-cli` | P0 | Typed CLI parsing with `clap`. |
@@ -389,4 +389,5 @@ The final state must satisfy:
 - The fourth-pass review (provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, DSL/view/dialog/commands) is documented in [`2026-06-28-fourth-pass-crate-review.md`](2026-06-28-fourth-pass-crate-review.md).
 - The fifth-pass review (build/CI/test harness, error handling/tracing/telemetry, protocol/IPC leftovers, declarative loaders/DSLs, macros/codegen) is documented in [`2026-06-28-fifth-pass-crate-review.md`](2026-06-28-fifth-pass-crate-review.md).
 - A fresh five-round review after implementation found additional gaps; see [`2026-06-28-five-round-review-synthesis.md`](2026-06-28-five-round-review-synthesis.md) for details, peer-codebase learnings, and `ctx7` confirmations.
+- A final five-round sweep after the backlog was mostly cleared found additional custom code and prematurely closed tasks; see [`2026-06-28-seventh-pass-final-sweep.md`](2026-06-28-seventh-pass-final-sweep.md).
 - If any task proves larger than expected, split it further and update `tasks/index.json` and this roadmap.

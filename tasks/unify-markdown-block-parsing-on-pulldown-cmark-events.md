@@ -4,6 +4,7 @@
 **Milestone**: R6
 **Category**: Core / State
 **Priority**: P1
+**Note**: heal_markdown still uses a char-level state machine; AC requires event-driven healing.
 
 **Depends on**: unify-markdown-processing-around-pulldown-cmark
 **Blocks**: replace-tui-markdown-block-layout-with-tui-markdown

@@ -4,6 +4,7 @@
 **Milestone**: R6
 **Category**: Security / Configuration
 **Priority**: P1
+**Note**: api_key is still String in ModelProvider; plaintext fallback remains; AuthToken.token is String.
 
 **Depends on**: replace-xor-auth-with-keyring
 **Blocks**: type-and-unify-provider-model-layer

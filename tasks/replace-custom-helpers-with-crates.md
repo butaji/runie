@@ -5,6 +5,7 @@
 **Milestone**: R1
 **Category**: Core / State
 **Priority**: P1
+**Note**: crates/runie-core/src/path.rs still exists with custom normalize_path.
 
 **Depends on**: none
 **Blocks**: narrow-runie-core-public-api

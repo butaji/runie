@@ -3,7 +3,7 @@
 **Status**: done
 **Milestone**: R6
 **Category**: Core / Declarative DSL
-**Priority": P2
+**Priority**: P2
 
 **Depends on**: use-pulldown-cmark-frontmatter-for-resource-loader
 **Blocks**: move-built-in-slash-commands-to-declarative-yaml
