@@ -212,7 +212,7 @@
   {
     "file": "reconnect-tui-agent-actor-channel.md",
     "title": "Reconnect or remove TUI `AgentActor` channel",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-redundant-check-field-access-script.md",
