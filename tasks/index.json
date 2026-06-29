@@ -387,7 +387,7 @@
   {
     "file": "unify-provider-config-persistence.md",
     "title": "Unify provider-config persistence helpers",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-provider-credential-resolution-with-dotenvy.md",

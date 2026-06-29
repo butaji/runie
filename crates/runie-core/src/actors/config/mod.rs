@@ -1,6 +1,6 @@
 //! `ConfigActor` — the single owner of `~/.runie/config.toml`.
 
-mod file_helpers;
+pub mod file_helpers;
 pub mod messages;
 pub mod ractor_config;
 #[cfg(test)]

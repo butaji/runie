@@ -2,9 +2,13 @@
 //!
 //! This module consolidates provider credential management that was previously
 //! spread across `login_config/` and various handlers.
+//!
+//! For actor-based config operations, see `actors/config/file_helpers.rs`.
 
 use std::path::PathBuf;
 use std::sync::RwLock;
+
+use crate::actors::config::file_helpers;
 
 thread_local! {
     static TEST_CONFIG_PATH: std::cell::RefCell<Option<PathBuf>> = const {
@@ -62,30 +66,16 @@ pub fn save_provider_config(
     api_key: &str,
     models: &[String],
 ) -> anyhow::Result<()> {
-    with_write_lock(|config| {
-        let provider_type = config
-            .model_providers
-            .get(name)
-            .and_then(|p| p.provider_type.clone());
-        config.model_providers.insert(
-            name.into(),
-            crate::config::ModelProvider {
-                provider_type,
-                base_url: base_url.into(),
-                api_key: api_key.into(),
-                models: models.into(),
-            },
-        );
-    })
-    .map(|_| ())
+    // Hold the write lock while saving to prevent concurrent corruption
+    let _guard = CONFIG_LOCK.write().unwrap();
+    file_helpers::save_provider_to_path(&config_path(), name, base_url, api_key, models)
 }
 
 /// Remove a provider configuration from `~/.runie/config.toml`.
 pub fn remove_provider_config(name: &str) -> anyhow::Result<()> {
-    with_write_lock(|config| {
-        config.model_providers.remove(name);
-    })
-    .map(|_| ())
+    // Hold the write lock while removing to prevent concurrent corruption
+    let _guard = CONFIG_LOCK.write().unwrap();
+    file_helpers::remove_provider_from_path(&config_path(), name)
 }
 
 /// Get the full configuration for a single provider, including API key.
