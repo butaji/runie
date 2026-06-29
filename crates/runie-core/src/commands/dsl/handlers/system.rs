@@ -4,9 +4,9 @@ use crate::commands::{CommandCategory, CommandRegistry, CommandResult, DialogTyp
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
 
-use super::spec::{CommandKind, CommandSpec};
+use crate::commands::dsl::spec::{build_cmd, CommandKind, CommandSpec};
 
-static SYSTEM_COMMANDS: &[CommandSpec] = &[
+static COMMANDS: &[CommandSpec] = &[
     CommandSpec {
         name: "settings",
         desc: "Open settings dialog",
@@ -106,7 +106,9 @@ static SYSTEM_COMMANDS: &[CommandSpec] = &[
 ];
 
 pub fn register(registry: &mut CommandRegistry) {
-    super::spec::register_commands(registry, SYSTEM_COMMANDS);
+    for spec in COMMANDS {
+        registry.register(build_cmd(spec));
+    }
 }
 
 fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
@@ -124,13 +126,11 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::CopyToClipboard(text))
 }
 
-fn handle_reload(_state: &mut AppState, _: &str) -> CommandResult {
-    // Emit ReloadAll event which will be handled by ConfigActor and other actors
+fn handle_reload(_: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ReloadAll)
 }
 
-fn handle_settings(_state: &mut AppState, _: &str) -> CommandResult {
-    // Emit intent event; owning actor handles opening the dialog
+fn handle_settings(_: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ToggleSettingsDialog)
 }
 
@@ -180,7 +180,6 @@ fn handle_theme(_state: &mut AppState, args: &str) -> CommandResult {
     if name.is_empty() {
         return CommandResult::OpenDialog(DialogType::ThemeSelector);
     }
-    // Emit SwitchTheme event; handler will validate and show error if invalid
     CommandResult::Event(crate::Event::SwitchTheme { name: name.to_owned() })
 }
 
@@ -199,7 +198,7 @@ fn handle_providers(_: &mut AppState, _args: &str) -> CommandResult {
 fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {
     let mut panel = Panel::new("hotkeys", " Keyboard Shortcuts ");
 
-    let mut bindings: Vec<(String, String)> = state
+    let mut bindings: Vec<_> = state
         .config
         .keybindings
         .iter()
@@ -218,12 +217,6 @@ fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::OpenPanelStack(Box::new(PanelStack::new(panel)))
 }
 
-// ── Prompt command handler ─────────────────────────────────────────────────────
-
-/// Handler for the `/prompt` command.
-/// Emits `RunPromptCommand` intent for state mutation.
 fn handle_prompt(_state: &mut AppState, args: &str) -> CommandResult {
-    CommandResult::Event(crate::Event::RunPromptCommand {
-        name: args.trim().to_owned(),
-    })
+    CommandResult::Event(crate::Event::RunPromptCommand { name: args.trim().to_owned() })
 }

@@ -1,10 +1,4 @@
 //! Session commands.
-//!
-//! Form submissions are routed through the command registry (see
-//! `dispatch_form_to_registry` in `update/dialog/form.rs`), which calls the
-//! canonical handlers in `run.rs`.  The `submit` field in `CommandKind::Form`
-//! is kept for backward compatibility but is never called for forms with a
-//! `cmd_name` set.
 
 pub mod run;
 
@@ -13,9 +7,9 @@ pub use run::{run_compact, run_fork, run_name};
 use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::model::AppState;
 
-use super::spec::{CommandKind, CommandSpec};
+use crate::commands::dsl::spec::{build_cmd, CommandKind, CommandSpec};
 
-static SESSION_COMMANDS: &[CommandSpec] = &[
+static COMMANDS: &[CommandSpec] = &[
     CommandSpec {
         name: "save",
         desc: "Save current session",
@@ -148,10 +142,7 @@ static SESSION_COMMANDS: &[CommandSpec] = &[
         sub: true,
         kind: CommandKind::FormWithHandler {
             title: "Compact Context",
-            fields: &[
-                ("Keep tokens", "2000", "keep"),
-                ("Focus", "optional focus keyword", "focus"),
-            ],
+            fields: &[("Keep tokens", "2000", "keep"), ("Focus", "optional focus keyword", "focus")],
             handler: run::run_compact,
         },
     },
@@ -182,10 +173,10 @@ static SESSION_COMMANDS: &[CommandSpec] = &[
 ];
 
 pub fn register(registry: &mut CommandRegistry) {
-    super::spec::register_commands(registry, SESSION_COMMANDS);
+    for spec in COMMANDS {
+        registry.register(build_cmd(spec));
+    }
 }
-
-// ── Command handlers ──────────────────────────────────────────────────────────
 
 fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
     if let Some(handles) = state.actor_handles().cloned() {
@@ -215,8 +206,6 @@ fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
     state.dialog_back_stack_mut().clear();
     *state.login_flow_mut() = None;
-    // Dismiss any pending permission request via actor when available.
-    // Fall back to direct state update for tests without actor handles.
     if let Some(handles) = state.actor_handles() {
         handles.try_dismiss_permission();
     } else {
@@ -226,9 +215,7 @@ fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     state.session_mut().session_created_at = now;
     state.session_mut().session_updated_at = now;
     state.messages_changed();
-    // Add confirmation message
     state.add_system_msg("New session started".into());
-    // Clear queues through TurnActor to maintain authoritative state
     CommandResult::Event(crate::Event::ClearQueues)
 }
 
@@ -270,12 +257,7 @@ fn session_token_count(state: &AppState) -> usize {
         .session
         .messages
         .iter()
-        .map(|m| {
-            state
-                .agent_state()
-                .token_tracker
-                .estimate_input(&m.content())
-        })
+        .map(|m| state.agent_state().token_tracker.estimate_input(&m.content()))
         .sum()
 }
 
@@ -288,12 +270,7 @@ fn count_messages_by_role(state: &AppState) -> (usize, usize, usize) {
 }
 
 fn count_role(state: &AppState, role: crate::model::Role) -> usize {
-    state
-        .session
-        .messages
-        .iter()
-        .filter(|m| m.role == role)
-        .count()
+    state.session().messages.iter().filter(|m| m.role == role).count()
 }
 
 fn build_session_info(
@@ -306,16 +283,13 @@ fn build_session_info(
     } else {
         &state.input().current_prompt
     };
-    let read_only = if state.config().read_only {
-        "on"
-    } else {
-        "off"
-    };
+    let read_only = if state.config().read_only { "on" } else { "off" };
     let trust = project_trust_status(state);
+    let session = state.session();
     format!(
         "Session: {}\nMessages: {} ({} user, {} assistant, {} tool)\nTokens: {} estimated\nProvider: {}\nModel: {}\nPrompt: {}\nThinking: {}\nRead-only: {}\nTrust: {}\nCreated: {}\nUpdated: {}",
-        state.session().session_display_name.as_deref().unwrap_or("unnamed"),
-        state.session().messages.len(),
+        session.session_display_name.as_deref().unwrap_or("unnamed"),
+        session.messages.len(),
         user,
         assistant,
         tool,
@@ -326,8 +300,8 @@ fn build_session_info(
         state.config().thinking_level.as_str(),
         read_only,
         trust,
-        crate::labels::format_timestamp(state.session().session_created_at),
-        crate::labels::format_timestamp(state.session().session_updated_at),
+        crate::labels::format_timestamp(session.session_created_at),
+        crate::labels::format_timestamp(session.session_updated_at),
     )
 }
 
@@ -381,8 +355,5 @@ fn load_session_metadata(
 ) -> anyhow::Result<crate::session::index::SessionMetadata> {
     let data_dir = store.dir().parent().unwrap_or(store.dir()).to_path_buf();
     let index = crate::session::index::SessionIndex::load(&data_dir)?;
-    index
-        .get(name)
-        .cloned()
-        .ok_or_else(|| anyhow::anyhow!("not found"))
+    index.get(name).cloned().ok_or_else(|| anyhow::anyhow!("not found"))
 }

@@ -7,7 +7,8 @@ use crate::resource_loader::{
     derive_name_from_path, is_user_invocable, load_resources_from_dir,
 };
 
-use super::types::{CommandCategory, CommandDef, SkillDef, Trigger};
+use super::types::{CommandDef, SkillDef, Trigger};
+use crate::commands::CommandCategory;
 
 /// Generic loader for declarative configuration.
 pub struct DeclarativeLoader {
@@ -132,8 +133,8 @@ pub(crate) fn parse_command_yaml(path: &Path) -> Option<CommandDef> {
         name,
         description: get_string(map, "description").unwrap_or_default(),
         category: get_string(map, "category")
-            .map(|s| CommandCategory::parse(&s))
-            .unwrap_or_default(),
+            .map(|s| super::types::parse_category(&s))
+            .unwrap_or(CommandCategory::System),
         intent: get_string(map, "intent").unwrap_or_default(),
         shortcut: get_string(map, "shortcut"),
         has_subcommands: get_bool(map, "subcommands").unwrap_or(false),

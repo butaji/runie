@@ -3,14 +3,14 @@
 //! # DSL Quick Reference
 //!
 //! ```
-//! use runie_core::commands::CommandCategory;
+//! use runie_core::commands::{CommandCategory, cmd};
 //! use runie_core::Event;
 //!
 //! // Simple message command
-//! let _ = runie_core::cmd!("hello", "Hello!");
+//! let _ = cmd("hello").msg("Hello!");
 //!
 //! // Full command definition
-//! let _ = runie_core::commands::cmd("save")
+//! let _ = cmd("save")
 //!     .desc("Save session")
 //!     .alias("s")
 //!     .category(CommandCategory::Session)

@@ -4,13 +4,9 @@ use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
 
-use super::spec::{CommandKind, CommandSpec};
+use crate::commands::dsl::spec::{build_cmd, CommandKind, CommandSpec};
 
-fn quit(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::Event::Quit)
-}
-
-static CORE_COMMANDS: &[CommandSpec] = &[
+static COMMANDS: &[CommandSpec] = &[
     CommandSpec {
         name: "help",
         desc: "Show command reference",
@@ -30,11 +26,17 @@ static CORE_COMMANDS: &[CommandSpec] = &[
 ];
 
 pub fn register(registry: &mut CommandRegistry) {
-    super::spec::register_commands(registry, CORE_COMMANDS);
+    for spec in COMMANDS {
+        registry.register(build_cmd(spec));
+    }
 }
 
 fn handle_help(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::OpenPanelStack(Box::new(PanelStack::new(build_help_panel(state))))
+}
+
+fn quit(_: &mut AppState, _: &str) -> CommandResult {
+    CommandResult::Event(crate::Event::Quit)
 }
 
 fn build_help_panel(state: &AppState) -> Panel {
@@ -46,20 +48,20 @@ fn build_help_panel(state: &AppState) -> Panel {
     let mut items: Vec<_> = state.registry().list();
     items.sort_by_key(|d| (d.category, &d.name));
 
-    for cmd in items {
-        if last_category != Some(cmd.category) {
+    for spec in items {
+        if last_category != Some(spec.category) {
             if last_category.is_some() {
                 panel = panel.separator();
             }
-            panel = panel.header(cmd.category.label());
-            last_category = Some(cmd.category);
+            panel = panel.header(spec.category.label());
+            last_category = Some(spec.category);
         }
-        let aliases = if cmd.aliases.is_empty() {
+        let aliases = if spec.aliases.is_empty() {
             String::new()
         } else {
-            format!(", {}", cmd.aliases.join(", "))
+            format!(", {}", spec.aliases.join(", "))
         };
-        let label = format!("/{}{}  {}", cmd.name, aliases, cmd.desc);
+        let label = format!("/{}{}  {}", spec.name, aliases, spec.desc);
         panel = panel.item(label, ItemAction::Close);
     }
     panel

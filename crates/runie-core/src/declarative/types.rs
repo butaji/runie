@@ -1,24 +1,18 @@
 //! Types for declarative configuration.
-//!
-//! This module defines the types for loading skills and commands from
-//! markdown/YAML files. The actual registration into the command registry
-//! is handled by the `declarative::register` module.
 
 use std::path::PathBuf;
+
+use crate::commands::CommandCategory;
 
 /// A trigger that activates a skill or command.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Trigger {
-    /// Slash command trigger (e.g., `/check-work`).
     Command(String),
-    /// File pattern trigger (e.g., `*.xlsx`).
     FilePattern(String),
-    /// Keyboard shortcut trigger (e.g., `Ctrl+b`).
     Shortcut(String),
 }
 
 impl Trigger {
-    /// Parse a trigger from a string.
     pub fn parse(s: &str) -> Option<Self> {
         let s = s.trim();
         if s.starts_with('/') {
@@ -36,66 +30,37 @@ impl Trigger {
 /// A loaded skill definition from a markdown file.
 #[derive(Debug, Clone)]
 pub struct SkillDef {
-    /// Unique skill name.
     pub name: String,
-    /// Human-readable description.
     pub description: String,
-    /// Additional context or instructions.
     pub context: Option<String>,
-    /// Triggers that activate this skill.
     pub triggers: Vec<Trigger>,
-    /// File path where this skill was defined.
     pub file_path: PathBuf,
-    /// Whether users can invoke this skill directly.
     pub user_invocable: bool,
 }
 
 /// A loaded command definition from a YAML file.
 #[derive(Debug, Clone)]
 pub struct CommandDef {
-    /// Unique command name.
     pub name: String,
-    /// Human-readable description.
     pub description: String,
-    /// Category for organization.
+    /// Category — uses the shared `CommandCategory` from commands DSL.
     pub category: CommandCategory,
-    /// Event variant name to emit when command executes.
     pub intent: String,
-    /// Keyboard shortcut (if any).
     pub shortcut: Option<String>,
-    /// Whether this command has sub-commands.
     pub has_subcommands: bool,
-    /// File path where this command was defined.
     pub file_path: PathBuf,
 }
 
-/// Command category for organization.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
-pub enum CommandCategory {
-    Session,
-    Model,
-    Tool,
-    System,
-    Help,
-    #[default]
-    Unknown,
-}
-
-impl CommandCategory {
-    /// Parse from string.
-    pub fn parse(s: &str) -> Self {
-        match s.to_lowercase().as_str() {
-            "session" => CommandCategory::Session,
-            "model" => CommandCategory::Model,
-            "tool" => CommandCategory::Tool,
-            "system" => CommandCategory::System,
-            "help" => CommandCategory::Help,
-            _ => CommandCategory::Unknown,
-        }
+/// Parse a declarative category string to the shared `CommandCategory`.
+/// Tool, Help, and Unknown map to System since they don't have DSL equivalents.
+pub fn parse_category(s: &str) -> CommandCategory {
+    match s.to_lowercase().as_str() {
+        "session" => CommandCategory::Session,
+        "model" => CommandCategory::Model,
+        "tool" | "help" | "system" | "unknown" | "" => CommandCategory::System,
+        _ => CommandCategory::System,
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -121,8 +86,12 @@ mod tests {
 
     #[test]
     fn command_category_parse() {
-        assert_eq!(CommandCategory::parse("session"), CommandCategory::Session);
-        assert_eq!(CommandCategory::parse("Session"), CommandCategory::Session);
-        assert_eq!(CommandCategory::parse("unknown"), CommandCategory::Unknown);
+        use crate::commands::CommandCategory;
+        assert_eq!(parse_category("session"), CommandCategory::Session);
+        assert_eq!(parse_category("Session"), CommandCategory::Session);
+        assert_eq!(parse_category("model"), CommandCategory::Model);
+        assert_eq!(parse_category("tool"), CommandCategory::System);
+        assert_eq!(parse_category("help"), CommandCategory::System);
+        assert_eq!(parse_category("unknown"), CommandCategory::System);
     }
 }

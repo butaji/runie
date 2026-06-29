@@ -1,33 +1,16 @@
 //! Registration of declarative commands and skills.
-//!
-//! This module bridges the gap between YAML/markdown definitions and the
-//! runtime command registry. It converts declarative CommandDef objects
-//! into dsl::CommandDef objects with proper handler functions.
 
-use std::collections::HashMap;
-use std::sync::RwLock;
-
-use crate::commands::dsl::{CommandCategory as DslCategory, CommandDef as DslCommandDef, CommandFlow};
+use crate::commands::dsl::{CommandFlow, CommandDef};
 use crate::commands::CommandRegistry;
 use crate::model::AppState;
 
-use super::types::{CommandDef as DeclarativeCommandDef, CommandCategory as DeclarativeCategory, SkillDef};
+use super::types::{CommandDef as DeclarativeCommandDef, SkillDef};
 
-/// Global registry of intent-to-event mappings for declarative commands.
-static INTENT_EVENTS: RwLock<Option<HashMap<&'static str, EventBuilder>>> = RwLock::new(None);
-
-/// Event builder function type.
-type EventBuilder = fn(args: &str) -> crate::Event;
-
-// ── Public API ────────────────────────────────────────────────────────────────
-
-/// Register all commands from a declarative command definition.
 pub fn register_declarative_command(registry: &mut CommandRegistry, cmd: DeclarativeCommandDef) {
-    let dsl_cmd = build_dsl_command(cmd);
-    registry.register(dsl_cmd);
+    let def = build_def(cmd);
+    registry.register(def);
 }
 
-/// Register multiple declarative commands.
 pub fn register_declarative_commands(
     registry: &mut CommandRegistry,
     commands: impl IntoIterator<Item = DeclarativeCommandDef>,
@@ -37,7 +20,6 @@ pub fn register_declarative_commands(
     }
 }
 
-/// Register skills loaded from declarative files.
 pub fn register_declarative_skills(
     skills: impl IntoIterator<Item = SkillDef>,
 ) -> Vec<crate::skills::Skill> {
@@ -46,54 +28,45 @@ pub fn register_declarative_skills(
 
 // ── Command building ──────────────────────────────────────────────────────────
 
-fn build_dsl_command(cmd: DeclarativeCommandDef) -> DslCommandDef {
+fn build_def(cmd: DeclarativeCommandDef) -> CommandDef {
     let intent: &'static str = Box::leak(cmd.intent.clone().into_boxed_str());
-    
-    // Register event builder for this intent
+
     let builder = get_event_builder(intent);
     register_intent(intent, builder);
 
-    let category = convert_category(cmd.category);
     let is_sub = cmd.has_subcommands;
 
-    // Create a PanelStack-based command that emits the event
     let panel_fn = move |_state: &mut AppState, args: &str| {
         let evt = if let Some(build) = get_intent_builder(intent) {
             build(args)
         } else {
             return crate::dialog::PanelStack::new(
-                crate::dialog::Panel::new("error", "Error").header("Handler not found")
+                crate::dialog::Panel::new("error", "Error").header("Handler not found"),
             );
         };
         crate::dialog::PanelStack::new(
-            crate::dialog::Panel::new("done", "Done").header(format!("Emitted: {:?}", evt))
+            crate::dialog::Panel::new("done", "Done").header(format!("Emitted: {:?}", evt)),
         )
     };
 
-    // Build command with proper lifetime handling
-    let mut dsl_cmd = DslCommandDef::new("<declarative>")
-        .category(category);
-    dsl_cmd.name = cmd.name;
-    dsl_cmd.desc = cmd.description;
-    dsl_cmd.flow = CommandFlow::PanelStack(std::sync::Arc::new(panel_fn));
+    let mut def = CommandDef::new("<declarative>").category(cmd.category);
+    def.name = cmd.name;
+    def.desc = cmd.description;
+    def.flow = CommandFlow::PanelStack(std::sync::Arc::new(panel_fn));
     if is_sub {
-        dsl_cmd = dsl_cmd.sub();
+        def.is_sub = true;
     }
-    dsl_cmd
-}
-
-fn convert_category(cat: DeclarativeCategory) -> DslCategory {
-    match cat {
-        DeclarativeCategory::Session => DslCategory::Session,
-        DeclarativeCategory::Model => DslCategory::Model,
-        DeclarativeCategory::Tool => DslCategory::System,
-        DeclarativeCategory::System => DslCategory::System,
-        DeclarativeCategory::Help => DslCategory::System,
-        DeclarativeCategory::Unknown => DslCategory::System,
-    }
+    def
 }
 
 // ── Intent registry ─────────────────────────────────────────────────────────
+
+use std::collections::HashMap;
+use std::sync::RwLock;
+
+static INTENT_EVENTS: RwLock<Option<HashMap<&'static str, EventBuilder>>> = RwLock::new(None);
+
+type EventBuilder = fn(args: &str) -> crate::Event;
 
 fn register_intent(intent: &'static str, builder: EventBuilder) {
     let mut intents = INTENT_EVENTS.write().unwrap();
@@ -136,7 +109,7 @@ fn get_event_builder(intent: &str) -> EventBuilder {
         "RejectEdit" => |_args| crate::Event::RejectEdit,
         "ReloadAll" => |_args| crate::Event::ReloadAll,
         "ProvidersDialog" => |_args| crate::Event::ProvidersDialog,
-        _ => |_args| crate::Event::ShowDiagnostics, // Fallback
+        _ => |_args| crate::Event::ShowDiagnostics,
     }
 }
 
@@ -167,16 +140,6 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn test_category_conversion() {
-        assert_eq!(convert_category(DeclarativeCategory::Session), DslCategory::Session);
-        assert_eq!(convert_category(DeclarativeCategory::Model), DslCategory::Model);
-        assert_eq!(convert_category(DeclarativeCategory::Tool), DslCategory::System);
-        assert_eq!(convert_category(DeclarativeCategory::System), DslCategory::System);
-        assert_eq!(convert_category(DeclarativeCategory::Help), DslCategory::System);
-        assert_eq!(convert_category(DeclarativeCategory::Unknown), DslCategory::System);
-    }
-
-    #[test]
     fn test_compact_args_parsing() {
         assert_eq!(parse_compact_args(""), ("2000".to_owned(), String::new()));
         assert_eq!(parse_compact_args("1000"), ("1000".to_owned(), String::new()));
@@ -184,7 +147,7 @@ mod tests {
     }
 
     #[test]
-    fn test_register_command_creates_dsl_command() {
+    fn test_register_command_creates_def() {
         let temp_dir = tempdir().unwrap();
         let cmd_path = temp_dir.path().join("test.yaml");
         std::fs::write(

@@ -10,13 +10,6 @@ pub mod session;
 pub mod system;
 pub mod tool;
 
-/// Re-export spec so handler modules can use `super::spec::CommandSpec`.
-pub mod spec {
-    pub use crate::commands::dsl::spec::{
-        build_cmd, register_commands, CommandKind, CommandSpec, FormSubmitFn,
-    };
-}
-
 pub fn register_all(registry: &mut crate::commands::CommandRegistry) {
     session::register(registry);
     model::register(registry);

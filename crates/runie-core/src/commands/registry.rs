@@ -121,16 +121,11 @@ impl DialogState {
 mod dialog_state_tests {
     use super::*;
 
-    // Layer 1: dialog_transitions_are_valid
-    // The with_panel_stack! macro provides a uniform interface for all PanelStack variants.
-    // Invalid transitions: trying to get panels from Welcome returns None.
     #[test]
     fn dialog_transitions_are_valid() {
-        // Welcome has no panel stack — panel_stack() returns None
         let welcome = DialogState::Welcome;
         assert!(welcome.panel_stack().is_none());
 
-        // Active variants all have a panel stack
         let stack = PanelStack::new(crate::dialog::Panel::new("test", "Test"));
         for kind in [
             DialogKind::CommandPalette,
@@ -141,41 +136,31 @@ mod dialog_state_tests {
             DialogKind::Generic,
         ] {
             let active = DialogState::Active { kind, panels: stack.clone() };
-            assert!(
-                active.panel_stack().is_some(),
-                "{kind:?} should have a panel stack"
-            );
+            assert!(active.panel_stack().is_some(), "{kind:?} should have a panel stack");
         }
     }
 
-    // Layer 1: dialog_prompt_data_unique
-    // Only the Active variant carries panel data; Welcome carries none.
     #[test]
     fn dialog_prompt_data_unique() {
-        // Welcome stores no panel data
         let welcome = DialogState::Welcome;
         let welcome2 = DialogState::Welcome;
-        assert_eq!(welcome, welcome2); // Zero data variant
+        assert_eq!(welcome, welcome2);
 
-        // Active variants carry their kind AND panels
         let stack = PanelStack::new(crate::dialog::Panel::new("a", "A"));
         let active_a = DialogState::Active { kind: DialogKind::CommandPalette, panels: stack.clone() };
         let active_b = DialogState::Active { kind: DialogKind::ModelSelector, panels: stack.clone() };
-        assert_ne!(active_a, active_b, "Different kinds are different states");
+        assert_ne!(active_a, active_b);
 
         let stack2 = PanelStack::new(crate::dialog::Panel::new("b", "B"));
         let active_c = DialogState::Active { kind: DialogKind::CommandPalette, panels: stack2 };
-        assert_ne!(active_a, active_c, "Different panels are different states");
+        assert_ne!(active_a, active_c);
     }
 
-    // Layer 1: Active variant exposes its kind
     #[test]
     fn active_variant_carries_kind() {
         let stack = PanelStack::new(crate::dialog::Panel::new("x", "X"));
         let active = DialogState::Active { kind: DialogKind::Settings, panels: stack };
-        // panel_stack() confirms we have the stack
         assert!(active.panel_stack().is_some());
-        // Active is not Welcome
         assert!(!matches!(active, DialogState::Welcome));
     }
 }
@@ -195,9 +180,8 @@ impl AppState {
         let (name, args) = input.split_once(' ').unwrap_or((input, ""));
 
         match self.registry().get(name) {
-            Some(cmd) => {
-                let (cmd_name, flow) = (cmd.name.clone(), cmd.flow.clone());
-                // Track usage for ranking
+            Some(spec) => {
+                let (cmd_name, flow) = (spec.name.clone(), spec.flow.clone());
                 self.record_command_usage(&cmd_name);
                 let result = flow.exec(self, &cmd_name, args);
                 if matches!(result, CommandResult::None) {

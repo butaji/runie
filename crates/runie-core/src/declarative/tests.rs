@@ -6,7 +6,8 @@ mod loader_tests {
     use std::path::Path;
 
     // Re-export types for tests
-    use crate::declarative::types::{CommandCategory, CommandDef, SkillDef, Trigger};
+    use crate::declarative::types::{CommandDef, SkillDef, Trigger};
+    use crate::commands::CommandCategory;
     use crate::declarative::loader::{
         load_skills_from_dir, parse_command_yaml, parse_triggers,
     };
@@ -197,17 +198,19 @@ Content
 
     #[test]
     fn command_category_parses_known_values() {
-        assert_eq!(CommandCategory::parse("session"), CommandCategory::Session);
-        assert_eq!(CommandCategory::parse("Session"), CommandCategory::Session);
-        assert_eq!(CommandCategory::parse("MODEL"), CommandCategory::Model);
-        assert_eq!(CommandCategory::parse("Tool"), CommandCategory::Tool);
-        assert_eq!(CommandCategory::parse("system"), CommandCategory::System);
+        assert_eq!(crate::declarative::types::parse_category("session"), CommandCategory::Session);
+        assert_eq!(crate::declarative::types::parse_category("Session"), CommandCategory::Session);
+        assert_eq!(crate::declarative::types::parse_category("MODEL"), CommandCategory::Model);
+        assert_eq!(crate::declarative::types::parse_category("system"), CommandCategory::System);
     }
 
     #[test]
-    fn command_category_defaults_to_unknown() {
-        assert_eq!(CommandCategory::parse("unknown"), CommandCategory::Unknown);
-        assert_eq!(CommandCategory::parse(""), CommandCategory::Unknown);
+    fn command_category_defaults_to_system() {
+        // Tool, Help, Unknown all map to System
+        assert_eq!(crate::declarative::types::parse_category("unknown"), CommandCategory::System);
+        assert_eq!(crate::declarative::types::parse_category(""), CommandCategory::System);
+        assert_eq!(crate::declarative::types::parse_category("tool"), CommandCategory::System);
+        assert_eq!(crate::declarative::types::parse_category("help"), CommandCategory::System);
     }
 
     // ── Skill definition tests ────────────────────────────────────────────────

@@ -2,11 +2,11 @@
 
 use crate::commands::{CommandCategory, CommandRegistry, CommandResult, DialogType};
 use crate::dialog::{ItemAction, Panel, PanelStack};
-use crate::model::AppState;
+use crate::model::{AppState, ThinkingLevel};
 
-use super::spec::{CommandKind, CommandSpec};
+use crate::commands::dsl::spec::{build_cmd, CommandKind, CommandSpec};
 
-static MODEL_COMMANDS: &[CommandSpec] = &[
+static COMMANDS: &[CommandSpec] = &[
     CommandSpec {
         name: "model",
         desc: "Switch model",
@@ -34,7 +34,9 @@ static MODEL_COMMANDS: &[CommandSpec] = &[
 ];
 
 pub fn register(registry: &mut CommandRegistry) {
-    super::spec::register_commands(registry, MODEL_COMMANDS);
+    for spec in COMMANDS {
+        registry.register(build_cmd(spec));
+    }
 }
 
 pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
@@ -75,9 +77,6 @@ fn switch_to_model(state: &mut AppState, provider: &str, model: &str) -> Command
 }
 
 fn is_model_configured(state: &AppState, provider: &str, model: &str) -> bool {
-    // Only providers/models explicitly chosen in config.toml are usable.
-    // This keeps `/model` and `/provider` aligned: the allowed set is
-    // authored through `/provider`, and `/model` selects from that set.
     state
         .configured_providers()
         .iter()
@@ -89,7 +88,7 @@ fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
     if rest.is_empty() {
         return open_thinking_panel(state);
     }
-    match rest.parse::<crate::model::ThinkingLevel>() {
+    match rest.parse::<ThinkingLevel>() {
         Ok(level) => {
             state.config_mut().thinking_level = level;
             CommandResult::Message(format!(
@@ -102,7 +101,6 @@ fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
 }
 
 fn open_thinking_panel(state: &mut AppState) -> CommandResult {
-    use crate::model::ThinkingLevel;
     let current = state.config().thinking_level;
 
     let mut panel = Panel::new("thinking", "Thinking Level")
@@ -131,9 +129,7 @@ fn handle_scoped_models(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::OpenDialog(DialogType::ScopedModels)
 }
 
-// ── Form-submit handlers ──────────────────────────────────────────────────────
-
-pub fn run_thinking(state: &mut AppState, level: crate::model::ThinkingLevel) {
+pub fn run_thinking(state: &mut AppState, level: ThinkingLevel) {
     state.config_mut().thinking_level = level;
     state.add_system_msg(format!(
         "Thinking level set to: {}",

@@ -1,27 +1,20 @@
 //! Safety and permission commands.
 
-use super::spec::{CommandKind, CommandSpec};
 use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::model::AppState;
 
-fn toggle_readonly(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::Event::ToggleReadOnly)
-}
-fn trust_project(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::Event::TrustProject)
-}
-fn untrust_project(_: &mut AppState, _: &str) -> CommandResult {
-    CommandResult::Event(crate::Event::UntrustProject)
-}
+use crate::commands::dsl::spec::{build_cmd, CommandKind, CommandSpec};
 
-static SAFETY_COMMANDS: &[CommandSpec] = &[
+static COMMANDS: &[CommandSpec] = &[
     CommandSpec {
         name: "readonly",
         desc: "Toggle read-only mode",
         aliases: &["ro"],
         category: CommandCategory::Safety,
         sub: false,
-        kind: CommandKind::Handler(toggle_readonly),
+        kind: CommandKind::Handler(|_: &mut AppState, _: &str| {
+            CommandResult::Event(crate::Event::ToggleReadOnly)
+        }),
     },
     CommandSpec {
         name: "trust",
@@ -29,7 +22,9 @@ static SAFETY_COMMANDS: &[CommandSpec] = &[
         aliases: &[],
         category: CommandCategory::Safety,
         sub: false,
-        kind: CommandKind::Handler(trust_project),
+        kind: CommandKind::Handler(|_: &mut AppState, _: &str| {
+            CommandResult::Event(crate::Event::TrustProject)
+        }),
     },
     CommandSpec {
         name: "untrust",
@@ -37,10 +32,14 @@ static SAFETY_COMMANDS: &[CommandSpec] = &[
         aliases: &[],
         category: CommandCategory::Safety,
         sub: false,
-        kind: CommandKind::Handler(untrust_project),
+        kind: CommandKind::Handler(|_: &mut AppState, _: &str| {
+            CommandResult::Event(crate::Event::UntrustProject)
+        }),
     },
 ];
 
 pub fn register(registry: &mut CommandRegistry) {
-    super::spec::register_commands(registry, SAFETY_COMMANDS);
+    for spec in COMMANDS {
+        registry.register(build_cmd(spec));
+    }
 }
