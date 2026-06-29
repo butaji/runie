@@ -422,7 +422,7 @@
   {
     "file": "use-notify-directly-in-config-actor.md",
     "title": "Use `notify` directly in `RactorConfigActor`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
