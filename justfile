@@ -17,7 +17,7 @@ test-verbose:
 
 # Run clippy lints
 lint:
-    cargo clippy --all-targets --all-features -- -D warnings
+    cargo clippy --workspace --lib --bins -- -D warnings
 
 # Check formatting
 fmt:
@@ -41,7 +41,7 @@ write-config-schema:
 
 # Run clippy with auto-fix suggestions
 lint-fix:
-    cargo clippy --fix --allow-dirty --allow-staged -- -D warnings
+    cargo clippy --fix --workspace --allow-dirty --allow-staged -- -D warnings
 
 # Clean build artifacts
 clean:

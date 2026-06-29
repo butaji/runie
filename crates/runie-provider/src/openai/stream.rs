@@ -213,18 +213,15 @@ pub mod tests {
             if trimmed.is_empty() {
                 continue;
             }
-            match OpenAiFrame::from_line(trimmed) {
-                Some(frame) => {
-                    if protocol.terminal(&frame) {
-                        let (_, events) = protocol.step(std::mem::take(&mut state), frame);
-                        all.extend(events);
-                        break;
-                    }
-                    let (new_state, events) = protocol.step(std::mem::take(&mut state), frame);
-                    state = new_state;
+            if let Some(frame) = OpenAiFrame::from_line(trimmed) {
+                if protocol.terminal(&frame) {
+                    let (_, events) = protocol.step(std::mem::take(&mut state), frame);
                     all.extend(events);
+                    break;
                 }
-                None => {}
+                let (new_state, events) = protocol.step(std::mem::take(&mut state), frame);
+                state = new_state;
+                all.extend(events);
             }
         }
         all.extend(protocol.on_halt(state));
