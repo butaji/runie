@@ -442,7 +442,7 @@
   {
     "file": "use-strum-for-event-intent-names.md",
     "title": "use-strum-for-event-intent-names.md",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "wire-or-delete-input-actor.md",
