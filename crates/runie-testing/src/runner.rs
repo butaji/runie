@@ -116,23 +116,23 @@ impl TestRunner {
 }
 
 fn nanoid() -> String {
-    use std::hash::{DefaultHasher, Hash, Hasher};
-    let mut hasher = DefaultHasher::new();
-    let seed = format!(
-        "{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    );
-    seed.hash(&mut hasher);
-    format!("{:x}", hasher.finish())[..8].to_string()
+    // Use uuid v4 for unique test identifiers.
+    uuid::Uuid::new_v4().to_string()[..8].to_string()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::fixtures::mock_provider;
+
+    #[test]
+    fn runner_id_is_unique() {
+        let ids: Vec<_> = (0..100).map(|_| nanoid()).collect();
+        let mut sorted = ids.clone();
+        sorted.sort();
+        sorted.dedup();
+        assert_eq!(ids.len(), sorted.len(), "generated IDs should be unique");
+    }
 
     #[tokio::test]
     async fn test_runner_submit_and_expect_event() {

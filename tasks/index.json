@@ -257,7 +257,7 @@
   {
     "file": "replace-custom-nanoid-in-test-runner.md",
     "title": "Replace custom nanoid in test runner",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-custom-retry-with-backon.md",
@@ -297,7 +297,7 @@
   {
     "file": "replace-think-filter-with-regex.md",
     "title": "Replace think-block filter with regex",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-tmux-test-with-ratatui-tests.md",
