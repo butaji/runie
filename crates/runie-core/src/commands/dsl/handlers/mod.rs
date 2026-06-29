@@ -29,7 +29,10 @@ fn init_handler_registry() -> HandlerRegistry {
     // Register built-in handlers that are defined inline in model.rs
     registry.register("model", NamedHandler::Handler(model::handle_model));
     registry.register("thinking", NamedHandler::Handler(model::handle_thinking));
-    registry.register("scoped_models", NamedHandler::Handler(model::handle_scoped_models));
+    registry.register(
+        "scoped_models",
+        NamedHandler::Handler(model::handle_scoped_models),
+    );
 
     registry
 }

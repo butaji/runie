@@ -6,7 +6,6 @@ mod tests {
     use crate::model::{AppState, ChatMessage, Role};
     use crate::view::elements::Element;
     use crate::view::LazyCache;
-    
 
     fn msg(role: Role, content: &str, timestamp: f64, id: &str) -> ChatMessage {
         ChatMessage {
@@ -272,7 +271,11 @@ mod tests {
             .filter(|e| matches!(e, Element::UserMessage { .. }))
             .collect();
 
-        assert_eq!(user_elements.len(), 1, "Expected exactly one UserMessage element");
+        assert_eq!(
+            user_elements.len(),
+            1,
+            "Expected exactly one UserMessage element"
+        );
         if let Element::UserMessage { content, timestamp } = user_elements[0] {
             assert_eq!(content, "Hello, world!");
             assert_eq!(*timestamp, 1.0);
@@ -307,11 +310,28 @@ mod tests {
             .filter(|e| matches!(e, Element::ToolDone { .. }))
             .collect();
 
-        assert_eq!(tool_elements.len(), 1, "Expected exactly one ToolDone element");
-        if let Element::ToolDone { name, duration_secs, output, error, .. } = tool_elements[0] {
+        assert_eq!(
+            tool_elements.len(),
+            1,
+            "Expected exactly one ToolDone element"
+        );
+        if let Element::ToolDone {
+            name,
+            duration_secs,
+            output,
+            error,
+            ..
+        } = tool_elements[0]
+        {
             assert_eq!(name, "bash", "Tool name should be 'bash'");
-            assert!((duration_secs - 1.5).abs() < 0.01, "Expected duration ~1.5s");
-            assert!(output.contains("file1.txt"), "Output should contain file1.txt");
+            assert!(
+                (duration_secs - 1.5).abs() < 0.01,
+                "Expected duration ~1.5s"
+            );
+            assert!(
+                output.contains("file1.txt"),
+                "Output should contain file1.txt"
+            );
             assert!(!error, "ToolDone should not be an error");
         } else {
             panic!("Expected ToolDone element");
@@ -342,8 +362,17 @@ mod tests {
             .filter(|e| matches!(e, Element::AgentMessage { .. }))
             .collect();
 
-        assert_eq!(agent_elements.len(), 1, "Expected exactly one AgentMessage element");
-        if let Element::AgentMessage { content, timestamp, provider } = agent_elements[0] {
+        assert_eq!(
+            agent_elements.len(),
+            1,
+            "Expected exactly one AgentMessage element"
+        );
+        if let Element::AgentMessage {
+            content,
+            timestamp,
+            provider,
+        } = agent_elements[0]
+        {
             assert_eq!(content, "I'll help you with that.");
             assert_eq!(*timestamp, 3.0);
             assert_eq!(provider, "openai");
@@ -375,7 +404,11 @@ mod tests {
             .filter(|e| matches!(e, Element::ThoughtMarker { .. }))
             .collect();
 
-        assert_eq!(thought_elements.len(), 1, "Expected exactly one ThoughtMarker element");
+        assert_eq!(
+            thought_elements.len(),
+            1,
+            "Expected exactly one ThoughtMarker element"
+        );
         if let Element::ThoughtMarker { content, timestamp } = thought_elements[0] {
             assert_eq!(content, "Let me think about this 2.0s");
             assert_eq!(*timestamp, 4.0);

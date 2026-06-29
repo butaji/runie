@@ -4,17 +4,19 @@
 //! with typed input parsed from the `ParsedToolCall`.
 
 use crate::tool::{
-    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool,
-    ListDirTool, ReadFileTool, SearchTool, WriteFileTool,
+    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool, ListDirTool,
+    ReadFileTool, SearchTool, WriteFileTool,
 };
 use crate::PermissionGate;
 use runie_core::harness_skills::{SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult};
-use runie_core::message::{ChatMessage, Part};
 #[cfg(test)]
 use runie_core::message::Role;
+use runie_core::message::{ChatMessage, Part};
 use runie_core::permissions::{PermissionAction, PermissionContext};
-use runie_core::tool::{is_builtin_tool, parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus};
 use runie_core::tool::ParsedToolCall;
+use runie_core::tool::{
+    is_builtin_tool, parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus,
+};
 use std::time::Duration;
 use tokio::time::timeout;
 
@@ -37,7 +39,9 @@ pub async fn execute_tool_call(
                 Err(_) => timeout_error(tool_name),
             }
         }
-        PermissionAction::Deny | PermissionAction::Ask => blocked_output(tool_name, tool_call.args.clone()),
+        PermissionAction::Deny | PermissionAction::Ask => {
+            blocked_output(tool_name, tool_call.args.clone())
+        }
     }
 }
 
@@ -82,7 +86,10 @@ pub fn build_permission_context<'a>(
     input: &'a serde_json::Value,
     cwd: &'a std::path::Path,
 ) -> PermissionContext<'a> {
-    let path = input.get("path").and_then(|v| v.as_str()).map(std::path::Path::new);
+    let path = input
+        .get("path")
+        .and_then(|v| v.as_str())
+        .map(std::path::Path::new);
     PermissionContext {
         tool,
         path,
@@ -162,8 +169,7 @@ pub async fn execute_tools_with_observer(
 ) -> Vec<ToolOutput> {
     let mut outputs = Vec::with_capacity(tools.len());
     for tool_call in tools {
-        let output =
-            execute_single_with_observer(tool_call, ctx, gate, observer, hooks).await;
+        let output = execute_single_with_observer(tool_call, ctx, gate, observer, hooks).await;
         outputs.push(output);
     }
     outputs
@@ -199,7 +205,6 @@ async fn execute_with_skill_hooks(
     fire_skill_after_hook(Some(skills), tool_call, &output);
     output
 }
-
 
 fn skip_output(tool_call: &ParsedToolCall, output: String) -> ToolOutput {
     ToolOutput {
@@ -344,9 +349,7 @@ mod tests {
             id: Some("call_1".to_string()),
         }];
         let ctx = ToolContext::default();
-        let mut observer = TestObserver {
-            events: Vec::new(),
-        };
+        let mut observer = TestObserver { events: Vec::new() };
 
         execute_tools_with_observer(&tools, "req.0", &ctx, &gate, &mut observer, None).await;
 

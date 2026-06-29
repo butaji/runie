@@ -61,14 +61,27 @@ pub(super) fn detect_hyperlinks(env: &HashMap<String, String>) -> bool {
 
 /// Temporarily set env vars from a snapshot, run a closure, then restore.
 const ENV_KEYS: &[&str] = &[
-    "COLORTERM", "TERM", "TERM_PROGRAM", "FORCE_COLOR", "FORCE_HYPERLINK",
-    "NO_COLOR", "LC_ALL", "LC_CTYPE", "LANG", "IGNORE_IS_TERMINAL",
+    "COLORTERM",
+    "TERM",
+    "TERM_PROGRAM",
+    "FORCE_COLOR",
+    "FORCE_HYPERLINK",
+    "NO_COLOR",
+    "LC_ALL",
+    "LC_CTYPE",
+    "LANG",
+    "IGNORE_IS_TERMINAL",
 ];
 
 fn with_env<R>(env: &HashMap<String, String>, f: impl FnOnce() -> R) -> R {
-    let saved: Vec<_> = ENV_KEYS.iter().map(|k| (k.to_string(), std::env::var(k).ok())).collect();
+    let saved: Vec<_> = ENV_KEYS
+        .iter()
+        .map(|k| (k.to_string(), std::env::var(k).ok()))
+        .collect();
     ENV_KEYS.iter().for_each(|k| std::env::remove_var(k));
-    env.iter().filter(|(k, _)| ENV_KEYS.contains(&k.as_str())).for_each(|(k, v)| std::env::set_var(k, v));
+    env.iter()
+        .filter(|(k, _)| ENV_KEYS.contains(&k.as_str()))
+        .for_each(|(k, v)| std::env::set_var(k, v));
     let result = f();
     saved.into_iter().for_each(|(k, old)| match old {
         Some(v) => std::env::set_var(&k, v),
@@ -123,7 +136,10 @@ pub(super) fn detect_multiplexer(env: &HashMap<String, String>) -> MultiplexerTy
     MultiplexerType::None
 }
 
-pub(super) fn detect_mouse(brand: super::TerminalBrand, multiplexer: MultiplexerType) -> MouseCapability {
+pub(super) fn detect_mouse(
+    brand: super::TerminalBrand,
+    multiplexer: MultiplexerType,
+) -> MouseCapability {
     if brand == super::TerminalBrand::Unknown && multiplexer == MultiplexerType::None {
         return MouseCapability::None;
     }
@@ -138,14 +154,13 @@ pub(super) fn detect_mouse(brand: super::TerminalBrand, multiplexer: Multiplexer
         | super::TerminalBrand::WindowsTerminal
         | super::TerminalBrand::Warp
         | super::TerminalBrand::VSCode => MouseCapability::Sgr,
-        super::TerminalBrand::TerminalApp | super::TerminalBrand::Unknown => MouseCapability::Legacy,
+        super::TerminalBrand::TerminalApp | super::TerminalBrand::Unknown => {
+            MouseCapability::Legacy
+        }
     }
 }
 
-pub(super) fn detect_clipboard(
-    brand: super::TerminalBrand,
-    multiplexer: MultiplexerType,
-) -> bool {
+pub(super) fn detect_clipboard(brand: super::TerminalBrand, multiplexer: MultiplexerType) -> bool {
     matches!(
         brand,
         super::TerminalBrand::ITerm2

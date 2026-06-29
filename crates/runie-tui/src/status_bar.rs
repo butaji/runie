@@ -5,8 +5,8 @@ use ratatui::{
     widgets::Paragraph,
     Frame,
 };
-use runie_util::display_width::width;
 use runie_core::Snapshot;
+use runie_util::display_width::width;
 
 use crate::theme::{style_status_idle, style_timestamp};
 use crate::ui::{estimate_element_tokens, hstack};

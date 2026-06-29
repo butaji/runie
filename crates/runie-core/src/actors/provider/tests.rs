@@ -5,7 +5,9 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use crate::actors::config::RactorConfigActor as ConfigActor;
-use crate::actors::provider::{BuiltProvider, RactorProviderActor as ProviderActor, ProviderFactory};
+use crate::actors::provider::{
+    BuiltProvider, ProviderFactory, RactorProviderActor as ProviderActor,
+};
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::event::Event;
@@ -97,8 +99,10 @@ fn spawn_actor(
     ractor::ActorCell,
 ) {
     let bus = EventBus::<Event>::new(1);
-    let (config_handle, config_cell) = futures::executor::block_on(ConfigActor::spawn_default(bus.clone()));
-    let (provider_handle, provider_cell) = futures::executor::block_on(ProviderActor::spawn(bus, config_handle, factory)).unwrap();
+    let (config_handle, config_cell) =
+        futures::executor::block_on(ConfigActor::spawn_default(bus.clone()));
+    let (provider_handle, provider_cell) =
+        futures::executor::block_on(ProviderActor::spawn(bus, config_handle, factory)).unwrap();
     (provider_handle, provider_cell, config_cell)
 }
 

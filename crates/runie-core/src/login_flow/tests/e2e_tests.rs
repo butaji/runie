@@ -322,13 +322,18 @@ async fn login_flow_save_does_not_block_async_runtime() {
     );
 
     for _ in 0..50 {
-        if list_configured_providers().iter().any(|(n, _, _)| n == "minimax") {
+        if list_configured_providers()
+            .iter()
+            .any(|(n, _, _)| n == "minimax")
+        {
             break;
         }
         tokio::task::yield_now().await;
     }
     assert!(
-        list_configured_providers().iter().any(|(n, _, _)| n == "minimax"),
+        list_configured_providers()
+            .iter()
+            .any(|(n, _, _)| n == "minimax"),
         "provider should be saved in the background"
     );
 }

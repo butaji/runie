@@ -72,5 +72,4 @@ impl AppState {
         self.configure_token_tracker();
         self.messages_changed();
     }
-
 }

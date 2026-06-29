@@ -54,13 +54,23 @@ pub enum SessionStoreMsg {
 #[derive(Debug, Clone)]
 pub enum SessionMutationMsg {
     /// Add a user message with optional image attachments.
-    AddUserMessage { content: String, images: Vec<String> },
+    AddUserMessage {
+        content: String,
+        images: Vec<String>,
+    },
     /// Add a system message.
     AddSystemMessage { content: String },
     /// Add a tool message.
-    AddToolMessage { id: String, name: String, content: String },
+    AddToolMessage {
+        id: String,
+        name: String,
+        content: String,
+    },
     /// Update an existing tool message.
-    UpdateToolMessage { id_contains: String, content: String },
+    UpdateToolMessage {
+        id_contains: String,
+        content: String,
+    },
     /// Add a turn-complete message.
     AddTurnComplete { id: String, content: String },
     /// Add an error message.
@@ -114,16 +124,38 @@ pub enum SessionMsg {
     },
     List,
     // Session state mutations
-    AddUserMessage { content: String, images: Vec<String> },
-    AddSystemMessage { content: String },
-    AddToolMessage { id: String, name: String, content: String },
-    UpdateToolMessage { id_contains: String, content: String },
-    AddTurnComplete { id: String, content: String },
-    AddErrorMessage { id: String, content: String },
+    AddUserMessage {
+        content: String,
+        images: Vec<String>,
+    },
+    AddSystemMessage {
+        content: String,
+    },
+    AddToolMessage {
+        id: String,
+        name: String,
+        content: String,
+    },
+    UpdateToolMessage {
+        id_contains: String,
+        content: String,
+    },
+    AddTurnComplete {
+        id: String,
+        content: String,
+    },
+    AddErrorMessage {
+        id: String,
+        content: String,
+    },
     Reset,
-    ForkAt { index: usize },
+    ForkAt {
+        index: usize,
+    },
     CloneBranch,
-    PushPendingEdit { edit: EditPreview },
+    PushPendingEdit {
+        edit: EditPreview,
+    },
     DrainPendingEdits,
     ClearPendingEdits,
 }

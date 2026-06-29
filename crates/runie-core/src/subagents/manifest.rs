@@ -64,6 +64,9 @@ mod tests {
     #[test]
     fn check_file_returns_false_on_mismatch() {
         let m = Manifest::load();
-        assert!(!m.check_file("explore.md", "0000000000000000000000000000000000000000000000000000000000000000"));
+        assert!(!m.check_file(
+            "explore.md",
+            "0000000000000000000000000000000000000000000000000000000000000000"
+        ));
     }
 }

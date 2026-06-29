@@ -84,7 +84,8 @@ pub fn parse_keybindings_json(content: &str) -> Result<HashMap<String, String>> 
     for (key, val) in obj {
         let event_name = val
             .as_str()
-            .context(format!("binding value for '{}' must be a string", key))?.to_owned();
+            .context(format!("binding value for '{}' must be a string", key))?
+            .to_owned();
         bindings.insert(key.to_lowercase(), event_name);
     }
 

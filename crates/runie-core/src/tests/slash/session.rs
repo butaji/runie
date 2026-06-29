@@ -21,7 +21,11 @@ fn delete_no_args_opens_form() {
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
-    if let Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
+    if let Some(crate::commands::DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack,
+    }) = &state.open_dialog
+    {
         let panel = stack.current().expect("should have panel");
         assert_eq!(panel.id, "delete", "should be delete form");
     } else {

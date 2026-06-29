@@ -1,7 +1,7 @@
 //! High-level test runner for event-driven agent tests.
 
-use std::sync::Arc;
 use parking_lot::Mutex;
+use std::sync::Arc;
 use std::time::Duration;
 
 use runie_agent::{run_agent_turn, AgentCommand, PermissionGate};
@@ -68,9 +68,7 @@ impl TestRunner {
         };
 
         let events = self.events.clone();
-        let emit = Arc::new(Mutex::new(move |evt: Event| {
-            events.lock().push(evt)
-        }));
+        let emit = Arc::new(Mutex::new(move |evt: Event| events.lock().push(evt)));
         let gate = PermissionGate::new(PermissionManager::default(), Arc::new(AutoAllowSink));
         run_agent_turn(provider, &cmd, emit, 5, gate).await?;
         Ok(id)

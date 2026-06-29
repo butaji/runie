@@ -32,8 +32,8 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-pub use manifest::Manifest;
 use crate::resource_loader::{extract_body, extract_frontmatter};
+pub use manifest::Manifest;
 
 /// Prompt mode for a subagent — controls how much context is included.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::EnumString)]
@@ -183,7 +183,11 @@ fn fm_str(fm: &HashMap<String, String>, key: &str) -> String {
 fn parse_subagent_content(name_hint: &str, content: &str) -> Option<SubagentType> {
     let fm = extract_frontmatter(content);
     let name = fm_str(&fm, "name");
-    let name = if name.is_empty() { name_hint.to_owned() } else { name };
+    let name = if name.is_empty() {
+        name_hint.to_owned()
+    } else {
+        name
+    };
     let prompt_mode = match fm_str(&fm, "prompt_mode").as_str() {
         "compact" => PromptMode::Compact,
         _ => PromptMode::Full,
@@ -191,7 +195,11 @@ fn parse_subagent_content(name_hint: &str, content: &str) -> Option<SubagentType
     let permission_mode = PermissionMode::parse(&fm_str(&fm, "permission_mode"));
     let agents_md = fm_str(&fm, "agents_md").parse::<bool>().unwrap_or(false);
     let model = fm_str(&fm, "model");
-    let model = if model.is_empty() { "inherit".to_owned() } else { model };
+    let model = if model.is_empty() {
+        "inherit".to_owned()
+    } else {
+        model
+    };
     Some(SubagentType {
         name,
         description: fm_str(&fm, "description"),
@@ -202,10 +210,6 @@ fn parse_subagent_content(name_hint: &str, content: &str) -> Option<SubagentType
         body: extract_body(content),
     })
 }
-
-
-
-
 
 // ── Embedded types ────────────────────────────────────────────────────────────
 // These are embedded at compile time via `include_str!`.  Their SHA-256
@@ -231,8 +235,11 @@ fn embedded_types() -> Vec<(&'static str, SubagentType)> {
         ),
         (
             "check-work",
-            parse_subagent_content("check-work", include_str!("../../resources/agents/check-work.md"))
-                .expect("embedded check-work must parse"),
+            parse_subagent_content(
+                "check-work",
+                include_str!("../../resources/agents/check-work.md"),
+            )
+            .expect("embedded check-work must parse"),
         ),
     ]
 }
@@ -396,7 +403,10 @@ Second paragraph.
 Third paragraph.
 "#;
         let st = parse_subagent_content("multi", content).unwrap();
-        assert_eq!(st.body, "First paragraph.\n\nSecond paragraph.\n\nThird paragraph.");
+        assert_eq!(
+            st.body,
+            "First paragraph.\n\nSecond paragraph.\n\nThird paragraph."
+        );
     }
 
     #[test]

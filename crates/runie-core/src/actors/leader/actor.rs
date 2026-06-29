@@ -9,16 +9,16 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::{broadcast, mpsc};
 
+use crate::actors::leader::AgentSpawnFuture;
 use crate::actors::turn::RactorTurnActor;
 use crate::actors::{
-    RactorConfigActor, RactorConfigHandle, RactorFffIndexerActor, RactorFffIndexerHandle,
-    InputActor, RactorInputHandle, RactorIoActor, RactorIoHandle,
-    RactorPermissionActor, RactorPermissionHandle, RactorProviderActor,
-    RactorProviderHandle, RactorSessionActor, RactorSessionHandle,
+    InputActor, RactorConfigActor, RactorConfigHandle, RactorFffIndexerActor,
+    RactorFffIndexerHandle, RactorInputHandle, RactorIoActor, RactorIoHandle,
+    RactorPermissionActor, RactorPermissionHandle, RactorProviderActor, RactorProviderHandle,
+    RactorSessionActor, RactorSessionHandle,
 };
 use crate::bus::EventBus;
 use crate::Event as CoreEvent;
-use crate::actors::leader::AgentSpawnFuture;
 
 use super::messages::{LeaderCommand, LeaderStatus};
 use super::{AgentActorFactory, LeaderAgentHandle};
@@ -62,7 +62,9 @@ impl Leader {
     /// Create a new leader in **embedded mode** (no TCP listener).
     /// This is the default for TUI and CLI usage.
     pub fn new() -> Self {
-        Self { config: LeaderConfig::default() }
+        Self {
+            config: LeaderConfig::default(),
+        }
     }
 
     /// Create a leader with explicit configuration.
@@ -72,7 +74,9 @@ impl Leader {
 
     /// Use a custom TCP address (enables server mode).
     pub fn with_tcp_addr<A: ToString>(self, addr: A) -> Self {
-        Self { config: self.config.with_tcp_addr(addr) }
+        Self {
+            config: self.config.with_tcp_addr(addr),
+        }
     }
 
     /// Start the leader and spawn all actors.
@@ -122,8 +126,9 @@ impl Leader {
         )
         .await
         .map_err(|e| anyhow::anyhow!("FffIndexerActor spawn failed: {}", e))?;
-        let agent_handle =
-            agent_factory.spawn(bus.clone(), provider_h.clone(), permission_h.clone()).await?;
+        let agent_handle = agent_factory
+            .spawn(bus.clone(), provider_h.clone(), permission_h.clone())
+            .await?;
 
         Ok(SpawnedHandles {
             config: config_h,
@@ -388,12 +393,12 @@ pub mod test_helpers {
     /// a `LeaderHandle` with default bus/command channels.
     /// The caller takes ownership and must eventually call `shutdown()`.
     pub async fn test_leader_handle() -> LeaderHandle {
+        use crate::actors::provider::{BuiltProvider, ProviderFactory};
+        use crate::provider::{Provider, ProviderError};
+        use crate::provider_event::ProviderEvent;
         use std::future::Future;
         use std::pin::Pin;
         use std::sync::Arc;
-        use crate::actors::provider::{ProviderFactory, BuiltProvider};
-        use crate::provider::{Provider, ProviderError};
-        use crate::provider_event::ProviderEvent;
 
         struct NoOpAgentHandle;
         impl LeaderAgentHandle for NoOpAgentHandle {
@@ -404,17 +409,35 @@ pub mod test_helpers {
 
         struct NoOpProvider;
         impl Provider for NoOpProvider {
-            fn generate(&self, _: Vec<crate::message::ChatMessage>) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
+            fn generate(
+                &self,
+                _: Vec<crate::message::ChatMessage>,
+            ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
+            {
                 Box::pin(futures::stream::empty())
             }
         }
 
         struct TestProviderFactory;
         impl ProviderFactory for TestProviderFactory {
-            fn build(&self, provider: &str, model: &str, _config: &crate::Config) -> Result<BuiltProvider, ProviderError> {
-                Ok(BuiltProvider::new(Box::new(NoOpProvider), provider.into(), model.into()))
+            fn build(
+                &self,
+                provider: &str,
+                model: &str,
+                _config: &crate::Config,
+            ) -> Result<BuiltProvider, ProviderError> {
+                Ok(BuiltProvider::new(
+                    Box::new(NoOpProvider),
+                    provider.into(),
+                    model.into(),
+                ))
             }
-            fn validate_key(&self, _: &str, _: &str) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<String>>> + Send + '_>> {
+            fn validate_key(
+                &self,
+                _: &str,
+                _: &str,
+            ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<String>>> + Send + '_>>
+            {
                 Box::pin(async { Ok(vec![]) })
             }
             fn resolve_credentials(&self, _: &str, _: &crate::Config) -> (String, String) {
@@ -425,11 +448,13 @@ pub mod test_helpers {
         let bus = EventBus::<CoreEvent>::new(16);
         let (config_h, _) = RactorConfigActor::spawn_default(bus.clone()).await;
         let factory: Arc<dyn ProviderFactory> = Arc::new(TestProviderFactory);
-        let (provider_h, _) =
-            RactorProviderActor::spawn(bus.clone(), config_h.clone(), factory).await
-                .expect("provider spawn");
+        let (provider_h, _) = RactorProviderActor::spawn(bus.clone(), config_h.clone(), factory)
+            .await
+            .expect("provider spawn");
         let (io_h, _) = RactorIoActor::spawn(bus.clone()).await.expect("io spawn");
-        let (session_h, _) = RactorSessionActor::spawn(bus.clone()).await.expect("session spawn");
+        let (session_h, _) = RactorSessionActor::spawn(bus.clone())
+            .await
+            .expect("session spawn");
         let (permission_h, _) = RactorPermissionActor::spawn(bus.clone()).await;
         let (turn_h, _, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
         let (input_h, _) = InputActor::spawn(bus.clone()).await;

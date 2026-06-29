@@ -13,16 +13,16 @@ use crate::tool_runner::{execute_tool_call, tool_result_message};
 use crate::PermissionGate;
 use anyhow::Result;
 use futures::StreamExt;
+use runie_core::event::headless::HeadlessEvent;
 use runie_core::message::ChatMessage;
 use runie_core::permissions::PermissionManager;
 use runie_core::provider::Provider;
 use runie_core::provider_event::ProviderEvent;
-use runie_core::tool::{ToolContext, ToolOutput};
 use runie_core::tool::{
     assign_tool_call_ids, build_assistant_message, parse_tool_calls_fallible,
     tool_parse_error_message, ParsedToolCall, ToolParseError,
 };
-use runie_core::event::headless::HeadlessEvent;
+use runie_core::tool::{ToolContext, ToolOutput};
 use runie_core::tool_stream::ToolStream;
 use std::ops::ControlFlow;
 use std::sync::Arc;
@@ -212,8 +212,14 @@ impl<'a> HeadlessStreamState<'a> {
             ProviderEvent::ThinkingDelta(content) => {
                 self.emit(HeadlessEvent::Thinking { data: content });
             }
-            ProviderEvent::Usage { input_tokens, output_tokens } => {
-                self.emit(HeadlessEvent::Usage { input_tokens, output_tokens });
+            ProviderEvent::Usage {
+                input_tokens,
+                output_tokens,
+            } => {
+                self.emit(HeadlessEvent::Usage {
+                    input_tokens,
+                    output_tokens,
+                });
             }
             ProviderEvent::Finish { reason } => {
                 self.emit(HeadlessEvent::End {
@@ -225,7 +231,9 @@ impl<'a> HeadlessStreamState<'a> {
             }
             ProviderEvent::Error(e) => {
                 self.error = Some(format!("{:?}", e));
-                self.emit(HeadlessEvent::Error { message: format!("{:?}", e) });
+                self.emit(HeadlessEvent::Error {
+                    message: format!("{:?}", e),
+                });
                 return ControlFlow::Break(());
             }
             _ => {}
@@ -236,7 +244,9 @@ impl<'a> HeadlessStreamState<'a> {
     fn on_text_delta(&mut self, delta: String) {
         self.text.push_str(&delta);
         self.content.push_str(&delta);
-        self.emit(HeadlessEvent::Text { data: delta.clone() });
+        self.emit(HeadlessEvent::Text {
+            data: delta.clone(),
+        });
         if let Some(cb) = self.options.on_chunk.as_mut() {
             cb(&delta);
         }

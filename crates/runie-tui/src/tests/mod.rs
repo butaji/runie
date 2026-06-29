@@ -104,7 +104,8 @@ pub fn configure_test_providers(providers: &[(String, Vec<String>)]) {
     ));
     runie_core::provider::config::set_test_config_path(path);
     for (name, models) in providers {
-        let _ = runie_core::provider::config::save_provider_config(name, "http://test", "key", models);
+        let _ =
+            runie_core::provider::config::save_provider_config(name, "http://test", "key", models);
     }
 }
 

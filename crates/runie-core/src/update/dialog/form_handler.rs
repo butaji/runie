@@ -15,7 +15,11 @@ pub fn handle_form_dialog(state: &mut AppState, event: crate::Event) {
     let Some(mut dialog) = state.open_dialog_mut().take() else {
         return;
     };
-    let DialogState::Active { kind: DialogKind::Generic, panels: ref mut stack } = dialog else {
+    let DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: ref mut stack,
+    } = dialog
+    else {
         *state.open_dialog_mut() = Some(dialog);
         return;
     };

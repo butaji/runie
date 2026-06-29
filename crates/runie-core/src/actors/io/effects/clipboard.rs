@@ -50,7 +50,9 @@ fn write_clipboard_macos(text: &str) -> Result<(), String> {
         .spawn()
         .map_err(|e| format!("pbcopy failed: {}", e))?;
     if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(text.as_bytes()).map_err(|e| format!("write failed: {}", e))?;
+        stdin
+            .write_all(text.as_bytes())
+            .map_err(|e| format!("write failed: {}", e))?;
     }
     child.wait().map_err(|e| format!("wait failed: {}", e))?;
     Ok(())
@@ -75,7 +77,9 @@ fn write_clipboard_wl_copy(text: &str) -> Result<(), String> {
         .spawn()
         .map_err(|e| format!("wl-copy failed: {}", e))?;
     if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(text.as_bytes()).map_err(|e| format!("write failed: {}", e))?;
+        stdin
+            .write_all(text.as_bytes())
+            .map_err(|e| format!("write failed: {}", e))?;
     }
     child.wait().map_err(|e| format!("wait failed: {}", e))?;
     Ok(())
@@ -89,7 +93,9 @@ fn write_clipboard_xclip(text: &str) -> Result<(), String> {
         .spawn()
         .map_err(|e| format!("xclip failed: {}", e))?;
     if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(text.as_bytes()).map_err(|e| format!("write failed: {}", e))?;
+        stdin
+            .write_all(text.as_bytes())
+            .map_err(|e| format!("write failed: {}", e))?;
     }
     child.wait().map_err(|e| format!("wait failed: {}", e))?;
     Ok(())

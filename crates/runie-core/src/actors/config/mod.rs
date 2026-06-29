@@ -7,12 +7,13 @@ pub mod ractor_config;
 mod tests;
 
 // Ractor-based ConfigActor.
-pub use ractor_config::{RactorConfigActor, RactorConfigHandle};
 pub use messages::ConfigMsg;
+pub use ractor_config::{RactorConfigActor, RactorConfigHandle};
 
 /// Trait for config actor handles.
 pub trait ConfigHandle: Send + Sync + Clone {
-    fn get_config(&self) -> impl std::future::Future<Output = Option<crate::config::Config>> + Send;
+    fn get_config(&self)
+        -> impl std::future::Future<Output = Option<crate::config::Config>> + Send;
     fn get_configured_providers(
         &self,
     ) -> impl std::future::Future<Output = Option<Vec<(String, String, Vec<String>)>>> + Send;

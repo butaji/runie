@@ -29,10 +29,7 @@ fn smoke_no_module_name_collision() {
         })
         .collect();
 
-    let collisions: Vec<_> = core_modules
-        .intersection(&tui_modules)
-        .copied()
-        .collect();
+    let collisions: Vec<_> = core_modules.intersection(&tui_modules).copied().collect();
 
     // Known resolved pairs (different meanings; not a bug):
     // diff: core=domain patch logic, tui=gutter render (different files)
@@ -257,7 +254,11 @@ fn startup_render_contains_keybinding_hints() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = (0..buf.area().height)
-        .map(|y| (0..buf.area().width).map(|x| buf[(x, y)].symbol()).collect::<String>())
+        .map(|y| {
+            (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol())
+                .collect::<String>()
+        })
         .collect();
     assert!(
         content.contains("ctrl+o"),
@@ -282,7 +283,11 @@ fn startup_render_buffer_has_placeholder_and_hints() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let all_content: String = (0..buf.area().height)
-        .map(|y| (0..buf.area().width).map(|x| buf[(x, y)].symbol()).collect::<String>())
+        .map(|y| {
+            (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol())
+                .collect::<String>()
+        })
         .collect();
     assert!(
         all_content.contains("Type a message"),

@@ -40,7 +40,10 @@ pub enum HeadlessEvent {
     ToolResult { id: String, output: String },
 
     /// Token usage for the turn.
-    Usage { input_tokens: usize, output_tokens: usize },
+    Usage {
+        input_tokens: usize,
+        output_tokens: usize,
+    },
 
     /// An error occurred.
     Error { message: String },
@@ -74,7 +77,9 @@ mod tests {
 
     #[test]
     fn text_event_serialization() {
-        let evt = HeadlessEvent::Text { data: "Hello".into() };
+        let evt = HeadlessEvent::Text {
+            data: "Hello".into(),
+        };
         let line = evt.to_json_line();
         assert!(line.contains(r#""type":"text""#));
         assert!(line.contains(r#""data":"Hello""#));
@@ -122,7 +127,13 @@ mod tests {
         };
         let line = evt.to_json_line();
         let parsed: HeadlessEvent = serde_json::from_str(&line).unwrap();
-        assert!(matches!(parsed, HeadlessEvent::Usage { input_tokens: 100, output_tokens: 50 }));
+        assert!(matches!(
+            parsed,
+            HeadlessEvent::Usage {
+                input_tokens: 100,
+                output_tokens: 50
+            }
+        ));
     }
 
     #[test]

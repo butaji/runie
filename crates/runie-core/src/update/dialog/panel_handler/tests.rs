@@ -65,7 +65,10 @@ fn space_in_list_panel_keeps_dialog_open() {
         ItemAction::Toggle("read_only".into()),
     );
     let mut stack = PanelStack::new(panel);
-    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack.clone() });
+    state.open_dialog = Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack.clone(),
+    });
 
     let result = update_panel_stack(&mut state, crate::Event::Input(' ').into(), &mut stack);
     assert_eq!(
@@ -74,7 +77,13 @@ fn space_in_list_panel_keeps_dialog_open() {
         "space should be consumed by the toggle"
     );
     assert!(
-        matches!(state.open_dialog, Some(DialogState::Active { kind: DialogKind::Generic, panels: _ })),
+        matches!(
+            state.open_dialog,
+            Some(DialogState::Active {
+                kind: DialogKind::Generic,
+                panels: _
+            })
+        ),
         "dialog should stay open after toggling"
     );
     assert!(state.config.read_only);

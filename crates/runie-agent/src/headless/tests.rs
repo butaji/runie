@@ -1,8 +1,6 @@
 //! Tests for the headless runner.
 
-use crate::headless::{
-    run_headless_cli, run_headless_turn, HeadlessCliOptions, HeadlessOptions,
-};
+use crate::headless::{run_headless_cli, run_headless_turn, HeadlessCliOptions, HeadlessOptions};
 use crate::PermissionGate;
 use runie_core::event::headless::HeadlessEvent;
 use runie_core::message::{ChatMessage, Role};
@@ -178,9 +176,8 @@ async fn headless_turn_error_propagates() {
         fn generate(
             &self,
             _messages: Vec<ChatMessage>,
-        ) -> std::pin::Pin<
-            Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>,
-        > {
+        ) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
+        {
             let events = vec![
                 Ok(ProviderEvent::TextDelta("Before error. ".into())),
                 Ok(ProviderEvent::Error(ModelError::RateLimit {
@@ -205,13 +202,18 @@ async fn headless_turn_error_propagates() {
 
     // The headless runner should propagate the error without panicking
     let result = run_headless_turn(messages, &ErrorProvider, options).await;
-    assert!(result.is_err(), "expected error to propagate, got: {result:?}");
+    assert!(
+        result.is_err(),
+        "expected error to propagate, got: {result:?}"
+    );
 }
 
 // Layer 1: HeadlessEvent emits valid JSON lines
 #[test]
 fn headless_event_serializes_to_jsonl() {
-    let evt = HeadlessEvent::Text { data: "Hello".into() };
+    let evt = HeadlessEvent::Text {
+        data: "Hello".into(),
+    };
     let line = evt.to_json_line();
     assert!(line.contains(r#""type":"text""#));
     assert!(line.contains(r#""data":"Hello""#));
@@ -220,7 +222,9 @@ fn headless_event_serializes_to_jsonl() {
 // Layer 1: HeadlessEvent error round-trips
 #[test]
 fn headless_event_error_round_trips() {
-    let evt = HeadlessEvent::Error { message: "oops".into() };
+    let evt = HeadlessEvent::Error {
+        message: "oops".into(),
+    };
     let line = evt.to_json_line();
     let parsed: HeadlessEvent = serde_json::from_str(&line).unwrap();
     assert!(matches!(parsed, HeadlessEvent::Error { message } if message == "oops"));

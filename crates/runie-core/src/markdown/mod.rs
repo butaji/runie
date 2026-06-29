@@ -11,8 +11,8 @@ mod inline;
 mod tests;
 
 pub use blocks::extract_blocks;
-pub(crate) use inline::md_options;
 pub use heal::heal_markdown;
+pub(crate) use inline::md_options;
 pub use inline::{inlines_to_text, parse_inline_spans};
 
 // ── Inline spans ─────────────────────────────────────────────────────────────

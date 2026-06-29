@@ -27,7 +27,11 @@ fn save_no_args_opens_form() {
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
-    if let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
+    if let Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack,
+    }) = &state.open_dialog
+    {
         let panel = stack.current().expect("should have panel");
         assert_eq!(panel.id, "save", "should be save form");
     } else {
@@ -42,7 +46,11 @@ fn load_no_args_opens_form() {
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
-    if let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
+    if let Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack,
+    }) = &state.open_dialog
+    {
         let panel = stack.current().expect("should have panel");
         assert_eq!(panel.id, "load", "should be load form");
     } else {
@@ -57,7 +65,11 @@ fn delete_no_args_opens_form() {
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
-    if let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
+    if let Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack,
+    }) = &state.open_dialog
+    {
         let panel = stack.current().expect("should have panel");
         assert_eq!(panel.id, "delete", "should be delete form");
     } else {
@@ -72,7 +84,11 @@ fn form_save_accepts_input() {
 
     // Should open form
     assert!(state.open_dialog.is_some());
-    if let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
+    if let Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack,
+    }) = &state.open_dialog
+    {
         let panel = stack.current().expect("panel");
         assert!(panel.is_form(), "should be form");
     }
@@ -92,16 +108,19 @@ fn form_submit_executes_command() {
         "form should be open after submit"
     );
     // Check the dialog type - take dialog to inspect, then restore
-    let form_is_form =
-        if let Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
-            if let Some(panel) = stack.current() {
-                panel.is_form()
-            } else {
-                false
-            }
+    let form_is_form = if let Some(crate::commands::DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack,
+    }) = &state.open_dialog
+    {
+        if let Some(panel) = stack.current() {
+            panel.is_form()
         } else {
             false
-        };
+        }
+    } else {
+        false
+    };
     assert!(form_is_form, "panel should be a form");
     // Type a name - these go to input, but should be routed to form
     state.update(crate::Event::Input('m'));
@@ -136,7 +155,10 @@ fn form_panel_id_maps_to_known_form_command() {
     panel
         .form_values
         .insert("name".into(), "should-not-fire".into());
-    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
+    state.open_dialog = Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: PanelStack::new(panel),
+    });
 
     state.update(Event::CommandFormSubmit);
 
@@ -203,7 +225,10 @@ fn invalid_fork_index_shows_error_for_out_of_range() {
         message_index: crate::dialog::dsl::get_field(values, "index"),
     });
     panel.form_values.insert("index".into(), "999".into());
-    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
+    state.open_dialog = Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: PanelStack::new(panel),
+    });
 
     state.update(Event::CommandFormSubmit);
 
@@ -241,7 +266,10 @@ fn compact_with_invalid_keep_shows_error() {
         .form_values
         .insert("keep".into(), "not-a-number".into());
     panel.form_values.insert("focus".into(), "".into());
-    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
+    state.open_dialog = Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: PanelStack::new(panel),
+    });
 
     state.update(Event::CommandFormSubmit);
 

@@ -10,16 +10,16 @@
 //! The actor registers its shared handles in a process-wide registry so that
 //! tools can also access the index without going through the event bus.
 
+use parking_lot::RwLock;
 use std::path::PathBuf;
 use std::sync::Arc;
-use parking_lot::RwLock;
 
 use serde::{Deserialize, Serialize};
 
 use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
 
-pub use self::ractor_fff_indexer::RactorFffIndexerHandle;
 pub use self::ractor_fff_indexer::RactorFffIndexerActor;
+pub use self::ractor_fff_indexer::RactorFffIndexerHandle;
 
 mod ractor_fff_indexer;
 
@@ -169,5 +169,3 @@ impl FffSearchRequest {
         }
     }
 }
-
-

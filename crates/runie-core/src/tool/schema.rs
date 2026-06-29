@@ -76,12 +76,7 @@ pub fn generate_schema<T: JsonSchema>() -> Value {
 /// Generate MCP tool definition from a `ToolDef` implementation.
 pub fn to_mcp_tool<T: ToolDef>() -> Tool {
     let schema = generate_schema::<T::Input>();
-    let input_schema = Arc::new(
-        schema
-            .as_object()
-            .cloned()
-            .unwrap_or_default(),
-    );
+    let input_schema = Arc::new(schema.as_object().cloned().unwrap_or_default());
 
     let mut tool = Tool::new(T::NAME, T::DESCRIPTION, input_schema);
 

@@ -35,7 +35,16 @@ use crate::trust::TrustDecision;
 ///
 /// Each variant carries the minimal data needed by the target actor; the
 /// authoritative source of all intent data is the original `Event` variant.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, strum::Display, strum::IntoStaticStr, strum::VariantNames)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    strum::Display,
+    strum::IntoStaticStr,
+    strum::VariantNames,
+)]
 #[serde(tag = "type", content = "data")]
 #[strum(serialize_all = "PascalCase")]
 pub enum Intent {

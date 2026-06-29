@@ -21,7 +21,9 @@ pub async fn run(
         return;
     }
 
-    let result = provider_handle.validate_key(provider.clone(), key.clone()).await;
+    let result = provider_handle
+        .validate_key(provider.clone(), key.clone())
+        .await;
 
     match result {
         Ok(models) => {

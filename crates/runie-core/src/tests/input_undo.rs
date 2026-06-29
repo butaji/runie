@@ -3,7 +3,6 @@
 #[cfg(test)]
 mod tests {
     use crate::model::AppState;
-    
 
     #[test]
     fn undo_reverts_last_insert() {

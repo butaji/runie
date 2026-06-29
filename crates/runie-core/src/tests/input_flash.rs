@@ -3,7 +3,6 @@
 #[cfg(test)]
 mod tests {
     use crate::model::AppState;
-    
 
     #[test]
     fn flash_increments_on_noop() {

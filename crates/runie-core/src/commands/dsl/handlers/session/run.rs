@@ -55,9 +55,7 @@ pub fn run_fork(state: &mut AppState, index_raw: &str) -> CommandResult {
         });
     }
     // Emit ForkSession intent; owning actor handles the mutation
-    CommandResult::Event(crate::Event::ForkSession {
-        message_index,
-    })
+    CommandResult::Event(crate::Event::ForkSession { message_index })
 }
 
 /// Compact the context, keeping the last `keep_raw` tokens.
@@ -67,10 +65,7 @@ pub fn run_compact(_state: &mut AppState, args: &str) -> CommandResult {
     let keep = parts.first().unwrap_or(&"2000").to_string();
     let focus = parts.get(1).unwrap_or(&"").to_string();
     // Emit intent event; owning actor handles the mutation
-    CommandResult::Event(crate::Event::RunCompactCommand {
-        keep,
-        focus,
-    })
+    CommandResult::Event(crate::Event::RunCompactCommand { keep, focus })
 }
 
 // ── Session IO handlers ──────────────────────────────────────────────────────
@@ -88,7 +83,10 @@ pub fn run_save(state: &mut AppState, name: &str) -> CommandResult {
     let handles = state.actor_handles().cloned();
     let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
     if can_spawn {
-        let _ = handles.unwrap().session.try_send(SessionMsg::Save { name: name_owned, session });
+        let _ = handles.unwrap().session.try_send(SessionMsg::Save {
+            name: name_owned,
+            session,
+        });
         CommandResult::Message(format!("Saving session '{}'…", name.trim()))
     } else {
         match crate::session::replay::save_session(&name_owned, state) {
@@ -104,7 +102,12 @@ pub fn run_load(state: &mut AppState, name: &str) -> CommandResult {
     if name.is_empty() {
         return CommandResult::Message("Usage: /load name".into());
     }
-    if send_session_msg(state, SessionMsg::Load { name: name.to_owned() }) {
+    if send_session_msg(
+        state,
+        SessionMsg::Load {
+            name: name.to_owned(),
+        },
+    ) {
         return CommandResult::None;
     }
     match crate::session::replay::load_session(name, state) {
@@ -122,7 +125,12 @@ pub fn run_delete(state: &mut AppState, name: &str) -> CommandResult {
     if name.is_empty() {
         return CommandResult::Message("Usage: /delete name".into());
     }
-    if send_session_msg(state, SessionMsg::Delete { name: name.to_owned() }) {
+    if send_session_msg(
+        state,
+        SessionMsg::Delete {
+            name: name.to_owned(),
+        },
+    ) {
         return CommandResult::None;
     }
     match crate::session::replay::delete_session(name) {
@@ -144,7 +152,10 @@ pub fn run_import(state: &mut AppState, path: &str) -> CommandResult {
     let handles = state.actor_handles().cloned();
     let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
     if can_spawn {
-        let _ = handles.unwrap().session.try_send(SessionMsg::Import { path: path_buf });
+        let _ = handles
+            .unwrap()
+            .session
+            .try_send(SessionMsg::Import { path: path_buf });
         return CommandResult::Message(format!("Importing session from '{}'…", path));
     }
     let json = match std::fs::read_to_string(&path_buf) {
@@ -166,13 +177,20 @@ pub fn run_export(state: &mut AppState, path: &str) -> CommandResult {
     if path.is_empty() {
         return CommandResult::Message("Usage: /export path/to/session.json".into());
     }
-    let name = state.session().session_display_name.clone().unwrap_or_else(|| "exported".into());
+    let name = state
+        .session()
+        .session_display_name
+        .clone()
+        .unwrap_or_else(|| "exported".into());
     let session = crate::session::Session::from_state(state, name);
     let path_buf = std::path::PathBuf::from(path);
     let handles = state.actor_handles().cloned();
     let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
     if can_spawn {
-        let _ = handles.unwrap().session.try_send(SessionMsg::Export { path: path_buf, session });
+        let _ = handles.unwrap().session.try_send(SessionMsg::Export {
+            path: path_buf,
+            session,
+        });
         return CommandResult::Message(format!("Exporting session to '{}'…", path));
     }
     let json = serde_json::to_string_pretty(&session).unwrap_or_default();

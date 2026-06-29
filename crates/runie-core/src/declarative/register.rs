@@ -1,6 +1,6 @@
 //! Registration of declarative commands and skills.
 
-use crate::commands::dsl::{CommandFlow, CommandDef};
+use crate::commands::dsl::{CommandDef, CommandFlow};
 use crate::commands::CommandRegistry;
 use crate::model::AppState;
 
@@ -83,22 +83,48 @@ fn get_intent_builder(intent: &str) -> Option<EventBuilder> {
 
 fn get_event_builder(intent: &str) -> EventBuilder {
     match intent {
-        "SaveCommand" => |args| crate::Event::RunSaveCommand { name: args.to_owned() },
-        "LoadCommand" => |args| crate::Event::RunLoadCommand { name: args.to_owned() },
-        "DeleteCommand" => |args| crate::Event::RunDeleteCommand { name: args.to_owned() },
-        "ExportCommand" => |args| crate::Event::RunExportCommand { path: args.to_owned() },
-        "ImportCommand" => |args| crate::Event::RunImportCommand { path: args.to_owned() },
-        "ForkCommand" => |args| crate::Event::RunForkCommand { message_index: args.to_owned() },
+        "SaveCommand" => |args| crate::Event::RunSaveCommand {
+            name: args.to_owned(),
+        },
+        "LoadCommand" => |args| crate::Event::RunLoadCommand {
+            name: args.to_owned(),
+        },
+        "DeleteCommand" => |args| crate::Event::RunDeleteCommand {
+            name: args.to_owned(),
+        },
+        "ExportCommand" => |args| crate::Event::RunExportCommand {
+            path: args.to_owned(),
+        },
+        "ImportCommand" => |args| crate::Event::RunImportCommand {
+            path: args.to_owned(),
+        },
+        "ForkCommand" => |args| crate::Event::RunForkCommand {
+            message_index: args.to_owned(),
+        },
         "CompactCommand" => |args| {
             let (keep, focus) = parse_compact_args(args);
             crate::Event::RunCompactCommand { keep, focus }
         },
-        "NameCommand" => |args| crate::Event::RunNameCommand { name: args.to_owned() },
-        "PromptCommand" => |args| crate::Event::RunPromptCommand { name: args.to_owned() },
-        "SkillCommand" => |args| crate::Event::RunSkillCommand { name: args.to_owned() },
-        "ModelCommand" => |_args| crate::Event::RunPaletteCommand { name: "model".into(), args: String::new() },
-        "ThinkingCommand" => |_args| crate::Event::RunPaletteCommand { name: "thinking".into(), args: String::new() },
-        "SwitchTheme" => |args| crate::Event::SwitchTheme { name: args.to_owned() },
+        "NameCommand" => |args| crate::Event::RunNameCommand {
+            name: args.to_owned(),
+        },
+        "PromptCommand" => |args| crate::Event::RunPromptCommand {
+            name: args.to_owned(),
+        },
+        "SkillCommand" => |args| crate::Event::RunSkillCommand {
+            name: args.to_owned(),
+        },
+        "ModelCommand" => |_args| crate::Event::RunPaletteCommand {
+            name: "model".into(),
+            args: String::new(),
+        },
+        "ThinkingCommand" => |_args| crate::Event::RunPaletteCommand {
+            name: "thinking".into(),
+            args: String::new(),
+        },
+        "SwitchTheme" => |args| crate::Event::SwitchTheme {
+            name: args.to_owned(),
+        },
         "CopyToClipboard" => |args| crate::Event::CopyToClipboard(args.to_owned()),
         "ClearQueues" => |_args| crate::Event::ClearQueues,
         "ToggleSettingsDialog" => |_args| crate::Event::ToggleSettingsDialog,
@@ -142,8 +168,14 @@ mod tests {
     #[test]
     fn test_compact_args_parsing() {
         assert_eq!(parse_compact_args(""), ("2000".to_owned(), String::new()));
-        assert_eq!(parse_compact_args("1000"), ("1000".to_owned(), String::new()));
-        assert_eq!(parse_compact_args("1000 focus"), ("1000".to_owned(), "focus".to_owned()));
+        assert_eq!(
+            parse_compact_args("1000"),
+            ("1000".to_owned(), String::new())
+        );
+        assert_eq!(
+            parse_compact_args("1000 focus"),
+            ("1000".to_owned(), "focus".to_owned())
+        );
     }
 
     #[test]

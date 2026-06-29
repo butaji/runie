@@ -27,7 +27,9 @@ use serde::{Deserialize, Serialize};
 use super::PermissionAction;
 
 /// Scope of a permission rule.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum PermissionScope {
     /// User-level rules from ~/.runie/config.toml
@@ -160,7 +162,12 @@ impl PermissionSet {
     }
 
     /// Evaluate with the built-in sensitive-path denylist applied first.
-    pub fn effective_action(&self, tool: &str, path: Option<&str>, cmd: Option<&str>) -> PermissionAction {
+    pub fn effective_action(
+        &self,
+        tool: &str,
+        path: Option<&str>,
+        cmd: Option<&str>,
+    ) -> PermissionAction {
         if let Some(p) = path {
             if super::is_sensitive_path(p) {
                 return PermissionAction::Deny;
@@ -172,7 +179,13 @@ impl PermissionSet {
     /// Evaluate with scope precedence: session > project > user.
     /// Returns the highest-priority matching rule's action.
     /// Higher scopes always override lower scopes, even if they return Ask.
-    pub fn evaluate_with_scope(&self, tool: &str, path: Option<&str>, cmd: Option<&str>, max_scope: PermissionScope) -> PermissionAction {
+    pub fn evaluate_with_scope(
+        &self,
+        tool: &str,
+        path: Option<&str>,
+        cmd: Option<&str>,
+        max_scope: PermissionScope,
+    ) -> PermissionAction {
         // Track whether each scope has a matching rule
         let mut scope_has_match = [false, false, false];
         let mut scope_actions = [

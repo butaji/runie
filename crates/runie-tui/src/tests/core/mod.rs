@@ -1,9 +1,7 @@
 //! Core TUI integration tests moved from runie-core.
 
 // Re-export types used by child test modules so they can `use super::*;`
-pub use super::{
-    AppState, DialogKind,
-};
+pub use super::{AppState, DialogKind};
 
 /// Inject mock file entries for file picker tests.
 /// File picker results now come via `FffIndexerActor`, so tests need mock data.
@@ -39,8 +37,6 @@ mod action_text;
 #[cfg(test)]
 mod at_file_picker;
 #[cfg(test)]
-mod file_picker_git_status;
-#[cfg(test)]
 mod autoscroll_bug;
 #[cfg(test)]
 mod autoscroll_overflow;
@@ -58,6 +54,8 @@ mod element_order;
 mod element_sorting;
 #[cfg(test)]
 mod element_spacing;
+#[cfg(test)]
+mod file_picker_git_status;
 #[cfg(test)]
 mod input;
 #[cfg(test)]

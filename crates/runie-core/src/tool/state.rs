@@ -220,7 +220,10 @@ mod tests {
         state.start();
         match state {
             ToolCallState::Running {
-                id, name, started: _, ..
+                id,
+                name,
+                started: _,
+                ..
             } => {
                 assert_eq!(id, "call.1");
                 assert_eq!(name, "bash");

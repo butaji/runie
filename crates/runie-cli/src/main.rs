@@ -9,10 +9,10 @@
 use anyhow::Result;
 use clap::Parser;
 
-mod print;
-mod json;
-mod server;
 mod inspect;
+mod json;
+mod print;
+mod server;
 pub mod transport;
 
 /// Runie CLI — Terminal-native coding agent harness

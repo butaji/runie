@@ -7,8 +7,7 @@ impl AppState {
     pub fn tick_animation(&mut self) {
         let mut changed = false;
         if self.agent_state_mut().turn_active {
-            self.view_mut().animation_frame =
-                self.view_mut().animation_frame.wrapping_add(1);
+            self.view_mut().animation_frame = self.view_mut().animation_frame.wrapping_add(1);
             self.update_speed();
             changed = true;
         }

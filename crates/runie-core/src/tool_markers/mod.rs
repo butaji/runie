@@ -31,8 +31,6 @@ pub fn parse_tool_calls(text: &str) -> Vec<String> {
         .collect()
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -55,7 +53,9 @@ mod tests {
         assert!(!has_tool_markers(r#"{"foo": "bar"}"#));
         assert!(!has_tool_markers(r#"{"name": "not_a_tool"}"#));
         assert!(!has_tool_markers(r#"{"arguments": {}}"#));
-        assert!(!has_tool_markers(r#"[TOOL_CALL]{tool => "bash", args => {}}"#));
+        assert!(!has_tool_markers(
+            r#"[TOOL_CALL]{tool => "bash", args => {}}"#
+        ));
     }
 
     #[test]

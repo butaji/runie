@@ -57,16 +57,20 @@ mod tests {
     fn does_not_merge_consecutive_tool_results() {
         // Need an assistant message with matching tool calls for tool results to be preserved
         let mut assistant = ChatMessage::assistant("call tools".to_string());
-        assistant.parts.push(runie_core::proto::message::Part::ToolCall {
-            id: "call_1".into(),
-            name: "tool1".into(),
-            args: serde_json::json!({}),
-        });
-        assistant.parts.push(runie_core::proto::message::Part::ToolCall {
-            id: "call_2".into(),
-            name: "tool2".into(),
-            args: serde_json::json!({}),
-        });
+        assistant
+            .parts
+            .push(runie_core::proto::message::Part::ToolCall {
+                id: "call_1".into(),
+                name: "tool1".into(),
+                args: serde_json::json!({}),
+            });
+        assistant
+            .parts
+            .push(runie_core::proto::message::Part::ToolCall {
+                id: "call_2".into(),
+                name: "tool2".into(),
+                args: serde_json::json!({}),
+            });
         let messages = vec![
             ChatMessage::user("hi".to_string()),
             assistant,

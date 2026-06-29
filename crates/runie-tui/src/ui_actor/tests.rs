@@ -89,9 +89,15 @@ async fn make_test_actor() -> (
     let (shutdown_tx, _shutdown_rx) = oneshot::channel();
     let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
     let turn_handle = test_turn_handle().await;
-    let actor = UiActor::new(state, AgentActorHandle::new(agent_tx),
-        turn_handle.clone(), kb_tx,
-        EventBus::new(4), shutdown_tx, TermCaps::default());
+    let actor = UiActor::new(
+        state,
+        AgentActorHandle::new(agent_tx),
+        turn_handle.clone(),
+        kb_tx,
+        EventBus::new(4),
+        shutdown_tx,
+        TermCaps::default(),
+    );
     (actor, effect_tx, turn_handle)
 }
 
@@ -100,12 +106,18 @@ async fn paced_renderer_advances_on_response_delta() {
     let (mut actor, effect_tx, _) = make_test_actor().await;
 
     // Simulate a streaming message: TextStart -> ResponseDelta -> tick.
-    actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
-    actor.handle_event(
-        Event::ResponseDelta { id: "1".into(), content: "hello world".into() },
-        effect_tx.clone(),
-    )
-    .await;
+    actor
+        .handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone())
+        .await;
+    actor
+        .handle_event(
+            Event::ResponseDelta {
+                id: "1".into(),
+                content: "hello world".into(),
+            },
+            effect_tx.clone(),
+        )
+        .await;
 
     // Tick once to advance the paced renderer.
     actor.paced.tick();
@@ -123,17 +135,27 @@ async fn paced_renderer_advances_on_response_delta() {
 async fn paced_renderer_finishes_on_turn_complete() {
     let (mut actor, effect_tx, _) = make_test_actor().await;
 
-    actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
-    actor.handle_event(
-        Event::ResponseDelta { id: "1".into(), content: "hello world".into() },
-        effect_tx.clone(),
-    )
-    .await;
-    actor.handle_event(
-        Event::TurnComplete { id: "1".into(), duration_secs: 1.0 },
-        effect_tx.clone(),
-    )
-    .await;
+    actor
+        .handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone())
+        .await;
+    actor
+        .handle_event(
+            Event::ResponseDelta {
+                id: "1".into(),
+                content: "hello world".into(),
+            },
+            effect_tx.clone(),
+        )
+        .await;
+    actor
+        .handle_event(
+            Event::TurnComplete {
+                id: "1".into(),
+                duration_secs: 1.0,
+            },
+            effect_tx.clone(),
+        )
+        .await;
 
     // After TurnComplete, renderer should be caught up.
     assert!(
@@ -161,24 +183,34 @@ async fn login_key_submit_triggers_validation_effect() {
     state.set_actor_handles(handles.clone());
 
     let mut actor = UiActor::new(
-        state, AgentActorHandle::new(agent_tx),
+        state,
+        AgentActorHandle::new(agent_tx),
         handles.turn.clone(),
-        kb_tx, EventBus::new(4), shutdown_tx, TermCaps::default(),
+        kb_tx,
+        EventBus::new(4),
+        shutdown_tx,
+        TermCaps::default(),
     );
 
     let mut flow = LoginFlowState::new().with_provider("test-unknown-provider".into());
     flow.key = "sk-test".into();
     let panel = build_key_input(&flow);
     let stack = runie_core::dialog::PanelStack::new(panel);
-    *actor.state.open_dialog_mut() = Some(
-        runie_core::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack }
-    );
+    *actor.state.open_dialog_mut() = Some(runie_core::commands::DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack,
+    });
     *actor.state.login_flow_mut() = Some(flow);
 
-    actor.handle_event(
-        Event::SubmitKey { provider: "test-unknown-provider".into(), key: "sk-test".into() },
-        effect_tx.clone(),
-    ).await;
+    actor
+        .handle_event(
+            Event::SubmitKey {
+                provider: "test-unknown-provider".into(),
+                key: "sk-test".into(),
+            },
+            effect_tx.clone(),
+        )
+        .await;
 
     assert!(
         matches!(
@@ -189,5 +221,8 @@ async fn login_key_submit_triggers_validation_effect() {
     );
 
     let result = tokio::time::timeout(Duration::from_secs(2), effect_rx.recv()).await;
-    assert!(result.is_ok(), "validation effect should produce a result event");
+    assert!(
+        result.is_ok(),
+        "validation effect should produce a result event"
+    );
 }

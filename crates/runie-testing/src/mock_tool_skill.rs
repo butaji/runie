@@ -3,9 +3,9 @@
 //! Provides a `HarnessSkill` that returns canned output for configured tool names,
 //! letting agent-turn tests run without real IO.
 
+use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
-use parking_lot::Mutex;
 
 use async_trait::async_trait;
 use runie_core::harness_skills::{
@@ -45,7 +45,10 @@ impl HarnessSkill for MockToolSkill {
 /// Build a `SkillRegistry` with canned outputs for `list_dir` and `bash`.
 pub fn mock_tool_skill() -> SkillRegistry {
     let mut outputs = HashMap::new();
-    outputs.insert("list_dir".to_string(), "Cargo.toml\nREADME.md\n".to_string());
+    outputs.insert(
+        "list_dir".to_string(),
+        "Cargo.toml\nREADME.md\n".to_string(),
+    );
     outputs.insert("bash".to_string(), "hello\n".to_string());
     let mut registry = SkillRegistry::new();
     registry.register(MockToolSkill::new(outputs));
@@ -82,7 +85,9 @@ pub struct RecordingSkill {
 impl RecordingSkill {
     /// Build a recording skill.
     pub fn new() -> Self {
-        Self { ctx: Arc::new(Mutex::new(None)) }
+        Self {
+            ctx: Arc::new(Mutex::new(None)),
+        }
     }
 
     /// Take and return the last recorded context.
@@ -114,9 +119,7 @@ mod tests {
 
     #[test]
     fn mock_tool_skill_skips_with_output() {
-        let skill = MockToolSkill::new(
-            [("list_dir".into(), "Cargo.toml\n".into())].into(),
-        );
+        let skill = MockToolSkill::new([("list_dir".into(), "Cargo.toml\n".into())].into());
         let result = skill.on_tool_call(&ToolCallCtx {
             tool_name: "list_dir".into(),
             tool_input: serde_json::json!({}),
@@ -129,9 +132,7 @@ mod tests {
 
     #[test]
     fn mock_tool_skill_continues_for_unknown_tool() {
-        let skill = MockToolSkill::new(
-            [("list_dir".into(), "Cargo.toml\n".into())].into(),
-        );
+        let skill = MockToolSkill::new([("list_dir".into(), "Cargo.toml\n".into())].into());
         let result = skill.on_tool_call(&ToolCallCtx {
             tool_name: "bash".into(),
             tool_input: serde_json::json!({}),

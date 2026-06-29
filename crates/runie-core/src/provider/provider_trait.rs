@@ -132,10 +132,7 @@ mod tests {
                 ProviderError::MissingApiKey("OPENAI_API_KEY".into()),
                 "Missing API key",
             ),
-            (
-                ProviderError::ConfigNotLoaded,
-                "Configuration not loaded",
-            ),
+            (ProviderError::ConfigNotLoaded, "Configuration not loaded"),
         ];
         for (err, prefix) in cases {
             let msg = err.to_string();
@@ -153,8 +150,14 @@ mod tests {
         let err: ProviderError = anyhow_err.into();
         let msg = err.to_string();
         // The underlying error message is preserved in the display
-        assert!(msg.contains("network error"), "expected 'network error' in: {msg}");
-        assert!(msg.contains("connection refused"), "expected 'connection refused' in: {msg}");
+        assert!(
+            msg.contains("network error"),
+            "expected 'network error' in: {msg}"
+        );
+        assert!(
+            msg.contains("connection refused"),
+            "expected 'connection refused' in: {msg}"
+        );
         // The variant is still Source
         assert!(
             matches!(err, ProviderError::Source(_)),

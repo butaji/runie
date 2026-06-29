@@ -23,7 +23,11 @@ fn valid_config_passes_validation() {
         "truncation": { "max_lines": 100, "max_bytes": 50000 }
     });
     let errors = validate::validate(&value);
-    assert!(errors.is_empty(), "valid config should have no errors: {:?}", errors);
+    assert!(
+        errors.is_empty(),
+        "valid config should have no errors: {:?}",
+        errors
+    );
 }
 
 #[test]
@@ -33,7 +37,9 @@ fn invalid_provider_type_fails_validation() {
     });
     let errors = validate::validate(&value);
     assert!(!errors.is_empty(), "provider as integer should fail");
-    assert!(errors.iter().any(|e| e.contains("provider") && e.contains("string")));
+    assert!(errors
+        .iter()
+        .any(|e| e.contains("provider") && e.contains("string")));
 }
 
 #[test]
@@ -117,7 +123,10 @@ fn invalid_provider_models_item_fails_validation() {
         }
     });
     let errors = validate::validate(&value);
-    assert!(!errors.is_empty(), "models array item as integer should fail");
+    assert!(
+        !errors.is_empty(),
+        "models array item as integer should fail"
+    );
 }
 
 #[test]
@@ -143,7 +152,10 @@ fn invalid_hook_command_item_fails_validation() {
         }
     });
     let errors = validate::validate(&value);
-    assert!(!errors.is_empty(), "hook command item as integer should fail");
+    assert!(
+        !errors.is_empty(),
+        "hook command item as integer should fail"
+    );
 }
 
 #[test]
@@ -181,15 +193,24 @@ fn null_values_are_strictly_rejected_for_non_nullable_fields() {
     // provider/model/theme are Option<T> so they tolerate null; the rest do not.
     assert!(!errors.is_empty(), "non-nullable null fields should fail");
     // Errors should be about type mismatch, not unknown fields.
-    assert!(errors.iter().all(|e| e.contains("not of type") || e.contains(": unknown")),
-        "errors should be type errors or unknown fields: {:?}", errors);
+    assert!(
+        errors
+            .iter()
+            .all(|e| e.contains("not of type") || e.contains(": unknown")),
+        "errors should be type errors or unknown fields: {:?}",
+        errors
+    );
 }
 
 #[test]
 fn empty_object_is_valid() {
     let value = json!({});
     let errors = validate::validate(&value);
-    assert!(errors.is_empty(), "empty object should be valid: {:?}", errors);
+    assert!(
+        errors.is_empty(),
+        "empty object should be valid: {:?}",
+        errors
+    );
 }
 
 // ============================================================================
@@ -207,7 +228,11 @@ fn registry_validation_accepts_known_provider_and_model() {
         ..Config::default()
     };
     let errors = validate::validate_registry(&config);
-    assert!(errors.is_empty(), "known provider/model should pass: {:?}", errors);
+    assert!(
+        errors.is_empty(),
+        "known provider/model should pass: {:?}",
+        errors
+    );
 }
 
 #[test]
@@ -219,7 +244,9 @@ fn registry_validation_rejects_unknown_provider() {
     let errors = validate::validate_registry(&config);
     assert!(!errors.is_empty(), "unknown provider should fail");
     assert!(
-        errors.iter().any(|e| e.contains("fake-provider") && e.contains("unknown provider")),
+        errors
+            .iter()
+            .any(|e| e.contains("fake-provider") && e.contains("unknown provider")),
         "error should mention unknown provider: {:?}",
         errors
     );
@@ -238,7 +265,9 @@ fn registry_validation_rejects_unknown_model_for_provider() {
     let errors = validate::validate_registry(&config);
     assert!(!errors.is_empty(), "unknown model should fail");
     assert!(
-        errors.iter().any(|e| e.contains("nonexistent-model") && e.contains("not found")),
+        errors
+            .iter()
+            .any(|e| e.contains("nonexistent-model") && e.contains("not found")),
         "error should mention model not found: {:?}",
         errors
     );
@@ -272,9 +301,14 @@ fn registry_validation_rejects_unknown_configured_provider() {
         },
     );
     let errors = validate::validate_registry(&config);
-    assert!(!errors.is_empty(), "unknown configured provider should fail");
     assert!(
-        errors.iter().any(|e| e.contains("fake-provider") && e.contains("unknown provider")),
+        !errors.is_empty(),
+        "unknown configured provider should fail"
+    );
+    assert!(
+        errors
+            .iter()
+            .any(|e| e.contains("fake-provider") && e.contains("unknown provider")),
         "error should mention unknown provider: {:?}",
         errors
     );
@@ -305,7 +339,11 @@ fn registry_validation_accepts_full_model_format() {
         ..Config::default()
     };
     let errors = validate::validate_registry(&config);
-    assert!(errors.is_empty(), "full model format should pass: {:?}", errors);
+    assert!(
+        errors.is_empty(),
+        "full model format should pass: {:?}",
+        errors
+    );
 }
 
 #[test]

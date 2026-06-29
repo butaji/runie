@@ -1,6 +1,5 @@
 //! Model cycling tests (Layer 1 + Layer 2)
 
-
 use crate::model::{AppState, ScopedModel};
 
 fn sm(provider: &str, name: &str, enabled: bool) -> ScopedModel {

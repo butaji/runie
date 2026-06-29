@@ -15,46 +15,77 @@ pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry
     register_handler!(
         registry,
         "save",
-        FormWithHandler("Save Session", &[("Name", "session-name", "name")], run::run_save)
+        FormWithHandler(
+            "Save Session",
+            &[("Name", "session-name", "name")],
+            run::run_save
+        )
     );
     register_handler!(
         registry,
         "load",
-        FormWithHandler("Load Session", &[("Name", "session-name", "name")], run::run_load)
+        FormWithHandler(
+            "Load Session",
+            &[("Name", "session-name", "name")],
+            run::run_load
+        )
     );
     register_handler!(
         registry,
         "delete",
-        FormWithHandler("Delete Session", &[("Name", "session-name", "name")], run::run_delete)
+        FormWithHandler(
+            "Delete Session",
+            &[("Name", "session-name", "name")],
+            run::run_delete
+        )
     );
     register_handler!(
         registry,
         "export",
-        FormWithHandler("Export Session", &[("Path", "session.json", "path")], run::run_export)
+        FormWithHandler(
+            "Export Session",
+            &[("Path", "session.json", "path")],
+            run::run_export
+        )
     );
     register_handler!(
         registry,
         "import",
-        FormWithHandler("Import Session", &[("Path", "session.json", "path")], run::run_import)
+        FormWithHandler(
+            "Import Session",
+            &[("Path", "session.json", "path")],
+            run::run_import
+        )
     );
     register_handler!(
         registry,
         "compact",
         FormWithHandler(
             "Compact Context",
-            &[("Keep tokens", "2000", "keep"), ("Focus", "optional focus keyword", "focus")],
+            &[
+                ("Keep tokens", "2000", "keep"),
+                ("Focus", "optional focus keyword", "focus")
+            ],
             run::run_compact
         )
     );
     register_handler!(
         registry,
         "fork",
-        FormWithHandler("Fork Session", &[("Message index", "0", "index")], run::run_fork)
+        FormWithHandler(
+            "Fork Session",
+            &[("Message index", "0", "index")],
+            run::run_fork
+        )
     );
     register_handler!(
         registry,
         "name",
-        FormWithHandler("Set Session Name", &[("Name", "session-name", "name")], run::run_name)
+        FormWithHandler(
+            "Set Session Name",
+            &[("Name", "session-name", "name")],
+            run::run_name
+        )
     );
     // Simple handlers
     register_handler!(registry, "sessions", Handler(handle_sessions));
@@ -144,7 +175,12 @@ fn session_token_count(state: &AppState) -> usize {
         .session
         .messages
         .iter()
-        .map(|m| state.agent_state().token_tracker.estimate_input(&m.content()))
+        .map(|m| {
+            state
+                .agent_state()
+                .token_tracker
+                .estimate_input(&m.content())
+        })
         .sum()
 }
 
@@ -157,7 +193,12 @@ fn count_messages_by_role(state: &AppState) -> (usize, usize, usize) {
 }
 
 fn count_role(state: &AppState, role: crate::model::Role) -> usize {
-    state.session().messages.iter().filter(|m| m.role == role).count()
+    state
+        .session()
+        .messages
+        .iter()
+        .filter(|m| m.role == role)
+        .count()
 }
 
 fn build_session_info(
@@ -170,7 +211,11 @@ fn build_session_info(
     } else {
         &state.input().current_prompt
     };
-    let read_only = if state.config().read_only { "on" } else { "off" };
+    let read_only = if state.config().read_only {
+        "on"
+    } else {
+        "off"
+    };
     let trust = project_trust_status(state);
     let session = state.session();
     format!(
@@ -242,5 +287,8 @@ fn load_session_metadata(
 ) -> anyhow::Result<crate::session::index::SessionMetadata> {
     let data_dir = store.dir().parent().unwrap_or(store.dir()).to_path_buf();
     let index = crate::session::index::SessionIndex::load(&data_dir)?;
-    index.get(name).cloned().ok_or_else(|| anyhow::anyhow!("not found"))
+    index
+        .get(name)
+        .cloned()
+        .ok_or_else(|| anyhow::anyhow!("not found"))
 }

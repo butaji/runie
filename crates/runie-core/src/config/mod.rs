@@ -12,13 +12,13 @@ use crate::model::ThinkingLevel;
 use schemars::JsonSchema;
 
 pub mod layers;
-mod validate;
+pub mod mcp;
+pub mod migrate;
+mod provider_config;
 pub mod schema;
 #[cfg(test)]
 mod tests;
-pub mod migrate;
-pub mod mcp;
-mod provider_config;
+mod validate;
 
 // Re-export MCP types for convenience
 pub use mcp::{McpSection, McpServer, McpTransport};
@@ -28,8 +28,7 @@ pub use mcp::{McpSection, McpServer, McpTransport};
 // ============================================================================
 
 /// Models configuration section.
-#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
-#[derive(JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct ModelsSection {
     /// The default model to use when no model is specified.
     pub default: Option<String>,
@@ -43,8 +42,7 @@ pub struct ModelsSection {
 // ============================================================================
 
 /// A provider's configuration entry.
-#[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
-#[derive(JsonSchema)]
+#[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize, JsonSchema)]
 pub struct ModelProvider {
     #[serde(rename = "type")]
     pub provider_type: Option<String>,
@@ -173,8 +171,7 @@ impl PermissionsSection {
 // ============================================================================
 
 /// Canonical config type for `~/.runie/config.toml`.
-#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
-#[derive(JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct Config {
     /// Default provider name.
     pub provider: Option<String>,
@@ -233,7 +230,10 @@ impl Config {
                     Ok(v) => v,
                     Err(_) => return Self::default(),
                 };
-                match crate::config::migrate::migrate_with_path(&mut value, Some(path.to_path_buf())) {
+                match crate::config::migrate::migrate_with_path(
+                    &mut value,
+                    Some(path.to_path_buf()),
+                ) {
                     Ok(true) => {
                         let _ = crate::config::migrate::backup_config(path);
                         if let Ok(migrated) = toml::to_string(&value) {
@@ -519,10 +519,7 @@ pub enum ConfigChange {
 
 fn current_config_values(config: &Config) -> (String, String, String) {
     let (provider, model) = config.resolve_default_model();
-    let theme = config
-        .theme
-        .clone()
-        .unwrap_or_else(|| "runie".to_owned());
+    let theme = config.theme.clone().unwrap_or_else(|| "runie".to_owned());
     (provider, model, theme)
 }
 
@@ -550,4 +547,3 @@ mod telemetry_tests {
         assert!(!section.enabled);
     }
 }
-

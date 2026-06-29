@@ -6,11 +6,11 @@
 
 use std::sync::Arc;
 
+use crate::commands::DialogKind;
 use crate::model::state::AppState;
 use crate::model::view_cache::ViewCache;
 use crate::model::{build_model_selector_items, ModelSelectorItem};
 use crate::model_catalog::configured_models_catalog;
-use crate::commands::DialogKind;
 use crate::snapshot::{
     compute_current_top_element, compute_hovered_element, compute_mouse_target, Snapshot,
 };
@@ -96,13 +96,7 @@ impl AppState {
     fn command_palette_items(&self, filter: &str) -> Vec<(String, String, String)> {
         crate::commands::filter_commands(&self.registry, filter)
             .into_iter()
-            .map(|cmd| {
-                (
-                    cmd.name.clone(),
-                    cmd.desc.clone(),
-                    cmd.category.to_string(),
-                )
-            })
+            .map(|cmd| (cmd.name.clone(), cmd.desc.clone(), cmd.category.to_string()))
             .collect()
     }
 
@@ -129,9 +123,10 @@ impl AppState {
 
     fn refresh_session_tree_items(&mut self) {
         let filter = match self.open_dialog() {
-            Some(crate::commands::DialogState::Active { kind: DialogKind::SessionTree, panels: _ }) => {
-                crate::session::tree::SessionTreeFilter::All
-            }
+            Some(crate::commands::DialogState::Active {
+                kind: DialogKind::SessionTree,
+                panels: _,
+            }) => crate::session::tree::SessionTreeFilter::All,
             _ => {
                 self.view_mut().cached_session_tree_valid = false;
                 if self.view_mut().cached_session_tree_items.is_empty() {

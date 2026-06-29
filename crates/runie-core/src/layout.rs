@@ -290,7 +290,10 @@ mod tests {
         let text2 = "aaaaaaaaaaaaaaaaaaaa"; // 20 'a' chars
         let lines2 = word_wrap(text2, 5, 3);
         // First line: up to 5 chars, then 3 for rest
-        assert!(lines2.len() >= 3, "expected multiple lines with different widths");
+        assert!(
+            lines2.len() >= 3,
+            "expected multiple lines with different widths"
+        );
     }
 
     #[test]
@@ -372,7 +375,10 @@ mod tests {
             for width in [1u16, 5, 10, 20, 40, 80] {
                 let lines = word_wrap(text, width, width);
                 // Non-empty input must produce at least one line.
-                assert!(!lines.is_empty(), "word_wrap({text:?}, {width}) must not be empty");
+                assert!(
+                    !lines.is_empty(),
+                    "word_wrap({text:?}, {width}) must not be empty"
+                );
                 // Each output line must be a whole word (no partial words mid-line).
                 // The exception is CJK characters whose display width exceeds the
                 // requested width — they cannot be split.
@@ -406,7 +412,10 @@ mod tests {
         // At width 80, the sentence should not wrap; at width 10 it should.
         let wide_count = element_line_count(&msg, 80);
         let narrow_count = element_line_count(&msg, 10);
-        assert!(narrow_count >= wide_count, "narrow ({narrow_count}) must ≥ wide ({wide_count})");
+        assert!(
+            narrow_count >= wide_count,
+            "narrow ({narrow_count}) must ≥ wide ({wide_count})"
+        );
         // Width 10 forces multi-line wrapping.
         assert!(narrow_count > 2, "width-10 should wrap: got {narrow_count}");
     }

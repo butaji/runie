@@ -1,7 +1,7 @@
 use super::types::*;
 use super::*;
-use crate::tool::{ToolDef, ToolContext, ToolStatus};
 use crate::tool::search::core::SearchInput;
+use crate::tool::{ToolContext, ToolDef, ToolStatus};
 use fff_search::{Constraint, Location, QueryParser};
 use git2::Status as GitStatus;
 

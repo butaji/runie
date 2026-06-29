@@ -14,10 +14,7 @@ use std::path::Path;
 const IO_ADAPTER_MODULES: &[&str] = &["actors/io"];
 
 /// Files in test directories or that are purely test scaffolding.
-const TEST_SCAFFOLDING_FILES: &[&str] = &[
-    "tests/",
-    "/tests.",
-];
+const TEST_SCAFFOLDING_FILES: &[&str] = &["tests/", "/tests."];
 
 /// Files that intentionally contain sync IO in production.
 /// These should be migrated to IO actors over time.

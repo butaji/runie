@@ -3,10 +3,10 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use crate::config::ProviderConfigResolver;
+use crate::{build_provider, find_provider, validate_api_key, ProviderError};
 use runie_core::actors::provider::{BuiltProvider, ProviderFactory};
 use runie_core::config::Config;
-use crate::config::ProviderConfigResolver;
-use crate::{find_provider, build_provider, validate_api_key, ProviderError};
 use runie_core::proto::ProviderConfigBox;
 
 /// The production provider factory.
@@ -22,7 +22,11 @@ impl ProviderFactory for DynProviderFactory {
         model: &str,
         config: &Config,
     ) -> Result<BuiltProvider, ProviderError> {
-        build_provider(provider, model, Some(ProviderConfigBox::new(config.clone())))
+        build_provider(
+            provider,
+            model,
+            Some(ProviderConfigBox::new(config.clone())),
+        )
     }
 
     fn validate_key(

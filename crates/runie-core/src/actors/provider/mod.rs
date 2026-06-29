@@ -7,6 +7,6 @@ mod tests;
 
 // Ractor-based ProviderActor.
 pub mod ractor_provider;
-pub use ractor_provider::{RactorProviderActor, RactorProviderHandle};
 pub use factory::{BuiltProvider, ProviderFactory};
 pub use messages::{ProviderActorHandle, ProviderMsg};
+pub use ractor_provider::{RactorProviderActor, RactorProviderHandle};

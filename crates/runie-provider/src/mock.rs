@@ -1,6 +1,6 @@
+use crate::Provider;
 use futures::Stream;
 use runie_core::proto::message::{ChatMessage, Role};
-use crate::Provider;
 use runie_core::provider_event::{ProviderEvent, StopReason};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -122,7 +122,8 @@ fn command_tool_chunks(input: &str) -> Option<Vec<String>> {
     if input.contains("grep") || input.contains("search") {
         return Some(vec![
             "I'll search for that pattern.\n".to_owned(),
-            r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": ".", "glob": "*.rs"}}"#.to_owned(),
+            r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": ".", "glob": "*.rs"}}"#
+                .to_owned(),
         ]);
     }
     if input.contains("find") || input.contains("glob") {

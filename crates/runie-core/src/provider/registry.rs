@@ -5,7 +5,9 @@
 //!
 //! Provider and model metadata is loaded from YAML files in `resources/models/`.
 
-use super::registry_data::{mock_provider_yaml, parse_provider_yaml, provider_yaml_files, ProviderYaml};
+use super::registry_data::{
+    mock_provider_yaml, parse_provider_yaml, provider_yaml_files, ProviderYaml,
+};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
 

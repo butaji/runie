@@ -139,10 +139,16 @@ mod tests {
     use crate::model::QueuedMessageKind::*;
 
     fn steering(content: &str) -> QueuedMessage {
-        QueuedMessage { content: content.into(), kind: Steering }
+        QueuedMessage {
+            content: content.into(),
+            kind: Steering,
+        }
     }
     fn follow_up(content: &str) -> QueuedMessage {
-        QueuedMessage { content: content.into(), kind: FollowUp }
+        QueuedMessage {
+            content: content.into(),
+            kind: FollowUp,
+        }
     }
 
     #[test]

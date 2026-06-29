@@ -8,7 +8,6 @@ use crate::Event;
 
 use super::panel_handler::toggle_selected_checkbox;
 
-
 /// What a form panel should do in response to an event.
 #[derive(Debug, Clone)]
 pub enum FormAction {
@@ -154,15 +153,20 @@ fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
         return A::KeepOpen;
     }
     match panel.selected_item().cloned() {
-        Some(PanelItem::Action { action: ItemAction::Emit(evt), .. }) => A::Submit(Some(evt)),
+        Some(PanelItem::Action {
+            action: ItemAction::Emit(evt),
+            ..
+        }) => A::Submit(Some(evt)),
         Some(PanelItem::Action { .. }) => A::Submit(None),
-        Some(PanelItem::Toggle { action: ItemAction::Emit(crate::Event::ToggleModel { model }), .. })
-            if panel.id == "login-models" => {
-                if let Some(flow) = state.login_flow_mut().as_mut() {
-                    flow.selected_models.insert(model);
-                }
-                A::Submit(Some(crate::Event::Save))
+        Some(PanelItem::Toggle {
+            action: ItemAction::Emit(crate::Event::ToggleModel { model }),
+            ..
+        }) if panel.id == "login-models" => {
+            if let Some(flow) = state.login_flow_mut().as_mut() {
+                flow.selected_models.insert(model);
             }
+            A::Submit(Some(crate::Event::Save))
+        }
         Some(PanelItem::Toggle { .. }) => {
             toggle_selected_checkbox(state, panel);
             A::KeepOpen
@@ -412,10 +416,7 @@ fn dispatch_form_to_registry(
 /// For a form with fields ["keep", "focus"] and values {"keep": "2000", "focus": "foo"},
 /// this produces "2000 foo".
 fn serialize_form_values_ordered(keys: &[String], values: &HashMap<String, String>) -> String {
-    let parts: Vec<String> = keys
-        .iter()
-        .filter_map(|k| values.get(k).cloned())
-        .collect();
+    let parts: Vec<String> = keys.iter().filter_map(|k| values.get(k).cloned()).collect();
     parts.join(" ")
 }
 

@@ -23,7 +23,11 @@ impl FormPanel {
     pub fn new(id: impl Into<String>, title: impl Into<String>) -> Self {
         // Forms never use fuzzy filtering — keystrokes edit field values.
         let panel = Panel::new(id, title).form();
-        Self { panel, cmd_name: None, field_keys: Vec::new() }
+        Self {
+            panel,
+            cmd_name: None,
+            field_keys: Vec::new(),
+        }
     }
 
     /// Add a form field

@@ -1,6 +1,5 @@
 //! Diagnostics tests (Layer 1 + Layer 2)
 
-
 use crate::model::AppState;
 
 #[test]

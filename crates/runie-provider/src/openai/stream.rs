@@ -97,7 +97,8 @@ fn configure_backoff(es: &mut EventSource) {
 
 /// Process SSE events and yield provider events.
 async fn stream_sse_events(
-    es: &mut (impl futures::Stream<Item = Result<reqwest_eventsource::Event, reqwest_eventsource::Error>> + Unpin),
+    es: &mut (impl futures::Stream<Item = Result<reqwest_eventsource::Event, reqwest_eventsource::Error>>
+              + Unpin),
 ) -> OpenAiState {
     let protocol = OpenAiProtocol::new();
     let mut state = OpenAiState::default();
@@ -115,7 +116,9 @@ async fn stream_sse_events(
         let is_terminal = protocol.terminal(&frame);
         let (new_state, _) = protocol.step(state, frame);
         state = new_state;
-        if is_terminal { break; }
+        if is_terminal {
+            break;
+        }
     }
     state
 }
@@ -129,7 +132,8 @@ fn build_eventsource(
     let api_key = &provider.api_key;
 
     EventSource::new(
-        provider.client
+        provider
+            .client
             .post(&url)
             .header("Authorization", format!("Bearer {}", api_key.trim()))
             .header("Content-Type", "application/json")

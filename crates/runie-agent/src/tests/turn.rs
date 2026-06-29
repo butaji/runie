@@ -3,12 +3,12 @@ use crate::tests::ensure_mock_provider;
 use crate::{
     run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages, AgentCommand,
 };
+use parking_lot::Mutex;
 use runie_core::harness_skills::{SkillRegistry, ToolCallCtx, ToolCallPhase};
 use runie_core::Event;
 use runie_testing::mock_tool_skill;
 use runie_testing::{allow_all_gate, mock_provider, RecordingSkill};
 use std::sync::Arc;
-use parking_lot::Mutex;
 
 #[tokio::test]
 async fn test_agent_loop_simple_response() {
@@ -30,9 +30,7 @@ async fn test_agent_loop_simple_response() {
     run_agent_turn(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().push(evt)
-        })),
+        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
         5,
         allow_all_gate(),
     )
@@ -84,9 +82,7 @@ async fn test_agent_loop_with_tool_call() {
     run_agent_turn_with_skills(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().push(evt)
-        })),
+        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
         5,
         Some(&mock_tool_skill()),
         allow_all_gate(),
@@ -133,9 +129,7 @@ async fn test_agent_loop_with_native_tool_call_events() {
     run_agent_turn_with_skills(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().push(evt)
-        })),
+        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
         1,
         Some(&mock_tool_skill()),
         allow_all_gate(),
@@ -182,9 +176,7 @@ async fn test_agent_loop_respects_max_iterations() {
     run_agent_turn(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().push(evt)
-        })),
+        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
         3,
         allow_all_gate(),
     )
@@ -213,9 +205,7 @@ async fn test_agent_loop_events_have_correct_id() {
     run_agent_turn(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().push(evt)
-        })),
+        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
         5,
         allow_all_gate(),
     )
@@ -319,9 +309,7 @@ async fn agent_tool_event_carries_mock_output() {
     run_agent_turn_with_skills(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().push(evt)
-        })),
+        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
         5,
         Some(&mock_tool_skill()),
         allow_all_gate(),
@@ -331,7 +319,6 @@ async fn agent_tool_event_carries_mock_output() {
 
     let tool_end = events
         .lock()
-        
         .iter()
         .find_map(|e| match e {
             Event::ToolEnd { output, .. } => Some(output.clone()),
@@ -362,9 +349,7 @@ async fn tool_call_event_matches_mock_output() {
     run_agent_turn_with_skills(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().push(evt)
-        })),
+        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
         5,
         Some(&mock_tool_skill()),
         allow_all_gate(),
@@ -374,7 +359,6 @@ async fn tool_call_event_matches_mock_output() {
 
     let tool_ends: Vec<String> = events
         .lock()
-        
         .iter()
         .filter_map(|e| match e {
             Event::ToolEnd { output, .. } => Some(output.clone()),

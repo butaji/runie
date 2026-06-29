@@ -14,12 +14,15 @@
 use futures::StreamExt;
 use runie_agent::AgentActorFactoryImpl;
 use runie_core::actors::leader::{Leader, LeaderHandle};
-use runie_provider::DynProviderFactory;
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::telemetry;
 use runie_core::{AppState, Snapshot};
-use runie_tui::{app_init, keymap, terminal, terminal_setup, theme, ui, ui_actor::{AgentHandleBox, LeaderAgentActorHandle, UiActor}};
+use runie_provider::DynProviderFactory;
+use runie_tui::{
+    app_init, keymap, terminal, terminal_setup, theme, ui,
+    ui_actor::{AgentHandleBox, LeaderAgentActorHandle, UiActor},
+};
 use std::{collections::HashMap, io, time::Duration};
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -65,7 +68,14 @@ async fn main() -> io::Result<()> {
     init_terminal_state(&mut state);
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
-    spawn_background_tasks(terminal, state, terminal_caps, leader_handle.clone(), shutdown_tx).await;
+    spawn_background_tasks(
+        terminal,
+        state,
+        terminal_caps,
+        leader_handle.clone(),
+        shutdown_tx,
+    )
+    .await;
 
     shutdown_rx
         .await
@@ -90,24 +100,60 @@ async fn input_forwarder_task(
     use runie_core::actors::InputMsg;
     while let Some(evt) = input_rx.recv().await {
         match &evt {
-            Event::Input(c) => { input_handle.send(InputMsg::InsertChar(*c)).await; }
-            Event::Backspace => { input_handle.send(InputMsg::Backspace).await; }
-            Event::Newline => { input_handle.send(InputMsg::Newline).await; }
-            Event::DeleteWord => { input_handle.send(InputMsg::DeleteWord).await; }
-            Event::DeleteToEnd => { input_handle.send(InputMsg::DeleteToEnd).await; }
-            Event::DeleteToStart => { input_handle.send(InputMsg::DeleteToStart).await; }
-            Event::CursorLeft => { input_handle.send(InputMsg::CursorLeft).await; }
-            Event::CursorRight => { input_handle.send(InputMsg::CursorRight).await; }
-            Event::CursorStart => { input_handle.send(InputMsg::CursorStart).await; }
-            Event::CursorEnd => { input_handle.send(InputMsg::CursorEnd).await; }
-            Event::CursorWordLeft => { input_handle.send(InputMsg::CursorWordLeft).await; }
-            Event::CursorWordRight => { input_handle.send(InputMsg::CursorWordRight).await; }
-            Event::HistoryPrev => { input_handle.send(InputMsg::HistoryPrev).await; }
-            Event::HistoryNext => { input_handle.send(InputMsg::HistoryNext).await; }
-            Event::Undo => { input_handle.send(InputMsg::Undo).await; }
-            Event::Redo => { input_handle.send(InputMsg::Redo).await; }
-            Event::Paste(s) => { input_handle.send(InputMsg::Paste(s.clone())).await; }
-            Event::PasteImage => { input_handle.send(InputMsg::PasteImage).await; }
+            Event::Input(c) => {
+                input_handle.send(InputMsg::InsertChar(*c)).await;
+            }
+            Event::Backspace => {
+                input_handle.send(InputMsg::Backspace).await;
+            }
+            Event::Newline => {
+                input_handle.send(InputMsg::Newline).await;
+            }
+            Event::DeleteWord => {
+                input_handle.send(InputMsg::DeleteWord).await;
+            }
+            Event::DeleteToEnd => {
+                input_handle.send(InputMsg::DeleteToEnd).await;
+            }
+            Event::DeleteToStart => {
+                input_handle.send(InputMsg::DeleteToStart).await;
+            }
+            Event::CursorLeft => {
+                input_handle.send(InputMsg::CursorLeft).await;
+            }
+            Event::CursorRight => {
+                input_handle.send(InputMsg::CursorRight).await;
+            }
+            Event::CursorStart => {
+                input_handle.send(InputMsg::CursorStart).await;
+            }
+            Event::CursorEnd => {
+                input_handle.send(InputMsg::CursorEnd).await;
+            }
+            Event::CursorWordLeft => {
+                input_handle.send(InputMsg::CursorWordLeft).await;
+            }
+            Event::CursorWordRight => {
+                input_handle.send(InputMsg::CursorWordRight).await;
+            }
+            Event::HistoryPrev => {
+                input_handle.send(InputMsg::HistoryPrev).await;
+            }
+            Event::HistoryNext => {
+                input_handle.send(InputMsg::HistoryNext).await;
+            }
+            Event::Undo => {
+                input_handle.send(InputMsg::Undo).await;
+            }
+            Event::Redo => {
+                input_handle.send(InputMsg::Redo).await;
+            }
+            Event::Paste(s) => {
+                input_handle.send(InputMsg::Paste(s.clone())).await;
+            }
+            Event::PasteImage => {
+                input_handle.send(InputMsg::PasteImage).await;
+            }
             _ => {}
         }
     }
@@ -130,8 +176,13 @@ async fn spawn_background_tasks(
 
     // UiActor creates its own watch channel for snapshots; take the receiver for the render task.
     let mut ui_actor = spawn_ui_actor(
-        state, agent_handle,
-        leader_handle.turn.clone(), kb_tx, bus, shutdown_tx, caps,
+        state,
+        agent_handle,
+        leader_handle.turn.clone(),
+        kb_tx,
+        bus,
+        shutdown_tx,
+        caps,
     );
     let render_rx = ui_actor.take_render_rx();
 
@@ -184,7 +235,10 @@ fn render_loop(
             snap = s;
         }
 
-        let new_size = terminal.size().map(|r| (r.width, r.height)).unwrap_or((0, 0));
+        let new_size = terminal
+            .size()
+            .map(|r| (r.width, r.height))
+            .unwrap_or((0, 0));
         if last_size != Some(new_size) {
             let _ = terminal.clear();
             last_size = Some(new_size);
@@ -205,8 +259,13 @@ fn spawn_ui_actor(
     caps: terminal::caps::TermCaps,
 ) -> UiActor {
     UiActor::with_agent_handle(
-        state, AgentHandleBox::Leader(agent_handle),
-        turn_handle, kb_tx, bus, shutdown_tx, caps,
+        state,
+        AgentHandleBox::Leader(agent_handle),
+        turn_handle,
+        kb_tx,
+        bus,
+        shutdown_tx,
+        caps,
     )
 }
 

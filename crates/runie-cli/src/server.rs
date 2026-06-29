@@ -81,8 +81,6 @@ async fn handle_connection(stream: TcpStream) {
     }
 }
 
-
-
 async fn process_request(line: &str) -> Message {
     let req = match parse_request(line) {
         Ok(r) => r,
@@ -100,9 +98,15 @@ async fn dispatch_method(req: &Request) -> Result<Option<Value>, Error> {
     match req.method.as_str() {
         "initialize" => Ok(Some(initialize_result())),
         "chat" => handle_chat(&req.params).await.map(Some).map_err(chat_error),
-        "complete" => handle_complete(&req.params).await.map(Some).map_err(complete_error),
+        "complete" => handle_complete(&req.params)
+            .await
+            .map(Some)
+            .map_err(complete_error),
         "listModels" => Ok(Some(handle_list_models())),
-        "listSessions" => handle_list_sessions().await.map(Some).map_err(list_sessions_error),
+        "listSessions" => handle_list_sessions()
+            .await
+            .map(Some)
+            .map_err(list_sessions_error),
         _ => Err(Error::method_not_found(format!(
             "Method not found: {}",
             req.method

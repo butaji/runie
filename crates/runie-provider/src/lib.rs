@@ -16,22 +16,22 @@ use crate::retry::{is_retryable, with_retry};
 // ---------------------------------------------------------------------------
 
 // Provider trait and registry (moved to runie-core for cross-crate access).
-pub use runie_core::provider::{Provider, ResponseChunk};
 pub use runie_core::provider::registry::{
     display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
-    known_providers, is_mock_enabled, ModelMeta, ProviderMeta,
+    is_mock_enabled, known_providers, ModelMeta, ProviderMeta,
 };
 pub use runie_core::provider::ProviderError;
+pub use runie_core::provider::{Provider, ResponseChunk};
 
 // Model catalog types.
-pub use runie_core::model_catalog::{filter_models, model_catalog, ModelCapabilities, ModelInfo};
 pub use runie_core::model_catalog::configured::configured_models_catalog;
+pub use runie_core::model_catalog::{filter_models, model_catalog, ModelCapabilities, ModelInfo};
 
 pub use config::Config;
-pub use runie_core::proto::ProviderConfigBox;
 pub use factory::DynProviderFactory;
 pub use mock::{MockProvider, MockStreamingProvider};
 pub use openai::OpenAiProvider;
+pub use runie_core::proto::ProviderConfigBox;
 
 use anyhow::Result;
 
@@ -114,8 +114,7 @@ impl DynProvider {
         model: &str,
         config: &runie_core::config::Config,
     ) -> Result<Self, ProviderError> {
-        build_provider(key, model, Some(ProviderConfigBox::new(config.clone())))
-            .map(DynProvider)
+        build_provider(key, model, Some(ProviderConfigBox::new(config.clone()))).map(DynProvider)
     }
 
     /// Wrap an arbitrary provider implementation.
@@ -171,8 +170,7 @@ pub fn build_provider(
         return Ok(build_mock_provider(key, model));
     }
 
-    let meta = find_provider(key)
-        .ok_or_else(|| ProviderError::UnknownProvider(key.to_owned()))?;
+    let meta = find_provider(key).ok_or_else(|| ProviderError::UnknownProvider(key.to_owned()))?;
 
     let (api_key, base_url) = resolve_credentials(key, &meta, config);
     if api_key.is_empty() && !is_mock_enabled() {
@@ -180,7 +178,11 @@ pub fn build_provider(
     }
 
     let provider = build_openai_provider(api_key, model, &base_url);
-    Ok(BuiltProvider::new(provider, key.to_owned(), model.to_owned()))
+    Ok(BuiltProvider::new(
+        provider,
+        key.to_owned(),
+        model.to_owned(),
+    ))
 }
 
 fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
@@ -233,7 +235,12 @@ pub async fn validate_api_key_with_timeout(
     timeout: std::time::Duration,
 ) -> Result<Vec<String>> {
     // Apply retry via backon to transient errors, bounded by overall timeout.
-    match tokio::time::timeout(timeout, with_retry(|| async { fetch_models(base_url, api_key, timeout).await })).await {
+    match tokio::time::timeout(
+        timeout,
+        with_retry(|| async { fetch_models(base_url, api_key, timeout).await }),
+    )
+    .await
+    {
         Ok(Ok(models)) => Ok(models),
         Ok(Err(e)) => {
             if is_retryable(&e) {
@@ -282,7 +289,8 @@ async fn fetch_models(
 // Re-exports for consumers
 // ---------------------------------------------------------------------------
 
-pub async fn spawn_headless_runtime() -> anyhow::Result<runie_core::headless_runtime::HeadlessRuntime> {
+pub async fn spawn_headless_runtime(
+) -> anyhow::Result<runie_core::headless_runtime::HeadlessRuntime> {
     use runie_core::bus::EventBus;
     use runie_core::event::Event;
     use std::sync::Arc;

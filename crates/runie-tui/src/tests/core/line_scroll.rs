@@ -56,8 +56,7 @@ fn user_message_is_one_line() {
     state.refresh_after_message_change();
 
     assert_eq!(
-        state.view.total_lines,
-        4,
+        state.view.total_lines, 4,
         "UserMessage (3: margins+content) + Spacer (1) = 4 lines"
     );
 }
@@ -112,7 +111,7 @@ fn visible_shows_latest_element_at_bottom() {
     state.view.scroll = 0; // at bottom
 
     let region = crate::tests::core::visible_helper::compute_viewport(&mut state, 3); // 3 lines viewport
-                                                                                  // 3 messages = 3*3 UserMessage + 3 Spacer = 12 lines total
+                                                                                      // 3 messages = 3*3 UserMessage + 3 Spacer = 12 lines total
     assert!(
         region
             .elements

@@ -27,7 +27,10 @@ impl Default for SpeedWindow {
 
 impl SpeedWindow {
     pub fn new(window_tokens: usize) -> Self {
-        Self { events: VecDeque::new(), window_tokens }
+        Self {
+            events: VecDeque::new(),
+            window_tokens,
+        }
     }
 
     pub fn record(&mut self, token_count: usize) {
@@ -40,7 +43,9 @@ impl SpeedWindow {
         if self.events.len() <= 1 {
             return;
         }
-        let Some((_, latest)) = self.events.back() else { return };
+        let Some((_, latest)) = self.events.back() else {
+            return;
+        };
         let cutoff = latest.saturating_sub(self.window_tokens);
         while self.events.len() > 1 {
             if let Some((_, count)) = self.events.front() {

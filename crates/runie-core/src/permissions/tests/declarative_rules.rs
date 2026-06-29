@@ -26,9 +26,12 @@ fn permission_rule_with_pattern() {
 
 #[test]
 fn permission_rule_with_scope() {
-    let user_rule = PermissionRule::new(PermissionAction::Allow, "bash").with_scope(PermissionScope::User);
-    let project_rule = PermissionRule::new(PermissionAction::Deny, "bash").with_scope(PermissionScope::Project);
-    let session_rule = PermissionRule::new(PermissionAction::Ask, "bash").with_scope(PermissionScope::Session);
+    let user_rule =
+        PermissionRule::new(PermissionAction::Allow, "bash").with_scope(PermissionScope::User);
+    let project_rule =
+        PermissionRule::new(PermissionAction::Deny, "bash").with_scope(PermissionScope::Project);
+    let session_rule =
+        PermissionRule::new(PermissionAction::Ask, "bash").with_scope(PermissionScope::Session);
 
     assert_eq!(user_rule.scope, PermissionScope::User);
     assert_eq!(project_rule.scope, PermissionScope::Project);
@@ -38,9 +41,15 @@ fn permission_rule_with_scope() {
 #[test]
 fn permission_set_with_scope_precedence() {
     let mut rules = PermissionSet::new(vec![]);
-    rules.add_rule(PermissionRule::new(PermissionAction::Allow, "bash").with_scope(PermissionScope::User));
-    rules.add_rule(PermissionRule::new(PermissionAction::Deny, "bash").with_scope(PermissionScope::Project));
-    rules.add_rule(PermissionRule::new(PermissionAction::Ask, "bash").with_scope(PermissionScope::Session));
+    rules.add_rule(
+        PermissionRule::new(PermissionAction::Allow, "bash").with_scope(PermissionScope::User),
+    );
+    rules.add_rule(
+        PermissionRule::new(PermissionAction::Deny, "bash").with_scope(PermissionScope::Project),
+    );
+    rules.add_rule(
+        PermissionRule::new(PermissionAction::Ask, "bash").with_scope(PermissionScope::Session),
+    );
 
     // Session rules should take precedence
     assert_eq!(
@@ -52,9 +61,15 @@ fn permission_set_with_scope_precedence() {
 #[test]
 fn permission_set_filters_by_max_scope() {
     let mut rules = PermissionSet::new(vec![]);
-    rules.add_rule(PermissionRule::new(PermissionAction::Allow, "bash").with_scope(PermissionScope::User));
-    rules.add_rule(PermissionRule::new(PermissionAction::Deny, "bash").with_scope(PermissionScope::Project));
-    rules.add_rule(PermissionRule::new(PermissionAction::Ask, "bash").with_scope(PermissionScope::Session));
+    rules.add_rule(
+        PermissionRule::new(PermissionAction::Allow, "bash").with_scope(PermissionScope::User),
+    );
+    rules.add_rule(
+        PermissionRule::new(PermissionAction::Deny, "bash").with_scope(PermissionScope::Project),
+    );
+    rules.add_rule(
+        PermissionRule::new(PermissionAction::Ask, "bash").with_scope(PermissionScope::Session),
+    );
 
     // When max scope is Project, Session rules are filtered out
     assert_eq!(
@@ -72,9 +87,16 @@ fn permission_set_filters_by_max_scope() {
 #[test]
 fn permission_set_rules_for_scope() {
     let mut rules = PermissionSet::new(vec![]);
-    rules.add_rule(PermissionRule::new(PermissionAction::Allow, "read_file").with_scope(PermissionScope::User));
-    rules.add_rule(PermissionRule::new(PermissionAction::Deny, "bash").with_scope(PermissionScope::User));
-    rules.add_rule(PermissionRule::new(PermissionAction::Ask, "write_file").with_scope(PermissionScope::Project));
+    rules.add_rule(
+        PermissionRule::new(PermissionAction::Allow, "read_file").with_scope(PermissionScope::User),
+    );
+    rules.add_rule(
+        PermissionRule::new(PermissionAction::Deny, "bash").with_scope(PermissionScope::User),
+    );
+    rules.add_rule(
+        PermissionRule::new(PermissionAction::Ask, "write_file")
+            .with_scope(PermissionScope::Project),
+    );
 
     let user_rules = rules.rules_for_scope(PermissionScope::User);
     assert_eq!(user_rules.len(), 2);
@@ -88,9 +110,11 @@ fn permission_set_rules_for_scope() {
 
 #[test]
 fn permission_set_extend() {
-    let mut rules1 = PermissionSet::new(vec![
-        PermissionRule::new(PermissionAction::Allow, "read_file").with_scope(PermissionScope::User)
-    ]);
+    let mut rules1 = PermissionSet::new(vec![PermissionRule::new(
+        PermissionAction::Allow,
+        "read_file",
+    )
+    .with_scope(PermissionScope::User)]);
     let rules2 = PermissionSet::new(vec![
         PermissionRule::new(PermissionAction::Deny, "bash").with_scope(PermissionScope::User)
     ]);
@@ -199,7 +223,10 @@ fn rule_evaluation_matrix_allow_deny_ask() {
     rules.add_rule(PermissionRule::new(PermissionAction::Allow, "read_file"));
     rules.add_rule(PermissionRule::new(PermissionAction::Deny, "bash"));
 
-    assert_eq!(rules.evaluate("read_file", None, None), PermissionAction::Allow);
+    assert_eq!(
+        rules.evaluate("read_file", None, None),
+        PermissionAction::Allow
+    );
     assert_eq!(rules.evaluate("bash", None, None), PermissionAction::Deny);
     assert_eq!(rules.evaluate("unknown", None, None), PermissionAction::Ask);
 }
@@ -212,8 +239,14 @@ fn rule_evaluation_with_wildcard_patterns() {
         PermissionRule::new(PermissionAction::Ask, "list_*"),
     ]);
 
-    assert_eq!(rules.evaluate("read_file", None, None), PermissionAction::Allow);
-    assert_eq!(rules.evaluate("list_dir", None, None), PermissionAction::Ask);
+    assert_eq!(
+        rules.evaluate("read_file", None, None),
+        PermissionAction::Allow
+    );
+    assert_eq!(
+        rules.evaluate("list_dir", None, None),
+        PermissionAction::Ask
+    );
     assert_eq!(rules.evaluate("bash", None, None), PermissionAction::Deny);
 }
 

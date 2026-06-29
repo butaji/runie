@@ -2,14 +2,13 @@
 
 use crate::tests::ensure_mock_provider;
 use crate::{run_agent_turn, AgentCommand};
+use parking_lot::Mutex;
 use runie_core::permissions::{
-    AutoAllowSink, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove,
-    PermissionManager,
+    AutoAllowSink, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
 };
 use runie_core::Event;
 use runie_testing::mock_provider;
 use std::sync::Arc;
-use parking_lot::Mutex;
 
 /// Simulate the permission gate used by the TUI and verify read-only tools
 /// are auto-approved and rendered as ToolStart/ToolEnd events.
@@ -40,10 +39,7 @@ async fn test_agent_loop_with_tui_gate_allows_read_only_tool() {
         Box::new(FileAccessAsk::new()),
     ]);
     // Use AutoAllowSink so read-only tools are auto-approved without needing a real PermissionActor.
-    let gate = crate::PermissionGate::new(
-        permissions,
-        Arc::new(AutoAllowSink),
-    );
+    let gate = crate::PermissionGate::new(permissions, Arc::new(AutoAllowSink));
 
     run_agent_turn(&provider, &cmd, emit, 5, gate)
         .await

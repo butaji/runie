@@ -27,7 +27,9 @@ impl RactorSessionHandle {
 
     /// Request a trust decision change.
     pub async fn set_trust(&self, path: PathBuf, decision: TrustDecision) {
-        self.inner.send(SessionMsg::SetTrust { path, decision }).await;
+        self.inner
+            .send(SessionMsg::SetTrust { path, decision })
+            .await;
     }
 
     /// Append an entry to the history file.
@@ -62,32 +64,45 @@ impl RactorSessionHandle {
 
     /// Try to add a user message (fire-and-forget).
     pub fn try_add_user_message(&self, content: String, images: Vec<String>) {
-        let _ = self.inner.try_send(SessionMsg::AddUserMessage { content, images });
+        let _ = self
+            .inner
+            .try_send(SessionMsg::AddUserMessage { content, images });
     }
 
     /// Try to add a system message (fire-and-forget).
     pub fn try_add_system_message(&self, content: String) {
-        let _ = self.inner.try_send(SessionMsg::AddSystemMessage { content });
+        let _ = self
+            .inner
+            .try_send(SessionMsg::AddSystemMessage { content });
     }
 
     /// Try to add a tool message (fire-and-forget).
     pub fn try_add_tool_message(&self, id: String, name: String, content: String) {
-        let _ = self.inner.try_send(SessionMsg::AddToolMessage { id, name, content });
+        let _ = self
+            .inner
+            .try_send(SessionMsg::AddToolMessage { id, name, content });
     }
 
     /// Try to update a tool message (fire-and-forget).
     pub fn try_update_tool_message(&self, id_contains: String, content: String) {
-        let _ = self.inner.try_send(SessionMsg::UpdateToolMessage { id_contains, content });
+        let _ = self.inner.try_send(SessionMsg::UpdateToolMessage {
+            id_contains,
+            content,
+        });
     }
 
     /// Try to add a turn-complete message (fire-and-forget).
     pub fn try_add_turn_complete(&self, id: String, content: String) {
-        let _ = self.inner.try_send(SessionMsg::AddTurnComplete { id, content });
+        let _ = self
+            .inner
+            .try_send(SessionMsg::AddTurnComplete { id, content });
     }
 
     /// Try to add an error message (fire-and-forget).
     pub fn try_add_error_message(&self, id: String, content: String) {
-        let _ = self.inner.try_send(SessionMsg::AddErrorMessage { id, content });
+        let _ = self
+            .inner
+            .try_send(SessionMsg::AddErrorMessage { id, content });
     }
 
     /// Try to reset session (fire-and-forget).

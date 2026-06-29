@@ -31,7 +31,6 @@ impl FromStr for CommandCategory {
     }
 }
 
-
 impl CommandCategory {
     /// Label for display (pascal case).
     pub fn label(&self) -> &'static str {

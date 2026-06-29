@@ -21,10 +21,7 @@ fn command(content: &str) -> AgentCommand {
 }
 
 fn minimax_replay(fixture_names: &[&str]) -> runie_provider::DynProvider {
-    let fixture_strs: Vec<String> = fixture_names
-        .iter()
-        .map(|n| fixtures::fixture(n))
-        .collect();
+    let fixture_strs: Vec<String> = fixture_names.iter().map(|n| fixtures::fixture(n)).collect();
     dyn_replay_provider(&fixture_strs)
 }
 
@@ -76,8 +73,7 @@ async fn m3_read_file_turn_executes_read_file() {
 
 #[tokio::test]
 async fn m3_multi_tool_turn_executes_list_dir_and_read_file() {
-    let provider =
-        minimax_replay(&["m3_multi_tool_list_dir.sse", "m3_multi_tool_readme.sse"]);
+    let provider = minimax_replay(&["m3_multi_tool_list_dir.sse", "m3_multi_tool_readme.sse"]);
     let (events, emit) = capture_events();
     run_agent_turn_with_skills(
         &provider,

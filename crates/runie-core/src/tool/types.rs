@@ -40,8 +40,7 @@ pub fn repair_partial_json(raw: &str) -> Option<Value> {
     if let Ok(v) = serde_json::from_str(&format!("{raw}]")) {
         return Some(v);
     }
-    complete_by_brace_counting(raw)
-        .and_then(|repaired| serde_json::from_str(&repaired).ok())
+    complete_by_brace_counting(raw).and_then(|repaired| serde_json::from_str(&repaired).ok())
 }
 
 fn complete_by_brace_counting(raw: &str) -> Option<String> {

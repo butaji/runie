@@ -123,7 +123,9 @@ impl EffectCommand {
     /// Dispatch the effect via IoActor (async).
     pub async fn dispatch_async(self, state: &AppState) {
         let io_handle = state.actor_handles().as_ref().map(|h| h.io.clone());
-        let Some(handle) = io_handle else { return; };
+        let Some(handle) = io_handle else {
+            return;
+        };
 
         match self {
             Self::OpenExternalEditor { text } => {
@@ -132,7 +134,10 @@ impl EffectCommand {
             Self::CopyToClipboard { text } => {
                 handle.write_clipboard(text).await;
             }
-            Self::ShareSession { messages, display_name } => {
+            Self::ShareSession {
+                messages,
+                display_name,
+            } => {
                 handle.share_session(messages, display_name).await;
             }
             Self::Suspend => {

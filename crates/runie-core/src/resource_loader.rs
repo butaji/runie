@@ -187,13 +187,12 @@ pub fn parse_yaml_line(line: &str) -> Option<(String, String)> {
 /// Strip surrounding quotes from a YAML value.
 pub fn strip_quotes(s: &str) -> String {
     let s = s.trim();
-    let unquoted = if (s.starts_with('\'') && s.ends_with('\''))
-        || (s.starts_with('"') && s.ends_with('"'))
-    {
-        &s[1..s.len() - 1]
-    } else {
-        s
-    };
+    let unquoted =
+        if (s.starts_with('\'') && s.ends_with('\'')) || (s.starts_with('"') && s.ends_with('"')) {
+            &s[1..s.len() - 1]
+        } else {
+            s
+        };
     unquoted.to_owned()
 }
 
@@ -263,10 +262,7 @@ description: A test skill
 "#;
         let fm = extract_frontmatter(content);
         assert_eq!(fm.get("name"), Some(&"test-skill".to_owned()));
-        assert_eq!(
-            fm.get("description"),
-            Some(&"A test skill".to_owned())
-        );
+        assert_eq!(fm.get("description"), Some(&"A test skill".to_owned()));
     }
 
     #[test]

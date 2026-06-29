@@ -44,7 +44,10 @@ fn theme_invalid_shows_error() {
     exec(&mut state, "/theme not-a-real-theme");
 
     // Invalid themes should NOT be set
-    assert_eq!(state.config.theme_name, "dracula", "invalid theme should not be set");
+    assert_eq!(
+        state.config.theme_name, "dracula",
+        "invalid theme should not be set"
+    );
     let sys_msgs: Vec<_> = state
         .session
         .messages

@@ -54,8 +54,11 @@ pub(crate) fn fill_snapshot_config(s: &mut Snapshot, state: &AppState) {
     s.theme_name = config.theme_name.clone();
     s.thinking_level = config.thinking_level;
     s.read_only = config.read_only;
-    s.input_title =
-        build_input_title(&config.current_provider, &config.current_model, config.read_only);
+    s.input_title = build_input_title(
+        &config.current_provider,
+        &config.current_model,
+        config.read_only,
+    );
 }
 
 pub(crate) fn fill_snapshot_dialog(s: &mut Snapshot, state: &AppState) {

@@ -8,7 +8,10 @@ use runie_core::Event;
 
 fn settings_selected(state: &AppState) -> Option<usize> {
     match &state.open_dialog {
-        Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) => stack.current().map(|p| p.selected),
+        Some(DialogState::Active {
+            kind: DialogKind::Settings,
+            panels: stack,
+        }) => stack.current().map(|p| p.selected),
         _ => None,
     }
 }
@@ -34,7 +37,13 @@ fn settings_opens_dialog() {
     let mut state = AppState::default();
     palette_select(&mut state, "settings");
     assert!(
-        matches!(state.open_dialog, Some(DialogState::Active { kind: DialogKind::Settings, panels: _ })),
+        matches!(
+            state.open_dialog,
+            Some(DialogState::Active {
+                kind: DialogKind::Settings,
+                panels: _
+            })
+        ),
         "Expected Settings dialog, got {:?}",
         state.open_dialog
     );
@@ -73,7 +82,11 @@ fn settings_select_toggles_read_only() {
     // Scan for the read-only toggle
     let count = settings_count(&state);
     for _ in 0..count {
-        let is_readonly = if let Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) = &state.open_dialog {
+        let is_readonly = if let Some(DialogState::Active {
+            kind: DialogKind::Settings,
+            panels: stack,
+        }) = &state.open_dialog
+        {
             stack
                 .current()
                 .and_then(|p| p.selected_item())
@@ -101,7 +114,13 @@ fn settings_space_toggles_read_only_and_keeps_dialog_open() {
     state.update(Event::Input(' '));
     assert!(state.config.read_only, "space should toggle read_only on");
     assert!(
-        matches!(state.open_dialog, Some(DialogState::Active { kind: DialogKind::Settings, panels: _ })),
+        matches!(
+            state.open_dialog,
+            Some(DialogState::Active {
+                kind: DialogKind::Settings,
+                panels: _
+            })
+        ),
         "space toggle should keep the dialog open"
     );
 
@@ -131,7 +150,11 @@ fn settings_select_toggles_steering_mode() {
         DeliveryMode::OneAtATime
     ));
     for _ in 0..count {
-        let is_steering = if let Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) = &state.open_dialog {
+        let is_steering = if let Some(DialogState::Active {
+            kind: DialogKind::Settings,
+            panels: stack,
+        }) = &state.open_dialog
+        {
             stack
                 .current()
                 .and_then(|p| p.selected_item())
@@ -160,7 +183,11 @@ fn settings_select_cycles_provider() {
     state.update(Event::ToggleSettingsDialog);
     let count = settings_count(&state);
     for _ in 0..count {
-        let is_provider = if let Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) = &state.open_dialog {
+        let is_provider = if let Some(DialogState::Active {
+            kind: DialogKind::Settings,
+            panels: stack,
+        }) = &state.open_dialog
+        {
             stack
                 .current()
                 .and_then(|p| p.selected_item())
@@ -185,7 +212,11 @@ fn settings_select_cycles_theme() {
     state.update(Event::ToggleSettingsDialog);
     let count = settings_count(&state);
     for _ in 0..count {
-        let is_theme = if let Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) = &state.open_dialog {
+        let is_theme = if let Some(DialogState::Active {
+            kind: DialogKind::Settings,
+            panels: stack,
+        }) = &state.open_dialog
+        {
             stack
                 .current()
                 .and_then(|p| p.selected_item())
@@ -226,7 +257,11 @@ fn find_index(state: &AppState, label: &str) -> Option<usize> {
 fn select_by_label(state: &mut AppState, label: &str) {
     let count = settings_count(state);
     for _ in 0..count {
-        let is_match = if let Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) = &state.open_dialog {
+        let is_match = if let Some(DialogState::Active {
+            kind: DialogKind::Settings,
+            panels: stack,
+        }) = &state.open_dialog
+        {
             stack
                 .current()
                 .and_then(|p| p.selected_item())
@@ -247,7 +282,11 @@ fn select_by_label(state: &mut AppState, label: &str) {
 fn navigate_to_setting(state: &mut AppState, label: &str) {
     let count = settings_count(state);
     for _ in 0..count {
-        let is_match = if let Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) = &state.open_dialog {
+        let is_match = if let Some(DialogState::Active {
+            kind: DialogKind::Settings,
+            panels: stack,
+        }) = &state.open_dialog
+        {
             stack
                 .current()
                 .and_then(|p| p.selected_item())

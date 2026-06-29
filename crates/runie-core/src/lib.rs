@@ -13,8 +13,8 @@ extern crate self as runie_core;
 
 pub mod actors;
 pub use actors::{
-    FffFileItem, FffSearchRequest,
-    FffSearchResult, FffSearchResultPayload, FffSearchState, PersistenceActor,
+    FffFileItem, FffSearchRequest, FffSearchResult, FffSearchResultPayload, FffSearchState,
+    PersistenceActor,
 };
 pub use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
 // Inner state structs are pub(crate) — accessible within runie-core but not exported externally.
@@ -31,9 +31,9 @@ pub mod bus;
 pub mod commands;
 pub mod config;
 pub mod declarative;
-pub mod resource_loader;
 pub mod dialog;
 pub mod diff;
+pub mod resource_loader;
 // display_width re-exported from runie-util for internal use.
 mod display_width;
 pub mod dry_run;
@@ -97,14 +97,10 @@ pub use agent_phase::{elapsed_secs, format_elapsed, AgentPhase};
 pub use auth::{AuthStorage, AuthToken};
 pub use config::{Config, ConfigChange, ModelProvider, ModelsSection, TruncationSection};
 pub use declarative::{CommandDef, DeclarativeLoader, SkillDef, Trigger};
-pub use resource_loader::{
-    derive_name_from_path, extract_frontmatter, extract_section, is_user_invocable,
-    load_resources_from_dir, parse_resource_md, parse_yaml_line, resolve_name,
-    strip_quotes,
-};
 pub use diff::{Diff, DiffHunk, DiffLine};
 pub use dry_run::{run_dry_run, DryRunReport, DryRunStatus};
 pub use edit_preview::EditPreview;
+pub use error::{RunieError, RunieErrorKind};
 pub use event::Event;
 pub use file_refs::{find_files, is_image_file, read_file_ref, FileRef};
 pub use harness_skills::{
@@ -134,8 +130,11 @@ pub use provider::{
     display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
     known_providers, Provider, ProviderError, ProviderMeta, ResponseChunk,
 };
-pub use error::{RunieError, RunieErrorKind};
 pub use provider_event::{ModelError, ProviderEvent, StopReason};
+pub use resource_loader::{
+    derive_name_from_path, extract_frontmatter, extract_section, is_user_invocable,
+    load_resources_from_dir, parse_resource_md, parse_yaml_line, resolve_name, strip_quotes,
+};
 pub use session::index::{SessionIndex, SessionMetadata};
 pub use session::store::SessionStore;
 pub use session::tree::{SessionTree, SessionTreeFilter, TreeNodeData};

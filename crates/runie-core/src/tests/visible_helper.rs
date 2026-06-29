@@ -10,9 +10,7 @@ pub struct TestViewport {
 pub fn compute_viewport(state: &mut AppState, visible_height: usize) -> TestViewport {
     let snap = state.snapshot();
     if snap.elements.is_empty() || visible_height == 0 {
-        return TestViewport {
-            elements: vec![],
-        };
+        return TestViewport { elements: vec![] };
     }
 
     let total = snap.total_lines;

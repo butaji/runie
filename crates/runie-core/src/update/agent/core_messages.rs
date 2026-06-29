@@ -246,7 +246,12 @@ impl AppState {
             }],
             ..Default::default()
         };
-        if let Some(idx) = self.session().messages.iter().position(|m| m.role == Role::TurnComplete) {
+        if let Some(idx) = self
+            .session()
+            .messages
+            .iter()
+            .position(|m| m.role == Role::TurnComplete)
+        {
             error.timestamp = self.session_mut().messages[idx].timestamp;
             self.session_mut().messages.insert(idx, error);
         } else {

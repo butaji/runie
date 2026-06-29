@@ -62,7 +62,10 @@ fn handle_trust_project(state: &mut AppState, decision: crate::trust::TrustDecis
     state.config_mut().read_only = new_read_only;
     // Remove welcome message and notify when trusted
     if matches!(decision, crate::trust::TrustDecision::Trusted) {
-        state.session_mut().messages.retain(|m| m.id != "trust_welcome");
+        state
+            .session_mut()
+            .messages
+            .retain(|m| m.id != "trust_welcome");
         state.messages_changed();
         state.notify(
             format!("Project '{}' trusted. Read-only disabled.", cwd.display()),
@@ -78,7 +81,10 @@ fn handle_trust_project(state: &mut AppState, decision: crate::trust::TrustDecis
     if let Some(handles) = state.actor_handles() {
         let handles = handles.clone();
         let cwd_async = cwd;
-        let _ = handles.session.try_send(SessionMsg::SetTrust { path: cwd_async, decision });
+        let _ = handles.session.try_send(SessionMsg::SetTrust {
+            path: cwd_async,
+            decision,
+        });
     }
 }
 

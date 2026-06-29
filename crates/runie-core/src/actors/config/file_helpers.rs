@@ -42,11 +42,7 @@ pub fn remove_provider_from_path(path: &Path, name: &str) -> anyhow::Result<()> 
 }
 
 /// Set the default provider/model in the config file.
-pub fn set_default_model_at_path(
-    path: &Path,
-    provider: &str,
-    model: &str,
-) -> anyhow::Result<()> {
+pub fn set_default_model_at_path(path: &Path, provider: &str, model: &str) -> anyhow::Result<()> {
     let mut config = crate::config::Config::load(Some(path));
     config.provider = Some(provider.into());
     config.model = None;
@@ -114,11 +110,7 @@ pub fn set_thinking_level_at_path(path: &Path, level: ThinkingLevel) -> anyhow::
 }
 
 /// Add or update an MCP server in the config file.
-pub fn add_mcp_server_to_path(
-    path: &Path,
-    name: &str,
-    server: &McpServer,
-) -> anyhow::Result<()> {
+pub fn add_mcp_server_to_path(path: &Path, name: &str, server: &McpServer) -> anyhow::Result<()> {
     let mut config = crate::config::Config::load(Some(path));
     config.mcp.servers.insert(name.to_owned(), server.clone());
     config.save_to(path)

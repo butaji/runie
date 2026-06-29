@@ -22,8 +22,7 @@ mod tests;
 
 static CURRENT_THEME: RwLock<Option<Arc<opaline::Theme>>> = RwLock::new(None);
 static CURRENT_THEME_NAME: Mutex<String> = Mutex::new(String::new());
-static CURRENT_CAPS: RwLock<Option<crate::terminal::caps::TermCaps>> =
-    RwLock::new(None);
+static CURRENT_CAPS: RwLock<Option<crate::terminal::caps::TermCaps>> = RwLock::new(None);
 
 #[cfg(test)]
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -77,9 +76,7 @@ pub fn current_theme_name() -> String {
 }
 
 fn current_caps() -> Option<crate::terminal::caps::TermCaps> {
-    *CURRENT_CAPS
-        .read()
-        .unwrap_or_else(|e| e.into_inner())
+    *CURRENT_CAPS.read().unwrap_or_else(|e| e.into_inner())
 }
 
 /// Get the currently active theme (falls back to default).

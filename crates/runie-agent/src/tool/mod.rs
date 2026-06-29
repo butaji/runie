@@ -4,8 +4,8 @@
 //! tool definitions, schema generation, and execution via MCP.
 
 pub use runie_core::tool::{
-    is_builtin_tool, tool_error, truncate_output, which_tool, which_tool_async,
-    BUILTIN_TOOL_NAMES, ToolContext, ToolDef, ToolOutput, ToolStatus,
+    is_builtin_tool, tool_error, truncate_output, which_tool, which_tool_async, ToolContext,
+    ToolDef, ToolOutput, ToolStatus, BUILTIN_TOOL_NAMES,
 };
 
 mod bash;
@@ -44,8 +44,16 @@ mod tests {
     fn builtin_tool_names_contains_all_tools() {
         // Verify the list contains all our tool implementations
         let tools = [
-            "bash", "read_file", "write_file", "edit_file", "list_dir",
-            "grep", "find", "fetch_docs", "search", "find_definitions",
+            "bash",
+            "read_file",
+            "write_file",
+            "edit_file",
+            "list_dir",
+            "grep",
+            "find",
+            "fetch_docs",
+            "search",
+            "find_definitions",
         ];
         for name in tools {
             assert!(

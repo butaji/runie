@@ -145,7 +145,8 @@ impl ToolDef for FindDefinitionsTool {
                     "results",
                     false,
                     start,
-                ).unwrap_or_else(|_| ToolOutput {
+                )
+                .unwrap_or_else(|_| ToolOutput {
                     tool_name: "find_definitions".to_owned(),
                     tool_args: serde_json::json!({ "symbol": input.symbol }),
                     content: "FFF indexer not initialized".to_owned(),
@@ -161,8 +162,17 @@ impl ToolDef for FindDefinitionsTool {
             start,
             build_find_def_lock_error,
             build_find_def_not_initialized,
-            |picker| Ok(search_definitions(picker, &input.symbol, &input.glob, input.limit.unwrap_or(DEFAULT_LIMIT), start)),
-        ).unwrap_or_else(|e| ToolOutput {
+            |picker| {
+                Ok(search_definitions(
+                    picker,
+                    &input.symbol,
+                    &input.glob,
+                    input.limit.unwrap_or(DEFAULT_LIMIT),
+                    start,
+                ))
+            },
+        )
+        .unwrap_or_else(|e| ToolOutput {
             tool_name: "find_definitions".to_owned(),
             tool_args: serde_json::json!({ "symbol": input.symbol }),
             content: format!("find_definitions error: {}", e),
@@ -276,7 +286,8 @@ fn build_definitions_output(
             "results": defs,
             "total": defs.len(),
             "indexed": indexed,
-        })).unwrap_or_default(),
+        }))
+        .unwrap_or_default(),
         bytes_transferred: None,
         duration: start.elapsed(),
         status: ToolStatus::Success,

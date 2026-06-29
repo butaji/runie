@@ -6,14 +6,10 @@ mod loader_tests {
     use std::path::Path;
 
     // Re-export types for tests
-    use crate::declarative::types::{CommandDef, DeclarativeCommandYaml, SkillDef, Trigger};
     use crate::commands::CommandCategory;
-    use crate::declarative::loader::{
-        parse_command_yaml, parse_triggers,
-    };
-    use crate::resource_loader::{
-        extract_frontmatter, parse_yaml_line, strip_quotes,
-    };
+    use crate::declarative::loader::{parse_command_yaml, parse_triggers};
+    use crate::declarative::types::{CommandDef, DeclarativeCommandYaml, SkillDef, Trigger};
+    use crate::resource_loader::{extract_frontmatter, parse_yaml_line, strip_quotes};
 
     // ── Frontmatter parsing tests ───────────────────────────────────────────────
 

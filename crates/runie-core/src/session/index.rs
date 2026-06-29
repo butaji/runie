@@ -52,7 +52,10 @@ impl SessionIndex {
         let path = Self::path(data_dir);
         let temp_path = path.with_extension("tmp");
         let dir = path.parent().ok_or_else(|| {
-            anyhow::anyhow!("session index path has no parent directory: {}", path.display())
+            anyhow::anyhow!(
+                "session index path has no parent directory: {}",
+                path.display()
+            )
         })?;
 
         fs::create_dir_all(dir)?;

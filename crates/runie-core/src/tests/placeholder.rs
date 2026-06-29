@@ -3,7 +3,6 @@
 #[cfg(test)]
 mod tests {
     use crate::model::AppState;
-    
 
     #[test]
     fn default_placeholder_is_set() {

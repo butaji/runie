@@ -214,7 +214,8 @@ impl BlockParser {
     fn push_code(&mut self, code: &str) {
         match &mut self.state {
             BlockState::Top => {
-                self.inline_buf.push(super::MdInline::Code(code.to_string()));
+                self.inline_buf
+                    .push(super::MdInline::Code(code.to_string()));
                 self.content_buf.push('`');
                 self.content_buf.push_str(code);
                 self.content_buf.push('`');

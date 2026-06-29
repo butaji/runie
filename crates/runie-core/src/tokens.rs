@@ -119,15 +119,12 @@ impl TokenTracker {
 pub fn token_tracker_for(provider: &str, model: &str) -> TokenTracker {
     crate::provider::find_provider(provider)
         .and_then(|p| {
-            p.models
-                .iter()
-                .find(|m| m.name == model)
-                .map(|meta| {
-                    TokenTracker::with_costs(
-                        meta.cost_prompt.unwrap_or(0.0),
-                        meta.cost_completion.unwrap_or(0.0),
-                    )
-                })
+            p.models.iter().find(|m| m.name == model).map(|meta| {
+                TokenTracker::with_costs(
+                    meta.cost_prompt.unwrap_or(0.0),
+                    meta.cost_completion.unwrap_or(0.0),
+                )
+            })
         })
         .unwrap_or_default()
 }

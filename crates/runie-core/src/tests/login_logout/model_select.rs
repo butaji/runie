@@ -5,8 +5,8 @@ use crate::model::AppState;
 use crate::Event;
 
 use super::{
-    add_minimax_provider, assert_step, assert_transient_contains, clean_config,
-    current_panel, fetch_models, save_login_flow, select_provider, select_minimax_model, submit_key,
+    add_minimax_provider, assert_step, assert_transient_contains, clean_config, current_panel,
+    fetch_models, save_login_flow, select_minimax_model, select_provider, submit_key,
 };
 
 // ---------------------------------------------------------------------------
@@ -48,7 +48,11 @@ fn providers_select_model_records_usage() {
     select_minimax_model(&mut state);
 
     assert!(
-        state.config.recent_models.iter().any(|m| m.contains("minimax")),
+        state
+            .config
+            .recent_models
+            .iter()
+            .any(|m| m.contains("minimax")),
         "model usage should be recorded in recent_models"
     );
 }
@@ -111,7 +115,10 @@ fn single_model_enter_saves() {
 
     state.update(Event::from(crate::Event::Submit));
 
-    assert!(state.login_flow.is_none(), "login flow should be cleared after save");
+    assert!(
+        state.login_flow.is_none(),
+        "login flow should be cleared after save"
+    );
     assert_eq!(state.config.current_provider, "minimax");
     assert_eq!(state.config.current_model, "M3");
     assert!(state.has_models());
@@ -162,7 +169,10 @@ fn space_toggles_model_checkbox() {
         !flow.selected_models.contains("M3"),
         "space should toggle off the first selected model"
     );
-    assert!(state.open_dialog.is_some(), "dialog should remain open after toggling");
+    assert!(
+        state.open_dialog.is_some(),
+        "dialog should remain open after toggling"
+    );
 }
 
 #[test]
@@ -179,7 +189,9 @@ fn toggle_model_event_preserves_selection_index() {
         "selection should start on second model"
     );
 
-    state.update(Event::from(crate::Event::ToggleModel { model: "M2".into() }));
+    state.update(Event::from(crate::Event::ToggleModel {
+        model: "M2".into(),
+    }));
 
     assert_eq!(
         current_panel(&state).map(|p| p.selected),
@@ -231,6 +243,10 @@ fn saving_after_deselecting_model_persists_two_models() {
         .into_iter()
         .find(|(p, _, _)| p == "minimax")
         .expect("minimax should be configured");
-    assert_eq!(models.len(), 2, "only two still-selected models should be saved");
+    assert_eq!(
+        models.len(),
+        2,
+        "only two still-selected models should be saved"
+    );
     assert!(!models.contains(&"M1".into()));
 }

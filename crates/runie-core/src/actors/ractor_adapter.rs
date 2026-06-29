@@ -62,9 +62,9 @@
 use std::future::Future;
 use std::pin::Pin;
 
-use ractor::{Actor, ActorRef};
 use ractor::concurrency::JoinHandle;
 use ractor::SpawnErr as RactorSpawnErr;
+use ractor::{Actor, ActorRef};
 use tokio::sync::oneshot;
 
 #[cfg(test)]
@@ -160,7 +160,13 @@ where
     A: Actor,
 {
     let (actor_ref, handle) = Actor::spawn(name, actor, args).await?;
-    Ok((RactorHandle { actor_ref: actor_ref.clone() }, handle, actor_ref.get_cell()))
+    Ok((
+        RactorHandle {
+            actor_ref: actor_ref.clone(),
+        },
+        handle,
+        actor_ref.get_cell(),
+    ))
 }
 
 /// Future type returned by actor spawn.
@@ -179,9 +185,7 @@ pub type Reply<T> = RpcReply<T>;
 /// Wrapper for RPC reply channels, compatible with both runtimes.
 /// Uses Arc<Mutex<Option<oneshot::Sender<T>>>> to allow cloning.
 #[derive(Debug)]
-pub struct RpcReply<T>(
-    std::sync::Arc<parking_lot::Mutex<Option<oneshot::Sender<T>>>>
-);
+pub struct RpcReply<T>(std::sync::Arc<parking_lot::Mutex<Option<oneshot::Sender<T>>>>);
 
 impl<T> RpcReply<T> {
     /// Create a new reply handle from a oneshot sender.
@@ -211,9 +215,7 @@ pub fn rpc_channel<T>() -> (RpcReply<T>, oneshot::Receiver<T>) {
 
 // ── Re-exports ─────────────────────────────────────────────────────────────────
 
-pub use ractor::{
-    ActorErr, ActorProcessingErr, MessagingErr, RactorErr,
-};
+pub use ractor::{ActorErr, ActorProcessingErr, MessagingErr, RactorErr};
 
 #[cfg(test)]
 mod tests {
@@ -254,10 +256,12 @@ mod tests {
         let (handle, join, cell) = spawn_ractor(None, TestActor, ()).await.unwrap();
         handle.send("hello".to_string()).await;
         drop(handle);
-        
+
         // Wait for actor to stop
-        tokio::time::timeout(std::time::Duration::from_secs(2), join).await.ok();
-        
+        tokio::time::timeout(std::time::Duration::from_secs(2), join)
+            .await
+            .ok();
+
         // Actor should be stopped now
         assert!(matches!(
             cell.get_status(),

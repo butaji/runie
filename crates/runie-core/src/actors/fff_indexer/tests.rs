@@ -53,27 +53,33 @@ async fn indexer_initializes_in_temp_dir() {
     let mut sub = bus.subscribe();
 
     // Spawn the indexer using ractor version
-    let (handle, _cell) =
-        RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
-            .await
-            .expect("spawn succeeds");
+    let (handle, _cell) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
+        .await
+        .expect("spawn succeeds");
 
     // Wait for the actor to finish initialization
     wait_for_indexed(500).await;
 
     // Send a search request
     let request_id = 1;
-    handle.search(FffSearchRequest {
-        request_id,
-        query: "lib".to_string(),
-        limit: Some(10),
-        project_path: root.clone(),
-    }).await;
+    handle
+        .search(FffSearchRequest {
+            request_id,
+            query: "lib".to_string(),
+            limit: Some(10),
+            project_path: root.clone(),
+        })
+        .await;
 
     // Collect results using deterministic sync
     let mut result_entries: Option<Vec<FffFileEntry>> = None;
     for _ in 0..100 {
-        if let Ok(Event::FffSearchResult { request_id: rid, entries, .. }) = sub.try_recv() {
+        if let Ok(Event::FffSearchResult {
+            request_id: rid,
+            entries,
+            ..
+        }) = sub.try_recv()
+        {
             if rid == request_id {
                 result_entries = Some(entries);
                 break;
@@ -83,7 +89,10 @@ async fn indexer_initializes_in_temp_dir() {
     }
 
     // Send should succeed
-    assert!(result_entries.is_some(), "should have received search result");
+    assert!(
+        result_entries.is_some(),
+        "should have received search result"
+    );
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -105,27 +114,33 @@ async fn indexer_answers_file_search() {
     // Subscribe BEFORE spawning so we don't miss any events
     let mut sub = bus.subscribe();
 
-    let (handle, _cell) =
-        RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
-            .await
-            .expect("spawn succeeds");
+    let (handle, _cell) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
+        .await
+        .expect("spawn succeeds");
 
     // Wait for the actor to finish initialization
     wait_for_indexed(500).await;
 
     // Search for "cli"
     let request_id = 2;
-    handle.search(FffSearchRequest {
-        request_id,
-        query: "cli".to_string(),
-        limit: Some(5),
-        project_path: root.clone(),
-    }).await;
+    handle
+        .search(FffSearchRequest {
+            request_id,
+            query: "cli".to_string(),
+            limit: Some(5),
+            project_path: root.clone(),
+        })
+        .await;
 
     // Wait for result
     let mut result_entries: Option<Vec<FffFileEntry>> = None;
     for _ in 0..100 {
-        if let Ok(Event::FffSearchResult { request_id: rid, entries, .. }) = sub.try_recv() {
+        if let Ok(Event::FffSearchResult {
+            request_id: rid,
+            entries,
+            ..
+        }) = sub.try_recv()
+        {
             if rid == request_id {
                 result_entries = Some(entries);
                 break;
@@ -160,27 +175,32 @@ async fn search_request_event_returns_results() {
     // Subscribe BEFORE spawning so we don't miss any events
     let mut sub = bus.subscribe();
 
-    let (handle, _cell) =
-        RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
-            .await
-            .expect("spawn succeeds");
+    let (handle, _cell) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
+        .await
+        .expect("spawn succeeds");
 
     // Wait for the actor to finish initialization
     wait_for_indexed(500).await;
 
     let request_id = 3;
-    handle.search(FffSearchRequest {
-        request_id,
-        query: "readme".to_string(),
-        limit: Some(5),
-        project_path: root,
-    }).await;
+    handle
+        .search(FffSearchRequest {
+            request_id,
+            query: "readme".to_string(),
+            limit: Some(5),
+            project_path: root,
+        })
+        .await;
 
     // Drain events using deterministic sync
     let mut got_result = false;
     for _ in 0..500 {
-        if let Ok(Event::FffSearchResult { request_id: rid, entries, indexed, .. }) =
-            sub.try_recv()
+        if let Ok(Event::FffSearchResult {
+            request_id: rid,
+            entries,
+            indexed,
+            ..
+        }) = sub.try_recv()
         {
             if rid == request_id {
                 assert!(!entries.is_empty() || !indexed);

@@ -33,15 +33,13 @@ pub struct ReadFileTool;
 impl ReadFileTool {
     /// Read file contents from disk.
     async fn read_file(path: &std::path::Path) -> Result<String, ToolOutput> {
-        fs::read_to_string(path)
-            .await
-            .map_err(|e| {
-                ToolOutput::error(
-                    "read_file",
-                    serde_json::json!({ "path": path.to_string_lossy() }),
-                    format!("Error reading {}: {}", path.display(), e),
-                )
-            })
+        fs::read_to_string(path).await.map_err(|e| {
+            ToolOutput::error(
+                "read_file",
+                serde_json::json!({ "path": path.to_string_lossy() }),
+                format!("Error reading {}: {}", path.display(), e),
+            )
+        })
     }
 
     /// Slice content by offset and limit.
@@ -75,7 +73,8 @@ impl ToolDef for ReadFileTool {
     type Input = ReadFileInput;
 
     const NAME: &'static str = "read_file";
-    const DESCRIPTION: &'static str = "Read the contents of a file from disk. Supports optional offset and limit.";
+    const DESCRIPTION: &'static str =
+        "Read the contents of a file from disk. Supports optional offset and limit.";
     const READ_ONLY: bool = true;
     const REQUIRES_APPROVAL: bool = false;
 

@@ -1,9 +1,9 @@
 //! Crossterm key event → CoreEvent conversion with configurable keybindings.
 
+use crokey::KeyCombinationFormat;
 use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };
-use crokey::KeyCombinationFormat;
 use once_cell::sync::Lazy;
 use runie_core::{keybindings, Event as CoreEvent};
 use std::collections::HashMap;
@@ -91,7 +91,10 @@ pub fn key_event_to_combo(key: &KeyEvent) -> String {
         _ => {}
     }
     let combo = KeyCombination::from(*key);
-    COMBO_FORMAT.to_string(combo).to_lowercase().replace('-', "+")
+    COMBO_FORMAT
+        .to_string(combo)
+        .to_lowercase()
+        .replace('-', "+")
 }
 
 fn map_key_event(key: &KeyEvent, bindings: &HashMap<String, String>) -> Option<CoreEvent> {

@@ -6,14 +6,14 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use ractor::{Actor, ActorProcessingErr, ActorRef};
 use ractor::async_trait;
+use ractor::{Actor, ActorProcessingErr, ActorRef};
 
 use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
 use crate::bus::EventBus;
-use crate::ChatMessage;
 use crate::event::Event;
 use crate::snapshot::GitInfo;
+use crate::ChatMessage;
 
 use super::messages::IoMsg;
 
@@ -46,7 +46,12 @@ impl RactorIoHandle {
 
     /// Request sharing session to gist.
     pub async fn share_session(&self, messages: Vec<ChatMessage>, display_name: Option<String>) {
-        self.inner.send(IoMsg::ShareSession { messages, display_name }).await;
+        self.inner
+            .send(IoMsg::ShareSession {
+                messages,
+                display_name,
+            })
+            .await;
     }
 
     /// Request opening external editor.
@@ -87,13 +92,13 @@ pub struct RactorIoActor {
 
 impl RactorIoActor {
     fn new(bus: EventBus<Event>) -> Self {
-        Self {
-            bus, 
-        }
+        Self { bus }
     }
 
     /// Spawn a `RactorIoActor` on the given event bus.
-    pub async fn spawn(bus: EventBus<Event>) -> Result<(RactorIoHandle, ractor::ActorCell), ractor::SpawnErr> {
+    pub async fn spawn(
+        bus: EventBus<Event>,
+    ) -> Result<(RactorIoHandle, ractor::ActorCell), ractor::SpawnErr> {
         let actor = Self::new(bus.clone());
         let (handle, _join, cell) = spawn_ractor(None, actor, bus).await?;
         Ok((RactorIoHandle::new(handle), cell))
@@ -124,7 +129,10 @@ impl Actor for RactorIoActor {
             IoMsg::RunBash { command } => self.run_bash(command).await,
             IoMsg::WriteFiles { edits } => self.write_files(edits).await,
             IoMsg::DetectEnv => self.detect_env().await,
-            IoMsg::ShareSession { messages, display_name } => {
+            IoMsg::ShareSession {
+                messages,
+                display_name,
+            } => {
                 self.share_session(messages, display_name).await;
             }
             IoMsg::OpenExternalEditor { text } => {
@@ -183,9 +191,10 @@ impl RactorIoActor {
     }
 
     async fn write_clipboard(&self, text: String) {
-        let success = tokio::task::spawn_blocking(move || super::effects::write_clipboard_sync(&text))
-            .await
-            .unwrap_or(false);
+        let success =
+            tokio::task::spawn_blocking(move || super::effects::write_clipboard_sync(&text))
+                .await
+                .unwrap_or(false);
         self.emit(Event::ClipboardWritten { success });
     }
 
@@ -200,20 +209,14 @@ impl RactorIoActor {
     async fn suspend_process(&self) {
         let bus = self.bus.clone();
         tokio::task::spawn_blocking(move || {
-            let _ = crossterm::execute!(
-                std::io::stdout(),
-                crossterm::terminal::LeaveAlternateScreen,
-            );
+            let _ =
+                crossterm::execute!(std::io::stdout(), crossterm::terminal::LeaveAlternateScreen,);
             let _ = crossterm::terminal::disable_raw_mode();
-            let _ = nix::sys::signal::kill(
-                nix::unistd::Pid::this(),
-                nix::sys::signal::Signal::SIGTSTP,
-            );
+            let _ =
+                nix::sys::signal::kill(nix::unistd::Pid::this(), nix::sys::signal::Signal::SIGTSTP);
             let _ = crossterm::terminal::enable_raw_mode();
-            let _ = crossterm::execute!(
-                std::io::stdout(),
-                crossterm::terminal::EnterAlternateScreen,
-            );
+            let _ =
+                crossterm::execute!(std::io::stdout(), crossterm::terminal::EnterAlternateScreen,);
             bus.publish(Event::ProcessResumed);
         });
     }
@@ -347,14 +350,12 @@ fn read_worktree_git_info_sync(git_file: &Path) -> Option<GitInfo> {
 }
 
 fn read_branch_sync(head_path: &Path) -> Option<String> {
-    std::fs::read_to_string(head_path)
-        .ok()
-        .and_then(|content| {
-            content
-                .trim()
-                .strip_prefix("ref: refs/heads/")
-                .map(|b| b.to_owned())
-        })
+    std::fs::read_to_string(head_path).ok().and_then(|content| {
+        content
+            .trim()
+            .strip_prefix("ref: refs/heads/")
+            .map(|b| b.to_owned())
+    })
 }
 
 fn read_origin_repo_name_sync(config_path: &Path) -> Option<String> {
@@ -447,10 +448,7 @@ mod tests {
         let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(5);
         let mut found = false;
         while !found && tokio::time::Instant::now() < deadline {
-            match tokio::time::timeout(
-                deadline - tokio::time::Instant::now(),
-                sub.recv(),
-            ).await {
+            match tokio::time::timeout(deadline - tokio::time::Instant::now(), sub.recv()).await {
                 Ok(Ok(evt)) => {
                     if matches!(evt, Event::BashOutput { .. }) {
                         found = true;

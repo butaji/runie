@@ -95,9 +95,10 @@ fn esc_closes_settings_dialog_without_triggering_vim_nav() {
     let mut state = state_with_vim();
 
     // Open settings dialog directly
-    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Settings, panels: PanelStack::new(
-        Panel::new("settings", "Settings").item("Done", ItemAction::Close),
-    ) });
+    state.open_dialog = Some(DialogState::Active {
+        kind: DialogKind::Settings,
+        panels: PanelStack::new(Panel::new("settings", "Settings").item("Done", ItemAction::Close)),
+    });
     state.view.input_receiver = InputReceiver::Dialog;
 
     // Press Esc to close

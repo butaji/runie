@@ -237,7 +237,9 @@ fn handle_toggle_vim_mode(state: &mut AppState) {
     let handles = state.actor_handles().cloned();
     if let Some(h) = handles {
         if tokio::runtime::Handle::try_current().is_ok() {
-            let _ = h.config.try_send(ConfigMsg::SetVimMode { enabled: new_value });
+            let _ = h
+                .config
+                .try_send(ConfigMsg::SetVimMode { enabled: new_value });
         }
     }
     state.view_mut().cached_settings_valid = false;

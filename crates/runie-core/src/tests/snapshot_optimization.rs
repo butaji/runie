@@ -118,7 +118,10 @@ fn test_elements_built_correctly() {
 
     // Elements should have correct content in both snapshots
     assert!(!snap1.elements.is_empty(), "Elements should be present");
-    assert!(!snap2.elements.is_empty(), "Elements should be present in second snapshot");
+    assert!(
+        !snap2.elements.is_empty(),
+        "Elements should be present in second snapshot"
+    );
     // Element counts should match
     assert_eq!(snap1.elements.len(), snap2.elements.len());
 }

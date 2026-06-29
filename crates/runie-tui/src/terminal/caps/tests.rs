@@ -2,13 +2,12 @@
 mod tests {
     use std::collections::HashMap;
 
-    use crate::terminal::caps::{
-        detect_capabilities, ColorDepth, MouseCapability, MultiplexerType, TermCaps,
-        TerminalBrand,
-    };
     use crate::terminal::caps::detect::{
-        detect_brand, detect_color_depth, detect_clipboard, detect_focus_tracking,
+        detect_brand, detect_clipboard, detect_color_depth, detect_focus_tracking,
         detect_hyperlinks, detect_mouse, detect_multiplexer, detect_unicode,
+    };
+    use crate::terminal::caps::{
+        detect_capabilities, ColorDepth, MouseCapability, MultiplexerType, TermCaps, TerminalBrand,
     };
 
     fn env(pairs: &[(&str, &str)]) -> HashMap<String, String> {
@@ -192,10 +191,7 @@ mod tests {
         // detect_unicode defaults to true (conservative unicode support) when no
         // UTF locale is found. This is the historical behavior preserved for
         // backwards compatibility. Real unicode detection is done via supports-color.
-        let env = env(&[
-            ("LC_ALL", "en_US.ISO-8859-1"),
-            ("LANG", "en_US.ISO-8859-1"),
-        ]);
+        let env = env(&[("LC_ALL", "en_US.ISO-8859-1"), ("LANG", "en_US.ISO-8859-1")]);
         assert!(detect_unicode(&env));
     }
 
@@ -248,7 +244,10 @@ mod tests {
     #[test]
     fn color_depth_truecolor_from_colorterm() {
         let env = env(&[("COLORTERM", "truecolor")]);
-        assert_eq!(detect_color_depth(&env, TerminalBrand::Unknown, MultiplexerType::None), ColorDepth::Truecolor);
+        assert_eq!(
+            detect_color_depth(&env, TerminalBrand::Unknown, MultiplexerType::None),
+            ColorDepth::Truecolor
+        );
     }
 
     #[test]
@@ -257,7 +256,10 @@ mod tests {
         let env = env(&[("NO_COLOR", "1")]);
         // Unknown brand, no multiplexer → fallback ANSI256.
         let depth = detect_color_depth(&env, TerminalBrand::Unknown, MultiplexerType::None);
-        assert!(matches!(depth, ColorDepth::ANSI256 | ColorDepth::ANSI16 | ColorDepth::None));
+        assert!(matches!(
+            depth,
+            ColorDepth::ANSI256 | ColorDepth::ANSI16 | ColorDepth::None
+        ));
     }
 
     #[test]

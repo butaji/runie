@@ -5,8 +5,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::actors::LeaderHandle;
     use crate::actors::leader::test_leader_handle;
+    use crate::actors::LeaderHandle;
 
     // ── Layer 1: State/Logic ────────────────────────────────────────────────
 

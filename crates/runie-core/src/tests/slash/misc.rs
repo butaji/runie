@@ -65,7 +65,10 @@ fn help_opens_reference_panel() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: _ })
+            Some(crate::commands::DialogState::Active {
+                kind: DialogKind::Generic,
+                panels: _
+            })
         ),
         "/help should open the reference panel"
     );
@@ -83,7 +86,12 @@ fn model_switches_provider_and_model() {
     let mut state = fresh_state();
     seed_providers(
         &mut state,
-        &[("openai".into(), String::new(), String::new(), vec!["gpt-4o".into()])],
+        &[(
+            "openai".into(),
+            String::new(),
+            String::new(),
+            vec!["gpt-4o".into()],
+        )],
     );
     exec(&mut state, "/model openai/gpt-4o");
 

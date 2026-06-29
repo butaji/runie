@@ -12,7 +12,8 @@ use crate::Event;
 
 use super::{
     open_command_palette, open_model_selector, open_scoped_models_dialog, open_settings_dialog,
-    open_theme_selector, panel_handler::{update_panel_stack, PanelUpdateResult},
+    open_theme_selector,
+    panel_handler::{update_panel_stack, PanelUpdateResult},
 };
 
 /// Handles dialog-specific events. Returns whether the dialog was closed.
@@ -67,7 +68,13 @@ fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
 
 fn is_palette_activation(dialog: &DialogState, event: &Event) -> bool {
     matches!(event, crate::Event::Submit | crate::Event::PaletteSelect)
-        && matches!(dialog, DialogState::Active { kind: DialogKind::CommandPalette, panels: _ })
+        && matches!(
+            dialog,
+            DialogState::Active {
+                kind: DialogKind::CommandPalette,
+                panels: _
+            }
+        )
 }
 
 fn restore_or_pop_dialog(
@@ -114,7 +121,10 @@ pub fn process_command_result(state: &mut AppState, result: CommandResult) {
                 push_dialog_to_back_stack(state, current);
             }
             state.view_mut().dirty = true;
-            *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: *stack });
+            *state.open_dialog_mut() = Some(DialogState::Active {
+                kind: DialogKind::Generic,
+                panels: *stack,
+            });
         }
         CR::None => {}
     }

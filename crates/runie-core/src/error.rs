@@ -22,8 +22,8 @@
 //! - [`SanitizeError`] — message sanitization errors
 //! - [`ToolParseError`] — tool-call parse errors
 
-pub use crate::provider_event::ModelError;
 pub use crate::provider::ProviderError;
+pub use crate::provider_event::ModelError;
 pub use crate::sanitize::SanitizeError;
 pub use crate::tool::types::ToolParseError;
 
@@ -42,7 +42,9 @@ pub struct RunieError {
 impl RunieError {
     /// Create a new error from any error source.
     pub fn new<E: Into<anyhow::Error>>(source: E) -> Self {
-        Self { source: source.into() }
+        Self {
+            source: source.into(),
+        }
     }
 }
 

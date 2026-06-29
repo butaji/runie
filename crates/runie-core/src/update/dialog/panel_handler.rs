@@ -198,7 +198,10 @@ fn update_form_panel(
 
     let keep_open = matches!(&action, FormAction::KeepOpen);
     if keep_open && state.open_dialog().is_none() {
-        *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack.clone() });
+        *state.open_dialog_mut() = Some(DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: stack.clone(),
+        });
     }
     super::form::apply_form_action(state, action);
     if keep_open {
@@ -211,7 +214,10 @@ fn update_form_panel(
 fn handle_back_action(state: &mut AppState, stack: &mut PanelStack) -> bool {
     if stack.len() > 1 {
         stack.pop();
-        *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack.clone() });
+        *state.open_dialog_mut() = Some(DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: stack.clone(),
+        });
         false
     } else {
         let root_closable = stack.root().map(|p| p.closable).unwrap_or(true);
@@ -425,7 +431,9 @@ fn toggle_vim_mode(state: &mut AppState) {
     let handles = state.actor_handles().cloned();
     if let Some(h) = handles {
         if tokio::runtime::Handle::try_current().is_ok() {
-            let _ = h.config.try_send(ConfigMsg::SetVimMode { enabled: new_value });
+            let _ = h
+                .config
+                .try_send(ConfigMsg::SetVimMode { enabled: new_value });
         }
     }
     state.view_mut().cached_settings_valid = false;
@@ -437,7 +445,9 @@ fn toggle_telemetry(state: &mut AppState) {
     let handles = state.actor_handles().cloned();
     if let Some(h) = handles {
         if tokio::runtime::Handle::try_current().is_ok() {
-            let _ = h.config.try_send(ConfigMsg::SetTelemetry { enabled: new_enabled });
+            let _ = h.config.try_send(ConfigMsg::SetTelemetry {
+                enabled: new_enabled,
+            });
         }
     }
     state.view_mut().cached_settings_valid = false;
@@ -460,7 +470,9 @@ fn apply_truncation_setting(state: &mut AppState, stack: &mut PanelStack, key: &
     let handles = state.actor_handles().cloned();
     if let Some(h) = handles {
         if tokio::runtime::Handle::try_current().is_ok() {
-            let _ = h.config.try_send(ConfigMsg::SetTruncation { limits: truncation });
+            let _ = h
+                .config
+                .try_send(ConfigMsg::SetTruncation { limits: truncation });
         }
     }
     state.view_mut().cached_settings_valid = false;

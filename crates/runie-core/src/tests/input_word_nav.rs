@@ -3,7 +3,6 @@
 #[cfg(test)]
 mod tests {
     use crate::model::AppState;
-    
 
     #[test]
     fn word_left_to_start_of_previous_word() {

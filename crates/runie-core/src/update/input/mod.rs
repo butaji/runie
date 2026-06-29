@@ -96,15 +96,20 @@ fn permission_input_event(state: &mut AppState, event: crate::Event) {
         return;
     };
     let action = match event {
-        crate::Event::Input('y') | crate::Event::Input('Y') | crate::Event::Input('a') | crate::Event::Input('A') => PermissionAction::Allow,
+        crate::Event::Input('y')
+        | crate::Event::Input('Y')
+        | crate::Event::Input('a')
+        | crate::Event::Input('A') => PermissionAction::Allow,
         _ => PermissionAction::Deny,
     };
     // Emit intent to PermissionActor instead of direct registry mutation
     if let Some(handles) = state.actor_handles() {
-        let _ = handles.permission.try_send(PermissionMsg::ResolvePermission {
-            request_id: req.request_id.clone(),
-            action,
-        });
+        let _ = handles
+            .permission
+            .try_send(PermissionMsg::ResolvePermission {
+                request_id: req.request_id.clone(),
+                action,
+            });
     }
 }
 

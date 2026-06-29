@@ -29,23 +29,26 @@ impl Clone for PermissionMsg {
     fn clone(&self) -> Self {
         // AskPermission's Reply is Clone via Arc, so we can clone the whole message.
         match self {
-            PermissionMsg::AskPermission { request_id, tool, input, reply } => {
-                PermissionMsg::AskPermission {
-                    request_id: request_id.clone(),
-                    tool: tool.clone(),
-                    input: input.clone(),
-                    reply: reply.clone(),
-                }
-            }
+            PermissionMsg::AskPermission {
+                request_id,
+                tool,
+                input,
+                reply,
+            } => PermissionMsg::AskPermission {
+                request_id: request_id.clone(),
+                tool: tool.clone(),
+                input: input.clone(),
+                reply: reply.clone(),
+            },
             PermissionMsg::ResolvePermission { request_id, action } => {
                 PermissionMsg::ResolvePermission {
                     request_id: request_id.clone(),
                     action: *action,
                 }
             }
-            PermissionMsg::CancelPermission { request_id } => {
-                PermissionMsg::CancelPermission { request_id: request_id.clone() }
-            }
+            PermissionMsg::CancelPermission { request_id } => PermissionMsg::CancelPermission {
+                request_id: request_id.clone(),
+            },
             PermissionMsg::DismissRequest => PermissionMsg::DismissRequest,
         }
     }

@@ -20,8 +20,7 @@ pub fn init() {
         return;
     }
 
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     tracing_subscriber::registry()
         .with(fmt::layer().with_target(true).with_thread_ids(true))
@@ -34,7 +33,6 @@ pub fn init() {
 
 #[cfg(test)]
 mod tests {
-    
 
     #[test]
     fn subscriber_init_is_idempotent() {

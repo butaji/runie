@@ -288,7 +288,8 @@ fn persist_provider_config(
         });
         return;
     }
-    if let Err(e) = crate::provider::config::save_provider_config(provider, base_url, key, selected) {
+    if let Err(e) = crate::provider::config::save_provider_config(provider, base_url, key, selected)
+    {
         state.add_system_msg(format!("Failed to save provider config: {}", e));
     }
 }

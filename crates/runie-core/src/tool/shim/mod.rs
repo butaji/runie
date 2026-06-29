@@ -8,9 +8,7 @@ pub mod json;
 pub mod minimax;
 
 pub use json::{is_tool_call_value, is_tool_call_value_check, parse_inline_json_tools};
-pub use minimax::{
-    is_known_tool, parse_minimax_tool_calls, OPEN_M2, OPEN_M3,
-};
+pub use minimax::{is_known_tool, parse_minimax_tool_calls, OPEN_M2, OPEN_M3};
 
 use super::types::{ParsedToolCall, ToolParseError};
 use serde_json::{Map, Value};
@@ -20,37 +18,62 @@ const TC_END: &str = "[/TOOL_CALL]";
 
 // ─── Legacy TOOL: parser ──────────────────────────────────────────────────────
 
-pub(crate) fn parse_legacy_tools_in_line(line: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
+pub(crate) fn parse_legacy_tools_in_line(
+    line: &str,
+) -> Vec<Result<ParsedToolCall, ToolParseError>> {
     let mut results = Vec::new();
     let trimmed = line.trim();
     if let Some(rest) = trimmed.strip_prefix("TOOL:") {
         match parse_legacy_tool(rest) {
             Some(t) => results.push(Ok(t)),
             None if !rest.trim().is_empty() => {
-                results.push(Err(ToolParseError { raw: line.to_owned(), reason: "invalid legacy TOOL syntax".into() }));
+                results.push(Err(ToolParseError {
+                    raw: line.to_owned(),
+                    reason: "invalid legacy TOOL syntax".into(),
+                }));
             }
             None => {}
         }
     }
     for (idx, _) in line.match_indices("TOOL:") {
-        if idx == 0 { continue; }
-        if let Some(t) = parse_legacy_tool(&line[idx + 5..]) { results.push(Ok(t)); }
+        if idx == 0 {
+            continue;
+        }
+        if let Some(t) = parse_legacy_tool(&line[idx + 5..]) {
+            results.push(Ok(t));
+        }
     }
     results
 }
 
 pub(crate) fn parse_legacy_tool(payload: &str) -> Option<ParsedToolCall> {
     let t = payload.trim();
-    if t.is_empty() { return None; }
-    let (name, a1, a2) = if t.contains(':') { parse_legacy_colon(t) } else { parse_legacy_space(t) };
-    if name.is_empty() { return None; }
+    if t.is_empty() {
+        return None;
+    }
+    let (name, a1, a2) = if t.contains(':') {
+        parse_legacy_colon(t)
+    } else {
+        parse_legacy_space(t)
+    };
+    if name.is_empty() {
+        return None;
+    }
     let args = build_legacy_args(name, a1, a2)?;
-    Some(ParsedToolCall { name: name.to_owned(), args, id: None })
+    Some(ParsedToolCall {
+        name: name.to_owned(),
+        args,
+        id: None,
+    })
 }
 
 fn parse_legacy_colon(t: &str) -> (&str, String, String) {
     let p: Vec<&str> = t.splitn(3, ':').collect();
-    (p[0], p.get(1).unwrap_or(&"").to_string(), p.get(2).unwrap_or(&"").to_string())
+    (
+        p[0],
+        p.get(1).unwrap_or(&"").to_string(),
+        p.get(2).unwrap_or(&"").to_string(),
+    )
 }
 
 fn parse_legacy_space(t: &str) -> (&str, String, String) {
@@ -64,9 +87,16 @@ fn parse_legacy_space(t: &str) -> (&str, String, String) {
 pub(crate) fn build_legacy_args(name: &str, a1: String, a2: String) -> Option<Value> {
     let mut args = Map::new();
     match name {
-        "read_file" | "list_dir" => { args.insert("path".into(), Value::String(a1)); }
-        "write_file" => { args.insert("path".into(), Value::String(a1)); args.insert("content".into(), Value::String(a2)); }
-        "bash" => { args.insert("command".into(), Value::String(a1)); }
+        "read_file" | "list_dir" => {
+            args.insert("path".into(), Value::String(a1));
+        }
+        "write_file" => {
+            args.insert("path".into(), Value::String(a1));
+            args.insert("content".into(), Value::String(a2));
+        }
+        "bash" => {
+            args.insert("command".into(), Value::String(a1));
+        }
         _ => return None,
     }
     Some(Value::Object(args))
@@ -80,8 +110,14 @@ pub(crate) fn parse_markup_tool(line: &str) -> Option<ParsedToolCall> {
     let v: Value = serde_json::from_str(&json).ok()?;
     let name = v.get("tool")?.as_str()?;
     let args = v.get("args")?.as_object()?;
-    if !is_known_tool(name) { return None; }
-    Some(ParsedToolCall { name: name.to_owned(), args: Value::Object(args.clone()), id: None })
+    if !is_known_tool(name) {
+        return None;
+    }
+    Some(ParsedToolCall {
+        name: name.to_owned(),
+        args: Value::Object(args.clone()),
+        id: None,
+    })
 }
 
 pub(crate) fn extract_tool_call_payload(line: &str) -> Option<&str> {
@@ -95,24 +131,39 @@ pub(crate) fn arrow_to_json(input: &str) -> String {
     let mut out = String::with_capacity(input.len());
     let mut chars = input.chars().peekable();
     while let Some(ch) = chars.next() {
-        if ch == '"' || ch == '\'' { out.push('"'); continue; }
+        if ch == '"' || ch == '\'' {
+            out.push('"');
+            continue;
+        }
         if !in_str(&out) && ch == '=' && chars.peek() == Some(&'>') {
             chars.next();
             out.push(':');
-            if chars.peek() == Some(&' ') { chars.next(); out.push(' '); }
+            if chars.peek() == Some(&' ') {
+                chars.next();
+                out.push(' ');
+            }
             continue;
         }
         if !in_str(&out) && (ch.is_alphabetic() || ch == '_') {
             let mut word = String::new();
             word.push(ch);
             while let Some(&c) = chars.peek() {
-                if c.is_alphanumeric() || c == '_' { word.push(c); chars.next(); }
-                else { break; }
+                if c.is_alphanumeric() || c == '_' {
+                    word.push(c);
+                    chars.next();
+                } else {
+                    break;
+                }
             }
             let last = out.trim_end().chars().last();
             let is_key = last == Some('{') || last == Some(',');
-            if is_key { out.push('"'); out.push_str(&word); out.push('"'); }
-            else { out.push_str(&word); }
+            if is_key {
+                out.push('"');
+                out.push_str(&word);
+                out.push('"');
+            } else {
+                out.push_str(&word);
+            }
             continue;
         }
         out.push(ch);
@@ -125,22 +176,32 @@ fn in_str(s: &str) -> bool {
 }
 
 pub fn parse_tool_calls(text: &str) -> Vec<ParsedToolCall> {
-    parse_tool_calls_fallible(text).into_iter().filter_map(|r| r.ok()).collect()
+    parse_tool_calls_fallible(text)
+        .into_iter()
+        .filter_map(|r| r.ok())
+        .collect()
 }
 
 pub fn parse_tool_calls_fallible(text: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
     let minimax = parse_minimax_tool_calls(text);
-    if !minimax.is_empty() { return minimax; }
+    if !minimax.is_empty() {
+        return minimax;
+    }
     let mut results = Vec::new();
     for line in text.lines() {
         let trimmed = line.trim();
-        if trimmed.is_empty() { continue; }
+        if trimmed.is_empty() {
+            continue;
+        }
         results.extend(parse_line_strategies(trimmed, line));
     }
     results
 }
 
-fn parse_line_strategies(trimmed: &str, original: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
+fn parse_line_strategies(
+    trimmed: &str,
+    original: &str,
+) -> Vec<Result<ParsedToolCall, ToolParseError>> {
     let mut results = Vec::new();
     results.extend(parse_legacy_tools_in_line(trimmed));
     if trimmed.contains('{') {
@@ -148,58 +209,83 @@ fn parse_line_strategies(trimmed: &str, original: &str) -> Vec<Result<ParsedTool
         if !inline.is_empty() {
             results.extend(inline);
         } else if trimmed.starts_with('{') {
-            results.push(Err(ToolParseError { raw: original.to_owned(), reason: "invalid JSON".into() }));
+            results.push(Err(ToolParseError {
+                raw: original.to_owned(),
+                reason: "invalid JSON".into(),
+            }));
         }
     }
     if trimmed.contains(TC_START) {
         match parse_markup_tool(trimmed) {
             Some(t) => results.push(Ok(t)),
-            None => results.push(Err(ToolParseError { raw: original.to_owned(), reason: "invalid [TOOL_CALL] markup or unknown tool name".into() })),
+            None => results.push(Err(ToolParseError {
+                raw: original.to_owned(),
+                reason: "invalid [TOOL_CALL] markup or unknown tool name".into(),
+            })),
         }
     }
     results
 }
 
 pub fn has_tool_calls(text: &str) -> bool {
-    if text.contains(TC_START) && text.contains(TC_END) { return true; }
-    if text.contains(OPEN_M2) || text.contains(OPEN_M3) { return true; }
+    if text.contains(TC_START) && text.contains(TC_END) {
+        return true;
+    }
+    if text.contains(OPEN_M2) || text.contains(OPEN_M3) {
+        return true;
+    }
     text.lines().any(has_tool_calls_in_line)
 }
 
 fn has_tool_calls_in_line(line: &str) -> bool {
     let t = line.trim();
-    if t.starts_with("TOOL:") { return true; }
-    if t.starts_with('{') && is_tool_call_value_check(t) { return true; }
-    line.match_indices("TOOL:").any(|(idx, _)| parse_legacy_tool(&line[idx + 5..]).is_some())
+    if t.starts_with("TOOL:") {
+        return true;
+    }
+    if t.starts_with('{') && is_tool_call_value_check(t) {
+        return true;
+    }
+    line.match_indices("TOOL:")
+        .any(|(idx, _)| parse_legacy_tool(&line[idx + 5..]).is_some())
 }
 
 pub fn assign_tool_call_ids(tools: &mut [ParsedToolCall]) {
-    for tool in tools { if tool.id.is_none() { tool.id = Some("call_0".into()); } }
+    for tool in tools {
+        if tool.id.is_none() {
+            tool.id = Some("call_0".into());
+        }
+    }
 }
 
-#[cfg(test)] mod tests {
+#[cfg(test)]
+mod tests {
     use super::*;
-    #[test] fn minimax_m3() {
+    #[test]
+    fn minimax_m3() {
         let t = r#"<tool_call><invoke name="read_file"><parameter name="path">README.md</parameter></invoke>
 </minimax:tool_call>"#;
         let r = parse_tool_calls_fallible(t);
         assert!(!r.is_empty());
         assert_eq!(r[0].as_ref().unwrap().name, "read_file");
     }
-    #[test] fn inline_json() {
+    #[test]
+    fn inline_json() {
         let t = r#"{"name":"bash","arguments":{"command":"ls"}}"#;
         assert!(!parse_tool_calls_fallible(t).is_empty());
     }
-    #[test] fn legacy_colon() {
+    #[test]
+    fn legacy_colon() {
         let r = parse_tool_calls_fallible("TOOL:bash:ls");
         assert!(!r.is_empty());
         assert_eq!(r[0].as_ref().unwrap().name, "bash");
     }
-    #[test] fn markup() {
+    #[test]
+    fn markup() {
         let t = r#"[TOOL_CALL]{tool => "bash", args => {"command" => "ls"}}[/TOOL_CALL]"#;
         assert!(!parse_tool_calls_fallible(t).is_empty());
     }
-    #[test] fn minimax_m2_with_param() {
+    #[test]
+    fn minimax_m2_with_param() {
         let t = r#"<minimax:tool_call>
 <invoke name="list_dir">
 <parameter name="path">.</parameter>
@@ -210,13 +296,19 @@ pub fn assign_tool_call_ids(tools: &mut [ParsedToolCall]) {
         let tool = r[0].as_ref().unwrap();
         assert_eq!(tool.name, "list_dir");
         eprintln!("DEBUG args: {:?}", tool.args);
-        assert_eq!(tool.args.get("path").map(|v| v.as_str().unwrap()), Some("."), "path should be '.'");
+        assert_eq!(
+            tool.args.get("path").map(|v| v.as_str().unwrap()),
+            Some("."),
+            "path should be '.'"
+        );
     }
 
-    #[test] fn debug_buffer_positions() {
-        use quick_xml::Reader;
+    #[test]
+    fn debug_buffer_positions() {
         use quick_xml::events::Event;
-        let block = "<invoke name=\"list_dir\">\n<parameter name=\"path\">.</parameter>\n</invoke>\n";
+        use quick_xml::Reader;
+        let block =
+            "<invoke name=\"list_dir\">\n<parameter name=\"path\">.</parameter>\n</invoke>\n";
         let mut reader = Reader::from_str(block);
         reader.config_mut().trim_text(true);
         loop {
@@ -224,7 +316,9 @@ pub fn assign_tool_call_ids(tools: &mut [ParsedToolCall]) {
             match reader.read_event() {
                 Ok(e) => {
                     eprintln!("Event: {:?}, pos={}", e, pos);
-                    if matches!(e, Event::Eof) { break; }
+                    if matches!(e, Event::Eof) {
+                        break;
+                    }
                 }
                 Err(_) => break,
             }

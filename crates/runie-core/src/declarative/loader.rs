@@ -3,9 +3,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::resource_loader::{
-    derive_name_from_path, is_user_invocable, load_resources_from_dir,
-};
+use crate::resource_loader::{derive_name_from_path, is_user_invocable, load_resources_from_dir};
 
 use super::types::{CommandDef, DeclarativeCommandYaml, SkillDef, Trigger};
 
@@ -123,7 +121,8 @@ pub fn load_commands_from_dir(dir: &Path) -> Vec<CommandDef> {
 
 /// Parse a command YAML file into a typed struct.
 pub(crate) fn parse_command_yaml(path: &Path) -> Option<CommandDef> {
-    let yaml: DeclarativeCommandYaml = serde_yaml::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
+    let yaml: DeclarativeCommandYaml =
+        serde_yaml::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
     let (handler_name, message) = match yaml.kind_type.as_str() {
         "handler" | "form" | "form_with_handler" => (yaml.handler.clone(), None),
         "msg" => (None, yaml.message.clone()),
@@ -159,7 +158,10 @@ fn parse_command_triggers(frontmatter: &HashMap<String, String>) -> Vec<Trigger>
     let Some(triggers_str) = frontmatter.get("triggers") else {
         return Vec::new();
     };
-    triggers_str.lines().filter_map(parse_trigger_line).collect()
+    triggers_str
+        .lines()
+        .filter_map(parse_trigger_line)
+        .collect()
 }
 
 fn parse_trigger_line(line: &str) -> Option<Trigger> {
@@ -182,7 +184,6 @@ fn parse_single_command(frontmatter: &HashMap<String, String>) -> Vec<Trigger> {
         .map(|cmd| vec![Trigger::Command(cmd.clone())])
         .unwrap_or_default()
 }
-
 
 #[cfg(test)]
 mod tests {

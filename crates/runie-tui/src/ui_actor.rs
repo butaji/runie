@@ -3,16 +3,16 @@
 //! The actor subscribes to the shared `EventBus<Event>`, applies every event to
 //! `AppState`, sends fresh `Snapshot`s to the render task via a `watch` channel,
 //! and triggers side-effects (agent spawns, clipboard, etc.) without blocking.
-use std::collections::HashMap;
-use std::time::Duration;
-use runie_agent::{AgentMsg, AgentCommand};
+use runie_agent::{AgentCommand, AgentMsg};
 use runie_core::bus::{EventBus, Receiver};
 #[cfg(test)]
 use runie_core::login_flow::LoginStep;
+use std::collections::HashMap;
+use std::time::Duration;
 
 #[cfg(test)]
 use runie_core::commands::DialogKind;
-use runie_core::{AppState, Snapshot, Event};
+use runie_core::{AppState, Event, Snapshot};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::effects::{login, EffectCommand};
@@ -24,14 +24,18 @@ pub struct AgentActorHandle {
 }
 
 impl AgentActorHandle {
-    pub fn new(tx: mpsc::Sender<AgentMsg>) -> Self { Self { tx } }
+    pub fn new(tx: mpsc::Sender<AgentMsg>) -> Self {
+        Self { tx }
+    }
 
     pub async fn run(&self, command: AgentCommand) {
         let _ = self.tx.send(AgentMsg::Run { command }).await;
     }
 
     pub async fn run_if_queued(&self, turn_handle: &runie_core::actors::RactorTurnHandle) {
-        turn_handle.send(runie_core::actors::TurnMsg::RunIfQueued).await;
+        turn_handle
+            .send(runie_core::actors::TurnMsg::RunIfQueued)
+            .await;
     }
 }
 
@@ -63,7 +67,9 @@ impl LeaderAgentActorHandle {
     }
 
     pub async fn run_if_queued(&self, turn_handle: &runie_core::actors::RactorTurnHandle) {
-        turn_handle.send(runie_core::actors::TurnMsg::RunIfQueued).await;
+        turn_handle
+            .send(runie_core::actors::TurnMsg::RunIfQueued)
+            .await;
     }
 }
 use crate::pace::PacedRenderer;
@@ -135,8 +141,13 @@ impl UiActor {
         caps: TermCaps,
     ) -> Self {
         Self::with_agent_handle(
-            state, AgentHandleBox::Actor(agent_handle),
-            turn_handle, kb_tx, bus, shutdown_tx, caps,
+            state,
+            AgentHandleBox::Actor(agent_handle),
+            turn_handle,
+            kb_tx,
+            bus,
+            shutdown_tx,
+            caps,
         )
     }
 
@@ -176,8 +187,7 @@ impl UiActor {
     /// Take the snapshot channel receiver, transferring ownership to the render task.
     /// Must be called exactly once, after construction and before `run()`.
     pub fn take_render_rx(&mut self) -> watch::Receiver<Snapshot> {
-        self.render_rx.take()
-            .expect("render_rx already taken")
+        self.render_rx.take().expect("render_rx already taken")
     }
 
     /// Run the actor until a quit event is processed.
@@ -253,64 +263,87 @@ impl UiActor {
                 // In test mode (no InputActor), apply synchronously so the UiActor
                 // state is updated without waiting for an InputChanged response.
                 self.apply_event(evt.clone());
-                self.send_input_msg(runie_core::actors::InputMsg::InsertChar(*c)).await;
+                self.send_input_msg(runie_core::actors::InputMsg::InsertChar(*c))
+                    .await;
             }
             Event::Backspace => {
-                self.send_input_msg(runie_core::actors::InputMsg::Backspace).await;
+                self.send_input_msg(runie_core::actors::InputMsg::Backspace)
+                    .await;
             }
             Event::Newline => {
-                self.send_input_msg(runie_core::actors::InputMsg::Newline).await;
+                self.send_input_msg(runie_core::actors::InputMsg::Newline)
+                    .await;
             }
             Event::DeleteWord => {
-                self.send_input_msg(runie_core::actors::InputMsg::DeleteWord).await;
+                self.send_input_msg(runie_core::actors::InputMsg::DeleteWord)
+                    .await;
             }
             Event::DeleteToEnd => {
-                self.send_input_msg(runie_core::actors::InputMsg::DeleteToEnd).await;
+                self.send_input_msg(runie_core::actors::InputMsg::DeleteToEnd)
+                    .await;
             }
             Event::DeleteToStart => {
-                self.send_input_msg(runie_core::actors::InputMsg::DeleteToStart).await;
+                self.send_input_msg(runie_core::actors::InputMsg::DeleteToStart)
+                    .await;
             }
             Event::KillChar => {
-                self.send_input_msg(runie_core::actors::InputMsg::KillChar).await;
+                self.send_input_msg(runie_core::actors::InputMsg::KillChar)
+                    .await;
             }
             Event::Undo => {
-                self.send_input_msg(runie_core::actors::InputMsg::Undo).await;
+                self.send_input_msg(runie_core::actors::InputMsg::Undo)
+                    .await;
             }
             Event::Redo => {
-                self.send_input_msg(runie_core::actors::InputMsg::Redo).await;
+                self.send_input_msg(runie_core::actors::InputMsg::Redo)
+                    .await;
             }
             Event::Paste(text) => {
-                self.send_input_msg(runie_core::actors::InputMsg::Paste(text.clone())).await;
+                self.send_input_msg(runie_core::actors::InputMsg::Paste(text.clone()))
+                    .await;
             }
             Event::CursorLeft => {
-                self.send_input_msg(runie_core::actors::InputMsg::CursorLeft).await;
+                self.send_input_msg(runie_core::actors::InputMsg::CursorLeft)
+                    .await;
             }
             Event::CursorRight => {
-                self.send_input_msg(runie_core::actors::InputMsg::CursorRight).await;
+                self.send_input_msg(runie_core::actors::InputMsg::CursorRight)
+                    .await;
             }
             Event::CursorStart => {
-                self.send_input_msg(runie_core::actors::InputMsg::CursorStart).await;
+                self.send_input_msg(runie_core::actors::InputMsg::CursorStart)
+                    .await;
             }
             Event::CursorEnd => {
-                self.send_input_msg(runie_core::actors::InputMsg::CursorEnd).await;
+                self.send_input_msg(runie_core::actors::InputMsg::CursorEnd)
+                    .await;
             }
             Event::CursorWordLeft => {
-                self.send_input_msg(runie_core::actors::InputMsg::CursorWordLeft).await;
+                self.send_input_msg(runie_core::actors::InputMsg::CursorWordLeft)
+                    .await;
             }
             Event::CursorWordRight => {
-                self.send_input_msg(runie_core::actors::InputMsg::CursorWordRight).await;
+                self.send_input_msg(runie_core::actors::InputMsg::CursorWordRight)
+                    .await;
             }
             Event::HistoryPrev => {
-                self.send_input_msg(runie_core::actors::InputMsg::HistoryPrev).await;
+                self.send_input_msg(runie_core::actors::InputMsg::HistoryPrev)
+                    .await;
             }
             Event::HistoryNext => {
-                self.send_input_msg(runie_core::actors::InputMsg::HistoryNext).await;
+                self.send_input_msg(runie_core::actors::InputMsg::HistoryNext)
+                    .await;
             }
             Event::Submit => {
                 // Capture content, send Submit to InputActor, dispatch after InputChanged.
                 let content = self.state.input().input().trim().to_owned();
-                self.pending_submit = if content.is_empty() { None } else { Some(content.clone()) };
-                self.send_input_msg(runie_core::actors::InputMsg::Submit { content }).await;
+                self.pending_submit = if content.is_empty() {
+                    None
+                } else {
+                    Some(content.clone())
+                };
+                self.send_input_msg(runie_core::actors::InputMsg::Submit { content })
+                    .await;
             }
             Event::InputChanged { state } => {
                 // Single source of truth for input state. Apply state and handle
@@ -324,7 +357,12 @@ impl UiActor {
                 *self.state.input_mut() = *state.clone();
 
                 // Detect autocomplete triggers: '@' or '/' typed at end of input.
-                self.detect_autocomplete_trigger(&prev_input, prev_cursor_pos, &new_input, new_cursor_pos);
+                self.detect_autocomplete_trigger(
+                    &prev_input,
+                    prev_cursor_pos,
+                    &new_input,
+                    new_cursor_pos,
+                );
 
                 // Dispatch pending submit after state is clean.
                 if let Some(content) = self.pending_submit.take() {
@@ -391,7 +429,10 @@ impl UiActor {
                 let flow = self.state.login_flow().cloned();
                 if let Some(f) = flow {
                     let tx = effect_tx.clone();
-                    let provider_handle = self.state.actor_handles().as_ref()
+                    let provider_handle = self
+                        .state
+                        .actor_handles()
+                        .as_ref()
                         .map(|h| h.provider.clone());
                     if let Some(handle) = provider_handle {
                         tokio::spawn(login::run(f.provider, f.key, tx, handle.clone()));
@@ -417,7 +458,9 @@ impl UiActor {
 
     /// Fire-and-forget send to InputActor.
     async fn send_input_msg(&self, msg: runie_core::actors::InputMsg) {
-        let Some(handles) = self.state.actor_handles() else { return };
+        let Some(handles) = self.state.actor_handles() else {
+            return;
+        };
         let _ = handles.input.try_send(msg);
     }
 
@@ -436,9 +479,8 @@ impl UiActor {
         new_cursor: usize,
     ) {
         // Detect '@' or '/' typed at end of input (not inside existing autocomplete).
-        let was_empty_or_space = prev_input.is_empty()
-            || prev_input.ends_with(' ')
-            || prev_input.ends_with('\n');
+        let was_empty_or_space =
+            prev_input.is_empty() || prev_input.ends_with(' ') || prev_input.ends_with('\n');
 
         if was_empty_or_space
             && !new_input.is_empty()
@@ -497,12 +539,13 @@ impl UiActor {
         }
         // Steering (follow-up during active turn).
         if self.state.agent_state().turn_active {
-            self.state.agent_state_mut().message_queue.push(
-                runie_core::model::QueuedMessage {
+            self.state
+                .agent_state_mut()
+                .message_queue
+                .push(runie_core::model::QueuedMessage {
                     content,
                     kind: runie_core::model::QueuedMessageKind::Steering,
-                },
-            );
+                });
             self.state.view_mut().scroll = 0;
             self.state.view_mut().dirty = true;
             return;

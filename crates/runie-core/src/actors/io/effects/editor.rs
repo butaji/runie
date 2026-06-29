@@ -7,8 +7,7 @@ pub fn open_editor_sync(text: String) -> Result<String, String> {
     let editor = std::env::var("EDITOR")
         .unwrap_or_else(|_| if cfg!(windows) { "notepad" } else { "vi" }.to_owned());
 
-    let mut tmp = tempfile::NamedTempFile::new()
-        .map_err(|e| format!("temp file error: {}", e))?;
+    let mut tmp = tempfile::NamedTempFile::new().map_err(|e| format!("temp file error: {}", e))?;
     tmp.write_all(text.as_bytes())
         .map_err(|e| format!("write error: {}", e))?;
     tmp.flush().map_err(|e| format!("flush error: {}", e))?;

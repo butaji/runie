@@ -3,13 +3,13 @@
 
 use crate::{run_agent_turn, AgentCommand};
 use futures::Stream;
+use parking_lot::Mutex;
 use runie_core::message::{ChatMessage, Role};
 use runie_core::provider::Provider;
 use runie_core::provider_event::{ProviderEvent, StopReason};
 use runie_testing::allow_all_gate;
 use std::pin::Pin;
 use std::sync::Arc;
-use parking_lot::Mutex;
 
 struct MinimaxLikeProvider;
 
@@ -74,9 +74,7 @@ async fn minimax_inline_think_renders_visible_response() {
     run_agent_turn(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().push(evt)
-        })),
+        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
         5,
         allow_all_gate(),
     )

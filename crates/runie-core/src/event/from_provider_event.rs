@@ -26,22 +26,35 @@ impl From<ProviderEvent> for Event {
             PE::ToolCallInputDelta { id, delta } => tool_input_delta(id, delta),
             PE::ToolCallEnd { id } => tool_end(id),
             PE::Finish { reason: _ } => Event::Done { id: String::new() },
-            PE::Error(e) => Event::Error { id: String::new(), message: e.to_string() },
+            PE::Error(e) => Event::Error {
+                id: String::new(),
+                message: e.to_string(),
+            },
             PE::Usage { .. } => usage_event(),
         }
     }
 }
 
 fn text_delta(content: String) -> Event {
-    Event::ResponseDelta { id: String::new(), content }
+    Event::ResponseDelta {
+        id: String::new(),
+        content,
+    }
 }
 
 fn thinking_delta(content: String) -> Event {
-    Event::ThinkingDelta { id: String::new(), content }
+    Event::ThinkingDelta {
+        id: String::new(),
+        content,
+    }
 }
 
 fn tool_start(id: String, name: String) -> Event {
-    Event::ToolStart { id, name, input: Default::default() }
+    Event::ToolStart {
+        id,
+        name,
+        input: Default::default(),
+    }
 }
 
 fn tool_input_delta(id: String, delta: String) -> Event {
@@ -49,11 +62,18 @@ fn tool_input_delta(id: String, delta: String) -> Event {
 }
 
 fn tool_end(id: String) -> Event {
-    Event::ToolEnd { id, duration_secs: 0.0, output: String::new() }
+    Event::ToolEnd {
+        id,
+        duration_secs: 0.0,
+        output: String::new(),
+    }
 }
 
 fn usage_event() -> Event {
-    Event::ResponseDelta { id: String::new(), content: String::new() }
+    Event::ResponseDelta {
+        id: String::new(),
+        content: String::new(),
+    }
 }
 
 #[cfg(test)]

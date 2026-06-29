@@ -2,8 +2,8 @@
 
 #![allow(unused_imports)]
 use super::OpenAiProvider;
-use runie_core::proto::message::{ChatMessage, Part, ToolCall};
 use crate::ModelMeta;
+use runie_core::proto::message::{ChatMessage, Part, ToolCall};
 
 const MAX_TOOL_CALL_ID_LEN: usize = 64;
 
@@ -195,8 +195,8 @@ fn fallback_message(role: &str, content: &str) -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runie_core::proto::message::{MessageMetadata, Part, Role};
     use crate::ModelMeta;
+    use runie_core::proto::message::{MessageMetadata, Part, Role};
 
     fn provider() -> OpenAiProvider {
         OpenAiProvider::new("sk".to_string(), "gpt-4o")

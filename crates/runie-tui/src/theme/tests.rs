@@ -3,8 +3,10 @@
 use std::sync::Arc;
 
 use crate::terminal::caps::{MouseCapability, TermCaps};
-use crate::theme::{BUILTIN_THEMES, current_theme, set_current_theme, set_current_theme_with_caps, test_lock};
 use crate::theme::loader::{default_theme, minimal_fallback_theme};
+use crate::theme::{
+    current_theme, set_current_theme, set_current_theme_with_caps, test_lock, BUILTIN_THEMES,
+};
 
 #[test]
 fn theme_cache_returns_same_instance() {
@@ -155,7 +157,10 @@ fn default_theme_loads_successfully() {
     );
     let theme = result.unwrap();
     // The embedded theme must have at least basic tokens.
-    assert!(!theme.token_names().is_empty(), "default theme should have tokens");
+    assert!(
+        !theme.token_names().is_empty(),
+        "default theme should have tokens"
+    );
 }
 
 /// Verifies that the minimal fallback theme is always loadable.
@@ -164,10 +169,21 @@ fn default_theme_loads_successfully() {
 fn minimal_fallback_theme_loads_successfully() {
     let _lock = test_lock();
     let theme = minimal_fallback_theme();
-    assert!(!theme.token_names().is_empty(), "fallback theme should have tokens");
+    assert!(
+        !theme.token_names().is_empty(),
+        "fallback theme should have tokens"
+    );
     // Verify the hardcoded color values are present.
     let bg = theme.color("bg-base");
-    assert_ne!(bg, opaline::OpalineColor::FALLBACK, "fallback bg-base should resolve");
+    assert_ne!(
+        bg,
+        opaline::OpalineColor::FALLBACK,
+        "fallback bg-base should resolve"
+    );
     let text = theme.color("text-primary");
-    assert_ne!(text, opaline::OpalineColor::FALLBACK, "fallback text-primary should resolve");
+    assert_ne!(
+        text,
+        opaline::OpalineColor::FALLBACK,
+        "fallback text-primary should resolve"
+    );
 }

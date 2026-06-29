@@ -70,26 +70,12 @@ async fn run_grep_impl(
     let args = build_grep_args(pattern, path, glob, ignore_case, literal, limit);
     let output = match run_grep_command(tool, &args).await {
         Ok(o) => o,
-        Err(e) => {
-            return tool_error(
-                "grep",
-                &format!("Error running grep: {}", e),
-                start,
-                false,
-            )
-        }
+        Err(e) => return tool_error("grep", &format!("Error running grep: {}", e), start, false),
     };
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     let (content, status) = parse_grep_output(&stdout, &stderr, output.status.code());
-    build_grep_output(
-        pattern,
-        path,
-        content,
-        status,
-        stdout.len(),
-        start,
-    )
+    build_grep_output(pattern, path, content, status, stdout.len(), start)
 }
 
 async fn select_grep_tool() -> &'static str {

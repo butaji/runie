@@ -20,7 +20,10 @@ fn input_scroll_not_adjusted_on_content_changes() {
         state.update(crate::Event::Newline);
     }
     // Scroll stays at 0 on content changes - this is the actual behavior
-    assert_eq!(state.input.input_scroll, 0, "Scroll stays at 0 on content change");
+    assert_eq!(
+        state.input.input_scroll, 0,
+        "Scroll stays at 0 on content change"
+    );
 }
 
 /// Layer 1: Cursor navigation does clamp input_scroll to keep cursor visible.
@@ -59,7 +62,10 @@ fn cursor_start_resets_scroll_to_zero() {
     }
     // Move to end (scroll gets clamped)
     state.update(crate::Event::CursorEnd);
-    assert!(state.input.input_scroll > 0, "Scroll should be > 0 after CursorEnd");
+    assert!(
+        state.input.input_scroll > 0,
+        "Scroll should be > 0 after CursorEnd"
+    );
     // Move to start - scroll should reset to 0
     state.update(crate::Event::CursorStart);
     assert_eq!(

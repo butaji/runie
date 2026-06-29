@@ -44,12 +44,7 @@ pub async fn run() -> Result<()> {
     let messages = build_json_messages(&req);
     let start = Instant::now();
 
-    let result = run_json_turn(
-        req.provider.as_deref(),
-        req.model.as_deref(),
-        messages,
-    )
-    .await?;
+    let result = run_json_turn(req.provider.as_deref(), req.model.as_deref(), messages).await?;
 
     let response = build_json_response(result, start.elapsed().as_millis() as u64);
     println!("{}", serde_json::to_string(&response)?);

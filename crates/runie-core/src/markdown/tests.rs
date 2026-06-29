@@ -148,8 +148,6 @@ fn heal_unclosed_fence() {
             if content.starts_with("```rust")));
 }
 
-
-
 #[test]
 fn debug_parse_inline() {
     let text = "hello **bold** world";

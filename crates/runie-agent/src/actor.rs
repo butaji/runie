@@ -2,22 +2,22 @@
 //!
 //! This is the production implementation of the AgentActor using ractor.
 
+use parking_lot::Mutex;
 use std::pin::Pin;
 use std::sync::Arc;
-use parking_lot::Mutex;
 
-use ractor::{Actor, ActorRef, ActorProcessingErr};
 use ractor::async_trait;
+use ractor::{Actor, ActorProcessingErr, ActorRef};
 
 use runie_core::actors::permission::RactorPermissionHandle;
 use runie_core::actors::provider::RactorProviderHandle;
-use runie_core::actors::ractor_adapter::{RactorHandle, spawn_ractor};
+use runie_core::actors::ractor_adapter::{spawn_ractor, RactorHandle};
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
+use runie_core::permissions::PermissionGate;
 use runie_core::permissions::{
     DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
 };
-use runie_core::permissions::PermissionGate;
 
 use crate::emit_approval_sink::EmitApprovalSink;
 use crate::run_agent_turn;
@@ -31,7 +31,9 @@ pub enum AgentMsg {
     /// Execute one agent turn.
     Run { command: AgentCommand },
     /// Execute a turn from the leader's minimal command type.
-    RunLeader { command: runie_core::actors::leader::LeaderAgentCmd },
+    RunLeader {
+        command: runie_core::actors::leader::LeaderAgentCmd,
+    },
 }
 
 // ── Ractor-based AgentActor ───────────────────────────────────────────────────
@@ -171,7 +173,14 @@ pub async fn spawn_ractor_agent(
     bus: runie_core::bus::EventBus<Event>,
     provider_handle: RactorProviderHandle,
     permission_handle: RactorPermissionHandle,
-) -> Result<(RactorAgentHandle, ractor::concurrency::JoinHandle<()>, ractor::ActorCell), ractor::SpawnErr> {
+) -> Result<
+    (
+        RactorAgentHandle,
+        ractor::concurrency::JoinHandle<()>,
+        ractor::ActorCell,
+    ),
+    ractor::SpawnErr,
+> {
     let actor = RactorAgentActor {
         provider_handle: Arc::new(Mutex::new(None)),
         permission_handle: Arc::new(Mutex::new(None)),
@@ -193,7 +202,9 @@ pub trait RactorAgentHandleExt {
 
 impl RactorAgentHandleExt for RactorAgentHandle {
     async fn run_if_queued(&self, turn_handle: &runie_core::actors::RactorTurnHandle) {
-        turn_handle.send(runie_core::actors::TurnMsg::RunIfQueued).await;
+        turn_handle
+            .send(runie_core::actors::TurnMsg::RunIfQueued)
+            .await;
     }
 }
 
@@ -227,7 +238,10 @@ impl LeaderAgentHandleImpl {
 }
 
 impl runie_core::actors::leader::LeaderAgentHandle for LeaderAgentHandleImpl {
-    fn run(&self, cmd: runie_core::actors::leader::LeaderAgentCmd) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+    fn run(
+        &self,
+        cmd: runie_core::actors::leader::LeaderAgentCmd,
+    ) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
         let inner = self.inner.clone();
         let msg = AgentMsg::RunLeader { command: cmd };
         Box::pin(async move {
@@ -253,7 +267,15 @@ impl Default for AgentActorFactoryImpl {
 
 impl runie_core::actors::leader::AgentActorFactory for AgentActorFactoryImpl {
     type SpawnFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = Result<Box<dyn runie_core::actors::leader::LeaderAgentHandle>, ractor::SpawnErr>> + Send>>;
+        Box<
+            dyn std::future::Future<
+                    Output = Result<
+                        Box<dyn runie_core::actors::leader::LeaderAgentHandle>,
+                        ractor::SpawnErr,
+                    >,
+                > + Send,
+        >,
+    >;
 
     fn spawn(
         &self,

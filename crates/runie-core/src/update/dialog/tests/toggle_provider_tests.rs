@@ -49,14 +49,16 @@ fn toggle_provider_model_disables_model_and_switches_active() {
     // Initialize the model_providers so toggle_provider_model can update it
     state.config_mut().model_providers.insert(
         "openai".into(),
-        Config::default().model_providers.get("openai").cloned().unwrap_or_else(|| {
-            crate::config::ModelProvider {
+        Config::default()
+            .model_providers
+            .get("openai")
+            .cloned()
+            .unwrap_or_else(|| crate::config::ModelProvider {
                 provider_type: None,
                 base_url: "https://api.openai.com/v1".into(),
                 api_key: "sk-test".into(),
                 models: vec!["gpt-4o".into(), "gpt-4o-mini".into()],
-            }
-        }),
+            }),
     );
 
     toggle_provider_model(&mut state, "openai", "gpt-4o-mini");

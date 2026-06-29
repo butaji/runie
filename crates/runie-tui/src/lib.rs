@@ -30,14 +30,14 @@ pub mod ui_actor;
 #[cfg(test)]
 mod tests;
 
-pub use runie_core::{AppState, ChatMessage};
 /// Re-export [`Stylize`] from ratatui for backward compatibility.
 pub use ratatui::style::Stylize;
+pub use runie_core::{AppState, ChatMessage};
 
 // Re-export dialog types from runie_core for convenience
-pub use runie_core::dialog::{EventLabel, ItemAction, Panel, PanelItem, PanelStack, PanelId};
-pub use runie_core::dialog::dsl::{form, panel, get_field, FormPanel};
 pub use runie_core::dialog::builders::{
     command_palette, file_picker, model_selector, scoped_models, session_list, session_tree,
     settings, theme_picker, SessionRow,
 };
+pub use runie_core::dialog::dsl::{form, get_field, panel, FormPanel};
+pub use runie_core::dialog::{EventLabel, ItemAction, Panel, PanelId, PanelItem, PanelStack};

@@ -207,7 +207,10 @@ fn panel_dialog_hides_underlying_messages() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(runie_core::commands::DialogState::Active { kind: DialogKind::Generic, panels: _ })
+            Some(runie_core::commands::DialogState::Active {
+                kind: DialogKind::Generic,
+                panels: _
+            })
         ),
         "PanelStack dialog should be open"
     );

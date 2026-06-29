@@ -35,5 +35,9 @@ impl crate::proto::provider::ProviderConfig for crate::config::Config {
 }
 
 fn non_empty(s: &str) -> Option<String> {
-    if s.is_empty() { None } else { Some(s.to_owned()) }
+    if s.is_empty() {
+        None
+    } else {
+        Some(s.to_owned())
+    }
 }

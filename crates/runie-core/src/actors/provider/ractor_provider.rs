@@ -5,12 +5,12 @@
 
 use std::sync::Arc;
 
-use ractor::{Actor, ActorProcessingErr, ActorRef};
 use ractor::async_trait as ractor_async_trait;
+use ractor::{Actor, ActorProcessingErr, ActorRef};
 
-use crate::actors::config::RactorConfigHandle;
 #[cfg(test)]
 use crate::actors::config::RactorConfigActor;
+use crate::actors::config::RactorConfigHandle;
 use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
 use crate::bus::EventBus;
 use crate::config::Config;
@@ -100,7 +100,11 @@ pub struct RactorProviderActor {
 }
 
 impl RactorProviderActor {
-    fn new(_bus: EventBus<Event>, config_handle: RactorConfigHandle, factory: Arc<dyn ProviderFactory>) -> Self {
+    fn new(
+        _bus: EventBus<Event>,
+        config_handle: RactorConfigHandle,
+        factory: Arc<dyn ProviderFactory>,
+    ) -> Self {
         Self {
             config_handle,
             factory,
@@ -130,16 +134,39 @@ impl RactorProviderActor {
 
         struct EchoProvider;
         impl Provider for EchoProvider {
-            fn generate(&self, _: Vec<crate::ChatMessage>) -> Pin<Box<dyn futures::Stream<Item = Result<crate::provider_event::ProviderEvent>> + Send + '_>> {
+            fn generate(
+                &self,
+                _: Vec<crate::ChatMessage>,
+            ) -> Pin<
+                Box<
+                    dyn futures::Stream<Item = Result<crate::provider_event::ProviderEvent>>
+                        + Send
+                        + '_,
+                >,
+            > {
                 Box::pin(futures::stream::empty())
             }
         }
         struct TestFactory;
         impl ProviderFactory for TestFactory {
-            fn build(&self, _provider: &str, model: &str, _config: &Config) -> Result<BuiltProvider, ProviderError> {
-                Ok(BuiltProvider::new(Box::new(EchoProvider), "test".into(), model.into()))
+            fn build(
+                &self,
+                _provider: &str,
+                model: &str,
+                _config: &Config,
+            ) -> Result<BuiltProvider, ProviderError> {
+                Ok(BuiltProvider::new(
+                    Box::new(EchoProvider),
+                    "test".into(),
+                    model.into(),
+                ))
             }
-            fn validate_key(&self, _: &str, _: &str) -> Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + '_>> {
+            fn validate_key(
+                &self,
+                _: &str,
+                _: &str,
+            ) -> Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + '_>>
+            {
                 Box::pin(async { Ok(vec![]) })
             }
             fn resolve_credentials(&self, _: &str, _: &Config) -> (String, String) {
@@ -148,7 +175,9 @@ impl RactorProviderActor {
         }
 
         let (config_h, _) = RactorConfigActor::spawn_default(bus.clone()).await;
-        Self::spawn(bus, config_h, Arc::new(TestFactory)).await.unwrap()
+        Self::spawn(bus, config_h, Arc::new(TestFactory))
+            .await
+            .unwrap()
     }
 
     /// Build a provider for the given registry key and model.
@@ -167,14 +196,14 @@ impl RactorProviderActor {
     }
 
     /// Validate an API key for a provider.
-    pub async fn validate_key(
-        &self,
-        provider: &str,
-        api_key: &str,
-    ) -> anyhow::Result<Vec<String>> {
+    pub async fn validate_key(&self, provider: &str, api_key: &str) -> anyhow::Result<Vec<String>> {
         let config = self.config().await.map_err(|e| anyhow::anyhow!("{e}"))?;
         let (base_url, resolved_key) = self.factory.resolve_credentials(provider, &config);
-        let api_key = if api_key.is_empty() { &resolved_key } else { api_key };
+        let api_key = if api_key.is_empty() {
+            &resolved_key
+        } else {
+            api_key
+        };
         if api_key.is_empty() {
             anyhow::bail!("API key is required");
         }
@@ -255,17 +284,35 @@ mod tests {
     /// A minimal mock provider that always returns empty.
     struct MockProvider;
     impl Provider for MockProvider {
-        fn generate(&self, _: Vec<ChatMessage>) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
+        fn generate(
+            &self,
+            _: Vec<ChatMessage>,
+        ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
+        {
             Box::pin(futures::stream::empty())
         }
     }
 
     struct MockFactory;
     impl ProviderFactory for MockFactory {
-        fn build(&self, _provider: &str, model: &str, _config: &Config) -> Result<BuiltProvider, ProviderError> {
-            Ok(BuiltProvider::new(Box::new(MockProvider), "mock".into(), model.into()))
+        fn build(
+            &self,
+            _provider: &str,
+            model: &str,
+            _config: &Config,
+        ) -> Result<BuiltProvider, ProviderError> {
+            Ok(BuiltProvider::new(
+                Box::new(MockProvider),
+                "mock".into(),
+                model.into(),
+            ))
         }
-        fn validate_key(&self, _: &str, _: &str) -> Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + '_>> {
+        fn validate_key(
+            &self,
+            _: &str,
+            _: &str,
+        ) -> Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + '_>>
+        {
             Box::pin(async { Ok(vec!["model-a".into(), "model-b".into()]) })
         }
         fn resolve_credentials(&self, _: &str, _: &Config) -> (String, String) {
@@ -278,7 +325,9 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let (config_handle, _cell) = RactorConfigActor::spawn_default(bus.clone()).await;
         let factory = Arc::new(MockFactory);
-        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory).await.unwrap();
+        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
+            .await
+            .unwrap();
         let _ = handle;
     }
 
@@ -288,7 +337,9 @@ mod tests {
         let (config_handle, _cell) = RactorConfigActor::spawn_default(bus.clone()).await;
         let factory = Arc::new(MockFactory);
 
-        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory).await.unwrap();
+        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
+            .await
+            .unwrap();
         let result = handle.build("mock".into(), "echo".into()).await;
         assert!(result.is_ok(), "build should succeed: {:?}", result);
         let built = result.unwrap();
@@ -302,7 +353,9 @@ mod tests {
         let (config_handle, _cell) = RactorConfigActor::spawn_default(bus.clone()).await;
         let factory = Arc::new(MockFactory);
 
-        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory).await.unwrap();
+        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
+            .await
+            .unwrap();
         let result = handle.validate_key("mock".into(), "sk-test".into()).await;
         assert!(result.is_ok(), "validate_key should succeed: {:?}", result);
         let models = result.unwrap();

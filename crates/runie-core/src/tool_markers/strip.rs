@@ -325,7 +325,11 @@ fn push(result: &mut String, line: &str) {
 }
 
 fn emit_fence_if_valid(buf: &[String], end_line: &str, result: &mut String) {
-    let body = buf.iter().skip(1).flat_map(|s| s.chars()).collect::<String>();
+    let body = buf
+        .iter()
+        .skip(1)
+        .flat_map(|s| s.chars())
+        .collect::<String>();
     if !body.trim().is_empty() && !is_tool_call_json(body.trim()) {
         for l in buf {
             push(result, l);
@@ -489,8 +493,11 @@ mod unicode_bug_tests {
         assert_eq!(result, "Before\nAfter");
         // Test all formats still work after collapse
         assert!(strip_all("[TOOL_CALL]{tool => \"bash\", args => {}}[/TOOL_CALL]").is_empty());
-        assert!(strip_all(r#"<minimax:tool_call><invoke name="bash"><command>ls</command></invoke>
-<invoke...Copyright"#).is_empty());
+        assert!(strip_all(
+            r#"<minimax:tool_call><invoke name="bash"><command>ls</command></invoke>
+<invoke...Copyright"#
+        )
+        .is_empty());
         assert!(strip_all(r#"{"name": "bash", "arguments": {"command": "ls"}}"#).is_empty());
     }
 }

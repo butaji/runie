@@ -18,13 +18,15 @@ pub struct TreeNodeData {
 
 impl TreeNodeData {
     pub fn new(message: ChatMessage) -> Self {
-        Self { message, label: None }
+        Self {
+            message,
+            label: None,
+        }
     }
 }
 
 /// Tree filter for the session tree dialog.
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
-#[derive(strum::Display)]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq, strum::Display)]
 pub enum SessionTreeFilter {
     #[default]
     All,
@@ -218,12 +220,16 @@ impl SessionTree {
 
     /// Get the node at the end of the current branch.
     pub fn current_node(&self) -> Option<&TreeNodeData> {
-        self.current_branch.last().and_then(|id| self.arena.get(*id).map(|n| n.get()))
+        self.current_branch
+            .last()
+            .and_then(|id| self.arena.get(*id).map(|n| n.get()))
     }
 
     /// Get a mutable reference to the node at the end of the current branch.
     pub fn current_node_mut(&mut self) -> Option<&mut TreeNodeData> {
-        self.current_branch.last_mut().and_then(|id| self.arena.get_mut(*id).map(|n| n.get_mut()))
+        self.current_branch
+            .last_mut()
+            .and_then(|id| self.arena.get_mut(*id).map(|n| n.get_mut()))
     }
 
     /// Get a node by ID.

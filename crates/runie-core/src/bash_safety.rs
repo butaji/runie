@@ -41,7 +41,9 @@ fn check_destructive_tokens(tokens: &[String]) -> Option<&'static str> {
 }
 
 fn check_rm_at_idx(tokens: &[String], idx: usize) -> Option<&'static str> {
-    let has_rf = tokens[idx..].iter().any(|t| t == "-rf" || t == "-fr" || t == "-r" || t == "-R");
+    let has_rf = tokens[idx..]
+        .iter()
+        .any(|t| t == "-rf" || t == "-fr" || t == "-r" || t == "-R");
     if !has_rf {
         return None;
     }
@@ -117,7 +119,12 @@ fn check_interpreter_attack(tokens: &[String]) -> Option<&'static str> {
         let lower = t.to_lowercase();
         interpreters.iter().any(|i| lower == *i)
     }) {
-        let joined: String = tokens.iter().skip(idx).cloned().collect::<Vec<_>>().join(" ");
+        let joined: String = tokens
+            .iter()
+            .skip(idx)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(" ");
         if contains_destructive(&joined) {
             return Some("interpreter executing destructive code is blocked");
         }

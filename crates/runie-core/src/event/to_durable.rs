@@ -18,10 +18,18 @@ impl Event {
             Event::ToolStart { id, name, input } => Some(tool_called(id, name, input)),
             Event::ToolEnd { id, output, .. } => Some(tool_result(id, output)),
             Event::Response { id, content } => Some(message_sent(id, content)),
-            Event::SwitchModel { provider, model, .. } => Some(model_switched(provider, model)),
-            Event::RunNameCommand { name } => Some(DurableCoreEvent::SessionRenamed { name: name.clone() }),
-            Event::SwitchTheme { name } => Some(DurableCoreEvent::ThemeSwitched { name: name.clone() }),
-            Event::SetThinkingLevel(level) => Some(DurableCoreEvent::ThinkingLevelSet { level: *level }),
+            Event::SwitchModel {
+                provider, model, ..
+            } => Some(model_switched(provider, model)),
+            Event::RunNameCommand { name } => {
+                Some(DurableCoreEvent::SessionRenamed { name: name.clone() })
+            }
+            Event::SwitchTheme { name } => {
+                Some(DurableCoreEvent::ThemeSwitched { name: name.clone() })
+            }
+            Event::SetThinkingLevel(level) => {
+                Some(DurableCoreEvent::ThinkingLevelSet { level: *level })
+            }
             _ => None,
         }
     }

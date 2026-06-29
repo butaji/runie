@@ -3,10 +3,10 @@
 //! This actor uses the ractor framework for actor supervision and message handling.
 
 use parking_lot::Mutex;
-use ractor::{Actor, ActorProcessingErr, ActorRef};
 use ractor::async_trait;
+use ractor::{Actor, ActorProcessingErr, ActorRef};
 
-use crate::actors::ractor_adapter::{RactorHandle, spawn_ractor};
+use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::InputState;
@@ -120,13 +120,21 @@ mod tests {
         handle.send(InputMsg::InsertChar('h')).await;
 
         // Wait for first InputChanged event
-        let found_h = wait_for_event(&mut sub, |e| matches!(e, Event::InputChanged { state } if state.input == "h")).await;
+        let found_h = wait_for_event(
+            &mut sub,
+            |e| matches!(e, Event::InputChanged { state } if state.input == "h"),
+        )
+        .await;
         assert!(found_h, "Expected InputChanged with 'h'");
 
         handle.send(InputMsg::InsertChar('i')).await;
 
         // Wait for second InputChanged event
-        let found_hi = wait_for_event(&mut sub, |e| matches!(e, Event::InputChanged { state } if state.input == "hi")).await;
+        let found_hi = wait_for_event(
+            &mut sub,
+            |e| matches!(e, Event::InputChanged { state } if state.input == "hi"),
+        )
+        .await;
         assert!(found_hi, "Expected InputChanged with 'hi'");
 
         drop(handle);

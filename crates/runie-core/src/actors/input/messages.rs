@@ -166,14 +166,12 @@ impl InputMsg {
             }
             InputMsg::CursorLeft => {
                 if state.cursor_pos > 0 {
-                    state.cursor_pos =
-                        prev_grapheme_boundary(&state.input, state.cursor_pos);
+                    state.cursor_pos = prev_grapheme_boundary(&state.input, state.cursor_pos);
                 }
             }
             InputMsg::CursorRight => {
                 if state.cursor_pos < state.input.len() {
-                    state.cursor_pos =
-                        next_grapheme_boundary(&state.input, state.cursor_pos);
+                    state.cursor_pos = next_grapheme_boundary(&state.input, state.cursor_pos);
                 }
             }
             InputMsg::CursorStart => {
@@ -184,14 +182,12 @@ impl InputMsg {
             }
             InputMsg::CursorWordLeft => {
                 if state.cursor_pos > 0 {
-                    state.cursor_pos =
-                        find_word_boundary_left(&state.input, state.cursor_pos);
+                    state.cursor_pos = find_word_boundary_left(&state.input, state.cursor_pos);
                 }
             }
             InputMsg::CursorWordRight => {
                 if state.cursor_pos < state.input.len() {
-                    state.cursor_pos =
-                        find_word_boundary_right(&state.input, state.cursor_pos);
+                    state.cursor_pos = find_word_boundary_right(&state.input, state.cursor_pos);
                 }
             }
             InputMsg::MoveCursor { pos } => {
@@ -228,7 +224,8 @@ impl InputMsg {
             }
             InputMsg::Undo => {
                 if let Some((text, pos)) = state.undo_stack.pop() {
-                    state.redo_stack
+                    state
+                        .redo_stack
                         .push((state.input.clone(), state.cursor_pos));
                     state.input = text;
                     state.cursor_pos = pos;
@@ -236,13 +233,17 @@ impl InputMsg {
             }
             InputMsg::Redo => {
                 if let Some((text, pos)) = state.redo_stack.pop() {
-                    state.undo_stack
+                    state
+                        .undo_stack
                         .push((state.input.clone(), state.cursor_pos));
                     state.input = text;
                     state.cursor_pos = pos;
                 }
             }
-            InputMsg::Submit { .. } | InputMsg::SetText { .. } | InputMsg::SetPrompt { .. } | InputMsg::Clear => {
+            InputMsg::Submit { .. }
+            | InputMsg::SetText { .. }
+            | InputMsg::SetPrompt { .. }
+            | InputMsg::Clear => {
                 // These all clear input state. For Submit, the content is
                 // dispatched by UiActor directly (captured before sending).
                 state.input.clear();

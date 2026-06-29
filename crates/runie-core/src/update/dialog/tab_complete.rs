@@ -100,10 +100,7 @@ impl AppState {
         let has_suggestions;
         {
             let comp = self.completion_mut();
-            has_suggestions = comp
-                .at_suggestions
-                .as_ref()
-                .is_some_and(|s| !s.is_empty());
+            has_suggestions = comp.at_suggestions.as_ref().is_some_and(|s| !s.is_empty());
             suggestions_len = comp.at_suggestions.as_ref().map_or(0, |s| s.len());
             if !has_suggestions {
                 comp.at_selected = None;

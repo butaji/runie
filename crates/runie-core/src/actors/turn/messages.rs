@@ -13,18 +13,11 @@ pub enum TurnMsg {
     /// Abort the current turn and stop the queue.
     AbortTurn,
     /// Submit a user message to the queue.
-    SubmitUserMessage {
-        content: String,
-        id: String,
-    },
+    SubmitUserMessage { content: String, id: String },
     /// Queue a steering message.
-    QueueSteering {
-        content: String,
-    },
+    QueueSteering { content: String },
     /// Queue a follow-up message.
-    QueueFollowUp {
-        content: String,
-    },
+    QueueFollowUp { content: String },
     /// Abort the message queue (move messages back to input).
     AbortQueue,
     /// Clear all queues.
@@ -37,18 +30,11 @@ pub enum TurnMsg {
     /// Dequeue the last message back to input.
     Dequeue,
     /// LLM event: thinking started.
-    Thinking {
-        id: String,
-    },
+    Thinking { id: String },
     /// LLM event: thought done.
-    ThoughtDone {
-        id: String,
-    },
+    ThoughtDone { id: String },
     /// LLM event: tool started.
-    ToolStart {
-        id: String,
-        name: String,
-    },
+    ToolStart { id: String, name: String },
     /// LLM event: tool ended.
     ToolEnd {
         id: String,
@@ -56,28 +42,15 @@ pub enum TurnMsg {
         output: String,
     },
     /// LLM event: response delta.
-    ResponseDelta {
-        id: String,
-        content: String,
-    },
+    ResponseDelta { id: String, content: String },
     /// LLM event: turn complete.
-    TurnComplete {
-        id: String,
-        duration_secs: f64,
-    },
+    TurnComplete { id: String, duration_secs: f64 },
     /// LLM event: done.
-    Done {
-        id: String,
-    },
+    Done { id: String },
     /// LLM event: error.
-    Error {
-        id: String,
-        message: String,
-    },
+    Error { id: String, message: String },
     /// Update speed stats.
-    UpdateSpeed {
-        tokens_out: usize,
-    },
+    UpdateSpeed { tokens_out: usize },
     /// Generate next message ID.
     NextId,
 }

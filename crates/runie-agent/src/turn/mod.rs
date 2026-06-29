@@ -10,10 +10,10 @@ use runie_core::message::{ChatMessage, Role};
 use runie_core::permissions::PermissionGate;
 use runie_core::provider::Provider;
 use runie_core::sanitize::sanitize_messages;
-use runie_core::tool::{to_openai_function, BUILTIN_TOOL_NAMES};
 use runie_core::tool::{
     assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
 };
+use runie_core::tool::{to_openai_function, BUILTIN_TOOL_NAMES};
 use std::time::Instant;
 
 // Helper modules
@@ -295,4 +295,3 @@ pub(crate) fn build_initial_messages(command: &AgentCommand) -> Vec<ChatMessage>
 }
 
 // Re-export emit and tools for internal use
-

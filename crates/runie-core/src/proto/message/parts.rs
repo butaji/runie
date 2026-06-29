@@ -28,11 +28,15 @@ pub enum Part {
 
 impl Part {
     pub fn text(content: impl Into<String>) -> Self {
-        Self::Text { content: content.into() }
+        Self::Text {
+            content: content.into(),
+        }
     }
 
     pub fn reasoning(content: impl Into<String>) -> Self {
-        Self::Reasoning { content: content.into() }
+        Self::Reasoning {
+            content: content.into(),
+        }
     }
 
     pub fn tool_call(id: impl Into<String>, name: impl Into<String>, args: Value) -> Self {

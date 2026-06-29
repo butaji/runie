@@ -9,7 +9,13 @@ impl AppState {
 
     pub(super) fn toggle_session_tree_dialog(&mut self) {
         use crate::commands::DialogState;
-        if matches!(self.open_dialog, Some(DialogState::Active { kind: DialogKind::SessionTree, panels: _ })) {
+        if matches!(
+            self.open_dialog,
+            Some(DialogState::Active {
+                kind: DialogKind::SessionTree,
+                panels: _
+            })
+        ) {
             *self.open_dialog_mut() = None;
             self.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
             self.view_mut().dirty = true;
@@ -21,7 +27,11 @@ impl AppState {
 
     pub(super) fn cycle_session_tree_filter(&mut self) {
         use crate::commands::DialogState;
-        if let Some(DialogState::Active { kind: DialogKind::SessionTree, panels: stack }) = &mut *self.open_dialog_mut() {
+        if let Some(DialogState::Active {
+            kind: DialogKind::SessionTree,
+            panels: stack,
+        }) = &mut *self.open_dialog_mut()
+        {
             if let Some(_panel) = stack.current_mut() {
                 // cycle through filter variants based on panel id or custom logic
                 // For now just mark dirty so the panel re-renders
@@ -110,7 +120,8 @@ impl AppState {
             return;
         }
         let content = std::mem::take(&mut self.input_mut().input)
-            .trim().to_owned();
+            .trim()
+            .to_owned();
         self.input_mut().cursor_pos = 0;
         if content.is_empty() {
             return;
@@ -150,7 +161,11 @@ impl AppState {
             return;
         }
         // Drain via TurnQueue, then emit facts
-        let msgs: Vec<_> = TurnQueue::new(self.agent_state_mut().message_queue.drain(..).collect()).drain().into_iter().rev().collect();
+        let msgs: Vec<_> = TurnQueue::new(self.agent_state_mut().message_queue.drain(..).collect())
+            .drain()
+            .into_iter()
+            .rev()
+            .collect();
         for msg in msgs {
             self.apply_queue_aborted(msg.content);
         }
@@ -165,7 +180,10 @@ impl AppState {
         let handles = self.actor_handles().cloned();
         if let Some(ref h) = handles {
             if tokio::runtime::Handle::try_current().is_ok() {
-                let _ = h.turn.try_send(TurnMsg::DeliverQueued { steering_mode, follow_up_mode });
+                let _ = h.turn.try_send(TurnMsg::DeliverQueued {
+                    steering_mode,
+                    follow_up_mode,
+                });
                 self.agent_state_mut().message_queue.clear();
             } else {
                 // Test mode without runtime: use TurnQueue directly
@@ -179,7 +197,11 @@ impl AppState {
     }
 
     /// Sync delivery via TurnQueue — replaces the old sync fallback methods.
-    fn deliver_via_turn_queue(&mut self, steering_mode: DeliveryMode, follow_up_mode: DeliveryMode) {
+    fn deliver_via_turn_queue(
+        &mut self,
+        steering_mode: DeliveryMode,
+        follow_up_mode: DeliveryMode,
+    ) {
         let mut queue = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
         // Try steering first
         if let Some(r) = queue.pop_steering(steering_mode) {
@@ -187,7 +209,8 @@ impl AppState {
             self.push_user_from_queue(r.content);
             if follow_up_mode == DeliveryMode::All {
                 // Also deliver follow-ups in All mode
-                let mut q = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
+                let mut q =
+                    TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
                 if let Some(r) = q.pop_all_follow_ups() {
                     self.agent_state_mut().message_queue = q.into_inner();
                     self.push_user_from_queue(r.content);
@@ -209,10 +232,14 @@ impl AppState {
             role: Role::User,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![runie_core::message::Part::Text { content: content.clone() }],
+            parts: vec![runie_core::message::Part::Text {
+                content: content.clone(),
+            }],
             ..Default::default()
         });
-        self.agent_state_mut().request_queue.push_back((content, id));
+        self.agent_state_mut()
+            .request_queue
+            .push_back((content, id));
         self.messages_changed();
     }
 

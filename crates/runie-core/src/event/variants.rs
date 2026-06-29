@@ -66,8 +66,12 @@ pub enum Event {
     },
 
     // Agent
-    Thinking { id: String },
-    ThoughtDone { id: String },
+    Thinking {
+        id: String,
+    },
+    ThoughtDone {
+        id: String,
+    },
     ToolStart {
         id: String,
         name: String,
@@ -97,11 +101,22 @@ pub enum Event {
         content: String,
     },
     // LLM lifecycle
-    TextStart { id: String },
-    TextEnd { id: String },
-    ThinkingStart { id: String },
-    ThinkingEnd { id: String },
-    Response { id: String, content: String },
+    TextStart {
+        id: String,
+    },
+    TextEnd {
+        id: String,
+    },
+    ThinkingStart {
+        id: String,
+    },
+    ThinkingEnd {
+        id: String,
+    },
+    Response {
+        id: String,
+        content: String,
+    },
     TurnComplete {
         id: String,
         duration_secs: f64,
@@ -114,24 +129,50 @@ pub enum Event {
         message: String,
     },
 
-    TurnStarted { id: String, request_id: String, content: String },
+    TurnStarted {
+        id: String,
+        request_id: String,
+        content: String,
+    },
     TurnAborted,
     TurnCompleted,
-    TurnErrored { id: String, message: String },
+    TurnErrored {
+        id: String,
+        message: String,
+    },
     /// Turn failed due to tool constraint violation before provider call.
     TurnConstraintError {
         id: String,
         tool: String,
         message: String,
     },
-    TokenStatsUpdated { tokens_in: usize, tokens_out: usize, speed_tps: f64 },
-    StreamStarted { id: String },
-    UserMessageSubmitted { id: String, content: String },
-    QueueAborted { content: String },
+    TokenStatsUpdated {
+        tokens_in: usize,
+        tokens_out: usize,
+        speed_tps: f64,
+    },
+    StreamStarted {
+        id: String,
+    },
+    UserMessageSubmitted {
+        id: String,
+        content: String,
+    },
+    QueueAborted {
+        content: String,
+    },
     QueuesCleared,
-    SteeringDelivered { content: String, id: String },
-    FollowUpDelivered { content: String, id: String },
-    MessageDequeued { content: String },
+    SteeringDelivered {
+        content: String,
+        id: String,
+    },
+    FollowUpDelivered {
+        content: String,
+        id: String,
+    },
+    MessageDequeued {
+        content: String,
+    },
     IdGenerated(crate::actors::turn::NextIdResponse),
 
     PermissionRequest {
@@ -144,7 +185,9 @@ pub enum Event {
         action: crate::permissions::PermissionAction,
     },
     PermissionRequestDismissed,
-    AssistantMessageReady { message: crate::message::ChatMessage },
+    AssistantMessageReady {
+        message: crate::message::ChatMessage,
+    },
 
     // Replay
     MessageReplayed {
@@ -345,13 +388,21 @@ pub enum Event {
 
     // IO effects (results)
     /// Gist URL or error from sharing session.
-    GistShared { result: Result<String, String> },
+    GistShared {
+        result: Result<String, String>,
+    },
     /// Text from external editor or error.
-    ExternalEditorClosed { result: Result<String, String> },
+    ExternalEditorClosed {
+        result: Result<String, String>,
+    },
     /// Clipboard write result.
-    ClipboardWritten { success: bool },
+    ClipboardWritten {
+        success: bool,
+    },
     /// Clipboard read text.
-    ClipboardRead { result: Result<String, String> },
+    ClipboardRead {
+        result: Result<String, String>,
+    },
     /// Process suspended/resumed.
     ProcessResumed,
 

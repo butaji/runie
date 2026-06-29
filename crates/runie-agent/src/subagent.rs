@@ -19,14 +19,14 @@
 //! `run_subagent_type()` to run a named type, or `run_subagent()` for
 //! explicit parameters.
 
-use crate::{run_agent_turn, AgentCommand, PermissionGate, stream_response::EmitFn};
+use crate::{run_agent_turn, stream_response::EmitFn, AgentCommand, PermissionGate};
+use parking_lot::Mutex;
 use runie_core::model::ThinkingLevel;
 use runie_core::permissions::{AutoAllowSink, PermissionManager};
 use runie_core::provider::Provider;
 use runie_core::subagents::{PermissionMode as SubPermissionMode, SubagentRegistry, SubagentType};
 use std::collections::HashMap;
 use std::sync::Arc;
-use parking_lot::Mutex;
 use thiserror::Error;
 
 /// Parent context passed to subagent commands.
@@ -191,8 +191,7 @@ async fn run_subagent_turn_with_gate(
     let (tx, rx) = tokio::sync::oneshot::channel::<Result<String, SubagentError>>();
 
     // Wrap the sender in Arc<Mutex> so the sync emit callback can use it.
-    let tx: Arc<Mutex<Option<tokio::sync::oneshot::Sender<_>>>> =
-        Arc::new(Mutex::new(Some(tx)));
+    let tx: Arc<Mutex<Option<tokio::sync::oneshot::Sender<_>>>> = Arc::new(Mutex::new(Some(tx)));
 
     // Collect response text and errors during the turn.
     let responses = Arc::new(Mutex::new(Vec::<String>::new()));
@@ -238,15 +237,14 @@ async fn run_subagent_turn_with_gate(
     }
 
     // Await the result from the oneshot channel with a generous timeout.
-    match tokio::time::timeout(
-        std::time::Duration::from_secs(300),
-        rx,
-    )
-    .await
-    {
+    match tokio::time::timeout(std::time::Duration::from_secs(300), rx).await {
         Ok(Ok(result)) => result,
-        Ok(Err(_)) => Err(SubagentError::Source(anyhow::anyhow!("subagent channel closed"))),
-        Err(_) => Err(SubagentError::Source(anyhow::anyhow!("subagent timed out after 300s"))),
+        Ok(Err(_)) => Err(SubagentError::Source(anyhow::anyhow!(
+            "subagent channel closed"
+        ))),
+        Err(_) => Err(SubagentError::Source(anyhow::anyhow!(
+            "subagent timed out after 300s"
+        ))),
     }
 }
 
@@ -329,7 +327,18 @@ mod tests {
     async fn subagent_channel_returns_result() {
         // Layer 1: verify that the channel mechanism returns the expected result.
         let provider = mock_provider();
-        let result = run_subagent("channel test", "mock", "echo", &provider, ThinkingLevel::Off, false, "", "", 5).await;
+        let result = run_subagent(
+            "channel test",
+            "mock",
+            "echo",
+            &provider,
+            ThinkingLevel::Off,
+            false,
+            "",
+            "",
+            5,
+        )
+        .await;
         assert!(result.is_ok(), "channel should deliver result: {result:?}");
         assert!(result.unwrap().contains("channel test"));
     }
@@ -343,7 +352,10 @@ mod tests {
         drop(rx);
         // Sending on a closed channel returns Err; we handle it with `let _ =`.
         let result = tx.send(Ok("result".to_string()));
-        assert!(result.is_err(), "sending on closed channel should fail gracefully");
+        assert!(
+            result.is_err(),
+            "sending on closed channel should fail gracefully"
+        );
     }
 
     #[tokio::test]
@@ -380,7 +392,11 @@ mod tests {
         )
         .await;
         // The mock provider returns tool calls; we just verify it runs to completion.
-        assert!(result.is_ok(), "explore subagent should succeed, got: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "explore subagent should succeed, got: {:?}",
+            result
+        );
         let out = result.unwrap();
         assert!(!out.is_empty(), "explore subagent should produce output");
     }
@@ -404,9 +420,6 @@ mod tests {
             5,
         )
         .await;
-        assert!(
-            result.is_err(),
-            "unknown subagent type should return error"
-        );
+        assert!(result.is_err(), "unknown subagent type should return error");
     }
 }

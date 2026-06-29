@@ -154,22 +154,51 @@ impl Diff {
 }
 
 fn diffy_to_canonical(p: &diffy::Patch<str>) -> Diff {
-    let hunks = p.hunks().iter().map(|h| {
-        let old_r = h.old_range();
-        let new_r = h.new_range();
-        let mut lines = Vec::new();
-        let mut ol = old_r.start() as u32;
-        let mut nl = new_r.start() as u32;
-        for l in h.lines() {
-            match l {
-                diffy::Line::Delete(s) => { let n = ol; ol += 1; lines.push(DiffLine::Removed((*s).to_string(), Some(n))); }
-                diffy::Line::Insert(s) => { let n = nl; nl += 1; lines.push(DiffLine::Added((*s).to_string(), Some(n))); }
-                diffy::Line::Context(s) => { ol += 1; nl += 1; lines.push(DiffLine::Context((*s).to_string())); }
+    let hunks = p
+        .hunks()
+        .iter()
+        .map(|h| {
+            let old_r = h.old_range();
+            let new_r = h.new_range();
+            let mut lines = Vec::new();
+            let mut ol = old_r.start() as u32;
+            let mut nl = new_r.start() as u32;
+            for l in h.lines() {
+                match l {
+                    diffy::Line::Delete(s) => {
+                        let n = ol;
+                        ol += 1;
+                        lines.push(DiffLine::Removed((*s).to_string(), Some(n)));
+                    }
+                    diffy::Line::Insert(s) => {
+                        let n = nl;
+                        nl += 1;
+                        lines.push(DiffLine::Added((*s).to_string(), Some(n)));
+                    }
+                    diffy::Line::Context(s) => {
+                        ol += 1;
+                        nl += 1;
+                        lines.push(DiffLine::Context((*s).to_string()));
+                    }
+                }
             }
-        }
-        DiffHunk { header: format!("@@ -{},{} +{},{} @@", old_r.start(), old_r.len(), new_r.start(), new_r.len()), lines }
-    }).collect();
-    Diff { old_path: "a".into(), new_path: "b".into(), hunks }
+            DiffHunk {
+                header: format!(
+                    "@@ -{},{} +{},{} @@",
+                    old_r.start(),
+                    old_r.len(),
+                    new_r.start(),
+                    new_r.len()
+                ),
+                lines,
+            }
+        })
+        .collect();
+    Diff {
+        old_path: "a".into(),
+        new_path: "b".into(),
+        hunks,
+    }
 }
 /// ── Legacy parser for imperfect agent output strings ─────────────────────────
 fn legacy_parse_diff(text: &str) -> Diff {

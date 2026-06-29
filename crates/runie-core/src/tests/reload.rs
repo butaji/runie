@@ -10,7 +10,10 @@ fn reload_returns_event() {
     let cmd_name = cmd.name.clone();
     let result = cmd.flow.clone().exec(&mut state, &cmd_name, "");
     assert!(
-        matches!(result, crate::commands::CommandResult::Event(crate::Event::ReloadAll)),
+        matches!(
+            result,
+            crate::commands::CommandResult::Event(crate::Event::ReloadAll)
+        ),
         "expected ReloadAll event, got {result:?}"
     );
 }

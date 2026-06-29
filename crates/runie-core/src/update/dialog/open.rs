@@ -49,7 +49,10 @@ pub fn open_command_palette_with_filter(state: &mut AppState, initial_filter: &s
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::CommandPalette, panels: stack });
+    *state.open_dialog_mut() = Some(DialogState::Active {
+        kind: DialogKind::CommandPalette,
+        panels: stack,
+    });
 }
 
 pub fn open_model_selector(state: &mut AppState) {
@@ -75,9 +78,10 @@ pub fn open_model_selector(state: &mut AppState) {
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::ModelSelector, panels: model_selector(
-        recent, groups, &current,
-    ) });
+    *state.open_dialog_mut() = Some(DialogState::Active {
+        kind: DialogKind::ModelSelector,
+        panels: model_selector(recent, groups, &current),
+    });
 }
 
 pub fn open_settings_dialog(state: &mut AppState) {
@@ -90,7 +94,10 @@ pub fn open_settings_dialog(state: &mut AppState) {
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Settings, panels: settings(categories) });
+    *state.open_dialog_mut() = Some(DialogState::Active {
+        kind: DialogKind::Settings,
+        panels: settings(categories),
+    });
 }
 
 pub fn open_scoped_models_dialog(state: &mut AppState) {
@@ -104,7 +111,10 @@ pub fn open_scoped_models_dialog(state: &mut AppState) {
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::ScopedModels, panels: scoped_models(models) });
+    *state.open_dialog_mut() = Some(DialogState::Active {
+        kind: DialogKind::ScopedModels,
+        panels: scoped_models(models),
+    });
 }
 
 pub fn open_theme_selector(state: &mut AppState) {
@@ -124,7 +134,10 @@ pub fn open_theme_selector(state: &mut AppState) {
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
+    *state.open_dialog_mut() = Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: PanelStack::new(panel),
+    });
 }
 
 fn sync_scoped_models_with_config(state: &mut AppState) {
@@ -178,7 +191,10 @@ pub fn open_session_tree_dialog(state: &mut AppState) {
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::SessionTree, panels: session_tree(items) });
+    *state.open_dialog_mut() = Some(DialogState::Active {
+        kind: DialogKind::SessionTree,
+        panels: session_tree(items),
+    });
 }
 
 fn parse_filter(filter: Option<&str>) -> (Option<String>, Option<String>) {
@@ -220,13 +236,18 @@ pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
+    *state.open_dialog_mut() = Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: PanelStack::new(panel),
+    });
 }
 
 /// Send a file search request to `FffIndexerActor`.
 /// Results arrive asynchronously via `Event::FffSearchResult`.
 pub(crate) fn refresh_file_picker_search(state: &mut AppState, query: &str) {
-    let Some(handles) = state.actor_handles() else { return };
+    let Some(handles) = state.actor_handles() else {
+        return;
+    };
     let fff = &handles.fff_indexer;
 
     let request_id = state.fff_debounce().wrapping_add(1);

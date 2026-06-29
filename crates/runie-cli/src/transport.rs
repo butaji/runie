@@ -65,7 +65,10 @@ mod tests {
 
     #[test]
     fn build_response_ok() {
-        let msg = build_response(Some(serde_json::json!(1)), Ok(serde_json::json!({"result": "ok"})));
+        let msg = build_response(
+            Some(serde_json::json!(1)),
+            Ok(serde_json::json!({"result": "ok"})),
+        );
         match msg {
             Message::Response(resp) => {
                 assert!(resp.error.is_none());
@@ -76,7 +79,10 @@ mod tests {
 
     #[test]
     fn build_response_error() {
-        let msg = build_response(Some(serde_json::json!(1)), Err(anyhow::anyhow!("test error")));
+        let msg = build_response(
+            Some(serde_json::json!(1)),
+            Err(anyhow::anyhow!("test error")),
+        );
         match msg {
             Message::Response(resp) => {
                 assert!(resp.error.is_some());

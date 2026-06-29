@@ -57,17 +57,41 @@ pub fn parse_provider_yaml(yaml: &str) -> Result<ProviderYaml, serde_yaml::Error
 /// Get the list of embedded YAML files for all providers.
 pub fn provider_yaml_files() -> Vec<(&'static str, &'static str)> {
     vec![
-        ("anthropic", include_str!("../../resources/models/anthropic.yaml")),
+        (
+            "anthropic",
+            include_str!("../../resources/models/anthropic.yaml"),
+        ),
         ("openai", include_str!("../../resources/models/openai.yaml")),
         ("google", include_str!("../../resources/models/google.yaml")),
-        ("deepseek", include_str!("../../resources/models/deepseek.yaml")),
-        ("openrouter", include_str!("../../resources/models/openrouter.yaml")),
+        (
+            "deepseek",
+            include_str!("../../resources/models/deepseek.yaml"),
+        ),
+        (
+            "openrouter",
+            include_str!("../../resources/models/openrouter.yaml"),
+        ),
         ("groq", include_str!("../../resources/models/groq.yaml")),
-        ("mistral", include_str!("../../resources/models/mistral.yaml")),
-        ("fireworks", include_str!("../../resources/models/fireworks.yaml")),
-        ("together", include_str!("../../resources/models/together.yaml")),
-        ("minimax", include_str!("../../resources/models/minimax.yaml")),
-        ("moonshotai", include_str!("../../resources/models/moonshotai.yaml")),
+        (
+            "mistral",
+            include_str!("../../resources/models/mistral.yaml"),
+        ),
+        (
+            "fireworks",
+            include_str!("../../resources/models/fireworks.yaml"),
+        ),
+        (
+            "together",
+            include_str!("../../resources/models/together.yaml"),
+        ),
+        (
+            "minimax",
+            include_str!("../../resources/models/minimax.yaml"),
+        ),
+        (
+            "moonshotai",
+            include_str!("../../resources/models/moonshotai.yaml"),
+        ),
         ("xai", include_str!("../../resources/models/xai.yaml")),
         ("ollama", include_str!("../../resources/models/ollama.yaml")),
     ]
@@ -125,7 +149,11 @@ mod tests {
         for (key, yaml) in provider_yaml_files() {
             let provider: ProviderYaml = serde_yaml::from_str(yaml).unwrap();
             assert_eq!(provider.key, key, "YAML key should match filename");
-            assert!(!provider.models.is_empty(), "Provider {} should have models", key);
+            assert!(
+                !provider.models.is_empty(),
+                "Provider {} should have models",
+                key
+            );
         }
     }
 

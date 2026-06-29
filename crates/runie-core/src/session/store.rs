@@ -10,7 +10,8 @@
 use crate::event::durable::DurableCoreEvent;
 use crate::session::index::SessionMetadata;
 use crate::session::persistence::{
-    exclusive_lock, shared_lock, read_header, touch_header, SharedLock, ExclusiveLock, SessionHeader,
+    exclusive_lock, read_header, shared_lock, touch_header, ExclusiveLock, SessionHeader,
+    SharedLock,
 };
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
@@ -190,7 +191,9 @@ impl SessionStore {
         }
 
         results.sort_by(|a, b| {
-            b.updated_at.partial_cmp(&a.updated_at).unwrap_or(std::cmp::Ordering::Equal)
+            b.updated_at
+                .partial_cmp(&a.updated_at)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         Ok(results)
@@ -402,8 +405,12 @@ mod tests {
     #[test]
     fn multiple_sessions_isolated() {
         let store = test_store();
-        store.append("s1", &make_event("1", "user", "S1", 1.0)).unwrap();
-        store.append("s2", &make_event("2", "user", "S2", 2.0)).unwrap();
+        store
+            .append("s1", &make_event("1", "user", "S1", 1.0))
+            .unwrap();
+        store
+            .append("s2", &make_event("2", "user", "S2", 2.0))
+            .unwrap();
 
         let ev1 = store.load_events("s1").unwrap();
         let ev2 = store.load_events("s2").unwrap();

@@ -4,8 +4,8 @@ use crate::event::{intent::Intent, EventKind};
 use crate::Event;
 
 // Re-export submodules for organization
-mod durable;
 mod dispatch;
+mod durable;
 
 use crate::event::EVENT_NAMES;
 

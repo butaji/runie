@@ -26,9 +26,18 @@ pub enum DeliveryMode {
 }
 
 /// Thinking level for reasoning-intensive tasks.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
-#[derive(schemars::JsonSchema)]
-#[derive(strum::EnumString)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    Default,
+    serde::Serialize,
+    serde::Deserialize,
+    schemars::JsonSchema,
+    strum::EnumString,
+)]
 #[strum(ascii_case_insensitive)]
 pub enum ThinkingLevel {
     #[default]

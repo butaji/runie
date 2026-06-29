@@ -19,10 +19,7 @@ pub trait PersistenceActor {
     /// Load all authoritative state from disk and publish relevant facts.
     ///
     /// Called once at actor startup before the message loop begins.
-    fn load_all(
-        &mut self,
-        bus: &EventBus<Event>,
-    ) -> impl std::future::Future<Output = ()> + Send;
+    fn load_all(&mut self, bus: &EventBus<Event>) -> impl std::future::Future<Output = ()> + Send;
 }
 
 // Note: The PersistenceActor trait documents the pattern used by config and session actors.

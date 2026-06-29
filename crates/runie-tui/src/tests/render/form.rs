@@ -13,7 +13,10 @@ use runie_core::{
 };
 
 fn open_form_dialog(state: &mut AppState, panel: Panel) {
-    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
+    state.open_dialog = Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: PanelStack::new(panel),
+    });
 }
 
 fn render(state: &mut AppState) -> ratatui::buffer::Buffer {

@@ -3,7 +3,6 @@
 #[cfg(test)]
 mod tests {
     use crate::model::AppState;
-    
 
     #[test]
     fn paste_inserts_text_at_cursor() {

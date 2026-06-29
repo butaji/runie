@@ -32,8 +32,7 @@ pub fn rank_commands_with_query(
     let mut ranked: Vec<_> = all
         .iter()
         .filter_map(|cmd| {
-            let base = fuzzy_score(query, &cmd.name)
-                .or_else(|| fuzzy_score(query, &cmd.desc))?;
+            let base = fuzzy_score(query, &cmd.name).or_else(|| fuzzy_score(query, &cmd.desc))?;
             let usage = command_usage.get(&cmd.name);
             let score = compute_ranking_score(query, cmd, usage) + base * 100;
             Some((cmd.name.clone(), score))

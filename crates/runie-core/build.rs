@@ -12,12 +12,11 @@ fn generate_event_taxonomy(manifest_dir: &Path) -> Result<(), String> {
     let taxonomy_path = manifest_dir.join("src/event/taxonomy.json");
     let json = fs::read_to_string(&taxonomy_path)
         .map_err(|e| format!("failed to read taxonomy.json: {}", e))?;
-    let taxonomy: serde_json::Value = serde_json::from_str(&json)
-        .map_err(|e| format!("failed to parse taxonomy.json: {}", e))?;
+    let taxonomy: serde_json::Value =
+        serde_json::from_str(&json).map_err(|e| format!("failed to parse taxonomy.json: {}", e))?;
 
     let out_dir = manifest_dir.join("src/event/generated");
-    fs::create_dir_all(&out_dir)
-        .map_err(|e| format!("failed to create generated dir: {}", e))?;
+    fs::create_dir_all(&out_dir).map_err(|e| format!("failed to create generated dir: {}", e))?;
 
     generate_kind_rs(&taxonomy, &out_dir)?;
     generate_category_rs(&taxonomy, &out_dir)?;
@@ -77,32 +76,44 @@ fn generate_kind_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<(), 
     out.push_str("//! Generated from `taxonomy.json`. DO NOT EDIT.\n\n");
     out.push_str("use super::super::kind::EventKind;\n");
     out.push_str("use super::super::variants::Event;\n\n");
-    out.push_str("// ── Event → Kind ──────────────────────────────────────────────────────────────\n\n");
+    out.push_str(
+        "// ── Event → Kind ──────────────────────────────────────────────────────────────\n\n",
+    );
     out.push_str("impl Event {\n");
     out.push_str("    /// Return the kind for this event variant.\n");
     out.push_str("    pub fn kind(&self) -> EventKind {\n");
     out.push_str("        match self {\n");
 
     for v in &intent_variants {
-        out.push_str(&format!("            Event::{}{} => EventKind::Intent,\n",
-            v, pattern_suffix_for(v)));
+        out.push_str(&format!(
+            "            Event::{}{} => EventKind::Intent,\n",
+            v,
+            pattern_suffix_for(v)
+        ));
     }
     out.push_str("            // Fact variants\n");
     for v in &fact_variants {
-        out.push_str(&format!("            Event::{}{} => EventKind::Fact,\n",
-            v, pattern_suffix_for(v)));
+        out.push_str(&format!(
+            "            Event::{}{} => EventKind::Fact,\n",
+            v,
+            pattern_suffix_for(v)
+        ));
     }
     out.push_str("            // Control variants\n");
     for v in &control_variants {
-        out.push_str(&format!("            Event::{}{} => EventKind::Control,\n",
-            v, pattern_suffix_for(v)));
+        out.push_str(&format!(
+            "            Event::{}{} => EventKind::Control,\n",
+            v,
+            pattern_suffix_for(v)
+        ));
     }
     out.push_str("        }\n");
     out.push_str("    }\n");
     out.push_str("}\n\n");
 
     // Named variants (zero-arg) for EVENT_NAMES
-    let named: Vec<_> = intent_variants.iter()
+    let named: Vec<_> = intent_variants
+        .iter()
         .chain(control_variants.iter())
         .filter(|v| !has_fields(v))
         .collect();
@@ -129,7 +140,9 @@ fn generate_category_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<
     out.push_str("//! `EventCategory` enum and `Event::category()` mapping.\n");
     out.push_str("//! Generated from `taxonomy.json`. DO NOT EDIT.\n\n");
     out.push_str("use super::super::variants::Event;\n\n");
-    out.push_str("// ── EventCategory enum ─────────────────────────────────────────────────────────\n\n");
+    out.push_str(
+        "// ── EventCategory enum ─────────────────────────────────────────────────────────\n\n",
+    );
     out.push_str("/// Event category — routing taxonomy for the dispatcher.\n");
     out.push_str("#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::Display, strum::IntoStaticStr, strum::VariantNames)]\n");
     out.push_str("pub enum EventCategory {\n");
@@ -142,7 +155,9 @@ fn generate_category_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<
     out.push_str("    Unknown,\n");
     out.push_str("}\n\n");
 
-    out.push_str("// ── Event → Category ─────────────────────────────────────────────────────────\n\n");
+    out.push_str(
+        "// ── Event → Category ─────────────────────────────────────────────────────────\n\n",
+    );
     out.push_str("impl Event {\n");
     out.push_str("    /// Return the category for this event variant.\n");
     out.push_str("    pub fn category(&self) -> EventCategory {\n");
@@ -161,8 +176,12 @@ fn generate_category_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<
             }
         }
         for v in &variants {
-            out.push_str(&format!("            Event::{}{} => EventCategory::{},\n",
-                v, pattern_suffix_for(v), cat_name));
+            out.push_str(&format!(
+                "            Event::{}{} => EventCategory::{},\n",
+                v,
+                pattern_suffix_for(v),
+                cat_name
+            ));
         }
     }
     out.push_str("        }\n");
@@ -282,7 +301,10 @@ fn generate_intent_impl_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Resu
         if skips.contains(event_name) {
             continue;
         }
-        let intent_name = renames.get(event_name).map(|s| s.as_str()).unwrap_or(event_name);
+        let intent_name = renames
+            .get(event_name)
+            .map(|s| s.as_str())
+            .unwrap_or(event_name);
         let arm = build_intent_arm(event_name, intent_name);
         out.push_str("            ");
         out.push_str(&arm);
@@ -408,37 +430,117 @@ fn build_intent_arm(event_name: &str, intent_name: &str) -> String {
 
 /// Heuristic: does this event variant have fields?
 fn has_fields(name: &str) -> bool {
-    matches!(name,
-        "Input" | "Paste" | "MouseClick" | "MouseRelease" |
-        "MouseDrag" | "MouseMove" | "TerminalSize" | "SwitchModel" | "SwitchTheme" |
-        "SetThinkingLevel" | "ScopedModelToggle" | "ScopedModelToggleProvider" |
-        "SettingsSwitchCategory" | "ForkSession" | "SelectSession" | "StarSession" |
-        "RenameSession" | "DeleteSession" | "ExternalEditorDone" | "PendingEdit" |
-        "TransientMessage" | "TransientError" | "RunLoadCommand" | "RunSaveCommand" |
-        "RunDeleteCommand" | "RunImportCommand" | "RunExportCommand" | "RunSkillCommand" |
-        "RunLoginCommand" | "RunLogoutCommand" | "RunNameCommand" | "RunForkCommand" |
-        "RunCompactCommand" | "RunPromptCommand" | "RunThinkingCommand" |
-        "RunPaletteCommand" | "SelectProvider" | "SubmitKey" | "ToggleModel" |
-        "SessionTreeSelect" | "SessionList" | "SessionOperationFailed" |
-        "SessionChanged" | "SessionLoaded" | "SessionSaved" | "SessionDeleted" |
-        "SessionImported" | "SessionExported" | "PaletteFilter" | "CommandFormInput" |
-        "ModelSelectorFilter" | "CopyToClipboard" | "InsertAtRef" |
-        "ProvidersSelectModel" | "ProvidersDisconnect" | "ProvidersEditModels" |
-        "PermissionResponse" | "AssistantMessageReady" | "BashOutput" |
-        "ClipboardRead" | "ClipboardWritten" | "CompletionChanged" | "ConfigLoaded" |
-        "Done" | "EnvDetected" | "Error" | "ExternalEditorClosed" |
-        "FffSearchResult" | "FilesWritten" | "FollowUpDelivered" |
-        "GistShared" | "HistoryAppend" | "HistoryLoaded" | "InputChanged" |
-        "MessageDequeued" | "MessageReplayed" | "ModelsFetched" |
-        "PermissionRequest" | "QueueAborted" | "ReadOnlyChanged" | "Response" |
-        "ResponseDelta" | "SetPrompt" | "SteeringDelivered" | "StreamStarted" |
-        "SystemMessage" | "TextEnd" | "TextStart" | "Thinking" |
-        "ThinkingDelta" | "ThinkingEnd" | "ThinkingStart" | "ThoughtDone" |
-        "TokenStatsUpdated" | "ToolConstraintError" | "ToolEnd" |
-        "ToolInputDelta" | "ToolStart" | "TrustChanged" | "TrustLoaded" |
-        "TrustSet" | "TurnComplete" | "TurnConstraintError" | "TurnErrored" |
-        "TurnStarted" | "UserMessageSubmitted" | "ValidationFailed" | "ViewChanged" |
-        "IdGenerated"
+    matches!(
+        name,
+        "Input"
+            | "Paste"
+            | "MouseClick"
+            | "MouseRelease"
+            | "MouseDrag"
+            | "MouseMove"
+            | "TerminalSize"
+            | "SwitchModel"
+            | "SwitchTheme"
+            | "SetThinkingLevel"
+            | "ScopedModelToggle"
+            | "ScopedModelToggleProvider"
+            | "SettingsSwitchCategory"
+            | "ForkSession"
+            | "SelectSession"
+            | "StarSession"
+            | "RenameSession"
+            | "DeleteSession"
+            | "ExternalEditorDone"
+            | "PendingEdit"
+            | "TransientMessage"
+            | "TransientError"
+            | "RunLoadCommand"
+            | "RunSaveCommand"
+            | "RunDeleteCommand"
+            | "RunImportCommand"
+            | "RunExportCommand"
+            | "RunSkillCommand"
+            | "RunLoginCommand"
+            | "RunLogoutCommand"
+            | "RunNameCommand"
+            | "RunForkCommand"
+            | "RunCompactCommand"
+            | "RunPromptCommand"
+            | "RunThinkingCommand"
+            | "RunPaletteCommand"
+            | "SelectProvider"
+            | "SubmitKey"
+            | "ToggleModel"
+            | "SessionTreeSelect"
+            | "SessionList"
+            | "SessionOperationFailed"
+            | "SessionChanged"
+            | "SessionLoaded"
+            | "SessionSaved"
+            | "SessionDeleted"
+            | "SessionImported"
+            | "SessionExported"
+            | "PaletteFilter"
+            | "CommandFormInput"
+            | "ModelSelectorFilter"
+            | "CopyToClipboard"
+            | "InsertAtRef"
+            | "ProvidersSelectModel"
+            | "ProvidersDisconnect"
+            | "ProvidersEditModels"
+            | "PermissionResponse"
+            | "AssistantMessageReady"
+            | "BashOutput"
+            | "ClipboardRead"
+            | "ClipboardWritten"
+            | "CompletionChanged"
+            | "ConfigLoaded"
+            | "Done"
+            | "EnvDetected"
+            | "Error"
+            | "ExternalEditorClosed"
+            | "FffSearchResult"
+            | "FilesWritten"
+            | "FollowUpDelivered"
+            | "GistShared"
+            | "HistoryAppend"
+            | "HistoryLoaded"
+            | "InputChanged"
+            | "MessageDequeued"
+            | "MessageReplayed"
+            | "ModelsFetched"
+            | "PermissionRequest"
+            | "QueueAborted"
+            | "ReadOnlyChanged"
+            | "Response"
+            | "ResponseDelta"
+            | "SetPrompt"
+            | "SteeringDelivered"
+            | "StreamStarted"
+            | "SystemMessage"
+            | "TextEnd"
+            | "TextStart"
+            | "Thinking"
+            | "ThinkingDelta"
+            | "ThinkingEnd"
+            | "ThinkingStart"
+            | "ThoughtDone"
+            | "TokenStatsUpdated"
+            | "ToolConstraintError"
+            | "ToolEnd"
+            | "ToolInputDelta"
+            | "ToolStart"
+            | "TrustChanged"
+            | "TrustLoaded"
+            | "TrustSet"
+            | "TurnComplete"
+            | "TurnConstraintError"
+            | "TurnErrored"
+            | "TurnStarted"
+            | "UserMessageSubmitted"
+            | "ValidationFailed"
+            | "ViewChanged"
+            | "IdGenerated"
     )
 }
 
@@ -455,13 +557,16 @@ fn guess_fields(name: &str) -> String {
         "SetThinkingLevel" => "(lvl)".to_string(),
         "ScopedModelToggle" | "ScopedModelToggleProvider" => " { provider, name }".to_string(),
         "ForkSession" => " { message_index }".to_string(),
-        "SelectSession" | "StarSession" | "DeleteSession" | "SessionTreeSelect" => " { id }".to_string(),
+        "SelectSession" | "StarSession" | "DeleteSession" | "SessionTreeSelect" => {
+            " { id }".to_string()
+        }
         "RenameSession" => " { id, name }".to_string(),
         "ExternalEditorDone" => " { content }".to_string(),
         "PendingEdit" => " { path, original, proposed }".to_string(),
         "TransientMessage" => " { content, level }".to_string(),
         "TransientError" => " { content }".to_string(),
-        "RunLoadCommand" | "RunSaveCommand" | "RunDeleteCommand" | "RunNameCommand" | "RunPromptCommand" => " { name }".to_string(),
+        "RunLoadCommand" | "RunSaveCommand" | "RunDeleteCommand" | "RunNameCommand"
+        | "RunPromptCommand" => " { name }".to_string(),
         "RunImportCommand" | "RunExportCommand" => " { path }".to_string(),
         "RunLoginCommand" => " { provider, token }".to_string(),
         "RunLogoutCommand" => " { provider }".to_string(),
@@ -509,13 +614,21 @@ fn collect_variants(cat_val: &serde_json::Value) -> Vec<String> {
 /// Build a match pattern suffix for a variant name.
 /// Returns ` { .. }` for struct/tuple variants, `""` for unit variants.
 fn pattern_suffix_for(name: &str) -> String {
-    if has_fields(name) { " { .. }".to_string() } else { String::new() }
+    if has_fields(name) {
+        " { .. }".to_string()
+    } else {
+        String::new()
+    }
 }
 
 /// Build a pattern for the `matches!` macro.
 /// Unit variants use the variant name directly; struct variants use `{ .. }`.
 fn matches_pattern(name: &str) -> String {
-    if has_fields(name) { format!("Event::{} {{ .. }}", name) } else { format!("Event::{}", name) }
+    if has_fields(name) {
+        format!("Event::{} {{ .. }}", name)
+    } else {
+        format!("Event::{}", name)
+    }
 }
 
 // ── AppState field-access guardrail ──────────────────────────────────────────
@@ -644,17 +757,10 @@ fn needs_appstate_lint(rel_path: &str) -> bool {
         && !exemptions.iter().any(|e| rel_path.ends_with(e))
 }
 
-fn check_appstate_field_access(
-    rel_path: &str,
-    lines: &[&str],
-    errors: &mut Vec<String>,
-) {
+fn check_appstate_field_access(rel_path: &str, lines: &[&str], errors: &mut Vec<String>) {
     for (i, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
-        if trimmed.starts_with("//")
-            || trimmed.starts_with("/*")
-            || trimmed.starts_with('*')
-        {
+        if trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*') {
             continue;
         }
         for (pattern, suggestion) in APPSTATE_PATTERNS {
@@ -691,9 +797,7 @@ fn main() {
     }
 
     // Validate bundled subagent type checksums.
-    if let Err(msg) =
-        validate_agent_manifest(manifest_dir.join("resources").join("agents"))
-    {
+    if let Err(msg) = validate_agent_manifest(manifest_dir.join("resources").join("agents")) {
         eprintln!("\n=== AGENT MANIFEST VALIDATION FAILED ===\n  {}\n\n", msg);
         process::exit(1);
     }
@@ -721,8 +825,8 @@ fn main() {
 /// stored SHA-256 checksums.
 fn validate_agent_manifest(agents_dir: PathBuf) -> Result<(), String> {
     let manifest_path = agents_dir.join("manifest.json");
-    let manifest_json =
-        fs::read_to_string(&manifest_path).map_err(|e| format!("failed to read manifest.json: {}", e))?;
+    let manifest_json = fs::read_to_string(&manifest_path)
+        .map_err(|e| format!("failed to read manifest.json: {}", e))?;
 
     #[derive(serde::Deserialize)]
     struct Manifest {

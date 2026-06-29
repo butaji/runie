@@ -127,7 +127,10 @@ pub enum DialogKind {
 #[derive(Debug, Clone, PartialEq)]
 pub enum DialogState {
     Welcome,
-    Active { kind: DialogKind, panels: PanelStack },
+    Active {
+        kind: DialogKind,
+        panels: PanelStack,
+    },
 }
 
 impl DialogState {
@@ -165,7 +168,10 @@ mod dialog_state_tests {
 
         // Active state exposes the panel stack
         let stack = PanelStack::new(crate::dialog::Panel::new("test", "Test"));
-        let active = DialogState::Active { kind: DialogKind::CommandPalette, panels: stack.clone() };
+        let active = DialogState::Active {
+            kind: DialogKind::CommandPalette,
+            panels: stack.clone(),
+        };
         assert_eq!(active.panel_stack(), Some(&stack));
     }
 
@@ -183,8 +189,14 @@ mod dialog_state_tests {
             DialogKind::SessionTree,
             DialogKind::Generic,
         ] {
-            let active = DialogState::Active { kind, panels: stack.clone() };
-            assert!(active.panel_stack().is_some(), "{kind:?} should have a panel stack");
+            let active = DialogState::Active {
+                kind,
+                panels: stack.clone(),
+            };
+            assert!(
+                active.panel_stack().is_some(),
+                "{kind:?} should have a panel stack"
+            );
         }
     }
 
@@ -195,19 +207,31 @@ mod dialog_state_tests {
         assert_eq!(welcome, welcome2);
 
         let stack = PanelStack::new(crate::dialog::Panel::new("a", "A"));
-        let active_a = DialogState::Active { kind: DialogKind::CommandPalette, panels: stack.clone() };
-        let active_b = DialogState::Active { kind: DialogKind::ModelSelector, panels: stack.clone() };
+        let active_a = DialogState::Active {
+            kind: DialogKind::CommandPalette,
+            panels: stack.clone(),
+        };
+        let active_b = DialogState::Active {
+            kind: DialogKind::ModelSelector,
+            panels: stack.clone(),
+        };
         assert_ne!(active_a, active_b);
 
         let stack2 = PanelStack::new(crate::dialog::Panel::new("b", "B"));
-        let active_c = DialogState::Active { kind: DialogKind::CommandPalette, panels: stack2 };
+        let active_c = DialogState::Active {
+            kind: DialogKind::CommandPalette,
+            panels: stack2,
+        };
         assert_ne!(active_a, active_c);
     }
 
     #[test]
     fn active_variant_carries_kind() {
         let stack = PanelStack::new(crate::dialog::Panel::new("x", "X"));
-        let active = DialogState::Active { kind: DialogKind::Settings, panels: stack };
+        let active = DialogState::Active {
+            kind: DialogKind::Settings,
+            panels: stack,
+        };
         assert!(active.panel_stack().is_some());
         assert!(!matches!(active, DialogState::Welcome));
     }

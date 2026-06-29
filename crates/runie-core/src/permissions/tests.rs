@@ -105,14 +105,19 @@ async fn file_access_ask_requires_approval() {
 fn wildcard_rule_matches_tool() {
     let rules = PermissionSet::new(vec![PermissionRule::new(PermissionAction::Allow, "*")]);
     assert_eq!(rules.evaluate("bash", None, None), PermissionAction::Allow);
-    assert_eq!(rules.evaluate("read_file", None, None), PermissionAction::Allow);
+    assert_eq!(
+        rules.evaluate("read_file", None, None),
+        PermissionAction::Allow
+    );
 }
 
 #[test]
 fn path_rule_matches_file() {
-    let rules = PermissionSet::new(vec![
-        PermissionRule::new(PermissionAction::Allow, "read_file").with_path("src/**")
-    ]);
+    let rules = PermissionSet::new(vec![PermissionRule::new(
+        PermissionAction::Allow,
+        "read_file",
+    )
+    .with_path("src/**")]);
     assert_eq!(
         rules.evaluate("read_file", Some("src/main.rs"), None),
         PermissionAction::Allow
@@ -188,9 +193,15 @@ fn permission_set_evaluates_rules() {
         PermissionRule::new(PermissionAction::Allow, "read_*"),
         PermissionRule::new(PermissionAction::Ask, "bash"),
     ]);
-    assert_eq!(rules.evaluate("read_file", None, None), PermissionAction::Allow);
+    assert_eq!(
+        rules.evaluate("read_file", None, None),
+        PermissionAction::Allow
+    );
     assert_eq!(rules.evaluate("bash", None, None), PermissionAction::Ask);
-    assert_eq!(rules.evaluate("unknown", None, None), PermissionAction::Deny);
+    assert_eq!(
+        rules.evaluate("unknown", None, None),
+        PermissionAction::Deny
+    );
 }
 
 #[test]
@@ -224,7 +235,10 @@ fn default_rules_read_only_allowed_write_asks() {
         rules.effective_action("edit_file", None, None),
         PermissionAction::Ask
     );
-    assert_eq!(rules.effective_action("bash", None, None), PermissionAction::Ask);
+    assert_eq!(
+        rules.effective_action("bash", None, None),
+        PermissionAction::Ask
+    );
 }
 
 #[test]
@@ -291,7 +305,11 @@ async fn default_allow_for_safe_tools() {
     for tool in ["read_file", "list_dir", "grep", "find", "fetch_docs"] {
         let context = ctx(tool, None, None);
         let result = manager.evaluate(&context).await;
-        assert_eq!(result, PermissionResult::Allow, "{tool} should be auto-approved in Auto mode");
+        assert_eq!(
+            result,
+            PermissionResult::Allow,
+            "{tool} should be auto-approved in Auto mode"
+        );
     }
 }
 
@@ -303,7 +321,11 @@ async fn file_access_triggers_ask() {
     let outside_path = Path::new("/etc/passwd");
     let context = ctx("read_file", Some(outside_path), Some(cwd));
     let result = manager.evaluate(&context).await;
-    assert_eq!(result, PermissionResult::Ask, "File access outside cwd should ask");
+    assert_eq!(
+        result,
+        PermissionResult::Ask,
+        "File access outside cwd should ask"
+    );
 }
 
 /// Layer 1: Explicit deny rule wins over a default allow.
@@ -322,7 +344,11 @@ async fn bypass_permissions_approves_all() {
     let manager = PermissionManager::new(PermissionMode::BypassPermissions);
     let context = ctx("bash", None, None);
     let result = manager.evaluate(&context).await;
-    assert_eq!(result, PermissionResult::Allow, "BypassPermissions should allow all");
+    assert_eq!(
+        result,
+        PermissionResult::Allow,
+        "BypassPermissions should allow all"
+    );
 }
 
 /// Layer 1: Plan mode blocks write tools.
@@ -332,7 +358,11 @@ async fn plan_mode_blocks_writes() {
     for tool in ["write_file", "edit_file", "bash"] {
         let context = ctx(tool, None, None);
         let result = manager.evaluate(&context).await;
-        assert_eq!(result, PermissionResult::Ask, "{tool} should ask in Plan mode");
+        assert_eq!(
+            result,
+            PermissionResult::Ask,
+            "{tool} should ask in Plan mode"
+        );
     }
 }
 
@@ -343,7 +373,10 @@ async fn accept_edits_mode_approves_writes() {
     for tool in ["write_file", "edit_file"] {
         let context = ctx(tool, None, None);
         let result = manager.evaluate(&context).await;
-        assert_eq!(result, PermissionResult::Allow, "{tool} should be allowed in AcceptEdits mode");
+        assert_eq!(
+            result,
+            PermissionResult::Allow,
+            "{tool} should be allowed in AcceptEdits mode"
+        );
     }
 }
-

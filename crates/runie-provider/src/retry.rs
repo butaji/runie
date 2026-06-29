@@ -5,7 +5,6 @@
 //! stream starts emitting events. Once the stream has started, any error is
 //! surfaced immediately.
 
-
 use anyhow::Error;
 use backon::{ExponentialBuilder, Retryable};
 use futures::Future;
@@ -51,10 +50,8 @@ mod tests {
 
     #[tokio::test]
     async fn with_retry_fails_after_max_attempts() {
-        let result: Result<i32, _> = with_retry(|| async {
-            Err(anyhow::anyhow!("persistent error"))
-        })
-        .await;
+        let result: Result<i32, _> =
+            with_retry(|| async { Err(anyhow::anyhow!("persistent error")) }).await;
         assert!(result.is_err());
     }
 

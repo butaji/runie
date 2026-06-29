@@ -90,7 +90,9 @@ pub fn handle_theme(_state: &mut AppState, args: &str) -> CommandResult {
     if name.is_empty() {
         return CommandResult::OpenDialog(DialogType::ThemeSelector);
     }
-    CommandResult::Event(crate::Event::SwitchTheme { name: name.to_owned() })
+    CommandResult::Event(crate::Event::SwitchTheme {
+        name: name.to_owned(),
+    })
 }
 
 pub fn handle_approve(_: &mut AppState, _: &str) -> CommandResult {
@@ -128,5 +130,7 @@ pub fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 pub fn handle_prompt(_state: &mut AppState, args: &str) -> CommandResult {
-    CommandResult::Event(crate::Event::RunPromptCommand { name: args.trim().to_owned() })
+    CommandResult::Event(crate::Event::RunPromptCommand {
+        name: args.trim().to_owned(),
+    })
 }

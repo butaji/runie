@@ -17,7 +17,13 @@ fn theme_switch_reaches_handler_while_settings_dialog_open() {
 
     assert_eq!(state.config.theme_name, "dracula");
     assert!(
-        matches!(state.open_dialog, Some(DialogState::Active { kind: DialogKind::Settings, panels: _ })),
+        matches!(
+            state.open_dialog,
+            Some(DialogState::Active {
+                kind: DialogKind::Settings,
+                panels: _
+            })
+        ),
         "Dialog should remain open after theme switch"
     );
 }
@@ -34,7 +40,10 @@ fn theme_switch_reaches_handler_while_palette_open() {
     assert_eq!(state.config.theme_name, "nord");
     assert!(matches!(
         state.open_dialog,
-        Some(DialogState::Active { kind: DialogKind::CommandPalette, panels: _ })
+        Some(DialogState::Active {
+            kind: DialogKind::CommandPalette,
+            panels: _
+        })
     ));
 }
 
@@ -51,7 +60,13 @@ fn model_switch_reaches_handler_while_dialog_open() {
 
     assert_eq!(state.config.current_provider, "openai");
     assert_eq!(state.config.current_model, "gpt-4o");
-    assert!(matches!(state.open_dialog, Some(DialogState::Active { kind: DialogKind::Settings, panels: _ })));
+    assert!(matches!(
+        state.open_dialog,
+        Some(DialogState::Active {
+            kind: DialogKind::Settings,
+            panels: _
+        })
+    ));
 }
 
 #[test]
@@ -121,13 +136,22 @@ fn theme_picker_activation_switches_theme() {
             },
         ),
     ]);
-    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack });
+    state.open_dialog = Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack,
+    });
     state.update(Event::HistoryNext);
     state.update(Event::Submit);
 
     assert_eq!(state.config.theme_name, "dracula");
     assert!(
-        matches!(state.open_dialog, Some(DialogState::Active { kind: DialogKind::Generic, panels: _ })),
+        matches!(
+            state.open_dialog,
+            Some(DialogState::Active {
+                kind: DialogKind::Generic,
+                panels: _
+            })
+        ),
         "Theme picker should stay open after applying theme"
     );
 }
@@ -149,7 +173,10 @@ fn theme_picker_filter_and_submit_switches_theme() {
             },
         ),
     ]);
-    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack });
+    state.open_dialog = Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack,
+    });
     for c in "dracula".chars() {
         state.update(Event::Input(c));
     }

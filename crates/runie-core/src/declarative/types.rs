@@ -113,8 +113,7 @@ where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    CommandCategory::from_str(&s)
-        .map_err(|_| SerdeError::custom(format!("unknown category: {s}")))
+    CommandCategory::from_str(&s).map_err(|_| SerdeError::custom(format!("unknown category: {s}")))
 }
 
 /// Deserialize a YAML list of trigger strings into `Vec<Trigger>`.

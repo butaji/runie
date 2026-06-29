@@ -105,7 +105,8 @@ fn thinking_delta_passthrough() {
 #[test]
 fn flush_emits_te() {
     let mut f = ThinkFilter::new();
-    let _ = f.feed(ev("<thinking>unclosed"))
+    let _ = f
+        .feed(ev("<thinking>unclosed"))
         .into_iter()
         .collect::<Vec<_>>();
     let flushed: Vec<_> = f.flush().into_iter().collect();
@@ -157,7 +158,8 @@ fn empty_block() {
 #[test]
 fn after_flush() {
     let mut f = ThinkFilter::new();
-    let _ = f.feed(ev("<thinking>done</thinking>"))
+    let _ = f
+        .feed(ev("<thinking>done</thinking>"))
         .into_iter()
         .collect::<Vec<_>>();
     let _ = f.flush().into_iter().collect::<Vec<_>>();
@@ -169,7 +171,8 @@ fn after_flush() {
 #[test]
 fn multiple_chunks() {
     let mut f = ThinkFilter::new();
-    let _ = f.feed(ev("<tool_call>first"))
+    let _ = f
+        .feed(ev("<tool_call>first"))
         .into_iter()
         .collect::<Vec<_>>();
     let out2: Vec<_> = f.feed(ev(" second")).into_iter().collect();

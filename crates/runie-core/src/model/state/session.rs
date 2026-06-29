@@ -242,12 +242,16 @@ impl ConfigState {
     }
 
     /// Immutable access to model_providers.
-    pub fn model_providers(&self) -> &std::collections::HashMap<String, crate::config::ModelProvider> {
+    pub fn model_providers(
+        &self,
+    ) -> &std::collections::HashMap<String, crate::config::ModelProvider> {
         &self.model_providers
     }
 
     /// Mutable access to model_providers.
-    pub fn model_providers_mut(&mut self) -> &mut std::collections::HashMap<String, crate::config::ModelProvider> {
+    pub fn model_providers_mut(
+        &mut self,
+    ) -> &mut std::collections::HashMap<String, crate::config::ModelProvider> {
         &mut self.model_providers
     }
 

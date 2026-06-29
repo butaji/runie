@@ -102,10 +102,7 @@ fn transient_error_renders_red_background_with_error_prefix() {
 #[test]
 fn transient_message_renders_in_hints_line() {
     let _lock = crate::theme::test_lock();
-    let mut state = AppState::__with_transient_test(
-        Some("Test message".to_string()),
-        None,
-    );
+    let mut state = AppState::__with_transient_test(Some("Test message".to_string()), None);
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();

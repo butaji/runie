@@ -76,15 +76,9 @@ mod tests {
     #[test]
     fn regex_handles_unclosed_think() {
         // Unclosed opening tag: strips to end of input
-        assert_eq!(
-            strip_thinking_tags("<think>unclosed reasoning"),
-            ""
-        );
+        assert_eq!(strip_thinking_tags("<think>unclosed reasoning"), "");
         // Unclosed with visible content before: keeps visible
-        assert_eq!(
-            strip_thinking_tags("visible<think>unclosed"),
-            "visible"
-        );
+        assert_eq!(strip_thinking_tags("visible<think>unclosed"), "visible");
         // Closed then unclosed: keeps visible before, strips unclosed to end
         assert_eq!(
             strip_thinking_tags("<think>closed</think>visible<think>unclosed"),

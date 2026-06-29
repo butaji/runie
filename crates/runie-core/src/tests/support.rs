@@ -18,10 +18,7 @@ pub static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 /// Seed `state.config.model_providers` with the given provider configurations.
 /// Each entry is `(Name, base_url, api_key, models)`.
-pub fn seed_providers(
-    state: &mut AppState,
-    providers: &[(String, String, String, Vec<String>)],
-) {
+pub fn seed_providers(state: &mut AppState, providers: &[(String, String, String, Vec<String>)]) {
     for (name, base_url, api_key, models) in providers {
         state.config_mut().model_providers_mut().insert(
             name.clone(),
@@ -64,9 +61,7 @@ pub fn exec(state: &mut AppState, text: &str) {
 pub fn tmp_store() -> SessionStore {
     static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-    let dir =
-        std::env::temp_dir()
-            .join(format!("runie_slash_test_{}_{}", std::process::id(), n));
+    let dir = std::env::temp_dir().join(format!("runie_slash_test_{}_{}", std::process::id(), n));
     let _ = std::fs::remove_dir_all(&dir);
     SessionStore::new(dir)
 }

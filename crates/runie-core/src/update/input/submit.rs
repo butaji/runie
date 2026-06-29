@@ -146,7 +146,9 @@ impl AppState {
             role: Role::User,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![runie_core::message::Part::Text { content: content.clone() }],
+            parts: vec![runie_core::message::Part::Text {
+                content: content.clone(),
+            }],
             ..Default::default()
         });
         self.agent_state_mut()
@@ -170,7 +172,10 @@ impl AppState {
                 DialogType::ThemeSelector => crate::update::dialog::open_theme_selector(self),
             },
             crate::commands::CommandResult::OpenPanelStack(stack) => {
-                *self.open_dialog_mut() = Some(crate::commands::DialogState::Active { kind: crate::commands::DialogKind::Generic, panels: (*stack).clone() });
+                *self.open_dialog_mut() = Some(crate::commands::DialogState::Active {
+                    kind: crate::commands::DialogKind::Generic,
+                    panels: (*stack).clone(),
+                });
                 self.view_mut().dirty = true;
             }
             crate::commands::CommandResult::None => {}
@@ -179,8 +184,7 @@ impl AppState {
 
     fn run_bash_command(&mut self, command: &str) {
         let handles = self.actor_handles().cloned();
-        let can_spawn = handles.as_ref().is_some()
-            && tokio::runtime::Handle::try_current().is_ok();
+        let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
 
         if can_spawn {
             let command = command.to_owned();
@@ -229,6 +233,8 @@ fn try_send_input(state: &mut AppState, msg: crate::actors::InputMsg) {
 /// Emit `SessionMsg::AppendHistory` to SessionActor (fire-and-forget).
 fn try_append_history(state: &mut AppState, entry: String) {
     if let Some(handles) = state.actor_handles() {
-        let _ = handles.session.try_send(SessionMsg::AppendHistory { entry });
+        let _ = handles
+            .session
+            .try_send(SessionMsg::AppendHistory { entry });
     }
 }

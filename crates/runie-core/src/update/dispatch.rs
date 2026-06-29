@@ -6,7 +6,9 @@ use crate::model::AppState;
 use crate::Event;
 
 pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
-    if try_handle_early_events(state, &event) { return; }
+    if try_handle_early_events(state, &event) {
+        return;
+    }
     match event.category() {
         EventCategory::Input => super::input::input_event(state, event),
         EventCategory::Agent => handle_agent_event(state, event),
@@ -20,15 +22,32 @@ pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
         EventCategory::Command => super::command::handle_command_event(state, event),
         EventCategory::LoginFlow => crate::login_flow::login_flow_event(state, event),
         EventCategory::Permission => super::permission::permission_event(state, event),
-        EventCategory::IO => { let _ = handle_io_events(state, &event); }
-        EventCategory::Persistence => { let _ = handle_persistence_events(state, &event); }
+        EventCategory::IO => {
+            let _ = handle_io_events(state, &event);
+        }
+        EventCategory::Persistence => {
+            let _ = handle_persistence_events(state, &event);
+        }
         EventCategory::Other | EventCategory::Unknown => {}
     }
 }
 
 fn try_handle_early_events(state: &mut AppState, event: &Event) -> bool {
-    if let Event::MessageReplayed { id, role, content, timestamp, provider } = event {
-        state.replay_message(id.clone(), role.clone(), content.clone(), *timestamp, provider.clone());
+    if let Event::MessageReplayed {
+        id,
+        role,
+        content,
+        timestamp,
+        provider,
+    } = event
+    {
+        state.replay_message(
+            id.clone(),
+            role.clone(),
+            content.clone(),
+            *timestamp,
+            provider.clone(),
+        );
         return true;
     }
     if let Event::SetPrompt { name } = event {
@@ -43,12 +62,31 @@ fn try_handle_early_events(state: &mut AppState, event: &Event) -> bool {
 
 fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
     match event {
-        Event::TurnAborted => { state.apply_turn_aborted(); true }
-        Event::QueueAborted { content } => { state.apply_queue_aborted(content.clone()); true }
-        Event::TurnStarted { .. } => { state.apply_turn_started(); true }
-        Event::TurnCompleted => { state.apply_turn_completed(); true }
-        Event::TurnErrored { .. } => { state.apply_turn_errored(); true }
-        Event::TokenStatsUpdated { tokens_in, tokens_out, speed_tps } => {
+        Event::TurnAborted => {
+            state.apply_turn_aborted();
+            true
+        }
+        Event::QueueAborted { content } => {
+            state.apply_queue_aborted(content.clone());
+            true
+        }
+        Event::TurnStarted { .. } => {
+            state.apply_turn_started();
+            true
+        }
+        Event::TurnCompleted => {
+            state.apply_turn_completed();
+            true
+        }
+        Event::TurnErrored { .. } => {
+            state.apply_turn_errored();
+            true
+        }
+        Event::TokenStatsUpdated {
+            tokens_in,
+            tokens_out,
+            speed_tps,
+        } => {
             state.apply_token_stats(*tokens_in, *tokens_out, *speed_tps);
             true
         }
@@ -86,13 +124,36 @@ fn to_turn_msg(event: &Event) -> Option<TurnMsg> {
     match event {
         Event::Thinking { id } => Some(TurnMsg::Thinking { id: id.clone() }),
         Event::ThoughtDone { id } => Some(TurnMsg::ThoughtDone { id: id.clone() }),
-        Event::ToolStart { id, name, .. } => Some(TurnMsg::ToolStart { id: id.clone(), name: name.clone() }),
-        Event::ToolEnd { id, duration_secs, output } => Some(TurnMsg::ToolEnd { id: id.clone(), duration_secs: *duration_secs, output: output.clone() }),
-        Event::ResponseDelta { id, content } => Some(TurnMsg::ResponseDelta { id: id.clone(), content: content.clone() }),
-        Event::TurnComplete { id, duration_secs } => Some(TurnMsg::TurnComplete { id: id.clone(), duration_secs: *duration_secs }),
+        Event::ToolStart { id, name, .. } => Some(TurnMsg::ToolStart {
+            id: id.clone(),
+            name: name.clone(),
+        }),
+        Event::ToolEnd {
+            id,
+            duration_secs,
+            output,
+        } => Some(TurnMsg::ToolEnd {
+            id: id.clone(),
+            duration_secs: *duration_secs,
+            output: output.clone(),
+        }),
+        Event::ResponseDelta { id, content } => Some(TurnMsg::ResponseDelta {
+            id: id.clone(),
+            content: content.clone(),
+        }),
+        Event::TurnComplete { id, duration_secs } => Some(TurnMsg::TurnComplete {
+            id: id.clone(),
+            duration_secs: *duration_secs,
+        }),
         Event::Done { id } => Some(TurnMsg::Done { id: id.clone() }),
-        Event::Error { id, message } => Some(TurnMsg::Error { id: id.clone(), message: message.clone() }),
-        Event::TurnConstraintError { id, .. } => Some(TurnMsg::Error { id: id.clone(), message: "Tool constraint violation".to_string() }),
+        Event::Error { id, message } => Some(TurnMsg::Error {
+            id: id.clone(),
+            message: message.clone(),
+        }),
+        Event::TurnConstraintError { id, .. } => Some(TurnMsg::Error {
+            id: id.clone(),
+            message: "Tool constraint violation".to_string(),
+        }),
         _ => None,
     }
 }
@@ -100,26 +161,43 @@ fn to_turn_msg(event: &Event) -> Option<TurnMsg> {
 fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
     use crate::event::TransientLevel;
     match event {
-        Event::TrustLoaded { decisions } => { state.set_trust_decisions(decisions.clone()); true }
+        Event::TrustLoaded { decisions } => {
+            state.set_trust_decisions(decisions.clone());
+            true
+        }
         Event::TrustChanged { path, decision } => {
             state.set_trust_decision(path.clone(), *decision);
             let new_read_only = !matches!(decision, crate::trust::TrustDecision::Trusted);
             state.config_mut().read_only = new_read_only;
             if matches!(decision, crate::trust::TrustDecision::Trusted) {
-                state.session_mut().messages.retain(|m| m.id != "trust_welcome");
+                state
+                    .session_mut()
+                    .messages
+                    .retain(|m| m.id != "trust_welcome");
                 state.messages_changed();
-                state.notify(format!("Project '{}' trusted. Read-only disabled.", path.display()), TransientLevel::Success);
+                state.notify(
+                    format!("Project '{}' trusted. Read-only disabled.", path.display()),
+                    TransientLevel::Success,
+                );
             } else {
-                state.notify(format!("Project '{}' untrusted. Read-only enabled.", path.display()), TransientLevel::Warning);
+                state.notify(
+                    format!("Project '{}' untrusted. Read-only enabled.", path.display()),
+                    TransientLevel::Warning,
+                );
             }
             true
         }
-        Event::ReadOnlyChanged { enabled } => { state.config_mut().read_only = *enabled; true }
+        Event::ReadOnlyChanged { enabled } => {
+            state.config_mut().read_only = *enabled;
+            true
+        }
         Event::HistoryLoaded { entries } => {
             if let Some(handles) = state.actor_handles() {
-                let _ = handles.input.try_send(crate::actors::InputMsg::HistoryLoaded {
-                    entries: entries.clone(),
-                });
+                let _ = handles
+                    .input
+                    .try_send(crate::actors::InputMsg::HistoryLoaded {
+                        entries: entries.clone(),
+                    });
             }
             true
         }
@@ -130,18 +208,54 @@ fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
 fn handle_session_store_events(state: &mut AppState, event: &Event) -> bool {
     use crate::event::TransientLevel;
     match event {
-        Event::SessionLoaded { name, events, metadata } => { apply_session_loaded(state, name, events, metadata); true }
-        Event::SessionSaved { name } => { state.notify(format!("Session '{}' saved.", name), TransientLevel::Info); true }
-        Event::SessionDeleted { name } => { state.notify(format!("Session '{}' deleted.", name), TransientLevel::Info); true }
-        Event::SessionImported { session } => { apply_session_imported(state, session); true }
-        Event::SessionExported { path } => { state.notify(format!("Session exported to '{}'.", path), TransientLevel::Info); true }
-        Event::SessionList { sessions } => { apply_session_list(state, sessions); true }
-        Event::SessionOperationFailed { operation, error } => { state.notify(format!("{} failed: {}", operation, error), TransientLevel::Error); true }
+        Event::SessionLoaded {
+            name,
+            events,
+            metadata,
+        } => {
+            apply_session_loaded(state, name, events, metadata);
+            true
+        }
+        Event::SessionSaved { name } => {
+            state.notify(format!("Session '{}' saved.", name), TransientLevel::Info);
+            true
+        }
+        Event::SessionDeleted { name } => {
+            state.notify(format!("Session '{}' deleted.", name), TransientLevel::Info);
+            true
+        }
+        Event::SessionImported { session } => {
+            apply_session_imported(state, session);
+            true
+        }
+        Event::SessionExported { path } => {
+            state.notify(
+                format!("Session exported to '{}'.", path),
+                TransientLevel::Info,
+            );
+            true
+        }
+        Event::SessionList { sessions } => {
+            apply_session_list(state, sessions);
+            true
+        }
+        Event::SessionOperationFailed { operation, error } => {
+            state.notify(
+                format!("{} failed: {}", operation, error),
+                TransientLevel::Error,
+            );
+            true
+        }
         _ => false,
     }
 }
 
-fn apply_session_loaded(state: &mut AppState, name: &str, events: &[crate::event::DurableCoreEvent], metadata: &Option<Box<crate::session::index::SessionMetadata>>) {
+fn apply_session_loaded(
+    state: &mut AppState,
+    name: &str,
+    events: &[crate::event::DurableCoreEvent],
+    metadata: &Option<Box<crate::session::index::SessionMetadata>>,
+) {
     crate::session::replay::replay_events(state, events);
     if let Some(meta) = metadata {
         state.session_mut().session_display_name = Some(meta.display_name.clone());
@@ -150,12 +264,18 @@ fn apply_session_loaded(state: &mut AppState, name: &str, events: &[crate::event
     }
     state.configure_token_tracker();
     state.messages_changed();
-    state.notify(format!("Session '{}' loaded.", name), crate::event::TransientLevel::Info);
+    state.notify(
+        format!("Session '{}' loaded.", name),
+        crate::event::TransientLevel::Info,
+    );
 }
 
 fn apply_session_imported(state: &mut AppState, session: &crate::session::Session) {
     state.restore_session(session);
-    state.notify(format!("Session imported from '{}'.", session.name), crate::event::TransientLevel::Info);
+    state.notify(
+        format!("Session imported from '{}'.", session.name),
+        crate::event::TransientLevel::Info,
+    );
 }
 
 fn apply_session_list(state: &mut AppState, sessions: &[String]) {
@@ -169,10 +289,30 @@ fn apply_session_list(state: &mut AppState, sessions: &[String]) {
 
 fn handle_io_events(state: &mut AppState, event: &Event) -> bool {
     match event {
-        Event::BashOutput { command, output } => { state.add_system_msg(format!("$ {}\n{}", command, output)); state.view_mut().scroll = 0; state.messages_changed(); true }
-        Event::FilesWritten { count, errors } => { state.add_system_msg(if errors.is_empty() { format!("Applied {} edit(s).", count) } else { format!("Applied {} edit(s). Errors: {}", count, errors.join(", ")) }); true }
-        Event::EnvDetected { git_info, cwd_name } => { *state.git_info_mut() = git_info.clone(); *state.cwd_name_mut() = cwd_name.clone(); true }
-        Event::FffSearchResult { request_id, entries, .. } => {
+        Event::BashOutput { command, output } => {
+            state.add_system_msg(format!("$ {}\n{}", command, output));
+            state.view_mut().scroll = 0;
+            state.messages_changed();
+            true
+        }
+        Event::FilesWritten { count, errors } => {
+            state.add_system_msg(if errors.is_empty() {
+                format!("Applied {} edit(s).", count)
+            } else {
+                format!("Applied {} edit(s). Errors: {}", count, errors.join(", "))
+            });
+            true
+        }
+        Event::EnvDetected { git_info, cwd_name } => {
+            *state.git_info_mut() = git_info.clone();
+            *state.cwd_name_mut() = cwd_name.clone();
+            true
+        }
+        Event::FffSearchResult {
+            request_id,
+            entries,
+            ..
+        } => {
             if *request_id == state.fff_debounce() {
                 *state.fff_file_results_mut() = entries.clone();
             }

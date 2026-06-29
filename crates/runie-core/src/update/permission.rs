@@ -22,7 +22,10 @@ pub(crate) fn permission_event(state: &mut AppState, event: Event) {
             });
             state.view_mut().dirty = true;
         }
-        Event::PermissionResponse { request_id, action: _ } => {
+        Event::PermissionResponse {
+            request_id,
+            action: _,
+        } => {
             // Projection: the PermissionActor resolved the request.
             // Clear the request UI after resolution.
             if state

@@ -54,8 +54,9 @@ impl ToolCall {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[derive(strum::Display, strum::EnumString)]
+#[derive(
+    Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize, strum::Display, strum::EnumString,
+)]
 #[strum(serialize_all = "snake_case")]
 pub enum Role {
     #[default]
@@ -271,9 +272,15 @@ mod tests {
     fn chat_message_content_getter_concatenates_text_parts() {
         let msg = ChatMessage {
             parts: vec![
-                Part::Text { content: "a".into() },
-                Part::Reasoning { content: "r".into() },
-                Part::Text { content: "b".into() },
+                Part::Text {
+                    content: "a".into(),
+                },
+                Part::Reasoning {
+                    content: "r".into(),
+                },
+                Part::Text {
+                    content: "b".into(),
+                },
             ],
             ..Default::default()
         };
@@ -284,7 +291,9 @@ mod tests {
     fn chat_message_tool_calls_getter_extracts_from_parts() {
         let msg = ChatMessage {
             parts: vec![
-                Part::Text { content: "hi".into() },
+                Part::Text {
+                    content: "hi".into(),
+                },
                 Part::ToolCall {
                     id: "c1".into(),
                     name: "bash".into(),
@@ -328,7 +337,9 @@ mod tests {
             metadata: MessageMetadata::default(),
             tool_call_id: None,
             provider_metadata: None,
-            parts: vec![Part::Text { content: "hello".into() }],
+            parts: vec![Part::Text {
+                content: "hello".into(),
+            }],
         };
         let json = serde_json::to_string(&msg).unwrap();
         let parsed: ChatMessage = serde_json::from_str(&json).unwrap();
@@ -344,7 +355,9 @@ mod tests {
             timestamp: 1.0,
             id: "a1".into(),
             parts: vec![
-                Part::Text { content: "hello".into() },
+                Part::Text {
+                    content: "hello".into(),
+                },
                 Part::ToolCall {
                     id: "call_1".into(),
                     name: "list_dir".into(),
@@ -363,8 +376,7 @@ mod tests {
 
     #[test]
     fn canonical_tool_call_round_trips_through_json() {
-        let tc =
-            ToolCall::new("call_abc", "bash", serde_json::json!({"cmd": "ls -la"}));
+        let tc = ToolCall::new("call_abc", "bash", serde_json::json!({"cmd": "ls -la"}));
         let json = serde_json::to_string(&tc).unwrap();
         let parsed: ToolCall = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.id, "call_abc");

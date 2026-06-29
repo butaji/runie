@@ -31,7 +31,9 @@ pub struct ProviderConfigBox {
 impl ProviderConfigBox {
     /// Create a new box from any ProviderConfig implementation.
     pub fn new(config: impl ProviderConfig + 'static) -> Self {
-        Self { inner: Arc::new(config) }
+        Self {
+            inner: Arc::new(config),
+        }
     }
 }
 
@@ -44,7 +46,9 @@ impl std::ops::Deref for ProviderConfigBox {
 
 impl Clone for ProviderConfigBox {
     fn clone(&self) -> Self {
-        Self { inner: self.inner.clone() }
+        Self {
+            inner: self.inner.clone(),
+        }
     }
 }
 

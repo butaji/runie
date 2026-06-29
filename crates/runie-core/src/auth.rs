@@ -77,7 +77,8 @@ impl AuthStorage {
     pub fn new() -> Self {
         Self {
             tokens: HashMap::new(),
-            fallback_path: default_auth_path().unwrap_or_else(|| PathBuf::from("/tmp/runie_auth.json")),
+            fallback_path: default_auth_path()
+                .unwrap_or_else(|| PathBuf::from("/tmp/runie_auth.json")),
             keyring_available: true, // Try keyring; fallback if it fails
         }
     }
@@ -115,7 +116,8 @@ impl AuthStorage {
             return;
         }
         if let Ok(json) = std::fs::read_to_string(&self.fallback_path) {
-            let raw: serde_json::Value = serde_json::from_str(&json).unwrap_or(serde_json::json!({}));
+            let raw: serde_json::Value =
+                serde_json::from_str(&json).unwrap_or(serde_json::json!({}));
             if let Some(obj) = raw.as_object() {
                 for (provider, val) in obj {
                     if let Some(token_str) = val.get("token").and_then(|v| v.as_str()) {
@@ -202,7 +204,9 @@ impl AuthStorage {
     }
 
     pub fn get_token(&self, provider: &str) -> Option<Token> {
-        self.tokens.get(provider).map(|t| Token::new(t.token.clone()))
+        self.tokens
+            .get(provider)
+            .map(|t| Token::new(t.token.clone()))
     }
 
     /// Get a keyring token directly by provider name.
@@ -272,12 +276,16 @@ fn set_keyring(provider: &str, token: &str) -> anyhow::Result<()> {
 
 fn get_keyring(provider: &str) -> anyhow::Result<String> {
     let entry = keyring::Entry::new(SERVICE, &account_name(provider))?;
-    entry.get_password().map_err(|e| anyhow::anyhow!("keyring error: {}", e))
+    entry
+        .get_password()
+        .map_err(|e| anyhow::anyhow!("keyring error: {}", e))
 }
 
 fn delete_keyring(provider: &str) -> anyhow::Result<()> {
     let entry = keyring::Entry::new(SERVICE, &account_name(provider))?;
-    entry.delete_credential().map_err(|e| anyhow::anyhow!("keyring error: {}", e))
+    entry
+        .delete_credential()
+        .map_err(|e| anyhow::anyhow!("keyring error: {}", e))
 }
 
 fn load_all_from_keyring() -> anyhow::Result<HashMap<String, AuthToken>> {
@@ -287,7 +295,15 @@ fn load_all_from_keyring() -> anyhow::Result<HashMap<String, AuthToken>> {
     let mut tokens = HashMap::new();
 
     // Try common provider names
-    let common_providers = ["openai", "anthropic", "google", "groq", "mistral", "cohere", "xai"];
+    let common_providers = [
+        "openai",
+        "anthropic",
+        "google",
+        "groq",
+        "mistral",
+        "cohere",
+        "xai",
+    ];
     for provider in common_providers {
         if let Ok(token) = get_keyring(provider) {
             tokens.insert(
@@ -353,8 +369,8 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = std::env::temp_dir()
-            .join(format!("runie_auth_test_{}_{}", std::process::id(), id));
+        let path =
+            std::env::temp_dir().join(format!("runie_auth_test_{}_{}", std::process::id(), id));
         AuthStorage {
             tokens: HashMap::new(),
             fallback_path: path,

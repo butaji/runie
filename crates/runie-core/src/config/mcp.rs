@@ -13,7 +13,9 @@ use strum::{Display, EnumString};
 // ============================================================================
 
 /// Transport type for MCP server communication.
-#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, Display, EnumString)]
+#[derive(
+    Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, Display, EnumString,
+)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 #[derive(JsonSchema)]
@@ -36,8 +38,7 @@ fn default_scope() -> String {
 }
 
 /// An MCP server configuration entry.
-#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
-#[derive(JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct McpServer {
     /// Transport type: stdio, http, or sse.
     #[serde(default)]
@@ -121,7 +122,11 @@ mod tests {
         for transport in [McpTransport::Stdio, McpTransport::Http, McpTransport::Sse] {
             let s = transport.to_string();
             let parsed = McpTransport::from_str(&s);
-            assert_eq!(parsed, Ok(transport.clone()), "round-trip failed for {transport:?}");
+            assert_eq!(
+                parsed,
+                Ok(transport.clone()),
+                "round-trip failed for {transport:?}"
+            );
         }
     }
 
@@ -129,7 +134,11 @@ mod tests {
     fn mcp_server_stdio() {
         let server = McpServer {
             transport: McpTransport::Stdio,
-            command: vec!["npx".to_string(), "-y".to_string(), "@mcp/server".to_string()],
+            command: vec![
+                "npx".to_string(),
+                "-y".to_string(),
+                "@mcp/server".to_string(),
+            ],
             url: None,
             headers: HashMap::new(),
             scope: "user".to_string(),

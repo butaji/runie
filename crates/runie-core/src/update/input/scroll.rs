@@ -61,11 +61,7 @@ fn scroll_to_post(state: &mut AppState, snap: &crate::Snapshot, post_index: usiz
     let total = snap.total_lines;
     let max_scroll = total.saturating_sub(visible);
     let cum = cumulative_line_counts(&snap.line_counts);
-    let first_element = snap
-        .posts
-        .get(post_index)
-        .map(|p| p.start)
-        .unwrap_or(0);
+    let first_element = snap.posts.get(post_index).map(|p| p.start).unwrap_or(0);
     let target_top = if first_element == 0 {
         0
     } else {

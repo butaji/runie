@@ -103,7 +103,9 @@ mod tests {
 
     #[tokio::test]
     async fn tool_call_executes() {
-        let input = ListDirInput { path: Some(".".to_string()) };
+        let input = ListDirInput {
+            path: Some(".".to_string()),
+        };
         let ctx = ToolContext::default();
         let result = ListDirTool::execute(input, &ctx).await;
         assert_eq!(result.status, ToolStatus::Success);

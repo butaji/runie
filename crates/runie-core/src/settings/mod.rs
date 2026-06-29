@@ -2,13 +2,16 @@
 
 mod dialog;
 
-pub use dialog::{build_setting_categories, build_setting_items, handle_settings_category, provider_model_lists};
+pub use dialog::{
+    build_setting_categories, build_setting_items, handle_settings_category, provider_model_lists,
+};
 
 use crate::Event;
 
 /// Category for grouping settings in the dialog.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[derive(strum::Display)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, strum::Display,
+)]
 pub enum SettingsCategory {
     Models,
     Appearance,

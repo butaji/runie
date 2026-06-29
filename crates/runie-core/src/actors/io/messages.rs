@@ -27,5 +27,3 @@ pub enum IoMsg {
     /// Suspend/resume the process.
     SuspendProcess,
 }
-
-

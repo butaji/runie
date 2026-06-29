@@ -3,7 +3,6 @@
 //! These tests exercise the full update flow: a multi-panel stack, ESC
 //! events (SettingsClose / PaletteClose), and the open_dialog state.
 
-
 use crate::commands::{DialogKind, DialogState};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
@@ -27,7 +26,10 @@ fn open_settings_with_subpanel() -> AppState {
     stack.push(child);
 
     AppState {
-        open_dialog: Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }),
+        open_dialog: Some(DialogState::Active {
+            kind: DialogKind::Settings,
+            panels: stack,
+        }),
         ..Default::default()
     }
 }
@@ -38,9 +40,10 @@ fn esc_at_root_closes_the_dialog() {
     // The push hasn't happened via an event yet, so stack depth is 1? No,
     // open_settings_with_subpanel pushes the child, so depth is 2. Let me
     // instead test a single-panel dialog.
-    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Settings, panels: PanelStack::new(
-        Panel::new("settings", "Settings").item("Done", ItemAction::Close),
-    ) });
+    state.open_dialog = Some(DialogState::Active {
+        kind: DialogKind::Settings,
+        panels: PanelStack::new(Panel::new("settings", "Settings").item("Done", ItemAction::Close)),
+    });
     assert!(state.open_dialog.is_some());
     state.update(crate::Event::SettingsClose);
     assert!(
@@ -53,11 +56,16 @@ fn esc_at_root_closes_the_dialog() {
 fn esc_in_subpanel_pops_and_keeps_dialog_open() {
     let mut state = open_settings_with_subpanel();
     // Stack depth = 2 (root + child).
-    assert!(matches!(&state.open_dialog, Some(DialogState::Active { kind: DialogKind::Settings, panels: s }) if s.len() == 2));
+    assert!(
+        matches!(&state.open_dialog, Some(DialogState::Active { kind: DialogKind::Settings, panels: s }) if s.len() == 2)
+    );
     state.update(crate::Event::SettingsClose);
     // Stack should have popped to depth 1, dialog still open.
     match &state.open_dialog {
-        Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) => {
+        Some(DialogState::Active {
+            kind: DialogKind::Settings,
+            panels: stack,
+        }) => {
             assert_eq!(stack.len(), 1, "ESC in subpanel must pop to root");
             assert_eq!(stack.current().unwrap().id, "settings");
         }
@@ -69,7 +77,9 @@ fn esc_in_subpanel_pops_and_keeps_dialog_open() {
 fn double_esc_pops_then_closes() {
     let mut state = open_settings_with_subpanel();
     state.update(crate::Event::SettingsClose); // pop to root
-    assert!(matches!(&state.open_dialog, Some(DialogState::Active { kind: DialogKind::Settings, panels: s }) if s.len() == 1));
+    assert!(
+        matches!(&state.open_dialog, Some(DialogState::Active { kind: DialogKind::Settings, panels: s }) if s.len() == 1)
+    );
     state.update(crate::Event::SettingsClose); // close at root
     assert!(
         state.open_dialog.is_none(),
@@ -103,14 +113,20 @@ fn palette_close_pops_or_closes() {
     let mut stack = PanelStack::new(root);
     stack.push(child);
     let mut state = AppState {
-        open_dialog: Some(DialogState::Active { kind: DialogKind::CommandPalette, panels: stack }),
+        open_dialog: Some(DialogState::Active {
+            kind: DialogKind::CommandPalette,
+            panels: stack,
+        }),
         ..Default::default()
     };
 
     // First Esc (in sub-panel): pop to root, bar still open.
     state.update(crate::Event::PaletteClose);
     match &state.open_dialog {
-        Some(DialogState::Active { kind: DialogKind::CommandPalette, panels: s }) => {
+        Some(DialogState::Active {
+            kind: DialogKind::CommandPalette,
+            panels: s,
+        }) => {
             assert_eq!(s.len(), 1, "Esc in sub-panel must pop, not close");
             assert_eq!(s.current().unwrap().id, "palette");
         }
@@ -144,14 +160,20 @@ fn form_dialog_esc_pops_or_closes() {
     stack.push(child);
 
     let mut state = AppState {
-        open_dialog: Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }),
+        open_dialog: Some(DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: stack,
+        }),
         ..Default::default()
     };
 
     // ESC in the child form: pop to root.
     state.update(crate::Event::CommandFormClose);
     match &state.open_dialog {
-        Some(DialogState::Active { kind: DialogKind::Generic, panels: s }) => {
+        Some(DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: s,
+        }) => {
             assert_eq!(s.len(), 1);
             assert_eq!(s.current().unwrap().id, "login-key");
         }
@@ -282,20 +304,32 @@ fn sub_command_pushes_current_dialog_to_back_stack() {
 fn state_with_palette_and_subdialog() -> AppState {
     let mut state = AppState::default();
     let palette = Panel::new("palette", "Commands").keep_open();
-    state.open_dialog = Some(DialogState::Active { kind: DialogKind::CommandPalette, panels: PanelStack::new(palette) });
+    state.open_dialog = Some(DialogState::Active {
+        kind: DialogKind::CommandPalette,
+        panels: PanelStack::new(palette),
+    });
 
     if let Some(current) = state.open_dialog.take() {
         state.push_dialog_to_back_stack(current);
     }
     let sub = PanelStack::new(Panel::new("sub", "Sub").keep_open());
-    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: sub });
+    state.open_dialog = Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: sub,
+    });
 
     state
 }
 
 fn assert_palette_restored(state: &AppState) {
     assert!(
-        matches!(state.open_dialog, Some(DialogState::Active { kind: DialogKind::CommandPalette, panels: _ })),
+        matches!(
+            state.open_dialog,
+            Some(DialogState::Active {
+                kind: DialogKind::CommandPalette,
+                panels: _
+            })
+        ),
         "Esc on sub-dialog must restore palette, got {:?}",
         state.open_dialog
     );
@@ -309,7 +343,10 @@ fn global_dialog_back_stack_palette_pushes_subdialog() {
     assert_eq!(state.dialog_back_stack.len(), 1);
     assert!(matches!(
         state.open_dialog,
-        Some(DialogState::Active { kind: DialogKind::Generic, panels: _ })
+        Some(DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: _
+        })
     ));
 
     state.update(crate::Event::DialogBack);
@@ -333,7 +370,10 @@ fn palette_then_subdialog_esc_back_to_palette_then_esc_closes() {
     assert_eq!(state.dialog_back_stack.len(), 1);
     assert!(matches!(
         state.open_dialog,
-        Some(DialogState::Active { kind: DialogKind::Generic, panels: _ })
+        Some(DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: _
+        })
     ));
 
     state.update(crate::Event::DialogBack);

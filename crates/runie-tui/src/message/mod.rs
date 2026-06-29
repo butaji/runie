@@ -12,8 +12,7 @@ use runie_util::display_width;
 use runie_util::labels::format_timestamp;
 
 use crate::markdown_render::{
-    apply_color_to_inlines, extract_code_blocks, md_to_spans, parse_inline_spans, CodeBlock,
-    MdSpan,
+    apply_color_to_inlines, extract_code_blocks, md_to_spans, parse_inline_spans, CodeBlock, MdSpan,
 };
 use crate::theme::{
     color_accent_bg, color_fg, color_fg_bright, style_agent, style_timestamp, style_user,
@@ -114,12 +113,7 @@ fn build_user_body(
         .map(|(i, row)| {
             let with_ts = i == 0;
             let prefix = if with_ts { GLYPH_USER } else { GLYPH_INDENT };
-            build_user_line_from_spans(
-                row,
-                prefix,
-                with_ts,
-                params,
-            )
+            build_user_line_from_spans(row, prefix, with_ts, params)
         })
         .collect()
 }
@@ -145,7 +139,10 @@ fn build_user_line_from_spans(
             .saturating_sub(text_width)
             .saturating_sub(params.ts_width);
         if padding > 0 {
-            line_spans.push(Span::styled(" ".repeat(padding as usize), params.base_style));
+            line_spans.push(Span::styled(
+                " ".repeat(padding as usize),
+                params.base_style,
+            ));
         }
         line_spans.push(Span::styled(
             format!(" {}", params.ts_str),
@@ -282,7 +279,12 @@ fn render_agent_code_block(
     is_first: bool,
     lines: &mut Vec<Line<'static>>,
 ) -> bool {
-    lines.push(code::render_code_header(lang, is_first, inner_width, ts_str));
+    lines.push(code::render_code_header(
+        lang,
+        is_first,
+        inner_width,
+        ts_str,
+    ));
     lines.extend(code::render_code_block_lines(content, lang));
     false
 }

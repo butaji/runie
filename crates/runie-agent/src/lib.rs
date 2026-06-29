@@ -14,8 +14,8 @@ pub mod truncate;
 pub mod turn;
 
 pub use actor::{
-    AgentActorFactoryImpl, LeaderAgentHandleImpl, RactorAgentHandle, RactorAgentHandleExt,
-    AgentMsg, spawn_ractor_agent,
+    spawn_ractor_agent, AgentActorFactoryImpl, AgentMsg, LeaderAgentHandleImpl, RactorAgentHandle,
+    RactorAgentHandleExt,
 };
 pub use headless::{
     run_headless_cli, run_headless_turn, HeadlessCliOptions, HeadlessOptions, HeadlessResult,

@@ -26,7 +26,10 @@ pub(super) fn push_login_panel(state: &mut crate::model::AppState, panel: Panel)
     }
     let mut stack = take_or_create_login_stack(state);
     stack.push(panel);
-    *state.open_dialog_mut() = Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack });
+    *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack,
+    });
     state.view_mut().dirty = true;
 }
 
@@ -39,7 +42,10 @@ pub(super) fn replace_top_login_panel_with(state: &mut crate::model::AppState, n
         stack.pop();
     }
     stack.push(new_top);
-    *state.open_dialog_mut() = Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack });
+    *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack,
+    });
     state.view_mut().dirty = true;
 }
 
@@ -62,7 +68,10 @@ pub(super) fn pop_login_panel(state: &mut crate::model::AppState) {
             _ => flow.step.clone(),
         };
     }
-    *state.open_dialog_mut() = Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack });
+    *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack,
+    });
     state.view_mut().dirty = true;
 }
 
@@ -85,7 +94,10 @@ pub(super) fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
                 _ => flow.step.clone(),
             };
         }
-        *state.open_dialog_mut() = Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack });
+        *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: stack,
+        });
         state.view_mut().dirty = true;
     } else if stack.root().map(|p| p.closable).unwrap_or(true) {
         // At the root: close the login flow and restore the previous
@@ -101,7 +113,10 @@ pub(super) fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
         }
     } else {
         // The root panel is marked non-closable: keep it open.
-        *state.open_dialog_mut() = Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack });
+        *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: stack,
+        });
         state.view_mut().dirty = true;
     }
 }
@@ -114,7 +129,11 @@ pub(super) fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
 /// stack from the current `LoginFlowState` so that nested updates such as
 /// toggling a model or pressing Cancel still operate on the correct panels.
 fn take_or_create_login_stack(state: &mut crate::model::AppState) -> PanelStack {
-    if let Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack }) = state.open_dialog_mut().take() {
+    if let Some(crate::commands::DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack,
+    }) = state.open_dialog_mut().take()
+    {
         return stack;
     }
     if let Some(flow) = state.login_flow().as_ref() {
@@ -149,7 +168,10 @@ pub(super) fn rebuild_login_dialog(state: &mut crate::model::AppState) {
         let mut root = build_provider_picker();
         root.closable = state.has_models();
         let stack = PanelStack::new(root);
-        *state.open_dialog_mut() = Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack });
+        *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: stack,
+        });
         state.view_mut().dirty = true;
     }
 }

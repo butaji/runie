@@ -56,7 +56,10 @@ fn theme_selector_renders_theme_list() {
     state.update(Event::Submit);
     assert!(matches!(
         state.open_dialog,
-        Some(runie_core::commands::DialogState::Active { kind: DialogKind::Generic, panels: _ })
+        Some(runie_core::commands::DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: _
+        })
     ));
 
     let backend = TestBackend::new(60, 24);
@@ -302,10 +305,10 @@ fn input_box_renders_prompt() {
             }
         }
     }
-    assert!(found_prompt, "Input box should render the chevron prompt glyph ❯");
-    // Placeholder rendering depends on input state; verify at minimum the prompt renders
     assert!(
         found_prompt,
-        "Input box should render prompt when empty"
+        "Input box should render the chevron prompt glyph ❯"
     );
+    // Placeholder rendering depends on input state; verify at minimum the prompt renders
+    assert!(found_prompt, "Input box should render prompt when empty");
 }

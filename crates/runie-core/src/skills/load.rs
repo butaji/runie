@@ -17,10 +17,7 @@ use super::Skill;
 /// Subdirectory skills take precedence over flat files with the same name.
 pub fn load_from_dir(dir: &Path) -> Vec<Skill> {
     let records = load_resources_from_dir(dir);
-    records
-        .into_iter()
-        .filter_map(record_to_skill)
-        .collect()
+    records.into_iter().filter_map(record_to_skill).collect()
 }
 
 /// Convert a ResourceRecord to a Skill, with markdown fallback for missing fields.
@@ -32,23 +29,17 @@ fn record_to_skill(record: crate::resource_loader::ResourceRecord) -> Option<Ski
         .frontmatter
         .get("description")
         .cloned()
-        .unwrap_or_else(|| {
-            extract_section(&record.content, "Description").unwrap_or_default()
-        });
+        .unwrap_or_else(|| extract_section(&record.content, "Description").unwrap_or_default());
     let context = record
         .frontmatter
         .get("context")
         .cloned()
-        .unwrap_or_else(|| {
-            extract_section(&record.content, "Context").unwrap_or_default()
-        });
+        .unwrap_or_else(|| extract_section(&record.content, "Context").unwrap_or_default());
     let invocation = record
         .frontmatter
         .get("invocation")
         .cloned()
-        .unwrap_or_else(|| {
-            extract_section(&record.content, "Invocation").unwrap_or_default()
-        });
+        .unwrap_or_else(|| extract_section(&record.content, "Invocation").unwrap_or_default());
 
     let user_invocable = is_user_invocable(&invocation);
 
@@ -72,7 +63,7 @@ pub(crate) fn parse_skill_md(path: &Path) -> Option<Skill> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     use tempfile::TempDir;
 
     #[test]

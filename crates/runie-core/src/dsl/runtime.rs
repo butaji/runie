@@ -153,7 +153,8 @@ fn route_intent(handles: &Option<crate::actors::LeaderHandle>, intent: &Intent) 
             let path = path.clone();
             let decision = *decision;
             tokio::spawn(async move {
-                s.send_message(SessionMsg::SetTrust { path, decision }).await;
+                s.send_message(SessionMsg::SetTrust { path, decision })
+                    .await;
             });
         }
         Intent::AppendHistory { entry } => {

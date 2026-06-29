@@ -76,27 +76,38 @@ impl RactorTurnActor {
             return;
         };
         state.turn_state.start_turn();
-        Self::emit(state, Event::TurnStarted {
-            id: id.clone(),
-            request_id: id,
-            content,
-        });
+        Self::emit(
+            state,
+            Event::TurnStarted {
+                id: id.clone(),
+                request_id: id,
+                content,
+            },
+        );
     }
 
     fn handle_abort_turn(state: &mut TurnActorState) {
         let messages: Vec<_> = state.turn_state.message_queue.drain(..).rev().collect();
         for msg in &messages {
-            Self::emit(state, Event::QueueAborted { content: msg.content.clone() });
+            Self::emit(
+                state,
+                Event::QueueAborted {
+                    content: msg.content.clone(),
+                },
+            );
         }
         state.turn_state.stop_turn();
         Self::emit(state, Event::TurnAborted);
     }
 
     fn handle_submit_user_message(state: &mut TurnActorState, content: String, id: String) {
-        Self::emit(state, Event::UserMessageSubmitted {
-            id: id.clone(),
-            content: content.clone(),
-        });
+        Self::emit(
+            state,
+            Event::UserMessageSubmitted {
+                id: id.clone(),
+                content: content.clone(),
+            },
+        );
         state.turn_state.request_queue.push_back((content, id));
     }
 
@@ -117,7 +128,12 @@ impl RactorTurnActor {
     fn handle_abort_queue(state: &mut TurnActorState) {
         let messages: Vec<_> = state.turn_state.message_queue.drain(..).rev().collect();
         for msg in &messages {
-            Self::emit(state, Event::QueueAborted { content: msg.content.clone() });
+            Self::emit(
+                state,
+                Event::QueueAborted {
+                    content: msg.content.clone(),
+                },
+            );
         }
     }
 
@@ -127,7 +143,11 @@ impl RactorTurnActor {
         Self::emit(state, Event::QueuesCleared);
     }
 
-    fn handle_deliver_queued(state: &mut TurnActorState, steering_mode: DeliveryMode, follow_up_mode: DeliveryMode) {
+    fn handle_deliver_queued(
+        state: &mut TurnActorState,
+        steering_mode: DeliveryMode,
+        follow_up_mode: DeliveryMode,
+    ) {
         if Self::try_deliver_steering(state, steering_mode) {
             if follow_up_mode == DeliveryMode::All {
                 Self::try_deliver_follow_up(state, follow_up_mode);
@@ -145,7 +165,10 @@ impl RactorTurnActor {
             None => return false,
             Some(r) => {
                 let id = Self::next_id_internal(&mut state.turn_state);
-                state.turn_state.request_queue.push_back((r.content.clone(), id.clone()));
+                state
+                    .turn_state
+                    .request_queue
+                    .push_back((r.content.clone(), id.clone()));
                 (r.content, id)
             }
         };
@@ -161,7 +184,10 @@ impl RactorTurnActor {
             None => return,
             Some(r) => {
                 let id = Self::next_id_internal(&mut state.turn_state);
-                state.turn_state.request_queue.push_back((r.content.clone(), id.clone()));
+                state
+                    .turn_state
+                    .request_queue
+                    .push_back((r.content.clone(), id.clone()));
                 (r.content, id)
             }
         };
@@ -194,17 +220,27 @@ impl RactorTurnActor {
         state.turn_state.tool_started_at = Some(std::time::Instant::now());
         state.turn_state.current_tool_name = Some(name.clone());
         state.turn_state.intermediate_step_count += 1;
-        Self::emit(state, Event::ToolStart {
-            id,
-            name,
-            input: serde_json::Value::Null,
-        });
+        Self::emit(
+            state,
+            Event::ToolStart {
+                id,
+                name,
+                input: serde_json::Value::Null,
+            },
+        );
     }
 
     fn handle_tool_end(state: &mut TurnActorState, id: String, duration_secs: f64, output: String) {
         state.turn_state.tool_started_at = None;
         state.turn_state.current_tool_name = None;
-        Self::emit(state, Event::ToolEnd { id, duration_secs, output });
+        Self::emit(
+            state,
+            Event::ToolEnd {
+                id,
+                duration_secs,
+                output,
+            },
+        );
     }
 
     fn handle_response_delta(state: &mut TurnActorState, id: String, content: String) {
@@ -246,7 +282,14 @@ impl RactorTurnActor {
         state.turn_state.tokens_at_last_speed = tokens_out;
         let tokens_in = state.turn_state.tokens_in;
         let speed_tps = state.turn_state.speed_tps;
-        Self::emit(state, Event::TokenStatsUpdated { tokens_in, tokens_out, speed_tps });
+        Self::emit(
+            state,
+            Event::TokenStatsUpdated {
+                tokens_in,
+                tokens_out,
+                speed_tps,
+            },
+        );
     }
 
     fn handle_next_id(state: &mut TurnActorState) {
@@ -281,19 +324,32 @@ impl Actor for RactorTurnActor {
         match msg {
             TurnMsg::RunIfQueued => Self::handle_run_if_queued(state),
             TurnMsg::AbortTurn => Self::handle_abort_turn(state),
-            TurnMsg::SubmitUserMessage { content, id } => Self::handle_submit_user_message(state, content, id),
+            TurnMsg::SubmitUserMessage { content, id } => {
+                Self::handle_submit_user_message(state, content, id)
+            }
             TurnMsg::QueueSteering { content } => Self::handle_queue_steering(state, content),
             TurnMsg::QueueFollowUp { content } => Self::handle_queue_follow_up(state, content),
             TurnMsg::AbortQueue => Self::handle_abort_queue(state),
             TurnMsg::ClearQueues => Self::handle_clear_queues(state),
-            TurnMsg::DeliverQueued { steering_mode, follow_up_mode } => Self::handle_deliver_queued(state, steering_mode, follow_up_mode),
+            TurnMsg::DeliverQueued {
+                steering_mode,
+                follow_up_mode,
+            } => Self::handle_deliver_queued(state, steering_mode, follow_up_mode),
             TurnMsg::Dequeue => Self::handle_dequeue(state),
             TurnMsg::Thinking { id } => Self::handle_thinking(state, id),
             TurnMsg::ThoughtDone { .. } => Self::handle_thought_done(state),
             TurnMsg::ToolStart { id, name } => Self::handle_tool_start(state, id, name),
-            TurnMsg::ToolEnd { id, duration_secs, output } => Self::handle_tool_end(state, id, duration_secs, output),
-            TurnMsg::ResponseDelta { id, content } => Self::handle_response_delta(state, id, content),
-            TurnMsg::TurnComplete { id, duration_secs } => Self::handle_turn_complete(state, id, duration_secs),
+            TurnMsg::ToolEnd {
+                id,
+                duration_secs,
+                output,
+            } => Self::handle_tool_end(state, id, duration_secs, output),
+            TurnMsg::ResponseDelta { id, content } => {
+                Self::handle_response_delta(state, id, content)
+            }
+            TurnMsg::TurnComplete { id, duration_secs } => {
+                Self::handle_turn_complete(state, id, duration_secs)
+            }
             TurnMsg::Done { .. } => Self::handle_done(state),
             TurnMsg::Error { id, message } => Self::handle_error(state, id, message),
             TurnMsg::UpdateSpeed { tokens_out } => Self::handle_update_speed(state, tokens_out),
@@ -305,7 +361,13 @@ impl Actor for RactorTurnActor {
 
 impl RactorTurnActor {
     /// Spawn a `RactorTurnActor` on the given event bus.
-    pub async fn spawn(bus: EventBus<Event>) -> (RactorTurnHandle, ractor::ActorCell, tokio::task::JoinHandle<()>) {
+    pub async fn spawn(
+        bus: EventBus<Event>,
+    ) -> (
+        RactorTurnHandle,
+        ractor::ActorCell,
+        tokio::task::JoinHandle<()>,
+    ) {
         let (handle, join, cell) = spawn_ractor(None, Self, bus).await.unwrap();
         (RactorTurnHandle::new(handle), cell, join)
     }
@@ -320,11 +382,19 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await;
         let mut sub = bus.subscribe();
-        handle.send(TurnMsg::SubmitUserMessage { content: "hello".into(), id: "req.0".into() }).await;
+        handle
+            .send(TurnMsg::SubmitUserMessage {
+                content: "hello".into(),
+                id: "req.0".into(),
+            })
+            .await;
         handle.send(TurnMsg::RunIfQueued).await;
         let mut found = false;
         while let Ok(evt) = sub.recv().await {
-            if matches!(evt, Event::TurnStarted { .. }) { found = true; break; }
+            if matches!(evt, Event::TurnStarted { .. }) {
+                found = true;
+                break;
+            }
         }
         assert!(found);
     }
@@ -334,12 +404,20 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await;
         let mut sub = bus.subscribe();
-        handle.send(TurnMsg::SubmitUserMessage { content: "hello".into(), id: "req.0".into() }).await;
+        handle
+            .send(TurnMsg::SubmitUserMessage {
+                content: "hello".into(),
+                id: "req.0".into(),
+            })
+            .await;
         handle.send(TurnMsg::RunIfQueued).await;
         handle.send(TurnMsg::AbortTurn).await;
         let mut found = false;
         while let Ok(evt) = sub.recv().await {
-            if matches!(evt, Event::TurnAborted) { found = true; break; }
+            if matches!(evt, Event::TurnAborted) {
+                found = true;
+                break;
+            }
         }
         assert!(found);
     }
@@ -349,10 +427,18 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await;
         let mut sub = bus.subscribe();
-        handle.send(TurnMsg::Error { id: "req.0".into(), message: "oops".into() }).await;
+        handle
+            .send(TurnMsg::Error {
+                id: "req.0".into(),
+                message: "oops".into(),
+            })
+            .await;
         let mut found = false;
         while let Ok(evt) = sub.recv().await {
-            if matches!(evt, Event::TurnErrored { .. }) { found = true; break; }
+            if matches!(evt, Event::TurnErrored { .. }) {
+                found = true;
+                break;
+            }
         }
         assert!(found);
     }

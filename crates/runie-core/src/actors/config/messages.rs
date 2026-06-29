@@ -51,9 +51,16 @@ pub enum ConfigMsg {
     /// The actor merges both layers and emits ConfigLoaded with the effective config.
     LoadLayers(Reply<Config>),
     /// Add or update an MCP server in the specified scope.
-    AddMcpServer { scope: ConfigScope, name: String, server: McpServer },
+    AddMcpServer {
+        scope: ConfigScope,
+        name: String,
+        server: McpServer,
+    },
     /// Remove an MCP server from the specified scope.
     RemoveMcpServer { scope: ConfigScope, name: String },
     /// List MCP servers in the specified scope.
-    ListMcpServers { scope: ConfigScope, reply: Reply<Vec<(String, McpServer)>> },
+    ListMcpServers {
+        scope: ConfigScope,
+        reply: Reply<Vec<(String, McpServer)>>,
+    },
 }

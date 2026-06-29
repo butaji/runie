@@ -151,7 +151,6 @@ fn append_closers(result: &mut String, openers: &RawOpeners, _style_stack: &[Sty
     }
 }
 
-
 fn count_run(chars: &mut std::iter::Peekable<std::str::Chars>, target: char, min: usize) -> usize {
     let mut n = min;
     while chars.peek() == Some(&target) {

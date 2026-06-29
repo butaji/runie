@@ -1,6 +1,6 @@
 //! Tests for event taxonomy — generated intent impl and kind/category.
 
-use crate::event::{Event, intent::Intent};
+use crate::event::{intent::Intent, Event};
 use crate::model::ThinkingLevel;
 use crate::permissions::PermissionAction;
 
@@ -22,9 +22,7 @@ fn fact_events_return_none() {
             command: "ls".into(),
             output: "/".into(),
         },
-        Event::Thinking {
-            id: "t1".into(),
-        },
+        Event::Thinking { id: "t1".into() },
         Event::ToolEnd {
             id: "t1".into(),
             duration_secs: 0.5,
@@ -87,8 +85,6 @@ fn switch_theme_is_intent_not_fact() {
     assert!(e.into_intent().is_some());
 }
 
-
-
 // ── Event::category tests ──────────────────────────────────────────────────────
 
 #[test]
@@ -131,8 +127,14 @@ fn event_names_contains_known_intents() {
     use crate::event::EVENT_NAMES;
     let names: Vec<_> = EVENT_NAMES.iter().map(|(n, _)| *n).collect();
     assert!(names.contains(&"Quit"), "EVENT_NAMES should include Quit");
-    assert!(names.contains(&"Submit"), "EVENT_NAMES should include Submit");
-    assert!(names.contains(&"ToggleExpand"), "EVENT_NAMES should include ToggleExpand");
+    assert!(
+        names.contains(&"Submit"),
+        "EVENT_NAMES should include Submit"
+    );
+    assert!(
+        names.contains(&"ToggleExpand"),
+        "EVENT_NAMES should include ToggleExpand"
+    );
 }
 
 // ── Integration tests for event variants ───────────────────────────────────────

@@ -269,7 +269,10 @@ api_key = "sk-openai"
         );
 
         let loaded = crate::config::Config::load(Some(&path));
-        let minimax = loaded.model_providers.get("minimax").expect("minimax entry");
+        let minimax = loaded
+            .model_providers
+            .get("minimax")
+            .expect("minimax entry");
         assert_eq!(minimax.api_key, "sk-test");
         assert_eq!(minimax.base_url, "https://api.minimaxi.chat/v1");
 

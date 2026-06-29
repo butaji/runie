@@ -5,11 +5,11 @@
 
 use std::path::PathBuf;
 
-use ractor::{Actor, ActorProcessingErr, ActorRef, async_trait};
 use fff_search::{
     ContentCacheBudget, FFFMode, FilePickerOptions, FrecencyTracker, FuzzySearchOptions,
     PaginationArgs, QueryParser, QueryTracker, SearchResult as FffRawSearchResult,
 };
+use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
 use std::time::Duration;
 
 use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
@@ -18,8 +18,8 @@ use crate::event::Event;
 use crate::model::FffFileEntry;
 
 use super::{
-    FffFileItem, FffSearchRequest, FffSearchResultPayload, FffSearchState,
-    FffSearchStateInner, DEFAULT_LIMIT, SCAN_TIMEOUT_SECS,
+    FffFileItem, FffSearchRequest, FffSearchResultPayload, FffSearchState, FffSearchStateInner,
+    DEFAULT_LIMIT, SCAN_TIMEOUT_SECS,
 };
 
 /// Ractor-based FffIndexerActor handle.
@@ -50,7 +50,10 @@ impl RactorFffIndexerHandle {
     }
 
     /// Try to send a message (non-blocking).
-    pub fn try_send(&self, msg: FffSearchRequest) -> Result<(), ractor::MessagingErr<FffSearchRequest>> {
+    pub fn try_send(
+        &self,
+        msg: FffSearchRequest,
+    ) -> Result<(), ractor::MessagingErr<FffSearchRequest>> {
         self.inner.try_send(msg)
     }
 }
@@ -75,7 +78,7 @@ impl RactorFffIndexerActor {
             root,
             frecency_path: fff_dir.join("frecency"),
             query_path: fff_dir.join("queries"),
-            bus, 
+            bus,
             shared_picker: fff_search::SharedFilePicker::default(),
             shared_frecency: fff_search::SharedFrecency::default(),
             shared_query_tracker: fff_search::SharedQueryTracker::default(),
@@ -362,7 +365,7 @@ mod tests {
     async fn ractor_fff_indexer_actor_spawns() {
         use crate::bus::EventBus;
         use crate::event::Event;
-        
+
         FffSearchState::reset_for_test();
         let bus = EventBus::<Event>::new(16);
         let temp_dir = tempfile::tempdir().unwrap();
@@ -370,7 +373,8 @@ mod tests {
             temp_dir.path().to_path_buf(),
             temp_dir.path().to_path_buf(),
             bus,
-        ).await;
+        )
+        .await;
         assert!(result.is_ok());
     }
 }

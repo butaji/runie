@@ -46,7 +46,8 @@ impl LoopDetectorSkill {
             .get("path")
             .or_else(|| input.get("command"))
             .and_then(|v| v.as_str())
-            .unwrap_or("").to_owned();
+            .unwrap_or("")
+            .to_owned();
         let entry = (tool_name.to_owned(), target, success);
         if let Ok(mut calls) = self.recent_calls.lock() {
             calls.push(entry);

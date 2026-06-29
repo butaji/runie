@@ -62,7 +62,11 @@ impl HandlerRegistry {
     pub fn to_command_kind(&self, name: &str) -> Option<CommandKind> {
         self.get(name).map(|h| match h {
             NamedHandler::Handler(f) => CommandKind::Handler(*f),
-            NamedHandler::Form { title, fields, submit } => CommandKind::Form {
+            NamedHandler::Form {
+                title,
+                fields,
+                submit,
+            } => CommandKind::Form {
                 title,
                 fields,
                 submit: *submit,

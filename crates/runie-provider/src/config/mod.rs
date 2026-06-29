@@ -8,9 +8,9 @@
 
 use std::collections::HashMap;
 
-use runie_core::proto::ProviderConfigBox;
 #[cfg(test)]
 use runie_core::proto::ProviderConfig;
+use runie_core::proto::ProviderConfigBox;
 
 /// Resolves provider configuration from multiple sources with priority:
 /// 1. Environment variables
@@ -43,7 +43,11 @@ impl ProviderConfigResolver {
 
         let dotenv = Self::load_dotenv();
 
-        Self { env, dotenv, provider_config: Some(provider_config) }
+        Self {
+            env,
+            dotenv,
+            provider_config: Some(provider_config),
+        }
     }
 
     /// Create a resolver with only environment variables (no config file).
@@ -52,14 +56,22 @@ impl ProviderConfigResolver {
         for (key, val) in std::env::vars() {
             env.insert(key, val);
         }
-        Self { env, dotenv: HashMap::new(), provider_config: None }
+        Self {
+            env,
+            dotenv: HashMap::new(),
+            provider_config: None,
+        }
     }
 
     /// Create a resolver with a config but no environment variable capture.
     /// Use this for tests that need isolation from the actual environment.
     #[cfg(test)]
     pub fn with_config<C: runie_core::proto::ProviderConfig + 'static>(config: C) -> Self {
-        Self { env: HashMap::new(), dotenv: HashMap::new(), provider_config: Some(ProviderConfigBox::new(config)) }
+        Self {
+            env: HashMap::new(),
+            dotenv: HashMap::new(),
+            provider_config: Some(ProviderConfigBox::new(config)),
+        }
     }
 
     /// Load .env file using dotenvy.
@@ -85,9 +97,8 @@ impl ProviderConfigResolver {
                             let key = key.trim().to_owned();
                             if key.ends_with("_API_KEY") || key.ends_with("_BASE_URL") {
                                 // Only insert if not already in env
-                                map.entry(key).or_insert_with(|| {
-                                    val.trim().trim_matches('"').to_owned()
-                                });
+                                map.entry(key)
+                                    .or_insert_with(|| val.trim().trim_matches('"').to_owned());
                             }
                         }
                     }
@@ -167,8 +178,7 @@ mod tests {
             api_key: Some("config-key".to_string()),
             base_url: Some("http://example.com".to_string()),
         };
-        let resolver =
-            ProviderConfigResolver::new(ProviderConfigBox::new(test_config));
+        let resolver = ProviderConfigResolver::new(ProviderConfigBox::new(test_config));
 
         // Environment variable should override config
         let result = resolver.resolve_api_key("testprovider");

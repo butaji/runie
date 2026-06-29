@@ -286,9 +286,7 @@ fn dispatcher_handles_all_variants() {
                 tokens_out: 0,
                 speed_tps: 0.0,
             },
-            Event::StreamStarted { .. } => Event::StreamStarted {
-                id: String::new(),
-            },
+            Event::StreamStarted { .. } => Event::StreamStarted { id: String::new() },
             Event::UserMessageSubmitted { .. } => Event::UserMessageSubmitted {
                 id: String::new(),
                 content: String::new(),
@@ -308,9 +306,9 @@ fn dispatcher_handles_all_variants() {
             Event::MessageDequeued { .. } => Event::MessageDequeued {
                 content: String::new(),
             },
-            Event::IdGenerated(_) => Event::IdGenerated(crate::actors::turn::NextIdResponse {
-                id: String::new(),
-            }),
+            Event::IdGenerated(_) => {
+                Event::IdGenerated(crate::actors::turn::NextIdResponse { id: String::new() })
+            }
             Event::AssistantMessageReady { .. } => Event::AssistantMessageReady {
                 message: crate::ChatMessage::default(),
             },

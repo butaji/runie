@@ -1,10 +1,10 @@
 //! Tests for canonical tool execution via `runie_core::tool`.
 
-use runie_core::tool::{parse_input, ToolContext, ToolDef, ToolStatus, ToolOutput};
 use crate::tool::{
-    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool,
-    ListDirTool, ReadFileTool, SearchTool, WriteFileTool,
+    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool, ListDirTool,
+    ReadFileTool, SearchTool, WriteFileTool,
 };
+use runie_core::tool::{parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus};
 
 async fn call_tool(name: &str, args: serde_json::Value) -> ToolOutput {
     dispatch_tool(name, &args).await

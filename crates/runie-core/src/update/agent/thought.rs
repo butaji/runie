@@ -63,9 +63,16 @@ pub(crate) fn split_think_blocks(content: &str) -> (String, Option<String>) {
     let caps: Vec<_> = THINK_REGEX.captures_iter(content).collect();
     let has_complete = !caps.is_empty();
     let block_reasoning = extract_block_reasoning(&caps);
-    let unclosed_reasoning = if !has_complete && content.contains("<think>") { {
-        content.find("<think>").map(|p| &content[p + 7..]).unwrap_or("")
-    } } else { "" };
+    let unclosed_reasoning = if !has_complete && content.contains("<think>") {
+        {
+            content
+                .find("<think>")
+                .map(|p| &content[p + 7..])
+                .unwrap_or("")
+        }
+    } else {
+        ""
+    };
 
     if block_reasoning.is_empty() && unclosed_reasoning.is_empty() {
         return (content.to_string(), None);
@@ -74,7 +81,9 @@ pub(crate) fn split_think_blocks(content: &str) -> (String, Option<String>) {
     let visible = if has_complete {
         THINK_REGEX.replace_all(content, "").to_string()
     } else {
-        content.find("<think>").map_or(content.to_string(), |p| content[..p].to_string())
+        content
+            .find("<think>")
+            .map_or(content.to_string(), |p| content[..p].to_string())
     };
 
     let all_reasoning = format!("{block_reasoning}{unclosed_reasoning}");

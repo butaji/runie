@@ -27,7 +27,8 @@ impl ToolDef for BashTool {
     type Input = BashInput;
 
     const NAME: &'static str = "bash";
-    const DESCRIPTION: &'static str = "Execute a shell command. Commands are subject to safety checks.";
+    const DESCRIPTION: &'static str =
+        "Execute a shell command. Commands are subject to safety checks.";
     const READ_ONLY: bool = false;
     const REQUIRES_APPROVAL: bool = true;
 

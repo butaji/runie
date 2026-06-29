@@ -83,7 +83,6 @@ impl InputState {
 
     /// Push current (input, cursor) onto the undo stack.
     pub fn push_undo(&mut self) {
-        self.undo_stack
-            .push((self.input.clone(), self.cursor_pos));
+        self.undo_stack.push((self.input.clone(), self.cursor_pos));
     }
 }

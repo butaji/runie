@@ -14,9 +14,12 @@ pub fn run(prompt: &str) -> Result<()> {
     rt.block_on(async {
         let messages = build_messages(prompt);
         let sink = build_sink(false);
-        let opts = build_options(None, Some(Box::new(|event: HeadlessEvent| {
-            println!("{}", event.to_json_line());
-        })));
+        let opts = build_options(
+            None,
+            Some(Box::new(|event: HeadlessEvent| {
+                println!("{}", event.to_json_line());
+            })),
+        );
         runie_agent::run_headless_cli(None, None, messages, sink, opts).await?;
         Ok(())
     })

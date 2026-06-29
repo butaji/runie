@@ -79,7 +79,10 @@ impl AppState {
             self.input_mut().input_flash = 3;
             return;
         }
-        let prev_ls = input_text[..cur_start - 1].rfind('\n').map(|i| i + 1).unwrap_or(0);
+        let prev_ls = input_text[..cur_start - 1]
+            .rfind('\n')
+            .map(|i| i + 1)
+            .unwrap_or(0);
         let new_pos = prev_ls + (cursor_pos - cur_start).min(prev_ls);
         try_send_input(self, crate::actors::InputMsg::MoveCursor { pos: new_pos });
         self.clamp_input_scroll();

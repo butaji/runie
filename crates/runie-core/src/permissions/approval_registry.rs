@@ -6,8 +6,8 @@
 //!
 //! Uses `parking_lot::Mutex` for synchronous access (suitable for use in actors).
 
-use std::collections::HashMap;
 use parking_lot::Mutex;
+use std::collections::HashMap;
 
 use crate::actors::Reply;
 

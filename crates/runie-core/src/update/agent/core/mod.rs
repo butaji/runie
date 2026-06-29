@@ -249,9 +249,9 @@ impl AppState {
     }
     fn on_response_delta(&mut self, id: String, content: String) {
         self.track_response_tokens(&content);
-        let has_open_text = self.current_assistant_message_mut().is_some_and(|msg| {
-            matches!(msg.parts.last(), Some(Part::Text { .. }))
-        });
+        let has_open_text = self
+            .current_assistant_message_mut()
+            .is_some_and(|msg| matches!(msg.parts.last(), Some(Part::Text { .. })));
         if has_open_text {
             self.append_delta_to_text_part(&content);
             return;

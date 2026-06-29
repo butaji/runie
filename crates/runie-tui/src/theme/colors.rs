@@ -141,7 +141,10 @@ mod tests {
         // Verify macro-generated accessors return valid Color values.
         // These call the actual generated functions to ensure they compile and work.
         assert!(matches!(color_bg(), Color::Rgb(_, _, _) | Color::Reset));
-        assert!(matches!(color_bg_panel(), Color::Rgb(_, _, _) | Color::Reset));
+        assert!(matches!(
+            color_bg_panel(),
+            Color::Rgb(_, _, _) | Color::Reset
+        ));
         assert!(matches!(color_fg(), Color::Rgb(_, _, _)));
         assert!(matches!(color_fg_mid(), Color::Rgb(_, _, _)));
         assert!(matches!(color_accent(), Color::Rgb(_, _, _)));
@@ -151,11 +154,17 @@ mod tests {
         assert!(matches!(color_dim(), Color::Rgb(_, _, _)));
         assert!(matches!(color_border(), Color::Rgb(_, _, _)));
         assert!(matches!(color_code(), Color::Rgb(_, _, _)));
-        assert!(matches!(color_code_bg(), Color::Rgb(_, _, _) | Color::Reset));
+        assert!(matches!(
+            color_code_bg(),
+            Color::Rgb(_, _, _) | Color::Reset
+        ));
         assert!(matches!(color_fg_bright(), Color::Rgb(_, _, _)));
         assert!(matches!(color_diff_insert_bg(), Color::Rgb(_, _, _)));
         assert!(matches!(color_diff_remove_bg(), Color::Rgb(_, _, _)));
-        assert!(matches!(color_user_bg(), Color::Rgb(_, _, _) | Color::Reset));
+        assert!(matches!(
+            color_user_bg(),
+            Color::Rgb(_, _, _) | Color::Reset
+        ));
         assert!(matches!(color_accent_bg(), Color::Rgb(_, _, _)));
     }
 

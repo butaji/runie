@@ -66,9 +66,7 @@ pub fn validate_registry(config: &crate::config::Config) -> Vec<String> {
                                 ));
                             }
                         } else if find_model(model).is_none() {
-                            errors.push(format!(
-                                "model '{model}': not found in registry"
-                            ));
+                            errors.push(format!("model '{model}': not found in registry"));
                         }
                     } else {
                         // Model is standalone, check if it exists for this provider
@@ -89,9 +87,7 @@ pub fn validate_registry(config: &crate::config::Config) -> Vec<String> {
     // Validate configured providers
     for (name, provider_config) in &config.model_providers {
         if find_provider(name).is_none() {
-            errors.push(format!(
-                "[model_providers.{name}]: unknown provider"
-            ));
+            errors.push(format!("[model_providers.{name}]: unknown provider"));
         }
 
         // Validate provider's model list

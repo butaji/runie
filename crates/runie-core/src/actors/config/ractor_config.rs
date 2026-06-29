@@ -3,8 +3,8 @@
 //! Migrated from custom Actor trait to ractor for consistency with the rest
 //! of the actor system.
 
-use std::path::{Path, PathBuf};
 use parking_lot::Mutex;
+use std::path::{Path, PathBuf};
 
 use notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
@@ -63,7 +63,10 @@ impl RactorConfigHandle {
     /// Request the list of configured providers.
     pub async fn get_configured_providers(&self) -> Option<Vec<(String, String, Vec<String>)>> {
         let (tx, rx) = tokio::sync::oneshot::channel();
-        let _ = self.inner.send(ConfigMsg::GetConfiguredProviders(Reply::new(tx))).await;
+        let _ = self
+            .inner
+            .send(ConfigMsg::GetConfiguredProviders(Reply::new(tx)))
+            .await;
         rx.await.ok()
     }
 
@@ -78,8 +81,22 @@ impl RactorConfigHandle {
     }
 
     /// Save a provider configuration.
-    pub async fn save_provider(&self, name: String, base_url: String, api_key: String, models: Vec<String>) {
-        let _ = self.inner.send(ConfigMsg::SaveProvider { name, base_url, api_key, models }).await;
+    pub async fn save_provider(
+        &self,
+        name: String,
+        base_url: String,
+        api_key: String,
+        models: Vec<String>,
+    ) {
+        let _ = self
+            .inner
+            .send(ConfigMsg::SaveProvider {
+                name,
+                base_url,
+                api_key,
+                models,
+            })
+            .await;
     }
 
     /// Remove a provider configuration.
@@ -89,12 +106,18 @@ impl RactorConfigHandle {
 
     /// Persist the active provider/model as the default.
     pub async fn set_default_model(&self, provider: String, model: String) {
-        let _ = self.inner.send(ConfigMsg::SetDefaultModel { provider, model }).await;
+        let _ = self
+            .inner
+            .send(ConfigMsg::SetDefaultModel { provider, model })
+            .await;
     }
 
     /// Update the saved model list for a provider.
     pub async fn set_provider_models(&self, name: String, models: Vec<String>) {
-        let _ = self.inner.send(ConfigMsg::SetProviderModels { name, models }).await;
+        let _ = self
+            .inner
+            .send(ConfigMsg::SetProviderModels { name, models })
+            .await;
     }
 
     /// Set the theme name.
@@ -125,24 +148,45 @@ impl RactorConfigHandle {
     /// Load layered config (global + project) and return the effective config.
     pub async fn load_layers(&self) -> Option<Config> {
         let (tx, rx) = tokio::sync::oneshot::channel();
-        let _ = self.inner.send(ConfigMsg::LoadLayers(crate::actors::ractor_adapter::Reply::new(tx))).await;
+        let _ = self
+            .inner
+            .send(ConfigMsg::LoadLayers(
+                crate::actors::ractor_adapter::Reply::new(tx),
+            ))
+            .await;
         rx.await.ok()
     }
 
     /// Add or update an MCP server in the specified scope.
     pub async fn add_mcp_server(&self, scope: ConfigScope, name: String, server: McpServer) {
-        let _ = self.inner.send(ConfigMsg::AddMcpServer { scope, name, server }).await;
+        let _ = self
+            .inner
+            .send(ConfigMsg::AddMcpServer {
+                scope,
+                name,
+                server,
+            })
+            .await;
     }
 
     /// Remove an MCP server from the specified scope.
     pub async fn remove_mcp_server(&self, scope: ConfigScope, name: String) {
-        let _ = self.inner.send(ConfigMsg::RemoveMcpServer { scope, name }).await;
+        let _ = self
+            .inner
+            .send(ConfigMsg::RemoveMcpServer { scope, name })
+            .await;
     }
 
     /// List MCP servers in the specified scope.
     pub async fn list_mcp_servers(&self, scope: ConfigScope) -> Vec<(String, McpServer)> {
         let (tx, rx) = tokio::sync::oneshot::channel();
-        let _ = self.inner.send(ConfigMsg::ListMcpServers { scope, reply: crate::actors::ractor_adapter::Reply::new(tx) }).await;
+        let _ = self
+            .inner
+            .send(ConfigMsg::ListMcpServers {
+                scope,
+                reply: crate::actors::ractor_adapter::Reply::new(tx),
+            })
+            .await;
         rx.await.unwrap_or_default()
     }
 }
@@ -168,9 +212,11 @@ pub struct RactorConfigActor;
 impl RactorConfigActor {
     /// Load layered config asynchronously.
     async fn load_layers_async(global: PathBuf, local: Option<PathBuf>) -> Config {
-        tokio::task::spawn_blocking(move || Config::load_layers_from_paths(global, local.unwrap_or_default()))
-            .await
-            .unwrap_or_default()
+        tokio::task::spawn_blocking(move || {
+            Config::load_layers_from_paths(global, local.unwrap_or_default())
+        })
+        .await
+        .unwrap_or_default()
     }
 
     /// Load layered config synchronously (for use in spawn_blocking).
@@ -182,7 +228,12 @@ impl RactorConfigActor {
         match msg {
             ConfigMsg::Load => Self::load_and_emit(state).await,
             ConfigMsg::Reload => Self::reload_and_emit(state).await,
-            ConfigMsg::SaveProvider { name, base_url, api_key, models } => {
+            ConfigMsg::SaveProvider {
+                name,
+                base_url,
+                api_key,
+                models,
+            } => {
                 Self::save_provider(state, &name, &base_url, &api_key, &models).await;
             }
             ConfigMsg::RemoveProvider { name } => Self::remove_provider(state, &name).await,
@@ -208,7 +259,11 @@ impl RactorConfigActor {
                 let effective = Self::load_layers_sync(&state.path, &state.project_path);
                 reply.send(effective);
             }
-            ConfigMsg::AddMcpServer { scope, name, server } => {
+            ConfigMsg::AddMcpServer {
+                scope,
+                name,
+                server,
+            } => {
                 Self::add_mcp_server(state, scope, &name, server).await;
             }
             ConfigMsg::RemoveMcpServer { scope, name } => {
@@ -222,25 +277,37 @@ impl RactorConfigActor {
     }
 
     async fn load_and_emit(state: &mut ConfigActorState) {
-        let effective = Self::load_layers_async(state.path.clone(), state.project_path.clone()).await;
+        let effective =
+            Self::load_layers_async(state.path.clone(), state.project_path.clone()).await;
         let mut guard = state.config.lock();
         *guard = effective.clone();
         drop(guard);
-        state.emit(Event::ConfigLoaded { config: Box::new(effective) });
+        state.emit(Event::ConfigLoaded {
+            config: Box::new(effective),
+        });
     }
 
     async fn reload_and_emit(state: &mut ConfigActorState) {
-        let new_config = Self::load_layers_async(state.path.clone(), state.project_path.clone()).await;
+        let new_config =
+            Self::load_layers_async(state.path.clone(), state.project_path.clone()).await;
         let changed = new_config != *state.config.lock();
         if changed {
             let mut guard = state.config.lock();
             *guard = new_config.clone();
             drop(guard);
-            state.emit(Event::ConfigLoaded { config: Box::new(new_config) });
+            state.emit(Event::ConfigLoaded {
+                config: Box::new(new_config),
+            });
         }
     }
 
-    async fn save_provider(state: &mut ConfigActorState, name: &str, base_url: &str, api_key: &str, models: &[String]) {
+    async fn save_provider(
+        state: &mut ConfigActorState,
+        name: &str,
+        base_url: &str,
+        api_key: &str,
+        models: &[String],
+    ) {
         let path = state.path.clone();
         let name = name.to_owned();
         let base_url = base_url.to_owned();
@@ -248,14 +315,18 @@ impl RactorConfigActor {
         let models = models.to_vec();
         let result = tokio::task::spawn_blocking(move || {
             file_helpers::save_provider_to_path(&path, &name, &base_url, &api_key, &models)
-        }).await;
+        })
+        .await;
         Self::handle_write_result(state, result).await;
     }
 
     async fn remove_provider(state: &mut ConfigActorState, name: &str) {
         let path = state.path.clone();
         let name = name.to_owned();
-        let result = tokio::task::spawn_blocking(move || file_helpers::remove_provider_from_path(&path, &name)).await;
+        let result = tokio::task::spawn_blocking(move || {
+            file_helpers::remove_provider_from_path(&path, &name)
+        })
+        .await;
         Self::handle_write_result(state, result).await;
     }
 
@@ -263,7 +334,10 @@ impl RactorConfigActor {
         let path = state.path.clone();
         let provider = provider.to_owned();
         let model = model.to_owned();
-        let result = tokio::task::spawn_blocking(move || file_helpers::set_default_model_at_path(&path, &provider, &model)).await;
+        let result = tokio::task::spawn_blocking(move || {
+            file_helpers::set_default_model_at_path(&path, &provider, &model)
+        })
+        .await;
         Self::handle_write_result(state, result).await;
     }
 
@@ -271,44 +345,63 @@ impl RactorConfigActor {
         let path = state.path.clone();
         let name = name.to_owned();
         let models = models.to_vec();
-        let result = tokio::task::spawn_blocking(move || file_helpers::set_provider_models_at_path(&path, &name, &models)).await;
+        let result = tokio::task::spawn_blocking(move || {
+            file_helpers::set_provider_models_at_path(&path, &name, &models)
+        })
+        .await;
         Self::handle_write_result(state, result).await;
     }
 
     async fn set_theme(state: &mut ConfigActorState, name: &str) {
         let path = state.path.clone();
         let name = name.to_owned();
-        let result = tokio::task::spawn_blocking(move || file_helpers::set_theme_at_path(&path, &name)).await;
+        let result =
+            tokio::task::spawn_blocking(move || file_helpers::set_theme_at_path(&path, &name))
+                .await;
         Self::handle_write_result(state, result).await;
     }
 
     async fn set_vim_mode(state: &mut ConfigActorState, enabled: bool) {
         let path = state.path.clone();
-        let result = tokio::task::spawn_blocking(move || file_helpers::set_vim_mode_at_path(&path, enabled)).await;
+        let result =
+            tokio::task::spawn_blocking(move || file_helpers::set_vim_mode_at_path(&path, enabled))
+                .await;
         Self::handle_write_result(state, result).await;
     }
 
     async fn set_telemetry(state: &mut ConfigActorState, enabled: bool) {
         let path = state.path.clone();
-        let result = tokio::task::spawn_blocking(move || file_helpers::set_telemetry_at_path(&path, enabled)).await;
+        let result = tokio::task::spawn_blocking(move || {
+            file_helpers::set_telemetry_at_path(&path, enabled)
+        })
+        .await;
         Self::handle_write_result(state, result).await;
     }
 
     async fn set_truncation(state: &mut ConfigActorState, limits: &TruncationSection) {
         let path = state.path.clone();
         let limits = limits.clone();
-        let result = tokio::task::spawn_blocking(move || file_helpers::set_truncation_at_path(&path, &limits)).await;
+        let result = tokio::task::spawn_blocking(move || {
+            file_helpers::set_truncation_at_path(&path, &limits)
+        })
+        .await;
         Self::handle_write_result(state, result).await;
     }
 
     async fn set_thinking_level(state: &mut ConfigActorState, level: &ThinkingLevel) {
         let path = state.path.clone();
         let level = *level;
-        let result = tokio::task::spawn_blocking(move || file_helpers::set_thinking_level_at_path(&path, level)).await;
+        let result = tokio::task::spawn_blocking(move || {
+            file_helpers::set_thinking_level_at_path(&path, level)
+        })
+        .await;
         Self::handle_write_result(state, result).await;
     }
 
-    async fn handle_write_result(state: &mut ConfigActorState, result: Result<anyhow::Result<()>, tokio::task::JoinError>) {
+    async fn handle_write_result(
+        state: &mut ConfigActorState,
+        result: Result<anyhow::Result<()>, tokio::task::JoinError>,
+    ) {
         match result {
             Ok(Ok(())) => Self::load_and_emit(state).await,
             Ok(Err(e)) => {
@@ -339,13 +432,19 @@ impl RactorConfigActor {
         result
     }
 
-    async fn add_mcp_server(state: &mut ConfigActorState, scope: ConfigScope, name: &str, server: McpServer) {
+    async fn add_mcp_server(
+        state: &mut ConfigActorState,
+        scope: ConfigScope,
+        name: &str,
+        server: McpServer,
+    ) {
         let path = Self::path_for_scope(&state.path, &state.project_path, scope);
         let name = name.to_owned();
         let server = server.clone();
         let result = tokio::task::spawn_blocking(move || {
             file_helpers::add_mcp_server_to_path(&path, &name, &server)
-        }).await;
+        })
+        .await;
         Self::handle_write_result(state, result).await;
     }
 
@@ -354,18 +453,18 @@ impl RactorConfigActor {
         let name = name.to_owned();
         let result = tokio::task::spawn_blocking(move || {
             file_helpers::remove_mcp_server_from_path(&path, &name)
-        }).await;
+        })
+        .await;
         Self::handle_write_result(state, result).await;
     }
 
-    fn list_mcp_servers_from_state(state: &ConfigActorState, scope: ConfigScope) -> Vec<(String, McpServer)> {
+    fn list_mcp_servers_from_state(
+        state: &ConfigActorState,
+        scope: ConfigScope,
+    ) -> Vec<(String, McpServer)> {
         let path = Self::path_for_scope(&state.path, &state.project_path, scope);
         let config = Config::load(Some(&path));
-        config
-            .mcp
-            .servers
-            .into_iter()
-            .collect()
+        config.mcp.servers.into_iter().collect()
     }
 
     fn path_for_scope(global: &Path, project: &Option<PathBuf>, scope: ConfigScope) -> PathBuf {
@@ -407,20 +506,20 @@ impl Actor for RactorConfigActor {
         let (bus, path, project_path) = args;
         // Load layered config
         let config = Self::load_layers_async(path.clone(), project_path.clone()).await;
-        
+
         let path_clone = path.clone();
         let project_path_clone = project_path.clone();
         let config_for_state = config.clone();
         let config_arc = std::sync::Arc::new(Mutex::new(config));
-        
+
         // Clone bus for watcher task
         let bus_for_watcher = bus.clone();
-        
+
         // Spawn the file watcher: a std thread feeds a tokio mpsc channel;
         // the tokio task reloads config on each Reload message.
         let path_clone_std = path.clone();
         let (tx, mut rx) = mpsc::channel::<ConfigMsg>(32);
-        
+
         std::thread::spawn(move || {
             let (std_tx, std_rx) = std::sync::mpsc::channel();
             let debouncer = match new_debouncer(std::time::Duration::from_millis(300), std_tx) {
@@ -432,7 +531,10 @@ impl Actor for RactorConfigActor {
             };
             let mut debouncer = debouncer;
             if let Some(parent) = path_clone_std.parent() {
-                if let Err(e) = debouncer.watcher().watch(parent, RecursiveMode::NonRecursive) {
+                if let Err(e) = debouncer
+                    .watcher()
+                    .watch(parent, RecursiveMode::NonRecursive)
+                {
                     tracing::error!("config watcher: watch {:?} failed: {e:?}", parent);
                     return;
                 }
@@ -443,28 +545,31 @@ impl Actor for RactorConfigActor {
                 }
             }
         });
-        
+
         tokio::spawn(async move {
             while let Some(msg) = rx.recv().await {
                 if matches!(msg, ConfigMsg::Reload) {
                     // Reload config from disk - clone owned values for each iteration
                     let global = path_clone.clone();
                     let local = project_path_clone.clone().unwrap_or_default();
-                    let new_config =
-                        tokio::task::spawn_blocking(move || Config::load_layers_from_paths(global, local))
-                            .await
-                            .unwrap_or_default();
+                    let new_config = tokio::task::spawn_blocking(move || {
+                        Config::load_layers_from_paths(global, local)
+                    })
+                    .await
+                    .unwrap_or_default();
                     let changed = new_config != *config_arc.lock();
                     if changed {
                         let mut guard = config_arc.lock();
                         *guard = new_config.clone();
                         drop(guard);
-                        bus_for_watcher.publish(Event::ConfigLoaded { config: Box::new(new_config) });
+                        bus_for_watcher.publish(Event::ConfigLoaded {
+                            config: Box::new(new_config),
+                        });
                     }
                 }
             }
         });
-        
+
         let state = ConfigActorState {
             config: Mutex::new(config_for_state.clone()),
             path: path.clone(),
@@ -473,7 +578,7 @@ impl Actor for RactorConfigActor {
         };
         // Emit the initial config
         Self::emit_current_config(&state);
-        
+
         Ok(state)
     }
 
@@ -492,7 +597,9 @@ impl RactorConfigActor {
     /// Emit the current config as an event.
     fn emit_current_config(state: &ConfigActorState) {
         let config_to_emit = state.config.lock().clone();
-        state.emit(Event::ConfigLoaded { config: Box::new(config_to_emit) });
+        state.emit(Event::ConfigLoaded {
+            config: Box::new(config_to_emit),
+        });
     }
 
     /// Spawn a `RactorConfigActor` on the given event bus.
@@ -515,9 +622,7 @@ impl RactorConfigActor {
     }
 
     /// Spawn with default paths (global ~/.runie/config.toml, project ./.runie/config.toml).
-    pub async fn spawn_default(
-        bus: EventBus<Event>,
-    ) -> (RactorConfigHandle, ractor::ActorCell) {
+    pub async fn spawn_default(bus: EventBus<Event>) -> (RactorConfigHandle, ractor::ActorCell) {
         Self::spawn(bus, None, None).await
     }
 }
@@ -533,7 +638,8 @@ mod tests {
         let temp_path = std::env::temp_dir().join("runie_test_config.toml");
         // Subscribe BEFORE spawning so we don't miss pre_start's ConfigLoaded
         let mut sub = bus.subscribe();
-        let (_handle, _cell) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
+        let (_handle, _cell) =
+            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
 
         // Wait for ConfigLoaded with timeout to prevent hanging forever
         let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
@@ -557,7 +663,8 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let temp_path = std::env::temp_dir().join("runie_test_config2.toml");
         let mut sub = bus.subscribe();
-        let (handle, _cell) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
+        let (handle, _cell) =
+            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
 
         // Wait for ConfigLoaded to ensure actor is ready
         let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
@@ -599,11 +706,9 @@ mod tests {
             writeln!(file, r#"theme = "dark""#).unwrap();
         }
 
-        let (handle, _cell) = RactorConfigActor::spawn(
-            bus,
-            Some(global_path.clone()),
-            Some(project_path.clone()),
-        ).await;
+        let (handle, _cell) =
+            RactorConfigActor::spawn(bus, Some(global_path.clone()), Some(project_path.clone()))
+                .await;
 
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
@@ -622,11 +727,7 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let temp_path = std::env::temp_dir().join("runie_test_mcp.toml");
 
-        let (handle, _cell) = RactorConfigActor::spawn(
-            bus,
-            Some(temp_path.clone()),
-            None,
-        ).await;
+        let (handle, _cell) = RactorConfigActor::spawn(bus, Some(temp_path.clone()), None).await;
 
         // Wait for actor to start
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
@@ -639,26 +740,40 @@ mod tests {
             headers: std::collections::HashMap::new(),
             scope: "user".to_string(),
         };
-        handle.add_mcp_server(ConfigScope::Global, "test-server".to_string(), server.clone()).await;
+        handle
+            .add_mcp_server(
+                ConfigScope::Global,
+                "test-server".to_string(),
+                server.clone(),
+            )
+            .await;
 
         // Wait for write to complete
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
         // List MCP servers
         let servers = handle.list_mcp_servers(ConfigScope::Global).await;
-        assert!(servers.iter().any(|(name, _)| name == "test-server"),
-            "Should have test-server in list: {:?}", servers);
+        assert!(
+            servers.iter().any(|(name, _)| name == "test-server"),
+            "Should have test-server in list: {:?}",
+            servers
+        );
 
         // Remove the server
-        handle.remove_mcp_server(ConfigScope::Global, "test-server".to_string()).await;
+        handle
+            .remove_mcp_server(ConfigScope::Global, "test-server".to_string())
+            .await;
 
         // Wait for write to complete
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
         // Verify it's gone
         let servers = handle.list_mcp_servers(ConfigScope::Global).await;
-        assert!(!servers.iter().any(|(name, _)| name == "test-server"),
-            "test-server should be removed: {:?}", servers);
+        assert!(
+            !servers.iter().any(|(name, _)| name == "test-server"),
+            "test-server should be removed: {:?}",
+            servers
+        );
 
         let _ = std::fs::remove_file(&temp_path);
     }
@@ -670,7 +785,11 @@ mod tests {
             ..Default::default()
         };
         let result = config.validate();
-        assert!(result.is_ok(), "simple valid config should validate: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "simple valid config should validate: {:?}",
+            result
+        );
     }
 
     #[tokio::test]
@@ -686,7 +805,8 @@ mod tests {
         }
 
         let mut sub = bus.subscribe();
-        let (_handle, _cell) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
+        let (_handle, _cell) =
+            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
 
         // Collect events for up to 2 seconds
         let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
@@ -705,7 +825,10 @@ mod tests {
         }
 
         // Even with a parse error, the actor should emit ConfigLoaded with defaults
-        assert!(found_config_loaded, "Actor should emit ConfigLoaded even with parse error");
+        assert!(
+            found_config_loaded,
+            "Actor should emit ConfigLoaded even with parse error"
+        );
         let _ = std::fs::remove_file(&temp_path);
     }
 

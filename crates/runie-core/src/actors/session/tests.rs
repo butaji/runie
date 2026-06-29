@@ -2,7 +2,6 @@
 
 use std::path::PathBuf;
 
-
 use crate::actors::session::RactorSessionActor;
 use crate::bus::{EventBus, Receiver};
 use crate::trust::{TrustDecision, TrustManager};
@@ -63,12 +62,16 @@ async fn session_actor_add_user_message_via_handle() {
     let mut sub = bus.subscribe();
     let _ = tokio::time::timeout(std::time::Duration::from_millis(500), async {
         while sub.recv().await.is_ok() {}
-    }).await;
+    })
+    .await;
 
     handle.try_add_user_message("hello".to_string(), vec![]);
 
     let saw_changed = wait_for_event(&mut sub, |e| matches!(e, Event::SessionChanged { .. })).await;
-    assert!(saw_changed, "should emit SessionChanged after adding message");
+    assert!(
+        saw_changed,
+        "should emit SessionChanged after adding message"
+    );
 }
 
 #[tokio::test]
@@ -80,7 +83,8 @@ async fn session_actor_reset_via_handle() {
     let mut sub = bus.subscribe();
     let _ = tokio::time::timeout(std::time::Duration::from_millis(500), async {
         while sub.recv().await.is_ok() {}
-    }).await;
+    })
+    .await;
 
     // Add a message first
     handle.try_add_user_message("hello".to_string(), vec![]);

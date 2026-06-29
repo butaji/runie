@@ -145,7 +145,12 @@ impl RactorPermissionActor {
         action: PermissionAction,
     ) {
         state.registry.resolve(&request_id, action);
-        if state.current_request.as_ref().map(|r| r.request_id == request_id).unwrap_or(false) {
+        if state
+            .current_request
+            .as_ref()
+            .map(|r| r.request_id == request_id)
+            .unwrap_or(false)
+        {
             state.current_request = None;
         }
         state.emit(Event::PermissionResponse { request_id, action });
@@ -153,7 +158,12 @@ impl RactorPermissionActor {
 
     fn handle_cancel_permission(state: &mut PermissionActorState, request_id: String) {
         state.registry.resolve(&request_id, PermissionAction::Deny);
-        if state.current_request.as_ref().map(|r| r.request_id == request_id).unwrap_or(false) {
+        if state
+            .current_request
+            .as_ref()
+            .map(|r| r.request_id == request_id)
+            .unwrap_or(false)
+        {
             state.current_request = None;
         }
     }
@@ -254,17 +264,13 @@ mod tests {
         let (handle, _cell) = RactorPermissionActor::spawn(bus.clone()).await;
 
         let mut rx = handle
-            .ask_permission(
-                "req-await-1".into(),
-                "bash".into(),
-                serde_json::json!({}),
-            )
+            .ask_permission("req-await-1".into(), "bash".into(), serde_json::json!({}))
             .await;
 
         // Use try_recv to verify the channel is NOT yet complete
         // (would return Ok(Ready) if already resolved)
         let resolved = match rx.try_recv() {
-            Ok(_) => true,  // Got a value = already resolved
+            Ok(_) => true, // Got a value = already resolved
             Err(tokio::sync::oneshot::error::TryRecvError::Empty) => false, // Still pending
             Err(tokio::sync::oneshot::error::TryRecvError::Closed) => true, // Closed = also resolved
         };
@@ -278,11 +284,7 @@ mod tests {
         let (handle, _cell) = RactorPermissionActor::spawn(bus.clone()).await;
 
         let rx = handle
-            .ask_permission(
-                "req-allow-1".into(),
-                "bash".into(),
-                serde_json::json!({}),
-            )
+            .ask_permission("req-allow-1".into(), "bash".into(), serde_json::json!({}))
             .await;
 
         // Resolve with Allow
@@ -302,11 +304,7 @@ mod tests {
         let (handle, _cell) = RactorPermissionActor::spawn(bus.clone()).await;
 
         let rx = handle
-            .ask_permission(
-                "req-deny-1".into(),
-                "bash".into(),
-                serde_json::json!({}),
-            )
+            .ask_permission("req-deny-1".into(), "bash".into(), serde_json::json!({}))
             .await;
 
         // Resolve with Deny

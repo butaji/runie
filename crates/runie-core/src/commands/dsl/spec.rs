@@ -132,12 +132,18 @@ impl CommandDef {
         self.panel(move |_state, args| build_form_stack_from_template(template.clone(), args))
     }
 
-    pub fn form_with_handler<Build>(self, title: &'static str, form_builder: Build, handler: FormHandler) -> Self
+    pub fn form_with_handler<Build>(
+        self,
+        title: &'static str,
+        form_builder: Build,
+        handler: FormHandler,
+    ) -> Self
     where
         Build: FnOnce(FormPanel) -> FormPanel + Send + Sync + 'static,
     {
         let id = self.name.clone();
-        let template = form_builder(crate::dialog::dsl::form(id, title).cmd_name(self.name.clone()));
+        let template =
+            form_builder(crate::dialog::dsl::form(id, title).cmd_name(self.name.clone()));
         self.panel(move |_state, args| build_form_stack_from_template(template.clone(), args))
             .with_form_handler(handler)
     }
@@ -177,13 +183,23 @@ pub fn build_cmd(spec: &CommandSpec) -> CommandDef {
     }
     match &spec.kind {
         CommandKind::Handler(f) => cmd.handler(*f),
-        CommandKind::Form { title, fields, submit } => {
+        CommandKind::Form {
+            title,
+            fields,
+            submit,
+        } => {
             let fields = *fields;
             let submit = *submit;
             let name = spec.name;
-            cmd.form(title, move |f| add_fields(f, fields).on_submit(submit).cmd_name(name))
+            cmd.form(title, move |f| {
+                add_fields(f, fields).on_submit(submit).cmd_name(name)
+            })
         }
-        CommandKind::FormWithHandler { title, fields, handler } => {
+        CommandKind::FormWithHandler {
+            title,
+            fields,
+            handler,
+        } => {
             let fields = *fields;
             let handler = *handler;
             let name = spec.name;
@@ -219,10 +235,18 @@ pub fn build_cmd_from_yaml(
         if let Some(kind) = handler_registry.to_command_kind(handler_name) {
             match kind {
                 CommandKind::Handler(f) => cmd = cmd.handler(f),
-                CommandKind::Form { title, fields, submit } => {
+                CommandKind::Form {
+                    title,
+                    fields,
+                    submit,
+                } => {
                     cmd = cmd.form(title, move |f| add_fields(f, fields).on_submit(submit));
                 }
-                CommandKind::FormWithHandler { title, fields, handler } => {
+                CommandKind::FormWithHandler {
+                    title,
+                    fields,
+                    handler,
+                } => {
                     cmd = cmd.form_with_handler(title, move |f| add_fields(f, fields), handler);
                 }
                 CommandKind::Msg(m) => cmd = cmd.msg(m),
@@ -255,7 +279,13 @@ fn build_form_stack_from_template(template: FormPanel, args: &str) -> CoreStack 
     let mut arg_idx = 0;
     for item in built.items {
         match item {
-            crate::dialog::PanelItem::FormField { label, placeholder, key, value, .. } => {
+            crate::dialog::PanelItem::FormField {
+                label,
+                placeholder,
+                key,
+                value,
+                ..
+            } => {
                 let val = if arg_idx < args_list.len() {
                     args_list[arg_idx].to_owned()
                 } else {
@@ -272,7 +302,10 @@ fn build_form_stack_from_template(template: FormPanel, args: &str) -> CoreStack 
 }
 
 /// Register every command from a spec table.
-pub fn register_commands(registry: &mut crate::commands::CommandRegistry, commands: &[CommandSpec]) {
+pub fn register_commands(
+    registry: &mut crate::commands::CommandRegistry,
+    commands: &[CommandSpec],
+) {
     for spec in commands {
         registry.register(build_cmd(spec));
     }
@@ -350,7 +383,9 @@ mod tests {
     }
 
     fn save_submit(values: &HashMap<String, String>) -> crate::Event {
-        crate::Event::RunSaveCommand { name: crate::dialog::dsl::get_field(values, "name") }
+        crate::Event::RunSaveCommand {
+            name: crate::dialog::dsl::get_field(values, "name"),
+        }
     }
 
     #[test]

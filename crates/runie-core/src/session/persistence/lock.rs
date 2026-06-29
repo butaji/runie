@@ -1,8 +1,8 @@
 //! File locking utilities using `fs2`.
 
+use fs2::FileExt;
 use std::fs::{File, OpenOptions};
 use std::path::Path;
-use fs2::FileExt;
 
 /// RAII guard for a shared (read) lock on a file.
 pub struct SharedLock {

@@ -1,9 +1,7 @@
 //! Vim-navigation selection rendering tests.
 
 // Re-export types used by child test modules so they can `use super::*;`
-pub use super::{
-    AppState, ChatMessage, Part, Role,
-};
+pub use super::{AppState, ChatMessage, Part, Role};
 
 mod background;
 mod basic;

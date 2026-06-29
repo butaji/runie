@@ -17,9 +17,9 @@ pub mod parse;
 pub mod schema;
 pub mod shim;
 mod state;
-pub mod types;
 #[cfg(test)]
 mod tests;
+pub mod types;
 
 pub use constraints::{
     validate as validate_constraints, validate_constraint, Constraint, ConstraintViolation,
@@ -32,12 +32,12 @@ pub use format::{
 };
 // Re-export path utilities from canonical location
 pub use crate::path::resolve_path_in as resolve_path;
-pub use schema::{generate_schema, parse_input, to_mcp_tool, to_openai_function, ToolDef};
-pub use state::{ToolCallState, ToolCallTracker};
 pub use parse::{
     assign_tool_call_ids, build_assistant_message, has_tool_calls, parse_tool_calls,
     parse_tool_calls_fallible, tool_parse_error_message,
 };
+pub use schema::{generate_schema, parse_input, to_mcp_tool, to_openai_function, ToolDef};
+pub use state::{ToolCallState, ToolCallTracker};
 pub use types::{repair_partial_json, ParsedToolCall, ToolParseError};
 
 /// Canonical list of all implemented built-in tool names.

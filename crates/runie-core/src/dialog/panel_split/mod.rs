@@ -2,7 +2,6 @@
 //!
 //! Split from dialog/panel.rs to stay under the 500-line limit.
 
-
 use super::{ItemAction, PanelItem};
 use crate::Event;
 

@@ -9,8 +9,8 @@ use crossterm::{
     cursor::{Hide, SetCursorStyle, Show},
     event::{
         DisableBracketedPaste, DisableFocusChange, DisableMouseCapture, EnableBracketedPaste,
-        EnableFocusChange, EnableMouseCapture, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,
-        PushKeyboardEnhancementFlags,
+        EnableFocusChange, EnableMouseCapture, KeyboardEnhancementFlags,
+        PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
     },
     terminal::{EnterAlternateScreen, LeaveAlternateScreen},
     QueueableCommand,
@@ -23,10 +23,8 @@ use std::io;
 /// Capability detection is best-effort and intentionally does not fail
 /// setup; a conservative capability set is returned if detection is
 /// inconclusive.
-pub fn setup_terminal() -> io::Result<(
-    Terminal<CrosstermBackend<std::io::Stdout>>,
-    caps::TermCaps,
-)> {
+pub fn setup_terminal() -> io::Result<(Terminal<CrosstermBackend<std::io::Stdout>>, caps::TermCaps)>
+{
     let capabilities = caps::detect_capabilities_from_env();
 
     crossterm::terminal::enable_raw_mode()?;
@@ -89,19 +87,16 @@ pub fn restore_terminal_graphics<W: io::Write>(
 pub fn enable_mouse<W: io::Write>(writer: &mut W, caps: caps::MouseCapability) -> io::Result<()> {
     match caps {
         caps::MouseCapability::None => Ok(()),
-        caps::MouseCapability::Legacy | caps::MouseCapability::Sgr | caps::MouseCapability::SgrExtended => {
+        caps::MouseCapability::Legacy
+        | caps::MouseCapability::Sgr
+        | caps::MouseCapability::SgrExtended => {
             writer.queue(EnableMouseCapture)?;
             writer.flush()
         }
     }
 }
 
-
-
-fn enable_focus_tracking<W: io::Write>(
-    writer: &mut W,
-    caps: &caps::TermCaps,
-) -> io::Result<()> {
+fn enable_focus_tracking<W: io::Write>(writer: &mut W, caps: &caps::TermCaps) -> io::Result<()> {
     if caps.focus_tracking {
         writer.queue(EnableFocusChange)?;
     }
@@ -236,7 +231,10 @@ mod tests {
         };
         enable_mouse_grok_style(&mut buf, &caps).unwrap();
         let s = String::from_utf8(buf).unwrap();
-        assert!(s.contains("\x1b[?1049h"), "missing ?1049h (alternate screen)");
+        assert!(
+            s.contains("\x1b[?1049h"),
+            "missing ?1049h (alternate screen)"
+        );
         // EnableMouseCapture enables 1000, 1002, 1003, 1015, 1006.
         assert!(s.contains("\x1b[?1000h"), "missing ?1000h");
         assert!(s.contains("\x1b[?1002h"), "missing ?1002h");
@@ -244,7 +242,10 @@ mod tests {
         assert!(s.contains("\x1b[?1015h"), "missing ?1015h");
         assert!(s.contains("\x1b[?1006h"), "missing ?1006h");
         assert!(s.contains("\x1b[?1004h"), "missing ?1004h (focus)");
-        assert!(s.contains("\x1b[?2004h"), "missing ?2004h (bracketed paste)");
+        assert!(
+            s.contains("\x1b[?2004h"),
+            "missing ?2004h (bracketed paste)"
+        );
         assert!(s.contains("\x1b[?2026h"), "missing ?2026h (sync update)");
         assert!(s.contains("\x1b[?25l"), "missing ?25l (hide cursor)");
         assert!(s.contains("\x1b[1 q"), "missing block cursor");
@@ -261,7 +262,10 @@ mod tests {
         enable_mouse_grok_style(&mut buf, &caps).unwrap();
         let s = String::from_utf8(buf).unwrap();
         // Only alternate screen + focus (false) + bracketed + sync + cursor (always emitted)
-        assert!(s.contains("\x1b[?1049h"), "should still have alternate screen");
+        assert!(
+            s.contains("\x1b[?1049h"),
+            "should still have alternate screen"
+        );
         assert!(!s.contains("?1000"), "should not emit mouse modes");
         assert!(!s.contains("?1002"), "should not emit mouse modes");
         assert!(!s.contains("?1003"), "should not emit mouse modes");
@@ -274,7 +278,10 @@ mod tests {
         let s = String::from_utf8(buf).unwrap();
         assert!(s.contains("\x1b[?2026l"), "missing ?2026l (sync end)");
         assert!(s.contains("\x1b[?25h"), "missing ?25h (show cursor)");
-        assert!(s.contains("\x1b[?2004l"), "missing ?2004l (bracketed paste)");
+        assert!(
+            s.contains("\x1b[?2004l"),
+            "missing ?2004l (bracketed paste)"
+        );
         assert!(s.contains("\x1b[?1004l"), "missing ?1004l (focus)");
         assert!(s.contains("\x1b[?1000l"), "missing ?1000l");
         assert!(s.contains("\x1b[?1049l"), "missing ?1049l (exit alternate)");

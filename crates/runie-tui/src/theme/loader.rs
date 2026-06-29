@@ -112,7 +112,8 @@ fn quantize_theme(
     }
 
     // Reconstruct: load fresh theme and register quantized tokens on top.
-    let mut result = load_theme_raw(name).expect("load_theme_raw must succeed in quantize_theme (fallback should have resolved)");
+    let mut result = load_theme_raw(name)
+        .expect("load_theme_raw must succeed in quantize_theme (fallback should have resolved)");
     for (k, v) in &quantized {
         result.register_token(k, *v);
     }
@@ -173,9 +174,9 @@ fn ansi16_to_opaline(i: u8) -> opaline::OpalineColor {
 
 fn ansi256_cube_to_opaline(i: u8) -> opaline::OpalineColor {
     let n = i - 16;
-    let r = n / 36 ;
-    let g = (n % 36) / 6 ;
-    let b = n % 6 ;
+    let r = n / 36;
+    let g = (n % 36) / 6;
+    let b = n % 6;
     let channel = |v: u8| if v == 0 { 0 } else { 95 + (v - 1) * 40 };
     opaline::OpalineColor::new(channel(r), channel(g), channel(b))
 }

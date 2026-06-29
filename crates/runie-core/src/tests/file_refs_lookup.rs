@@ -26,7 +26,13 @@ fn at_ref_opens_file_picker_dialog() {
     let mut state = AppState::default();
     state.update(crate::Event::Input('@'));
     assert!(
-        matches!(state.open_dialog, Some(DialogState::Active { kind: DialogKind::Generic, panels: _ })),
+        matches!(
+            state.open_dialog,
+            Some(DialogState::Active {
+                kind: DialogKind::Generic,
+                panels: _
+            })
+        ),
         "@ should open a PanelStack file picker dialog"
     );
 }
@@ -37,7 +43,10 @@ fn at_ref_dialog_has_file_items() {
     inject_mock_files(&mut state);
     state.update(crate::Event::Input('@'));
     let stack = match &state.open_dialog {
-        Some(DialogState::Active { kind: DialogKind::Generic, panels: s }) => s,
+        Some(DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: s,
+        }) => s,
         _ => panic!("Expected PanelStack dialog"),
     };
     let panel = stack.current().expect("PanelStack should have a panel");
@@ -54,7 +63,10 @@ fn at_ref_dialog_is_filterable() {
     let mut state = AppState::default();
     state.update(crate::Event::Input('@'));
     let stack = match &state.open_dialog {
-        Some(DialogState::Active { kind: DialogKind::Generic, panels: s }) => s,
+        Some(DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: s,
+        }) => s,
         _ => panic!("Expected PanelStack dialog"),
     };
     let panel = stack.current().expect("PanelStack should have a panel");
@@ -69,7 +81,10 @@ fn at_ref_select_inserts_file_path() {
     // Find a file item and select it
     let label = {
         let stack = match &state.open_dialog {
-            Some(DialogState::Active { kind: DialogKind::Generic, panels: s }) => s,
+            Some(DialogState::Active {
+                kind: DialogKind::Generic,
+                panels: s,
+            }) => s,
             _ => panic!("Expected PanelStack dialog"),
         };
         let panel = stack.current().expect("Panel should exist");

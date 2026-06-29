@@ -6,18 +6,20 @@ use crate::tests::view;
 
 fn palette_state(state: &AppState) -> Option<(String, usize)> {
     match &state.open_dialog {
-        Some(DialogState::Active { kind: DialogKind::CommandPalette, panels: stack }) => {
-            stack.current().map(|p| (p.filter.clone(), p.selected))
-        }
+        Some(DialogState::Active {
+            kind: DialogKind::CommandPalette,
+            panels: stack,
+        }) => stack.current().map(|p| (p.filter.clone(), p.selected)),
         _ => None,
     }
 }
 
 fn model_selector_state(state: &AppState) -> Option<(String, usize)> {
     match &state.open_dialog {
-        Some(DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
-            stack.current().map(|p| (p.filter.clone(), p.selected))
-        }
+        Some(DialogState::Active {
+            kind: DialogKind::ModelSelector,
+            panels: stack,
+        }) => stack.current().map(|p| (p.filter.clone(), p.selected)),
         _ => None,
     }
 }
@@ -110,7 +112,13 @@ fn esc_from_subdialog_returns_to_palette() {
     // Esc on the sub-dialog must pop back to the palette, not close.
     state.update(Event::dialog_back());
     assert!(
-        matches!(state.open_dialog, Some(DialogState::Active { kind: DialogKind::CommandPalette, panels: _ })),
+        matches!(
+            state.open_dialog,
+            Some(DialogState::Active {
+                kind: DialogKind::CommandPalette,
+                panels: _
+            })
+        ),
         "Esc on sub-dialog must return to the palette, got {:?}",
         state.open_dialog
     );
@@ -233,7 +241,13 @@ fn esc_restores_palette_in_same_state() {
 
     state.update(Event::palette_select());
     assert!(
-        !matches!(state.open_dialog, Some(DialogState::Active { kind: DialogKind::CommandPalette, panels: _ })),
+        !matches!(
+            state.open_dialog,
+            Some(DialogState::Active {
+                kind: DialogKind::CommandPalette,
+                panels: _
+            })
+        ),
         "Sub-dialog should be open"
     );
 

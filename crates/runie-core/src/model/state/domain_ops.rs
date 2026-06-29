@@ -5,7 +5,7 @@
 
 use super::ranking;
 use super::{AppState, CommandUsage, ModelSource};
-use crate::actors::{LeaderHandle, ConfigMsg};
+use crate::actors::{ConfigMsg, LeaderHandle};
 use crate::event::TransientLevel;
 
 impl AppState {
@@ -265,7 +265,9 @@ impl AppState {
         if let Some(h) = self.actor_handles() {
             if tokio::runtime::Handle::try_current().is_ok() {
                 let name = name.to_owned();
-                let _ = h.config.try_send(ConfigMsg::SetProviderModels { name, models });
+                let _ = h
+                    .config
+                    .try_send(ConfigMsg::SetProviderModels { name, models });
             }
         }
     }

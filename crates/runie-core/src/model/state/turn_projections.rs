@@ -102,7 +102,12 @@ impl AppState {
     }
 
     /// Project TokenStatsUpdated fact into AppState.
-    pub(crate) fn apply_token_stats(&mut self, tokens_in: usize, tokens_out: usize, speed_tps: f64) {
+    pub(crate) fn apply_token_stats(
+        &mut self,
+        tokens_in: usize,
+        tokens_out: usize,
+        speed_tps: f64,
+    ) {
         self.agent_state_mut().tokens_in = tokens_in;
         self.agent_state_mut().tokens_out = tokens_out;
         self.agent_state_mut().speed_tps = speed_tps;
@@ -117,7 +122,9 @@ impl AppState {
             role: Role::User,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![Part::Text { content: content.clone() }],
+            parts: vec![Part::Text {
+                content: content.clone(),
+            }],
             ..Default::default()
         });
         self.agent_state_mut()
@@ -131,15 +138,17 @@ impl AppState {
     pub(crate) fn apply_steering_delivered(&mut self, content: String, id: String) {
         use crate::message::{now, ChatMessage, Part, Role};
         // Remove from AppState mirror of message_queue (if present)
-        self.agent_state_mut()
-            .message_queue
-            .retain(|m| !(m.kind == crate::model::QueuedMessageKind::Steering && m.content != content));
+        self.agent_state_mut().message_queue.retain(|m| {
+            !(m.kind == crate::model::QueuedMessageKind::Steering && m.content != content)
+        });
         // Add to session
         self.session_mut().messages.push(ChatMessage {
             role: Role::User,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![Part::Text { content: content.clone() }],
+            parts: vec![Part::Text {
+                content: content.clone(),
+            }],
             ..Default::default()
         });
         // Add to request_queue (for agent to pick up)
@@ -154,15 +163,17 @@ impl AppState {
     pub(crate) fn apply_follow_up_delivered(&mut self, content: String, id: String) {
         use crate::message::{now, ChatMessage, Part, Role};
         // Remove from AppState mirror of message_queue (if present)
-        self.agent_state_mut()
-            .message_queue
-            .retain(|m| !(m.kind == crate::model::QueuedMessageKind::FollowUp && m.content != content));
+        self.agent_state_mut().message_queue.retain(|m| {
+            !(m.kind == crate::model::QueuedMessageKind::FollowUp && m.content != content)
+        });
         // Add to session
         self.session_mut().messages.push(ChatMessage {
             role: Role::User,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![Part::Text { content: content.clone() }],
+            parts: vec![Part::Text {
+                content: content.clone(),
+            }],
             ..Default::default()
         });
         // Add to request_queue (for agent to pick up)

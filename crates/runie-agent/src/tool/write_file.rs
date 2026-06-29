@@ -23,7 +23,8 @@ impl ToolDef for WriteFileTool {
     type Input = WriteFileInput;
 
     const NAME: &'static str = "write_file";
-    const DESCRIPTION: &'static str = "Write content to a file, creating parent directories as needed.";
+    const DESCRIPTION: &'static str =
+        "Write content to a file, creating parent directories as needed.";
     const READ_ONLY: bool = false;
     const REQUIRES_APPROVAL: bool = true;
 

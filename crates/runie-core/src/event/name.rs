@@ -12,7 +12,10 @@ impl Event {
     pub fn name(&self) -> Option<&'static str> {
         let self_name: &'static str = self.into();
         // Check if this variant is in the bindable set (zero-arg variants).
-        EVENT_NAMES.iter().any(|(n, _)| *n == self_name).then_some(self_name)
+        EVENT_NAMES
+            .iter()
+            .any(|(n, _)| *n == self_name)
+            .then_some(self_name)
     }
 
     /// Build an Event from its canonical name. Supports `Input:<char>` prefix.
@@ -21,6 +24,9 @@ impl Event {
             let c = rest.chars().next()?;
             return Some(Event::Input(c));
         }
-        EVENT_NAMES.iter().find(|(n, _)| *n == name).map(|(_, ctor)| ctor())
+        EVENT_NAMES
+            .iter()
+            .find(|(n, _)| *n == name)
+            .map(|(_, ctor)| ctor())
     }
 }

@@ -3,10 +3,10 @@
 
 use crate::tests::ensure_mock_provider;
 use crate::{run_agent_turn_with_skills, AgentCommand};
+use parking_lot::Mutex;
 use runie_core::message::Role;
 use runie_testing::{allow_all_gate, mock_provider, mock_tool_skill};
 use std::sync::Arc;
-use parking_lot::Mutex;
 
 #[tokio::test]
 async fn agent_turn_state_no_raw_tool_markers() {
@@ -28,9 +28,7 @@ async fn agent_turn_state_no_raw_tool_markers() {
     run_agent_turn_with_skills(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().push(evt)
-        })),
+        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
         5,
         Some(&mock_tool_skill()),
         allow_all_gate(),

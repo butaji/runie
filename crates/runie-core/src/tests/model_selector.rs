@@ -8,9 +8,10 @@ use crate::model_catalog::{build_model_selector_items, filter_models, model_cata
 
 fn selector_state(state: &AppState) -> Option<(String, usize)> {
     match &state.open_dialog {
-        Some(DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
-            stack.current().map(|p| (p.filter.clone(), p.selected))
-        }
+        Some(DialogState::Active {
+            kind: DialogKind::ModelSelector,
+            panels: stack,
+        }) => stack.current().map(|p| (p.filter.clone(), p.selected)),
         _ => None,
     }
 }
@@ -212,9 +213,10 @@ fn empty_current_marker_when_no_active_model() {
     state.update(crate::Event::ToggleModelSelector);
 
     let items = match &state.open_dialog {
-        Some(DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
-            stack.current().map(|p| p.items.clone()).unwrap_or_default()
-        }
+        Some(DialogState::Active {
+            kind: DialogKind::ModelSelector,
+            panels: stack,
+        }) => stack.current().map(|p| p.items.clone()).unwrap_or_default(),
         _ => Vec::new(),
     };
     assert!(
@@ -287,9 +289,10 @@ fn selector_wraps_down() {
     );
     state.update(crate::Event::ToggleModelSelector);
     let count = match &state.open_dialog {
-        Some(DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
-            stack.current().map(|p| p.navigable_count()).unwrap_or(0)
-        }
+        Some(DialogState::Active {
+            kind: DialogKind::ModelSelector,
+            panels: stack,
+        }) => stack.current().map(|p| p.navigable_count()).unwrap_or(0),
         _ => 0,
     };
     for _ in 0..count {

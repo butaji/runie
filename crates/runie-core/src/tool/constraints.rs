@@ -13,13 +13,20 @@ use serde_json::Value;
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Constraint {
     /// If field A is true, field B must also be true (or present).
-    Implication { if_field: String, then_field: String },
+    Implication {
+        if_field: String,
+        then_field: String,
+    },
     /// Only one of the listed fields may be set.
     Mutex { fields: Vec<String> },
     /// At least one of the listed fields must be set.
     RequireOne { fields: Vec<String> },
     /// Numeric field must be within range.
-    Range { field: String, min: Option<f64>, max: Option<f64> },
+    Range {
+        field: String,
+        min: Option<f64>,
+        max: Option<f64>,
+    },
     /// String field must match regex pattern.
     Pattern { field: String, pattern: String },
 }
@@ -27,27 +34,41 @@ pub enum Constraint {
 impl Constraint {
     /// Create an implication constraint: `if_field implies then_field`.
     pub fn implication(if_field: impl Into<String>, then_field: impl Into<String>) -> Self {
-        Self::Implication { if_field: if_field.into(), then_field: then_field.into() }
+        Self::Implication {
+            if_field: if_field.into(),
+            then_field: then_field.into(),
+        }
     }
 
     /// Create a mutex constraint: only one field can be set.
     pub fn mutex(fields: impl Into<Vec<String>>) -> Self {
-        Self::Mutex { fields: fields.into() }
+        Self::Mutex {
+            fields: fields.into(),
+        }
     }
 
     /// Create a require-one constraint: at least one field must be set.
     pub fn require_one(fields: impl Into<Vec<String>>) -> Self {
-        Self::RequireOne { fields: fields.into() }
+        Self::RequireOne {
+            fields: fields.into(),
+        }
     }
 
     /// Create a range constraint: field must be between min and max.
     pub fn range(field: impl Into<String>, min: Option<f64>, max: Option<f64>) -> Self {
-        Self::Range { field: field.into(), min, max }
+        Self::Range {
+            field: field.into(),
+            min,
+            max,
+        }
     }
 
     /// Create a pattern constraint: field must match regex.
     pub fn pattern(field: impl Into<String>, pattern: impl Into<String>) -> Self {
-        Self::Pattern { field: field.into(), pattern: pattern.into() }
+        Self::Pattern {
+            field: field.into(),
+            pattern: pattern.into(),
+        }
     }
 }
 
@@ -67,12 +88,19 @@ pub struct ValidationResult {
 impl ValidationResult {
     /// Create an empty (valid) result.
     pub fn valid() -> Self {
-        Self { violations: Vec::new() }
+        Self {
+            violations: Vec::new(),
+        }
     }
 
     /// Create a result with a single violation.
     pub fn violated(constraint: Constraint, message: impl Into<String>) -> Self {
-        Self { violations: vec![ConstraintViolation { constraint, message: message.into() }] }
+        Self {
+            violations: vec![ConstraintViolation {
+                constraint,
+                message: message.into(),
+            }],
+        }
     }
 
     /// Check if validation passed.
@@ -82,7 +110,10 @@ impl ValidationResult {
 
     /// Add a violation.
     pub fn add_violation(&mut self, constraint: Constraint, message: impl Into<String>) {
-        self.violations.push(ConstraintViolation { constraint, message: message.into() });
+        self.violations.push(ConstraintViolation {
+            constraint,
+            message: message.into(),
+        });
     }
 
     /// Merge another result into this one.
@@ -117,7 +148,11 @@ fn is_present(value: &Value) -> bool {
 // Individual constraint validators
 // ---------------------------------------------------------------------------
 
-fn validate_implication(if_field: &str, then_field: &str, args: &Value) -> Option<ConstraintViolation> {
+fn validate_implication(
+    if_field: &str,
+    then_field: &str,
+    args: &Value,
+) -> Option<ConstraintViolation> {
     let if_value = get_field(args, if_field)?;
     let then_value = args.get(then_field);
     if is_truthy(if_value) && (then_value.is_none() || !is_present(then_value.unwrap())) {
@@ -130,22 +165,27 @@ fn validate_implication(if_field: &str, then_field: &str, args: &Value) -> Optio
 }
 
 fn validate_mutex(fields: &[String], args: &Value) -> Option<ConstraintViolation> {
-    let present: Vec<_> = fields.iter().filter(|f| {
-        get_field(args, f).map(is_present).unwrap_or(false)
-    }).collect();
+    let present: Vec<_> = fields
+        .iter()
+        .filter(|f| get_field(args, f).map(is_present).unwrap_or(false))
+        .collect();
     if present.len() > 1 {
         return Some(ConstraintViolation {
             constraint: Constraint::mutex(fields.to_vec()),
-            message: format!("only one of [{}] may be set, but {} are present", fields.join(", "), present.len()),
+            message: format!(
+                "only one of [{}] may be set, but {} are present",
+                fields.join(", "),
+                present.len()
+            ),
         });
     }
     None
 }
 
 fn validate_require_one(fields: &[String], args: &Value) -> Option<ConstraintViolation> {
-    let any_present = fields.iter().any(|f| {
-        get_field(args, f).map(is_present).unwrap_or(false)
-    });
+    let any_present = fields
+        .iter()
+        .any(|f| get_field(args, f).map(is_present).unwrap_or(false));
     if !any_present {
         return Some(ConstraintViolation {
             constraint: Constraint::require_one(fields.to_vec()),
@@ -155,9 +195,16 @@ fn validate_require_one(fields: &[String], args: &Value) -> Option<ConstraintVio
     None
 }
 
-fn validate_range(field: &str, min: Option<f64>, max: Option<f64>, args: &Value) -> Option<ConstraintViolation> {
+fn validate_range(
+    field: &str,
+    min: Option<f64>,
+    max: Option<f64>,
+    args: &Value,
+) -> Option<ConstraintViolation> {
     let value = get_field(args, field)?;
-    let num = value.as_f64().or_else(|| value.as_i64().map(|n| n as f64))?;
+    let num = value
+        .as_f64()
+        .or_else(|| value.as_i64().map(|n| n as f64))?;
     if let Some(min_val) = min {
         if num < min_val {
             return Some(ConstraintViolation {
@@ -194,7 +241,10 @@ fn validate_pattern(field: &str, pattern: &str, args: &Value) -> Option<Constrai
 /// Validate a single constraint against tool arguments.
 pub fn validate_constraint(constraint: &Constraint, args: &Value) -> Option<ConstraintViolation> {
     match constraint {
-        Constraint::Implication { if_field, then_field } => validate_implication(if_field, then_field, args),
+        Constraint::Implication {
+            if_field,
+            then_field,
+        } => validate_implication(if_field, then_field, args),
         Constraint::Mutex { fields } => validate_mutex(fields, args),
         Constraint::RequireOne { fields } => validate_require_one(fields, args),
         Constraint::Range { field, min, max } => validate_range(field, *min, *max, args),
@@ -346,7 +396,10 @@ mod tests {
     #[test]
     fn validation_result_merge() {
         let mut result = ValidationResult::valid();
-        result.merge(ValidationResult::violated(Constraint::implication("a", "b"), "a implies b"));
+        result.merge(ValidationResult::violated(
+            Constraint::implication("a", "b"),
+            "a implies b",
+        ));
         assert!(!result.is_valid());
         assert_eq!(result.violations.len(), 1);
     }

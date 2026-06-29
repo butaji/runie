@@ -20,8 +20,7 @@ use super::{
 /// NOTE: View projection (Element/Post/Feed) is no longer cached in AppState.
 /// The projection is built on-demand by `ensure_fresh()` and stored in `Snapshot`.
 /// UiActor owns the Element cache for rendering purposes.
-#[derive(Clone)]
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct AppState {
     // 6 inner state structs (factored domain state)
     // `session` transitions to private once all direct mutations are removed
@@ -55,11 +54,13 @@ pub struct AppState {
     pub actor_handles: Option<crate::actors::LeaderHandle>,
 }
 
-
 impl AppState {
     /// Create a test AppState with specific transient message.
     #[doc(hidden)]
-    pub fn __with_transient_test(msg: Option<String>, level: Option<crate::event::TransientLevel>) -> Self {
+    pub fn __with_transient_test(
+        msg: Option<String>,
+        level: Option<crate::event::TransientLevel>,
+    ) -> Self {
         let mut state = Self::default();
         *state.transient_message_mut() = msg;
         *state.transient_level_mut() = level;
@@ -68,7 +69,11 @@ impl AppState {
 
     /// Set transient message and level for tests.
     #[doc(hidden)]
-    pub fn __set_transient_for_test(&mut self, msg: Option<String>, level: Option<crate::event::TransientLevel>) {
+    pub fn __set_transient_for_test(
+        &mut self,
+        msg: Option<String>,
+        level: Option<crate::event::TransientLevel>,
+    ) {
         *self.transient_message_mut() = msg;
         *self.transient_level_mut() = level;
     }

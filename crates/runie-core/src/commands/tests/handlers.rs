@@ -42,7 +42,10 @@ fn help_panel_lists_commands() {
     let mut state = AppState::default();
     run_slash(&mut state, "/help");
     let stack = match &state.open_dialog {
-        Some(DialogState::Active { kind: DialogKind::Generic, panels: s }) => s,
+        Some(DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: s,
+        }) => s,
         other => panic!("expected PanelStack, got {:?}", other),
     };
     let panel = stack.current().expect("panel should exist");

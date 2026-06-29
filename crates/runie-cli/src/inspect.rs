@@ -5,8 +5,8 @@
 //! permission rules, and config sources.
 
 use runie_core::config::Config;
-use runie_core::subagents::{PromptMode, PermissionMode, SubagentRegistry};
 use runie_core::skills::{load_all, Skill};
+use runie_core::subagents::{PermissionMode, PromptMode, SubagentRegistry};
 
 use std::collections::HashSet;
 
@@ -92,7 +92,9 @@ impl InspectReport {
     /// Build a full inspect report asynchronously using ConfigActor.
     pub async fn build_with_config_actor(config_handle: &ConfigHandle) -> Self {
         let config = config_handle.load_layers().await.unwrap_or_default();
-        let skills = tokio::task::spawn_blocking(load_all).await.unwrap_or_default();
+        let skills = tokio::task::spawn_blocking(load_all)
+            .await
+            .unwrap_or_default();
         let subagent_registry = SubagentRegistry::from_builtins();
 
         Self {
@@ -134,7 +136,10 @@ impl InspectReport {
             if !seen.contains(&global) {
                 seen.insert(global.clone());
                 let loaded = std::path::Path::new(&global).exists();
-                sources.push(ConfigSource { path: global, loaded });
+                sources.push(ConfigSource {
+                    path: global,
+                    loaded,
+                });
             }
         }
 
@@ -143,7 +148,10 @@ impl InspectReport {
             if !seen.contains(&local) {
                 seen.insert(local.clone());
                 let loaded = std::path::Path::new(&local).exists();
-                sources.push(ConfigSource { path: local, loaded });
+                sources.push(ConfigSource {
+                    path: local,
+                    loaded,
+                });
             }
         }
 
@@ -151,8 +159,12 @@ impl InspectReport {
     }
 
     fn global_config_path() -> Option<String> {
-        dirs::home_dir()
-            .map(|p| p.join(".runie").join("config.toml").to_string_lossy().to_string())
+        dirs::home_dir().map(|p| {
+            p.join(".runie")
+                .join("config.toml")
+                .to_string_lossy()
+                .to_string()
+        })
     }
 
     fn local_config_path() -> Option<String> {
@@ -307,7 +319,10 @@ impl InspectReport {
                 } else {
                     format!(" (aliases: {})", cmd.aliases.join(", "))
                 };
-                println!("  /{} [{}] — {}{}", cmd.name, cmd.category, cmd.description, aliases);
+                println!(
+                    "  /{} [{}] — {}{}",
+                    cmd.name, cmd.category, cmd.description, aliases
+                );
             }
         }
         println!();
@@ -321,7 +336,10 @@ impl InspectReport {
             for agent in &self.subagents {
                 let agents_md = if agent.agents_md { " (AGENTS.md)" } else { "" };
                 println!("  • {} — {}{}", agent.name, agent.description, agents_md);
-                println!("    mode: {}, perms: {}", agent.prompt_mode, agent.permission_mode);
+                println!(
+                    "    mode: {}, perms: {}",
+                    agent.prompt_mode, agent.permission_mode
+                );
             }
         }
         println!();
@@ -389,7 +407,11 @@ impl InspectReport {
         } else {
             format!(" [{}]", flags.join(", "))
         };
-        let suffix = format!("{}{}", flags_str, context.map(|c| format!(" ({})", c)).unwrap_or_default());
+        let suffix = format!(
+            "{}{}",
+            flags_str,
+            context.map(|c| format!(" ({})", c)).unwrap_or_default()
+        );
         println!("    • {}{}", model.name, suffix);
     }
 
@@ -417,7 +439,10 @@ impl InspectReport {
             model_catalog: &self.model_catalog,
         };
 
-        println!("{}", serde_json::to_string_pretty(&report).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&report).unwrap_or_default()
+        );
     }
 }
 
@@ -455,8 +480,14 @@ mod tests {
     #[test]
     fn inspect_report_builds_without_panic() {
         let report = InspectReport::build();
-        assert!(!report.commands.is_empty(), "Expected commands to be registered");
-        assert!(!report.model_catalog.is_empty(), "Expected model catalog entries");
+        assert!(
+            !report.commands.is_empty(),
+            "Expected commands to be registered"
+        );
+        assert!(
+            !report.model_catalog.is_empty(),
+            "Expected model catalog entries"
+        );
     }
 
     #[test]

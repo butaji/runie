@@ -23,7 +23,9 @@ pub struct MdSpan {
 /// producing styled `MdSpan`s for rendering.
 pub fn apply_color_to_inlines(inlines: &[MdInline], base_color: Color) -> Vec<MdSpan> {
     let base = ratatui::style::Style::default().fg(base_color);
-    let code_style = ratatui::style::Style::default().fg(color_accent()).bg(color_code_bg());
+    let code_style = ratatui::style::Style::default()
+        .fg(color_accent())
+        .bg(color_code_bg());
     let mut spans = Vec::new();
     let style_stack: Vec<ratatui::style::Style> = vec![base];
 

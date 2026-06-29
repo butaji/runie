@@ -46,7 +46,11 @@ impl ToolDef for SearchTool {
 
     async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput {
         let start = Instant::now();
-        let mode = input.mode.as_ref().map(|s| SearchMode::from_str(s)).unwrap_or_default();
+        let mode = input
+            .mode
+            .as_ref()
+            .map(|s| SearchMode::from_str(s))
+            .unwrap_or_default();
         let path = input.path.as_deref().unwrap_or(".");
         let limit = input.limit.unwrap_or(DEFAULT_LIMIT);
         let full_path = resolve_path_in(path, &ctx.working_dir);
@@ -87,7 +91,8 @@ fn search_not_initialized_error(query: &str, start: Instant) -> ToolOutput {
         "items",
         false,
         start,
-    ).unwrap_or_else(|_| search_error(query, start, "FFF indexer not initialized".to_owned()))
+    )
+    .unwrap_or_else(|_| search_error(query, start, "FFF indexer not initialized".to_owned()))
 }
 
 fn execute_search_with_picker(
@@ -111,7 +116,8 @@ fn execute_search_with_picker(
                 |qt| dispatch_search(picker, qt, query, mode, limit, start),
             ))
         },
-    ).unwrap_or_else(|e| search_error(query, start, format!("search error: {}", e)))
+    )
+    .unwrap_or_else(|e| search_error(query, start, format!("search error: {}", e)))
 }
 
 fn build_search_lock_error(msg: String, duration: std::time::Duration) -> ToolOutput {
@@ -136,12 +142,7 @@ fn build_search_not_initialized(query: String, duration: std::time::Duration) ->
     )
 }
 
-fn with_query_tracker<F>(
-    state: &FffSearchState,
-    query: String,
-    start: Instant,
-    f: F,
-) -> ToolOutput
+fn with_query_tracker<F>(state: &FffSearchState, query: String, start: Instant, f: F) -> ToolOutput
 where
     F: FnOnce(Option<&QueryTracker>) -> ToolOutput,
 {
