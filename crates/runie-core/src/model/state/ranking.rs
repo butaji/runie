@@ -2,6 +2,11 @@ use super::helpers::compute_ranking_score;
 use super::CommandUsage;
 use std::collections::HashMap;
 
+/// Score a fuzzy match between `query` and `candidate` using `sublime_fuzzy`.
+fn fuzzy_score(query: &str, candidate: &str) -> Option<i32> {
+    sublime_fuzzy::best_match(query, candidate).map(|m| m.score() as i32)
+}
+
 pub fn rank_commands_empty_query(
     command_usage: &HashMap<String, CommandUsage>,
     all: &[&crate::commands::CommandDef],
@@ -28,8 +33,8 @@ pub fn rank_commands_with_query(
     let mut ranked: Vec<_> = all
         .iter()
         .filter_map(|cmd| {
-            let base = crate::fuzzy::score(query, &cmd.name)
-                .or_else(|| crate::fuzzy::score(query, &cmd.desc))?;
+            let base = fuzzy_score(query, &cmd.name)
+                .or_else(|| fuzzy_score(query, &cmd.desc))?;
             let usage = command_usage.get(&cmd.name);
             let score = compute_ranking_score(query, cmd, usage) + base * 100;
             Some((cmd.name.clone(), score))

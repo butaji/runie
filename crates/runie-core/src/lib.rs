@@ -42,8 +42,6 @@ pub mod edit_preview;
 pub mod error;
 pub mod event;
 pub mod file_refs;
-pub mod fuzzy;
-pub mod glob;
 pub mod headless_runtime;
 pub mod hooks;
 pub mod input_history;

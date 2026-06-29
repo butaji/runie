@@ -21,7 +21,7 @@
 //! scope = "project"
 //! ```
 
-use crate::glob::matches;
+use glob::Pattern;
 use serde::{Deserialize, Serialize};
 
 use super::PermissionAction;
@@ -89,19 +89,19 @@ impl PermissionRule {
     }
 
     fn matches_tool(&self, tool: &str) -> bool {
-        matches(&self.tool, tool)
+        glob_matches(&self.tool, tool)
     }
 
     fn matches_path(&self, path: &str) -> bool {
         match &self.path {
-            Some(p) => matches(p, path),
+            Some(p) => glob_matches(p, path),
             None => true,
         }
     }
 
     fn matches_pattern(&self, cmd: &str) -> bool {
         match &self.pattern {
-            Some(p) => matches(p, cmd),
+            Some(p) => glob_matches(p, cmd),
             None => true,
         }
     }
@@ -287,4 +287,11 @@ fn allow_rule(tool: &str) -> PermissionRule {
 
 fn ask_rule(tool: &str) -> PermissionRule {
     PermissionRule::new(PermissionAction::Ask, tool)
+}
+
+/// Match a glob pattern against a string using the `glob` crate.
+fn glob_matches(pattern: &str, name: &str) -> bool {
+    Pattern::new(pattern)
+        .map(|p| p.matches(name))
+        .unwrap_or(false)
 }

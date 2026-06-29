@@ -237,7 +237,7 @@
   {
     "file": "simplify-terminal-capability-detection.md",
     "title": "Simplify terminal capability detection",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",

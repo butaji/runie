@@ -18,7 +18,6 @@
 use std::path::Path;
 
 use async_trait::async_trait;
-use crate::glob::matches;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -184,7 +183,15 @@ pub fn is_sensitive_path(path: &str) -> bool {
         ".aws/*",
         "**/.git/config",
     ];
-    sensitive.iter().any(|p| matches(p, path))
+    sensitive.iter().any(|p| glob_matches(p, path))
+}
+
+/// Match a glob pattern against a string using the `glob` crate.
+fn glob_matches(pattern: &str, name: &str) -> bool {
+    use glob::Pattern;
+    Pattern::new(pattern)
+        .map(|p| p.matches(name))
+        .unwrap_or(false)
 }
 
 /// Build an approval sink based on yolo mode.

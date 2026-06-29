@@ -1,7 +1,6 @@
 //! Fuzzy filtering score for panel items.
 
 use crate::dialog::PanelItem;
-use crate::fuzzy;
 
 /// Score how well a `label` matches a `query`. Higher is better.
 /// Priority: startsWith > contains > fuzzy character-order match.
@@ -18,7 +17,7 @@ pub fn match_score(label: &str, query: &str) -> Option<isize> {
     if label_lower.contains(&query_lower) {
         return Some(5_000 + (100 - label.len() as isize).max(0));
     }
-    fuzzy::score(query, label).map(|s| s as isize)
+    fuzzy_score(query, label).map(|s| s as isize)
 }
 
 /// Score any panel item, using command-aware matching for palette entries.
@@ -64,5 +63,10 @@ fn command_match_score(name: &str, desc: &str, label: &str, query: &str) -> Opti
     }
 
     // Fuzzy match against the command name so "mdl" can still find "model".
-    fuzzy::score(query, name).map(|s| s as isize)
+    fuzzy_score(query, name).map(|s| s as isize)
+}
+
+/// Score a fuzzy match between `query` and `candidate` using `sublime_fuzzy`.
+fn fuzzy_score(query: &str, candidate: &str) -> Option<i32> {
+    sublime_fuzzy::best_match(query, candidate).map(|m| m.score() as i32)
 }

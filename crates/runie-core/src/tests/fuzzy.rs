@@ -1,13 +1,18 @@
-//! Tests for fuzzy file matching
+//! Tests for fuzzy matching using `sublime_fuzzy`
+
+/// Score a fuzzy match between `query` and `candidate`.
+fn fuzzy_score(query: &str, candidate: &str) -> Option<i32> {
+    sublime_fuzzy::best_match(query, candidate).map(|m| m.score() as i32)
+}
 
 #[cfg(test)]
 mod tests {
-    use crate::fuzzy::fuzzy_match;
+    use super::*;
 
     #[test]
     fn exact_match_scores_highest() {
-        let score = fuzzy_match("hello", "hello").unwrap();
-        let partial = fuzzy_match("hel", "hello").unwrap();
+        let score = fuzzy_score("hello", "hello").unwrap();
+        let partial = fuzzy_score("hel", "hello").unwrap();
         assert!(
             score > partial,
             "Exact match should score higher than partial"
@@ -16,23 +21,23 @@ mod tests {
 
     #[test]
     fn partial_match_in_order() {
-        assert!(fuzzy_match("abc", "aabbcc").is_some());
+        assert!(fuzzy_score("abc", "aabbcc").is_some());
     }
 
     #[test]
     fn missing_char_returns_none() {
-        assert!(fuzzy_match("xyz", "abc").is_none());
+        assert!(fuzzy_score("xyz", "abc").is_none());
     }
 
     #[test]
     fn case_insensitive_match() {
-        assert!(fuzzy_match("HEL", "hello").is_some());
+        assert!(fuzzy_score("HEL", "hello").is_some());
     }
 
     #[test]
     fn shorter_query_matches_longer() {
-        let s = fuzzy_match("src", "source.rs").unwrap();
-        let l = fuzzy_match("srcmain", "source.rs");
+        let s = fuzzy_score("src", "source.rs").unwrap();
+        let l = fuzzy_score("srcmain", "source.rs");
         assert!(
             l.is_none() || l.unwrap() < s,
             "Shorter match should score higher or longer should not match"
@@ -41,8 +46,8 @@ mod tests {
 
     #[test]
     fn word_boundary_bonus() {
-        let with_boundary = fuzzy_match("mr", "main.rs").unwrap();
-        let without = fuzzy_match("mr", "mar").unwrap();
+        let with_boundary = fuzzy_score("mr", "main.rs").unwrap();
+        let without = fuzzy_score("mr", "mar").unwrap();
         assert!(
             with_boundary > without,
             "Match after dot boundary should score higher"
@@ -52,7 +57,7 @@ mod tests {
     #[test]
     fn empty_query_returns_none() {
         // sublime_fuzzy returns None for empty query (no characters to match)
-        assert!(fuzzy_match("", "anything").is_none());
+        assert!(fuzzy_score("", "anything").is_none());
     }
 
     #[test]
@@ -61,7 +66,7 @@ mod tests {
         let query = "mr";
         let mut results: Vec<_> = candidates
             .iter()
-            .filter_map(|c| fuzzy_match(query, c).map(|s| (c, s)))
+            .filter_map(|c| fuzzy_score(query, c).map(|s| (c, s)))
             .collect();
         results.sort_by_key(|b| std::cmp::Reverse(b.1));
         assert_eq!(results[0].0, &"main.rs", "Should match main.rs best");
@@ -69,15 +74,15 @@ mod tests {
 
     #[test]
     fn fuzzy_score_exact_match_beats_partial() {
-        let exact = fuzzy_match("hello", "hello").unwrap();
-        let partial = fuzzy_match("hel", "hello").unwrap();
+        let exact = fuzzy_score("hello", "hello").unwrap();
+        let partial = fuzzy_score("hel", "hello").unwrap();
         assert!(exact > partial, "Exact match should beat partial match");
     }
 
     #[test]
     fn fuzzy_score_start_bonus() {
-        let start = fuzzy_match("he", "hello").unwrap();
-        let middle = fuzzy_match("he", "ache").unwrap();
+        let start = fuzzy_score("he", "hello").unwrap();
+        let middle = fuzzy_score("he", "ache").unwrap();
         assert!(start > middle, "Start-of-word match should score higher");
     }
 
@@ -89,7 +94,7 @@ mod tests {
 
         let mut at_ref: Vec<_> = candidates
             .iter()
-            .filter_map(|c| fuzzy_match(query, c).map(|s| (c, s)))
+            .filter_map(|c| fuzzy_score(query, c).map(|s| (c, s)))
             .collect();
         at_ref.sort_by_key(|b| std::cmp::Reverse(b.1));
 
