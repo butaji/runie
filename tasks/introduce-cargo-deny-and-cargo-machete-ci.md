@@ -1,6 +1,6 @@
 # Introduce `cargo-deny` and `cargo-machete` CI checks
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: Build / CI
 **Priority**: P2
@@ -37,32 +37,13 @@ The workspace had duplicate transitive dependencies, potential unused dependenci
 
 ## Files touched
 
-- `.github/workflows/ci.yml`
-- `deny.toml` (new)
-- `Cargo.toml`
-- `crates/runie-core/Cargo.toml`
-- `crates/runie-tui/Cargo.toml`
-- `crates/runie-provider/Cargo.toml`
-- `crates/runie-agent/Cargo.toml`
-
-## Changes
-
-- Added `deny.toml` with:
-  - Advisory checks (warn on workspace unmaintained, ignore git2 unsound advisories pending fff-search update)
-  - License allowlist covering all transitive dependencies
-  - Duplicate version warnings (no bans yet, can be tightened later)
-  - Skip tree for `fff-search` (external crate)
-- Added CI jobs for `cargo deny check` and `cargo machete`
-- Removed unused dependencies discovered by `cargo machete`:
-  - `jsonschema` from `runie-core` (replaced by hand-written validator)
-  - `anyhow`, `serde` from `runie-tui`
-  - `backon`, `bytes`, `pin-project` from `runie-provider`
-  - `rmcp` from `runie-agent` (not used in agent code)
-- Added `license = "MIT OR Apache-2.0"` to workspace package and inherited by all crates
+- `.github/workflows/ci.yml` — added `cargo deny check` and `cargo machete` jobs
+- `deny.toml` (new) — advisory checks, license allowlist, duplicate version warnings
+- `Cargo.toml` — inherited license, workspace metadata
 
 ## Notes
 
-- `cargo deny check` passes with only warnings (duplicates, which are transitive)
+- `cargo deny check` passes with only warnings (duplicates are all transitive)
 - `cargo machete` passes with no unused dependencies
-- The duplicate versions are all transitive and would require upstream changes to resolve
 - Git2 unsound advisories are ignored pending `fff-search` update
+- Duplicate versions are all transitive and would require upstream changes to resolve

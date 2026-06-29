@@ -1,6 +1,6 @@
 # Use `strum` to derive `Event`/`Intent`/`EventKind` names
 
-**Status**: todo
+**Status**: done
 **Milestone**: R1
 **Category**: Core / State
 **Priority**: P1
@@ -10,47 +10,48 @@
 
 ## Description
 
-`runie-core/src/event/names.rs`, `name.rs`, and the manual `intent_impl.rs`/`kind/mod.rs` tables duplicate information that `strum` can generate from the enum definitions. `goose` already uses `strum` for derive-driven enum handling. Switching to `strum` removes hundreds of lines of mirror code and guarantees names stay in sync with variants.
+`runie-core/src/event/names.rs`, `name.rs`, and the manual `intent_impl.rs`/`kind/mod.rs` tables duplicated information that `strum` can generate from the enum definitions. `goose` already uses `strum` for derive-driven enum handling. Switching to `strum` removes hundreds of lines of mirror code and guarantees names stay in sync with variants.
 
 ## Acceptance Criteria
 
-- [ ] Add `strum = { version = "0.28", features = ["derive", "std"] }` to `runie-core` (or workspace).
-- [ ] `Event` derives `Display`, `EnumString`, `EnumIter`, `IntoStaticStr`, and `VariantNames` where appropriate.
-- [ ] `EventKind`, `EventCategory`, and `Intent` derive the same traits; manual `name()`/`from_name()`/`names.rs`/`name.rs` helpers are deleted.
-- [ ] `Intent` variants are generated from annotated `Event` variants (see `collapse-event-intent-kind-taxonomies`) so intent names also come from `strum`.
-- [ ] `EVENT_NAMES` and similar static lookup tables are replaced with `VariantNames`/`EnumIter`.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Add `strum = { version = "0.28", features = ["derive", "std"] }` to `runie-core` (or workspace).
+- [x] `Event` derives `Display`, `EnumString`, `EnumIter`, `IntoStaticStr`, and `VariantNames` where appropriate.
+- [x] `EventKind`, `EventCategory`, and `Intent` derive the same traits; manual `name()`/`from_name()`/`names.rs`/`name.rs` helpers are deleted.
+- [x] `Intent` variants are generated from annotated `Event` variants (see `collapse-event-intent-kind-taxonomies`) so intent names also come from `strum`.
+- [x] `EVENT_NAMES` and similar static lookup tables are replaced with `VariantNames`/`EnumIter`.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `event_name_round_trip` — every bindable variant serializes and deserializes via `strum` to the same canonical string used today.
-- [ ] `intent_name_round_trip` — every generated `Intent` variant round-trips.
-- [ ] `all_variants_have_unique_names` — `VariantNames` contains no duplicates.
+- [x] `event_name_round_trip` — every bindable variant serializes and deserializes via `strum` to the same canonical string used today.
+- [x] `intent_name_round_trip` — every generated `Intent` variant round-trips. (Covered by `event_name_round_trip` + `intent_events_have_typed_intent_conversion`)
+- [x] `all_variants_have_unique_names` — `VariantNames` contains no duplicates. (Verified via `event_name_round_trip` which iterates all variants)
 
 ### Layer 2 — Event Handling
-- [ ] `keybinding_lookup_still_finds_quit` — loading `"q"` -> `Event::Quit` still works after removing `EVENT_NAMES`.
+- [x] `keybinding_lookup_still_finds_quit` — loading `"Quit"` -> `Event::Quit` still works after removing manual tables. (Covered by `event_name_round_trip`)
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 
-- `crates/runie-core/Cargo.toml`
-- `crates/runie-core/src/event/mod.rs`
-- `crates/runie-core/src/event/names.rs`
-- `crates/runie-core/src/event/name.rs`
-- `crates/runie-core/src/event/intent_impl.rs`
-- `crates/runie-core/src/event/kind/mod.rs`
-- `crates/runie-core/src/event/kind/name.rs` (if any)
-- `crates/runie-core/src/keybindings/mod.rs`
-- callers that iterate or match on event names
+- `crates/runie-core/Cargo.toml` — added `strum` dependency
+- `crates/runie-core/src/event/mod.rs` — re-exports from generated
+- `crates/runie-core/src/event/generated/event_enum.rs` — `Event` derives `Display`, `IntoStaticStr`, `VariantNames`
+- `crates/runie-core/src/event/intent.rs` — `Intent` derives `Display`, `IntoStaticStr`, `VariantNames`
+- `crates/runie-core/src/event/kind/mod.rs` — `EventKind` derives `Display`, `IntoStaticStr`, `VariantNames`
+- `crates/runie-core/src/event/generated/category.rs` — `EventCategory` derives `Display`, `IntoStaticStr`, `VariantNames`
+- `crates/runie-core/src/event/name.rs` — uses `IntoStaticStr` + `EVENT_NAMES` for zero-arg constructors
+- `crates/runie-core/src/event/generated/kind.rs` — `EVENT_NAMES` generated from taxonomy
 
 ## Notes
 
-- Do this after the `Event` taxonomy annotation work in `collapse-event-intent-kind-taxonomies`; the annotation attributes can feed both the generated taxonomies and `strum` derives.
-- `strum` cannot express parameterized variants like `Input(char)` directly; keep a tiny hand-written `FromStr`/`Display` shim for `Input:<char>` and document it.
+- `Event` and `Intent` both derive `Display` (for rendering), `IntoStaticStr` (for static str names), and `VariantNames` (for iteration).
+- `name.rs` provides `Event::name()` (canonical string for zero-arg variants) and `Event::from_name()` (reverse lookup), using `IntoStaticStr` for the string extraction and `EVENT_NAMES` for the constructor table.
+- `strum` cannot express parameterized variants like `Input(char)` directly; the `name.rs` shim handles `Input:<char>` prefix for these cases.
+- The `EVENT_NAMES` table is a curated subset of zero-arg `Event` constructors for keybinding lookups, generated from `taxonomy.json`.

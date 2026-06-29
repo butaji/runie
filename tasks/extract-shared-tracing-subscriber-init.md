@@ -1,16 +1,16 @@
 # Extract shared tracing subscriber init
 
-**Status**: todo
+**Status**: done
 **Milestone**: R6
-**Category": Observability
-**Priority": P2
+**Category**: Observability
+**Priority**: P2
 
 **Depends on**: initialize-tracing-subscriber-in-binaries
 **Blocks**: none
 
 ## Description
 
-`runie-tui/src/main.rs` and `runie-cli/src/main.rs` contain identical `EnvFilter` + `fmt::layer` subscriber setup. Extract a single `runie_core::telemetry::init()` helper and call it from both binaries.
+`runie-tui/src/main.rs` and `runie-cli/src/main.rs` contain identical `EnvFilter` + `fmt::layer` subscriber setup. Extracted a single `runie_core::telemetry::init()` helper and called it from both binaries.
 
 ## Acceptance Criteria
 

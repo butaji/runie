@@ -12,7 +12,7 @@
   {
     "file": "add-jsonschema-validation-to-configactor-load.md",
     "title": "Add `jsonschema` validation to `ConfigActor` load path",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-built-in-tool-names.md",
@@ -47,7 +47,7 @@
   {
     "file": "collapse-event-intent-kind-taxonomies.md",
     "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "dedupe-turn-queue-delivery-logic.md",
@@ -122,7 +122,7 @@
   {
     "file": "extract-shared-tracing-subscriber-init.md",
     "title": "Extract shared tracing subscriber init",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
@@ -172,7 +172,7 @@
   {
     "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
     "title": "Introduce `cargo-deny` and `cargo-machete` CI checks",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "migrate-production-actors-to-ractor.md",
@@ -222,7 +222,7 @@
   {
     "file": "remove-sleep-from-automatic-tests.md",
     "title": "Remove `sleep()` from automatic tests",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-sync-turn-queue-fallback-from-app-state.md",
@@ -342,7 +342,7 @@
   {
     "file": "store-provider-api-keys-in-keyring-not-config.md",
     "title": "Store provider API keys in OS keyring, not plain `config.toml`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",
@@ -382,7 +382,7 @@
   {
     "file": "unify-permission-system-rules.md",
     "title": "Unify permission-system rule engines",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-provider-config-persistence.md",
@@ -442,7 +442,7 @@
   {
     "file": "use-strum-for-event-intent-names.md",
     "title": "Use `strum` to derive `Event`/`Intent`/`EventKind` names",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "wire-or-delete-input-actor.md",

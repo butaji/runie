@@ -1,6 +1,6 @@
 # Remove `sleep()` from automatic tests
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: Test harness
 **Priority**: P2
@@ -14,21 +14,7 @@
 
 ## Changes Made
 
-### Files Modified
-
-1. **`crates/runie-core/src/actors/session/tests.rs`** - Rewrote all 5 tests to use `wait_for_event()` helper that uses `recv()` with timeout instead of polling with sleep.
-
-2. **`crates/runie-core/src/actors/session/ractor_session_actor.rs`** - Updated tests module to use `wait_for_event()` helper, removing 2 sleep calls.
-
-3. **`crates/runie-core/src/actors/config/ractor_config.rs`** - Updated `get_config_returns_config` test to wait for `ConfigLoaded` event deterministically instead of sleeping.
-
-4. **`crates/runie-core/src/actors/input/actor.rs`** - Updated `insert_char_updates_cursor` test to wait for each `InputChanged` event deterministically.
-
-5. **`crates/runie-core/src/actors/io/ractor_io.rs`** - Updated `ractor_io_receives_messages` test to use `recv()` with timeout.
-
-6. **`crates/runie-core/src/actors/permission/ractor_permission.rs`** - Updated both tests to use `wait_for_event()` helper.
-
-### Pattern Used
+All actor tests now use timeout-based `recv()` instead of `sleep()`. Pattern used:
 
 ```rust
 /// Wait for an event matching a predicate with a deterministic timeout.
@@ -83,11 +69,10 @@ The following sleeps remain and are acceptable:
 | `runie-testing/src/runner.rs` | 98 | Harness polling loop (documented as acceptable) |
 | `runie-provider/src/mock.rs` | 181, 297 | Mock provider simulating provider delays |
 | `runie-provider/src/retry.rs` | 50 | Production retry logic |
-| `runie-agent/src/tool_runner.rs` | 273 | Production timeout logic |
 
 ## Notes
 
 - The `wait_for_event()` helper provides a deterministic 2-second deadline for event arrival.
 - Tests no longer rely on arbitrary timing to observe async side effects.
 - This makes tests more reliable and faster (no unnecessary waiting).
-- **Update after review:** residual `sleep` calls remain in `runie-testing/src/runner.rs` (harness polling loop), `runie-provider/src/mock.rs` (simulated provider delay), and `runie-provider/src/retry.rs` (retry backoff). These are acceptable by design; the harness polling loop could be replaced with `Notify`/`oneshot` in a future cleanup if needed.
+- The harness polling loop in `runie-testing/src/runner.rs` is acceptable by design; replacing it with `Notify`/`oneshot` could be done in a future cleanup.

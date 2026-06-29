@@ -5,7 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
-pub const CURRENT_CONFIG_VERSION: u32 = 3;
+pub const CURRENT_CONFIG_VERSION: u32 = 4;
 
 /// Migrate a parsed TOML value to the current version.
 /// Returns `Ok(true)` if mutations were applied.
@@ -36,6 +36,9 @@ pub fn migrate_with_path(
     if version < 3 {
         v2_to_v3(config, config_path)?;
     }
+    if version < 4 {
+        v3_to_v4(config)?;
+    }
 
     if let Some(map) = config.as_table_mut() {
         map.insert(
@@ -44,6 +47,49 @@ pub fn migrate_with_path(
         );
     }
     Ok(true)
+}
+
+/// v3 → v4: migrate plaintext `api_key` values to OS keyring.
+///
+/// Iterates through `[model_providers.*]` and moves any non-empty `api_key`
+/// to the OS keyring, then clears it from the config file.
+fn v3_to_v4(config: &mut toml::Value) -> anyhow::Result<()> {
+    use crate::auth;
+
+    let map = config
+        .as_table_mut()
+        .ok_or_else(|| anyhow::anyhow!("config must be a table"))?;
+
+    let providers = match map.get_mut("model_providers") {
+        Some(toml::Value::Table(t)) => t,
+        _ => return Ok(()),
+    };
+
+    for (name, provider_value) in providers.iter_mut() {
+        let provider_map = match provider_value.as_table_mut() {
+            Some(m) => m,
+            None => continue,
+        };
+
+        let api_key = match provider_map.get("api_key") {
+            Some(toml::Value::String(s)) if !s.is_empty() => Some(s.clone()),
+            _ => None,
+        };
+
+        // If there's a non-empty api_key, store it in keyring first
+        if let Some(key) = api_key {
+            if let Err(e) = auth::set_keyring_value(name, &key) {
+                tracing::warn!("failed to migrate api_key for {} to keyring: {}", name, e);
+            } else {
+                tracing::info!("migrated api_key for {} to keyring", name);
+            }
+        }
+
+        // Always remove api_key from config (resolution uses keyring/env)
+        provider_map.remove("api_key");
+    }
+
+    Ok(())
 }
 
 /// v2 → v3: migrate `keybindings.json` to `[keybindings]` table in config.toml.
@@ -141,6 +187,7 @@ fn v1_to_v2(config: &mut toml::Value) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::Config;
 
     #[test]
     fn migrate_v0_to_v1() {
@@ -199,6 +246,104 @@ provider = "openai"
 
         let changed = migrate(&mut config).unwrap();
         assert!(!changed);
+    }
+
+    #[test]
+    fn migrate_v3_to_v4_parses_back_to_config() {
+        // This test verifies that after migration, the TOML can be parsed
+        // back into a Config struct correctly.
+        let mut config: toml::Value = toml::from_str(
+            r#"
+version = 3
+provider = "openai"
+
+[model_providers.openai]
+type = "openai"
+base_url = "https://api.openai.com/v1"
+api_key = "sk-plaintext"
+models = ["gpt-4", "gpt-3.5-turbo"]
+"#,
+        )
+        .unwrap();
+
+        // Run migration
+        let changed = migrate(&mut config).unwrap();
+        assert!(changed);
+
+        // Serialize and parse back
+        let s = toml::to_string(&config).unwrap();
+
+        // Parse into Config
+        let parsed_config: Config = toml::from_str(&s).unwrap();
+
+        // Verify provider is present
+        assert!(!parsed_config.model_providers.is_empty(), "model_providers should not be empty");
+        assert!(parsed_config.model_providers.contains_key("openai"));
+        let provider = parsed_config.model_providers.get("openai").unwrap();
+        assert_eq!(provider.base_url, "https://api.openai.com/v1");
+    }
+
+    #[test]
+    fn migrate_v3_to_v4_removes_plaintext_api_keys() {
+        let mut config: toml::Value = toml::from_str(
+            r#"
+version = 3
+provider = "openai"
+
+[model_providers.openai]
+base_url = "https://api.openai.com/v1"
+api_key = "sk-plaintext"
+models = ["gpt-4", "gpt-3.5-turbo"]
+
+[model_providers.anthropic]
+base_url = "https://api.anthropic.com"
+api_key = ""
+models = ["claude-3"]
+"#,
+        )
+        .unwrap();
+
+        // Migration should run
+        let changed = migrate(&mut config).unwrap();
+        assert!(changed, "migration should make changes");
+        assert_eq!(
+            config["version"].as_integer(),
+            Some(CURRENT_CONFIG_VERSION as i64)
+        );
+
+        // openai has non-empty api_key - should be removed (migrated to keyring)
+        let openai = &config["model_providers"]["openai"];
+        assert!(
+            openai.get("api_key").is_none(),
+            "api_key should be removed after migration"
+        );
+        assert_eq!(openai["base_url"].as_str(), Some("https://api.openai.com/v1"));
+
+        // anthropic has empty api_key - should also be removed (no keyring needed)
+        let anthropic = &config["model_providers"]["anthropic"];
+        assert!(
+            anthropic.get("api_key").is_none(),
+            "empty api_key should also be removed"
+        );
+    }
+
+    #[test]
+    fn migrate_v3_to_v4_no_providers() {
+        // Config without model_providers should not fail
+        let mut config: toml::Value = toml::from_str(
+            r#"
+version = 3
+provider = "openai"
+"#,
+        )
+        .unwrap();
+
+        let changed = migrate(&mut config).unwrap();
+        assert!(changed);
+        assert_eq!(
+            config["version"].as_integer(),
+            Some(CURRENT_CONFIG_VERSION as i64)
+        );
     }
 
     #[test]

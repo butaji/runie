@@ -10,6 +10,10 @@ use crate::model::ThinkingLevel;
 // ── File helpers (sync, for use in spawn_blocking) ─────────────────────────────
 
 /// Save a provider entry to the config file.
+///
+/// API key is stored in keyring first; if keyring is unavailable or retrieval
+/// fails, falls back to storing in the config file (legacy mode). The resolution
+/// order at runtime is: keyring → env var → config file.
 pub fn save_provider_to_path(
     path: &Path,
     name: &str,
@@ -17,25 +21,41 @@ pub fn save_provider_to_path(
     api_key: &str,
     models: &[String],
 ) -> anyhow::Result<()> {
+    // Try to store api_key in keyring first; if retrieval fails, fall back to config
+    let keyring_available = if !api_key.is_empty() {
+        crate::auth::set_and_verify_keyring(name, api_key).is_ok()
+    } else {
+        true
+    };
+
     let mut config = crate::config::Config::load(Some(path));
     let provider_type = config
         .model_providers
         .get(name)
         .and_then(|p| p.provider_type.clone());
+    // Store api_key in config only if keyring is unavailable/unverified
+    let stored_api_key = if keyring_available {
+        String::new()
+    } else {
+        api_key.to_owned()
+    };
     config.model_providers.insert(
         name.into(),
         ModelProvider {
             provider_type,
             base_url: base_url.into(),
-            api_key: api_key.into(),
+            api_key: stored_api_key,
             models: models.into(),
         },
     );
     config.save_to(path)
 }
 
-/// Remove a provider entry from the config file.
+/// Remove a provider entry from the config file and keyring.
 pub fn remove_provider_from_path(path: &Path, name: &str) -> anyhow::Result<()> {
+    // Also remove from keyring
+    let _ = crate::auth::delete_keyring_entry(name);
+
     let mut config = crate::config::Config::load(Some(path));
     config.model_providers.remove(name);
     config.save_to(path)

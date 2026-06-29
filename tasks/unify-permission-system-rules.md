@@ -1,6 +1,6 @@
 # Unify permission-system rule engines
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Architecture / Security
 **Priority**: P1
@@ -49,9 +49,12 @@
 
 ## Files touched
 
-- `crates/runie-core/src/permissions/mod.rs`
-- `crates/runie-core/src/permissions/approval_registry.rs`
-- `crates/runie-core/src/actors/permission/ractor_permission.rs`
+- `crates/runie-core/src/permissions/mod.rs` — `PermissionManager` now uses `PermissionMode` to build policy chain
+- `crates/runie-core/src/permissions/approval_registry.rs` — simplified with `parking_lot::Mutex`
+- `crates/runie-core/src/permissions/rules.rs` — `PermissionSet` with `PermissionRule`/`PermissionScope`
+- `crates/runie-core/src/permissions/default_tool_approve.rs` — policy implementation
+- `crates/runie-core/src/permissions/file_access_ask.rs` — policy implementation
+- `crates/runie-core/src/actors/permission/ractor_permission.rs` — actor wiring
 
 ## Notes
 

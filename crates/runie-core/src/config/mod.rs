@@ -47,6 +47,7 @@ pub struct ModelProvider {
     #[serde(rename = "type")]
     pub provider_type: Option<String>,
     pub base_url: String,
+    #[serde(default)]
     pub api_key: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub models: Vec<String>,

@@ -55,9 +55,10 @@ pub enum ConfigMsg {
         scope: ConfigScope,
         name: String,
         server: McpServer,
+        reply: Reply<()>
     },
     /// Remove an MCP server from the specified scope.
-    RemoveMcpServer { scope: ConfigScope, name: String },
+    RemoveMcpServer { scope: ConfigScope, name: String, reply: Reply<()> },
     /// List MCP servers in the specified scope.
     ListMcpServers {
         scope: ConfigScope,

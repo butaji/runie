@@ -268,14 +268,47 @@ fn account_name(provider: &str) -> String {
     format!("provider:{}", provider)
 }
 
+/// Set a provider token directly in the keyring (no instance state needed).
+/// This is used by the config migration to move plaintext keys to keyring.
+pub fn set_keyring_value(provider: &str, token: &str) -> anyhow::Result<()> {
+    set_keyring(provider, token)
+}
+
+/// Set a provider token in the keyring and verify it can be retrieved.
+///
+/// Returns `Ok(())` only if both `set_password` and `get_password` succeed
+/// and the retrieved value matches the input. This guards against keyring
+/// backends that silently fail retrieval (e.g., macOS Keychain access issues).
+pub fn set_and_verify_keyring(provider: &str, token: &str) -> anyhow::Result<()> {
+    let account = account_name(provider);
+    let entry = keyring::Entry::new(SERVICE, &account)?;
+    entry.set_password(token)?;
+    match entry.get_password() {
+        Ok(stored) if stored == token => Ok(()),
+        Ok(stored) => Err(anyhow::anyhow!(
+            "keyring returned different token (len={}): {:?}",
+            stored.len(),
+            &stored[..stored.len().min(8)]
+        )),
+        Err(e) => Err(anyhow::anyhow!("keyring retrieval failed: {e}")),
+    }
+}
+
+/// Delete a provider token from the keyring.
+pub fn delete_keyring_entry(provider: &str) -> anyhow::Result<()> {
+    delete_keyring(provider)
+}
+
 fn set_keyring(provider: &str, token: &str) -> anyhow::Result<()> {
-    let entry = keyring::Entry::new(SERVICE, &account_name(provider))?;
+    let account = account_name(provider);
+    let entry = keyring::Entry::new(SERVICE, &account)?;
     entry.set_password(token)?;
     Ok(())
 }
 
 fn get_keyring(provider: &str) -> anyhow::Result<String> {
-    let entry = keyring::Entry::new(SERVICE, &account_name(provider))?;
+    let account = account_name(provider);
+    let entry = keyring::Entry::new(SERVICE, &account)?;
     entry
         .get_password()
         .map_err(|e| anyhow::anyhow!("keyring error: {}", e))

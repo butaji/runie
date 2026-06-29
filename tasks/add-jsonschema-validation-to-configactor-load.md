@@ -1,6 +1,6 @@
 # Add `jsonschema` validation to `ConfigActor` load path
 
-**Status**: todo
+**Status**: done
 **Milestone**: R6
 **Category**: Configuration
 **Priority**: P2
@@ -35,12 +35,13 @@ After the hand-written validator is replaced by `jsonschema`, wire validation in
 
 ## Files touched
 
-- `crates/runie-core/src/actors/config/ractor_config.rs` — added `load_async_strict` call and error emission
-- `crates/runie-core/src/config/mod.rs` — added `load_async_strict` and `load_async_checked` helpers
-- `crates/runie-core/src/config/tests/mod.rs` — added validation test
+- `crates/runie-core/src/actors/config/ractor_config.rs` — added `validate_full()` call in `load_and_emit` and `reload_and_emit` with error emission; kept previous valid config on failure
+- `crates/runie-core/src/actors/config/tests.rs` — fixed tests to use known providers (`openai`, `anthropic`) so validation passes
+- `crates/runie-core/src/config/tests/validate_tests.rs` — layer 1 validation tests (pre-existing)
 
 ## Notes
 
 - Coordinate with `replace-config-validator-with-jsonschema.md`.
 - The `validate.rs` module already uses `jsonschema`; this task wired it into the actor.
 - On validation failure during `reload_and_emit`, the actor keeps the previous valid config.
+- `load_and_emit` emits Error and falls back to defaults if validation fails.

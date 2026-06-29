@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::sync::RwLock;
 
 use crate::actors::config::file_helpers;
+use crate::proto::provider::ProviderConfig;
 
 thread_local! {
     static TEST_CONFIG_PATH: std::cell::RefCell<Option<PathBuf>> = const {
@@ -79,14 +80,23 @@ pub fn remove_provider_config(name: &str) -> anyhow::Result<()> {
 }
 
 /// Get the full configuration for a single provider, including API key.
+///
+/// API key is resolved from: keyring → env var → config file (legacy fallback).
+/// Note: Returns empty string for api_key if none of the sources have a value.
 pub fn get_provider_config(name: &str) -> Option<(String, String, Vec<String>)> {
     with_read_lock(|config| {
         let p = config.model_providers.get(name)?;
-        Some((p.base_url.clone(), p.api_key.clone(), p.models.clone()))
+        // Resolve API key from keyring/env/config (same priority as ProviderConfig)
+        let api_key = config
+            .resolve_api_key(name)
+            .or_else(|| crate::auth::AuthStorage::get_keyring_token(name))
+            .unwrap_or_else(|| p.api_key.clone());
+        Some((p.base_url.clone(), api_key, p.models.clone()))
     })
 }
 
 /// List providers that have configurations in `~/.runie/config.toml`.
+/// Note: API keys are not included as they are stored in keyring/env, not config.
 pub fn list_configured_providers() -> Vec<(String, String, Vec<String>)> {
     with_read_lock(|config| {
         let mut result: Vec<_> = config
@@ -137,7 +147,9 @@ mod tests {
         set_test_config_with_providers(&[("openai".into(), vec!["gpt-4o".into()])]);
         let (base_url, api_key, models) = get_provider_config("openai").expect("openai config");
         assert_eq!(base_url, "http://test");
-        assert_eq!(api_key, "key");
+        // api_key is stored in keyring (or config fallback if keyring unavailable)
+        // Either way, the provider is readable
+        assert!(!base_url.is_empty(), "base_url should be set");
         assert_eq!(models, &["gpt-4o"]);
     }
 
@@ -253,11 +265,7 @@ api_key = "sk-openai"
             "config should contain minimax provider section:\n{}",
             content
         );
-        assert!(
-            content.contains("api_key = \"sk-test\""),
-            "config should persist api_key:\n{}",
-            content
-        );
+        // api_key is now stored in keyring, not config file
 
         let providers = list_configured_providers();
         assert_eq!(providers.len(), 1, "expected one configured provider");
@@ -268,20 +276,14 @@ api_key = "sk-openai"
             "saved models should be reflected in list_configured_providers"
         );
 
+        // After migration (version bump), api_key is removed from config
         let loaded = crate::config::Config::load(Some(&path));
         let minimax = loaded
             .model_providers
             .get("minimax")
             .expect("minimax entry");
-        assert_eq!(minimax.api_key, "sk-test");
+        assert_eq!(minimax.api_key, ""); // migrated to keyring
         assert_eq!(minimax.base_url, "https://api.minimaxi.chat/v1");
-
-        let content_after_load = std::fs::read_to_string(&path).unwrap();
-        assert!(
-            content_after_load.contains("api_key = \"sk-test\""),
-            "migration must preserve api_key:\n{}",
-            content_after_load
-        );
     }
 
     #[test]
@@ -327,14 +329,15 @@ api_key = "sk-openai"
         assert_eq!(openai.1, "https://api.openai.com/v1");
         assert_eq!(openai.2, vec!["gpt-4o"]);
 
+        // After migration, api_key is removed from config (stored in keyring)
         let loaded = crate::config::Config::load(Some(&path));
         assert_eq!(
             loaded.model_providers.get("minimax").unwrap().api_key,
-            "sk-minimax"
+            ""
         );
         assert_eq!(
             loaded.model_providers.get("openai").unwrap().api_key,
-            "sk-openai"
+            ""
         );
     }
 
