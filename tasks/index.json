@@ -47,7 +47,7 @@
   {
     "file": "collapse-event-intent-kind-taxonomies.md",
     "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "dedupe-turn-queue-delivery-logic.md",
@@ -227,7 +227,7 @@
   {
     "file": "remove-sync-turn-queue-fallback-from-app-state.md",
     "title": "Remove sync `TurnQueue` fallback from `AppState`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-unused-dependencies-and-normalize-workspace-deps.md",
@@ -357,7 +357,7 @@
   {
     "file": "unify-core-and-tui-line-count-computation.md",
     "title": "Unify core and TUI line-count computation",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-declarative-resource-loader.md",
@@ -442,7 +442,7 @@
   {
     "file": "use-strum-for-event-intent-names.md",
     "title": "Use `strum` to derive `Event`/`Intent`/`EventKind` names",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "wire-or-delete-input-actor.md",
