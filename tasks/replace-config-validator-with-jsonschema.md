@@ -1,6 +1,6 @@
 # Replace custom config validator with `jsonschema`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R1
 **Category**: Configuration
 **Priority**: P0
