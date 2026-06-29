@@ -1,6 +1,6 @@
 # Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`
 
-**Status**: done
+**Status**: todo
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P1

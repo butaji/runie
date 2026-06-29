@@ -1,6 +1,6 @@
 # Remove sync `TurnQueue` fallback from `AppState`
 
-**Status**: done
+**Status**: todo
 **Milestone**: R6
 **Category**: Architecture / Actors
 **Priority**: P1

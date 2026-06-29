@@ -1,6 +1,6 @@
 # Introduce `cargo-deny` and `cargo-machete` CI checks
 
-**Status**: done
+**Status**: todo
 **Milestone**: R5
 **Category**: Build / CI
 **Priority**: P2

@@ -43,9 +43,9 @@ Rules:
 | `runie-provider` | LLM provider clients and model catalog (OpenAI-compatible, Anthropic, MiniMax, …) |
 | `runie-tui` | CLI entry, Ratatui rendering, panels/forms, theme, terminal setup |
 | `runie-server` | RPC / server mode binary |
-| `runie-protocol` | Shared IPC types |
+| `runie-protocol` | Folded into `runie-core` (`crates/runie-core/src/proto/`) |
 | `runie-testing` | Test fixtures, mock providers, and harness helpers |
-| `runie-macros` | Derive macros for commands, policies, and events |
+| `runie-macros` | Deleted; no longer a workspace member |
 
 ## Runtime
 
@@ -391,7 +391,7 @@ Tests are exempt from function-length and complexity checks so they can stay com
 
 ## Current cleanup roadmap
 
-The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. A third five-round review focused on replacing custom code with crates, unification, and Pareto simplification; its findings are recorded in [`docs/superpowers/plans/2026-06-28-less-code-crate-replacements.md`](superpowers/plans/2026-06-28-less-code-crate-replacements.md). A fourth five-round review dug deeper into provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, and DSL/view/dialog/commands; its findings are recorded in [`docs/superpowers/plans/2026-06-28-fourth-pass-crate-review.md`](superpowers/plans/2026-06-28-fourth-pass-crate-review.md). A fifth five-round review focused on build/CI/test harness, error handling/tracing/telemetry, protocol/IPC leftovers, declarative loaders/DSLs, and macros/codegen; its findings are recorded in [`docs/superpowers/plans/2026-06-28-fifth-pass-crate-review.md`](superpowers/plans/2026-06-28-fifth-pass-crate-review.md). A fresh five-round review after many tasks landed found additional post-implementation gaps, especially in actor plumbing, TUI rendering, and build/CI hygiene; its findings are recorded in [`docs/superpowers/plans/2026-06-28-five-round-review-synthesis.md`](superpowers/plans/2026-06-28-five-round-review-synthesis.md). The remaining active work is tracked in `tasks/index.json` (42 active cleanup tasks) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
+The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. A third five-round review focused on replacing custom code with crates, unification, and Pareto simplification; its findings are recorded in [`docs/superpowers/plans/2026-06-28-less-code-crate-replacements.md`](superpowers/plans/2026-06-28-less-code-crate-replacements.md). A fourth five-round review dug deeper into provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, and DSL/view/dialog/commands; its findings are recorded in [`docs/superpowers/plans/2026-06-28-fourth-pass-crate-review.md`](superpowers/plans/2026-06-28-fourth-pass-crate-review.md). A fifth five-round review focused on build/CI/test harness, error handling/tracing/telemetry, protocol/IPC leftovers, declarative loaders/DSLs, and macros/codegen; its findings are recorded in [`docs/superpowers/plans/2026-06-28-fifth-pass-crate-review.md`](superpowers/plans/2026-06-28-fifth-pass-crate-review.md). A fresh five-round review after many tasks landed found additional post-implementation gaps, especially in actor plumbing, TUI rendering, and build/CI hygiene; its findings are recorded in [`docs/superpowers/plans/2026-06-28-five-round-review-synthesis.md`](superpowers/plans/2026-06-28-five-round-review-synthesis.md). A subsequent verification pass checked whether tasks marked `done` were actually complete; the results are recorded in [`docs/superpowers/plans/2026-06-28-task-verification-report.md`](superpowers/plans/2026-06-28-task-verification-report.md). The remaining active work is tracked in `tasks/index.json` (24 active cleanup tasks plus 1 wontfix) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
 
 ### Active tasks
 
@@ -500,7 +500,7 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 
 #### Phase 18 — Fifth-pass protocol / IPC cleanup (P1)
 
-53. **Fold `runie-protocol` into `runie-core`** (`tasks/fold-runie-protocol-into-core.md`) — move the still-existing protocol crate's types into `runie-core` and delete the crate.
+53. **Fold `runie-protocol` into `runie-core`** (`tasks/fold-runie-protocol-into-core.md`) — `done`. The crate no longer exists; types live in `crates/runie-core/src/proto/`.
 54. **Unify CLI JSON-RPC transport and remove dead ACP plumbing** (`tasks/unify-cli-json-rpc-transport-and-remove-dead-acp.md`) — shared transport module; fix or delete the broken ACP path.
 
 #### Phase 19 — Fifth-pass declarative loaders / DSL / small parser cleanup (P1/P2)

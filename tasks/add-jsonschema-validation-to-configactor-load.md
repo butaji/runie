@@ -1,6 +1,6 @@
 # Add `jsonschema` validation to `ConfigActor` load path
 
-**Status**: done
+**Status**: todo
 **Milestone**: R6
 **Category**: Configuration
 **Priority**: P2

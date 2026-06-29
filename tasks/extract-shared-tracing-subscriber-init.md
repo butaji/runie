@@ -1,6 +1,6 @@
 # Extract shared tracing subscriber init
 
-**Status**: done
+**Status**: todo
 **Milestone**: R6
 **Category": Observability
 **Priority": P2

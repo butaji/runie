@@ -1,6 +1,6 @@
 # Initialize `tracing` subscriber in CLI and TUI binaries
 
-**Status**: done
+**Status**: todo
 **Milestone**: R5
 **Category**: Observability
 **Priority**: P0

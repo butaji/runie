@@ -1,6 +1,6 @@
 # Replace custom path/glob/fuzzy/keybinding helpers with crates
 
-**Status**: done
+**Status**: todo
 **Note**: Verified 2026-06-29 — glob.rs and fuzzy.rs deleted, path.rs uses shellexpand, telemetry.rs uses tracing, keybindings uses #[cfg(test)] parse_key_combo.
 **Milestone**: R1
 **Category**: Core / State

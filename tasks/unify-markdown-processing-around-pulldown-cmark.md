@@ -1,9 +1,10 @@
 # Unify markdown processing around `pulldown-cmark`
 
-**Status**: done (markdown module unified on pulldown-cmark; tool-marker stripping intentionally remains separate string parsing — see notes)
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P0
+**Note**: Markdown processing unified on pulldown-cmark; tool-marker stripping remains string-based by design.
 
 **Depends on**: use-pulldown-cmark-frontmatter-for-resource-loader
 **Blocks**: replace-tui-markdown-block-layout-with-tui-markdown

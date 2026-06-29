@@ -1,6 +1,6 @@
 # Migrate TUI and CLI to `Leader::start`
 
-**Status**: done
+**Status**: todo
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P1

@@ -1,6 +1,6 @@
 # Use `clap` derive macros for CLI argument parsing
 
-**Status**: done
+**Status**: todo
 **Milestone**: R1
 **Category**: Input / Commands
 **Priority**: P0

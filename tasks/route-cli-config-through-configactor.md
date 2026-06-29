@@ -1,6 +1,6 @@
 # Route CLI config operations through `ConfigActor`
 
-**Status**: done
+**Status**: todo
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2

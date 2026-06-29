@@ -1,6 +1,6 @@
 # Simplify slash-command DSL
 
-**Status**: done
+**Status**: todo
 **Milestone**: R2
 **Category**: Input / Commands
 **Priority**: P1

@@ -1,9 +1,10 @@
 # Replace remaining custom parsers and macros with `strum`
 
-**Status**: done (McpTransport, DialogType, DialogKind, command_category_round_trip test added)
+**Status**: done
 **Milestone**: R5
 **Category**: Core / State
 **Priority**: P2
+**Note**: Strum derives added for remaining small enums.
 
 **Depends on**: use-strum-for-event-intent-names
 **Blocks**: none

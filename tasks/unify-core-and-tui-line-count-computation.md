@@ -1,6 +1,6 @@
 # Unify core and TUI line-count computation
 
-**Status**: done
+**Status**: todo
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P2

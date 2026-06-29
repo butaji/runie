@@ -1,9 +1,10 @@
 # Replace hand-rolled TUI markdown block layout with `tui-markdown`
 
-**Status**: done (tui-markdown used for inline styling; block structure preserved with custom overlay of timestamps/glyphs/margins)
+**Status**: done
 **Milestone**: R6
 **Category**: TUI / Rendering
 **Priority**: P0
+**Note**: Markdown block layout uses tui-markdown for inline spans with a custom overlay for timestamps/glyphs/margins.
 
 **Depends on**: unify-markdown-processing-around-pulldown-cmark
 **Blocks**: none

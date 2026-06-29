@@ -1,9 +1,10 @@
 # Implement MCP client runtime or remove config scaffolding
 
-**Status: done
+**Status**: done
 **Milestone**: R5
 **Category**: Architecture / Tools
 **Priority**: P2
+**Note**: Dead CLI MCP scaffolding removed; config types retained in RactorConfigActor.
 
 **Depends on**: delete-or-fix-dead-mcp-feature-flag
 **Blocks**: none

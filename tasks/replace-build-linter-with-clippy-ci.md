@@ -1,6 +1,6 @@
 # Replace custom build.rs linter with Clippy / CI
 
-**Status**: done
+**Status**: todo
 **Milestone**: R3
 **Category**: Architecture / Tooling
 **Priority**: P2

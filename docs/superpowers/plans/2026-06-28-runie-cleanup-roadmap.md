@@ -12,7 +12,7 @@
 
 ## File structure
 
-- `tasks/index.json` — canonical registry of the 60 active cleanup tasks.
+- `tasks/index.json` — canonical registry of the 24 active cleanup tasks (plus 1 wontfix).
 - **Actor runtime (split into three sequential tasks):**
   - `tasks/migrate-production-actors-to-ractor.md`
   - `tasks/delete-dead-actor-modules-and-custom-trait.md`
@@ -126,6 +126,7 @@
 - `docs/superpowers/plans/2026-06-28-fourth-pass-crate-review.md` — detailed fourth-pass findings.
 - `docs/superpowers/plans/2026-06-28-fifth-pass-crate-review.md` — detailed fifth-pass findings.
 - `docs/superpowers/plans/2026-06-28-five-round-review-synthesis.md` — post-implementation gaps and peer learnings.
+- `docs/superpowers/plans/2026-06-28-task-verification-report.md` — verification of whether tasks marked `done` are truly complete.
 - `tasks/archive/` — completed tasks from this and earlier reviews.
 
 ## Active task map

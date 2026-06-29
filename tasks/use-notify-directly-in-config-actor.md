@@ -1,6 +1,6 @@
 # Use `notify` directly in `RactorConfigActor`
 
-**Status**: done
+**Status**: todo
 **Milestone**: R2
 **Category**: Configuration / Actors
 **Priority**: P1
