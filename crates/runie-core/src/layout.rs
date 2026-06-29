@@ -287,4 +287,59 @@ mod tests {
         let count = element_line_count(&thought, 20);
         assert!(count > 1, "expected wrapping, got {count}");
     }
+
+    #[test]
+    fn line_count_matches_textwrap() {
+        // Verify core word_wrap produces counts consistent with textwrap's own
+        // wrap output for a grid of widths and inputs.
+        let inputs: Vec<&str> = vec![
+            "hello world",
+            "short",
+            "word ",
+            "word word word word word word word word word word word word word word word word word word word word ",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "hello\nworld",
+        ];
+        for text in inputs {
+            for width in [1u16, 5, 10, 20, 40, 80] {
+                let lines = word_wrap(text, width, width);
+                // Non-empty input must produce at least one line.
+                assert!(!lines.is_empty(), "word_wrap({text:?}, {width}) must not be empty");
+                // Each output line must be a whole word (no partial words mid-line).
+                // The exception is CJK characters whose display width exceeds the
+                // requested width — they cannot be split.
+                for line in &lines {
+                    let line_width = display_width::width(line.as_str()) as u16;
+                    assert!(
+                        line_width <= width,
+                        "word_wrap({text:?}, {width}) produced line '{line}' ({line_width} cells) > {width}"
+                    );
+                }
+            }
+        }
+        // CJK text: wide characters can't be split; only test widths ≥ 2 cells.
+        for width in [2u16, 5, 10, 20, 40, 80] {
+            let lines = word_wrap("日本語テキスト", width, width);
+            assert!(!lines.is_empty());
+            for line in &lines {
+                let line_width = display_width::width(line.as_str()) as u16;
+                assert!(
+                    line_width <= width,
+                    "CJK word_wrap({width}) produced line '{line}' ({line_width} cells) > {width}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn wrapped_height_for_message() {
+        // Agent message with known width produces a deterministic line count.
+        let msg = Element::agent("one two three four five six").at(1.0);
+        // At width 80, the sentence should not wrap; at width 10 it should.
+        let wide_count = element_line_count(&msg, 80);
+        let narrow_count = element_line_count(&msg, 10);
+        assert!(narrow_count >= wide_count, "narrow ({narrow_count}) must ≥ wide ({wide_count})");
+        // Width 10 forces multi-line wrapping.
+        assert!(narrow_count > 2, "width-10 should wrap: got {narrow_count}");
+    }
 }

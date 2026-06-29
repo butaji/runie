@@ -1,5 +1,5 @@
 use ratatui::text::Line;
-use runie_core::Element;
+use runie_core::{layout::word_wrap, Element};
 
 use crate::ui::render_lines::to_lines_and_count;
 
@@ -32,34 +32,13 @@ pub(crate) fn build_lines_with_mapping(
     (lines, mapping)
 }
 
-/// Wrap text to lines respecting content width.
+/// Wrap streaming tail text to terminal lines, using the shared `word_wrap`
+/// from runie-core so wrapping rules stay in sync with core scroll math.
 fn wrap_text_to_lines(text: &str, width: u16) -> Vec<Line<'_>> {
-    use std::borrow::Cow;
-
-    let mut result = Vec::new();
-    for line in text.lines() {
-        if line.is_empty() {
-            result.push(Line::from(""));
-            continue;
-        }
-
-        // Simple word wrap at width boundary
-        let chars_per_line = width as usize;
-        let chars: Vec<char> = line.chars().collect();
-
-        if chars.len() <= chars_per_line {
-            result.push(Line::from(Cow::Borrowed(line)));
-            continue;
-        }
-
-        // Break into chunks of chars_per_line
-        for chunk in chars.chunks(chars_per_line) {
-            let wrapped: String = chunk.iter().collect();
-            result.push(Line::from(Cow::Owned(wrapped)));
-        }
-    }
-
-    result
+    word_wrap(text, width, width)
+        .into_iter()
+        .map(Line::from)
+        .collect()
 }
 
 pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
@@ -78,9 +57,25 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::ui::render_lines::{element_line_count, to_lines_internal};
     use ratatui::widgets::Paragraph;
+    use runie_core::layout::word_wrap;
     use runie_core::view::elements::Element;
+
+    #[test]
+    fn wrap_text_to_lines_matches_word_wrap() {
+        // Streaming tail uses word_wrap; verify the adapter produces the same lines.
+        for width in [20u16, 40, 80] {
+            let text = "hello world from runie agent";
+            let direct: Vec<String> = word_wrap(text, width, width);
+            let adapted: Vec<String> = wrap_text_to_lines(text, width)
+                .into_iter()
+                .map(|l| l.to_string())
+                .collect();
+            assert_eq!(direct, adapted, "width {width}");
+        }
+    }
 
     fn assert_count_matches(element: Element, width: u16) {
         let count = element_line_count(&element, width);

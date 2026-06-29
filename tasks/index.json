@@ -357,7 +357,7 @@
   {
     "file": "unify-core-and-tui-line-count-computation.md",
     "title": "Unify core and TUI line-count computation",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-declarative-resource-loader.md",
