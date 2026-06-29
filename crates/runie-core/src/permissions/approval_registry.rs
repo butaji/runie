@@ -5,7 +5,7 @@
 //! request and the receiver completes.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 use tokio::sync::oneshot;
 
 use super::PermissionAction;
@@ -25,22 +25,20 @@ impl ApprovalRegistry {
     /// complete when [`resolve`](Self::resolve) is called.
     pub fn register(&self, request_id: &str) -> oneshot::Receiver<PermissionAction> {
         let (tx, rx) = oneshot::channel();
-        if let Ok(mut pending) = self.pending.lock() {
-            pending.insert(request_id.to_owned(), tx);
-        }
+        self.pending.lock().insert(request_id.to_owned(), tx);
         rx
     }
 
     /// Resolve a pending approval request with the user's chosen action.
     /// Returns `true` if the request existed and was resolved.
     pub fn resolve(&self, request_id: &str, action: PermissionAction) -> bool {
-        if let Ok(mut pending) = self.pending.lock() {
-            if let Some(tx) = pending.remove(request_id) {
-                let _ = tx.send(action);
-                return true;
-            }
+        let mut pending = self.pending.lock();
+        if let Some(tx) = pending.remove(request_id) {
+            let _ = tx.send(action);
+            true
+        } else {
+            false
         }
-        false
     }
 }
 

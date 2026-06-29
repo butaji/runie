@@ -190,12 +190,10 @@ impl RactorFffIndexerActor {
             frecency: self.shared_frecency.clone(),
             query_tracker: self.shared_query_tracker.clone(),
         };
-        if let Ok(mut guard) = super::fff_state().write() {
-            *guard = Some(FffSearchStateInner {
-                state: global_state,
-                indexed: false,
-            });
-        }
+        *super::fff_state().write() = Some(FffSearchStateInner {
+            state: global_state,
+            indexed: false,
+        });
     }
 
     async fn wait_for_fff_scan(&mut self) {
@@ -215,10 +213,9 @@ impl RactorFffIndexerActor {
         }
         tracing::debug!("fff indexer: initial scan complete");
         self.indexed = true;
-        if let Ok(mut guard) = super::fff_state().write() {
-            if let Some(inner) = guard.as_mut() {
-                inner.indexed = true;
-            }
+        let mut guard = super::fff_state().write();
+        if let Some(inner) = guard.as_mut() {
+            inner.indexed = true;
         }
     }
 

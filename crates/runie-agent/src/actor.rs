@@ -2,7 +2,8 @@
 //!
 //! This is the production implementation of the AgentActor using ractor.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 
 use ractor::{Actor, ActorRef, ActorProcessingErr};
 use ractor::async_trait;
@@ -56,8 +57,8 @@ impl Actor for RactorAgentActor {
         _myself: ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        *self.provider_handle.lock().unwrap() = Some(args.provider_handle);
-        *self.permission_handle.lock().unwrap() = Some(args.permission_handle);
+        *self.provider_handle.lock() = Some(args.provider_handle);
+        *self.permission_handle.lock() = Some(args.permission_handle);
         Ok(())
     }
 
@@ -99,8 +100,8 @@ impl RactorAgentActor {
     fn get_provider_handle(&self, cmd: &AgentCommand) -> RactorProviderHandle {
         self.provider_handle
             .lock()
-            .unwrap()
-            .clone()
+            .as_ref()
+            .cloned()
             .unwrap_or_else(|| {
                 self.emit_error_and_done(&cmd.id, "Provider not initialized".into());
                 panic!("Provider not initialized")
@@ -110,8 +111,8 @@ impl RactorAgentActor {
     fn get_permission_handle(&self, cmd: &AgentCommand) -> RactorPermissionHandle {
         self.permission_handle
             .lock()
-            .unwrap()
-            .clone()
+            .as_ref()
+            .cloned()
             .unwrap_or_else(|| {
                 self.emit_error_and_done(&cmd.id, "Permission handle not initialized".into());
                 panic!("Permission handle not initialized")

@@ -4,7 +4,8 @@
 //! letting agent-turn tests run without real IO.
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 
 use async_trait::async_trait;
 use runie_core::harness_skills::{
@@ -86,7 +87,7 @@ impl RecordingSkill {
 
     /// Take and return the last recorded context.
     pub fn take(&self) -> Option<ToolCallCtx> {
-        self.ctx.lock().unwrap().take()
+        self.ctx.lock().take()
     }
 }
 
@@ -102,7 +103,7 @@ impl HarnessSkill for RecordingSkill {
     }
 
     fn on_tool_call(&self, ctx: &ToolCallCtx) -> ToolCallResult {
-        *self.ctx.lock().unwrap() = Some(ctx.clone());
+        *self.ctx.lock() = Some(ctx.clone());
         ToolCallResult::Continue
     }
 }

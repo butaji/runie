@@ -1,6 +1,7 @@
 //! Approval sinks for permission prompts.
 
 use async_trait::async_trait;
+use parking_lot::RwLock;
 use serde_json::Value;
 
 use super::PermissionAction;
@@ -40,7 +41,7 @@ impl ApprovalSink for DenyAllSink {
 
 /// Scripted sink for tests.
 pub struct ScriptedSink {
-    decisions: std::sync::RwLock<Vec<(String, PermissionAction)>>,
+    decisions: RwLock<Vec<(String, PermissionAction)>>,
 }
 
 impl Default for ScriptedSink {
@@ -52,24 +53,21 @@ impl Default for ScriptedSink {
 impl ScriptedSink {
     pub fn new() -> Self {
         Self {
-            decisions: std::sync::RwLock::new(Vec::new()),
+            decisions: RwLock::new(Vec::new()),
         }
     }
     pub fn add_decision(&self, tool: impl Into<String>, action: PermissionAction) {
-        if let Ok(mut d) = self.decisions.write() {
-            d.push((tool.into(), action));
-        }
+        self.decisions.write().push((tool.into(), action));
     }
 }
 
 #[async_trait]
 impl ApprovalSink for ScriptedSink {
     async fn ask(&self, tool: &str, _input: &Value) -> PermissionAction {
-        if let Ok(d) = self.decisions.read() {
-            for (t, a) in d.iter().rev() {
-                if t == tool {
-                    return *a;
-                }
+        let d = self.decisions.read();
+        for (t, a) in d.iter().rev() {
+            if t == tool {
+                return *a;
             }
         }
         PermissionAction::Ask

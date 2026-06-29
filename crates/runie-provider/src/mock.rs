@@ -7,10 +7,13 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
+/// Seed used by [`MockProvider::default`] to produce deterministic delays.
+const MOCK_DEFAULT_SEED: u64 = 42;
+
 #[derive(Clone)]
 pub struct MockProvider {
     delay_ms: Option<(u64, u64)>,
-    seed: Option<u64>,
+    seed: u64,
     counter: Arc<AtomicU64>,
 }
 
@@ -18,7 +21,7 @@ impl Default for MockProvider {
     fn default() -> Self {
         Self {
             delay_ms: None,
-            seed: None,
+            seed: MOCK_DEFAULT_SEED,
             counter: Arc::new(AtomicU64::new(0)),
         }
     }
@@ -39,7 +42,7 @@ impl MockProvider {
     pub fn with_seed(min_ms: u64, max_ms: u64, seed: u64) -> Self {
         Self {
             delay_ms: Some((min_ms, max_ms)),
-            seed: Some(seed),
+            seed,
             counter: Arc::new(AtomicU64::new(0)),
         }
     }
@@ -51,12 +54,8 @@ impl MockProvider {
     pub(crate) fn random_delay(&self) -> Option<Duration> {
         self.delay_ms.map(|(min, max)| {
             let range = max.saturating_sub(min) + 1;
-            let offset = if let Some(seed) = self.seed {
-                let n = self.counter.fetch_add(1, Ordering::Relaxed);
-                xorshift64star(seed.wrapping_add(n)) % range
-            } else {
-                rand::random::<u64>() % range
-            };
+            let n = self.counter.fetch_add(1, Ordering::Relaxed);
+            let offset = xorshift64star(self.seed.wrapping_add(n)) % range;
             Duration::from_millis(offset + min)
         })
     }

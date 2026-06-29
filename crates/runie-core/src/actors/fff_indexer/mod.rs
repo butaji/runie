@@ -12,7 +12,7 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::RwLock;
+use parking_lot::RwLock;
 
 use serde::{Deserialize, Serialize};
 
@@ -67,16 +67,13 @@ impl FffSearchState {
     ///
     /// Returns `None` if the indexer has not been spawned yet.
     pub fn get() -> Option<Self> {
-        let guard = fff_state().read().ok()?;
+        let guard = fff_state().read();
         guard.as_ref().map(|inner| inner.state.clone())
     }
 
     /// Returns `true` if the global indexer has completed its initial scan.
     pub fn is_indexed() -> bool {
-        let guard = match fff_state().read() {
-            Ok(g) => g,
-            Err(_) => return false,
-        };
+        let guard = fff_state().read();
         guard.as_ref().map(|i| i.indexed).unwrap_or(false)
     }
 
@@ -84,9 +81,7 @@ impl FffSearchState {
     /// Clears the inner state so a new indexer can initialize with a fresh root.
     #[cfg(test)]
     pub fn reset_for_test() {
-        if let Ok(mut g) = fff_state().write() {
-            *g = None;
-        }
+        *fff_state().write() = None;
     }
 
     /// Record that a file was accessed (read or selected) to boost its frecency score.

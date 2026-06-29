@@ -7,7 +7,8 @@ use runie_core::harness_skills::{HarnessSkill, SkillRegistry, ToolCallCtx, ToolC
 use runie_core::Event;
 use runie_testing::mock_tool_skill;
 use runie_testing::{allow_all_gate, mock_provider, RecordingSkill};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 
 #[tokio::test]
 async fn test_agent_loop_simple_response() {
@@ -30,7 +31,7 @@ async fn test_agent_loop_simple_response() {
         &provider,
         &cmd,
         Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().unwrap().push(evt)
+            events_clone.lock().push(evt)
         })),
         5,
         allow_all_gate(),
@@ -38,7 +39,7 @@ async fn test_agent_loop_simple_response() {
     .await
     .unwrap();
 
-    let events = events.lock().unwrap();
+    let events = events.lock();
     let thinking = events
         .iter()
         .filter(|e| matches!(e, Event::Thinking { .. }))
@@ -84,7 +85,7 @@ async fn test_agent_loop_with_tool_call() {
         &provider,
         &cmd,
         Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().unwrap().push(evt)
+            events_clone.lock().push(evt)
         })),
         5,
         Some(&mock_tool_skill()),
@@ -93,7 +94,7 @@ async fn test_agent_loop_with_tool_call() {
     .await
     .unwrap();
 
-    let events = events.lock().unwrap();
+    let events = events.lock();
     let tool_starts = events
         .iter()
         .filter(|e| matches!(e, Event::ToolStart { .. }))
@@ -133,7 +134,7 @@ async fn test_agent_loop_with_native_tool_call_events() {
         &provider,
         &cmd,
         Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().unwrap().push(evt)
+            events_clone.lock().push(evt)
         })),
         1,
         Some(&mock_tool_skill()),
@@ -142,7 +143,7 @@ async fn test_agent_loop_with_native_tool_call_events() {
     .await
     .unwrap();
 
-    let events = events.lock().unwrap();
+    let events = events.lock();
     let tool_starts = events
         .iter()
         .filter(|e| matches!(e, Event::ToolStart { .. }))
@@ -182,14 +183,14 @@ async fn test_agent_loop_respects_max_iterations() {
         &provider,
         &cmd,
         Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().unwrap().push(evt)
+            events_clone.lock().push(evt)
         })),
         3,
         allow_all_gate(),
     )
     .await
     .unwrap();
-    assert!(!events.lock().unwrap().is_empty());
+    assert!(!events.lock().is_empty());
 }
 
 #[tokio::test]
@@ -213,7 +214,7 @@ async fn test_agent_loop_events_have_correct_id() {
         &provider,
         &cmd,
         Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().unwrap().push(evt)
+            events_clone.lock().push(evt)
         })),
         5,
         allow_all_gate(),
@@ -221,7 +222,7 @@ async fn test_agent_loop_events_have_correct_id() {
     .await
     .unwrap();
 
-    for evt in events.lock().unwrap().iter() {
+    for evt in events.lock().iter() {
         let evt_id = match evt {
             Event::Thinking { id } => id.clone(),
             Event::ThoughtDone { id } => id.clone(),
@@ -319,7 +320,7 @@ async fn agent_tool_event_carries_mock_output() {
         &provider,
         &cmd,
         Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().unwrap().push(evt)
+            events_clone.lock().push(evt)
         })),
         5,
         Some(&mock_tool_skill()),
@@ -330,7 +331,7 @@ async fn agent_tool_event_carries_mock_output() {
 
     let tool_end = events
         .lock()
-        .unwrap()
+        
         .iter()
         .find_map(|e| match e {
             Event::ToolEnd { output, .. } => Some(output.clone()),
@@ -362,7 +363,7 @@ async fn tool_call_event_matches_mock_output() {
         &provider,
         &cmd,
         Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().unwrap().push(evt)
+            events_clone.lock().push(evt)
         })),
         5,
         Some(&mock_tool_skill()),
@@ -373,7 +374,7 @@ async fn tool_call_event_matches_mock_output() {
 
     let tool_ends: Vec<String> = events
         .lock()
-        .unwrap()
+        
         .iter()
         .filter_map(|e| match e {
             Event::ToolEnd { output, .. } => Some(output.clone()),
@@ -404,6 +405,6 @@ fn tool_call_hook_receives_input() {
         success: None,
     });
 
-    let ctx = ctx_ref.lock().unwrap().take().unwrap();
+    let ctx = ctx_ref.lock().take().unwrap();
     assert_eq!(ctx.tool_input, input);
 }

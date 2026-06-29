@@ -6,7 +6,8 @@ use crate::{run_agent_turn_with_skills, AgentCommand};
 use runie_core::message::Role;
 use runie_core::Event;
 use runie_testing::{allow_all_gate, mock_provider, mock_tool_skill};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 
 #[tokio::test]
 async fn agent_turn_state_no_raw_tool_markers() {
@@ -29,7 +30,7 @@ async fn agent_turn_state_no_raw_tool_markers() {
         &provider,
         &cmd,
         Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().unwrap().push(evt)
+            events_clone.lock().push(evt)
         })),
         5,
         Some(&mock_tool_skill()),
@@ -41,7 +42,7 @@ async fn agent_turn_state_no_raw_tool_markers() {
     let mut state = runie_core::AppState::default();
     let config = runie_core::config::Config::default();
     state.apply_config(&config);
-    for evt in events.lock().unwrap().drain(..) {
+    for evt in events.lock().drain(..) {
         state.update(evt);
     }
 

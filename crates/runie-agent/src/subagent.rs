@@ -25,7 +25,8 @@ use runie_core::permissions::{AutoAllowSink, PermissionManager};
 use runie_core::provider::Provider;
 use runie_core::subagents::{PermissionMode as SubPermissionMode, SubagentRegistry, SubagentType};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -222,33 +223,27 @@ fn build_subagent_callback(
 ) -> Arc<Mutex<dyn FnMut(runie_core::Event) + Send + Sync>> {
     Arc::new(Mutex::new(move |evt: runie_core::Event| match evt {
         runie_core::Event::ResponseDelta { content, .. }
-        | runie_core::Event::Response { content, .. } => state
-            .responses
-            .lock()
-            .unwrap_or_else(|p| p.into_inner())
-            .push(content),
+        | runie_core::Event::Response { content, .. } => {
+            state.responses.lock().push(content)
+        }
         runie_core::Event::Error { message, .. } => {
-            *state.error.lock().unwrap_or_else(|p| p.into_inner()) = Some(message)
+            *state.error.lock() = Some(message)
         }
         runie_core::Event::Done { .. } => {
-            *state.done.lock().unwrap_or_else(|p| p.into_inner()) = true
+            *state.done.lock() = true
         }
         _ => {}
     }))
 }
 
 fn finalize_subagent_result(state: Arc<SubagentState>) -> Result<String, SubagentError> {
-    if let Some(msg) = state.error.lock().unwrap_or_else(|p| p.into_inner()).take() {
+    if let Some(msg) = state.error.lock().take() {
         return Err(SubagentError::Source(anyhow::anyhow!(msg)));
     }
-    if !*state.done.lock().unwrap_or_else(|p| p.into_inner()) {
+    if !*state.done.lock() {
         return Err(SubagentError::Source(anyhow::anyhow!("subagent did not finish")));
     }
-    Ok(state
-        .responses
-        .lock()
-        .unwrap_or_else(|p| p.into_inner())
-        .join(""))
+    Ok(state.responses.lock().join(""))
 }
 
 #[cfg(test)]
@@ -315,24 +310,6 @@ mod tests {
         )
         .await;
         assert!(result.is_ok(), "{result:?}");
-    }
-
-    #[test]
-    fn finalize_recovers_from_poisoned_done_mutex() {
-        let state = Arc::new(SubagentState::default());
-        let state2 = state.clone();
-        let handle = std::thread::spawn(move || {
-            let _guard = state2.done.lock().unwrap();
-            panic!("poison done mutex")
-        });
-        let _ = handle.join();
-
-        let result = finalize_subagent_result(state);
-        assert!(
-            matches!(result, Err(SubagentError::Source(ref e)) if e.to_string() == "subagent did not finish"),
-            "expected 'did not finish' error, got {:?}",
-            result
-        );
     }
 
     // Layer 4 — Provider Replay / Mock-Tool E2E

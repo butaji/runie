@@ -8,7 +8,8 @@ use runie_core::permissions::{
 };
 use runie_core::Event;
 use runie_testing::mock_provider;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 
 /// A mock approval sink that always denies (for testing without a real PermissionActor).
 pub struct MockApprovalSink;
@@ -41,7 +42,7 @@ async fn test_agent_loop_with_tui_gate_allows_read_only_tool() {
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
     let emit = Arc::new(Mutex::new(move |evt: runie_core::event::Event| {
-        events_clone.lock().unwrap().push(evt)
+        events_clone.lock().push(evt)
     }));
     let permissions = PermissionManager::default().with_policies(vec![
         Box::new(DefaultToolApprove::new()),
@@ -58,7 +59,7 @@ async fn test_agent_loop_with_tui_gate_allows_read_only_tool() {
         .await
         .unwrap();
 
-    let events = events.lock().unwrap();
+    let events = events.lock();
     let tool_starts = events
         .iter()
         .filter(|e| matches!(e, Event::ToolStart { .. }))

@@ -1,6 +1,7 @@
 //! High-level test runner for event-driven agent tests.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 use std::time::Duration;
 
 use runie_agent::{run_agent_turn, AgentCommand, PermissionGate};
@@ -68,7 +69,7 @@ impl TestRunner {
 
         let events = self.events.clone();
         let emit = Arc::new(Mutex::new(move |evt: Event| {
-            events.lock().unwrap().push(evt)
+            events.lock().push(evt)
         }));
         let gate = PermissionGate::new(PermissionManager::default(), Arc::new(AutoAllowSink));
         run_agent_turn(provider, &cmd, emit, 5, gate).await?;
@@ -87,7 +88,7 @@ impl TestRunner {
         let deadline = tokio::time::Instant::now() + timeout;
         loop {
             {
-                let guard = self.events.lock().unwrap();
+                let guard = self.events.lock();
                 if let Some(evt) = guard.iter().find(|e| predicate(e)) {
                     return Some(evt.clone());
                 }
@@ -110,7 +111,7 @@ impl TestRunner {
 
     /// Return all collected events.
     pub fn events(&self) -> Vec<Event> {
-        self.events.lock().unwrap().clone()
+        self.events.lock().clone()
     }
 }
 

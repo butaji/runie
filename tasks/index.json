@@ -32,7 +32,7 @@
   {
     "file": "cleanup-verify-tests-and-just-recipes.md",
     "title": "Clean up `verify-tests.sh` and `just lint-fix`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "collapse-actor-handles-to-typed-map.md",
@@ -102,7 +102,7 @@
   {
     "file": "drop-unused-rand-from-runie-provider.md",
     "title": "Drop unused `rand` from `runie-provider`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "eliminate-production-unwrap-expect.md",
@@ -207,7 +207,7 @@
   {
     "file": "normalize-remaining-std-mutex-to-parking-lot.md",
     "title": "Normalize remaining `std::sync::Mutex`/`RwLock` to `parking_lot`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "reconnect-tui-agent-actor-channel.md",

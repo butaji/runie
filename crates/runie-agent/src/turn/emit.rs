@@ -29,6 +29,6 @@ pub fn emit_error_and_done(emit: &EmitFn, id: &str, message: String) {
 
 /// Emit an event through the emit function.
 pub fn emit_now(emit: &EmitFn, event: Event) {
-    let mut emit = emit.lock().unwrap_or_else(|p| p.into_inner());
+    let mut emit = emit.lock();
     emit(event);
 }

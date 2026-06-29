@@ -9,7 +9,8 @@ use runie_core::provider_event::{ProviderEvent, StopReason};
 use runie_core::Event;
 use runie_testing::allow_all_gate;
 use std::pin::Pin;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 
 struct MinimaxLikeProvider;
 
@@ -75,7 +76,7 @@ async fn minimax_inline_think_renders_visible_response() {
         &provider,
         &cmd,
         Arc::new(Mutex::new(move |evt| {
-            events_clone.lock().unwrap().push(evt)
+            events_clone.lock().push(evt)
         })),
         5,
         allow_all_gate(),
@@ -86,7 +87,7 @@ async fn minimax_inline_think_renders_visible_response() {
     let mut state = runie_core::AppState::default();
     let config = runie_core::config::Config::default();
     state.apply_config(&config);
-    for evt in events.lock().unwrap().drain(..) {
+    for evt in events.lock().drain(..) {
         state.update(evt);
     }
 

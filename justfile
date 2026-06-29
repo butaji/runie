@@ -41,7 +41,7 @@ write-config-schema:
 
 # Run clippy with auto-fix suggestions
 lint-fix:
-    cargo clippy --fix --allow-dirty --allow-staged -- -A clippy::all
+    cargo clippy --fix --allow-dirty --allow-staged -- -D warnings
 
 # Clean build artifacts
 clean:

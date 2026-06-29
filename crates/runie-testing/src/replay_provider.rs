@@ -6,7 +6,8 @@
 
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 
 use futures::Stream;
 use runie_core::message::ChatMessage;
@@ -57,7 +58,7 @@ pub fn capture_events() -> (Arc<Mutex<Vec<Event>>>, runie_agent::stream_response
     let captured = events.clone();
     let emit: runie_agent::stream_response::EmitFn =
         Arc::new(Mutex::new(move |evt: Event| {
-            captured.lock().unwrap().push(evt);
+            captured.lock().push(evt);
         }));
     (events, emit)
 }

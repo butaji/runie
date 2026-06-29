@@ -43,7 +43,7 @@ async fn m3_list_files_turn_executes_list_dir() {
     .await
     .unwrap();
 
-    let events = events.lock().unwrap();
+    let events = events.lock();
     assert!(events.iter().any(|e| matches!(
         e,
         Event::ToolStart { name, .. } if name == "list_dir"
@@ -66,7 +66,7 @@ async fn m3_read_file_turn_executes_read_file() {
     .await
     .unwrap();
 
-    let events = events.lock().unwrap();
+    let events = events.lock();
     assert!(events.iter().any(|e| matches!(
         e,
         Event::ToolStart { name, .. } if name == "read_file"
@@ -90,7 +90,7 @@ async fn m3_multi_tool_turn_executes_list_dir_and_read_file() {
     .await
     .unwrap();
 
-    let events = events.lock().unwrap();
+    let events = events.lock();
     let tool_names: Vec<&str> = events
         .iter()
         .filter_map(|e| match e {
@@ -118,7 +118,7 @@ async fn m27_multi_tool_turn_executes_read_file() {
     .await
     .unwrap();
 
-    let events = events.lock().unwrap();
+    let events = events.lock();
     assert!(events.iter().any(|e| matches!(
         e,
         Event::ToolStart { name, .. } if name == "read_file"
