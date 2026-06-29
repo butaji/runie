@@ -1,11 +1,478 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process;
+
+// ── Event taxonomy generation ─────────────────────────────────────────────────
+
+/// Generate event taxonomy Rust source from `taxonomy.json`.
+/// Produces: generated/kind.rs, generated/category.rs, generated/facts.rs,
+/// generated/intent_impl.rs.
+fn generate_event_taxonomy(manifest_dir: &Path) -> Result<(), String> {
+    let taxonomy_path = manifest_dir.join("src/event/taxonomy.json");
+    let json = fs::read_to_string(&taxonomy_path)
+        .map_err(|e| format!("failed to read taxonomy.json: {}", e))?;
+    let taxonomy: serde_json::Value = serde_json::from_str(&json)
+        .map_err(|e| format!("failed to parse taxonomy.json: {}", e))?;
+
+    let out_dir = manifest_dir.join("src/event/generated");
+    fs::create_dir_all(&out_dir)
+        .map_err(|e| format!("failed to create generated dir: {}", e))?;
+
+    generate_kind_rs(&taxonomy, &out_dir)?;
+    generate_category_rs(&taxonomy, &out_dir)?;
+    generate_facts_rs(&taxonomy, &out_dir)?;
+    generate_intent_impl_rs(&taxonomy, &out_dir)?;
+
+    Ok(())
+}
+
+fn generate_kind_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<(), String> {
+    let categories = taxonomy["categories"].as_object().unwrap();
+    let mut intent_variants = Vec::new();
+    let mut fact_variants = Vec::new();
+    let mut control_variants = Vec::new();
+
+    for (_cat_name, cat_obj) in categories {
+        let kind = cat_obj["kind"].as_str().unwrap();
+
+        // Collect variants from each array separately
+        let mut all_variants = Vec::new();
+
+        // intent_variants are always Intent kind
+        if let Some(arr) = cat_obj.get("intent_variants").and_then(|v| v.as_array()) {
+            for v in arr {
+                if let Some(s) = v.as_str() {
+                    intent_variants.push(s.to_string());
+                }
+            }
+        }
+        // fact_variants are always Fact kind
+        if let Some(arr) = cat_obj.get("fact_variants").and_then(|v| v.as_array()) {
+            for v in arr {
+                if let Some(s) = v.as_str() {
+                    fact_variants.push(s.to_string());
+                }
+            }
+        }
+        // variants take the category's kind
+        if let Some(arr) = cat_obj.get("variants").and_then(|v| v.as_array()) {
+            for v in arr {
+                if let Some(s) = v.as_str() {
+                    all_variants.push(s.to_string());
+                }
+            }
+        }
+
+        match kind {
+            "Intent" => intent_variants.extend(all_variants),
+            "Fact" => fact_variants.extend(all_variants),
+            "Control" => control_variants.extend(all_variants),
+            other => return Err(format!("unknown kind: {}", other)),
+        }
+    }
+
+    let mut out = String::new();
+    out.push_str("//! `Event::kind()` impl and `EVENT_NAMES` bindable-variant table.\n");
+    out.push_str("//! Generated from `taxonomy.json`. DO NOT EDIT.\n\n");
+    out.push_str("use super::super::kind::EventKind;\n");
+    out.push_str("use super::super::variants::Event;\n\n");
+    out.push_str("// ── Event → Kind ──────────────────────────────────────────────────────────────\n\n");
+    out.push_str("impl Event {\n");
+    out.push_str("    /// Return the kind for this event variant.\n");
+    out.push_str("    pub fn kind(&self) -> EventKind {\n");
+    out.push_str("        match self {\n");
+
+    for v in &intent_variants {
+        out.push_str(&format!("            Event::{}{} => EventKind::Intent,\n",
+            v, pattern_suffix_for(v)));
+    }
+    out.push_str("            // Fact variants\n");
+    for v in &fact_variants {
+        out.push_str(&format!("            Event::{}{} => EventKind::Fact,\n",
+            v, pattern_suffix_for(v)));
+    }
+    out.push_str("            // Control variants\n");
+    for v in &control_variants {
+        out.push_str(&format!("            Event::{}{} => EventKind::Control,\n",
+            v, pattern_suffix_for(v)));
+    }
+    out.push_str("        }\n");
+    out.push_str("    }\n");
+    out.push_str("}\n\n");
+
+    // Named variants (zero-arg) for EVENT_NAMES
+    let named: Vec<_> = intent_variants.iter()
+        .chain(control_variants.iter())
+        .filter(|v| !has_fields(v))
+        .collect();
+
+    out.push_str("/// Zero-argument event constructor signature.\n");
+    out.push_str("pub type EventCtor = fn() -> Event;\n\n");
+    out.push_str("/// Bindable event names paired with their zero-arg constructors.\n");
+    out.push_str("pub const EVENT_NAMES: &[(&str, EventCtor)] = &[\n");
+    for v in &named {
+        out.push_str(&format!("    (\"{}\", || Event::{}),\n", v, v));
+    }
+    out.push_str("];\n");
+
+    let path = out_dir.join("kind.rs");
+    fs::write(&path, &out).map_err(|e| format!("failed to write kind.rs: {}", e))?;
+    eprintln!("  generated {}", path.display());
+    Ok(())
+}
+
+fn generate_category_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<(), String> {
+    let categories = taxonomy["categories"].as_object().unwrap();
+
+    let mut out = String::new();
+    out.push_str("//! `EventCategory` enum and `Event::category()` mapping.\n");
+    out.push_str("//! Generated from `taxonomy.json`. DO NOT EDIT.\n\n");
+    out.push_str("use super::super::variants::Event;\n\n");
+    out.push_str("// ── EventCategory enum ─────────────────────────────────────────────────────────\n\n");
+    out.push_str("/// Event category — routing taxonomy for the dispatcher.\n");
+    out.push_str("#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]\n");
+    out.push_str("pub enum EventCategory {\n");
+    let mut cats: Vec<_> = categories.keys().collect();
+    cats.sort();
+    for cat in &cats {
+        out.push_str(&format!("    {},\n", cat));
+    }
+    out.push_str("    #[default]\n");
+    out.push_str("    Unknown,\n");
+    out.push_str("}\n\n");
+
+    out.push_str("// ── Event → Category ─────────────────────────────────────────────────────────\n\n");
+    out.push_str("impl Event {\n");
+    out.push_str("    /// Return the category for this event variant.\n");
+    out.push_str("    pub fn category(&self) -> EventCategory {\n");
+    out.push_str("        match self {\n");
+
+    for (cat_name, cat_obj) in categories {
+        // Collect variants from all arrays
+        let mut variants = Vec::new();
+        for key in ["intent_variants", "fact_variants", "variants"] {
+            if let Some(arr) = cat_obj.get(key).and_then(|v| v.as_array()) {
+                for v in arr {
+                    if let Some(s) = v.as_str() {
+                        variants.push(s.to_string());
+                    }
+                }
+            }
+        }
+        for v in &variants {
+            out.push_str(&format!("            Event::{}{} => EventCategory::{},\n",
+                v, pattern_suffix_for(v), cat_name));
+        }
+    }
+    out.push_str("        }\n");
+    out.push_str("    }\n");
+    out.push_str("}\n");
+
+    let path = out_dir.join("category.rs");
+    fs::write(&path, &out).map_err(|e| format!("failed to write category.rs: {}", e))?;
+    eprintln!("  generated {}", path.display());
+    Ok(())
+}
+
+fn generate_facts_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<(), String> {
+    let categories = taxonomy["categories"].as_object().unwrap();
+    let mut fact_variants = Vec::new();
+
+    for cat_obj in categories.values() {
+        let kind = cat_obj["kind"].as_str().unwrap();
+        if kind == "Fact" {
+            fact_variants.extend(collect_variants(cat_obj));
+        }
+    }
+
+    let mut out = String::new();
+    out.push_str("//! `is_fact_variant()` fast-path predicate.\n");
+    out.push_str("//! Generated from `taxonomy.json`. DO NOT EDIT.\n\n");
+    out.push_str("use super::super::variants::Event;\n\n");
+    out.push_str("/// Returns true if this event is a fact (not an intent or control).\n");
+    out.push_str("pub fn is_fact_variant(e: &Event) -> bool {\n");
+    out.push_str("    matches!(\n        e,\n");
+    for (i, v) in fact_variants.iter().enumerate() {
+        if i > 0 {
+            out.push_str("        | ");
+        } else {
+            out.push_str("        ");
+        }
+        out.push_str(&matches_pattern(v));
+        out.push_str("\n");
+    }
+    out.push_str("    )\n");
+    out.push_str("}\n");
+
+    let path = out_dir.join("facts.rs");
+    fs::write(&path, &out).map_err(|e| format!("failed to write facts.rs: {}", e))?;
+    eprintln!("  generated {}", path.display());
+    Ok(())
+}
+
+fn generate_intent_impl_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<(), String> {
+    let categories = taxonomy["categories"].as_object().unwrap();
+
+    // Build event → intent name lookup from taxonomy
+    let renames: HashMap<String, String> = taxonomy["intent_renames"]
+        .as_object()
+        .unwrap()
+        .iter()
+        .filter(|(k, _)| !k.starts_with('_'))
+        .map(|(k, v)| (k.clone(), v.as_str().unwrap().to_string()))
+        .collect();
+
+    let skips: Vec<String> = taxonomy["intent_skips"]["_list"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().to_string())
+        .collect();
+
+    // Collect all events that have an Intent counterpart
+    let mut has_intent: Vec<String> = Vec::new();
+    for cat_obj in categories.values() {
+        let kind = cat_obj["kind"].as_str().unwrap();
+        if kind == "Intent" || kind == "Control" {
+            has_intent.extend(collect_variants(cat_obj));
+        }
+    }
+
+    let mut out = String::new();
+    out.push_str("//! `Event::into_intent()` implementation.\n");
+    out.push_str("//! Generated from `taxonomy.json`. DO NOT EDIT.\n\n");
+    out.push_str("use super::intent::Intent;\n");
+    out.push_str("use super::variants::Event;\n");
+    out.push_str("use super::generated::is_fact_variant;\n\n");
+    out.push_str("impl Event {\n");
+    out.push_str("    /// Convert this event to a typed `Intent`, if it is an intent.\n");
+    out.push_str("    pub fn into_intent(self) -> Option<Intent> {\n");
+    out.push_str("        if is_fact_variant(&self) {\n");
+    out.push_str("            return None;\n");
+    out.push_str("        }\n");
+    out.push_str("        match self {\n");
+
+    for event_name in &has_intent {
+        if skips.contains(event_name) {
+            continue;
+        }
+        let intent_name = renames.get(event_name).map(|s| s.as_str()).unwrap_or(event_name);
+        let arm = build_intent_arm(event_name, intent_name);
+        out.push_str("            ");
+        out.push_str(&arm);
+        out.push('\n');
+    }
+
+    out.push_str("        }\n");
+    out.push_str("    }\n");
+    out.push_str("}\n");
+
+    let path = out_dir.join("intent_impl.rs");
+    fs::write(&path, &out).map_err(|e| format!("failed to write intent_impl.rs: {}", e))?;
+    eprintln!("  generated {}", path.display());
+    Ok(())
+}
+
+/// Build a match arm converting Event→Intent for a given event/intent name pair.
+fn build_intent_arm(event_name: &str, intent_name: &str) -> String {
+    match event_name {
+        "Input" => "Event::Input(c) => Some(Intent::Input(c)),".to_string(),
+        "Paste" => "Event::Paste(s) => Some(Intent::Paste(s)),".to_string(),
+        "CommandFormInput" => "Event::CommandFormInput(c) => Some(Intent::CommandFormInput(c)),".to_string(),
+        "PaletteFilter" => "Event::PaletteFilter(c) => Some(Intent::PaletteFilter(c)),".to_string(),
+        "ModelSelectorFilter" => "Event::ModelSelectorFilter(c) => Some(Intent::ModelSelectorFilter(c)),".to_string(),
+        "PaletteUp" => "Event::PaletteUp => Some(Intent::PaletteUp),".to_string(),
+        "PaletteDown" => "Event::PaletteDown => Some(Intent::PaletteDown),".to_string(),
+        "PaletteSelect" => "Event::PaletteSelect => Some(Intent::PaletteSelect),".to_string(),
+        "PaletteClose" => "Event::PaletteClose => Some(Intent::PaletteClose),".to_string(),
+        "ModelSelectorUp" => "Event::ModelSelectorUp => Some(Intent::ModelSelectorUp),".to_string(),
+        "ModelSelectorDown" => "Event::ModelSelectorDown => Some(Intent::ModelSelectorDown),".to_string(),
+        "ModelSelectorSelect" => "Event::ModelSelectorSelect => Some(Intent::ModelSelectorSelect),".to_string(),
+        "ModelSelectorClose" => "Event::ModelSelectorClose => Some(Intent::ModelSelectorClose),".to_string(),
+        "PathCompletionUp" => "Event::PathCompletionUp => Some(Intent::PathCompletionUp),".to_string(),
+        "PathCompletionDown" => "Event::PathCompletionDown => Some(Intent::PathCompletionDown),".to_string(),
+        "PathCompletionSelect" => "Event::PathCompletionSelect => Some(Intent::PathCompletionSelect),".to_string(),
+        "PathCompletionClose" => "Event::PathCompletionClose => Some(Intent::PathCompletionClose),".to_string(),
+        "CopyToClipboard" => "Event::CopyToClipboard(s) => Some(Intent::CopyToClipboard(s)),".to_string(),
+        "InsertAtRef" => "Event::InsertAtRef(s) => Some(Intent::InsertAtRef(s)),".to_string(),
+        "Submit" => "Event::Submit => Some(Intent::Submit),".to_string(),
+        "RunCompactCommand" => "Event::RunCompactCommand { keep, focus } => Some(Intent::RunCompactCommand { keep: keep.clone(), focus: focus.clone() }),".to_string(),
+        "RunForkCommand" => "Event::RunForkCommand { message_index } => Some(Intent::RunForkCommand { message_index: message_index.parse().ok()?, message_index: message_index.clone() }),".to_string(),
+        "ForkSession" => "Event::ForkSession { message_index } => Some(Intent::ForkSession { message_index: *message_index }),".to_string(),
+        "SessionTreeSelect" => "Event::SessionTreeSelect { id } => Some(Intent::SessionTreeSelect { id: id.clone() }),".to_string(),
+        "SelectSession" => "Event::SelectSession { id } => Some(Intent::SelectSession { id: id.clone() }),".to_string(),
+        "StarSession" => "Event::StarSession { id } => Some(Intent::StarSession { id: id.clone() }),".to_string(),
+        "RenameSession" => "Event::RenameSession { id, name } => Some(Intent::RenameSession { id: id.clone(), name: name.clone() }),".to_string(),
+        "DeleteSession" => "Event::DeleteSession { id } => Some(Intent::DeleteSession { id: id.clone() }),".to_string(),
+        "SwitchModel" => "Event::SwitchModel { provider, model, explicit } => Some(Intent::SwitchModel { provider: provider.clone(), model: model.clone(), explicit: *explicit }),".to_string(),
+        "ScopedModelToggle" => "Event::ScopedModelToggle { provider, name } => Some(Intent::ScopedModelToggle { provider: provider.clone(), name: name.clone() }),".to_string(),
+        "ScopedModelToggleProvider" => "Event::ScopedModelToggleProvider { provider } => Some(Intent::ScopedModelToggleProvider { provider: provider.clone() }),".to_string(),
+        "SettingsSwitchCategory" => "Event::SettingsSwitchCategory { category } => Some(Intent::SettingsSwitchCategory { category: *category }),".to_string(),
+        "SetThinkingLevel" => "Event::SetThinkingLevel(lvl) => Some(Intent::SetThinkingLevel(*lvl)),".to_string(),
+        "RunLoadCommand" => "Event::RunLoadCommand { name } => Some(Intent::RunLoadCommand { name: name.clone() }),".to_string(),
+        "RunSaveCommand" => "Event::RunSaveCommand { name } => Some(Intent::RunSaveCommand { name: name.clone() }),".to_string(),
+        "RunDeleteCommand" => "Event::RunDeleteCommand { name } => Some(Intent::RunDeleteCommand { name: name.clone() }),".to_string(),
+        "RunImportCommand" => "Event::RunImportCommand { path } => Some(Intent::RunImportCommand { path: path.clone() }),".to_string(),
+        "RunExportCommand" => "Event::RunExportCommand { path } => Some(Intent::RunExportCommand { path: path.clone() }),".to_string(),
+        "RunSkillCommand" => "Event::RunSkillCommand { name } => Some(Intent::RunSkillCommand { name: name.clone() }),".to_string(),
+        "RunLoginCommand" => "Event::RunLoginCommand { provider, token } => Some(Intent::RunLoginCommand { provider: provider.clone(), token: token.clone() }),".to_string(),
+        "RunLogoutCommand" => "Event::RunLogoutCommand { provider } => Some(Intent::RunLogoutCommand { provider: provider.clone() }),".to_string(),
+        "RunNameCommand" => "Event::RunNameCommand { name } => Some(Intent::RunNameCommand { name: name.clone() }),".to_string(),
+        "RunPromptCommand" => "Event::RunPromptCommand { name } => Some(Intent::RunPromptCommand { name: name.clone() }),".to_string(),
+        "RunThinkingCommand" => "Event::RunThinkingCommand { level } => Some(Intent::RunThinkingCommand { level: *level }),".to_string(),
+        "RunPaletteCommand" => "Event::RunPaletteCommand { name, args } => Some(Intent::RunPaletteCommand { name: name.clone(), args: args.clone() }),".to_string(),
+        "SelectProvider" => "Event::SelectProvider { provider } => Some(Intent::SelectProvider { provider: provider.clone() }),".to_string(),
+        "SubmitKey" => "Event::SubmitKey { provider, key } => Some(Intent::SubmitKey { provider: provider.clone(), key: key.clone() }),".to_string(),
+        "ToggleModel" => "Event::ToggleModel { model } => Some(Intent::ToggleModel { model: model.clone() }),".to_string(),
+        "ExternalEditorDone" => "Event::ExternalEditorDone { content } => Some(Intent::ExternalEditorDone { content: content.clone() }),".to_string(),
+        "PermissionResponse" => "Event::PermissionResponse { request_id, action } => Some(Intent::PermissionResponse { request_id: request_id.clone(), action: *action }),".to_string(),
+        "MouseClick" => "Event::MouseClick { row, col, button } => Some(Intent::MouseClick { row: *row, col: *col, button: button.clone() }),".to_string(),
+        "MouseRelease" => "Event::MouseRelease { row, col, button } => Some(Intent::MouseRelease { row: *row, col: *col, button: button.clone() }),".to_string(),
+        "MouseDrag" => "Event::MouseDrag { row, col, button } => Some(Intent::MouseDrag { row: *row, col: *col, button: button.clone() }),".to_string(),
+        "MouseMove" => "Event::MouseMove { row, col } => Some(Intent::MouseMove { row: *row, col: *col }),".to_string(),
+        "TerminalSize" => "Event::TerminalSize { width, height } => Some(Intent::TerminalSize { width: *width, height: *height }),".to_string(),
+        "PendingEdit" => "Event::PendingEdit { path, original, proposed } => Some(Intent::PendingEdit { path: path.clone(), original: original.clone(), proposed: proposed.clone() }),".to_string(),
+        "ProvidersSelectModel" => "Event::ProvidersSelectModel { provider, model } => Some(Intent::ProvidersSelectModel { provider: provider.clone(), model: model.clone() }),".to_string(),
+        "ProvidersDisconnect" => "Event::ProvidersDisconnect { provider } => Some(Intent::ProvidersDisconnect { provider: provider.clone() }),".to_string(),
+        "ProvidersEditModels" => "Event::ProvidersEditModels { provider } => Some(Intent::ProvidersEditModels { provider: provider.clone() }),".to_string(),
+        // Events that map to Notify
+        "TransientMessage" => {
+            "Event::TransientMessage { content, level } => Some(Intent::Notify { content: content.clone(), level: *level }),".to_string()
+        }
+        "TransientError" => {
+            "Event::TransientError { content } => Some(Intent::Notify { content: content.clone(), level: super::TransientLevel::Error }),".to_string()
+        }
+        // Renamed events
+        "Start" => "Event::Start => Some(Intent::LoginStart),".to_string(),
+        "SwitchTheme" => "Event::SwitchTheme { name } => Some(Intent::SetTheme { name: name.clone() }),".to_string(),
+        "Up" => "Event::Up => Some(Intent::ScrollUp),".to_string(),
+        "Down" => "Event::Down => Some(Intent::ScrollDown),".to_string(),
+        "TrustProject" => "Event::TrustProject => Some(Intent::TrustProject),".to_string(),
+        "UntrustProject" => "Event::UntrustProject => Some(Intent::UntrustProject),".to_string(),
+        "ReloadAll" => "Event::ReloadAll => Some(Intent::ReloadConfig),".to_string(),
+        // Simple zero-arg events (intent name matches event name)
+        _ if event_name == intent_name && !has_fields(event_name) => {
+            format!("Event::{} => Some(Intent::{}),", event_name, intent_name)
+        }
+        // Simple events with same name but different fields (auto-convert)
+        _ if event_name == intent_name => {
+            let fields = guess_fields(event_name);
+            format!("Event::{}{} => Some(Intent::{}{}),", event_name, fields, intent_name, fields)
+        }
+        // Renamed events with fields
+        _ => {
+            let fields = guess_fields(event_name);
+            format!("Event::{}{} => Some(Intent::{}{}),", event_name, fields, intent_name, fields)
+        }
+    }
+}
+
+/// Heuristic: does this event variant have fields?
+fn has_fields(name: &str) -> bool {
+    matches!(name,
+        "Input" | "Paste" | "MouseClick" | "MouseRelease" |
+        "MouseDrag" | "MouseMove" | "TerminalSize" | "SwitchModel" | "SwitchTheme" |
+        "SetThinkingLevel" | "ScopedModelToggle" | "ScopedModelToggleProvider" |
+        "SettingsSwitchCategory" | "ForkSession" | "SelectSession" | "StarSession" |
+        "RenameSession" | "DeleteSession" | "ExternalEditorDone" | "PendingEdit" |
+        "TransientMessage" | "TransientError" | "RunLoadCommand" | "RunSaveCommand" |
+        "RunDeleteCommand" | "RunImportCommand" | "RunExportCommand" | "RunSkillCommand" |
+        "RunLoginCommand" | "RunLogoutCommand" | "RunNameCommand" | "RunForkCommand" |
+        "RunCompactCommand" | "RunPromptCommand" | "RunThinkingCommand" |
+        "RunPaletteCommand" | "SelectProvider" | "SubmitKey" | "ToggleModel" |
+        "SessionTreeSelect" | "SessionList" | "SessionOperationFailed" |
+        "SessionChanged" | "SessionLoaded" | "SessionSaved" | "SessionDeleted" |
+        "SessionImported" | "SessionExported" | "PaletteFilter" | "CommandFormInput" |
+        "ModelSelectorFilter" | "CopyToClipboard" | "InsertAtRef" |
+        "ProvidersSelectModel" | "ProvidersDisconnect" | "ProvidersEditModels" |
+        "PermissionResponse" | "AssistantMessageReady" | "BashOutput" |
+        "ClipboardRead" | "ClipboardWritten" | "CompletionChanged" | "ConfigLoaded" |
+        "Done" | "EnvDetected" | "Error" | "ExternalEditorClosed" |
+        "FffSearchResult" | "FilesWritten" | "FollowUpDelivered" |
+        "GistShared" | "HistoryAppend" | "HistoryLoaded" | "InputChanged" |
+        "MessageDequeued" | "MessageReplayed" | "ModelsFetched" |
+        "PermissionRequest" | "QueueAborted" | "ReadOnlyChanged" | "Response" |
+        "ResponseDelta" | "SetPrompt" | "SteeringDelivered" | "StreamStarted" |
+        "SystemMessage" | "TextEnd" | "TextStart" | "Thinking" |
+        "ThinkingDelta" | "ThinkingEnd" | "ThinkingStart" | "ThoughtDone" |
+        "TokenStatsUpdated" | "ToolConstraintError" | "ToolEnd" |
+        "ToolInputDelta" | "ToolStart" | "TrustChanged" | "TrustLoaded" |
+        "TrustSet" | "TurnComplete" | "TurnConstraintError" | "TurnErrored" |
+        "TurnStarted" | "UserMessageSubmitted" | "ValidationFailed" | "ViewChanged" |
+        "IdGenerated"
+    )
+}
+
+/// Guess field pattern for a named event variant.
+fn guess_fields(name: &str) -> String {
+    match name {
+        "Input" => "(c)".to_string(),
+        "Paste" => "(s)".to_string(),
+        "MouseClick" | "MouseRelease" | "MouseDrag" => " { row, col, button }".to_string(),
+        "MouseMove" => " { row, col }".to_string(),
+        "TerminalSize" => " { width, height }".to_string(),
+        "SwitchModel" => " { provider, model, explicit }".to_string(),
+        "SwitchTheme" => " { name }".to_string(),
+        "SetThinkingLevel" => "(lvl)".to_string(),
+        "ScopedModelToggle" | "ScopedModelToggleProvider" => " { provider, name }".to_string(),
+        "SettingsSwitchCategory" => " { category }".to_string(),
+        "ForkSession" => " { message_index }".to_string(),
+        "SelectSession" | "StarSession" | "DeleteSession" | "SessionTreeSelect" => " { id }".to_string(),
+        "RenameSession" => " { id, name }".to_string(),
+        "ExternalEditorDone" => " { content }".to_string(),
+        "PendingEdit" => " { path, original, proposed }".to_string(),
+        "TransientMessage" => " { content, level }".to_string(),
+        "TransientError" => " { content }".to_string(),
+        "RunLoadCommand" | "RunSaveCommand" | "RunDeleteCommand" | "RunNameCommand" | "RunPromptCommand" => " { name }".to_string(),
+        "RunImportCommand" | "RunExportCommand" => " { path }".to_string(),
+        "RunLoginCommand" => " { provider, token }".to_string(),
+        "RunLogoutCommand" => " { provider }".to_string(),
+        "RunForkCommand" => " { message_index }".to_string(),
+        "RunCompactCommand" => " { keep, focus }".to_string(),
+        "RunThinkingCommand" => " { level }".to_string(),
+        "RunPaletteCommand" => " { name, args }".to_string(),
+        "SelectProvider" | "ToggleModel" => " { provider }".to_string(),
+        "SubmitKey" => " { provider, key }".to_string(),
+        "PaletteFilter" | "CommandFormInput" | "ModelSelectorFilter" => "(c)".to_string(),
+        "CopyToClipboard" | "InsertAtRef" => "(s)".to_string(),
+        "ProvidersSelectModel" => " { provider, model }".to_string(),
+        "ProvidersDisconnect" | "ProvidersEditModels" => " { provider }".to_string(),
+        "PermissionResponse" => " { request_id, action }".to_string(),
+        _ => " { /* unknown */ }".to_string(),
+    }
+}
+
+/// Collect all variant names from a category JSON value.
+fn collect_variants(cat_val: &serde_json::Value) -> Vec<String> {
+    let mut variants = Vec::new();
+    for key in ["intent_variants", "fact_variants", "variants"] {
+        if let Some(arr) = cat_val.get(key).and_then(|v| v.as_array()) {
+            for v in arr {
+                if let Some(s) = v.as_str() {
+                    variants.push(s.to_string());
+                }
+            }
+        }
+    }
+    variants
+}
+
+/// Build a match pattern suffix for a variant name.
+/// Returns ` { .. }` for struct/tuple variants, `""` for unit variants.
+fn pattern_suffix_for(name: &str) -> String {
+    if has_fields(name) { " { .. }".to_string() } else { String::new() }
+}
+
+/// Build a pattern for the `matches!` macro.
+/// Unit variants use the variant name directly; struct variants use `{ .. }`.
+fn matches_pattern(name: &str) -> String {
+    if has_fields(name) { format!("Event::{} {{ .. }}", name) } else { format!("Event::{}", name) }
+}
 
 // ── AppState field-access guardrail ──────────────────────────────────────────
 //
 // Private AppState fields must be accessed through accessors, not directly.
-// Uses a trailing dot to match field access (state.session.xxx) but NOT
-// method calls (state.session(), state.session_mut()).
 const APPSTATE_PATTERNS: &[(&str, &str)] = &[
     ("state.session.", "state.session()"),
     ("state.input.", "state.input()"),
@@ -102,7 +569,6 @@ fn is_test_file(rel_path: &str) -> bool {
         || rel_path.contains("_test.")
 }
 
-/// Files exempt from the AppState field-access check.
 fn needs_appstate_lint(rel_path: &str) -> bool {
     let exemptions = [
         "build.rs",
@@ -166,16 +632,22 @@ fn lint_file(path: &Path, workspace_root: &Path, errors: &mut Vec<String>) {
 }
 
 fn main() {
-    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
-    let workspace_root =
-        Path::new(&manifest_dir).parent().unwrap().parent().unwrap();
+    let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default());
+    let workspace_root = manifest_dir.parent().unwrap().parent().unwrap();
+
+    // Generate event taxonomy from taxonomy.json
+    eprintln!("cargo:rerun-if-changed=src/event/taxonomy.json");
+    if let Err(msg) = generate_event_taxonomy(&manifest_dir) {
+        eprintln!("\n=== EVENT TAXONOMY GENERATION FAILED ===\n  {}\n\n", msg);
+        process::exit(1);
+    }
 
     // Validate bundled subagent type checksums.
     if let Err(msg) =
-        validate_agent_manifest(PathBuf::from(&manifest_dir).join("resources").join("agents"))
+        validate_agent_manifest(manifest_dir.join("resources").join("agents"))
     {
         eprintln!("\n=== AGENT MANIFEST VALIDATION FAILED ===\n  {}\n\n", msg);
-        std::process::exit(1);
+        process::exit(1);
     }
 
     let mut errors = Vec::new();
@@ -193,7 +665,7 @@ fn main() {
             eprintln!("  {}", err);
         }
         eprintln!("\n{} violations found\n", errors.len());
-        std::process::exit(1);
+        process::exit(1);
     }
 }
 

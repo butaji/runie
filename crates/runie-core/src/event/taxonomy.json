@@ -1,9 +1,55 @@
 {
+  "_metadata": {
+    "note": "This file is the canonical source for event taxonomy generation.",
+    "generates": [
+      "generated/kind.rs — EventKind match table + EVENT_NAMES",
+      "generated/category.rs — EventCategory match table",
+      "generated/facts.rs — is_fact_variant() predicate",
+      "generated/intent_impl.rs — Event into_intent() impl"
+    ]
+  },
+  "intent_renames": {
+    "_note": "Events whose Intent counterpart has a different name.",
+    "Start": "LoginStart",
+    "SwitchTheme": "SetTheme",
+    "Up": "ScrollUp",
+    "Down": "ScrollDown",
+    "TrustProject": "TrustProject",
+    "UntrustProject": "UntrustProject",
+    "ReloadAll": "ReloadConfig",
+    "TransientMessage": "Notify",
+    "TransientError": "Notify"
+  },
+  "intent_skips": {
+    "_note": "Events that have no Intent counterpart (remain as Facts).",
+    "_list": [
+      "SetPrompt",
+      "MessageReplayed",
+      "TurnStarted",
+      "TurnAborted",
+      "TurnCompleted",
+      "TurnErrored",
+      "TurnConstraintError",
+      "TokenStatsUpdated",
+      "StreamStarted",
+      "UserMessageSubmitted",
+      "QueueAborted",
+      "QueuesCleared",
+      "SteeringDelivered",
+      "FollowUpDelivered",
+      "MessageDequeued",
+      "IdGenerated",
+      "AssistantMessageReady",
+      "KeybindingsReloaded",
+      "PermissionRequest",
+      "PermissionRequestDismissed"
+    ]
+  },
   "categories": {
     "Input": {
       "kind": "Intent",
       "variants": [
-        "Backspace", "Newline", "Submit", "Escape", "CursorLeft", "CursorRight",
+        "Input", "Backspace", "Newline", "Submit", "Escape", "CursorLeft", "CursorRight",
         "CursorStart", "CursorEnd", "DeleteWord", "DeleteToEnd", "DeleteToStart",
         "KillChar", "HistoryPrev", "HistoryNext", "Undo", "Redo", "CursorWordLeft",
         "CursorWordRight", "PageUp", "PageDown", "GoToTop", "GoToBottom",
