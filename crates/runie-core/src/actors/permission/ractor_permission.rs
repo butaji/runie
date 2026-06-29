@@ -131,18 +131,8 @@ impl Actor for RactorPermissionActor {
                 input,
                 reply,
             } => {
-                self.registry.lock().register(&request_id);
-                *self.current_request.lock() = Some(PermissionRequestState {
-                    request_id: request_id.clone(),
-                    tool: tool.clone(),
-                    input: input.clone(),
-                });
-                self.bus.publish(Event::PermissionRequest {
-                    request_id: request_id.clone(),
-                    tool: tool.clone(),
-                    input,
-                });
-                reply.send(PermissionAction::Deny);
+                // Store reply channel and emit event; do NOT reply until ResolvePermission.
+                self.handle_ask_permission(request_id, tool, input, reply);
             }
             PermissionMsg::ResolvePermission { request_id, action } => {
                 self.registry.lock().resolve(&request_id, action);
@@ -186,6 +176,33 @@ impl RactorPermissionActor {
             *current = None;
         }
     }
+
+    /// Handle `AskPermission`: store the reply channel in the registry so
+    /// `ResolvePermission` can deliver the user's choice. Do NOT reply here.
+    fn handle_ask_permission(
+        &self,
+        request_id: String,
+        tool: String,
+        input: serde_json::Value,
+        reply: crate::actors::Reply<PermissionAction>,
+    ) {
+        // Store the reply channel in ApprovalRegistry so ResolvePermission can send.
+        // The registry returns the receiver, but we already have the reply channel
+        // in the PermissionMsg, so we just store the sender end.
+        let _rx = self.registry.lock().register(&request_id, reply);
+
+        *self.current_request.lock() = Some(PermissionRequestState {
+            request_id: request_id.clone(),
+            tool: tool.clone(),
+            input: input.clone(),
+        });
+
+        self.bus.publish(Event::PermissionRequest {
+            request_id,
+            tool,
+            input,
+        });
+    }
 }
 
 #[cfg(test)]
@@ -213,47 +230,143 @@ mod tests {
         false
     }
 
+    // ── Layer 1: State/Logic tests ──────────────────────────────────────────
+
     #[tokio::test]
-    async fn ask_permission_stores_request() {
+    async fn permission_actor_awaits_resolution() {
+        // Verify that AskPermission does NOT immediately resolve.
+        // The receiver should still be pending until ResolvePermission is called.
         let bus = EventBus::<Event>::new(16);
-        let mut sub = bus.subscribe();
         let (handle, _cell) = RactorPermissionActor::spawn(bus.clone()).await;
 
-        handle
+        let mut rx = handle
             .ask_permission(
-                "req-1".into(),
+                "req-await-1".into(),
                 "bash".into(),
                 serde_json::json!({}),
             )
             .await;
 
-        let found = wait_for_event(&mut sub, |e| matches!(e, Event::PermissionRequest { .. })).await;
-        assert!(found, "Expected PermissionRequest event");
+        // Use try_recv to verify the channel is NOT yet complete
+        // (would return Ok(Ready) if already resolved)
+        let resolved = match rx.try_recv() {
+            Ok(_) => true,  // Got a value = already resolved
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty) => false, // Still pending
+            Err(tokio::sync::oneshot::error::TryRecvError::Closed) => true, // Closed = also resolved
+        };
+
+        assert!(!resolved, "AskPermission should NOT immediately resolve");
     }
 
     #[tokio::test]
-    async fn resolve_permission_clears_request() {
+    async fn permission_actor_resolves_with_allow() {
+        let bus = EventBus::<Event>::new(16);
+        let (handle, _cell) = RactorPermissionActor::spawn(bus.clone()).await;
+
+        let mut rx = handle
+            .ask_permission(
+                "req-allow-1".into(),
+                "bash".into(),
+                serde_json::json!({}),
+            )
+            .await;
+
+        // Resolve with Allow
+        handle
+            .resolve_permission("req-allow-1".into(), PermissionAction::Allow)
+            .await;
+
+        // Verify the receiver gets Allow
+        let result = tokio::time::timeout(std::time::Duration::from_secs(1), rx).await;
+        assert!(result.is_ok(), "Should receive a result");
+        assert_eq!(result.unwrap(), Ok(PermissionAction::Allow));
+    }
+
+    #[tokio::test]
+    async fn permission_actor_resolves_with_deny() {
+        let bus = EventBus::<Event>::new(16);
+        let (handle, _cell) = RactorPermissionActor::spawn(bus.clone()).await;
+
+        let mut rx = handle
+            .ask_permission(
+                "req-deny-1".into(),
+                "bash".into(),
+                serde_json::json!({}),
+            )
+            .await;
+
+        // Resolve with Deny
+        handle
+            .resolve_permission("req-deny-1".into(), PermissionAction::Deny)
+            .await;
+
+        // Verify the receiver gets Deny
+        let result = tokio::time::timeout(std::time::Duration::from_secs(1), rx).await;
+        assert!(result.is_ok(), "Should receive a result");
+        assert_eq!(result.unwrap(), Ok(PermissionAction::Deny));
+    }
+
+    #[tokio::test]
+    async fn permission_request_event_roundtrip() {
+        // Layer 2: Event Handling - verify events flow correctly
         let bus = EventBus::<Event>::new(16);
         let mut sub = bus.subscribe();
         let (handle, _cell) = RactorPermissionActor::spawn(bus.clone()).await;
 
-        // First ask permission
-        handle
+        // Ask permission
+        let _rx = handle
             .ask_permission(
-                "req-2".into(),
-                "read_file".into(),
-                serde_json::json!({"path": "test.txt"}),
+                "req-event-1".into(),
+                "bash".into(),
+                serde_json::json!({"command": "ls"}),
             )
             .await;
 
-        // Wait for PermissionRequest, then resolve
-        let _ = wait_for_event(&mut sub, |e| matches!(e, Event::PermissionRequest { .. })).await;
+        // Wait for PermissionRequest event
+        let found = wait_for_event(&mut sub, |e| matches!(e, Event::PermissionRequest { request_id, .. } if request_id == "req-event-1")).await;
+        assert!(found, "Expected PermissionRequest event");
 
+        // Resolve permission
         handle
-            .resolve_permission("req-2".into(), PermissionAction::Allow)
+            .resolve_permission("req-event-1".into(), PermissionAction::Allow)
             .await;
 
-        let found = wait_for_event(&mut sub, |e| matches!(e, Event::PermissionResponse { action: PermissionAction::Allow, .. })).await;
+        // Wait for PermissionResponse event
+        let found = wait_for_event(&mut sub, |e| matches!(e, Event::PermissionResponse { request_id, action: PermissionAction::Allow, .. } if request_id == "req-event-1")).await;
         assert!(found, "Expected PermissionResponse event");
+    }
+
+    // Legacy test names for backward compatibility with existing test expectations
+    // These tests verify the same behavior as the new tests above.
+    #[tokio::test]
+    async fn ask_permission_stores_request() {
+        // Same as permission_actor_awaits_resolution
+        let bus = EventBus::<Event>::new(16);
+        let (handle, _cell) = RactorPermissionActor::spawn(bus.clone()).await;
+        let mut rx = handle
+            .ask_permission("req-legacy-1".into(), "bash".into(), serde_json::json!({}))
+            .await;
+        let resolved = match rx.try_recv() {
+            Ok(_) => true,
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty) => false,
+            Err(tokio::sync::oneshot::error::TryRecvError::Closed) => true,
+        };
+        assert!(!resolved, "AskPermission should NOT immediately resolve");
+    }
+
+    #[tokio::test]
+    async fn resolve_permission_clears_request() {
+        // Same as permission_actor_resolves_with_allow
+        let bus = EventBus::<Event>::new(16);
+        let (handle, _cell) = RactorPermissionActor::spawn(bus.clone()).await;
+        let mut rx = handle
+            .ask_permission("req-legacy-2".into(), "bash".into(), serde_json::json!({}))
+            .await;
+        handle
+            .resolve_permission("req-legacy-2".into(), PermissionAction::Allow)
+            .await;
+        let result = tokio::time::timeout(std::time::Duration::from_secs(1), rx).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Ok(PermissionAction::Allow));
     }
 }

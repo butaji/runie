@@ -6,14 +6,15 @@
 
 use std::collections::HashMap;
 use parking_lot::Mutex;
-use tokio::sync::oneshot;
+
+use crate::actors::Reply;
 
 use super::PermissionAction;
 
-/// Holds pending oneshot senders keyed by request id.
+/// Holds pending reply channels keyed by request id.
 #[derive(Debug, Default)]
 pub struct ApprovalRegistry {
-    pending: Mutex<HashMap<String, oneshot::Sender<PermissionAction>>>,
+    pending: Mutex<HashMap<String, Reply<PermissionAction>>>,
 }
 
 impl ApprovalRegistry {
@@ -21,20 +22,18 @@ impl ApprovalRegistry {
         Self::default()
     }
 
-    /// Register a new approval request and return the receiver that will
-    /// complete when [`resolve`](Self::resolve) is called.
-    pub fn register(&self, request_id: &str) -> oneshot::Receiver<PermissionAction> {
-        let (tx, rx) = oneshot::channel();
-        self.pending.lock().insert(request_id.to_owned(), tx);
-        rx
+    /// Register a new approval request with the reply channel.
+    /// The reply channel will be used by [`resolve`](Self::resolve) to deliver the user's choice.
+    pub fn register(&self, request_id: &str, reply: Reply<PermissionAction>) {
+        self.pending.lock().insert(request_id.to_owned(), reply);
     }
 
     /// Resolve a pending approval request with the user's chosen action.
     /// Returns `true` if the request existed and was resolved.
     pub fn resolve(&self, request_id: &str, action: PermissionAction) -> bool {
         let mut pending = self.pending.lock();
-        if let Some(tx) = pending.remove(request_id) {
-            let _ = tx.send(action);
+        if let Some(reply) = pending.remove(request_id) {
+            reply.send(action);
             true
         } else {
             false
@@ -45,12 +44,16 @@ impl ApprovalRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::actors::Reply;
+    use tokio::sync::oneshot;
 
     #[test]
     fn resolve_sends_action_to_receiver() {
         let registry = ApprovalRegistry::new();
-        let rx = registry.register("req-1");
+        let (tx, rx) = oneshot::channel();
+        let reply = Reply::new(tx);
 
+        registry.register("req-1", reply);
         assert!(registry.resolve("req-1", PermissionAction::Allow));
 
         assert_eq!(rx.blocking_recv(), Ok(PermissionAction::Allow));
@@ -66,8 +69,11 @@ mod tests {
     #[test]
     fn multiple_requests_are_independent() {
         let registry = ApprovalRegistry::new();
-        let rx_a = registry.register("a");
-        let rx_b = registry.register("b");
+        let (tx_a, rx_a) = oneshot::channel();
+        let (tx_b, rx_b) = oneshot::channel();
+
+        registry.register("a", Reply::new(tx_a));
+        registry.register("b", Reply::new(tx_b));
 
         registry.resolve("a", PermissionAction::Allow);
         registry.resolve("b", PermissionAction::Deny);
