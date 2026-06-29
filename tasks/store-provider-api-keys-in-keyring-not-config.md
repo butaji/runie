@@ -1,6 +1,6 @@
 # Store provider API keys in OS keyring, not plain `config.toml`
 
-**Status**: todo
+**Status**: partial (keyring integration done)
 **Milestone**: R6
 **Category**: Security / Configuration
 **Priority": P1

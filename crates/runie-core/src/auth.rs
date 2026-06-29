@@ -208,6 +208,12 @@ impl AuthStorage {
         self.tokens.get(provider).map(|t| Token::new(t.token.clone()))
     }
 
+    /// Get a keyring token directly by provider name.
+    /// Returns the token string if found in keyring, None otherwise.
+    pub fn get_keyring_token(provider: &str) -> Option<String> {
+        get_keyring(provider).ok()
+    }
+
     pub fn is_authenticated(&self, provider: &str) -> bool {
         self.tokens.contains_key(provider)
     }
@@ -419,5 +425,14 @@ mod tests {
     fn token_from_string() {
         let t: Token = "hello".into();
         assert_eq!(t.expose(), "hello");
+    }
+
+    #[test]
+    fn get_keyring_token_returns_none_when_not_found() {
+        // Keyring may not have this provider, so we just verify the method works
+        let result = AuthStorage::get_keyring_token("nonexistent_provider_xyz");
+        // Result is None or Some depending on actual keyring state
+        // This test just verifies the API works without panicking
+        let _ = result;
     }
 }

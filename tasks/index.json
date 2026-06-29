@@ -342,7 +342,7 @@
   {
     "file": "store-provider-api-keys-in-keyring-not-config.md",
     "title": "Store provider API keys in OS keyring, not plain `config.toml`",
-    "status": "todo"
+    "status": "partial (keyring integration done)"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",
