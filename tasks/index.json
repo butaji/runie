@@ -352,7 +352,7 @@
   {
     "file": "unify-cli-json-rpc-transport-and-remove-dead-acp.md",
     "title": "Unify CLI JSON-RPC transport and remove dead ACP plumbing",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-core-and-tui-line-count-computation.md",
@@ -392,7 +392,7 @@
   {
     "file": "unify-provider-credential-resolution-with-dotenvy.md",
     "title": "Unify provider credential resolution with `dotenvy`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-session-store-and-index.md",

@@ -71,6 +71,7 @@ tempfile = "3"
 thiserror = "2"
 secrecy = "0.8"
 keyring = { version = "3", features = ["vendored"] }
+dotenvy = "0.15"
 fs2 = "0.4"
 ansi_colours = "1.2"
 tui-textarea = "0.7"

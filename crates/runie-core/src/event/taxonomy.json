@@ -1,0 +1,131 @@
+{
+  "categories": {
+    "Input": {
+      "kind": "Intent",
+      "variants": [
+        "Backspace", "Newline", "Submit", "Escape", "CursorLeft", "CursorRight",
+        "CursorStart", "CursorEnd", "DeleteWord", "DeleteToEnd", "DeleteToStart",
+        "KillChar", "HistoryPrev", "HistoryNext", "Undo", "Redo", "CursorWordLeft",
+        "CursorWordRight", "PageUp", "PageDown", "GoToTop", "GoToBottom",
+        "Paste", "PasteImage", "MouseClick", "MouseRelease", "MouseDrag",
+        "MouseMove", "MouseScrollUp", "MouseScrollDown", "FocusGained", "FocusLost",
+        "TerminalSize"
+      ]
+    },
+    "Agent": {
+      "kind": "Fact",
+      "variants": [
+        "Thinking", "ThoughtDone", "ToolStart", "ToolInputDelta", "ToolEnd",
+        "ToolConstraintError", "ResponseDelta", "ThinkingDelta", "TextStart",
+        "TextEnd", "ThinkingStart", "ThinkingEnd", "Response", "TurnComplete",
+        "Done", "Error", "TurnStarted", "TurnAborted", "TurnCompleted",
+        "TurnErrored", "TurnConstraintError", "TokenStatsUpdated", "StreamStarted",
+        "UserMessageSubmitted", "QueueAborted", "QueuesCleared", "SteeringDelivered",
+        "FollowUpDelivered", "MessageDequeued", "IdGenerated", "AssistantMessageReady"
+      ]
+    },
+    "Scroll": {
+      "kind": "Intent",
+      "variants": ["Up", "Down"]
+    },
+    "Control": {
+      "kind": "Control",
+      "variants": [
+        "Quit", "ForceQuit", "Reset", "Abort", "ClearQueues", "FollowUp",
+        "ToggleExpand", "Dequeue", "OpenExternalEditor", "ExternalEditorDone",
+        "ShareSession", "Suspend", "ToggleVimMode", "CopyLastResponse",
+        "OpenSessionList", "NewSession", "ResumeSession", "SelectSession",
+        "StarSession", "RenameSession", "DeleteSession"
+      ]
+    },
+    "ModelConfig": {
+      "kind": "Intent",
+      "intent_variants": [
+        "SwitchModel", "SwitchTheme", "CycleModelNext", "CycleModelPrev",
+        "ToggleScopedModelsDialog", "ScopedModelToggle", "ScopedModelEnableAll",
+        "ScopedModelDisableAll", "ScopedModelToggleProvider", "ToggleSettingsDialog",
+        "SettingsUp", "SettingsDown", "SettingsLeft", "SettingsRight",
+        "SettingsSelect", "SettingsClose", "SettingsSwitchCategory",
+        "CycleThinkingLevel", "SetThinkingLevel", "ToggleReadOnly",
+        "TrustProject", "UntrustProject", "ReloadAll"
+      ],
+      "fact_variants": ["KeybindingsReloaded"]
+    },
+    "Dialog": {
+      "kind": "Intent",
+      "variants": [
+        "ToggleWelcome", "ToggleCommandPalette", "PaletteFilter", "PaletteBackspace",
+        "PaletteUp", "PaletteDown", "PaletteSelect", "PaletteClose",
+        "ToggleModelSelector", "ModelSelectorFilter", "ModelSelectorBackspace",
+        "ModelSelectorUp", "ModelSelectorDown", "ModelSelectorSelect", "ModelSelectorClose",
+        "TogglePathCompletion", "PathCompletionUp", "PathCompletionDown",
+        "PathCompletionSelect", "PathCompletionClose", "CommandFormInput",
+        "CommandFormBackspace", "CommandFormUp", "CommandFormDown",
+        "CommandFormSubmit", "CommandFormClose", "DialogBack", "ProvidersDialog",
+        "ProvidersSelectModel", "ProvidersDisconnect", "ProvidersAdd",
+        "ProvidersEditModels", "CopyToClipboard", "CopySelectedBlock",
+        "CopyBlockMetadata", "AtFilePicker", "InsertAtRef"
+      ]
+    },
+    "Edit": {
+      "kind": "Intent",
+      "variants": ["PendingEdit", "ApproveEdit", "RejectEdit"]
+    },
+    "System": {
+      "kind": "Fact",
+      "intent_variants": ["TransientMessage", "TransientError", "ClearTransient", "ShowDiagnostics"],
+      "fact_variants": ["SystemMessage", "ConfigLoaded"]
+    },
+    "Persistence": {
+      "kind": "Fact",
+      "variants": [
+        "InputChanged", "ViewChanged", "CompletionChanged", "TrustLoaded",
+        "TrustChanged", "TrustSet", "ReadOnlyChanged", "HistoryLoaded", "HistoryAppend"
+      ]
+    },
+    "IO": {
+      "kind": "Fact",
+      "variants": [
+        "GistShared", "ExternalEditorClosed", "ClipboardWritten", "ClipboardRead",
+        "ProcessResumed", "BashOutput", "FilesWritten", "EnvDetected", "FffSearchResult"
+      ]
+    },
+    "Session": {
+      "kind": "Intent",
+      "intent_variants": [
+        "ForkSession", "CloneSession", "ToggleSessionTree",
+        "SessionTreeFilterCycle", "SessionTreeSelect"
+      ],
+      "fact_variants": [
+        "SessionLoaded", "SessionSaved", "SessionDeleted", "SessionImported",
+        "SessionExported", "SessionList", "SessionOperationFailed", "SessionChanged"
+      ]
+    },
+    "Command": {
+      "kind": "Intent",
+      "variants": [
+        "SetPrompt", "RunLoadCommand", "RunSaveCommand", "RunDeleteCommand",
+        "RunImportCommand", "RunExportCommand", "RunSkillCommand",
+        "RunLoginCommand", "RunLogoutCommand", "RunNameCommand",
+        "RunForkCommand", "RunCompactCommand", "RunPromptCommand",
+        "RunThinkingCommand", "RunPaletteCommand"
+      ]
+    },
+    "LoginFlow": {
+      "kind": "Intent",
+      "intent_variants": [
+        "Start", "SelectProvider", "SubmitKey", "ToggleModel", "Save", "Cancel"
+      ],
+      "fact_variants": ["ValidationFailed", "ModelsFetched"]
+    },
+    "Permission": {
+      "kind": "Intent",
+      "intent_variants": ["PermissionResponse"],
+      "fact_variants": ["PermissionRequest", "PermissionRequestDismissed"]
+    },
+    "Other": {
+      "kind": "Fact",
+      "variants": ["MessageReplayed"]
+    }
+  }
+}

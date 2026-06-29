@@ -1,8 +1,10 @@
 //! Provider configuration resolver.
 //!
 //! This module provides credential resolution for LLM providers.
-//! It uses the `ProviderConfig` trait from `` to break
-//! circular dependencies between runie-core and runie-provider.
+//! It uses the `ProviderConfig` trait to break circular dependencies
+//! between runie-core and runie-provider.
+//!
+//! Priority: 1. Environment variables, 2. dotenvy (.env), 3. Config file
 
 use std::collections::HashMap;
 
@@ -12,7 +14,7 @@ use runie_core::proto::ProviderConfig;
 
 /// Resolves provider configuration from multiple sources with priority:
 /// 1. Environment variables
-/// 2. .env file in current working directory
+/// 2. .env file (loaded via dotenvy)
 /// 3. Config file entries
 #[derive(Clone)]
 pub struct ProviderConfigResolver {
@@ -60,26 +62,40 @@ impl ProviderConfigResolver {
         Self { env: HashMap::new(), dotenv: HashMap::new(), provider_config: Some(ProviderConfigBox::new(config)) }
     }
 
+    /// Load .env file using dotenvy.
     fn load_dotenv() -> HashMap<String, String> {
-        let path = std::env::current_dir().unwrap_or_default().join(".env");
-        if !path.exists() {
-            return HashMap::new();
-        }
-        let content = match std::fs::read_to_string(&path) {
-            Ok(c) => c,
-            Err(_) => return HashMap::new(),
-        };
-        let mut map = HashMap::new();
-        for line in content.lines() {
-            let line = line.trim();
-            if line.is_empty() || line.starts_with('#') {
-                continue;
+        match dotenvy::dotenv() {
+            Ok(path) => {
+                // dotenvy loads into env; read them back
+                let mut map = HashMap::new();
+                // Read only the vars we care about (API_KEY, BASE_URL)
+                for (key, val) in std::env::vars() {
+                    if key.ends_with("_API_KEY") || key.ends_with("_BASE_URL") {
+                        map.insert(key, val);
+                    }
+                }
+                // Also check the .env file path for keys dotenvy might have loaded
+                if let Ok(content) = std::fs::read_to_string(&path) {
+                    for line in content.lines() {
+                        let line = line.trim();
+                        if line.is_empty() || line.starts_with('#') {
+                            continue;
+                        }
+                        if let Some((key, val)) = line.split_once('=') {
+                            let key = key.trim().to_owned();
+                            if key.ends_with("_API_KEY") || key.ends_with("_BASE_URL") {
+                                // Only insert if not already in env
+                                map.entry(key).or_insert_with(|| {
+                                    val.trim().trim_matches('"').to_owned()
+                                });
+                            }
+                        }
+                    }
+                }
+                map
             }
-            if let Some((key, val)) = line.split_once('=') {
-                map.insert(key.trim().to_owned(), val.trim().trim_matches('"').to_owned());
-            }
+            Err(_) => HashMap::new(),
         }
-        map
     }
 
     /// Resolve the API key for a provider, checking environment first.
