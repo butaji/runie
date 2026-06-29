@@ -304,7 +304,7 @@ impl RactorSessionActor {
 
         let res = tokio::task::spawn_blocking(move || -> anyhow::Result<()> {
             store.append_batch(&name_for_task, &events)?;
-            store.update_index(&meta)?;
+            store.update_metadata(&meta)?;
             Ok(())
         }).await;
 

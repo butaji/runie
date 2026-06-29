@@ -123,9 +123,9 @@ fn delete_session() {
     let sid = "test-delete";
 
     append_msg(&store, sid, "msg1", "user", "Test", 1.0);
-    assert!(store.path(sid).exists());
+    assert!(store.exists(sid));
     store.delete(sid).unwrap();
-    assert!(!store.path(sid).exists());
+    assert!(!store.exists(sid));
 }
 
 #[test]
@@ -161,10 +161,10 @@ fn meta_round_trips_through_index() {
         is_system: false,
     };
 
-    store.update_index(&meta).unwrap();
+    store.update_metadata(&meta).unwrap();
 
     // Verify the JSONL file was created
-    assert!(store.path(sid).exists(), "session file should be created");
+    assert!(store.exists(sid), "session file should be created");
 }
 
 #[test]

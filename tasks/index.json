@@ -397,7 +397,7 @@
   {
     "file": "unify-session-store-and-index.md",
     "title": "Unify session store and index into a single persistence backend",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-tui-message-wrapping-with-textwrap.md",

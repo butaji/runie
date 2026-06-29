@@ -3,6 +3,7 @@
 //! runtime save/load use `crate::session::store::SessionStore`.
 
 pub mod index;
+pub mod persistence;
 pub mod replay;
 pub mod store;
 pub mod tree;

@@ -167,7 +167,7 @@ pub fn save_session(name: &str, state: &AppState) -> anyhow::Result<()> {
         SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
     let events = state_to_durable_events(state);
     store.append_batch(name, &events)?;
-    store.update_index(&build_metadata(state, name))?;
+    store.update_metadata(&build_metadata(state, name))?;
     Ok(())
 }
 
@@ -187,9 +187,7 @@ pub fn load_session(name: &str, state: &mut AppState) -> anyhow::Result<()> {
 }
 
 fn restore_metadata(name: &str, state: &mut AppState, store: &SessionStore) -> anyhow::Result<()> {
-    let data_dir = store.dir().to_path_buf();
-    let index = crate::session::index::SessionIndex::load(&data_dir).unwrap_or_default();
-    if let Some(meta) = index.get(name) {
+    if let Some(meta) = store.load_metadata(name)? {
         // Only overwrite session_display_name if the metadata's display_name
         // differs from the session name — identical names mean the metadata is
         // just storing the session name as a fallback, not a custom display.
@@ -333,7 +331,7 @@ mod tests {
         let events = state_to_durable_events(&state);
         store.append_batch("roundtrip", &events).unwrap();
         store
-            .update_index(&SessionMetadata {
+            .update_metadata(&SessionMetadata {
                 id: "roundtrip".into(),
                 display_name: "roundtrip".into(),
                 created_at: 10.0,

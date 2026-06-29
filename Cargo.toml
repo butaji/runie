@@ -61,6 +61,7 @@ tempfile = "3"
 thiserror = "2"
 secrecy = "0.8"
 keyring = { version = "3", features = ["vendored"] }
+fs2 = "0.4"
 
 async-trait = "0.1"
 futures-util = "0.3"
