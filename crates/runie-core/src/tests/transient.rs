@@ -1,6 +1,5 @@
 //! Transient message tests (Layer 1: state logic)
 
-use crate::Event;
 
 use crate::model::Role;
 use crate::tests::fresh_state;

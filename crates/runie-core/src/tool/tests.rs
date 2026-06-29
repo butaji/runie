@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use serde_json::Value;
 
 use crate::path::resolve_path_in as resolve_path;
 use crate::tool::{
@@ -18,10 +17,6 @@ struct TestToolInput {
     input: String,
 }
 
-#[derive(Debug, Default)]
-struct TestToolOutput {
-    content: String,
-}
 
 impl TestTool {
     fn execute_impl(input: TestToolInput) -> ToolOutput {

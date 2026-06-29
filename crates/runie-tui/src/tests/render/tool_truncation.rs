@@ -1,6 +1,5 @@
 //! Layer 3 rendering tests for tool output truncation.
 
-use super::*;
 use ratatui::{backend::TestBackend, Terminal};
 
 use runie_core::Event;

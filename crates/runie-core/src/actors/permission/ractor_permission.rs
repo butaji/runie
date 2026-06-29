@@ -277,7 +277,7 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let (handle, _cell) = RactorPermissionActor::spawn(bus.clone()).await;
 
-        let mut rx = handle
+        let rx = handle
             .ask_permission(
                 "req-allow-1".into(),
                 "bash".into(),
@@ -301,7 +301,7 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let (handle, _cell) = RactorPermissionActor::spawn(bus.clone()).await;
 
-        let mut rx = handle
+        let rx = handle
             .ask_permission(
                 "req-deny-1".into(),
                 "bash".into(),
@@ -373,7 +373,7 @@ mod tests {
         // Same as permission_actor_resolves_with_allow
         let bus = EventBus::<Event>::new(16);
         let (handle, _cell) = RactorPermissionActor::spawn(bus.clone()).await;
-        let mut rx = handle
+        let rx = handle
             .ask_permission("req-legacy-2".into(), "bash".into(), serde_json::json!({}))
             .await;
         handle

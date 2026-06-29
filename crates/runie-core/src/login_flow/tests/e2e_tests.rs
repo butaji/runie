@@ -1,4 +1,3 @@
-use crate::Event;
 use crate::model::AppState;
 use crate::provider::config::list_configured_providers;
 

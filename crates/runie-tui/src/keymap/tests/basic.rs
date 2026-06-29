@@ -32,7 +32,7 @@ fn ctrl_o_converts_to_toggle_expand() {
 
 #[test]
 fn ctrl_o_toggles_expand_state() {
-    use runie_core::{AppState, ChatMessage, Event, Part, Role};
+    use runie_core::{AppState, ChatMessage, Part, Role};
 
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {

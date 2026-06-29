@@ -1,4 +1,3 @@
-use super::*;
 use runie_core::layout::element_line_count;
 use runie_core::model::{AppState, ChatMessage, Role};
 use runie_core::Event;

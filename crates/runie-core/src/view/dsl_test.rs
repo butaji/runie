@@ -6,7 +6,7 @@ mod tests {
     use crate::model::{AppState, ChatMessage, Role};
     use crate::view::elements::Element;
     use crate::view::LazyCache;
-    use crate::Event;
+    
 
     fn msg(role: Role, content: &str, timestamp: f64, id: &str) -> ChatMessage {
         ChatMessage {

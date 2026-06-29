@@ -25,7 +25,7 @@ fn make_config(providers: &[(String, Vec<String>)]) -> Config {
 
 /// Set state.config().model_providers with the given provider/models.
 fn set_config(state: &mut AppState, providers: &[(String, Vec<String>)]) {
-    let mut cfg = make_config(providers);
+    let cfg = make_config(providers);
     *state.config_mut().model_providers_mut() = cfg.model_providers;
 }
 

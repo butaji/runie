@@ -1,5 +1,5 @@
 use crate::tokens::{
-    estimate_tokens, estimate_tokens_for_model, estimate_tokens_with_tokenizer, token_tracker_for,
+    estimate_tokens, estimate_tokens_for_model, estimate_tokens_with_tokenizer,
     TokenTracker,
 };
 

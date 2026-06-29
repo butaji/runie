@@ -224,10 +224,8 @@ mod tests {
     #[test]
     fn ansi256_from_rgb_returns_valid_index() {
         // ansi_colours produces a valid 256-color index for any RGB input.
-        let idx = ansi256_from_rgb((255, 0, 0));
-        assert!(idx <= 255, "ansi256_from_rgb should produce 0-255, got {}", idx);
-        let idx = ansi256_from_rgb((0, 0, 0));
-        assert!(idx <= 255, "black should produce valid index, got {}", idx);
+        let _ = ansi256_from_rgb((255, 0, 0));
+        let _ = ansi256_from_rgb((0, 0, 0));
         // Gray colors map to the grayscale ramp (indices 232-255).
         let gray = ansi256_from_rgb((128, 128, 128));
         assert!(gray >= 232, "mid-gray should map to grayscale ramp, got {}", gray);

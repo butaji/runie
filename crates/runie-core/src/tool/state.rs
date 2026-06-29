@@ -220,11 +220,10 @@ mod tests {
         state.start();
         match state {
             ToolCallState::Running {
-                id, name, started, ..
+                id, name, started: _, ..
             } => {
                 assert_eq!(id, "call.1");
                 assert_eq!(name, "bash");
-                assert!(started.elapsed().as_secs() >= 0);
             }
             _ => panic!("Expected Running state"),
         }

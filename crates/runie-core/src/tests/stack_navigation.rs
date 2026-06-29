@@ -3,7 +3,6 @@
 //! These tests exercise the full update flow: a multi-panel stack, ESC
 //! events (SettingsClose / PaletteClose), and the open_dialog state.
 
-use crate::Event;
 
 use crate::commands::{DialogKind, DialogState};
 use crate::dialog::{ItemAction, Panel, PanelStack};
@@ -243,7 +242,7 @@ fn every_sub_opening_command_is_marked_sub() {
 /// .sub() or the Sub variant stops pushing.
 #[test]
 fn sub_command_pushes_current_dialog_to_back_stack() {
-    use crate::commands::{DialogKind, CommandFlow, CommandRegistry};
+    use crate::commands::{CommandFlow, CommandRegistry};
 
     let reg = CommandRegistry::new();
 

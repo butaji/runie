@@ -2,7 +2,6 @@
 
 use crate::login_flow::LoginStep;
 use crate::model::AppState;
-use crate::Event;
 
 pub fn start_login_flow(state: &mut AppState) {
     state.update(crate::Event::Start);

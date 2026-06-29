@@ -1,6 +1,5 @@
 //! Tests for empty line between elements in chat feed.
 
-use super::*;
 use runie_core::Event;
 
 use runie_core::layout::element_line_count;

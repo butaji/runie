@@ -1,6 +1,5 @@
 //! Tests for focus event handling in the AppState.
 
-use crate::Event;
 
 use crate::AppState;
 

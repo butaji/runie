@@ -1,5 +1,4 @@
 use crate::config::Config;
-use crate::event::DurableCoreEvent;
 use crate::event::Event;
 use crate::model::{AppState, Role};
 

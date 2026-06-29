@@ -72,7 +72,7 @@ pub(crate) fn parse_skill_md(path: &Path) -> Option<Skill> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
+    
     use tempfile::TempDir;
 
     #[test]

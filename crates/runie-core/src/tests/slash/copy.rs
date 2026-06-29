@@ -4,7 +4,6 @@ use super::exec;
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tests::fresh_state;
-use crate::Event;
 
 #[test]
 fn copy_with_no_assistant_message_warns() {

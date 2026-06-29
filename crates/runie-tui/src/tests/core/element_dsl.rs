@@ -1,4 +1,3 @@
-use super::*;
 use runie_core::view::elements::Element;
 
 #[test]

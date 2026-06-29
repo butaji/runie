@@ -198,7 +198,7 @@ fn model_selector_reflects_login_selected_models() {
 
 #[test]
 fn model_selector_reflects_ui_toggled_login_models() {
-    use crate::Event;
+    
 
     clean_config();
     let mut state = AppState::default();

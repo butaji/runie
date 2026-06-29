@@ -1,5 +1,4 @@
 use super::super::*;
-use super::*;
 use crate::tests::connect_model;
 use runie_core::Event;
 use runie_core::Part;

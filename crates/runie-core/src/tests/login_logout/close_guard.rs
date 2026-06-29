@@ -1,5 +1,4 @@
 use crate::model::AppState;
-use crate::Event;
 
 use super::{clean_config, validate_provider};
 

@@ -3,23 +3,13 @@
 use crate::tests::ensure_mock_provider;
 use crate::{run_agent_turn, AgentCommand};
 use runie_core::permissions::{
-    ApprovalSink, AutoAllowSink, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove,
-    PermissionAction, PermissionManager,
+    AutoAllowSink, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove,
+    PermissionManager,
 };
 use runie_core::Event;
 use runie_testing::mock_provider;
 use std::sync::Arc;
 use parking_lot::Mutex;
-
-/// A mock approval sink that always denies (for testing without a real PermissionActor).
-pub struct MockApprovalSink;
-
-#[async_trait::async_trait]
-impl ApprovalSink for MockApprovalSink {
-    async fn ask(&self, _tool: &str, _input: &serde_json::Value) -> PermissionAction {
-        PermissionAction::Deny
-    }
-}
 
 /// Simulate the permission gate used by the TUI and verify read-only tools
 /// are auto-approved and rendered as ToolStart/ToolEnd events.

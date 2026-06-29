@@ -160,7 +160,7 @@ fn all_form_commands_are_listed() {
     // table. This list is the contract — when a new form command is added,
     // this test must be updated to include it. Commands marked `.sub()`
     // wrap their flow in `CommandFlow::Sub`; we unwrap to find the PanelStack.
-    use crate::commands::{DialogKind, CommandFlow, CommandRegistry};
+    use crate::commands::{CommandFlow, CommandRegistry};
     let reg = CommandRegistry::new();
     let form_commands: Vec<String> = reg
         .list()

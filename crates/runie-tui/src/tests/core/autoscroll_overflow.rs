@@ -1,5 +1,4 @@
 #![allow(clippy::needless_borrow)]
-use super::*;
 
 use runie_core::model::{AppState, ChatMessage, Role};
 use runie_core::Event;

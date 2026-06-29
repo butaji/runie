@@ -232,7 +232,7 @@ mod tests {
 
             async fn pre_start(
                 &self,
-                myself: ActorRef<Self::Msg>,
+                _myself: ActorRef<Self::Msg>,
                 _: (),
             ) -> Result<Self::State, ractor::ActorProcessingErr> {
                 Ok(())

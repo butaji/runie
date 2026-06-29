@@ -1,6 +1,5 @@
 use crate::model::AppState;
 use crate::prompts::{PromptSource, PromptTemplate};
-use crate::Event;
 
 #[test]
 fn prompt_switch_updates() {

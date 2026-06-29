@@ -1,4 +1,3 @@
-use super::*;
 use runie_core::commands::{DialogKind, DialogState};
 use runie_core::model::AppState;
 use runie_core::Event;

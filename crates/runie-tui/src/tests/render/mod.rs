@@ -2,10 +2,9 @@
 
 // Re-export types used by child test modules so they can `use super::*;`
 pub use super::{
-    AppState, ChatMessage, DialogKind, Element, Event, Part, PermissionRequestState, Role,
+    AppState, ChatMessage, DialogKind, Part, PermissionRequestState, Role,
     ScopedModel, Snapshot,
 };
-use ratatui::{backend::TestBackend, Terminal};
 
 mod render_at;
 mod render_basic;

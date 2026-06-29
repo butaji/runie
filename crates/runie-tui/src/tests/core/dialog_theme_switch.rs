@@ -1,6 +1,5 @@
 //! Tests that global events (theme, model) pass through when dialogs are open.
 
-use super::*;
 use runie_core::Event;
 
 use runie_core::commands::{DialogKind, DialogState};

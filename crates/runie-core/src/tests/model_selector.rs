@@ -1,7 +1,6 @@
 //! Model selector tests (Layer 1 + Layer 2)
 
 use crate::config::ModelProvider;
-use crate::Event;
 
 use crate::commands::{DialogKind, DialogState};
 use crate::model::{AppState, ScopedModel};

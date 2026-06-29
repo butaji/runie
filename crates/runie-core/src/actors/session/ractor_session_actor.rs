@@ -414,7 +414,7 @@ mod tests {
     async fn ractor_session_handles_trust_loaded() {
         let bus = EventBus::<Event>::new(16);
         let mut sub = bus.subscribe();
-        let (handle, _cell) = RactorSessionActor::spawn(bus).await.unwrap();
+        let (_handle, _cell) = RactorSessionActor::spawn(bus).await.unwrap();
 
         let found = wait_for_event(&mut sub, |e| matches!(e, Event::TrustLoaded { .. })).await;
         assert!(found, "Expected TrustLoaded event");

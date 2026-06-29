@@ -1,5 +1,4 @@
 use super::super::*;
-use super::*;
 use std::sync::Mutex;
 
 static ENV_LOCK: Mutex<()> = Mutex::new(());

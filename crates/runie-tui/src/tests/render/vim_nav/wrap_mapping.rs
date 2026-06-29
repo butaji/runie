@@ -1,6 +1,5 @@
 //! Tests that row-to-element mapping stays aligned with Ratatui's wrap pass.
 
-use super::*;
 use std::sync::Arc;
 
 use ratatui::widgets::{Paragraph, Wrap};

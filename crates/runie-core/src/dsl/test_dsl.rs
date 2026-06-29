@@ -7,7 +7,6 @@
 //! ```
 
 use crate::model::AppState;
-use crate::Event;
 
 /// Fluent builder for an agent turn sequence.
 pub struct AgentTurn<'a> {

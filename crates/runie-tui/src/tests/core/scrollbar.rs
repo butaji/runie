@@ -1,5 +1,3 @@
-use super::*;
-use runie_core::model::AppState;
 use runie_core::Event;
 use runie_core::Part;
 use runie_testing::fresh_state;

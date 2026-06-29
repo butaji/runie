@@ -2,7 +2,6 @@
 //! turn so the UI does not show a stuck "Working..." status.
 
 use crate::model::{AppState, QueuedMessage, QueuedMessageKind};
-use crate::Event;
 
 #[test]
 fn agent_error_clears_turn_active() {

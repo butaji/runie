@@ -1,6 +1,5 @@
 //! Tests for chat feed element sorting by last update time.
 
-use super::*;
 use runie_core::Event;
 
 use runie_core::model::{AppState, ChatMessage, Role};

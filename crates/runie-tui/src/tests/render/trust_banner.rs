@@ -1,6 +1,5 @@
 //! Layer 3 rendering tests for the trust banner.
 
-use super::*;
 use ratatui::{backend::TestBackend, Terminal};
 
 use runie_core::model::{AppState, ChatMessage, Role};

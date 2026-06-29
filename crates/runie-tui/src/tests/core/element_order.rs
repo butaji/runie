@@ -1,4 +1,3 @@
-use super::*;
 use runie_core::model::{AppState, ChatMessage, Role};
 use runie_core::view::LazyCache;
 use runie_core::Event;

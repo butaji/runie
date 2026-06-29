@@ -1,7 +1,6 @@
 use crate::dsl::AppStateDsl;
 use crate::model::Role;
 use crate::tests::fresh_state;
-use crate::Event;
 
 #[test]
 fn test_agent_thinking_sets_streaming() {

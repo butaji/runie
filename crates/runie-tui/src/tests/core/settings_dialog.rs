@@ -1,6 +1,5 @@
 //! Settings dialog tests (Layer 2 + Layer 3)
 
-use super::*;
 use runie_core::commands::{DialogKind, DialogState};
 use runie_core::model::{AppState, DeliveryMode};
 use runie_core::settings::{SettingValue, SettingsCategory};

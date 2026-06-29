@@ -1,26 +1,12 @@
 //! Tests for ThinkFilter.
 
 use super::*;
-use runie_core::provider_event::StopReason as SR;
 
 fn ev(delta: &str) -> ProviderEvent {
     ProviderEvent::TextDelta(delta.into())
 }
 fn td(delta: &str) -> ProviderEvent {
     ProviderEvent::ThinkingDelta(delta.into())
-}
-fn fin() -> ProviderEvent {
-    ProviderEvent::Finish { reason: SR::Stop }
-}
-fn ts() -> ProviderEvent {
-    ProviderEvent::ThinkingStart {
-        id: "inline".into(),
-    }
-}
-fn te() -> ProviderEvent {
-    ProviderEvent::ThinkingEnd {
-        id: "inline".into(),
-    }
 }
 
 fn has_ts(events: &[ProviderEvent]) -> bool {
@@ -100,7 +86,7 @@ fn partial_open_tag() {
 #[test]
 fn partial_close_tag() {
     let mut f = ThinkFilter::new();
-    f.feed(ev("<tool_call>")).into_iter().collect::<Vec<_>>();
+    let _ = f.feed(ev("<tool_call>")).into_iter().collect::<Vec<_>>();
     let out1: Vec<_> = f.feed(ev("some thought</th")).into_iter().collect();
     assert!(td_content(&out1).contains("some thought"));
     let out2: Vec<_> = f.feed(ev("inking>")).into_iter().collect();
@@ -119,7 +105,7 @@ fn thinking_delta_passthrough() {
 #[test]
 fn flush_emits_te() {
     let mut f = ThinkFilter::new();
-    f.feed(ev("<thinking>unclosed"))
+    let _ = f.feed(ev("<thinking>unclosed"))
         .into_iter()
         .collect::<Vec<_>>();
     let flushed: Vec<_> = f.flush().into_iter().collect();
@@ -130,7 +116,7 @@ fn flush_emits_te() {
 #[test]
 fn flush_empty() {
     let mut f = ThinkFilter::new();
-    f.feed(ev("plain")).into_iter().collect::<Vec<_>>();
+    let _ = f.feed(ev("plain")).into_iter().collect::<Vec<_>>();
     let flushed: Vec<_> = f.flush().into_iter().collect();
     assert!(flushed.is_empty());
 }
@@ -171,10 +157,10 @@ fn empty_block() {
 #[test]
 fn after_flush() {
     let mut f = ThinkFilter::new();
-    f.feed(ev("<thinking>done</thinking>"))
+    let _ = f.feed(ev("<thinking>done</thinking>"))
         .into_iter()
         .collect::<Vec<_>>();
-    f.flush().into_iter().collect::<Vec<_>>();
+    let _ = f.flush().into_iter().collect::<Vec<_>>();
     let out: Vec<_> = f.feed(ev("more text")).into_iter().collect();
     assert_eq!(out, vec![ev("more text")]);
 }

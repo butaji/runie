@@ -3,7 +3,6 @@
 use super::helpers::{accent_bg, add_message, draw, state_with_selected_post};
 use super::*;
 use crate::tests::connect_model;
-use runie_core::Event;
 
 #[test]
 fn nav_mode_selected_post_has_accent_background() {

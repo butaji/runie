@@ -3,7 +3,6 @@
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tests::fresh_state;
-use crate::Event;
 
 #[test]
 fn vim_mode_is_enabled_by_default() {
@@ -466,7 +465,7 @@ fn y_in_vim_nav_copies_block_and_exits_nav() {
 }
 
 #[test]
-fn Y_in_vim_nav_copies_metadata_and_exits_nav() {
+fn y_in_vim_nav_copies_metadata_and_exits_nav() {
     let mut state = state_for_nav_copy();
     enter_nav(&mut state);
     assert!(state.view.vim_nav_mode);

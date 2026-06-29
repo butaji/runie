@@ -34,7 +34,7 @@ pub fn init() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
 
     #[test]
     fn subscriber_init_is_idempotent() {

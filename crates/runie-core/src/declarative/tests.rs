@@ -9,7 +9,7 @@ mod loader_tests {
     use crate::declarative::types::{CommandDef, DeclarativeCommandYaml, SkillDef, Trigger};
     use crate::commands::CommandCategory;
     use crate::declarative::loader::{
-        load_skills_from_dir, parse_command_yaml, parse_triggers,
+        parse_command_yaml, parse_triggers,
     };
     use crate::resource_loader::{
         extract_frontmatter, parse_yaml_line, strip_quotes,
@@ -107,7 +107,7 @@ Content
 
     #[test]
     fn yaml_line_handles_leading_whitespace() {
-        let (key, val) = parse_yaml_line("  name: test").unwrap();
+        let (key, _val) = parse_yaml_line("  name: test").unwrap();
         assert_eq!(key, "name");
     }
 
@@ -125,7 +125,7 @@ Content
 
     #[test]
     fn yaml_line_handles_colons_in_values() {
-        let (key, val) = parse_yaml_line("url: http://example.com").unwrap();
+        let (_key, val) = parse_yaml_line("url: http://example.com").unwrap();
         assert_eq!(val, "http://example.com");
     }
 

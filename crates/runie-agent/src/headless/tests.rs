@@ -1,7 +1,7 @@
 //! Tests for the headless runner.
 
 use crate::headless::{
-    run_headless_cli, run_headless_turn, HeadlessCliOptions, HeadlessOptions, HeadlessResult,
+    run_headless_cli, run_headless_turn, HeadlessCliOptions, HeadlessOptions,
 };
 use crate::PermissionGate;
 use runie_core::event::headless::HeadlessEvent;
@@ -139,7 +139,7 @@ async fn headless_runner_executes_tool_call_markup() {
 #[tokio::test]
 async fn headless_cli_helper_builds_gate() {
     let sink: Arc<dyn runie_core::permissions::ApprovalSink> = Arc::new(AutoAllowSink);
-    let opts = HeadlessCliOptions {
+    let _opts = HeadlessCliOptions {
         execute_tools: true,
         max_tool_rounds: 5,
         on_chunk: None,

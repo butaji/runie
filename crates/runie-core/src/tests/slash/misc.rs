@@ -1,6 +1,5 @@
 use super::exec;
 use crate::commands::DialogKind;
-use crate::config::ModelProvider;
 use crate::model::Role;
 use crate::tests::{fresh_state, seed_providers, type_str};
 use crate::Event;

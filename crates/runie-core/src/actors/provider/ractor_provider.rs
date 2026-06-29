@@ -252,8 +252,8 @@ mod tests {
     use crate::provider_event::ProviderEvent;
     use std::pin::Pin;
 
-    /// A minimal mock provider that echoes back the model name.
-    struct MockProvider(String);
+    /// A minimal mock provider that always returns empty.
+    struct MockProvider;
     impl Provider for MockProvider {
         fn generate(&self, _: Vec<ChatMessage>) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
             Box::pin(futures::stream::empty())
@@ -263,7 +263,7 @@ mod tests {
     struct MockFactory;
     impl ProviderFactory for MockFactory {
         fn build(&self, _provider: &str, model: &str, _config: &Config) -> Result<BuiltProvider, ProviderError> {
-            Ok(BuiltProvider::new(Box::new(MockProvider(model.into())), "mock".into(), model.into()))
+            Ok(BuiltProvider::new(Box::new(MockProvider), "mock".into(), model.into()))
         }
         fn validate_key(&self, _: &str, _: &str) -> Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + '_>> {
             Box::pin(async { Ok(vec!["model-a".into(), "model-b".into()]) })

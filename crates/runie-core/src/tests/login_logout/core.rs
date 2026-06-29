@@ -1,8 +1,6 @@
 //! Tests for the `/providers` command and login flow state machine.
 
-use crate::login_flow::LoginStep;
 use crate::model::AppState;
-use crate::Event;
 
 use super::{add_provider_and_select_model, clean_config};
 

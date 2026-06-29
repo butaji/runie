@@ -2,7 +2,6 @@
 
 use std::path::PathBuf;
 
-use tempfile::TempDir;
 
 use crate::actors::session::RactorSessionActor;
 use crate::bus::{EventBus, Receiver};

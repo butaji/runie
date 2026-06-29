@@ -211,7 +211,7 @@ fn thinking_panel_has_cli_usage_hint() {
 fn thinking_does_not_create_a_form_panel() {
     // /thinking must use a select panel, not a form. Forms are for free-text
     // input; thinking levels are a fixed enum.
-    use runie_core::commands::{DialogKind, CommandRegistry, CommandResult};
+    use runie_core::commands::{CommandRegistry, CommandResult};
     let reg = CommandRegistry::new();
     let cmd = reg.get("thinking").expect("thinking command");
     let mut state = AppState::default();

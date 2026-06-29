@@ -1,5 +1,4 @@
 use super::find_input_box_bounds;
-use super::*;
 use crate::tests::connect_model;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
@@ -294,21 +293,12 @@ fn input_box_renders_prompt() {
 
     // Find the input box area by looking for the chevron prompt glyph
     let mut found_prompt = false;
-    let mut found_placeholder = false;
     for y in 0..buf.area().height {
         for x in 0..buf.area().width.saturating_sub(2) {
             // Check for the chevron glyph "❯"
             if buf[(x, y)].symbol() == "❯" {
                 found_prompt = true;
-                // Check if placeholder text appears after the prompt
-                let remaining: String = (x..buf.area().width)
-                    .map(|cx| buf[(cx, y)].symbol())
-                    .collect::<String>()
-                    .trim()
-                    .to_string();
-                if remaining.contains("Type a message") || remaining.starts_with(" ") {
-                    found_placeholder = true;
-                }
+                // Placeholder text check (placeholder rendering depends on input state)
             }
         }
     }

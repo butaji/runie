@@ -7,7 +7,6 @@ use crate::Event;
 mod durable;
 mod dispatch;
 
-use crate::event::DurableCoreEvent;
 use crate::event::EVENT_NAMES;
 
 /// Pre-optimization size of `Event` before boxing large orchestrator payloads.

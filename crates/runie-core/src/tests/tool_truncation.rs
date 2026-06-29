@@ -1,7 +1,6 @@
 //! Tool output truncation tests.
 
 use crate::model::AppState;
-use crate::Event;
 
 #[test]
 fn tool_output_truncated_to_max_lines() {

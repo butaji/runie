@@ -1,7 +1,6 @@
 use super::*;
 use crate::commands::DialogState;
 use crate::dialog::Panel;
-use crate::Event;
 
 #[test]
 fn space_toggles_checkbox_item_value() {

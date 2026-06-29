@@ -380,7 +380,7 @@ mod tests {
             aliases: &[],
             category: CommandCategory::System,
             sub: false,
-            kind: CommandKind::Handler(|state, args| {
+            kind: CommandKind::Handler(|_state, args| {
                 CommandResult::Message(format!("Hello, {}!", args))
             }),
         };

@@ -107,7 +107,6 @@ mod tests {
         let mut state = fresh_state();
         assert_eq!(state.input().input, "");
         exec(&mut state, "/save");
-        assert!(state.input().cursor_pos >= 0);
     }
 
     #[test]

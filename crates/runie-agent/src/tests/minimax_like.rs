@@ -6,7 +6,6 @@ use futures::Stream;
 use runie_core::message::{ChatMessage, Role};
 use runie_core::provider::Provider;
 use runie_core::provider_event::{ProviderEvent, StopReason};
-use runie_core::Event;
 use runie_testing::allow_all_gate;
 use std::pin::Pin;
 use std::sync::Arc;

@@ -3,7 +3,7 @@ use crate::tests::ensure_mock_provider;
 use crate::{
     run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages, AgentCommand,
 };
-use runie_core::harness_skills::{HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase};
+use runie_core::harness_skills::{SkillRegistry, ToolCallCtx, ToolCallPhase};
 use runie_core::Event;
 use runie_testing::mock_tool_skill;
 use runie_testing::{allow_all_gate, mock_provider, RecordingSkill};

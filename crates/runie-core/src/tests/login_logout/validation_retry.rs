@@ -2,7 +2,6 @@
 
 use crate::login_flow::LoginStep;
 use crate::model::AppState;
-use crate::Event;
 
 use super::{
     assert_step, assert_transient_contains, clean_config, default_models_for_provider,
