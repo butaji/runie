@@ -112,7 +112,7 @@
   {
     "file": "expand-leader-start-for-tui-and-cli.md",
     "title": ":start` for the full TUI and CLI runtime",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "extract-shared-streaming-response-parser.md",
