@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use runie_core::{proto::message::Part, AppState, ChatMessage, Event, Role};
+use runie_core::{proto::message::Part, AppState, ChatMessage, Role};
 
 fn bench_snapshot(c: &mut Criterion) {
     c.bench_function("snapshot_100_messages", |b| {
