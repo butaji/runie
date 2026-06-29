@@ -23,11 +23,19 @@ Rules:
 - Blocking IO belongs in IO actors, never in handlers or the render path.
 - Complexity is hidden behind small declarative DSLs for commands, keybindings, and dialog flows.
 
+Current crate state:
+- `runie-protocol` has been folded into `runie-core/src/proto/`.
+- `runie-macros` has been deleted.
+- `runie-util` exists for small shared utilities (e.g., display-width helpers).
+- The TUI bootstraps through `Leader::start`; the CLI still does not (tracked in `tasks/migrate-tui-and-cli-to-leader-bootstrap.md`).
+- Session persistence uses a single headered JSONL file with `fs2` advisory locks; SQLite is deferred.
+
 ## Before you write code
 
 1. Read the relevant `tasks/<id>.md`, `AGENTS.md`, `docs/Architecture.md`, `docs/UI_UX.md`, and this file.
-2. For non-trivial changes, plan first (`EnterPlanMode`), then execute.
-3. Use parallel subagents for independent sub-tasks.
+2. Read `docs/superpowers/plans/2026-06-28-task-verification-report.md` to avoid re-implementing tasks that were prematurely marked `done`.
+3. For non-trivial changes, plan first (`EnterPlanMode`), then execute.
+4. Use parallel subagents for independent sub-tasks.
 
 ## How to implement
 
@@ -36,6 +44,7 @@ Rules:
 - Do not add speculative abstraction; concrete DSLs win.
 - Keep production functions ≤ 40 lines and files ≤ 500 lines; complexity ≤ 10.
 - Follow existing code style and crate boundaries.
+- Replace custom code with crates or OS features whenever there is a clear Pareto win; document the justification when keeping custom code.
 
 ## Testing
 
@@ -54,10 +63,20 @@ Never:
 ## Task actualization
 
 When reviewing `tasks/` against code:
-- A task is `done` when its production-code change is clearly in place, even if its own test list is still thin (Pareto).
-- If the implementation differs from the AC but the intent is satisfied, update the task description to match reality and mark it `done`.
-- If the change is missing, partial, or broken, leave it `todo`.
-- After any status change, regenerate `tasks/index.json` and update the roadmap count.
+- A task is `done` only when **every** acceptance criterion is satisfied in production code and `cargo test --workspace` passes.
+- Do not mark a task `done` based on partial implementation or unchecked AC boxes.
+- If the implementation differs from the AC but the intent is clearly satisfied, update the task description to match reality and mark it `done`.
+- If the change is missing, partial, or broken, leave it `todo` (or `partial` if you want to record progress).
+- If a task is intentionally out of scope, mark it `wontfix` and document why.
+- After any status change, regenerate `tasks/index.json` and update the roadmap count in `docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`.
+
+## Verification before claiming done
+
+Before you mark any task `done`:
+1. Re-read its `tasks/<id>.md` and check off every AC item against the code.
+2. Run `cargo check --workspace` and `cargo test --workspace`.
+3. Grep for the old code the task was supposed to remove; if it still exists, the task is not done.
+4. Update `tasks/index.json` and the roadmap count.
 
 ## Commit & push
 
@@ -72,3 +91,4 @@ When reviewing `tasks/` against code:
 - Blocking or long-lived work in handlers / render path.
 - New runtime dependencies without a concrete Pareto justification.
 - Monolithic files, long functions, or speculative generic abstractions.
+- Marking tasks `done` before their acceptance criteria are actually satisfied.
