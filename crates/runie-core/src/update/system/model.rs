@@ -40,10 +40,7 @@ impl AppState {
         let handles = self.actor_handles().cloned();
         if let Some(handles) = handles {
             if tokio::runtime::Handle::try_current().is_ok() {
-                let handles = handles;
-                tokio::spawn(async move {
-                    handles.config.send_message(ConfigMsg::SetDefaultModel { provider, model });
-                });
+                let _ = handles.config.try_send(ConfigMsg::SetDefaultModel { provider, model });
             }
         }
     }

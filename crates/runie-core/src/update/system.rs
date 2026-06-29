@@ -135,9 +135,7 @@ impl AppState {
         if let Some(h) = handles {
             let name_clone = name.clone();
             if tokio::runtime::Handle::try_current().is_ok() {
-                tokio::spawn(async move {
-                    h.config.send_message(ConfigMsg::SetTheme { name: name_clone });
-                });
+                let _ = h.config.try_send(ConfigMsg::SetTheme { name: name_clone });
             }
         }
         self.add_system_msg(format!("Theme switched to '{}'", name));
@@ -161,10 +159,7 @@ impl AppState {
         let handles = self.actor_handles().cloned();
         if let Some(ref h) = handles {
             if tokio::runtime::Handle::try_current().is_ok() {
-                let handles = h.clone();
-                tokio::spawn(async move {
-                    handles.turn.send_message(TurnMsg::AbortTurn);
-                });
+                let _ = h.turn.try_send(TurnMsg::AbortTurn);
             }
         } else {
             // Fallback for tests without actor handles
@@ -242,9 +237,7 @@ fn handle_toggle_vim_mode(state: &mut AppState) {
     let handles = state.actor_handles().cloned();
     if let Some(h) = handles {
         if tokio::runtime::Handle::try_current().is_ok() {
-            tokio::spawn(async move {
-                h.config.send_message(ConfigMsg::SetVimMode { enabled: new_value });
-            });
+            let _ = h.config.try_send(ConfigMsg::SetVimMode { enabled: new_value });
         }
     }
     state.view_mut().cached_settings_valid = false;
@@ -269,10 +262,7 @@ fn handle_clear_queues(state: &mut AppState) {
     let handles = state.actor_handles().cloned();
     if let Some(ref h) = handles {
         if tokio::runtime::Handle::try_current().is_ok() {
-            let handles = h.clone();
-            tokio::spawn(async move {
-                handles.turn.send_message(TurnMsg::ClearQueues);
-            });
+            let _ = h.turn.try_send(TurnMsg::ClearQueues);
         }
     } else {
         // Fallback for tests without actor handles

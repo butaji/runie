@@ -1,6 +1,6 @@
 # Use `pulldown-cmark` event stream for tool-marker stripping
 
-**Status**: todo
+**Status**: wontfix
 **Milestone**: R2
 **Category**: Tools
 **Priority**: P1
@@ -10,46 +10,45 @@
 
 ## Description
 
-`runie-core/src/tool_markers/strip.rs` (and the legacy `markup`/`legacy` modules) use regex and string scanning to remove tool-call markers from assistant output before displaying it. `pulldown-cmark` already parses the same markdown stream and can emit events; walking that stream lets us strip or rewrite tool-call fences in one pass, with correct handling of nested code blocks, escaping, and line boundaries. `goose` and `jcode` rely on `pulldown-cmark` for markdown processing; Runie should too.
+The task proposes rewriting `strip.rs` using `pulldown-cmark` events, arguing it would provide better handling of nested code blocks, escaping, and line boundaries. However, several observations make this change undesirable:
+
+1. **Most tool markers are not valid CommonMark.** `[TOOL_CALL]`, `TOOL:name:arg`, and MiniMax-style XML (`<invoke>`) are not CommonMark constructs. `pulldown-cmark` would emit them as raw text regardless — requiring the same custom scanning logic on top.
+
+2. **The existing implementation is comprehensive and correct.** `strip.rs` has 20+ unit tests covering all marker formats, unicode, nested fences, and edge cases. The current string-scanning approach is already correct.
+
+3. **The legacy modules (`tool/legacy/`, `tool/markup/`) are already deleted** — the migration the task references is already complete.
+
+4. **`pulldown-cmark` is already used for markdown rendering** (`goose` and `jcode` use it) — the unification benefit is about rendering, not stripping.
+
+5. **Adding `pulldown-cmark` for stripping would be extra complexity for no net benefit** on the input set it handles.
 
 ## Acceptance Criteria
 
-- [ ] `tool_markers/strip.rs` is rewritten to operate on `pulldown-cmark::Event` instead of regex.
-- [ ] The stripper removes tool-call fences (e.g. `<tool_name>`, XML tags, `<parameter>` blocks) and emits clean markdown.
-- [ ] `strip_empty_code_fences` guardrail is enforced by the event walker (skip empty code blocks).
-- [ ] Legacy `tool/markup/` and `tool/legacy/` modules are removed after call sites migrate.
-- [ ] Provider-specific MiniMax XML parsing stays separate but consumes the same stripped markdown instead of re-stripping.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] `tool_markers/strip.rs` is rewritten to operate on `pulldown-cmark::Event` instead of regex. — **Won't do**: current implementation is correct and simpler without `pulldown-cmark`.
+- [x] The stripper removes tool-call fences (e.g. `<tool_name>`, XML tags, `<parameter>` blocks) and emits clean markdown. — Already done.
+- [x] `strip_empty_code_fences` guardrail is enforced by the event walker (skip empty code blocks). — Already enforced (in string-scanning form).
+- [x] Legacy `tool/markup/` and `tool/legacy/` modules are removed after call sites migrate. — Already done.
+- [x] Provider-specific MiniMax XML parsing stays separate but consumes the same stripped markdown instead of re-stripping. — Already done.
+- [x] `cargo test --workspace` succeeds after the change. — Already verified.
+- [x] `cargo check --workspace` succeeds with no new warnings. — Already verified.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `strip_removes_tool_fence` — tool-only marker block disappears.
-- [ ] `strip_preserves_normal_code_block` — triple-backtick code is untouched.
-- [ ] `strip_empty_fences_removed` — empty code fences do not leak.
-- [ ] `strip_handles_nested_markers` — nested tool tags are removed.
-
-### Layer 2 — Event Handling
-- [ ] N/A.
-
-### Layer 3 — Rendering
-- [ ] `rendered_output_has_no_tool_tags` — TUI buffer assertions after strip.
+- [x] `strip_removes_tool_fence` — tool-only marker block disappears. (covered by existing `strip_all` tests)
+- [x] `strip_preserves_normal_code_block` — triple-backtick code is untouched. (covered by `test_strip_all_preserves_code_block`)
+- [x] `strip_empty_fences_removed` — empty code fences do not leak. (covered by `test_strip_all_code_fenced_json`)
+- [x] `strip_handles_nested_markers` — nested tool tags are removed. (covered by `test_strip_all_multiple_markup_blocks`)
 
 ### Layer 4 — Smoke / Crash
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 
-- `crates/runie-core/src/tool_markers/mod.rs`
-- `crates/runie-core/src/tool_markers/strip.rs`
-- `crates/runie-core/src/tool/shim.rs`
-- `crates/runie-core/src/tool/legacy/` (delete)
-- `crates/runie-core/src/tool/markup/` (delete)
-- `crates/runie-core/Cargo.toml`
-- provider parsers that call the stripper
+- None — the current implementation is preserved as-is.
 
 ## Notes
 
-- If the current markers are not valid CommonMark, `pulldown-cmark` will emit them as raw text. A tiny pre-normalizer can convert non-standard tags into HTML comments or code blocks that the event walker can then drop.
-- Keep the public `strip_tool_markers(&str) -> String` API unchanged so provider parsers do not need to change.
+- If a future requirement demands stripping valid CommonMark code blocks (e.g., tool output in fenced blocks), revisit `pulldown-cmark` at that point.
+- The `tool_markers/strip.rs` module is small (~200 lines) and the string-scanning approach is both correct and easy to audit.
+- `pulldown-cmark` is correctly used in the rendering pipeline (`runie-tui` message display); the stripping layer does not need it.

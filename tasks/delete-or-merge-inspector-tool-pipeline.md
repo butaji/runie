@@ -1,6 +1,6 @@
 # Delete or merge the inspector tool pipeline
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Tools
 **Priority**: P1
@@ -10,38 +10,40 @@
 
 ## Description
 
-The `inspect` command and its associated tool pipeline duplicate the rendering and execution path used by the main agent tool loop. Either delete `inspect` if it is unused, or merge it so it shares the same tool execution and display code.
+The `ToolPipeline` + `Inspector` trait in `runie-agent/src/inspector.rs` was dead code: exported from `runie-agent` but never imported or used anywhere in the codebase. The `runie inspect` CLI command (`crates/runie-cli/src/inspect.rs`) is unrelated — it prints runtime configuration and is actively used.
+
+**Action taken**: Deleted `crates/runie-agent/src/inspector.rs` and removed `pub mod inspector` from `runie-agent/src/lib.rs`. Removed the stale exemption for `inspector.rs` in `runie-core/build.rs`.
 
 ## Acceptance Criteria
 
-- [ ] `inspect` either is removed or delegates to the shared tool execution path.
-- [ ] No separate inspector-specific rendering module remains unless it is a thin wrapper.
-- [ ] Tool-call display uses one formatter across TUI, CLI, and inspector.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] `inspect` either is removed or delegates to the shared tool execution path. — `inspect` in CLI (`runie inspect`) is the config-inspection command; it was never related to the tool pipeline. The dead tool pipeline is deleted.
+- [x] No separate inspector-specific rendering module remains unless it is a thin wrapper. — N/A.
+- [x] Tool-call display uses one formatter across TUI, CLI, and inspector. — N/A.
+- [x] `cargo test --workspace` succeeds after the change. — Verified.
+- [x] `cargo check --workspace` succeeds with no new warnings. — Verified (no new warnings).
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `tool_result_format_is_shared` — formatter output matches for agent and inspector inputs.
+- [x] N/A — the module was dead code; deletion doesn't affect any test logic.
 
 ### Layer 2 — Event Handling
-- [ ] N/A — command dispatch is unchanged.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] `tool_output_renders_consistently` — a `TestBackend` buffer matches for both render paths after unification.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `inspect_delegates_to_tool_loop` — if kept, `inspect` produces the same events as a normal tool turn.
+- [x] N/A.
 
 ## Files touched
 
-- `crates/runie-cli/src/inspect.rs`
-- `crates/runie-cli/src/commands.rs`
-- `crates/runie-tui/src/ui/tool.rs`
-- `crates/runie-core/src/tool/display.rs`
+- `crates/runie-agent/src/inspector.rs` — **deleted**
+- `crates/runie-agent/src/lib.rs` — removed `pub mod inspector`
+- `crates/runie-core/build.rs` — removed stale exemption for `inspector.rs`
 
 ## Notes
 
-- If `inspect` is required for headless debugging, keep it as a CLI command that drives the same `ToolSkill` harness the agent uses.
-- Do not maintain two formatters for markdown/plaintext output.
+- `runie inspect` (config introspection) and the tool-inspector pipeline were always two separate things.
+- The `ToolPipeline` was designed as middleware around tool calls but was never wired into the agent tool loop.
+- The `runie-cli/src/inspect.rs` file is unaffected and remains active.

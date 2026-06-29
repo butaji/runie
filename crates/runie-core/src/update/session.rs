@@ -118,10 +118,7 @@ impl AppState {
         let handles = self.actor_handles().cloned();
         if let Some(ref h) = handles {
             if tokio::runtime::Handle::try_current().is_ok() {
-                let handles = h.clone();
-                tokio::spawn(async move {
-                    handles.turn.send_message(TurnMsg::QueueFollowUp { content });
-                });
+                let _ = h.turn.try_send(TurnMsg::QueueFollowUp { content });
             } else {
                 // Test mode: apply synchronously
                 self.agent_state_mut()
@@ -155,10 +152,7 @@ impl AppState {
         let handles = self.actor_handles().cloned();
         if let Some(ref h) = handles {
             if tokio::runtime::Handle::try_current().is_ok() {
-                let handles = h.clone();
-                tokio::spawn(async move {
-                    handles.turn.send_message(TurnMsg::AbortQueue);
-                });
+                let _ = h.turn.try_send(TurnMsg::AbortQueue);
             } else {
                 // Test mode: drain synchronously
                 let msgs: Vec<_> = self
@@ -195,11 +189,7 @@ impl AppState {
         let handles = self.actor_handles().cloned();
         if let Some(ref h) = handles {
             if tokio::runtime::Handle::try_current().is_ok() {
-                // Production mode: send to TurnActor
-                let handles = h.clone();
-                tokio::spawn(async move {
-                    handles.turn.send_message(TurnMsg::DeliverQueued { steering_mode, follow_up_mode });
-                });
+                let _ = h.turn.try_send(TurnMsg::DeliverQueued { steering_mode, follow_up_mode });
                 // Clear the AppState mirror - TurnActor will emit facts to update it
                 self.agent_state_mut().message_queue.clear();
             } else {

@@ -123,10 +123,7 @@ impl AppState {
                 // Production mode: send to TurnActor
                 let id = format!("req.{}", self.agent_state().next_id);
                 self.agent_state_mut().next_id += 1;
-                let handles = h.clone();
-                tokio::spawn(async move {
-                    handles.turn.send_message(TurnMsg::SubmitUserMessage { content, id });
-                });
+                let _ = h.turn.try_send(TurnMsg::SubmitUserMessage { content, id });
             } else {
                 // Test mode: apply synchronously
                 self.apply_user_message_sync(content);
@@ -184,10 +181,7 @@ impl AppState {
 
         if can_spawn {
             let command = command.to_owned();
-            let handles = handles.unwrap();
-            tokio::spawn(async move {
-                handles.io.send_message(IoMsg::RunBash { command });
-            });
+            let _ = handles.unwrap().io.try_send(IoMsg::RunBash { command });
             return;
         }
         // Fallback: no actor handles — run bash synchronously.
@@ -222,7 +216,7 @@ impl AppState {
 /// synchronous tests can assert on the updated state without awaiting the actor.
 fn try_send_input(state: &mut AppState, msg: crate::actors::InputMsg) {
     if let Some(handles) = state.actor_handles() {
-        handles.input.send_message(msg);
+        let _ = handles.input.try_send(msg);
     } else {
         // Test mode: apply synchronously to AppState projection.
         msg.apply_to(state.input_mut());
@@ -232,6 +226,6 @@ fn try_send_input(state: &mut AppState, msg: crate::actors::InputMsg) {
 /// Emit `SessionMsg::AppendHistory` to SessionActor (fire-and-forget).
 fn try_append_history(state: &mut AppState, entry: String) {
     if let Some(handles) = state.actor_handles() {
-        handles.session.send_message(SessionMsg::AppendHistory { entry });
+        let _ = handles.session.try_send(SessionMsg::AppendHistory { entry });
     }
 }

@@ -48,6 +48,11 @@ impl RactorFffIndexerHandle {
     pub async fn send_message(&self, msg: FffSearchRequest) {
         self.inner.send(msg).await;
     }
+
+    /// Try to send a message (non-blocking).
+    pub fn try_send(&self, msg: FffSearchRequest) -> Result<(), ractor::MessagingErr<FffSearchRequest>> {
+        self.inner.try_send(msg)
+    }
 }
 
 /// Ractor-based FffIndexerActor.

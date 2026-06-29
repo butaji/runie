@@ -134,4 +134,9 @@ impl RactorSessionHandle {
     pub async fn send_message(&self, msg: SessionMsg) {
         self.inner.send(msg).await;
     }
+
+    /// Try to send a message (non-blocking).
+    pub fn try_send(&self, msg: SessionMsg) -> Result<(), ractor::MessagingErr<SessionMsg>> {
+        self.inner.try_send(msg)
+    }
 }

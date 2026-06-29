@@ -1,37 +1,37 @@
 # Drop unused `rand` from `runie-provider`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R6
 **Category**: Dependencies
-**Priority": P2
+**Priority**: P2
 
 **Depends on**: none
 **Blocks**: none
 
 ## Description
 
-`rand` is declared in `runie-provider` and used only for `MockProvider::random_delay`. Make mock delays deterministic and remove the dependency.
+`rand` was previously a dependency of `runie-provider`, used only for `MockProvider::random_delay`. It has since been replaced with a custom `xorshift64star` implementation — no `rand` crate is present in the workspace.
 
 ## Acceptance Criteria
 
-- [ ] Replace `MockProvider::random_delay` with a deterministic delay strategy (e.g., fixed or stepped).
-- [ ] Remove `rand` from `crates/runie-provider/Cargo.toml`.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Replace `MockProvider::random_delay` with a deterministic delay strategy (e.g., fixed or stepped).
+- [x] Remove `rand` from `crates/runie-provider/Cargo.toml`. — **Already done**: `rand` is not listed; `mock.rs` uses a hand-rolled `xorshift64star` seeded deterministically.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `mock_delay_is_deterministic` — delay is predictable given inputs.
+- [x] `mock_provider_delay_is_deterministic` — delay is predictable given inputs (`crates/runie-provider/src/tests.rs`).
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 
-- `crates/runie-provider/Cargo.toml`
-- `crates/runie-provider/src/mock.rs`
+- None — the migration was already completed before this task was authored.
 
 ## Notes
 
-- AGENTS.md forbids artificial delays in automatic tests; mock provider delays should not affect deterministic tests.
+- AGENTS.md forbids artificial delays in automatic tests; `MockProvider::random_delay` is seeded with a fixed value so tests remain deterministic.
+- `MockProvider::default()` uses seed `42`; `MockProvider::with_delay(min, max)` also uses seed `42`; `MockProvider::with_seed(min, max, s)` accepts an explicit seed.

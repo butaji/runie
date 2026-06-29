@@ -80,9 +80,7 @@ fn handle_vim_mode_toggle(state: &mut AppState) {
     let handles = state.actor_handles().cloned();
     if let Some(h) = handles {
         if tokio::runtime::Handle::try_current().is_ok() {
-            tokio::spawn(async move {
-                h.config.send_message(ConfigMsg::SetVimMode { enabled: new_value });
-            });
+            let _ = h.config.try_send(ConfigMsg::SetVimMode { enabled: new_value });
         }
     }
     state.view_mut().cached_settings_valid = false;
@@ -246,9 +244,7 @@ fn sync_provider_models(state: &mut AppState, provider: &str, models: &[String])
         let provider = provider.to_owned();
         let models = models.to_vec();
         if tokio::runtime::Handle::try_current().is_ok() {
-            tokio::spawn(async move {
-                h.config.send_message(ConfigMsg::SetProviderModels { name: provider, models });
-            });
+            let _ = h.config.try_send(ConfigMsg::SetProviderModels { name: provider, models });
         }
     }
 }

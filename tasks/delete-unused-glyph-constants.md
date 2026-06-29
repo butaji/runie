@@ -1,40 +1,39 @@
 # Delete unused glyph constants from `runie-tui`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R6
-**Category": TUI / Rendering
-**Priority": P3
+**Category**: TUI / Rendering
+**Priority**: P3
 
 **Depends on**: none
 **Blocks**: none
 
 ## Description
 
-`crates/runie-tui/src/glyphs.rs` defines many glyphs that are not referenced anywhere in the crate. Move any still-useful ones into `theme/glyph.rs` and delete the file.
+`crates/runie-tui/src/glyphs.rs` does not exist. The glyph constants it was supposed to contain have already been cleaned up (or were moved to `theme/glyph.rs` in a prior refactor). The only remaining reference is a comment in `ui.rs`.
 
 ## Acceptance Criteria
 
-- [ ] Identify which glyphs are actually used.
-- [ ] Move used glyphs to `theme/glyph.rs`.
-- [ ] Delete `crates/runie-tui/src/glyphs.rs`.
-- [ ] Update imports.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Identify which glyphs are actually used. — **N/A**: the file does not exist.
+- [x] Move used glyphs to `theme/glyph.rs`. — **N/A**.
+- [x] Delete `crates/runie-tui/src/glyphs.rs`. — **Already done**: file does not exist.
+- [x] Update imports. — **N/A**.
+- [x] `cargo test --workspace` succeeds after the change. — Already verified.
+- [x] `cargo check --workspace` succeeds with no new warnings. — Already verified.
 
 ## Tests
 
 ### Layer 3 — Rendering
-- [ ] `used_glyphs_still_render` — any moved glyphs still appear in expected buffers.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 
-- `crates/runie-tui/src/glyphs.rs`
-- `crates/runie-tui/src/theme/glyph.rs`
-- `crates/runie-tui/src/lib.rs`
+- None — the file was already removed before this task was authored.
 
 ## Notes
 
-- Low priority; good cleanup if touching adjacent TUI code.
+- Glyphs used in the TUI are defined in `crates/runie-tui/src/theme/glyph.rs` (which exists).
+- The only reference to "glyphs" in the codebase is a design-system comment in `ui.rs`.

@@ -8,7 +8,9 @@ use std::sync::Arc;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use ractor::async_trait as ractor_async_trait;
 
-use crate::actors::config::{RactorConfigActor, RactorConfigHandle};
+use crate::actors::config::RactorConfigHandle;
+#[cfg(test)]
+use crate::actors::config::RactorConfigActor;
 use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
 use crate::bus::EventBus;
 use crate::config::Config;

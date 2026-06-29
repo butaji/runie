@@ -120,9 +120,7 @@ impl AppState {
                 .map(|p| (p.path, p.proposed))
                 .collect();
             let handles = handles.unwrap();
-            tokio::spawn(async move {
-                handles.io.send_message(IoMsg::WriteFiles { edits });
-            });
+            let _ = handles.io.try_send(IoMsg::WriteFiles { edits });
             return true;
         }
         false

@@ -280,13 +280,11 @@ fn persist_provider_config(
         let base_url = base_url.to_owned();
         let key = key.to_owned();
         let selected = selected.to_vec();
-        tokio::spawn(async move {
-            handles.config.send_message(ConfigMsg::SaveProvider {
-                name: provider,
-                base_url,
-                api_key: key,
-                models: selected,
-            });
+        let _ = handles.config.try_send(ConfigMsg::SaveProvider {
+            name: provider,
+            base_url,
+            api_key: key,
+            models: selected,
         });
         return;
     }

@@ -88,10 +88,7 @@ pub fn run_save(state: &mut AppState, name: &str) -> CommandResult {
     let handles = state.actor_handles().cloned();
     let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
     if can_spawn {
-        let handles = handles.unwrap();
-        tokio::spawn(async move {
-            handles.session.send_message(SessionMsg::Save { name: name_owned, session });
-        });
+        let _ = handles.unwrap().session.try_send(SessionMsg::Save { name: name_owned, session });
         CommandResult::Message(format!("Saving session '{}'…", name.trim()))
     } else {
         match crate::session::replay::save_session(&name_owned, state) {
@@ -147,10 +144,7 @@ pub fn run_import(state: &mut AppState, path: &str) -> CommandResult {
     let handles = state.actor_handles().cloned();
     let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
     if can_spawn {
-        let handles = handles.unwrap();
-        tokio::spawn(async move {
-            handles.session.send_message(SessionMsg::Import { path: path_buf });
-        });
+        let _ = handles.unwrap().session.try_send(SessionMsg::Import { path: path_buf });
         return CommandResult::Message(format!("Importing session from '{}'…", path));
     }
     let json = match std::fs::read_to_string(&path_buf) {
@@ -178,10 +172,7 @@ pub fn run_export(state: &mut AppState, path: &str) -> CommandResult {
     let handles = state.actor_handles().cloned();
     let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
     if can_spawn {
-        let handles = handles.unwrap();
-        tokio::spawn(async move {
-            handles.session.send_message(SessionMsg::Export { path: path_buf, session });
-        });
+        let _ = handles.unwrap().session.try_send(SessionMsg::Export { path: path_buf, session });
         return CommandResult::Message(format!("Exporting session to '{}'…", path));
     }
     let json = serde_json::to_string_pretty(&session).unwrap_or_default();
@@ -195,10 +186,7 @@ pub fn run_export(state: &mut AppState, path: &str) -> CommandResult {
 fn send_session_msg(state: &AppState, msg: SessionMsg) -> bool {
     if let Some(handles) = state.actor_handles() {
         if tokio::runtime::Handle::try_current().is_ok() {
-            let session = handles.session.clone();
-            tokio::spawn(async move {
-                session.send_message(msg);
-            });
+            let _ = handles.session.try_send(msg);
             return true;
         }
     }

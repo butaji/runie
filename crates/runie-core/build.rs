@@ -348,7 +348,6 @@ fn needs_appstate_lint(rel_path: &str) -> bool {
         "session/replay.rs",
         "login_flow/validation.rs",
         "model/state/input.rs",
-        "inspector.rs", // ToolPipeline.registry is ToolDefRegistry, not AppState
     ];
     !is_test_file(rel_path)
         && !rel_path.contains("/benches/")

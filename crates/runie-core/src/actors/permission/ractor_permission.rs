@@ -84,6 +84,11 @@ impl RactorPermissionHandle {
     pub async fn send_message(&self, msg: PermissionMsg) {
         let _ = self.inner.send(msg).await;
     }
+
+    /// Try to send a message (non-blocking).
+    pub fn try_send(&self, msg: PermissionMsg) -> Result<(), ractor::MessagingErr<PermissionMsg>> {
+        self.inner.try_send(msg)
+    }
 }
 
 /// Ractor-based PermissionActor.

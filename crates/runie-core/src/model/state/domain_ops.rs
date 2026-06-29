@@ -255,10 +255,7 @@ impl AppState {
         if let Some(h) = self.actor_handles() {
             if tokio::runtime::Handle::try_current().is_ok() {
                 let name = name.to_owned();
-                let config = h.config.clone();
-                tokio::spawn(async move {
-                    config.send_message(ConfigMsg::RemoveProvider { name });
-                });
+                let _ = h.config.try_send(ConfigMsg::RemoveProvider { name });
             }
         }
     }
@@ -268,10 +265,7 @@ impl AppState {
         if let Some(h) = self.actor_handles() {
             if tokio::runtime::Handle::try_current().is_ok() {
                 let name = name.to_owned();
-                let config = h.config.clone();
-                tokio::spawn(async move {
-                    config.send_message(ConfigMsg::SetProviderModels { name, models });
-                });
+                let _ = h.config.try_send(ConfigMsg::SetProviderModels { name, models });
             }
         }
     }
@@ -381,10 +375,7 @@ impl AppState {
         let handles = self.actor_handles().cloned();
         if let Some(h) = handles {
             if tokio::runtime::Handle::try_current().is_ok() {
-                let h = h;
-                tokio::spawn(async move {
-                    h.config.send_message(ConfigMsg::SetThinkingLevel { level });
-                });
+                let _ = h.config.try_send(ConfigMsg::SetThinkingLevel { level });
             }
         }
         self.notify(

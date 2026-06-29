@@ -182,9 +182,7 @@ pub fn register(registry: &mut CommandRegistry) {
 fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
     if let Some(handles) = state.actor_handles().cloned() {
         if tokio::runtime::Handle::try_current().is_ok() {
-            tokio::spawn(async move {
-                handles.session.send_message(SessionMsg::List);
-            });
+            let _ = handles.session.try_send(SessionMsg::List);
             return CommandResult::None;
         }
     }
@@ -208,7 +206,7 @@ fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     state.dialog_back_stack_mut().clear();
     *state.login_flow_mut() = None;
     if let Some(handles) = state.actor_handles() {
-        handles.permission.send_message(PermissionMsg::DismissRequest);
+        let _ = handles.permission.try_send(PermissionMsg::DismissRequest);
     } else {
         *state.permission_request_mut() = None;
     }

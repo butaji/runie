@@ -73,6 +73,11 @@ impl RactorIoHandle {
     pub async fn send_message(&self, msg: IoMsg) {
         let _ = self.inner.send(msg).await;
     }
+
+    /// Try to send a message (non-blocking).
+    pub fn try_send(&self, msg: IoMsg) -> Result<(), ractor::MessagingErr<IoMsg>> {
+        self.inner.try_send(msg)
+    }
 }
 
 /// Ractor-based IoActor.

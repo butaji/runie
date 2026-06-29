@@ -108,10 +108,7 @@ impl AppState {
         let handles = self.actor_handles().cloned();
         if let Some(ref h) = handles {
             if tokio::runtime::Handle::try_current().is_ok() {
-                let handles = h.clone();
-                tokio::spawn(async move {
-                    handles.turn.send_message(TurnMsg::AbortTurn);
-                });
+                let _ = h.turn.try_send(TurnMsg::AbortTurn);
             }
         } else {
             self.apply_turn_aborted();

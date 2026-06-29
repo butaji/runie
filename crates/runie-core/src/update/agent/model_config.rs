@@ -78,9 +78,7 @@ fn handle_trust_project(state: &mut AppState, decision: crate::trust::TrustDecis
     if let Some(handles) = state.actor_handles() {
         let handles = handles.clone();
         let cwd_async = cwd;
-        let _ = tokio::spawn(async move {
-            handles.session.send_message(SessionMsg::SetTrust { path: cwd_async, decision });
-        });
+        let _ = handles.session.try_send(SessionMsg::SetTrust { path: cwd_async, decision });
     }
 }
 
