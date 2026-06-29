@@ -1,6 +1,6 @@
 # Use `ractor` `State` for actor mutable state
 
-**Status**: partial (InputActor done)
+**Status**: done
 **Milestone**: R6
 **Category**: Architecture / Actors
 **Priority**: P1
@@ -14,23 +14,23 @@ Production actors use `type State = ()` and hold mutable state behind `parking_l
 
 ## Acceptance Criteria
 
-- [ ] Convert `RactorSessionActor`, `RactorTurnActor`, `RactorConfigActor`, `RactorPermissionActor`, and `InputActor` to use `type State` for mutable state.
-- [ ] Remove interior `Mutex`/`Arc<Mutex>` fields where they are only used for actor-local state.
-- [ ] Keep `Mutex` only for state shared across threads outside the actor.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Convert `RactorSessionActor`, `RactorTurnActor`, `RactorConfigActor`, `RactorPermissionActor`, and `InputActor` to use `type State` for mutable state.
+- [x] Remove interior `Mutex`/`Arc<Mutex>` fields where they are only used for actor-local state.
+- [x] Keep `Mutex` only for state shared across threads outside the actor (e.g., `ApprovalRegistry` which is process-wide).
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `session_actor_state_updates_without_mutex` — state updates via `&mut State`.
-- [ ] `turn_actor_state_updates_without_mutex` — same.
+- [x] `session_actor_state_updates_without_mutex` — state updates via `&mut State`.
+- [x] `turn_actor_state_updates_without_mutex` — same.
 
 ### Layer 2 — Event Handling
-- [ ] `config_actor_reload_updates_state` — reload message updates `State`.
+- [x] `config_actor_reload_updates_state` — reload message updates `State`.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `mock_turn_still_completes` — provider replay turn works after state refactor.
+- [x] `mock_turn_still_completes` — provider replay turn works after state refactor.
 
 ## Files touched
 
@@ -38,8 +38,7 @@ Production actors use `type State = ()` and hold mutable state behind `parking_l
 - `crates/runie-core/src/actors/turn/ractor_turn.rs`
 - `crates/runie-core/src/actors/config/ractor_config.rs`
 - `crates/runie-core/src/actors/permission/ractor_permission.rs`
-- `crates/runie-core/src/actors/input/actor.rs`
-- `crates/runie-agent/src/actor.rs`
+- `crates/runie-core/src/actors/input/actor.rs` (already done)
 
 ## Notes
 

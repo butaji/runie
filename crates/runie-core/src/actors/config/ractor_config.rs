@@ -147,106 +147,101 @@ impl RactorConfigHandle {
     }
 }
 
-/// Ractor-based ConfigActor state.
-pub struct RactorConfigActor {
-    config: std::sync::Arc<Mutex<Config>>,
-    /// Primary config path (typically global ~/.runie/config.toml).
-    path: PathBuf,
-    /// Project config path (typically ./.runie/config.toml).
-    project_path: Option<PathBuf>,
-    bus: EventBus<Event>,
+/// Ractor State for ConfigActor — holds all mutable state.
+/// EventBus is wrapped in Mutex for interior mutability from `&self` context.
+pub struct ConfigActorState {
+    pub config: Mutex<Config>,
+    pub path: PathBuf,
+    pub project_path: Option<PathBuf>,
+    pub bus: Mutex<EventBus<Event>>,
 }
 
+impl ConfigActorState {
+    fn emit(&self, event: Event) {
+        self.bus.lock().publish(event);
+    }
+}
+
+/// Ractor-based ConfigActor.
+pub struct RactorConfigActor;
+
 impl RactorConfigActor {
-    fn new(bus: EventBus<Event>, path: PathBuf, project_path: Option<PathBuf>) -> Self {
-        Self {
-            config: std::sync::Arc::new(Mutex::new(Config::default())),
-            path,
-            project_path,
-            bus,
-        }
-    }
-
-    async fn handle_msg(&self, msg: ConfigMsg) {
-        match msg {
-            ConfigMsg::Load => self.load_and_emit().await,
-            ConfigMsg::Reload => self.reload_and_emit().await,
-            ConfigMsg::SaveProvider { name, base_url, api_key, models } => {
-                self.save_provider(&name, &base_url, &api_key, &models).await;
-            }
-            ConfigMsg::RemoveProvider { name } => self.remove_provider(&name).await,
-            ConfigMsg::SetDefaultModel { provider, model } => {
-                self.set_default_model(&provider, &model).await;
-            }
-            ConfigMsg::SetProviderModels { name, models } => {
-                self.set_provider_models(&name, &models).await;
-            }
-            ConfigMsg::SetTheme { name } => self.set_theme(&name).await,
-            ConfigMsg::SetVimMode { enabled } => self.set_vim_mode(enabled).await,
-            ConfigMsg::SetTelemetry { enabled } => self.set_telemetry(enabled).await,
-            ConfigMsg::SetTruncation { limits } => self.set_truncation(&limits).await,
-            ConfigMsg::SetThinkingLevel { level } => self.set_thinking_level(&level).await,
-            ConfigMsg::GetConfig(reply) => {
-                let cfg = self.config.lock().clone();
-                reply.send(cfg);
-            }
-            ConfigMsg::GetConfiguredProviders(reply) => {
-                reply.send(self.list_configured_providers());
-            }
-            ConfigMsg::LoadLayers(reply) => {
-                let effective = self.load_layers_sync();
-                reply.send(effective);
-            }
-            ConfigMsg::AddMcpServer { scope, name, server } => {
-                self.add_mcp_server(scope, &name, server).await;
-            }
-            ConfigMsg::RemoveMcpServer { scope, name } => {
-                self.remove_mcp_server(scope, &name).await;
-            }
-            ConfigMsg::ListMcpServers { scope, reply } => {
-                let servers = self.list_mcp_servers(scope);
-                reply.send(servers);
-            }
-        }
-    }
-
-    async fn load_and_emit(&self) {
-        let effective = self.load_layers_async().await;
-        let mut guard = self.config.lock();
-        *guard = effective.clone();
-        drop(guard);
-        self.bus.publish(Event::ConfigLoaded { config: Box::new(effective) });
-    }
-
     /// Load layered config asynchronously.
-    async fn load_layers_async(&self) -> Config {
-        let global = self.path.clone();
-        let local = self.project_path.clone();
+    async fn load_layers_async(global: PathBuf, local: Option<PathBuf>) -> Config {
         tokio::task::spawn_blocking(move || Config::load_layers_from_paths(global, local.unwrap_or_default()))
             .await
             .unwrap_or_default()
     }
 
     /// Load layered config synchronously (for use in spawn_blocking).
-    fn load_layers_sync(&self) -> Config {
-        let global = self.path.clone();
-        let local = self.project_path.clone();
-        Config::load_layers_from_paths(global, local.unwrap_or_default())
+    fn load_layers_sync(global: &PathBuf, local: &Option<PathBuf>) -> Config {
+        Config::load_layers_from_paths(global.clone(), local.clone().unwrap_or_default())
     }
 
-    async fn reload_and_emit(&self) {
-        let new_config = self.load_layers_async().await;
-        let changed = new_config != *self.config.lock();
-        if changed {
-            let mut guard = self.config.lock();
-            *guard = new_config.clone();
-            drop(guard);
-            self.bus.publish(Event::ConfigLoaded { config: Box::new(new_config) });
+    async fn handle_msg(state: &mut ConfigActorState, msg: ConfigMsg) {
+        match msg {
+            ConfigMsg::Load => Self::load_and_emit(state).await,
+            ConfigMsg::Reload => Self::reload_and_emit(state).await,
+            ConfigMsg::SaveProvider { name, base_url, api_key, models } => {
+                Self::save_provider(state, &name, &base_url, &api_key, &models).await;
+            }
+            ConfigMsg::RemoveProvider { name } => Self::remove_provider(state, &name).await,
+            ConfigMsg::SetDefaultModel { provider, model } => {
+                Self::set_default_model(state, &provider, &model).await;
+            }
+            ConfigMsg::SetProviderModels { name, models } => {
+                Self::set_provider_models(state, &name, &models).await;
+            }
+            ConfigMsg::SetTheme { name } => Self::set_theme(state, &name).await,
+            ConfigMsg::SetVimMode { enabled } => Self::set_vim_mode(state, enabled).await,
+            ConfigMsg::SetTelemetry { enabled } => Self::set_telemetry(state, enabled).await,
+            ConfigMsg::SetTruncation { limits } => Self::set_truncation(state, &limits).await,
+            ConfigMsg::SetThinkingLevel { level } => Self::set_thinking_level(state, &level).await,
+            ConfigMsg::GetConfig(reply) => {
+                let cfg = state.config.lock().clone();
+                reply.send(cfg);
+            }
+            ConfigMsg::GetConfiguredProviders(reply) => {
+                reply.send(Self::list_configured_providers(&state));
+            }
+            ConfigMsg::LoadLayers(reply) => {
+                let effective = Self::load_layers_sync(&state.path, &state.project_path);
+                reply.send(effective);
+            }
+            ConfigMsg::AddMcpServer { scope, name, server } => {
+                Self::add_mcp_server(state, scope, &name, server).await;
+            }
+            ConfigMsg::RemoveMcpServer { scope, name } => {
+                Self::remove_mcp_server(state, scope, &name).await;
+            }
+            ConfigMsg::ListMcpServers { scope, reply } => {
+                let servers = Self::list_mcp_servers_from_state(state, scope);
+                reply.send(servers);
+            }
         }
     }
 
-    async fn save_provider(&self, name: &str, base_url: &str, api_key: &str, models: &[String]) {
-        let path = self.path.clone();
+    async fn load_and_emit(state: &mut ConfigActorState) {
+        let effective = Self::load_layers_async(state.path.clone(), state.project_path.clone()).await;
+        let mut guard = state.config.lock();
+        *guard = effective.clone();
+        drop(guard);
+        state.emit(Event::ConfigLoaded { config: Box::new(effective) });
+    }
+
+    async fn reload_and_emit(state: &mut ConfigActorState) {
+        let new_config = Self::load_layers_async(state.path.clone(), state.project_path.clone()).await;
+        let changed = new_config != *state.config.lock();
+        if changed {
+            let mut guard = state.config.lock();
+            *guard = new_config.clone();
+            drop(guard);
+            state.emit(Event::ConfigLoaded { config: Box::new(new_config) });
+        }
+    }
+
+    async fn save_provider(state: &mut ConfigActorState, name: &str, base_url: &str, api_key: &str, models: &[String]) {
+        let path = state.path.clone();
         let name = name.to_owned();
         let base_url = base_url.to_owned();
         let api_key = api_key.to_owned();
@@ -254,78 +249,78 @@ impl RactorConfigActor {
         let result = tokio::task::spawn_blocking(move || {
             file_helpers::save_provider_to_path(&path, &name, &base_url, &api_key, &models)
         }).await;
-        self.handle_write_result(result).await;
+        Self::handle_write_result(state, result).await;
     }
 
-    async fn remove_provider(&self, name: &str) {
-        let path = self.path.clone();
+    async fn remove_provider(state: &mut ConfigActorState, name: &str) {
+        let path = state.path.clone();
         let name = name.to_owned();
         let result = tokio::task::spawn_blocking(move || file_helpers::remove_provider_from_path(&path, &name)).await;
-        self.handle_write_result(result).await;
+        Self::handle_write_result(state, result).await;
     }
 
-    async fn set_default_model(&self, provider: &str, model: &str) {
-        let path = self.path.clone();
+    async fn set_default_model(state: &mut ConfigActorState, provider: &str, model: &str) {
+        let path = state.path.clone();
         let provider = provider.to_owned();
         let model = model.to_owned();
         let result = tokio::task::spawn_blocking(move || file_helpers::set_default_model_at_path(&path, &provider, &model)).await;
-        self.handle_write_result(result).await;
+        Self::handle_write_result(state, result).await;
     }
 
-    async fn set_provider_models(&self, name: &str, models: &[String]) {
-        let path = self.path.clone();
+    async fn set_provider_models(state: &mut ConfigActorState, name: &str, models: &[String]) {
+        let path = state.path.clone();
         let name = name.to_owned();
         let models = models.to_vec();
         let result = tokio::task::spawn_blocking(move || file_helpers::set_provider_models_at_path(&path, &name, &models)).await;
-        self.handle_write_result(result).await;
+        Self::handle_write_result(state, result).await;
     }
 
-    async fn set_theme(&self, name: &str) {
-        let path = self.path.clone();
+    async fn set_theme(state: &mut ConfigActorState, name: &str) {
+        let path = state.path.clone();
         let name = name.to_owned();
         let result = tokio::task::spawn_blocking(move || file_helpers::set_theme_at_path(&path, &name)).await;
-        self.handle_write_result(result).await;
+        Self::handle_write_result(state, result).await;
     }
 
-    async fn set_vim_mode(&self, enabled: bool) {
-        let path = self.path.clone();
+    async fn set_vim_mode(state: &mut ConfigActorState, enabled: bool) {
+        let path = state.path.clone();
         let result = tokio::task::spawn_blocking(move || file_helpers::set_vim_mode_at_path(&path, enabled)).await;
-        self.handle_write_result(result).await;
+        Self::handle_write_result(state, result).await;
     }
 
-    async fn set_telemetry(&self, enabled: bool) {
-        let path = self.path.clone();
+    async fn set_telemetry(state: &mut ConfigActorState, enabled: bool) {
+        let path = state.path.clone();
         let result = tokio::task::spawn_blocking(move || file_helpers::set_telemetry_at_path(&path, enabled)).await;
-        self.handle_write_result(result).await;
+        Self::handle_write_result(state, result).await;
     }
 
-    async fn set_truncation(&self, limits: &TruncationSection) {
-        let path = self.path.clone();
+    async fn set_truncation(state: &mut ConfigActorState, limits: &TruncationSection) {
+        let path = state.path.clone();
         let limits = limits.clone();
         let result = tokio::task::spawn_blocking(move || file_helpers::set_truncation_at_path(&path, &limits)).await;
-        self.handle_write_result(result).await;
+        Self::handle_write_result(state, result).await;
     }
 
-    async fn set_thinking_level(&self, level: &ThinkingLevel) {
-        let path = self.path.clone();
+    async fn set_thinking_level(state: &mut ConfigActorState, level: &ThinkingLevel) {
+        let path = state.path.clone();
         let level = *level;
         let result = tokio::task::spawn_blocking(move || file_helpers::set_thinking_level_at_path(&path, level)).await;
-        self.handle_write_result(result).await;
+        Self::handle_write_result(state, result).await;
     }
 
-    async fn handle_write_result(&self, result: Result<anyhow::Result<()>, tokio::task::JoinError>) {
+    async fn handle_write_result(state: &mut ConfigActorState, result: Result<anyhow::Result<()>, tokio::task::JoinError>) {
         match result {
-            Ok(Ok(())) => self.load_and_emit().await,
+            Ok(Ok(())) => Self::load_and_emit(state).await,
             Ok(Err(e)) => {
                 tracing::error!("config write failed: {e:?}");
-                self.bus.publish(Event::Error {
+                state.emit(Event::Error {
                     id: "config".to_owned(),
                     message: format!("Config write failed: {e}"),
                 });
             }
             Err(thread_id) => {
                 tracing::error!("config write task panicked in thread: {:?}", thread_id);
-                self.bus.publish(Event::Error {
+                state.emit(Event::Error {
                     id: "config".to_owned(),
                     message: "Config write task panicked".to_owned(),
                 });
@@ -333,8 +328,8 @@ impl RactorConfigActor {
         }
     }
 
-    fn list_configured_providers(&self) -> Vec<(String, String, Vec<String>)> {
-        let guard = self.config.lock();
+    fn list_configured_providers(state: &ConfigActorState) -> Vec<(String, String, Vec<String>)> {
+        let guard = state.config.lock();
         let mut result: Vec<_> = guard
             .model_providers
             .iter()
@@ -344,33 +339,27 @@ impl RactorConfigActor {
         result
     }
 
-    fn add_mcp_server(&self, scope: ConfigScope, name: &str, server: McpServer) -> impl std::future::Future<Output = ()> {
-        let path = self.path_for_scope(scope);
+    async fn add_mcp_server(state: &mut ConfigActorState, scope: ConfigScope, name: &str, server: McpServer) {
+        let path = Self::path_for_scope(&state.path, &state.project_path, scope);
         let name = name.to_owned();
         let server = server.clone();
-        async move {
-            let result = tokio::task::spawn_blocking(move || {
-                file_helpers::add_mcp_server_to_path(&path, &name, &server)
-            })
-            .await;
-            Self::handle_write_result_static(result).await;
-        }
+        let result = tokio::task::spawn_blocking(move || {
+            file_helpers::add_mcp_server_to_path(&path, &name, &server)
+        }).await;
+        Self::handle_write_result(state, result).await;
     }
 
-    fn remove_mcp_server(&self, scope: ConfigScope, name: &str) -> impl std::future::Future<Output = ()> {
-        let path = self.path_for_scope(scope);
+    async fn remove_mcp_server(state: &mut ConfigActorState, scope: ConfigScope, name: &str) {
+        let path = Self::path_for_scope(&state.path, &state.project_path, scope);
         let name = name.to_owned();
-        async move {
-            let result = tokio::task::spawn_blocking(move || {
-                file_helpers::remove_mcp_server_from_path(&path, &name)
-            })
-            .await;
-            Self::handle_write_result_static(result).await;
-        }
+        let result = tokio::task::spawn_blocking(move || {
+            file_helpers::remove_mcp_server_from_path(&path, &name)
+        }).await;
+        Self::handle_write_result(state, result).await;
     }
 
-    fn list_mcp_servers(&self, scope: ConfigScope) -> Vec<(String, McpServer)> {
-        let path = self.path_for_scope(scope);
+    fn list_mcp_servers_from_state(state: &ConfigActorState, scope: ConfigScope) -> Vec<(String, McpServer)> {
+        let path = Self::path_for_scope(&state.path, &state.project_path, scope);
         let config = Config::load(Some(&path));
         config
             .mcp
@@ -379,10 +368,10 @@ impl RactorConfigActor {
             .collect()
     }
 
-    fn path_for_scope(&self, scope: ConfigScope) -> PathBuf {
+    fn path_for_scope(global: &PathBuf, project: &Option<PathBuf>, scope: ConfigScope) -> PathBuf {
         match scope {
-            ConfigScope::Global => self.path.clone(),
-            ConfigScope::Project => self.project_path.clone().unwrap_or_else(|| {
+            ConfigScope::Global => global.clone(),
+            ConfigScope::Project => project.clone().unwrap_or_else(|| {
                 std::env::current_dir()
                     .unwrap_or_default()
                     .join(".runie")
@@ -390,41 +379,6 @@ impl RactorConfigActor {
             }),
         }
     }
-
-    async fn handle_write_result_static(result: Result<anyhow::Result<()>, tokio::task::JoinError>) {
-        match result {
-            Ok(Ok(())) => {}
-            Ok(Err(e)) => {
-                tracing::error!("config write failed: {e:?}");
-            }
-            Err(thread_id) => {
-                tracing::error!("config write task panicked in thread: {:?}", thread_id);
-            }
-        }
-    }
-
-    /// Reload config if changed (used by the file watcher task).
-    async fn reload_if_changed(
-        config: std::sync::Arc<Mutex<Config>>,
-        path: PathBuf,
-        project_path: Option<PathBuf>,
-        bus: EventBus<Event>,
-    ) {
-        let global = path.clone();
-        let local = project_path.unwrap_or_default();
-        let new_config =
-            tokio::task::spawn_blocking(move || Config::load_layers_from_paths(global, local))
-                .await
-                .unwrap_or_default();
-        let changed = new_config != *config.lock();
-        if changed {
-            let mut guard = config.lock();
-            *guard = new_config.clone();
-            drop(guard);
-            bus.publish(Event::ConfigLoaded { config: Box::new(new_config) });
-        }
-    }
-
 }
 
 /// Check if debounced events touch the config file with a relevant kind.
@@ -442,7 +396,7 @@ fn config_event_is_relevant(events: &[DebouncedEvent], config_path: &PathBuf) ->
 #[ractor::async_trait]
 impl Actor for RactorConfigActor {
     type Msg = ConfigMsg;
-    type State = ();
+    type State = ConfigActorState;
     type Arguments = (EventBus<Event>, PathBuf, Option<PathBuf>);
 
     async fn pre_start(
@@ -450,22 +404,23 @@ impl Actor for RactorConfigActor {
         _myself: ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        let (_bus, _path, _project_path) = args;
+        let (bus, path, project_path) = args;
         // Load layered config
-        let config = self.load_layers_async().await;
-        {
-            let mut guard = self.config.lock();
-            *guard = config;
-        }
-        self.emit_current_config();
+        let config = Self::load_layers_async(path.clone(), project_path.clone()).await;
+        
+        let path_clone = path.clone();
+        let project_path_clone = project_path.clone();
+        let config_for_state = config.clone();
+        let config_arc = std::sync::Arc::new(Mutex::new(config));
+        
+        // Clone bus for watcher task
+        let bus_for_watcher = bus.clone();
+        
         // Spawn the file watcher: a std thread feeds a tokio mpsc channel;
         // the tokio task reloads config on each Reload message.
-        let config_clone = self.config.clone();
-        let path_clone_std = self.path.clone();
-        let path_clone = self.path.clone();
-        let project_path_clone = self.project_path.clone();
-        let bus_clone = self.bus.clone();
+        let path_clone_std = path.clone();
         let (tx, mut rx) = mpsc::channel::<ConfigMsg>(32);
+        
         std::thread::spawn(move || {
             let (std_tx, std_rx) = std::sync::mpsc::channel();
             let debouncer = match new_debouncer(std::time::Duration::from_millis(300), std_tx) {
@@ -488,35 +443,58 @@ impl Actor for RactorConfigActor {
                 }
             }
         });
+        
         tokio::spawn(async move {
             while let Some(msg) = rx.recv().await {
                 if matches!(msg, ConfigMsg::Reload) {
-                    // Clone owned values for each iteration (all are cheap to clone)
-                    Self::reload_if_changed(
-                        config_clone.clone(),
-                        path_clone.clone(),
-                        project_path_clone.clone(),
-                        bus_clone.clone(),
-                    )
-                    .await;
+                    // Reload config from disk - clone owned values for each iteration
+                    let global = path_clone.clone();
+                    let local = project_path_clone.clone().unwrap_or_default();
+                    let new_config =
+                        tokio::task::spawn_blocking(move || Config::load_layers_from_paths(global, local))
+                            .await
+                            .unwrap_or_default();
+                    let changed = new_config != *config_arc.lock();
+                    if changed {
+                        let mut guard = config_arc.lock();
+                        *guard = new_config.clone();
+                        drop(guard);
+                        bus_for_watcher.publish(Event::ConfigLoaded { config: Box::new(new_config) });
+                    }
                 }
             }
         });
-        Ok(())
+        
+        let state = ConfigActorState {
+            config: Mutex::new(config_for_state.clone()),
+            path: path.clone(),
+            project_path: project_path.clone(),
+            bus: Mutex::new(bus.clone()),
+        };
+        // Emit the initial config
+        Self::emit_current_config(&state);
+        
+        Ok(state)
     }
 
     async fn handle(
         &self,
         _myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
-        _state: &mut Self::State,
+        state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        self.handle_msg(msg).await;
+        Self::handle_msg(state, msg).await;
         Ok(())
     }
 }
 
 impl RactorConfigActor {
+    /// Emit the current config as an event.
+    fn emit_current_config(state: &ConfigActorState) {
+        let config_to_emit = state.config.lock().clone();
+        state.emit(Event::ConfigLoaded { config: Box::new(config_to_emit) });
+    }
+
     /// Spawn a `RactorConfigActor` on the given event bus.
     ///
     /// The actor loads layered config (global + project) on startup.
@@ -528,9 +506,9 @@ impl RactorConfigActor {
         project_path: Option<PathBuf>,
     ) -> (RactorConfigHandle, ractor::ActorCell) {
         let path = global_path.unwrap_or_else(crate::config::config_path);
-        let actor = Self::new(bus.clone(), path.clone(), project_path.clone());
+        let actor = Self;
         let (handle, _join, cell) =
-            spawn_ractor(None, actor, (bus, path, project_path))
+            spawn_ractor(None, actor, (bus, path.clone(), project_path.clone()))
                 .await
                 .unwrap();
         (RactorConfigHandle::new(handle), cell)
@@ -541,11 +519,6 @@ impl RactorConfigActor {
         bus: EventBus<Event>,
     ) -> (RactorConfigHandle, ractor::ActorCell) {
         Self::spawn(bus, None, None).await
-    }
-
-    fn emit_current_config(&self) {
-        let config_to_emit = self.config.lock().clone();
-        self.bus.publish(Event::ConfigLoaded { config: Box::new(config_to_emit) });
     }
 }
 

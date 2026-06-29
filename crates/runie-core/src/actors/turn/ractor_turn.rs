@@ -16,6 +16,22 @@ use crate::Event;
 use super::messages::{NextIdResponse, TurnMsg};
 use super::state::TurnState;
 
+/// Ractor State for TurnActor — holds all mutable state.
+/// EventBus is wrapped in Mutex for interior mutability from `&self` context.
+pub struct TurnActorState {
+    pub turn_state: TurnState,
+    pub bus: Mutex<EventBus<Event>>,
+}
+
+impl Default for TurnActorState {
+    fn default() -> Self {
+        Self {
+            turn_state: TurnState::default(),
+            bus: Mutex::new(EventBus::new(16)),
+        }
+    }
+}
+
 /// Ractor-based TurnActor handle.
 #[derive(Clone, Debug)]
 pub struct RactorTurnHandle {
@@ -44,319 +60,245 @@ impl RactorTurnHandle {
     }
 }
 
-/// TurnActor state for ractor.
-pub struct RactorTurnActor {
-    /// The authoritative turn state.
-    state: Mutex<TurnState>,
-    /// Bridge to the event bus for publishing facts.
-    bus: EventBus<Event>,
-}
+/// TurnActor using ractor State pattern.
+pub struct RactorTurnActor;
 
 impl RactorTurnActor {
-    fn new(bus: EventBus<Event>) -> Self {
-        Self {
-            state: Mutex::new(TurnState::default()),
-            bus, 
-        }
+    fn emit(state: &TurnActorState, event: Event) {
+        state.bus.lock().publish(event);
     }
 
-    fn emit(&self, event: Event) {
-        self.bus.publish(event);
-    }
-
-    fn handle_msg(&self, msg: TurnMsg) {
-        match msg {
-            TurnMsg::RunIfQueued => self.handle_run_if_queued(),
-            TurnMsg::AbortTurn => self.handle_abort_turn(),
-            TurnMsg::SubmitUserMessage { content, id } => {
-                self.handle_submit_user_message(content, id);
-            }
-            TurnMsg::QueueSteering { content } => self.handle_queue_steering(content),
-            TurnMsg::QueueFollowUp { content } => self.handle_queue_follow_up(content),
-            TurnMsg::AbortQueue => self.handle_abort_queue(),
-            TurnMsg::ClearQueues => self.handle_clear_queues(),
-            TurnMsg::DeliverQueued { steering_mode, follow_up_mode } => {
-                self.handle_deliver_queued(steering_mode, follow_up_mode);
-            }
-            TurnMsg::Dequeue => self.handle_dequeue(),
-            TurnMsg::Thinking { id } => self.handle_thinking(id),
-            TurnMsg::ThoughtDone { .. } => self.handle_thought_done(),
-            TurnMsg::ToolStart { id, name } => self.handle_tool_start(id, name),
-            TurnMsg::ToolEnd { id, duration_secs, output } => {
-                self.handle_tool_end(id, duration_secs, output);
-            }
-            TurnMsg::ResponseDelta { id, content } => self.handle_response_delta(id, content),
-            TurnMsg::TurnComplete { id, duration_secs } => {
-                self.handle_turn_complete(id, duration_secs);
-            }
-            TurnMsg::Done { .. } => self.handle_done(),
-            TurnMsg::Error { id, message } => self.handle_error(id, message),
-            TurnMsg::UpdateSpeed { tokens_out } => self.handle_update_speed(tokens_out),
-            TurnMsg::NextId => self.handle_next_id(),
-        }
-    }
-
-    fn handle_run_if_queued(&self) {
-        let mut state = self.state.lock();
-        if state.turn_active {
+    fn handle_run_if_queued(state: &mut TurnActorState) {
+        if state.turn_state.turn_active {
             return;
         }
-        let Some((content, id)) = state.pop_queue() else {
+        let Some((content, id)) = state.turn_state.pop_queue() else {
             return;
         };
-        state.start_turn();
-        drop(state);
-        self.emit(Event::TurnStarted {
+        state.turn_state.start_turn();
+        Self::emit(state, Event::TurnStarted {
             id: id.clone(),
             request_id: id,
             content,
         });
     }
 
-    fn handle_abort_turn(&self) {
-        {
-            let mut state = self.state.lock();
-            let messages: Vec<_> = state.message_queue.drain(..).rev().collect();
-            for msg in &messages {
-                self.emit(Event::QueueAborted { content: msg.content.clone() });
-            }
-            state.stop_turn();
+    fn handle_abort_turn(state: &mut TurnActorState) {
+        let messages: Vec<_> = state.turn_state.message_queue.drain(..).rev().collect();
+        for msg in &messages {
+            Self::emit(state, Event::QueueAborted { content: msg.content.clone() });
         }
-        self.emit(Event::TurnAborted);
+        state.turn_state.stop_turn();
+        Self::emit(state, Event::TurnAborted);
     }
 
-    fn handle_submit_user_message(&self, content: String, id: String) {
-        self.emit(Event::UserMessageSubmitted {
+    fn handle_submit_user_message(state: &mut TurnActorState, content: String, id: String) {
+        Self::emit(state, Event::UserMessageSubmitted {
             id: id.clone(),
             content: content.clone(),
         });
-        let mut state = self.state.lock();
-        state.request_queue.push_back((content, id));
+        state.turn_state.request_queue.push_back((content, id));
     }
 
-    fn handle_queue_steering(&self, content: String) {
-        let mut state = self.state.lock();
-        state.message_queue.push(QueuedMessage {
+    fn handle_queue_steering(state: &mut TurnActorState, content: String) {
+        state.turn_state.message_queue.push(QueuedMessage {
             content,
             kind: QueuedMessageKind::Steering,
         });
     }
 
-    fn handle_queue_follow_up(&self, content: String) {
-        let mut state = self.state.lock();
-        state.message_queue.push(QueuedMessage {
+    fn handle_queue_follow_up(state: &mut TurnActorState, content: String) {
+        state.turn_state.message_queue.push(QueuedMessage {
             content,
             kind: QueuedMessageKind::FollowUp,
         });
     }
 
-    fn handle_abort_queue(&self) {
-        {
-            let mut state = self.state.lock();
-            let messages: Vec<_> = state.message_queue.drain(..).rev().collect();
-            for msg in &messages {
-                self.emit(Event::QueueAborted { content: msg.content.clone() });
-            }
+    fn handle_abort_queue(state: &mut TurnActorState) {
+        let messages: Vec<_> = state.turn_state.message_queue.drain(..).rev().collect();
+        for msg in &messages {
+            Self::emit(state, Event::QueueAborted { content: msg.content.clone() });
         }
     }
 
-    fn handle_clear_queues(&self) {
-        let mut state = self.state.lock();
-        state.request_queue.clear();
-        state.message_queue.clear();
-        drop(state);
-        self.emit(Event::QueuesCleared);
+    fn handle_clear_queues(state: &mut TurnActorState) {
+        state.turn_state.request_queue.clear();
+        state.turn_state.message_queue.clear();
+        Self::emit(state, Event::QueuesCleared);
     }
 
-    fn handle_deliver_queued(&self, steering_mode: DeliveryMode, follow_up_mode: DeliveryMode) {
-        if self.try_deliver_steering(steering_mode) {
-            // Steering delivered - in "All" mode, also try follow-ups via pop_follow_up
+    fn handle_deliver_queued(state: &mut TurnActorState, steering_mode: DeliveryMode, follow_up_mode: DeliveryMode) {
+        if Self::try_deliver_steering(state, steering_mode) {
             if follow_up_mode == DeliveryMode::All {
-                self.try_deliver_follow_up(follow_up_mode);
+                Self::try_deliver_follow_up(state, follow_up_mode);
             }
             return;
         }
-        self.try_deliver_follow_up(follow_up_mode);
+        Self::try_deliver_follow_up(state, follow_up_mode);
     }
 
-    fn try_deliver_steering(&self, mode: DeliveryMode) -> bool {
-        let id = {
-            let mut state = self.state.lock();
-            let mut queue = TurnQueue::new(std::mem::take(&mut state.message_queue));
-            let result = queue.pop_steering(mode);
-            state.message_queue = queue.into_inner();
-            match result {
-                None => return false,
-                Some(r) => {
-                    let id = self.next_id_internal(&mut state);
-                    state.request_queue.push_back((r.content.clone(), id.clone()));
-                    (r.content, id)
-                }
+    fn try_deliver_steering(state: &mut TurnActorState, mode: DeliveryMode) -> bool {
+        let mut queue = TurnQueue::new(std::mem::take(&mut state.turn_state.message_queue));
+        let result = queue.pop_steering(mode);
+        state.turn_state.message_queue = queue.into_inner();
+        let (content, id) = match result {
+            None => return false,
+            Some(r) => {
+                let id = Self::next_id_internal(&mut state.turn_state);
+                state.turn_state.request_queue.push_back((r.content.clone(), id.clone()));
+                (r.content, id)
             }
         };
-        self.emit(Event::SteeringDelivered { content: id.0, id: id.1 });
+        Self::emit(state, Event::SteeringDelivered { content, id });
         true
     }
 
-    fn try_deliver_follow_up(&self, mode: DeliveryMode) {
-        let id = {
-            let mut state = self.state.lock();
-            let mut queue = TurnQueue::new(std::mem::take(&mut state.message_queue));
-            let result = queue.pop_follow_up(mode);
-            state.message_queue = queue.into_inner();
-            match result {
-                None => return,
-                Some(r) => {
-                    let id = self.next_id_internal(&mut state);
-                    state.request_queue.push_back((r.content.clone(), id.clone()));
-                    (r.content, id)
-                }
+    fn try_deliver_follow_up(state: &mut TurnActorState, mode: DeliveryMode) {
+        let mut queue = TurnQueue::new(std::mem::take(&mut state.turn_state.message_queue));
+        let result = queue.pop_follow_up(mode);
+        state.turn_state.message_queue = queue.into_inner();
+        let (content, id) = match result {
+            None => return,
+            Some(r) => {
+                let id = Self::next_id_internal(&mut state.turn_state);
+                state.turn_state.request_queue.push_back((r.content.clone(), id.clone()));
+                (r.content, id)
             }
         };
-        self.emit(Event::FollowUpDelivered { content: id.0, id: id.1 });
+        Self::emit(state, Event::FollowUpDelivered { content, id });
     }
 
-    fn next_id_internal(&self, state: &mut TurnState) -> String {
-        let id = format!("req.{}", state.next_id);
-        state.next_id += 1;
+    fn next_id_internal(turn_state: &mut TurnState) -> String {
+        let id = format!("req.{}", turn_state.next_id);
+        turn_state.next_id += 1;
         id
     }
 
-    fn handle_dequeue(&self) {
-        let content = {
-            let mut state = self.state.lock();
-            state.message_queue.pop().map(|m| m.content)
-        };
+    fn handle_dequeue(state: &mut TurnActorState) {
+        let content = state.turn_state.message_queue.pop().map(|m| m.content);
         if let Some(content) = content {
-            self.emit(Event::MessageDequeued { content });
+            Self::emit(state, Event::MessageDequeued { content });
         }
     }
 
-    fn handle_thinking(&self, id: String) {
-        {
-            let mut state = self.state.lock();
-            state.thinking_started_at = Some(std::time::Instant::now());
-        }
-        self.emit(Event::Thinking { id });
+    fn handle_thinking(state: &mut TurnActorState, id: String) {
+        state.turn_state.thinking_started_at = Some(std::time::Instant::now());
+        Self::emit(state, Event::Thinking { id });
     }
 
-    fn handle_thought_done(&self) {
-        let mut state = self.state.lock();
-        state.thinking_started_at = None;
+    fn handle_thought_done(state: &mut TurnActorState) {
+        state.turn_state.thinking_started_at = None;
     }
 
-    fn handle_tool_start(&self, id: String, name: String) {
-        {
-            let mut state = self.state.lock();
-            state.tool_started_at = Some(std::time::Instant::now());
-            state.current_tool_name = Some(name.clone());
-            state.intermediate_step_count += 1;
-        }
-        self.emit(Event::ToolStart {
+    fn handle_tool_start(state: &mut TurnActorState, id: String, name: String) {
+        state.turn_state.tool_started_at = Some(std::time::Instant::now());
+        state.turn_state.current_tool_name = Some(name.clone());
+        state.turn_state.intermediate_step_count += 1;
+        Self::emit(state, Event::ToolStart {
             id,
             name,
             input: serde_json::Value::Null,
         });
     }
 
-    fn handle_tool_end(&self, id: String, duration_secs: f64, output: String) {
-        {
-            let mut state = self.state.lock();
-            state.tool_started_at = None;
-            state.current_tool_name = None;
+    fn handle_tool_end(state: &mut TurnActorState, id: String, duration_secs: f64, output: String) {
+        state.turn_state.tool_started_at = None;
+        state.turn_state.current_tool_name = None;
+        Self::emit(state, Event::ToolEnd { id, duration_secs, output });
+    }
+
+    fn handle_response_delta(state: &mut TurnActorState, id: String, content: String) {
+        let was_streaming = state.turn_state.streaming;
+        if !was_streaming {
+            state.turn_state.streaming = true;
+            Self::emit(state, Event::StreamStarted { id: id.clone() });
         }
-        self.emit(Event::ToolEnd { id, duration_secs, output });
+        Self::emit(state, Event::ResponseDelta { id, content });
     }
 
-    fn handle_response_delta(&self, id: String, content: String) {
-        let res = {
-            let mut state = self.state.lock();
-            if !state.streaming {
-                state.streaming = true;
-                true
-            } else {
-                false
-            }
-        }; if res {
-            self.emit(Event::StreamStarted { id: id.clone() });
-        }
-        self.emit(Event::ResponseDelta { id, content });
+    fn handle_turn_complete(state: &mut TurnActorState, id: String, duration_secs: f64) {
+        state.turn_state.turn_started_at = None;
+        state.turn_state.turn_tokens_out = 0;
+        Self::emit(state, Event::TurnComplete { id, duration_secs });
     }
 
-    fn handle_turn_complete(&self, id: String, duration_secs: f64) {
-        {
-            let mut state = self.state.lock();
-            state.turn_started_at = None;
-            state.turn_tokens_out = 0;
-        }
-        self.emit(Event::TurnComplete { id, duration_secs });
+    fn handle_done(state: &mut TurnActorState) {
+        state.turn_state.streaming = false;
+        state.turn_state.turn_active = false;
+        state.turn_state.inflight = state.turn_state.inflight.saturating_sub(1);
+        state.turn_state.current_tool_name = None;
+        Self::emit(state, Event::TurnCompleted);
     }
 
-    fn handle_done(&self) {
-        {
-            let mut state = self.state.lock();
-            state.streaming = false;
-            state.turn_active = false;
-            state.inflight = state.inflight.saturating_sub(1);
-            state.current_tool_name = None;
-        }
-        self.emit(Event::TurnCompleted);
+    fn handle_error(state: &mut TurnActorState, id: String, message: String) {
+        state.turn_state.streaming = false;
+        state.turn_state.turn_active = false;
+        state.turn_state.inflight = 0;
+        Self::emit(state, Event::TurnErrored { id, message });
     }
 
-    fn handle_error(&self, id: String, message: String) {
-        {
-            let mut state = self.state.lock();
-            state.streaming = false;
-            state.turn_active = false;
-            state.inflight = 0;
-        }
-        self.emit(Event::TurnErrored { id, message });
+    fn handle_update_speed(state: &mut TurnActorState, tokens_out: usize) {
+        state.turn_state.tokens_out = tokens_out;
+        state.turn_state.turn_tokens_out = tokens_out;
+        state.turn_state.speed_window.record(tokens_out);
+        state.turn_state.speed_tps = state.turn_state.speed_window.speed();
+        state.turn_state.last_speed_update = Some(std::time::Instant::now());
+        state.turn_state.tokens_at_last_speed = tokens_out;
+        let tokens_in = state.turn_state.tokens_in;
+        let speed_tps = state.turn_state.speed_tps;
+        Self::emit(state, Event::TokenStatsUpdated { tokens_in, tokens_out, speed_tps });
     }
 
-    fn handle_update_speed(&self, tokens_out: usize) {
-        let (tokens_in, speed_tps) = {
-            let mut state = self.state.lock();
-            state.tokens_out = tokens_out;
-            state.turn_tokens_out = tokens_out;
-            state.speed_window.record(tokens_out);
-            state.speed_tps = state.speed_window.speed();
-            state.last_speed_update = Some(std::time::Instant::now());
-            state.tokens_at_last_speed = tokens_out;
-            (state.tokens_in, state.speed_tps)
-        };
-        self.emit(Event::TokenStatsUpdated { tokens_in, tokens_out, speed_tps });
-    }
-
-    fn handle_next_id(&self) {
-        let id = {
-            let mut state = self.state.lock();
-            self.next_id_internal(&mut state)
-        };
-        self.emit(Event::IdGenerated(NextIdResponse { id }));
+    fn handle_next_id(state: &mut TurnActorState) {
+        let id = Self::next_id_internal(&mut state.turn_state);
+        Self::emit(state, Event::IdGenerated(NextIdResponse { id }));
     }
 }
 
 #[ractor::async_trait]
 impl Actor for RactorTurnActor {
     type Msg = TurnMsg;
-    type State = ();
+    type State = TurnActorState;
     type Arguments = EventBus<Event>;
 
     async fn pre_start(
         &self,
         _myself: ActorRef<Self::Msg>,
-        _args: Self::Arguments,
+        bus: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        Ok(())
+        Ok(TurnActorState {
+            turn_state: TurnState::default(),
+            bus: Mutex::new(bus),
+        })
     }
 
     async fn handle(
         &self,
         _myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
-        _state: &mut Self::State,
+        state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        self.handle_msg(msg);
+        match msg {
+            TurnMsg::RunIfQueued => Self::handle_run_if_queued(state),
+            TurnMsg::AbortTurn => Self::handle_abort_turn(state),
+            TurnMsg::SubmitUserMessage { content, id } => Self::handle_submit_user_message(state, content, id),
+            TurnMsg::QueueSteering { content } => Self::handle_queue_steering(state, content),
+            TurnMsg::QueueFollowUp { content } => Self::handle_queue_follow_up(state, content),
+            TurnMsg::AbortQueue => Self::handle_abort_queue(state),
+            TurnMsg::ClearQueues => Self::handle_clear_queues(state),
+            TurnMsg::DeliverQueued { steering_mode, follow_up_mode } => Self::handle_deliver_queued(state, steering_mode, follow_up_mode),
+            TurnMsg::Dequeue => Self::handle_dequeue(state),
+            TurnMsg::Thinking { id } => Self::handle_thinking(state, id),
+            TurnMsg::ThoughtDone { .. } => Self::handle_thought_done(state),
+            TurnMsg::ToolStart { id, name } => Self::handle_tool_start(state, id, name),
+            TurnMsg::ToolEnd { id, duration_secs, output } => Self::handle_tool_end(state, id, duration_secs, output),
+            TurnMsg::ResponseDelta { id, content } => Self::handle_response_delta(state, id, content),
+            TurnMsg::TurnComplete { id, duration_secs } => Self::handle_turn_complete(state, id, duration_secs),
+            TurnMsg::Done { .. } => Self::handle_done(state),
+            TurnMsg::Error { id, message } => Self::handle_error(state, id, message),
+            TurnMsg::UpdateSpeed { tokens_out } => Self::handle_update_speed(state, tokens_out),
+            TurnMsg::NextId => Self::handle_next_id(state),
+        }
         Ok(())
     }
 }
@@ -364,8 +306,7 @@ impl Actor for RactorTurnActor {
 impl RactorTurnActor {
     /// Spawn a `RactorTurnActor` on the given event bus.
     pub async fn spawn(bus: EventBus<Event>) -> (RactorTurnHandle, ractor::ActorCell, tokio::task::JoinHandle<()>) {
-        let actor = Self::new(bus.clone());
-        let (handle, join, cell) = spawn_ractor(None, actor, bus).await.unwrap();
+        let (handle, join, cell) = spawn_ractor(None, Self, bus).await.unwrap();
         (RactorTurnHandle::new(handle), cell, join)
     }
 }

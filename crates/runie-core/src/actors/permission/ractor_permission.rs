@@ -91,48 +91,102 @@ impl RactorPermissionHandle {
     }
 }
 
+/// Ractor State for PermissionActor — holds all mutable state.
+/// EventBus is wrapped in Mutex for interior mutability from `&self` context.
+/// ApprovalRegistry is kept wrapped in Mutex because it's process-wide.
+pub struct PermissionActorState {
+    /// The authoritative approval registry (process-wide).
+    pub registry: ApprovalRegistry,
+    /// Current permission request state.
+    pub current_request: Option<PermissionRequestState>,
+    /// Bridge to the event bus for publishing facts.
+    pub bus: Mutex<EventBus<Event>>,
+}
+
+impl PermissionActorState {
+    fn emit(&self, event: Event) {
+        self.bus.lock().publish(event);
+    }
+}
+
 /// Ractor-based PermissionActor.
 ///
 /// Owns the approval registry and permission request UI state.
 /// Uses ractor for actor supervision and message handling.
-pub struct RactorPermissionActor {
-    /// The authoritative approval registry.
-    registry: ApprovalRegistry,
-    /// Current permission request state.
-    current_request: Mutex<Option<PermissionRequestState>>,
-    /// Bridge to the event bus for publishing facts.
-    bus: EventBus<Event>,
-}
+pub struct RactorPermissionActor;
 
-impl Default for RactorPermissionActor {
-    fn default() -> Self {
-        Self {
-            registry: ApprovalRegistry::new(),
-            current_request: Mutex::new(None),
-            bus: EventBus::new(16),
+impl RactorPermissionActor {
+    fn handle_ask_permission(
+        state: &mut PermissionActorState,
+        request_id: String,
+        tool: String,
+        input: serde_json::Value,
+        reply: crate::actors::Reply<PermissionAction>,
+    ) {
+        // Store the reply channel in ApprovalRegistry so ResolvePermission can send.
+        state.registry.register(&request_id, reply);
+
+        state.current_request = Some(PermissionRequestState {
+            request_id: request_id.clone(),
+            tool: tool.clone(),
+            input: input.clone(),
+        });
+
+        state.emit(Event::PermissionRequest {
+            request_id,
+            tool,
+            input,
+        });
+    }
+
+    fn handle_resolve_permission(
+        state: &mut PermissionActorState,
+        request_id: String,
+        action: PermissionAction,
+    ) {
+        state.registry.resolve(&request_id, action);
+        if state.current_request.as_ref().map(|r| r.request_id == request_id).unwrap_or(false) {
+            state.current_request = None;
         }
+        state.emit(Event::PermissionResponse { request_id, action });
+    }
+
+    fn handle_cancel_permission(state: &mut PermissionActorState, request_id: String) {
+        state.registry.resolve(&request_id, PermissionAction::Deny);
+        if state.current_request.as_ref().map(|r| r.request_id == request_id).unwrap_or(false) {
+            state.current_request = None;
+        }
+    }
+
+    fn handle_dismiss(state: &mut PermissionActorState) {
+        state.current_request = None;
+        state.emit(Event::PermissionRequestDismissed);
     }
 }
 
 #[ractor::async_trait]
 impl Actor for RactorPermissionActor {
     type Msg = PermissionMsg;
-    type State = ();
+    type State = PermissionActorState;
     type Arguments = EventBus<Event>;
 
     async fn pre_start(
         &self,
         _myself: ActorRef<Self::Msg>,
-        _args: Self::Arguments,
+        bus: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        Ok(())
+        Ok(PermissionActorState {
+            registry: ApprovalRegistry::new(),
+            current_request: None,
+            bus: Mutex::new(bus),
+        })
     }
 
     async fn handle(
         &self,
         _myself: ActorRef<Self::Msg>,
-        msg: PermissionMsg,
-        _state: &mut Self::State,
+        msg: Self::Msg,
+        state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match msg {
             PermissionMsg::AskPermission {
@@ -141,21 +195,16 @@ impl Actor for RactorPermissionActor {
                 input,
                 reply,
             } => {
-                // Store reply channel and emit event; do NOT reply until ResolvePermission.
-                self.handle_ask_permission(request_id, tool, input, reply);
+                Self::handle_ask_permission(state, request_id, tool, input, reply);
             }
             PermissionMsg::ResolvePermission { request_id, action } => {
-                self.registry.resolve(&request_id, action);
-                self.clear_request_if_matches(&request_id);
-                self.bus.publish(Event::PermissionResponse { request_id, action });
+                Self::handle_resolve_permission(state, request_id, action);
             }
             PermissionMsg::CancelPermission { request_id } => {
-                self.registry.resolve(&request_id, PermissionAction::Deny);
-                self.clear_request_if_matches(&request_id);
+                Self::handle_cancel_permission(state, request_id);
             }
             PermissionMsg::DismissRequest => {
-                *self.current_request.lock() = None;
-                self.bus.publish(Event::PermissionRequestDismissed);
+                Self::handle_dismiss(state);
             }
         }
         Ok(())
@@ -165,45 +214,8 @@ impl Actor for RactorPermissionActor {
 impl RactorPermissionActor {
     /// Spawn a `RactorPermissionActor` on the given event bus.
     pub async fn spawn(bus: EventBus<Event>) -> (RactorPermissionHandle, ractor::ActorCell) {
-        let actor = Self {
-            registry: ApprovalRegistry::new(),
-            current_request: Mutex::new(None),
-            bus: bus.clone(),
-        };
-        let (handle, _join, cell) = spawn_ractor(None, actor, bus).await.unwrap();
+        let (handle, _join, cell) = spawn_ractor(None, Self, bus).await.unwrap();
         (RactorPermissionHandle::new(handle), cell)
-    }
-
-    fn clear_request_if_matches(&self, request_id: &str) {
-        let mut current = self.current_request.lock();
-        if current.as_ref().map(|r| r.request_id == request_id).unwrap_or(false) {
-            *current = None;
-        }
-    }
-
-    /// Handle `AskPermission`: store the reply channel in the registry so
-    /// `ResolvePermission` can deliver the user's choice. Do NOT reply here.
-    fn handle_ask_permission(
-        &self,
-        request_id: String,
-        tool: String,
-        input: serde_json::Value,
-        reply: crate::actors::Reply<PermissionAction>,
-    ) {
-        // Store the reply channel in ApprovalRegistry so ResolvePermission can send.
-        self.registry.register(&request_id, reply);
-
-        *self.current_request.lock() = Some(PermissionRequestState {
-            request_id: request_id.clone(),
-            tool: tool.clone(),
-            input: input.clone(),
-        });
-
-        self.bus.publish(Event::PermissionRequest {
-            request_id,
-            tool,
-            input,
-        });
     }
 }
 
