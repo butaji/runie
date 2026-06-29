@@ -280,3 +280,70 @@ fn approval_decision_deny_maps_to_permission_deny() {
     assert_eq!(result, PermissionAction::Deny);
 }
 
+// ============================================================================
+// Layer 1: State/Logic tests for unify-permission-system-rules
+// ============================================================================
+
+/// Layer 1: Safe tools are approved by default.
+#[tokio::test]
+async fn default_allow_for_safe_tools() {
+    let manager = PermissionManager::new(PermissionMode::Auto);
+    for tool in ["read_file", "list_dir", "grep", "find", "fetch_docs"] {
+        let context = ctx(tool, None, None);
+        let result = manager.evaluate(&context).await;
+        assert_eq!(result, PermissionResult::Allow, "{tool} should be auto-approved in Auto mode");
+    }
+}
+
+/// Layer 1: File access outside cwd triggers an approval request.
+#[tokio::test]
+async fn file_access_triggers_ask() {
+    let manager = PermissionManager::new(PermissionMode::Default);
+    let cwd = Path::new("/project");
+    let outside_path = Path::new("/etc/passwd");
+    let context = ctx("read_file", Some(outside_path), Some(cwd));
+    let result = manager.evaluate(&context).await;
+    assert_eq!(result, PermissionResult::Ask, "File access outside cwd should ask");
+}
+
+/// Layer 1: Explicit deny rule wins over a default allow.
+#[test]
+fn explicit_deny_overrides() {
+    let rules = PermissionSet::new(vec![
+        PermissionRule::new(PermissionAction::Allow, "bash"),
+        PermissionRule::new(PermissionAction::Deny, "bash"),
+    ]);
+    assert_eq!(rules.evaluate("bash", None, None), PermissionAction::Deny);
+}
+
+/// Layer 1: BypassPermissions mode approves everything.
+#[tokio::test]
+async fn bypass_permissions_approves_all() {
+    let manager = PermissionManager::new(PermissionMode::BypassPermissions);
+    let context = ctx("bash", None, None);
+    let result = manager.evaluate(&context).await;
+    assert_eq!(result, PermissionResult::Allow, "BypassPermissions should allow all");
+}
+
+/// Layer 1: Plan mode blocks write tools.
+#[tokio::test]
+async fn plan_mode_blocks_writes() {
+    let manager = PermissionManager::new(PermissionMode::Plan);
+    for tool in ["write_file", "edit_file", "bash"] {
+        let context = ctx(tool, None, None);
+        let result = manager.evaluate(&context).await;
+        assert_eq!(result, PermissionResult::Ask, "{tool} should ask in Plan mode");
+    }
+}
+
+/// Layer 1: AcceptEdits mode auto-approves edits.
+#[tokio::test]
+async fn accept_edits_mode_approves_writes() {
+    let manager = PermissionManager::new(PermissionMode::AcceptEdits);
+    for tool in ["write_file", "edit_file"] {
+        let context = ctx(tool, None, None);
+        let result = manager.evaluate(&context).await;
+        assert_eq!(result, PermissionResult::Allow, "{tool} should be allowed in AcceptEdits mode");
+    }
+}
+

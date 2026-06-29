@@ -3,8 +3,8 @@
 //! This module provides a ractor-based implementation of the PermissionActor,
 //! following the same pattern as the InputActor migration.
 
-use ractor::{Actor, ActorProcessingErr, ActorRef};
 use parking_lot::Mutex;
+use ractor::{Actor, ActorProcessingErr, ActorRef};
 
 use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
 use crate::bus::EventBus;
@@ -97,7 +97,7 @@ impl RactorPermissionHandle {
 /// Uses ractor for actor supervision and message handling.
 pub struct RactorPermissionActor {
     /// The authoritative approval registry.
-    registry: Mutex<ApprovalRegistry>,
+    registry: ApprovalRegistry,
     /// Current permission request state.
     current_request: Mutex<Option<PermissionRequestState>>,
     /// Bridge to the event bus for publishing facts.
@@ -107,7 +107,7 @@ pub struct RactorPermissionActor {
 impl Default for RactorPermissionActor {
     fn default() -> Self {
         Self {
-            registry: Mutex::new(ApprovalRegistry::new()),
+            registry: ApprovalRegistry::new(),
             current_request: Mutex::new(None),
             bus: EventBus::new(16),
         }
@@ -145,14 +145,12 @@ impl Actor for RactorPermissionActor {
                 self.handle_ask_permission(request_id, tool, input, reply);
             }
             PermissionMsg::ResolvePermission { request_id, action } => {
-                self.registry.lock().resolve(&request_id, action);
+                self.registry.resolve(&request_id, action);
                 self.clear_request_if_matches(&request_id);
                 self.bus.publish(Event::PermissionResponse { request_id, action });
             }
             PermissionMsg::CancelPermission { request_id } => {
-                self.registry
-                    .lock()
-                    .resolve(&request_id, PermissionAction::Deny);
+                self.registry.resolve(&request_id, PermissionAction::Deny);
                 self.clear_request_if_matches(&request_id);
             }
             PermissionMsg::DismissRequest => {
@@ -168,7 +166,7 @@ impl RactorPermissionActor {
     /// Spawn a `RactorPermissionActor` on the given event bus.
     pub async fn spawn(bus: EventBus<Event>) -> (RactorPermissionHandle, ractor::ActorCell) {
         let actor = Self {
-            registry: Mutex::new(ApprovalRegistry::new()),
+            registry: ApprovalRegistry::new(),
             current_request: Mutex::new(None),
             bus: bus.clone(),
         };
@@ -178,11 +176,7 @@ impl RactorPermissionActor {
 
     fn clear_request_if_matches(&self, request_id: &str) {
         let mut current = self.current_request.lock();
-        if current
-            .as_ref()
-            .map(|r| r.request_id == request_id)
-            .unwrap_or(false)
-        {
+        if current.as_ref().map(|r| r.request_id == request_id).unwrap_or(false) {
             *current = None;
         }
     }
@@ -197,9 +191,7 @@ impl RactorPermissionActor {
         reply: crate::actors::Reply<PermissionAction>,
     ) {
         // Store the reply channel in ApprovalRegistry so ResolvePermission can send.
-        // The registry returns the receiver, but we already have the reply channel
-        // in the PermissionMsg, so we just store the sender end.
-        let _rx = self.registry.lock().register(&request_id, reply);
+        self.registry.register(&request_id, reply);
 
         *self.current_request.lock() = Some(PermissionRequestState {
             request_id: request_id.clone(),

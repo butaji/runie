@@ -3,6 +3,8 @@
 //! The agent turn blocks on a oneshot receiver while the TUI shows a modal
 //! dialog. When the user chooses Allow/Deny/Always-allow, the UI resolves the
 //! request and the receiver completes.
+//!
+//! Uses `parking_lot::Mutex` for synchronous access (suitable for use in actors).
 
 use std::collections::HashMap;
 use parking_lot::Mutex;
@@ -18,17 +20,20 @@ pub struct ApprovalRegistry {
 }
 
 impl ApprovalRegistry {
+    /// Create a new empty registry.
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            pending: Mutex::new(HashMap::new()),
+        }
     }
 
-    /// Register a new approval request with the reply channel.
+    /// Register a new approval request with the reply channel (sync).
     /// The reply channel will be used by [`resolve`](Self::resolve) to deliver the user's choice.
     pub fn register(&self, request_id: &str, reply: Reply<PermissionAction>) {
         self.pending.lock().insert(request_id.to_owned(), reply);
     }
 
-    /// Resolve a pending approval request with the user's chosen action.
+    /// Resolve a pending approval request with the user's chosen action (sync).
     /// Returns `true` if the request existed and was resolved.
     pub fn resolve(&self, request_id: &str, action: PermissionAction) -> bool {
         let mut pending = self.pending.lock();

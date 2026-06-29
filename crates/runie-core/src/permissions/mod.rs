@@ -144,9 +144,45 @@ pub struct PermissionManager {
 }
 
 impl PermissionManager {
-    pub fn new(_mode: PermissionMode) -> Self {
-        Self {
-            policies: Vec::new(),
+    /// Create a new manager with the default policy chain for the given mode.
+    pub fn new(mode: PermissionMode) -> Self {
+        let policies = Self::build_policies(mode);
+        Self { policies }
+    }
+
+    /// Build the default policy chain for a permission mode.
+    fn build_policies(mode: PermissionMode) -> Vec<Box<dyn PermissionPolicy>> {
+        match mode {
+            PermissionMode::BypassPermissions => {
+                // Auto-approve everything.
+                vec![Box::new(BypassAllPolicy)]
+            }
+            PermissionMode::Plan => {
+                // Block all write tools until plan is approved.
+                vec![Box::new(BlockWriteToolsPolicy)]
+            }
+            PermissionMode::Auto => {
+                // Auto-approve safe tools, ask for others.
+                vec![
+                    Box::new(DefaultToolApprove::new()),
+                    Box::new(FileAccessAsk::new()),
+                ]
+            }
+            PermissionMode::AcceptEdits => {
+                // Auto-approve read and write, ask for bash.
+                vec![
+                    Box::new(DefaultToolApprove::new()),
+                    Box::new(AcceptEditsPolicy),
+                ]
+            }
+            PermissionMode::DontAsk => {
+                // Allow all unless explicit deny rule exists (handled by PermissionSet).
+                vec![]
+            }
+            PermissionMode::Default => {
+                // Ask for all operations that match file access outside cwd.
+                vec![Box::new(FileAccessAsk::new())]
+            }
         }
     }
 
@@ -169,6 +205,78 @@ impl PermissionManager {
             }
         }
         PermissionResult::Ask
+    }
+}
+
+// Policy implementations for PermissionMode-driven chains.
+// These policies are used by PermissionManager when built with a PermissionMode.
+
+/// Auto-approve all operations (BypassPermissions mode).
+struct BypassAllPolicy;
+
+#[async_trait]
+impl PermissionPolicy for BypassAllPolicy {
+    fn name(&self) -> &str {
+        "bypass_all"
+    }
+
+    fn matches(&self, _ctx: &PermissionContext<'_>) -> bool {
+        true
+    }
+
+    async fn evaluate(&self, _ctx: &PermissionContext<'_>) -> Option<PermissionResult> {
+        Some(PermissionResult::Allow)
+    }
+}
+
+/// Block write tools until plan is approved (Plan mode).
+struct BlockWriteToolsPolicy;
+
+impl BlockWriteToolsPolicy {
+    fn is_write_tool(tool: &str) -> bool {
+        matches!(
+            tool,
+            "write_file" | "edit_file" | "bash" | "delete_file" | "create_directory"
+        )
+    }
+}
+
+#[async_trait]
+impl PermissionPolicy for BlockWriteToolsPolicy {
+    fn name(&self) -> &str {
+        "block_write_tools"
+    }
+
+    fn matches(&self, ctx: &PermissionContext<'_>) -> bool {
+        Self::is_write_tool(ctx.tool)
+    }
+
+    async fn evaluate(&self, _ctx: &PermissionContext<'_>) -> Option<PermissionResult> {
+        Some(PermissionResult::Ask)
+    }
+}
+
+/// Auto-approve file edits (AcceptEdits mode).
+struct AcceptEditsPolicy;
+
+impl AcceptEditsPolicy {
+    fn is_edit_tool(tool: &str) -> bool {
+        matches!(tool, "write_file" | "edit_file")
+    }
+}
+
+#[async_trait]
+impl PermissionPolicy for AcceptEditsPolicy {
+    fn name(&self) -> &str {
+        "accept_edits"
+    }
+
+    fn matches(&self, ctx: &PermissionContext<'_>) -> bool {
+        Self::is_edit_tool(ctx.tool)
+    }
+
+    async fn evaluate(&self, _ctx: &PermissionContext<'_>) -> Option<PermissionResult> {
+        Some(PermissionResult::Allow)
     }
 }
 
