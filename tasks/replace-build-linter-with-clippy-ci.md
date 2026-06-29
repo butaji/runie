@@ -1,6 +1,6 @@
 # Replace custom build.rs linter with Clippy / CI
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Architecture / Tooling
 **Priority**: P2
@@ -60,3 +60,4 @@
 - The `AppState` field-access check is kept in `build.rs` because it has no Clippy equivalent and is valuable for enforcing the accessor pattern.
 - The agent manifest SHA-256 checksum validation is kept in `build.rs` as a release integrity check.
 - `bacon.toml`'s `check-skip` job remains as documentation; the remaining `build.rs` checks (AppState access + manifest validation) are fast enough for iteration.
+- Event taxonomy generation was removed from `build.rs`; generated files are committed to git and regeneration is manual via `scripts/generate-event-taxonomy.sh`.

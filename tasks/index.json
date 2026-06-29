@@ -1,5 +1,10 @@
 [
   {
+    "file": "TEMPLATE.md",
+    "title": "Task Title",
+    "status": "todo"
+  },
+  {
     "file": "actually-collapse-actor-handles-to-typed-map.md",
     "title": "Actually collapse `ActorHandles` to a typed map",
     "status": "done"
@@ -12,12 +17,12 @@
   {
     "file": "add-jsonschema-validation-to-configactor-load.md",
     "title": "Add `jsonschema` validation to `ConfigActor` load path",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "centralize-built-in-tool-names.md",
     "title": "Centralize built-in tool names",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "centralize-test-fixtures-and-mocks.md",
@@ -27,7 +32,7 @@
   {
     "file": "cleanup-small-duplicates-and-dead-code.md",
     "title": "Clean up small duplicates and dead code",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "cleanup-verify-tests-and-just-recipes.md",
@@ -47,7 +52,7 @@
   {
     "file": "collapse-event-intent-kind-taxonomies.md",
     "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "dedupe-turn-queue-delivery-logic.md",
@@ -107,7 +112,7 @@
   {
     "file": "eliminate-production-unwrap-expect.md",
     "title": "Eliminate production `unwrap`/`expect` that should be recoverable errors",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "expand-leader-start-for-tui-and-cli.md",
@@ -122,7 +127,7 @@
   {
     "file": "extract-shared-tracing-subscriber-init.md",
     "title": "Extract shared tracing subscriber init",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
@@ -167,12 +172,12 @@
   {
     "file": "initialize-tracing-subscriber-in-binaries.md",
     "title": "Initialize `tracing` subscriber in CLI and TUI binaries",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
     "title": "Introduce `cargo-deny` and `cargo-machete` CI checks",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "migrate-production-actors-to-ractor.md",
@@ -222,12 +227,12 @@
   {
     "file": "remove-sleep-from-automatic-tests.md",
     "title": "Remove `sleep()` from automatic tests",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "remove-sync-turn-queue-fallback-from-app-state.md",
     "title": "Remove sync `TurnQueue` fallback from `AppState`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "remove-unused-dependencies-and-normalize-workspace-deps.md",
@@ -247,12 +252,12 @@
   {
     "file": "replace-config-validator-with-jsonschema.md",
     "title": "Replace custom config validator with `jsonschema`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-custom-helpers-with-crates.md",
     "title": "Replace custom path/glob/fuzzy/keybinding helpers with crates",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-custom-nanoid-in-test-runner.md",
@@ -272,7 +277,7 @@
   {
     "file": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",
     "title": "Replace custom TUI widgets with ratatui ecosystem crates",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-leftover-macros-with-functions.md",
@@ -327,12 +332,12 @@
   {
     "file": "route-cli-config-through-configactor.md",
     "title": "Route CLI config operations through `ConfigActor`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "simplify-slash-command-dsl.md",
     "title": "Simplify slash-command DSL",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "simplify-terminal-capability-detection.md",
@@ -342,7 +347,7 @@
   {
     "file": "store-provider-api-keys-in-keyring-not-config.md",
     "title": "Store provider API keys in OS keyring, not plain `config.toml`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",
@@ -357,7 +362,7 @@
   {
     "file": "unify-core-and-tui-line-count-computation.md",
     "title": "Unify core and TUI line-count computation",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "unify-declarative-resource-loader.md",
@@ -382,7 +387,7 @@
   {
     "file": "unify-permission-system-rules.md",
     "title": "Unify permission-system rule engines",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "unify-provider-config-persistence.md",
@@ -417,12 +422,12 @@
   {
     "file": "use-clap-derive-for-cli.md",
     "title": "Use `clap` derive macros for CLI argument parsing",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-notify-directly-in-config-actor.md",
     "title": "Use `notify` directly in `RactorConfigActor`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
@@ -442,7 +447,7 @@
   {
     "file": "use-strum-for-event-intent-names.md",
     "title": "Use `strum` to derive `Event`/`Intent`/`EventKind` names",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "wire-or-delete-input-actor.md",
