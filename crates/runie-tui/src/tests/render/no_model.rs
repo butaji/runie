@@ -91,6 +91,9 @@ fn input_box_and_status_bar_visible_after_model_connected() {
 
 #[test]
 fn apply_config_ignores_stale_top_level_provider() {
+    // Ensure no API key env var is set for this test
+    std::env::remove_var("OPENAI_API_KEY");
+
     let _path = clean_config();
     let config = r#"provider = "openai"
 model = "gpt-4o"
@@ -127,19 +130,15 @@ models = ["gpt-4o"]
 "#;
     std::fs::write(&_path, config).unwrap();
 
+    // Set env var since migration strips api_key to keyring (env has priority)
+    std::env::set_var("OPENAI_API_KEY", "sk-test");
+
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
 
     let config = runie_core::config::Config::load(Some(&_path));
-    
-    // DEBUG: print what the config looks like
-    eprintln!("DEBUG: _path={:?}", _path);
-    eprintln!("DEBUG: config.provider={:?}", config.provider);
-    eprintln!("DEBUG: openai mp={:?}", config.model_providers.get("openai"));
-    let (rp, rm) = config.resolve_default_model();
-    eprintln!("DEBUG: resolve_default_model=({}, {})", rp, rm);
-    
+
     state.apply_config(&config);
 
     assert_eq!(state.config.current_provider, "openai");

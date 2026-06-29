@@ -894,8 +894,8 @@ mod tests {
             found_config_loaded,
             "Actor should emit ConfigLoaded even with parse error"
         );
-        // Error is emitted when validation fails on a parsed-but-invalid config.
         // For a parse error, the fallback defaults are valid so no Error is emitted.
+        assert!(!found_error, "Parse error should not emit Error event");
         let _ = std::fs::remove_file(&temp_path);
     }
 

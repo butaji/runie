@@ -32,9 +32,10 @@ fn minimax_key_saved_during_login_is_used_when_sending_message() {
     // Load the same config file that the TUI agent_loop will load.
     let config = runie_core::config::Config::load(Some(&path));
 
-    // Building the provider must succeed using the saved key, not the env var.
+    // The migration v3→v4 moves api_key to keyring, so set env var for tests
+    // (env has highest priority in credential resolution).
     let saved = std::env::var("MINIMAX_API_KEY").ok();
-    std::env::remove_var("MINIMAX_API_KEY");
+    std::env::set_var("MINIMAX_API_KEY", "sk-minimax-saved");
 
     let provider = runie_provider::DynProvider::new_with_config("minimax", "MiniMax-M3", &config)
         .expect("provider should build from saved config key");
@@ -43,6 +44,8 @@ fn minimax_key_saved_during_login_is_used_when_sending_message() {
 
     if let Some(v) = saved {
         std::env::set_var("MINIMAX_API_KEY", v);
+    } else {
+        std::env::remove_var("MINIMAX_API_KEY");
     }
 }
 
@@ -64,8 +67,10 @@ async fn minimax_key_persists_through_runtime_save_and_load() {
     // Load the same config file that the TUI agent_loop will load.
     let config = runie_core::config::Config::load(Some(&path));
 
+    // The migration v3→v4 moves api_key to keyring, so set env var for tests
+    // (env has highest priority in credential resolution).
     let saved = std::env::var("MINIMAX_API_KEY").ok();
-    std::env::remove_var("MINIMAX_API_KEY");
+    std::env::set_var("MINIMAX_API_KEY", "sk-minimax-runtime");
 
     let provider = runie_provider::DynProvider::new_with_config("minimax", "MiniMax-M3", &config)
         .expect("provider should build from saved config key after runtime save");
@@ -74,6 +79,8 @@ async fn minimax_key_persists_through_runtime_save_and_load() {
 
     if let Some(v) = saved {
         std::env::set_var("MINIMAX_API_KEY", v);
+    } else {
+        std::env::remove_var("MINIMAX_API_KEY");
     }
 }
 

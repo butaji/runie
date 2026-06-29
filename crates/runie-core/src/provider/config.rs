@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn get_provider_config_reads_saved_config() {
         set_test_config_with_providers(&[("openai".into(), vec!["gpt-4o".into()])]);
-        let (base_url, api_key, models) = get_provider_config("openai").expect("openai config");
+        let (base_url, _api_key, models) = get_provider_config("openai").expect("openai config");
         assert_eq!(base_url, "http://test");
         // api_key is stored in keyring (or config fallback if keyring unavailable)
         // Either way, the provider is readable
