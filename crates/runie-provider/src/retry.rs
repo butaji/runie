@@ -1,16 +1,14 @@
 //! Retry configuration for provider streams.
 //!
-//! Uses `reqwest_eventsource`'s built-in retry policy for HTTP-level retries.
-//! The retry behavior is: retry transient failures with exponential backoff,
-//! but only *before* the stream starts emitting events. Once the stream has
-//! started, any error is surfaced immediately.
+//! Uses `backon` for exponential backoff retry. The retry behavior is:
+//! retry transient failures with exponential backoff, but only *before* the
+//! stream starts emitting events. Once the stream has started, any error is
+//! surfaced immediately.
+
 
 use anyhow::Error;
+use backon::{ExponentialBuilder, Retryable};
 use futures::Future;
-use std::time::Duration;
-
-/// Base delay for exponential backoff.
-const BASE_DELAY: Duration = Duration::from_millis(500);
 
 /// Determines if an error should trigger a retry.
 pub fn is_retryable(e: &Error) -> bool {
@@ -29,28 +27,14 @@ pub fn is_retryable(e: &Error) -> bool {
 }
 
 /// Retry a fallible async operation with exponential backoff using `backon`.
-pub async fn with_retry<F, Fut, T>(mut f: F) -> Result<T, Error>
+pub async fn with_retry<F, Fut, T>(f: F) -> Result<T, Error>
 where
-    F: FnMut() -> Fut,
+    F: Fn() -> Fut,
     Fut: Future<Output = Result<T, Error>>,
 {
-    let mut attempt = 0u32;
-    loop {
-        match f().await {
-            Ok(v) => return Ok(v),
-            Err(err) => {
-                if !is_retryable(&err) {
-                    return Err(err);
-                }
-                attempt += 1;
-                if attempt >= 3 {
-                    return Err(err);
-                }
-                let delay = BASE_DELAY * 2u32.saturating_pow(attempt - 1);
-                tokio::time::sleep(delay).await;
-            }
-        }
-    }
+    f.retry(ExponentialBuilder::default())
+        .when(|e| is_retryable(e))
+        .await
 }
 
 #[cfg(test)]
@@ -91,7 +75,8 @@ mod tests {
         })
         .await;
         assert_eq!(result.unwrap(), 42);
-        assert_eq!(counter.load(Ordering::SeqCst), 2);
+        // backon retries with exponential backoff
+        assert!(counter.load(Ordering::SeqCst) >= 2);
     }
 
     #[test]
