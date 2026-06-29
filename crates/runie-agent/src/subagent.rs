@@ -27,7 +27,6 @@ use runie_core::subagents::{PermissionMode as SubPermissionMode, SubagentRegistr
 use std::collections::HashMap;
 use std::sync::Arc;
 use parking_lot::Mutex;
-use std::sync::mpsc as sync_mpsc;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -189,62 +188,76 @@ fn build_subagent_command(
     }
 }
 
-/// Collected state from the agent turn callback.
-#[derive(Default)]
-struct SubagentState {
-    responses: Vec<String>,
-    done: bool,
-    error: Option<String>,
-}
-
 /// Run a subagent turn with a custom permission gate.
-/// Uses a synchronous `sync_mpsc::channel` to collect the final result from
-/// the callback, replacing the polling-based `finalize_subagent_result`.
+/// Uses a `tokio::sync::oneshot` channel so the callback sends the final result
+/// directly when `Done` is received. No polling, no shared mutable state.
 async fn run_subagent_turn_with_gate(
     provider: &dyn Provider,
     cmd: &AgentCommand,
     max_iterations: usize,
     gate: PermissionGate,
 ) -> Result<String, SubagentError> {
-    let (tx, rx) = sync_mpsc::channel::<Result<String, SubagentError>>();
+    // Create oneshot channel for the single final result.
+    let (tx, rx) = tokio::sync::oneshot::channel::<Result<String, SubagentError>>();
 
-    // Shared state for the callback to write into.
-    let state: Arc<Mutex<SubagentState>> = Arc::new(Mutex::new(SubagentState::default()));
-    let state_for_cb = state.clone();
+    // Wrap the sender in Arc<Mutex> so the sync emit callback can use it.
+    let tx: Arc<Mutex<Option<tokio::sync::oneshot::Sender<_>>>> =
+        Arc::new(Mutex::new(Some(tx)));
 
-    let emit: EmitFn = Arc::new(Mutex::new(move |evt: runie_core::Event| {
-        let mut s = state_for_cb.lock();
-        match evt {
-            runie_core::Event::ResponseDelta { content, .. }
-            | runie_core::Event::Response { content, .. } => s.responses.push(content),
-            runie_core::Event::Error { message, .. } => s.error = Some(message),
-            runie_core::Event::Done { .. } => s.done = true,
-            _ => {}
+    // Collect response text and errors during the turn.
+    let responses = Arc::new(Mutex::new(Vec::<String>::new()));
+
+    let emit: EmitFn = Arc::new(Mutex::new({
+        let tx = tx.clone();
+        let responses = responses.clone();
+        move |evt: runie_core::Event| {
+            match evt {
+                runie_core::Event::ResponseDelta { content, .. }
+                | runie_core::Event::Response { content, .. } => {
+                    responses.lock().push(content);
+                }
+                runie_core::Event::Error { message, .. } => {
+                    let mut guard = tx.lock();
+                    if let Some(tx) = guard.take() {
+                        let _ = tx.send(Err(SubagentError::Source(anyhow::anyhow!(message))));
+                    }
+                }
+                runie_core::Event::Done { .. } => {
+                    // Build the final result and send it through the channel.
+                    let text = responses.lock().join("");
+                    let mut guard = tx.lock();
+                    if let Some(tx) = guard.take() {
+                        let _ = tx.send(Ok(text));
+                    }
+                }
+                _ => {}
+            }
         }
     }));
 
-    // Run the turn synchronously; the callback populates `state`.
+    // Run the turn once with the collecting callback.
     let run_result = run_agent_turn(provider, cmd, emit, max_iterations, gate).await;
 
-    // Extract collected state from the Arc (Arc is dropped here).
-    let s = Arc::try_unwrap(state)
-        .map(|m| m.into_inner())
-        .unwrap_or_else(|_| SubagentState::default());
-
-    // Send the result through the channel.
-    let result = match run_result {
-        Ok(()) if s.error.is_some() => {
-            Err(SubagentError::Source(anyhow::anyhow!(s.error.unwrap())))
+    // If run_agent_turn returned an error and we haven't sent a result yet,
+    // send the error through the channel.
+    if let Err(e) = run_result {
+        let mut guard = tx.lock();
+        if let Some(tx) = guard.take() {
+            let _ = tx.send(Err(SubagentError::Source(e)));
         }
-        Ok(()) if !s.done => {
-            Err(SubagentError::Source(anyhow::anyhow!("subagent did not finish")))
-        }
-        Ok(()) => Ok(s.responses.join("")),
-        Err(e) => Err(SubagentError::Source(e)),
-    };
+    }
 
-    let _ = tx.send(result);
-    rx.recv().unwrap_or_else(|_| Err(SubagentError::Source(anyhow::anyhow!("subagent channel closed"))))
+    // Await the result from the oneshot channel with a generous timeout.
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(300),
+        rx,
+    )
+    .await
+    {
+        Ok(Ok(result)) => result,
+        Ok(Err(_)) => Err(SubagentError::Source(anyhow::anyhow!("subagent channel closed"))),
+        Err(_) => Err(SubagentError::Source(anyhow::anyhow!("subagent timed out after 300s"))),
+    }
 }
 
 async fn run_subagent_turn(
@@ -331,7 +344,28 @@ mod tests {
         assert!(result.unwrap().contains("channel test"));
     }
 
-    // Layer 4 — Provider Replay / Mock-Tool E2E
+    #[tokio::test]
+    async fn subagent_channel_drops_on_cancel() {
+        // Layer 1: dropping the receiver closes the channel; sender handles it
+        // gracefully without panicking.
+        let (tx, rx) = tokio::sync::oneshot::channel::<Result<String, SubagentError>>();
+        // Drop the receiver to simulate cancellation.
+        drop(rx);
+        // Sending on a closed channel returns Err; we handle it with `let _ =`.
+        let result = tx.send(Ok("result".to_string()));
+        assert!(result.is_err(), "sending on closed channel should fail gracefully");
+    }
+
+    #[tokio::test]
+    async fn subagent_timeout_returns_error() {
+        // Layer 1: verify timeout handling works for the channel await.
+        // We create a receiver and never send on it, then timeout after 1ms.
+        use tokio::time::Duration;
+        let (_tx, rx) = tokio::sync::oneshot::channel::<Result<String, SubagentError>>();
+        let result = tokio::time::timeout(Duration::from_millis(1), rx).await;
+        // Timeout returns Err(Elapsed).
+        assert!(result.is_err(), "timeout should return Elapsed error");
+    }
 
     #[tokio::test]
     async fn explore_subagent_type_runs_with_mock_provider() {

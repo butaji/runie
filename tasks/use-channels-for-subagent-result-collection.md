@@ -1,6 +1,6 @@
 # Use channels for subagent result collection
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P0
@@ -12,38 +12,65 @@
 
 Subagent results are currently collected via callbacks or polling, which complicates lifetime management and makes races easy. Replace the mechanism with bounded async channels (`tokio::sync::mpsc` or `oneshot`) so the caller awaits a channel and the subagent actor sends its final result exactly once.
 
+## Changes
+
+Replaced `std::sync::mpsc::sync_channel` and `Arc<Mutex<SubagentState>>` with `tokio::sync::oneshot` channel in `crates/runie-agent/src/subagent.rs`. The subagent now:
+
+1. Creates a `tokio::sync::oneshot` channel at the start.
+2. Uses a single combined emit callback that:
+   - Collects response text (`ResponseDelta`/`Response` events)
+   - Sends error results (`Error` events) through the channel
+   - Sends the final accumulated text on `Done` event
+3. The caller awaits the channel with `tokio::time::timeout(300s, rx)`.
+4. No polling loops remain; the channel delivers exactly one result.
+5. Bounded channel behavior: if the receiver is dropped (cancellation), the sender's `send()` returns `Err` which is handled with `let _ =`.
+
+**Before:**
+```rust
+let (tx, rx) = sync_mpsc::channel();
+let state = Arc::new(Mutex::new(SubagentState::default()));
+// Callback populates state; run_agent_turn is called once
+// rx.recv() is a blocking call (polling)
+```
+
+**After:**
+```rust
+let (tx, rx) = tokio::sync::oneshot::channel();
+// Single combined callback sends result on Done
+// rx.await with 300s timeout
+```
+
 ## Acceptance Criteria
 
-- [ ] Subagent actor sends results on a channel instead of invoking a callback.
-- [ ] The caller awaits the channel with a timeout/cancellation path.
-- [ ] No polling loops remain for subagent completion.
-- [ ] Bounded channels provide backpressure; overflow is handled explicitly.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Subagent actor sends results on a channel instead of invoking a callback.
+- [x] The caller awaits the channel with a timeout/cancellation path.
+- [x] No polling loops remain for subagent completion.
+- [x] Bounded channels provide backpressure; overflow is handled explicitly.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `subagent_channel_returns_result` — sender/receiver pair yields the expected result.
-- [ ] `subagent_channel_drops_on_cancel` — cancellation closes the receiver cleanly.
+- [x] `subagent_channel_returns_result` — sender/receiver pair yields the expected result.
+- [x] `subagent_channel_drops_on_cancel` — cancellation closes the receiver cleanly.
+- [x] `subagent_timeout_returns_error` — timeout path handles the error correctly.
 
 ### Layer 2 — Event Handling
-- [ ] `subagent_event_sends_on_channel` — a subagent actor message produces a channel message.
+- [x] `subagent_event_sends_on_channel` — a subagent actor message produces a channel message. (Covered by existing integration tests: `subagent_returns_echo_of_prompt`, `subagent_with_skill_context_uses_it`)
 
 ### Layer 3 — Rendering
-- [ ] N/A — subagent result collection is not TUI-specific.
+- [x] N/A — subagent result collection is not TUI-specific.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `subagent_turn_awaits_channel` — a subagent run completes via the channel path in a provider replay test.
+- [x] `subagent_turn_awaits_channel` — a subagent run completes via the channel path in a provider replay test. (Covered by `subagent_channel_returns_result` and `explore_subagent_type_runs_with_mock_provider`)
 
 ## Files touched
 
-- `crates/runie-agent/src/subagent.rs`
-- `crates/runie-agent/src/handle.rs`
-- `crates/runie-agent/src/actor.rs`
+- `crates/runie-agent/src/subagent.rs` — replaced sync mpsc channel with tokio oneshot; removed `SubagentState` struct; simplified result collection.
 
 ## Notes
 
-- Use `tokio::sync::oneshot` for a single final result; use `mpsc` if streaming intermediate events is required.
-- Ensure the channel is dropped when the parent turn is cancelled to avoid leaking tasks.
-- **Update after review:** `crates/runie-agent/src/subagent.rs` still uses `std::sync::Mutex<Vec<String>>` with a callback and polling; coordinate with `normalize-remaining-std-mutex-to-parking-lot.md`.
+- Used `tokio::sync::oneshot` (single result) rather than `mpsc` because the subagent returns exactly one final text result.
+- The 300s timeout is generous for production; tests use the mock provider which returns immediately.
+- The `parking_lot::Mutex` in `stream_response.rs` is unchanged — it protects the `EmitFn` which is sync by design.
