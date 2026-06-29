@@ -337,7 +337,7 @@
   {
     "file": "simplify-terminal-capability-detection.md",
     "title": "Simplify terminal capability detection",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "store-provider-api-keys-in-keyring-not-config.md",
