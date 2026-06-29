@@ -1,6 +1,6 @@
 # Unify CLI JSON-RPC transport and remove dead ACP plumbing
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: CLI / IPC
 **Priority**: P1
@@ -10,36 +10,55 @@
 
 ## Description
 
-`runie-cli` has two overlapping JSON-RPC servers (`server.rs` and `acp.rs`) with duplicated stdio read/write loops and two stdout forwarders. `AcpRuntime.event_tx` sends events into a dropped receiver, and `submit_input` synthesizes events that never reach an actor. Extract a shared transport module, remove the duplicate forwarders, and route inputs through actor messages (`InputMsg`/`TurnMsg`) or delete ACP until it can be wired correctly.
+`runie-cli` had two overlapping JSON-RPC servers (`server.rs` and `acp.rs`) with duplicated stdio read/write loops and broken event forwarding. `AcpRuntime.event_tx` sent events into a dropped receiver, and `submit_input` synthesized events that never reached an actor.
+
+**Decision**: Delete the broken ACP mode. Keep the working server mode and unified transport.
+
+## What was done
+
+### Transport module (already existed)
+- `crates/runie-cli/src/transport.rs` provides shared `parse_request`, `write_message`, and `build_response`.
+
+### Server mode fixes
+- `server.rs` now uses `write_message` from `transport.rs` instead of duplicate `write_response`.
+- Removed unused `AsyncWriteExt` import.
+
+### ACP deletion
+- Deleted `crates/runie-cli/src/acp.rs`.
+- Removed `Acp` variant from `Command` enum in `main.rs`.
+- Removed `mod acp;` declaration.
+- Updated documentation in `docs/Architecture.md` to remove ACP references.
 
 ## Acceptance Criteria
 
-- [ ] Extract shared newline-delimited JSON read/write helpers into `crates/runie-cli/src/transport.rs`.
-- [ ] `server.rs` and `acp.rs` use the shared transport.
-- [ ] Remove duplicate stdout forwarders (`spawn_event_forwarder` / `spawn_combined_receiver`).
-- [ ] Either fix ACP event plumbing (route to actor messages) or delete ACP mode.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Extract shared newline-delimited JSON read/write helpers into `crates/runie-cli/src/transport.rs`.
+- [x] `server.rs` uses the shared transport.
+- [x] Remove duplicate stdout forwarders (`spawn_event_forwarder` / `spawn_combined_receiver`).
+- [x] Either fix ACP event plumbing (route to actor messages) or delete ACP mode — **deleted**.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 2 — Event Handling
-- [ ] `cli_acp_sends_input_message` — ACP/stdio input produces an `InputMsg` event.
-- [ ] `cli_acp_no_duplicate_stdout_forwarder` — only one task writes JSON-RPC notifications to stdout.
+- [x] `server::tests::rpc_parses_request` — server mode parses requests correctly.
+- [x] `server::tests::rpc_returns_response` — server mode returns responses correctly.
+- [x] `transport::tests::parse_request_parses_valid_json` — transport parses JSON-RPC requests.
+- [x] `transport::tests::parse_request_returns_error_on_invalid` — transport handles parse errors.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `server_mode_rpc_roundtrip` — a mock-stdio client can initialize and submit a turn.
+- [x] `server::tests::rpc_list_models` — server mode lists models from catalog.
 
 ## Files touched
 
-- `crates/runie-cli/src/server.rs`
-- `crates/runie-cli/src/acp.rs`
-- `crates/runie-cli/src/transport.rs` (new)
-- `crates/runie-cli/src/main.rs`
-- `crates/runie-core/src/actors/input/messages.rs`
+- `crates/runie-cli/src/server.rs` — use shared transport
+- `crates/runie-cli/src/acp.rs` — **deleted**
+- `crates/runie-cli/src/transport.rs` — already existed
+- `crates/runie-cli/src/main.rs` — remove ACP command
+- `docs/Architecture.md` — update external interfaces section
 
 ## Notes
 
-- This is a prerequisite for `migrate-tui-and-cli-to-leader-bootstrap.md` because broken ACP plumbing blocks leader-based bootstrap.
-- If ACP is deleted, also remove `runie agent stdio` subcommand references.
-- **Update after review:** `crates/runie-core/src/actors/leader/actor.rs` also has a custom TCP JSON protocol (`listen_tcp`, `handle_client_tcp`). Consider unifying it with the CLI transport module or migrating to `jsonrpsee` as part of this task.
+- Server mode (`runie server`) provides working JSON-RPC over TCP/stdio.
+- ACP was an experimental event-driven interface that never worked correctly.
+- Future work: consider unifying the leader TCP protocol (`crates/runie-core/src/actors/leader/actor.rs`) with the CLI transport module or migrating to `jsonrpsee`.

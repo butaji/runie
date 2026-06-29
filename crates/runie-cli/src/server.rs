@@ -16,10 +16,10 @@ use runie_core::message::ChatMessage;
 use runie_core::proto::{Error, Message, Request};
 use serde_json::Value;
 use std::collections::HashMap;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 
-use crate::transport::{build_response, parse_request};
+use crate::transport::{build_response, parse_request, write_message};
 
 const CURRENT_VERSION: &str = runie_core::proto::PROTOCOL_VERSION;
 
@@ -62,7 +62,7 @@ async fn run_stdio_server() -> Result<()> {
         if line.trim().is_empty() {
             continue;
         }
-        write_response(&mut stdout, &process_request(&line).await).await?;
+        write_message(&mut stdout, &process_request(&line).await).await?;
     }
     Ok(())
 }
@@ -77,20 +77,11 @@ async fn handle_connection(stream: TcpStream) {
         if line.trim().is_empty() {
             continue;
         }
-        let _ = write_response(&mut writer, &process_request(&line).await).await;
+        let _ = write_message(&mut writer, &process_request(&line).await).await;
     }
 }
 
-async fn write_response<W>(writer: &mut W, msg: &Message) -> Result<()>
-where
-    W: AsyncWriteExt + Unpin,
-{
-    let json = serde_json::to_string(msg)?;
-    writer.write_all(json.as_bytes()).await?;
-    writer.write_all(b"\n").await?;
-    writer.flush().await?;
-    Ok(())
-}
+
 
 async fn process_request(line: &str) -> Message {
     let req = match parse_request(line) {

@@ -188,8 +188,8 @@ Team mode uses the Orchestrator-Harness Protocol (OHP): a typed plan with roles,
 
 Runie exposes its event bus to the outside world through thin clients that talk to the `LeaderActor`:
 
-1. **ACP over stdio** — JSON-RPC adapter (`runie agent stdio`).
-2. **Streaming JSON headless mode** — `runie -p "task"` emits newline-delimited facts.
+1. **Streaming JSON headless mode** — `runie -p "task"` emits newline-delimited facts.
+2. **JSON-RPC server** — `runie server` provides TCP/stdio JSON-RPC for IDE integrations.
 3. **WebSocket server** — `runie agent serve` for IDE/editor integrations.
 
 All clients send intents and receive the same fact stream. The TUI is just one consumer. Example headless event:

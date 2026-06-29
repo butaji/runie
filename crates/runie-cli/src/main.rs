@@ -5,7 +5,6 @@
 //! - `runie inspect` — print runtime configuration discovered for the current directory
 //! - `runie json` — structured JSON stdin/stdout for scripting
 //! - `runie server` — TCP/stdio JSON-RPC server for IDE integration
-//! - `runie acp` — ACP (Agent Client Protocol) over stdio for programmatic control
 
 use anyhow::Result;
 use clap::Parser;
@@ -13,7 +12,6 @@ use clap::Parser;
 mod print;
 mod json;
 mod server;
-mod acp;
 mod inspect;
 pub mod transport;
 
@@ -50,8 +48,6 @@ enum Command {
         #[arg(long)]
         yolo: bool,
     },
-    /// ACP (Agent Client Protocol) over stdio
-    Acp,
 }
 
 fn main() {
@@ -65,7 +61,6 @@ fn main() {
         Command::Inspect { json } => run_inspect(json),
         Command::Json => block_on(run_json()),
         Command::Server { stdio, yolo } => block_on(run_server(stdio, yolo)),
-        Command::Acp => block_on(acp::run()),
     };
 
     if let Err(e) = result {
