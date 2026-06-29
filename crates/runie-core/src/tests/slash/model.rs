@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use super::{exec, tmp_store, ENV_LOCK};
 use crate::commands::DialogKind;
 use crate::model::Role;

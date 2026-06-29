@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use super::{exec, minimal_session, tmp_store, ENV_LOCK};
 use crate::commands::DialogKind;
 use crate::message::Part;

@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 //! Streaming tool-turn regression tests.
 
 use crate::event::Event;

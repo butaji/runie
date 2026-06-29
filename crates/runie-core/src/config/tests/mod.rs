@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use super::*;
 use std::fs;
 use std::sync::Mutex;

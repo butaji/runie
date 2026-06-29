@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 //! Theme slash command tests
 
 use super::slash::{exec, tmp_store, ENV_LOCK};

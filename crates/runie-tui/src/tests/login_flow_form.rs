@@ -1,3 +1,4 @@
+#![allow(clippy::useless_conversion)]
 //! End-to-end tests for login form editing (Layer 2 + Layer 3).
 //!
 //! Covers typing, pasting, and cursor navigation inside the API key form field.

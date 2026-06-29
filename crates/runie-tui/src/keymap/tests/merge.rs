@@ -4,6 +4,7 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseEvent, Mouse
 
 /// Verify capability detection is functional after the runie-term merge.
 #[test]
+#[allow(clippy::overly_complex_bool_expr)]
 fn terminal_caps_detect_from_env() {
     let caps = crate::terminal::caps::detect_capabilities_from_env();
     let _ = format!("{:?}", caps);

@@ -1,3 +1,4 @@
+#![allow(clippy::items_after_test_module)]
 //! Command Registry - manages command registration and dispatch
 
 use super::{CommandCategory, CommandDef, CommandResult};

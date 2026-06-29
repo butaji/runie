@@ -116,7 +116,7 @@ mod tests {
             Element::agent("plain **bold** _italic_ `code` text").at(0.0),
             80,
         );
-        assert_count_matches(Element::agent(&"**bold** word ".repeat(20)).at(0.0), 40);
+        assert_count_matches(Element::agent("**bold** word ".repeat(20).as_str()).at(0.0), 40);
         assert_count_matches(
             Element::agent("line with `code` and **bold**\nnext line with *italic*").at(0.0),
             50,

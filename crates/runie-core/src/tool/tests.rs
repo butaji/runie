@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use std::time::Duration;
 
 use crate::path::resolve_path_in as resolve_path;

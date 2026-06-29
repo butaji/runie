@@ -1,3 +1,4 @@
+#![allow(clippy::useless_conversion)]
 //! End-to-end tests for onboarding input interactions (Layer 2 + Layer 3).
 //!
 //! These tests drive the login/provider-add flow through core input events and

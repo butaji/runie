@@ -1,3 +1,4 @@
+#![allow(clippy::useless_conversion)]
 //! End-to-end login flow tests (Layer 2 + Layer 3).
 //!
 //! Drives the provider-add flow through core events and verifies both the

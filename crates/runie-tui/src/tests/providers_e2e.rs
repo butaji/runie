@@ -75,19 +75,19 @@ fn add_provider_via_providers_dialog_keeps_active_model_unchanged() {
 
     state.update(Event::ProvidersDialog);
     state.update(Event::ProvidersAdd);
-    state.update(Event::from(Event::SelectProvider {
+    state.update(Event::SelectProvider {
         provider: "minimax".into(),
-    }));
-    state.update(Event::from(Event::SubmitKey {
+    });
+    state.update(Event::SubmitKey {
         provider: "minimax".into(),
         key: "sk-test".into(),
-    }));
-    state.update(Event::from(Event::ModelsFetched {
+    });
+    state.update(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
         models: vec!["MiniMax-M3".into()],
-    }));
-    state.update(Event::from(Event::Save));
+    });
+    state.update(Event::Save);
 
     assert!(
         configured_provider_names().contains(&"openai".into()),

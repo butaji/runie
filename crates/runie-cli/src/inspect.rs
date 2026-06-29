@@ -515,7 +515,7 @@ mod tests {
     fn provider_info_has_no_api_key() {
         let report = InspectReport::build();
         for provider in &report.providers {
-            assert!(provider.name != "" || provider.base_url != "");
+            assert!(!provider.name.is_empty() || !provider.base_url.is_empty());
         }
     }
 }

@@ -147,7 +147,7 @@ fn space_toggles_scoped_model_checkbox() {
         before
     );
 
-    state.update(Event::from(Event::Input(' ')));
+    state.update(Event::Input(' '));
 
     let after = render_dialog(&mut state);
     assert!(

@@ -75,7 +75,7 @@ async fn headless_runner_with_execute_tools_enabled() {
     let result = run_headless_turn(messages, &provider, options)
         .await
         .unwrap();
-    assert!(result.tool_outputs.len() >= 1);
+    assert!(!result.tool_outputs.is_empty());
 }
 
 #[tokio::test]

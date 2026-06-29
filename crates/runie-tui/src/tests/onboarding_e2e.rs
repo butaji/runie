@@ -1,3 +1,4 @@
+#![allow(clippy::useless_conversion)]
 //! End-to-end onboarding tests (Layer 2 + Layer 3).
 //!
 //! Drives the first-run login flow and the providers-add flow through core

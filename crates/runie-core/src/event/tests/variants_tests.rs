@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 //! Tests for Event variants.
 
 use crate::event::{intent::Intent, EventKind};

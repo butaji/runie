@@ -14,7 +14,7 @@ fn smoke_no_module_name_collision() {
             let t = l.trim();
             t.strip_prefix("pub mod ")
                 .or_else(|| t.strip_prefix("pub(crate) mod "))
-                .and_then(|s| s.trim_end_matches(';').trim().split_whitespace().next())
+                .and_then(|s| s.trim_end_matches(';').split_whitespace().next())
         })
         .collect();
 
@@ -25,7 +25,7 @@ fn smoke_no_module_name_collision() {
             let t = l.trim();
             t.strip_prefix("pub mod ")
                 .or_else(|| t.strip_prefix("pub(crate) mod "))
-                .and_then(|s| s.trim_end_matches(';').trim().split_whitespace().next())
+                .and_then(|s| s.trim_end_matches(';').split_whitespace().next())
         })
         .collect();
 

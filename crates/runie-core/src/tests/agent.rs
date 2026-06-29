@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use crate::dsl::AppStateDsl;
 use crate::model::Role;
 use crate::tests::fresh_state;

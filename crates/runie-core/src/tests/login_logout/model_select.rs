@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 //! Tests for model selection in the login flow and provider dialog.
 
 use crate::login_flow::LoginStep;

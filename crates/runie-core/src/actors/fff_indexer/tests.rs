@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use super::*;
 use crate::bus::EventBus;
 use crate::event::Event;

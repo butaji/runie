@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 //! Layer 1 tests for agent streaming — lifecycle events populating `ChatMessage::parts`.
 //!
 //! Exercises `handle_llm_event` and `finish_turn` by feeding synthetic

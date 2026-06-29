@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 //! Tests for runie-provider
 
 use crate::{

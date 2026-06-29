@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use super::helpers::compute_ranking_score;
 use super::CommandUsage;
 use std::collections::HashMap;

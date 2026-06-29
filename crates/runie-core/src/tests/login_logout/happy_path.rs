@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 //! Onboarding happy path tests.
 
 use crate::login_flow::LoginStep;

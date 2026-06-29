@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use crate::login_flow::LoginStep;
 use crate::model::AppState;
 use crate::Event;

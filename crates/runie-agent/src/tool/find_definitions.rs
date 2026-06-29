@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 //! `find_definitions` tool — locate symbol definitions using FFF's classifier.
 
 use crate::tool::search::fff_helpers::{

@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 //! Tests for command form dialogs.
 
 use crate::dialog::dsl::get_field;

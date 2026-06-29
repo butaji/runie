@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use crate::commands::{CommandDef, CommandFlow, CommandResult};
 use crate::model::AppState;
 

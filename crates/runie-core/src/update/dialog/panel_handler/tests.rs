@@ -1,3 +1,4 @@
+#![allow(clippy::useless_conversion)]
 use super::*;
 use crate::commands::DialogState;
 use crate::dialog::Panel;

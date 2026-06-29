@@ -1,3 +1,4 @@
+#![allow(clippy::items_after_test_module)]
 //! Bash command execution for ! prefix (merged from bash.rs).
 
 use crate::actors::IoMsg;

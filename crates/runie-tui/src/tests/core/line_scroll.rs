@@ -11,9 +11,7 @@ fn thought_msg(id: &str, n_lines: usize) -> ChatMessage {
         .join("\n");
     ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: content.into(),
-        }],
+        parts: vec![Part::Text { content }],
         timestamp: 1.0,
         id: id.to_string(),
         ..Default::default()
@@ -29,9 +27,7 @@ fn tool_msg(id: &str, n_output_lines: usize) -> ChatMessage {
     let content = format!("◆ Ran ls 0.5s\n{}", output);
     ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: content.into(),
-        }],
+        parts: vec![Part::Text { content }],
         timestamp: 1.0,
         id: id.to_string(),
         ..Default::default()

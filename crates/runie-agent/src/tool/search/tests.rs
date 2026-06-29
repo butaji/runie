@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use super::types::*;
 use super::*;
 use crate::tool::search::core::SearchInput;

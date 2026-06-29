@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 //! Architecture guardrails — enforce layer separation (IO | Domain | UI).
 //!
 //! This test verifies that the domain layer (`crates/runie-core/src/`) does not
