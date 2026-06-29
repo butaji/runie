@@ -417,9 +417,27 @@ mod tests {
     async fn get_config_returns_config() {
         let bus = EventBus::<Event>::new(16);
         let temp_path = std::env::temp_dir().join("runie_test_config2.toml");
+        let mut sub = bus.subscribe();
         let (handle, _cell) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone())).await;
 
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        // Wait for ConfigLoaded to ensure actor is ready
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
+        let mut found = false;
+        while !found && tokio::time::Instant::now() < deadline {
+            match tokio::time::timeout(
+                deadline - tokio::time::Instant::now(),
+                sub.recv(),
+            ).await {
+                Ok(Ok(evt)) => {
+                    if matches!(evt, Event::ConfigLoaded { .. }) {
+                        found = true;
+                    }
+                }
+                Ok(Err(_)) | Err(_) => break,
+            }
+        }
+        assert!(found, "ConfigLoaded should be emitted");
+
         let config = handle.get_config().await;
         assert!(config.is_some(), "get_config should return Some");
         let _ = std::fs::remove_file(&temp_path);

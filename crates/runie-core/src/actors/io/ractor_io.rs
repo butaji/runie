@@ -433,15 +433,20 @@ mod tests {
 
         handle.run_bash("echo test".to_string()).await;
 
-        // Give actor time to process
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
-        // Verify we got a BashOutput event
+        // Wait for BashOutput event
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(5);
         let mut found = false;
-        while let Ok(evt) = sub.try_recv() {
-            if matches!(evt, Event::BashOutput { .. }) {
-                found = true;
-                break;
+        while !found && tokio::time::Instant::now() < deadline {
+            match tokio::time::timeout(
+                deadline - tokio::time::Instant::now(),
+                sub.recv(),
+            ).await {
+                Ok(Ok(evt)) => {
+                    if matches!(evt, Event::BashOutput { .. }) {
+                        found = true;
+                    }
+                }
+                Ok(Err(_)) | Err(_) => break,
             }
         }
         assert!(found, "Expected BashOutput event");

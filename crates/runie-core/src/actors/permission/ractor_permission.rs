@@ -191,6 +191,27 @@ impl RactorPermissionActor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bus::Receiver;
+
+    /// Wait for an event matching a predicate with a deterministic timeout.
+    async fn wait_for_event<F>(sub: &mut Receiver<Event>, pred: F) -> bool
+    where
+        F: Fn(&Event) -> bool,
+    {
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
+        while tokio::time::Instant::now() < deadline {
+            let timeout_duration = deadline - tokio::time::Instant::now();
+            match tokio::time::timeout(timeout_duration, sub.recv()).await {
+                Ok(Ok(evt)) => {
+                    if pred(&evt) {
+                        return true;
+                    }
+                }
+                Ok(Err(_)) | Err(_) => break,
+            }
+        }
+        false
+    }
 
     #[tokio::test]
     async fn ask_permission_stores_request() {
@@ -206,20 +227,8 @@ mod tests {
             )
             .await;
 
-        // Give actor time to process
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-
-        let mut found_permission_request = false;
-        for _ in 0..10 {
-            if let Ok(e) = sub.try_recv() {
-                if matches!(e, Event::PermissionRequest { .. }) {
-                    found_permission_request = true;
-                    break;
-                }
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-        }
-        assert!(found_permission_request, "Expected PermissionRequest event");
+        let found = wait_for_event(&mut sub, |e| matches!(e, Event::PermissionRequest { .. })).await;
+        assert!(found, "Expected PermissionRequest event");
     }
 
     #[tokio::test]
@@ -237,24 +246,14 @@ mod tests {
             )
             .await;
 
-        // Then resolve it
+        // Wait for PermissionRequest, then resolve
+        let _ = wait_for_event(&mut sub, |e| matches!(e, Event::PermissionRequest { .. })).await;
+
         handle
             .resolve_permission("req-2".into(), PermissionAction::Allow)
             .await;
 
-        // Give actor time to process
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-
-        let mut found_response = false;
-        for _ in 0..10 {
-            if let Ok(e) = sub.try_recv() {
-                if matches!(e, Event::PermissionResponse { action: PermissionAction::Allow, .. }) {
-                    found_response = true;
-                    break;
-                }
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-        }
-        assert!(found_response, "Expected PermissionResponse event");
+        let found = wait_for_event(&mut sub, |e| matches!(e, Event::PermissionResponse { action: PermissionAction::Allow, .. })).await;
+        assert!(found, "Expected PermissionResponse event");
     }
 }

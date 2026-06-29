@@ -420,6 +420,27 @@ impl Actor for RactorSessionActor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bus::Receiver;
+
+    /// Wait for an event matching a predicate with a deterministic timeout.
+    async fn wait_for_event<F>(sub: &mut Receiver<Event>, pred: F) -> bool
+    where
+        F: Fn(&Event) -> bool,
+    {
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
+        while tokio::time::Instant::now() < deadline {
+            let timeout_duration = deadline - tokio::time::Instant::now();
+            match tokio::time::timeout(timeout_duration, sub.recv()).await {
+                Ok(Ok(evt)) => {
+                    if pred(&evt) {
+                        return true;
+                    }
+                }
+                Ok(Err(_)) | Err(_) => break,
+            }
+        }
+        false
+    }
 
     #[tokio::test]
     async fn ractor_session_actor_spawns() {
@@ -434,18 +455,7 @@ mod tests {
         let mut sub = bus.subscribe();
         let (handle, _cell) = RactorSessionActor::spawn(bus).await.unwrap();
 
-        // Wait for TrustLoaded event
-        let mut found = false;
-        let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_millis(200);
-        while tokio::time::Instant::now() < deadline {
-            if let Ok(e) = sub.try_recv() {
-                if matches!(e, Event::TrustLoaded { .. }) {
-                    found = true;
-                    break;
-                }
-            }
-            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-        }
+        let found = wait_for_event(&mut sub, |e| matches!(e, Event::TrustLoaded { .. })).await;
         assert!(found, "Expected TrustLoaded event");
     }
 
@@ -457,18 +467,7 @@ mod tests {
 
         handle.try_add_user_message("hello".to_string(), vec![]);
 
-        // Wait for SessionChanged event
-        let mut found = false;
-        let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_millis(200);
-        while tokio::time::Instant::now() < deadline {
-            if let Ok(e) = sub.try_recv() {
-                if matches!(e, Event::SessionChanged { .. }) {
-                    found = true;
-                    break;
-                }
-            }
-            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-        }
+        let found = wait_for_event(&mut sub, |e| matches!(e, Event::SessionChanged { .. })).await;
         assert!(found, "Expected SessionChanged event after adding user message");
     }
 }

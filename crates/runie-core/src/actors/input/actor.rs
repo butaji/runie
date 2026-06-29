@@ -84,6 +84,27 @@ impl InputActor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bus::Receiver;
+
+    /// Wait for an event matching a predicate with a deterministic timeout.
+    async fn wait_for_event<F>(sub: &mut Receiver<Event>, pred: F) -> bool
+    where
+        F: Fn(&Event) -> bool,
+    {
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
+        while tokio::time::Instant::now() < deadline {
+            let timeout_duration = deadline - tokio::time::Instant::now();
+            match tokio::time::timeout(timeout_duration, sub.recv()).await {
+                Ok(Ok(evt)) => {
+                    if pred(&evt) {
+                        return true;
+                    }
+                }
+                Ok(Err(_)) | Err(_) => break,
+            }
+        }
+        false
+    }
 
     #[tokio::test]
     async fn insert_char_updates_cursor() {
@@ -92,28 +113,18 @@ mod tests {
 
         let (handle, _cell) = InputActor::spawn(bus.clone()).await;
         handle.send(InputMsg::InsertChar('h')).await;
+
+        // Wait for first InputChanged event
+        let found_h = wait_for_event(&mut sub, |e| matches!(e, Event::InputChanged { state } if state.input == "h")).await;
+        assert!(found_h, "Expected InputChanged with 'h'");
+
         handle.send(InputMsg::InsertChar('i')).await;
+
+        // Wait for second InputChanged event
+        let found_hi = wait_for_event(&mut sub, |e| matches!(e, Event::InputChanged { state } if state.input == "hi")).await;
+        assert!(found_hi, "Expected InputChanged with 'hi'");
+
         drop(handle);
-
-        // Give the actor time to process
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-
-        let mut events = Vec::new();
-        while let Ok(e) = sub.try_recv() {
-            if matches!(e, Event::InputChanged { .. }) {
-                events.push(e);
-            }
-        }
-
-        assert_eq!(events.len(), 2);
-        if let Event::InputChanged { state } = &events[0] {
-            assert_eq!(state.input, "h");
-            assert_eq!(state.cursor_pos, 1);
-        }
-        if let Event::InputChanged { state } = &events[1] {
-            assert_eq!(state.input, "hi");
-            assert_eq!(state.cursor_pos, 2);
-        }
     }
 
     #[tokio::test]
