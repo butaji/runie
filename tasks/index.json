@@ -32,7 +32,7 @@
   {
     "file": "cleanup-small-duplicates-and-dead-code.md",
     "title": "Clean up small duplicates and dead code",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "cleanup-verify-tests-and-just-recipes.md",
@@ -172,7 +172,7 @@
   {
     "file": "initialize-tracing-subscriber-in-binaries.md",
     "title": "Initialize `tracing` subscriber in CLI and TUI binaries",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
@@ -252,7 +252,7 @@
   {
     "file": "replace-config-validator-with-jsonschema.md",
     "title": "Replace custom config validator with `jsonschema`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-custom-helpers-with-crates.md",

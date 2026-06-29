@@ -1,6 +1,6 @@
 # Clean up small duplicates and dead code
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Architecture / Refactoring
 **Priority**: P3
