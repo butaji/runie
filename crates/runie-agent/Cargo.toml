@@ -2,6 +2,7 @@
 name = "runie-agent"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [lib]
 path = "src/lib.rs"
@@ -19,7 +20,6 @@ async-trait.workspace = true
 reqwest.workspace = true
 fff-search.workspace = true
 git2.workspace = true
-rmcp.workspace = true
 schemars.workspace = true
 ractor.workspace = true
 

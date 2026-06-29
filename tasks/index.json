@@ -167,7 +167,7 @@
   {
     "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
     "title": "Introduce cargo-deny and cargo-machete CI checks",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "migrate-tui-and-cli-to-leader-bootstrap.md",

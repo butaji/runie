@@ -8,6 +8,7 @@ resolver = "2"
 [workspace.package]
 version = "0.2.16"
 edition = "2021"
+license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
 ratatui = { version = "0.30", features = ["crossterm", "unstable-rendered-line-info"] }
@@ -66,6 +67,10 @@ runie-core = { path = "crates/runie-core" }
 runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }
 runie-testing = { path = "crates/runie-testing" }
+
+# CI tooling
+cargo-deny = "0.17"
+cargo-machete = "0.7"
 
 
 
