@@ -19,7 +19,7 @@
 //! `run_subagent_type()` to run a named type, or `run_subagent()` for
 //! explicit parameters.
 
-use crate::{run_agent_turn, AgentCommand, PermissionGate};
+use crate::{run_agent_turn, AgentCommand, PermissionGate, stream_response::EmitFn};
 use runie_core::model::ThinkingLevel;
 use runie_core::permissions::{AutoAllowSink, PermissionManager};
 use runie_core::provider::Provider;
@@ -27,6 +27,7 @@ use runie_core::subagents::{PermissionMode as SubPermissionMode, SubagentRegistr
 use std::collections::HashMap;
 use std::sync::Arc;
 use parking_lot::Mutex;
+use std::sync::mpsc as sync_mpsc;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -123,8 +124,16 @@ fn build_type_command(
     parent_system_prompt: &str,
 ) -> AgentCommand {
     let prompt = sub_type.interpolate(variables);
-    let system_prompt = if sub_type.agents_md { parent_system_prompt } else { "" };
-    let skills_context = if sub_type.agents_md { parent_skills_context } else { "" };
+    let system_prompt = if sub_type.agents_md {
+        parent_system_prompt
+    } else {
+        ""
+    };
+    let skills_context = if sub_type.agents_md {
+        parent_skills_context
+    } else {
+        ""
+    };
     let read_only = sub_type.permission_mode == SubPermissionMode::Plan || parent_read_only;
     AgentCommand {
         content: prompt,
@@ -145,7 +154,7 @@ fn build_type_command(
 fn resolve_model(sub_type: &SubagentType, parent_model: &str) -> String {
     match sub_type.model.as_str() {
         "inherit" => parent_model.to_owned(),
-        "fast" | _ => sub_type.model.clone(), // concrete id or "fast" trait
+        "fast" | _ => sub_type.model.clone(),
     }
 }
 
@@ -180,19 +189,62 @@ fn build_subagent_command(
     }
 }
 
+/// Collected state from the agent turn callback.
+#[derive(Default)]
+struct SubagentState {
+    responses: Vec<String>,
+    done: bool,
+    error: Option<String>,
+}
+
 /// Run a subagent turn with a custom permission gate.
-pub(crate) async fn run_subagent_turn_with_gate(
+/// Uses a synchronous `sync_mpsc::channel` to collect the final result from
+/// the callback, replacing the polling-based `finalize_subagent_result`.
+async fn run_subagent_turn_with_gate(
     provider: &dyn Provider,
     cmd: &AgentCommand,
     max_iterations: usize,
     gate: PermissionGate,
 ) -> Result<String, SubagentError> {
-    let state = Arc::new(SubagentState::default());
-    let callback = build_subagent_callback(state.clone());
-    run_agent_turn(provider, cmd, callback, max_iterations, gate)
-        .await
-        .map_err(SubagentError::from)?;
-    finalize_subagent_result(state)
+    let (tx, rx) = sync_mpsc::channel::<Result<String, SubagentError>>();
+
+    // Shared state for the callback to write into.
+    let state: Arc<Mutex<SubagentState>> = Arc::new(Mutex::new(SubagentState::default()));
+    let state_for_cb = state.clone();
+
+    let emit: EmitFn = Arc::new(Mutex::new(move |evt: runie_core::Event| {
+        let mut s = state_for_cb.lock();
+        match evt {
+            runie_core::Event::ResponseDelta { content, .. }
+            | runie_core::Event::Response { content, .. } => s.responses.push(content),
+            runie_core::Event::Error { message, .. } => s.error = Some(message),
+            runie_core::Event::Done { .. } => s.done = true,
+            _ => {}
+        }
+    }));
+
+    // Run the turn synchronously; the callback populates `state`.
+    let run_result = run_agent_turn(provider, cmd, emit, max_iterations, gate).await;
+
+    // Extract collected state from the Arc (Arc is dropped here).
+    let s = Arc::try_unwrap(state)
+        .map(|m| m.into_inner())
+        .unwrap_or_else(|_| SubagentState::default());
+
+    // Send the result through the channel.
+    let result = match run_result {
+        Ok(()) if s.error.is_some() => {
+            Err(SubagentError::Source(anyhow::anyhow!(s.error.unwrap())))
+        }
+        Ok(()) if !s.done => {
+            Err(SubagentError::Source(anyhow::anyhow!("subagent did not finish")))
+        }
+        Ok(()) => Ok(s.responses.join("")),
+        Err(e) => Err(SubagentError::Source(e)),
+    };
+
+    let _ = tx.send(result);
+    rx.recv().unwrap_or_else(|_| Err(SubagentError::Source(anyhow::anyhow!("subagent channel closed"))))
 }
 
 async fn run_subagent_turn(
@@ -200,50 +252,8 @@ async fn run_subagent_turn(
     cmd: &AgentCommand,
     max_iterations: usize,
 ) -> Result<String, SubagentError> {
-    let state = Arc::new(SubagentState::default());
-    let callback = build_subagent_callback(state.clone());
     let gate = PermissionGate::new(PermissionManager::default(), Arc::new(AutoAllowSink));
-
-    run_agent_turn(provider, cmd, callback, max_iterations, gate)
-        .await
-        .map_err(SubagentError::from)?;
-
-    finalize_subagent_result(state)
-}
-
-#[derive(Default)]
-struct SubagentState {
-    responses: Mutex<Vec<String>>,
-    done: Mutex<bool>,
-    error: Mutex<Option<String>>,
-}
-
-fn build_subagent_callback(
-    state: Arc<SubagentState>,
-) -> Arc<Mutex<dyn FnMut(runie_core::Event) + Send + Sync>> {
-    Arc::new(Mutex::new(move |evt: runie_core::Event| match evt {
-        runie_core::Event::ResponseDelta { content, .. }
-        | runie_core::Event::Response { content, .. } => {
-            state.responses.lock().push(content)
-        }
-        runie_core::Event::Error { message, .. } => {
-            *state.error.lock() = Some(message)
-        }
-        runie_core::Event::Done { .. } => {
-            *state.done.lock() = true
-        }
-        _ => {}
-    }))
-}
-
-fn finalize_subagent_result(state: Arc<SubagentState>) -> Result<String, SubagentError> {
-    if let Some(msg) = state.error.lock().take() {
-        return Err(SubagentError::Source(anyhow::anyhow!(msg)));
-    }
-    if !*state.done.lock() {
-        return Err(SubagentError::Source(anyhow::anyhow!("subagent did not finish")));
-    }
-    Ok(state.responses.lock().join(""))
+    run_subagent_turn_with_gate(provider, cmd, max_iterations, gate).await
 }
 
 #[cfg(test)]
@@ -310,6 +320,15 @@ mod tests {
         )
         .await;
         assert!(result.is_ok(), "{result:?}");
+    }
+
+    #[tokio::test]
+    async fn subagent_channel_returns_result() {
+        // Layer 1: verify that the channel mechanism returns the expected result.
+        let provider = mock_provider();
+        let result = run_subagent("channel test", "mock", "echo", &provider, ThinkingLevel::Off, false, "", "", 5).await;
+        assert!(result.is_ok(), "channel should deliver result: {result:?}");
+        assert!(result.unwrap().contains("channel test"));
     }
 
     // Layer 4 — Provider Replay / Mock-Tool E2E
