@@ -27,16 +27,13 @@
 //!   end                → { "stopReason": "...", "sessionId": "...", "responseId": "..." }
 
 use anyhow::Result;
-use runie_core::actors::RactorConfigActor;
-use runie_core::actors::provider::RactorProviderActor;
-use runie_core::actors::permission::RactorPermissionActor;
-use runie_core::actors::session::RactorSessionActor;
-use runie_core::actors::io::RactorIoActor;
+use runie_agent::AgentActorFactoryImpl;
+use runie_core::actors::leader::{Leader, LeaderHandle};
 use runie_core::bus::EventBus;
-use runie_agent::spawn_ractor_agent;
 use runie_core::event::Event;
 use runie_core::proto::Notification;
 use runie_core::proto::{Error, Message, Request, Response};
+use runie_provider::DynProviderFactory;
 use serde::Deserialize;
 use serde_json::Value;
 use std::sync::Arc;
@@ -48,38 +45,20 @@ const ACP_PROTOCOL_VERSION: &str = "1.0.0";
 
 /// Run the ACP stdio adapter.
 pub async fn run() -> Result<()> {
-    let bus = EventBus::<Event>::new(100);
-    let runtime = spawn_runtime(bus.clone()).await?;
+    let leader = Leader::new();
+    let agent_factory = Arc::new(AgentActorFactoryImpl);
+    let provider_factory = Arc::new(DynProviderFactory);
+    let handle = leader
+        .start(provider_factory, agent_factory)
+        .await
+        .map_err(|e| anyhow::anyhow!("leader bootstrap failed: {}", e))?;
 
     // Single task: subscribe to bus events and forward them to stdout as JSON-RPC.
-    spawn_event_forwarder(bus.clone());
+    spawn_event_forwarder(handle.event_bus().clone());
 
     let stdin = tokio::io::stdin();
     let mut stdout = tokio::io::stdout();
-    process_stdin_loop(stdin, &mut stdout, &runtime).await
-}
-
-/// Spawn all actors needed for ACP mode and return the event bus.
-async fn spawn_runtime(bus: EventBus<Event>) -> Result<EventBus<Event>> {
-    // Spawn actors (same set as the TUI leader bootstrap).
-    let (config_handle, _) = RactorConfigActor::spawn(bus.clone(), None).await;
-    let (provider_handle, _provider_actor) = RactorProviderActor::spawn(
-        bus.clone(),
-        config_handle.clone(),
-        Arc::new(runie_provider::DynProviderFactory),
-    ).await?;
-    let (_session_handle, _session_actor) = RactorSessionActor::spawn(bus.clone()).await?;
-    let (_io_handle, _io_actor) = RactorIoActor::spawn(bus.clone()).await?;
-    let (permission_handle, _permission_actor) = RactorPermissionActor::spawn(bus.clone()).await;
-
-    // Spawn the agent actor — this is what drives the LLM turns.
-    let (_agent_handle, _agent_actor, _agent_cell) = spawn_ractor_agent(
-        bus.clone(),
-        provider_handle.clone(),
-        permission_handle.clone(),
-    ).await?;
-
-    Ok(bus)
+    process_stdin_loop(stdin, &mut stdout, &handle).await
 }
 
 /// Spawn a task that forwards events from the bus to stdout as JSON-RPC notifications.
@@ -103,7 +82,7 @@ fn spawn_event_forwarder(bus: EventBus<Event>) {
 async fn process_stdin_loop(
     stdin: tokio::io::Stdin,
     stdout: &mut tokio::io::Stdout,
-    bus: &EventBus<Event>,
+    handle: &LeaderHandle,
 ) -> Result<()> {
     let mut lines = BufReader::new(stdin).lines();
     while let Some(line) = lines.next_line().await? {
@@ -119,7 +98,7 @@ async fn process_stdin_loop(
             }
         };
         let id = req.id.clone();
-        match dispatch_acp_request(&req, bus).await {
+        match dispatch_acp_request(&req, handle).await {
             Ok(result) => {
                 let resp = Message::Response(Response::ok(id, result));
                 write_message(stdout, &resp).await?;
@@ -144,13 +123,13 @@ where
     Ok(())
 }
 
-async fn dispatch_acp_request(req: &Request, bus: &EventBus<Event>) -> Result<Value> {
+async fn dispatch_acp_request(req: &Request, handle: &LeaderHandle) -> Result<Value> {
     match req.method.as_str() {
         "initialize" => initialize(),
-        "submit_input" => submit_input(&req.params, bus).await,
-        "interrupt" => interrupt(bus).await,
-        "permission_resp" => permission_resp(&req.params, bus).await,
-        "shutdown" => shutdown(bus).await,
+        "submit_input" => submit_input(&req.params, handle).await,
+        "interrupt" => interrupt(handle.event_bus()).await,
+        "permission_resp" => permission_resp(&req.params, handle.event_bus()).await,
+        "shutdown" => shutdown(handle.event_bus()).await,
         _ => Err(anyhow::anyhow!("Unknown method: {}", req.method)),
     }
 }
@@ -168,18 +147,16 @@ struct SubmitInputParams {
     input: String,
 }
 
-async fn submit_input(params: &Value, bus: &EventBus<Event>) -> Result<Value> {
+async fn submit_input(params: &Value, handle: &LeaderHandle) -> Result<Value> {
     let params: SubmitInputParams = serde_json::from_value(params.clone())?;
-    let turn_id = turn_id_from_time();
+    let id = turn_id_from_time();
 
-    // Publish input and submit events so the turn actor picks them up.
-    let mut state = runie_core::model::InputState::default();
-    state.input = params.input;
-    bus.publish(Event::InputChanged { state: Box::new(state) });
-    bus.publish(Event::Submit);
+    // Send the message directly to the turn actor so it picks up the turn.
+    use runie_core::actors::TurnMsg;
+    handle.turn.send(TurnMsg::SubmitUserMessage { content: params.input, id: id.clone() }).await;
 
     // Wait for turn completion by subscribing to the bus.
-    // Subscribe fresh so we only see events from this turn onward.
+    let bus = handle.event_bus();
     let mut sub = bus.subscribe();
     timeout(Duration::from_secs(300), async {
         while let Ok(evt) = sub.recv().await {
@@ -187,7 +164,7 @@ async fn submit_input(params: &Value, bus: &EventBus<Event>) -> Result<Value> {
                 return Ok(serde_json::json!({ "turnId": id, "responseId": id }));
             }
         }
-        Ok(serde_json::json!({ "turnId": turn_id }))
+        Ok(serde_json::json!({ "turnId": id }))
     })
     .await
     .map_err(|_| anyhow::anyhow!("Timeout waiting for turn"))?
