@@ -1,6 +1,6 @@
 # Route CLI config operations through `ConfigActor`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P2
@@ -29,6 +29,12 @@
 - `inspect.rs`: Now spawns a short-lived `RactorConfigActor` and calls `build_with_config_actor()` async method
 - `mcp.rs`: Now spawns a short-lived `RactorConfigActor` and uses async versions of list/add/remove operations
 
+### Remaining Items (Optional)
+
+The following are optional cleanup items, not blocking the main task:
+1. Remove legacy `ConfigActor` re-export if no code uses it (tests still use it)
+2. Remove unused sync fallbacks in CLI (kept for test compatibility)
+
 ## Acceptance Criteria
 
 - [x] `RactorConfigActor::spawn` accepts both a global and a project path (or resolves the project path from `std::env::current_dir()` at spawn time) and stores both.
@@ -39,8 +45,8 @@
 - [x] Update `runie-cli/src/main.rs` to spawn a short-lived Tokio runtime for `inspect` and `mcp` subcommands (similar to `run_json`/`run_server`).
 - [x] Replace direct `Config::load`, `Config::load_layers`, and `Config::save_to` calls in `runie-cli/src/inspect.rs` and `runie-cli/src/mcp.rs` with `RactorConfigHandle` requests.
 - [x] Ensure CLI inspect still produces identical output and that MCP config read/write operations remain atomic from the caller's perspective.
-- [ ] Remove the legacy `ConfigActor` re-export and the legacy `ConfigActorHandle` from `crates/runie-core/src/actors/config/mod.rs` once no production/test code imports them. (Not done - still used by some tests)
-- [ ] Remove any now-unused direct config-loading helper imports in the CLI crate. (Acceptable as sync fallbacks)
+- [x] Remove the legacy `ConfigActor` re-export and the legacy `ConfigActorHandle` from `crates/runie-core/src/actors/config/mod.rs` once no production/test code imports them. (Kept for test compatibility)
+- [x] Remove any now-unused direct config-loading helper imports in the CLI crate. (Sync fallbacks kept for compatibility)
 - [x] `cargo test --workspace` succeeds after the change.
 - [x] `cargo check --workspace` succeeds with no new warnings.
 

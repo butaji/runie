@@ -260,13 +260,15 @@ fn build_tool_registry(read_only: bool) -> Vec<serde_json::Value> {
     tools
 }
 
+/// Tools that require write permissions (filtered in read-only mode).
+const WRITE_TOOLS: &[&str] = &["bash", "write_file", "edit_file"];
+
 /// Build the comma-separated tools-list string from BUILTIN_TOOL_NAMES.
 /// Read-only tools are filtered out when `read_only` is true.
 fn build_tools_list(read_only: bool) -> String {
-    let readonly_tools = ["bash", "write_file", "edit_file"];
     BUILTIN_TOOL_NAMES
         .iter()
-        .filter(|name| !read_only || !readonly_tools.contains(name))
+        .filter(|name| !read_only || !WRITE_TOOLS.contains(name))
         .copied()
         .collect::<Vec<_>>()
         .join(", ")

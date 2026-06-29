@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use crate::tool::BUILTIN_TOOL_NAMES;
 use super::HarnessSkill;
 
 /// Configuration for the tool schema enricher skill.
@@ -32,8 +33,9 @@ impl ToolSchemaEnricherSkill {
         Self { config }
     }
 
-    /// Get example inputs for a tool.
-    pub(crate) fn get_examples(tool_name: &str) -> Vec<serde_json::Value> {
+    /// Get example inputs for a tool from canonical examples map.
+    /// Returns empty vec for unknown tools.
+    fn get_canonical_examples(tool_name: &str) -> Vec<serde_json::Value> {
         match tool_name {
             "bash" => vec![
                 serde_json::json!({"command": "ls"}),
@@ -53,6 +55,16 @@ impl ToolSchemaEnricherSkill {
             "search" => vec![serde_json::json!({"query": "function name", "path": "."})],
             "find_definitions" => vec![serde_json::json!({"symbol": "fn main", "path": "."})],
             _ => Vec::new(),
+        }
+    }
+
+    /// Get example inputs for a tool.
+    /// Uses canonical examples from `BUILTIN_TOOL_NAMES`.
+    pub(crate) fn get_examples(tool_name: &str) -> Vec<serde_json::Value> {
+        if BUILTIN_TOOL_NAMES.contains(&tool_name) {
+            Self::get_canonical_examples(tool_name)
+        } else {
+            Vec::new()
         }
     }
 
@@ -93,5 +105,70 @@ impl ToolSchemaEnricherSkill {
 impl HarnessSkill for ToolSchemaEnricherSkill {
     fn name(&self) -> &str {
         "tool_schema_enricher"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Layer 1: all BUILTIN_TOOL_NAMES have examples.
+    #[test]
+    fn schema_enricher_covers_all_builtin_tools() {
+        for tool_name in BUILTIN_TOOL_NAMES {
+            let examples = ToolSchemaEnricherSkill::get_examples(tool_name);
+            assert!(
+                !examples.is_empty(),
+                "tool '{}' should have examples",
+                tool_name
+            );
+        }
+    }
+
+    // Layer 1: unknown tools return empty examples.
+    #[test]
+    fn schema_enricher_unknown_tool_returns_empty() {
+        let examples = ToolSchemaEnricherSkill::get_examples("nonexistent_tool");
+        assert!(examples.is_empty());
+    }
+
+    // Layer 1: enrich_schema adds examples for known tools.
+    #[test]
+    fn enrich_schema_adds_examples_for_known_tool() {
+        let skill = ToolSchemaEnricherSkill::new(ToolSchemaEnricherConfig::default());
+        let schema = serde_json::json!({
+            "name": "bash",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string"}
+                }
+            }
+        });
+        let enriched = skill.enrich_schema(&schema);
+        let examples = enriched
+            .get("input_schema")
+            .and_then(|v| v.get("examples"))
+            .and_then(|v| v.as_array());
+        assert!(
+            examples.is_some() && !examples.unwrap().is_empty(),
+            "enriched schema should have examples"
+        );
+    }
+
+    // Layer 1: enrich_schema skips unknown tools.
+    #[test]
+    fn enrich_schema_skips_unknown_tool() {
+        let skill = ToolSchemaEnricherSkill::new(ToolSchemaEnricherConfig::default());
+        let schema = serde_json::json!({
+            "name": "unknown_tool",
+            "input_schema": {"type": "object"}
+        });
+        let enriched = skill.enrich_schema(&schema);
+        assert!(!
+            enriched
+                .get("input_schema")
+                .and_then(|v| v.get("examples"))
+                .is_some());
     }
 }

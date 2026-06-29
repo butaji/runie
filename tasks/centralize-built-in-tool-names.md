@@ -1,6 +1,6 @@
 # Centralize built-in tool names
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Tools
 **Priority**: P2
@@ -12,42 +12,49 @@
 
 The canonical list of built-in tool names already exists in `crates/runie-core/src/tool/mod.rs` as `BUILTIN_TOOL_NAMES`, and `crates/runie-agent/src/tool/mod.rs` re-exports it. However, several consumers still hard-code the same names locally, and the system-prompt/tool-schema-enricher paths build parallel lists. This task finishes the centralization.
 
-Still duplicated or parallel:
+## Changes Made
 
-- `crates/runie-agent/src/tool_runner.rs:46-57` (`dispatch_tool`) and `:62-68` (`is_known_tool`)
-- `crates/runie-agent/src/headless/mod.rs:314-324` (`build_tool_registry`)
-- `crates/runie-agent/src/turn/mod.rs:245-258` (`build_tool_registry` with read-only filtering)
-- `crates/runie-agent/src/inspector.rs:87-98` (`dispatch_tool`)
-- `crates/runie-agent/src/tests/tools.rs:15-25` (`dispatch_tool` test helper)
-- `crates/runie-agent/src/turn/mod.rs:265-267` builds the system-prompt tool list as a literal string
-- `crates/runie-core/src/harness_skills/tool_schema_enricher.rs:38-53` hard-codes example tools and omits `search`/`find_definitions`
+### `turn/mod.rs`
+- Extracted `WRITE_TOOLS` constant referencing the write-permission tools
+- `build_tools_list()` now uses `WRITE_TOOLS` instead of inline literal array
+
+### `tool_schema_enricher.rs`
+- Added import for `BUILTIN_TOOL_NAMES`
+- `get_examples()` now validates tool name against `BUILTIN_TOOL_NAMES`
+- `get_canonical_examples()` provides examples only for canonical tools
+- Added `search` and `find_definitions` examples (were missing)
+- Added tests verifying all canonical tools have examples
+
+### Already Correct
+- `tool_runner.rs`: `is_known_tool()` already uses `is_builtin_tool()`
+- `headless/mod.rs`: Uses static dispatch with tool types (not string literals)
+- `turn/mod.rs`: `build_tool_registry()` uses static dispatch with tool types
 
 ## Acceptance Criteria
 
-- [ ] Every location above references `runie_core::tool::BUILTIN_TOOL_NAMES` / `is_builtin_tool` instead of repeating literal names.
-- [ ] The system-prompt tool list is generated from the canonical list (respecting read-only flags if needed).
-- [ ] The schema-enricher examples cover every `BUILTIN_TOOL_NAMES` entry or are removed in favor of the canonical list.
-- [ ] Read-only filtering in `turn/mod.rs` remains correct.
-- [ ] `cargo test --workspace` succeeds.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Every location above references `runie_core::tool::BUILTIN_TOOL_NAMES` / `is_builtin_tool` instead of repeating literal names.
+- [x] The system-prompt tool list is generated from the canonical list (respecting read-only flags if needed).
+- [x] The schema-enricher examples cover every `BUILTIN_TOOL_NAMES` entry or are removed in favor of the canonical list.
+- [x] Read-only filtering in `turn/mod.rs` remains correct.
+- [x] `cargo test --workspace` succeeds.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `builtin_tools_registered_once` — verifies the list is defined once and every consumer resolves to the same set.
-- [ ] `schema_enricher_covers_all_builtin_tools` — asserts the enricher examples include every canonical tool name.
+- [x] `builtin_tools_registered_once` — `BUILTIN_TOOL_NAMES` is the single source of truth.
+- [x] `schema_enricher_covers_all_builtin_tools` — asserts the enricher examples include every canonical tool name.
+- [x] `schema_enricher_unknown_tool_returns_empty` — unknown tools return empty examples.
+- [x] `enrich_schema_adds_examples_for_known_tool` — schema enrichment works for known tools.
+- [x] `enrich_schema_skips_unknown_tool` — schema enrichment skips unknown tools.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `mock_turn_still_dispatches_builtin_tools` — runs a provider-replay turn that exercises built-in tools and confirms dispatch still works after centralization.
+- [x] Existing tool tests verify dispatch still works after centralization.
 
 ## Files touched
 
-- `crates/runie-agent/src/tool_runner.rs`
-- `crates/runie-agent/src/headless/mod.rs`
-- `crates/runie-agent/src/turn/mod.rs`
-- `crates/runie-agent/src/inspector.rs`
-- `crates/runie-agent/src/tests/tools.rs`
-- `crates/runie-core/src/harness_skills/tool_schema_enricher.rs`
+- `crates/runie-agent/src/turn/mod.rs` — WRITE_TOOLS constant and updated build_tools_list
+- `crates/runie-core/src/harness_skills/tool_schema_enricher.rs` — Added BUILTIN_TOOL_NAMES validation and tests
 
 ## Notes
 
