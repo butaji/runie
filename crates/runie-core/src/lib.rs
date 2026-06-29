@@ -74,8 +74,7 @@ pub mod snapshot;
 // state types moved to model::state
 pub mod streaming_buffer;
 pub mod subagents;
-// telemetry module kept for tests and config integration
-pub mod telemetry;
+
 pub mod theme_tokens;
 
 pub mod tokens;

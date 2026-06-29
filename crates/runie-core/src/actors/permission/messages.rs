@@ -1,6 +1,4 @@
-//! Messages and handles for `PermissionActor`.
-
-use tokio::sync::mpsc;
+//! Messages for `PermissionActor`.
 
 use crate::actors::ractor_adapter::Reply;
 use crate::permissions::PermissionAction;
@@ -50,80 +48,5 @@ impl Clone for PermissionMsg {
             }
             PermissionMsg::DismissRequest => PermissionMsg::DismissRequest,
         }
-    }
-}
-
-/// Handle for sending commands to `PermissionActor`.
-#[derive(Clone, Debug)]
-pub struct PermissionActorHandle {
-    tx: mpsc::Sender<PermissionMsg>,
-}
-
-impl PermissionActorHandle {
-    /// Wrap an existing sender.
-    pub fn new(tx: mpsc::Sender<PermissionMsg>) -> Self {
-        Self { tx }
-    }
-
-    /// Request permission for a tool call. Returns a receiver for the response.
-    pub async fn ask_permission(
-        &self,
-        request_id: String,
-        tool: String,
-        input: serde_json::Value,
-    ) -> tokio::sync::oneshot::Receiver<PermissionAction> {
-        let (tx, rx) = tokio::sync::oneshot::channel();
-        let msg = PermissionMsg::AskPermission {
-            request_id,
-            tool,
-            input,
-            reply: Reply::new(tx),
-        };
-        let _ = self.tx.send(msg).await;
-        rx
-    }
-
-    /// Resolve a pending permission request.
-    pub async fn resolve_permission(&self, request_id: String, action: PermissionAction) {
-        let _ = self
-            .tx
-            .send(PermissionMsg::ResolvePermission {
-                request_id,
-                action,
-            })
-            .await;
-    }
-
-    /// Cancel a pending permission request.
-    pub async fn cancel_permission(&self, request_id: String) {
-        let _ = self
-            .tx
-            .send(PermissionMsg::CancelPermission { request_id })
-            .await;
-    }
-
-    /// Dismiss the permission request UI.
-    pub async fn dismiss(&self) {
-        let _ = self.tx.send(PermissionMsg::DismissRequest).await;
-    }
-
-    /// Resolve a pending permission request (sync fire-and-forget).
-    pub fn try_resolve_permission(&self, request_id: String, action: PermissionAction) {
-        let _ = self.tx.try_send(PermissionMsg::ResolvePermission {
-            request_id,
-            action,
-        });
-    }
-
-    /// Cancel a pending permission request (sync fire-and-forget).
-    pub fn try_cancel_permission(&self, request_id: String) {
-        let _ = self
-            .tx
-            .try_send(PermissionMsg::CancelPermission { request_id });
-    }
-
-    /// Dismiss the permission request UI (sync fire-and-forget).
-    pub fn try_dismiss(&self) {
-        let _ = self.tx.try_send(PermissionMsg::DismissRequest);
     }
 }

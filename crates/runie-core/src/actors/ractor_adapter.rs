@@ -65,7 +65,7 @@ use std::pin::Pin;
 use ractor::{Actor, ActorRef};
 use ractor::concurrency::JoinHandle;
 use ractor::SpawnErr as RactorSpawnErr;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::oneshot;
 
 use crate::bus::EventBus;
 
@@ -183,39 +183,6 @@ impl<E: Clone + Send + 'static> Clone for EventBusBridge<E> {
 impl<E: Clone + Send + 'static> std::fmt::Debug for EventBusBridge<E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EventBusBridge").finish()
-    }
-}
-
-// ── GenericActorHandle ─────────────────────────────────────────────────────
-
-/// Generic actor handle for sending typed messages.
-///
-/// Wraps `Arc<Sender<Msg>>` so the handle is always `Clone` regardless of `Msg`.
-/// Used for fire-and-forget actors.
-#[derive(Clone, Debug)]
-pub struct GenericActorHandle<Msg: Clone> {
-    tx: std::sync::Arc<mpsc::Sender<Msg>>,
-}
-
-impl<Msg: Clone> GenericActorHandle<Msg> {
-    /// Wrap an existing sender.
-    pub fn new(tx: mpsc::Sender<Msg>) -> Self {
-        Self { tx: std::sync::Arc::new(tx) }
-    }
-
-    /// Access the underlying sender.
-    pub fn inner(&self) -> &mpsc::Sender<Msg> {
-        &self.tx
-    }
-
-    /// Send a message (async fire-and-forget).
-    pub async fn send(&self, msg: Msg) {
-        let _ = self.tx.send(msg).await;
-    }
-
-    /// Try to send a message (sync fire-and-forget; no-op if full).
-    pub fn try_send(&self, msg: Msg) {
-        let _ = self.tx.try_send(msg);
     }
 }
 

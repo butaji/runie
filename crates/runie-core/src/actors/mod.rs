@@ -5,7 +5,7 @@
 //! a running session.
 
 pub mod ractor_adapter;
-pub use ractor_adapter::{spawn_ractor, GenericActorHandle, RactorHandle, Reply, RpcReply};
+pub use ractor_adapter::{spawn_ractor, RactorHandle, Reply, RpcReply};
 
 pub mod turn;
 pub mod config;

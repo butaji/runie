@@ -478,4 +478,20 @@ pub fn config_path() -> PathBuf {
         .join("config.toml")
 }
 
+#[cfg(test)]
+mod telemetry_tests {
+    use super::TelemetrySection;
+
+    #[test]
+    fn telemetry_section_default_enabled() {
+        let section = TelemetrySection::default();
+        assert!(section.enabled);
+    }
+
+    #[test]
+    fn telemetry_can_be_disabled() {
+        let section = TelemetrySection { enabled: false };
+        assert!(!section.enabled);
+    }
+}
 
