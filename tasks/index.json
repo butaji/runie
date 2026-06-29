@@ -437,7 +437,7 @@
   {
     "file": "use-ractor-state-for-actor-mutable-state.md",
     "title": "Use `ractor` `State` for actor mutable state",
-    "status": "todo"
+    "status": "partial (inputactor done)"
   },
   {
     "file": "use-strum-for-event-intent-names.md",
@@ -447,6 +447,6 @@
   {
     "file": "wire-or-delete-input-actor.md",
     "title": "Wire or delete `InputActor`",
-    "status": "todo"
+    "status": "done"
   }
 ]

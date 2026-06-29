@@ -2,9 +2,9 @@
 //!
 //! This actor uses the ractor framework for actor supervision and message handling.
 
+use parking_lot::Mutex;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use ractor::async_trait;
-use parking_lot::Mutex;
 
 use crate::actors::ractor_adapter::{RactorHandle, spawn_ractor};
 use crate::bus::EventBus;
@@ -16,49 +16,63 @@ use super::messages::InputMsg;
 /// Handle type for InputActor using ractor.
 pub type RactorInputHandle = RactorHandle<InputMsg>;
 
+/// InputActor's ractor State — holds the authoritative input state.
+///
+/// EventBus is wrapped in Mutex to allow publishing from `&self` context
+/// (ractor's handle method receives `&self`, not `&mut self`).
+pub struct InputActorState {
+    /// The authoritative input state.
+    input: InputState,
+    /// Bridge to the event bus for publishing facts.
+    /// Wrapped in Mutex for interior mutability from `&self`.
+    bus: Mutex<EventBus<Event>>,
+}
+
+impl InputActorState {
+    /// Publish an InputChanged event with the current input state.
+    fn publish_input_changed(&self) {
+        let state = self.input.clone();
+        self.bus.lock().publish(Event::InputChanged {
+            state: Box::new(state),
+        });
+    }
+}
+
 /// Ractor-based InputActor.
 ///
 /// Text editing, cursor navigation, history, and undo/redo are all mutations
 /// that live here. The actor processes `InputMsg` messages and emits
 /// `InputChanged` facts when state changes.
-pub struct InputActor {
-    /// The authoritative input state (protected by mutex for interior mutability).
-    state: Mutex<InputState>,
-    /// Bridge to the event bus for publishing facts.
-    bus: EventBus<Event>,
-}
+pub struct InputActor;
 
 #[async_trait]
 impl Actor for InputActor {
     type Msg = InputMsg;
-    type State = ();
+    type State = InputActorState;
     type Arguments = EventBus<Event>;
 
     async fn pre_start(
         &self,
         _myself: ActorRef<Self::Msg>,
-        _args: Self::Arguments,
+        bus: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        Ok(())
+        Ok(InputActorState {
+            input: InputState::default(),
+            bus: Mutex::new(bus),
+        })
     }
 
     async fn handle(
         &self,
         _myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
-        _state: &mut Self::State,
+        state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        let (new_state,) = {
-            let mut state = self.state.lock();
-            InputMsg::apply_to(&msg, &mut state);
-            (state.clone(),)
-        };
+        InputMsg::apply_to(&msg, &mut state.input);
         // Always emit InputChanged: UiActor uses this as the single source of
         // truth for input state, enabling autocomplete trigger detection and
         // clean state synchronization without dual updates.
-        self.bus.publish(Event::InputChanged {
-            state: Box::new(new_state),
-        });
+        state.publish_input_changed();
         Ok(())
     }
 }
@@ -66,17 +80,9 @@ impl Actor for InputActor {
 impl InputActor {
     /// Spawn an `InputActor` on the given event bus using ractor.
     pub async fn spawn(bus: EventBus<Event>) -> (RactorInputHandle, ractor::ActorCell) {
-        let actor = Self {
-            state: Mutex::new(InputState::default()),
-            bus: bus.clone(),
-        };
+        let actor = Self;
         let (handle, _join, cell) = spawn_ractor(None, actor, bus).await.unwrap();
         (handle, cell)
-    }
-
-    #[cfg(test)]
-    pub fn state(&self) -> InputState {
-        self.state.lock().clone()
     }
 }
 

@@ -1,6 +1,6 @@
 # Wire or delete `InputActor`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R6
 **Category**: Architecture / Actors
 **Priority**: P1

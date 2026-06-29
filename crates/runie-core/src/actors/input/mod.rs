@@ -2,8 +2,6 @@
 
 mod actor;
 mod messages;
-#[cfg(test)]
-mod ractor_input;
 
 pub use actor::{InputActor, RactorInputHandle};
 pub use messages::InputMsg;

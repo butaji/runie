@@ -1,6 +1,6 @@
 # Use `ractor` `State` for actor mutable state
 
-**Status**: todo
+**Status**: partial (InputActor done)
 **Milestone**: R6
 **Category**: Architecture / Actors
 **Priority**: P1
