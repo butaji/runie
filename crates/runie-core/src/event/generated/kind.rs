@@ -300,9 +300,7 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("Cancel", || Event::Cancel),
     ("CycleModelNext", || Event::CycleModelNext),
     ("CycleModelPrev", || Event::CycleModelPrev),
-    ("ToggleScopedModelsDialog", || {
-        Event::ToggleScopedModelsDialog
-    }),
+    ("ToggleScopedModelsDialog", || Event::ToggleScopedModelsDialog),
     ("ScopedModelEnableAll", || Event::ScopedModelEnableAll),
     ("ScopedModelDisableAll", || Event::ScopedModelDisableAll),
     ("ToggleSettingsDialog", || Event::ToggleSettingsDialog),
