@@ -1,6 +1,6 @@
 # Move `cargo-deny` and `cargo-machete` from workspace deps to CI
 
-**Status**: todo
+**Status**: done
 **Milestone**: R6
 **Category": Build / CI
 **Priority": P2
@@ -14,19 +14,19 @@
 
 ## Acceptance Criteria
 
-- [ ] Remove `cargo-deny` and `cargo-machete` from `Cargo.toml` `[workspace.dependencies]`.
-- [ ] Install them in CI (caching where possible).
-- [ ] Ensure CI jobs still pass.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Remove `cargo-deny` and `cargo-machete` from `Cargo.toml` `[workspace.dependencies]`.
+- [x] Install them in CI (caching where possible).
+- [x] Ensure CI jobs still pass.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `cargo_toml_has_no_binary_tools` — `cargo-deny` and `cargo-machete` are not in workspace deps.
+- [x] `cargo_toml_has_no_binary_tools` — `cargo-deny` and `cargo-machete` are not in workspace deps.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 

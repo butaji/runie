@@ -197,7 +197,7 @@
   {
     "file": "move-cargo-deny-machete-from-workspace-deps-to-ci.md",
     "title": "Move `cargo-deny` and `cargo-machete` from workspace deps to CI",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "narrow-runie-core-public-api.md",
@@ -302,7 +302,7 @@
   {
     "file": "replace-tmux-test-with-ratatui-tests.md",
     "title": "Replace `scripts/tmux-test.sh` with Ratatui `TestBackend` tests",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-tui-keymap-combo-stringification-with-crokey.md",

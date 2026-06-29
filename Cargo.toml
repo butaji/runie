@@ -83,9 +83,5 @@ runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }
 runie-testing = { path = "crates/runie-testing" }
 
-# CI tooling
-cargo-deny = "0.17"
-cargo-machete = "0.7"
-
 
 

@@ -84,6 +84,11 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/rust-setup
 
+      - name: Install cargo-deny
+        uses: cargo-bins/cargo-deny-action@v3
+        with:
+          version: 0.17
+
       - name: Run cargo-deny
         run: cargo deny check
 
@@ -93,6 +98,9 @@ jobs:
     steps:
       - name: Setup Rust
         uses: ./.github/actions/rust-setup
+
+      - name: Install cargo-machete
+        run: cargo install cargo-machete --version 0.7
 
       - name: Run cargo machete
         run: cargo machete
