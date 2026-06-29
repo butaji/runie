@@ -1,0 +1,11 @@
+[package]
+name = "runie-util"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+unicode-width = { workspace = true }
+strum = { workspace = true }
+
+[dev-dependencies]

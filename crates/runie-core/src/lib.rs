@@ -34,7 +34,9 @@ pub mod declarative;
 pub mod resource_loader;
 pub mod dialog;
 pub mod diff;
-pub mod display_width;
+// display_width moved to runie-util; kept here for internal use.
+#[allow(unused)]
+mod display_width;
 pub mod dry_run;
 pub mod dsl;
 pub mod edit_preview;
@@ -116,7 +118,7 @@ pub use keybindings::{
     default_keybindings, event_from_name, load_keybindings, merged_keybindings,
     parse_keybindings_json,
 };
-pub use labels::{format_timestamp, thinking_with_time, thought_with_time, THINKING_LOADING};
+// labels moved to runie-util
 pub use lifecycle::LifecycleState;
 pub use login_flow::{
     build_key_input, build_login_root, build_model_selector, build_provider_picker, LoginFlowState,

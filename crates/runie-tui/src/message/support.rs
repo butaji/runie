@@ -6,7 +6,7 @@ use crate::theme::{
     style_agent, style_thinking, style_thought, style_timestamp, style_tool_header,
     style_tool_output, style_tool_running, style_tool_summary, style_turn_complete, GLYPH_AGENT,
 };
-use runie_core::display_width;
+use runie_util::display_width;
 use runie_core::tool::{format_bytes, format_duration, format_tool_label};
 
 use super::{add_lr_margins, add_lr_margins_to_lines, word_wrap, GLYPH_INDENT};

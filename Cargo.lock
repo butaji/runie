@@ -3645,6 +3645,7 @@ dependencies = [
  "runie-core",
  "runie-provider",
  "runie-testing",
+ "runie-util",
  "serde_json",
  "supports-color",
  "supports-hyperlinks",
@@ -3653,6 +3654,14 @@ dependencies = [
  "tracing-subscriber",
  "tui-markdown",
  "tui-textarea",
+ "unicode-width 0.2.0",
+]
+
+[[package]]
+name = "runie-util"
+version = "0.2.16"
+dependencies = [
+ "strum 0.26.3",
  "unicode-width 0.2.0",
 ]
 

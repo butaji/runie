@@ -3,6 +3,7 @@ use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::AppState;
 use runie_core::Part;
+use runie_util::labels::format_timestamp;
 
 #[test]
 fn user_message_has_border_bg_color() {
@@ -54,7 +55,7 @@ fn timestamp_shown_once_per_message_element() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
 
-    let ts_str = runie_core::format_timestamp(12345.0);
+    let ts_str = format_timestamp(12345.0);
     let count = (0..buf.area().height)
         .filter(|y| {
             let line: String = (0..buf.area().width)
@@ -85,7 +86,7 @@ fn timestamp_right_aligned_on_first_line() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
 
-    let ts_str = runie_core::format_timestamp(12345.0);
+    let ts_str = format_timestamp(12345.0);
     let mut found = false;
     for y in 0..buf.area().height {
         let line: String = (0..buf.area().width)
@@ -124,7 +125,7 @@ fn agent_message_timestamp_appears_once() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
 
-    let ts_str = runie_core::format_timestamp(99999.0);
+    let ts_str = format_timestamp(99999.0);
     let count = (0..buf.area().height)
         .filter(|y| {
             let line: String = (0..buf.area().width)
@@ -160,7 +161,7 @@ fn timestamp_never_wraps_even_when_content_is_very_long() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
 
-    let ts_str = runie_core::format_timestamp(12345.0);
+    let ts_str = format_timestamp(12345.0);
     let mut found_y: Option<u16> = None;
     for y in 0..buf.area().height {
         let line: String = (0..buf.area().width)

@@ -5,7 +5,7 @@ use ratatui::{
     widgets::Paragraph,
     Frame,
 };
-use runie_core::display_width::width;
+use runie_util::display_width::width;
 use runie_core::Snapshot;
 
 use crate::theme::{style_status_idle, style_timestamp};
@@ -52,7 +52,7 @@ fn push_turn_status(parts: &mut Vec<String>, snap: &Snapshot) {
         return;
     }
     let mut text = if let Some(elapsed) = snap.turn_elapsed_secs {
-        runie_core::labels::action_text(snap.spinner_frame, "Working", elapsed)
+        runie_util::labels::action_text(snap.spinner_frame, "Working", elapsed)
     } else {
         format!("{} Working...", snap.spinner_frame)
     };
