@@ -7,7 +7,7 @@
   {
     "file": "actually-replace-runie-provider-backoff-with-backon.md",
     "title": "Actually replace `runie-provider` custom backoff with `backon`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-jsonschema-validation-to-configactor-load.md",
@@ -32,7 +32,7 @@
   {
     "file": "cleanup-verify-tests-and-just-recipes.md",
     "title": "Clean up `verify-tests.sh` and `just lint-fix`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "collapse-actor-handles-to-typed-map.md",
@@ -97,7 +97,7 @@
   {
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
     "title": "Deserialize declarative command YAML with typed structs",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "drop-unused-rand-from-runie-provider.md",
@@ -122,7 +122,7 @@
   {
     "file": "extract-shared-tracing-subscriber-init.md",
     "title": "Extract shared tracing subscriber init",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
@@ -257,7 +257,7 @@
   {
     "file": "replace-custom-nanoid-in-test-runner.md",
     "title": "Replace custom nanoid in test runner",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-custom-retry-with-backon.md",
@@ -277,7 +277,7 @@
   {
     "file": "replace-leftover-macros-with-functions.md",
     "title": "Replace leftover macros with functions",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-legacy-tool-parsers-with-thin-shim.md",
