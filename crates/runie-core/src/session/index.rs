@@ -51,7 +51,9 @@ impl SessionIndex {
     pub fn save(&self, data_dir: &Path) -> anyhow::Result<()> {
         let path = Self::path(data_dir);
         let temp_path = path.with_extension("tmp");
-        let dir = path.parent().unwrap();
+        let dir = path.parent().ok_or_else(|| {
+            anyhow::anyhow!("session index path has no parent directory: {}", path.display())
+        })?;
 
         fs::create_dir_all(dir)?;
         let content = serde_json::to_string_pretty(self)?;

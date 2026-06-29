@@ -37,7 +37,7 @@ pub async fn run_headless_cli(
     sink: Arc<dyn runie_core::permissions::ApprovalSink>,
     options: HeadlessCliOptions,
 ) -> Result<HeadlessResult> {
-    let runtime = runie_provider::spawn_headless_runtime().await;
+    let runtime = runie_provider::spawn_headless_runtime().await?;
     let provider = runtime.provider(provider_name, provider_model).await?;
     let opts = build_headless_options(sink, options);
     run_headless_turn(messages, &provider, opts).await

@@ -274,7 +274,7 @@ async fn fetch_models(
 // Re-exports for consumers
 // ---------------------------------------------------------------------------
 
-pub async fn spawn_headless_runtime() -> runie_core::headless_runtime::HeadlessRuntime {
+pub async fn spawn_headless_runtime() -> anyhow::Result<runie_core::headless_runtime::HeadlessRuntime> {
     use runie_core::bus::EventBus;
     use runie_core::event::Event;
     use std::sync::Arc;
@@ -284,7 +284,6 @@ pub async fn spawn_headless_runtime() -> runie_core::headless_runtime::HeadlessR
         Arc::new(DynProviderFactory),
     )
     .await
-    .expect("config must load")
 }
 
 #[cfg(test)]

@@ -9,6 +9,8 @@ pub fn list_builtin_themes() -> Vec<&'static str> {
 }
 
 pub(crate) fn default_theme() -> opaline::Theme {
+    // The embedded default theme should always be valid. Panicking here during
+    // development catches corruption; in production this should never trigger.
     opaline::load_from_str(DEFAULT_THEME_TOML, None).expect("embedded default theme must be valid")
 }
 
