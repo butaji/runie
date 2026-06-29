@@ -34,32 +34,91 @@ impl AgentActorHandle {
         turn_handle.send(runie_core::actors::TurnMsg::RunIfQueued).await;
     }
 }
+
+/// Handle backed by `LeaderAgentHandle` (from `Leader::start`).
+/// Used when the agent is spawned via the leader bootstrap.
+#[derive(Clone)]
+pub struct LeaderAgentActorHandle {
+    inner: std::sync::Arc<dyn runie_core::actors::leader::LeaderAgentHandle>,
+}
+
+impl LeaderAgentActorHandle {
+    /// Wrap a `LeaderAgentHandle` (e.g. from `LeaderHandle::agent`).
+    pub fn new(inner: std::sync::Arc<dyn runie_core::actors::leader::LeaderAgentHandle>) -> Self {
+        Self { inner }
+    }
+
+    pub async fn run(&self, command: AgentCommand) {
+        let cmd = runie_core::actors::leader::LeaderAgentCmd {
+            content: command.content,
+            id: command.id,
+            provider: command.provider,
+            model: command.model,
+            thinking_level: command.thinking_level,
+            read_only: command.read_only,
+            skills_context: command.skills_context,
+            system_prompt: command.system_prompt,
+        };
+        self.inner.run(cmd).await;
+    }
+
+    pub async fn run_if_queued(&self, turn_handle: &runie_core::actors::RactorTurnHandle) {
+        turn_handle.send(runie_core::actors::TurnMsg::RunIfQueued).await;
+    }
+}
 use crate::pace::PacedRenderer;
 use crate::terminal::caps::TermCaps;
 
 const ANIM_MS: u64 = 100;
 
+/// Box over agent-handle variants so UiActor can hold either type without
+/// generics or async-fn trait objects.
+pub enum AgentHandleBox {
+    Actor(AgentActorHandle),
+    Leader(LeaderAgentActorHandle),
+}
+
+impl AgentHandleBox {
+    async fn run(&self, command: AgentCommand) {
+        match self {
+            Self::Actor(h) => h.run(command).await,
+            Self::Leader(h) => h.run(command).await,
+        }
+    }
+
+    async fn run_if_queued(&self, turn: &runie_core::actors::RactorTurnHandle) {
+        match self {
+            Self::Actor(h) => h.run_if_queued(turn).await,
+            Self::Leader(h) => h.run_if_queued(turn).await,
+        }
+    }
+}
+
 /// Actor that owns the application state.
 pub struct UiActor {
-    state: AppState,
+    pub(crate) state: AppState,
+    /// UiActor creates its own watch channel for snapshots so the render task can
+    /// receive frames. Call `take_render_rx()` after construction to hand the
+    /// receiver to the render task.
     render_tx: watch::Sender<Snapshot>,
-    agent_handle: AgentActorHandle,
+    render_rx: Option<watch::Receiver<Snapshot>>,
+    agent_handle: AgentHandleBox,
     persistence_handle: RactorSessionHandle,
     turn_handle: runie_core::actors::RactorTurnHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: Option<oneshot::Sender<()>>,
     caps: TermCaps,
-    /// Paces the streaming text display for smooth typing animation.
-    paced: PacedRenderer,
+    pub(crate) paced: PacedRenderer,
 }
 
 impl UiActor {
-    /// Create a new `UiActor`.
+    /// Create a new `UiActor` with an mpsc-backed agent handle.
+    /// UiActor creates its own watch channel for snapshots; call `take_render_rx()`
+    /// to hand the receiver to the render task.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         state: AppState,
-        render_tx: watch::Sender<Snapshot>,
         agent_handle: AgentActorHandle,
         persistence_handle: RactorSessionHandle,
         turn_handle: runie_core::actors::RactorTurnHandle,
@@ -68,9 +127,31 @@ impl UiActor {
         shutdown_tx: oneshot::Sender<()>,
         caps: TermCaps,
     ) -> Self {
+        Self::with_agent_handle(
+            state, AgentHandleBox::Actor(agent_handle), persistence_handle,
+            turn_handle, kb_tx, bus, shutdown_tx, caps,
+        )
+    }
+
+    /// Create a new `UiActor` with a generic agent handle.
+    /// UiActor creates its own watch channel for snapshots; call `take_render_rx()`
+    /// to hand the receiver to the render task.
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_agent_handle(
+        mut state: AppState,
+        agent_handle: AgentHandleBox,
+        persistence_handle: RactorSessionHandle,
+        turn_handle: runie_core::actors::RactorTurnHandle,
+        kb_tx: watch::Sender<HashMap<String, String>>,
+        bus: EventBus<Event>,
+        shutdown_tx: oneshot::Sender<()>,
+        caps: TermCaps,
+    ) -> Self {
+        let (render_tx, render_rx) = watch::channel(state.snapshot());
         Self {
             state,
             render_tx,
+            render_rx: Some(render_rx),
             agent_handle,
             persistence_handle,
             turn_handle,
@@ -80,6 +161,13 @@ impl UiActor {
             caps,
             paced: PacedRenderer::new(),
         }
+    }
+
+    /// Take the snapshot channel receiver, transferring ownership to the render task.
+    /// Must be called exactly once, after construction and before `run()`.
+    pub fn take_render_rx(&mut self) -> watch::Receiver<Snapshot> {
+        self.render_rx.take()
+            .expect("render_rx already taken")
     }
 
     /// Run the actor until a quit event is processed.
@@ -255,244 +343,4 @@ async fn handle_persistence_messages(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use runie_core::actors::{
-        ActorHandles, InputActor, RactorIoActor,
-        RactorSessionActor, RactorTurnActor, RactorConfigActor,
-    };
-    use runie_core::actors::permission::RactorPermissionActor;
-    use runie_core::actors::provider::{RactorProviderActor, RactorProviderHandle};
-
-    async fn test_turn_handle() -> runie_core::actors::RactorTurnHandle {
-        let bus = EventBus::<Event>::new(10);
-        let (handle, _, _) = RactorTurnActor::spawn(bus).await;
-        handle
-    }
-
-    async fn test_session_handle() -> RactorSessionHandle {
-        let bus = EventBus::<Event>::new(10);
-        let (handle, _) = RactorSessionActor::spawn(bus).await.unwrap();
-        handle
-    }
-
-    async fn test_provider_handle() -> RactorProviderHandle {
-        use std::sync::Arc;
-        use runie_provider::DynProviderFactory;
-        let bus = EventBus::<Event>::new(10);
-        let (config_handle, _) = RactorConfigActor::spawn(bus.clone(), None).await;
-        let (handle, _) = RactorProviderActor::spawn(
-            bus.clone(),
-            config_handle,
-            Arc::new(DynProviderFactory),
-        ).await.unwrap();
-        handle
-    }
-
-    async fn test_actor_handles() -> runie_core::actors::ActorHandles {
-        use std::sync::Arc;
-        use runie_provider::DynProviderFactory;
-        let bus = EventBus::<Event>::new(10);
-        let (config, _) = RactorConfigActor::spawn(bus.clone(), None).await;
-        let (provider, _) = RactorProviderActor::spawn(
-            bus.clone(),
-            config.clone(),
-            Arc::new(DynProviderFactory),
-        ).await.unwrap();
-        let (session, _) = RactorSessionActor::spawn(bus.clone()).await.unwrap();
-        let (io, _) = RactorIoActor::spawn(bus.clone()).await.unwrap();
-        let (permission, _) = RactorPermissionActor::spawn(bus.clone()).await;
-        let (input, _) = InputActor::spawn(bus.clone()).await;
-        let (turn, _, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
-        runie_core::actors::ActorHandles {
-            config,
-            provider,
-            session,
-            io,
-            fff_indexer: None,
-            input,
-            permission,
-            turn,
-            turn_join: Some(Arc::new(turn_join)),
-        }
-    }
-
-    #[tokio::test]
-    async fn ui_actor_updates_state_from_bus_event() {
-        let state = AppState::default();
-        let bus = EventBus::<Event>::new(10);
-        let (render_tx, mut render_rx) = watch::channel(Snapshot::default());
-        let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
-        let agent_handle = AgentActorHandle::new(agent_tx);
-        let persistence_handle = test_session_handle().await;
-        let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
-        let (shutdown_tx, _shutdown_rx) = oneshot::channel();
-        let turn_handle = test_turn_handle().await;
-
-        let ui_sub = bus.subscribe();
-        tokio::spawn(
-            UiActor::new(
-                state,
-                render_tx,
-                agent_handle,
-                persistence_handle,
-                turn_handle,
-                kb_tx,
-                bus.clone(),
-                shutdown_tx,
-                TermCaps::default(),
-            )
-            .run(ui_sub),
-        );
-
-        // Wait for the actor to publish the initial snapshot.
-        let _ = render_rx.changed().await;
-
-        bus.publish(Event::Input('h'));
-        render_rx.changed().await.unwrap();
-        let snap = render_rx.borrow().clone();
-        assert!(snap.input.contains('h'));
-    }
-
-    #[tokio::test]
-    async fn render_actor_draws_snapshot_without_mutation() {
-        let backend = ratatui::backend::TestBackend::new(20, 5);
-        let mut terminal = ratatui::Terminal::new(backend).unwrap();
-        let (render_tx, render_rx) = watch::channel(Snapshot::default());
-
-        // Run a minimal render loop in the background.
-        tokio::spawn(async move {
-            let mut rx = render_rx;
-            let _ = rx.changed().await;
-            let snap = rx.borrow().clone();
-            let _ = terminal.draw(|f| crate::ui::draw_snapshot(f, &snap));
-        });
-
-        let mut state = AppState::default();
-        state.input_mut().input = "hello".to_string();
-        render_tx.send(state.snapshot()).unwrap();
-
-        // The snapshot was rendered from an immutable reference.
-        // Mutation would require a mutable borrow, which the draw closure does not take.
-        assert_eq!(state.input().input, "hello");
-    }
-
-    /// Helper: builds a UiActor with minimal dependencies for test use.
-    async fn make_test_actor() -> (
-        UiActor,
-        mpsc::Sender<Event>,
-        runie_core::actors::RactorTurnHandle,
-    ) {
-        let state = AppState::default();
-        let (render_tx, _render_rx) = watch::channel(Snapshot::default());
-        let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
-        let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
-        let (shutdown_tx, _shutdown_rx) = oneshot::channel();
-        let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
-        let turn_handle = test_turn_handle().await;
-        let persistence_handle = test_session_handle().await;
-        let actor = UiActor::new(state, render_tx, AgentActorHandle::new(agent_tx),
-            persistence_handle, turn_handle.clone(), kb_tx,
-            EventBus::new(4), shutdown_tx, TermCaps::default());
-        (actor, effect_tx, turn_handle)
-    }
-
-    #[tokio::test]
-    async fn paced_renderer_advances_on_response_delta() {
-        let (mut actor, effect_tx, _) = make_test_actor().await;
-
-        // Simulate a streaming message: TextStart -> ResponseDelta -> tick.
-        actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
-        actor.handle_event(
-            Event::ResponseDelta { id: "1".into(), content: "hello world".into() },
-            effect_tx.clone(),
-        )
-        .await;
-
-        // Tick once to advance the paced renderer.
-        actor.paced.tick();
-
-        let displayed = actor.paced.displayed();
-        // Should have advanced at least the first 2 chars.
-        assert!(
-            !displayed.is_empty() || actor.paced.is_caught_up(),
-            "paced renderer should show some text: '{}'",
-            displayed
-        );
-    }
-
-    #[tokio::test]
-    async fn paced_renderer_finishes_on_turn_complete() {
-        let (mut actor, effect_tx, _) = make_test_actor().await;
-
-        actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
-        actor.handle_event(
-            Event::ResponseDelta { id: "1".into(), content: "hello world".into() },
-            effect_tx.clone(),
-        )
-        .await;
-        actor.handle_event(
-            Event::TurnComplete { id: "1".into(), duration_secs: 1.0 },
-            effect_tx.clone(),
-        )
-        .await;
-
-        // After TurnComplete, renderer should be caught up.
-        assert!(
-            actor.paced.is_caught_up(),
-            "paced renderer should be caught up after TurnComplete"
-        );
-        assert!(
-            actor.paced.displayed().contains("hello"),
-            "paced renderer should contain full text: '{}'",
-            actor.paced.displayed()
-        );
-    }
-
-    #[tokio::test]
-    async fn login_key_submit_triggers_validation_effect() {
-        use runie_core::login_flow::{build_key_input, LoginFlowState};
-
-        let (render_tx, _render_rx) = watch::channel(Snapshot::default());
-        let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
-        let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
-        let (shutdown_tx, _shutdown_rx) = oneshot::channel();
-        let (effect_tx, mut effect_rx) = mpsc::channel::<Event>(16);
-
-        let handles = test_actor_handles().await;
-        let mut state = AppState::default();
-        state.set_actor_handles(handles.clone());
-
-        let mut actor = UiActor::new(
-            state, render_tx, AgentActorHandle::new(agent_tx),
-            handles.session.clone(), handles.turn.clone(),
-            kb_tx, EventBus::new(4), shutdown_tx, TermCaps::default(),
-        );
-
-        let mut flow = LoginFlowState::new().with_provider("test-unknown-provider".into());
-        flow.key = "sk-test".into();
-        let panel = build_key_input(&flow);
-        let stack = runie_core::dialog::PanelStack::new(panel);
-        *actor.state.open_dialog_mut() = Some(
-            runie_core::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack }
-        );
-        *actor.state.login_flow_mut() = Some(flow);
-
-        actor.handle_event(
-            Event::SubmitKey { provider: "test-unknown-provider".into(), key: "sk-test".into() },
-            effect_tx.clone(),
-        ).await;
-
-        assert!(
-            matches!(
-                actor.state.login_flow().as_ref().map(|f| f.step.clone()),
-                Some(LoginStep::Validating)
-            ),
-            "login flow should reach validating step"
-        );
-
-        let result = tokio::time::timeout(Duration::from_secs(2), effect_rx.recv()).await;
-        assert!(result.is_ok(), "validation effect should produce a result event");
-    }
-}
+mod tests;

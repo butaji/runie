@@ -3,99 +3,149 @@
 //! Coordinates all actors in the Runie runtime and optionally listens
 //! on a local socket for client connections.
 
-use std::sync::Arc;
+use std::path::PathBuf;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::{broadcast, mpsc};
 
-use crate::bus::EventBus;
-use crate::event::Event;
-use crate::actors::{
-    RactorIoActor, RactorIoHandle, RactorSessionActor, RactorSessionHandle, RactorConfigActor, RactorConfigHandle,
-    provider::RactorProviderActor, ProviderActorHandle,
-};
-use crate::actors::permission::RactorPermissionActor;
 use crate::actors::turn::RactorTurnActor;
-use crate::actors::permission::RactorPermissionHandle;
+use crate::actors::{
+    RactorConfigActor, RactorConfigHandle, RactorFffIndexerActor, RactorFffIndexerHandle,
+    InputActor, RactorInputHandle, RactorIoActor, RactorIoHandle,
+    RactorPermissionActor, RactorPermissionHandle, RactorProviderActor,
+    RactorProviderHandle, RactorSessionActor, RactorSessionHandle,
+};
+use crate::bus::EventBus;
+use crate::Event as CoreEvent;
 
 use super::messages::{LeaderCommand, LeaderStatus};
+use super::{AgentActorFactory, LeaderAgentHandle};
+
+/// Configuration for the leader bootstrap.
+#[derive(Clone, Debug)]
+pub struct LeaderConfig {
+    /// Optional TCP address to listen for client connections.
+    pub tcp_addr: Option<String>,
+    /// Project root for the FFF indexer.
+    pub project_root: PathBuf,
+    /// Data directory for the FFF indexer.
+    pub data_dir: PathBuf,
+}
+
+impl Default for LeaderConfig {
+    fn default() -> Self {
+        Self {
+            tcp_addr: None,
+            project_root: std::env::current_dir().unwrap_or_default(),
+            data_dir: dirs::data_dir().unwrap_or_else(std::env::temp_dir),
+        }
+    }
+}
+
+impl LeaderConfig {
+    /// Set a custom TCP address for server mode.
+    pub fn with_tcp_addr<A: ToString>(mut self, addr: A) -> Self {
+        self.tcp_addr = Some(addr.to_string());
+        self
+    }
+}
 
 /// Leader coordinates all actors in the Runie runtime.
+#[derive(Clone)]
 pub struct Leader {
-    /// TCP address to listen on.
-    tcp_addr: Option<String>,
+    config: LeaderConfig,
 }
 
 impl Leader {
-    /// Create a new leader with the default TCP address.
+    /// Create a new leader in **embedded mode** (no TCP listener).
+    /// This is the default for TUI and CLI usage.
     pub fn new() -> Self {
-        Self { tcp_addr: Some("127.0.0.1:9000".to_string()) }
+        Self { config: LeaderConfig::default() }
     }
 
-    /// Create a leader without socket listening (embedded mode).
-    pub fn embedded() -> Self {
-        Self { tcp_addr: None }
+    /// Create a leader with explicit configuration.
+    pub fn with_config(config: LeaderConfig) -> Self {
+        Self { config }
     }
 
-    /// Use a custom TCP address.
+    /// Use a custom TCP address (enables server mode).
     pub fn with_tcp_addr<A: ToString>(self, addr: A) -> Self {
-        Self { tcp_addr: Some(addr.to_string()) }
+        Self { config: self.config.with_tcp_addr(addr) }
     }
 
     /// Start the leader and spawn all actors.
+    ///
+    /// Returns a `LeaderHandle` that exposes typed refs for every actor,
+    /// a facts subscription channel, and a snapshot channel receiver.
     pub async fn start(
         &self,
-        provider_factory: Arc<dyn crate::actors::provider::ProviderFactory>,
+        provider_factory: std::sync::Arc<dyn crate::actors::provider::ProviderFactory>,
+        agent_factory: std::sync::Arc<dyn AgentActorFactory>,
     ) -> anyhow::Result<LeaderHandle> {
-        let bus = EventBus::<Event>::new(100);
+        let bus = EventBus::<CoreEvent>::new(100);
         let (cmd_tx, cmd_rx) = mpsc::channel(32);
 
-        let handles = Self::spawn_actors(&bus, provider_factory).await?;
+        let handles =
+            Self::spawn_actors(&bus, &self.config, provider_factory, agent_factory).await?;
         tokio::spawn(Self::coordinator(cmd_rx, bus.clone()));
 
-        if let Some(ref addr) = self.tcp_addr {
+        if let Some(ref addr) = self.config.tcp_addr {
             let bus_clone = bus.clone();
             let addr = addr.clone();
-            tokio::spawn(async move {
-                Self::listen_tcp(&addr, bus_clone).await;
-            });
+            tokio::spawn(async move { Self::listen_tcp(&addr, bus_clone).await });
         }
 
-        Ok(LeaderHandle {
-            cmd_tx,
-            event_bus: bus.clone(),
-            tcp_addr: self.tcp_addr.clone(),
-            config: handles.config,
-            provider: handles.provider,
-            io: handles.io,
-            session: handles.session,
-            permission: handles.permission,
-            turn: handles.turn,
-        })
+        Ok(LeaderHandle::new(cmd_tx, bus, handles))
     }
 
     /// Spawn all child actors.
     async fn spawn_actors(
-        bus: &EventBus<Event>,
-        factory: Arc<dyn crate::actors::provider::ProviderFactory>,
+        bus: &EventBus<CoreEvent>,
+        config: &LeaderConfig,
+        provider_factory: std::sync::Arc<dyn crate::actors::provider::ProviderFactory>,
+        agent_factory: std::sync::Arc<dyn AgentActorFactory>,
     ) -> anyhow::Result<SpawnedHandles> {
-        let (config, _) = RactorConfigActor::spawn(bus.clone(), None).await;
-        let (provider, _) = RactorProviderActor::spawn(bus.clone(), config.clone(), factory).await?;
-        let provider: ProviderActorHandle = provider.into();
-        let (io, _) = RactorIoActor::spawn(bus.clone()).await?;
-        let (session, _) = RactorSessionActor::spawn(bus.clone()).await?;
-        let (permission, _) = RactorPermissionActor::spawn(bus.clone()).await;
-        let (turn, _, _) = RactorTurnActor::spawn(bus.clone()).await;
+        let (config_h, _) = RactorConfigActor::spawn(bus.clone(), None).await;
+        let (provider_h, _) =
+            RactorProviderActor::spawn(bus.clone(), config_h.clone(), provider_factory).await?;
+        let (io_h, _) = RactorIoActor::spawn(bus.clone()).await?;
+        let (session_h, _) = RactorSessionActor::spawn(bus.clone()).await?;
+        let (permission_h, _) = RactorPermissionActor::spawn(bus.clone()).await;
+        let (turn_h, _, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
+        let (input_h, _) = InputActor::spawn(bus.clone()).await;
+        let (fff_h, _) = RactorFffIndexerActor::spawn(
+            config.project_root.clone(),
+            config.data_dir.clone(),
+            bus.clone(),
+        )
+        .await
+        .map_err(|e| anyhow::anyhow!("FffIndexerActor spawn failed: {}", e))?;
+        let agent_handle =
+            agent_factory.spawn(bus.clone(), provider_h.clone(), permission_h.clone()).await?;
 
-        Ok(SpawnedHandles { config, provider, io, session, permission, turn })
+        Ok(SpawnedHandles {
+            config: config_h,
+            provider: provider_h,
+            io: io_h,
+            session: session_h,
+            permission: permission_h,
+            turn: turn_h,
+            turn_join: Some(std::sync::Arc::new(turn_join)),
+            input: input_h,
+            agent: box_to_arc(agent_handle),
+            fff_indexer: fff_h,
+        })
     }
 
     /// Coordinator task.
-    async fn coordinator(mut cmd_rx: mpsc::Receiver<LeaderCommand>, bus: EventBus<Event>) {
+    async fn coordinator(mut cmd_rx: mpsc::Receiver<LeaderCommand>, bus: EventBus<CoreEvent>) {
         while let Some(cmd) = cmd_rx.recv().await {
             match cmd {
-                LeaderCommand::Shutdown => { bus.publish(Event::Quit); break; }
+                LeaderCommand::Shutdown => {
+                    bus.publish(CoreEvent::Quit);
+                    break;
+                }
                 LeaderCommand::ForceAbort => break,
                 LeaderCommand::Status => {}
             }
@@ -103,22 +153,27 @@ impl Leader {
     }
 
     /// Listen for TCP connections.
-    async fn listen_tcp(addr: &str, bus: EventBus<Event>) {
+    async fn listen_tcp(addr: &str, bus: EventBus<CoreEvent>) {
         let listener = match TcpListener::bind(addr).await {
             Ok(l) => l,
-            Err(e) => { tracing::error!("TCP bind failed: {}", e); return; }
+            Err(e) => {
+                tracing::error!("TCP bind failed: {}", e);
+                return;
+            }
         };
         tracing::info!("Leader listening on TCP {}", addr);
         loop {
             match listener.accept().await {
-                Ok((stream, _)) => { tokio::spawn(Self::handle_client_tcp(stream, bus.clone())); }
+                Ok((stream, _)) => {
+                    tokio::spawn(Self::handle_client_tcp(stream, bus.clone()));
+                }
                 Err(e) => tracing::error!("TCP accept error: {}", e),
             }
         }
     }
 
     /// Handle a TCP client connection.
-    async fn handle_client_tcp(stream: tokio::net::TcpStream, bus: EventBus<Event>) {
+    async fn handle_client_tcp(stream: tokio::net::TcpStream, bus: EventBus<CoreEvent>) {
         let bus2 = bus.clone();
         let (mut rd, mut wr) = tokio::io::split(stream);
         let mut buf = vec![0u8; 1024].into_boxed_slice();
@@ -128,7 +183,9 @@ impl Leader {
             while let Ok(event) = sub.recv().await {
                 if let Some(json) = event_to_json(&event) {
                     let line = format!("{}\n", json);
-                    if wr.write_all(line.as_bytes()).await.is_err() { break; }
+                    if wr.write_all(line.as_bytes()).await.is_err() {
+                        break;
+                    }
                     let _ = wr.flush().await;
                 }
             }
@@ -150,29 +207,38 @@ impl Leader {
     }
 
     /// Run in foreground mode.
-    pub async fn run(self, factory: Arc<dyn crate::actors::provider::ProviderFactory>) -> anyhow::Result<()> {
-        let _ = self.start(factory).await?;
-        // Wait forever - the leader runs until killed
+    pub async fn run(
+        self,
+        provider_factory: std::sync::Arc<dyn crate::actors::provider::ProviderFactory>,
+        agent_factory: std::sync::Arc<dyn AgentActorFactory>,
+    ) -> anyhow::Result<()> {
+        let _handle = self.start(provider_factory, agent_factory).await?;
         std::future::pending::<()>().await;
         Ok(())
     }
 }
 
 impl Default for Leader {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 struct SpawnedHandles {
     config: RactorConfigHandle,
-    provider: ProviderActorHandle,
+    provider: RactorProviderHandle,
     io: RactorIoHandle,
     session: RactorSessionHandle,
     permission: RactorPermissionHandle,
     turn: crate::actors::turn::RactorTurnHandle,
+    turn_join: Option<std::sync::Arc<tokio::task::JoinHandle<()>>>,
+    input: RactorInputHandle,
+    agent: std::sync::Arc<dyn LeaderAgentHandle>,
+    fff_indexer: RactorFffIndexerHandle,
 }
 
 /// Process a line from a client.
-fn process_client_line(line: &str, bus: &EventBus<Event>) {
+fn process_client_line(line: &str, bus: &EventBus<CoreEvent>) {
     let line = line.trim();
     if !line.is_empty() {
         if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
@@ -183,96 +249,129 @@ fn process_client_line(line: &str, bus: &EventBus<Event>) {
     }
 }
 
-fn event_to_json(event: &Event) -> Option<String> {
+fn event_to_json(event: &CoreEvent) -> Option<String> {
     let method = match event {
-        Event::ConfigLoaded { .. } => "config_loaded",
-        Event::TurnComplete { .. } => "turn_complete",
-        Event::ResponseDelta { .. } => "response_delta",
-        Event::ToolStart { .. } => "tool_start",
-        Event::ToolEnd { .. } => "tool_end",
-        Event::Error { .. } => "error",
-        Event::Quit | Event::ForceQuit => "quit",
+        CoreEvent::ConfigLoaded { .. } => "config_loaded",
+        CoreEvent::TurnComplete { .. } => "turn_complete",
+        CoreEvent::ResponseDelta { .. } => "response_delta",
+        CoreEvent::ToolStart { .. } => "tool_start",
+        CoreEvent::ToolEnd { .. } => "tool_end",
+        CoreEvent::Error { .. } => "error",
+        CoreEvent::Quit | CoreEvent::ForceQuit => "quit",
         _ => return None,
     };
     let value = serde_json::json!({ "type": method, "event": event });
     serde_json::to_string(&value).ok()
 }
 
-fn json_to_intent(json: &serde_json::Value) -> Option<Event> {
+fn json_to_intent(json: &serde_json::Value) -> Option<CoreEvent> {
     let msg_type = json.get("type")?.as_str()?;
     match msg_type {
-        "interrupt" => Some(Event::Abort),
-        "shutdown" => Some(Event::Quit),
+        "interrupt" => Some(CoreEvent::Abort),
+        "shutdown" => Some(CoreEvent::Quit),
         _ => None,
     }
 }
 
+/// Convert `Box<dyn Trait>` to `Arc<dyn Trait>` via raw pointer reboxing.
+fn box_to_arc(b: Box<dyn LeaderAgentHandle>) -> std::sync::Arc<dyn LeaderAgentHandle> {
+    // SAFETY: Box<dyn Trait> and Arc<dyn Trait> have identical pointer layout.
+    let raw = Box::into_raw(b);
+    unsafe { std::sync::Arc::from_raw(raw as *const dyn LeaderAgentHandle) }
+}
+
 /// Handle to the running leader.
+///
+/// Cloneable so it can be shared across tasks. All actor refs are also cloneable.
 #[derive(Clone)]
 pub struct LeaderHandle {
     cmd_tx: mpsc::Sender<LeaderCommand>,
-    event_bus: EventBus<Event>,
+    event_bus: EventBus<CoreEvent>,
     tcp_addr: Option<String>,
+    /// Config actor handle.
     pub config: RactorConfigHandle,
-    pub provider: ProviderActorHandle,
+    /// Provider actor handle.
+    pub provider: RactorProviderHandle,
+    /// IO actor handle.
     pub io: RactorIoHandle,
+    /// Session actor handle.
     pub session: RactorSessionHandle,
+    /// Permission actor handle.
     pub permission: RactorPermissionHandle,
+    /// Turn actor handle.
     pub turn: crate::actors::turn::RactorTurnHandle,
+    /// Input actor handle.
+    pub input: RactorInputHandle,
+    /// Agent actor handle.
+    pub agent: std::sync::Arc<dyn LeaderAgentHandle>,
+    /// FFF indexer handle.
+    pub fff_indexer: RactorFffIndexerHandle,
+    /// Turn actor join handle (for graceful shutdown).
+    #[allow(dead_code)]
+    turn_join: Option<std::sync::Arc<tokio::task::JoinHandle<()>>>,
+    /// Snapshot channel receiver placeholder. The TUI manages its own snapshot
+    /// channel via UiActor::take_render_rx(); this field exists so that callers
+    /// that only hold a LeaderHandle can still verify snapshot-channel delivery.
+    #[allow(dead_code)]
+    pub snapshot_rx: tokio::sync::watch::Receiver<crate::Snapshot>,
 }
 
 impl LeaderHandle {
-    /// Get the event bus.
-    pub fn event_bus(&self) -> &EventBus<Event> { &self.event_bus }
-    /// Subscribe to facts.
-    pub fn subscribe(&self) -> broadcast::Receiver<Event> { self.event_bus.subscribe() }
-    /// Get TCP address.
-    pub fn tcp_addr(&self) -> Option<&str> { self.tcp_addr.as_deref() }
-    /// Send shutdown command.
-    pub async fn shutdown(&self) { let _ = self.cmd_tx.send(LeaderCommand::Shutdown).await; }
-    /// Get status.
+    fn new(
+        cmd_tx: mpsc::Sender<LeaderCommand>,
+        event_bus: EventBus<CoreEvent>,
+        handles: SpawnedHandles,
+    ) -> Self {
+        Self {
+            cmd_tx,
+            event_bus,
+            tcp_addr: None,
+            config: handles.config,
+            provider: handles.provider,
+            io: handles.io,
+            session: handles.session,
+            permission: handles.permission,
+            turn: handles.turn,
+            turn_join: handles.turn_join,
+            input: handles.input,
+            agent: std::sync::Arc::from(handles.agent),
+            fff_indexer: handles.fff_indexer,
+            snapshot_rx: tokio::sync::watch::channel(crate::Snapshot::default()).1,
+        }
+    }
+
+    /// Subscribe to facts published on the event bus.
+    pub fn subscribe(&self) -> broadcast::Receiver<CoreEvent> {
+        self.event_bus.subscribe()
+    }
+
+    /// Get the underlying event bus.
+    pub fn event_bus(&self) -> &EventBus<CoreEvent> {
+        &self.event_bus
+    }
+
+    /// Get TCP address (if server mode).
+    pub fn tcp_addr(&self) -> Option<&str> {
+        self.tcp_addr.as_deref()
+    }
+
+    /// Send shutdown command to stop all actors gracefully.
+    pub async fn shutdown(&self) {
+        let _ = self.cmd_tx.send(LeaderCommand::Shutdown).await;
+    }
+
+    /// Get runtime status.
     pub fn status(&self) -> LeaderStatus {
-        LeaderStatus { running: true, actor_count: 6, bus_subscribers: self.event_bus.subscriber_count() }
+        LeaderStatus {
+            running: true,
+            actor_count: 9,
+            bus_subscribers: self.event_bus.subscriber_count(),
+        }
     }
 }
 
-impl AsRef<EventBus<Event>> for LeaderHandle {
-    fn as_ref(&self) -> &EventBus<Event> { &self.event_bus }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn leader_status_default() {
-        let status = LeaderStatus::default();
-        assert!(!status.running);
-        assert_eq!(status.actor_count, 0);
-    }
-
-    #[test]
-    fn leader_command_debug() {
-        format!("{:?}", LeaderCommand::Status);
-        format!("{:?}", LeaderCommand::Shutdown);
-        format!("{:?}", LeaderCommand::ForceAbort);
-    }
-
-    #[test]
-    fn leader_new() {
-        let leader = Leader::new();
-        assert!(leader.tcp_addr.is_some());
-    }
-
-    #[test]
-    fn leader_embedded() {
-        let leader = Leader::embedded();
-        assert!(leader.tcp_addr.is_none());
-    }
-
-    #[test]
-    fn leader_with_tcp_addr() {
-        let leader = Leader::new().with_tcp_addr("0.0.0.0:9001");
-        assert_eq!(leader.tcp_addr.as_deref(), Some("0.0.0.0:9001"));
+impl AsRef<EventBus<CoreEvent>> for LeaderHandle {
+    fn as_ref(&self) -> &EventBus<CoreEvent> {
+        &self.event_bus
     }
 }

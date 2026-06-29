@@ -12,18 +12,15 @@
 //!   - SessionActor subscribes to bus, persists durable events to JSONL
 
 use futures::StreamExt;
-use runie_agent::spawn_ractor_agent;
-use runie_core::actors::{
-    ActorHandles, RactorFffIndexerActor, RactorIoActor,
-    RactorConfigActor, RactorConfigHandle, RactorSessionActor, RactorTurnActor,
-};
-use runie_core::actors::permission::RactorPermissionActor;
+use runie_agent::AgentActorFactoryImpl;
+use runie_core::actors::leader::Leader;
+use runie_core::actors::ActorHandles;
+use runie_provider::DynProviderFactory;
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::telemetry;
 use runie_core::{AppState, Snapshot};
-use runie_provider::DynProviderFactory;
-use runie_tui::{app_init, keymap, terminal, terminal_setup, theme, ui, ui_actor::UiActor};
+use runie_tui::{app_init, keymap, terminal, terminal_setup, theme, ui, ui_actor::{AgentHandleBox, UiActor}};
 use std::{collections::HashMap, io, time::Duration};
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -41,12 +38,8 @@ impl Drop for Cleanup {
     }
 }
 
-// Note: Durable event append is now handled by the unified SessionActor
-// spawned in bootstrap_app(). No separate persistence actor needed.
-
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> io::Result<()> {
-    // Initialize tracing subscriber.
     telemetry::init();
 
     let args: Vec<String> = std::env::args().collect();
@@ -56,22 +49,25 @@ async fn main() -> io::Result<()> {
     }
 
     let _cleanup = Cleanup;
-    let bus = EventBus::<Event>::new(100);
-    let (mut state, actor_handles) = bootstrap_app(bus.clone()).await
-        .map_err(|e| io::Error::other(format!("actor bootstrap failed: {}", e)))?;
+
+    let leader = Leader::new();
+    let agent_factory = std::sync::Arc::new(AgentActorFactoryImpl);
+    let provider_factory = std::sync::Arc::new(DynProviderFactory);
+    let leader_handle = leader
+        .start(provider_factory, agent_factory)
+        .await
+        .map_err(|e| io::Error::other(format!("leader bootstrap failed: {}", e)))?;
+
+    let mut state = AppState::default();
+    let handles = build_actor_handles(&leader_handle);
+    state.set_actor_handles(handles.clone());
+    app_init::bootstrap(&mut state).await;
 
     let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
     init_terminal_state(&mut state);
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
-    spawn_background_tasks(
-        terminal,
-        state,
-        terminal_caps,
-        bus,
-        shutdown_tx,
-        actor_handles,
-    ).await;
+    spawn_background_tasks(terminal, state, terminal_caps, leader_handle, shutdown_tx).await;
 
     shutdown_rx
         .await
@@ -79,56 +75,18 @@ async fn main() -> io::Result<()> {
     Ok(())
 }
 
-async fn bootstrap_app(bus: EventBus<Event>) -> Result<(AppState, ActorHandles), ractor::SpawnErr> {
-    let (config_handle, _) = RactorConfigActor::spawn(bus.clone(), None).await;
-    let (provider_handle, _provider_actor) = spawn_provider_actor(&bus, &config_handle).await?;
-    // Unified SessionActor: owns trust, history, session CRUD, and durable event append
-    let (session_handle, _) = RactorSessionActor::spawn(bus.clone()).await?;
-    let (io_handle, _) = RactorIoActor::spawn(bus.clone()).await?;
-    let (permission_handle, _permission_actor) = RactorPermissionActor::spawn(bus.clone()).await;
-    // InputActor owns the input buffer, cursor, history, undo/redo.
-    let (input_handle, _input_actor) = runie_core::actors::InputActor::spawn(bus.clone()).await;
-    // TurnActor owns turn lifecycle, queues, and token tracking.
-    let (turn_handle, _, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
-    let mut state = AppState::default();
-    // Build the ActorHandles registry with wrapper handle types.
-    let mut handles = ActorHandles {
-        config: config_handle,
-        provider: provider_handle,
-        session: session_handle,
-        io: io_handle,
-        permission: permission_handle,
-        input: input_handle,
-        turn: turn_handle,
-        fff_indexer: None,
-        turn_join: Some(std::sync::Arc::new(turn_join)),
-    };
-    state.set_actor_handles(handles.clone());
-    app_init::bootstrap(&mut state).await;
-    // Spawn FffIndexerActor with the current working directory as the project root.
-    let project_root = std::env::current_dir().unwrap_or_default();
-    let data_dir = dirs::data_dir().unwrap_or_else(std::env::temp_dir);
-    if let Ok((fff_handle, _actor_cell)) =
-        RactorFffIndexerActor::spawn(project_root, data_dir, bus.clone()).await
-    {
-        handles.fff_indexer = Some(fff_handle);
-        state.set_actor_handles(handles.clone());
+fn build_actor_handles(leader_handle: &runie_core::actors::leader::LeaderHandle) -> ActorHandles {
+    ActorHandles {
+        config: leader_handle.config.clone(),
+        provider: leader_handle.provider.clone(),
+        io: leader_handle.io.clone(),
+        session: leader_handle.session.clone(),
+        permission: leader_handle.permission.clone(),
+        input: leader_handle.input.clone(),
+        turn: leader_handle.turn.clone(),
+        fff_indexer: Some(leader_handle.fff_indexer.clone()),
+        turn_join: None,
     }
-    Ok((state, handles))
-}
-
-async fn spawn_provider_actor(
-    bus: &EventBus<Event>,
-    config_handle: &RactorConfigHandle,
-) -> Result<(
-    runie_core::actors::provider::RactorProviderHandle,
-    ractor::ActorCell,
-), ractor::SpawnErr> {
-    runie_core::actors::provider::RactorProviderActor::spawn(
-        bus.clone(),
-        config_handle.clone(),
-        std::sync::Arc::new(DynProviderFactory),
-    ).await
 }
 
 fn init_terminal_state(state: &mut AppState) {
@@ -138,66 +96,76 @@ fn init_terminal_state(state: &mut AppState) {
     }
 }
 
+/// Forwarder: raw events come in via `input_rx`, get mapped to InputMsg and sent to
+/// the leader's InputActor, and the raw event is also published on the bus.
+async fn input_forwarder_task(
+    mut input_rx: mpsc::Receiver<Event>,
+    input_handle: runie_core::actors::RactorInputHandle,
+    bus: EventBus<Event>,
+) {
+    use runie_core::actors::InputMsg;
+    while let Some(evt) = input_rx.recv().await {
+        bus.publish(evt.clone());
+        match &evt {
+            Event::Input(c) => { input_handle.send(InputMsg::InsertChar(*c)).await; }
+            Event::Backspace => { input_handle.send(InputMsg::Backspace).await; }
+            Event::Newline => { input_handle.send(InputMsg::Newline).await; }
+            Event::DeleteWord => { input_handle.send(InputMsg::DeleteWord).await; }
+            Event::DeleteToEnd => { input_handle.send(InputMsg::DeleteToEnd).await; }
+            Event::DeleteToStart => { input_handle.send(InputMsg::DeleteToStart).await; }
+            Event::CursorLeft => { input_handle.send(InputMsg::CursorLeft).await; }
+            Event::CursorRight => { input_handle.send(InputMsg::CursorRight).await; }
+            Event::CursorStart => { input_handle.send(InputMsg::CursorStart).await; }
+            Event::CursorEnd => { input_handle.send(InputMsg::CursorEnd).await; }
+            Event::CursorWordLeft => { input_handle.send(InputMsg::CursorWordLeft).await; }
+            Event::CursorWordRight => { input_handle.send(InputMsg::CursorWordRight).await; }
+            Event::HistoryPrev => { input_handle.send(InputMsg::HistoryPrev).await; }
+            Event::HistoryNext => { input_handle.send(InputMsg::HistoryNext).await; }
+            Event::Undo => { input_handle.send(InputMsg::Undo).await; }
+            Event::Redo => { input_handle.send(InputMsg::Redo).await; }
+            Event::Paste(s) => { input_handle.send(InputMsg::Paste(s.clone())).await; }
+            Event::PasteImage => { input_handle.send(InputMsg::PasteImage).await; }
+            _ => {}
+        }
+    }
+}
+
 async fn spawn_background_tasks(
     terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
-    mut state: AppState,
+    state: AppState,
     caps: terminal::caps::TermCaps,
-    bus: EventBus<Event>,
+    leader_handle: runie_core::actors::leader::LeaderHandle,
     shutdown_tx: oneshot::Sender<()>,
-    handles: ActorHandles,
 ) {
-    let handles = setup_actor_channels(&handles, &mut state, &bus).await;
-    let (render_tx, render_rx) = watch::channel(state.snapshot());
+    let bus = leader_handle.event_bus().clone();
+    let (input_tx, input_rx) = mpsc::channel::<Event>(100);
+
+    let agent_handle = runie_tui::ui_actor::LeaderAgentActorHandle::new(leader_handle.agent.clone());
+    let handles = ActorChannels {
+        input_tx,
+        agent_handle,
+        persistence_handle: leader_handle.session.clone(),
+        turn_handle: leader_handle.turn.clone(),
+    };
+
     let (kb_tx, kb_rx) = watch::channel(state.config().keybindings().clone());
-    spawn_input_forwarder(handles.input_rx, bus.clone());
-    spawn_agent_tasks(handles.input_tx, kb_rx, terminal, render_rx, bus.clone(), caps);
-    spawn_ui_actor(state, render_tx, handles.agent_handle, handles.persistence_handle, handles.turn_handle, kb_tx, bus.clone(), shutdown_tx, caps);
-    tokio::spawn(handles.agent_actor);
-    // Note: turn_actor join handle is dropped here. The actor continues
-    // running as part of the event bus lifecycle.
+    tokio::spawn(input_forwarder_task(input_rx, leader_handle.input.clone(), bus.clone()));
+
+    // UiActor creates its own watch channel for snapshots; take the receiver for the render task.
+    let mut ui_actor = spawn_ui_actor(
+        state, handles.agent_handle, handles.persistence_handle,
+        handles.turn_handle, kb_tx, bus, shutdown_tx, caps,
+    );
+    let render_rx = ui_actor.take_render_rx();
+
+    spawn_agent_tasks(handles.input_tx, kb_rx, terminal, render_rx, caps);
 }
 
 struct ActorChannels {
     input_tx: mpsc::Sender<Event>,
-    input_rx: mpsc::Receiver<Event>,
-    agent_handle: runie_tui::ui_actor::AgentActorHandle,
-    agent_actor: ractor::concurrency::JoinHandle<()>,
+    agent_handle: runie_tui::ui_actor::LeaderAgentActorHandle,
     persistence_handle: runie_core::actors::RactorSessionHandle,
     turn_handle: runie_core::actors::RactorTurnHandle,
-}
-
-async fn setup_actor_channels(
-    handles: &ActorHandles,
-    _state: &mut AppState,
-    bus: &EventBus<Event>,
-) -> ActorChannels {
-    let (input_tx, input_rx) = mpsc::channel::<Event>(100);
-    let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
-    // Use the wrapper handles directly for spawn_ractor_agent.
-    let (_agent_handle, agent_actor, _agent_cell) = spawn_ractor_agent(
-        bus.clone(),
-        handles.provider.clone(),
-        handles.permission.clone(),
-    ).await.expect("AgentActor must spawn");
-    // Store the mpsc channel sender as the UiActor's handle.
-    let ui_agent_handle = runie_tui::ui_actor::AgentActorHandle::new(agent_tx);
-    // Re-use the turn and session handles from bootstrap_app.
-    ActorChannels {
-        input_tx,
-        input_rx,
-        agent_handle: ui_agent_handle,
-        agent_actor,
-        persistence_handle: handles.session.clone(),
-        turn_handle: handles.turn.clone(),
-    }
-}
-
-fn spawn_input_forwarder(mut input_rx: mpsc::Receiver<Event>, bus: EventBus<Event>) {
-    tokio::spawn(async move {
-        while let Some(evt) = input_rx.recv().await {
-            bus.publish(evt);
-        }
-    });
 }
 
 fn spawn_agent_tasks(
@@ -205,12 +173,9 @@ fn spawn_agent_tasks(
     kb_rx: watch::Receiver<HashMap<String, String>>,
     terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
     render_rx: watch::Receiver<Snapshot>,
-    _bus: EventBus<Event>,
     caps: terminal::caps::TermCaps,
 ) {
     tokio::spawn(input_reader(input_tx, kb_rx));
-    // Move terminal IO off the Tokio runtime — use a dedicated OS thread.
-    // Use sync_channel with buffer size 1 for non-blocking sends.
     let (tx, rx) = std::sync::mpsc::sync_channel(1);
     std::thread::spawn(move || render_loop(terminal, rx, caps));
     tokio::spawn(render_forwarder(render_rx, tx));
@@ -222,11 +187,8 @@ async fn render_forwarder(
 ) {
     loop {
         let snap = render_rx.borrow_and_update().clone();
-        // Use try_send to avoid blocking the async event loop.
-        // If the render thread is busy, skip this frame and process the next one.
         if tx.try_send(snap).is_err() {
-            // Render thread is backed up — skip this frame, let it catch up.
-            // This prevents input latency when the render is slow.
+            // Render thread is backed up — skip this frame.
         }
         if render_rx.changed().await.is_err() {
             break;
@@ -243,25 +205,16 @@ fn render_loop(
     let mut last_size: Option<(u16, u16)> = None;
 
     loop {
-        // Wait for a snapshot, but no more than one frame period.
-        // This caps the render thread at ~60 FPS and prevents it from
-        // burning CPU redrawing on every tiny event burst.
         let mut snap = match rx.recv_timeout(FRAME_TIME) {
             Ok(s) => s,
             Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
             Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
         };
-
-        // Drain any newer snapshots that arrived while we were waiting and
-        // keep only the latest one. Older intermediate frames are dropped.
         while let Ok(s) = rx.try_recv() {
             snap = s;
         }
 
-        let new_size = terminal
-            .size()
-            .map(|r| (r.width, r.height))
-            .unwrap_or((0, 0));
+        let new_size = terminal.size().map(|r| (r.width, r.height)).unwrap_or((0, 0));
         if last_size != Some(new_size) {
             let _ = terminal.clear();
             last_size = Some(new_size);
@@ -274,35 +227,20 @@ fn render_loop(
 #[allow(clippy::too_many_arguments)]
 fn spawn_ui_actor(
     state: AppState,
-    render_tx: watch::Sender<Snapshot>,
-    agent_handle: runie_tui::ui_actor::AgentActorHandle,
+    agent_handle: runie_tui::ui_actor::LeaderAgentActorHandle,
     persistence_handle: runie_core::actors::RactorSessionHandle,
     turn_handle: runie_core::actors::RactorTurnHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: oneshot::Sender<()>,
     caps: terminal::caps::TermCaps,
-) {
-    // UiActor is the sole owner of AppState and the only runtime mutator.
-    // Late subscriber catch-up is handled by SessionActor disk-replay at startup.
-    let ui_sub = bus.subscribe();
-    tokio::spawn(
-        UiActor::new(
-            state,
-            render_tx,
-            agent_handle,
-            persistence_handle,
-            turn_handle,
-            kb_tx,
-            bus,
-            shutdown_tx,
-            caps,
-        )
-        .run(ui_sub),
-    );
+) -> UiActor {
+    UiActor::with_agent_handle(
+        state, AgentHandleBox::Leader(agent_handle), persistence_handle,
+        turn_handle, kb_tx, bus, shutdown_tx, caps,
+    )
 }
 
-/// Input reader that sends mapped events to the shared bus via `input_tx`.
 async fn input_reader(
     input_tx: mpsc::Sender<Event>,
     mut kb_rx: watch::Receiver<HashMap<String, String>>,
@@ -312,11 +250,9 @@ async fn input_reader(
         let bindings = kb_rx.borrow_and_update().clone();
         if let Some(evt) = keymap::convert_event(&event, &bindings) {
             let is_quit = matches!(evt, Event::Quit | Event::Reset);
-
             if input_tx.send(evt).await.is_err() {
                 break;
             }
-
             if is_quit {
                 break;
             }

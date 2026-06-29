@@ -342,6 +342,7 @@ fn needs_appstate_lint(rel_path: &str) -> bool {
         "actors/input/messages.rs",
         "actors/ui_control/actor.rs",
         "actors/handles.rs", // ActorHandles has typed actor handles, not AppState fields.
+        "actors/leader/actor.rs", // Leader struct has self.config (LeaderConfig), not AppState.
         "update/input/text.rs",
         "update/input/submit.rs",
         "retry.rs",

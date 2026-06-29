@@ -50,41 +50,51 @@ const ACP_PROTOCOL_VERSION: &str = "1.0.0";
 /// Run the ACP stdio adapter.
 pub async fn run() -> Result<()> {
     let bus = EventBus::<Event>::new(100);
-    let (event_tx, mut event_rx) = mpsc::channel::<Event>(100);
     let runtime = spawn_runtime(bus.clone()).await?;
+
+    // Single task: subscribe to bus events and forward them to stdout as JSON-RPC.
     spawn_event_forwarder(bus.clone());
-    spawn_combined_receiver(bus, event_tx);
+
     let stdin = tokio::io::stdin();
     let mut stdout = tokio::io::stdout();
-    process_stdin_loop(stdin, &mut stdout, &runtime, &mut event_rx).await
+    process_stdin_loop(stdin, &mut stdout, &runtime).await
 }
 
-fn spawn_combined_receiver(bus: EventBus<Event>, event_tx: mpsc::Sender<Event>) {
-    let (tx, mut local_rx) = mpsc::channel::<Event>(100);
+/// Spawn all actors needed for ACP mode and return the event bus.
+async fn spawn_runtime(bus: EventBus<Event>) -> Result<EventBus<Event>> {
+    // Spawn actors (same set as the TUI leader bootstrap).
+    let (config_handle, _) = RactorConfigActor::spawn(bus.clone(), None).await;
+    let (provider_handle, _provider_actor) = RactorProviderActor::spawn(
+        bus.clone(),
+        config_handle.clone(),
+        Arc::new(runie_provider::DynProviderFactory),
+    ).await?;
+    let (_session_handle, _session_actor) = RactorSessionActor::spawn(bus.clone()).await?;
+    let (_io_handle, _io_actor) = RactorIoActor::spawn(bus.clone()).await?;
+    let (permission_handle, _permission_actor) = RactorPermissionActor::spawn(bus.clone()).await;
+
+    // Spawn the agent actor — this is what drives the LLM turns.
+    let (_agent_handle, _agent_actor, _agent_cell) = spawn_ractor_agent(
+        bus.clone(),
+        provider_handle.clone(),
+        permission_handle.clone(),
+    ).await?;
+
+    Ok(bus)
+}
+
+/// Spawn a task that forwards events from the bus to stdout as JSON-RPC notifications.
+fn spawn_event_forwarder(bus: EventBus<Event>) {
     tokio::spawn(async move {
         let mut sub = bus.subscribe();
-        loop {
-            tokio::select! {
-                biased;
-                Some(evt) = local_rx.recv() => {
-                    if event_tx.send(evt).await.is_err() { break; }
-                }
-                result = sub.recv() => {
-                    match result {
-                        Ok(evt) => {
-                            if let Some(notif) = event_to_notification(&evt) {
-                                let msg = Message::Notification(notif);
-                                if let Ok(json) = serde_json::to_string(&msg) {
-                                    let mut out = tokio::io::stdout();
-                                    let _ = out.write_all(json.as_bytes()).await;
-                                    let _ = out.write_all(b"\n").await;
-                                    let _ = out.flush().await;
-                                }
-                            }
-                            if tx.send(evt).await.is_err() { break; }
-                        }
-                        Err(_) => break,
-                    }
+        while let Ok(evt) = sub.recv().await {
+            if let Some(notif) = event_to_notification(&evt) {
+                let msg = Message::Notification(notif);
+                if let Ok(json) = serde_json::to_string(&msg) {
+                    let mut stdout = tokio::io::stdout();
+                    let _ = stdout.write_all(json.as_bytes()).await;
+                    let _ = stdout.write_all(b"\n").await;
+                    let _ = stdout.flush().await;
                 }
             }
         }
@@ -94,8 +104,7 @@ fn spawn_combined_receiver(bus: EventBus<Event>, event_tx: mpsc::Sender<Event>) 
 async fn process_stdin_loop(
     stdin: tokio::io::Stdin,
     stdout: &mut tokio::io::Stdout,
-    runtime: &AcpRuntime,
-    event_rx: &mut mpsc::Receiver<Event>,
+    bus: &EventBus<Event>,
 ) -> Result<()> {
     let mut lines = BufReader::new(stdin).lines();
     while let Some(line) = lines.next_line().await? {
@@ -111,7 +120,7 @@ async fn process_stdin_loop(
             }
         };
         let id = req.id.clone();
-        match dispatch_acp_request(&req, runtime, event_rx).await {
+        match dispatch_acp_request(&req, bus).await {
             Ok(result) => {
                 let resp = Message::Response(Response::ok(id, result));
                 write_message(stdout, &resp).await?;
@@ -136,44 +145,13 @@ where
     Ok(())
 }
 
-struct AcpRuntime {
-    event_tx: mpsc::Sender<Event>,
-}
-
-async fn spawn_runtime(bus: EventBus<Event>) -> Result<AcpRuntime> {
-    let (event_tx, _event_rx) = mpsc::channel::<Event>(100);
-    // Spawn actors
-    let (config_handle, _) = RactorConfigActor::spawn(bus.clone(), None).await;
-    let (provider_handle, _provider_actor) = RactorProviderActor::spawn(
-        bus.clone(),
-        config_handle.clone(),
-        Arc::new(runie_provider::DynProviderFactory),
-    ).await?;
-    let (_session_handle, _session_actor) = RactorSessionActor::spawn(bus.clone()).await?;
-    let (_io_handle, _io_actor) = RactorIoActor::spawn(bus.clone()).await?;
-    let (permission_handle, _permission_actor) = RactorPermissionActor::spawn(bus.clone()).await;
-
-    // Spawn agent actor
-    let (_agent_handle, _agent_actor, _agent_cell) = spawn_ractor_agent(
-        bus.clone(),
-        provider_handle.clone(),
-        permission_handle.clone(),
-    ).await?;
-
-    Ok(AcpRuntime { event_tx })
-}
-
-async fn dispatch_acp_request(
-    req: &Request,
-    runtime: &AcpRuntime,
-    event_rx: &mut mpsc::Receiver<Event>,
-) -> Result<Value> {
+async fn dispatch_acp_request(req: &Request, bus: &EventBus<Event>) -> Result<Value> {
     match req.method.as_str() {
         "initialize" => initialize(),
-        "submit_input" => submit_input(&req.params, runtime, event_rx).await,
-        "interrupt" => interrupt(runtime).await,
-        "permission_resp" => permission_resp(&req.params, runtime).await,
-        "shutdown" => shutdown(runtime).await,
+        "submit_input" => submit_input(&req.params, bus).await,
+        "interrupt" => interrupt(bus).await,
+        "permission_resp" => permission_resp(&req.params, bus).await,
+        "shutdown" => shutdown(bus).await,
         _ => Err(anyhow::anyhow!("Unknown method: {}", req.method)),
     }
 }
@@ -191,23 +169,21 @@ struct SubmitInputParams {
     input: String,
 }
 
-async fn submit_input(
-    params: &Value,
-    runtime: &AcpRuntime,
-    event_rx: &mut mpsc::Receiver<Event>,
-) -> Result<Value> {
+async fn submit_input(params: &Value, bus: &EventBus<Event>) -> Result<Value> {
     let params: SubmitInputParams = serde_json::from_value(params.clone())?;
     let turn_id = turn_id_from_time();
 
-    // Send input event using InputState::default() + set input text
+    // Publish input and submit events so the turn actor picks them up.
     let mut state = runie_core::model::InputState::default();
     state.input = params.input;
-    runtime.event_tx.send(Event::InputChanged { state: Box::new(state) }).await?;
-    runtime.event_tx.send(Event::Submit).await?;
+    bus.publish(Event::InputChanged { state: Box::new(state) });
+    bus.publish(Event::Submit);
 
-    // Wait for turn completion with timeout
+    // Wait for turn completion by subscribing to the bus.
+    // Subscribe fresh so we only see events from this turn onward.
+    let mut sub = bus.subscribe();
     timeout(Duration::from_secs(300), async {
-        while let Some(evt) = event_rx.recv().await {
+        while let Ok(evt) = sub.recv().await {
             if let Event::TurnComplete { id, .. } = evt {
                 return Ok(serde_json::json!({ "turnId": id, "responseId": id }));
             }
@@ -226,8 +202,8 @@ fn turn_id_from_time() -> String {
     format!("turn_{ms}")
 }
 
-async fn interrupt(runtime: &AcpRuntime) -> Result<Value> {
-    runtime.event_tx.send(Event::Abort).await?;
+async fn interrupt(bus: &EventBus<Event>) -> Result<Value> {
+    bus.publish(Event::Abort);
     Ok(serde_json::json!({}))
 }
 
@@ -237,42 +213,22 @@ struct PermissionRespParams {
     action: String,
 }
 
-async fn permission_resp(params: &Value, runtime: &AcpRuntime) -> Result<Value> {
+async fn permission_resp(params: &Value, bus: &EventBus<Event>) -> Result<Value> {
     let params: PermissionRespParams = serde_json::from_value(params.clone())?;
     let action = match params.action.as_str() {
         "allow" => runie_core::permissions::PermissionAction::Allow,
         _ => runie_core::permissions::PermissionAction::Deny,
     };
-    runtime.event_tx.send(Event::PermissionResponse {
+    bus.publish(Event::PermissionResponse {
         request_id: params.request_id,
         action,
-    }).await?;
-    Ok(serde_json::json!({}))
-}
-
-async fn shutdown(runtime: &AcpRuntime) -> Result<Value> {
-    let _ = runtime.event_tx.send(Event::Quit).await;
-    // Note: shutdown_tx.take() would require interior mutability
-    // For ACP mode, shutdown is best-effort
-    Ok(serde_json::json!({}))
-}
-
-/// Spawn a task that forwards events from the bus to stdout as JSON-RPC notifications.
-fn spawn_event_forwarder(bus: EventBus<Event>) {
-    tokio::spawn(async move {
-        let mut sub = bus.subscribe();
-        while let Ok(evt) = sub.recv().await {
-            if let Some(notif) = event_to_notification(&evt) {
-                let msg = Message::Notification(notif);
-                if let Ok(json) = serde_json::to_string(&msg) {
-                    let mut stdout = tokio::io::stdout();
-                    let _ = stdout.write_all(json.as_bytes()).await;
-                    let _ = stdout.write_all(b"\n").await;
-                    let _ = stdout.flush().await;
-                }
-            }
-        }
     });
+    Ok(serde_json::json!({}))
+}
+
+async fn shutdown(bus: &EventBus<Event>) -> Result<Value> {
+    bus.publish(Event::Quit);
+    Ok(serde_json::json!({}))
 }
 
 /// Convert a core Event to a JSON-RPC Notification.

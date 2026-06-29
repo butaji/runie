@@ -2,6 +2,7 @@
 //!
 //! This is the production implementation of the AgentActor using ractor.
 
+use std::pin::Pin;
 use std::sync::Arc;
 use parking_lot::Mutex;
 
@@ -29,6 +30,8 @@ use crate::AgentCommand;
 pub enum AgentMsg {
     /// Execute one agent turn.
     Run { command: AgentCommand },
+    /// Execute a turn from the leader's minimal command type.
+    RunLeader { command: runie_core::actors::leader::LeaderAgentCmd },
 }
 
 // ── Ractor-based AgentActor ───────────────────────────────────────────────────
@@ -70,6 +73,10 @@ impl Actor for RactorAgentActor {
     ) -> Result<(), ActorProcessingErr> {
         match msg {
             AgentMsg::Run { command } => self.run_turn(&command).await,
+            AgentMsg::RunLeader { command } => {
+                let cmd: AgentCommand = command.into();
+                self.run_turn(&cmd).await;
+            }
         }
         Ok(())
     }
@@ -187,5 +194,77 @@ pub trait RactorAgentHandleExt {
 impl RactorAgentHandleExt for RactorAgentHandle {
     async fn run_if_queued(&self, turn_handle: &runie_core::actors::RactorTurnHandle) {
         turn_handle.send(runie_core::actors::TurnMsg::RunIfQueued).await;
+    }
+}
+
+// ── Leader integration ────────────────────────────────────────────────────────
+
+impl From<runie_core::actors::leader::LeaderAgentCmd> for AgentCommand {
+    fn from(cmd: runie_core::actors::leader::LeaderAgentCmd) -> Self {
+        Self {
+            content: cmd.content,
+            id: cmd.id,
+            provider: cmd.provider,
+            model: cmd.model,
+            thinking_level: cmd.thinking_level,
+            read_only: cmd.read_only,
+            skills_context: cmd.skills_context,
+            system_prompt: cmd.system_prompt,
+            truncation: crate::truncate::TruncationPolicy::default(),
+        }
+    }
+}
+
+/// Handle that implements `LeaderAgentHandle` for use by the leader.
+pub struct LeaderAgentHandleImpl {
+    inner: RactorAgentHandle,
+}
+
+impl LeaderAgentHandleImpl {
+    pub fn new(inner: RactorAgentHandle) -> Self {
+        Self { inner }
+    }
+}
+
+impl runie_core::actors::leader::LeaderAgentHandle for LeaderAgentHandleImpl {
+    fn run(&self, cmd: runie_core::actors::leader::LeaderAgentCmd) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        let inner = self.inner.clone();
+        let msg = AgentMsg::RunLeader { command: cmd };
+        Box::pin(async move {
+            let _ = inner.send(msg).await;
+        })
+    }
+}
+
+/// Factory for spawning agent actors (implements `AgentActorFactory`).
+pub struct AgentActorFactoryImpl;
+
+impl AgentActorFactoryImpl {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Default for AgentActorFactoryImpl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl runie_core::actors::leader::AgentActorFactory for AgentActorFactoryImpl {
+    fn spawn(
+        &self,
+        bus: runie_core::bus::EventBus<runie_core::event::Event>,
+        provider_handle: runie_core::actors::provider::RactorProviderHandle,
+        permission_handle: runie_core::actors::permission::RactorPermissionHandle,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Box<dyn runie_core::actors::leader::LeaderAgentHandle>, ractor::SpawnErr>> + Send>,
+    > {
+        Box::pin(async move {
+            let (handle, _, _cell) =
+                spawn_ractor_agent(bus, provider_handle, permission_handle).await?;
+            Ok(Box::new(LeaderAgentHandleImpl::new(handle))
+                as Box<dyn runie_core::actors::leader::LeaderAgentHandle>)
+        })
     }
 }
