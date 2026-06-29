@@ -10,6 +10,9 @@ use runie_core::skills::{load_all, Skill};
 
 use std::collections::HashSet;
 
+// Type alias for the config handle reply type
+type ConfigHandle = runie_core::actors::RactorConfigHandle;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -86,7 +89,25 @@ pub struct ModelInfoEntry {
 // ---------------------------------------------------------------------------
 
 impl InspectReport {
-    /// Build a full inspect report.
+    /// Build a full inspect report asynchronously using ConfigActor.
+    pub async fn build_with_config_actor(config_handle: &ConfigHandle) -> Self {
+        let config = config_handle.load_layers().await.unwrap_or_default();
+        let skills = tokio::task::spawn_blocking(load_all).await.unwrap_or_default();
+        let subagent_registry = SubagentRegistry::from_builtins();
+
+        Self {
+            config_sources: Self::discover_config_sources(),
+            skill_items: Self::format_skills(skills),
+            commands: Self::list_commands(),
+            subagents: Self::list_subagents(&subagent_registry),
+            permissions: Self::list_permissions(&config),
+            providers: Self::list_providers(&config),
+            model_catalog: Self::list_model_catalog(),
+        }
+    }
+
+    /// Build a full inspect report synchronously (uses Config::load_layers directly).
+    /// Kept for backward compatibility with tests.
     pub fn build() -> Self {
         let config = Config::load_layers();
         let skills = load_all();
@@ -403,15 +424,27 @@ impl InspectReport {
 // CLI Entry Point
 // ---------------------------------------------------------------------------
 
-/// Run the inspect command.
+/// Run the inspect command synchronously.
 pub fn run(json: bool) -> anyhow::Result<()> {
-    let report = InspectReport::build();
-    if json {
-        report.print_json();
-    } else {
-        report.print_human();
-    }
-    Ok(())
+    // Spawn a minimal runtime for the ConfigActor
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+
+    rt.block_on(async {
+        let (config_handle, _cell) = runie_core::actors::RactorConfigActor::spawn_default(
+            runie_core::bus::EventBus::new(16),
+        )
+        .await;
+
+        let report = InspectReport::build_with_config_actor(&config_handle).await;
+        if json {
+            report.print_json();
+        } else {
+            report.print_human();
+        }
+        Ok(())
+    })
 }
 
 #[cfg(test)]

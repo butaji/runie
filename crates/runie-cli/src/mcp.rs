@@ -4,6 +4,8 @@
 //! for both user (`~/.runie/config.toml`) and project (`./.runie/config.toml`) scopes.
 
 use anyhow::{Context, Result};
+use runie_core::actors::{RactorConfigActor, RactorConfigHandle};
+use runie_core::actors::config::messages::ConfigScope;
 use runie_core::config::{Config, McpServer, McpTransport};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -15,12 +17,28 @@ const PROJECT_CONFIG_FILE: &str = "config.toml";
 
 /// Run the MCP CLI command (for clap-based CLI).
 pub fn run_mcp(subcommand: Option<&McpCommand>) -> Result<()> {
-    match subcommand {
-        Some(McpCommand::List) => run_list_internal("user"),
-        Some(McpCommand::Add { name, command }) => run_add_internal(name, command, "user", McpTransport::Stdio),
-        Some(McpCommand::Remove { name }) => run_remove_internal(name, "user"),
-        None => run_list_internal("user"),
-    }
+    // Spawn a minimal runtime for the ConfigActor
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+
+    rt.block_on(async {
+        let (config_handle, _cell) = RactorConfigActor::spawn_default(
+            runie_core::bus::EventBus::new(16),
+        )
+        .await;
+
+        match subcommand {
+            Some(McpCommand::List) => run_list_internal_async(&config_handle, ConfigScope::Global).await,
+            Some(McpCommand::Add { name, command }) => {
+                run_add_internal_async(&config_handle, name, command, ConfigScope::Global, McpTransport::Stdio).await
+            }
+            Some(McpCommand::Remove { name }) => {
+                run_remove_internal_async(&config_handle, name, ConfigScope::Global).await
+            }
+            None => run_list_internal_async(&config_handle, ConfigScope::Global).await,
+        }
+    })
 }
 
 /// Run the MCP CLI command (legacy argv-based CLI).
@@ -88,6 +106,36 @@ fn run_list_internal(scope: &str) -> Result<()> {
     Ok(())
 }
 
+/// Async version using ConfigActor.
+async fn run_list_internal_async(config_handle: &RactorConfigHandle, scope: ConfigScope) -> Result<()> {
+    let servers = config_handle.list_mcp_servers(scope).await;
+    let scope_str = match scope {
+        ConfigScope::Global => "user",
+        ConfigScope::Project => "project",
+    };
+
+    if servers.is_empty() {
+        println!("No MCP servers configured for scope '{}'.", scope_str);
+        return Ok(());
+    }
+
+    println!("MCP servers [{}]:", scope_str);
+    println!("{:<20} {:<10} {}", "NAME", "TRANSPORT", "CONFIG");
+    println!("{}", "-".repeat(60));
+
+    for (name, server) in servers.iter() {
+        let config_str = if server.command.is_empty() {
+            server.url.clone().unwrap_or_default()
+        } else {
+            server.command.join(" ")
+        };
+        let transport_str = transport_name(&server.transport);
+        println!("{:<20} {:<10} {}", name, transport_str, config_str);
+    }
+
+    Ok(())
+}
+
 #[allow(dead_code)]
 fn run_list_internal_from_args(args: &[String]) -> Result<()> {
     let scope = parse_scope(args).unwrap_or_else(|| "user".to_string());
@@ -108,6 +156,24 @@ fn run_add_internal(name: &str, command: &str, scope: &str, transport: McpTransp
     config.mcp.servers.insert(name.to_string(), server);
     save_config_for_scope(&config, scope)?;
     println!("Added MCP server '{}' to [{}] scope.", name, scope);
+    Ok(())
+}
+
+/// Async version using ConfigActor.
+async fn run_add_internal_async(
+    config_handle: &RactorConfigHandle,
+    name: &str,
+    command: &str,
+    scope: ConfigScope,
+    transport: McpTransport,
+) -> Result<()> {
+    let scope_str = match scope {
+        ConfigScope::Global => "user",
+        ConfigScope::Project => "project",
+    };
+    let server = build_server(transport, command, HashMap::new(), scope_str);
+    config_handle.add_mcp_server(scope, name.to_string(), server).await;
+    println!("Added MCP server '{}' to [{}] scope.", name, scope_str);
     Ok(())
 }
 
@@ -219,6 +285,26 @@ fn run_remove_internal(name: &str, scope: &str) -> Result<()> {
         anyhow::bail!("MCP server '{name}' not found in [{scope}] scope.");
     }
 
+    Ok(())
+}
+
+/// Async version using ConfigActor.
+async fn run_remove_internal_async(
+    config_handle: &RactorConfigHandle,
+    name: &str,
+    scope: ConfigScope,
+) -> Result<()> {
+    let scope_str = match scope {
+        ConfigScope::Global => "user",
+        ConfigScope::Project => "project",
+    };
+    // First check if the server exists
+    let servers = config_handle.list_mcp_servers(scope).await;
+    if !servers.iter().any(|(n, _)| n == name) {
+        anyhow::bail!("MCP server '{}' not found in [{}] scope.", name, scope_str);
+    }
+    config_handle.remove_mcp_server(scope, name.to_string()).await;
+    println!("Removed MCP server '{}' from [{}] scope.", name, scope_str);
     Ok(())
 }
 

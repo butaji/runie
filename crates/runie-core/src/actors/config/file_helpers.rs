@@ -7,7 +7,7 @@ use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 use std::path::PathBuf;
 use tokio::sync::mpsc;
 
-use crate::config::ModelProvider;
+use crate::config::{McpServer, ModelProvider};
 use crate::model::ThinkingLevel;
 
 use super::messages::ConfigMsg;
@@ -107,6 +107,24 @@ pub fn set_truncation_at_path(
 pub fn set_thinking_level_at_path(path: &PathBuf, level: ThinkingLevel) -> anyhow::Result<()> {
     let mut config = crate::config::Config::load(Some(path));
     config.thinking_level = level;
+    config.save_to(path)
+}
+
+/// Add or update an MCP server in the config file.
+pub fn add_mcp_server_to_path(
+    path: &PathBuf,
+    name: &str,
+    server: &McpServer,
+) -> anyhow::Result<()> {
+    let mut config = crate::config::Config::load(Some(path));
+    config.mcp.servers.insert(name.to_owned(), server.clone());
+    config.save_to(path)
+}
+
+/// Remove an MCP server from the config file.
+pub fn remove_mcp_server_from_path(path: &PathBuf, name: &str) -> anyhow::Result<()> {
+    let mut config = crate::config::Config::load(Some(path));
+    config.mcp.servers.remove(name);
     config.save_to(path)
 }
 

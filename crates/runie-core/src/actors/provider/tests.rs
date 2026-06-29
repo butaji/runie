@@ -97,7 +97,7 @@ fn spawn_actor(
     ractor::ActorCell,
 ) {
     let bus = EventBus::<Event>::new(1);
-    let (config_handle, config_cell) = futures::executor::block_on(ConfigActor::spawn(bus.clone(), None));
+    let (config_handle, config_cell) = futures::executor::block_on(ConfigActor::spawn_default(bus.clone()));
     let (provider_handle, provider_cell) = futures::executor::block_on(ProviderActor::spawn(bus, config_handle, factory)).unwrap();
     (provider_handle, provider_cell, config_cell)
 }

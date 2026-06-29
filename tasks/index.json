@@ -372,7 +372,7 @@
   {
     "file": "route-cli-config-through-configactor.md",
     "title": "Route CLI config operations through `ConfigActor`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "store-provider-api-keys-in-keyring-not-config.md",

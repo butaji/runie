@@ -12,12 +12,12 @@ use tokio::sync::mpsc;
 use crate::actors::ractor_adapter::spawn_ractor;
 use crate::actors::ractor_adapter::Reply;
 use crate::bus::EventBus;
-use crate::config::{Config, TruncationSection};
+use crate::config::{Config, McpServer, TruncationSection};
 use crate::event::Event;
 use crate::model::ThinkingLevel;
 
 use super::file_helpers;
-use super::messages::ConfigMsg;
+use super::messages::{ConfigMsg, ConfigScope};
 
 /// Ractor-based ConfigActor handle.
 /// API-compatible with `ConfigActorHandle` for drop-in replacement.
@@ -119,22 +119,50 @@ impl RactorConfigHandle {
     pub async fn set_thinking_level(&self, level: ThinkingLevel) {
         let _ = self.inner.send(ConfigMsg::SetThinkingLevel { level }).await;
     }
+
+    /// Load layered config (global + project) and return the effective config.
+    pub async fn load_layers(&self) -> Option<Config> {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let _ = self.inner.send(ConfigMsg::LoadLayers(crate::actors::ractor_adapter::Reply::new(tx))).await;
+        rx.await.ok()
+    }
+
+    /// Add or update an MCP server in the specified scope.
+    pub async fn add_mcp_server(&self, scope: ConfigScope, name: String, server: McpServer) {
+        let _ = self.inner.send(ConfigMsg::AddMcpServer { scope, name, server }).await;
+    }
+
+    /// Remove an MCP server from the specified scope.
+    pub async fn remove_mcp_server(&self, scope: ConfigScope, name: String) {
+        let _ = self.inner.send(ConfigMsg::RemoveMcpServer { scope, name }).await;
+    }
+
+    /// List MCP servers in the specified scope.
+    pub async fn list_mcp_servers(&self, scope: ConfigScope) -> Vec<(String, McpServer)> {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let _ = self.inner.send(ConfigMsg::ListMcpServers { scope, reply: crate::actors::ractor_adapter::Reply::new(tx) }).await;
+        rx.await.unwrap_or_default()
+    }
 }
 
 /// Ractor-based ConfigActor state.
 pub struct RactorConfigActor {
     config: std::sync::Arc<Mutex<Config>>,
+    /// Primary config path (typically global ~/.runie/config.toml).
     path: PathBuf,
+    /// Project config path (typically ./.runie/config.toml).
+    project_path: Option<PathBuf>,
     bus: EventBus<Event>,
     watcher_tx: Mutex<Option<mpsc::Sender<ConfigMsg>>>,
 }
 
 impl RactorConfigActor {
-    fn new(bus: EventBus<Event>, path: PathBuf) -> Self {
+    fn new(bus: EventBus<Event>, path: PathBuf, project_path: Option<PathBuf>) -> Self {
         Self {
             config: std::sync::Arc::new(Mutex::new(Config::default())),
             path,
-            bus, 
+            project_path,
+            bus,
             watcher_tx: Mutex::new(None),
         }
     }
@@ -165,43 +193,55 @@ impl RactorConfigActor {
             ConfigMsg::GetConfiguredProviders(reply) => {
                 reply.send(self.list_configured_providers());
             }
+            ConfigMsg::LoadLayers(reply) => {
+                // Load layered config and return it (don't update in-memory state)
+                let effective = self.load_layers_sync();
+                reply.send(effective);
+            }
+            ConfigMsg::AddMcpServer { scope, name, server } => {
+                self.add_mcp_server(scope, &name, server).await;
+            }
+            ConfigMsg::RemoveMcpServer { scope, name } => {
+                self.remove_mcp_server(scope, &name).await;
+            }
+            ConfigMsg::ListMcpServers { scope, reply } => {
+                let servers = self.list_mcp_servers(scope);
+                reply.send(servers);
+            }
         }
     }
 
     async fn load_and_emit(&self) {
-        let (config, errors) = Config::load_async_strict(Some(self.path.clone())).await;
-        let is_valid = errors.is_empty();
-        if is_valid {
-            let mut guard = self.config.lock();
-            *guard = config.clone();
-        } else {
-            tracing::warn!("config validation errors: {:?}", errors);
-            self.bus.publish(Event::Error {
-                id: "config".to_owned(),
-                message: format!("Config validation errors: {}", errors.join("; ")),
-            });
-        }
-        self.bus.publish(Event::ConfigLoaded { config: Box::new(config) });
+        let effective = self.load_layers_async().await;
+        let mut guard = self.config.lock();
+        *guard = effective.clone();
+        drop(guard);
+        self.bus.publish(Event::ConfigLoaded { config: Box::new(effective) });
+    }
+
+    /// Load layered config asynchronously.
+    async fn load_layers_async(&self) -> Config {
+        let global = self.path.clone();
+        let local = self.project_path.clone();
+        tokio::task::spawn_blocking(move || Config::load_layers_from_paths(global, local.unwrap_or_default()))
+            .await
+            .unwrap_or_default()
+    }
+
+    /// Load layered config synchronously (for use in spawn_blocking).
+    fn load_layers_sync(&self) -> Config {
+        let global = self.path.clone();
+        let local = self.project_path.clone();
+        Config::load_layers_from_paths(global, local.unwrap_or_default())
     }
 
     async fn reload_and_emit(&self) {
-        let (new_config, errors) = Config::load_async_strict(Some(self.path.clone())).await;
-        let is_valid = errors.is_empty();
-        let changed = if is_valid && new_config != *self.config.lock() {
+        let new_config = self.load_layers_async().await;
+        let changed = new_config != *self.config.lock();
+        if changed {
             let mut guard = self.config.lock();
             *guard = new_config.clone();
-            true
-        } else {
-            if !errors.is_empty() {
-                tracing::warn!("config validation errors on reload: {:?}", errors);
-                self.bus.publish(Event::Error {
-                    id: "config".to_owned(),
-                    message: format!("Config validation errors: {}", errors.join("; ")),
-                });
-            }
-            false
-        };
-        if changed {
+            drop(guard);
             self.bus.publish(Event::ConfigLoaded { config: Box::new(new_config) });
         }
     }
@@ -305,6 +345,65 @@ impl RactorConfigActor {
         result
     }
 
+    fn add_mcp_server(&self, scope: ConfigScope, name: &str, server: McpServer) -> impl std::future::Future<Output = ()> {
+        let path = self.path_for_scope(scope);
+        let name = name.to_owned();
+        let server = server.clone();
+        async move {
+            let result = tokio::task::spawn_blocking(move || {
+                file_helpers::add_mcp_server_to_path(&path, &name, &server)
+            })
+            .await;
+            Self::handle_write_result_static(result).await;
+        }
+    }
+
+    fn remove_mcp_server(&self, scope: ConfigScope, name: &str) -> impl std::future::Future<Output = ()> {
+        let path = self.path_for_scope(scope);
+        let name = name.to_owned();
+        async move {
+            let result = tokio::task::spawn_blocking(move || {
+                file_helpers::remove_mcp_server_from_path(&path, &name)
+            })
+            .await;
+            Self::handle_write_result_static(result).await;
+        }
+    }
+
+    fn list_mcp_servers(&self, scope: ConfigScope) -> Vec<(String, McpServer)> {
+        let path = self.path_for_scope(scope);
+        let config = Config::load(Some(&path));
+        config
+            .mcp
+            .servers
+            .into_iter()
+            .collect()
+    }
+
+    fn path_for_scope(&self, scope: ConfigScope) -> PathBuf {
+        match scope {
+            ConfigScope::Global => self.path.clone(),
+            ConfigScope::Project => self.project_path.clone().unwrap_or_else(|| {
+                std::env::current_dir()
+                    .unwrap_or_default()
+                    .join(".runie")
+                    .join("config.toml")
+            }),
+        }
+    }
+
+    async fn handle_write_result_static(result: Result<anyhow::Result<()>, tokio::task::JoinError>) {
+        match result {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => {
+                tracing::error!("config write failed: {e:?}");
+            }
+            Err(thread_id) => {
+                tracing::error!("config write task panicked in thread: {:?}", thread_id);
+            }
+        }
+    }
+
     fn spawn_watcher(&self, tx: mpsc::Sender<ConfigMsg>) {
         let path = self.path.clone();
         std::thread::spawn(move || {
@@ -319,25 +418,19 @@ impl RactorConfigActor {
 impl Actor for RactorConfigActor {
     type Msg = ConfigMsg;
     type State = ();
-    type Arguments = (EventBus<Event>, PathBuf);
+    type Arguments = (EventBus<Event>, PathBuf, Option<PathBuf>);
 
     async fn pre_start(
         &self,
         _myself: ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        let (_bus, path) = args;
-        let (config, errors) = Config::load_async_strict(Some(path)).await;
+        let (_bus, _path, _project_path) = args;
+        // Load layered config
+        let config = self.load_layers_async().await;
         {
             let mut guard = self.config.lock();
-            *guard = config.clone();
-        }
-        if !errors.is_empty() {
-            tracing::warn!("config validation errors on load: {:?}", errors);
-            self.bus.publish(Event::Error {
-                id: "config".to_owned(),
-                message: format!("Config validation errors: {}", errors.join("; ")),
-            });
+            *guard = config;
         }
         let (tx, rx) = mpsc::channel(32);
         {
@@ -363,11 +456,29 @@ impl Actor for RactorConfigActor {
 
 impl RactorConfigActor {
     /// Spawn a `RactorConfigActor` on the given event bus.
-    pub async fn spawn(bus: EventBus<Event>, test_path: Option<PathBuf>) -> (RactorConfigHandle, ractor::ActorCell) {
-        let path = test_path.unwrap_or_else(crate::config::config_path);
-        let actor = Self::new(bus.clone(), path.clone());
-        let (handle, _join, cell) = spawn_ractor(None, actor, (bus, path)).await.unwrap();
+    ///
+    /// The actor loads layered config (global + project) on startup.
+    /// - `global_path`: Global config path (~/.runie/config.toml)
+    /// - `project_path`: Optional project config path (.runie/config.toml)
+    pub async fn spawn(
+        bus: EventBus<Event>,
+        global_path: Option<PathBuf>,
+        project_path: Option<PathBuf>,
+    ) -> (RactorConfigHandle, ractor::ActorCell) {
+        let path = global_path.unwrap_or_else(crate::config::config_path);
+        let actor = Self::new(bus.clone(), path.clone(), project_path.clone());
+        let (handle, _join, cell) =
+            spawn_ractor(None, actor, (bus, path, project_path))
+                .await
+                .unwrap();
         (RactorConfigHandle::new(handle), cell)
+    }
+
+    /// Spawn with default paths (global ~/.runie/config.toml, project ./.runie/config.toml).
+    pub async fn spawn_default(
+        bus: EventBus<Event>,
+    ) -> (RactorConfigHandle, ractor::ActorCell) {
+        Self::spawn(bus, None, None).await
     }
 
     fn emit_current_config(&self) {
@@ -378,11 +489,12 @@ impl RactorConfigActor {
     async fn spawn_watcher_task(&self, mut rx: mpsc::Receiver<ConfigMsg>) {
         let config_clone = self.config.clone();
         let path_clone = self.path.clone();
+        let project_path_clone = self.project_path.clone();
         let bus_clone = self.bus.clone();
         tokio::spawn(async move {
             while let Some(msg) = rx.recv().await {
                 if matches!(msg, ConfigMsg::Reload) {
-                    Self::handle_watcher_reload(&config_clone, &path_clone, &bus_clone).await;
+                    Self::handle_watcher_reload(&config_clone, &path_clone, &project_path_clone, &bus_clone).await;
                 }
             }
         });
@@ -391,25 +503,21 @@ impl RactorConfigActor {
     async fn handle_watcher_reload(
         config: &std::sync::Arc<Mutex<Config>>,
         path: &PathBuf,
+        project_path: &Option<PathBuf>,
         bus: &EventBus<Event>,
     ) {
-        let (new_config, errors) = Config::load_async_strict(Some(path.clone())).await;
-        let is_valid = errors.is_empty();
-        let changed = if is_valid && new_config != *config.lock() {
+        // For layered config, we reload both paths
+        let global = path.clone();
+        let local = project_path.clone().unwrap_or_default();
+        let new_config =
+            tokio::task::spawn_blocking(move || Config::load_layers_from_paths(global, local))
+                .await
+                .unwrap_or_default();
+        let changed = new_config != *config.lock();
+        if changed {
             let mut guard = config.lock();
             *guard = new_config.clone();
-            true
-        } else {
-            if !errors.is_empty() {
-                tracing::warn!("config validation errors on watcher reload: {:?}", errors);
-                bus.publish(Event::Error {
-                    id: "config".to_owned(),
-                    message: format!("Config validation errors: {}", errors.join("; ")),
-                });
-            }
-            false
-        };
-        if changed {
+            drop(guard);
             bus.publish(Event::ConfigLoaded { config: Box::new(new_config) });
         }
     }
@@ -418,6 +526,7 @@ impl RactorConfigActor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
 
     #[tokio::test]
     async fn spawn_and_load_config() {
@@ -425,7 +534,7 @@ mod tests {
         let temp_path = std::env::temp_dir().join("runie_test_config.toml");
         // Subscribe BEFORE spawning so we don't miss pre_start's ConfigLoaded
         let mut sub = bus.subscribe();
-        let (_handle, _cell) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone())).await;
+        let (_handle, _cell) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
 
         // Wait for ConfigLoaded with timeout to prevent hanging forever
         let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
@@ -449,7 +558,7 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let temp_path = std::env::temp_dir().join("runie_test_config2.toml");
         let mut sub = bus.subscribe();
-        let (handle, _cell) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone())).await;
+        let (handle, _cell) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
 
         // Wait for ConfigLoaded to ensure actor is ready
         let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
@@ -471,6 +580,90 @@ mod tests {
 
         let config = handle.get_config().await;
         assert!(config.is_some(), "get_config should return Some");
+        let _ = std::fs::remove_file(&temp_path);
+    }
+
+    #[tokio::test]
+    async fn load_layers_returns_effective_config() {
+        let bus = EventBus::<Event>::new(16);
+        let global_path = std::env::temp_dir().join("runie_test_layers_global.toml");
+        let project_path = std::env::temp_dir().join("runie_test_layers_project.toml");
+
+        // Write global config
+        {
+            let mut file = std::fs::File::create(&global_path).unwrap();
+            writeln!(file, r#"provider = "openai""#).unwrap();
+        }
+
+        // Write project config with theme override
+        {
+            let mut file = std::fs::File::create(&project_path).unwrap();
+            writeln!(file, r#"theme = "dark""#).unwrap();
+        }
+
+        let (handle, _cell) = RactorConfigActor::spawn(
+            bus,
+            Some(global_path.clone()),
+            Some(project_path.clone()),
+        ).await;
+
+        // Wait a bit for actor to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        let config = handle.load_layers().await;
+        assert!(config.is_some(), "load_layers should return Some");
+        let config = config.unwrap();
+        // Both global and project settings should be present
+        assert_eq!(config.provider, Some("openai".to_string()));
+        assert_eq!(config.theme, Some("dark".to_string()));
+
+        let _ = std::fs::remove_file(&global_path);
+        let _ = std::fs::remove_file(&project_path);
+    }
+
+    #[tokio::test]
+    async fn mcp_server_roundtrip() {
+        let bus = EventBus::<Event>::new(16);
+        let temp_path = std::env::temp_dir().join("runie_test_mcp.toml");
+
+        let (handle, _cell) = RactorConfigActor::spawn(
+            bus,
+            Some(temp_path.clone()),
+            None,
+        ).await;
+
+        // Wait for actor to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        // Add an MCP server
+        let server = McpServer {
+            transport: crate::config::McpTransport::Stdio,
+            command: vec!["npx".to_string(), "-y".to_string(), "@server".to_string()],
+            url: None,
+            headers: std::collections::HashMap::new(),
+            scope: "user".to_string(),
+        };
+        handle.add_mcp_server(ConfigScope::Global, "test-server".to_string(), server.clone()).await;
+
+        // Wait for write to complete
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        // List MCP servers
+        let servers = handle.list_mcp_servers(ConfigScope::Global).await;
+        assert!(servers.iter().any(|(name, _)| name == "test-server"),
+            "Should have test-server in list: {:?}", servers);
+
+        // Remove the server
+        handle.remove_mcp_server(ConfigScope::Global, "test-server".to_string()).await;
+
+        // Wait for write to complete
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        // Verify it's gone
+        let servers = handle.list_mcp_servers(ConfigScope::Global).await;
+        assert!(!servers.iter().any(|(name, _)| name == "test-server"),
+            "test-server should be removed: {:?}", servers);
+
         let _ = std::fs::remove_file(&temp_path);
     }
 
@@ -498,7 +691,6 @@ mod tests {
         // Test that invalid TOML doesn't crash the actor and config defaults are used.
         // The Config::load silently falls back to defaults on parse errors,
         // so the actor continues to work with defaults.
-        use std::io::Write;
 
         let bus = EventBus::<Event>::new(16);
         let temp_path = std::env::temp_dir().join("runie_test_parse_error.toml");
@@ -511,7 +703,7 @@ mod tests {
         }
 
         let mut sub = bus.subscribe();
-        let (_handle, _cell) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone())).await;
+        let (_handle, _cell) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
 
         // Collect events for up to 2 seconds
         let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);

@@ -106,7 +106,7 @@ impl Leader {
         provider_factory: std::sync::Arc<dyn crate::actors::provider::ProviderFactory>,
         agent_factory: std::sync::Arc<dyn AgentActorFactory>,
     ) -> anyhow::Result<SpawnedHandles> {
-        let (config_h, _) = RactorConfigActor::spawn(bus.clone(), None).await;
+        let (config_h, _) = RactorConfigActor::spawn_default(bus.clone()).await;
         let (provider_h, _) =
             RactorProviderActor::spawn(bus.clone(), config_h.clone(), provider_factory).await?;
         let (io_h, _) = RactorIoActor::spawn(bus.clone()).await?;
@@ -422,7 +422,7 @@ pub mod test_helpers {
         }
 
         let bus = EventBus::<CoreEvent>::new(16);
-        let (config_h, _) = RactorConfigActor::spawn(bus.clone(), None).await;
+        let (config_h, _) = RactorConfigActor::spawn_default(bus.clone()).await;
         let factory: Arc<dyn ProviderFactory> = Arc::new(TestProviderFactory);
         let (provider_h, _) =
             RactorProviderActor::spawn(bus.clone(), config_h.clone(), factory).await
