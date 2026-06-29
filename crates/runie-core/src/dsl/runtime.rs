@@ -137,11 +137,11 @@ impl Runtime for TestRuntime {
 
 // ── RealRuntime ───────────────────────────────────────────────────────────────
 
-/// Route an intent to its owning actor via ActorHandles.
+/// Route an intent to its owning actor via `LeaderHandle`.
 ///
 /// Intents are fire-and-forget: we spawn the async calls so they run
 /// in the background without blocking the sync DSL runtime.
-fn route_intent(handles: &Option<crate::actors::ActorHandles>, intent: &Intent) {
+fn route_intent(handles: &Option<crate::actors::LeaderHandle>, intent: &Intent) {
     let Some(h) = handles else { return };
     match intent {
         Intent::SetTheme { .. } | Intent::ReloadConfig => {
@@ -184,16 +184,16 @@ fn route_intent(handles: &Option<crate::actors::ActorHandles>, intent: &Intent) 
 
 /// Production runtime backed by the actor system.
 ///
-/// Sends intents to actors via `ActorHandles`, broadcasts facts to the
+/// Sends intents to actors via `LeaderHandle`, broadcasts facts to the
 /// `EventBus`, and dispatches notifications to `NotificationActor`.
 pub struct RealRuntime {
     /// Actor handles — `None` when actors are not yet spawned (e.g. headless).
-    actor_handles: Option<crate::actors::ActorHandles>,
+    actor_handles: Option<crate::actors::LeaderHandle>,
 }
 
 impl RealRuntime {
     /// Create a new real runtime with the given actor handles.
-    pub fn new(actor_handles: Option<crate::actors::ActorHandles>) -> Self {
+    pub fn new(actor_handles: Option<crate::actors::LeaderHandle>) -> Self {
         Self { actor_handles }
     }
 

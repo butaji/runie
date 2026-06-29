@@ -2,11 +2,8 @@
 //! Tests for UiActor.
 use super::*;
 use runie_core::actors::{
-    InputActor, RactorIoActor,
-    RactorSessionActor, RactorTurnActor, RactorConfigActor,
+    RactorSessionActor, RactorTurnActor,
 };
-use runie_core::actors::permission::RactorPermissionActor;
-use runie_core::actors::provider::{RactorProviderActor, RactorProviderHandle};
 
 #[cfg(test)]
 async fn test_turn_handle() -> runie_core::actors::RactorTurnHandle {
@@ -16,53 +13,20 @@ async fn test_turn_handle() -> runie_core::actors::RactorTurnHandle {
 }
 
 #[cfg(test)]
-async fn test_session_handle() -> RactorSessionHandle {
+async fn test_session_handle() -> runie_core::actors::RactorSessionHandle {
     let bus = EventBus::<Event>::new(10);
     let (handle, _) = RactorSessionActor::spawn(bus).await.unwrap();
     handle
 }
 
-#[cfg(test)]
-async fn test_provider_handle() -> RactorProviderHandle {
-    use std::sync::Arc;
-    use runie_provider::DynProviderFactory;
-    let bus = EventBus::<Event>::new(10);
-    let (config_handle, _) = RactorConfigActor::spawn(bus.clone(), None).await;
-    let (handle, _) = RactorProviderActor::spawn(
-        bus.clone(),
-        config_handle,
-        Arc::new(DynProviderFactory),
-    ).await.unwrap();
-    handle
-}
-
+/// Returns a `LeaderHandle` (aliased as `ActorHandles`) for tests.
+///
+/// Note: `ActorHandles` is an alias for `LeaderHandle` in `runie-core`.
+/// This helper uses `test_leader_handle()` which constructs all actors
+/// via the leader bootstrap.
 #[cfg(test)]
 async fn test_actor_handles() -> runie_core::actors::ActorHandles {
-    use std::sync::Arc;
-    use runie_provider::DynProviderFactory;
-    let bus = EventBus::<Event>::new(10);
-    let (config, _) = RactorConfigActor::spawn(bus.clone(), None).await;
-    let (provider, _) = RactorProviderActor::spawn(
-        bus.clone(),
-        config.clone(),
-        Arc::new(DynProviderFactory),
-    ).await.unwrap();
-    let (session, _) = RactorSessionActor::spawn(bus.clone()).await.unwrap();
-    let (io, _) = RactorIoActor::spawn(bus.clone()).await.unwrap();
-    let (permission, _) = RactorPermissionActor::spawn(bus.clone()).await;
-    let (input, _) = InputActor::spawn(bus.clone()).await;
-    let (turn, _, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
-    runie_core::actors::ActorHandles {
-        config,
-        provider,
-        session,
-        io,
-        fff_indexer: None,
-        input,
-        permission,
-        turn,
-        turn_join: Some(Arc::new(turn_join)),
-    }
+    runie_core::actors::leader::test_leader_handle().await
 }
 
 #[tokio::test]

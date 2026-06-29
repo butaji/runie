@@ -226,7 +226,7 @@ pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
 /// Results arrive asynchronously via `Event::FffSearchResult`.
 pub(crate) fn refresh_file_picker_search(state: &mut AppState, query: &str) {
     let Some(handles) = state.actor_handles() else { return };
-    let Some(ref fff) = handles.fff_indexer else { return };
+    let fff = &handles.fff_indexer;
 
     let request_id = state.fff_debounce().wrapping_add(1);
     let request = crate::actors::FffSearchRequest {

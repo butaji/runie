@@ -5,7 +5,7 @@
 
 use super::ranking;
 use super::{AppState, CommandUsage, ModelSource};
-use crate::actors::{ActorHandles, ConfigMsg};
+use crate::actors::{LeaderHandle, ConfigMsg};
 use crate::event::TransientLevel;
 
 impl AppState {
@@ -63,8 +63,8 @@ impl AppState {
 
     // ── Actor handles ───────────────────────────────────────────────────────
 
-    /// Install a complete `ActorHandles` registry.
-    pub fn set_actor_handles(&mut self, handles: ActorHandles) {
+    /// Install a complete `LeaderHandle` registry.
+    pub fn set_actor_handles(&mut self, handles: LeaderHandle) {
         *self.actor_handles_mut() = Some(handles);
     }
 

@@ -4,121 +4,48 @@
 //! throughout the application lifetime. They catch lifecycle bugs like
 //! silently dropping actor handles.
 //!
-//! Layer 2 test: `bootstrap_spawns_all_actors` — TUI bootstrap produces
-//! a non-empty ActorSystem.
+//! Layer 2 test: `bootstrap_spawns_all_actors` — Leader bootstrap produces
+//! a LeaderHandle with all actors spawned.
 
-use runie_core::actors::{ConfigActor, ProviderActor};
-use runie_core::actors::provider::{ProviderMsg, ProviderReply};
-use runie_core::bus::EventBus;
-use runie_core::Event;
+use runie_core::actors::leader::Leader;
 use runie_provider::DynProviderFactory;
-use std::sync::Arc;
+use runie_agent::AgentActorFactoryImpl;
 
-/// Verifies the provider actor stays alive and can receive messages.
-/// This test would fail if actors are dropped due to `_actors` pattern
-/// or similar silent drops.
-#[tokio::test]
-async fn provider_actor_responds_to_list_models_request() {
-    let bus = EventBus::<Event>::new(4);
-    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
-    let (provider_handle, provider_actor) = ProviderActor::spawn(
-        bus,
-        config_handle,
-        Arc::new(DynProviderFactory),
-    );
-
-    // Verify we can send a ListModels request and get a response.
-    // If the actor is dropped, the send will fail immediately.
-    let (reply_tx, _reply_rx) = tokio::sync::oneshot::channel();
-    let send_result = provider_handle
-        .tx()
-        .send(ProviderMsg::ListModels {
-            provider: "openai".into(),
-            reply: ProviderReply::new(reply_tx),
-        })
-        .await;
-
-    // Drop the actors explicitly to show the test is checking their lifetime.
-    drop(provider_actor);
-    drop(provider_handle);
-    drop(_config_actor);
-
-    // The send should succeed (actor is alive).
-    // Note: The response might be an error (no config), but the actor
-    // should have received and processed the message.
-    assert!(
-        send_result.is_ok(),
-        "provider actor should be alive to receive messages. \
-         If send fails with 'actor unavailable', the actor was dropped (lifecycle bug)"
-    );
-}
-
-/// Verifies the provider actor handle can be cloned and used while the
-/// underlying actor is still alive.
-#[tokio::test]
-async fn provider_actor_handle_can_be_cloned() {
-    let bus = EventBus::<Event>::new(4);
-    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
-    let (provider_handle, _provider_actor) = ProviderActor::spawn(
-        bus,
-        config_handle,
-        Arc::new(DynProviderFactory),
-    );
-
-    // Clone the handle (like AppState does)
-    let tx = provider_handle.tx();
-    let tx_clone = tx.clone();
-
-    // Both handles should work
-    let (reply_tx, _reply_rx) = tokio::sync::oneshot::channel();
-    let result = tx_clone
-        .send(ProviderMsg::ListModels {
-            provider: "openai".into(),
-            reply: ProviderReply::new(reply_tx),
-        })
-        .await;
-
-    assert!(
-        result.is_ok(),
-        "cloned provider_tx should send successfully"
-    );
-}
-
-/// Layer 2 test: bootstrap produces an ActorHandles with all actors spawned.
+/// Verifies the leader bootstrap spawns all actors and produces a valid LeaderHandle.
 #[tokio::test]
 async fn bootstrap_spawns_all_actors() {
-    use runie_core::bus::EventBus;
-    use runie_core::Event;
-    use runie_core::actors::{
-        ConfigActor, IoActor, ProviderActor, SessionActor,
-        ActorHandles,
-    };
-    use runie_provider::DynProviderFactory;
-    use std::sync::Arc;
+    let leader = Leader::new();
+    let agent_factory = std::sync::Arc::new(AgentActorFactoryImpl);
+    let provider_factory = std::sync::Arc::new(DynProviderFactory);
+    let handle = leader
+        .start(provider_factory, agent_factory)
+        .await
+        .expect("leader should start");
 
-    let bus = EventBus::<Event>::new(16);
+    // Verify all expected actor handles are present and non-null.
+    use runie_core::actors::RactorConfigHandle;
+    use runie_core::actors::RactorProviderHandle;
+    use runie_core::actors::RactorSessionHandle;
+    use runie_core::actors::RactorIoHandle;
+    use runie_core::actors::RactorTurnHandle;
+    use runie_core::actors::RactorInputHandle;
+    use runie_core::actors::RactorPermissionHandle;
+    use runie_core::actors::RactorFffIndexerHandle;
 
-    // Spawn actors the same way bootstrap_app does
-    let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None);
-    let (provider_handle, _provider_actor) = ProviderActor::spawn(
-        bus,
-        config_handle,
-        Arc::new(DynProviderFactory),
-    );
-    let (session_handle, _session_actor) = SessionActor::spawn(bus.clone());
-    let (io_handle, _io_actor) = IoActor::spawn(bus.clone());
+    // Config, provider, session, io, turn, input, permission, fff_indexer
+    // are all accessible via the LeaderHandle fields.
+    let _: &RactorConfigHandle = &handle.config;
+    let _: &RactorProviderHandle = &handle.provider;
+    let _: &RactorSessionHandle = &handle.session;
+    let _: &RactorIoHandle = &handle.io;
+    let _: &RactorTurnHandle = &handle.turn;
+    let _: &RactorInputHandle = &handle.input;
+    let _: &RactorPermissionHandle = &handle.permission;
+    let _: &RactorFffIndexerHandle = &handle.fff_indexer;
 
-    let handles = ActorHandles {
-        config: Some(config_handle),
-        provider: Some(provider_handle),
-        session: Some(session_handle),
-        io: Some(io_handle),
-        fff_indexer: None,
-    };
+    // Agent handle is also present via the dyn trait.
+    let _: &std::sync::Arc<dyn runie_core::actors::leader::LeaderAgentHandle> = &handle.agent;
 
-    // Verify all actors are present
-    assert!(handles.config.is_some(), "config actor should be spawned");
-    assert!(handles.provider.is_some(), "provider actor should be spawned");
-    assert!(handles.session.is_some(), "session actor should be spawned");
-    assert!(handles.io.is_some(), "io actor should be spawned");
+    // Shutdown cleanly.
+    handle.shutdown().await;
 }

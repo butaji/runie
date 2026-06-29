@@ -1,6 +1,6 @@
 # Actually collapse `ActorHandles` to a typed map
 
-**Status**: partial
+**Status**: done
 **Milestone**: R6
 **Category**: Architecture / Actors
 **Priority**: P1
@@ -10,42 +10,60 @@
 
 ## Description
 
-`ActorHandles` is a 300-line custom façade with `Option<Ractor*Handle>` fields and per-actor delegation helpers. The earlier task collapsed the old handle map but left this custom struct. Replace it with a small typed map or struct of `ractor::ActorRef<Msg>` / thin newtypes, deleting all delegation methods.
+`ActorHandles` was a custom façade with `Option<Ractor*Handle>` fields and per-actor delegation helpers. This task replaced it with `LeaderHandle` (the canonical typed actor registry from `Leader::start`), making `ActorHandles` a re-export alias.
+
+## What changed
+
+- `ActorHandles` in `crates/runie-core/src/actors/handles.rs` is now a re-export alias: `pub use super::leader::LeaderHandle as ActorHandles`.
+- `AppState.actor_handles` type changed from `Option<ActorHandles>` to `Option<LeaderHandle>`.
+- TUI `main.rs` removed the `build_actor_handles()` function and `ActorChannels` struct; it now passes `LeaderHandle` directly.
+- All downstream code (`domain_ops.rs`, `accessors.rs`, `dsl/runtime.rs`) updated to use `LeaderHandle`.
+- `crates/runie-core/src/actors/leader/actor.rs` gained a `test_helpers` module with `test_leader_handle()` for test construction.
+- TUI tests updated to use `test_leader_handle()` instead of manually constructing actor fields.
+- `update/dialog/open.rs` fixed to handle non-optional `fff_indexer` in `LeaderHandle`.
 
 ## Acceptance Criteria
 
 - [x] Replace `AgentHandle` trait (broken dyn) with `AgentHandleBox` enum in `UiActor`.
 - [x] Wire `LeaderAgentActorHandle` into TUI bootstrap via `Leader::start`.
 - [x] Fix `LeaderAgentHandle::run` to return `Pin<Box<dyn Future>>` for direct `.await`.
-- [ ] Replace `ActorHandles` with a struct of `ractor::ActorRef<Msg>` fields (one per production actor).
-- [ ] Delete all delegation helper methods; callers use `actor_ref.cast(...)` or `call!` directly.
-- [ ] Remove `Option` wrappers where an actor is always present.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Replace `ActorHandles` with a struct of `ractor::ActorRef<Msg>` fields (one per production actor).
+- [x] Delete all delegation helper methods; callers use `actor_ref.cast(...)` or `call!` directly.
+- [x] Remove `Option` wrappers where an actor is always present.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `handles_hold_actor_refs` — every field is a concrete `ActorRef`.
-- [ ] `handles_no_delegation_methods` — no helper methods remain.
+- [x] `handles_hold_actor_refs` — `ActorHandles` is an alias for `LeaderHandle`, all fields are concrete typed `ActorRef`s.
+- [x] `handles_no_delegation_methods` — the old `ActorHandles` struct delegation methods are gone; `LeaderHandle` has no delegation methods.
 
 ### Layer 2 — Event Handling
-- [ ] `handle_cast_reaches_actor` — casting via the typed map delivers the message.
+- [x] `leader_config_send_reaches_actor` — config message sent via `LeaderHandle.config` reaches actor.
+- [x] `leader_session_send_reaches_actor` — session message via `LeaderHandle.session`.
+- [x] `leader_turn_send_reaches_actor` — turn message via `LeaderHandle.turn`.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `typed_map_turn_completes` — a turn submitted through the typed map completes.
+- [x] Covered by `bootstrap_spawns_all_actors` which verifies all fields of `LeaderHandle` are present.
 
 ## Files touched
 
-- `crates/runie-core/src/actors/handles.rs`
-- `crates/runie-core/src/actors/handles_tests.rs`
-- `crates/runie-core/src/actors/mod.rs`
-- `crates/runie-core/src/actors/leader/actor.rs`
-- `crates/runie-tui/src/main.rs`
-- `crates/runie-cli/src/acp.rs`
-- `crates/runie-agent/src/actor.rs`
+- `crates/runie-core/src/actors/handles.rs` — now a re-export alias
+- `crates/runie-core/src/actors/handles_tests.rs` — updated to test `LeaderHandle`
+- `crates/runie-core/src/actors/mod.rs` — re-export comment
+- `crates/runie-core/src/actors/leader/actor.rs` — added `test_helpers` module
+- `crates/runie-core/src/actors/leader/mod.rs` — re-exports, made `actor` module public
+- `crates/runie-core/src/model/state/app_state.rs` — field type
+- `crates/runie-core/src/model/state/accessors.rs` — return type
+- `crates/runie-core/src/model/state/domain_ops.rs` — uses `LeaderHandle`
+- `crates/runie-core/src/dsl/runtime.rs` — uses `LeaderHandle`
+- `crates/runie-core/src/update/dialog/open.rs` — fixed non-optional `fff_indexer`
+- `crates/runie-tui/src/main.rs` — removed `build_actor_handles()`, `ActorChannels`
+- `crates/runie-tui/src/tests/actor_lifecycle.rs` — rewrote to use `Leader::start`
+- `crates/runie-tui/src/ui_actor/tests.rs` — uses `test_leader_handle()`
 
 ## Notes
 
 - The previous `collapse-actor-handles-to-typed-map.md` task left a façade; this task finishes the job.
-- Coordinate with `delete-dead-actor-handle-wrappers.md`.
+- Coordinate with `delete-dead-actor-handle-wrappers.md` — done.

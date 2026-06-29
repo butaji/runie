@@ -23,7 +23,7 @@ pub mod session;
 mod persistence;
 pub use persistence::PersistenceActor;
 
-pub use handles::ActorHandles;
+pub use handles::ActorHandles; // re-export alias (points to LeaderHandle)
 
 pub use turn::{TurnMsg, RactorTurnActor, RactorTurnHandle};
 pub use config::{RactorConfigActor, RactorConfigHandle, ConfigMsg};

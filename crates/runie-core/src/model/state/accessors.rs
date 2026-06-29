@@ -101,7 +101,7 @@ impl AppState {
         self.perm_req.as_ref()
     }
 
-    pub fn actor_handles(&self) -> Option<&crate::actors::ActorHandles> {
+    pub fn actor_handles(&self) -> Option<&crate::actors::LeaderHandle> {
         self.actor_handles.as_ref()
     }
 
@@ -207,7 +207,7 @@ impl AppState {
         &mut self.perm_req
     }
 
-    pub fn actor_handles_mut(&mut self) -> &mut Option<crate::actors::ActorHandles> {
+    pub fn actor_handles_mut(&mut self) -> &mut Option<crate::actors::LeaderHandle> {
         &mut self.actor_handles
     }
 }

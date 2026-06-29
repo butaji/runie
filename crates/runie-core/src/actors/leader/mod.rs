@@ -14,9 +14,10 @@
 use std::pin::Pin;
 
 mod messages;
-mod actor;
+pub mod actor;
 
 pub use actor::{Leader, LeaderHandle, LeaderConfig};
+pub use actor::test_helpers::test_leader_handle;
 pub use messages::{LeaderCommand, LeaderStatus};
 
 use crate::actors::permission::RactorPermissionHandle;

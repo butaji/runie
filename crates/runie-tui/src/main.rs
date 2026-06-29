@@ -13,14 +13,13 @@
 
 use futures::StreamExt;
 use runie_agent::AgentActorFactoryImpl;
-use runie_core::actors::leader::Leader;
-use runie_core::actors::ActorHandles;
+use runie_core::actors::leader::{Leader, LeaderHandle};
 use runie_provider::DynProviderFactory;
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::telemetry;
 use runie_core::{AppState, Snapshot};
-use runie_tui::{app_init, keymap, terminal, terminal_setup, theme, ui, ui_actor::{AgentHandleBox, UiActor}};
+use runie_tui::{app_init, keymap, terminal, terminal_setup, theme, ui, ui_actor::{AgentHandleBox, LeaderAgentActorHandle, UiActor}};
 use std::{collections::HashMap, io, time::Duration};
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -59,34 +58,19 @@ async fn main() -> io::Result<()> {
         .map_err(|e| io::Error::other(format!("leader bootstrap failed: {}", e)))?;
 
     let mut state = AppState::default();
-    let handles = build_actor_handles(&leader_handle);
-    state.set_actor_handles(handles.clone());
+    state.set_actor_handles(leader_handle.clone());
     app_init::bootstrap(&mut state).await;
 
     let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
     init_terminal_state(&mut state);
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
-    spawn_background_tasks(terminal, state, terminal_caps, leader_handle, shutdown_tx).await;
+    spawn_background_tasks(terminal, state, terminal_caps, leader_handle.clone(), shutdown_tx).await;
 
     shutdown_rx
         .await
         .map_err(|_| io::Error::other("shutdown signal dropped"))?;
     Ok(())
-}
-
-fn build_actor_handles(leader_handle: &runie_core::actors::leader::LeaderHandle) -> ActorHandles {
-    ActorHandles {
-        config: leader_handle.config.clone(),
-        provider: leader_handle.provider.clone(),
-        io: leader_handle.io.clone(),
-        session: leader_handle.session.clone(),
-        permission: leader_handle.permission.clone(),
-        input: leader_handle.input.clone(),
-        turn: leader_handle.turn.clone(),
-        fff_indexer: Some(leader_handle.fff_indexer.clone()),
-        turn_join: None,
-    }
 }
 
 fn init_terminal_state(state: &mut AppState) {
@@ -134,38 +118,25 @@ async fn spawn_background_tasks(
     terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
     state: AppState,
     caps: terminal::caps::TermCaps,
-    leader_handle: runie_core::actors::leader::LeaderHandle,
+    leader_handle: LeaderHandle,
     shutdown_tx: oneshot::Sender<()>,
 ) {
     let bus = leader_handle.event_bus().clone();
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
 
-    let agent_handle = runie_tui::ui_actor::LeaderAgentActorHandle::new(leader_handle.agent.clone());
-    let handles = ActorChannels {
-        input_tx,
-        agent_handle,
-        persistence_handle: leader_handle.session.clone(),
-        turn_handle: leader_handle.turn.clone(),
-    };
+    let agent_handle = LeaderAgentActorHandle::new(leader_handle.agent.clone());
 
     let (kb_tx, kb_rx) = watch::channel(state.config().keybindings().clone());
     tokio::spawn(input_forwarder_task(input_rx, leader_handle.input.clone(), bus.clone()));
 
     // UiActor creates its own watch channel for snapshots; take the receiver for the render task.
     let mut ui_actor = spawn_ui_actor(
-        state, handles.agent_handle, handles.persistence_handle,
-        handles.turn_handle, kb_tx, bus, shutdown_tx, caps,
+        state, agent_handle, leader_handle.session.clone(),
+        leader_handle.turn.clone(), kb_tx, bus, shutdown_tx, caps,
     );
     let render_rx = ui_actor.take_render_rx();
 
-    spawn_agent_tasks(handles.input_tx, kb_rx, terminal, render_rx, caps);
-}
-
-struct ActorChannels {
-    input_tx: mpsc::Sender<Event>,
-    agent_handle: runie_tui::ui_actor::LeaderAgentActorHandle,
-    persistence_handle: runie_core::actors::RactorSessionHandle,
-    turn_handle: runie_core::actors::RactorTurnHandle,
+    spawn_agent_tasks(input_tx, kb_rx, terminal, render_rx, caps);
 }
 
 fn spawn_agent_tasks(
@@ -227,7 +198,7 @@ fn render_loop(
 #[allow(clippy::too_many_arguments)]
 fn spawn_ui_actor(
     state: AppState,
-    agent_handle: runie_tui::ui_actor::LeaderAgentActorHandle,
+    agent_handle: LeaderAgentActorHandle,
     persistence_handle: runie_core::actors::RactorSessionHandle,
     turn_handle: runie_core::actors::RactorTurnHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,

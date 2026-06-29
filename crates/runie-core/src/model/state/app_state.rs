@@ -52,7 +52,7 @@ pub struct AppState {
     pub fff_file_results: Vec<FffFileEntry>,
     pub fff_debounce: u64,
     pub perm_req: Option<crate::model::PermissionRequestState>,
-    pub actor_handles: Option<crate::actors::ActorHandles>,
+    pub actor_handles: Option<crate::actors::LeaderHandle>,
 }
 
 
