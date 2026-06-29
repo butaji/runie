@@ -1,38 +1,28 @@
-//! Conditional-test skip macros.
+//! Conditional-test skip helpers.
 
-/// Skip the current test if `SEATBELT=1` is set.
-#[macro_export]
-macro_rules! skip_if_seatbelt {
-    () => {
-        if std::env::var("SEATBELT").unwrap_or_default() == "1" {
-            eprintln!("skipping test under SEATBELT");
-            return;
-        }
-    };
+/// Returns true if the test should be skipped when `SEATBELT=1` is set.
+pub fn is_seatbelt_enabled() -> bool {
+    std::env::var("SEATBELT").unwrap_or_default() == "1"
 }
 
-/// Skip the current test if `RUNIE_INTEGRATION` is not set.
-#[macro_export]
-macro_rules! skip_if_integration {
-    () => {
-        if std::env::var("RUNIE_INTEGRATION").is_err() {
-            eprintln!("skipping integration test; set RUNIE_INTEGRATION=1 to run");
-            return;
-        }
-    };
+/// Returns true if the test should be skipped when `RUNIE_INTEGRATION` is not set.
+pub fn is_integration_test() -> bool {
+    std::env::var("RUNIE_INTEGRATION").is_err()
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn seatbelt_macro_compiles() {
+    fn seatbelt_helper_compiles() {
         std::env::remove_var("SEATBELT");
-        skip_if_seatbelt!();
+        assert!(!is_seatbelt_enabled());
     }
 
     #[test]
-    fn integration_macro_compiles() {
+    fn integration_helper_compiles() {
         std::env::remove_var("RUNIE_INTEGRATION");
-        skip_if_integration!();
+        assert!(is_integration_test());
     }
 }

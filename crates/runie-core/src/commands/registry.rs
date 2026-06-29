@@ -94,22 +94,21 @@ pub enum DialogState {
     Active { kind: DialogKind, panels: PanelStack },
 }
 
-macro_rules! with_panel_stack {
-    ($self:expr_2021, $stack:ident, $body:expr_2021) => {
-        match $self {
-            DialogState::Welcome => None,
-            DialogState::Active { kind: _, panels: $stack } => Some($body),
-        }
-    };
-}
-
 impl DialogState {
+    /// Access the panel stack if this is an `Active` dialog.
     pub fn panel_stack(&self) -> Option<&PanelStack> {
-        with_panel_stack!(self, s, s)
+        match self {
+            DialogState::Welcome => None,
+            DialogState::Active { kind: _, panels } => Some(panels),
+        }
     }
 
+    /// Mutably access the panel stack if this is an `Active` dialog.
     pub fn panel_stack_mut(&mut self) -> Option<&mut PanelStack> {
-        with_panel_stack!(self, s, s)
+        match self {
+            DialogState::Welcome => None,
+            DialogState::Active { kind: _, panels } => Some(panels),
+        }
     }
 }
 
@@ -120,6 +119,19 @@ impl DialogState {
 #[cfg(test)]
 mod dialog_state_tests {
     use super::*;
+
+    #[test]
+    fn dialog_panel_stack_accessor() {
+        // Welcome state has no panel stack
+        let mut welcome = DialogState::Welcome;
+        assert!(welcome.panel_stack().is_none());
+        assert!(welcome.panel_stack_mut().is_none());
+
+        // Active state exposes the panel stack
+        let stack = PanelStack::new(crate::dialog::Panel::new("test", "Test"));
+        let active = DialogState::Active { kind: DialogKind::CommandPalette, panels: stack.clone() };
+        assert_eq!(active.panel_stack(), Some(&stack));
+    }
 
     #[test]
     fn dialog_transitions_are_valid() {

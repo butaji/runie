@@ -10,34 +10,33 @@ mod thought;
 
 pub use model_config::model_config_event;
 
-/// Helper to apply state mutation and ensure TurnComplete stays last.
-macro_rules! with_ordering {
-    ($state:expr_2021, $apply:expr_2021) => {{
-        $apply;
-        $state.ensure_turn_complete_last();
-    }};
+/// Apply a state mutation and ensure TurnComplete stays last.
+fn apply_and_order<F>(state: &mut AppState, f: F)
+where
+    F: FnOnce(&mut AppState),
+{
+    f(state);
+    state.ensure_turn_complete_last();
 }
 
 pub fn agent_event(state: &mut AppState, event: crate::Event) {
     use Event as E;
     match event {
-        E::Thinking { id } => with_ordering!(state, state.set_thinking(id)),
-        E::ThoughtDone { id } => with_ordering!(state, state.add_thought(id)),
-        E::ToolStart { id, name, .. } => with_ordering!(state, state.start_tool(id, name)),
+        E::Thinking { id } => apply_and_order(state, |s| s.set_thinking(id)),
+        E::ThoughtDone { id } => apply_and_order(state, |s| s.add_thought(id)),
+        E::ToolStart { id, name, .. } => apply_and_order(state, |s| s.start_tool(id, name)),
         E::ToolEnd {
             duration_secs,
             output,
             ..
-        } => {
-            with_ordering!(state, state.end_tool(duration_secs, output))
-        }
+        } => apply_and_order(state, |s| s.end_tool(duration_secs, output)),
         E::ResponseDelta { .. } => state.handle_llm_event(event),
-        E::Response { id, content } => with_ordering!(state, state.append_response(id, content)),
+        E::Response { id, content } => apply_and_order(state, |s| s.append_response(id, content)),
         E::TurnComplete { id, duration_secs } => {
-            with_ordering!(state, state.complete_turn(id, duration_secs))
+            apply_and_order(state, |s| s.complete_turn(id, duration_secs))
         }
         E::Done { id } => state.finish_turn(id),
-        E::Error { id, message } => with_ordering!(state, state.add_error(id, message)),
+        E::Error { id, message } => apply_and_order(state, |s| s.add_error(id, message)),
         // LLM lifecycle events — populate parts during streaming
         E::TextStart { .. }
         | E::TextEnd { .. }

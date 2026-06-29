@@ -57,7 +57,7 @@
   {
     "file": "delete-dead-actor-handle-wrappers.md",
     "title": "Delete dead actor handle wrappers",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-dead-actor-modules-and-custom-trait.md",
@@ -77,7 +77,7 @@
   {
     "file": "delete-leftover-telemetry-stub.md",
     "title": "Delete leftover `telemetry.rs` stub",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-or-fix-dead-mcp-feature-flag.md",
@@ -92,7 +92,7 @@
   {
     "file": "delete-unused-glyph-constants.md",
     "title": "Delete unused glyph constants from `runie-tui`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
@@ -217,7 +217,7 @@
   {
     "file": "remove-redundant-check-field-access-script.md",
     "title": "Remove redundant `check-field-access.sh`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-sleep-from-automatic-tests.md",
@@ -277,7 +277,7 @@
   {
     "file": "replace-leftover-macros-with-functions.md",
     "title": "Replace leftover macros with functions",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-legacy-tool-parsers-with-thin-shim.md",
