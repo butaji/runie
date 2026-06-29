@@ -110,11 +110,10 @@ impl RactorProviderActor {
         bus: EventBus<Event>,
         config_handle: RactorConfigHandle,
         factory: Arc<dyn ProviderFactory>,
-    ) -> (RactorProviderHandle, ractor::ActorCell) {
+    ) -> Result<(RactorProviderHandle, ractor::ActorCell), ractor::SpawnErr> {
         let actor = Self::new(bus, config_handle, factory);
-        let (handle, _join, cell) = spawn_ractor(None, actor, ()).await
-            .expect("ractor spawn must succeed");
-        (RactorProviderHandle::new(handle), cell)
+        let (handle, _join, cell) = spawn_ractor(None, actor, ()).await?;
+        Ok((RactorProviderHandle::new(handle), cell))
     }
 
     /// Spawn a minimal provider actor for testing (no real config/factory needed).
@@ -147,7 +146,7 @@ impl RactorProviderActor {
         }
 
         let (config_h, _) = RactorConfigActor::spawn(bus.clone(), None).await;
-        Self::spawn(bus, config_h, Arc::new(TestFactory)).await
+        Self::spawn(bus, config_h, Arc::new(TestFactory)).await.unwrap()
     }
 
     /// Build a provider for the given registry key and model.
@@ -277,7 +276,7 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let (config_handle, _cell) = RactorConfigActor::spawn(bus.clone(), None).await;
         let factory = Arc::new(MockFactory);
-        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory).await;
+        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory).await.unwrap();
         let _ = handle;
     }
 
@@ -287,7 +286,7 @@ mod tests {
         let (config_handle, _cell) = RactorConfigActor::spawn(bus.clone(), None).await;
         let factory = Arc::new(MockFactory);
 
-        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory).await;
+        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory).await.unwrap();
         let result = handle.build("mock".into(), "echo".into()).await;
         assert!(result.is_ok(), "build should succeed: {:?}", result);
         let built = result.unwrap();
@@ -301,7 +300,7 @@ mod tests {
         let (config_handle, _cell) = RactorConfigActor::spawn(bus.clone(), None).await;
         let factory = Arc::new(MockFactory);
 
-        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory).await;
+        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory).await.unwrap();
         let result = handle.validate_key("mock".into(), "sk-test".into()).await;
         assert!(result.is_ok(), "validate_key should succeed: {:?}", result);
         let models = result.unwrap();

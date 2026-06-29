@@ -81,7 +81,7 @@ impl Leader {
         factory: Arc<dyn crate::actors::provider::ProviderFactory>,
     ) -> anyhow::Result<SpawnedHandles> {
         let (config, _) = RactorConfigActor::spawn(bus.clone(), None).await;
-        let (provider, _) = RactorProviderActor::spawn(bus.clone(), config.clone(), factory).await;
+        let (provider, _) = RactorProviderActor::spawn(bus.clone(), config.clone(), factory).await?;
         let provider: ProviderActorHandle = provider.into();
         let (io, _) = RactorIoActor::spawn(bus.clone()).await?;
         let (session, _) = RactorSessionActor::spawn(bus.clone()).await?;

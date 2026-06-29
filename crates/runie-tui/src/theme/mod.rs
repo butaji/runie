@@ -63,7 +63,8 @@ pub fn set_current_theme_with_caps(name: &str, caps: crate::terminal::caps::Term
 
     *CURRENT_CAPS.write().unwrap_or_else(|e| e.into_inner()) = Some(caps);
     *CURRENT_THEME_NAME.lock().unwrap_or_else(|e| e.into_inner()) = name.to_owned();
-    let theme = loader::load_theme_with_caps(name, caps);
+    let theme = loader::load_theme_with_caps(name, caps)
+        .unwrap_or_else(|_| loader::minimal_fallback_theme());
     *CURRENT_THEME.write().unwrap_or_else(|e| e.into_inner()) = Some(Arc::new(theme));
 }
 
@@ -84,9 +85,14 @@ fn current_caps() -> Option<crate::terminal::caps::TermCaps> {
 /// Get the currently active theme (falls back to default).
 pub fn current_theme() -> Arc<opaline::Theme> {
     let guard = CURRENT_THEME.read().unwrap_or_else(|e| e.into_inner());
-    guard
-        .clone()
-        .unwrap_or_else(|| Arc::new(loader::default_theme()))
+    guard.clone().unwrap_or_else(|| {
+        // Last resort: load embedded default. If that fails, use the minimal
+        // hardcoded fallback — this would only happen if the build pipeline
+        // corrupted the embedded theme TOML.
+        loader::default_theme()
+            .map(Arc::new)
+            .unwrap_or_else(|_| Arc::new(loader::minimal_fallback_theme()))
+    })
 }
 
 /// Get semantic tokens from the current theme.

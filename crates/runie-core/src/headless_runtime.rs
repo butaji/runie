@@ -40,7 +40,7 @@ impl HeadlessRuntime {
         let mut sub = bus.subscribe();
         let (config_handle, config_actor) = RactorConfigActor::spawn(bus.clone(), None).await;
         let (provider_handle, provider_actor) =
-            RactorProviderActor::spawn(bus.clone(), config_handle.clone(), factory).await;
+            RactorProviderActor::spawn(bus.clone(), config_handle.clone(), factory).await?;
 
         // Wait until the config actor has loaded (or failed to load) so callers
         // can resolve provider/model defaults immediately.

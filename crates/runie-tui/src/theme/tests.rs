@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use crate::terminal::caps::{MouseCapability, TermCaps};
 use crate::theme::{BUILTIN_THEMES, current_theme, set_current_theme, set_current_theme_with_caps, test_lock};
+use crate::theme::loader::{default_theme, minimal_fallback_theme};
 
 #[test]
 fn theme_cache_returns_same_instance() {
@@ -136,4 +137,37 @@ fn builtin_themes_have_distinct_bg_base() {
     );
 
     set_current_theme("runie");
+}
+
+// ── Layer 1 — State/Logic: theme fallback on invalid content ────────────────
+
+/// Verifies that the embedded default theme loads without error.
+/// This is a sanity check: if the build-pipeline corrupted DEFAULT_THEME_TOML,
+/// this test would surface the regression.
+#[test]
+fn default_theme_loads_successfully() {
+    let _lock = test_lock();
+    let result = default_theme();
+    assert!(
+        result.is_ok(),
+        "embedded default theme must load: {:?}",
+        result.err()
+    );
+    let theme = result.unwrap();
+    // The embedded theme must have at least basic tokens.
+    assert!(!theme.token_names().is_empty(), "default theme should have tokens");
+}
+
+/// Verifies that the minimal fallback theme is always loadable.
+/// This is the last-resort fallback used when ALL other loaders fail.
+#[test]
+fn minimal_fallback_theme_loads_successfully() {
+    let _lock = test_lock();
+    let theme = minimal_fallback_theme();
+    assert!(!theme.token_names().is_empty(), "fallback theme should have tokens");
+    // Verify the hardcoded color values are present.
+    let bg = theme.color("bg-base");
+    assert_ne!(bg, opaline::OpalineColor::FALLBACK, "fallback bg-base should resolve");
+    let text = theme.color("text-primary");
+    assert_ne!(text, opaline::OpalineColor::FALLBACK, "fallback text-primary should resolve");
 }

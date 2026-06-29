@@ -2,12 +2,12 @@
   {
     "file": "actually-collapse-actor-handles-to-typed-map.md",
     "title": "Actually collapse `ActorHandles` to a typed map",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "actually-replace-runie-provider-backoff-with-backon.md",
     "title": "Actually replace `runie-provider` custom backoff with `backon`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "add-jsonschema-validation-to-configactor-load.md",
@@ -32,7 +32,7 @@
   {
     "file": "cleanup-verify-tests-and-just-recipes.md",
     "title": "Clean up `verify-tests.sh` and `just lint-fix`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "collapse-actor-handles-to-typed-map.md",
@@ -57,7 +57,7 @@
   {
     "file": "delete-dead-actor-handle-wrappers.md",
     "title": "Delete dead actor handle wrappers",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "delete-dead-actor-modules-and-custom-trait.md",
@@ -77,7 +77,7 @@
   {
     "file": "delete-leftover-telemetry-stub.md",
     "title": "Delete leftover `telemetry.rs` stub",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "delete-or-fix-dead-mcp-feature-flag.md",
@@ -92,7 +92,7 @@
   {
     "file": "delete-unused-glyph-constants.md",
     "title": "Delete unused glyph constants from `runie-tui`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
@@ -102,12 +102,12 @@
   {
     "file": "drop-unused-rand-from-runie-provider.md",
     "title": "Drop unused `rand` from `runie-provider`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "eliminate-production-unwrap-expect.md",
     "title": "Eliminate production `unwrap`/`expect` that should be recoverable errors",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "expand-leader-start-for-tui-and-cli.md",
@@ -122,7 +122,7 @@
   {
     "file": "extract-shared-tracing-subscriber-init.md",
     "title": "Extract shared tracing subscriber init",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
@@ -207,7 +207,7 @@
   {
     "file": "normalize-remaining-std-mutex-to-parking-lot.md",
     "title": "Normalize remaining `std::sync::Mutex`/`RwLock` to `parking_lot`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "reconnect-tui-agent-actor-channel.md",
@@ -217,7 +217,7 @@
   {
     "file": "remove-redundant-check-field-access-script.md",
     "title": "Remove redundant `check-field-access.sh`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "remove-sleep-from-automatic-tests.md",
@@ -257,7 +257,7 @@
   {
     "file": "replace-custom-nanoid-in-test-runner.md",
     "title": "Replace custom nanoid in test runner",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-custom-retry-with-backon.md",
@@ -277,7 +277,7 @@
   {
     "file": "replace-leftover-macros-with-functions.md",
     "title": "Replace leftover macros with functions",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-legacy-tool-parsers-with-thin-shim.md",
@@ -297,12 +297,12 @@
   {
     "file": "replace-think-filter-with-regex.md",
     "title": "Replace think-block filter with regex",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-tmux-test-with-ratatui-tests.md",
     "title": "Replace `scripts/tmux-test.sh` with Ratatui `TestBackend` tests",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-tui-keymap-combo-stringification-with-crokey.md",

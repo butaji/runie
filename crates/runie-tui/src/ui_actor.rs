@@ -286,7 +286,7 @@ mod tests {
             bus.clone(),
             config_handle,
             Arc::new(DynProviderFactory),
-        ).await;
+        ).await.unwrap();
         handle
     }
 
@@ -299,7 +299,7 @@ mod tests {
             bus.clone(),
             config.clone(),
             Arc::new(DynProviderFactory),
-        ).await;
+        ).await.unwrap();
         let (session, _) = RactorSessionActor::spawn(bus.clone()).await.unwrap();
         let (io, _) = RactorIoActor::spawn(bus.clone()).await.unwrap();
         let (permission, _) = RactorPermissionActor::spawn(bus.clone()).await;

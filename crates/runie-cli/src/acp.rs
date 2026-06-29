@@ -148,7 +148,7 @@ async fn spawn_runtime(bus: EventBus<Event>) -> Result<AcpRuntime> {
         bus.clone(),
         config_handle.clone(),
         Arc::new(runie_provider::DynProviderFactory),
-    ).await;
+    ).await?;
     let (_session_handle, _session_actor) = RactorSessionActor::spawn(bus.clone()).await?;
     let (_io_handle, _io_actor) = RactorIoActor::spawn(bus.clone()).await?;
     let (permission_handle, _permission_actor) = RactorPermissionActor::spawn(bus.clone()).await;

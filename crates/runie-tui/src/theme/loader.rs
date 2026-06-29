@@ -1,5 +1,37 @@
 use crate::semantic_tokens::DEFAULT_THEME_TOML;
 
+/// Minimal fallback theme TOML used when the embedded default theme fails to load.
+/// This is a hardcoded constant that cannot fail to parse — used only in the
+/// last-resort fallback path in `current_theme()`.
+const MINIMAL_FALLBACK_TOML: &str = concat!(
+    "[meta]\n",
+    "name = \"runie-minimal\"\n",
+    "author = \"runie\"\n",
+    "variant = \"dark\"\n",
+    "\n",
+    "[palette]\n",
+    "bg-base = \"#1e1e1e\"\n",
+    "text-primary = \"#cccccc\"\n",
+    "accent-primary = \"#569cd6\"\n",
+    "success = \"#4ec9b0\"\n",
+    "error = \"#f14c4c\"\n",
+    "\n",
+    "[tokens]\n",
+    "bg-base = \"#1e1e1e\"\n",
+    "text-primary = \"#cccccc\"\n",
+    "accent-primary = \"#569cd6\"\n",
+    "success = \"#4ec9b0\"\n",
+    "error = \"#f14c4c\"\n",
+);
+
+/// Last-resort fallback theme. Used only when ALL loaders (builtin, custom file,
+/// and embedded default) fail — which would indicate build-pipeline corruption.
+/// This constant TOML is designed to be trivially parseable and never fails.
+pub(crate) fn minimal_fallback_theme() -> opaline::Theme {
+    opaline::load_from_str(MINIMAL_FALLBACK_TOML, None)
+        .expect("MINIMAL_FALLBACK_TOML is valid TOML — update if opaline API changes")
+}
+
 // Canonical source for built-in theme names; also used by runie-core for the CLI.
 pub use runie_core::theme_tokens::BUILTIN_THEMES;
 
@@ -8,18 +40,20 @@ pub fn list_builtin_themes() -> Vec<&'static str> {
     BUILTIN_THEMES.to_vec()
 }
 
-pub(crate) fn default_theme() -> opaline::Theme {
-    // The embedded default theme should always be valid. Panicking here during
-    // development catches corruption; in production this should never trigger.
-    opaline::load_from_str(DEFAULT_THEME_TOML, None).expect("embedded default theme must be valid")
+/// Load the embedded default theme.
+///
+/// Returns an error only if the embedded TOML is syntactically invalid
+/// (which would indicate build-pipeline corruption).
+pub(crate) fn default_theme() -> Result<opaline::Theme, opaline::OpalineError> {
+    opaline::load_from_str(DEFAULT_THEME_TOML, None)
 }
 
 /// Load a theme by name: builtin → custom file → default fallback (no style registration).
-pub(crate) fn load_theme_raw(name: &str) -> opaline::Theme {
+pub(crate) fn load_theme_raw(name: &str) -> Result<opaline::Theme, opaline::OpalineError> {
     // Only use the builtin loader if the name is actually a builtin.
     // "runie" is not a builtin — it uses the embedded DEFAULT_THEME_TOML.
     if let Some(t) = opaline::load_by_name(name) {
-        return t;
+        return Ok(t);
     }
     let custom_path = dirs::home_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
@@ -27,26 +61,26 @@ pub(crate) fn load_theme_raw(name: &str) -> opaline::Theme {
         .join("themes")
         .join(format!("{}.toml", name));
     if let Ok(theme) = opaline::load_from_file(&custom_path) {
-        return theme;
+        return Ok(theme);
     }
     default_theme()
 }
 
 /// Load a theme by name: builtin → custom file → default fallback.
-pub(crate) fn load_theme(name: &str) -> opaline::Theme {
-    crate::theme::styles::register_runie_styles(load_theme_raw(name))
+pub(crate) fn load_theme(name: &str) -> Result<opaline::Theme, opaline::OpalineError> {
+    load_theme_raw(name).map(crate::theme::styles::register_runie_styles)
 }
 
 /// Load a theme and quantize its colors to the terminal's color depth.
 pub(crate) fn load_theme_with_caps(
     name: &str,
     caps: crate::terminal::caps::TermCaps,
-) -> opaline::Theme {
-    let base = load_theme(name);
+) -> Result<opaline::Theme, opaline::OpalineError> {
+    let base = load_theme(name)?;
     if caps.truecolor {
-        return base; // No quantization needed
+        return Ok(base); // No quantization needed
     }
-    quantize_theme(base, caps, name)
+    Ok(quantize_theme(base, caps, name))
 }
 
 /// Quantize all palette and token colors in a theme to the terminal's color depth.
@@ -78,7 +112,7 @@ fn quantize_theme(
     }
 
     // Reconstruct: load fresh theme and register quantized tokens on top.
-    let mut result = load_theme_raw(name);
+    let mut result = load_theme_raw(name).expect("load_theme_raw must succeed in quantize_theme (fallback should have resolved)");
     for (k, v) in &quantized {
         result.register_token(k, *v);
     }

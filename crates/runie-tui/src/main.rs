@@ -57,9 +57,8 @@ async fn main() -> io::Result<()> {
 
     let _cleanup = Cleanup;
     let bus = EventBus::<Event>::new(100);
-    let bootstrap = bootstrap_app(bus.clone()).await;
-    let mut state = bootstrap.0;
-    let actor_handles = bootstrap.1;
+    let (mut state, actor_handles) = bootstrap_app(bus.clone()).await
+        .map_err(|e| io::Error::other(format!("actor bootstrap failed: {}", e)))?;
 
     let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
     init_terminal_state(&mut state);
@@ -80,12 +79,12 @@ async fn main() -> io::Result<()> {
     Ok(())
 }
 
-async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
+async fn bootstrap_app(bus: EventBus<Event>) -> Result<(AppState, ActorHandles), ractor::SpawnErr> {
     let (config_handle, _) = RactorConfigActor::spawn(bus.clone(), None).await;
-    let (provider_handle, _provider_actor) = spawn_provider_actor(&bus, &config_handle).await;
+    let (provider_handle, _provider_actor) = spawn_provider_actor(&bus, &config_handle).await?;
     // Unified SessionActor: owns trust, history, session CRUD, and durable event append
-    let (session_handle, _) = RactorSessionActor::spawn(bus.clone()).await.expect("SessionActor must spawn");
-    let (io_handle, _) = RactorIoActor::spawn(bus.clone()).await.expect("IoActor must spawn");
+    let (session_handle, _) = RactorSessionActor::spawn(bus.clone()).await?;
+    let (io_handle, _) = RactorIoActor::spawn(bus.clone()).await?;
     let (permission_handle, _permission_actor) = RactorPermissionActor::spawn(bus.clone()).await;
     // InputActor owns the input buffer, cursor, history, undo/redo.
     let (input_handle, _input_actor) = runie_core::actors::InputActor::spawn(bus.clone()).await;
@@ -115,16 +114,16 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
         handles.fff_indexer = Some(fff_handle);
         state.set_actor_handles(handles.clone());
     }
-    (state, handles)
+    Ok((state, handles))
 }
 
 async fn spawn_provider_actor(
     bus: &EventBus<Event>,
     config_handle: &RactorConfigHandle,
-) -> (
+) -> Result<(
     runie_core::actors::provider::RactorProviderHandle,
     ractor::ActorCell,
-) {
+), ractor::SpawnErr> {
     runie_core::actors::provider::RactorProviderActor::spawn(
         bus.clone(),
         config_handle.clone(),

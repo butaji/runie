@@ -408,7 +408,7 @@ async fn provider_actor_builds_mock_provider_with_runie_mock() {
     let bus = EventBus::<Event>::new(1);
     let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None).await;
     let (provider_handle, _provider_actor) =
-        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory)).await;
+        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory)).await.unwrap();
 
     let built = provider_handle
         .build("mock".into(), "echo".into())
@@ -426,7 +426,7 @@ async fn provider_actor_rejects_unknown_provider_real_factory() {
     let bus = EventBus::<Event>::new(1);
     let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), None).await;
     let (provider_handle, _provider_actor) =
-        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory)).await;
+        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory)).await.unwrap();
 
     let err = provider_handle
         .build("ghost-provider".into(), "x".into())
@@ -477,7 +477,7 @@ api_key = "sk-test"
     let bus = EventBus::<Event>::new(1);
     let (config_handle, _config_actor) = ConfigActor::spawn(bus.clone(), Some(config_path)).await;
     let (provider_handle, _provider_actor) =
-        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory)).await;
+        ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory)).await.unwrap();
 
     let models = provider_handle
         .validate_key("test".into(), "sk-test".into())
