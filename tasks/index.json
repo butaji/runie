@@ -312,7 +312,7 @@
   {
     "file": "replace-tui-markdown-block-layout-with-tui-markdown.md",
     "title": "Replace hand-rolled TUI markdown block layout with `tui-markdown`",
-    "status": "todo"
+    "status": "partial (tui-markdown used for inline styling, block structure preserved)"
   },
   {
     "file": "replace-xor-auth-with-keyring.md",

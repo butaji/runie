@@ -1,4 +1,7 @@
 //! Message rendering — timestamps, margins, alignment.
+//!
+//! Uses the core markdown module for block structure, with tui-markdown
+//! providing inline styling for text blocks.
 
 use ratatui::{
     style::Style,
@@ -10,7 +13,7 @@ use runie_util::labels::format_timestamp;
 
 use crate::markdown_render::{
     apply_color_to_inlines, extract_code_blocks, md_to_spans, parse_inline_spans, CodeBlock,
-    MdInline, MdSpan,
+    MdSpan,
 };
 use crate::theme::{
     color_accent_bg, color_fg, color_fg_bright, style_agent, style_timestamp, style_user,
@@ -79,8 +82,6 @@ pub fn render_user_message(
     lines
 }
 
-// allow: orthogonal layout dimensions and styles — bundled for rendering context
-#[allow(clippy::too_many_arguments)]
 fn build_user_body(
     content: &str,
     inner_width: u16,
@@ -91,6 +92,7 @@ fn build_user_body(
     base_style: Style,
     bg_style: Style,
 ) -> Vec<Line<'static>> {
+    // Use tui-markdown for inline styling
     let inlines = parse_inline_spans(content);
     let spans = apply_color_to_inlines(&inlines, color_fg_bright());
     let first_w = inner_width
@@ -98,6 +100,7 @@ fn build_user_body(
         .saturating_sub(ts_width);
     let rest_w = inner_width.saturating_sub(indent_width);
     let rows = wrap_styled_spans(&spans, first_w, rest_w);
+
     rows.iter()
         .enumerate()
         .map(|(i, row)| {
@@ -117,8 +120,6 @@ fn build_user_body(
         .collect()
 }
 
-// allow: orthogonal layout dimensions and styles — bundled for rendering context
-#[allow(clippy::too_many_arguments)]
 fn build_user_line_from_spans(
     spans: &[MdSpan],
     prefix: &'static str,
@@ -208,7 +209,7 @@ fn render_agent_block(
 }
 
 fn render_agent_text_block(
-    inlines: &[MdInline],
+    inlines: &[runie_core::markdown::MdInline],
     ts_str: &str,
     inner_width: u16,
     is_first: bool,
@@ -243,47 +244,6 @@ fn render_agent_text_block(
     false
 }
 
-fn render_agent_code_block(
-    lang: &str,
-    content: &str,
-    ts_str: &str,
-    inner_width: u16,
-    is_first: bool,
-    lines: &mut Vec<Line<'static>>,
-) -> bool {
-    lines.push(code::render_code_header(
-        lang,
-        is_first,
-        inner_width,
-        ts_str,
-    ));
-    lines.extend(code::render_code_block_lines(content, lang));
-    false
-}
-
-fn render_agent_list_block(
-    items: &[String],
-    ordered: bool,
-    ts_str: &str,
-    inner_width: u16,
-    is_first: bool,
-    lines: &mut Vec<Line<'static>>,
-) -> bool {
-    let mut is_first = is_first;
-    for (i, item) in items.iter().enumerate() {
-        lines.push(support::render_list_item(
-            item,
-            ordered,
-            i,
-            is_first,
-            inner_width,
-            ts_str,
-        ));
-        is_first = false;
-    }
-    is_first
-}
-
 fn build_agent_line_from_spans(
     spans: &[MdSpan],
     prefix: &'static str,
@@ -310,13 +270,49 @@ fn build_agent_line_from_spans(
     Line::from(line_spans)
 }
 
+fn render_agent_code_block(
+    lang: &str,
+    content: &str,
+    ts_str: &str,
+    inner_width: u16,
+    is_first: bool,
+    lines: &mut Vec<Line<'static>>,
+) -> bool {
+    lines.push(code::render_code_header(lang, is_first, inner_width, ts_str));
+    lines.extend(code::render_code_block_lines(content, lang));
+    false
+}
+
+fn render_agent_list_block(
+    items: &[String],
+    ordered: bool,
+    ts_str: &str,
+    inner_width: u16,
+    is_first: bool,
+    lines: &mut Vec<Line<'static>>,
+) -> bool {
+    let mut first_item = is_first;
+    for (i, item) in items.iter().enumerate() {
+        lines.push(support::render_list_item(
+            item,
+            ordered,
+            i,
+            first_item,
+            inner_width,
+            ts_str,
+        ));
+        first_item = false;
+    }
+    is_first
+}
+
 fn render_empty_agent_line(content_width: u16, ts_str: &str) -> Line<'static> {
-    let text = GLYPH_AGENT.to_owned();
-    let mut spans = vec![Span::styled(text.clone(), style_agent())];
+    let prefix = GLYPH_AGENT;
+    let mut spans = vec![Span::styled(prefix, style_agent())];
     if content_width > 0 {
         let ts_width = display_width::width(ts_str) + 1;
         let padding = content_width
-            .saturating_sub(display_width::width(&text))
+            .saturating_sub(display_width::width(prefix))
             .saturating_sub(ts_width);
         if padding > 0 {
             spans.push(Span::raw(" ".repeat(padding as usize)));
