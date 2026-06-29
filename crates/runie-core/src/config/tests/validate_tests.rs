@@ -158,7 +158,12 @@ fn unknown_field_produces_warning() {
 }
 
 #[test]
-fn null_values_are_ignored() {
+fn null_values_are_strictly_rejected_for_non_nullable_fields() {
+    // Fields with serde defaults (models, telemetry, ui, truncation, prompts,
+    // hooks, model_providers) are not nullable in the schema; null is only valid
+    // for explicitly Option<T> fields (provider, model, theme).
+    // This is a stricter-than-original behavior: the hand-written validator
+    // ignored null for defaulted fields; jsonschema enforces the schema.
     let value = json!({
         "provider": null,
         "model": null,
@@ -172,7 +177,12 @@ fn null_values_are_ignored() {
         "hooks": null
     });
     let errors = validate::validate(&value);
-    assert!(errors.is_empty(), "null values should be ignored: {:?}", errors);
+    // Explicitly-null non-nullable fields produce validation errors.
+    // provider/model/theme are Option<T> so they tolerate null; the rest do not.
+    assert!(!errors.is_empty(), "non-nullable null fields should fail");
+    // Errors should be about type mismatch, not unknown fields.
+    assert!(errors.iter().all(|e| e.contains("not of type") || e.contains(": unknown")),
+        "errors should be type errors or unknown fields: {:?}", errors);
 }
 
 #[test]

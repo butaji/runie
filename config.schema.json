@@ -12,12 +12,19 @@
       }
     },
     "keybindings": {
-      "description": "User-defined keybindings that override defaults.\nParsed from `[keybindings]` table in `config.toml`.",
+      "description": "User-defined keybindings that override defaults.",
       "type": "object",
       "additionalProperties": {
         "type": "string"
       },
       "default": {}
+    },
+    "mcp": {
+      "description": "MCP server configurations.",
+      "$ref": "#/$defs/McpSection",
+      "default": {
+        "servers": {}
+      }
     },
     "model": {
       "description": "Legacy model field (use `[models].default` instead).",
@@ -118,6 +125,77 @@
         }
       }
     },
+    "McpSection": {
+      "description": "MCP server configuration section.",
+      "type": "object",
+      "properties": {
+        "servers": {
+          "description": "Named MCP server configurations.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/McpServer"
+          },
+          "default": {}
+        }
+      }
+    },
+    "McpServer": {
+      "description": "An MCP server configuration entry.",
+      "type": "object",
+      "properties": {
+        "command": {
+          "description": "Command and arguments for stdio transport.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "headers": {
+          "description": "HTTP headers for http/sse transports.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "scope": {
+          "description": "Scope: user or project.",
+          "type": "string",
+          "default": "user"
+        },
+        "transport": {
+          "description": "Transport type: stdio, http, or sse.",
+          "$ref": "#/$defs/McpTransport",
+          "default": "stdio"
+        },
+        "url": {
+          "description": "URL for http/sse transports.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "McpTransport": {
+      "description": "Transport type for MCP server communication.",
+      "oneOf": [
+        {
+          "description": "Stdio-based MCP server (default).",
+          "type": "string",
+          "const": "stdio"
+        },
+        {
+          "description": "HTTP-based MCP server.",
+          "type": "string",
+          "const": "http"
+        },
+        {
+          "description": "Server-Sent Events transport.",
+          "type": "string",
+          "const": "sse"
+        }
+      ]
+    },
     "ModelProvider": {
       "description": "A provider's configuration entry.",
       "type": "object",
@@ -171,7 +249,7 @@
       }
     },
     "PermissionAction": {
-      "description": "Permission action result.\n\nThis is the canonical enum for permission decisions throughout the codebase.\nThe protocol's `ApprovalDecision` (Allow/Deny only) is converted to this type\nat the protocol/core boundary via `From<runie_protocol::op::ApprovalDecision>`.",
+      "description": "Permission action result.\n\nThis is the canonical enum for permission decisions throughout the codebase.\nThe protocol's `ApprovalDecision` (Allow/Deny only) is converted to this type\nat the protocol/core boundary via `From<crate::proto::op::ApprovalDecision>`.",
       "type": "string",
       "enum": [
         "Allow",

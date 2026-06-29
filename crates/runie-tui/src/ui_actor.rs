@@ -8,7 +8,9 @@ use std::time::Duration;
 use runie_agent::{AgentMsg, AgentCommand};
 use runie_core::actors::RactorSessionHandle;
 use runie_core::bus::{EventBus, Receiver};
+#[cfg(test)]
 use runie_core::login_flow::LoginStep;
+
 #[cfg(test)]
 use runie_core::commands::DialogKind;
 use runie_core::{AppState, Snapshot, Event};
@@ -152,12 +154,9 @@ impl UiActor {
             None
         };
 
-        let old_login_step = self.state.login_flow().as_ref().map(|f| f.step.clone());
         self.apply_event(evt.clone());
         self.update_paced_renderer(&evt);
         self.dispatch_effect(&evt, effect_tx.clone()).await;
-        self.dispatch_login_validation(effect_tx, old_login_step).await;
-
         if *self.state.should_quit_mut() {
             return true;
         }
@@ -213,16 +212,6 @@ impl UiActor {
                 });
             }
         }
-    }
-
-    /// Dispatch login validation when step transitions to Validating.
-    async fn dispatch_login_validation(
-        &mut self,
-        _effect_tx: mpsc::Sender<Event>,
-        old_login_step: Option<LoginStep>,
-    ) {
-        // Login validation is now handled in dispatch_effect
-        let _ = old_login_step;
     }
 
     /// Build a snapshot with the paced streaming tail applied.
@@ -389,8 +378,12 @@ mod tests {
         assert_eq!(state.input().input, "hello");
     }
 
-    #[tokio::test]
-    async fn paced_renderer_advances_on_response_delta() {
+    /// Helper: builds a UiActor with minimal dependencies for test use.
+    async fn make_test_actor() -> (
+        UiActor,
+        mpsc::Sender<Event>,
+        runie_core::actors::RactorTurnHandle,
+    ) {
         let state = AppState::default();
         let (render_tx, _render_rx) = watch::channel(Snapshot::default());
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
@@ -399,9 +392,15 @@ mod tests {
         let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
         let turn_handle = test_turn_handle().await;
         let persistence_handle = test_session_handle().await;
-        let mut actor = UiActor::new(state, render_tx, AgentActorHandle::new(agent_tx),
-            persistence_handle, turn_handle, kb_tx,
+        let actor = UiActor::new(state, render_tx, AgentActorHandle::new(agent_tx),
+            persistence_handle, turn_handle.clone(), kb_tx,
             EventBus::new(4), shutdown_tx, TermCaps::default());
+        (actor, effect_tx, turn_handle)
+    }
+
+    #[tokio::test]
+    async fn paced_renderer_advances_on_response_delta() {
+        let (mut actor, effect_tx, _) = make_test_actor().await;
 
         // Simulate a streaming message: TextStart -> ResponseDelta -> tick.
         actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
@@ -425,17 +424,7 @@ mod tests {
 
     #[tokio::test]
     async fn paced_renderer_finishes_on_turn_complete() {
-        let state = AppState::default();
-        let (render_tx, _render_rx) = watch::channel(Snapshot::default());
-        let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
-        let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
-        let (shutdown_tx, _shutdown_rx) = oneshot::channel();
-        let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
-        let turn_handle = test_turn_handle().await;
-        let persistence_handle = test_session_handle().await;
-        let mut actor = UiActor::new(state, render_tx, AgentActorHandle::new(agent_tx),
-            persistence_handle, turn_handle, kb_tx,
-            EventBus::new(4), shutdown_tx, TermCaps::default());
+        let (mut actor, effect_tx, _) = make_test_actor().await;
 
         actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
         actor.handle_event(
@@ -467,48 +456,33 @@ mod tests {
 
         let (render_tx, _render_rx) = watch::channel(Snapshot::default());
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
-        let agent_handle = AgentActorHandle::new(agent_tx);
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, mut effect_rx) = mpsc::channel::<Event>(16);
 
         let handles = test_actor_handles().await;
-        let persistence_handle = handles.session.clone();
-        let turn_handle = handles.turn.clone();
-
         let mut state = AppState::default();
-        state.set_actor_handles(handles);
+        state.set_actor_handles(handles.clone());
 
         let mut actor = UiActor::new(
-            state,
-            render_tx,
-            agent_handle,
-            persistence_handle,
-            turn_handle,
-            kb_tx,
-            EventBus::new(4),
-            shutdown_tx,
-            TermCaps::default(),
+            state, render_tx, AgentActorHandle::new(agent_tx),
+            handles.session.clone(), handles.turn.clone(),
+            kb_tx, EventBus::new(4), shutdown_tx, TermCaps::default(),
         );
 
         let mut flow = LoginFlowState::new().with_provider("test-unknown-provider".into());
         flow.key = "sk-test".into();
         let panel = build_key_input(&flow);
         let stack = runie_core::dialog::PanelStack::new(panel);
-        *actor.state.open_dialog_mut() = Some(runie_core::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack });
+        *actor.state.open_dialog_mut() = Some(
+            runie_core::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack }
+        );
         *actor.state.login_flow_mut() = Some(flow);
 
-        // Send SubmitKey directly since the form-to-key transformation happens
-        // in the core update system, not in UiActor's dispatch_effect.
-        actor
-            .handle_event(
-                Event::SubmitKey {
-                    provider: "test-unknown-provider".into(),
-                    key: "sk-test".into(),
-                },
-                effect_tx.clone(),
-            )
-            .await;
+        actor.handle_event(
+            Event::SubmitKey { provider: "test-unknown-provider".into(), key: "sk-test".into() },
+            effect_tx.clone(),
+        ).await;
 
         assert!(
             matches!(
@@ -518,11 +492,7 @@ mod tests {
             "login flow should reach validating step"
         );
 
-        let result =
-            tokio::time::timeout(std::time::Duration::from_secs(2), effect_rx.recv()).await;
-        assert!(
-            result.is_ok(),
-            "validation effect should produce a result event"
-        );
+        let result = tokio::time::timeout(Duration::from_secs(2), effect_rx.recv()).await;
+        assert!(result.is_ok(), "validation effect should produce a result event");
     }
 }

@@ -14,6 +14,8 @@ use schemars::JsonSchema;
 pub mod layers;
 mod validate;
 pub mod schema;
+#[cfg(test)]
+mod tests;
 pub mod migrate;
 pub mod mcp;
 mod provider_config;
