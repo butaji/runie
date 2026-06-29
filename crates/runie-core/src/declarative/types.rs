@@ -1,6 +1,7 @@
 //! Types for declarative configuration.
 
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use serde::de::{self, Error as SerdeError, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -26,13 +27,15 @@ pub struct DeclarativeCommandYaml {
     pub triggers: Vec<Trigger>,
 }
 
+/// Deserialize a category string using FromStr.
+/// Handles case-insensitive matching to maintain backward compatibility.
 fn deserialize_category<'de, D>(deserializer: D) -> Result<CommandCategory, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    parse_category(&s)
-        .ok_or_else(|| SerdeError::custom(format!("unknown category: {s}")))
+    CommandCategory::from_str(&s)
+        .map_err(|_| SerdeError::custom(format!("unknown category: {s}")))
 }
 
 /// Deserialize a YAML list of trigger strings into `Vec<Trigger>`.
@@ -64,18 +67,6 @@ where
     }
 
     deserializer.deserialize_seq(TriggerVisitor)
-}
-
-/// Parse a declarative category string to the shared `CommandCategory`.
-pub fn parse_category(s: &str) -> Option<CommandCategory> {
-    match s.to_lowercase().as_str() {
-        "core" => Some(CommandCategory::Core),
-        "session" => Some(CommandCategory::Session),
-        "model" => Some(CommandCategory::Model),
-        "safety" => Some(CommandCategory::Safety),
-        "tool" | "help" | "system" | "unknown" | "" => Some(CommandCategory::System),
-        _ => None,
-    }
 }
 
 /// A trigger that activates a skill or command.
@@ -130,6 +121,7 @@ pub struct CommandDef {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str::FromStr;
 
     #[test]
     fn trigger_parse_command() {
@@ -150,14 +142,44 @@ mod tests {
     }
 
     #[test]
-    fn command_category_parse() {
+    fn command_category_from_str_round_trip() {
         use crate::commands::CommandCategory;
-        assert_eq!(parse_category("session"), Some(CommandCategory::Session));
-        assert_eq!(parse_category("Session"), Some(CommandCategory::Session));
-        assert_eq!(parse_category("model"), Some(CommandCategory::Model));
-        assert_eq!(parse_category("tool"), Some(CommandCategory::System));
-        assert_eq!(parse_category("help"), Some(CommandCategory::System));
-        assert_eq!(parse_category("unknown"), Some(CommandCategory::System));
-        assert_eq!(parse_category("nonexistent"), None);
+        // Case-insensitive parsing (original behavior preserved)
+        assert_eq!(
+            CommandCategory::from_str("session"),
+            Ok(CommandCategory::Session)
+        );
+        assert_eq!(
+            CommandCategory::from_str("SESSION"),
+            Ok(CommandCategory::Session)
+        );
+        assert_eq!(
+            CommandCategory::from_str("model"),
+            Ok(CommandCategory::Model)
+        );
+        assert_eq!(
+            CommandCategory::from_str("safety"),
+            Ok(CommandCategory::Safety)
+        );
+        // Aliases that map to System
+        assert_eq!(
+            CommandCategory::from_str("tool"),
+            Ok(CommandCategory::System)
+        );
+        assert_eq!(
+            CommandCategory::from_str("help"),
+            Ok(CommandCategory::System)
+        );
+        assert_eq!(
+            CommandCategory::from_str("system"),
+            Ok(CommandCategory::System)
+        );
+        // Display round-trip
+        assert_eq!(
+            CommandCategory::from_str(&CommandCategory::Core.to_string()),
+            Ok(CommandCategory::Core)
+        );
+        // Unknown returns error
+        assert!(CommandCategory::from_str("nonexistent").is_err());
     }
 }

@@ -1,6 +1,6 @@
 # Deserialize declarative command YAML with typed structs
 
-**Status**: todo
+**Status**: done
 **Milestone**: R6
 **Category**: Core / Declarative DSL
 **Priority": P2
@@ -14,17 +14,18 @@
 
 ## Acceptance Criteria
 
-- [ ] Define `DeclarativeCommandYaml` (or similar) with `serde::Deserialize`.
-- [ ] Deserialize `triggers` as `Vec<Trigger>`.
-- [ ] Delete `parse_category` once `CommandCategory` derives `EnumString`.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Define `DeclarativeCommandYaml` (or similar) with `serde::Deserialize`.
+- [x] Deserialize `triggers` as `Vec<Trigger>`.
+- [x] Delete `parse_category` — replaced with `CommandCategory::from_str` using `std::str::FromStr`.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `declarative_command_yaml_deserializes` — a YAML command spec parses correctly.
-- [ ] `declarative_command_triggers_as_list` — triggers are a YAML list, not flat strings.
+- [x] `declarative_command_yaml_deserializes` — a YAML command spec parses correctly.
+- [x] `declarative_command_triggers_as_list` — triggers are a YAML list, not flat strings.
+- [x] `command_category_from_str_round_trip` — case-insensitive category parsing with FromStr.
 
 ### Layer 2 — Event Handling
 - [ ] N/A.

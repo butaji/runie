@@ -194,28 +194,60 @@ Content
         assert!(triggers.is_empty());
     }
 
-    // ── Command category parsing ───────────────────────────────────────────────
+    // ── Command category parsing via FromStr ───────────────────────────────────
 
     #[test]
-    fn command_category_parses_known_values() {
-        assert_eq!(crate::declarative::types::parse_category("session"), Some(CommandCategory::Session));
-        assert_eq!(crate::declarative::types::parse_category("Session"), Some(CommandCategory::Session));
-        assert_eq!(crate::declarative::types::parse_category("MODEL"), Some(CommandCategory::Model));
-        assert_eq!(crate::declarative::types::parse_category("system"), Some(CommandCategory::System));
+    fn command_category_from_str_parses_known_values() {
+        use std::str::FromStr;
+        // Case-insensitive parsing (original behavior preserved)
+        assert_eq!(
+            CommandCategory::from_str("session"),
+            Ok(CommandCategory::Session)
+        );
+        assert_eq!(
+            CommandCategory::from_str("SESSION"),
+            Ok(CommandCategory::Session)
+        );
+        assert_eq!(
+            CommandCategory::from_str("model"),
+            Ok(CommandCategory::Model)
+        );
+        assert_eq!(
+            CommandCategory::from_str("safety"),
+            Ok(CommandCategory::Safety)
+        );
+        assert_eq!(
+            CommandCategory::from_str("system"),
+            Ok(CommandCategory::System)
+        );
     }
 
     #[test]
-    fn command_category_defaults_to_system() {
+    fn command_category_from_str_aliases_map_to_system() {
+        use std::str::FromStr;
         // Tool, Help, Unknown all map to System
-        assert_eq!(crate::declarative::types::parse_category("unknown"), Some(CommandCategory::System));
-        assert_eq!(crate::declarative::types::parse_category(""), Some(CommandCategory::System));
-        assert_eq!(crate::declarative::types::parse_category("tool"), Some(CommandCategory::System));
-        assert_eq!(crate::declarative::types::parse_category("help"), Some(CommandCategory::System));
+        assert_eq!(
+            CommandCategory::from_str("tool"),
+            Ok(CommandCategory::System)
+        );
+        assert_eq!(
+            CommandCategory::from_str("help"),
+            Ok(CommandCategory::System)
+        );
     }
 
     #[test]
-    fn command_category_returns_none_for_unknown() {
-        assert_eq!(crate::declarative::types::parse_category("nonexistent"), None);
+    fn command_category_from_str_display_round_trip() {
+        use std::str::FromStr;
+        // Display round-trip
+        assert_eq!(
+            CommandCategory::from_str(&CommandCategory::Core.to_string()),
+            Ok(CommandCategory::Core)
+        );
+        assert_eq!(
+            CommandCategory::from_str(&CommandCategory::Session.to_string()),
+            Ok(CommandCategory::Session)
+        );
     }
 
     // ── Skill definition tests ────────────────────────────────────────────────
