@@ -6,7 +6,7 @@ mod loader_tests {
     use std::path::Path;
 
     // Re-export types for tests
-    use crate::declarative::types::{CommandDef, SkillDef, Trigger};
+    use crate::declarative::types::{CommandDef, DeclarativeCommandYaml, SkillDef, Trigger};
     use crate::commands::CommandCategory;
     use crate::declarative::loader::{
         load_skills_from_dir, parse_command_yaml, parse_triggers,
@@ -198,19 +198,24 @@ Content
 
     #[test]
     fn command_category_parses_known_values() {
-        assert_eq!(crate::declarative::types::parse_category("session"), CommandCategory::Session);
-        assert_eq!(crate::declarative::types::parse_category("Session"), CommandCategory::Session);
-        assert_eq!(crate::declarative::types::parse_category("MODEL"), CommandCategory::Model);
-        assert_eq!(crate::declarative::types::parse_category("system"), CommandCategory::System);
+        assert_eq!(crate::declarative::types::parse_category("session"), Some(CommandCategory::Session));
+        assert_eq!(crate::declarative::types::parse_category("Session"), Some(CommandCategory::Session));
+        assert_eq!(crate::declarative::types::parse_category("MODEL"), Some(CommandCategory::Model));
+        assert_eq!(crate::declarative::types::parse_category("system"), Some(CommandCategory::System));
     }
 
     #[test]
     fn command_category_defaults_to_system() {
         // Tool, Help, Unknown all map to System
-        assert_eq!(crate::declarative::types::parse_category("unknown"), CommandCategory::System);
-        assert_eq!(crate::declarative::types::parse_category(""), CommandCategory::System);
-        assert_eq!(crate::declarative::types::parse_category("tool"), CommandCategory::System);
-        assert_eq!(crate::declarative::types::parse_category("help"), CommandCategory::System);
+        assert_eq!(crate::declarative::types::parse_category("unknown"), Some(CommandCategory::System));
+        assert_eq!(crate::declarative::types::parse_category(""), Some(CommandCategory::System));
+        assert_eq!(crate::declarative::types::parse_category("tool"), Some(CommandCategory::System));
+        assert_eq!(crate::declarative::types::parse_category("help"), Some(CommandCategory::System));
+    }
+
+    #[test]
+    fn command_category_returns_none_for_unknown() {
+        assert_eq!(crate::declarative::types::parse_category("nonexistent"), None);
     }
 
     // ── Skill definition tests ────────────────────────────────────────────────
@@ -318,5 +323,51 @@ shortcut: Ctrl+b
 
         let result = parse_command_yaml(&cmd_path);
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn declarative_command_yaml_deserializes() {
+        let yaml = r#"
+name: test-cmd
+description: A test command
+category: Model
+intent: SetModel
+shortcut: Ctrl+m
+subcommands: false
+"#;
+        let cmd: DeclarativeCommandYaml = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(cmd.name, "test-cmd");
+        assert_eq!(cmd.description, "A test command");
+        assert_eq!(cmd.category, CommandCategory::Model);
+        assert_eq!(cmd.intent, "SetModel");
+        assert_eq!(cmd.shortcut, Some("Ctrl+m".to_owned()));
+        assert!(!cmd.subcommands);
+    }
+
+    #[test]
+    fn declarative_command_yaml_defaults_missing_fields() {
+        let yaml = "name: minimal\n";
+        let cmd: DeclarativeCommandYaml = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(cmd.name, "minimal");
+        assert_eq!(cmd.description, "");
+        assert_eq!(cmd.category, CommandCategory::System);
+        assert_eq!(cmd.intent, "");
+        assert!(cmd.shortcut.is_none());
+        assert!(!cmd.subcommands);
+        assert!(cmd.triggers.is_empty());
+    }
+
+    #[test]
+    fn declarative_command_yaml_deserializes_triggers_as_list() {
+        let yaml = r#"
+name: trig-cmd
+triggers:
+  - /help
+  - Ctrl+h
+"#;
+        let cmd: DeclarativeCommandYaml = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(cmd.triggers.len(), 2);
+        assert_eq!(cmd.triggers[0], Trigger::Command("/help".to_owned()));
+        assert_eq!(cmd.triggers[1], Trigger::Shortcut("Ctrl+h".to_owned()));
     }
 }

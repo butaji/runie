@@ -114,4 +114,43 @@ mod tests {
         let err = anyhow::anyhow!("400 Bad Request");
         assert!(!is_retryable(&err));
     }
+
+    // ── Layer 1: retryable error triggers multiple attempts ───────────────────
+
+    #[tokio::test]
+    async fn backon_retries_retryable_error() {
+        let counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let c = counter.clone();
+        let result: Result<i32, anyhow::Error> = with_retry(move || {
+            let c = c.clone();
+            async move {
+                let n = c.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                if n < 2 {
+                    Err(anyhow::anyhow!("rate limit"))
+                } else {
+                    Ok::<_, anyhow::Error>(42)
+                }
+            }
+        })
+        .await;
+        assert_eq!(result.unwrap(), 42);
+        assert!(counter.load(std::sync::atomic::Ordering::SeqCst) >= 2);
+    }
+
+    #[tokio::test]
+    async fn backon_does_not_retry_fatal_error() {
+        let counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let c = counter.clone();
+        let result: Result<i32, anyhow::Error> = with_retry(move || {
+            let c = c.clone();
+            async move {
+                c.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                Err(anyhow::anyhow!("401 Unauthorized"))
+            }
+        })
+        .await;
+        assert!(result.is_err());
+        // Only one attempt for non-retryable error
+        assert_eq!(counter.load(std::sync::atomic::Ordering::SeqCst), 1);
+    }
 }

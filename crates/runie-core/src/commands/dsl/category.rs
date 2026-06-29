@@ -10,14 +10,20 @@ pub enum CommandCategory {
     System,
 }
 
+impl Default for CommandCategory {
+    fn default() -> Self {
+        Self::System
+    }
+}
+
 impl CommandCategory {
     pub fn label(&self) -> &'static str {
         match self {
+            Self::System => "System",
             Self::Core => "Core",
             Self::Session => "Session",
             Self::Model => "Model",
             Self::Safety => "Safety",
-            Self::System => "System",
         }
     }
 

@@ -7,8 +7,7 @@ use crate::resource_loader::{
     derive_name_from_path, is_user_invocable, load_resources_from_dir,
 };
 
-use super::types::{CommandDef, SkillDef, Trigger};
-use crate::commands::CommandCategory;
+use super::types::{CommandDef, DeclarativeCommandYaml, SkillDef, Trigger};
 
 /// Generic loader for declarative configuration.
 pub struct DeclarativeLoader {
@@ -122,22 +121,16 @@ pub fn load_commands_from_dir(dir: &Path) -> Vec<CommandDef> {
     commands
 }
 
-/// Parse a command YAML file.
+/// Parse a command YAML file into a typed struct.
 pub(crate) fn parse_command_yaml(path: &Path) -> Option<CommandDef> {
-    let content = std::fs::read_to_string(path).ok()?;
-    let value: serde_yaml::Value = serde_yaml::from_str(&content).ok()?;
-    let map = value.as_mapping()?;
-    let name = get_string(map, "name")?;
-
+    let yaml: DeclarativeCommandYaml = serde_yaml::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
     Some(CommandDef {
-        name,
-        description: get_string(map, "description").unwrap_or_default(),
-        category: get_string(map, "category")
-            .map(|s| super::types::parse_category(&s))
-            .unwrap_or(CommandCategory::System),
-        intent: get_string(map, "intent").unwrap_or_default(),
-        shortcut: get_string(map, "shortcut"),
-        has_subcommands: get_bool(map, "subcommands").unwrap_or(false),
+        name: yaml.name,
+        description: yaml.description,
+        category: yaml.category,
+        intent: yaml.intent,
+        shortcut: yaml.shortcut,
+        has_subcommands: yaml.subcommands,
         file_path: path.to_owned(),
     })
 }
@@ -182,23 +175,6 @@ fn parse_single_command(frontmatter: &HashMap<String, String>) -> Vec<Trigger> {
         .unwrap_or_default()
 }
 
-// ---------------------------------------------------------------------------
-// YAML helpers (command parsing only)
-// ---------------------------------------------------------------------------
-
-/// Get a string value from a YAML mapping.
-fn get_string(map: &serde_yaml::Mapping, key: &str) -> Option<String> {
-    let key_value = serde_yaml::Value::String(key.to_owned());
-    map.get(&key_value)?.as_str().map(String::from)
-}
-
-/// Get a boolean value from a YAML mapping.
-fn get_bool(map: &serde_yaml::Mapping, key: &str) -> Option<bool> {
-    let key_value = serde_yaml::Value::String(key.to_owned());
-    map.get(&key_value)?
-        .as_bool()
-        .or_else(|| map.get(&key_value)?.as_str().map(|s| s == "true"))
-}
 
 #[cfg(test)]
 mod tests {

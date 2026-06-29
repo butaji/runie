@@ -2,7 +2,81 @@
 
 use std::path::PathBuf;
 
+use serde::de::{self, Error as SerdeError, Visitor};
+use serde::{Deserialize, Deserializer};
+
 use crate::commands::CommandCategory;
+
+/// A command definition loaded from a YAML file.
+/// This is the typed deserialization target; convert to `CommandDef` via `From`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct DeclarativeCommandYaml {
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default, deserialize_with = "deserialize_category")]
+    pub category: CommandCategory,
+    #[serde(default)]
+    pub intent: String,
+    #[serde(default)]
+    pub shortcut: Option<String>,
+    #[serde(default)]
+    pub subcommands: bool,
+    #[serde(default, deserialize_with = "deserialize_triggers")]
+    pub triggers: Vec<Trigger>,
+}
+
+fn deserialize_category<'de, D>(deserializer: D) -> Result<CommandCategory, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    parse_category(&s)
+        .ok_or_else(|| SerdeError::custom(format!("unknown category: {s}")))
+}
+
+/// Deserialize a YAML list of trigger strings into `Vec<Trigger>`.
+fn deserialize_triggers<'de, D>(deserializer: D) -> Result<Vec<Trigger>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct TriggerVisitor;
+
+    impl<'de> Visitor<'de> for TriggerVisitor {
+        type Value = Vec<Trigger>;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "a list of trigger strings")
+        }
+
+        fn visit_seq<S>(self, mut seq: S) -> Result<Self::Value, S::Error>
+        where
+            S: de::SeqAccess<'de>,
+        {
+            let mut triggers = Vec::new();
+            while let Some(s) = seq.next_element::<String>()? {
+                if let Some(t) = Trigger::parse(&s) {
+                    triggers.push(t);
+                }
+            }
+            Ok(triggers)
+        }
+    }
+
+    deserializer.deserialize_seq(TriggerVisitor)
+}
+
+/// Parse a declarative category string to the shared `CommandCategory`.
+pub fn parse_category(s: &str) -> Option<CommandCategory> {
+    match s.to_lowercase().as_str() {
+        "core" => Some(CommandCategory::Core),
+        "session" => Some(CommandCategory::Session),
+        "model" => Some(CommandCategory::Model),
+        "safety" => Some(CommandCategory::Safety),
+        "tool" | "help" | "system" | "unknown" | "" => Some(CommandCategory::System),
+        _ => None,
+    }
+}
 
 /// A trigger that activates a skill or command.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,16 +125,7 @@ pub struct CommandDef {
     pub file_path: PathBuf,
 }
 
-/// Parse a declarative category string to the shared `CommandCategory`.
-/// Tool, Help, and Unknown map to System since they don't have DSL equivalents.
-pub fn parse_category(s: &str) -> CommandCategory {
-    match s.to_lowercase().as_str() {
-        "session" => CommandCategory::Session,
-        "model" => CommandCategory::Model,
-        "tool" | "help" | "system" | "unknown" | "" => CommandCategory::System,
-        _ => CommandCategory::System,
-    }
-}
+
 
 #[cfg(test)]
 mod tests {
@@ -87,11 +152,12 @@ mod tests {
     #[test]
     fn command_category_parse() {
         use crate::commands::CommandCategory;
-        assert_eq!(parse_category("session"), CommandCategory::Session);
-        assert_eq!(parse_category("Session"), CommandCategory::Session);
-        assert_eq!(parse_category("model"), CommandCategory::Model);
-        assert_eq!(parse_category("tool"), CommandCategory::System);
-        assert_eq!(parse_category("help"), CommandCategory::System);
-        assert_eq!(parse_category("unknown"), CommandCategory::System);
+        assert_eq!(parse_category("session"), Some(CommandCategory::Session));
+        assert_eq!(parse_category("Session"), Some(CommandCategory::Session));
+        assert_eq!(parse_category("model"), Some(CommandCategory::Model));
+        assert_eq!(parse_category("tool"), Some(CommandCategory::System));
+        assert_eq!(parse_category("help"), Some(CommandCategory::System));
+        assert_eq!(parse_category("unknown"), Some(CommandCategory::System));
+        assert_eq!(parse_category("nonexistent"), None);
     }
 }

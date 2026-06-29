@@ -9,6 +9,8 @@ pub mod openai;
 pub mod protocol;
 pub mod retry;
 
+use crate::retry::{is_retryable, with_retry};
+
 // ---------------------------------------------------------------------------
 // Re-exports from runie-core
 // ---------------------------------------------------------------------------
@@ -230,9 +232,15 @@ pub async fn validate_api_key_with_timeout(
     api_key: &str,
     timeout: std::time::Duration,
 ) -> Result<Vec<String>> {
-    let fut = fetch_models(base_url, api_key, timeout);
-    match tokio::time::timeout(timeout, fut).await {
-        Ok(result) => result,
+    // Apply retry via backon to transient errors, bounded by overall timeout.
+    match tokio::time::timeout(timeout, with_retry(|| async { fetch_models(base_url, api_key, timeout).await })).await {
+        Ok(Ok(models)) => Ok(models),
+        Ok(Err(e)) => {
+            if is_retryable(&e) {
+                anyhow::bail!("API validation failed after retries: {e}");
+            }
+            Err(e)
+        }
         Err(_) => anyhow::bail!("API validation timed out after {}s", timeout.as_secs()),
     }
 }
