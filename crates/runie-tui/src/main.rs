@@ -130,7 +130,7 @@ async fn spawn_background_tasks(
 
     // UiActor creates its own watch channel for snapshots; take the receiver for the render task.
     let mut ui_actor = spawn_ui_actor(
-        state, agent_handle, leader_handle.session.clone(),
+        state, agent_handle,
         leader_handle.turn.clone(), kb_tx, bus, shutdown_tx, caps,
     );
     let render_rx = ui_actor.take_render_rx();
@@ -198,7 +198,6 @@ fn render_loop(
 fn spawn_ui_actor(
     state: AppState,
     agent_handle: LeaderAgentActorHandle,
-    persistence_handle: runie_core::actors::RactorSessionHandle,
     turn_handle: runie_core::actors::RactorTurnHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
@@ -206,7 +205,7 @@ fn spawn_ui_actor(
     caps: terminal::caps::TermCaps,
 ) -> UiActor {
     UiActor::with_agent_handle(
-        state, AgentHandleBox::Leader(agent_handle), persistence_handle,
+        state, AgentHandleBox::Leader(agent_handle),
         turn_handle, kb_tx, bus, shutdown_tx, caps,
     )
 }

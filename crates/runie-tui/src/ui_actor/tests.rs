@@ -1,21 +1,12 @@
 #![allow(unused_imports)]
 //! Tests for UiActor.
 use super::*;
-use runie_core::actors::{
-    RactorSessionActor, RactorTurnActor,
-};
+use runie_core::actors::RactorTurnActor;
 
 #[cfg(test)]
 async fn test_turn_handle() -> runie_core::actors::RactorTurnHandle {
     let bus = EventBus::<Event>::new(10);
     let (handle, _, _) = RactorTurnActor::spawn(bus).await;
-    handle
-}
-
-#[cfg(test)]
-async fn test_session_handle() -> runie_core::actors::RactorSessionHandle {
-    let bus = EventBus::<Event>::new(10);
-    let (handle, _) = RactorSessionActor::spawn(bus).await.unwrap();
     handle
 }
 
@@ -35,7 +26,6 @@ async fn ui_actor_updates_state_from_bus_event() {
     let bus = EventBus::<Event>::new(10);
     let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
     let agent_handle = AgentActorHandle::new(agent_tx);
-    let persistence_handle = test_session_handle().await;
     let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
     let (shutdown_tx, _shutdown_rx) = oneshot::channel();
     let turn_handle = test_turn_handle().await;
@@ -43,7 +33,6 @@ async fn ui_actor_updates_state_from_bus_event() {
     let mut ui_actor = UiActor::new(
         state,
         agent_handle,
-        persistence_handle,
         turn_handle,
         kb_tx,
         bus.clone(),
@@ -100,9 +89,8 @@ async fn make_test_actor() -> (
     let (shutdown_tx, _shutdown_rx) = oneshot::channel();
     let (effect_tx, _effect_rx) = mpsc::channel::<Event>(16);
     let turn_handle = test_turn_handle().await;
-    let persistence_handle = test_session_handle().await;
     let actor = UiActor::new(state, AgentActorHandle::new(agent_tx),
-        persistence_handle, turn_handle.clone(), kb_tx,
+        turn_handle.clone(), kb_tx,
         EventBus::new(4), shutdown_tx, TermCaps::default());
     (actor, effect_tx, turn_handle)
 }
@@ -174,7 +162,7 @@ async fn login_key_submit_triggers_validation_effect() {
 
     let mut actor = UiActor::new(
         state, AgentActorHandle::new(agent_tx),
-        handles.session.clone(), handles.turn.clone(),
+        handles.turn.clone(),
         kb_tx, EventBus::new(4), shutdown_tx, TermCaps::default(),
     );
 

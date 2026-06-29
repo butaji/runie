@@ -6,7 +6,6 @@
 use std::collections::HashMap;
 use std::time::Duration;
 use runie_agent::{AgentMsg, AgentCommand};
-use runie_core::actors::RactorSessionHandle;
 use runie_core::bus::{EventBus, Receiver};
 #[cfg(test)]
 use runie_core::login_flow::LoginStep;
@@ -105,7 +104,6 @@ pub struct UiActor {
     render_tx: watch::Sender<Snapshot>,
     render_rx: Option<watch::Receiver<Snapshot>>,
     agent_handle: AgentHandleBox,
-    persistence_handle: RactorSessionHandle,
     turn_handle: runie_core::actors::RactorTurnHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
@@ -130,7 +128,6 @@ impl UiActor {
     pub fn new(
         state: AppState,
         agent_handle: AgentActorHandle,
-        persistence_handle: RactorSessionHandle,
         turn_handle: runie_core::actors::RactorTurnHandle,
         kb_tx: watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
@@ -138,7 +135,7 @@ impl UiActor {
         caps: TermCaps,
     ) -> Self {
         Self::with_agent_handle(
-            state, AgentHandleBox::Actor(agent_handle), persistence_handle,
+            state, AgentHandleBox::Actor(agent_handle),
             turn_handle, kb_tx, bus, shutdown_tx, caps,
         )
     }
@@ -150,7 +147,6 @@ impl UiActor {
     pub fn with_agent_handle(
         mut state: AppState,
         agent_handle: AgentHandleBox,
-        persistence_handle: RactorSessionHandle,
         turn_handle: runie_core::actors::RactorTurnHandle,
         kb_tx: watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
@@ -165,7 +161,6 @@ impl UiActor {
             render_tx,
             render_rx: Some(render_rx),
             agent_handle,
-            persistence_handle,
             turn_handle,
             kb_tx,
             bus,
@@ -520,32 +515,6 @@ impl UiActor {
     fn publish_snapshot(&mut self) {
         let snap = self.build_paced_snapshot();
         let _ = self.render_tx.send(snap);
-    }
-}
-
-async fn handle_persistence_messages(
-    handle: RactorSessionHandle,
-    evt: Event,
-    submitted_text: Option<String>,
-) {
-    if let Some(entry) = submitted_text {
-        if !entry.trim().is_empty() {
-            handle.append_history(entry.trim().to_owned()).await;
-        }
-    }
-    let cwd = std::env::current_dir().unwrap_or_default();
-    match evt {
-        Event::TrustProject => {
-            handle
-                .set_trust(cwd, runie_core::trust::TrustDecision::Trusted)
-                .await;
-        }
-        Event::UntrustProject => {
-            handle
-                .set_trust(cwd, runie_core::trust::TrustDecision::Untrusted)
-                .await;
-        }
-        _ => {}
     }
 }
 
