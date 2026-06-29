@@ -1,6 +1,6 @@
 # Replace custom TUI widgets with ratatui ecosystem crates
 
-**Status**: todo
+**Status**: in_progress
 **Milestone**: R1
 **Category**: TUI / Rendering
 **Priority**: P0
@@ -14,25 +14,25 @@
 
 ## Acceptance Criteria
 
-- [ ] Delete `crates/runie-tui/src/stylize.rs` and use `ratatui::style::Stylize`.
+- [x] Delete `crates/runie-tui/src/stylize.rs` and use `ratatui::style::Stylize`.
 - [ ] Replace the custom input box in `crates/runie-tui/src/ui/input.rs` with `tui-textarea` (multi-line) or `tui-input` (single-line).
 - [ ] Replace the custom popup list in `crates/runie-tui/src/popups/panel/list.rs` with `ratatui::widgets::List` and `ListState`.
-- [ ] Replace hand-written terminal setup/cleanup sequences in `crates/runie-tui/src/terminal_setup.rs` with `crossterm::execute!` commands (`EnterAlternateScreen`, `EnableMouseCapture`, `EnableFocusTracking`, `EnableBracketedPaste`, `SetTitle`, `Clear`, etc.). Keep OSC 52 only if intentional.
-- [ ] Replace custom ANSI 256 color quantization in `crates/runie-tui/src/quantize.rs` with `ansi_colours::ansi256_from_rgb` plus a small ANSI-16 fallback.
+- [x] Replace hand-written terminal setup/cleanup sequences in `crates/runie-tui/src/terminal_setup.rs` with `crossterm::execute!` commands (`EnterAlternateScreen`, `EnableMouseCapture`, `EnableFocusTracking`, `EnableBracketedPaste`, `SetTitle`, `Clear`, etc.). Keep OSC 52 only if intentional.
+- [x] Replace custom ANSI 256 color quantization in `crates/runie-tui/src/quantize.rs` with `ansi_colours::ansi256_from_rgb` plus a small ANSI-16 fallback.
 - [ ] Form rendering (`popups/panel/form.rs`) should use `tui-input`/`tui-textarea` for fields and `List` for action buttons where practical.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 3 — Rendering
 - [ ] `input_box_renders_prompt` — buffer assertions for the prompt widget after migration.
 - [ ] `popup_list_renders_selection` — `List` with highlight style produces the same visual output.
-- [ ] `terminal_setup_uses_crossterm_commands` — verify no raw byte sequences remain in `terminal_setup.rs`.
-- [ ] `ansi_quantization_matches_legacy` — `ansi256_from_rgb` produces the same 256-color indices as the old lookup for a sample set.
+- [x] `terminal_setup_uses_crossterm_commands` — verify no raw byte sequences remain in `terminal_setup.rs`.
+- [x] `ansi_quantization_matches_legacy` — `ansi256_from_rgb` produces the same 256-color indices as the old lookup for a sample set.
 
 ### Layer 1 — State/Logic
-- [ ] `stylize_trait_deleted` — `ratatui::style::Stylize` is used and the local trait is gone.
+- [x] `stylize_trait_deleted` — `ratatui::style::Stylize` is used and the local trait is gone.
 
 ### Layer 2 — Event Handling
 - [ ] N/A.
