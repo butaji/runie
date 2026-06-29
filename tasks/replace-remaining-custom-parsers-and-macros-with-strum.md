@@ -1,6 +1,6 @@
 # Replace remaining custom parsers and macros with `strum`
 
-**Status**: todo
+**Status**: partial (CommandCategory, ThinkingLevel, PermissionMode, PromptMode done)
 **Milestone**: R5
 **Category**: Core / State
 **Priority**: P2
@@ -14,17 +14,17 @@ Several small enums and macros still implement `FromStr`, `Display`, `label()`, 
 
 ## Acceptance Criteria
 
-- [ ] Delete `cmd!` macro in `commands/dsl/mod.rs`; migrate call sites to `commands::dsl::cmd(...)`.
-- [ ] Replace `with_ordering!` with a helper function.
-- [ ] Replace `CommandCategory::label/as_str` with `strum::Display`.
-- [ ] Replace `ThinkingLevel::FromStr/as_str/cycle/ALL` with `strum` derives + small manual `cycle()`.
-- [ ] Replace `PermissionMode`/`PromptMode::from_str` with `strum::EnumString`.
+- [x] Delete `cmd!` macro in `commands/dsl/mod.rs`; migrate call sites to `commands::dsl::cmd(...)`. (already done)
+- [x] Replace `with_ordering!` with a helper function. (already deleted)
+- [x] Replace `CommandCategory::label/as_str` with `strum::Display`.
+- [x] Replace `ThinkingLevel::FromStr/as_str/cycle/ALL` with `strum` derives + small manual `cycle()`.
+- [x] Replace `PermissionMode`/`PromptMode::from_str` with `strum::EnumString`.
 - [ ] Replace `Role::as_str`/`Role::parse` (in `proto/message/mod.rs`) with `strum` derives.
 - [ ] Replace `SessionTreeFilter`, `SettingsCategory`, `McpTransport`, `DialogType`, `DialogKind` string mappings with `strum` derives.
 - [ ] Replace `theme_color!`/`style_fn!` macros with functions or generic helpers.
-- [ ] Delete dead manual MCP argv parsers in `runie-cli/src/mcp.rs`.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Delete dead manual MCP argv parsers in `runie-cli/src/mcp.rs`. (already deleted)
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 

@@ -1,6 +1,7 @@
 //! Message types shared across the application.
 
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 pub mod parts;
 
@@ -54,6 +55,8 @@ impl ToolCall {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(strum::Display, strum::EnumString)]
+#[strum(serialize_all = "snake_case")]
 pub enum Role {
     #[default]
     User,
@@ -65,7 +68,9 @@ pub enum Role {
 }
 
 impl Role {
+    /// String representation (snake_case).
     pub fn as_str(&self) -> &'static str {
+        // Matches #[strum(serialize_all = "snake_case")] on the enum.
         match self {
             Role::User => "user",
             Role::Thought => "thought",
@@ -78,15 +83,7 @@ impl Role {
 
     /// Convert from API string representation.
     pub fn parse(s: &str) -> Option<Self> {
-        match s {
-            "user" => Some(Role::User),
-            "thought" => Some(Role::Thought),
-            "assistant" => Some(Role::Assistant),
-            "tool" => Some(Role::Tool),
-            "turn_complete" => Some(Role::TurnComplete),
-            "system" => Some(Role::System),
-            _ => None,
-        }
+        Self::from_str(s).ok()
     }
 }
 
