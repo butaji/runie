@@ -3,8 +3,21 @@
 use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };
+use crokey::KeyCombinationFormat;
+use once_cell::sync::Lazy;
 use runie_core::{keybindings, Event as CoreEvent};
 use std::collections::HashMap;
+
+/// Lowercase `+`-separated combo formatter backed by `crokey::KeyCombinationFormat`.
+/// Output matches the legacy format: "ctrl+c", "alt+enter", "shift+tab".
+static COMBO_FORMAT: Lazy<KeyCombinationFormat> = Lazy::new(|| {
+    KeyCombinationFormat::default()
+        .with_lowercase_modifiers()
+        .with_control("ctrl-")
+        .with_alt("alt-")
+        .with_shift("shift-")
+        .with_command("cmd-")
+});
 
 pub fn convert_event(event: &Event, bindings: &HashMap<String, String>) -> Option<CoreEvent> {
     log_key_event(event);
@@ -69,39 +82,16 @@ fn log_key_event(event: &Event) {
 /// Handle escape sequences that crossterm doesn't parse as KeyEvent.
 /// Many terminals send different sequences for modified keys.
 pub fn key_event_to_combo(key: &KeyEvent) -> String {
-    let mut parts = Vec::new();
-    if key.modifiers.contains(KeyModifiers::CONTROL) {
-        parts.push("ctrl");
+    use crokey::KeyCombination;
+    match key.code {
+        // crokey formats KeyCode::Esc as "Esc" via Debug; map to "escape".
+        KeyCode::Esc if key.modifiers.is_empty() => return "escape".to_owned(),
+        // BackTab is always SHIFT+Tab in the binding table; use the legacy alias.
+        KeyCode::BackTab => return "shift+tab".to_owned(),
+        _ => {}
     }
-    if key.modifiers.contains(KeyModifiers::ALT) {
-        parts.push("alt");
-    }
-    if key.modifiers.contains(KeyModifiers::SHIFT) {
-        parts.push("shift");
-    }
-    let key_name = match key.code {
-        KeyCode::Char('\t') => "tab".to_owned(),
-        KeyCode::Char(c) => c.to_lowercase().collect(),
-        KeyCode::Enter => "enter".to_owned(),
-        KeyCode::Esc => "escape".to_owned(),
-        KeyCode::Backspace => "backspace".to_owned(),
-        KeyCode::Tab => "tab".to_owned(),
-        KeyCode::BackTab => "shift+tab".to_owned(),
-        KeyCode::Delete => "delete".to_owned(),
-        KeyCode::Up => "up".to_owned(),
-        KeyCode::Down => "down".to_owned(),
-        KeyCode::Left => "left".to_owned(),
-        KeyCode::Right => "right".to_owned(),
-        KeyCode::Home => "home".to_owned(),
-        KeyCode::End => "end".to_owned(),
-        KeyCode::Insert => "insert".to_owned(),
-        KeyCode::PageUp => "pageup".to_owned(),
-        KeyCode::PageDown => "pagedown".to_owned(),
-        KeyCode::F(n) => format!("f{}", n),
-        _ => return String::new(),
-    };
-    parts.push(&key_name);
-    parts.join("+")
+    let combo = KeyCombination::from(*key);
+    COMBO_FORMAT.to_string(combo).to_lowercase().replace('-', "+")
 }
 
 fn map_key_event(key: &KeyEvent, bindings: &HashMap<String, String>) -> Option<CoreEvent> {

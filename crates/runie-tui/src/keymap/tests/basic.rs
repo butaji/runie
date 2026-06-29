@@ -1,5 +1,23 @@
 use super::{default_bindings, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
+/// Layer 2: a parsed combo triggers the right action — exercises the crokey-backed
+/// key_event_to_combo → lookup_binding path end-to-end.
+#[test]
+fn keybinding_event_maps_to_action() {
+    // Ctrl+Shift+O (uppercase) parses as Ctrl+Shift+o via crokey normalization.
+    let key = KeyEvent::new(
+        KeyCode::Char('O'),
+        KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+    );
+    let event = crossterm::event::Event::Key(key);
+    let result = crate::keymap::convert_event(&event, &default_bindings());
+    assert!(
+        matches!(result, Some(runie_core::Event::CopyLastResponse)),
+        "Ctrl+Shift+O should map to CopyLastResponse, got {:?}",
+        result
+    );
+}
+
 #[test]
 fn ctrl_o_converts_to_toggle_expand() {
     let key = KeyEvent::new(KeyCode::Char('o'), KeyModifiers::CONTROL);

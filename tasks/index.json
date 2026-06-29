@@ -352,7 +352,7 @@
   {
     "file": "replace-tui-keymap-combo-stringification-with-crokey.md",
     "title": "Replace TUI keymap combo stringification with `crokey`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-tui-markdown-block-layout-with-tui-markdown.md",
