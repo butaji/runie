@@ -37,9 +37,9 @@ Line wrapping and line-count logic exist in both `runie-core` and `runie-tui`, p
 
 ## Files touched
 
-- `crates/runie-core/src/text.rs`
-- `crates/runie-tui/src/ui/message.rs`
-- `crates/runie-tui/src/ui/diff.rs`
+- `crates/runie-core/src/layout.rs`
+- `crates/runie-tui/src/message/wrap.rs`
+- `crates/runie-tui/src/ui/messages/lines.rs`
 - `Cargo.toml`
 
 ## Notes

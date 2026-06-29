@@ -46,3 +46,4 @@ Subagent results are currently collected via callbacks or polling, which complic
 
 - Use `tokio::sync::oneshot` for a single final result; use `mpsc` if streaming intermediate events is required.
 - Ensure the channel is dropped when the parent turn is cancelled to avoid leaking tasks.
+- **Update after review:** `crates/runie-agent/src/subagent.rs` still uses `std::sync::Mutex<Vec<String>>` with a callback and polling; coordinate with `normalize-remaining-std-mutex-to-parking-lot.md`.

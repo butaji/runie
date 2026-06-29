@@ -40,11 +40,12 @@ Provider and model configuration is largely stringly typed, with model names, to
 
 - `crates/runie-provider/src/config.rs`
 - `crates/runie-provider/src/catalog.rs`
-- `crates/runie-protocol/src/provider.rs`
-- `crates/runie-core/src/config_validator.rs`
+- `crates/runie-core/src/config/mod.rs`
+- `crates/runie-core/src/config/validate.rs`
 - `config.schema.json`
 
 ## Notes
 
 - The catalog should be plain data (JSON/YAML) embedded with `include_str!` so adding a model does not require a code change.
 - Avoid provider-specific tokenizer crates unless required for token counting.
+- **Update after review:** provider API keys are currently plaintext in `config.toml`; moving them to the OS keyring is tracked by `store-provider-api-keys-in-keyring-not-config.md` and should land before or alongside this task so `api_key` can become `secrecy::SecretString`.

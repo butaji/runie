@@ -55,3 +55,4 @@
 - The retry behavior is now handled at the HTTP connection level by `reqwest_eventsource`, which retries before the stream starts.
 - Once the stream starts emitting events, any errors are propagated immediately without retry.
 - The `backon` crate remains in the workspace for use with non-stream async operations.
+- **Update after review:** the task was previously marked done, but `crates/runie-provider/src/retry.rs` still contains a hand-rolled backoff loop with `tokio::time::sleep`. The remaining cleanup is now tracked by `actually-replace-runie-provider-backoff-with-backon.md`.

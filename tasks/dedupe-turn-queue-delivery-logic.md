@@ -46,3 +46,4 @@
 
 - Coordinate with `collapse-actor-handles-to-typed-map.md` because `RactorTurnActor` handle wiring may change.
 - If the sync fallback is kept only for tests, consider moving it to `runie-testing`.
+- **Update after review:** a sync fallback still exists in `crates/runie-core/src/update/session.rs`. Removing it is tracked by `remove-sync-turn-queue-fallback-from-app-state.md`.

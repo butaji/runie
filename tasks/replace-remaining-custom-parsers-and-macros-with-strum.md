@@ -19,7 +19,10 @@ Several small enums and macros still implement `FromStr`, `Display`, `label()`, 
 - [ ] Replace `CommandCategory::label/as_str` with `strum::Display`.
 - [ ] Replace `ThinkingLevel::FromStr/as_str/cycle/ALL` with `strum` derives + small manual `cycle()`.
 - [ ] Replace `PermissionMode`/`PromptMode::from_str` with `strum::EnumString`.
+- [ ] Replace `Role::as_str`/`Role::parse` (in `proto/message/mod.rs`) with `strum` derives.
+- [ ] Replace `SessionTreeFilter`, `SettingsCategory`, `McpTransport`, `DialogType`, `DialogKind` string mappings with `strum` derives.
 - [ ] Replace `theme_color!`/`style_fn!` macros with functions or generic helpers.
+- [ ] Delete dead manual MCP argv parsers in `runie-cli/src/mcp.rs`.
 - [ ] `cargo test --workspace` succeeds after the change.
 - [ ] `cargo check --workspace` succeeds with no new warnings.
 
@@ -46,6 +49,13 @@ Several small enums and macros still implement `FromStr`, `Display`, `label()`, 
 - `crates/runie-core/src/update/agent/mod.rs`
 - `crates/runie-core/src/model/state/types.rs`
 - `crates/runie-core/src/subagents/mod.rs`
+- `crates/runie-core/src/proto/message/mod.rs`
+- `crates/runie-core/src/session/tree.rs`
+- `crates/runie-core/src/settings/mod.rs`
+- `crates/runie-core/src/config/mcp.rs`
+- `crates/runie-core/src/commands/dsl/flow.rs`
+- `crates/runie-core/src/commands/registry.rs`
+- `crates/runie-cli/src/mcp.rs`
 - `crates/runie-tui/src/theme/colors.rs`
 - `crates/runie-tui/src/theme/styles.rs`
 

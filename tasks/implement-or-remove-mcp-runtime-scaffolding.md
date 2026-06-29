@@ -43,3 +43,4 @@
 
 - If MCP is removed, update `docs/Architecture.md` and `Configuration.md` to remove MCP references.
 - If MCP is implemented, ensure it does not duplicate the existing built-in tool loop.
+- **Update after review:** `runie-cli/src/mcp.rs` contains dead manual argv parsers behind `#[allow(dead_code)]]`; delete them as part of this task or `replace-remaining-custom-parsers-and-macros-with-strum.md`.

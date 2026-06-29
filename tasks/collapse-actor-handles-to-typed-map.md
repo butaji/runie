@@ -60,3 +60,4 @@ Current state as of this review:
 - If `FffIndexerActor` cannot be migrated to ractor in the preceding task, keep a small dedicated wrapper but move it next to the actor instead of in the global `handles.rs`.
 - `LeaderHandle` should probably become a thin wrapper around `ActorHandles` plus the event bus and shutdown sender.
 - Rejected alternative: keeping the large helper struct for backward compatibility. It ossifies the runtime surface and makes adding or removing actors expensive.
+- **Update after review:** the current `ActorHandles` is still a 300-line façade. The remaining collapse is tracked by `actually-collapse-actor-handles-to-typed-map.md`.

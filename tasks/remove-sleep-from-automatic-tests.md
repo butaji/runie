@@ -90,3 +90,4 @@ The following sleeps remain and are acceptable:
 - The `wait_for_event()` helper provides a deterministic 2-second deadline for event arrival.
 - Tests no longer rely on arbitrary timing to observe async side effects.
 - This makes tests more reliable and faster (no unnecessary waiting).
+- **Update after review:** residual `sleep` calls remain in `runie-testing/src/runner.rs` (harness polling loop), `runie-provider/src/mock.rs` (simulated provider delay), and `runie-provider/src/retry.rs` (retry backoff). These are acceptable by design; the harness polling loop could be replaced with `Notify`/`oneshot` in a future cleanup if needed.

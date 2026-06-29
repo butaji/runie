@@ -1,12 +1,27 @@
 [
   {
+    "file": "actually-collapse-actor-handles-to-typed-map.md",
+    "title": "Actually collapse `ActorHandles` to a typed map",
+    "status": "todo"
+  },
+  {
+    "file": "actually-replace-runie-provider-backoff-with-backon.md",
+    "title": "Actually replace `runie-provider` custom backoff with `backon`",
+    "status": "todo"
+  },
+  {
+    "file": "add-jsonschema-validation-to-configactor-load.md",
+    "title": "Add `jsonschema` validation to `ConfigActor` load path",
+    "status": "todo"
+  },
+  {
     "file": "centralize-built-in-tool-names.md",
     "title": "Centralize built-in tool names",
     "status": "done"
   },
   {
     "file": "centralize-test-fixtures-and-mocks.md",
-    "title": "Centralize test fixtures and mocks in runie-testing",
+    "title": "Centralize test fixtures and mocks in `runie-testing`",
     "status": "done"
   },
   {
@@ -15,14 +30,24 @@
     "status": "done"
   },
   {
+    "file": "cleanup-verify-tests-and-just-recipes.md",
+    "title": "Clean up `verify-tests.sh` and `just lint-fix`",
+    "status": "todo"
+  },
+  {
     "file": "collapse-actor-handles-to-typed-map.md",
-    "title": "Collapse ActorHandles to a typed ractor::ActorRef map",
+    "title": "Collapse `ActorHandles` to a typed `ractor::ActorRef` map",
     "status": "done"
   },
   {
     "file": "collapse-dialogstate-variants.md",
-    "title": "Collapse DialogState variants",
+    "title": "Collapse `DialogState` variants",
     "status": "done"
+  },
+  {
+    "file": "collapse-event-intent-kind-taxonomies.md",
+    "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
+    "status": "todo"
   },
   {
     "file": "dedupe-turn-queue-delivery-logic.md",
@@ -30,23 +55,78 @@
     "status": "done"
   },
   {
+    "file": "delete-dead-actor-handle-wrappers.md",
+    "title": "Delete dead actor handle wrappers",
+    "status": "todo"
+  },
+  {
     "file": "delete-dead-actor-modules-and-custom-trait.md",
-    "title": "Delete dead actor modules and the custom Actor trait",
+    "title": "Delete dead actor modules and the custom `Actor` trait",
     "status": "done"
   },
   {
     "file": "delete-dead-runie-macros-crate.md",
-    "title": "Delete the dead runie-macros crate",
+    "title": "Delete the dead `runie-macros` crate",
     "status": "done"
+  },
+  {
+    "file": "delete-eventbusbridge-wrapper.md",
+    "title": "Delete `EventBusBridge` wrapper",
+    "status": "todo"
+  },
+  {
+    "file": "delete-leftover-telemetry-stub.md",
+    "title": "Delete leftover `telemetry.rs` stub",
+    "status": "todo"
   },
   {
     "file": "delete-or-fix-dead-mcp-feature-flag.md",
-    "title": "Delete or fix dead mcp feature flag",
+    "title": "Delete or fix dead `mcp` feature flag",
     "status": "done"
   },
   {
+    "file": "delete-or-merge-inspector-tool-pipeline.md",
+    "title": "Delete or merge the inspector tool pipeline",
+    "status": "todo"
+  },
+  {
+    "file": "delete-unused-glyph-constants.md",
+    "title": "Delete unused glyph constants from `runie-tui`",
+    "status": "todo"
+  },
+  {
+    "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
+    "title": "Deserialize declarative command YAML with typed structs",
+    "status": "todo"
+  },
+  {
+    "file": "drop-unused-rand-from-runie-provider.md",
+    "title": "Drop unused `rand` from `runie-provider`",
+    "status": "todo"
+  },
+  {
+    "file": "eliminate-production-unwrap-expect.md",
+    "title": "Eliminate production `unwrap`/`expect` that should be recoverable errors",
+    "status": "todo"
+  },
+  {
+    "file": "expand-leader-start-for-tui-and-cli.md",
+    "title": "Expand `Leader::start` for the full TUI and CLI runtime",
+    "status": "todo"
+  },
+  {
+    "file": "extract-shared-streaming-response-parser.md",
+    "title": "Extract shared streaming response parser",
+    "status": "todo"
+  },
+  {
+    "file": "extract-shared-tracing-subscriber-init.md",
+    "title": "Extract shared tracing subscriber init",
+    "status": "todo"
+  },
+  {
     "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
-    "title": "Fix broken schema feature usage in CI and justfile",
+    "title": "Fix broken `schema` feature usage in CI and justfile",
     "status": "done"
   },
   {
@@ -65,8 +145,13 @@
     "status": "done"
   },
   {
+    "file": "fix-ractor-permission-actor-reply-lifecycle.md",
+    "title": "Fix `RactorPermissionActor` reply lifecycle",
+    "status": "todo"
+  },
+  {
     "file": "fold-runie-protocol-into-core.md",
-    "title": "Fold runie-protocol crate into runie-core",
+    "title": "Fold `runie-protocol` crate into `runie-core`",
     "status": "done"
   },
   {
@@ -75,14 +160,74 @@
     "status": "done"
   },
   {
+    "file": "implement-or-remove-mcp-runtime-scaffolding.md",
+    "title": "Implement MCP client runtime or remove config scaffolding",
+    "status": "todo"
+  },
+  {
     "file": "initialize-tracing-subscriber-in-binaries.md",
-    "title": "Initialize tracing subscriber in CLI and TUI binaries",
+    "title": "Initialize `tracing` subscriber in CLI and TUI binaries",
+    "status": "done"
+  },
+  {
+    "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
+    "title": "Introduce `cargo-deny` and `cargo-machete` CI checks",
     "status": "done"
   },
   {
     "file": "migrate-production-actors-to-ractor.md",
-    "title": "Migrate production actors to ractor",
+    "title": "Migrate production actors to `ractor`",
     "status": "done"
+  },
+  {
+    "file": "migrate-subagent-loader-to-resource-loader.md",
+    "title": "Migrate subagent loader to unified resource loader",
+    "status": "todo"
+  },
+  {
+    "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
+    "title": "Migrate TUI and CLI to `Leader::start`",
+    "status": "todo"
+  },
+  {
+    "file": "move-built-in-slash-commands-to-declarative-yaml.md",
+    "title": "Move built-in slash command specs to declarative YAML resources",
+    "status": "todo"
+  },
+  {
+    "file": "move-cargo-deny-machete-from-workspace-deps-to-ci.md",
+    "title": "Move `cargo-deny` and `cargo-machete` from workspace deps to CI",
+    "status": "todo"
+  },
+  {
+    "file": "narrow-runie-core-public-api.md",
+    "title": "Narrow `runie-core` public API",
+    "status": "todo"
+  },
+  {
+    "file": "normalize-remaining-std-mutex-to-parking-lot.md",
+    "title": "Normalize remaining `std::sync::Mutex`/`RwLock` to `parking_lot`",
+    "status": "todo"
+  },
+  {
+    "file": "reconnect-tui-agent-actor-channel.md",
+    "title": "Reconnect or remove TUI `AgentActor` channel",
+    "status": "todo"
+  },
+  {
+    "file": "remove-redundant-check-field-access-script.md",
+    "title": "Remove redundant `check-field-access.sh`",
+    "status": "todo"
+  },
+  {
+    "file": "remove-sleep-from-automatic-tests.md",
+    "title": "Remove `sleep()` from automatic tests",
+    "status": "done"
+  },
+  {
+    "file": "remove-sync-turn-queue-fallback-from-app-state.md",
+    "title": "Remove sync `TurnQueue` fallback from `AppState`",
+    "status": "todo"
   },
   {
     "file": "remove-unused-dependencies-and-normalize-workspace-deps.md",
@@ -91,113 +236,8 @@
   },
   {
     "file": "replace-bash-safety-with-shell-words.md",
-    "title": "Replace custom bash-safety heuristic with shell-words",
+    "title": "Replace custom bash-safety heuristic with `shell-words`",
     "status": "done"
-  },
-  {
-    "file": "replace-custom-retry-with-backon.md",
-    "title": "Replace custom retry module with backon",
-    "status": "done"
-  },
-  {
-    "file": "replace-custom-telemetry-with-tracing-layer.md",
-    "title": "Replace custom telemetry module with a tracing layer",
-    "status": "done"
-  },
-  {
-    "file": "unify-tui-render-test-helpers.md",
-    "title": "Unify TUI render test helpers",
-    "status": "done"
-  },
-  {
-    "file": "unify-declarative-resource-loader.md",
-    "title": "Unify declarative resource loader",
-    "status": "done"
-  },
-  {
-    "file": "unify-library-error-types-with-thiserror.md",
-    "title": "Unify library error types with thiserror",
-    "status": "done"
-  },
-  {
-    "file": "use-clap-derive-for-cli.md",
-    "title": "Use clap derive macros for CLI argument parsing",
-    "status": "done"
-  },
-  {
-    "file": "replace-legacy-tool-parsers-with-thin-shim.md",
-    "title": "Finish tool-parser shim: collapse legacy modules and marker stripping",
-    "status": "done"
-  },
-  {
-    "file": "remove-sleep-from-automatic-tests.md",
-    "title": "Remove sleep() from automatic tests",
-    "status": "done"
-  },
-  {
-    "file": "collapse-event-intent-kind-taxonomies.md",
-    "title": "Annotate Event variants to generate EventKind, EventCategory, and Intent",
-    "status": "todo"
-  },
-  {
-    "file": "delete-or-merge-inspector-tool-pipeline.md",
-    "title": "Delete or merge the inspector tool pipeline",
-    "status": "todo"
-  },
-  {
-    "file": "eliminate-production-unwrap-expect.md",
-    "title": "Eliminate production unwrap/expect that should be recoverable errors",
-    "status": "todo"
-  },
-  {
-    "file": "expand-leader-start-for-tui-and-cli.md",
-    "title": "Expand Leader::start for the full TUI and CLI runtime",
-    "status": "todo"
-  },
-  {
-    "file": "extract-shared-streaming-response-parser.md",
-    "title": "Extract shared streaming response parser",
-    "status": "todo"
-  },
-  {
-    "file": "implement-or-remove-mcp-runtime-scaffolding.md",
-    "title": "Implement MCP client runtime or remove config scaffolding",
-    "status": "todo"
-  },
-  {
-    "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
-    "title": "Introduce cargo-deny and cargo-machete CI checks",
-    "status": "done"
-  },
-  {
-    "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
-    "title": "Migrate TUI and CLI to Leader::start",
-    "status": "todo"
-  },
-  {
-    "file": "migrate-subagent-loader-to-resource-loader.md",
-    "title": "Migrate subagent loader to unified resource loader",
-    "status": "todo"
-  },
-  {
-    "file": "narrow-runie-core-public-api.md",
-    "title": "Narrow runie-core public API",
-    "status": "todo"
-  },
-  {
-    "file": "replace-xor-auth-with-keyring.md",
-    "title": "Replace XOR-obfuscated auth storage with OS keyring",
-    "status": "todo"
-  },
-  {
-    "file": "replace-tmux-test-with-ratatui-tests.md",
-    "title": "Replace scripts/tmux-test.sh with Ratatui TestBackend tests",
-    "status": "todo"
-  },
-  {
-    "file": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",
-    "title": "Replace custom TUI widgets with ratatui ecosystem crates",
-    "status": "todo"
   },
   {
     "file": "replace-build-linter-with-clippy-ci.md",
@@ -206,7 +246,7 @@
   },
   {
     "file": "replace-config-validator-with-jsonschema.md",
-    "title": "Replace custom config validator with jsonschema",
+    "title": "Replace custom config validator with `jsonschema`",
     "status": "todo"
   },
   {
@@ -215,18 +255,78 @@
     "status": "todo"
   },
   {
+    "file": "replace-custom-nanoid-in-test-runner.md",
+    "title": "Replace custom nanoid in test runner",
+    "status": "todo"
+  },
+  {
+    "file": "replace-custom-retry-with-backon.md",
+    "title": "Replace custom retry module with `backon`",
+    "status": "done"
+  },
+  {
+    "file": "replace-custom-telemetry-with-tracing-layer.md",
+    "title": "Replace custom telemetry module with a `tracing` layer",
+    "status": "done"
+  },
+  {
+    "file": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",
+    "title": "Replace custom TUI widgets with ratatui ecosystem crates",
+    "status": "todo"
+  },
+  {
+    "file": "replace-leftover-macros-with-functions.md",
+    "title": "Replace leftover macros with functions",
+    "status": "todo"
+  },
+  {
+    "file": "replace-legacy-tool-parsers-with-thin-shim.md",
+    "title": "Finish tool-parser shim: collapse legacy modules and marker stripping",
+    "status": "done"
+  },
+  {
     "file": "replace-remaining-custom-parsers-and-macros-with-strum.md",
-    "title": "Replace remaining custom parsers and macros with strum",
+    "title": "Replace remaining custom parsers and macros with `strum`",
+    "status": "todo"
+  },
+  {
+    "file": "replace-session-tree-with-arena-crate.md",
+    "title": "Replace hand-rolled session tree with an arena tree crate",
     "status": "todo"
   },
   {
     "file": "replace-think-filter-with-regex.md",
     "title": "Replace think-block filter with regex",
-    "status": "done"
+    "status": "todo"
+  },
+  {
+    "file": "replace-tmux-test-with-ratatui-tests.md",
+    "title": "Replace `scripts/tmux-test.sh` with Ratatui `TestBackend` tests",
+    "status": "todo"
+  },
+  {
+    "file": "replace-tui-keymap-combo-stringification-with-crokey.md",
+    "title": "Replace TUI keymap combo stringification with `crokey`",
+    "status": "todo"
+  },
+  {
+    "file": "replace-tui-markdown-block-layout-with-tui-markdown.md",
+    "title": "Replace hand-rolled TUI markdown block layout with `tui-markdown`",
+    "status": "todo"
+  },
+  {
+    "file": "replace-xor-auth-with-keyring.md",
+    "title": "Replace XOR-obfuscated auth storage with OS keyring",
+    "status": "todo"
+  },
+  {
+    "file": "rescope-terminal-capability-task-to-current-module.md",
+    "title": "Rescope terminal capability task to current module layout",
+    "status": "todo"
   },
   {
     "file": "route-cli-config-through-configactor.md",
-    "title": "Route CLI config operations through ConfigActor",
+    "title": "Route CLI config operations through `ConfigActor`",
     "status": "todo"
   },
   {
@@ -237,7 +337,12 @@
   {
     "file": "simplify-terminal-capability-detection.md",
     "title": "Simplify terminal capability detection",
-    "status": "done"
+    "status": "todo"
+  },
+  {
+    "file": "store-provider-api-keys-in-keyring-not-config.md",
+    "title": "Store provider API keys in OS keyring, not plain `config.toml`",
+    "status": "todo"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",
@@ -255,8 +360,23 @@
     "status": "todo"
   },
   {
+    "file": "unify-declarative-resource-loader.md",
+    "title": "Unify declarative resource loader",
+    "status": "done"
+  },
+  {
+    "file": "unify-library-error-types-with-thiserror.md",
+    "title": "Unify library error types with `thiserror`",
+    "status": "done"
+  },
+  {
+    "file": "unify-markdown-block-parsing-on-pulldown-cmark-events.md",
+    "title": "Unify markdown block parsing and healing on `pulldown-cmark` events",
+    "status": "todo"
+  },
+  {
     "file": "unify-markdown-processing-around-pulldown-cmark.md",
-    "title": "Unify markdown processing around pulldown-cmark",
+    "title": "Unify markdown processing around `pulldown-cmark`",
     "status": "todo"
   },
   {
@@ -265,13 +385,13 @@
     "status": "todo"
   },
   {
-    "file": "unify-provider-credential-resolution-with-dotenvy.md",
-    "title": "Unify provider credential resolution with dotenvy",
+    "file": "unify-provider-config-persistence.md",
+    "title": "Unify provider-config persistence helpers",
     "status": "todo"
   },
   {
-    "file": "unify-provider-config-persistence.md",
-    "title": "Unify provider-config persistence helpers",
+    "file": "unify-provider-credential-resolution-with-dotenvy.md",
+    "title": "Unify provider credential resolution with `dotenvy`",
     "status": "todo"
   },
   {
@@ -280,28 +400,53 @@
     "status": "todo"
   },
   {
-    "file": "use-notify-directly-in-config-actor.md",
-    "title": "Use notify directly in RactorConfigActor",
+    "file": "unify-tui-message-wrapping-with-textwrap.md",
+    "title": "Unify TUI message wrapping with `textwrap`",
     "status": "todo"
   },
   {
-    "file": "use-pulldown-cmark-frontmatter-for-resource-loader.md",
-    "title": "Use pulldown-cmark-frontmatter for declarative resource loading",
+    "file": "unify-tui-render-test-helpers.md",
+    "title": "Unify TUI render test helpers",
     "status": "done"
-  },
-  {
-    "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
-    "title": "Use pulldown-cmark event stream for tool-marker stripping",
-    "status": "todo"
-  },
-  {
-    "file": "use-strum-for-event-intent-names.md",
-    "title": "Use strum to derive Event/Intent/EventKind names",
-    "status": "todo"
   },
   {
     "file": "use-channels-for-subagent-result-collection.md",
     "title": "Use channels for subagent result collection",
+    "status": "todo"
+  },
+  {
+    "file": "use-clap-derive-for-cli.md",
+    "title": "Use `clap` derive macros for CLI argument parsing",
+    "status": "done"
+  },
+  {
+    "file": "use-notify-directly-in-config-actor.md",
+    "title": "Use `notify` directly in `RactorConfigActor`",
+    "status": "todo"
+  },
+  {
+    "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
+    "title": "Use `pulldown-cmark` event stream for tool-marker stripping",
+    "status": "todo"
+  },
+  {
+    "file": "use-pulldown-cmark-frontmatter-for-resource-loader.md",
+    "title": "Use `pulldown-cmark-frontmatter` for declarative resource loading",
+    "status": "done"
+  },
+  {
+    "file": "use-ractor-state-for-actor-mutable-state.md",
+    "title": "Use `ractor` `State` for actor mutable state",
+    "status": "todo"
+  },
+  {
+    "file": "use-strum-for-event-intent-names.md",
+    "title": "Use `strum` to derive `Event`/`Intent`/`EventKind` names",
+    "status": "todo"
+  },
+  {
+    "file": "wire-or-delete-input-actor.md",
+    "title": "Wire or delete `InputActor`",
     "status": "todo"
   }
 ]

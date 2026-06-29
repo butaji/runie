@@ -52,3 +52,4 @@ Actors held state in `std::sync::Mutex` and called `.lock().unwrap()` everywhere
 - The `RpcReply`/`Reply` wrapper types in `ractor_adapter.rs` and `messages.rs` also use `parking_lot::Mutex`.
 - Test files still use `std::sync::Mutex` for test synchronization (allowed; tests are exempt from the rule).
 - The `spawn_ractor(...).await.unwrap()` calls for actor startup are still present in some actors; these represent unrecoverable startup failures (missing config, invalid path) and are acceptable to leave as-is since they indicate programmer error rather than runtime conditions.
+- **Update after review:** `std::sync::Mutex`/`RwLock` still remain in `permissions/`, `fff_indexer/`, and `runie-agent/`. The remaining normalization is tracked by `normalize-remaining-std-mutex-to-parking-lot.md`.

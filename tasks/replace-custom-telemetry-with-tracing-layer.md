@@ -56,3 +56,4 @@
 - `ConfigState.telemetry` field type changed from `Telemetry` to `TelemetrySection`.
 - `ConfigState::telemetry_enabled()` and `telemetry_enabled_mut()` accessors added.
 - Default telemetry behavior changed from disabled (`Telemetry::new(false)`) to enabled (`TelemetrySection::default()` = `enabled: true`).
+- **Update after review:** `crates/runie-core/src/telemetry.rs` is now a stub with only two trivial tests. Delete it or repurpose it for the shared subscriber init; tracked by `delete-leftover-telemetry-stub.md` and `extract-shared-tracing-subscriber-init.md`.

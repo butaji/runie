@@ -38,8 +38,9 @@ Terminal capability detection (`NO_COLOR`, color level, truecolor, hyperlinks) i
 
 ## Files touched
 
-- `crates/runie-tui/src/term_caps.rs`
-- `crates/runie-tui/src/app.rs`
+- `crates/runie-tui/src/terminal/caps/mod.rs`
+- `crates/runie-tui/src/terminal/caps/detect.rs`
+- `crates/runie-tui/src/terminal/caps/tests.rs`
 - `crates/runie-tui/src/ui/*.rs`
 - `Cargo.toml`
 

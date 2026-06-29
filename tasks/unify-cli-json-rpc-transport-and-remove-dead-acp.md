@@ -42,3 +42,4 @@
 
 - This is a prerequisite for `migrate-tui-and-cli-to-leader-bootstrap.md` because broken ACP plumbing blocks leader-based bootstrap.
 - If ACP is deleted, also remove `runie agent stdio` subcommand references.
+- **Update after review:** `crates/runie-core/src/actors/leader/actor.rs` also has a custom TCP JSON protocol (`listen_tcp`, `handle_client_tcp`). Consider unifying it with the CLI transport module or migrating to `jsonrpsee` as part of this task.

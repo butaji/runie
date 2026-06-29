@@ -391,7 +391,7 @@ Tests are exempt from function-length and complexity checks so they can stay com
 
 ## Current cleanup roadmap
 
-The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. A third five-round review focused on replacing custom code with crates, unification, and Pareto simplification; its findings are recorded in [`docs/superpowers/plans/2026-06-28-less-code-crate-replacements.md`](superpowers/plans/2026-06-28-less-code-crate-replacements.md). A fourth five-round review dug deeper into provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, and DSL/view/dialog/commands; its findings are recorded in [`docs/superpowers/plans/2026-06-28-fourth-pass-crate-review.md`](superpowers/plans/2026-06-28-fourth-pass-crate-review.md). A fifth five-round review focused on build/CI/test harness, error handling/tracing/telemetry, protocol/IPC leftovers, declarative loaders/DSLs, and macros/codegen; its findings are recorded in [`docs/superpowers/plans/2026-06-28-fifth-pass-crate-review.md`](superpowers/plans/2026-06-28-fifth-pass-crate-review.md). The remaining active work is tracked in `tasks/index.json` (48 active cleanup tasks) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
+The 2026-06-28 architecture and code review found that the implementation had drifted from the documented three-layer model. A second-pass review showed that several planned tasks were already complete on disk and have been archived under `tasks/archive/`. A third five-round review focused on replacing custom code with crates, unification, and Pareto simplification; its findings are recorded in [`docs/superpowers/plans/2026-06-28-less-code-crate-replacements.md`](superpowers/plans/2026-06-28-less-code-crate-replacements.md). A fourth five-round review dug deeper into provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, and DSL/view/dialog/commands; its findings are recorded in [`docs/superpowers/plans/2026-06-28-fourth-pass-crate-review.md`](superpowers/plans/2026-06-28-fourth-pass-crate-review.md). A fifth five-round review focused on build/CI/test harness, error handling/tracing/telemetry, protocol/IPC leftovers, declarative loaders/DSLs, and macros/codegen; its findings are recorded in [`docs/superpowers/plans/2026-06-28-fifth-pass-crate-review.md`](superpowers/plans/2026-06-28-fifth-pass-crate-review.md). A fresh five-round review after many tasks landed found additional post-implementation gaps, especially in actor plumbing, TUI rendering, and build/CI hygiene; its findings are recorded in [`docs/superpowers/plans/2026-06-28-five-round-review-synthesis.md`](superpowers/plans/2026-06-28-five-round-review-synthesis.md). The remaining active work is tracked in `tasks/index.json` (60 active cleanup tasks) and summarized in [`docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md`](superpowers/plans/2026-06-28-runie-cleanup-roadmap.md).
 
 ### Active tasks
 
@@ -517,6 +517,49 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 61. **Eliminate production `unwrap`/`expect`** (`tasks/eliminate-production-unwrap-expect.md`) — convert recoverable panics to typed errors.
 62. **Introduce `cargo-deny` and `cargo-machete` CI checks** (`tasks/introduce-cargo-deny-and-cargo-machete-ci.md`) — audit dependencies and duplicates automatically.
 
+#### Phase 21 — Post-review actor runtime hardening (P0/P1)
+
+63. **Fix `RactorPermissionActor` reply lifecycle** (`tasks/fix-ractor-permission-actor-reply-lifecycle.md`) — stop auto-denying; resolve pending requests via `ResolvePermission`.
+64. **Reconnect or remove TUI `AgentActor` channel** (`tasks/reconnect-tui-agent-actor-channel.md`) — fix the disconnected agent channel in the TUI bootstrap.
+65. **Use `ractor` `State` for actor mutable state** (`tasks/use-ractor-state-for-actor-mutable-state.md`) — move state out of interior `Mutex` into `type State`.
+66. **Wire or delete `InputActor`** (`tasks/wire-or-delete-input-actor.md`) — decide whether the orphan input actor stays.
+67. **Delete dead actor handle wrappers** (`tasks/delete-dead-actor-handle-wrappers.md`) — remove legacy handle structs.
+68. **Actually collapse `ActorHandles` to a typed map** (`tasks/actually-collapse-actor-handles-to-typed-map.md`) — finish the handle collapse.
+
+#### Phase 22 — Post-review queue/mutex normalization (P1/P2)
+
+69. **Remove sync `TurnQueue` fallback from `AppState`** (`tasks/remove-sync-turn-queue-fallback-from-app-state.md`) — delete duplicated sync delivery methods.
+70. **Normalize remaining `std::sync::Mutex`/`RwLock` to `parking_lot`** (`tasks/normalize-remaining-std-mutex-to-parking_lot.md`) — permissions, fff_indexer, runie-agent.
+71. **Delete `EventBusBridge` wrapper** (`tasks/delete-eventbusbridge-wrapper.md`) — hold `EventBus` directly.
+72. **Use channels for subagent result collection** (`tasks/use-channels-for-subagent-result-collection.md`) — replace callback/polling.
+
+#### Phase 23 — Post-review provider/config/security (P1/P2)
+
+73. **Store provider API keys in OS keyring, not plain config.toml** (`tasks/store-provider-api-keys-in-keyring-not-config.md`) — move secrets out of TOML.
+74. **Add `jsonschema` validation to `ConfigActor` load** (`tasks/add-jsonschema-validation-to-configactor-load.md`) — validate configs at load time.
+75. **Actually replace `runie-provider` custom backoff with `backon`** (`tasks/actually-replace-runie-provider-backoff-with-backon.md`) — finish the retry cleanup.
+76. **Drop unused `rand` from `runie-provider`** (`tasks/drop-unused-rand-from-runie-provider.md`) — deterministic mock delays.
+
+#### Phase 24 — Post-review TUI/markdown unification (P0/P2)
+
+77. **Replace hand-rolled TUI markdown block layout with `tui-markdown`** (`tasks/replace-tui-markdown-block-layout-with-tui-markdown.md`) — highest-impact TUI simplification.
+78. **Unify markdown block parsing and healing on `pulldown-cmark` events** (`tasks/unify-markdown-block-parsing-on-pulldown-cmark-events.md`) — remove marker re-injection.
+79. **Unify TUI message wrapping with `textwrap`** (`tasks/unify-tui-message-wrapping-with-textwrap.md`) — display-width-aware wrapping.
+80. **Replace TUI keymap combo stringification with `crokey`** (`tasks/replace-tui-keymap-combo-stringification-with-crokey.md`) — round-trip key combos.
+81. **Rescope terminal capability task to current module** (`tasks/rescope-terminal-capability-task-to-current-module.md`) — update stale file paths.
+
+#### Phase 25 — Post-review declarative loaders / build / CI (P2/P3)
+
+82. **Deserialize declarative command YAML with typed structs** (`tasks/deserialize-declarative-command-yaml-with-typed-structs.md`) — remove manual YAML walking.
+83. **Move built-in slash commands to declarative YAML** (`tasks/move-built-in-slash-commands-to-declarative-yaml.md`) — remove static Rust tables.
+84. **Replace session tree with arena crate** (`tasks/replace-session-tree-with-arena-crate.md`) — `indextree` or `ego-tree`.
+85. **Move `cargo-deny`/`cargo-machete` from workspace deps to CI** (`tasks/move-cargo-deny-machete-from-workspace-deps-to-ci.md`) — binary tools should not be workspace deps.
+86. **Extract shared tracing subscriber init** (`tasks/extract-shared-tracing-subscriber-init.md`) — dedupe subscriber setup.
+87. **Clean up `verify-tests.sh` and `just lint-fix`** (`tasks/cleanup-verify-tests-and-just-recipes.md`) — fix brittle dev recipes.
+88. **Remove redundant `check-field-access.sh`** (`tasks/remove-redundant-check-field-access-script.md`) — duplicate linter.
+89. **Replace leftover macros with functions** (`tasks/replace-leftover-macros-with-functions.md`) — `with_panel_stack!`, `with_ordering!`, test skip macros.
+90. **Delete unused glyph constants** (`tasks/delete-unused-glyph-constants.md`) — dead TUI glyphs.
+
 ### Archived completed tasks
 
 The following 2026-06-28 review tasks were already complete on disk and are now in `tasks/archive/`:
@@ -559,6 +602,11 @@ The plan is phased so that **every merged task leaves `cargo check --workspace` 
 19. Land fifth-pass protocol/IPC cleanup (Tasks 53–54); `fold-runie-protocol-into-core` must precede `unify-cli-json-rpc-transport-and-remove-dead-acp`.
 20. Land fifth-pass declarative loaders / DSL / parser cleanup (Tasks 55–58).
 21. Land fifth-pass test harness hardening (Tasks 59–62).
+22. Land post-review actor runtime hardening (Tasks 63–68); `fix-ractor-permission-actor-reply-lifecycle` and `reconnect-tui-agent-actor-channel` are P0.
+23. Land post-review queue/mutex normalization (Tasks 69–72); `remove-sync-turn-queue-fallback-from-app-state` must precede `use-channels-for-subagent-result-collection`.
+24. Land post-review provider/config/security (Tasks 73–76); `store-provider-api-keys-in-keyring-not-config` should land near `type-and-unify-provider-model-layer`.
+25. Land post-review TUI/markdown unification (Tasks 77–81); `unify-markdown-block-parsing-on-pulldown-cmark-events` must precede `replace-tui-markdown-block-layout-with-tui-markdown`.
+26. Land post-review declarative loaders / build / CI (Tasks 82–90).
 
 ## Testing philosophy
 

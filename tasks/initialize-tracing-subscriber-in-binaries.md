@@ -49,3 +49,4 @@
 - Used `tracing_subscriber::registry()` with `fmt::layer()` and `EnvFilter`.
 - Default filter is `info`; `RUST_LOG` environment variable overrides it.
 - Advanced telemetry layers belong in `replace-custom-telemetry-with-tracing-layer.md`.
+- **Update after review:** the subscriber initialization is duplicated in both binaries. The remaining cleanup is tracked by `extract-shared-tracing-subscriber-init.md`.
