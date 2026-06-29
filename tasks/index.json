@@ -12,12 +12,12 @@
   {
     "file": "add-jsonschema-validation-to-configactor-load.md",
     "title": "Add `jsonschema` validation to `ConfigActor` load path",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-built-in-tool-names.md",
     "title": "Centralize built-in tool names",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-test-fixtures-and-mocks.md",
@@ -27,7 +27,7 @@
   {
     "file": "cleanup-small-duplicates-and-dead-code.md",
     "title": "Clean up small duplicates and dead code",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "cleanup-verify-tests-and-just-recipes.md",
@@ -107,7 +107,7 @@
   {
     "file": "eliminate-production-unwrap-expect.md",
     "title": "Eliminate production `unwrap`/`expect` that should be recoverable errors",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "expand-leader-start-for-tui-and-cli.md",
@@ -122,7 +122,7 @@
   {
     "file": "extract-shared-tracing-subscriber-init.md",
     "title": "Extract shared tracing subscriber init",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
@@ -167,12 +167,12 @@
   {
     "file": "initialize-tracing-subscriber-in-binaries.md",
     "title": "Initialize `tracing` subscriber in CLI and TUI binaries",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
     "title": "Introduce `cargo-deny` and `cargo-machete` CI checks",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "migrate-production-actors-to-ractor.md",
@@ -222,7 +222,7 @@
   {
     "file": "remove-sleep-from-automatic-tests.md",
     "title": "Remove `sleep()` from automatic tests",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-sync-turn-queue-fallback-from-app-state.md",
@@ -242,17 +242,17 @@
   {
     "file": "replace-build-linter-with-clippy-ci.md",
     "title": "Replace custom build.rs linter with Clippy / CI",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-config-validator-with-jsonschema.md",
     "title": "Replace custom config validator with `jsonschema`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-custom-helpers-with-crates.md",
     "title": "Replace custom path/glob/fuzzy/keybinding helpers with crates",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-custom-nanoid-in-test-runner.md",
@@ -272,7 +272,7 @@
   {
     "file": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",
     "title": "Replace custom TUI widgets with ratatui ecosystem crates",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-leftover-macros-with-functions.md",
@@ -327,12 +327,12 @@
   {
     "file": "route-cli-config-through-configactor.md",
     "title": "Route CLI config operations through `ConfigActor`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "simplify-slash-command-dsl.md",
     "title": "Simplify slash-command DSL",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "simplify-terminal-capability-detection.md",
@@ -342,7 +342,7 @@
   {
     "file": "store-provider-api-keys-in-keyring-not-config.md",
     "title": "Store provider API keys in OS keyring, not plain `config.toml`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",
@@ -382,7 +382,7 @@
   {
     "file": "unify-permission-system-rules.md",
     "title": "Unify permission-system rule engines",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-provider-config-persistence.md",
@@ -417,12 +417,12 @@
   {
     "file": "use-clap-derive-for-cli.md",
     "title": "Use `clap` derive macros for CLI argument parsing",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-notify-directly-in-config-actor.md",
     "title": "Use `notify` directly in `RactorConfigActor`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-pulldown-cmark-for-tool-marker-stripping.md",

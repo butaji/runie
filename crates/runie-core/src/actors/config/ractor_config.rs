@@ -9,7 +9,6 @@ use std::path::{Path, PathBuf};
 use notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 use ractor::{Actor, ActorProcessingErr, ActorRef};
-use tokio::sync::mpsc;
 
 use crate::actors::ractor_adapter::spawn_ractor;
 use crate::actors::ractor_adapter::Reply;
@@ -500,29 +499,23 @@ impl Actor for RactorConfigActor {
 
     async fn pre_start(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         let (bus, path, project_path) = args;
         // Load layered config
         let config = Self::load_layers_async(path.clone(), project_path.clone()).await;
 
-        let path_clone = path.clone();
-        let project_path_clone = project_path.clone();
         let config_for_state = config.clone();
-        let config_arc = std::sync::Arc::new(Mutex::new(config));
 
-        // Clone bus for watcher task
-        let bus_for_watcher = bus.clone();
-
-        // Spawn the file watcher: a std thread feeds a tokio mpsc channel;
-        // the tokio task reloads config on each Reload message.
-        let path_clone_std = path.clone();
-        let (tx, mut rx) = mpsc::channel::<ConfigMsg>(32);
+        // Spawn the file watcher in a std thread. It watches the config directory
+        // and sends ConfigMsg::Reload to the actor on changes.
+        let myself_clone = myself.clone();
+        let path_clone = path.clone();
 
         std::thread::spawn(move || {
-            let (std_tx, std_rx) = std::sync::mpsc::channel();
-            let debouncer = match new_debouncer(std::time::Duration::from_millis(300), std_tx) {
+            let (tx, rx) = std::sync::mpsc::channel();
+            let debouncer = match new_debouncer(std::time::Duration::from_millis(300), tx) {
                 Ok(d) => d,
                 Err(e) => {
                     tracing::error!("config watcher: create debouncer failed: {e:?}");
@@ -530,7 +523,7 @@ impl Actor for RactorConfigActor {
                 }
             };
             let mut debouncer = debouncer;
-            if let Some(parent) = path_clone_std.parent() {
+            if let Some(parent) = path_clone.parent() {
                 if let Err(e) = debouncer
                     .watcher()
                     .watch(parent, RecursiveMode::NonRecursive)
@@ -539,33 +532,10 @@ impl Actor for RactorConfigActor {
                     return;
                 }
             }
-            while let Ok(Ok(events)) = std_rx.recv() {
-                if config_event_is_relevant(&events, &path_clone_std) {
-                    let _ = tx.blocking_send(ConfigMsg::Reload);
-                }
-            }
-        });
-
-        tokio::spawn(async move {
-            while let Some(msg) = rx.recv().await {
-                if matches!(msg, ConfigMsg::Reload) {
-                    // Reload config from disk - clone owned values for each iteration
-                    let global = path_clone.clone();
-                    let local = project_path_clone.clone().unwrap_or_default();
-                    let new_config = tokio::task::spawn_blocking(move || {
-                        Config::load_layers_from_paths(global, local)
-                    })
-                    .await
-                    .unwrap_or_default();
-                    let changed = new_config != *config_arc.lock();
-                    if changed {
-                        let mut guard = config_arc.lock();
-                        *guard = new_config.clone();
-                        drop(guard);
-                        bus_for_watcher.publish(Event::ConfigLoaded {
-                            config: Box::new(new_config),
-                        });
-                    }
+            while let Ok(Ok(events)) = rx.recv() {
+                if config_event_is_relevant(&events, &path_clone) {
+                    // Send reload message to actor directly
+                    let _ = myself_clone.cast(ConfigMsg::Reload);
                 }
             }
         });
