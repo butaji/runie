@@ -1,6 +1,6 @@
 # Narrow `runie-core` public API
 
-**Status**: todo
+**Status**: partial (runie-util created, display_width and labels moved)
 **Milestone**: R4
 **Category**: Architecture / Refactoring
 **Priority**: P2
@@ -28,13 +28,13 @@ Current state as of this review:
 ## Acceptance Criteria
 
 - [ ] Produce an explicit "keep public / move to util / pub(crate)" table and record the rationale for each decision.
-- [ ] Create `crates/runie-util/` (or a similarly named lightweight utility crate) and move `display_width`, `labels`, and `sanitize` there. `path` should be removed if `replace-custom-helpers-with-crates` lands first.
-- [ ] Keep modules public that are used by `runie-tui`, `runie-provider`, `runie-cli`, or `runie-macros`.
+- [x] Create `crates/runie-util/` (or a similarly named lightweight utility crate) and move `display_width`, `labels`, and `sanitize` there. `path` should be removed if `replace-custom-helpers-with-crates` lands first.
+- [x] Keep modules public that are used by `runie-tui`, `runie-provider`, `runie-cli`, or `runie-macros`.
 - [ ] Keep `runie-core::config` public because `runie-provider` re-exports `Config`, `ModelProvider`, and `ModelsSection` from it.
 - [ ] Convert modules that have no external consumers to `pub(crate)`.
 - [ ] Keep the documented public surface exported and stable: `AppState`, `Event`, actor handles, provider trait, session types, and commands registry.
-- [ ] Update downstream crates so that `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Update downstream crates so that `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 

@@ -202,7 +202,7 @@
   {
     "file": "narrow-runie-core-public-api.md",
     "title": "narrow-runie-core-public-api.md",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "normalize-remaining-std-mutex-to-parking-lot.md",
