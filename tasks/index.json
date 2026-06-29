@@ -252,7 +252,7 @@
   {
     "file": "replace-custom-helpers-with-crates.md",
     "title": "Replace custom path/glob/fuzzy/keybinding helpers with crates",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-custom-nanoid-in-test-runner.md",
