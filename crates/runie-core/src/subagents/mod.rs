@@ -30,12 +30,13 @@ mod manifest;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 pub use manifest::Manifest;
 use crate::resource_loader::{extract_body, extract_frontmatter};
 
 /// Prompt mode for a subagent — controls how much context is included.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::EnumString)]
 pub enum PromptMode {
     /// Full context: all session history, AGENTS.md, all skills.
     #[default]
@@ -45,7 +46,7 @@ pub enum PromptMode {
 }
 
 /// Permission mode for a subagent — controls which operations require approval.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::EnumString)]
 pub enum PermissionMode {
     /// Apply rules; ask when no rule matches.  (default)
     #[default]
@@ -63,7 +64,12 @@ pub enum PermissionMode {
 }
 
 impl PermissionMode {
-    fn from_str(s: &str) -> Self {
+    fn parse(s: &str) -> Self {
+        // Try EnumString first, then fall back to legacy string mappings.
+        if let Ok(mode) = Self::from_str(s) {
+            return mode;
+        }
+        // Legacy string mappings.
         match s {
             "acceptEdits" => Self::AcceptEdits,
             "auto" => Self::Auto,
@@ -182,7 +188,7 @@ fn parse_subagent_content(name_hint: &str, content: &str) -> Option<SubagentType
         "compact" => PromptMode::Compact,
         _ => PromptMode::Full,
     };
-    let permission_mode = PermissionMode::from_str(&fm_str(&fm, "permission_mode"));
+    let permission_mode = PermissionMode::parse(&fm_str(&fm, "permission_mode"));
     let agents_md = fm_str(&fm, "agents_md").parse::<bool>().unwrap_or(false);
     let model = fm_str(&fm, "model");
     let model = if model.is_empty() { "inherit".to_owned() } else { model };
@@ -394,18 +400,18 @@ Third paragraph.
     }
 
     #[test]
-    fn permission_mode_from_str_all_variants() {
+    fn permission_mode_parse_all_variants() {
         assert_eq!(
-            PermissionMode::from_str("acceptEdits"),
+            PermissionMode::parse("acceptEdits"),
             PermissionMode::AcceptEdits
         );
-        assert_eq!(PermissionMode::from_str("auto"), PermissionMode::Auto);
-        assert_eq!(PermissionMode::from_str("dontAsk"), PermissionMode::DontAsk);
+        assert_eq!(PermissionMode::parse("auto"), PermissionMode::Auto);
+        assert_eq!(PermissionMode::parse("dontAsk"), PermissionMode::DontAsk);
         assert_eq!(
-            PermissionMode::from_str("bypassPermissions"),
+            PermissionMode::parse("bypassPermissions"),
             PermissionMode::BypassPermissions
         );
-        assert_eq!(PermissionMode::from_str("plan"), PermissionMode::Plan);
-        assert_eq!(PermissionMode::from_str("unknown"), PermissionMode::Default);
+        assert_eq!(PermissionMode::parse("plan"), PermissionMode::Plan);
+        assert_eq!(PermissionMode::parse("unknown"), PermissionMode::Default);
     }
 }

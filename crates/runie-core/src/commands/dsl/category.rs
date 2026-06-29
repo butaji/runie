@@ -5,6 +5,7 @@ use strum::Display;
 
 /// Command category for organization
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Display)]
+#[strum(serialize_all = "PascalCase")]
 pub enum CommandCategory {
     Core,
     Session,
@@ -35,18 +36,20 @@ impl Default for CommandCategory {
 }
 
 impl CommandCategory {
-    /// Label for display.
+    /// Label for display (pascal case).
     pub fn label(&self) -> &'static str {
+        // `Display` derive with `serialize_all = "PascalCase"` ensures this matches.
         match self {
-            Self::System => "System",
             Self::Core => "Core",
             Self::Session => "Session",
             Self::Model => "Model",
             Self::Safety => "Safety",
+            Self::System => "System",
         }
     }
 
-    pub fn as_str(&self) -> &str {
+    /// String representation (pascal case).
+    pub fn as_str(&self) -> &'static str {
         self.label()
     }
 }

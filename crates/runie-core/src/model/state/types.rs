@@ -28,6 +28,8 @@ pub enum DeliveryMode {
 /// Thinking level for reasoning-intensive tasks.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[derive(schemars::JsonSchema)]
+#[derive(strum::EnumString)]
+#[strum(ascii_case_insensitive)]
 pub enum ThinkingLevel {
     #[default]
     Off,
@@ -51,6 +53,7 @@ impl ThinkingLevel {
         Self::ALL
     }
 
+    /// Cycle to the next thinking level.
     pub fn cycle(self) -> Self {
         match self {
             Self::Off => Self::Low,
@@ -60,6 +63,7 @@ impl ThinkingLevel {
         }
     }
 
+    /// Prompt suffix for this thinking level.
     pub fn prompt_suffix(&self) -> &'static str {
         match self {
             Self::Off => "",
@@ -69,6 +73,7 @@ impl ThinkingLevel {
         }
     }
 
+    /// Lowercase string representation.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Off => "off",
@@ -86,19 +91,6 @@ impl ThinkingLevel {
             Self::Low => "☵",    // 010 - water (minimal thinking)
             Self::Medium => "☳", // 100 - thunder (moderate thinking)
             Self::High => "☰",   // 111 - heaven (deep thinking)
-        }
-    }
-}
-
-impl std::str::FromStr for ThinkingLevel {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "off" => Ok(Self::Off),
-            "low" => Ok(Self::Low),
-            "medium" => Ok(Self::Medium),
-            "high" => Ok(Self::High),
-            _ => Err(format!("Unknown thinking level: {s}")),
         }
     }
 }

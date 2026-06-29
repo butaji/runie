@@ -103,7 +103,7 @@ impl AppState {
                 (
                     cmd.name.clone(),
                     cmd.desc.clone(),
-                    cmd.category.as_str().to_owned(),
+                    cmd.category.to_string(),
                 )
             })
             .collect()

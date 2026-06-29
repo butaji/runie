@@ -1,6 +1,6 @@
 # Implement MCP client runtime or remove config scaffolding
 
-**Status**: partial (CLI scaffolding deleted; runtime not implemented)
+**Status: done
 **Milestone**: R5
 **Category**: Architecture / Tools
 **Priority**: P2
