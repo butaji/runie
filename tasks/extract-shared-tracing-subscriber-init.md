@@ -1,6 +1,6 @@
 # Extract shared tracing subscriber init
 
-**Status**: todo
+**Status**: done
 **Milestone**: R6
 **Category": Observability
 **Priority": P2
@@ -14,29 +14,31 @@
 
 ## Acceptance Criteria
 
-- [ ] Add `runie_core::telemetry::init()` that builds the subscriber.
-- [ ] Call it from `runie-tui/src/main.rs` and `runie-cli/src/main.rs`.
-- [ ] Preserve env-filter behavior and default filter.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Add `runie_core::telemetry::init()` that builds the subscriber.
+- [x] Call it from `runie-tui/src/main.rs` and `runie-cli/src/main.rs`.
+- [x] Preserve env-filter behavior and default filter.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `subscriber_init_is_idempotent` — calling init twice does not panic.
+- [x] `subscriber_init_is_idempotent` — calling init twice does not panic.
 
 ### Layer 2 — Event Handling
-- [ ] `telemetry_event_emitted_after_init` — a test subscriber captures an event.
+- [x] `telemetry_event_emitted_after_init` — a test subscriber captures an event.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 
-- `crates/runie-core/src/telemetry.rs` (currently a stub; repurpose)
-- `crates/runie-tui/src/main.rs`
-- `crates/runie-cli/src/main.rs`
+- `crates/runie-core/src/telemetry.rs` — shared `init()` helper with EnvFilter + fmt::layer
+- `crates/runie-tui/src/main.rs` — calls `telemetry::init()` at startup
+- `crates/runie-cli/src/main.rs` — calls `runie_core::telemetry::init()` at startup
 
 ## Notes
 
-- This can be combined with deleting the leftover telemetry stub if the stub has no other purpose.
+- `tracing_subscriber` is already a workspace dependency.
+- The `init()` function uses `OnceLock` for idempotency.
+- Default filter is "info" level, configurable via `RUST_LOG`.
