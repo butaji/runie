@@ -230,21 +230,46 @@ fn generate_intent_impl_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Resu
         .map(|v| v.as_str().unwrap().to_string())
         .collect();
 
-    // Collect all events that have an Intent counterpart
+    // Collect ALL fact variant names.
+    // A variant is a fact if:
+    // 1. It appears in a `fact_variants` array (overrides category kind), OR
+    // 2. It belongs to a `kind: "Fact"` category.
+    // These must NOT appear in intent match arms.
+    let mut all_fact_variants: Vec<String> = categories
+        .values()
+        .filter_map(|cat_obj| cat_obj.get("fact_variants").and_then(|v| v.as_array()))
+        .flat_map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)))
+        .collect();
+    for cat_obj in categories.values() {
+        let kind = cat_obj["kind"].as_str().unwrap();
+        if kind == "Fact" {
+            all_fact_variants.extend(collect_variants(cat_obj));
+        }
+    }
+    let all_fact_set: std::collections::HashSet<&str> =
+        all_fact_variants.iter().map(|s| s.as_str()).collect();
+
+    // Collect all events that have an Intent counterpart,
+    // EXCLUDING fact_variants (they have no Intent counterpart).
     let mut has_intent: Vec<String> = Vec::new();
     for cat_obj in categories.values() {
         let kind = cat_obj["kind"].as_str().unwrap();
         if kind == "Intent" || kind == "Control" {
-            has_intent.extend(collect_variants(cat_obj));
+            let variants = collect_variants(cat_obj);
+            has_intent.extend(
+                variants
+                    .into_iter()
+                    .filter(|v| !all_fact_set.contains(v.as_str())),
+            );
         }
     }
 
     let mut out = String::new();
     out.push_str("//! `Event::into_intent()` implementation.\n");
     out.push_str("//! Generated from `taxonomy.json`. DO NOT EDIT.\n\n");
-    out.push_str("use super::intent::Intent;\n");
-    out.push_str("use super::variants::Event;\n");
-    out.push_str("use super::generated::is_fact_variant;\n\n");
+    out.push_str("use super::super::intent::Intent;\n");
+    out.push_str("use super::super::variants::Event;\n");
+    out.push_str("use super::facts::is_fact_variant;\n\n");
     out.push_str("impl Event {\n");
     out.push_str("    /// Convert this event to a typed `Intent`, if it is an intent.\n");
     out.push_str("    pub fn into_intent(self) -> Option<Intent> {\n");
@@ -264,6 +289,8 @@ fn generate_intent_impl_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Resu
         out.push('\n');
     }
 
+    // Catch-all for any variants not covered above (shouldn't happen with correct taxonomy).
+    out.push_str("            _ => None,\n");
     out.push_str("        }\n");
     out.push_str("    }\n");
     out.push_str("}\n");
@@ -275,6 +302,9 @@ fn generate_intent_impl_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Resu
 }
 
 /// Build a match arm converting Event→Intent for a given event/intent name pair.
+///
+/// All struct fields are bound as VALUES in the match pattern (not references),
+/// so we use `.clone()` — NOT `*field` — to construct the Intent variant.
 fn build_intent_arm(event_name: &str, intent_name: &str) -> String {
     match event_name {
         "Input" => "Event::Input(c) => Some(Intent::Input(c)),".to_string(),
@@ -297,19 +327,27 @@ fn build_intent_arm(event_name: &str, intent_name: &str) -> String {
         "CopyToClipboard" => "Event::CopyToClipboard(s) => Some(Intent::CopyToClipboard(s)),".to_string(),
         "InsertAtRef" => "Event::InsertAtRef(s) => Some(Intent::InsertAtRef(s)),".to_string(),
         "Submit" => "Event::Submit => Some(Intent::Submit),".to_string(),
+        // RunForkCommand: Intent expects String, Event has String (no parse needed)
+        "RunForkCommand" => "Event::RunForkCommand { message_index } => Some(Intent::RunForkCommand { message_index: message_index.clone() }),".to_string(),
         "RunCompactCommand" => "Event::RunCompactCommand { keep, focus } => Some(Intent::RunCompactCommand { keep: keep.clone(), focus: focus.clone() }),".to_string(),
-        "RunForkCommand" => "Event::RunForkCommand { message_index } => Some(Intent::RunForkCommand { message_index: message_index.parse().ok()?, message_index: message_index.clone() }),".to_string(),
-        "ForkSession" => "Event::ForkSession { message_index } => Some(Intent::ForkSession { message_index: *message_index }),".to_string(),
+        "ForkSession" => "Event::ForkSession { message_index } => Some(Intent::ForkSession { message_index }),".to_string(),
         "SessionTreeSelect" => "Event::SessionTreeSelect { id } => Some(Intent::SessionTreeSelect { id: id.clone() }),".to_string(),
         "SelectSession" => "Event::SelectSession { id } => Some(Intent::SelectSession { id: id.clone() }),".to_string(),
         "StarSession" => "Event::StarSession { id } => Some(Intent::StarSession { id: id.clone() }),".to_string(),
         "RenameSession" => "Event::RenameSession { id, name } => Some(Intent::RenameSession { id: id.clone(), name: name.clone() }),".to_string(),
         "DeleteSession" => "Event::DeleteSession { id } => Some(Intent::DeleteSession { id: id.clone() }),".to_string(),
-        "SwitchModel" => "Event::SwitchModel { provider, model, explicit } => Some(Intent::SwitchModel { provider: provider.clone(), model: model.clone(), explicit: *explicit }),".to_string(),
+        // NOTE: struct fields are bound BY VALUE in the match pattern (not references),
+        // so we must NOT dereference Copy types (u16, bool) or owned types (enum variants).
+        // - For Copy types and owned types: bind with `ref`, deref to copy/move into Intent
+        // - For owned String/Vec fields: bind by value, clone into Intent
+        "TerminalSize" => "Event::TerminalSize { ref width, ref height } => Some(Intent::TerminalSize { width: *width, height: *height }),".to_string(),
+        "SwitchModel" => "Event::SwitchModel { ref provider, ref model, ref explicit } => Some(Intent::SwitchModel { provider: (*provider).clone(), model: (*model).clone(), explicit: *explicit }),".to_string(),
+        "SettingsSwitchCategory" => "Event::SettingsSwitchCategory { ref category } => Some(Intent::SettingsSwitchCategory { category: (*category).clone() }),".to_string(),
+        "PermissionResponse" => "Event::PermissionResponse { ref request_id, ref action } => Some(Intent::PermissionResponse { request_id: request_id.clone(), action: (*action).clone() }),".to_string(),
         "ScopedModelToggle" => "Event::ScopedModelToggle { provider, name } => Some(Intent::ScopedModelToggle { provider: provider.clone(), name: name.clone() }),".to_string(),
         "ScopedModelToggleProvider" => "Event::ScopedModelToggleProvider { provider } => Some(Intent::ScopedModelToggleProvider { provider: provider.clone() }),".to_string(),
-        "SettingsSwitchCategory" => "Event::SettingsSwitchCategory { category } => Some(Intent::SettingsSwitchCategory { category: *category }),".to_string(),
-        "SetThinkingLevel" => "Event::SetThinkingLevel(lvl) => Some(Intent::SetThinkingLevel(*lvl)),".to_string(),
+        // SetThinkingLevel: Intent takes `ThinkingLevel` (owned), Event has `ThinkingLevel` (owned in tuple)
+        "SetThinkingLevel" => "Event::SetThinkingLevel(lvl) => Some(Intent::SetThinkingLevel(lvl)),".to_string(),
         "RunLoadCommand" => "Event::RunLoadCommand { name } => Some(Intent::RunLoadCommand { name: name.clone() }),".to_string(),
         "RunSaveCommand" => "Event::RunSaveCommand { name } => Some(Intent::RunSaveCommand { name: name.clone() }),".to_string(),
         "RunDeleteCommand" => "Event::RunDeleteCommand { name } => Some(Intent::RunDeleteCommand { name: name.clone() }),".to_string(),
@@ -320,18 +358,16 @@ fn build_intent_arm(event_name: &str, intent_name: &str) -> String {
         "RunLogoutCommand" => "Event::RunLogoutCommand { provider } => Some(Intent::RunLogoutCommand { provider: provider.clone() }),".to_string(),
         "RunNameCommand" => "Event::RunNameCommand { name } => Some(Intent::RunNameCommand { name: name.clone() }),".to_string(),
         "RunPromptCommand" => "Event::RunPromptCommand { name } => Some(Intent::RunPromptCommand { name: name.clone() }),".to_string(),
-        "RunThinkingCommand" => "Event::RunThinkingCommand { level } => Some(Intent::RunThinkingCommand { level: *level }),".to_string(),
+        "RunThinkingCommand" => "Event::RunThinkingCommand { level } => Some(Intent::RunThinkingCommand { level: level.clone() }),".to_string(),
         "RunPaletteCommand" => "Event::RunPaletteCommand { name, args } => Some(Intent::RunPaletteCommand { name: name.clone(), args: args.clone() }),".to_string(),
         "SelectProvider" => "Event::SelectProvider { provider } => Some(Intent::SelectProvider { provider: provider.clone() }),".to_string(),
         "SubmitKey" => "Event::SubmitKey { provider, key } => Some(Intent::SubmitKey { provider: provider.clone(), key: key.clone() }),".to_string(),
         "ToggleModel" => "Event::ToggleModel { model } => Some(Intent::ToggleModel { model: model.clone() }),".to_string(),
         "ExternalEditorDone" => "Event::ExternalEditorDone { content } => Some(Intent::ExternalEditorDone { content: content.clone() }),".to_string(),
-        "PermissionResponse" => "Event::PermissionResponse { request_id, action } => Some(Intent::PermissionResponse { request_id: request_id.clone(), action: *action }),".to_string(),
-        "MouseClick" => "Event::MouseClick { row, col, button } => Some(Intent::MouseClick { row: *row, col: *col, button: button.clone() }),".to_string(),
-        "MouseRelease" => "Event::MouseRelease { row, col, button } => Some(Intent::MouseRelease { row: *row, col: *col, button: button.clone() }),".to_string(),
-        "MouseDrag" => "Event::MouseDrag { row, col, button } => Some(Intent::MouseDrag { row: *row, col: *col, button: button.clone() }),".to_string(),
-        "MouseMove" => "Event::MouseMove { row, col } => Some(Intent::MouseMove { row: *row, col: *col }),".to_string(),
-        "TerminalSize" => "Event::TerminalSize { width, height } => Some(Intent::TerminalSize { width: *width, height: *height }),".to_string(),
+        "MouseClick" => "Event::MouseClick { ref row, ref col, ref button } => Some(Intent::MouseClick { row: *row, col: *col, button: button.clone() }),".to_string(),
+        "MouseRelease" => "Event::MouseRelease { ref row, ref col, ref button } => Some(Intent::MouseRelease { row: *row, col: *col, button: button.clone() }),".to_string(),
+        "MouseDrag" => "Event::MouseDrag { ref row, ref col, ref button } => Some(Intent::MouseDrag { row: *row, col: *col, button: button.clone() }),".to_string(),
+        "MouseMove" => "Event::MouseMove { ref row, ref col } => Some(Intent::MouseMove { row: *row, col: *col }),".to_string(),
         "PendingEdit" => "Event::PendingEdit { path, original, proposed } => Some(Intent::PendingEdit { path: path.clone(), original: original.clone(), proposed: proposed.clone() }),".to_string(),
         "ProvidersSelectModel" => "Event::ProvidersSelectModel { provider, model } => Some(Intent::ProvidersSelectModel { provider: provider.clone(), model: model.clone() }),".to_string(),
         "ProvidersDisconnect" => "Event::ProvidersDisconnect { provider } => Some(Intent::ProvidersDisconnect { provider: provider.clone() }),".to_string(),
@@ -343,8 +379,10 @@ fn build_intent_arm(event_name: &str, intent_name: &str) -> String {
         "TransientError" => {
             "Event::TransientError { content } => Some(Intent::Notify { content: content.clone(), level: super::TransientLevel::Error }),".to_string()
         }
-        // Renamed events
+        // Renamed unit variants (no fields)
         "Start" => "Event::Start => Some(Intent::LoginStart),".to_string(),
+        "Save" => "Event::Save => Some(Intent::LoginSave),".to_string(),
+        "Cancel" => "Event::Cancel => Some(Intent::LoginCancel),".to_string(),
         "SwitchTheme" => "Event::SwitchTheme { name } => Some(Intent::SetTheme { name: name.clone() }),".to_string(),
         "Up" => "Event::Up => Some(Intent::ScrollUp),".to_string(),
         "Down" => "Event::Down => Some(Intent::ScrollDown),".to_string(),
@@ -416,7 +454,6 @@ fn guess_fields(name: &str) -> String {
         "SwitchTheme" => " { name }".to_string(),
         "SetThinkingLevel" => "(lvl)".to_string(),
         "ScopedModelToggle" | "ScopedModelToggleProvider" => " { provider, name }".to_string(),
-        "SettingsSwitchCategory" => " { category }".to_string(),
         "ForkSession" => " { message_index }".to_string(),
         "SelectSession" | "StarSession" | "DeleteSession" | "SessionTreeSelect" => " { id }".to_string(),
         "RenameSession" => " { id, name }".to_string(),
@@ -438,7 +475,18 @@ fn guess_fields(name: &str) -> String {
         "CopyToClipboard" | "InsertAtRef" => "(s)".to_string(),
         "ProvidersSelectModel" => " { provider, model }".to_string(),
         "ProvidersDisconnect" | "ProvidersEditModels" => " { provider }".to_string(),
-        "PermissionResponse" => " { request_id, action }".to_string(),
+        // NOTE: PermissionResponse is handled explicitly in build_intent_arm.
+        // NOTE: SettingsSwitchCategory is handled explicitly in build_intent_arm.
+        "ValidationFailed" => " { provider, key, error }".to_string(),
+        "ModelsFetched" => " { provider, key, models }".to_string(),
+        "SessionLoaded" => " { name, events, metadata }".to_string(),
+        "SessionSaved" => " { name }".to_string(),
+        "SessionDeleted" => " { name }".to_string(),
+        "SessionImported" => " { session }".to_string(),
+        "SessionExported" => " { path }".to_string(),
+        "SessionList" => " { sessions }".to_string(),
+        "SessionOperationFailed" => " { operation, error }".to_string(),
+        "SessionChanged" => " { state }".to_string(),
         _ => " { /* unknown */ }".to_string(),
     }
 }

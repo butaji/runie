@@ -86,6 +86,8 @@ pub enum Intent {
     Reset,
     /// Abort the current agent turn.
     Abort,
+    /// Clear all pending queues.
+    ClearQueues,
     /// Request a follow-up turn.
     FollowUp,
     /// Toggle collapse/expand for a message.

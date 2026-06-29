@@ -7,9 +7,8 @@
 
 pub mod category;
 pub mod facts;
+pub mod intent_impl;
 pub mod kind;
 
 pub use category::EventCategory;
-pub use facts::is_fact_variant;
-pub use kind::EventCtor;
 pub use kind::EVENT_NAMES;

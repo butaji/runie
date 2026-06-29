@@ -17,17 +17,16 @@ pub mod durable;
 pub mod from_provider_event;
 pub mod headless;
 pub mod intent;
-pub(crate) mod intent_impl;
 pub mod kind;
 mod level;
 pub mod name;
 pub mod to_durable;
 mod variants;
-mod generated;
+pub mod generated;
 
 pub use generated::EventCategory;
 pub use generated::EVENT_NAMES;
-pub use generated::EventCtor;
 pub use kind::EventKind;
+
 #[cfg(test)]
 mod tests;

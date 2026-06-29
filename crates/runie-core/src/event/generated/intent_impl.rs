@@ -1,9 +1,9 @@
 //! `Event::into_intent()` implementation.
 //! Generated from `taxonomy.json`. DO NOT EDIT.
 
-use super::intent::Intent;
-use super::variants::Event;
-use super::generated::is_fact_variant;
+use super::super::intent::Intent;
+use super::super::variants::Event;
+use super::facts::is_fact_variant;
 
 impl Event {
     /// Convert this event to a typed `Intent`, if it is an intent.
@@ -21,10 +21,10 @@ impl Event {
             Event::RunLoginCommand { provider, token } => Some(Intent::RunLoginCommand { provider: provider.clone(), token: token.clone() }),
             Event::RunLogoutCommand { provider } => Some(Intent::RunLogoutCommand { provider: provider.clone() }),
             Event::RunNameCommand { name } => Some(Intent::RunNameCommand { name: name.clone() }),
-            Event::RunForkCommand { message_index } => Some(Intent::RunForkCommand { message_index: message_index.parse().ok()?, message_index: message_index.clone() }),
+            Event::RunForkCommand { message_index } => Some(Intent::RunForkCommand { message_index: message_index.clone() }),
             Event::RunCompactCommand { keep, focus } => Some(Intent::RunCompactCommand { keep: keep.clone(), focus: focus.clone() }),
             Event::RunPromptCommand { name } => Some(Intent::RunPromptCommand { name: name.clone() }),
-            Event::RunThinkingCommand { level } => Some(Intent::RunThinkingCommand { level: *level }),
+            Event::RunThinkingCommand { level } => Some(Intent::RunThinkingCommand { level: level.clone() }),
             Event::RunPaletteCommand { name, args } => Some(Intent::RunPaletteCommand { name: name.clone(), args: args.clone() }),
             Event::Quit => Some(Intent::Quit),
             Event::ForceQuit => Some(Intent::ForceQuit),
@@ -112,24 +112,22 @@ impl Event {
             Event::GoToBottom => Some(Intent::GoToBottom),
             Event::Paste(s) => Some(Intent::Paste(s)),
             Event::PasteImage => Some(Intent::PasteImage),
-            Event::MouseClick { row, col, button } => Some(Intent::MouseClick { row: *row, col: *col, button: button.clone() }),
-            Event::MouseRelease { row, col, button } => Some(Intent::MouseRelease { row: *row, col: *col, button: button.clone() }),
-            Event::MouseDrag { row, col, button } => Some(Intent::MouseDrag { row: *row, col: *col, button: button.clone() }),
-            Event::MouseMove { row, col } => Some(Intent::MouseMove { row: *row, col: *col }),
+            Event::MouseClick { ref row, ref col, ref button } => Some(Intent::MouseClick { row: *row, col: *col, button: button.clone() }),
+            Event::MouseRelease { ref row, ref col, ref button } => Some(Intent::MouseRelease { row: *row, col: *col, button: button.clone() }),
+            Event::MouseDrag { ref row, ref col, ref button } => Some(Intent::MouseDrag { row: *row, col: *col, button: button.clone() }),
+            Event::MouseMove { ref row, ref col } => Some(Intent::MouseMove { row: *row, col: *col }),
             Event::MouseScrollUp => Some(Intent::MouseScrollUp),
             Event::MouseScrollDown => Some(Intent::MouseScrollDown),
             Event::FocusGained => Some(Intent::FocusGained),
             Event::FocusLost => Some(Intent::FocusLost),
-            Event::TerminalSize { width, height } => Some(Intent::TerminalSize { width: *width, height: *height }),
+            Event::TerminalSize { ref width, ref height } => Some(Intent::TerminalSize { width: *width, height: *height }),
             Event::Start => Some(Intent::LoginStart),
             Event::SelectProvider { provider } => Some(Intent::SelectProvider { provider: provider.clone() }),
             Event::SubmitKey { provider, key } => Some(Intent::SubmitKey { provider: provider.clone(), key: key.clone() }),
             Event::ToggleModel { model } => Some(Intent::ToggleModel { model: model.clone() }),
-            Event::Save => Some(Intent::Save),
-            Event::Cancel => Some(Intent::Cancel),
-            Event::ValidationFailed { /* unknown */ } => Some(Intent::ValidationFailed { /* unknown */ }),
-            Event::ModelsFetched { /* unknown */ } => Some(Intent::ModelsFetched { /* unknown */ }),
-            Event::SwitchModel { provider, model, explicit } => Some(Intent::SwitchModel { provider: provider.clone(), model: model.clone(), explicit: *explicit }),
+            Event::Save => Some(Intent::LoginSave),
+            Event::Cancel => Some(Intent::LoginCancel),
+            Event::SwitchModel { ref provider, ref model, ref explicit } => Some(Intent::SwitchModel { provider: (*provider).clone(), model: (*model).clone(), explicit: *explicit }),
             Event::SwitchTheme { name } => Some(Intent::SetTheme { name: name.clone() }),
             Event::CycleModelNext => Some(Intent::CycleModelNext),
             Event::CycleModelPrev => Some(Intent::CycleModelPrev),
@@ -145,29 +143,22 @@ impl Event {
             Event::SettingsRight => Some(Intent::SettingsRight),
             Event::SettingsSelect => Some(Intent::SettingsSelect),
             Event::SettingsClose => Some(Intent::SettingsClose),
-            Event::SettingsSwitchCategory { category } => Some(Intent::SettingsSwitchCategory { category: *category }),
+            Event::SettingsSwitchCategory { ref category } => Some(Intent::SettingsSwitchCategory { category: (*category).clone() }),
             Event::CycleThinkingLevel => Some(Intent::CycleThinkingLevel),
-            Event::SetThinkingLevel(lvl) => Some(Intent::SetThinkingLevel(*lvl)),
+            Event::SetThinkingLevel(lvl) => Some(Intent::SetThinkingLevel(lvl)),
             Event::ToggleReadOnly => Some(Intent::ToggleReadOnly),
             Event::TrustProject => Some(Intent::TrustProject),
             Event::UntrustProject => Some(Intent::UntrustProject),
             Event::ReloadAll => Some(Intent::ReloadConfig),
-            Event::PermissionResponse { request_id, action } => Some(Intent::PermissionResponse { request_id: request_id.clone(), action: *action }),
+            Event::PermissionResponse { ref request_id, ref action } => Some(Intent::PermissionResponse { request_id: request_id.clone(), action: (*action).clone() }),
             Event::Up => Some(Intent::ScrollUp),
             Event::Down => Some(Intent::ScrollDown),
-            Event::ForkSession { message_index } => Some(Intent::ForkSession { message_index: *message_index }),
+            Event::ForkSession { message_index } => Some(Intent::ForkSession { message_index }),
             Event::CloneSession => Some(Intent::CloneSession),
             Event::ToggleSessionTree => Some(Intent::ToggleSessionTree),
             Event::SessionTreeFilterCycle => Some(Intent::SessionTreeFilterCycle),
             Event::SessionTreeSelect { id } => Some(Intent::SessionTreeSelect { id: id.clone() }),
-            Event::SessionLoaded { /* unknown */ } => Some(Intent::SessionLoaded { /* unknown */ }),
-            Event::SessionSaved { /* unknown */ } => Some(Intent::SessionSaved { /* unknown */ }),
-            Event::SessionDeleted { /* unknown */ } => Some(Intent::SessionDeleted { /* unknown */ }),
-            Event::SessionImported { /* unknown */ } => Some(Intent::SessionImported { /* unknown */ }),
-            Event::SessionExported { /* unknown */ } => Some(Intent::SessionExported { /* unknown */ }),
-            Event::SessionList { /* unknown */ } => Some(Intent::SessionList { /* unknown */ }),
-            Event::SessionOperationFailed { /* unknown */ } => Some(Intent::SessionOperationFailed { /* unknown */ }),
-            Event::SessionChanged { /* unknown */ } => Some(Intent::SessionChanged { /* unknown */ }),
+            _ => None,
         }
     }
 }
