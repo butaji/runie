@@ -183,7 +183,7 @@ mod dialog_state_tests {
 
 impl AppState {
     /// Dispatch a slash command
-    pub(crate) fn handle_slash(&mut self, content: &str) -> Option<CommandResult> {
+    pub fn handle_slash(&mut self, content: &str) -> Option<CommandResult> {
         if !content.starts_with('/') {
             return None;
         }

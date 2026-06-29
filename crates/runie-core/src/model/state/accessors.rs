@@ -120,7 +120,7 @@ impl AppState {
         &mut self.agent
     }
 
-    pub(crate) fn view_mut(&mut self) -> &mut ViewState {
+    pub fn view_mut(&mut self) -> &mut ViewState {
         &mut self.view
     }
 

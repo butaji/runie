@@ -15,7 +15,7 @@ pub use crate::model::state::types::PermissionRequestState;
 pub use crate::model::state::view::ViewState;
 pub use crate::model::state::FffFileEntry;
 pub use crate::model::state::ModelSource;
-pub(crate) use crate::model::state::{QueuedMessage, QueuedMessageKind};
+pub use crate::model::state::types::{QueuedMessage, QueuedMessageKind};
 pub use crate::model_catalog::{
     build_model_selector_items, filter_models, model_catalog, ModelInfo,
 };

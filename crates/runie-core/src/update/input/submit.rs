@@ -43,8 +43,10 @@ impl AppState {
         }
     }
 
-    /// Extract the submit text, sending Clear to InputActor.
+    /// Extract the submit text.
     /// Returns None if input is empty (and sets flash).
+    /// Clears the input field synchronously in tests (via InputMsg::Clear) and
+    /// via UiActor/InputActor in production.
     fn take_submit_text(&mut self) -> Option<String> {
         let input = self.input();
         if input.input.is_empty() {
@@ -52,7 +54,8 @@ impl AppState {
             return None;
         }
         let content = input.input.trim().to_owned();
-        // Clear input through InputActor.
+        // In test mode (no actor handles), try_send_input applies synchronously.
+        // In production, this sends to InputActor which clears and replies with InputChanged.
         try_send_input(self, crate::actors::InputMsg::Clear);
         Some(content)
     }
@@ -104,7 +107,7 @@ impl AppState {
         self.view_mut().dirty = true;
     }
 
-    fn submit_user_message(&mut self, mut content: String) {
+    pub fn submit_user_message(&mut self, mut content: String) {
         // Append image attachments.
         if !self.session().image_attachments.is_empty() {
             for uri in std::mem::take(&mut self.session_mut().image_attachments) {
@@ -151,7 +154,7 @@ impl AppState {
             .push_back((content, id));
     }
 
-    fn apply_command_result(&mut self, result: crate::commands::CommandResult) {
+    pub fn apply_command_result(&mut self, result: crate::commands::CommandResult) {
         use crate::commands::DialogType;
         match result {
             crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),

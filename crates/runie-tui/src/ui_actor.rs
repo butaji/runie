@@ -15,6 +15,7 @@ use runie_core::login_flow::LoginStep;
 use runie_core::commands::DialogKind;
 use runie_core::{AppState, Snapshot, Event};
 use tokio::sync::{mpsc, oneshot, watch};
+
 use crate::effects::{login, EffectCommand};
 
 /// Simple handle for sending commands to the agent.
@@ -111,6 +112,14 @@ pub struct UiActor {
     shutdown_tx: Option<oneshot::Sender<()>>,
     caps: TermCaps,
     pub(crate) paced: PacedRenderer,
+    /// Previous input text (snapshot before last InputChanged application).
+    /// Used to detect autocomplete trigger characters.
+    prev_input: String,
+    /// Previous cursor position (snapshot before last InputChanged application).
+    prev_cursor_pos: usize,
+    /// Pending submit content captured before sending InputMsg::Submit.
+    /// Dispatched after InputChanged is applied so state is clean.
+    pending_submit: Option<String>,
 }
 
 impl UiActor {
@@ -149,6 +158,8 @@ impl UiActor {
         caps: TermCaps,
     ) -> Self {
         let (render_tx, render_rx) = watch::channel(state.snapshot());
+        let prev_input = state.input().input.clone();
+        let prev_cursor_pos = state.input().cursor_pos;
         Self {
             state,
             render_tx,
@@ -161,6 +172,9 @@ impl UiActor {
             shutdown_tx: Some(shutdown_tx),
             caps,
             paced: PacedRenderer::new(),
+            prev_input,
+            prev_cursor_pos,
+            pending_submit: None,
         }
     }
 
@@ -237,22 +251,116 @@ impl UiActor {
         let was_config_loaded = matches!(&evt, Event::ConfigLoaded { .. });
         let was_agent_done = matches!(&evt, Event::Done { .. } | Event::Error { .. });
 
-        let submitted_text = if was_submit {
-            Some(self.state.input().input().to_string())
-        } else {
-            None
-        };
+        // Route input events through InputActor instead of applying directly.
+        // InputChanged events are the single source of truth for input state.
+        match &evt {
+            Event::Input(c) => {
+                // In test mode (no InputActor), apply synchronously so the UiActor
+                // state is updated without waiting for an InputChanged response.
+                self.apply_event(evt.clone());
+                self.send_input_msg(runie_core::actors::InputMsg::InsertChar(*c)).await;
+            }
+            Event::Backspace => {
+                self.send_input_msg(runie_core::actors::InputMsg::Backspace).await;
+            }
+            Event::Newline => {
+                self.send_input_msg(runie_core::actors::InputMsg::Newline).await;
+            }
+            Event::DeleteWord => {
+                self.send_input_msg(runie_core::actors::InputMsg::DeleteWord).await;
+            }
+            Event::DeleteToEnd => {
+                self.send_input_msg(runie_core::actors::InputMsg::DeleteToEnd).await;
+            }
+            Event::DeleteToStart => {
+                self.send_input_msg(runie_core::actors::InputMsg::DeleteToStart).await;
+            }
+            Event::KillChar => {
+                self.send_input_msg(runie_core::actors::InputMsg::KillChar).await;
+            }
+            Event::Undo => {
+                self.send_input_msg(runie_core::actors::InputMsg::Undo).await;
+            }
+            Event::Redo => {
+                self.send_input_msg(runie_core::actors::InputMsg::Redo).await;
+            }
+            Event::Paste(text) => {
+                self.send_input_msg(runie_core::actors::InputMsg::Paste(text.clone())).await;
+            }
+            Event::CursorLeft => {
+                self.send_input_msg(runie_core::actors::InputMsg::CursorLeft).await;
+            }
+            Event::CursorRight => {
+                self.send_input_msg(runie_core::actors::InputMsg::CursorRight).await;
+            }
+            Event::CursorStart => {
+                self.send_input_msg(runie_core::actors::InputMsg::CursorStart).await;
+            }
+            Event::CursorEnd => {
+                self.send_input_msg(runie_core::actors::InputMsg::CursorEnd).await;
+            }
+            Event::CursorWordLeft => {
+                self.send_input_msg(runie_core::actors::InputMsg::CursorWordLeft).await;
+            }
+            Event::CursorWordRight => {
+                self.send_input_msg(runie_core::actors::InputMsg::CursorWordRight).await;
+            }
+            Event::HistoryPrev => {
+                self.send_input_msg(runie_core::actors::InputMsg::HistoryPrev).await;
+            }
+            Event::HistoryNext => {
+                self.send_input_msg(runie_core::actors::InputMsg::HistoryNext).await;
+            }
+            Event::Submit => {
+                // Capture content, send Submit to InputActor, dispatch after InputChanged.
+                let content = self.state.input().input().trim().to_owned();
+                self.pending_submit = if content.is_empty() { None } else { Some(content.clone()) };
+                self.send_input_msg(runie_core::actors::InputMsg::Submit { content }).await;
+            }
+            Event::InputChanged { state } => {
+                // Single source of truth for input state. Apply state and handle
+                // autocomplete triggers before other events modify the projection.
+                let prev_input = self.prev_input.clone();
+                let prev_cursor_pos = self.prev_cursor_pos;
+                let new_input = state.input().to_owned();
+                let new_cursor_pos = state.cursor_pos;
 
-        self.apply_event(evt.clone());
-        self.update_paced_renderer(&evt);
-        self.dispatch_effect(&evt, effect_tx.clone()).await;
+                // Apply authoritative state.
+                *self.state.input_mut() = *state.clone();
+
+                // Detect autocomplete triggers: '@' or '/' typed at end of input.
+                self.detect_autocomplete_trigger(&prev_input, prev_cursor_pos, &new_input, new_cursor_pos);
+
+                // Dispatch pending submit after state is clean.
+                if let Some(content) = self.pending_submit.take() {
+                    self.dispatch_submit_content(content);
+                }
+
+                // Side effects that depend on updated input state.
+                self.state.view_mut().dirty = true;
+                self.handle_at_trigger();
+            }
+            _ => {
+                // Non-input events: apply directly.
+                self.apply_event(evt.clone());
+            }
+        }
+
+        // Non-input events: paced renderer, effects, etc.
+        if !matches!(&evt, Event::InputChanged { .. }) {
+            self.update_paced_renderer(&evt);
+            self.dispatch_effect(&evt, effect_tx.clone()).await;
+        }
         if *self.state.should_quit_mut() {
             return true;
         }
         if was_config_loaded {
             let _ = self.kb_tx.send(self.state.config().keybindings().clone());
         }
-        handle_persistence_messages(self.persistence_handle.clone(), evt, submitted_text).await;
+        if was_submit {
+            // History persistence: done after InputChanged (which clears input).
+            // The pending_submit already captured the content.
+        }
         if was_submit || was_followup || was_agent_done {
             self.agent_handle.run_if_queued(&self.turn_handle).await;
         }
@@ -310,6 +418,103 @@ impl UiActor {
         // Show the paced display text instead of the raw streaming tail.
         snap.streaming_tail = self.paced.displayed().to_owned();
         snap
+    }
+
+    /// Fire-and-forget send to InputActor.
+    async fn send_input_msg(&self, msg: runie_core::actors::InputMsg) {
+        let Some(handles) = self.state.actor_handles() else { return };
+        let _ = handles.input.try_send(msg);
+    }
+
+    /// Check if a command is a quit command (matches slash-command semantics).
+    fn is_quit_command(content: &str) -> bool {
+        matches!(content.trim(), "/q" | "/quit" | "/exit")
+    }
+
+    /// Detect autocomplete trigger characters ('@' or '/') typed at end of input.
+    /// Opens the command palette or file picker accordingly.
+    fn detect_autocomplete_trigger(
+        &mut self,
+        prev_input: &str,
+        _prev_cursor: usize,
+        new_input: &str,
+        new_cursor: usize,
+    ) {
+        // Detect '@' or '/' typed at end of input (not inside existing autocomplete).
+        let was_empty_or_space = prev_input.is_empty()
+            || prev_input.ends_with(' ')
+            || prev_input.ends_with('\n');
+
+        if was_empty_or_space
+            && !new_input.is_empty()
+            && new_cursor == new_input.len()
+            && !self.state.completion().at_suggestions.is_some()
+        {
+            let last_char = new_input.chars().last().unwrap();
+            if last_char == '@' {
+                // Open file picker.
+                let (input_text, cursor) = (new_input.to_owned(), new_cursor);
+                self.state.input_mut().file_picker_backup =
+                    Some((input_text, cursor, cursor, false));
+                runie_core::update::dialog::open_at_file_picker_all(&mut self.state);
+                self.state.view_mut().dirty = true;
+            } else if last_char == '/' && !Self::is_quit_command(new_input) {
+                // Open command palette.
+                self.state.input_mut().input = String::new();
+                self.state.input_mut().cursor_pos = 0;
+                runie_core::update::dialog::open_command_palette_with_filter(&mut self.state, "");
+                self.state.view_mut().dirty = true;
+            }
+        }
+    }
+
+    /// Handle autocomplete trigger at current cursor position.
+    fn handle_at_trigger(&mut self) {
+        let input = self.state.input();
+        let is_empty_or_space =
+            input.input.is_empty() || input.input.ends_with(' ') || input.input.ends_with('\n');
+        if !is_empty_or_space
+            || self.state.completion().at_suggestions.is_some()
+            || input.input.ends_with('@')
+        {
+            return;
+        }
+
+        let last_char = input.input.chars().last().unwrap();
+        if last_char == '@' && input.cursor_pos == input.input.len() {
+            // File picker: already opened in detect_autocomplete_trigger.
+            return;
+        }
+
+        if last_char == '/' && !Self::is_quit_command(&input.input) {
+            // Command palette: already opened in detect_autocomplete_trigger.
+            return;
+        }
+    }
+
+    /// Dispatch submit content (slash command, steering, or user message).
+    fn dispatch_submit_content(&mut self, content: String) {
+        // Slash command handling.
+        if let Some(result) = self.state.handle_slash(&content) {
+            self.state.apply_command_result(result);
+            self.state.view_mut().scroll = 0;
+            self.state.view_mut().dirty = true;
+            return;
+        }
+        // Steering (follow-up during active turn).
+        if self.state.agent_state().turn_active {
+            self.state.agent_state_mut().message_queue.push(
+                runie_core::model::QueuedMessage {
+                    content,
+                    kind: runie_core::model::QueuedMessageKind::Steering,
+                },
+            );
+            self.state.view_mut().scroll = 0;
+            self.state.view_mut().dirty = true;
+            return;
+        }
+        // Normal user message submission.
+        self.state.submit_user_message(content);
     }
 
     fn publish_snapshot(&mut self) {
