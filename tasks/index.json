@@ -32,7 +32,7 @@
   {
     "file": "cleanup-verify-tests-and-just-recipes.md",
     "title": "Clean up `verify-tests.sh` and `just lint-fix`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "collapse-actor-handles-to-typed-map.md",
@@ -217,7 +217,7 @@
   {
     "file": "remove-redundant-check-field-access-script.md",
     "title": "Remove redundant `check-field-access.sh`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-sleep-from-automatic-tests.md",
@@ -257,7 +257,7 @@
   {
     "file": "replace-custom-nanoid-in-test-runner.md",
     "title": "Replace custom nanoid in test runner",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-custom-retry-with-backon.md",
@@ -277,7 +277,7 @@
   {
     "file": "replace-leftover-macros-with-functions.md",
     "title": "Replace leftover macros with functions",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-legacy-tool-parsers-with-thin-shim.md",

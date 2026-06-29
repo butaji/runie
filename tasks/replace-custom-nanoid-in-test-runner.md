@@ -1,6 +1,6 @@
 # Replace custom nanoid in test runner
 
-**Status**: todo
+**Status**: done
 **Milestone**: R6
 **Category**: Test harness
 **Priority**: P3

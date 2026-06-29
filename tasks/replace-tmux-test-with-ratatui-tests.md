@@ -1,6 +1,6 @@
 # Replace `scripts/tmux-test.sh` with Ratatui `TestBackend` tests
 
-**Status**: todo
+**Status**: done
 **Milestone**: R5
 **Category**: Test harness
 **Priority**: P2

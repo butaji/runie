@@ -1,6 +1,6 @@
 # Clean up `verify-tests.sh` and `just lint-fix`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R6
 **Category**: Build / CI
 **Priority**: P3

@@ -1,6 +1,6 @@
 # Remove redundant `check-field-access.sh`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R6
 **Category**: Build / CI
 **Priority**: P3

@@ -1,6 +1,6 @@
 # Replace leftover macros with functions
 
-**Status**: todo
+**Status**: done
 **Milestone**: R6
 **Category**: Core / Refactoring
 **Priority**: P3
