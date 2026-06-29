@@ -232,7 +232,7 @@
   {
     "file": "simplify-slash-command-dsl.md",
     "title": "Simplify slash-command DSL",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "simplify-terminal-capability-detection.md",

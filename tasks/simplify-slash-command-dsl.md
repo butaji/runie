@@ -1,6 +1,6 @@
 # Simplify slash-command DSL
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Input / Commands
 **Priority**: P1
@@ -14,12 +14,12 @@
 
 ## Acceptance Criteria
 
-- [ ] Collapse `CommandSpec` and `CommandDef` into a single representation.
-- [ ] Either model slash commands as `clap` subcommand enums, or keep one declarative table that emits the builder and palette metadata.
-- [ ] Remove the custom form DSL if `tui-textarea`/`tui-input` and `List` cover the UI needs.
-- [ ] All existing slash commands (`/help`, `/model`, `/skill`, etc.) continue to work.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Collapse `CommandSpec` and `CommandDef` into a single representation.
+- [x] Either model slash commands as `clap` subcommand enums, or keep one declarative table that emits the builder and palette metadata.
+- [x] Remove the custom form DSL if `tui-textarea`/`tui-input` and `List` cover the UI needs. *(Form DSL retained but unified; form building still needed)*
+- [x] All existing slash commands (`/help`, `/model`, `/skill`, etc.) continue to work.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
