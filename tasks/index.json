@@ -1,452 +1,457 @@
 [
   {
+    "file": "TEMPLATE.md",
+    "title": "Template",
+    "status": "todo"
+  },
+  {
     "file": "actually-collapse-actor-handles-to-typed-map.md",
-    "title": "actually-collapse-actor-handles-to-typed-map.md",
+    "title": "Actually Collapse Actor Handles To Typed Map",
     "status": "done"
   },
   {
     "file": "actually-replace-runie-provider-backoff-with-backon.md",
-    "title": "actually-replace-runie-provider-backoff-with-backon.md",
+    "title": "Actually Replace Runie Provider Backoff With Backon",
     "status": "done"
   },
   {
     "file": "add-jsonschema-validation-to-configactor-load.md",
-    "title": "add-jsonschema-validation-to-configactor-load.md",
+    "title": "Add Jsonschema Validation To Configactor Load",
     "status": "done"
   },
   {
     "file": "centralize-built-in-tool-names.md",
-    "title": "centralize-built-in-tool-names.md",
+    "title": "Centralize Built In Tool Names",
     "status": "done"
   },
   {
     "file": "centralize-test-fixtures-and-mocks.md",
-    "title": "centralize-test-fixtures-and-mocks.md",
+    "title": "Centralize Test Fixtures And Mocks",
     "status": "done"
   },
   {
     "file": "cleanup-small-duplicates-and-dead-code.md",
-    "title": "cleanup-small-duplicates-and-dead-code.md",
+    "title": "Cleanup Small Duplicates And Dead Code",
     "status": "done"
   },
   {
     "file": "cleanup-verify-tests-and-just-recipes.md",
-    "title": "cleanup-verify-tests-and-just-recipes.md",
+    "title": "Cleanup Verify Tests And Just Recipes",
     "status": "done"
   },
   {
     "file": "collapse-actor-handles-to-typed-map.md",
-    "title": "collapse-actor-handles-to-typed-map.md",
+    "title": "Collapse Actor Handles To Typed Map",
     "status": "done"
   },
   {
     "file": "collapse-dialogstate-variants.md",
-    "title": "collapse-dialogstate-variants.md",
+    "title": "Collapse Dialogstate Variants",
     "status": "done"
   },
   {
     "file": "collapse-event-intent-kind-taxonomies.md",
-    "title": "collapse-event-intent-kind-taxonomies.md",
+    "title": "Collapse Event Intent Kind Taxonomies",
     "status": "done"
   },
   {
     "file": "dedupe-turn-queue-delivery-logic.md",
-    "title": "dedupe-turn-queue-delivery-logic.md",
+    "title": "Dedupe Turn Queue Delivery Logic",
     "status": "done"
   },
   {
     "file": "delete-dead-actor-handle-wrappers.md",
-    "title": "delete-dead-actor-handle-wrappers.md",
+    "title": "Delete Dead Actor Handle Wrappers",
     "status": "done"
   },
   {
     "file": "delete-dead-actor-modules-and-custom-trait.md",
-    "title": "delete-dead-actor-modules-and-custom-trait.md",
+    "title": "Delete Dead Actor Modules And Custom Trait",
     "status": "done"
   },
   {
     "file": "delete-dead-runie-macros-crate.md",
-    "title": "delete-dead-runie-macros-crate.md",
+    "title": "Delete Dead Runie Macros Crate",
     "status": "done"
   },
   {
     "file": "delete-eventbusbridge-wrapper.md",
-    "title": "delete-eventbusbridge-wrapper.md",
+    "title": "Delete Eventbusbridge Wrapper",
     "status": "done"
   },
   {
     "file": "delete-leftover-telemetry-stub.md",
-    "title": "delete-leftover-telemetry-stub.md",
+    "title": "Delete Leftover Telemetry Stub",
     "status": "done"
   },
   {
     "file": "delete-or-fix-dead-mcp-feature-flag.md",
-    "title": "delete-or-fix-dead-mcp-feature-flag.md",
+    "title": "Delete Or Fix Dead Mcp Feature Flag",
     "status": "done"
   },
   {
     "file": "delete-or-merge-inspector-tool-pipeline.md",
-    "title": "delete-or-merge-inspector-tool-pipeline.md",
+    "title": "Delete Or Merge Inspector Tool Pipeline",
     "status": "done"
   },
   {
     "file": "delete-unused-glyph-constants.md",
-    "title": "delete-unused-glyph-constants.md",
+    "title": "Delete Unused Glyph Constants",
     "status": "done"
   },
   {
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
-    "title": "deserialize-declarative-command-yaml-with-typed-structs.md",
+    "title": "Deserialize Declarative Command Yaml With Typed Structs",
     "status": "done"
   },
   {
     "file": "drop-unused-rand-from-runie-provider.md",
-    "title": "drop-unused-rand-from-runie-provider.md",
+    "title": "Drop Unused Rand From Runie Provider",
     "status": "done"
   },
   {
     "file": "eliminate-production-unwrap-expect.md",
-    "title": "eliminate-production-unwrap-expect.md",
+    "title": "Eliminate Production Unwrap Expect",
     "status": "done"
   },
   {
     "file": "expand-leader-start-for-tui-and-cli.md",
-    "title": "expand-leader-start-for-tui-and-cli.md",
+    "title": "Expand Leader Start For Tui And Cli",
     "status": "done"
   },
   {
     "file": "extract-shared-streaming-response-parser.md",
-    "title": "extract-shared-streaming-response-parser.md",
+    "title": "Extract Shared Streaming Response Parser",
     "status": "todo"
   },
   {
     "file": "extract-shared-tracing-subscriber-init.md",
-    "title": "extract-shared-tracing-subscriber-init.md",
+    "title": "Extract Shared Tracing Subscriber Init",
     "status": "done"
   },
   {
     "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
-    "title": "fix-broken-schema-feature-in-ci-and-justfile.md",
+    "title": "Fix Broken Schema Feature In Ci And Justfile",
     "status": "done"
   },
   {
     "file": "fix-dev-automation-recipes.md",
-    "title": "fix-dev-automation-recipes.md",
+    "title": "Fix Dev Automation Recipes",
     "status": "done"
   },
   {
     "file": "fix-dry-run-tool-names-discrepancy.md",
-    "title": "fix-dry-run-tool-names-discrepancy.md",
+    "title": "Fix Dry Run Tool Names Discrepancy",
     "status": "done"
   },
   {
     "file": "fix-keybindings-dead-code.md",
-    "title": "fix-keybindings-dead-code.md",
+    "title": "Fix Keybindings Dead Code",
     "status": "done"
   },
   {
     "file": "fix-ractor-permission-actor-reply-lifecycle.md",
-    "title": "fix-ractor-permission-actor-reply-lifecycle.md",
+    "title": "Fix Ractor Permission Actor Reply Lifecycle",
     "status": "done"
   },
   {
     "file": "fold-runie-protocol-into-core.md",
-    "title": "fold-runie-protocol-into-core.md",
+    "title": "Fold Runie Protocol Into Core",
     "status": "done"
   },
   {
     "file": "harden-actors-against-mutex-poisoning.md",
-    "title": "harden-actors-against-mutex-poisoning.md",
+    "title": "Harden Actors Against Mutex Poisoning",
     "status": "done"
   },
   {
     "file": "implement-or-remove-mcp-runtime-scaffolding.md",
-    "title": "implement-or-remove-mcp-runtime-scaffolding.md",
-    "status": "partial"
+    "title": "Implement Or Remove Mcp Runtime Scaffolding",
+    "status": "todo"
   },
   {
     "file": "initialize-tracing-subscriber-in-binaries.md",
-    "title": "initialize-tracing-subscriber-in-binaries.md",
+    "title": "Initialize Tracing Subscriber In Binaries",
     "status": "done"
   },
   {
     "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
-    "title": "introduce-cargo-deny-and-cargo-machete-ci.md",
+    "title": "Introduce Cargo Deny And Cargo Machete Ci",
     "status": "done"
   },
   {
     "file": "migrate-production-actors-to-ractor.md",
-    "title": "migrate-production-actors-to-ractor.md",
+    "title": "Migrate Production Actors To Ractor",
     "status": "done"
   },
   {
     "file": "migrate-subagent-loader-to-resource-loader.md",
-    "title": "migrate-subagent-loader-to-resource-loader.md",
+    "title": "Migrate Subagent Loader To Resource Loader",
     "status": "done"
   },
   {
     "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
-    "title": "migrate-tui-and-cli-to-leader-bootstrap.md",
+    "title": "Migrate Tui And Cli To Leader Bootstrap",
     "status": "done"
   },
   {
     "file": "move-built-in-slash-commands-to-declarative-yaml.md",
-    "title": "move-built-in-slash-commands-to-declarative-yaml.md",
+    "title": "Move Built In Slash Commands To Declarative Yaml",
     "status": "done"
   },
   {
     "file": "move-cargo-deny-machete-from-workspace-deps-to-ci.md",
-    "title": "move-cargo-deny-machete-from-workspace-deps-to-ci.md",
+    "title": "Move Cargo Deny Machete From Workspace Deps To Ci",
     "status": "done"
   },
   {
     "file": "narrow-runie-core-public-api.md",
-    "title": "narrow-runie-core-public-api.md",
+    "title": "Narrow Runie Core Public Api",
     "status": "partial"
   },
   {
     "file": "normalize-remaining-std-mutex-to-parking-lot.md",
-    "title": "normalize-remaining-std-mutex-to-parking-lot.md",
+    "title": "Normalize Remaining Std Mutex To Parking Lot",
     "status": "done"
   },
   {
     "file": "reconnect-tui-agent-actor-channel.md",
-    "title": "reconnect-tui-agent-actor-channel.md",
+    "title": "Reconnect Tui Agent Actor Channel",
     "status": "done"
   },
   {
     "file": "remove-redundant-check-field-access-script.md",
-    "title": "remove-redundant-check-field-access-script.md",
+    "title": "Remove Redundant Check Field Access Script",
     "status": "done"
   },
   {
     "file": "remove-sleep-from-automatic-tests.md",
-    "title": "remove-sleep-from-automatic-tests.md",
+    "title": "Remove Sleep From Automatic Tests",
     "status": "done"
   },
   {
     "file": "remove-sync-turn-queue-fallback-from-app-state.md",
-    "title": "remove-sync-turn-queue-fallback-from-app-state.md",
+    "title": "Remove Sync Turn Queue Fallback From App State",
     "status": "done"
   },
   {
     "file": "remove-unused-dependencies-and-normalize-workspace-deps.md",
-    "title": "remove-unused-dependencies-and-normalize-workspace-deps.md",
+    "title": "Remove Unused Dependencies And Normalize Workspace Deps",
     "status": "done"
   },
   {
     "file": "replace-bash-safety-with-shell-words.md",
-    "title": "replace-bash-safety-with-shell-words.md",
+    "title": "Replace Bash Safety With Shell Words",
     "status": "done"
   },
   {
     "file": "replace-build-linter-with-clippy-ci.md",
-    "title": "replace-build-linter-with-clippy-ci.md",
+    "title": "Replace Build Linter With Clippy Ci",
     "status": "done"
   },
   {
     "file": "replace-config-validator-with-jsonschema.md",
-    "title": "replace-config-validator-with-jsonschema.md",
+    "title": "Replace Config Validator With Jsonschema",
     "status": "done"
   },
   {
     "file": "replace-custom-helpers-with-crates.md",
-    "title": "replace-custom-helpers-with-crates.md",
+    "title": "Replace Custom Helpers With Crates",
     "status": "done"
   },
   {
     "file": "replace-custom-nanoid-in-test-runner.md",
-    "title": "replace-custom-nanoid-in-test-runner.md",
+    "title": "Replace Custom Nanoid In Test Runner",
     "status": "done"
   },
   {
     "file": "replace-custom-retry-with-backon.md",
-    "title": "replace-custom-retry-with-backon.md",
+    "title": "Replace Custom Retry With Backon",
     "status": "done"
   },
   {
     "file": "replace-custom-telemetry-with-tracing-layer.md",
-    "title": "replace-custom-telemetry-with-tracing-layer.md",
+    "title": "Replace Custom Telemetry With Tracing Layer",
     "status": "done"
   },
   {
     "file": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",
-    "title": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",
+    "title": "Replace Custom Tui Widgets With Ratatui Ecosystem",
     "status": "done"
   },
   {
     "file": "replace-leftover-macros-with-functions.md",
-    "title": "replace-leftover-macros-with-functions.md",
+    "title": "Replace Leftover Macros With Functions",
     "status": "done"
   },
   {
     "file": "replace-legacy-tool-parsers-with-thin-shim.md",
-    "title": "replace-legacy-tool-parsers-with-thin-shim.md",
+    "title": "Replace Legacy Tool Parsers With Thin Shim",
     "status": "done"
   },
   {
     "file": "replace-remaining-custom-parsers-and-macros-with-strum.md",
-    "title": "replace-remaining-custom-parsers-and-macros-with-strum.md",
+    "title": "Replace Remaining Custom Parsers And Macros With Strum",
     "status": "done"
   },
   {
     "file": "replace-session-tree-with-arena-crate.md",
-    "title": "replace-session-tree-with-arena-crate.md",
+    "title": "Replace Session Tree With Arena Crate",
     "status": "todo"
   },
   {
     "file": "replace-think-filter-with-regex.md",
-    "title": "replace-think-filter-with-regex.md",
+    "title": "Replace Think Filter With Regex",
     "status": "done"
   },
   {
     "file": "replace-tmux-test-with-ratatui-tests.md",
-    "title": "replace-tmux-test-with-ratatui-tests.md",
+    "title": "Replace Tmux Test With Ratatui Tests",
     "status": "done"
   },
   {
     "file": "replace-tui-keymap-combo-stringification-with-crokey.md",
-    "title": "replace-tui-keymap-combo-stringification-with-crokey.md",
+    "title": "Replace Tui Keymap Combo Stringification With Crokey",
     "status": "done"
   },
   {
     "file": "replace-tui-markdown-block-layout-with-tui-markdown.md",
-    "title": "replace-tui-markdown-block-layout-with-tui-markdown.md",
+    "title": "Replace Tui Markdown Block Layout With Tui Markdown",
     "status": "todo"
   },
   {
     "file": "replace-xor-auth-with-keyring.md",
-    "title": "replace-xor-auth-with-keyring.md",
+    "title": "Replace Xor Auth With Keyring",
     "status": "done"
   },
   {
     "file": "rescope-terminal-capability-task-to-current-module.md",
-    "title": "rescope-terminal-capability-task-to-current-module.md",
+    "title": "Rescope Terminal Capability Task To Current Module",
     "status": "done"
   },
   {
     "file": "route-cli-config-through-configactor.md",
-    "title": "route-cli-config-through-configactor.md",
+    "title": "Route Cli Config Through Configactor",
     "status": "done"
   },
   {
     "file": "simplify-slash-command-dsl.md",
-    "title": "simplify-slash-command-dsl.md",
+    "title": "Simplify Slash Command Dsl",
     "status": "done"
   },
   {
     "file": "simplify-terminal-capability-detection.md",
-    "title": "simplify-terminal-capability-detection.md",
+    "title": "Simplify Terminal Capability Detection",
     "status": "done"
   },
   {
     "file": "store-provider-api-keys-in-keyring-not-config.md",
-    "title": "store-provider-api-keys-in-keyring-not-config.md",
+    "title": "Store Provider Api Keys In Keyring Not Config",
     "status": "partial"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",
-    "title": "type-and-unify-provider-model-layer.md",
-    "status": "todo"
+    "title": "Type And Unify Provider Model Layer",
+    "status": "done"
   },
   {
     "file": "unify-cli-json-rpc-transport-and-remove-dead-acp.md",
-    "title": "unify-cli-json-rpc-transport-and-remove-dead-acp.md",
+    "title": "Unify Cli Json Rpc Transport And Remove Dead Acp",
     "status": "todo"
   },
   {
     "file": "unify-core-and-tui-line-count-computation.md",
-    "title": "unify-core-and-tui-line-count-computation.md",
+    "title": "Unify Core And Tui Line Count Computation",
     "status": "done"
   },
   {
     "file": "unify-declarative-resource-loader.md",
-    "title": "unify-declarative-resource-loader.md",
+    "title": "Unify Declarative Resource Loader",
     "status": "done"
   },
   {
     "file": "unify-library-error-types-with-thiserror.md",
-    "title": "unify-library-error-types-with-thiserror.md",
+    "title": "Unify Library Error Types With Thiserror",
     "status": "done"
   },
   {
     "file": "unify-markdown-block-parsing-on-pulldown-cmark-events.md",
-    "title": "unify-markdown-block-parsing-on-pulldown-cmark-events.md",
+    "title": "Unify Markdown Block Parsing On Pulldown Cmark Events",
     "status": "todo"
   },
   {
     "file": "unify-markdown-processing-around-pulldown-cmark.md",
-    "title": "unify-markdown-processing-around-pulldown-cmark.md",
+    "title": "Unify Markdown Processing Around Pulldown Cmark",
     "status": "todo"
   },
   {
     "file": "unify-permission-system-rules.md",
-    "title": "unify-permission-system-rules.md",
+    "title": "Unify Permission System Rules",
     "status": "done"
   },
   {
     "file": "unify-provider-config-persistence.md",
-    "title": "unify-provider-config-persistence.md",
+    "title": "Unify Provider Config Persistence",
     "status": "done"
   },
   {
     "file": "unify-provider-credential-resolution-with-dotenvy.md",
-    "title": "unify-provider-credential-resolution-with-dotenvy.md",
+    "title": "Unify Provider Credential Resolution With Dotenvy",
     "status": "done"
   },
   {
     "file": "unify-session-store-and-index.md",
-    "title": "unify-session-store-and-index.md",
+    "title": "Unify Session Store And Index",
     "status": "done"
   },
   {
     "file": "unify-tui-message-wrapping-with-textwrap.md",
-    "title": "unify-tui-message-wrapping-with-textwrap.md",
+    "title": "Unify Tui Message Wrapping With Textwrap",
     "status": "done"
   },
   {
     "file": "unify-tui-render-test-helpers.md",
-    "title": "unify-tui-render-test-helpers.md",
+    "title": "Unify Tui Render Test Helpers",
     "status": "done"
   },
   {
     "file": "use-channels-for-subagent-result-collection.md",
-    "title": "use-channels-for-subagent-result-collection.md",
+    "title": "Use Channels For Subagent Result Collection",
     "status": "done"
   },
   {
     "file": "use-clap-derive-for-cli.md",
-    "title": "use-clap-derive-for-cli.md",
+    "title": "Use Clap Derive For Cli",
     "status": "done"
   },
   {
     "file": "use-notify-directly-in-config-actor.md",
-    "title": "use-notify-directly-in-config-actor.md",
+    "title": "Use Notify Directly In Config Actor",
     "status": "done"
   },
   {
     "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
-    "title": "use-pulldown-cmark-for-tool-marker-stripping.md",
+    "title": "Use Pulldown Cmark For Tool Marker Stripping",
     "status": "wontfix"
   },
   {
     "file": "use-pulldown-cmark-frontmatter-for-resource-loader.md",
-    "title": "use-pulldown-cmark-frontmatter-for-resource-loader.md",
+    "title": "Use Pulldown Cmark Frontmatter For Resource Loader",
     "status": "done"
   },
   {
     "file": "use-ractor-state-for-actor-mutable-state.md",
-    "title": "use-ractor-state-for-actor-mutable-state.md",
+    "title": "Use Ractor State For Actor Mutable State",
     "status": "partial"
   },
   {
     "file": "use-strum-for-event-intent-names.md",
-    "title": "use-strum-for-event-intent-names.md",
+    "title": "Use Strum For Event Intent Names",
     "status": "done"
   },
   {
     "file": "wire-or-delete-input-actor.md",
-    "title": "wire-or-delete-input-actor.md",
+    "title": "Wire Or Delete Input Actor",
     "status": "done"
   }
 ]

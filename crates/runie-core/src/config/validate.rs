@@ -32,6 +32,116 @@ fn check_unknown_fields(value: &Value, errors: &mut Vec<String>) {
     }
 }
 
+/// Validate that provider/model references exist in the registry.
+///
+/// This runs after JSON schema validation and checks semantic correctness
+/// against the provider registry (loaded from YAML files).
+pub fn validate_registry(config: &crate::config::Config) -> Vec<String> {
+    use crate::provider::registry::{find_model, find_provider};
+
+    let mut errors = Vec::new();
+
+    // Validate the default provider/model
+    if let Some(provider) = &config.provider {
+        if !provider.is_empty() {
+            if find_provider(provider).is_none() {
+                errors.push(format!(
+                    "provider '{provider}': unknown provider (not in registry)"
+                ));
+            } else if let Some(model) = config.default_model() {
+                if !model.is_empty() {
+                    if let Some(full_model) = model.split_once('/') {
+                        // Model is in provider/model format
+                        if full_model.0 != *provider {
+                            errors.push(format!(
+                                "model '{model}': provider mismatch (expected '{provider}')"
+                            ));
+                        }
+                        let model_name = full_model.1;
+                        if let Some(meta) = find_model(model) {
+                            if meta.name != model_name && !model.contains('/') {
+                                // Model name doesn't match, check if it exists
+                                errors.push(format!(
+                                    "model '{model}': not found for provider '{provider}'"
+                                ));
+                            }
+                        } else if find_model(&model).is_none() {
+                            errors.push(format!(
+                                "model '{model}': not found in registry"
+                            ));
+                        }
+                    } else {
+                        // Model is standalone, check if it exists for this provider
+                        if let Some(p) = find_provider(provider) {
+                            let model_exists = p.models.iter().any(|m| m.name == model);
+                            if !model_exists {
+                                errors.push(format!(
+                                    "model '{model}': not found for provider '{provider}' "
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Validate configured providers
+    for (name, provider_config) in &config.model_providers {
+        if find_provider(name).is_none() {
+            errors.push(format!(
+                "[model_providers.{name}]: unknown provider"
+            ));
+        }
+
+        // Validate provider's model list
+        if let Some(p) = find_provider(name) {
+            for model_name in &provider_config.models {
+                if !p.models.iter().any(|m| &m.name == model_name) {
+                    // Allow unknown models (user might have custom models)
+                    // but suggest they might be typos
+                    if model_name.contains('/') {
+                        if let Some(actual_provider) = model_name.split('/').next() {
+                            if actual_provider != name {
+                                let msg = format!(
+                                    "[model_providers.{}].models: model '{}' has wrong provider prefix (expected '{}'/...)",
+                                    name, model_name, name
+                                );
+                                errors.push(msg);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Validate scoped models
+    if let Some(scoped) = &config.models.scoped {
+        for model in scoped {
+            if let Some((provider, model_name)) = model.split_once('/') {
+                if let Some(p) = find_provider(provider) {
+                    if !p.models.iter().any(|m| &m.name == model_name) {
+                        errors.push(format!(
+                            "[models.scoped]: model '{model}' not found for provider '{provider}'"
+                        ));
+                    }
+                }
+            } else if let Some(default) = &config.provider {
+                if let Some(p) = find_provider(default) {
+                    if !p.models.iter().any(|m| &m.name == model) {
+                        errors.push(format!(
+                            "[models.scoped]: model '{model}' not found for default provider '{default}'"
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    errors
+}
+
 /// Validate a JSON value against the schemars-generated config JSON schema.
 ///
 /// Returns a list of error messages.

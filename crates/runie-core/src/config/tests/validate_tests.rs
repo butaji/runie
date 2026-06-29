@@ -191,3 +191,152 @@ fn empty_object_is_valid() {
     let errors = validate::validate(&value);
     assert!(errors.is_empty(), "empty object should be valid: {:?}", errors);
 }
+
+// ============================================================================
+// Registry-based validation tests
+// ============================================================================
+
+#[test]
+fn registry_validation_accepts_known_provider_and_model() {
+    let config = Config {
+        provider: Some("openai".to_string()),
+        models: crate::config::ModelsSection {
+            default: Some("gpt-4o".to_string()),
+            scoped: None,
+        },
+        ..Config::default()
+    };
+    let errors = validate::validate_registry(&config);
+    assert!(errors.is_empty(), "known provider/model should pass: {:?}", errors);
+}
+
+#[test]
+fn registry_validation_rejects_unknown_provider() {
+    let config = Config {
+        provider: Some("fake-provider".to_string()),
+        ..Config::default()
+    };
+    let errors = validate::validate_registry(&config);
+    assert!(!errors.is_empty(), "unknown provider should fail");
+    assert!(
+        errors.iter().any(|e| e.contains("fake-provider") && e.contains("unknown provider")),
+        "error should mention unknown provider: {:?}",
+        errors
+    );
+}
+
+#[test]
+fn registry_validation_rejects_unknown_model_for_provider() {
+    let config = Config {
+        provider: Some("openai".to_string()),
+        models: crate::config::ModelsSection {
+            default: Some("nonexistent-model".to_string()),
+            scoped: None,
+        },
+        ..Config::default()
+    };
+    let errors = validate::validate_registry(&config);
+    assert!(!errors.is_empty(), "unknown model should fail");
+    assert!(
+        errors.iter().any(|e| e.contains("nonexistent-model") && e.contains("not found")),
+        "error should mention model not found: {:?}",
+        errors
+    );
+}
+
+#[test]
+fn registry_validation_rejects_wrong_provider_prefix() {
+    // Model name with provider prefix that doesn't match
+    let config = Config {
+        provider: Some("openai".to_string()),
+        models: crate::config::ModelsSection {
+            default: Some("anthropic/claude-3".to_string()),
+            scoped: None,
+        },
+        ..Config::default()
+    };
+    let errors = validate::validate_registry(&config);
+    assert!(!errors.is_empty(), "mismatched provider prefix should fail");
+}
+
+#[test]
+fn registry_validation_rejects_unknown_configured_provider() {
+    let mut config = Config::default();
+    config.model_providers.insert(
+        "fake-provider".to_string(),
+        crate::config::ModelProvider {
+            provider_type: Some("fake".to_string()),
+            base_url: "https://fake.example.com".to_string(),
+            api_key: "fake-key".to_string(),
+            models: vec![],
+        },
+    );
+    let errors = validate::validate_registry(&config);
+    assert!(!errors.is_empty(), "unknown configured provider should fail");
+    assert!(
+        errors.iter().any(|e| e.contains("fake-provider") && e.contains("unknown provider")),
+        "error should mention unknown provider: {:?}",
+        errors
+    );
+}
+
+#[test]
+fn registry_validation_accepts_minimax_provider() {
+    let config = Config {
+        provider: Some("minimax".to_string()),
+        models: crate::config::ModelsSection {
+            default: Some("MiniMax-M3".to_string()),
+            scoped: None,
+        },
+        ..Config::default()
+    };
+    let errors = validate::validate_registry(&config);
+    assert!(errors.is_empty(), "minimax should be valid: {:?}", errors);
+}
+
+#[test]
+fn registry_validation_accepts_full_model_format() {
+    let config = Config {
+        provider: Some("openai".to_string()),
+        models: crate::config::ModelsSection {
+            default: Some("openai/gpt-4o".to_string()),
+            scoped: None,
+        },
+        ..Config::default()
+    };
+    let errors = validate::validate_registry(&config);
+    assert!(errors.is_empty(), "full model format should pass: {:?}", errors);
+}
+
+#[test]
+fn config_validate_registry_method() {
+    let config = Config {
+        provider: Some("openai".to_string()),
+        ..Config::default()
+    };
+    assert!(config.validate_registry().is_ok());
+
+    let bad_config = Config {
+        provider: Some("nonexistent".to_string()),
+        ..Config::default()
+    };
+    assert!(bad_config.validate_registry().is_err());
+}
+
+#[test]
+fn config_validate_full_method() {
+    // Good config should pass full validation
+    let config = Config {
+        provider: Some("openai".to_string()),
+        ..Config::default()
+    };
+    assert!(config.validate_full().is_ok());
+
+    // Unknown provider should fail full validation
+    let bad_config = Config {
+        provider: Some("nonexistent".to_string()),
+        ..Config::default()
+    };
+    let result = bad_config.validate_full();
+    assert!(result.is_err());
+}

@@ -401,4 +401,37 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn model_catalog_lookup_resolves_context_and_pricing() {
+        // Test that context limit and pricing resolve by model id
+        let catalog = model_catalog();
+
+        // gpt-4o: known model with full metadata
+        let gpt4o = catalog
+            .iter()
+            .find(|m| m.full() == "openai/gpt-4o")
+            .expect("gpt-4o should exist");
+        assert_eq!(gpt4o.context_window, Some(128_000));
+        assert_eq!(gpt4o.cost_prompt, Some(5.0));
+        assert_eq!(gpt4o.cost_completion, Some(15.0));
+
+        // claude-sonnet-4-6: known model with full metadata
+        let claude = catalog
+            .iter()
+            .find(|m| m.full() == "anthropic/claude-sonnet-4-6")
+            .expect("claude-sonnet-4-6 should exist");
+        assert_eq!(claude.context_window, Some(200_000));
+        assert!(claude.cost_prompt.is_some());
+        assert!(claude.cost_completion.is_some());
+
+        // Minimax-M3: known model
+        let minimax = catalog
+            .iter()
+            .find(|m| m.full() == "minimax/MiniMax-M3")
+            .expect("MiniMax-M3 should exist");
+        assert_eq!(minimax.context_window, Some(256_000));
+        assert!(minimax.capabilities.streaming);
+        assert!(minimax.capabilities.supports_tools);
+    }
 }

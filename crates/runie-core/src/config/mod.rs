@@ -308,6 +308,35 @@ impl Config {
         Self::validate_value(&value)
     }
 
+    /// Validate provider/model references against the registry.
+    ///
+    /// This runs after JSON schema validation and checks that providers and
+    /// models exist in the bundled registry (loaded from YAML files).
+    pub fn validate_registry(&self) -> Result<(), Vec<String>> {
+        let errors = validate::validate_registry(self);
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
+    /// Validate this config against the JSON schema AND registry.
+    pub fn validate_full(&self) -> Result<(), Vec<String>> {
+        let mut errors = Vec::new();
+        if let Err(e) = self.validate() {
+            errors.extend(e);
+        }
+        if let Err(e) = self.validate_registry() {
+            errors.extend(e);
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
     /// Validate a raw TOML value against the canonical JSON schema.
     pub fn validate_toml(value: &toml::Value) -> Result<(), Vec<String>> {
         let json = serde_json::to_value(value)
