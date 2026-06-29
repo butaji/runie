@@ -8,7 +8,14 @@ pub fn parse_inline_spans(text: &str) -> Vec<MdInline> {
     parse_spans_from_events(parser)
 }
 
-pub(crate) fn md_options() -> Options {
+/// Parser options: standard markdown plus tables, strikethrough, tasklists.
+///
+/// **Note:** Raw HTML parsing is always enabled in `pulldown-cmark 0.12`, so
+/// tool-call HTML tags like `<invoke name="...">` and `</minimax:tool_call>` are emitted as
+/// `Event::Html` / `Event::InlineHtml` (not plain text) automatically.  The
+/// tool-marker stripper in `crate::tool_markers` uses this to skip tool-call
+/// HTML regions from the event stream.
+pub fn md_options() -> Options {
     Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TABLES | Options::ENABLE_TASKLISTS
 }
 
