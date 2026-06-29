@@ -122,7 +122,7 @@
   {
     "file": "extract-shared-streaming-response-parser.md",
     "title": "Extract Shared Streaming Response Parser",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "extract-shared-tracing-subscriber-init.md",

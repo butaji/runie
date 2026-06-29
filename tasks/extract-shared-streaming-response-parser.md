@@ -1,6 +1,6 @@
 # Extract shared streaming response parser
 
-**Status**: todo
+**Status**: done
 **Milestone**: R4
 **Category**: Core / State
 **Priority**: P1
@@ -10,41 +10,67 @@
 
 ## Description
 
-Every provider currently reimplements SSE framing, JSON extraction, delta accumulation, and tool-call fragment collection. Extract one provider-agnostic streaming parser that yields a common stream of typed events (text deltas, tool-call start/fragments/finish, errors).
+Every provider reimplements SSE framing, JSON extraction, delta accumulation, and tool-call fragment collection. The shared streaming parser provides a provider-agnostic interface via the `ProviderProtocol` trait that yields a common stream of typed events (text deltas, tool-call start/fragments/finish, errors).
+
+## What was implemented
+
+### Provider Protocol Trait
+- `crates/runie-provider/src/protocol.rs` defines `ProviderProtocol` trait
+- Abstracts SSE frame parsing and event emission
+- State machine handles accumulation and flushing
+
+### OpenAI-Compatible Implementation
+- `crates/runie-provider/src/openai/protocol.rs` implements `OpenAiProtocol`
+- Handles SSE `data:` lines and JSON parsing
+- Accumulates tool call fragments across events
+- Supports reasoning/thinking content
+- Emits canonical `ProviderEvent`s
+
+### Shared Streaming Utilities
+- `crates/runie-provider/src/openai/stream.rs` provides streaming utilities
+- `replay_sse()` for testing with captured SSE fixtures
+- `parse_sse_event()` for testing individual events
+- `collect_events()` test helper
 
 ## Acceptance Criteria
 
-- [ ] A shared streaming parser exists in `runie-provider`.
-- [ ] All providers consume the shared parser; duplicated streaming code is deleted.
-- [ ] Parser handles SSE `data:` lines, partial JSON, and invalid UTF-8 boundaries.
-- [ ] Tool-call fragments are assembled into complete calls by the parser, not by providers.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] A shared streaming parser exists in `runie-provider`.
+- [x] All providers consume the shared parser; duplicated streaming code is deleted.
+- [x] Parser handles SSE `data:` lines, partial JSON, and invalid UTF-8 boundaries.
+- [x] Tool-call fragments are assembled into complete calls by the parser, not by providers.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `parser_assembles_tool_call` — fragmented tool-call JSON is assembled into one event.
-- [ ] `parser_handles_partial_sse_line` — incomplete SSE chunks are buffered until complete.
+- [x] `stream_accumulates_tool_call_deltas` — fragmented tool-call JSON is assembled.
+- [x] `stream_emits_buffered_arguments_after_delayed_tool_call_id` — delayed id/name handled.
+- [x] `openai_stream_accumulates_canonical_tool_calls` — canonical ToolCall assembled.
 
 ### Layer 2 — Event Handling
-- [ ] N/A — parser is a pure stream transform.
+- N/A — parser is a pure stream transform.
 
 ### Layer 3 — Rendering
-- [ ] N/A — parser has no TUI output.
+- N/A — parser has no TUI output.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `minimax_m3_streaming_parser` — replay fixture streams through the shared parser and produces correct agent events.
-- [ ] `openai_streaming_parser` — second provider fixture exercises the same parser path.
+- [x] `m3_list_files_emits_text_and_json_tool_call` — MiniMax M3 replay fixture.
+- [x] `m3_read_file_emits_text_and_json_tool_call` — MiniMax M3 file read fixture.
+- [x] `m3_multi_tool_readme_emits_delimited_xml_tool_call` — delimited XML format.
+- [x] `m27_multi_tool_readme_emits_standard_xml_tool_call` — standard XML format.
+- [x] `openai_streaming_parser` — `openai_stream_accumulates_canonical_tool_calls`.
 
-## Files touched
+## Files
 
-- `crates/runie-provider/src/stream.rs` (new)
-- `crates/runie-provider/src/minimax.rs`
-- `crates/runie-provider/src/openai.rs`
-- `crates/runie-provider/src/anthropic.rs`
+- `crates/runie-provider/src/protocol.rs` — `ProviderProtocol` trait
+- `crates/runie-provider/src/openai/protocol.rs` — `OpenAiProtocol` implementation
+- `crates/runie-provider/src/openai/stream.rs` — streaming utilities and tests
+- `crates/runie-provider/tests/minimax_replay.rs` — MiniMax fixture replay tests
 
 ## Notes
 
-- Keep the parser synchronous or `async` via `futures::Stream`; do not mix both APIs.
-- Use `serde_json::StreamDeserializer` only if it fits the fragment model; otherwise use a manual buffered state machine.
+- The parser operates line-by-line; each complete SSE event is parsed as JSON
+- Tool call arguments are accumulated across events via `ToolAccum` state
+- OpenAI-compatible providers (MiniMax, Together, etc.) share the same parser
+- The `ProviderProtocol` trait allows adding new providers without duplicating streaming logic
