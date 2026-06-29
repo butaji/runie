@@ -32,6 +32,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 pub use manifest::Manifest;
+use crate::resource_loader::{extract_body, extract_frontmatter};
 
 /// Prompt mode for a subagent — controls how much context is included.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -166,15 +167,15 @@ pub fn parse_subagent_file(path: &PathBuf) -> Option<SubagentType> {
 }
 
 /// Extract a field from the frontmatter map, or return the default.
-fn fm_str(fm: &Option<HashMap<String, String>>, key: &str) -> String {
-    fm.as_ref().and_then(|m| m.get(key)).cloned().unwrap_or_default()
+fn fm_str(fm: &HashMap<String, String>, key: &str) -> String {
+    fm.get(key).cloned().unwrap_or_default()
 }
 
 /// Parse subagent content (YAML frontmatter + markdown body).
 /// `name_hint` is used when the frontmatter has no `name` field.
 /// Returns `None` only on I/O errors (not on missing frontmatter).
 fn parse_subagent_content(name_hint: &str, content: &str) -> Option<SubagentType> {
-    let fm = parse_frontmatter(content);
+    let fm = extract_frontmatter(content);
     let name = fm_str(&fm, "name");
     let name = if name.is_empty() { name_hint.to_owned() } else { name };
     let prompt_mode = match fm_str(&fm, "prompt_mode").as_str() {
@@ -198,57 +199,7 @@ fn parse_subagent_content(name_hint: &str, content: &str) -> Option<SubagentType
 
 
 
-/// Parse YAML frontmatter block between `---` markers.
-/// Returns `None` if no frontmatter is present.
-fn parse_frontmatter(content: &str) -> Option<HashMap<String, String>> {
-    if !content.starts_with("---\n") {
-        return None;
-    }
-    let after = content.strip_prefix("---\n")?;
-    let end = after.find("\n---")?;
-    let fm_text = &after[..end];
-    let mut result = HashMap::new();
-    for line in fm_text.lines() {
-        if let Some((k, v)) = parse_yaml_line(line) {
-            result.insert(k, v);
-        }
-    }
-    Some(result)
-}
 
-/// Parse a single `key: value` YAML line.  Skips empty lines and comments.
-fn parse_yaml_line(line: &str) -> Option<(String, String)> {
-    let line = line.trim();
-    if line.is_empty() || line.starts_with('#') {
-        return None;
-    }
-    let colon = line.find(':')?;
-    let key = line[..colon].trim().to_owned();
-    if key.is_empty() {
-        return None;
-    }
-    let raw = line[colon + 1..].trim();
-    Some((key, strip_quotes(raw)))
-}
-
-/// Strip surrounding single or double quotes from a value.
-fn strip_quotes(s: &str) -> String {
-    let s = s.trim();
-    if (s.starts_with('\'') && s.ends_with('\'')) || (s.starts_with('"') && s.ends_with('"')) {
-        s[1..s.len() - 1].to_owned()
-    } else {
-        s.to_owned()
-    }
-}
-
-/// Extract the markdown body — everything after the closing `---` marker.
-fn extract_body(content: &str) -> String {
-    if let Some(pos) = content.find("\n---\n") {
-        content[pos + 5..].trim().to_owned()
-    } else {
-        content.trim().to_owned()
-    }
-}
 
 // ── Embedded types ────────────────────────────────────────────────────────────
 // These are embedded at compile time via `include_str!`.  Their SHA-256
@@ -456,15 +407,5 @@ Third paragraph.
         );
         assert_eq!(PermissionMode::from_str("plan"), PermissionMode::Plan);
         assert_eq!(PermissionMode::from_str("unknown"), PermissionMode::Default);
-    }
-
-    #[test]
-    fn yaml_line_skips_empty_and_comments() {
-        assert!(parse_yaml_line("").is_none());
-        assert!(parse_yaml_line("   ").is_none());
-        assert!(parse_yaml_line("# comment").is_none());
-        assert!(parse_yaml_line("  # indented comment").is_none());
-        assert_eq!(parse_yaml_line("name: test"), Some(("name".into(), "test".into())));
-        assert_eq!(parse_yaml_line("desc: 'quoted value'"), Some(("desc".into(), "quoted value".into())));
     }
 }

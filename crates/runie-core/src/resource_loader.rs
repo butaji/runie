@@ -238,6 +238,16 @@ pub fn extract_section(content: &str, heading: &str) -> Option<String> {
     }
 }
 
+/// Extract markdown body — everything after the closing `---` frontmatter marker.
+/// If no frontmatter is present, returns the trimmed content.
+pub fn extract_body(content: &str) -> String {
+    if let Some(pos) = content.find("\n---\n") {
+        content[pos + 5..].trim().to_owned()
+    } else {
+        content.trim().to_owned()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -345,5 +355,40 @@ This is context."#;
     fn extract_section_handles_missing_heading() {
         let content = "## Other\n\nContent";
         assert!(extract_section(content, "Description").is_none());
+    }
+
+    #[test]
+    fn extract_body_with_frontmatter() {
+        let content = r#"---
+name: test
+---
+
+Body content here.
+"#;
+        assert_eq!(extract_body(content), "Body content here.");
+    }
+
+    #[test]
+    fn extract_body_without_frontmatter() {
+        let content = "Just body content.";
+        assert_eq!(extract_body(content), "Just body content.");
+    }
+
+    #[test]
+    fn extract_body_multiline() {
+        let content = r#"---
+name: multi
+---
+
+First paragraph.
+
+Second paragraph.
+
+Third paragraph.
+"#;
+        assert_eq!(
+            extract_body(content),
+            "First paragraph.\n\nSecond paragraph.\n\nThird paragraph."
+        );
     }
 }

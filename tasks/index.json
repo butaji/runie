@@ -182,7 +182,7 @@
   {
     "file": "migrate-subagent-loader-to-resource-loader.md",
     "title": "Migrate subagent loader to unified resource loader",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
