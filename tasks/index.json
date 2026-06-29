@@ -110,6 +110,11 @@
     "status": "done"
   },
   {
+    "file": "env-actor-owns-git-cwd.md",
+    "title": "Move git/cwd detection to IoActor",
+    "status": "done"
+  },
+  {
     "file": "expand-leader-start-for-tui-and-cli.md",
     "title": "Expand `Leader::start` for the full TUI and CLI runtime",
     "status": "done"
