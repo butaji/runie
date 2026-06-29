@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use runie_core::Event;
+use runie_core::{proto::message::Part, AppState, ChatMessage, Event, Role};
 
 fn bench_snapshot(c: &mut Criterion) {
     c.bench_function("snapshot_100_messages", |b| {
@@ -7,9 +7,11 @@ fn bench_snapshot(c: &mut Criterion) {
         for i in 0..100 {
             state.session.messages.push(ChatMessage {
                 role: Role::User,
-                content: format!("Message {} with some content to make it realistic", i),
                 timestamp: i as f64,
                 id: format!("msg{}", i),
+                parts: vec![Part::Text {
+                    content: format!("Message {} with some content to make it realistic", i),
+                }],
                 ..Default::default()
             });
         }
@@ -26,9 +28,11 @@ fn bench_snapshot(c: &mut Criterion) {
         for i in 0..500 {
             state.session.messages.push(ChatMessage {
                 role: Role::User,
-                content: format!("Message {} with some content to make it realistic", i),
                 timestamp: i as f64,
                 id: format!("msg{}", i),
+                parts: vec![Part::Text {
+                    content: format!("Message {} with some content to make it realistic", i),
+                }],
                 ..Default::default()
             });
         }

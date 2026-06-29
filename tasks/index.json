@@ -242,7 +242,7 @@
   {
     "file": "replace-build-linter-with-clippy-ci.md",
     "title": "Replace custom build.rs linter with Clippy / CI",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-config-validator-with-jsonschema.md",

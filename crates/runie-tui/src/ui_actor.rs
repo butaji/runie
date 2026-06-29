@@ -79,6 +79,7 @@ pub enum AgentHandleBox {
 }
 
 impl AgentHandleBox {
+    #[allow(dead_code)]
     async fn run(&self, command: AgentCommand) {
         match self {
             Self::Actor(h) => h.run(command).await,

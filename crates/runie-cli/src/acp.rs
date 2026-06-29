@@ -42,7 +42,6 @@ use serde_json::Value;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::sync::mpsc;
 use tokio::time::timeout;
 
 const ACP_PROTOCOL_VERSION: &str = "1.0.0";

@@ -96,3 +96,10 @@ jobs:
 
       - name: Run cargo machete
         run: cargo machete
+
+  file-limits:
+    name: File Line Limits
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check file line limits
+        run: ./scripts/check-file-limits.sh

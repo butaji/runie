@@ -1,24 +1,28 @@
+#![allow(unused_imports)]
 //! Tests for UiActor.
 use super::*;
 use runie_core::actors::{
-    ActorHandles, InputActor, RactorIoActor,
+    InputActor, RactorIoActor,
     RactorSessionActor, RactorTurnActor, RactorConfigActor,
 };
 use runie_core::actors::permission::RactorPermissionActor;
 use runie_core::actors::provider::{RactorProviderActor, RactorProviderHandle};
 
+#[cfg(test)]
 async fn test_turn_handle() -> runie_core::actors::RactorTurnHandle {
     let bus = EventBus::<Event>::new(10);
     let (handle, _, _) = RactorTurnActor::spawn(bus).await;
     handle
 }
 
+#[cfg(test)]
 async fn test_session_handle() -> RactorSessionHandle {
     let bus = EventBus::<Event>::new(10);
     let (handle, _) = RactorSessionActor::spawn(bus).await.unwrap();
     handle
 }
 
+#[cfg(test)]
 async fn test_provider_handle() -> RactorProviderHandle {
     use std::sync::Arc;
     use runie_provider::DynProviderFactory;
@@ -32,6 +36,7 @@ async fn test_provider_handle() -> RactorProviderHandle {
     handle
 }
 
+#[cfg(test)]
 async fn test_actor_handles() -> runie_core::actors::ActorHandles {
     use std::sync::Arc;
     use runie_provider::DynProviderFactory;
@@ -119,6 +124,7 @@ async fn render_actor_draws_snapshot_without_mutation() {
 }
 
 /// Helper: builds a UiActor with minimal dependencies for test use.
+#[cfg(test)]
 async fn make_test_actor() -> (
     UiActor,
     mpsc::Sender<Event>,

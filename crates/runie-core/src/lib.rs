@@ -27,7 +27,6 @@ pub use model::{
 pub mod agent_phase;
 pub mod auth;
 pub mod bash_safety;
-pub mod build_lint;
 pub mod bus;
 pub mod commands;
 pub mod config;

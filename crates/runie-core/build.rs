@@ -1,17 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-// Shared complexity heuristic. See `src/build_lint.rs` for docs and tests.
-include!("src/build_lint.rs");
-
-// Lint thresholds from AGENTS.md. File length is enforced for every source
-// file. Function length and complexity are enforced for production code only;
-// tests are allowed to be comprehensive.
-const MAX_FILE_LINES: usize = 500;
-const MAX_FUNCTION_LINES: usize = 40;
-const MAX_COMPLEXITY: usize = 10;
-
-// Private AppState fields — use accessors from accessors.rs.
+// ── AppState field-access guardrail ──────────────────────────────────────────
+//
+// Private AppState fields must be accessed through accessors, not directly.
 // Uses a trailing dot to match field access (state.session.xxx) but NOT
 // method calls (state.session(), state.session_mut()).
 const APPSTATE_PATTERNS: &[(&str, &str)] = &[
@@ -34,14 +26,8 @@ const APPSTATE_PATTERNS: &[(&str, &str)] = &[
     ("state.transient_level ", "state.transient_level_mut()"),
     ("state.fff_file_results.", "state.fff_file_results()"),
     ("state.fff_debounce ", "state.fff_debounce_mut()"),
-    (
-        "state.perm_req ",
-        "state.permission_request_opt()",
-    ),
-    (
-        "state.perm_req.",
-        "state.permission_request_opt().",
-    ),
+    ("state.perm_req ", "state.permission_request_opt()"),
+    ("state.perm_req.", "state.permission_request_opt()."),
     ("state.cwd_name ", "state.cwd_name_mut()"),
     ("state.git_info ", "state.git_info_mut()"),
     ("state.git_info.", "state.git_info_mut()"),
@@ -116,188 +102,45 @@ fn is_test_file(rel_path: &str) -> bool {
         || rel_path.contains("_test.")
 }
 
-fn is_test_function(lines: &[&str], fn_start: usize) -> bool {
-    lines[..fn_start]
-        .iter()
-        .rev()
-        .take_while(|line| {
-            let t = line.trim();
-            t.is_empty() || t.starts_with("//") || t.starts_with("#!")
-        })
-        .chain(
-            lines[..fn_start]
-                .iter()
-                .rev()
-                .skip_while(|line| {
-                    let t = line.trim();
-                    t.is_empty() || t.starts_with("//") || t.starts_with("#!")
-                })
-                .take(1),
-        )
-        .any(|line| {
-            let t = line.trim();
-            t.starts_with("#[test]") || t.starts_with("#[tokio::test]")
-        })
+/// Files exempt from the AppState field-access check.
+fn needs_appstate_lint(rel_path: &str) -> bool {
+    let exemptions = [
+        "build.rs",
+        "accessors.rs",
+        "domain_ops.rs",
+        "actors/config/actor.rs",
+        "actors/config/ractor_config.rs",
+        "actors/permission/actor.rs",
+        "actors/permission/ractor_permission.rs",
+        "actors/input/actor.rs",
+        "actors/input/messages.rs",
+        "actors/ui_control/actor.rs",
+        "actors/handles.rs",
+        "actors/leader/actor.rs",
+        "update/input/text.rs",
+        "update/input/submit.rs",
+        "retry.rs",
+        "session/replay.rs",
+        "login_flow/validation.rs",
+        "model/state/input.rs",
+    ];
+    !is_test_file(rel_path)
+        && !rel_path.contains("/benches/")
+        && !rel_path.contains("/harness_skills/")
+        && !exemptions.iter().any(|e| rel_path.ends_with(e))
 }
 
-fn check_file_length(rel_path: &str, lines: &[&str], errors: &mut Vec<String>) {
-    if lines.len() > MAX_FILE_LINES {
-        errors.push(format!(
-            "{}: {} lines (max {})",
-            rel_path,
-            lines.len(),
-            MAX_FILE_LINES
-        ));
-    }
-}
-
-fn is_function_start(trimmed: &str) -> bool {
-    if trimmed.ends_with(';') {
-        return false;
-    }
-    let mut tokens = trimmed.split_whitespace().peekable();
-    loop {
-        match tokens.peek().copied() {
-            Some("pub") | Some("pub(crate)") | Some("pub(super)") | Some("crate") => {
-                tokens.next();
-            }
-            Some("async") | Some("const") | Some("unsafe") | Some("static") => {
-                tokens.next();
-            }
-            Some("fn") => {
-                tokens.next();
-                return tokens
-                    .next()
-                    .map(|name| !name.starts_with('('))
-                    .unwrap_or(false);
-            }
-            _ => return false,
-        }
-    }
-}
-
-fn report_fn_violation(
+fn check_appstate_field_access(
     rel_path: &str,
-    fn_start: usize,
-    fn_name: &str,
-    fn_len: usize,
-    complexity: usize,
+    lines: &[&str],
     errors: &mut Vec<String>,
 ) {
-    if fn_len > MAX_FUNCTION_LINES {
-        errors.push(format!(
-            "{}:{}: function {} lines (max {})",
-            rel_path,
-            fn_start + 1,
-            fn_len,
-            MAX_FUNCTION_LINES
-        ));
-    }
-    if complexity > MAX_COMPLEXITY {
-        errors.push(format!(
-            "{}:{}: {} complexity {} (max {})",
-            rel_path,
-            fn_start + 1,
-            fn_name,
-            complexity,
-            MAX_COMPLEXITY
-        ));
-    }
-}
-
-#[derive(Default)]
-struct FnTracker {
-    in_fn: bool,
-    in_fn_body: bool,
-    fn_start: usize,
-    brace_depth: usize,
-    fn_complexity: usize,
-    fn_name: String,
-}
-
-impl FnTracker {
-    fn start(&mut self, i: usize, trimmed: &str) {
-        self.in_fn = true;
-        self.in_fn_body = false;
-        self.fn_start = i;
-        self.fn_complexity = 1;
-        self.fn_name = trimmed.lines().next().unwrap_or("").to_owned();
-    }
-
-    /// Update brace depth and return the complexity delta for this line.
-    ///
-    /// Complexity is counted at the CURRENT depth before brace changes are
-    /// applied. This ensures:
-    /// - `match {` arms are counted at depth 1 (before the `{` opens depth 2).
-    /// - The closing `}` of a block is counted at that block's depth (not after
-    ///   decrementing, which would wrongly count it at the enclosing depth).
-    fn update_depth_and_count(&mut self, trimmed: &str) -> usize {
-        let opens = trimmed.matches('{').count();
-        let closes = trimmed.matches('}').count();
-
-        // Count complexity at current depth BEFORE updating depth.
-        let c = count_complexity(trimmed, self.brace_depth);
-
-        // Apply depth change.
-        self.brace_depth = self.brace_depth.saturating_add(opens);
-        self.brace_depth = self.brace_depth.saturating_sub(closes);
-
-        if opens > 0 {
-            self.in_fn_body = true;
-        }
-
-        c
-    }
-
-    fn ended(&self, trimmed: &str) -> bool {
-        self.in_fn_body && self.brace_depth == 0 && trimmed.contains('}')
-    }
-
-    fn report_and_reset(&mut self, path: &str, i: usize, lines: &[&str], errors: &mut Vec<String>) {
-        let fn_len = i - self.fn_start + 1;
-        // Check test exemption BEFORE reporting so test functions are truly excluded.
-        let is_test = is_test_file(path) || is_test_function(lines, self.fn_start);
-        if !is_test {
-            report_fn_violation(
-                path,
-                self.fn_start,
-                &self.fn_name,
-                fn_len,
-                self.fn_complexity,
-                errors,
-            );
-        }
-        self.in_fn = false;
-        self.in_fn_body = false;
-        self.fn_complexity = 0;
-        self.fn_name.clear();
-    }
-}
-
-fn check_function_violations(rel_path: &str, lines: &[&str], errors: &mut Vec<String>) {
-    let mut tracker = FnTracker::default();
-
     for (i, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
-
-        if !tracker.in_fn && is_function_start(trimmed) {
-            tracker.start(i, trimmed);
-        }
-
-        if tracker.in_fn {
-            tracker.fn_complexity += tracker.update_depth_and_count(trimmed);
-
-            if tracker.ended(trimmed) {
-                tracker.report_and_reset(rel_path, i, lines, errors);
-            }
-        }
-    }
-}
-
-fn check_appstate_field_access(rel_path: &str, lines: &[&str], errors: &mut Vec<String>) {
-    for (i, line) in lines.iter().enumerate() {
-        let trimmed = line.trim();
-        if trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*') {
+        if trimmed.starts_with("//")
+            || trimmed.starts_with("/*")
+            || trimmed.starts_with('*')
+        {
             continue;
         }
         for (pattern, suggestion) in APPSTATE_PATTERNS {
@@ -315,68 +158,22 @@ fn check_appstate_field_access(rel_path: &str, lines: &[&str], errors: &mut Vec<
 
 fn lint_file(path: &Path, workspace_root: &Path, errors: &mut Vec<String>) {
     let rel_path = relative_path(path, workspace_root);
-    // Skip tests, benches, and build.rs itself from AppState field lint
     if needs_appstate_lint(&rel_path) {
         let content = fs::read_to_string(path).unwrap();
         let lines: Vec<_> = content.lines().collect();
         check_appstate_field_access(&rel_path, &lines, errors);
     }
-    let content = fs::read_to_string(path).unwrap();
-    let lines: Vec<_> = content.lines().collect();
-    check_file_length(&rel_path, &lines, errors);
-    if !is_fn_lint_exempt(&rel_path) {
-        check_function_violations(&rel_path, &lines, errors);
-    }
-}
-
-fn needs_appstate_lint(rel_path: &str) -> bool {
-    let exemptions = [
-        "build.rs",
-        "accessors.rs",
-        "domain_ops.rs",
-        "actors/config/actor.rs",
-        "actors/config/ractor_config.rs", // ractor migration; self.config is Mutex<Config>, not AppState.
-        "actors/permission/actor.rs",
-        "actors/permission/ractor_permission.rs", // ractor migration POC; self.registry is ApprovalRegistry, not AppState.
-        "actors/input/actor.rs",
-        "actors/input/messages.rs",
-        "actors/ui_control/actor.rs",
-        "actors/handles.rs", // ActorHandles has typed actor handles, not AppState fields.
-        "actors/leader/actor.rs", // Leader struct has self.config (LeaderConfig), not AppState.
-        "update/input/text.rs",
-        "update/input/submit.rs",
-        "retry.rs",
-        "session/replay.rs",
-        "login_flow/validation.rs",
-        "model/state/input.rs",
-    ];
-    !is_test_file(rel_path)
-        && !rel_path.contains("/benches/")
-        && !rel_path.contains("/harness_skills/")
-        && !exemptions.iter().any(|e| rel_path.ends_with(e))
-}
-
-/// Files that are fully exempt from function length/complexity checks
-/// (e.g. generated or data-driven files where the structure is intentional).
-fn is_fn_lint_exempt(rel_path: &str) -> bool {
-    let exemptions = [
-        "build.rs",
-        "actors/input/messages.rs", // apply_to mirrors InputActor; length/complexity is intentional.
-        "actors/permission/ractor_permission.rs", // ractor migration POC; self.registry is ApprovalRegistry, not AppState.
-    ];
-    exemptions.iter().any(|e| rel_path.ends_with(e))
 }
 
 fn main() {
-    if std::env::var("RUNIE_SKIP_BUILD_CHECKS").is_ok() {
-        return;
-    }
-
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
-    let workspace_root = Path::new(&manifest_dir).parent().unwrap().parent().unwrap();
+    let workspace_root =
+        Path::new(&manifest_dir).parent().unwrap().parent().unwrap();
 
     // Validate bundled subagent type checksums.
-    if let Err(msg) = validate_agent_manifest(PathBuf::from(&manifest_dir).join("resources").join("agents")) {
+    if let Err(msg) =
+        validate_agent_manifest(PathBuf::from(&manifest_dir).join("resources").join("agents"))
+    {
         eprintln!("\n=== AGENT MANIFEST VALIDATION FAILED ===\n  {}\n\n", msg);
         std::process::exit(1);
     }
@@ -404,8 +201,8 @@ fn main() {
 /// stored SHA-256 checksums.
 fn validate_agent_manifest(agents_dir: PathBuf) -> Result<(), String> {
     let manifest_path = agents_dir.join("manifest.json");
-    let manifest_json = fs::read_to_string(&manifest_path)
-        .map_err(|e| format!("failed to read manifest.json: {}", e))?;
+    let manifest_json =
+        fs::read_to_string(&manifest_path).map_err(|e| format!("failed to read manifest.json: {}", e))?;
 
     #[derive(serde::Deserialize)]
     struct Manifest {
@@ -414,11 +211,11 @@ fn validate_agent_manifest(agents_dir: PathBuf) -> Result<(), String> {
     let manifest: Manifest = serde_json::from_str(&manifest_json)
         .map_err(|e| format!("failed to parse manifest.json: {}", e))?;
 
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
     for (filename, expected_hash) in &manifest.files {
         let file_path = agents_dir.join(filename);
-        let content = fs::read(&file_path)
-            .map_err(|e| format!("failed to read {}: {}", filename, e))?;
+        let content =
+            fs::read(&file_path).map_err(|e| format!("failed to read {}: {}", filename, e))?;
         let mut hasher = Sha256::new();
         hasher.update(&content);
         let actual = hex::encode(hasher.finalize());
