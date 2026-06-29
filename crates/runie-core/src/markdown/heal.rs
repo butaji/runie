@@ -28,6 +28,7 @@ pub fn heal_markdown(text: &str) -> String {
 }
 
 /// Track which inline markers are explicitly opened in the original text.
+#[derive(Default)]
 struct RawOpeners {
     style_stack: Vec<StyleMarker>,
     code_n: usize,
@@ -114,23 +115,15 @@ fn parse_style_stack(text: &str) -> Vec<StyleMarker> {
     let mut style_stack = Vec::new();
     for event in Parser::new(text) {
         match event {
-            Event::Start(tag) => {
-                match tag {
-                    Tag::Strong => style_stack.push(StyleMarker::Bold),
-                    Tag::Emphasis => style_stack.push(StyleMarker::Italic('*')),
-                    Tag::Strikethrough => style_stack.push(StyleMarker::Strike),
-                    _ => {}
-                }
-            }
-            Event::End(tag_end) => {
-                match tag_end {
-                    pulldown_cmark::TagEnd::Strong
-                    | pulldown_cmark::TagEnd::Emphasis
-                    | pulldown_cmark::TagEnd::Strikethrough => {
-                        style_stack.pop();
-                    }
-                    _ => {}
-                }
+            Event::Start(Tag::Strong) => style_stack.push(StyleMarker::Bold),
+            Event::Start(Tag::Emphasis) => style_stack.push(StyleMarker::Italic('*')),
+            Event::Start(Tag::Strikethrough) => style_stack.push(StyleMarker::Strike),
+            Event::End(
+                pulldown_cmark::TagEnd::Strong
+                | pulldown_cmark::TagEnd::Emphasis
+                | pulldown_cmark::TagEnd::Strikethrough,
+            ) => {
+                style_stack.pop();
             }
             _ => {}
         }
@@ -158,15 +151,6 @@ fn append_closers(result: &mut String, openers: &RawOpeners, _style_stack: &[Sty
     }
 }
 
-impl Default for RawOpeners {
-    fn default() -> Self {
-        Self {
-            style_stack: Vec::new(),
-            code_n: 0,
-            link_open: false,
-        }
-    }
-}
 
 fn count_run(chars: &mut std::iter::Peekable<std::str::Chars>, target: char, min: usize) -> usize {
     let mut n = min;

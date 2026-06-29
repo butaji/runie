@@ -200,7 +200,7 @@ fn generate_facts_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<(),
             out.push_str("        ");
         }
         out.push_str(&matches_pattern(v));
-        out.push_str("\n");
+        out.push('\n');
     }
     out.push_str("    )\n");
     out.push_str("}\n");
@@ -342,8 +342,8 @@ fn build_intent_arm(event_name: &str, intent_name: &str) -> String {
         // - For owned String/Vec fields: bind by value, clone into Intent
         "TerminalSize" => "Event::TerminalSize { ref width, ref height } => Some(Intent::TerminalSize { width: *width, height: *height }),".to_string(),
         "SwitchModel" => "Event::SwitchModel { ref provider, ref model, ref explicit } => Some(Intent::SwitchModel { provider: (*provider).clone(), model: (*model).clone(), explicit: *explicit }),".to_string(),
-        "SettingsSwitchCategory" => "Event::SettingsSwitchCategory { ref category } => Some(Intent::SettingsSwitchCategory { category: (*category).clone() }),".to_string(),
-        "PermissionResponse" => "Event::PermissionResponse { ref request_id, ref action } => Some(Intent::PermissionResponse { request_id: request_id.clone(), action: (*action).clone() }),".to_string(),
+        "SettingsSwitchCategory" => "Event::SettingsSwitchCategory { ref category } => Some(Intent::SettingsSwitchCategory { category: *category }),".to_string(),
+        "PermissionResponse" => "Event::PermissionResponse { ref request_id, ref action } => Some(Intent::PermissionResponse { request_id: request_id.clone(), action: *action }),".to_string(),
         "ScopedModelToggle" => "Event::ScopedModelToggle { provider, name } => Some(Intent::ScopedModelToggle { provider: provider.clone(), name: name.clone() }),".to_string(),
         "ScopedModelToggleProvider" => "Event::ScopedModelToggleProvider { provider } => Some(Intent::ScopedModelToggleProvider { provider: provider.clone() }),".to_string(),
         // SetThinkingLevel: Intent takes `ThinkingLevel` (owned), Event has `ThinkingLevel` (owned in tuple)
@@ -358,7 +358,7 @@ fn build_intent_arm(event_name: &str, intent_name: &str) -> String {
         "RunLogoutCommand" => "Event::RunLogoutCommand { provider } => Some(Intent::RunLogoutCommand { provider: provider.clone() }),".to_string(),
         "RunNameCommand" => "Event::RunNameCommand { name } => Some(Intent::RunNameCommand { name: name.clone() }),".to_string(),
         "RunPromptCommand" => "Event::RunPromptCommand { name } => Some(Intent::RunPromptCommand { name: name.clone() }),".to_string(),
-        "RunThinkingCommand" => "Event::RunThinkingCommand { level } => Some(Intent::RunThinkingCommand { level: level.clone() }),".to_string(),
+        "RunThinkingCommand" => "Event::RunThinkingCommand { level } => Some(Intent::RunThinkingCommand { level }),".to_string(),
         "RunPaletteCommand" => "Event::RunPaletteCommand { name, args } => Some(Intent::RunPaletteCommand { name: name.clone(), args: args.clone() }),".to_string(),
         "SelectProvider" => "Event::SelectProvider { provider } => Some(Intent::SelectProvider { provider: provider.clone() }),".to_string(),
         "SubmitKey" => "Event::SubmitKey { provider, key } => Some(Intent::SubmitKey { provider: provider.clone(), key: key.clone() }),".to_string(),

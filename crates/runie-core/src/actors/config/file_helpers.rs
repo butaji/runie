@@ -2,7 +2,7 @@
 //!
 //! These are blocking operations that run on a separate thread via `spawn_blocking`.
 
-use std::path::PathBuf;
+use std::path::Path;
 
 use crate::config::{McpServer, ModelProvider};
 use crate::model::ThinkingLevel;
@@ -11,7 +11,7 @@ use crate::model::ThinkingLevel;
 
 /// Save a provider entry to the config file.
 pub fn save_provider_to_path(
-    path: &PathBuf,
+    path: &Path,
     name: &str,
     base_url: &str,
     api_key: &str,
@@ -35,7 +35,7 @@ pub fn save_provider_to_path(
 }
 
 /// Remove a provider entry from the config file.
-pub fn remove_provider_from_path(path: &PathBuf, name: &str) -> anyhow::Result<()> {
+pub fn remove_provider_from_path(path: &Path, name: &str) -> anyhow::Result<()> {
     let mut config = crate::config::Config::load(Some(path));
     config.model_providers.remove(name);
     config.save_to(path)
@@ -43,7 +43,7 @@ pub fn remove_provider_from_path(path: &PathBuf, name: &str) -> anyhow::Result<(
 
 /// Set the default provider/model in the config file.
 pub fn set_default_model_at_path(
-    path: &PathBuf,
+    path: &Path,
     provider: &str,
     model: &str,
 ) -> anyhow::Result<()> {
@@ -64,7 +64,7 @@ pub fn set_default_model_at_path(
 
 /// Update the model list for a provider.
 pub fn set_provider_models_at_path(
-    path: &PathBuf,
+    path: &Path,
     name: &str,
     models: &[String],
 ) -> anyhow::Result<()> {
@@ -76,21 +76,21 @@ pub fn set_provider_models_at_path(
 }
 
 /// Set the theme name.
-pub fn set_theme_at_path(path: &PathBuf, name: &str) -> anyhow::Result<()> {
+pub fn set_theme_at_path(path: &Path, name: &str) -> anyhow::Result<()> {
     let mut config = crate::config::Config::load(Some(path));
     config.theme = Some(name.to_owned());
     config.save_to(path)
 }
 
 /// Set vim mode.
-pub fn set_vim_mode_at_path(path: &PathBuf, enabled: bool) -> anyhow::Result<()> {
+pub fn set_vim_mode_at_path(path: &Path, enabled: bool) -> anyhow::Result<()> {
     let mut config = crate::config::Config::load(Some(path));
     config.ui.vim_mode = enabled;
     config.save_to(path)
 }
 
 /// Set telemetry enabled.
-pub fn set_telemetry_at_path(path: &PathBuf, enabled: bool) -> anyhow::Result<()> {
+pub fn set_telemetry_at_path(path: &Path, enabled: bool) -> anyhow::Result<()> {
     let mut config = crate::config::Config::load(Some(path));
     config.telemetry.enabled = enabled;
     config.save_to(path)
@@ -98,7 +98,7 @@ pub fn set_telemetry_at_path(path: &PathBuf, enabled: bool) -> anyhow::Result<()
 
 /// Set truncation limits.
 pub fn set_truncation_at_path(
-    path: &PathBuf,
+    path: &Path,
     limits: &crate::config::TruncationSection,
 ) -> anyhow::Result<()> {
     let mut config = crate::config::Config::load(Some(path));
@@ -107,7 +107,7 @@ pub fn set_truncation_at_path(
 }
 
 /// Set thinking level.
-pub fn set_thinking_level_at_path(path: &PathBuf, level: ThinkingLevel) -> anyhow::Result<()> {
+pub fn set_thinking_level_at_path(path: &Path, level: ThinkingLevel) -> anyhow::Result<()> {
     let mut config = crate::config::Config::load(Some(path));
     config.thinking_level = level;
     config.save_to(path)
@@ -115,7 +115,7 @@ pub fn set_thinking_level_at_path(path: &PathBuf, level: ThinkingLevel) -> anyho
 
 /// Add or update an MCP server in the config file.
 pub fn add_mcp_server_to_path(
-    path: &PathBuf,
+    path: &Path,
     name: &str,
     server: &McpServer,
 ) -> anyhow::Result<()> {
@@ -125,7 +125,7 @@ pub fn add_mcp_server_to_path(
 }
 
 /// Remove an MCP server from the config file.
-pub fn remove_mcp_server_from_path(path: &PathBuf, name: &str) -> anyhow::Result<()> {
+pub fn remove_mcp_server_from_path(path: &Path, name: &str) -> anyhow::Result<()> {
     let mut config = crate::config::Config::load(Some(path));
     config.mcp.servers.remove(name);
     config.save_to(path)

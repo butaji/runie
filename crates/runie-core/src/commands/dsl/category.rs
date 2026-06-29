@@ -6,11 +6,13 @@ use strum::Display;
 /// Command category for organization
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Display)]
 #[strum(serialize_all = "PascalCase")]
+#[derive(Default)]
 pub enum CommandCategory {
     Core,
     Session,
     Model,
     Safety,
+    #[default]
     System,
 }
 
@@ -29,11 +31,6 @@ impl FromStr for CommandCategory {
     }
 }
 
-impl Default for CommandCategory {
-    fn default() -> Self {
-        Self::System
-    }
-}
 
 impl CommandCategory {
     /// Label for display (pascal case).

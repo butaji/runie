@@ -63,8 +63,8 @@ impl HandlerRegistry {
         self.get(name).map(|h| match h {
             NamedHandler::Handler(f) => CommandKind::Handler(*f),
             NamedHandler::Form { title, fields, submit } => CommandKind::Form {
-                title: *title,
-                fields: *fields,
+                title,
+                fields,
                 submit: *submit,
             },
             NamedHandler::FormWithHandler {
@@ -72,8 +72,8 @@ impl HandlerRegistry {
                 fields,
                 handler,
             } => CommandKind::FormWithHandler {
-                title: *title,
-                fields: *fields,
+                title,
+                fields,
                 handler: *handler,
             },
         })

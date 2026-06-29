@@ -57,13 +57,19 @@ pub trait LeaderAgentHandle: Send + Sync {
 /// Implement this trait in `runie-agent` to avoid a `runie-core` → `runie-agent`
 /// dependency cycle.
 pub trait AgentActorFactory: Send + Sync {
+    /// Future type for spawn operation.
+    type SpawnFuture: std::future::Future<Output = Result<Box<dyn LeaderAgentHandle>, ractor::SpawnErr>> + Send;
+
     /// Spawn an agent actor connected to the given event bus and handles.
     fn spawn(
         &self,
         bus: EventBus<Event>,
         provider_handle: RactorProviderHandle,
         permission_handle: RactorPermissionHandle,
-    ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = Result<Box<dyn LeaderAgentHandle>, ractor::SpawnErr>> + Send>,
-    >;
+    ) -> Self::SpawnFuture;
 }
+
+/// Type alias for the spawn future return type.
+pub type AgentSpawnFuture = std::pin::Pin<
+    Box<dyn std::future::Future<Output = Result<Box<dyn LeaderAgentHandle>, ractor::SpawnErr>> + Send>,
+>;

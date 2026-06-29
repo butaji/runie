@@ -70,35 +70,43 @@ pub fn render_user_message(
     lines.push(margin_line(content_width, bg_style));
     lines.extend(build_user_body(
         content,
-        inner_width,
         prefix_width,
         indent_width,
-        ts_width,
-        &ts_str,
-        base_style,
-        bg_style,
+        &UserLineParams {
+            inner_width,
+            ts_str,
+            ts_width,
+            base_style,
+            bg_style,
+        },
     ));
     lines.push(margin_line(content_width, bg_style));
     lines
 }
 
-fn build_user_body(
-    content: &str,
+/// Parameters for building user message lines.
+struct UserLineParams {
     inner_width: u16,
-    prefix_width: u16,
-    indent_width: u16,
+    ts_str: String,
     ts_width: u16,
-    ts_str: &str,
     base_style: Style,
     bg_style: Style,
+}
+
+fn build_user_body(
+    content: &str,
+    prefix_width: u16,
+    indent_width: u16,
+    params: &UserLineParams,
 ) -> Vec<Line<'static>> {
     // Use tui-markdown for inline styling
     let inlines = parse_inline_spans(content);
     let spans = apply_color_to_inlines(&inlines, color_fg_bright());
-    let first_w = inner_width
+    let first_w = params
+        .inner_width
         .saturating_sub(prefix_width)
-        .saturating_sub(ts_width);
-    let rest_w = inner_width.saturating_sub(indent_width);
+        .saturating_sub(params.ts_width);
+    let rest_w = params.inner_width.saturating_sub(indent_width);
     let rows = wrap_styled_spans(&spans, first_w, rest_w);
 
     rows.iter()
@@ -109,12 +117,8 @@ fn build_user_body(
             build_user_line_from_spans(
                 row,
                 prefix,
-                inner_width,
-                ts_str,
-                ts_width,
                 with_ts,
-                base_style,
-                bg_style,
+                params,
             )
         })
         .collect()
@@ -123,39 +127,39 @@ fn build_user_body(
 fn build_user_line_from_spans(
     spans: &[MdSpan],
     prefix: &'static str,
-    inner_width: u16,
-    ts_str: &str,
-    ts_width: u16,
     with_ts: bool,
-    base_style: Style,
-    bg_style: Style,
+    params: &UserLineParams,
 ) -> Line<'static> {
     let p_width = display_width::width(prefix);
     let mut line_spans = vec![
-        Span::styled(" ", bg_style),
-        Span::styled(prefix, base_style),
+        Span::styled(" ", params.bg_style),
+        Span::styled(prefix, params.base_style),
     ];
     line_spans.extend(md_to_spans(spans));
 
     if with_ts {
         let text_width = span_width(&line_spans[2..]);
-        let padding = inner_width
+        let padding = params
+            .inner_width
             .saturating_sub(p_width)
             .saturating_sub(text_width)
-            .saturating_sub(ts_width);
+            .saturating_sub(params.ts_width);
         if padding > 0 {
-            line_spans.push(Span::styled(" ".repeat(padding as usize), base_style));
+            line_spans.push(Span::styled(" ".repeat(padding as usize), params.base_style));
         }
-        line_spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
+        line_spans.push(Span::styled(
+            format!(" {}", params.ts_str),
+            style_timestamp(),
+        ));
     }
 
     let used = span_width(&line_spans);
-    let fill = inner_width.saturating_sub(used);
+    let fill = params.inner_width.saturating_sub(used);
     if fill > 0 {
-        line_spans.push(Span::styled(" ".repeat(fill as usize), bg_style));
+        line_spans.push(Span::styled(" ".repeat(fill as usize), params.bg_style));
     }
-    line_spans.push(Span::styled(" ", bg_style));
-    Line::from(line_spans).style(bg_style)
+    line_spans.push(Span::styled(" ", params.bg_style));
+    Line::from(line_spans).style(params.bg_style)
 }
 
 pub fn render_agent_message(

@@ -252,14 +252,15 @@ impl Default for AgentActorFactoryImpl {
 }
 
 impl runie_core::actors::leader::AgentActorFactory for AgentActorFactoryImpl {
+    type SpawnFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Box<dyn runie_core::actors::leader::LeaderAgentHandle>, ractor::SpawnErr>> + Send>>;
+
     fn spawn(
         &self,
         bus: runie_core::bus::EventBus<runie_core::event::Event>,
         provider_handle: runie_core::actors::provider::RactorProviderHandle,
         permission_handle: runie_core::actors::permission::RactorPermissionHandle,
-    ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = Result<Box<dyn runie_core::actors::leader::LeaderAgentHandle>, ractor::SpawnErr>> + Send>,
-    > {
+    ) -> Self::SpawnFuture {
         Box::pin(async move {
             let (handle, _, _cell) =
                 spawn_ractor_agent(bus, provider_handle, permission_handle).await?;

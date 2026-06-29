@@ -232,7 +232,7 @@ pub fn word_wrap(text: &str, first_width: u16, rest_width: u16) -> Vec<String> {
     let rest_w = rest_width.max(1) as usize;
     let mut result = Vec::new();
 
-    for (is_first, line) in text.lines().enumerate() {
+    for line in text.lines() {
         if line.is_empty() {
             result.push(String::new());
             continue;
@@ -241,7 +241,7 @@ pub fn word_wrap(text: &str, first_width: u16, rest_width: u16) -> Vec<String> {
         // subsequent output lines to rest_w.
         let wrapped = wrap(line, first_w);
         for (i, wl) in wrapped.into_iter().enumerate() {
-            let target_w = if i == 0 && is_first == 0 { first_w } else if i == 0 { first_w } else { rest_w };
+            let target_w = if i == 0 { first_w } else { rest_w };
             result.extend(wrap(&wl, target_w).into_iter().map(|s| s.into_owned()));
         }
     }

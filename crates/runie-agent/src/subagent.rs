@@ -29,6 +29,16 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use thiserror::Error;
 
+/// Parent context passed to subagent commands.
+pub struct ParentContext {
+    provider_key: String,
+    model: String,
+    thinking: ThinkingLevel,
+    read_only: bool,
+    skills_context: String,
+    system_prompt: String,
+}
+
 #[derive(Debug, Error)]
 pub enum SubagentError {
     #[error("agent turn failed: {0}")]
@@ -78,27 +88,12 @@ pub async fn run_subagent(
 pub async fn run_subagent_type(
     type_name: &str,
     variables: HashMap<&str, &str>,
-    parent_provider_key: &str,
-    parent_model: &str,
-    parent_thinking: ThinkingLevel,
-    parent_read_only: bool,
-    parent_skills_context: &str,
-    parent_system_prompt: &str,
+    parent: ParentContext,
     provider: &dyn Provider,
     max_iterations: usize,
 ) -> Result<String, SubagentError> {
     let sub_type = resolve_subagent_type(type_name)?;
-    let cmd = build_type_command(
-        &sub_type,
-        type_name,
-        &variables,
-        parent_provider_key,
-        parent_model,
-        parent_thinking,
-        parent_read_only,
-        parent_skills_context,
-        parent_system_prompt,
-    );
+    let cmd = build_type_command(&sub_type, type_name, &variables, &parent);
     let gate = build_permission_gate(&sub_type.permission_mode);
     run_subagent_turn_with_gate(provider, &cmd, max_iterations, gate).await
 }
@@ -115,31 +110,26 @@ fn build_type_command(
     sub_type: &SubagentType,
     type_name: &str,
     variables: &HashMap<&str, &str>,
-    parent_provider_key: &str,
-    parent_model: &str,
-    parent_thinking: ThinkingLevel,
-    parent_read_only: bool,
-    parent_skills_context: &str,
-    parent_system_prompt: &str,
+    parent: &ParentContext,
 ) -> AgentCommand {
     let prompt = sub_type.interpolate(variables);
     let system_prompt = if sub_type.agents_md {
-        parent_system_prompt
+        parent.system_prompt.as_str()
     } else {
         ""
     };
     let skills_context = if sub_type.agents_md {
-        parent_skills_context
+        parent.skills_context.as_str()
     } else {
         ""
     };
-    let read_only = sub_type.permission_mode == SubPermissionMode::Plan || parent_read_only;
+    let read_only = sub_type.permission_mode == SubPermissionMode::Plan || parent.read_only;
     AgentCommand {
         content: prompt,
         id: format!("subagent.{}", type_name),
-        provider: parent_provider_key.to_owned(),
-        model: resolve_model(sub_type, parent_model),
-        thinking_level: parent_thinking,
+        provider: parent.provider_key.clone(),
+        model: resolve_model(sub_type, &parent.model),
+        thinking_level: parent.thinking,
         read_only,
         skills_context: skills_context.to_owned(),
         system_prompt: system_prompt.to_owned(),
@@ -153,7 +143,7 @@ fn build_type_command(
 fn resolve_model(sub_type: &SubagentType, parent_model: &str) -> String {
     match sub_type.model.as_str() {
         "inherit" => parent_model.to_owned(),
-        "fast" | _ => sub_type.model.clone(),
+        _ => sub_type.model.clone(),
     }
 }
 
@@ -377,12 +367,14 @@ mod tests {
         let result = run_subagent_type(
             "explore",
             vars,
-            "mock",
-            "echo",
-            ThinkingLevel::Off,
-            false,
-            "",
-            "",
+            ParentContext {
+                provider_key: "mock".into(),
+                model: "echo".into(),
+                thinking: ThinkingLevel::Off,
+                read_only: false,
+                skills_context: String::new(),
+                system_prompt: String::new(),
+            },
             &provider,
             5,
         )
@@ -400,12 +392,14 @@ mod tests {
         let result = run_subagent_type(
             "does-not-exist",
             vars,
-            "mock",
-            "echo",
-            ThinkingLevel::Off,
-            false,
-            "",
-            "",
+            ParentContext {
+                provider_key: "mock".into(),
+                model: "echo".into(),
+                thinking: ThinkingLevel::Off,
+                read_only: false,
+                skills_context: String::new(),
+                system_prompt: String::new(),
+            },
             &provider,
             5,
         )

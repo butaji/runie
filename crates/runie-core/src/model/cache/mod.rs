@@ -21,7 +21,6 @@ mod snapshot_fill;
 /// Extracted view values to avoid borrow conflicts.
 struct ViewValues {
     mouse_position: Option<(u16, u16)>,
-    mouse_position_tuple: (u16, u16),
     last_content_width: u16,
     last_visible_height: u16,
     scroll: usize,
@@ -33,24 +32,22 @@ fn snapshot_mouse_impl(
     elements: &[crate::view::Element],
     line_counts: &[usize],
     total_lines: usize,
-    mouse_position: (u16, u16),
-    last_content_width: u16,
-    last_visible_height: u16,
+    view: &ViewValues,
     input: &str,
     has_models: bool,
 ) -> (crate::snapshot::MouseTarget, Option<usize>) {
-    let mouse_pos = Some(mouse_position);
+    let mouse_pos = view.mouse_position;
     let target = compute_mouse_target(
         mouse_pos,
-        last_content_width,
-        last_visible_height,
+        view.last_content_width,
+        view.last_visible_height,
         input,
         has_models,
     );
     let hovered = compute_hovered_element(
         mouse_pos,
-        last_content_width,
-        last_visible_height,
+        view.last_content_width,
+        view.last_visible_height,
         input,
         elements,
         line_counts,
@@ -308,9 +305,7 @@ impl AppState {
             &cache.elements,
             &cache.line_counts,
             cache.total_lines,
-            view_values.mouse_position_tuple,
-            view_values.last_content_width,
-            view_values.last_visible_height,
+            &view_values,
             &self.input().input,
             self.has_models(),
         );
@@ -343,7 +338,6 @@ impl AppState {
         let view = self.view();
         ViewValues {
             mouse_position: view.mouse_position,
-            mouse_position_tuple: view.mouse_position.unwrap_or_default(),
             last_content_width: view.last_content_width,
             last_visible_height: view.last_visible_height,
             scroll: view.scroll,

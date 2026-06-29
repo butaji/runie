@@ -4,7 +4,7 @@
 //! Windows Credential Manager) with fallback to `.runie/auth.json` for CI/headless.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use secrecy::{ExposeSecret, SecretString};
 
@@ -100,10 +100,10 @@ impl AuthStorage {
     }
 
     /// Load from an explicit path (useful in tests).
-    pub fn load_from(path: &PathBuf) -> Self {
+    pub fn load_from(path: &Path) -> Self {
         let mut storage = Self {
             tokens: HashMap::new(),
-            fallback_path: path.clone(),
+            fallback_path: path.to_path_buf(),
             keyring_available: false,
         };
         storage.load_from_file();
@@ -114,26 +114,23 @@ impl AuthStorage {
         if !self.fallback_path.exists() {
             return;
         }
-        match std::fs::read_to_string(&self.fallback_path) {
-            Ok(json) => {
-                let raw: serde_json::Value = serde_json::from_str(&json).unwrap_or(serde_json::json!({}));
-                if let Some(obj) = raw.as_object() {
-                    for (provider, val) in obj {
-                        if let Some(token_str) = val.get("token").and_then(|v| v.as_str()) {
-                            let exp = val.get("expires_at").and_then(|v| v.as_f64());
-                            self.tokens.insert(
-                                provider.clone(),
-                                AuthToken {
-                                    provider: provider.clone(),
-                                    token: token_str.to_owned(),
-                                    expires_at: exp.filter(|e| *e > 0.0),
-                                },
-                            );
-                        }
+        if let Ok(json) = std::fs::read_to_string(&self.fallback_path) {
+            let raw: serde_json::Value = serde_json::from_str(&json).unwrap_or(serde_json::json!({}));
+            if let Some(obj) = raw.as_object() {
+                for (provider, val) in obj {
+                    if let Some(token_str) = val.get("token").and_then(|v| v.as_str()) {
+                        let exp = val.get("expires_at").and_then(|v| v.as_f64());
+                        self.tokens.insert(
+                            provider.clone(),
+                            AuthToken {
+                                provider: provider.clone(),
+                                token: token_str.to_owned(),
+                                expires_at: exp.filter(|e| *e > 0.0),
+                            },
+                        );
                     }
                 }
             }
-            Err(_) => {}
         }
     }
 

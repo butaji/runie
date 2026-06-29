@@ -25,14 +25,14 @@ where
 pub fn parse_request(line: &str) -> Result<Request, (Option<Value>, Error)> {
     let line = line.trim();
     if line.is_empty() {
-        return Err((None, Error::parse("Empty line").into())); // converts to anyhow::Error via From
+        return Err((None, Error::parse("Empty line"))); // converts to anyhow::Error via From
     }
 
     match serde_json::from_str::<Request>(line) {
         Ok(r) => Ok(r),
         Err(e) => Err((
             serde_json::from_str(line).ok(),
-            Error::parse(format!("Parse error: {e}")).into(),
+            Error::parse(format!("Parse error: {e}")),
         )),
     }
 }

@@ -18,6 +18,7 @@ use crate::actors::{
 };
 use crate::bus::EventBus;
 use crate::Event as CoreEvent;
+use crate::actors::leader::AgentSpawnFuture;
 
 use super::messages::{LeaderCommand, LeaderStatus};
 use super::{AgentActorFactory, LeaderAgentHandle};
@@ -81,7 +82,7 @@ impl Leader {
     pub async fn start(
         &self,
         provider_factory: std::sync::Arc<dyn crate::actors::provider::ProviderFactory>,
-        agent_factory: std::sync::Arc<dyn AgentActorFactory>,
+        agent_factory: std::sync::Arc<dyn AgentActorFactory<SpawnFuture = AgentSpawnFuture>>,
     ) -> anyhow::Result<LeaderHandle> {
         let bus = EventBus::<CoreEvent>::new(100);
         let (cmd_tx, cmd_rx) = mpsc::channel(32);
@@ -104,7 +105,7 @@ impl Leader {
         bus: &EventBus<CoreEvent>,
         config: &LeaderConfig,
         provider_factory: std::sync::Arc<dyn crate::actors::provider::ProviderFactory>,
-        agent_factory: std::sync::Arc<dyn AgentActorFactory>,
+        agent_factory: std::sync::Arc<dyn AgentActorFactory<SpawnFuture = AgentSpawnFuture>>,
     ) -> anyhow::Result<SpawnedHandles> {
         let (config_h, _) = RactorConfigActor::spawn_default(bus.clone()).await;
         let (provider_h, _) =
@@ -210,7 +211,7 @@ impl Leader {
     pub async fn run(
         self,
         provider_factory: std::sync::Arc<dyn crate::actors::provider::ProviderFactory>,
-        agent_factory: std::sync::Arc<dyn AgentActorFactory>,
+        agent_factory: std::sync::Arc<dyn AgentActorFactory<SpawnFuture = AgentSpawnFuture>>,
     ) -> anyhow::Result<()> {
         let _handle = self.start(provider_factory, agent_factory).await?;
         std::future::pending::<()>().await;
@@ -334,7 +335,7 @@ impl LeaderHandle {
             turn: handles.turn,
             turn_join: handles.turn_join,
             input: handles.input,
-            agent: std::sync::Arc::from(handles.agent),
+            agent: handles.agent,
             fff_indexer: handles.fff_indexer,
             snapshot_rx: tokio::sync::watch::channel(crate::Snapshot::default()).1,
         }

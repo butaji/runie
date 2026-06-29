@@ -44,8 +44,8 @@ impl RactorConfigHandle {
     }
 
     /// Try to send a message (non-blocking).
-    pub fn try_send(&self, msg: ConfigMsg) -> Result<(), ractor::MessagingErr<ConfigMsg>> {
-        self.inner.try_send(msg)
+    pub fn try_send(&self, msg: ConfigMsg) -> Result<(), Box<ractor::MessagingErr<ConfigMsg>>> {
+        self.inner.try_send(msg).map_err(Box::new)
     }
 
     /// Send a message to the actor (fire-and-forget).

@@ -56,7 +56,7 @@ pub(super) fn detect_color_depth(
 /// Detect hyperlink support using `supports-hyperlinks`.
 pub(super) fn detect_hyperlinks(env: &HashMap<String, String>) -> bool {
     let _lock = ENV_MUTEX.lock().unwrap();
-    with_env(env, || supports_hyperlinks::supports_hyperlinks())
+    with_env(env, supports_hyperlinks::supports_hyperlinks)
 }
 
 /// Temporarily set env vars from a snapshot, run a closure, then restore.

@@ -67,7 +67,7 @@ fn log_key_event(event: &Event) {
     if let Event::Key(key) = event {
         if std::env::var("RUNIE_DEBUG").is_ok() {
             let key = *key;
-            let _ = tokio::task::spawn_blocking(move || {
+            tokio::task::spawn_blocking(move || {
                 use std::io::Write;
                 let _ = std::fs::OpenOptions::new()
                     .create(true)

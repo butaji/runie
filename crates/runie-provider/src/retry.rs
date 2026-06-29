@@ -33,7 +33,7 @@ where
     Fut: Future<Output = Result<T, Error>>,
 {
     f.retry(ExponentialBuilder::default())
-        .when(|e| is_retryable(e))
+        .when(is_retryable)
         .await
 }
 

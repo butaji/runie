@@ -443,7 +443,7 @@ impl UiActor {
         if was_empty_or_space
             && !new_input.is_empty()
             && new_cursor == new_input.len()
-            && !self.state.completion().at_suggestions.is_some()
+            && self.state.completion().at_suggestions.is_none()
         {
             let last_char = new_input.chars().last().unwrap();
             if last_char == '@' {
@@ -483,7 +483,6 @@ impl UiActor {
 
         if last_char == '/' && !Self::is_quit_command(&input.input) {
             // Command palette: already opened in detect_autocomplete_trigger.
-            return;
         }
     }
 

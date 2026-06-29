@@ -63,9 +63,9 @@ pub(crate) fn split_think_blocks(content: &str) -> (String, Option<String>) {
     let caps: Vec<_> = THINK_REGEX.captures_iter(content).collect();
     let has_complete = !caps.is_empty();
     let block_reasoning = extract_block_reasoning(&caps);
-    let unclosed_reasoning = (!has_complete && content.contains("<think>")).then(|| {
+    let unclosed_reasoning = if !has_complete && content.contains("<think>") { {
         content.find("<think>").map(|p| &content[p + 7..]).unwrap_or("")
-    }).unwrap_or("");
+    } } else { "" };
 
     if block_reasoning.is_empty() && unclosed_reasoning.is_empty() {
         return (content.to_string(), None);

@@ -65,7 +65,7 @@ pub fn validate_registry(config: &crate::config::Config) -> Vec<String> {
                                     "model '{model}': not found for provider '{provider}'"
                                 ));
                             }
-                        } else if find_model(&model).is_none() {
+                        } else if find_model(model).is_none() {
                             errors.push(format!(
                                 "model '{model}': not found in registry"
                             ));
@@ -121,7 +121,7 @@ pub fn validate_registry(config: &crate::config::Config) -> Vec<String> {
         for model in scoped {
             if let Some((provider, model_name)) = model.split_once('/') {
                 if let Some(p) = find_provider(provider) {
-                    if !p.models.iter().any(|m| &m.name == model_name) {
+                    if !p.models.iter().any(|m| m.name == model_name) {
                         errors.push(format!(
                             "[models.scoped]: model '{model}' not found for provider '{provider}'"
                         ));

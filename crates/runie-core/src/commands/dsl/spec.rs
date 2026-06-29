@@ -220,8 +220,6 @@ pub fn build_cmd_from_yaml(
             match kind {
                 CommandKind::Handler(f) => cmd = cmd.handler(f),
                 CommandKind::Form { title, fields, submit } => {
-                    let fields = fields;
-                    let submit = submit;
                     cmd = cmd.form(title, move |f| add_fields(f, fields).on_submit(submit));
                 }
                 CommandKind::FormWithHandler { title, fields, handler } => {
