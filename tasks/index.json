@@ -422,7 +422,7 @@
   {
     "file": "implement-or-remove-mcp-runtime-scaffolding.md",
     "title": "Implement MCP client runtime or remove config scaffolding",
-    "status": "todo"
+    "status": "done (dead CLI scaffolding deleted; config types retained in RactorConfigActor)"
   },
   {
     "file": "narrow-runie-core-public-api.md",
