@@ -3,7 +3,7 @@
 //! Migrated from custom Actor trait to ractor for consistency with the rest
 //! of the actor system.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use parking_lot::Mutex;
 
 use notify::RecursiveMode;
@@ -174,8 +174,8 @@ impl RactorConfigActor {
     }
 
     /// Load layered config synchronously (for use in spawn_blocking).
-    fn load_layers_sync(global: &PathBuf, local: &Option<PathBuf>) -> Config {
-        Config::load_layers_from_paths(global.clone(), local.clone().unwrap_or_default())
+    fn load_layers_sync(global: &Path, local: &Option<PathBuf>) -> Config {
+        Config::load_layers_from_paths(global.to_path_buf(), local.clone().unwrap_or_default())
     }
 
     async fn handle_msg(state: &mut ConfigActorState, msg: ConfigMsg) {
@@ -202,7 +202,7 @@ impl RactorConfigActor {
                 reply.send(cfg);
             }
             ConfigMsg::GetConfiguredProviders(reply) => {
-                reply.send(Self::list_configured_providers(&state));
+                reply.send(Self::list_configured_providers(state));
             }
             ConfigMsg::LoadLayers(reply) => {
                 let effective = Self::load_layers_sync(&state.path, &state.project_path);
@@ -368,9 +368,9 @@ impl RactorConfigActor {
             .collect()
     }
 
-    fn path_for_scope(global: &PathBuf, project: &Option<PathBuf>, scope: ConfigScope) -> PathBuf {
+    fn path_for_scope(global: &Path, project: &Option<PathBuf>, scope: ConfigScope) -> PathBuf {
         match scope {
-            ConfigScope::Global => global.clone(),
+            ConfigScope::Global => global.to_path_buf(),
             ConfigScope::Project => project.clone().unwrap_or_else(|| {
                 std::env::current_dir()
                     .unwrap_or_default()
