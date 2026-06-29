@@ -1,6 +1,6 @@
 # Replace custom TUI widgets with ratatui ecosystem crates
 
-**Status**: in_progress
+**Status**: done
 **Milestone**: R1
 **Category**: TUI / Rendering
 **Priority**: P0
