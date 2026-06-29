@@ -5,7 +5,6 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
 use crate::provider::ProviderError;
@@ -73,32 +72,20 @@ impl fmt::Debug for ProviderMsg {
 }
 
 /// Ergonomic handle for sending messages to a `ProviderActor`.
-///
-/// Supports two backends:
-/// - `ractor::ActorRef` (ractor-based actors — the production path)
-/// - `mpsc::Sender` (legacy custom-trait actors — kept for test compatibility)
 #[derive(Clone, Debug)]
 pub struct ProviderActorHandle {
-    /// Ractor-based backend (preferred).
-    actor_ref: Option<ractor::ActorRef<ProviderMsg>>,
-    /// Legacy mpsc sender (for custom-trait actors in tests).
-    legacy_tx: Option<mpsc::Sender<ProviderMsg>>,
+    actor_ref: ractor::ActorRef<ProviderMsg>,
 }
 
 impl ProviderActorHandle {
-    /// Construct from a ractor `ActorRef` (ractor-based production actors).
+    /// Construct from a ractor `ActorRef`.
     pub fn from_actor_ref(actor_ref: ractor::ActorRef<ProviderMsg>) -> Self {
-        Self { actor_ref: Some(actor_ref), legacy_tx: None }
+        Self { actor_ref }
     }
 
-    /// Construct from an mpsc sender (legacy custom-trait actors).
-    pub fn from_legacy_tx(tx: mpsc::Sender<ProviderMsg>) -> Self {
-        Self { actor_ref: None, legacy_tx: Some(tx) }
-    }
-
-    /// Access the underlying actor ref (low-level, ractor path).
-    pub fn actor_ref(&self) -> Option<&ractor::ActorRef<ProviderMsg>> {
-        self.actor_ref.as_ref()
+    /// Access the underlying actor ref (low-level).
+    pub fn actor_ref(&self) -> &ractor::ActorRef<ProviderMsg> {
+        &self.actor_ref
     }
 
     /// Request a provider build.
@@ -113,11 +100,7 @@ impl ProviderActorHandle {
             model,
             reply: make_reply(reply_tx),
         };
-        if let Some(ref ar) = self.actor_ref {
-            let _ = ar.send_message(msg);
-        } else if let Some(ref tx) = self.legacy_tx {
-            let _ = tx.send(msg).await;
-        }
+        let _ = self.actor_ref.send_message(msg);
         reply_rx
             .await
             .unwrap_or_else(|_| Err(anyhow::anyhow!("provider actor dropped").into()))
@@ -135,11 +118,7 @@ impl ProviderActorHandle {
             api_key,
             reply: make_reply(reply_tx),
         };
-        if let Some(ref ar) = self.actor_ref {
-            let _ = ar.send_message(msg);
-        } else if let Some(ref tx) = self.legacy_tx {
-            let _ = tx.send(msg).await;
-        }
+        let _ = self.actor_ref.send_message(msg);
         reply_rx
             .await
             .unwrap_or_else(|_| Err(anyhow::anyhow!("provider actor dropped")))
@@ -152,11 +131,7 @@ impl ProviderActorHandle {
             provider,
             reply: make_reply(reply_tx),
         };
-        if let Some(ref ar) = self.actor_ref {
-            let _ = ar.send_message(msg);
-        } else if let Some(ref tx) = self.legacy_tx {
-            let _ = tx.send(msg).await;
-        }
+        let _ = self.actor_ref.send_message(msg);
         reply_rx
             .await
             .unwrap_or_else(|_| Err(anyhow::anyhow!("provider actor dropped")))

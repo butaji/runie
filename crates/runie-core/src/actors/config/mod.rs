@@ -1,14 +1,14 @@
 //! `ConfigActor` — the single owner of `~/.runie/config.toml`.
 
 mod file_helpers;
-mod messages;
+pub mod messages;
 pub mod ractor_config;
 #[cfg(test)]
 mod tests;
 
 // Ractor-based ConfigActor.
 pub use ractor_config::{RactorConfigActor, RactorConfigHandle};
-pub use messages::{ConfigActorHandle, ConfigMsg};
+pub use messages::ConfigMsg;
 
 /// Trait for config actor handles.
 pub trait ConfigHandle: Send + Sync + Clone {
@@ -16,15 +16,6 @@ pub trait ConfigHandle: Send + Sync + Clone {
     fn get_configured_providers(
         &self,
     ) -> impl std::future::Future<Output = Option<Vec<(String, String, Vec<String>)>>> + Send;
-}
-
-impl ConfigHandle for ConfigActorHandle {
-    async fn get_config(&self) -> Option<crate::config::Config> {
-        self.get_config().await
-    }
-    async fn get_configured_providers(&self) -> Option<Vec<(String, String, Vec<String>)>> {
-        self.get_configured_providers().await
-    }
 }
 
 impl ConfigHandle for RactorConfigHandle {

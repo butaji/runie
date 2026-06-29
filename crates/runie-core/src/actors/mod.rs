@@ -26,7 +26,7 @@ pub use persistence::PersistenceActor;
 pub use handles::ActorHandles;
 
 pub use turn::{TurnMsg, RactorTurnActor, RactorTurnHandle};
-pub use config::{RactorConfigActor, RactorConfigHandle, ConfigActorHandle, ConfigMsg};
+pub use config::{RactorConfigActor, RactorConfigHandle, ConfigMsg};
 pub use fff_indexer::{
     FffFileItem, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
     FffSearchState, format_git_status, RactorFffIndexerHandle, RactorFffIndexerActor,
