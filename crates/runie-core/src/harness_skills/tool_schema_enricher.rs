@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::tool::BUILTIN_TOOL_NAMES;
 use super::HarnessSkill;
+use crate::tool::BUILTIN_TOOL_NAMES;
 
 /// Configuration for the tool schema enricher skill.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -165,10 +165,9 @@ mod tests {
             "input_schema": {"type": "object"}
         });
         let enriched = skill.enrich_schema(&schema);
-        assert!(!
-            enriched
-                .get("input_schema")
-                .and_then(|v| v.get("examples"))
-                .is_some());
+        assert!(!enriched
+            .get("input_schema")
+            .and_then(|v| v.get("examples"))
+            .is_some());
     }
 }

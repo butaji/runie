@@ -277,7 +277,10 @@ models = ["gpt-4", "gpt-3.5-turbo"]
         let parsed_config: Config = toml::from_str(&s).unwrap();
 
         // Verify provider is present
-        assert!(!parsed_config.model_providers.is_empty(), "model_providers should not be empty");
+        assert!(
+            !parsed_config.model_providers.is_empty(),
+            "model_providers should not be empty"
+        );
         assert!(parsed_config.model_providers.contains_key("openai"));
         let provider = parsed_config.model_providers.get("openai").unwrap();
         assert_eq!(provider.base_url, "https://api.openai.com/v1");
@@ -317,7 +320,10 @@ models = ["claude-3"]
             openai.get("api_key").is_none(),
             "api_key should be removed after migration"
         );
-        assert_eq!(openai["base_url"].as_str(), Some("https://api.openai.com/v1"));
+        assert_eq!(
+            openai["base_url"].as_str(),
+            Some("https://api.openai.com/v1")
+        );
 
         // anthropic has empty api_key - should also be removed (no keyring needed)
         let anthropic = &config["model_providers"]["anthropic"];

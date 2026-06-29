@@ -209,7 +209,9 @@ impl AppState {
                 role: Role::User,
                 timestamp: now(),
                 id: id.clone(),
-                parts: vec![Part::Text { content: r.content.clone() }],
+                parts: vec![Part::Text {
+                    content: r.content.clone(),
+                }],
                 ..Default::default()
             });
             self.agent_state_mut()
@@ -227,7 +229,9 @@ impl AppState {
                         role: Role::User,
                         timestamp: now(),
                         id: id.clone(),
-                        parts: vec![Part::Text { content: r.content.clone() }],
+                        parts: vec![Part::Text {
+                            content: r.content.clone(),
+                        }],
                         ..Default::default()
                     });
                     self.agent_state_mut()
@@ -246,7 +250,9 @@ impl AppState {
                 role: Role::User,
                 timestamp: now(),
                 id: id.clone(),
-                parts: vec![Part::Text { content: r.content.clone() }],
+                parts: vec![Part::Text {
+                    content: r.content.clone(),
+                }],
                 ..Default::default()
             });
             self.agent_state_mut()

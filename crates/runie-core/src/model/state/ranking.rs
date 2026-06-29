@@ -71,12 +71,15 @@ mod ranking_tests {
         // Create a config with api_key in model_providers
         let mut config = crate::config::Config::default();
         config.provider = Some("openai".to_string());
-        config.model_providers.insert("openai".into(), crate::config::ModelProvider {
-            provider_type: None,
-            base_url: "https://api.openai.com/v1".to_string(),
-            api_key: "sk-test".to_string(),
-            models: vec!["gpt-4o".to_string()],
-        });
+        config.model_providers.insert(
+            "openai".into(),
+            crate::config::ModelProvider {
+                provider_type: None,
+                base_url: "https://api.openai.com/v1".to_string(),
+                api_key: "sk-test".to_string(),
+                models: vec!["gpt-4o".to_string()],
+            },
+        );
 
         let has = has_provider_credentials(&config, "openai");
         assert!(has, "should find credentials in config model_providers");

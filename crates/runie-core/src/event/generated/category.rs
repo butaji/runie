@@ -6,7 +6,17 @@ use super::event_enum::Event;
 // ── EventCategory enum ─────────────────────────────────────────────────────────
 
 /// Event category — routing taxonomy for the dispatcher.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::Display, strum::IntoStaticStr, strum::VariantNames)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Default,
+    strum::Display,
+    strum::IntoStaticStr,
+    strum::VariantNames,
+)]
 pub enum EventCategory {
     Agent,
     Command,

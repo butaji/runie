@@ -298,11 +298,16 @@ impl RactorConfigActor {
             tracing::warn!("initial config validation failed: {:?}", errors);
             state.emit(Event::Error {
                 id: "config".to_owned(),
-                message: format!("Config validation failed: {}. Using defaults.", errors.join("; ")),
+                message: format!(
+                    "Config validation failed: {}. Using defaults.",
+                    errors.join("; ")
+                ),
             });
             // Keep the default config (already in state from pre_start), emit it.
             let cfg = state.config.lock().clone();
-            state.emit(Event::ConfigLoaded { config: Box::new(cfg) });
+            state.emit(Event::ConfigLoaded {
+                config: Box::new(cfg),
+            });
             return;
         }
 
@@ -323,7 +328,10 @@ impl RactorConfigActor {
             tracing::warn!("config reload validation failed: {:?}", errors);
             state.emit(Event::Error {
                 id: "config".to_owned(),
-                message: format!("Config reload validation failed: {}. Keeping previous config.", errors.join("; ")),
+                message: format!(
+                    "Config reload validation failed: {}. Keeping previous config.",
+                    errors.join("; ")
+                ),
             });
             return;
         }
@@ -757,9 +765,12 @@ mod tests {
 
         // Subscribe BEFORE spawning so we don't miss pre_start's ConfigLoaded
         let mut sub = bus.subscribe();
-        let (handle, _cell) =
-            RactorConfigActor::spawn(bus.clone(), Some(global_path.clone()), Some(project_path.clone()))
-                .await;
+        let (handle, _cell) = RactorConfigActor::spawn(
+            bus.clone(),
+            Some(global_path.clone()),
+            Some(project_path.clone()),
+        )
+        .await;
 
         // Wait for ConfigLoaded to confirm actor has loaded the layered config
         let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
@@ -793,7 +804,8 @@ mod tests {
 
         // Subscribe BEFORE spawning so we don't miss pre_start's ConfigLoaded
         let mut sub = bus.subscribe();
-        let (handle, _cell) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
+        let (handle, _cell) =
+            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
 
         // Wait for ConfigLoaded to confirm actor is ready
         let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
