@@ -187,7 +187,7 @@
   {
     "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
     "title": "Migrate TUI and CLI to `Leader::start`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "move-built-in-slash-commands-to-declarative-yaml.md",
