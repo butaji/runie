@@ -161,8 +161,7 @@ fn all_form_commands_are_listed() {
     // this test must be updated to include it. Commands marked `.sub()`
     // wrap their flow in `CommandFlow::Sub`; we unwrap to find the PanelStack.
     use crate::commands::{DialogKind, CommandFlow, CommandRegistry};
-    let mut reg = CommandRegistry::new();
-    crate::commands::dsl::handlers::register_all(&mut reg);
+    let reg = CommandRegistry::new();
     let form_commands: Vec<String> = reg
         .list()
         .iter()

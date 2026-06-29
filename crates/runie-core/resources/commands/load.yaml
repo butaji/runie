@@ -1,0 +1,13 @@
+name: load
+description: Load a saved session
+category: Session
+sub: true
+triggers:
+  - /load
+type: form_with_handler
+handler: load
+title: "Load Session"
+fields:
+  - label: Name
+    placeholder: session-name
+    key: name

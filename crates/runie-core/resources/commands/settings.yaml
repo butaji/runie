@@ -1,0 +1,13 @@
+# Settings command
+# This demonstrates the YAML command format.
+
+name: settings
+description: Open settings dialog
+category: System
+sub: true
+triggers:
+  - /settings
+
+# Handler reference - looks up "settings" in the handler registry
+type: handler
+handler: settings

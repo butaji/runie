@@ -1,0 +1,13 @@
+name: import
+description: Import session from JSON
+category: Session
+sub: true
+triggers:
+  - /import
+type: form_with_handler
+handler: import
+title: "Import Session"
+fields:
+  - label: Path
+    placeholder: session.json
+    key: path

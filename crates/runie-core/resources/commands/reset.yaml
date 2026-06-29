@@ -1,0 +1,8 @@
+name: reset
+description: Clear all state
+category: Session
+sub: false
+triggers:
+  - /reset
+type: handler
+handler: reset

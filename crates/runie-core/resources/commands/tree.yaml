@@ -1,0 +1,8 @@
+name: tree
+description: Open session tree dialog
+category: Session
+sub: true
+triggers:
+  - /tree
+type: handler
+handler: tree

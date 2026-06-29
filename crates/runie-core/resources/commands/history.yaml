@@ -1,0 +1,8 @@
+name: history
+description: Show recent history
+category: Session
+sub: false
+triggers:
+  - /history
+type: handler
+handler: history

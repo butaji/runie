@@ -277,8 +277,11 @@ Content
             category: CommandCategory::Session,
             intent: "BookmarkMessage".to_owned(),
             shortcut: Some("Ctrl+b".to_owned()),
+            aliases: vec![],
             has_subcommands: false,
             file_path: Path::new("/commands/bookmark.yaml").to_path_buf(),
+            handler_name: None,
+            message: None,
         };
         assert_eq!(cmd.name, "bookmark");
         assert_eq!(cmd.category, CommandCategory::Session);
@@ -365,7 +368,7 @@ description: A test command
 category: Model
 intent: SetModel
 shortcut: Ctrl+m
-subcommands: false
+sub: false
 "#;
         let cmd: DeclarativeCommandYaml = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(cmd.name, "test-cmd");
@@ -373,7 +376,7 @@ subcommands: false
         assert_eq!(cmd.category, CommandCategory::Model);
         assert_eq!(cmd.intent, "SetModel");
         assert_eq!(cmd.shortcut, Some("Ctrl+m".to_owned()));
-        assert!(!cmd.subcommands);
+        assert!(!cmd.sub);
     }
 
     #[test]
@@ -385,7 +388,7 @@ subcommands: false
         assert_eq!(cmd.category, CommandCategory::System);
         assert_eq!(cmd.intent, "");
         assert!(cmd.shortcut.is_none());
-        assert!(!cmd.subcommands);
+        assert!(!cmd.sub);
         assert!(cmd.triggers.is_empty());
     }
 

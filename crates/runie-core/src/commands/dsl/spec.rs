@@ -68,7 +68,7 @@ pub struct CommandDef {
 }
 
 impl CommandDef {
-    pub fn new(name: &'static str) -> Self {
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
             desc: String::new(),
@@ -80,18 +80,20 @@ impl CommandDef {
         }
     }
 
-    pub fn desc(mut self, desc: &'static str) -> Self {
+    pub fn desc(mut self, desc: impl Into<String>) -> Self {
         self.desc = desc.into();
         self
     }
 
-    pub fn alias(mut self, alias: &'static str) -> Self {
+    pub fn alias(mut self, alias: impl Into<String>) -> Self {
         self.aliases.push(alias.into());
         self
     }
 
-    pub fn aliases(mut self, aliases: &'static [&'static str]) -> Self {
-        self.aliases.extend(aliases.iter().map(|s| s.to_string()));
+    pub fn aliases(mut self, aliases: &[&str]) -> Self {
+        for s in aliases {
+            self.aliases.push((*s).to_string());
+        }
         self
     }
 
@@ -100,8 +102,8 @@ impl CommandDef {
         self
     }
 
-    pub fn msg(self, msg: &'static str) -> Self {
-        self.with_flow(CommandFlow::Message(msg)).apply_sub()
+    pub fn msg(self, msg: impl Into<String>) -> Self {
+        self.with_flow(CommandFlow::Message(msg.into())).apply_sub()
     }
 
     pub fn handler(self, f: fn(&mut AppState, &str) -> CommandResult) -> Self {
@@ -135,7 +137,7 @@ impl CommandDef {
         Build: FnOnce(FormPanel) -> FormPanel + Send + Sync + 'static,
     {
         let id = self.name.clone();
-        let template = form_builder(crate::dialog::dsl::form(id, title));
+        let template = form_builder(crate::dialog::dsl::form(id, title).cmd_name(self.name.clone()));
         self.panel(move |_state, args| build_form_stack_from_template(template.clone(), args))
             .with_form_handler(handler)
     }
@@ -191,8 +193,48 @@ pub fn build_cmd(spec: &CommandSpec) -> CommandDef {
                 handler,
             )
         }
-        CommandKind::Msg(m) => cmd.msg(m),
+        CommandKind::Msg(m) => cmd.msg((*m).to_string()),
     }
+}
+
+/// Build a `CommandDef` from a YAML definition and handler registry.
+pub fn build_cmd_from_yaml(
+    yaml_def: &crate::declarative::types::CommandDef,
+    handler_registry: &super::handlers::registry::HandlerRegistry,
+) -> Option<CommandDef> {
+    let mut cmd = CommandDef::new(yaml_def.name.clone())
+        .desc(yaml_def.description.clone())
+        .category(yaml_def.category);
+    if !yaml_def.aliases.is_empty() {
+        let aliases: Vec<&str> = yaml_def.aliases.iter().map(|s| s.as_str()).collect();
+        cmd = cmd.aliases(&aliases);
+    }
+
+    if yaml_def.has_subcommands {
+        cmd = cmd.sub();
+    }
+
+    // Look up handler from registry
+    if let Some(ref handler_name) = yaml_def.handler_name {
+        if let Some(kind) = handler_registry.to_command_kind(handler_name) {
+            match kind {
+                CommandKind::Handler(f) => cmd = cmd.handler(f),
+                CommandKind::Form { title, fields, submit } => {
+                    let fields = fields;
+                    let submit = submit;
+                    cmd = cmd.form(title, move |f| add_fields(f, fields).on_submit(submit));
+                }
+                CommandKind::FormWithHandler { title, fields, handler } => {
+                    cmd = cmd.form_with_handler(title, move |f| add_fields(f, fields), handler);
+                }
+                CommandKind::Msg(m) => cmd = cmd.msg(m),
+            }
+        }
+    } else if let Some(ref msg) = yaml_def.message {
+        cmd = cmd.msg(msg);
+    }
+
+    Some(cmd)
 }
 
 fn add_fields(

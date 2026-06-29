@@ -1,0 +1,11 @@
+# Provider management command
+name: provider
+description: "Manage providers: add, disconnect, choose models"
+aliases:
+  - providers
+category: System
+sub: true
+triggers:
+  - /provider
+type: handler
+handler: provider

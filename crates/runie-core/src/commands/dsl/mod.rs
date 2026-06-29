@@ -11,6 +11,7 @@ pub(crate) mod spec;
 mod flow;
 mod category;
 pub mod handlers;
+pub(crate) mod embedded_commands;
 
 pub use spec::{build_cmd, register_commands, CommandDef, CommandKind, CommandSpec, FormHandler};
 pub use flow::{CommandFlow, CommandResult, DialogType};

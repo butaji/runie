@@ -244,7 +244,7 @@ fn test_save_and_load_session() {
     state.update(crate::Event::Input('i'));
     state.update(Event::submit());
     exec(&mut state, "/save test_session"); // Opens form with pre-filled name
-    state.update(Event::submit()); // Submits the form
+    state.update(Event::CommandFormSubmit); // Submits the form
     assert!(state
         .session
         .messages
@@ -253,7 +253,7 @@ fn test_save_and_load_session() {
 
     let mut state2 = fresh_state();
     exec(&mut state2, "/load test_session"); // Opens form with pre-filled name
-    state2.update(Event::submit()); // Submits the form
+    state2.update(Event::CommandFormSubmit); // Submits the form
     assert!(state2
         .session
         .messages

@@ -1,0 +1,9 @@
+# Prompt template command
+name: prompt
+description: Switch prompt template
+category: System
+sub: true
+triggers:
+  - /prompt
+type: handler
+handler: prompt

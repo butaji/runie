@@ -18,7 +18,7 @@ pub enum CommandFlow {
     /// No action (handled internally)
     None,
     /// Show a static message
-    Message(&'static str),
+    Message(String),
     /// Execute a handler function
     Handler(fn(&mut AppState, &str) -> CommandResult),
     /// Open a panel stack produced at runtime
@@ -35,7 +35,7 @@ impl CommandFlow {
     pub fn exec(&self, state: &mut AppState, _cmd_name: &str, args: &str) -> CommandResult {
         match self {
             Self::None => CommandResult::None,
-            Self::Message(msg) => CommandResult::Message((*msg).into()),
+            Self::Message(msg) => CommandResult::Message(msg.clone()),
             Self::Handler(f) => f(state, args),
             Self::PanelStack(f) => CommandResult::OpenPanelStack(Box::new(f(state, args))),
             Self::Sub(inner) => Self::exec_sub(inner, state, _cmd_name, args),
@@ -109,7 +109,7 @@ mod tests {
 
     #[test]
     fn test_command_flow_exec() {
-        let flow = CommandFlow::Message("test");
+        let flow = CommandFlow::Message("test".to_string());
         let mut state = AppState::default();
         let result = flow.exec(&mut state, "test", "");
         assert_eq!(result, CommandResult::Message("test".into()));

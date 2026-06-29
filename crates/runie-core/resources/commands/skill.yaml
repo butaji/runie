@@ -1,0 +1,9 @@
+# Show skill command
+name: skill
+description: Show skill details
+category: System
+sub: false
+triggers:
+  - /skill
+type: handler
+handler: skill

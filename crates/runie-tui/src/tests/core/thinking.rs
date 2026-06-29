@@ -212,8 +212,7 @@ fn thinking_does_not_create_a_form_panel() {
     // /thinking must use a select panel, not a form. Forms are for free-text
     // input; thinking levels are a fixed enum.
     use runie_core::commands::{DialogKind, CommandRegistry, CommandResult};
-    let mut reg = CommandRegistry::new();
-    runie_core::commands::dsl::handlers::register_all(&mut reg);
+    let reg = CommandRegistry::new();
     let cmd = reg.get("thinking").expect("thinking command");
     let mut state = AppState::default();
     state.config.thinking_level = ThinkingLevel::Medium;

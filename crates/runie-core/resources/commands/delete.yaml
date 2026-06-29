@@ -1,0 +1,13 @@
+name: delete
+description: Delete a saved session
+category: Session
+sub: true
+triggers:
+  - /delete
+type: form_with_handler
+handler: delete
+title: "Delete Session"
+fields:
+  - label: Name
+    placeholder: session-name
+    key: name

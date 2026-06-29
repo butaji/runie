@@ -1,42 +1,15 @@
 //! Model commands.
 
-use crate::commands::{CommandCategory, CommandRegistry, CommandResult, DialogType};
+use crate::commands::{CommandResult, DialogType};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::{AppState, ThinkingLevel};
 
-use crate::commands::dsl::spec::{build_cmd, CommandKind, CommandSpec};
-
-static COMMANDS: &[CommandSpec] = &[
-    CommandSpec {
-        name: "model",
-        desc: "Switch model",
-        aliases: &["m"],
-        category: CommandCategory::Model,
-        sub: true,
-        kind: CommandKind::Handler(handle_model),
-    },
-    CommandSpec {
-        name: "thinking",
-        desc: "Set thinking level (off/low/medium/high)",
-        aliases: &[],
-        category: CommandCategory::Model,
-        sub: true,
-        kind: CommandKind::Handler(handle_thinking),
-    },
-    CommandSpec {
-        name: "scoped-models",
-        desc: "Enable/disable models for cycling",
-        aliases: &[],
-        category: CommandCategory::Model,
-        sub: true,
-        kind: CommandKind::Handler(handle_scoped_models),
-    },
-];
-
-pub fn register(registry: &mut CommandRegistry) {
-    for spec in COMMANDS {
-        registry.register(build_cmd(spec));
-    }
+/// Register all model handlers with the handler registry (for YAML-based commands).
+pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
+    use crate::register_handler;
+    register_handler!(registry, "model", Handler(handle_model));
+    register_handler!(registry, "thinking", Handler(handle_thinking));
+    register_handler!(registry, "scoped-models", Handler(handle_scoped_models));
 }
 
 pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
@@ -83,7 +56,7 @@ fn is_model_configured(state: &AppState, provider: &str, model: &str) -> bool {
         .any(|(p, _, models)| p == provider && models.contains(&model.to_owned()))
 }
 
-fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
+pub fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
     let rest = args.trim();
     if rest.is_empty() {
         return open_thinking_panel(state);
@@ -120,7 +93,7 @@ fn open_thinking_panel(state: &mut AppState) -> CommandResult {
     CommandResult::OpenPanelStack(Box::new(PanelStack::new(panel)))
 }
 
-fn handle_scoped_models(state: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_scoped_models(state: &mut AppState, _: &str) -> CommandResult {
     if state.configured_providers().is_empty() {
         return CommandResult::Message(
             "No connected providers. Use /provider to add a provider first.".into(),

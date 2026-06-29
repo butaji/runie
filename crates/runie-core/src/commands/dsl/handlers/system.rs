@@ -1,117 +1,27 @@
 //! System commands.
 
-use crate::commands::{CommandCategory, CommandRegistry, CommandResult, DialogType};
+use crate::commands::{CommandResult, DialogType};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
 
-use crate::commands::dsl::spec::{build_cmd, CommandKind, CommandSpec};
-
-static COMMANDS: &[CommandSpec] = &[
-    CommandSpec {
-        name: "settings",
-        desc: "Open settings dialog",
-        aliases: &[],
-        category: CommandCategory::System,
-        sub: true,
-        kind: CommandKind::Handler(handle_settings),
-    },
-    CommandSpec {
-        name: "copy",
-        desc: "Copy last response to clipboard",
-        aliases: &[],
-        category: CommandCategory::System,
-        sub: false,
-        kind: CommandKind::Handler(handle_copy),
-    },
-    CommandSpec {
-        name: "reload",
-        desc: "Reload config, keybindings, themes",
-        aliases: &[],
-        category: CommandCategory::System,
-        sub: false,
-        kind: CommandKind::Handler(handle_reload),
-    },
-    CommandSpec {
-        name: "diagnostics",
-        desc: "Show resource loading diagnostics",
-        aliases: &[],
-        category: CommandCategory::System,
-        sub: false,
-        kind: CommandKind::Handler(handle_diagnostics),
-    },
-    CommandSpec {
-        name: "skills",
-        desc: "List loaded skills",
-        aliases: &[],
-        category: CommandCategory::System,
-        sub: false,
-        kind: CommandKind::Handler(handle_skills),
-    },
-    CommandSpec {
-        name: "skill",
-        desc: "Show skill details",
-        aliases: &[],
-        category: CommandCategory::System,
-        sub: false,
-        kind: CommandKind::Handler(handle_skill),
-    },
-    CommandSpec {
-        name: "prompt",
-        desc: "Switch prompt template",
-        aliases: &[],
-        category: CommandCategory::System,
-        sub: true,
-        kind: CommandKind::Handler(handle_prompt),
-    },
-    CommandSpec {
-        name: "hotkeys",
-        desc: "Show keyboard shortcuts",
-        aliases: &["keys", "shortcuts"],
-        category: CommandCategory::System,
-        sub: true,
-        kind: CommandKind::Handler(handle_hotkeys),
-    },
-    CommandSpec {
-        name: "theme",
-        desc: "Switch theme or list available themes",
-        aliases: &[],
-        category: CommandCategory::System,
-        sub: true,
-        kind: CommandKind::Handler(handle_theme),
-    },
-    CommandSpec {
-        name: "approve",
-        desc: "Apply pending file edits",
-        aliases: &[],
-        category: CommandCategory::System,
-        sub: false,
-        kind: CommandKind::Handler(handle_approve),
-    },
-    CommandSpec {
-        name: "reject",
-        desc: "Cancel pending file edits",
-        aliases: &[],
-        category: CommandCategory::System,
-        sub: false,
-        kind: CommandKind::Handler(handle_reject),
-    },
-    CommandSpec {
-        name: "provider",
-        desc: "Manage providers: add, disconnect, choose models",
-        aliases: &["providers"],
-        category: CommandCategory::System,
-        sub: true,
-        kind: CommandKind::Handler(handle_providers),
-    },
-];
-
-pub fn register(registry: &mut CommandRegistry) {
-    for spec in COMMANDS {
-        registry.register(build_cmd(spec));
-    }
+/// Register all system handlers with the handler registry (for YAML-based commands).
+pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
+    use crate::register_handler;
+    register_handler!(registry, "settings", Handler(handle_settings));
+    register_handler!(registry, "copy", Handler(handle_copy));
+    register_handler!(registry, "reload", Handler(handle_reload));
+    register_handler!(registry, "diagnostics", Handler(handle_diagnostics));
+    register_handler!(registry, "skills", Handler(handle_skills));
+    register_handler!(registry, "skill", Handler(handle_skill));
+    register_handler!(registry, "prompt", Handler(handle_prompt));
+    register_handler!(registry, "hotkeys", Handler(handle_hotkeys));
+    register_handler!(registry, "theme", Handler(handle_theme));
+    register_handler!(registry, "approve", Handler(handle_approve));
+    register_handler!(registry, "reject", Handler(handle_reject));
+    register_handler!(registry, "provider", Handler(handle_providers));
 }
 
-fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
     let text = state
         .session
         .messages
@@ -126,19 +36,19 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::CopyToClipboard(text))
 }
 
-fn handle_reload(_: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_reload(_: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ReloadAll)
 }
 
-fn handle_settings(_: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_settings(_: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ToggleSettingsDialog)
 }
 
-fn handle_diagnostics(_: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_diagnostics(_: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ShowDiagnostics)
 }
 
-fn handle_skills(state: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_skills(state: &mut AppState, _: &str) -> CommandResult {
     if state.skills().is_empty() {
         return CommandResult::Warning("No skills loaded.".into());
     }
@@ -148,7 +58,7 @@ fn handle_skills(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Message(lines.join("\n"))
 }
 
-fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
+pub fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
     let name = args.trim();
     if name.is_empty() {
         use crate::dialog::dsl::form;
@@ -175,7 +85,7 @@ fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
     }
 }
 
-fn handle_theme(_state: &mut AppState, args: &str) -> CommandResult {
+pub fn handle_theme(_state: &mut AppState, args: &str) -> CommandResult {
     let name = args.trim();
     if name.is_empty() {
         return CommandResult::OpenDialog(DialogType::ThemeSelector);
@@ -183,19 +93,19 @@ fn handle_theme(_state: &mut AppState, args: &str) -> CommandResult {
     CommandResult::Event(crate::Event::SwitchTheme { name: name.to_owned() })
 }
 
-fn handle_approve(_: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_approve(_: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ApproveEdit)
 }
 
-fn handle_reject(_: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_reject(_: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::RejectEdit)
 }
 
-fn handle_providers(_: &mut AppState, _args: &str) -> CommandResult {
+pub fn handle_providers(_: &mut AppState, _args: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ProvidersDialog)
 }
 
-fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {
     let mut panel = Panel::new("hotkeys", " Keyboard Shortcuts ");
 
     let mut bindings: Vec<_> = state
@@ -217,6 +127,6 @@ fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::OpenPanelStack(Box::new(PanelStack::new(panel)))
 }
 
-fn handle_prompt(_state: &mut AppState, args: &str) -> CommandResult {
+pub fn handle_prompt(_state: &mut AppState, args: &str) -> CommandResult {
     CommandResult::Event(crate::Event::RunPromptCommand { name: args.trim().to_owned() })
 }

@@ -124,14 +124,22 @@ pub fn load_commands_from_dir(dir: &Path) -> Vec<CommandDef> {
 /// Parse a command YAML file into a typed struct.
 pub(crate) fn parse_command_yaml(path: &Path) -> Option<CommandDef> {
     let yaml: DeclarativeCommandYaml = serde_yaml::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
+    let (handler_name, message) = match yaml.kind_type.as_str() {
+        "handler" | "form" | "form_with_handler" => (yaml.handler.clone(), None),
+        "msg" => (None, yaml.message.clone()),
+        _ => (None, None),
+    };
     Some(CommandDef {
         name: yaml.name,
         description: yaml.description,
         category: yaml.category,
         intent: yaml.intent,
         shortcut: yaml.shortcut,
-        has_subcommands: yaml.subcommands,
+        aliases: yaml.aliases,
+        has_subcommands: yaml.sub,
         file_path: path.to_owned(),
+        handler_name,
+        message,
     })
 }
 

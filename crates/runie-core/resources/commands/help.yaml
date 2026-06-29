@@ -1,0 +1,12 @@
+# Help commands
+name: help
+description: Show command reference
+category: Core
+aliases:
+  - h
+  - "?"
+sub: true
+triggers:
+  - /help
+type: handler
+handler: help

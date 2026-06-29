@@ -5,181 +5,69 @@ pub mod run;
 pub use run::{run_compact, run_fork, run_name};
 
 use crate::actors::{PermissionMsg, SessionMsg};
-use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
+use crate::commands::CommandResult;
 use crate::model::AppState;
 
-use crate::commands::dsl::spec::{build_cmd, CommandKind, CommandSpec};
-
-static COMMANDS: &[CommandSpec] = &[
-    CommandSpec {
-        name: "save",
-        desc: "Save current session",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: true,
-        kind: CommandKind::FormWithHandler {
-            title: "Save Session",
-            fields: &[("Name", "session-name", "name")],
-            handler: run::run_save,
-        },
-    },
-    CommandSpec {
-        name: "load",
-        desc: "Load a saved session",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: true,
-        kind: CommandKind::FormWithHandler {
-            title: "Load Session",
-            fields: &[("Name", "session-name", "name")],
-            handler: run::run_load,
-        },
-    },
-    CommandSpec {
-        name: "delete",
-        desc: "Delete a saved session",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: true,
-        kind: CommandKind::FormWithHandler {
-            title: "Delete Session",
-            fields: &[("Name", "session-name", "name")],
-            handler: run::run_delete,
-        },
-    },
-    CommandSpec {
-        name: "export",
-        desc: "Export session to JSON",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: true,
-        kind: CommandKind::FormWithHandler {
-            title: "Export Session",
-            fields: &[("Path", "session.json", "path")],
-            handler: run::run_export,
-        },
-    },
-    CommandSpec {
-        name: "import",
-        desc: "Import session from JSON",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: true,
-        kind: CommandKind::FormWithHandler {
-            title: "Import Session",
-            fields: &[("Path", "session.json", "path")],
-            handler: run::run_import,
-        },
-    },
-    CommandSpec {
-        name: "sessions",
-        desc: "List saved sessions",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: false,
-        kind: CommandKind::Handler(handle_sessions),
-    },
-    CommandSpec {
-        name: "new",
-        desc: "Start new session",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: false,
-        kind: CommandKind::Handler(handle_new),
-    },
-    CommandSpec {
-        name: "reset",
-        desc: "Clear all state",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: false,
-        kind: CommandKind::Handler(handle_reset),
-    },
-    CommandSpec {
-        name: "history",
-        desc: "Show recent history",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: false,
-        kind: CommandKind::Handler(handle_history),
-    },
-    CommandSpec {
-        name: "session",
-        desc: "Show session info",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: false,
-        kind: CommandKind::Handler(handle_session),
-    },
-    CommandSpec {
-        name: "tree",
-        desc: "Open session tree dialog",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: true,
-        kind: CommandKind::Handler(handle_tree),
-    },
-    CommandSpec {
-        name: "share",
-        desc: "Share session as GitHub gist",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: false,
-        kind: CommandKind::Handler(handle_share),
-    },
-    CommandSpec {
-        name: "resume",
-        desc: "Resume most recent session",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: false,
-        kind: CommandKind::Handler(handle_resume),
-    },
-    CommandSpec {
-        name: "compact",
-        desc: "Compact context",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: true,
-        kind: CommandKind::FormWithHandler {
-            title: "Compact Context",
-            fields: &[("Keep tokens", "2000", "keep"), ("Focus", "optional focus keyword", "focus")],
-            handler: run::run_compact,
-        },
-    },
-    CommandSpec {
-        name: "fork",
-        desc: "Fork session from a message",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: true,
-        kind: CommandKind::FormWithHandler {
-            title: "Fork Session",
-            fields: &[("Message index", "0", "index")],
-            handler: run::run_fork,
-        },
-    },
-    CommandSpec {
-        name: "name",
-        desc: "Set session display name",
-        aliases: &[],
-        category: CommandCategory::Session,
-        sub: true,
-        kind: CommandKind::FormWithHandler {
-            title: "Set Session Name",
-            fields: &[("Name", "session-name", "name")],
-            handler: run::run_name,
-        },
-    },
-];
-
-pub fn register(registry: &mut CommandRegistry) {
-    for spec in COMMANDS {
-        registry.register(build_cmd(spec));
-    }
+/// Register all session handlers with the handler registry (for YAML-based commands).
+pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
+    use crate::register_handler;
+    // Form handlers
+    register_handler!(
+        registry,
+        "save",
+        FormWithHandler("Save Session", &[("Name", "session-name", "name")], run::run_save)
+    );
+    register_handler!(
+        registry,
+        "load",
+        FormWithHandler("Load Session", &[("Name", "session-name", "name")], run::run_load)
+    );
+    register_handler!(
+        registry,
+        "delete",
+        FormWithHandler("Delete Session", &[("Name", "session-name", "name")], run::run_delete)
+    );
+    register_handler!(
+        registry,
+        "export",
+        FormWithHandler("Export Session", &[("Path", "session.json", "path")], run::run_export)
+    );
+    register_handler!(
+        registry,
+        "import",
+        FormWithHandler("Import Session", &[("Path", "session.json", "path")], run::run_import)
+    );
+    register_handler!(
+        registry,
+        "compact",
+        FormWithHandler(
+            "Compact Context",
+            &[("Keep tokens", "2000", "keep"), ("Focus", "optional focus keyword", "focus")],
+            run::run_compact
+        )
+    );
+    register_handler!(
+        registry,
+        "fork",
+        FormWithHandler("Fork Session", &[("Message index", "0", "index")], run::run_fork)
+    );
+    register_handler!(
+        registry,
+        "name",
+        FormWithHandler("Set Session Name", &[("Name", "session-name", "name")], run::run_name)
+    );
+    // Simple handlers
+    register_handler!(registry, "sessions", Handler(handle_sessions));
+    register_handler!(registry, "new", Handler(handle_new));
+    register_handler!(registry, "reset", Handler(handle_reset));
+    register_handler!(registry, "history", Handler(handle_history));
+    register_handler!(registry, "session_info", Handler(handle_session));
+    register_handler!(registry, "tree", Handler(handle_tree));
+    register_handler!(registry, "share", Handler(handle_share));
+    register_handler!(registry, "resume", Handler(handle_resume));
 }
 
-fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
     if let Some(handles) = state.actor_handles().cloned() {
         if tokio::runtime::Handle::try_current().is_ok() {
             let _ = handles.session.try_send(SessionMsg::List);
@@ -195,7 +83,7 @@ fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
     }
 }
 
-fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     state.session_mut().messages.clear();
     state.input_mut().input.clear();
     state.input_mut().cursor_pos = 0;
@@ -218,12 +106,12 @@ fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ClearQueues)
 }
 
-fn handle_reset(state: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_reset(state: &mut AppState, _: &str) -> CommandResult {
     state.reset_session();
     CommandResult::Message("State cleared.".into())
 }
 
-fn handle_history(state: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_history(state: &mut AppState, _: &str) -> CommandResult {
     if state.input().input_history.is_empty() {
         return CommandResult::Message("No history.".into());
     }
@@ -244,7 +132,7 @@ fn handle_history(state: &mut AppState, _: &str) -> CommandResult {
     ))
 }
 
-fn handle_session(state: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_session(state: &mut AppState, _: &str) -> CommandResult {
     let tokens = session_token_count(state);
     let (user, assistant, tool) = count_messages_by_role(state);
     let info = build_session_info(state, tokens, (user, assistant, tool));
@@ -314,15 +202,15 @@ fn project_trust_status(_state: &AppState) -> &'static str {
     }
 }
 
-fn handle_tree(_: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_tree(_: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ToggleSessionTree)
 }
 
-fn handle_share(_: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_share(_: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ShareSession)
 }
 
-fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {
+pub fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {
     match find_most_recent() {
         Some(name) => match crate::session::replay::load_session(&name, state) {
             Ok(_) => CommandResult::Message(format!("Loaded '{}'.", name)),

@@ -1,0 +1,9 @@
+# Reject edits command
+name: reject
+description: Cancel pending file edits
+category: System
+sub: false
+triggers:
+  - /reject
+type: handler
+handler: reject

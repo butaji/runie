@@ -1,0 +1,16 @@
+name: compact
+description: Compact context
+category: Session
+sub: true
+triggers:
+  - /compact
+type: form_with_handler
+handler: compact
+title: "Compact Context"
+fields:
+  - label: Keep tokens
+    placeholder: "2000"
+    key: keep
+  - label: Focus
+    placeholder: optional focus keyword
+    key: focus

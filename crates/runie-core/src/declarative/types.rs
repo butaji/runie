@@ -8,6 +8,35 @@ use serde::{Deserialize, Deserializer};
 
 use crate::commands::CommandCategory;
 
+/// What kind of command this is — determines how it executes.
+#[derive(Debug, Clone)]
+pub enum CommandKindDef {
+    /// Static message to display.
+    Msg { message: String },
+    /// Reference to a named handler function.
+    Handler { name: String },
+    /// Form dialog with submit event.
+    Form {
+        title: String,
+        fields: Vec<FormFieldDef>,
+        submit_event: String,
+    },
+    /// Form dialog with custom handler.
+    FormWithHandler {
+        title: String,
+        fields: Vec<FormFieldDef>,
+        handler: String,
+    },
+}
+
+/// A form field definition.
+#[derive(Debug, Clone, Deserialize)]
+pub struct FormFieldDef {
+    pub label: String,
+    pub placeholder: String,
+    pub key: String,
+}
+
 /// A command definition loaded from a YAML file.
 /// This is the typed deserialization target; convert to `CommandDef` via `From`.
 #[derive(Debug, Clone, Deserialize)]
@@ -22,9 +51,59 @@ pub struct DeclarativeCommandYaml {
     #[serde(default)]
     pub shortcut: Option<String>,
     #[serde(default)]
-    pub subcommands: bool,
+    pub aliases: Vec<String>,
+    #[serde(default)]
+    pub sub: bool,
     #[serde(default, deserialize_with = "deserialize_triggers")]
     pub triggers: Vec<Trigger>,
+    /// The command kind type: "handler", "msg", "form", "form_with_handler"
+    #[serde(alias = "type", default)]
+    pub kind_type: String,
+    /// Handler name (for handler type)
+    #[serde(default)]
+    pub handler: Option<String>,
+    /// Static message (for msg type)
+    #[serde(default)]
+    pub message: Option<String>,
+    /// Form title (for form types)
+    #[serde(default)]
+    pub title: Option<String>,
+    /// Form fields (for form types)
+    #[serde(default)]
+    pub fields: Vec<FormFieldDef>,
+    /// Form submit event (for form type)
+    #[serde(default)]
+    pub submit_event: Option<String>,
+    /// Form handler name (for form_with_handler type)
+    #[serde(default)]
+    pub form_handler: Option<String>,
+}
+
+impl DeclarativeCommandYaml {
+    /// Convert to `CommandKindDef` based on the `kind_type` field.
+    pub fn to_kind(&self) -> CommandKindDef {
+        match self.kind_type.as_str() {
+            "handler" => CommandKindDef::Handler {
+                name: self.handler.clone().unwrap_or_default(),
+            },
+            "msg" => CommandKindDef::Msg {
+                message: self.message.clone().unwrap_or_default(),
+            },
+            "form" => CommandKindDef::Form {
+                title: self.title.clone().unwrap_or_default(),
+                fields: self.fields.clone(),
+                submit_event: self.submit_event.clone().unwrap_or_default(),
+            },
+            "form_with_handler" => CommandKindDef::FormWithHandler {
+                title: self.title.clone().unwrap_or_default(),
+                fields: self.fields.clone(),
+                handler: self.form_handler.clone().unwrap_or_default(),
+            },
+            _ => CommandKindDef::Msg {
+                message: format!("Unknown command type: {}", self.kind_type),
+            },
+        }
+    }
 }
 
 /// Deserialize a category string using FromStr.
@@ -112,11 +191,14 @@ pub struct CommandDef {
     pub category: CommandCategory,
     pub intent: String,
     pub shortcut: Option<String>,
+    pub aliases: Vec<String>,
     pub has_subcommands: bool,
     pub file_path: PathBuf,
+    /// Handler name for looking up the actual handler function.
+    pub handler_name: Option<String>,
+    /// Static message (for Msg type commands).
+    pub message: Option<String>,
 }
-
-
 
 #[cfg(test)]
 mod tests {

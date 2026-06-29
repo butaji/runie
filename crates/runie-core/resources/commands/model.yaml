@@ -1,0 +1,11 @@
+# Model commands
+name: model
+description: Switch model
+aliases:
+  - m
+category: Model
+sub: true
+triggers:
+  - /model
+type: handler
+handler: model

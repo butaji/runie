@@ -1,0 +1,9 @@
+# Diagnostics command
+name: diagnostics
+description: Show resource loading diagnostics
+category: System
+sub: false
+triggers:
+  - /diagnostics
+type: handler
+handler: diagnostics

@@ -1,6 +1,7 @@
 //! Command Registry - manages command registration and dispatch
 
 use super::{CommandCategory, CommandDef, CommandResult};
+use crate::declarative::types::CommandDef as DeclarativeCommandDef;
 use crate::dialog::PanelStack;
 use crate::model::AppState;
 use std::collections::HashMap;
@@ -13,12 +14,26 @@ pub struct CommandRegistry {
 }
 
 impl CommandRegistry {
+    /// Create a new registry with embedded built-in commands.
     pub fn new() -> Self {
+        let embedded = crate::commands::dsl::embedded_commands::load_embedded_commands();
         let mut registry = Self {
             commands: HashMap::new(),
             aliases: HashMap::new(),
         };
-        super::dsl::handlers::register_all(&mut registry);
+        for def in embedded {
+            registry.register(def);
+        }
+        registry
+    }
+
+    /// Create a registry with commands loaded from YAML files (at runtime).
+    /// This merges commands from YAML files with embedded built-ins.
+    pub fn with_commands(commands: Vec<DeclarativeCommandDef>) -> Self {
+        let mut registry = Self::new();
+        for cmd in commands {
+            registry.register_from_yaml(cmd);
+        }
         registry
     }
 
@@ -27,6 +42,15 @@ impl CommandRegistry {
             self.aliases.insert(alias.clone(), def.name.clone());
         }
         self.commands.insert(def.name.clone(), def);
+    }
+
+    /// Register a command from YAML definition.
+    fn register_from_yaml(&mut self, yaml_def: DeclarativeCommandDef) {
+        let handler_registry = &super::dsl::handlers::HANDLER_REGISTRY;
+        let cmd = super::dsl::spec::build_cmd_from_yaml(&yaml_def, handler_registry);
+        if let Some(cmd) = cmd {
+            self.register(cmd);
+        }
     }
 
     pub fn get(&self, name: &str) -> Option<&CommandDef> {
@@ -53,6 +77,16 @@ impl CommandRegistry {
             result.push((def.category, vec![def]));
         }
         result
+    }
+
+    /// Number of registered commands.
+    pub fn len(&self) -> usize {
+        self.commands.len()
+    }
+
+    /// Check if registry is empty.
+    pub fn is_empty(&self) -> bool {
+        self.commands.is_empty()
     }
 }
 
