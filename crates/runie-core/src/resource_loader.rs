@@ -3,6 +3,8 @@
 //! Provides directory scanning, YAML frontmatter extraction, and name resolution
 //! for skills and other markdown-based resources.
 
+use pulldown_cmark_frontmatter::FrontmatterExtractor;
+use serde_yaml::Value;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -101,32 +103,67 @@ pub fn parse_resource_md(path: &Path) -> Option<ResourceRecord> {
 /// Extract YAML frontmatter from markdown content if present.
 /// Returns a HashMap of key-value pairs. Returns empty map if no frontmatter.
 pub fn extract_frontmatter(content: &str) -> HashMap<String, String> {
-    // Only recognize frontmatter if content starts with "---"
-    if !content.starts_with("---\n") {
-        return HashMap::new();
+    // pulldown-cmark-frontmatter expects fenced code blocks for frontmatter.
+    // Normalize raw --- delimiters to fenced blocks if needed.
+    let normalized = normalize_raw_frontmatter(content);
+    let extractor = FrontmatterExtractor::from_markdown(&normalized);
+    match extractor.extract() {
+        Some(fm) => {
+            if let Some(code_block) = fm.code_block {
+                yaml_frontmatter_to_hashmap(&code_block.source)
+            } else {
+                HashMap::new()
+            }
+        }
+        None => HashMap::new(),
     }
-
-    // Find the closing "---"
-    let after_opening = match content.strip_prefix("---\n") {
-        Some(s) => s,
-        None => return HashMap::new(),
-    };
-    let end_pos = match after_opening.find("\n---") {
-        Some(p) => p,
-        None => return HashMap::new(),
-    };
-    let fm_text = &after_opening[..end_pos];
-
-    parse_frontmatter_yaml(fm_text)
 }
 
-/// Parse simple YAML frontmatter: "key: value" lines.
-/// Supports unquoted values and single/double-quoted values. No nested structures.
-pub fn parse_frontmatter_yaml(fm_text: &str) -> HashMap<String, String> {
+/// Normalize raw `---` frontmatter delimiters to fenced code blocks.
+/// pulldown-cmark-frontmatter expects fenced code blocks.
+fn normalize_raw_frontmatter(content: &str) -> String {
+    // Check if content uses raw --- delimiters
+    if content.starts_with("---\n") {
+        let after_opening = match content.strip_prefix("---\n") {
+            Some(s) => s,
+            None => return content.to_string(),
+        };
+        let end_pos = match after_opening.find("\n---") {
+            Some(p) => p,
+            None => return content.to_string(),
+        };
+        let frontmatter = &after_opening[..end_pos];
+        let body = &after_opening[end_pos + 5..]; // skip "\n---"
+
+        // Re-wrap as a fenced code block
+        format!("```yaml\n{frontmatter}\n```\n{body}")
+    } else {
+        content.to_string()
+    }
+}
+
+/// Parse YAML frontmatter text into a HashMap.
+fn yaml_frontmatter_to_hashmap(source: &str) -> HashMap<String, String> {
+    match serde_yaml::from_str::<Value>(source) {
+        Ok(value) => yaml_value_to_hashmap(&value),
+        Err(_) => HashMap::new(),
+    }
+}
+
+/// Convert serde_yaml::Value to HashMap<String, String>.
+/// Handles simple string values and converts other types to their debug representation.
+fn yaml_value_to_hashmap(value: &Value) -> HashMap<String, String> {
     let mut result = HashMap::new();
-    for line in fm_text.lines() {
-        if let Some((key, value)) = parse_yaml_line(line) {
-            result.insert(key, value);
+    if let Some(map) = value.as_mapping() {
+        for (k, v) in map {
+            let key = k.as_str().unwrap_or_default().to_string();
+            let val = match v {
+                Value::String(s) => s.clone(),
+                Value::Bool(b) => b.to_string(),
+                Value::Number(n) => n.to_string(),
+                _ => format!("{:?}", v),
+            };
+            result.insert(key, val);
         }
     }
     result

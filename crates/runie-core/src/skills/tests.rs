@@ -246,21 +246,24 @@ fn frontmatter_parses_quoted_strings() {
 }
 
 #[test]
-fn frontmatter_multiline_block_scalar_not_supported() {
-    // Note: multiline block scalars (|) are not supported by the simple parser.
-    // This test documents that limitation; real skill files don't use them.
+fn frontmatter_multiline_block_scalar_parsed() {
+    // Note: block scalars are now supported by serde_yaml.
+    // This test verifies correct parsing of literal block scalars.
     let fm = extract_frontmatter("---\ncontext: |\n  Line one\n  Line two\n---\n");
-    // Simple parser gets the first line only ("|")
-    assert_eq!(fm.get("context"), Some(&"|".to_string()));
+    // serde_yaml parses the full block scalar content
+    let context = fm.get("context").unwrap();
+    assert!(context.contains("Line one"));
+    assert!(context.contains("Line two"));
 }
 
 #[test]
-fn frontmatter_folded_block_scalar_not_supported() {
-    // Note: folded block scalars (>) are not supported by the simple parser.
-    // This test documents that limitation; real skill files don't use them.
+fn frontmatter_folded_block_scalar_parsed() {
+    // Note: block scalars are now supported by serde_yaml.
+    // This test verifies correct parsing of folded block scalars.
     let fm = extract_frontmatter("---\ncontext: >\n  This is\n  folded into\n---\n");
-    // Simple parser gets the first line only (">")
-    assert_eq!(fm.get("context"), Some(&">".to_string()));
+    // serde_yaml parses the folded block scalar content
+    let context = fm.get("context").unwrap();
+    assert!(context.contains("folded"));
 }
 
 #[test]

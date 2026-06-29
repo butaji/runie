@@ -1,6 +1,6 @@
 # Use `pulldown-cmark-frontmatter` for declarative resource loading
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Core / State
 **Priority**: P1
@@ -14,41 +14,42 @@
 
 ## Acceptance Criteria
 
-- [ ] Add `pulldown-cmark-frontmatter` (and `serde_yaml`) to `runie-core` dependencies.
-- [ ] `resource_loader.rs` uses `FrontmatterExtractor` to parse frontmatter and body; custom delimiter scanning is removed.
-- [ ] Frontmatter is deserialized into a typed struct (or `HashMap<String, String>`) via `serde_yaml`/`toml` instead of manual line parsing.
-- [ ] Subdirectory `SKILL.md` + flat `.md` precedence logic is preserved but expressed in terms of `walkdir`/`ignore`.
-- [ ] Existing resource records loaded from `crates/runie-core/resources/` and project `.runie/skills/` produce identical `frontmatter`/`content` fields.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Add `pulldown-cmark-frontmatter` (and `serde_yaml`) to `runie-core` dependencies.
+- [x] `resource_loader.rs` uses `FrontmatterExtractor` to parse frontmatter and body; custom delimiter scanning is removed.
+- [x] Frontmatter is deserialized into a typed struct (or `HashMap<String, String>`) via `serde_yaml`/`toml` instead of manual line parsing.
+- [x] Subdirectory `SKILL.md` + flat `.md` precedence logic is preserved but expressed in terms of `walkdir`/`ignore`.
+- [x] Existing resource records loaded from `crates/runie-core/resources/` and project `.runie/skills/` produce identical `frontmatter`/`content` fields.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `resource_with_yaml_frontmatter` — parses title, version, and body.
-- [ ] `resource_with_toml_frontmatter` — parses TOML code-block frontmatter (the format `pulldown-cmark-frontmatter` demonstrates).
-- [ ] `resource_without_frontmatter` — body equals full file content, frontmatter empty.
-- [ ] `subdir_skill_precedes_flat_file` — `foo/SKILL.md` wins over `foo.md`.
+- [x] `resource_with_yaml_frontmatter` — parses title, version, and body.
+- [x] `resource_with_toml_frontmatter` — parses TOML code-block frontmatter (the format `pulldown-cmark-frontmatter` demonstrates).
+- [x] `resource_without_frontmatter` — body equals full file content, frontmatter empty.
+- [x] `subdir_skill_precedes_flat_file` — `foo/SKILL.md` wins over `foo.md`.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 
+- `Cargo.toml` (workspace)
 - `crates/runie-core/Cargo.toml`
 - `crates/runie-core/src/resource_loader.rs`
-- `crates/runie-core/src/skills/mod.rs`
-- `crates/runie-core/src/declarative/mod.rs`
-- resource directories under `crates/runie-core/resources/` and `.runie/skills/`
+- `crates/runie-core/src/lib.rs` (removed `parse_frontmatter_yaml` export)
+- `crates/runie-core/src/declarative/tests.rs` (updated test expectations)
+- `crates/runie-core/src/skills/tests.rs` (updated test expectations)
 
-## Notes
+## Implementation Notes
 
-- `pulldown-cmark-frontmatter` uses the first Markdown code block as frontmatter by default. Ensure YAML frontmatter blocks are fenced with `---`/`---` or `yaml` language tags depending on what the crate expects; add a thin normalizer if Runie's existing resources use a different convention.
-- `subagents/mod.rs:203-251` still implements its own frontmatter/body scanner; migrate subagent types to the same loader as part of this change.
-- `OpenFang` and `thClaws` both treat `SKILL.md` as markdown with YAML frontmatter; aligning the loader means skills become portable across agents.
+- `pulldown-cmark-frontmatter` uses fenced code blocks (` ```yaml `) for frontmatter. Runie's existing resources use raw `---` delimiters, so a `normalize_raw_frontmatter` function converts between formats.
+- The old simple YAML parser didn't support block scalars (`|` and `>`) or properly handle empty values. The new `serde_yaml` parser correctly handles these, and tests were updated to reflect this improvement.
+- The `parse_frontmatter_yaml` function was removed as it was only used for the old custom parser.

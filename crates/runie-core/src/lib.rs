@@ -98,7 +98,7 @@ pub use config::{Config, ConfigChange, ModelProvider, ModelsSection, TruncationS
 pub use declarative::{CommandDef, DeclarativeLoader, SkillDef, Trigger};
 pub use resource_loader::{
     derive_name_from_path, extract_frontmatter, extract_section, is_user_invocable,
-    load_resources_from_dir, parse_frontmatter_yaml, parse_resource_md, parse_yaml_line, resolve_name,
+    load_resources_from_dir, parse_resource_md, parse_yaml_line, resolve_name,
     strip_quotes,
 };
 pub use diff::{Diff, DiffHunk, DiffLine};

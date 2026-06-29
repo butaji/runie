@@ -26,6 +26,7 @@ dirs = "5.0"
 nix = { version = "0.31", features = ["signal"] }
 base64 = "0.22"
 pulldown-cmark = "0.13"
+pulldown-cmark-frontmatter = "0.4"
 fff-search = "0.9.5-nightly.ec57eb0"
 # git2 is used transitively via fff-search; no vendored libgit2 needed.
 git2 = "0.20"

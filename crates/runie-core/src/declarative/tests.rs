@@ -76,8 +76,8 @@ Content
 "#;
         let fm = extract_frontmatter(content);
         assert_eq!(fm.get("name"), Some(&"test".to_owned()));
-        // Empty values should be empty strings
-        assert_eq!(fm.get("empty"), Some(&"".to_owned()));
+        // Empty values are parsed as "Null" by serde_yaml
+        assert_eq!(fm.get("empty"), Some(&"Null".to_owned()));
     }
 
     #[test]
