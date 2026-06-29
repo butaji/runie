@@ -8,7 +8,7 @@ use std::sync::Arc;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use ractor::async_trait as ractor_async_trait;
 
-use crate::actors::config::RactorConfigHandle;
+use crate::actors::config::{RactorConfigActor, RactorConfigHandle};
 use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
 use crate::bus::EventBus;
 use crate::config::Config;
@@ -115,6 +115,39 @@ impl RactorProviderActor {
         let (handle, _join, cell) = spawn_ractor(None, actor, ()).await
             .expect("ractor spawn must succeed");
         (RactorProviderHandle::new(handle), cell)
+    }
+
+    /// Spawn a minimal provider actor for testing (no real config/factory needed).
+    #[cfg(test)]
+    pub async fn minimal_spawn_for_test(
+        bus: EventBus<Event>,
+    ) -> (RactorProviderHandle, ractor::ActorCell) {
+        use crate::provider::Provider;
+        use anyhow::Result;
+        use std::pin::Pin;
+        use std::sync::Arc;
+
+        struct EchoProvider;
+        impl Provider for EchoProvider {
+            fn generate(&self, _: Vec<crate::ChatMessage>) -> Pin<Box<dyn futures::Stream<Item = Result<crate::provider_event::ProviderEvent>> + Send + '_>> {
+                Box::pin(futures::stream::empty())
+            }
+        }
+        struct TestFactory;
+        impl ProviderFactory for TestFactory {
+            fn build(&self, _provider: &str, model: &str, _config: &Config) -> Result<BuiltProvider, ProviderError> {
+                Ok(BuiltProvider::new(Box::new(EchoProvider), "test".into(), model.into()))
+            }
+            fn validate_key(&self, _: &str, _: &str) -> Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + '_>> {
+                Box::pin(async { Ok(vec![]) })
+            }
+            fn resolve_credentials(&self, _: &str, _: &Config) -> (String, String) {
+                ("http://localhost".into(), "sk-test".into())
+            }
+        }
+
+        let (config_h, _) = RactorConfigActor::spawn(bus.clone(), None).await;
+        Self::spawn(bus, config_h, Arc::new(TestFactory)).await
     }
 
     /// Build a provider for the given registry key and model.

@@ -68,6 +68,11 @@ impl RactorIoHandle {
     pub async fn suspend_process(&self) {
         self.inner.send(IoMsg::SuspendProcess).await;
     }
+
+    /// Send a message to the actor (fire-and-forget).
+    pub async fn send_message(&self, msg: IoMsg) {
+        let _ = self.inner.send(msg).await;
+    }
 }
 
 /// Ractor-based IoActor.

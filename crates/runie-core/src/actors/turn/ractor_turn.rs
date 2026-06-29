@@ -37,6 +37,11 @@ impl RactorTurnHandle {
     pub fn try_send(&self, msg: TurnMsg) -> Result<(), ractor::MessagingErr<TurnMsg>> {
         self.inner.try_send(msg)
     }
+
+    /// Send a message to the actor (fire-and-forget).
+    pub async fn send_message(&self, msg: TurnMsg) {
+        let _ = self.inner.send(msg).await;
+    }
 }
 
 /// TurnActor state for ractor.

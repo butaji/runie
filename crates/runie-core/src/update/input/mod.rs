@@ -13,6 +13,7 @@ mod submit;
 mod support;
 mod text;
 
+use crate::actors::PermissionMsg;
 use crate::model::AppState;
 
 // Re-export only what callers actually need.
@@ -100,7 +101,10 @@ fn permission_input_event(state: &mut AppState, event: crate::Event) {
     };
     // Emit intent to PermissionActor instead of direct registry mutation
     if let Some(handles) = state.actor_handles() {
-        handles.try_resolve_permission(req.request_id.clone(), action);
+        handles.permission.send_message(PermissionMsg::ResolvePermission {
+            request_id: req.request_id.clone(),
+            action,
+        });
     }
 }
 

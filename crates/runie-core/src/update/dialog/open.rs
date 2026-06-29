@@ -235,7 +235,7 @@ pub(crate) fn refresh_file_picker_search(state: &mut AppState, query: &str) {
         limit: Some(50),
         project_path: std::env::current_dir().unwrap_or_default(),
     };
-    fff.try_search(request);
+    fff.send_message(request);
     *state.fff_debounce_mut() = request_id;
 }
 

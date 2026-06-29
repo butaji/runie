@@ -5,7 +5,7 @@
 
 use super::ranking;
 use super::{AppState, CommandUsage, ModelSource};
-use crate::actors::ActorHandles;
+use crate::actors::{ActorHandles, ConfigMsg};
 use crate::event::TransientLevel;
 
 impl AppState {
@@ -252,36 +252,27 @@ impl AppState {
 
     /// Fire-and-forget request to remove a provider via ConfigActor.
     pub fn remove_provider(&self, name: &str) {
-        let tx = self
-            .actor_handles
-            .as_ref()
-            .and_then(|h| h.config.as_ref())
-            .map(|h| h.tx().clone());
-        if let (Some(tx), Ok(_)) = (tx, tokio::runtime::Handle::try_current()) {
-            let msg = crate::actors::ConfigMsg::RemoveProvider {
-                name: name.to_owned(),
-            };
-            tokio::spawn(async move {
-                let _ = tx.send(msg).await;
-            });
+        if let Some(h) = self.actor_handles() {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let name = name.to_owned();
+                let config = h.config.clone();
+                tokio::spawn(async move {
+                    config.send_message(ConfigMsg::RemoveProvider { name });
+                });
+            }
         }
     }
 
     /// Fire-and-forget request to update a provider's saved model list.
     pub fn set_provider_models(&self, name: &str, models: Vec<String>) {
-        let tx = self
-            .actor_handles
-            .as_ref()
-            .and_then(|h| h.config.as_ref())
-            .map(|h| h.tx().clone());
-        if let (Some(tx), Ok(_)) = (tx, tokio::runtime::Handle::try_current()) {
-            let msg = crate::actors::ConfigMsg::SetProviderModels {
-                name: name.to_owned(),
-                models,
-            };
-            tokio::spawn(async move {
-                let _ = tx.send(msg).await;
-            });
+        if let Some(h) = self.actor_handles() {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let name = name.to_owned();
+                let config = h.config.clone();
+                tokio::spawn(async move {
+                    config.send_message(ConfigMsg::SetProviderModels { name, models });
+                });
+            }
         }
     }
 
@@ -392,7 +383,7 @@ impl AppState {
             if tokio::runtime::Handle::try_current().is_ok() {
                 let h = h;
                 tokio::spawn(async move {
-                    h.send_set_thinking_level(level).await;
+                    h.config.send_message(ConfigMsg::SetThinkingLevel { level });
                 });
             }
         }

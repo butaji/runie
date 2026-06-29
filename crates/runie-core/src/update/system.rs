@@ -1,5 +1,6 @@
 //! Shared state helpers used by multiple update handlers.
 
+use crate::actors::{ConfigMsg, TurnMsg};
 use crate::event::TransientLevel;
 use crate::model::{AppState, ChatMessage, Role};
 
@@ -135,7 +136,7 @@ impl AppState {
             let name_clone = name.clone();
             if tokio::runtime::Handle::try_current().is_ok() {
                 tokio::spawn(async move {
-                    h.send_set_theme(name_clone).await;
+                    h.config.send_message(ConfigMsg::SetTheme { name: name_clone });
                 });
             }
         }
@@ -162,7 +163,7 @@ impl AppState {
             if tokio::runtime::Handle::try_current().is_ok() {
                 let handles = h.clone();
                 tokio::spawn(async move {
-                    handles.send_turn_abort().await;
+                    handles.turn.send_message(TurnMsg::AbortTurn);
                 });
             }
         } else {
@@ -241,9 +242,8 @@ fn handle_toggle_vim_mode(state: &mut AppState) {
     let handles = state.actor_handles().cloned();
     if let Some(h) = handles {
         if tokio::runtime::Handle::try_current().is_ok() {
-            let h = h;
             tokio::spawn(async move {
-                h.send_set_vim_mode(new_value).await;
+                h.config.send_message(ConfigMsg::SetVimMode { enabled: new_value });
             });
         }
     }
@@ -271,7 +271,7 @@ fn handle_clear_queues(state: &mut AppState) {
         if tokio::runtime::Handle::try_current().is_ok() {
             let handles = h.clone();
             tokio::spawn(async move {
-                handles.send_turn_clear_queues().await;
+                handles.turn.send_message(TurnMsg::ClearQueues);
             });
         }
     } else {

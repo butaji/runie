@@ -6,6 +6,7 @@
 
 use super::panels::{build_key_input, build_model_selector, build_validating_panel};
 use super::state::{LoginFlowState, LoginStep};
+use crate::actors::ConfigMsg;
 use crate::login_flow::panel_ops::{
     pop_login_panel, pop_login_panel_or_close, push_login_panel, rebuild_login_dialog,
     replace_top_login_panel_with,
@@ -280,9 +281,12 @@ fn persist_provider_config(
         let key = key.to_owned();
         let selected = selected.to_vec();
         tokio::spawn(async move {
-            handles
-                .send_save_provider(&provider, &base_url, &key, selected)
-                .await;
+            handles.config.send_message(ConfigMsg::SaveProvider {
+                name: provider,
+                base_url,
+                api_key: key,
+                models: selected,
+            });
         });
         return;
     }

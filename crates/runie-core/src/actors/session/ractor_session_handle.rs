@@ -129,4 +129,9 @@ impl RactorSessionHandle {
     pub async fn export(&self, path: PathBuf, session: Session) {
         self.inner.send(SessionMsg::Export { path, session }).await;
     }
+
+    /// Send a message to the actor (fire-and-forget).
+    pub async fn send_message(&self, msg: SessionMsg) {
+        self.inner.send(msg).await;
+    }
 }

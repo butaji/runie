@@ -1,5 +1,6 @@
 //! Bash command execution for ! prefix (merged from bash.rs).
 
+use crate::actors::IoMsg;
 use std::process::{Command as SyncCommand, Stdio};
 
 /// Execute a bash command and return output string (sync fallback).
@@ -120,7 +121,7 @@ impl AppState {
                 .collect();
             let handles = handles.unwrap();
             tokio::spawn(async move {
-                handles.write_files(edits).await;
+                handles.io.send_message(IoMsg::WriteFiles { edits });
             });
             return true;
         }

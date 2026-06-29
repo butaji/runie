@@ -18,6 +18,7 @@
 //! add the method to `Runtime` with a default no-op implementation so all
 //! existing runtimes continue to compile.
 
+use crate::actors::{ConfigMsg, IoMsg, SessionMsg};
 use crate::dsl::fact::Fact;
 use crate::dsl::flow::Flow;
 use crate::event::intent::Intent;
@@ -144,31 +145,37 @@ fn route_intent(handles: &Option<crate::actors::ActorHandles>, intent: &Intent) 
     let Some(h) = handles else { return };
     match intent {
         Intent::SetTheme { .. } | Intent::ReloadConfig => {
-            if let Some(ref c) = h.config {
-                let h = c.clone();
-                tokio::spawn(async move { h.reload().await });
-            }
+            let c = h.config.clone();
+            tokio::spawn(async move { c.send_message(ConfigMsg::Reload).await });
         }
         Intent::SetTrust { path, decision } => {
-            let h = h.clone();
+            let s = h.session.clone();
             let path = path.clone();
             let decision = *decision;
-            tokio::spawn(async move { h.send_set_trust(path, decision).await });
+            tokio::spawn(async move {
+                s.send_message(SessionMsg::SetTrust { path, decision }).await;
+            });
         }
         Intent::AppendHistory { entry } => {
-            let h = h.clone();
+            let s = h.session.clone();
             let entry = entry.clone();
-            tokio::spawn(async move { h.send_append_history(entry).await });
+            tokio::spawn(async move {
+                s.send_message(SessionMsg::AppendHistory { entry }).await;
+            });
         }
         Intent::RunBash { command } => {
-            let h = h.clone();
+            let io = h.io.clone();
             let command = command.clone();
-            tokio::spawn(async move { h.run_bash(command).await });
+            tokio::spawn(async move {
+                io.send_message(IoMsg::RunBash { command }).await;
+            });
         }
         Intent::WriteFiles { edits } => {
-            let h = h.clone();
+            let io = h.io.clone();
             let edits = edits.clone();
-            tokio::spawn(async move { h.write_files(edits).await });
+            tokio::spawn(async move {
+                io.send_message(IoMsg::WriteFiles { edits }).await;
+            });
         }
         // TODO(r5): map remaining Intent variants to their owning actors
         _ => {}

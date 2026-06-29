@@ -1,5 +1,6 @@
 //! Panel stack navigation and item activation (merged from dialog_panel.rs).
 
+use crate::actors::ConfigMsg;
 use crate::commands::{DialogKind, DialogState};
 use crate::dialog::{ItemAction, Panel, PanelItem, PanelStack};
 use crate::model::AppState;
@@ -426,7 +427,7 @@ fn toggle_vim_mode(state: &mut AppState) {
         if tokio::runtime::Handle::try_current().is_ok() {
             let h = h;
             tokio::spawn(async move {
-                h.send_set_vim_mode(new_value).await;
+                h.config.send_message(ConfigMsg::SetVimMode { enabled: new_value });
             });
         }
     }
@@ -441,7 +442,7 @@ fn toggle_telemetry(state: &mut AppState) {
         if tokio::runtime::Handle::try_current().is_ok() {
             let h = h;
             tokio::spawn(async move {
-                h.send_set_telemetry(new_enabled).await;
+                h.config.send_message(ConfigMsg::SetTelemetry { enabled: new_enabled });
             });
         }
     }
@@ -467,7 +468,7 @@ fn apply_truncation_setting(state: &mut AppState, stack: &mut PanelStack, key: &
         if tokio::runtime::Handle::try_current().is_ok() {
             let h = h;
             tokio::spawn(async move {
-                h.send_set_truncation(truncation).await;
+                h.config.send_message(ConfigMsg::SetTruncation { limits: truncation });
             });
         }
     }

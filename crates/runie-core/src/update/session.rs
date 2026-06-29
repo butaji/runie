@@ -1,4 +1,5 @@
 use super::dialog::open_session_tree_dialog;
+use crate::actors::TurnMsg;
 use crate::commands::DialogKind;
 use crate::model::AppState;
 
@@ -119,7 +120,7 @@ impl AppState {
             if tokio::runtime::Handle::try_current().is_ok() {
                 let handles = h.clone();
                 tokio::spawn(async move {
-                    handles.try_send_turn_queue_follow_up(content);
+                    handles.turn.send_message(TurnMsg::QueueFollowUp { content });
                 });
             } else {
                 // Test mode: apply synchronously
@@ -156,7 +157,7 @@ impl AppState {
             if tokio::runtime::Handle::try_current().is_ok() {
                 let handles = h.clone();
                 tokio::spawn(async move {
-                    handles.send_turn_abort_queue().await;
+                    handles.turn.send_message(TurnMsg::AbortQueue);
                 });
             } else {
                 // Test mode: drain synchronously
@@ -197,7 +198,7 @@ impl AppState {
                 // Production mode: send to TurnActor
                 let handles = h.clone();
                 tokio::spawn(async move {
-                    handles.try_send_turn_deliver_queued(steering_mode, follow_up_mode);
+                    handles.turn.send_message(TurnMsg::DeliverQueued { steering_mode, follow_up_mode });
                 });
                 // Clear the AppState mirror - TurnActor will emit facts to update it
                 self.agent_state_mut().message_queue.clear();

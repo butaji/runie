@@ -7,6 +7,7 @@
 //! These handlers emit intent events. The actual state mutation logic lives
 //! in `handle_command_event` to avoid circular event loops.
 
+use crate::actors::SessionMsg;
 use crate::commands::CommandResult;
 use crate::model::AppState;
 
@@ -89,7 +90,7 @@ pub fn run_save(state: &mut AppState, name: &str) -> CommandResult {
     if can_spawn {
         let handles = handles.unwrap();
         tokio::spawn(async move {
-            handles.send_save_session(name_owned, session).await;
+            handles.session.send_message(SessionMsg::Save { name: name_owned, session });
         });
         CommandResult::Message(format!("Saving session '{}'…", name.trim()))
     } else {
@@ -106,7 +107,7 @@ pub fn run_load(state: &mut AppState, name: &str) -> CommandResult {
     if name.is_empty() {
         return CommandResult::Message("Usage: /load name".into());
     }
-    if send_to_session_store(state, |tx, n| async move { tx.load(n).await }, name) {
+    if send_session_msg(state, SessionMsg::Load { name: name.to_owned() }) {
         return CommandResult::None;
     }
     match crate::session::replay::load_session(name, state) {
@@ -124,7 +125,7 @@ pub fn run_delete(state: &mut AppState, name: &str) -> CommandResult {
     if name.is_empty() {
         return CommandResult::Message("Usage: /delete name".into());
     }
-    if send_to_session_store(state, |tx, n| async move { tx.delete(n).await }, name) {
+    if send_session_msg(state, SessionMsg::Delete { name: name.to_owned() }) {
         return CommandResult::None;
     }
     match crate::session::replay::delete_session(name) {
@@ -148,7 +149,7 @@ pub fn run_import(state: &mut AppState, path: &str) -> CommandResult {
     if can_spawn {
         let handles = handles.unwrap();
         tokio::spawn(async move {
-            handles.send_import_session(path_buf).await;
+            handles.session.send_message(SessionMsg::Import { path: path_buf });
         });
         return CommandResult::Message(format!("Importing session from '{}'…", path));
     }
@@ -179,7 +180,7 @@ pub fn run_export(state: &mut AppState, path: &str) -> CommandResult {
     if can_spawn {
         let handles = handles.unwrap();
         tokio::spawn(async move {
-            handles.send_export_session(path_buf, session).await;
+            handles.session.send_message(SessionMsg::Export { path: path_buf, session });
         });
         return CommandResult::Message(format!("Exporting session to '{}'…", path));
     }
@@ -190,22 +191,15 @@ pub fn run_export(state: &mut AppState, path: &str) -> CommandResult {
     }
 }
 
-/// Helper: send an async message to the session store if the actor is available.
-fn send_to_session_store<F, Fut>(state: &AppState, f: F, name: &str) -> bool
-where
-    F: FnOnce(crate::actors::RactorSessionHandle, String) -> Fut + Send + 'static,
-    Fut: std::future::Future<Output = ()> + Send + 'static,
-{
+/// Helper: send a session message to SessionActor if the actor is available.
+fn send_session_msg(state: &AppState, msg: SessionMsg) -> bool {
     if let Some(handles) = state.actor_handles() {
         if tokio::runtime::Handle::try_current().is_ok() {
-            if let Some(ref session) = handles.session {
-                let name = name.to_owned();
-                let session = session.clone();
-                tokio::spawn(async move {
-                    f(session, name).await;
-                });
-                return true;
-            }
+            let session = handles.session.clone();
+            tokio::spawn(async move {
+                session.send_message(msg);
+            });
+            return true;
         }
     }
     false

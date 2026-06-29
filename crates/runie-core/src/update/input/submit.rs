@@ -5,6 +5,7 @@
 //! Input state mutations go through `InputActor`; projection updates via
 //! `Event::InputChanged`.
 
+use crate::actors::{IoMsg, SessionMsg, TurnMsg};
 use crate::message::{now, ChatMessage, Role};
 use crate::model::AppState;
 
@@ -124,7 +125,7 @@ impl AppState {
                 self.agent_state_mut().next_id += 1;
                 let handles = h.clone();
                 tokio::spawn(async move {
-                    handles.try_send_turn_submit_user_message(content, id);
+                    handles.turn.send_message(TurnMsg::SubmitUserMessage { content, id });
                 });
             } else {
                 // Test mode: apply synchronously
@@ -185,7 +186,7 @@ impl AppState {
             let command = command.to_owned();
             let handles = handles.unwrap();
             tokio::spawn(async move {
-                handles.run_bash(command).await;
+                handles.io.send_message(IoMsg::RunBash { command });
             });
             return;
         }
@@ -221,7 +222,7 @@ impl AppState {
 /// synchronous tests can assert on the updated state without awaiting the actor.
 fn try_send_input(state: &mut AppState, msg: crate::actors::InputMsg) {
     if let Some(handles) = state.actor_handles() {
-        handles.try_send_input(msg);
+        handles.input.send_message(msg);
     } else {
         // Test mode: apply synchronously to AppState projection.
         msg.apply_to(state.input_mut());
@@ -231,6 +232,6 @@ fn try_send_input(state: &mut AppState, msg: crate::actors::InputMsg) {
 /// Emit `SessionMsg::AppendHistory` to SessionActor (fire-and-forget).
 fn try_append_history(state: &mut AppState, entry: String) {
     if let Some(handles) = state.actor_handles() {
-        handles.try_send_append_history(entry);
+        handles.session.send_message(SessionMsg::AppendHistory { entry });
     }
 }

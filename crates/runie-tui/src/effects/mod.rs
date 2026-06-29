@@ -122,7 +122,7 @@ impl EffectCommand {
 
     /// Dispatch the effect via IoActor (async).
     pub async fn dispatch_async(self, state: &AppState) {
-        let io_handle = state.actor_handles().as_ref().and_then(|h| h.io.clone());
+        let io_handle = state.actor_handles().as_ref().map(|h| h.io.clone());
         let Some(handle) = io_handle else { return; };
 
         match self {

@@ -1,3 +1,4 @@
+use crate::actors::TurnMsg;
 use crate::model::{AppState, InputReceiver};
 
 use super::dialog;
@@ -109,7 +110,7 @@ impl AppState {
             if tokio::runtime::Handle::try_current().is_ok() {
                 let handles = h.clone();
                 tokio::spawn(async move {
-                    handles.send_turn_abort().await;
+                    handles.turn.send_message(TurnMsg::AbortTurn);
                 });
             }
         } else {

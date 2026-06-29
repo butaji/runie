@@ -35,6 +35,7 @@ pub use input::{InputActor, RactorInputHandle, InputMsg};
 pub use io::{IoMsg, RactorIoActor, RactorIoHandle};
 pub use provider::{
     BuiltProvider, ProviderActorHandle, ProviderFactory, ProviderMsg,
+    RactorProviderActor, RactorProviderHandle,
 };
 pub use permission::{PermissionMsg, RactorPermissionActor, RactorPermissionHandle};
 pub use session::{

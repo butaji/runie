@@ -1,5 +1,6 @@
 //! Dialog toggle event handlers (merged from toggle.rs, provider_model_toggle.rs, model_selector.rs).
 
+use crate::actors::ConfigMsg;
 use crate::commands::{DialogKind, DialogState};
 use crate::model::AppState;
 
@@ -79,9 +80,8 @@ fn handle_vim_mode_toggle(state: &mut AppState) {
     let handles = state.actor_handles().cloned();
     if let Some(h) = handles {
         if tokio::runtime::Handle::try_current().is_ok() {
-            let h = h;
             tokio::spawn(async move {
-                h.send_set_vim_mode(new_value).await;
+                h.config.send_message(ConfigMsg::SetVimMode { enabled: new_value });
             });
         }
     }
@@ -246,9 +246,8 @@ fn sync_provider_models(state: &mut AppState, provider: &str, models: &[String])
         let provider = provider.to_owned();
         let models = models.to_vec();
         if tokio::runtime::Handle::try_current().is_ok() {
-            let h = h;
             tokio::spawn(async move {
-                h.send_set_provider_models(&provider, models).await;
+                h.config.send_message(ConfigMsg::SetProviderModels { name: provider, models });
             });
         }
     }

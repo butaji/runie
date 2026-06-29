@@ -1,5 +1,6 @@
 //! Model/provider switching helpers.
 
+use crate::actors::ConfigMsg;
 use crate::event::TransientLevel;
 use crate::model::{AppState, ModelSource};
 
@@ -41,7 +42,7 @@ impl AppState {
             if tokio::runtime::Handle::try_current().is_ok() {
                 let handles = handles;
                 tokio::spawn(async move {
-                    handles.send_set_default_model(&provider, &model).await;
+                    handles.config.send_message(ConfigMsg::SetDefaultModel { provider, model });
                 });
             }
         }

@@ -79,6 +79,11 @@ impl RactorPermissionHandle {
         let msg = PermissionMsg::DismissRequest;
         let _ = self.inner.try_send(msg);
     }
+
+    /// Send a message to the actor (fire-and-forget).
+    pub async fn send_message(&self, msg: PermissionMsg) {
+        let _ = self.inner.send(msg).await;
+    }
 }
 
 /// Ractor-based PermissionActor.

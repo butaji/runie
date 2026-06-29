@@ -90,29 +90,29 @@ async fn bootstrap_app(bus: EventBus<Event>) -> (AppState, ActorHandles) {
     // InputActor owns the input buffer, cursor, history, undo/redo.
     let (input_handle, _input_actor) = runie_core::actors::InputActor::spawn(bus.clone()).await;
     // TurnActor owns turn lifecycle, queues, and token tracking.
-    let (turn_handle, _, _) = RactorTurnActor::spawn(bus.clone()).await;
+    let (turn_handle, _, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
     let mut state = AppState::default();
-    // Build the ActorHandles registry — this is the single source of truth
-    // for all actor senders. It replaces the old loose config_tx/provider_tx/... fields.
+    // Build the ActorHandles registry with wrapper handle types.
     let mut handles = ActorHandles {
-        config: Some(config_handle),
-        provider: Some(provider_handle),
-        session: Some(session_handle.clone()),
-        io: Some(io_handle),
-        permission: Some(permission_handle),
-        input: Some(input_handle),
-        turn: Some(turn_handle.clone()),
-        ..Default::default()
+        config: config_handle,
+        provider: provider_handle,
+        session: session_handle,
+        io: io_handle,
+        permission: permission_handle,
+        input: input_handle,
+        turn: turn_handle,
+        fff_indexer: None,
+        turn_join: Some(std::sync::Arc::new(turn_join)),
     };
     state.set_actor_handles(handles.clone());
     app_init::bootstrap(&mut state).await;
     // Spawn FffIndexerActor with the current working directory as the project root.
     let project_root = std::env::current_dir().unwrap_or_default();
     let data_dir = dirs::data_dir().unwrap_or_else(std::env::temp_dir);
-    if let Ok((handle, _actor_cell)) =
+    if let Ok((fff_handle, _actor_cell)) =
         RactorFffIndexerActor::spawn(project_root, data_dir, bus.clone()).await
     {
-        handles.fff_indexer = Some(handle);
+        handles.fff_indexer = Some(fff_handle);
         state.set_actor_handles(handles.clone());
     }
     (state, handles)
@@ -154,7 +154,8 @@ async fn spawn_background_tasks(
     spawn_agent_tasks(handles.input_tx, kb_rx, terminal, render_rx, bus.clone(), caps);
     spawn_ui_actor(state, render_tx, handles.agent_handle, handles.persistence_handle, handles.turn_handle, kb_tx, bus.clone(), shutdown_tx, caps);
     tokio::spawn(handles.agent_actor);
-    tokio::spawn(handles.turn_actor);
+    // Note: turn_actor join handle is dropped here. The actor continues
+    // running as part of the event bus lifecycle.
 }
 
 struct ActorChannels {
@@ -164,7 +165,6 @@ struct ActorChannels {
     agent_actor: ractor::concurrency::JoinHandle<()>,
     persistence_handle: runie_core::actors::RactorSessionHandle,
     turn_handle: runie_core::actors::RactorTurnHandle,
-    turn_actor: ractor::concurrency::JoinHandle<()>,
 }
 
 async fn setup_actor_channels(
@@ -174,22 +174,22 @@ async fn setup_actor_channels(
 ) -> ActorChannels {
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
     let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
+    // Use the wrapper handles directly for spawn_ractor_agent.
     let (_agent_handle, agent_actor, _agent_cell) = spawn_ractor_agent(
         bus.clone(),
-        handles.provider.clone().expect("ProviderActor must be spawned"),
-        handles.permission.clone().expect("PermissionActor must be spawned"),
+        handles.provider.clone(),
+        handles.permission.clone(),
     ).await.expect("AgentActor must spawn");
-    // Store the mpsc channel sender as the UiActor's handle
+    // Store the mpsc channel sender as the UiActor's handle.
     let ui_agent_handle = runie_tui::ui_actor::AgentActorHandle::new(agent_tx);
-    let (turn_handle, _, turn_actor) = RactorTurnActor::spawn(bus.clone()).await;
+    // Re-use the turn and session handles from bootstrap_app.
     ActorChannels {
         input_tx,
         input_rx,
         agent_handle: ui_agent_handle,
         agent_actor,
-        persistence_handle: handles.session.clone().expect("SessionActor must be spawned"),
-        turn_handle,
-        turn_actor,
+        persistence_handle: handles.session.clone(),
+        turn_handle: handles.turn.clone(),
     }
 }
 

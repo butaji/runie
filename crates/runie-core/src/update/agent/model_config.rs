@@ -1,3 +1,4 @@
+use crate::actors::SessionMsg;
 use crate::model::AppState;
 use crate::update::dialog::dialog_toggle_event;
 use crate::Event;
@@ -78,7 +79,7 @@ fn handle_trust_project(state: &mut AppState, decision: crate::trust::TrustDecis
         let handles = handles.clone();
         let cwd_async = cwd;
         let _ = tokio::spawn(async move {
-            handles.send_set_trust(cwd_async, decision).await;
+            handles.session.send_message(SessionMsg::SetTrust { path: cwd_async, decision });
         });
     }
 }

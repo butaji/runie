@@ -201,7 +201,7 @@ impl UiActor {
                 if let Some(f) = flow {
                     let tx = effect_tx.clone();
                     let provider_handle = self.state.actor_handles().as_ref()
-                        .and_then(|h| h.provider.clone());
+                        .map(|h| h.provider.clone());
                     if let Some(handle) = provider_handle {
                         tokio::spawn(login::run(f.provider, f.key, tx, handle.clone()));
                     }
@@ -270,8 +270,10 @@ async fn handle_persistence_messages(
 mod tests {
     use super::*;
     use runie_core::actors::{
-        ActorHandles, RactorSessionActor, RactorTurnActor, RactorConfigActor,
+        ActorHandles, InputActor, RactorIoActor,
+        RactorSessionActor, RactorTurnActor, RactorConfigActor,
     };
+    use runie_core::actors::permission::RactorPermissionActor;
     use runie_core::actors::provider::{RactorProviderActor, RactorProviderHandle};
 
     async fn test_turn_handle() -> runie_core::actors::RactorTurnHandle {
@@ -297,6 +299,34 @@ mod tests {
             Arc::new(DynProviderFactory),
         ).await;
         handle
+    }
+
+    async fn test_actor_handles() -> runie_core::actors::ActorHandles {
+        use std::sync::Arc;
+        use runie_provider::DynProviderFactory;
+        let bus = EventBus::<Event>::new(10);
+        let (config, _) = RactorConfigActor::spawn(bus.clone(), None).await;
+        let (provider, _) = RactorProviderActor::spawn(
+            bus.clone(),
+            config.clone(),
+            Arc::new(DynProviderFactory),
+        ).await;
+        let (session, _) = RactorSessionActor::spawn(bus.clone()).await.unwrap();
+        let (io, _) = RactorIoActor::spawn(bus.clone()).await.unwrap();
+        let (permission, _) = RactorPermissionActor::spawn(bus.clone()).await;
+        let (input, _) = InputActor::spawn(bus.clone()).await;
+        let (turn, _, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
+        runie_core::actors::ActorHandles {
+            config,
+            provider,
+            session,
+            io,
+            fff_indexer: None,
+            input,
+            permission,
+            turn,
+            turn_join: Some(Arc::new(turn_join)),
+        }
     }
 
     #[tokio::test]
@@ -438,18 +468,16 @@ mod tests {
         let (render_tx, _render_rx) = watch::channel(Snapshot::default());
         let (agent_tx, _agent_rx) = mpsc::channel::<runie_agent::AgentMsg>(1);
         let agent_handle = AgentActorHandle::new(agent_tx);
-        let persistence_handle = test_session_handle().await;
         let (kb_tx, _kb_rx) = watch::channel(HashMap::<String, String>::new());
         let (shutdown_tx, _shutdown_rx) = oneshot::channel();
         let (effect_tx, mut effect_rx) = mpsc::channel::<Event>(16);
-        let provider_handle = test_provider_handle().await;
+
+        let handles = test_actor_handles().await;
+        let persistence_handle = handles.session.clone();
+        let turn_handle = handles.turn.clone();
 
         let mut state = AppState::default();
-        // Set up actor_handles with provider handle so effects can route through it.
-        let mut handles = ActorHandles::default();
-        handles.provider = Some(provider_handle);
         state.set_actor_handles(handles);
-        let turn_handle = test_turn_handle().await;
 
         let mut actor = UiActor::new(
             state,

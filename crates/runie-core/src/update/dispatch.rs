@@ -71,10 +71,8 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
 fn handle_agent_event(state: &mut AppState, event: Event) {
     // Send to TurnActor if available
     if let Some(ref handles) = state.actor_handles() {
-        if let Some(ref turn) = handles.turn {
-            if let Some(turn_msg) = to_turn_msg(&event) {
-                let _ = turn.try_send(turn_msg);
-            }
+        if let Some(turn_msg) = to_turn_msg(&event) {
+            handles.turn.send_message(turn_msg);
         }
     }
     // Also handle the event directly for immediate UI updates
@@ -121,7 +119,7 @@ fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
         Event::HistoryLoaded { entries } => {
             // Route through InputActor.
             if let Some(ref handles) = state.actor_handles() {
-                handles.try_send_input(crate::actors::InputMsg::HistoryLoaded {
+                handles.input.send_message(crate::actors::InputMsg::HistoryLoaded {
                     entries: entries.clone(),
                 });
             }

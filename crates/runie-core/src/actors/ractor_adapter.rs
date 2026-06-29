@@ -122,6 +122,24 @@ impl<Msg: ractor::Message> RactorHandle<Msg> {
     pub fn actor_ref(&self) -> &ActorRef<Msg> {
         &self.actor_ref
     }
+
+    /// Convert to an owned `ActorRef`.
+    pub fn into_actor_ref(self) -> ActorRef<Msg> {
+        self.actor_ref
+    }
+
+    /// Send a message to the actor (fire-and-forget).
+    /// Alias for `send()` for ergonomic compatibility.
+    pub async fn send_message(&self, msg: Msg) {
+        self.send(msg).await;
+    }
+}
+
+/// Construct a `RactorHandle` from an owned `ActorRef`.
+impl<Msg: ractor::Message> From<ActorRef<Msg>> for RactorHandle<Msg> {
+    fn from(actor_ref: ActorRef<Msg>) -> Self {
+        Self { actor_ref }
+    }
 }
 
 impl<Msg: ractor::Message> std::fmt::Debug for RactorHandle<Msg> {
