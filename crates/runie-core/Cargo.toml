@@ -52,7 +52,6 @@ git2.workspace = true
 reqwest = { workspace = true, features = ["blocking"] }
 tempfile.workspace = true
 tracing.workspace = true
-runie-macros = { path = "../runie-macros" }
 
 [target.'cfg(unix)'.dependencies]
 crossterm.workspace = true

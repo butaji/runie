@@ -60,47 +60,20 @@ pub(super) fn detect_hyperlinks(env: &HashMap<String, String>) -> bool {
 }
 
 /// Temporarily set env vars from a snapshot, run a closure, then restore.
+const ENV_KEYS: &[&str] = &[
+    "COLORTERM", "TERM", "TERM_PROGRAM", "FORCE_COLOR", "FORCE_HYPERLINK",
+    "NO_COLOR", "LC_ALL", "LC_CTYPE", "LANG", "IGNORE_IS_TERMINAL",
+];
+
 fn with_env<R>(env: &HashMap<String, String>, f: impl FnOnce() -> R) -> R {
-    let keys = [
-        "COLORTERM",
-        "TERM",
-        "TERM_PROGRAM",
-        "FORCE_COLOR",
-        "FORCE_HYPERLINK",
-        "NO_COLOR",
-        "LC_ALL",
-        "LC_CTYPE",
-        "LANG",
-        "IGNORE_IS_TERMINAL",
-    ];
-    // Save current values of all keys.
-    let saved: Vec<_> = keys
-        .iter()
-        .map(|k| (k.to_string(), std::env::var(k).ok()))
-        .collect();
-
-    // Remove all keys to ensure clean slate.
-    for k in &keys {
-        std::env::remove_var(k);
-    }
-
-    // Set only the variables from the snapshot.
-    for (k, v) in env {
-        if keys.contains(&k.as_str()) {
-            std::env::set_var(k, v);
-        }
-    }
-
+    let saved: Vec<_> = ENV_KEYS.iter().map(|k| (k.to_string(), std::env::var(k).ok())).collect();
+    ENV_KEYS.iter().for_each(|k| std::env::remove_var(k));
+    env.iter().filter(|(k, _)| ENV_KEYS.contains(&k.as_str())).for_each(|(k, v)| std::env::set_var(k, v));
     let result = f();
-
-    // Restore original values.
-    for (k, old) in saved {
-        match old {
-            Some(v) => std::env::set_var(&k, v),
-            None => std::env::remove_var(&k),
-        }
-    }
-
+    saved.into_iter().for_each(|(k, old)| match old {
+        Some(v) => std::env::set_var(&k, v),
+        None => std::env::remove_var(&k),
+    });
     result
 }
 
