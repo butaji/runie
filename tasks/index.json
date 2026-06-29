@@ -162,7 +162,7 @@
   {
     "file": "implement-or-remove-mcp-runtime-scaffolding.md",
     "title": "Implement MCP client runtime or remove config scaffolding",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "initialize-tracing-subscriber-in-binaries.md",

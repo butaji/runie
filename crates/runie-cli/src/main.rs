@@ -15,7 +15,7 @@ mod json;
 mod server;
 mod acp;
 mod inspect;
-mod mcp;
+pub mod transport;
 
 /// Runie CLI — Terminal-native coding agent harness
 #[derive(Parser, Debug)]
@@ -52,30 +52,6 @@ enum Command {
     },
     /// ACP (Agent Client Protocol) over stdio
     Acp,
-    /// Manage MCP servers
-    Mcp {
-        /// MCP subcommand
-        #[command(subcommand)]
-        subcommand: Option<McpCommand>,
-    },
-}
-
-#[derive(Parser, Debug)]
-enum McpCommand {
-    /// List configured MCP servers
-    List,
-    /// Add an MCP server
-    Add {
-        /// Server name
-        name: String,
-        /// Command to run
-        command: String,
-    },
-    /// Remove an MCP server
-    Remove {
-        /// Server name
-        name: String,
-    },
 }
 
 fn main() {
@@ -90,7 +66,6 @@ fn main() {
         Command::Json => block_on(run_json()),
         Command::Server { stdio, yolo } => block_on(run_server(stdio, yolo)),
         Command::Acp => block_on(acp::run()),
-        Command::Mcp { subcommand } => mcp::run_mcp(subcommand.as_ref()),
     };
 
     if let Err(e) = result {
