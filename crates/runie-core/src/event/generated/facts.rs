@@ -1,7 +1,7 @@
 //! `is_fact_variant()` fast-path predicate.
 //! Generated from `taxonomy.json`. DO NOT EDIT.
 
-use super::super::variants::Event;
+use super::event_enum::Event;
 
 /// Returns true if this event is a fact (not an intent or control).
 pub fn is_fact_variant(e: &Event) -> bool {

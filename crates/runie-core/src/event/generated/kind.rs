@@ -1,8 +1,8 @@
 //! `Event::kind()` impl and `EVENT_NAMES` bindable-variant table.
 //! Generated from `taxonomy.json`. DO NOT EDIT.
 
-use super::super::kind::EventKind;
-use super::super::variants::Event;
+use super::event_enum::Event;
+use crate::event::kind::EventKind;
 
 // ── Event → Kind ──────────────────────────────────────────────────────────────
 

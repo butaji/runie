@@ -6,7 +6,7 @@
 //!
 //! Durable events for JSONL persistence: [`DurableCoreEvent`](durable::DurableCoreEvent)
 
-pub use variants::Event;
+pub use generated::event_enum::Event;
 
 pub use durable::DurableCoreEvent;
 pub use level::TransientLevel;
@@ -21,7 +21,6 @@ pub mod kind;
 mod level;
 pub mod name;
 pub mod to_durable;
-mod variants;
 
 pub use generated::EventCategory;
 pub use generated::EVENT_NAMES;

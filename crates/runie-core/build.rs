@@ -6,8 +6,8 @@ use std::process;
 // ── Event taxonomy generation ─────────────────────────────────────────────────
 
 /// Generate event taxonomy Rust source from `taxonomy.json`.
-/// Produces: generated/kind.rs, generated/category.rs, generated/facts.rs,
-/// generated/intent_impl.rs.
+/// Produces: generated/event_enum.rs, generated/kind.rs, generated/category.rs,
+/// generated/facts.rs, generated/intent_impl.rs.
 fn generate_event_taxonomy(manifest_dir: &Path) -> Result<(), String> {
     let taxonomy_path = manifest_dir.join("src/event/taxonomy.json");
     let json = fs::read_to_string(&taxonomy_path)
@@ -18,12 +18,184 @@ fn generate_event_taxonomy(manifest_dir: &Path) -> Result<(), String> {
     let out_dir = manifest_dir.join("src/event/generated");
     fs::create_dir_all(&out_dir).map_err(|e| format!("failed to create generated dir: {}", e))?;
 
+    generate_event_enum_rs(&taxonomy, &out_dir)?;
     generate_kind_rs(&taxonomy, &out_dir)?;
     generate_category_rs(&taxonomy, &out_dir)?;
     generate_facts_rs(&taxonomy, &out_dir)?;
     generate_intent_impl_rs(&taxonomy, &out_dir)?;
 
     Ok(())
+}
+
+/// Generate the Event enum from taxonomy.json.
+fn generate_event_enum_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<(), String> {
+    let default_fields = serde_json::Map::new();
+    let fields = taxonomy["fields"].as_object().unwrap_or(&default_fields);
+    let categories = taxonomy["categories"].as_object().unwrap();
+
+    let mut all_variants: Vec<String> = Vec::new();
+    for cat_obj in categories.values() {
+        for key in ["intent_variants", "fact_variants", "variants"] {
+            if let Some(arr) = cat_obj.get(key).and_then(|v| v.as_array()) {
+                for v in arr {
+                    if let Some(s) = v.as_str() {
+                        if !all_variants.contains(&s.to_string()) {
+                            all_variants.push(s.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let mut out = String::new();
+    out.push_str("//! Event enum — generated from `taxonomy.json`. DO NOT EDIT.\n\n");
+    out.push_str("use serde::{Deserialize, Serialize};\n");
+    out.push_str("use strum::{Display, IntoStaticStr, VariantNames};\n\n");
+    out.push_str("use crate::event::TransientLevel;\n");
+    out.push_str("use crate::model::ThinkingLevel;\n");
+    out.push_str("use crate::settings::SettingsCategory;\n\n");
+    out.push_str("#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Display, IntoStaticStr, VariantNames)]\n");
+    out.push_str("#[serde(tag = \"type\", content = \"data\")]\n");
+    out.push_str("#[strum(serialize_all = \"PascalCase\")]\n");
+    out.push_str("pub enum Event {\n");
+
+    for variant in &all_variants {
+        let field = fields.get(variant);
+        if let Some(field_str) = field {
+            let field_text = field_str.as_str().unwrap_or("");
+            if field_text.is_empty() || field_text == "null" {
+                out.push_str(&format!("    {},\n", variant));
+            } else {
+                // Check for serde attributes (e.g., "{ ... }|serde_skip")
+                let (field_body, serde_attrs_raw) = field_text.split_once('|').unwrap_or((field_text, ""));
+                let serde_attrs: Vec<&str> = serde_attrs_raw.split(',').filter(|s| !s.is_empty()).collect();
+
+                // Output serde attributes if any
+                for attr in &serde_attrs {
+                    out.push_str(&format!("    #[serde({})]\n", attr));
+                }
+
+                if field_body.starts_with('{') {
+                    // Struct-like fields — parse name: type pairs while tracking angle brackets
+                    let inner = field_body.trim_start_matches('{').trim_end_matches('}');
+                    out.push_str(&format!("    {} {{\n", variant));
+                    for (name, typ) in parse_struct_fields(inner) {
+                        let rust_type = convert_field_type(&typ);
+                        out.push_str(&format!("        {}: {rh_type},\n", name, rh_type = rust_type));
+                    }
+                    out.push_str("    },\n");
+                } else {
+                    // Tuple-like fields (single value)
+                    let rust_type = convert_field_type(field_body);
+                    out.push_str(&format!("    {}({}),\n", variant, rust_type));
+                }
+            }
+        } else {
+            out.push_str(&format!("    {},\n", variant));
+        }
+    }
+
+    out.push_str("}\n");
+
+    let path = out_dir.join("event_enum.rs");
+    fs::write(&path, &out).map_err(|e| format!("failed to write event_enum.rs: {}", e))?;
+    eprintln!("  generated {}", path.display());
+    Ok(())
+}
+
+/// Parse struct field pairs from a string like "name: Type, age: usize".
+/// Handles nested angle brackets correctly.
+fn parse_struct_fields(input: &str) -> Vec<(String, String)> {
+    let mut results = Vec::new();
+    let mut current_name = String::new();
+    let mut current_type = String::new();
+    let mut depth = 0;
+    let mut in_name = true;
+
+    for ch in input.chars() {
+        match ch {
+            ':' if depth == 0 && in_name => {
+                in_name = false;
+            }
+            ',' if depth == 0 => {
+                // End of field
+                let name = current_name.trim().to_string();
+                let typ = current_type.trim().to_string();
+                if !name.is_empty() {
+                    results.push((name, typ));
+                }
+                current_name.clear();
+                current_type.clear();
+                in_name = true;
+            }
+            '<' => {
+                depth += 1;
+                if in_name {
+                    current_name.push(ch);
+                } else {
+                    current_type.push(ch);
+                }
+            }
+            '>' => {
+                depth -= 1;
+                if in_name {
+                    current_name.push(ch);
+                } else {
+                    current_type.push(ch);
+                }
+            }
+            _ => {
+                if in_name {
+                    current_name.push(ch);
+                } else {
+                    current_type.push(ch);
+                }
+            }
+        }
+    }
+
+    // Don't forget the last field
+    let name = current_name.trim().to_string();
+    let typ = current_type.trim().to_string();
+    if !name.is_empty() {
+        results.push((name, typ));
+    }
+
+    results
+}
+
+/// Convert JSON field type annotations to Rust types.
+fn convert_field_type(typ: &str) -> String {
+    match typ.trim() {
+        "String" | "string" => "String".to_string(),
+        "bool" | "boolean" => "bool".to_string(),
+        "u16" => "u16".to_string(),
+        "usize" => "usize".to_string(),
+        "f64" => "f64".to_string(),
+        "char" => "char".to_string(),
+        "crate::actors::turn::NextIdResponse" => "crate::actors::turn::NextIdResponse".to_string(),
+        "crate::permissions::PermissionAction" => "crate::permissions::PermissionAction".to_string(),
+        "crate::message::ChatMessage" => "crate::message::ChatMessage".to_string(),
+        "crate::tool::ConstraintViolation" => "crate::tool::ConstraintViolation".to_string(),
+        "crate::config::Config" => "crate::config::Config".to_string(),
+        "crate::model::InputState" => "crate::model::InputState".to_string(),
+        "crate::model::ViewState" => "crate::model::ViewState".to_string(),
+        "crate::model::CompletionState" => "crate::model::CompletionState".to_string(),
+        "crate::model::FffFileEntry" => "crate::model::FffFileEntry".to_string(),
+        "crate::model::SessionState" => "crate::model::SessionState".to_string(),
+        "crate::session::Session" => "crate::session::Session".to_string(),
+        "crate::session::index::SessionMetadata" => "crate::session::index::SessionMetadata".to_string(),
+        "crate::event::DurableCoreEvent" => "crate::event::DurableCoreEvent".to_string(),
+        "crate::trust::TrustDecision" => "crate::trust::TrustDecision".to_string(),
+        "crate::snapshot::GitInfo" => "crate::snapshot::GitInfo".to_string(),
+        "serde_json::Value" => "serde_json::Value".to_string(),
+        "ThinkingLevel" => "ThinkingLevel".to_string(),
+        "SettingsCategory" => "SettingsCategory".to_string(),
+        "TransientLevel" => "TransientLevel".to_string(),
+        "std::path::PathBuf" => "std::path::PathBuf".to_string(),
+        other => other.to_string(),
+    }
 }
 
 fn generate_kind_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<(), String> {
@@ -74,8 +246,8 @@ fn generate_kind_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<(), 
     let mut out = String::new();
     out.push_str("//! `Event::kind()` impl and `EVENT_NAMES` bindable-variant table.\n");
     out.push_str("//! Generated from `taxonomy.json`. DO NOT EDIT.\n\n");
-    out.push_str("use super::super::kind::EventKind;\n");
-    out.push_str("use super::super::variants::Event;\n\n");
+    out.push_str("use super::event_enum::Event;\n");
+    out.push_str("use crate::event::kind::EventKind;\n\n");
     out.push_str(
         "// ── Event → Kind ──────────────────────────────────────────────────────────────\n\n",
     );
@@ -139,7 +311,7 @@ fn generate_category_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<
     let mut out = String::new();
     out.push_str("//! `EventCategory` enum and `Event::category()` mapping.\n");
     out.push_str("//! Generated from `taxonomy.json`. DO NOT EDIT.\n\n");
-    out.push_str("use super::super::variants::Event;\n\n");
+    out.push_str("use super::event_enum::Event;\n\n");
     out.push_str(
         "// ── EventCategory enum ─────────────────────────────────────────────────────────\n\n",
     );
@@ -208,7 +380,7 @@ fn generate_facts_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Result<(),
     let mut out = String::new();
     out.push_str("//! `is_fact_variant()` fast-path predicate.\n");
     out.push_str("//! Generated from `taxonomy.json`. DO NOT EDIT.\n\n");
-    out.push_str("use super::super::variants::Event;\n\n");
+    out.push_str("use super::event_enum::Event;\n\n");
     out.push_str("/// Returns true if this event is a fact (not an intent or control).\n");
     out.push_str("pub fn is_fact_variant(e: &Event) -> bool {\n");
     out.push_str("    matches!(\n        e,\n");
@@ -286,8 +458,8 @@ fn generate_intent_impl_rs(taxonomy: &serde_json::Value, out_dir: &Path) -> Resu
     let mut out = String::new();
     out.push_str("//! `Event::into_intent()` implementation.\n");
     out.push_str("//! Generated from `taxonomy.json`. DO NOT EDIT.\n\n");
-    out.push_str("use super::super::intent::Intent;\n");
-    out.push_str("use super::super::variants::Event;\n");
+    out.push_str("use crate::event::intent::Intent;\n");
+    out.push_str("use super::event_enum::Event;\n");
     out.push_str("use super::facts::is_fact_variant;\n\n");
     out.push_str("impl Event {\n");
     out.push_str("    /// Convert this event to a typed `Intent`, if it is an intent.\n");

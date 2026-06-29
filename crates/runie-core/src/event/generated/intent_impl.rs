@@ -1,8 +1,8 @@
 //! `Event::into_intent()` implementation.
 //! Generated from `taxonomy.json`. DO NOT EDIT.
 
-use super::super::intent::Intent;
-use super::super::variants::Event;
+use crate::event::intent::Intent;
+use super::event_enum::Event;
 use super::facts::is_fact_variant;
 
 impl Event {

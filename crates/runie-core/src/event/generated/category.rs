@@ -1,7 +1,7 @@
 //! `EventCategory` enum and `Event::category()` mapping.
 //! Generated from `taxonomy.json`. DO NOT EDIT.
 
-use super::super::variants::Event;
+use super::event_enum::Event;
 
 // ── EventCategory enum ─────────────────────────────────────────────────────────
 
