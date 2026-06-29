@@ -6,7 +6,7 @@ use parking_lot::Mutex;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use ractor::async_trait;
 
-use crate::actors::ractor_adapter::{spawn_ractor, EventBusBridge};
+use crate::actors::ractor_adapter::spawn_ractor;
 use crate::bus::EventBus;
 use crate::edit_preview::EditPreview;
 use crate::message::{now, Part};
@@ -24,7 +24,7 @@ use super::ractor_session_handle::RactorSessionHandle;
 
 /// Ractor-based SessionActor.
 pub struct RactorSessionActor {
-    bus_bridge: EventBusBridge<Event>,
+    bus: EventBus<Event>,
     trust: Mutex<TrustManager>,
     store: SessionStore,
     session_state: Mutex<SessionState>,
@@ -36,7 +36,7 @@ impl Default for RactorSessionActor {
         let store = SessionStore::default_store()
             .unwrap_or_else(|| SessionStore::new(std::env::temp_dir().join("runie_sessions")));
         Self {
-            bus_bridge: EventBusBridge::new(EventBus::new(16)),
+            bus: EventBus::new(16),
             trust: Mutex::new(TrustManager::default()),
             store,
             session_state: Mutex::new(SessionState::default()),
@@ -50,7 +50,7 @@ impl RactorSessionActor {
         let store = SessionStore::default_store()
             .unwrap_or_else(|| SessionStore::new(std::env::temp_dir().join("runie_sessions")));
         Self {
-            bus_bridge: EventBusBridge::new(bus),
+            bus, 
             trust: Mutex::new(TrustManager::default()),
             store,
             session_state: Mutex::new(SessionState::default()),
@@ -66,7 +66,7 @@ impl RactorSessionActor {
     }
 
     fn emit(&self, event: Event) {
-        self.bus_bridge.publish(event);
+        self.bus.publish(event);
     }
 
     fn emit_changed(&self) {

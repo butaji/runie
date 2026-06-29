@@ -9,7 +9,8 @@ use ractor::async_trait;
 
 use runie_core::actors::permission::RactorPermissionHandle;
 use runie_core::actors::provider::RactorProviderHandle;
-use runie_core::actors::ractor_adapter::{EventBusBridge, RactorHandle, spawn_ractor};
+use runie_core::actors::ractor_adapter::{RactorHandle, spawn_ractor};
+use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::permissions::{
     DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
@@ -35,7 +36,7 @@ pub enum AgentMsg {
 struct RactorAgentActor {
     provider_handle: Arc<Mutex<Option<RactorProviderHandle>>>,
     permission_handle: Arc<Mutex<Option<RactorPermissionHandle>>>,
-    bus_bridge: EventBusBridge<Event>,
+    bus: EventBus<Event>,
 }
 
 /// Spawn arguments for RactorAgentActor.
@@ -126,7 +127,7 @@ impl RactorAgentActor {
     }
 
     fn create_emit_closure(&self) -> Arc<Mutex<impl Fn(Event) + Send + Sync + 'static>> {
-        let bus = self.bus_bridge.bus().clone();
+        let bus = self.bus.clone();
         Arc::new(Mutex::new(move |evt: Event| {
             bus.publish(evt);
         }))
@@ -145,11 +146,11 @@ impl RactorAgentActor {
     }
 
     fn emit_error_and_done(&self, id: &str, message: String) {
-        self.bus_bridge.publish(runie_core::Event::Error {
+        self.bus.publish(runie_core::Event::Error {
             id: id.to_owned(),
             message,
         });
-        self.bus_bridge
+        self.bus
             .publish(runie_core::Event::Done { id: id.to_owned() });
     }
 }
@@ -166,7 +167,7 @@ pub async fn spawn_ractor_agent(
     let actor = RactorAgentActor {
         provider_handle: Arc::new(Mutex::new(None)),
         permission_handle: Arc::new(Mutex::new(None)),
-        bus_bridge: EventBusBridge::new(bus.clone()),
+        bus: bus.clone(),
     };
     let args = RactorAgentArgs {
         provider_handle,

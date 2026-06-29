@@ -1,6 +1,6 @@
 # Delete `EventBusBridge` wrapper
 
-**Status**: todo
+**Status**: done
 **Milestone**: R6
 **Category**: Architecture / Actors
 **Priority**: P2

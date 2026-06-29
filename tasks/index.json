@@ -57,7 +57,7 @@
   {
     "file": "delete-dead-actor-handle-wrappers.md",
     "title": "Delete dead actor handle wrappers",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "delete-dead-actor-modules-and-custom-trait.md",
@@ -72,12 +72,12 @@
   {
     "file": "delete-eventbusbridge-wrapper.md",
     "title": "Delete `EventBusBridge` wrapper",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-leftover-telemetry-stub.md",
     "title": "Delete leftover `telemetry.rs` stub",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "delete-or-fix-dead-mcp-feature-flag.md",
@@ -92,7 +92,7 @@
   {
     "file": "delete-unused-glyph-constants.md",
     "title": "Delete unused glyph constants from `runie-tui`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
@@ -217,7 +217,7 @@
   {
     "file": "remove-redundant-check-field-access-script.md",
     "title": "Remove redundant `check-field-access.sh`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "remove-sleep-from-automatic-tests.md",

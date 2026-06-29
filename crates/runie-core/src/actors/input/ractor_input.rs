@@ -5,14 +5,14 @@
 //!
 //! ## Migration Pattern
 //!
-//! 1. Actor struct holds state + `EventBusBridge`
+//! 1. Actor struct holds state + `EventBus`
 //! 2. `handle` method processes messages and publishes facts
 //! 3. `spawn_ractor_input()` replaces `InputActor::spawn()`
 
 use ractor::{Actor, ActorRef, ActorProcessingErr};
 use ractor::async_trait;
 
-use crate::actors::ractor_adapter::{EventBusBridge, RactorHandle, spawn_ractor};
+use crate::actors::ractor_adapter::{RactorHandle, spawn_ractor};
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::InputState;
@@ -26,7 +26,7 @@ struct RactorInputActor {
     /// The authoritative input state.
     state: InputState,
     /// Bridge to the event bus for publishing facts.
-    bus_bridge: EventBusBridge<Event>,
+    bus: EventBus<Event>,
 }
 
 #[async_trait::async_trait]
@@ -65,7 +65,7 @@ pub async fn spawn_ractor_input(
 ) -> Result<(RactorInputHandle, ractor::ActorCell), ractor::SpawnErr> {
     let actor = RactorInputActor {
         state: InputState::default(),
-        bus_bridge: EventBusBridge::new(bus.clone()),
+        bus: bus.clone(),
     };
     let (handle, _join, cell) = spawn_ractor(None, actor, bus).await?;
     Ok((handle, cell))

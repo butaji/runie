@@ -12,7 +12,7 @@ use fff_search::{
 };
 use std::time::Duration;
 
-use crate::actors::ractor_adapter::{spawn_ractor, EventBusBridge, RactorHandle};
+use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::FffFileEntry;
@@ -50,7 +50,7 @@ pub struct RactorFffIndexerActor {
     root: PathBuf,
     frecency_path: PathBuf,
     query_path: PathBuf,
-    bus_bridge: EventBusBridge<Event>,
+    bus: EventBus<Event>,
     shared_picker: fff_search::SharedFilePicker,
     shared_frecency: fff_search::SharedFrecency,
     shared_query_tracker: fff_search::SharedQueryTracker,
@@ -65,7 +65,7 @@ impl RactorFffIndexerActor {
             root,
             frecency_path: fff_dir.join("frecency"),
             query_path: fff_dir.join("queries"),
-            bus_bridge: EventBusBridge::new(bus),
+            bus, 
             shared_picker: fff_search::SharedFilePicker::default(),
             shared_frecency: fff_search::SharedFrecency::default(),
             shared_query_tracker: fff_search::SharedQueryTracker::default(),
@@ -252,7 +252,7 @@ impl RactorFffIndexerActor {
     }
 
     fn emit(&self, event: Event) {
-        self.bus_bridge.publish(event);
+        self.bus.publish(event);
     }
 }
 

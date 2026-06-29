@@ -67,6 +67,7 @@ use ractor::concurrency::JoinHandle;
 use ractor::SpawnErr as RactorSpawnErr;
 use tokio::sync::oneshot;
 
+#[cfg(test)]
 use crate::bus::EventBus;
 
 // Re-export ractor types for convenience
@@ -149,42 +150,8 @@ pub type RactorFuture = Pin<Box<dyn Future<Output = ()> + Send>>;
 
 // ── Event bus integration ──────────────────────────────────────────────────────
 
-/// Bridge between ractor and the EventBus.
-///
-/// This allows ractor actors to publish events to the shared EventBus.
-pub struct EventBusBridge<E: Clone + Send + 'static> {
-    bus: EventBus<E>,
-}
-
-impl<E: Clone + Send + 'static> EventBusBridge<E> {
-    pub fn new(bus: EventBus<E>) -> Self {
-        Self { bus }
-    }
-
-    /// Get a clone of the underlying event bus.
-    pub fn bus(&self) -> &EventBus<E> {
-        &self.bus
-    }
-
-    /// Publish an event to the bus.
-    pub fn publish(&self, event: E) {
-        self.bus.publish(event);
-    }
-}
-
-impl<E: Clone + Send + 'static> Clone for EventBusBridge<E> {
-    fn clone(&self) -> Self {
-        Self {
-            bus: self.bus.clone(),
-        }
-    }
-}
-
-impl<E: Clone + Send + 'static> std::fmt::Debug for EventBusBridge<E> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("EventBusBridge").finish()
-    }
-}
+// Note: EventBus<E> is already Clone, so actors can hold it directly.
+// No wrapper is needed.
 
 // ── Reply wrapper (for RPC) ───────────────────────────────────────────────────
 
@@ -280,14 +247,13 @@ mod tests {
         ));
     }
 
-    /// Test that EventBusBridge can publish events.
+    /// Test that actors can publish events directly via EventBus.
     #[tokio::test]
-    async fn event_bus_bridge_publishes() {
+    async fn event_bus_actors_publish_directly() {
         let bus = EventBus::<String>::new(16);
-        let bridge = EventBusBridge::new(bus.clone());
 
         let mut sub = bus.subscribe();
-        bridge.publish("test".to_string());
+        bus.publish("test".to_string());
 
         let result = sub.recv().await.unwrap();
         assert_eq!(result, "test");

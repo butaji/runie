@@ -6,7 +6,7 @@
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use parking_lot::Mutex;
 
-use crate::actors::ractor_adapter::{spawn_ractor, EventBusBridge, RactorHandle};
+use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::PermissionRequestState;
@@ -91,7 +91,7 @@ pub struct RactorPermissionActor {
     /// Current permission request state.
     current_request: Mutex<Option<PermissionRequestState>>,
     /// Bridge to the event bus for publishing facts.
-    bus_bridge: EventBusBridge<Event>,
+    bus: EventBus<Event>,
 }
 
 impl Default for RactorPermissionActor {
@@ -99,7 +99,7 @@ impl Default for RactorPermissionActor {
         Self {
             registry: Mutex::new(ApprovalRegistry::new()),
             current_request: Mutex::new(None),
-            bus_bridge: EventBusBridge::new(EventBus::new(16)),
+            bus: EventBus::new(16),
         }
     }
 }
@@ -137,7 +137,7 @@ impl Actor for RactorPermissionActor {
                     tool: tool.clone(),
                     input: input.clone(),
                 });
-                self.bus_bridge.publish(Event::PermissionRequest {
+                self.bus.publish(Event::PermissionRequest {
                     request_id: request_id.clone(),
                     tool: tool.clone(),
                     input,
@@ -147,7 +147,7 @@ impl Actor for RactorPermissionActor {
             PermissionMsg::ResolvePermission { request_id, action } => {
                 self.registry.lock().resolve(&request_id, action);
                 self.clear_request_if_matches(&request_id);
-                self.bus_bridge.publish(Event::PermissionResponse { request_id, action });
+                self.bus.publish(Event::PermissionResponse { request_id, action });
             }
             PermissionMsg::CancelPermission { request_id } => {
                 self.registry
@@ -157,7 +157,7 @@ impl Actor for RactorPermissionActor {
             }
             PermissionMsg::DismissRequest => {
                 *self.current_request.lock() = None;
-                self.bus_bridge.publish(Event::PermissionRequestDismissed);
+                self.bus.publish(Event::PermissionRequestDismissed);
             }
         }
         Ok(())
@@ -170,7 +170,7 @@ impl RactorPermissionActor {
         let actor = Self {
             registry: Mutex::new(ApprovalRegistry::new()),
             current_request: Mutex::new(None),
-            bus_bridge: EventBusBridge::new(bus.clone()),
+            bus: bus.clone(),
         };
         let (handle, _join, cell) = spawn_ractor(None, actor, bus).await.unwrap();
         (RactorPermissionHandle::new(handle), cell)

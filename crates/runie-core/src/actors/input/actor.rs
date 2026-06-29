@@ -6,7 +6,7 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 use ractor::async_trait;
 use parking_lot::Mutex;
 
-use crate::actors::ractor_adapter::{EventBusBridge, RactorHandle, spawn_ractor};
+use crate::actors::ractor_adapter::{RactorHandle, spawn_ractor};
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::InputState;
@@ -25,7 +25,7 @@ pub struct InputActor {
     /// The authoritative input state (protected by mutex for interior mutability).
     state: Mutex<InputState>,
     /// Bridge to the event bus for publishing facts.
-    bus_bridge: EventBusBridge<Event>,
+    bus: EventBus<Event>,
 }
 
 #[async_trait]
@@ -56,7 +56,7 @@ impl Actor for InputActor {
             (state.clone(), should_emit)
         };
         if emit {
-            self.bus_bridge.publish(Event::InputChanged {
+            self.bus.publish(Event::InputChanged {
                 state: Box::new(new_state),
             });
         }
@@ -69,7 +69,7 @@ impl InputActor {
     pub async fn spawn(bus: EventBus<Event>) -> (RactorInputHandle, ractor::ActorCell) {
         let actor = Self {
             state: Mutex::new(InputState::default()),
-            bus_bridge: EventBusBridge::new(bus.clone()),
+            bus: bus.clone(),
         };
         let (handle, _join, cell) = spawn_ractor(None, actor, bus).await.unwrap();
         (handle, cell)

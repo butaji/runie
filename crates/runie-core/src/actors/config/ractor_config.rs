@@ -9,7 +9,7 @@ use parking_lot::Mutex;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use tokio::sync::mpsc;
 
-use crate::actors::ractor_adapter::{spawn_ractor, EventBusBridge};
+use crate::actors::ractor_adapter::spawn_ractor;
 use crate::actors::ractor_adapter::Reply;
 use crate::bus::EventBus;
 use crate::config::{Config, TruncationSection};
@@ -120,7 +120,7 @@ impl RactorConfigHandle {
 pub struct RactorConfigActor {
     config: std::sync::Arc<Mutex<Config>>,
     path: PathBuf,
-    bus_bridge: EventBusBridge<Event>,
+    bus: EventBus<Event>,
     watcher_tx: Mutex<Option<mpsc::Sender<ConfigMsg>>>,
 }
 
@@ -129,7 +129,7 @@ impl RactorConfigActor {
         Self {
             config: std::sync::Arc::new(Mutex::new(Config::default())),
             path,
-            bus_bridge: EventBusBridge::new(bus),
+            bus, 
             watcher_tx: Mutex::new(None),
         }
     }
@@ -169,7 +169,7 @@ impl RactorConfigActor {
             let mut guard = self.config.lock();
             *guard = config.clone();
         }
-        self.bus_bridge.publish(Event::ConfigLoaded { config: Box::new(config) });
+        self.bus.publish(Event::ConfigLoaded { config: Box::new(config) });
     }
 
     async fn reload_and_emit(&self) {
@@ -184,7 +184,7 @@ impl RactorConfigActor {
             }
         };
         if changed {
-            self.bus_bridge.publish(Event::ConfigLoaded { config: Box::new(new_config) });
+            self.bus.publish(Event::ConfigLoaded { config: Box::new(new_config) });
         }
     }
 
@@ -261,14 +261,14 @@ impl RactorConfigActor {
             Ok(Ok(())) => self.load_and_emit().await,
             Ok(Err(e)) => {
                 tracing::error!("config write failed: {e:?}");
-                self.bus_bridge.publish(Event::Error {
+                self.bus.publish(Event::Error {
                     id: "config".to_owned(),
                     message: format!("Config write failed: {e}"),
                 });
             }
             Err(thread_id) => {
                 tracing::error!("config write task panicked in thread: {:?}", thread_id);
-                self.bus_bridge.publish(Event::Error {
+                self.bus.publish(Event::Error {
                     id: "config".to_owned(),
                     message: "Config write task panicked".to_owned(),
                 });
@@ -347,13 +347,13 @@ impl RactorConfigActor {
 
     fn emit_current_config(&self) {
         let config_to_emit = self.config.lock().clone();
-        self.bus_bridge.publish(Event::ConfigLoaded { config: Box::new(config_to_emit) });
+        self.bus.publish(Event::ConfigLoaded { config: Box::new(config_to_emit) });
     }
 
     async fn spawn_watcher_task(&self, mut rx: mpsc::Receiver<ConfigMsg>) {
         let config_clone = self.config.clone();
         let path_clone = self.path.clone();
-        let bus_clone = self.bus_bridge.clone();
+        let bus_clone = self.bus.clone();
         tokio::spawn(async move {
             while let Some(msg) = rx.recv().await {
                 if matches!(msg, ConfigMsg::Reload) {
@@ -366,7 +366,7 @@ impl RactorConfigActor {
     async fn handle_watcher_reload(
         config: &std::sync::Arc<Mutex<Config>>,
         path: &PathBuf,
-        bus: &EventBusBridge<Event>,
+        bus: &EventBus<Event>,
     ) {
         let new_config = Config::load_async(Some(path.clone())).await;
         let changed = {

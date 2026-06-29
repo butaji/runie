@@ -9,7 +9,7 @@ use std::process::Command;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use ractor::async_trait;
 
-use crate::actors::ractor_adapter::{spawn_ractor, EventBusBridge, RactorHandle};
+use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
 use crate::bus::EventBus;
 use crate::ChatMessage;
 use crate::event::Event;
@@ -72,13 +72,13 @@ impl RactorIoHandle {
 
 /// Ractor-based IoActor.
 pub struct RactorIoActor {
-    bus_bridge: EventBusBridge<Event>,
+    bus: EventBus<Event>,
 }
 
 impl RactorIoActor {
     fn new(bus: EventBus<Event>) -> Self {
         Self {
-            bus_bridge: EventBusBridge::new(bus),
+            bus, 
         }
     }
 
@@ -188,7 +188,7 @@ impl RactorIoActor {
 
     #[cfg(unix)]
     async fn suspend_process(&self) {
-        let bus = self.bus_bridge.clone();
+        let bus = self.bus.clone();
         tokio::task::spawn_blocking(move || {
             let _ = crossterm::execute!(
                 std::io::stdout(),
@@ -212,7 +212,7 @@ impl RactorIoActor {
     async fn suspend_process(&self) {}
 
     fn emit(&self, event: Event) {
-        self.bus_bridge.publish(event);
+        self.bus.publish(event);
     }
 }
 

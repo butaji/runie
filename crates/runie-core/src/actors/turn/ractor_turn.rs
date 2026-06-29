@@ -7,7 +7,7 @@ use parking_lot::Mutex;
 
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 
-use crate::actors::ractor_adapter::{spawn_ractor, EventBusBridge};
+use crate::actors::ractor_adapter::spawn_ractor;
 use crate::bus::EventBus;
 use crate::model::{DeliveryMode, QueuedMessage, QueuedMessageKind};
 use crate::session::turn_queue::TurnQueue;
@@ -44,19 +44,19 @@ pub struct RactorTurnActor {
     /// The authoritative turn state.
     state: Mutex<TurnState>,
     /// Bridge to the event bus for publishing facts.
-    bus_bridge: EventBusBridge<Event>,
+    bus: EventBus<Event>,
 }
 
 impl RactorTurnActor {
     fn new(bus: EventBus<Event>) -> Self {
         Self {
             state: Mutex::new(TurnState::default()),
-            bus_bridge: EventBusBridge::new(bus),
+            bus, 
         }
     }
 
     fn emit(&self, event: Event) {
-        self.bus_bridge.publish(event);
+        self.bus.publish(event);
     }
 
     fn handle_msg(&self, msg: TurnMsg) {
