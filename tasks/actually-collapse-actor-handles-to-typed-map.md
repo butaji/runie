@@ -1,6 +1,6 @@
 # Actually collapse `ActorHandles` to a typed map
 
-**Status**: todo
+**Status**: partial
 **Milestone**: R6
 **Category**: Architecture / Actors
 **Priority**: P1
@@ -14,6 +14,9 @@
 
 ## Acceptance Criteria
 
+- [x] Replace `AgentHandle` trait (broken dyn) with `AgentHandleBox` enum in `UiActor`.
+- [x] Wire `LeaderAgentActorHandle` into TUI bootstrap via `Leader::start`.
+- [x] Fix `LeaderAgentHandle::run` to return `Pin<Box<dyn Future>>` for direct `.await`.
 - [ ] Replace `ActorHandles` with a struct of `ractor::ActorRef<Msg>` fields (one per production actor).
 - [ ] Delete all delegation helper methods; callers use `actor_ref.cast(...)` or `call!` directly.
 - [ ] Remove `Option` wrappers where an actor is always present.

@@ -2,7 +2,7 @@
   {
     "file": "actually-collapse-actor-handles-to-typed-map.md",
     "title": "Actually collapse `ActorHandles` to a typed map",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "actually-replace-runie-provider-backoff-with-backon.md",
