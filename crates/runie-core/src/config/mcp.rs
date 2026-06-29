@@ -6,14 +6,16 @@
 use std::collections::HashMap;
 
 use schemars::JsonSchema;
+use strum::{Display, EnumString};
 
 // ============================================================================
 // Transport
 // ============================================================================
 
 /// Transport type for MCP server communication.
-#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 #[derive(JsonSchema)]
 pub enum McpTransport {
     /// Stdio-based MCP server (default).
@@ -111,6 +113,16 @@ mod tests {
 
         let sse_str = serde_json::to_string(&sse).unwrap();
         assert_eq!(sse_str, "\"sse\"");
+    }
+
+    #[test]
+    fn mcp_transport_round_trip() {
+        use std::str::FromStr;
+        for transport in [McpTransport::Stdio, McpTransport::Http, McpTransport::Sse] {
+            let s = transport.to_string();
+            let parsed = McpTransport::from_str(&s);
+            assert_eq!(parsed, Ok(transport.clone()), "round-trip failed for {transport:?}");
+        }
     }
 
     #[test]

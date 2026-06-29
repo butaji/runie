@@ -5,6 +5,7 @@ use crate::declarative::types::CommandDef as DeclarativeCommandDef;
 use crate::dialog::PanelStack;
 use crate::model::AppState;
 use std::collections::HashMap;
+use strum::{Display, EnumString};
 
 /// Registry of all commands
 #[derive(Clone)]
@@ -110,7 +111,8 @@ pub fn filter_commands<'a>(reg: &'a CommandRegistry, query: &str) -> Vec<&'a Com
 // ============================================================================
 
 /// Kind of active dialog — which panel was opened.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, EnumString)]
+#[strum(serialize_all = "PascalCase")]
 pub enum DialogKind {
     CommandPalette,
     ModelSelector,
@@ -208,6 +210,23 @@ mod dialog_state_tests {
         let active = DialogState::Active { kind: DialogKind::Settings, panels: stack };
         assert!(active.panel_stack().is_some());
         assert!(!matches!(active, DialogState::Welcome));
+    }
+
+    #[test]
+    fn test_dialog_kind_round_trip() {
+        use std::str::FromStr;
+        for dk in [
+            DialogKind::CommandPalette,
+            DialogKind::ModelSelector,
+            DialogKind::Settings,
+            DialogKind::ScopedModels,
+            DialogKind::SessionTree,
+            DialogKind::Generic,
+        ] {
+            let s = dk.to_string();
+            let parsed = DialogKind::from_str(&s);
+            assert_eq!(parsed, Ok(dk), "round-trip failed for {dk:?}");
+        }
     }
 }
 

@@ -122,3 +122,25 @@ pub enum InputReceiver {
     /// A dialog/overlay is open and receiving input
     Dialog,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn thinking_level_iterates() {
+        // Test that cycle() goes through all levels and wraps correctly
+        assert_eq!(ThinkingLevel::Off.cycle(), ThinkingLevel::Low);
+        assert_eq!(ThinkingLevel::Low.cycle(), ThinkingLevel::Medium);
+        assert_eq!(ThinkingLevel::Medium.cycle(), ThinkingLevel::High);
+        assert_eq!(ThinkingLevel::High.cycle(), ThinkingLevel::Off);
+    }
+
+    #[test]
+    fn thinking_level_all_contains_all() {
+        for level in ThinkingLevel::ALL {
+            assert!(ThinkingLevel::all().contains(level));
+        }
+        assert_eq!(ThinkingLevel::ALL.len(), 4);
+    }
+}

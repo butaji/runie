@@ -8,6 +8,7 @@
 use crate::dialog::PanelStack;
 use crate::model::AppState;
 use crate::Event;
+use strum::{Display, EnumString};
 
 /// Type alias for a function that produces a panel stack at runtime.
 pub type PanelStackFn = std::sync::Arc<dyn Fn(&mut AppState, &str) -> PanelStack + Send + Sync>;
@@ -94,7 +95,8 @@ impl CommandResult {
 }
 
 /// Dialog types
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Display, EnumString)]
+#[strum(serialize_all = "PascalCase")]
 pub enum DialogType {
     CommandPalette,
     ModelSelector,
@@ -127,5 +129,21 @@ mod tests {
     fn test_dialog_type_equality() {
         assert_eq!(DialogType::Settings, DialogType::Settings);
         assert_ne!(DialogType::Settings, DialogType::CommandPalette);
+    }
+
+    #[test]
+    fn test_dialog_type_round_trip() {
+        use std::str::FromStr;
+        for dt in [
+            DialogType::CommandPalette,
+            DialogType::ModelSelector,
+            DialogType::Settings,
+            DialogType::ScopedModels,
+            DialogType::ThemeSelector,
+        ] {
+            let s = dt.to_string();
+            let parsed = DialogType::from_str(&s);
+            assert_eq!(parsed, Ok(dt.clone()), "round-trip failed for {dt:?}");
+        }
     }
 }

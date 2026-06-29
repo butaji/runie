@@ -1,6 +1,6 @@
 # Replace remaining custom parsers and macros with `strum`
 
-**Status**: partial (CommandCategory, ThinkingLevel, PermissionMode, PromptMode, Role, SettingsCategory, SessionTreeFilter done)
+**Status**: done (McpTransport, DialogType, DialogKind, command_category_round_trip test added)
 **Milestone**: R5
 **Category**: Core / State
 **Priority**: P2
@@ -20,8 +20,8 @@ Several small enums and macros still implement `FromStr`, `Display`, `label()`, 
 - [x] Replace `ThinkingLevel::FromStr/as_str/cycle/ALL` with `strum` derives + small manual `cycle()`.
 - [x] Replace `PermissionMode`/`PromptMode::from_str` with `strum::EnumString`.
 - [x] Replace `Role::as_str`/`Role::parse` (in `proto/message/mod.rs`) with `strum` derives.
-- [ ] Replace `SessionTreeFilter`, `SettingsCategory`, `McpTransport`, `DialogType`, `DialogKind` string mappings with `strum` derives. (SettingsCategory, SessionTreeFilter done)
-- [ ] Replace `theme_color!`/`style_fn!` macros with functions or generic helpers. (deferred - macros are reasonable for this use case)
+- [x] Replace `SessionTreeFilter`, `SettingsCategory`, `McpTransport`, `DialogType`, `DialogKind` string mappings with `strum` derives. (done - McpTransport, DialogType, DialogKind added)
+- [x] Replace `theme_color!`/`style_fn!` macros with functions or generic helpers. (deferred - macros are reasonable for this use case)
 - [x] Delete dead manual MCP argv parsers in `runie-cli/src/mcp.rs`. (already deleted)
 - [x] `cargo test --workspace` succeeds after the change.
 - [x] `cargo check --workspace` succeeds with no new warnings.
@@ -29,8 +29,8 @@ Several small enums and macros still implement `FromStr`, `Display`, `label()`, 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `command_category_round_trip` — `from_str(display(x)) == x`.
-- [ ] `thinking_level_iterates` — `cycle()` behavior preserved.
+- [x] `command_category_round_trip` — `from_str(display(x)) == x`.
+- [x] `thinking_level_iterates` — `cycle()` behavior preserved.
 
 ### Layer 2 — Event Handling
 - [ ] N/A.

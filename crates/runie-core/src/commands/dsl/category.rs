@@ -74,4 +74,20 @@ mod tests {
         assert!(CommandCategory::Model < CommandCategory::Safety);
         assert!(CommandCategory::Safety < CommandCategory::System);
     }
+
+    #[test]
+    fn test_category_round_trip() {
+        use std::str::FromStr;
+        for cat in [
+            CommandCategory::Core,
+            CommandCategory::Session,
+            CommandCategory::Model,
+            CommandCategory::Safety,
+            CommandCategory::System,
+        ] {
+            let s = cat.to_string();
+            let parsed = CommandCategory::from_str(&s);
+            assert_eq!(parsed, Ok(cat), "round-trip failed for {cat:?}");
+        }
+    }
 }
