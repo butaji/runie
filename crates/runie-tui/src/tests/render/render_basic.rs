@@ -284,3 +284,36 @@ fn test_stress_many_tool_calls() {
         state.session.messages.len()
     );
 }
+
+#[test]
+fn think_blocks_not_rendered() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    let mut state = AppState::default();
+    state.update(Event::Thinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::ThoughtDone {
+        id: "req.0".to_string(),
+    });
+    // Response contains think tags
+    state.update(Event::Response {
+        id: "req.0".to_string(),
+        content: "<think>hidden thought</think>visible answer".to_string(),
+    });
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content().iter().map(|c| c.symbol()).collect();
+    assert!(
+        !content.contains("<think>"),
+        "Think tags should not appear in rendered content"
+    );
+    assert!(
+        !content.contains("</think>"),
+        "Think tags should not appear in rendered content"
+    );
+    assert!(
+        content.contains("visible answer"),
+        "Visible content should be rendered"
+    );
+}

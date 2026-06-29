@@ -9,32 +9,93 @@ pub use crate::tool_markers::strip_tool_markers;
 
 /// Strip `<think>...</think>` thinking tags from content.
 /// Returns only the visible text, dropping the reasoning content.
+/// Handles unclosed tags by stripping from the last `<think>` to end of input.
 pub fn strip_thinking_tags(content: &str) -> String {
-    let mut visible = String::new();
-    let mut in_reasoning = false;
-    let mut rest = content;
-    loop {
-        let marker = if in_reasoning { "</think>" } else { "<think>" };
-        match rest.find(marker) {
-            Some(idx) => {
-                if !in_reasoning {
-                    visible.push_str(&rest[..idx]);
-                }
-                rest = &rest[idx + marker.len()..];
-                in_reasoning = !in_reasoning;
-            }
-            None => {
-                if !in_reasoning {
-                    visible.push_str(rest);
-                }
-                break;
-            }
-        }
+    static THINK_BLOCK_REGEX: std::sync::LazyLock<regex::Regex> =
+        std::sync::LazyLock::new(|| regex::Regex::new(r"(?s)<think>.*?</think>").unwrap());
+    static THINK_OPEN_REGEX: std::sync::LazyLock<regex::Regex> =
+        std::sync::LazyLock::new(|| regex::Regex::new(r"<think>").unwrap());
+
+    let caps: Vec<_> = THINK_BLOCK_REGEX.captures_iter(content).collect();
+    let has_unclosed = THINK_OPEN_REGEX.find_iter(content).count() > caps.len();
+
+    if has_unclosed {
+        strip_with_unclosed(content, &caps)
+    } else {
+        THINK_BLOCK_REGEX.replace_all(content, "").to_string()
     }
-    if in_reasoning {
-        // Unclosed thinking tag - drop the remaining content
+}
+
+fn strip_with_unclosed(content: &str, caps: &[regex::Captures]) -> String {
+    // Find the position after the last complete block
+    let after_last_block = caps
+        .last()
+        .and_then(|c| c.get(0))
+        .map(|m| m.end())
+        .unwrap_or(0);
+
+    // Look for unclosed <think> after the last complete block
+    let remaining = &content[after_last_block..];
+    if let Some(pos) = remaining.find("<think>") {
+        // Content before last block + content before unclosed tag
+        let before_block = &content[..after_last_block];
+        let before_unclosed = &remaining[..pos];
+        // Strip complete blocks from the before_block portion
+        static THINK_BLOCK_REGEX: std::sync::LazyLock<regex::Regex> =
+            std::sync::LazyLock::new(|| regex::Regex::new(r"(?s)<think>.*?</think>").unwrap());
+        let stripped_before = THINK_BLOCK_REGEX.replace_all(before_block, "");
+        format!("{stripped_before}{before_unclosed}")
+    } else {
+        content.to_string()
     }
-    visible
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn regex_strips_think_blocks() {
+        // Single think block: strips content inside, keeps visible
+        assert_eq!(
+            strip_thinking_tags("<think>reasoning</think>answer"),
+            "answer"
+        );
+        // Multiple think blocks: strips both
+        assert_eq!(
+            strip_thinking_tags("<think>reason1</think><think>reason2</think>visible"),
+            "visible"
+        );
+        // Nested-like scenario: think content that looks like tags
+        assert_eq!(
+            strip_thinking_tags("<think>think content</think>answer"),
+            "answer"
+        );
+    }
+
+    #[test]
+    fn regex_handles_unclosed_think() {
+        // Unclosed opening tag: strips to end of input
+        assert_eq!(
+            strip_thinking_tags("<think>unclosed reasoning"),
+            ""
+        );
+        // Unclosed with visible content before: keeps visible
+        assert_eq!(
+            strip_thinking_tags("visible<think>unclosed"),
+            "visible"
+        );
+        // Closed then unclosed: keeps visible before, strips unclosed to end
+        assert_eq!(
+            strip_thinking_tags("<think>closed</think>visible<think>unclosed"),
+            "visible"
+        );
+    }
+
+    #[test]
+    fn regex_preserves_text_without_tags() {
+        assert_eq!(strip_thinking_tags("plain answer"), "plain answer");
+    }
 }
 
 mod agent;

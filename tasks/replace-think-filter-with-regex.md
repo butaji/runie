@@ -14,27 +14,28 @@ The `<think>` block filter uses custom streaming string matching that is fragile
 
 ## Acceptance Criteria
 
-- [ ] Think tags (`<think>...</think>`) are stripped by a compiled `regex::Regex`.
-- [ ] Nested and unclosed tags are handled gracefully (strip until EOF for unclosed opening tag).
-- [ ] The custom streaming matcher is deleted.
-- [ ] Stripping happens in one place after markdown processing.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Think tags (`<think>...</think>`) are stripped by a compiled `regex::Regex`.
+- [x] Nested and unclosed tags are handled gracefully (strip until EOF for unclosed opening tag).
+- [x] The custom streaming matcher is deleted.
+- [x] Stripping happens in one place after markdown processing.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `regex_strips_think_blocks` — valid blocks are removed.
-- [ ] `regex_handles_unclosed_think` — unclosed `<think>` strips to end of input.
+- [x] `regex_strips_think_blocks` — valid blocks are removed.
+- [x] `regex_handles_unclosed_think` — unclosed `<think>` strips to end of input.
+- [x] `regex_preserves_text_without_tags` — text without think tags is unchanged.
 
 ### Layer 2 — Event Handling
-- [ ] N/A — filtering is stream/text transform.
+- [x] N/A — filtering is stream/text transform.
 
 ### Layer 3 — Rendering
-- [ ] `think_blocks_not_rendered` — a `TestBackend` buffer shows no think content.
+- [x] `think_blocks_not_rendered` — a `TestBackend` buffer shows no think content.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `minimax_m3_think_filter` — a captured provider stream containing think tags renders correctly end-to-end.
+- [x] `minimax_inline_think_renders_visible_response` — a captured provider stream containing think tags renders correctly end-to-end.
 
 ## Files touched
 

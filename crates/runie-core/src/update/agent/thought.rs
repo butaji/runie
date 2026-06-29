@@ -57,35 +57,39 @@ pub(crate) fn plan_thought(content: &str, duration: f64) -> ThoughtPlan {
 /// Returns `(visible_text, optional_reasoning)`. Unclosed `<think>` tags
 /// are treated as reasoning that continues to the end of the string.
 pub(crate) fn split_think_blocks(content: &str) -> (String, Option<String>) {
-    let mut visible = String::new();
-    let mut reasoning = String::new();
-    let mut in_reasoning = false;
-    let mut rest = content;
-    loop {
-        let marker = if in_reasoning { "</think>" } else { "<think>" };
-        match rest.find(marker) {
-            Some(idx) => {
-                if in_reasoning {
-                    reasoning.push_str(&rest[..idx]);
-                } else {
-                    visible.push_str(&rest[..idx]);
-                }
-                rest = &rest[idx + marker.len()..];
-                in_reasoning = !in_reasoning;
-            }
-            None => break,
-        }
+    static THINK_REGEX: std::sync::LazyLock<regex::Regex> =
+        std::sync::LazyLock::new(|| regex::Regex::new(r"(?s)<think>(.*?)</think>").unwrap());
+
+    let caps: Vec<_> = THINK_REGEX.captures_iter(content).collect();
+    let has_complete = !caps.is_empty();
+    let block_reasoning = extract_block_reasoning(&caps);
+    let unclosed_reasoning = (!has_complete && content.contains("<think>")).then(|| {
+        content.find("<think>").map(|p| &content[p + 7..]).unwrap_or("")
+    }).unwrap_or("");
+
+    if block_reasoning.is_empty() && unclosed_reasoning.is_empty() {
+        return (content.to_string(), None);
     }
-    if in_reasoning {
-        reasoning.push_str(rest);
+
+    let visible = if has_complete {
+        THINK_REGEX.replace_all(content, "").to_string()
     } else {
-        visible.push_str(rest);
-    }
-    if reasoning.is_empty() {
+        content.find("<think>").map_or(content.to_string(), |p| content[..p].to_string())
+    };
+
+    let all_reasoning = format!("{block_reasoning}{unclosed_reasoning}");
+    if all_reasoning.is_empty() {
         (visible, None)
     } else {
-        (visible, Some(reasoning))
+        (visible, Some(all_reasoning))
     }
+}
+
+fn extract_block_reasoning(caps: &[regex::Captures]) -> String {
+    caps.iter()
+        .filter_map(|c| c.get(1).map(|m| m.as_str().to_string()))
+        .collect::<Vec<_>>()
+        .join("")
 }
 
 #[cfg(test)]
