@@ -108,6 +108,7 @@ impl InspectReport {
 
     /// Build a full inspect report synchronously (uses Config::load_layers directly).
     /// Kept for backward compatibility with tests.
+    #[allow(dead_code)]
     pub fn build() -> Self {
         let config = Config::load_layers();
         let skills = load_all();
