@@ -222,7 +222,7 @@
   {
     "file": "replace-think-filter-with-regex.md",
     "title": "Replace think-block filter with regex",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "route-cli-config-through-configactor.md",
