@@ -8,6 +8,7 @@ use crate::Event;
 
 /// Category for grouping settings in the dialog.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(strum::Display)]
 pub enum SettingsCategory {
     Models,
     Appearance,
@@ -16,6 +17,7 @@ pub enum SettingsCategory {
 }
 
 impl SettingsCategory {
+    /// String representation (PascalCase).
     pub fn as_str(&self) -> &'static str {
         match self {
             SettingsCategory::Models => "Models",

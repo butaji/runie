@@ -41,6 +41,7 @@ impl TreeNode {
 
 /// Tree filter for the session tree dialog.
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(strum::Display)]
 pub enum SessionTreeFilter {
     #[default]
     All,
@@ -59,6 +60,7 @@ impl SessionTreeFilter {
         }
     }
 
+    /// String representation for display (kebab-case).
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::All => "all",
