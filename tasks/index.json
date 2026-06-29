@@ -227,7 +227,7 @@
   {
     "file": "remove-sync-turn-queue-fallback-from-app-state.md",
     "title": "Remove sync `TurnQueue` fallback from `AppState`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-unused-dependencies-and-normalize-workspace-deps.md",

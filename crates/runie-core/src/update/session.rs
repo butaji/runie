@@ -2,6 +2,7 @@ use super::dialog::open_session_tree_dialog;
 use crate::actors::TurnMsg;
 use crate::commands::DialogKind;
 use crate::model::AppState;
+use crate::session::turn_queue::TurnQueue;
 
 impl AppState {
     // === Session Event Handler ===
@@ -148,34 +149,10 @@ impl AppState {
             self.view_mut().dirty = true;
             return;
         }
-        // Route through TurnActor to maintain authoritative queue state
-        let handles = self.actor_handles().cloned();
-        if let Some(ref h) = handles {
-            if tokio::runtime::Handle::try_current().is_ok() {
-                let _ = h.turn.try_send(TurnMsg::AbortQueue);
-            } else {
-                // Test mode: drain synchronously
-                let msgs: Vec<_> = self
-                    .agent_state_mut()
-                    .message_queue
-                    .drain(..)
-                    .rev()
-                    .collect();
-                for msg in msgs {
-                    self.apply_queue_aborted(msg.content);
-                }
-            }
-        } else {
-            // Test mode without handles: drain synchronously
-            let msgs: Vec<_> = self
-                .agent_state_mut()
-                .message_queue
-                .drain(..)
-                .rev()
-                .collect();
-            for msg in msgs {
-                self.apply_queue_aborted(msg.content);
-            }
+        // Drain via TurnQueue, then emit facts
+        let msgs: Vec<_> = TurnQueue::new(self.agent_state_mut().message_queue.drain(..).collect()).drain().into_iter().rev().collect();
+        for msg in msgs {
+            self.apply_queue_aborted(msg.content);
         }
     }
 
@@ -183,91 +160,60 @@ impl AppState {
         if self.agent_state_mut().message_queue.is_empty() {
             return;
         }
-        // Route through TurnActor to maintain authoritative queue state
         let steering_mode = self.config().steering_mode;
         let follow_up_mode = self.config().follow_up_mode;
         let handles = self.actor_handles().cloned();
         if let Some(ref h) = handles {
             if tokio::runtime::Handle::try_current().is_ok() {
                 let _ = h.turn.try_send(TurnMsg::DeliverQueued { steering_mode, follow_up_mode });
-                // Clear the AppState mirror - TurnActor will emit facts to update it
                 self.agent_state_mut().message_queue.clear();
             } else {
-                // Test mode without runtime: apply synchronously
-                self.apply_deliver_queued_sync(steering_mode, follow_up_mode);
+                // Test mode without runtime: use TurnQueue directly
+                self.deliver_via_turn_queue(steering_mode, follow_up_mode);
             }
         } else {
-            // Test mode without handles: apply synchronously
-            self.apply_deliver_queued_sync(steering_mode, follow_up_mode);
+            // Test mode without handles: use TurnQueue directly
+            self.deliver_via_turn_queue(steering_mode, follow_up_mode);
         }
         self.view_mut().scroll = 0;
     }
 
-    fn has_follow_ups(&self) -> bool {
-        self.agent
-            .message_queue
-            .iter()
-            .any(|m| m.kind == crate::model::QueuedMessageKind::FollowUp)
-    }
-
-    /// Synchronous delivery logic for test mode.
-    fn apply_deliver_queued_sync(&mut self, steering_mode: DeliveryMode, follow_up_mode: DeliveryMode) {
-        use crate::model::DeliveryMode;
-        // Try to deliver steering (batch or single depending on mode)
-        if self.try_deliver_steering_sync(steering_mode) {
-            // Steering delivered - in "All" mode, also try follow-ups
-            if follow_up_mode == DeliveryMode::All && self.has_follow_ups() {
-                self.try_deliver_follow_ups_all_sync();
-            }
-            return;
-        }
-        // No steering in queue - try follow-ups
-        self.try_deliver_follow_up_sync(follow_up_mode);
-    }
-
-    /// Deliver all follow-ups in batch mode (sync version for tests).
-    fn try_deliver_follow_ups_all_sync(&mut self) {
-        use crate::session::turn_queue::TurnQueue;
+    /// Sync delivery via TurnQueue — replaces the old sync fallback methods.
+    fn deliver_via_turn_queue(&mut self, steering_mode: DeliveryMode, follow_up_mode: DeliveryMode) {
         let mut queue = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
-        if let Some(r) = queue.pop_all_follow_ups() {
+        // Try steering first
+        if let Some(r) = queue.pop_steering(steering_mode) {
             self.agent_state_mut().message_queue = queue.into_inner();
-            self.push_user_message_sync(r.content);
-            self.view_mut().scroll = 0;
-            self.messages_changed();
+            self.push_user_from_queue(r.content);
+            if follow_up_mode == DeliveryMode::All {
+                // Also deliver follow-ups in All mode
+                let mut q = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
+                if let Some(r) = q.pop_all_follow_ups() {
+                    self.agent_state_mut().message_queue = q.into_inner();
+                    self.push_user_from_queue(r.content);
+                } else {
+                    self.agent_state_mut().message_queue = q.into_inner();
+                }
+            }
+        } else if let Some(r) = queue.pop_follow_up(follow_up_mode) {
+            self.agent_state_mut().message_queue = queue.into_inner();
+            self.push_user_from_queue(r.content);
         } else {
             self.agent_state_mut().message_queue = queue.into_inner();
         }
     }
 
-    fn push_user_message_sync(&mut self, content: String) {
+    fn push_user_from_queue(&mut self, content: String) {
         let id = self.next_id();
         self.session_mut().messages.push(ChatMessage {
             role: Role::User,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![runie_core::message::Part::Text {
-                content: content.clone(),
-            }],
+            parts: vec![runie_core::message::Part::Text { content: content.clone() }],
             ..Default::default()
         });
-        self.agent_state_mut()
-            .request_queue
-            .push_back((content, id));
-    }
-
-    fn try_deliver_steering_sync(&mut self, mode: DeliveryMode) -> bool {
-        use crate::session::turn_queue::TurnQueue;
-        let mut queue = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
-        let result = queue.pop_steering(mode);
-        self.agent_state_mut().message_queue = queue.into_inner();
-        if let Some(r) = result {
-            self.push_user_message_sync(r.content);
-            self.view_mut().scroll = 0;
-            self.messages_changed();
-            true
-        } else {
-            false
-        }
+        self.agent_state_mut().request_queue.push_back((content, id));
+        self.messages_changed();
     }
 
     pub(crate) fn dequeue(&mut self) {
@@ -278,18 +224,6 @@ impl AppState {
         } else {
             self.input_mut().input_flash = 3;
             self.view_mut().dirty = true;
-        }
-    }
-
-    fn try_deliver_follow_up_sync(&mut self, mode: DeliveryMode) {
-        use crate::session::turn_queue::TurnQueue;
-        let mut queue = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
-        let result = queue.pop_follow_up(mode);
-        self.agent_state_mut().message_queue = queue.into_inner();
-        if let Some(r) = result {
-            self.push_user_message_sync(r.content);
-            self.view_mut().scroll = 0;
-            self.messages_changed();
         }
     }
 }
