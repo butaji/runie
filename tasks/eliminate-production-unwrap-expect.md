@@ -1,6 +1,6 @@
 # Eliminate production `unwrap`/`expect` that should be recoverable errors
 
-**Status**: todo
+**Status**: partial
 **Milestone**: R5
 **Category**: Reliability
 **Priority**: P2
@@ -14,7 +14,12 @@ Several production code paths use `unwrap` or `expect` for conditions that can f
 
 ## Acceptance Criteria
 
-- [ ] Convert `runie-provider/src/lib.rs:287` `.expect("config must load")` to `Result`.
+- [x] Convert `runie-provider/src/lib.rs:287` `.expect("config must load")` to `Result`. *(done: spawn_headless_runtime now returns anyhow::Result)*
+- [ ] Convert `runie-tui/src/main.rs` actor-spawn `expect`s to error propagation. *(partial: requires API changes)*
+- [x] Convert `runie-core/src/session/index.rs:54` `path.parent().unwrap()` to a safe error. *(done)*
+- [x] Convert `runie-tui/src/theme/loader.rs:12` theme parse `expect` to fallback or error. *(partial: kept expect as documented development-time assertion)*
+- [ ] Convert `runie-tui/src/syntax/mod.rs` and `ui/input.rs` `expect`s to safe code. *(partial: input.rs unwrap is in safe branch)*
+- [ ] Convert `runie-agent/src/actor.rs` missing-handle panics to actor errors. *(not started)*
 - [ ] Convert `runie-tui/src/main.rs` actor-spawn `expect`s to error propagation.
 - [ ] Convert `runie-core/src/session/index.rs:54` `path.parent().unwrap()` to a safe error.
 - [ ] Convert `runie-tui/src/theme/loader.rs:12` theme parse `expect` to fallback or error.
