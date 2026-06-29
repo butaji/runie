@@ -38,7 +38,7 @@ pub(crate) fn load_theme(name: &str) -> opaline::Theme {
 /// Load a theme and quantize its colors to the terminal's color depth.
 pub(crate) fn load_theme_with_caps(
     name: &str,
-    caps: crate::terminal::caps::TerminalCapabilities,
+    caps: crate::terminal::caps::TermCaps,
 ) -> opaline::Theme {
     let base = load_theme(name);
     if caps.truecolor {
@@ -50,7 +50,7 @@ pub(crate) fn load_theme_with_caps(
 /// Quantize all palette and token colors in a theme to the terminal's color depth.
 fn quantize_theme(
     theme: opaline::Theme,
-    caps: crate::terminal::caps::TerminalCapabilities,
+    caps: crate::terminal::caps::TermCaps,
     name: &str,
 ) -> opaline::Theme {
     use opaline::OpalineColor;

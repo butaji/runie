@@ -33,7 +33,7 @@ impl AgentActorHandle {
     }
 }
 use crate::pace::PacedRenderer;
-use crate::terminal::caps::TerminalCapabilities;
+use crate::terminal::caps::TermCaps;
 
 const ANIM_MS: u64 = 100;
 
@@ -47,7 +47,7 @@ pub struct UiActor {
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: Option<oneshot::Sender<()>>,
-    caps: TerminalCapabilities,
+    caps: TermCaps,
     /// Paces the streaming text display for smooth typing animation.
     paced: PacedRenderer,
 }
@@ -64,7 +64,7 @@ impl UiActor {
         kb_tx: watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
         shutdown_tx: oneshot::Sender<()>,
-        caps: TerminalCapabilities,
+        caps: TermCaps,
     ) -> Self {
         Self {
             state,
@@ -322,7 +322,7 @@ mod tests {
                 kb_tx,
                 bus.clone(),
                 shutdown_tx,
-                TerminalCapabilities::default(),
+                TermCaps::default(),
             )
             .run(ui_sub),
         );
@@ -371,7 +371,7 @@ mod tests {
         let persistence_handle = test_session_handle().await;
         let mut actor = UiActor::new(state, render_tx, AgentActorHandle::new(agent_tx),
             persistence_handle, turn_handle, kb_tx,
-            EventBus::new(4), shutdown_tx, TerminalCapabilities::default());
+            EventBus::new(4), shutdown_tx, TermCaps::default());
 
         // Simulate a streaming message: TextStart -> ResponseDelta -> tick.
         actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
@@ -405,7 +405,7 @@ mod tests {
         let persistence_handle = test_session_handle().await;
         let mut actor = UiActor::new(state, render_tx, AgentActorHandle::new(agent_tx),
             persistence_handle, turn_handle, kb_tx,
-            EventBus::new(4), shutdown_tx, TerminalCapabilities::default());
+            EventBus::new(4), shutdown_tx, TermCaps::default());
 
         actor.handle_event(Event::TextStart { id: "1".into() }, effect_tx.clone()).await;
         actor.handle_event(
@@ -460,7 +460,7 @@ mod tests {
             kb_tx,
             EventBus::new(4),
             shutdown_tx,
-            TerminalCapabilities::default(),
+            TermCaps::default(),
         );
 
         let mut flow = LoginFlowState::new().with_provider("test-unknown-provider".into());

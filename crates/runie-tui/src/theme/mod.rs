@@ -22,7 +22,7 @@ mod tests;
 
 static CURRENT_THEME: RwLock<Option<Arc<opaline::Theme>>> = RwLock::new(None);
 static CURRENT_THEME_NAME: Mutex<String> = Mutex::new(String::new());
-static CURRENT_CAPS: RwLock<Option<crate::terminal::caps::TerminalCapabilities>> =
+static CURRENT_CAPS: RwLock<Option<crate::terminal::caps::TermCaps>> =
     RwLock::new(None);
 
 #[cfg(test)]
@@ -46,7 +46,7 @@ pub fn set_current_theme(name: &str) {
 
 /// Set the active theme by name, quantized to the given terminal capabilities.
 /// Quantization happens once at load time; per-frame rendering is unaffected.
-pub fn set_current_theme_with_caps(name: &str, caps: crate::terminal::caps::TerminalCapabilities) {
+pub fn set_current_theme_with_caps(name: &str, caps: crate::terminal::caps::TermCaps) {
     let name_same = CURRENT_THEME_NAME
         .lock()
         .unwrap_or_else(|e| e.into_inner())
@@ -75,7 +75,7 @@ pub fn current_theme_name() -> String {
         .clone()
 }
 
-fn current_caps() -> Option<crate::terminal::caps::TerminalCapabilities> {
+fn current_caps() -> Option<crate::terminal::caps::TermCaps> {
     *CURRENT_CAPS
         .read()
         .unwrap_or_else(|e| e.into_inner())

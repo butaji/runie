@@ -100,7 +100,7 @@ impl EffectCommand {
     pub fn try_from_event(
         evt: &CoreEvent,
         state: &mut AppState,
-        _caps: &crate::terminal::caps::TerminalCapabilities,
+        _caps: &crate::terminal::caps::TermCaps,
     ) -> Option<Self> {
         let payload = extract(evt, state)?;
         Some(match payload {

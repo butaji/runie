@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::terminal::caps::{MouseCapability, TerminalCapabilities};
+use crate::terminal::caps::{MouseCapability, TermCaps};
 use crate::theme::{BUILTIN_THEMES, current_theme, set_current_theme, set_current_theme_with_caps, test_lock};
 
 #[test]
@@ -15,16 +15,16 @@ fn theme_cache_returns_same_instance() {
     assert!(Arc::ptr_eq(&first, &second));
 }
 
-fn truecolor_caps() -> TerminalCapabilities {
-    TerminalCapabilities {
+fn truecolor_caps() -> TermCaps {
+    TermCaps {
         truecolor: true,
         mouse: MouseCapability::Sgr,
         ..Default::default()
     }
 }
 
-fn ansi256_caps() -> TerminalCapabilities {
-    TerminalCapabilities {
+fn ansi256_caps() -> TermCaps {
+    TermCaps {
         truecolor: false,
         mouse: MouseCapability::Legacy,
         ..Default::default()

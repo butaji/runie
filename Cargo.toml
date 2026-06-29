@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-cli", "crates/runie-testing"]
+members = ["crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-cli", "crates/runie-testing", "crates/runie-macros"]
 resolver = "2"
 
 # Default test timeout: 120 seconds. Tests exceeding this are killed.
@@ -51,6 +51,8 @@ unicode-segmentation = "1.10"
 strum = { version = "0.26", features = ["derive"] }
 uuid = { version = "1", features = ["v4"] }
 clap = { version = "4.5", features = ["derive"] }
+supports-color = "3"
+supports-hyperlinks = "3"
 
 insta = { version = "1.41", features = ["yaml"] }
 tempfile = "3"
@@ -64,6 +66,7 @@ runie-core = { path = "crates/runie-core" }
 runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }
 runie-testing = { path = "crates/runie-testing" }
+runie-macros = { path = "crates/runie-macros" }
 
 
 

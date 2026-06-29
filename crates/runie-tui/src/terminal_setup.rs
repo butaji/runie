@@ -14,7 +14,7 @@ use std::io;
 /// inconclusive.
 pub fn setup_terminal() -> io::Result<(
     Terminal<CrosstermBackend<std::io::Stdout>>,
-    caps::TerminalCapabilities,
+    caps::TermCaps,
 )> {
     let capabilities = caps::detect_capabilities_from_env();
 
@@ -67,7 +67,7 @@ pub fn reset_keyboard_enhancements<W: io::Write>(writer: &mut W) -> io::Result<(
 
 pub fn restore_terminal_graphics<W: io::Write>(
     writer: &mut W,
-    capabilities: caps::TerminalCapabilities,
+    capabilities: caps::TermCaps,
 ) -> io::Result<()> {
     enable_mouse_grok_style(writer, &capabilities)?;
     let _ = push_keyboard_enhancement_flags(writer);
@@ -107,7 +107,7 @@ const GROK_MOUSE_SEQUENCES: &[&[u8]] = &[
 
 fn write_grok_mouse_modes<W: io::Write>(
     writer: &mut W,
-    caps: &caps::TerminalCapabilities,
+    caps: &caps::TermCaps,
 ) -> io::Result<()> {
     if caps.mouse == caps::MouseCapability::None {
         return Ok(());
@@ -120,7 +120,7 @@ fn write_grok_mouse_modes<W: io::Write>(
 
 fn enable_focus_tracking<W: io::Write>(
     writer: &mut W,
-    caps: &caps::TerminalCapabilities,
+    caps: &caps::TermCaps,
 ) -> io::Result<()> {
     if caps.focus_tracking {
         writer.write_all(b"\x1b[?1004h")?;
@@ -148,7 +148,7 @@ fn hide_cursor_and_set_block<W: io::Write>(writer: &mut W) -> io::Result<()> {
 /// (unsupported terminals ignore them).
 pub fn enable_mouse_grok_style<W: io::Write>(
     writer: &mut W,
-    caps: &caps::TerminalCapabilities,
+    caps: &caps::TermCaps,
 ) -> io::Result<()> {
     enter_alternate_screen(writer)?;
     write_grok_mouse_modes(writer, caps)?;
@@ -234,7 +234,7 @@ mod tests {
     #[test]
     fn mouse_init_sequence_includes_all_grok_modes() {
         let mut buf = Vec::new();
-        let caps = caps::TerminalCapabilities {
+        let caps = caps::TermCaps {
             mouse: caps::MouseCapability::Sgr,
             focus_tracking: true,
             ..Default::default()
@@ -263,7 +263,7 @@ mod tests {
     #[test]
     fn mouse_init_omits_mouse_when_capability_is_none() {
         let mut buf = Vec::new();
-        let caps = caps::TerminalCapabilities {
+        let caps = caps::TermCaps {
             mouse: caps::MouseCapability::None,
             focus_tracking: false,
             ..Default::default()

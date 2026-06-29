@@ -140,7 +140,7 @@ mod tests {
         // Force truecolor so quantized approximations do not break RGB assertions.
         crate::theme::set_current_theme_with_caps(
             crate::theme::DEFAULT_THEME_NAME,
-            crate::terminal::caps::TerminalCapabilities {
+            crate::terminal::caps::TermCaps {
                 truecolor: true,
                 ..Default::default()
             },

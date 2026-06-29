@@ -12,6 +12,8 @@ path = "src/main.rs"
 
 [dependencies]
 runie-core.workspace = true
+supports-color.workspace = true
+supports-hyperlinks.workspace = true
 runie-agent.workspace = true
 runie-provider.workspace = true
 ratatui.workspace = true

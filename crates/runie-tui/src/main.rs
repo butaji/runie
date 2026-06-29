@@ -147,7 +147,7 @@ fn init_terminal_state(state: &mut AppState) {
 async fn spawn_background_tasks(
     terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
     mut state: AppState,
-    caps: terminal::caps::TerminalCapabilities,
+    caps: terminal::caps::TermCaps,
     bus: EventBus<Event>,
     shutdown_tx: oneshot::Sender<()>,
     handles: ActorHandles,
@@ -212,7 +212,7 @@ fn spawn_agent_tasks(
     terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
     render_rx: watch::Receiver<Snapshot>,
     _bus: EventBus<Event>,
-    caps: terminal::caps::TerminalCapabilities,
+    caps: terminal::caps::TermCaps,
 ) {
     tokio::spawn(input_reader(input_tx, kb_rx));
     // Move terminal IO off the Tokio runtime — use a dedicated OS thread.
@@ -243,7 +243,7 @@ async fn render_forwarder(
 fn render_loop(
     mut terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
     rx: std::sync::mpsc::Receiver<Snapshot>,
-    caps: terminal::caps::TerminalCapabilities,
+    caps: terminal::caps::TermCaps,
 ) {
     const FRAME_TIME: Duration = Duration::from_millis(16);
     let mut last_size: Option<(u16, u16)> = None;
@@ -287,7 +287,7 @@ fn spawn_ui_actor(
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: oneshot::Sender<()>,
-    caps: terminal::caps::TerminalCapabilities,
+    caps: terminal::caps::TermCaps,
 ) {
     // UiActor is the sole owner of AppState and the only runtime mutator.
     // Late subscriber catch-up is handled by SessionActor disk-replay at startup.
