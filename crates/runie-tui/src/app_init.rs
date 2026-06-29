@@ -25,6 +25,6 @@ pub async fn bootstrap(state: &mut AppState) {
     let auth = tokio::task::spawn_blocking(runie_core::auth::AuthStorage::load)
         .await
         .unwrap_or_default();
-    let providers: Vec<String> = auth.tokens.keys().cloned().collect();
+    let providers: Vec<String> = auth.providers().map(String::from).collect();
     state.set_auth_providers(providers);
 }

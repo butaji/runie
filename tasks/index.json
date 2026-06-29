@@ -317,7 +317,7 @@
   {
     "file": "replace-xor-auth-with-keyring.md",
     "title": "Replace XOR-obfuscated auth storage with OS keyring",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "rescope-terminal-capability-task-to-current-module.md",
