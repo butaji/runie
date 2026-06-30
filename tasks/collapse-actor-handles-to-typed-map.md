@@ -1,6 +1,7 @@
 # Collapse `ActorHandles` to a typed `ractor::ActorRef` map
 
 **Status**: done
+**Note**: Remaining work tracked by `actually-collapse-actor-handles-to-typed-map.md` which is complete.
 **Milestone**: R4
 **Category**: Architecture / Actors
 **Priority**: P1
@@ -21,27 +22,27 @@ Current state as of this review:
 
 ## Acceptance Criteria
 
-- [ ] `ActorHandles` exposes only the production actors: `config`, `provider`, `io`, `session`, `permission`, `turn`, `input`, `agent`, and `fff_indexer`.
-- [ ] Each handle is a `ractor::ActorRef<Msg>` (or a thin newtype around it) rather than a custom helper struct.
-- [ ] If `FffIndexerActor` is not yet migrated to ractor, its handle remains a small dedicated wrapper located next to the actor, not in the global `handles.rs`.
-- [ ] `LeaderHandle` is reconciled with `ActorHandles` so the leader can return the collapsed map directly.
-- [ ] All callers in `runie-tui/src/main.rs`, `runie-cli/src/acp.rs`, `runie-agent/src/actor.rs`, and tests are updated to use the new map.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] `ActorHandles` exposes only the production actors: `config`, `provider`, `io`, `session`, `permission`, `turn`, `input`, `agent`, and `fff_indexer`. (See `actually-collapse-actor-handles-to-typed-map.md`)
+- [x] Each handle is a `ractor::ActorRef<Msg>` (or a thin newtype around it) rather than a custom helper struct. (See `actually-collapse-actor-handles-to-typed-map.md`)
+- [x] If `FffIndexerActor` is not yet migrated to ractor, its handle remains a small dedicated wrapper located next to the actor, not in the global `handles.rs`. (See `actually-collapse-actor-handles-to-typed-map.md`)
+- [x] `LeaderHandle` is reconciled with `ActorHandles` so the leader can return the collapsed map directly. (See `actually-collapse-actor-handles-to-typed-map.md`)
+- [x] All callers in `runie-tui/src/main.rs`, `runie-cli/src/acp.rs`, `runie-agent/src/actor.rs`, and tests are updated to use the new map. (See `actually-collapse-actor-handles-to-typed-map.md`)
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `actor_handles_contains_only_production_actors` — verifies the collapsed struct exposes exactly the expected typed actor refs and no dead fields remain.
+- [x] `actor_handles_contains_only_production_actors` — verifies the collapsed struct exposes exactly the expected typed actor refs and no dead fields remain. (See `actually-collapse-actor-handles-to-typed-map.md`)
 
 ### Layer 2 — Event Handling
-- [ ] `actor_handles_send_message_to_each_actor` — sends a message through every handle in the map and confirms the actor receives it.
+- [x] `actor_handles_send_message_to_each_actor` — sends a message through every handle in the map and confirms the actor receives it. (See `actually-collapse-actor-handles-to-typed-map.md`)
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `smoke_actor_handles_support_full_turn` — runs a provider-replay turn using the collapsed handle map.
+- [x] `smoke_actor_handles_support_full_turn` — runs a provider-replay turn using the collapsed handle map. (See `actually-collapse-actor-handles-to-typed-map.md`)
 
 ## Files touched
 

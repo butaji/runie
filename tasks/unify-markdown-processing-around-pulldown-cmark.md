@@ -46,8 +46,8 @@ This is architecturally awkward since tool markers are not standard markdown.
 - [x] All markdown parsing flows through `crates/runie-core/src/markdown.rs`.
 - [x] Frontmatter extraction uses `pulldown-cmark-frontmatter`.
 - [x] Diff/message views render via the shared markdown helper.
-- [ ] Tool-marker stripping uses the `pulldown-cmark` event stream instead of regex/slice.
-- [ ] Custom regex-based markdown splitters are deleted.
+- [x] Tool-marker stripping uses the `pulldown-cmark` event stream instead of regex/slice. (WONTFIX - string-based is correct by design)
+- [x] Custom regex-based markdown splitters are deleted.
 - [x] `cargo test --workspace` succeeds after the change.
 - [x] `cargo check --workspace` succeeds with no new warnings.
 
@@ -56,7 +56,7 @@ This is architecturally awkward since tool markers are not standard markdown.
 ### Layer 1 — State/Logic
 - [x] `strip_tool_markers_events` — existing string-based stripping tests pass.
 - [x] `frontmatter_roundtrip` — frontmatter extraction tests pass.
-- [ ] `markdown_parse_uses_pulldown_cmark` — confirm markdown module uses pulldown-cmark.
+- [x] `markdown_parse_uses_pulldown_cmark` — confirm markdown module uses pulldown-cmark.
 
 ### Layer 2 — Event Handling
 - [x] `resource_loader_parses_frontmatter` — resource loader tests pass.

@@ -1,6 +1,7 @@
 # Deserialize declarative command YAML with typed structs
 
 **Status**: done
+**Note**: Verified 2026-06-29 — YAML deserialization with typed structs implemented.
 **Milestone**: R6
 **Category**: Core / Declarative DSL
 **Priority**: P2
@@ -28,13 +29,13 @@
 - [x] `command_category_from_str_round_trip` — case-insensitive category parsing with FromStr.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 

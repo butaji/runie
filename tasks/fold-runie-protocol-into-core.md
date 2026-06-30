@@ -1,6 +1,7 @@
 # Fold `runie-protocol` crate into `runie-core`
 
 **Status**: done
+**Note**: Verified 2026-06-29 — `runie-protocol` crate deleted, types moved to `runie-core/src/proto/`.
 **Milestone**: R5
 **Category**: Architecture / Actors
 **Priority**: P1
@@ -15,27 +16,27 @@
 
 ## Acceptance Criteria
 
-- [ ] Move `runie-protocol/src/*` types into `runie-core` modules (`message`, `proto`, `provider`, `error`).
-- [ ] Remove `runie-protocol` from workspace members and from crate dependencies.
-- [ ] Deduplicate message tests; keep one canonical copy.
-- [ ] `runie-cli`, `runie-provider`, and `runie-core` compile without the crate.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Move `runie-protocol/src/*` types into `runie-core` modules (`message`, `proto`, `provider`, `error`).
+- [x] Remove `runie-protocol` from workspace members and from crate dependencies.
+- [x] Deduplicate message tests; keep one canonical copy.
+- [x] `runie-cli`, `runie-provider`, and `runie-core` compile without the crate.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `message_serde_roundtrip` — preserved in `runie-core`.
-- [ ] `provider_event_serde_roundtrip` — preserved.
+- [x] `message_serde_roundtrip` — preserved in `runie-core`.
+- [x] `provider_event_serde_roundtrip` — preserved.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `minimax_replay_still_passes` — provider replay still works after the move.
+- [x] `minimax_replay_still_passes` — provider replay still works after the move.
 
 ## Files touched
 

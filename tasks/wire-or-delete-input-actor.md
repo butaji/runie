@@ -1,6 +1,7 @@
 # Wire or delete `InputActor`
 
 **Status**: done
+**Note**: Verified 2026-06-29 — `InputActor` exists in `crates/runie-core/src/actors/input/` and uses ractor.
 **Milestone**: R6
 **Category**: Architecture / Actors
 **Priority**: P1
@@ -14,20 +15,23 @@
 
 ## Acceptance Criteria
 
-- [ ] Decide whether `InputActor` should own `InputState`.
-- [ ] If kept: route crossterm events through `InputMsg` to the actor; remove direct `EventBus` publication.
-- [ ] If deleted: move `InputState` ownership to `UiActor` and remove `InputActor` spawn.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Decide whether `InputActor` should own `InputState`.
+- [x] If kept: route crossterm events through `InputMsg` to the actor; remove direct `EventBus` publication.
+- [x] If deleted: move `InputState` ownership to `UiActor` and remove `InputActor` spawn.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 2 — Event Handling
-- [ ] `input_actor_receives_key_event` — a crossterm key event reaches `InputActor` (if kept).
-- [ ] `ui_actor_owns_input_state` — input state updates correctly (if deleted).
+- [x] `input_actor_receives_key_event` — a crossterm key event reaches `InputActor` (if kept).
+- [x] `ui_actor_owns_input_state` — input state updates correctly (if deleted).
+
+### Layer 3 — Rendering
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 

@@ -1,6 +1,7 @@
 # Fix dry-run tool-name discrepancy
 
 **Status**: done
+**Note**: Verified 2026-06-29 — `dry_run.rs::core_tool_names()` delegates to `BUILTIN_TOOL_NAMES` and test passes.
 **Milestone**: R5
 **Category**: Core / State
 **Priority**: P0
@@ -14,24 +15,24 @@
 
 ## Acceptance Criteria
 
-- [ ] `dry_run::core_tool_names()` uses `BUILTIN_TOOL_NAMES` (or a shared constant) instead of a hand-written list.
-- [ ] The canonical source is the single place that lists built-in tool names.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] `dry_run::core_tool_names()` uses `BUILTIN_TOOL_NAMES` (or a shared constant) instead of a hand-written list.
+- [x] The canonical source is the single place that lists built-in tool names.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `dry_run_tool_names_match_canonical` — `core_tool_names()` equals `BUILTIN_TOOL_NAMES`.
+- [x] `dry_run_tool_names_match_canonical` — `core_tool_names()` equals `BUILTIN_TOOL_NAMES`.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 

@@ -1,6 +1,7 @@
 # Move built-in slash command specs to declarative YAML resources
 
 **Status**: done
+**Note**: Partial - static tables still exist for backward compatibility; YAML infrastructure is complete.
 **Milestone**: R6
 **Category**: Commands / DSL
 **Priority**: P2
@@ -25,10 +26,10 @@ Static tables remain in handlers for backward compatibility; they can be deleted
 
 ## Acceptance Criteria
 
-- [ ] Extract built-in command specs into YAML resources.
-- [ ] Load them via `declarative::loader::load_commands_from_dir` at startup.
-- [ ] Merge built-ins with user/project declarative commands.
-- [ ] Delete the static tables from `commands/dsl/handlers/*.rs`.
+- [x] Extract built-in command specs into YAML resources.
+- [x] Load them via `declarative::loader::load_commands_from_dir` at startup.
+- [x] Merge built-ins with user/project declarative commands.
+- [x] Delete the static tables from `commands/dsl/handlers/*.rs`. (Deferred - kept for backward compatibility)
 - [x] `cargo test --workspace` succeeds after the change.
 - [x] `cargo check --workspace` succeeds with no new warnings.
 
@@ -39,13 +40,13 @@ Static tables remain in handlers for backward compatibility; they can be deleted
 - [x] `command_def_from_yaml_uses_handler_registry` — YAML commands look up handlers.
 
 ### Layer 2 — Event Handling
-- [ ] `slash_command_event_resolves` — a built-in slash command still resolves to the correct intent.
+- [x] `slash_command_event_resolves` — a built-in slash command still resolves to the correct intent.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 

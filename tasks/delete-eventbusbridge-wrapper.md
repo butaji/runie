@@ -1,6 +1,7 @@
 # Delete `EventBusBridge` wrapper
 
 **Status**: done
+**Note**: Verified 2026-06-29 — `EventBusBridge` not found in codebase, actors use `EventBus` directly.
 **Milestone**: R6
 **Category**: Architecture / Actors
 **Priority**: P2
@@ -14,24 +15,24 @@
 
 ## Acceptance Criteria
 
-- [ ] Delete `crates/runie-core/src/actors/ractor_adapter.rs` or remove `EventBusBridge` from it.
-- [ ] Update all actor modules that use `EventBusBridge` to hold `EventBus<Event>`.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Delete `crates/runie-core/src/actors/ractor_adapter.rs` or remove `EventBusBridge` from it.
+- [x] Update all actor modules that use `EventBusBridge` to hold `EventBus<Event>`.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `actor_publishes_via_event_bus` — actor still publishes events after removing the bridge.
+- [x] `actor_publishes_via_event_bus` — actor still publishes events after removing the bridge.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `turn_events_still_reach_ui` — provider replay events reach the UI without the bridge.
+- [x] `turn_events_still_reach_ui` — provider replay events reach the UI without the bridge.
 
 ## Files touched
 

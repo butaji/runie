@@ -16,13 +16,13 @@ Production code uses `eprintln!` for warnings in `keybindings/mod.rs` and `comma
 
 ## Acceptance Criteria
 
-- [ ] Replace production `eprintln!` calls with `tracing` events.
-- [ ] `cargo check --workspace` and `cargo test --workspace` pass.
+- [x] Replace production `eprintln!` calls with `tracing` events.
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.
 
 ## Tests
 
 ### Layer 2 — Event Handling
-- [ ] `keybinding_warning_emits_tracing_event` — a test subscriber captures the warning.
+- [x] `keybinding_warning_emits_tracing_event` — a test subscriber captures the warning.
 
 ## Files touched
 

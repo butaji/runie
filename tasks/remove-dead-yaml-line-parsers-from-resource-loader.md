@@ -1,6 +1,7 @@
 # Remove dead YAML line parsers from `resource_loader`
 
 **Status**: done
+**Note**: Verified 2026-06-29 — `parse_yaml_line` and `strip_quotes` not found in codebase.
 **Milestone**: R7
 **Category**: Core / Declarative DSL
 **Priority**: P2
@@ -14,15 +15,15 @@
 
 ## Acceptance Criteria
 
-- [ ] Delete `parse_yaml_line` and `strip_quotes`.
-- [ ] Delete their tests.
-- [ ] Remove exports from `lib.rs` if present.
-- [ ] `cargo check --workspace` and `cargo test --workspace` pass.
+- [x] Delete `parse_yaml_line` and `strip_quotes`.
+- [x] Delete their tests.
+- [x] Remove exports from `lib.rs` if present.
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `resource_loader_has_no_yaml_line_helpers` — grep confirms deletion.
+- [x] `resource_loader_has_no_yaml_line_helpers` — grep confirms deletion.
 
 ## Files touched
 

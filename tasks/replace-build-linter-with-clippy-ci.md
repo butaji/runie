@@ -36,13 +36,13 @@
 - [x] `ci_file_limit_passes` — `scripts/check-file-limits.sh` confirms all production `.rs` files are ≤500 lines.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 

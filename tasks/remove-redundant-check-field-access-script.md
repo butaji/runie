@@ -1,6 +1,7 @@
 # Remove redundant `check-field-access.sh`
 
 **Status**: done
+**Note**: Verified 2026-06-29 — `scripts/check-field-access.sh` does not exist.
 **Milestone**: R6
 **Category**: Build / CI
 **Priority**: P3
@@ -14,19 +15,19 @@
 
 ## Acceptance Criteria
 
-- [ ] Delete `scripts/check-field-access.sh`.
-- [ ] Remove any CI/recipe references.
-- [ ] Ensure the Clippy/CI replacement covers the same check.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Delete `scripts/check-field-access.sh`.
+- [x] Remove any CI/recipe references.
+- [x] Ensure the Clippy/CI replacement covers the same check.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 

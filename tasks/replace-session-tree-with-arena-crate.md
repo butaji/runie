@@ -28,10 +28,10 @@
 - [x] `tree_filtered_walk` — filtered traversal returns expected order (verified via existing tests).
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 

@@ -16,15 +16,15 @@
 
 ## Acceptance Criteria
 
-- [ ] Delete `subagents::PermissionMode`.
-- [ ] Re-export `permissions::PermissionMode` from `subagents`.
-- [ ] Legacy string parsing lives in `FromStr`.
-- [ ] `cargo check --workspace` and `cargo test --workspace` pass.
+- [x] Delete `subagents::PermissionMode`.
+- [x] Re-export `permissions::PermissionMode` from `subagents`.
+- [x] Legacy string parsing lives in `FromStr`.
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `subagent_uses_canonical_permission_mode` — subagent config resolves to canonical enum.
+- [x] `subagent_uses_canonical_permission_mode` — subagent config resolves to canonical enum.
 
 ## Files touched
 

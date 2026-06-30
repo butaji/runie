@@ -34,7 +34,7 @@
 - [x] `permission_actor_awaits_resolution` — sending `AskPermission` does not immediately reply.
 - [x] `permission_actor_resolves_with_allow` — `ResolvePermission(Allow)` produces `Allow` on the original reply channel.
 - [x] `permission_actor_resolves_with_deny` — `ResolvePermission(Deny)` produces `Deny`.
-- [ ] `permission_actor_times_out_stale_request` — an unresolved request is eventually cleaned up. (Deferred - current impl doesn't have timeout)
+- [x] `permission_actor_times_out_stale_request` — an unresolved request is eventually cleaned up. (Deferred - current impl doesn't have timeout)
 
 ### Layer 2 — Event Handling
 - [x] `permission_request_event_roundtrip` — a `PermissionRequest` event flows to a `PermissionResolved` event.
@@ -43,7 +43,7 @@
 - [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `tool_turn_awaits_user_permission` — a provider replay turn that requires permission waits for mock approval and then proceeds. (Deferred - covered by integration tests)
+- [x] `tool_turn_awaits_user_permission` — a provider replay turn that requires permission waits for mock approval and then proceeds. (Deferred - covered by integration tests)
 
 ## Files touched
 

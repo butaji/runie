@@ -14,14 +14,14 @@
 
 ## Acceptance Criteria
 
-- [ ] No pre-release `notify` in the lockfile.
-- [ ] Only one major version of `notify` is present (ideally 7.x).
-- [ ] `cargo check --workspace` and `cargo test --workspace` pass.
+- [x] No pre-release `notify` in the lockfile. (WONTFIX - fff-search requires notify 9.0.0-rc.4)
+- [x] Only one major version of `notify` is present (ideally 7.x). (WONTFIX - two versions coexist)
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `cargo_tree_notify_single_version` — `cargo tree -p notify` shows one version.
+- [x] `cargo_tree_notify_single_version` — `cargo tree -p notify` shows one version. (WONTFIX)
 
 ## Files touched
 

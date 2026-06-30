@@ -15,9 +15,9 @@
     "status": "done"
   },
   {
-    "file": "collapse-event-intent-kind-taxonomies.md",
-    "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
-    "status": "done"
+    "file": "adopt-palette-for-theme-color-math.md",
+    "title": "Adopt `palette` for theme color math",
+    "status": "wontfix"
   },
   {
     "file": "centralize-built-in-tool-names.md",
@@ -35,13 +35,13 @@
     "status": "done"
   },
   {
-    "file": "cleanup-verify-tests-and-just-recipes.md",
-    "title": "Clean up `verify-tests.sh` and `just lint-fix`",
+    "file": "cleanup-small-duplicates-and-dead-code.md",
+    "title": "Clean up small duplicates and dead code",
     "status": "done"
   },
   {
-    "file": "cleanup-small-duplicates-and-dead-code.md",
-    "title": "Clean up small duplicates and dead code",
+    "file": "cleanup-verify-tests-and-just-recipes.md",
+    "title": "Clean up `verify-tests.sh` and `just lint-fix`",
     "status": "done"
   },
   {
@@ -52,6 +52,11 @@
   {
     "file": "collapse-dialogstate-variants.md",
     "title": "Collapse `DialogState` variants",
+    "status": "done"
+  },
+  {
+    "file": "collapse-event-intent-kind-taxonomies.md",
+    "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
     "status": "done"
   },
   {
@@ -70,11 +75,6 @@
     "status": "done"
   },
   {
-    "file": "delete-eventbusbridge-wrapper.md",
-    "title": "Delete `EventBusBridge` wrapper",
-    "status": "done"
-  },
-  {
     "file": "delete-dead-actor-handle-wrappers.md",
     "title": "Delete dead actor handle wrappers",
     "status": "done"
@@ -82,6 +82,16 @@
   {
     "file": "delete-dead-actor-modules-and-custom-trait.md",
     "title": "Delete dead actor modules and the custom `Actor` trait",
+    "status": "done"
+  },
+  {
+    "file": "delete-dead-runie-macros-crate.md",
+    "title": "Delete the dead `runie-macros` crate",
+    "status": "done"
+  },
+  {
+    "file": "delete-eventbusbridge-wrapper.md",
+    "title": "Delete `EventBusBridge` wrapper",
     "status": "done"
   },
   {
@@ -97,11 +107,6 @@
   {
     "file": "delete-or-merge-inspector-tool-pipeline.md",
     "title": "Delete or merge the inspector tool pipeline",
-    "status": "done"
-  },
-  {
-    "file": "delete-dead-runie-macros-crate.md",
-    "title": "Delete the dead `runie-macros` crate",
     "status": "done"
   },
   {
@@ -130,6 +135,11 @@
     "status": "done"
   },
   {
+    "file": "env-actor-owns-git-cwd.md",
+    "title": "env-actor-owns-git-cwd",
+    "status": "done"
+  },
+  {
     "file": "expand-leader-start-for-tui-and-cli.md",
     "title": "Expand `Leader::start` for the full TUI and CLI runtime",
     "status": "done"
@@ -150,18 +160,8 @@
     "status": "done"
   },
   {
-    "file": "replace-legacy-tool-parsers-with-thin-shim.md",
-    "title": "Finish tool-parser shim: collapse legacy modules and marker stripping",
-    "status": "done"
-  },
-  {
     "file": "fix-500-line-file-limit-violations.md",
     "title": "Fix 500-line file-limit violations",
-    "status": "done"
-  },
-  {
-    "file": "fix-ractor-permission-actor-reply-lifecycle.md",
-    "title": "Fix `RactorPermissionActor` reply lifecycle",
     "status": "done"
   },
   {
@@ -180,8 +180,18 @@
     "status": "done"
   },
   {
+    "file": "fix-fff-search-pre-release-notify.md",
+    "title": "Fix `fff-search` pulling pre-release `notify`",
+    "status": "wontfix"
+  },
+  {
     "file": "fix-keybindings-dead-code.md",
     "title": "Fix keybindings dead-code warning",
+    "status": "done"
+  },
+  {
+    "file": "fix-ractor-permission-actor-reply-lifecycle.md",
+    "title": "Fix `RactorPermissionActor` reply lifecycle",
     "status": "done"
   },
   {
@@ -195,13 +205,13 @@
     "status": "done"
   },
   {
-    "file": "implement-or-remove-mcp-runtime-scaffolding.md",
-    "title": "Implement MCP client runtime or remove config scaffolding",
+    "file": "implement-graceful-leader-shutdown.md",
+    "title": "Implement graceful leader shutdown",
     "status": "done"
   },
   {
-    "file": "implement-graceful-leader-shutdown.md",
-    "title": "Implement graceful leader shutdown",
+    "file": "implement-or-remove-mcp-runtime-scaffolding.md",
+    "title": "Implement MCP client runtime or remove config scaffolding",
     "status": "done"
   },
   {
@@ -215,11 +225,6 @@
     "status": "done"
   },
   {
-    "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
-    "title": "Migrate TUI and CLI to `Leader::start`",
-    "status": "done"
-  },
-  {
     "file": "migrate-production-actors-to-ractor.md",
     "title": "Migrate production actors to `ractor`",
     "status": "done"
@@ -230,8 +235,8 @@
     "status": "done"
   },
   {
-    "file": "move-cargo-deny-machete-from-workspace-deps-to-ci.md",
-    "title": "Move `cargo-deny` and `cargo-machete` from workspace deps to CI",
+    "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
+    "title": "Migrate TUI and CLI to `Leader::start`",
     "status": "done"
   },
   {
@@ -240,13 +245,13 @@
     "status": "done"
   },
   {
-    "file": "narrow-runie-core-public-api.md",
-    "title": "Narrow `runie-core` public API",
+    "file": "move-cargo-deny-machete-from-workspace-deps-to-ci.md",
+    "title": "Move `cargo-deny` and `cargo-machete` from workspace deps to CI",
     "status": "done"
   },
   {
-    "file": "normalize-std-sync-locks-in-tui-production-code.md",
-    "title": "Normalize `std::sync` locks in TUI production code",
+    "file": "narrow-runie-core-public-api.md",
+    "title": "Narrow `runie-core` public API",
     "status": "done"
   },
   {
@@ -255,23 +260,13 @@
     "status": "done"
   },
   {
+    "file": "normalize-std-sync-locks-in-tui-production-code.md",
+    "title": "Normalize `std::sync` locks in TUI production code",
+    "status": "done"
+  },
+  {
     "file": "reconnect-tui-agent-actor-channel.md",
     "title": "Reconnect or remove TUI `AgentActor` channel",
-    "status": "done"
-  },
-  {
-    "file": "remove-mutex-eventbus-wrappers-from-actor-state.md",
-    "title": "Remove `Mutex<EventBus>` wrappers from actor `State`",
-    "status": "done"
-  },
-  {
-    "file": "remove-sleep-from-automatic-tests.md",
-    "title": "Remove `sleep()` from automatic tests",
-    "status": "done"
-  },
-  {
-    "file": "remove-dead-yaml-line-parsers-from-resource-loader.md",
-    "title": "Remove dead YAML line parsers from `resource_loader`",
     "status": "done"
   },
   {
@@ -280,8 +275,23 @@
     "status": "done"
   },
   {
+    "file": "remove-dead-yaml-line-parsers-from-resource-loader.md",
+    "title": "Remove dead YAML line parsers from `resource_loader`",
+    "status": "done"
+  },
+  {
+    "file": "remove-mutex-eventbus-wrappers-from-actor-state.md",
+    "title": "Remove `Mutex<EventBus>` wrappers from actor `State`",
+    "status": "done"
+  },
+  {
     "file": "remove-redundant-check-field-access-script.md",
     "title": "Remove redundant `check-field-access.sh`",
+    "status": "done"
+  },
+  {
+    "file": "remove-sleep-from-automatic-tests.md",
+    "title": "Remove `sleep()` from automatic tests",
     "status": "done"
   },
   {
@@ -305,31 +315,6 @@
     "status": "done"
   },
   {
-    "file": "replace-tui-keymap-combo-stringification-with-crokey.md",
-    "title": "Replace TUI keymap combo stringification with `crokey`",
-    "status": "done"
-  },
-  {
-    "file": "replace-xor-auth-with-keyring.md",
-    "title": "Replace XOR-obfuscated auth storage with OS keyring",
-    "status": "done"
-  },
-  {
-    "file": "replace-normalize-raw-frontmatter-with-standard-splitter.md",
-    "title": "Replace `normalize_raw_frontmatter` with a standard frontmatter splitter",
-    "status": "done"
-  },
-  {
-    "file": "replace-tmux-test-with-ratatui-tests.md",
-    "title": "Replace `scripts/tmux-test.sh` with Ratatui `TestBackend` tests",
-    "status": "done"
-  },
-  {
-    "file": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",
-    "title": "Replace custom TUI widgets with ratatui ecosystem crates",
-    "status": "done"
-  },
-  {
     "file": "replace-bash-safety-with-shell-words.md",
     "title": "Replace custom bash-safety heuristic with `shell-words`",
     "status": "done"
@@ -345,13 +330,13 @@
     "status": "done"
   },
   {
-    "file": "replace-custom-nanoid-in-test-runner.md",
-    "title": "Replace custom nanoid in test runner",
+    "file": "replace-custom-helpers-with-crates.md",
+    "title": "Replace custom path/glob/fuzzy/keybinding helpers with crates",
     "status": "done"
   },
   {
-    "file": "replace-custom-helpers-with-crates.md",
-    "title": "Replace custom path/glob/fuzzy/keybinding helpers with crates",
+    "file": "replace-custom-nanoid-in-test-runner.md",
+    "title": "Replace custom nanoid in test runner",
     "status": "done"
   },
   {
@@ -365,13 +350,8 @@
     "status": "done"
   },
   {
-    "file": "replace-tui-markdown-block-layout-with-tui-markdown.md",
-    "title": "Replace hand-rolled TUI markdown block layout with `tui-markdown`",
-    "status": "done"
-  },
-  {
-    "file": "replace-session-tree-with-arena-crate.md",
-    "title": "Replace hand-rolled session tree with an arena tree crate",
+    "file": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",
+    "title": "Replace custom TUI widgets with ratatui ecosystem crates",
     "status": "done"
   },
   {
@@ -380,13 +360,48 @@
     "status": "done"
   },
   {
+    "file": "replace-legacy-tool-parsers-with-thin-shim.md",
+    "title": "Finish tool-parser shim: collapse legacy modules and marker stripping",
+    "status": "done"
+  },
+  {
+    "file": "replace-normalize-raw-frontmatter-with-standard-splitter.md",
+    "title": "Replace `normalize_raw_frontmatter` with a standard frontmatter splitter",
+    "status": "done"
+  },
+  {
     "file": "replace-remaining-custom-parsers-and-macros-with-strum.md",
     "title": "Replace remaining custom parsers and macros with `strum`",
     "status": "done"
   },
   {
+    "file": "replace-session-tree-with-arena-crate.md",
+    "title": "Replace hand-rolled session tree with an arena tree crate",
+    "status": "done"
+  },
+  {
     "file": "replace-think-filter-with-regex.md",
     "title": "Replace think-block filter with regex",
+    "status": "done"
+  },
+  {
+    "file": "replace-tmux-test-with-ratatui-tests.md",
+    "title": "Replace `scripts/tmux-test.sh` with Ratatui `TestBackend` tests",
+    "status": "done"
+  },
+  {
+    "file": "replace-tui-keymap-combo-stringification-with-crokey.md",
+    "title": "Replace TUI keymap combo stringification with `crokey`",
+    "status": "done"
+  },
+  {
+    "file": "replace-tui-markdown-block-layout-with-tui-markdown.md",
+    "title": "Replace hand-rolled TUI markdown block layout with `tui-markdown`",
+    "status": "done"
+  },
+  {
+    "file": "replace-xor-auth-with-keyring.md",
+    "title": "Replace XOR-obfuscated auth storage with OS keyring",
     "status": "done"
   },
   {
@@ -400,11 +415,6 @@
     "status": "done"
   },
   {
-    "file": "simplify-word-wrap-to-single-pass.md",
-    "title": "Simplify `word_wrap` to a single pass",
-    "status": "done"
-  },
-  {
     "file": "simplify-slash-command-dsl.md",
     "title": "Simplify slash-command DSL",
     "status": "done"
@@ -412,6 +422,11 @@
   {
     "file": "simplify-terminal-capability-detection.md",
     "title": "Simplify terminal capability detection",
+    "status": "done"
+  },
+  {
+    "file": "simplify-word-wrap-to-single-pass.md",
+    "title": "Simplify `word_wrap` to a single pass",
     "status": "done"
   },
   {
@@ -427,21 +442,6 @@
   {
     "file": "unify-cli-json-rpc-transport-and-remove-dead-acp.md",
     "title": "Unify CLI JSON-RPC transport and remove dead ACP plumbing",
-    "status": "done"
-  },
-  {
-    "file": "unify-tui-message-wrapping-with-textwrap.md",
-    "title": "Unify TUI message wrapping with `textwrap`",
-    "status": "done"
-  },
-  {
-    "file": "unify-tui-render-test-helpers.md",
-    "title": "Unify TUI render test helpers",
-    "status": "done"
-  },
-  {
-    "file": "unify-permissionmode-between-permissions-and-subagents.md",
-    "title": "Unify `PermissionMode` between `permissions` and `subagents`",
     "status": "done"
   },
   {
@@ -480,6 +480,16 @@
     "status": "done"
   },
   {
+    "file": "unify-permissionmode-between-permissions-and-subagents.md",
+    "title": "Unify `PermissionMode` between `permissions` and `subagents`",
+    "status": "done"
+  },
+  {
+    "file": "unify-provider-config-persistence.md",
+    "title": "Unify provider-config persistence helpers",
+    "status": "done"
+  },
+  {
     "file": "unify-provider-credential-resolution-with-dotenvy.md",
     "title": "Unify provider credential resolution with `dotenvy`",
     "status": "done"
@@ -490,13 +500,23 @@
     "status": "done"
   },
   {
-    "file": "unify-provider-config-persistence.md",
-    "title": "Unify provider-config persistence helpers",
+    "file": "unify-session-store-and-index.md",
+    "title": "Unify session store and index into a single persistence backend",
     "status": "done"
   },
   {
-    "file": "unify-session-store-and-index.md",
-    "title": "Unify session store and index into a single persistence backend",
+    "file": "unify-tui-message-wrapping-with-textwrap.md",
+    "title": "Unify TUI message wrapping with `textwrap`",
+    "status": "done"
+  },
+  {
+    "file": "unify-tui-render-test-helpers.md",
+    "title": "Unify TUI render test helpers",
+    "status": "done"
+  },
+  {
+    "file": "use-channels-for-subagent-result-collection.md",
+    "title": "Use channels for subagent result collection",
     "status": "done"
   },
   {
@@ -508,6 +528,11 @@
     "file": "use-notify-directly-in-config-actor.md",
     "title": "Use `notify` directly in `RactorConfigActor`",
     "status": "done"
+  },
+  {
+    "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
+    "title": "Use `pulldown-cmark` event stream for tool-marker stripping",
+    "status": "wontfix"
   },
   {
     "file": "use-pulldown-cmark-frontmatter-for-resource-loader.md",
@@ -525,33 +550,8 @@
     "status": "done"
   },
   {
-    "file": "use-channels-for-subagent-result-collection.md",
-    "title": "Use channels for subagent result collection",
-    "status": "done"
-  },
-  {
     "file": "wire-or-delete-input-actor.md",
     "title": "Wire or delete `InputActor`",
     "status": "done"
-  },
-  {
-    "file": "env-actor-owns-git-cwd.md",
-    "title": "env-actor-owns-git-cwd",
-    "status": "done"
-  },
-  {
-    "file": "adopt-palette-for-theme-color-math.md",
-    "title": "Adopt `palette` for theme color math",
-    "status": "wontfix"
-  },
-  {
-    "file": "fix-fff-search-pre-release-notify.md",
-    "title": "Fix `fff-search` pulling pre-release `notify`",
-    "status": "wontfix"
-  },
-  {
-    "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
-    "title": "Use `pulldown-cmark` event stream for tool-marker stripping",
-    "status": "wontfix"
   }
 ]

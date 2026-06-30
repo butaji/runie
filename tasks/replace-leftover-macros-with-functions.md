@@ -15,19 +15,25 @@ Several small macros can be ordinary functions or `if let` expressions: `with_pa
 
 ## Acceptance Criteria
 
-- [ ] Replace `with_panel_stack!` with inherent methods `panel_stack()`/`panel_stack_mut()` on `DialogState`.
-- [ ] Replace `with_ordering!` with a helper function `apply_and_order(state, f)`.
-- [ ] Replace test skip macros with `#[cfg_attr(..., ignore)]` or helper functions.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Replace `with_panel_stack!` with inherent methods `panel_stack()`/`panel_stack_mut()` on `DialogState`.
+- [x] Replace `with_ordering!` with a helper function `apply_and_order(state, f)`.
+- [x] Replace test skip macros with `#[cfg_attr(..., ignore)]` or helper functions.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `dialog_panel_stack_accessor` — `panel_stack()` returns the expected stack.
+- [x] `dialog_panel_stack_accessor` — `panel_stack()` returns the expected stack.
+
+### Layer 2 — Event Handling
+- [x] N/A.
+
+### Layer 3 — Rendering
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 

@@ -1,6 +1,7 @@
 # Simplify `word_wrap` to a single pass
 
 **Status**: done
+**Note**: Verified 2026-06-29 — `word_wrap` in `layout.rs` uses single-pass algorithm with `unicode-width`.
 **Milestone**: R7
 
 **Note**: Verified 2026-06-29 — single-pass logic avoids re-wrapping already-short lines; all word_wrap tests pass.
@@ -16,14 +17,14 @@
 
 ## Acceptance Criteria
 
-- [ ] `word_wrap` produces the same output in a single pass.
-- [ ] All existing tests pass.
-- [ ] `cargo check --workspace` and `cargo test --workspace` pass.
+- [x] `word_wrap` produces the same output in a single pass.
+- [x] All existing tests pass.
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `word_wrap_single_pass_matches_double_pass` — outputs equal for a grid of inputs.
+- [x] `word_wrap_single_pass_matches_double_pass` — outputs equal for a grid of inputs.
 
 ## Files touched
 

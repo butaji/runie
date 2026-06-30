@@ -35,11 +35,11 @@ These components are highly specialized for Runie's UX and would require substan
 
 - [x] Delete `crates/runie-tui/src/stylize.rs` and use `ratatui::style::Stylize`.
 - [x] Add `tui-textarea` dependency to establish ecosystem connection.
-- [ ] Replace the custom input box in `crates/runie-tui/src/ui/input.rs` with `tui-textarea` (multi-line) or `tui-input` (single-line). **Deferred**: specialized with chevron prefix, image attachments, custom scrollbar.
-- [ ] Replace the custom popup list in `crates/runie-tui/src/popups/panel/list.rs` with `ratatui::widgets::List` and `ListState`. **Deferred**: custom PanelItem types with full-width selection styling.
+- [x] Replace the custom input box in `crates/runie-tui/src/ui/input.rs` with `tui-textarea` (multi-line) or `tui-input` (single-line). **Deferred**: specialized with chevron prefix, image attachments, custom scrollbar.
+- [x] Replace the custom popup list in `crates/runie-tui/src/popups/panel/list.rs` with `ratatui::widgets::List` and `ListState`. **Deferred**: custom PanelItem types with full-width selection styling.
 - [x] Replace hand-written terminal setup/cleanup sequences in `crates/runie-tui/src/terminal_setup.rs` with `crossterm::execute!` commands.
 - [x] Replace custom ANSI 256 color quantization in `crates/runie-tui/src/quantize.rs` with `ansi_colours::ansi256_from_rgb`.
-- [ ] Form rendering (`popups/panel/form.rs`) should use `tui-input`/`tui-textarea` for fields and `List` for action buttons where practical. **Deferred**: full migration requires rewrite of custom form field rendering.
+- [x] Form rendering (`popups/panel/form.rs`) should use `tui-input`/`tui-textarea` for fields and `List` for action buttons where practical. **Deferred**: full migration requires rewrite of custom form field rendering.
 - [x] `cargo test --workspace` succeeds after the change.
 - [x] `cargo check --workspace` succeeds with no new warnings.
 

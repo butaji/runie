@@ -21,10 +21,10 @@ Several actors held `EventBus<Event>` inside `parking_lot::Mutex` in their racto
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `actor_emits_event_without_mutex` — state mutation succeeds.
+- [x] `actor_emits_event_without_mutex` — state mutation succeeds.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `turn_events_still_reach_ui` — events reach UI after refactor.
+- [x] `turn_events_still_reach_ui` — events reach UI after refactor.
 
 ## Files touched
 

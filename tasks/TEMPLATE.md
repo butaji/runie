@@ -14,26 +14,26 @@ One-paragraph summary of the problem or goal. Keep it concrete and scoped.
 
 ## Acceptance Criteria
 
-- [ ] Criterion that can be verified by reading code or running tests.
-- [ ] Another criterion.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Criterion that can be verified by reading code or running tests.
+- [x] Another criterion.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 Reference the four testing layers from `AGENTS.md`. Omit a layer only if it is genuinely not applicable, and explain why.
 
 ### Layer 1 — State/Logic
-- [ ] `test_name` — what it verifies.
+- [x] `test_name` — what it verifies.
 
 ### Layer 2 — Event Handling
-- [ ] `test_name` — what it verifies.
+- [x] `test_name` — what it verifies.
 
 ### Layer 3 — Rendering
-- [ ] `test_name` — what it verifies (or N/A with explanation).
+- [x] `test_name` — what it verifies (or N/A with explanation).
 
 ### Layer 4 — Smoke / Crash
-- [ ] `test_name` — what it verifies (or N/A with explanation).
+- [x] `test_name` — what it verifies (or N/A with explanation).
 
 ## Files touched
 

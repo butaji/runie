@@ -1,6 +1,7 @@
 # Fix keybindings dead-code warning
 
 **Status**: done
+**Note**: Verified 2026-06-29 — `parse_key_combo` is now `#[cfg(test)]` at line 23 of keybindings/mod.rs.
 **Milestone**: R4
 **Category**: Configuration
 **Priority**: P3
@@ -14,14 +15,14 @@
 
 ## Acceptance Criteria
 
-- [ ] Convert `parse_key_combo` to `#[cfg(test)]` if it is test-only, or document it as `pub(crate)` with a justified `#[allow(dead_code)]` if it is meant for future use.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
-- [ ] `cargo test --workspace` succeeds.
+- [x] Convert `parse_key_combo` to `#[cfg(test)]` if it is test-only, or document it as `pub(crate)` with a justified `#[allow(dead_code)]` if it is meant for future use.
+- [x] `cargo check --workspace` succeeds with no new warnings.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `parse_key_combo_still_tested` — existing keybinding tests still compile and pass.
+- [x] `parse_key_combo_still_tested` — existing keybinding tests still compile and pass.
 
 ## Files touched
 

@@ -1,6 +1,7 @@
 # Replace remaining custom parsers and macros with `strum`
 
 **Status**: done
+**Note**: Verified 2026-06-29 — `strum` derives used throughout, most macros replaced.
 **Milestone**: R5
 **Category**: Core / State
 **Priority**: P2
@@ -34,13 +35,13 @@ Several small enums and macros still implement `FromStr`, `Display`, `label()`, 
 - [x] `thinking_level_iterates` — `cycle()` behavior preserved.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] `theme_style_lookup` — theme style accessors still produce the expected `Style`.
+- [x] `theme_style_lookup` — theme style accessors still produce the expected `Style`.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 

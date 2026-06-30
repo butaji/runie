@@ -16,15 +16,15 @@
 
 ## Acceptance Criteria
 
-- [ ] Replace `std::sync::Mutex`/`RwLock` in `theme/mod.rs` with `parking_lot`.
-- [ ] Replace `std::sync::Mutex` in `terminal/caps/detect.rs` with `parking_lot`.
-- [ ] Remove `.unwrap_or_else(|e| e.into_inner())` poison recovery.
-- [ ] `cargo check --workspace` and `cargo test --workspace` pass.
+- [x] Replace `std::sync::Mutex`/`RwLock` in `theme/mod.rs` with `parking_lot`.
+- [x] Replace `std::sync::Mutex` in `terminal/caps/detect.rs` with `parking_lot`.
+- [x] Remove `.unwrap_or_else(|e| e.into_inner())` poison recovery.
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `theme_globals_use_parking_lot` — theme access works after conversion.
+- [x] `theme_globals_use_parking_lot` — theme access works after conversion.
 
 ## Files touched
 

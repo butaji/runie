@@ -62,7 +62,7 @@ This task finishes the migration in phases so that `cargo check --workspace` sta
 - [x] All production spawn sites (`runie-tui/src/main.rs`, `runie-cli/src/acp.rs`, `Leader::start`, `HeadlessRuntime`) use the ractor-based versions for all migrated actors.
 - [x] `HeadlessRuntime` (`crates/runie-core/src/headless_runtime.rs`) is updated to use the ractor-based actors instead of the legacy ones.
 - [x] The legacy custom trait and helpers still exist but are no longer used by production code.
-- [ ] `UiControlActor` is left untouched; its fate is decided in `delete-dead-actor-modules-and-custom-trait`.
+- [x] `UiControlActor` is left untouched; its fate is decided in `delete-dead-actor-modules-and-custom-trait`.
 - [x] `cargo test --workspace` succeeds after the change.
 - [x] `cargo check --workspace` succeeds with no new warnings.
 
@@ -85,13 +85,13 @@ This task finishes the migration in phases so that `cargo check --workspace` sta
 - [x] `leader_start_uses_ractor_io` — `Leader::start` instantiates `RactorIoActor`.
 - [x] `leader_start_uses_ractor_session` — `Leader::start` instantiates `RactorSessionActor`.
 - [x] `headless_runtime_uses_ractor_provider` — `HeadlessRuntime` starts with `RactorProviderActor`.
-- [ ] `ractor_actor_spawn_lifecycle` — starts and stops each migrated production actor through ractor and asserts clean shutdown.
+- [x] `ractor_actor_spawn_lifecycle` — starts and stops each migrated production actor through ractor and asserts clean shutdown.
 
 ### Layer 3 — Rendering
-- [ ] N/A — this task changes runtime plumbing, not widgets.
+- [x] N/A — this task changes runtime plumbing, not widgets.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `smoke_migrated_actors_run_full_turn` — a provider-replay turn exercises the migrated `TurnActor`/`AgentActor` path end-to-end.
+- [x] `smoke_migrated_actors_run_full_turn` — a provider-replay turn exercises the migrated `TurnActor`/`AgentActor` path end-to-end.
 
 ## Files touched
 

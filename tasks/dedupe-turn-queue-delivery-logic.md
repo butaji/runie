@@ -1,6 +1,7 @@
 # Dedupe turn-queue delivery logic
 
 **Status**: done
+**Note**: Verified 2026-06-29 — `TurnQueue` struct extracted and used, Layer 4 test passes.
 **Milestone**: R2
 **Category**: Architecture / Actors
 **Priority**: P1
@@ -28,13 +29,13 @@
 - [x] `turn_queue_empty_after_clear` — no items remain after clearing.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `turn_delivery_replay_matches` — existing provider replay fixtures still produce the same turn sequence.
+- [x] `turn_delivery_replay_matches` — existing provider replay fixtures still produce the same turn sequence.
 
 ## Files touched
 

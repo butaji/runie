@@ -1,6 +1,7 @@
 # Fix 500-line file-limit violations
 
 **Status**: done
+**Note**: Verified 2026-06-29 — All production files are within 500-line limit, `cargo check` passes.
 **Milestone**: R7
 **Category**: Build / CI
 **Priority**: P1
@@ -32,7 +33,7 @@ AGENTS.md enforces a 500-line limit per `.rs` file. Several production files exc
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `file_lengths_within_limit` — script confirms no violations.
+- [x] `file_lengths_within_limit` — script confirms no violations.
 
 ## Files touched
 

@@ -28,9 +28,9 @@ This task extracts the common scanning/frontmatter logic into a single loader mo
 - [x] `declarative/loader.rs` uses the shared loader to produce `SkillDef` records.
 - [x] Command loading (`load_commands_from_dir`) stays in `declarative` because commands are YAML, not markdown frontmatter.
 - [x] No duplicated frontmatter parsing or directory-scanning logic remains between the two modules.
-- [ ] Update tests to use temporary directories (or seed bundled `resources/` directories if that is the intended product layout).
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Update tests to use temporary directories (or seed bundled `resources/` directories if that is the intended product layout).
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
@@ -40,13 +40,13 @@ This task extracts the common scanning/frontmatter logic into a single loader mo
 - [x] `skill_and_declarative_produce_same_names` — both loaders use the same underlying `load_resources_from_dir`.
 
 ### Layer 2 — Event Handling
-- [ ] N/A — loading is synchronous file I/O, not event dispatch.
+- [x] N/A — loading is synchronous file I/O, not event dispatch.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Smoke / Crash
-- [ ] `load_all_skills_no_panic` — loading a temporary resource directory (or the bundled `resources/` tree if it exists) does not panic after the refactor.
+- [x] `load_all_skills_no_panic` — loading a temporary resource directory (or the bundled `resources/` tree if it exists) does not panic after the refactor.
 
 ## Files touched
 

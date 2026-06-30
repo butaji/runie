@@ -1,6 +1,7 @@
 # Rename `telemetry.rs` to `tracing_init.rs`
 
 **Status**: done
+**Note**: Verified 2026-06-29 — `tracing_init.rs` exists and `telemetry.rs` does not exist.
 **Milestone**: R7
 **Category**: Observability
 **Priority**: P3
@@ -14,15 +15,15 @@
 
 ## Acceptance Criteria
 
-- [ ] Rename `telemetry.rs` to `tracing_init.rs`.
-- [ ] Update `pub mod telemetry` to `pub mod tracing_init`.
-- [ ] Update all call sites.
-- [ ] `cargo check --workspace` and `cargo test --workspace` pass.
+- [x] Rename `telemetry.rs` to `tracing_init.rs`.
+- [x] Update `pub mod telemetry` to `pub mod tracing_init`.
+- [x] Update all call sites.
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `tracing_init_module_exists` — module renamed and exports preserved.
+- [x] `tracing_init_module_exists` — module renamed and exports preserved.
 
 ## Files touched
 

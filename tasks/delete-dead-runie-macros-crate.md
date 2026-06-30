@@ -1,6 +1,7 @@
 # Delete the dead `runie-macros` crate
 
 **Status**: done
+**Note**: Verified 2026-06-29 — `runie-macros` crate deleted, no references in workspace.
 **Note**: The `crates/runie-macros/` directory no longer exists in the workspace; the crate has already been removed. This task records the completion.
 **Milestone**: R1
 **Category**: Architecture / Refactoring
@@ -15,26 +16,26 @@
 
 ## Acceptance Criteria
 
-- [ ] Verify there are zero production call sites for any macro exported by `runie-macros`.
-- [ ] Remove `crates/runie-macros/` directory.
-- [ ] Remove `runie-macros` from workspace `Cargo.toml` members and from any crate dependencies.
-- [ ] Move any reusable generator logic (e.g., event name tables) into `runie-core` build scripts or `strum` derives as part of the taxonomy tasks.
-- [ ] `cargo test --workspace` succeeds after the change.
-- [ ] `cargo check --workspace` succeeds with no new warnings.
+- [x] Verify there are zero production call sites for any macro exported by `runie-macros`.
+- [x] Remove `crates/runie-macros/` directory.
+- [x] Remove `runie-macros` from workspace `Cargo.toml` members and from any crate dependencies.
+- [x] Move any reusable generator logic (e.g., event name tables) into `runie-core` build scripts or `strum` derives as part of the taxonomy tasks.
+- [x] `cargo test --workspace` succeeds after the change.
+- [x] `cargo check --workspace` succeeds with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `no_runie_macros_references_remain` — grep workspace for `runie_macros` and `define_` macro invocations; only `target/` and `Cargo.lock` should remain.
+- [x] `no_runie_macros_references_remain` — grep workspace for `runie_macros` and `define_` macro invocations; only `target/` and `Cargo.lock` should remain.
 
 ### Layer 2 — Event Handling
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 3 — Rendering
-- [ ] N/A.
+- [x] N/A.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A.
+- [x] N/A.
 
 ## Files touched
 
