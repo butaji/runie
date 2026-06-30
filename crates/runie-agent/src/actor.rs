@@ -86,8 +86,12 @@ impl Actor for RactorAgentActor {
 
 impl RactorAgentActor {
     async fn run_turn(&self, command: &AgentCommand) {
-        let provider = self.get_provider_handle(command);
-        let permission = self.get_permission_handle(command);
+        let Some(provider) = self.get_provider_handle(command) else {
+            return;
+        };
+        let Some(permission) = self.get_permission_handle(command) else {
+            return;
+        };
 
         let (provider_key, model) = self.extract_provider_info(command);
         let built = match provider.build(provider_key, model).await {
@@ -106,25 +110,25 @@ impl RactorAgentActor {
         }
     }
 
-    fn get_provider_handle(&self, cmd: &AgentCommand) -> RactorProviderHandle {
+    fn get_provider_handle(&self, cmd: &AgentCommand) -> Option<RactorProviderHandle> {
         self.provider_handle
             .lock()
             .as_ref()
             .cloned()
-            .unwrap_or_else(|| {
+            .or_else(|| {
                 self.emit_error_and_done(&cmd.id, "Provider not initialized".into());
-                panic!("Provider not initialized")
+                None
             })
     }
 
-    fn get_permission_handle(&self, cmd: &AgentCommand) -> RactorPermissionHandle {
+    fn get_permission_handle(&self, cmd: &AgentCommand) -> Option<RactorPermissionHandle> {
         self.permission_handle
             .lock()
             .as_ref()
             .cloned()
-            .unwrap_or_else(|| {
+            .or_else(|| {
                 self.emit_error_and_done(&cmd.id, "Permission handle not initialized".into());
-                panic!("Permission handle not initialized")
+                None
             })
     }
 
