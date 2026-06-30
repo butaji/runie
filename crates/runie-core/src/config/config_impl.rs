@@ -4,6 +4,8 @@
 
 use std::path::{Path, PathBuf};
 
+use anyhow::Context;
+
 use serde_json::Value;
 
 // ── Inline config validation (moved from validate.rs) ──────────────────────────
@@ -314,11 +316,25 @@ impl crate::config::Config {
     }
 
     /// Save config to an explicit path.
+    ///
+    /// Uses `fs2` exclusive lock for cross-process safety.
     pub fn save_to(&self, path: &Path) -> anyhow::Result<()> {
+        use std::fs::{create_dir_all, OpenOptions};
+        use std::io::Write;
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
+            create_dir_all(parent)?;
         }
-        std::fs::write(path, toml::to_string_pretty(self)?)?;
+        let toml_string = toml::to_string_pretty(self)?;
+        let file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(path)
+            .with_context(|| format!("failed to open config for writing: {}", path.display()))?;
+        let _lock = fs2::FileExt::lock_exclusive(&file);
+        let mut file = file;
+        file.write_all(toml_string.as_bytes())
+            .with_context(|| format!("failed to write config: {}", path.display()))?;
         Ok(())
     }
 

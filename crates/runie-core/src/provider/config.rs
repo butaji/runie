@@ -5,8 +5,8 @@
 //!
 //! For actor-based config operations, see `actors/config/file_helpers.rs`.
 
+use std::fs::OpenOptions;
 use std::path::PathBuf;
-use std::sync::RwLock;
 
 use crate::actors::config::file_helpers;
 use crate::proto::provider::ProviderConfig;
@@ -16,8 +16,6 @@ thread_local! {
         std::cell::RefCell::new(None)
     };
 }
-
-static CONFIG_LOCK: RwLock<()> = RwLock::new(());
 
 /// Override the config file path for the current thread (tests only).
 pub fn set_test_config_path(path: PathBuf) {
@@ -38,44 +36,49 @@ fn load_config() -> crate::config::Config {
     crate::config::Config::load(Some(&config_path()))
 }
 
-/// Read the config file while holding the read lock.
+/// Read the config file with a shared (read) file lock.
 pub fn with_read_lock<F, T>(f: F) -> T
 where
     F: FnOnce(&crate::config::Config) -> T,
 {
-    let _guard = CONFIG_LOCK.read().unwrap();
-    f(&load_config())
+    let path = config_path();
+    let config = if path.exists() {
+        let file = OpenOptions::new().read(true).open(&path).unwrap();
+        let _lock = fs2::FileExt::lock_shared(&file);
+        crate::config::Config::load(Some(&path))
+    } else {
+        crate::config::Config::default()
+    };
+    f(&config)
 }
 
-/// Mutate and save the config file while holding the write lock.
+/// Mutate and save the config file with an exclusive file lock.
 pub fn with_write_lock<F, T>(f: F) -> anyhow::Result<T>
 where
     F: FnOnce(&mut crate::config::Config) -> T,
 {
-    let _guard = CONFIG_LOCK.write().unwrap();
-    let mut config = load_config();
+    let path = config_path();
+    let mut config = crate::config::Config::load(Some(&path));
     let result = f(&mut config);
-    config.save_to(&config_path())?;
+    // save_to uses fs2 exclusive lock internally
+    config.save_to(&path)?;
     Ok(result)
 }
 
 /// Save a provider configuration to `~/.runie/config.toml`.
-/// Creates the file and parent directories if needed.
+/// Uses surgical TOML edit with fs2 exclusive lock via file_helpers.
 pub fn save_provider_config(
     name: &str,
     base_url: &str,
     api_key: &str,
     models: &[String],
 ) -> anyhow::Result<()> {
-    // Hold the write lock while saving to prevent concurrent corruption
-    let _guard = CONFIG_LOCK.write().unwrap();
     file_helpers::save_provider_to_path(&config_path(), name, base_url, api_key, models)
 }
 
 /// Remove a provider configuration from `~/.runie/config.toml`.
+/// Uses surgical TOML edit with fs2 exclusive lock via file_helpers.
 pub fn remove_provider_config(name: &str) -> anyhow::Result<()> {
-    // Hold the write lock while removing to prevent concurrent corruption
-    let _guard = CONFIG_LOCK.write().unwrap();
     file_helpers::remove_provider_from_path(&config_path(), name)
 }
 
