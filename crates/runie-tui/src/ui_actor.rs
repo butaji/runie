@@ -173,12 +173,30 @@ impl UiActor {
         let was_config_loaded = matches!(&evt, Event::ConfigLoaded { .. });
         let was_agent_done = matches!(&evt, Event::Done { .. } | Event::Error { .. });
 
-        // Route input events through InputActor instead of applying directly.
-        // InputChanged events are the single source of truth for input state.
-        match &evt {
+        self.handle_input_event(&evt).await;
+
+        if !matches!(&evt, Event::InputChanged { .. }) {
+            self.update_paced_renderer(&evt);
+            self.dispatch_effect(&evt, effect_tx.clone()).await;
+        }
+        if *self.state.should_quit_mut() {
+            return true;
+        }
+        if was_config_loaded {
+            let _ = self.kb_tx.send(self.state.config().keybindings().clone());
+        }
+        if was_submit || was_followup || was_agent_done {
+            self.agent_handle.run_if_queued(&self.turn_handle).await;
+        }
+
+        false
+    }
+
+    /// Route input events through InputActor instead of applying directly.
+    /// InputChanged events are the single source of truth for input state.
+    async fn handle_input_event(&mut self, evt: &Event) {
+        match evt {
             Event::Input(c) => {
-                // In test mode (no InputActor), apply synchronously so the UiActor
-                // state is updated without waiting for an InputChanged response.
                 self.apply_event(evt.clone());
                 self.send_input_msg(runie_core::actors::InputMsg::InsertChar(*c))
                     .await;
@@ -252,66 +270,46 @@ impl UiActor {
                     .await;
             }
             Event::Submit => {
-                // Capture content, send Submit to InputActor, dispatch after InputChanged.
-                let content = self.state.input().input().trim().to_owned();
-                self.pending_submit = if content.is_empty() {
-                    None
-                } else {
-                    Some(content.clone())
-                };
-                self.send_input_msg(runie_core::actors::InputMsg::Submit { content })
-                    .await;
+                self.handle_submit_event().await;
             }
             Event::InputChanged { state } => {
-                // Single source of truth for input state. Apply state and handle
-                // autocomplete triggers before other events modify the projection.
-                let prev_input = self.prev_input.clone();
-                let prev_cursor_pos = self.prev_cursor_pos;
-                let new_input = state.input().to_owned();
-                let new_cursor_pos = state.cursor_pos;
-
-                // Apply authoritative state.
-                *self.state.input_mut() = *state.clone();
-
-                // Detect autocomplete triggers: '@' or '/' typed at end of input.
-                self.detect_autocomplete_trigger(
-                    &prev_input,
-                    prev_cursor_pos,
-                    &new_input,
-                    new_cursor_pos,
-                );
-
-                // Dispatch pending submit after state is clean.
-                if let Some(content) = self.pending_submit.take() {
-                    self.dispatch_submit_content(content);
-                }
-
-                // Side effects that depend on updated input state.
-                self.state.view_mut().dirty = true;
-                self.handle_at_trigger();
+                self.handle_input_changed(state);
             }
             _ => {
-                // Non-input events: apply directly.
                 self.apply_event(evt.clone());
             }
         }
+    }
 
-        // Non-input events: paced renderer, effects, etc.
-        if !matches!(&evt, Event::InputChanged { .. }) {
-            self.update_paced_renderer(&evt);
-            self.dispatch_effect(&evt, effect_tx.clone()).await;
-        }
-        if *self.state.should_quit_mut() {
-            return true;
-        }
-        if was_config_loaded {
-            let _ = self.kb_tx.send(self.state.config().keybindings().clone());
-        }
-        if was_submit || was_followup || was_agent_done {
-            self.agent_handle.run_if_queued(&self.turn_handle).await;
+    /// Handle the Submit event by capturing content and sending to InputActor.
+    async fn handle_submit_event(&mut self) {
+        let content = self.state.input().input().trim().to_owned();
+        self.pending_submit = if content.is_empty() {
+            None
+        } else {
+            Some(content.clone())
+        };
+        self.send_input_msg(runie_core::actors::InputMsg::Submit { content })
+            .await;
+    }
+
+    /// Handle InputChanged: apply authoritative state and trigger side effects.
+    fn handle_input_changed(&mut self, state: &runie_core::InputState) {
+        let prev_input = self.prev_input.clone();
+        let prev_cursor_pos = self.prev_cursor_pos;
+        let new_input = state.input().to_owned();
+        let new_cursor_pos = state.cursor_pos;
+
+        *self.state.input_mut() = (*state).clone();
+
+        self.detect_autocomplete_trigger(&prev_input, prev_cursor_pos, &new_input, new_cursor_pos);
+
+        if let Some(content) = self.pending_submit.take() {
+            self.dispatch_submit_content(content);
         }
 
-        false
+        self.state.view_mut().dirty = true;
+        self.handle_at_trigger();
     }
 
     /// Update the paced renderer based on the received event.
