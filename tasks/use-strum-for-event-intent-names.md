@@ -55,3 +55,10 @@
 - `name.rs` provides `Event::name()` (canonical string for zero-arg variants) and `Event::from_name()` (reverse lookup), using `IntoStaticStr` for the string extraction and `EVENT_NAMES` for the constructor table.
 - `strum` cannot express parameterized variants like `Input(char)` directly; the `name.rs` shim handles `Input:<char>` prefix for these cases.
 - The `EVENT_NAMES` table is a curated subset of zero-arg `Event` constructors for keybinding lookups, generated from `taxonomy.json`.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

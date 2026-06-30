@@ -50,3 +50,10 @@
 - Used `keyring` with the `vendored` feature for static builds.
 - Added `secrecy::SecretString` wrapper to prevent accidental token leakage in logs.
 - Migration from legacy XOR-encoded `auth.json` is handled by `migrate_legacy_auth()` which stores tokens in keyring and backs up the old file.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

@@ -45,3 +45,10 @@
 - This task is about correctness of recipes, not adding new functionality.
 - Coordinate with `replace-build-linter-with-clippy-ci.md` to remove the `check-skip` job when the build linter is replaced.
 - The `check-skip` job is kept because `crates/runie-core/build.rs` still contains the custom linter. Once `replace-build-linter-with-clippy-ci` lands, this job can be removed.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

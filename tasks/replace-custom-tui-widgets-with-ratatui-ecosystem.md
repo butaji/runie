@@ -77,3 +77,10 @@ These components are highly specialized for Runie's UX and would require substan
 - The deferred items are highly specialized for Runie's UX and would require substantial rewrites.
 - The main value (stylize, ANSI quantization, terminal setup) has been extracted.
 - Per Pareto principle: 80% benefit for 20% effort.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

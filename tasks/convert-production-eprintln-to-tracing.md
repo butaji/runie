@@ -32,3 +32,10 @@ Production code uses `eprintln!` for warnings in `keybindings/mod.rs` and `comma
 ## Notes
 
 - Tests are allowed to use `eprintln!` if they are not part of the production path.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

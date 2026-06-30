@@ -49,3 +49,10 @@
 - If a macro generator is needed later for `Event` taxonomies, implement it with `syn` and without string surgery.
 - This task depends on the event taxonomy tasks because they currently reference `runie-macros/src/event.rs` as a possible generator target.
 - Rejected: keep the crate “in case we need it” — unused proc-macro crates add compile time and maintenance surface.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

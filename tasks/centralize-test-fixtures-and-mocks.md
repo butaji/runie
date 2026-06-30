@@ -50,3 +50,10 @@ MiniMax SSE fixtures and mock helpers are duplicated across `runie-agent` and `r
 - Also consolidate duplicated `ENV_LOCK` mutexes and temp-dir/config-loading patterns from `runie-core/src/tests/support.rs` and `runie-provider/src/tests.rs` into `runie-testing`.
 - `scripts/tmux-test.sh` is a shell/tmux test that violates AGENTS.md; any coverage it provides should be ported to Ratatui `TestBackend` tests in `runie-tui/src/tests/`.
 - Rejected: leave duplication because the tests are in different crates — `runie-testing` exists precisely to prevent this.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

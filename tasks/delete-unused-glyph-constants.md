@@ -37,3 +37,10 @@
 
 - Glyphs used in the TUI are defined in `crates/runie-tui/src/theme/glyph.rs` (which exists).
 - The only reference to "glyphs" in the codebase is a design-system comment in `ui.rs`.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

@@ -44,3 +44,10 @@ Several small macros can be ordinary functions or `if let` expressions: `with_pa
 ## Notes
 
 - The `with_panel_stack!` part overlaps with `collapse-dialogstate-variants.md`; pick whichever task lands first to do it.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

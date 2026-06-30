@@ -44,3 +44,10 @@
 - The `mcp = []` feature in the task description was already removed from `Cargo.toml`.
 - `McpSection` is defined in `crates/runie-core/src/config/mcp.rs` and re-exported from `crates/runie-core/src/config/mod.rs`.
 - Coordinate with `implement-or-remove-mcp-runtime-scaffolding.md` for future decisions about the MCP runtime.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

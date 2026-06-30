@@ -63,3 +63,10 @@ All remaining allows are intentional and documented:
 - **Completion actor deleted:** `ractors/completion/` module no longer exists.
 - **Warnings fixed:** Fixed unused return value warnings in `think_filter/tests.rs`.
 - **`#[allow(dead_code)]` audit complete:** All remaining allows are intentional and documented.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

@@ -79,3 +79,10 @@ Provider and model configuration is largely stringly typed, with model names, to
 - Model names can still use `provider/model` string format in TOML config; validation converts to typed
 - String parsing (`split('/')`) exists as a convenience helper but is not required for validation
 - Provider/model validation runs after JSON schema validation for semantic correctness
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

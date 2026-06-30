@@ -38,3 +38,10 @@
 4. **Has no dependencies**: Doesn't require adding `palette` crate
 
 `palette` would be valuable for more advanced color space conversions (LAB, LCH, etc.) or perceptual color math, but the current use case is simple sRGB blending. Adding `palette` would increase compile times and binary size without clear benefit.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

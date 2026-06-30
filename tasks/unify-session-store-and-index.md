@@ -57,3 +57,10 @@
 - Each session file format: line 1 = JSON header, remaining lines = JSONL events.
 - `update_index` and `remove_from_index` are replaced with `update_metadata`.
 - The architecture guardrails were updated to allow the persistence module to contain sync IO.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

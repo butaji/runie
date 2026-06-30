@@ -43,3 +43,10 @@
 - The `heal_markdown` function was moved from `streaming_buffer.rs` to `markdown/heal.rs` for better organization.
 - `BlockParser` now uses a `Style` enum and style stack to track inline markers directly from events.
 - `inlines_to_text` was improved to properly round-trip styled spans back to markdown.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

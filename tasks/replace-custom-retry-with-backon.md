@@ -56,3 +56,10 @@
 - Once the stream starts emitting events, any errors are propagated immediately without retry.
 - The `backon` crate remains in the workspace for use with non-stream async operations.
 - **Update after review:** the task was previously marked done, but `crates/runie-provider/src/retry.rs` still contains a hand-rolled backoff loop with `tokio::time::sleep`. The remaining cleanup is now tracked by `actually-replace-runie-provider-backoff-with-backon.md`.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

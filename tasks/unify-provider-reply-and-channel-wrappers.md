@@ -38,3 +38,10 @@
 - `ractor_adapter::Reply` is an alias for `RpcReply<T>`; `rpc_channel()` is the canonical way to create reply channels.
 - `ProviderActorHandle` was a dead re-export; `RactorProviderHandle` is the correct type.
 - The `RpcReply::send(self, value)` API replaces the old `take_reply(&reply)` + `tx.send(result)` pattern.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

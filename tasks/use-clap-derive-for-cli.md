@@ -73,3 +73,10 @@ The `inspect` command covers config/MCP inspection. The `mcp` subcommand provide
 - `clap` is a workspace dependency; no new crate was needed.
 - MCP management uses ConfigActor's `add_mcp_server`, `remove_mcp_server`, and `list_mcp_servers` methods.
 - ConfigActor handles file persistence; the CLI module provides the user interface.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

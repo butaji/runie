@@ -53,3 +53,10 @@ Delete leftover scaffolding from the actor migration: `RactorActor` wrapper, `Ac
 - `RactorHandle::send_message` was kept because it is used extensively in `handles_tests.rs` (and would require updating many call sites). It is not dead code.
 - The `handles_tests.rs` file tested the `ActorHandles` alias specifically; the `LeaderHandle` field existence is verified by the actor integration tests.
 - Low priority cleanup before declaring the migration finished.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

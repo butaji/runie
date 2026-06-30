@@ -38,3 +38,10 @@ The new `extract_frontmatter`:
 - `pulldown_cmark_frontmatter` is no longer used in `resource_loader.rs`; removed from imports only.
 - The `serde_yaml` crate was already a dependency and is still used for parsing.
 - All 710 existing tests pass, confirming no behavioral regression.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

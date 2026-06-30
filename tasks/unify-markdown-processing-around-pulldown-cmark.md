@@ -80,3 +80,10 @@ This is architecturally awkward since tool markers are not standard markdown.
 - The `markdown` module is the single source of truth for markdown parsing
 - Tool-marker stripping is a specialized operation that doesn't fit pulldown-cmark's model
 - If strict pulldown-cmark usage is required, tool-marker stripping could be refactored to use the event stream, but the complexity may not be worth it
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

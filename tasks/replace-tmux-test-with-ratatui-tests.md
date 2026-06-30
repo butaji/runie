@@ -42,3 +42,10 @@
 
 - AGENTS.md forbids shell/tmux tests; this task brings the project into compliance.
 - If the tmux test is already unmaintained/broken, deleting it without replacement is acceptable only after documenting the lost coverage.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

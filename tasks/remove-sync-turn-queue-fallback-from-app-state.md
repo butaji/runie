@@ -49,3 +49,10 @@
 - The sync path (`apply_queue_delivery_sync`) remains for test mode because tests use `AppState` directly without spawning actors.
 - The projection methods (`apply_steering_delivered`, `apply_follow_up_delivered`) are designed for async mode where events come from `RactorTurnActor`.
 - Key insight: In sync mode, we must NOT call projection methods because they try to `retain` the queue which conflicts with `TurnQueue::pop_*` operations that already manage the queue state.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

@@ -52,3 +52,10 @@ The `validate.rs` module mixed schema validation with semantic checks. The follo
 - `validate` (JSON schema validation) and `validate_registry` (semantic provider/model checks) are now private helpers in `config_impl.rs`.
 - Test imports updated to use `use crate::config::config_impl::{validate, validate_registry}`.
 - 710 tests pass, workspace clean.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

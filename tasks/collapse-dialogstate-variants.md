@@ -46,3 +46,10 @@
 - If confirmation and prompting differ only by a callback, consider a single `Active` variant holding a payload enum.
 - The `with_panel_stack!` macro in `commands/registry.rs` destructures `DialogState` variants to extract `PanelStack`; replace it with a helper method as part of this refactor.
 - Preserve existing keyboard shortcuts; do not change UX while simplifying internals.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

@@ -78,3 +78,10 @@ commands/
 - Form DSL is retained because TUI form building still needs custom handling
 - `cmd!` macro was removed in favor of `cmd()` function
 - `INTENT_EVENTS` global map was eliminated in favor of direct command handling
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

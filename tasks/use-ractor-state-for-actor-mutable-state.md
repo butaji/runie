@@ -44,3 +44,10 @@ Production actors use `type State = ()` and hold mutable state behind `parking_l
 
 - `ctx7` for `ractor` confirms the pattern: `type State = ...`, `handle(..., state: &mut State)`.
 - This should land before permission-actor reply lifecycle because the fix becomes trivial with state as a `HashMap`.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

@@ -42,3 +42,10 @@ The heuristics provide sensible defaults based on terminal brand detection witho
 
 - No code changes were required; documentation only.
 - The current implementation is reasonable and does not need further simplification.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

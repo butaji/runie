@@ -62,3 +62,10 @@ Current state as of this review:
 - `LeaderHandle` should probably become a thin wrapper around `ActorHandles` plus the event bus and shutdown sender.
 - Rejected alternative: keeping the large helper struct for backward compatibility. It ossifies the runtime surface and makes adding or removing actors expensive.
 - **Update after review:** the current `ActorHandles` is still a 300-line façade. The remaining collapse is tracked by `actually-collapse-actor-handles-to-typed-map.md`.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

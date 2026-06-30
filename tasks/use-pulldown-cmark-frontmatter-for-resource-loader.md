@@ -53,3 +53,10 @@
 - `pulldown-cmark-frontmatter` uses fenced code blocks (` ```yaml `) for frontmatter. Runie's existing resources use raw `---` delimiters, so a `normalize_raw_frontmatter` function converts between formats.
 - The old simple YAML parser didn't support block scalars (`|` and `>`) or properly handle empty values. The new `serde_yaml` parser correctly handles these, and tests were updated to reflect this improvement.
 - The `parse_frontmatter_yaml` function was removed as it was only used for the old custom parser.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

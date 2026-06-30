@@ -59,3 +59,10 @@
 - `OpenFang` uses `dirs` 6 and `shellexpand` for path expansion; `goose` uses `etcetera` for config-dir resolution. Prefer `etcetera` for config paths (XDG on Linux, Application Support on macOS) and `shellexpand` for shell-like tilde/`$VAR` expansion.
 - `crossterm` 0.29+ already supports `Display` and modifier iteration; a custom parser is unnecessary.
 - Rejected: keep custom implementations for "fewer dependencies" — the reviewed crates are small, well-tested, and already appear in peer agent codebases.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

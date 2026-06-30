@@ -76,3 +76,10 @@ The following sleeps remain and are acceptable:
 - Tests no longer rely on arbitrary timing to observe async side effects.
 - This makes tests more reliable and faster (no unnecessary waiting).
 - The harness polling loop in `runie-testing/src/runner.rs` is acceptable by design; replacing it with `Notify`/`oneshot` could be done in a future cleanup.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

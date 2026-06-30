@@ -46,3 +46,10 @@ The remaining issue (panics on missing handles in `runie-agent/src/actor.rs`) ha
 - The `RpcReply`/`Reply` wrapper types in `ractor_adapter.rs` use `parking_lot::Mutex`.
 - Test files still use `std::sync::Mutex` for test synchronization (allowed; tests are exempt).
 - Remaining `std::sync::Mutex`/`RwLock` in `permissions/`, `fff_indexer/`, and `runie-agent/` is tracked by `normalize-remaining-std-mutex-to-parking-lot.md`.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

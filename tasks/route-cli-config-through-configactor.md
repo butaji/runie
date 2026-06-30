@@ -81,3 +81,10 @@ The following are optional cleanup items, not blocking the main task:
 - The actor resolves the project path once at spawn time, storing it in the actor state.
 - Legacy sync fallback functions kept in `mcp.rs` for backward compatibility with tests.
 - `inspect.rs` kept sync `build()` method for test compatibility; new `build_with_config_actor()` is the production path.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

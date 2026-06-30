@@ -76,3 +76,10 @@ Several production code paths use `unwrap` or `expect` for conditions that can f
 - Tests are allowed to use `unwrap`/`expect`; this task targets production code only.
 - The two remaining test ACs (`actor_handles_missing_handle_as_error`, `headless_runtime_reports_config_error`) require significant additional wiring and are marked as not done. They are optional enhancements.
 - The main production code changes are complete.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
