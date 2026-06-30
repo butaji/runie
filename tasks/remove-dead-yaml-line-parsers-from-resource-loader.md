@@ -1,6 +1,6 @@
 # Remove dead YAML line parsers from `resource_loader`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Core / Declarative DSL
 **Priority**: P2

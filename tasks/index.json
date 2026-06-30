@@ -272,7 +272,7 @@
   {
     "file": "remove-dead-yaml-line-parsers-from-resource-loader.md",
     "title": "Remove dead YAML line parsers from `resource_loader`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-mutex-eventbus-wrappers-from-actor-state.md",

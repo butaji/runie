@@ -133,7 +133,7 @@ pub use provider::{
 pub use provider_event::{ModelError, ProviderEvent, StopReason};
 pub use resource_loader::{
     derive_name_from_path, extract_frontmatter, extract_section, is_user_invocable,
-    load_resources_from_dir, parse_resource_md, parse_yaml_line, resolve_name, strip_quotes,
+    load_resources_from_dir, parse_resource_md, resolve_name,
 };
 pub use session::index::{SessionIndex, SessionMetadata};
 pub use session::store::SessionStore;

@@ -169,33 +169,6 @@ fn yaml_value_to_hashmap(value: &Value) -> HashMap<String, String> {
     result
 }
 
-/// Parse a single YAML "key: value" line, returning (key, value) or None.
-pub fn parse_yaml_line(line: &str) -> Option<(String, String)> {
-    let line = line.trim();
-    if line.is_empty() || line.starts_with('#') {
-        return None;
-    }
-    let colon_pos = line.find(':')?;
-    let key = line[..colon_pos].trim().to_owned();
-    if key.is_empty() {
-        return None;
-    }
-    let value = strip_quotes(line[colon_pos + 1..].trim());
-    Some((key, value))
-}
-
-/// Strip surrounding quotes from a YAML value.
-pub fn strip_quotes(s: &str) -> String {
-    let s = s.trim();
-    let unquoted =
-        if (s.starts_with('\'') && s.ends_with('\'')) || (s.starts_with('"') && s.ends_with('"')) {
-            &s[1..s.len() - 1]
-        } else {
-            s
-        };
-    unquoted.to_owned()
-}
-
 /// Resolve resource name from path and frontmatter.
 /// Prefers frontmatter "name" field, then derives from path.
 pub fn resolve_name(path: &Path, frontmatter: &HashMap<String, String>) -> String {
@@ -269,29 +242,6 @@ description: A test skill
     fn extract_frontmatter_returns_none_without_delimiters() {
         let content = "# Just a heading\n\nSome text";
         assert!(extract_frontmatter(content).is_empty());
-    }
-
-    #[test]
-    fn parse_yaml_line_with_quotes() {
-        assert_eq!(
-            parse_yaml_line("name: 'quoted value'"),
-            Some(("name".to_owned(), "quoted value".to_owned()))
-        );
-        assert_eq!(
-            parse_yaml_line("name: \"double quoted\""),
-            Some(("name".to_owned(), "double quoted".to_owned()))
-        );
-        assert_eq!(
-            parse_yaml_line("name: unquoted"),
-            Some(("name".to_owned(), "unquoted".to_owned()))
-        );
-    }
-
-    #[test]
-    fn strip_quotes_handles_both_styles() {
-        assert_eq!(strip_quotes("'single quoted'"), "single quoted");
-        assert_eq!(strip_quotes("\"double quoted\""), "double quoted");
-        assert_eq!(strip_quotes("no quotes"), "no quotes");
     }
 
     #[test]

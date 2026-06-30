@@ -9,7 +9,7 @@ mod loader_tests {
     use crate::commands::CommandCategory;
     use crate::declarative::loader::{parse_command_yaml, parse_triggers};
     use crate::declarative::types::{CommandDef, DeclarativeCommandYaml, SkillDef, Trigger};
-    use crate::resource_loader::{extract_frontmatter, parse_yaml_line, strip_quotes};
+    use crate::resource_loader::extract_frontmatter;
 
     // ── Frontmatter parsing tests ───────────────────────────────────────────────
 
@@ -92,62 +92,7 @@ Content
         assert!(fm.contains_key("description"));
     }
 
-    // ── YAML line parsing tests ────────────────────────────────────────────────
-
-    #[test]
-    fn yaml_line_parses_key_value() {
-        let (key, val) = parse_yaml_line("name: test").unwrap();
-        assert_eq!(key, "name");
-        assert_eq!(val, "test");
-    }
-
-    #[test]
-    fn yaml_line_handles_leading_whitespace() {
-        let (key, _val) = parse_yaml_line("  name: test").unwrap();
-        assert_eq!(key, "name");
-    }
-
-    #[test]
-    fn yaml_line_ignores_empty_lines() {
-        assert!(parse_yaml_line("").is_none());
-        assert!(parse_yaml_line("   ").is_none());
-    }
-
-    #[test]
-    fn yaml_line_ignores_comments() {
-        assert!(parse_yaml_line("# comment").is_none());
-        assert!(parse_yaml_line("  # indented comment").is_none());
-    }
-
-    #[test]
-    fn yaml_line_handles_colons_in_values() {
-        let (_key, val) = parse_yaml_line("url: http://example.com").unwrap();
-        assert_eq!(val, "http://example.com");
-    }
-
-    // ── Quote stripping tests ──────────────────────────────────────────────────
-
-    #[test]
-    fn strip_quotes_removes_double_quotes() {
-        assert_eq!(strip_quotes("\"hello\""), "hello");
-    }
-
-    #[test]
-    fn strip_quotes_removes_single_quotes() {
-        assert_eq!(strip_quotes("'hello'"), "hello");
-    }
-
-    #[test]
-    fn strip_quotes_preserves_unquoted() {
-        assert_eq!(strip_quotes("hello"), "hello");
-    }
-
-    #[test]
-    fn strip_quotes_handles_whitespace() {
-        assert_eq!(strip_quotes("  \"hello\"  "), "hello");
-    }
-
-    // ── Trigger parsing tests ─────────────────────────────────────────────────
+    // ── Trigger parsing tests ──────────────────────────────────────────────────
 
     #[test]
     fn triggers_parse_command() {
