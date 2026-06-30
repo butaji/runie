@@ -9,9 +9,15 @@ use super::registry_data::{
     mock_provider_yaml, parse_provider_yaml, provider_yaml_files, ProviderYaml,
 };
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::cell::RefCell;
 use std::sync::OnceLock;
 
 static MOCK_ENABLED: AtomicBool = AtomicBool::new(false);
+thread_local! {
+    /// Per-thread override for `is_mock_enabled` in tests. Allows tests to
+    /// set deterministic mock state without interfering with parallel tests.
+    static TEST_MOCK: RefCell<Option<bool>> = RefCell::new(None);
+}
 static PROVIDER_CACHE: OnceLock<Vec<ProviderMeta>> = OnceLock::new();
 
 /// Returns true when dev flags enable the mock provider. Without this,
@@ -21,6 +27,10 @@ static PROVIDER_CACHE: OnceLock<Vec<ProviderMeta>> = OnceLock::new();
 /// `dev.sh` sets `RUNIE_MOCK=1`. `RUNIE_MOCK_DELAY=1` is also accepted as
 /// a back-compat alias (it both enables the mock and adds streaming delays).
 pub fn is_mock_enabled() -> bool {
+    // Thread-local override takes precedence (set by `set_mock_enabled` in tests).
+    if let Some(v) = TEST_MOCK.with(|cell| *cell.borrow()) {
+        return v;
+    }
     MOCK_ENABLED.load(Ordering::Relaxed)
         || std::env::var_os("RUNIE_MOCK").is_some()
         || std::env::var_os("RUNIE_MOCK_DELAY").is_some()
@@ -28,7 +38,11 @@ pub fn is_mock_enabled() -> bool {
 
 /// Override the mock-enabled state without touching environment variables.
 /// Primarily useful in tests that need deterministic mock behavior.
+///
+/// The thread-local override takes precedence over the global atomic and
+/// environment variables, ensuring test parallelism safety.
 pub fn set_mock_enabled(enabled: bool) {
+    TEST_MOCK.with(|cell| *cell.borrow_mut() = Some(enabled));
     MOCK_ENABLED.store(enabled, Ordering::Relaxed);
 }
 

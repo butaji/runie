@@ -42,12 +42,35 @@ fn reset_config() {
 
 #[test]
 fn model_no_configured_providers_shows_message() {
+    // Unset RUNIE_MOCK env var (dev.sh sets it to "") and clear thread-local override.
+    std::env::remove_var("RUNIE_MOCK");
+    std::env::remove_var("RUNIE_MOCK_DELAY");
+    crate::provider::set_mock_enabled(false);
     reset_config();
     let mut state = AppState::default();
     let result = crate::commands::dsl::handlers::model::handle_model(&mut state, "");
+    crate::provider::set_mock_enabled(false); // clear thread-local override
     assert!(
         matches!(result, CommandResult::Message(ref msg) if msg.contains("No connected providers")),
         "expected message about no connected providers, got {:?}",
+        result
+    );
+}
+
+#[test]
+fn model_mock_enabled_opens_selector_even_without_toml_config() {
+    // When RUNIE_MOCK is set but no TOML providers are configured,
+    // /model should still open the selector (showing mock/echo).
+    std::env::remove_var("RUNIE_MOCK");
+    std::env::remove_var("RUNIE_MOCK_DELAY");
+    crate::provider::set_mock_enabled(true);
+    reset_config();
+    let mut state = AppState::default();
+    let result = crate::commands::dsl::handlers::model::handle_model(&mut state, "");
+    crate::provider::set_mock_enabled(false); // clear thread-local override
+    assert!(
+        matches!(result, CommandResult::OpenDialog(DialogType::ModelSelector)),
+        "expected ModelSelector dialog with mock enabled, got {:?}",
         result
     );
 }

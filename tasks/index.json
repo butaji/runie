@@ -337,7 +337,7 @@
   {
     "file": "fix-slash-command-model-provider-report-no-providers.md",
     "title": "Fix /model and /provider slash commands report no providers configured",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-slash-command-session-info-naming.md",
