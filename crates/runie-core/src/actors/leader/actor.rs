@@ -9,7 +9,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::{broadcast, mpsc};
 
-use crate::actors::leader::AgentSpawnFuture;
+use crate::actors::leader::{AgentSpawnFuture, SpawnedAgent};
 use crate::actors::turn::RactorTurnActor;
 use crate::actors::{
     InputActor, RactorConfigActor, RactorConfigHandle, RactorFffIndexerActor,
@@ -104,43 +104,52 @@ impl Leader {
         Ok(LeaderHandle::new(cmd_tx, bus, handles))
     }
 
-    /// Spawn all child actors.
+    /// Spawn all child actors and capture all cells and join handles for graceful shutdown.
     async fn spawn_actors(
         bus: &EventBus<CoreEvent>,
         config: &LeaderConfig,
         provider_factory: std::sync::Arc<dyn crate::actors::provider::ProviderFactory>,
         agent_factory: std::sync::Arc<dyn AgentActorFactory<SpawnFuture = AgentSpawnFuture>>,
     ) -> anyhow::Result<SpawnedHandles> {
-        let (config_h, _) = RactorConfigActor::spawn_default(bus.clone()).await;
-        let (provider_h, _) =
+        let (config_h, config_cell) = RactorConfigActor::spawn_default(bus.clone()).await;
+        let (provider_h, provider_cell) =
             RactorProviderActor::spawn(bus.clone(), config_h.clone(), provider_factory).await?;
-        let (io_h, _) = RactorIoActor::spawn(bus.clone()).await?;
-        let (session_h, _) = RactorSessionActor::spawn(bus.clone()).await?;
-        let (permission_h, _) = RactorPermissionActor::spawn(bus.clone()).await;
-        let (turn_h, _, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
-        let (input_h, _) = InputActor::spawn(bus.clone()).await;
-        let (fff_h, _) = RactorFffIndexerActor::spawn(
+        let (io_h, io_cell) = RactorIoActor::spawn(bus.clone()).await?;
+        let (session_h, session_cell) = RactorSessionActor::spawn(bus.clone()).await?;
+        let (permission_h, permission_cell) = RactorPermissionActor::spawn(bus.clone()).await;
+        let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
+        let (input_h, input_cell) = InputActor::spawn(bus.clone()).await;
+        let (fff_h, fff_cell) = RactorFffIndexerActor::spawn(
             config.project_root.clone(),
             config.data_dir.clone(),
             bus.clone(),
         )
         .await
         .map_err(|e| anyhow::anyhow!("FffIndexerActor spawn failed: {}", e))?;
-        let agent_handle = agent_factory
-            .spawn(bus.clone(), provider_h.clone(), permission_h.clone())
+        let SpawnedAgent { handle: agent_handle, join: agent_join } = agent_factory
+            .spawn_with_join(bus.clone(), provider_h.clone(), permission_h.clone())
             .await?;
 
         Ok(SpawnedHandles {
             config: config_h,
+            config_cell,
             provider: provider_h,
+            provider_cell,
             io: io_h,
+            io_cell,
             session: session_h,
+            session_cell,
             permission: permission_h,
+            permission_cell,
             turn: turn_h,
-            turn_join: Some(std::sync::Arc::new(turn_join)),
+            turn_cell,
+            turn_join: std::sync::Arc::new(turn_join),
             input: input_h,
+            input_cell,
             agent: agent_handle,
+            agent_join: std::sync::Arc::new(agent_join),
             fff_indexer: fff_h,
+            fff_cell,
         })
     }
 
@@ -230,17 +239,27 @@ impl Default for Leader {
     }
 }
 
+/// All handles, cells, and join handles produced by actor spawning.
 struct SpawnedHandles {
     config: RactorConfigHandle,
+    config_cell: ractor::ActorCell,
     provider: RactorProviderHandle,
+    provider_cell: ractor::ActorCell,
     io: RactorIoHandle,
+    io_cell: ractor::ActorCell,
     session: RactorSessionHandle,
+    session_cell: ractor::ActorCell,
     permission: RactorPermissionHandle,
+    permission_cell: ractor::ActorCell,
     turn: crate::actors::turn::RactorTurnHandle,
-    turn_join: Option<std::sync::Arc<tokio::task::JoinHandle<()>>>,
+    turn_cell: ractor::ActorCell,
+    turn_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
     input: RactorInputHandle,
+    input_cell: ractor::ActorCell,
     agent: std::sync::Arc<dyn LeaderAgentHandle>,
+    agent_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
     fff_indexer: RactorFffIndexerHandle,
+    fff_cell: ractor::ActorCell,
 }
 
 /// Process a line from a client.
@@ -307,9 +326,17 @@ pub struct LeaderHandle {
     pub agent: std::sync::Arc<dyn LeaderAgentHandle>,
     /// FFF indexer handle.
     pub fff_indexer: RactorFffIndexerHandle,
-    /// Turn actor join handle (for graceful shutdown).
-    #[allow(dead_code)]
-    turn_join: Option<std::sync::Arc<tokio::task::JoinHandle<()>>>,
+    // ── Shutdown state ────────────────────────────────────────────────────────
+    config_cell: ractor::ActorCell,
+    provider_cell: ractor::ActorCell,
+    io_cell: ractor::ActorCell,
+    session_cell: ractor::ActorCell,
+    permission_cell: ractor::ActorCell,
+    turn_cell: ractor::ActorCell,
+    turn_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
+    input_cell: ractor::ActorCell,
+    agent_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
+    fff_cell: ractor::ActorCell,
     /// Snapshot channel receiver placeholder. The TUI manages its own snapshot
     /// channel via UiActor::take_render_rx(); this field exists so that callers
     /// that only hold a LeaderHandle can still verify snapshot-channel delivery.
@@ -333,10 +360,19 @@ impl LeaderHandle {
             session: handles.session,
             permission: handles.permission,
             turn: handles.turn,
-            turn_join: handles.turn_join,
             input: handles.input,
             agent: handles.agent,
             fff_indexer: handles.fff_indexer,
+            config_cell: handles.config_cell,
+            provider_cell: handles.provider_cell,
+            io_cell: handles.io_cell,
+            session_cell: handles.session_cell,
+            permission_cell: handles.permission_cell,
+            turn_cell: handles.turn_cell,
+            turn_join: handles.turn_join,
+            input_cell: handles.input_cell,
+            agent_join: handles.agent_join,
+            fff_cell: handles.fff_cell,
             snapshot_rx: tokio::sync::watch::channel(crate::Snapshot::default()).1,
         }
     }
@@ -356,9 +392,32 @@ impl LeaderHandle {
         self.tcp_addr.as_deref()
     }
 
-    /// Send shutdown command to stop all actors gracefully.
-    pub async fn shutdown(&self) {
+    /// Stop all child actors gracefully and await their completion.
+    ///
+    /// 1. Publishes `Quit` to signal all actors.
+    /// 2. Stops all actor cells to ensure termination.
+    /// 3. Awaits the turn and agent join handles.
+    pub async fn shutdown(self) {
         let _ = self.cmd_tx.send(LeaderCommand::Shutdown).await;
+        self.event_bus.publish(CoreEvent::Quit);
+
+        // Stop all actors (reverse spawn order: least dependent first).
+        self.input_cell.stop(None);
+        self.session_cell.stop(None);
+        self.turn_cell.stop(None);
+        self.fff_cell.stop(None);
+        self.permission_cell.stop(None);
+        self.config_cell.stop(None);
+        self.provider_cell.stop(None);
+        self.io_cell.stop(None);
+
+        // Await turn and agent join handles.
+        let turn_join = std::sync::Arc::try_unwrap(self.turn_join)
+            .expect("turn join handle should have single ref on shutdown");
+        let _ = turn_join.await;
+        let agent_join = std::sync::Arc::try_unwrap(self.agent_join)
+            .expect("agent join handle should have single ref on shutdown");
+        let _ = agent_join.await;
     }
 
     /// Get runtime status.
@@ -441,19 +500,20 @@ pub mod test_helpers {
         }
 
         let bus = EventBus::<CoreEvent>::new(16);
-        let (config_h, _) = RactorConfigActor::spawn_default(bus.clone()).await;
+        let (config_h, config_cell) = RactorConfigActor::spawn_default(bus.clone()).await;
         let factory: Arc<dyn ProviderFactory> = Arc::new(TestProviderFactory);
-        let (provider_h, _) = RactorProviderActor::spawn(bus.clone(), config_h.clone(), factory)
-            .await
-            .expect("provider spawn");
-        let (io_h, _) = RactorIoActor::spawn(bus.clone()).await.expect("io spawn");
-        let (session_h, _) = RactorSessionActor::spawn(bus.clone())
+        let (provider_h, provider_cell) =
+            RactorProviderActor::spawn(bus.clone(), config_h.clone(), factory)
+                .await
+                .expect("provider spawn");
+        let (io_h, io_cell) = RactorIoActor::spawn(bus.clone()).await.expect("io spawn");
+        let (session_h, session_cell) = RactorSessionActor::spawn(bus.clone())
             .await
             .expect("session spawn");
-        let (permission_h, _) = RactorPermissionActor::spawn(bus.clone()).await;
-        let (turn_h, _, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
-        let (input_h, _) = InputActor::spawn(bus.clone()).await;
-        let (fff_h, _) = RactorFffIndexerActor::spawn(
+        let (permission_h, permission_cell) = RactorPermissionActor::spawn(bus.clone()).await;
+        let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
+        let (input_h, input_cell) = InputActor::spawn(bus.clone()).await;
+        let (fff_h, fff_cell) = RactorFffIndexerActor::spawn(
             std::env::current_dir().unwrap_or_default(),
             std::env::temp_dir(),
             bus.clone(),
@@ -463,6 +523,10 @@ pub mod test_helpers {
 
         let (cmd_tx, _cmd_rx) = mpsc::channel(4);
         let agent: Arc<dyn LeaderAgentHandle> = Arc::new(NoOpAgentHandle);
+        // Spawn a dummy task as the agent join handle (agent is not a real ractor actor
+        // in tests; the NoOpAgentHandle::run returns pending which never completes).
+        let agent_join: tokio::task::JoinHandle<()> =
+            tokio::spawn(std::future::pending::<()>());
 
         LeaderHandle {
             cmd_tx,
@@ -474,10 +538,19 @@ pub mod test_helpers {
             session: session_h,
             permission: permission_h,
             turn: turn_h,
-            turn_join: Some(std::sync::Arc::new(turn_join)),
             input: input_h,
             agent,
             fff_indexer: fff_h,
+            config_cell,
+            provider_cell,
+            io_cell,
+            session_cell,
+            permission_cell,
+            turn_cell,
+            turn_join: std::sync::Arc::new(turn_join),
+            input_cell,
+            agent_join: std::sync::Arc::new(agent_join),
+            fff_cell,
             snapshot_rx: tokio::sync::watch::channel(crate::Snapshot::default()).1,
         }
     }

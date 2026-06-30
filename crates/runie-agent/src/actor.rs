@@ -290,4 +290,23 @@ impl runie_core::actors::leader::AgentActorFactory for AgentActorFactoryImpl {
                 as std::sync::Arc<dyn runie_core::actors::leader::LeaderAgentHandle>)
         })
     }
+
+    fn spawn_with_join(
+        &self,
+        bus: runie_core::bus::EventBus<runie_core::event::Event>,
+        provider_handle: runie_core::actors::provider::RactorProviderHandle,
+        permission_handle: runie_core::actors::permission::RactorPermissionHandle,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<runie_core::actors::leader::SpawnedAgent, ractor::SpawnErr>> + Send>,
+    > {
+        Box::pin(async move {
+            let (handle, join, _cell) =
+                spawn_ractor_agent(bus, provider_handle, permission_handle).await?;
+            Ok(runie_core::actors::leader::SpawnedAgent {
+                handle: std::sync::Arc::new(LeaderAgentHandleImpl::new(handle))
+                    as std::sync::Arc<dyn runie_core::actors::leader::LeaderAgentHandle>,
+                join,
+            })
+        })
+    }
 }

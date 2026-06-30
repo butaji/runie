@@ -11,6 +11,7 @@
 //! The Leader module provides the central coordinator that owns the event bus
 //! and spawns all child actors.
 
+use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -26,6 +27,16 @@ use crate::actors::provider::RactorProviderHandle;
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::ThinkingLevel;
+
+/// Result of spawning an agent actor — includes the handle and its join handle.
+///
+/// The join handle must be awaited during leader shutdown to avoid leaked actor tasks.
+pub struct SpawnedAgent {
+    /// Typed handle for the agent actor.
+    pub handle: Arc<dyn LeaderAgentHandle>,
+    /// Join handle for the agent actor task.
+    pub join: ractor::concurrency::JoinHandle<()>,
+}
 
 /// Command passed from the leader to the agent actor.
 ///
@@ -69,6 +80,14 @@ pub trait AgentActorFactory: Send + Sync {
         provider_handle: RactorProviderHandle,
         permission_handle: RactorPermissionHandle,
     ) -> Self::SpawnFuture;
+
+    /// Spawn an agent actor and return handle + join handle for graceful shutdown.
+    fn spawn_with_join(
+        &self,
+        bus: EventBus<Event>,
+        provider_handle: RactorProviderHandle,
+        permission_handle: RactorPermissionHandle,
+    ) -> Pin<Box<dyn Future<Output = Result<SpawnedAgent, ractor::SpawnErr>> + Send>>;
 }
 
 /// Type alias for the spawn future return type.
