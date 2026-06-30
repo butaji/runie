@@ -86,8 +86,6 @@ fn none_result_closes_command_palette() {
 /// Layer 1: CommandResult::OpenDialog does NOT close the palette (opens a new dialog).
 #[test]
 fn open_dialog_result_pushes_to_back_stack() {
-    use crate::update::dialog::open_settings_dialog;
-
     let mut state = state_with_open_palette();
 
     // Simulate opening settings from the palette

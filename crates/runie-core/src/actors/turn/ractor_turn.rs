@@ -103,6 +103,8 @@ impl RactorTurnActor {
             },
         );
         state.turn_state.request_queue.push_back((content, id));
+        // Increment next_id so auto-generated IDs don't collide with caller-provided ones
+        state.turn_state.next_id += 1;
         Self::handle_run_if_queued(state);
     }
 
@@ -440,13 +442,14 @@ mod tests {
         assert!(found);
     }
 
-    /// Regression test: queue_follow_up then Done should leave message in queue.
-    /// When Done is processed, run_if_queued should start the next turn.
+    /// Regression test: QueueFollowUp puts in message_queue; DeliverQueued moves it to
+    /// request_queue (via FollowUpDelivered); RunIfQueued starts the next turn.
     ///
     /// Flow: SubmitUserMessage → RunIfQueued → TurnStarted
-    ///       QueueFollowUp (queues message)
+    ///       QueueFollowUp (queues to message_queue)
     ///       Done → TurnCompleted (turn_active becomes false)
-    ///       RunIfQueued → TurnStarted (pops queued message, starts second turn)
+    ///       DeliverQueued → FollowUpDelivered (moves to request_queue, generates new id)
+    ///       RunIfQueued → TurnStarted (starts second turn with new id)
     #[tokio::test]
     async fn queue_follow_up_after_done_starts_queued_turn() {
         let bus = EventBus::<Event>::new(16);
@@ -494,17 +497,37 @@ mod tests {
         }
         assert!(found_completed, "First turn should complete");
 
-        // After TurnCompleted, run_if_queued should start the queued turn
+        // After TurnCompleted, DeliverQueued moves message from message_queue to request_queue
+        handle
+            .send(TurnMsg::DeliverQueued {
+                steering_mode: DeliveryMode::OneAtATime,
+                follow_up_mode: DeliveryMode::All,
+            })
+            .await;
+
+        // Wait for FollowUpDelivered — with timeout to detect bugs
+        let result = tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            while let Ok(evt) = sub.recv().await {
+                if matches!(evt, Event::FollowUpDelivered { id, .. } if id == "req.1") {
+                    return;
+                }
+            }
+        })
+        .await;
+        assert!(result.is_ok(), "FollowUpDelivered should fire within 2s");
+
+        // RunIfQueued starts the queued turn
         handle.send(TurnMsg::RunIfQueued).await;
 
-        // After RunIfQueued, second turn should start
-        let mut found_second_turn = false;
-        while let Ok(evt) = sub.recv().await {
-            if matches!(evt, Event::TurnStarted { id, .. } if id == "req.1") {
-                found_second_turn = true;
-                break;
+        // After RunIfQueued, second turn should start — with timeout
+        let result = tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            while let Ok(evt) = sub.recv().await {
+                if matches!(evt, Event::TurnStarted { id, .. } if id == "req.1") {
+                    return;
+                }
             }
-        }
-        assert!(found_second_turn, "Second turn should start after Done + RunIfQueued");
+        })
+        .await;
+        assert!(result.is_ok(), "Second turn should start after DeliverQueued + RunIfQueued");
     }
 }

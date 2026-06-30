@@ -243,7 +243,6 @@ fn parse_key_combo_alt_enter() {
 #[test]
 fn parse_key_combo_plain() {
     let combo = crokey::parse("enter").unwrap();
-    use crossterm::event::KeyModifiers;
     assert!(combo.modifiers.is_empty());
 }
 
