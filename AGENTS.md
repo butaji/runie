@@ -124,26 +124,29 @@ and no test ACs. Every feature must be verifiable by `cargo test`.
 
 ## Linter Rules
 
-**STRICT ENFORCEMENT**
+**ENFORCED GUARDRAILS**
 
-The build script at `crates/runie-core/build.rs` enforces these limits:
+The build script at `crates/runie-core/build.rs` enforces:
 
-| Metric | Limit | Scope |
-|--------|-------|-------|
-| File lines | **500** | Every `.rs` file |
-| Function lines | **40** | Production code only |
-| Complexity | **10** | Production code only |
+| Check | Scope | Fail-on-violation |
+|-------|-------|-------------------|
+| AppState field access patterns | Production code only | Yes |
+| Agent manifest checksums | Generated files | Yes |
 
-File-length limits apply to every source file without exception. Function-length and complexity limits apply to production code only; test functions and files under `tests/` directories are exempt so tests can remain comprehensive.
+**AppState field access** ensures internal state fields are accessed through accessor methods, not directly.
 
-Complexity is an approximate heuristic (`crates/runie-core/build.rs`) that counts
-`if`, `else if`, `match`, `while`, `for`, `loop`, `break`, `continue`, `return`,
-`&&`, `||`, and `?` tokens. It is intentionally lightweight and does not parse
-Rust syntax, so it may miss nested closures, `try` blocks, match guards, and
-similar constructs. It is used as a coarse guardrail, not a precise metric.
+**GUIDELINES (Not Enforced)**
 
-Any production-code violation fails `cargo build`. There are no allow-lists.
+These are aspirational limits documented in the codebase but not automatically enforced:
 
-Violations are detected automatically by `cargo build`; always run `cargo build --workspace` before claiming the codebase is clean.
+| Metric | Target | Rationale |
+|--------|--------|----------|
+| File lines | ≤ 500 | Readability, modularity |
+| Function lines | ≤ 40 | Single responsibility |
+| Complexity | ≤ 10 | Maintainability |
 
-**Breaking the rules is not acceptable.** If your change introduces a violation, you must fix it before committing.
+Complexity is an approximate heuristic that counts `if`, `else if`, `match`, `while`, `for`, `loop`, `break`, `continue`, `return`, `&&`, `||`, and `?` tokens. It does not parse Rust syntax and may miss nested closures, match guards, and similar constructs.
+
+**Best practice:** Keep files small, functions focused, and complexity low. When a function grows beyond ~60 lines, consider extracting helper functions. When a file exceeds ~400 lines, consider splitting or extracting modules.
+
+**Current state:** Several production files exceed these targets (e.g., `apply_to` at 208 lines, `render_thought_marker` at 264 lines, `parse` at 281 lines). Enforcement is tracked in `tasks/enforce-advertised-file-function-complexity-limits.md`.

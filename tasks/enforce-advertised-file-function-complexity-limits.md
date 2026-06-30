@@ -1,6 +1,6 @@
 # Enforce advertised file/function/complexity limits
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Testing
 **Priority**: P2

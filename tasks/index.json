@@ -97,7 +97,7 @@
   {
     "file": "enforce-advertised-file-function-complexity-limits.md",
     "title": "Enforce advertised file/function/complexity limits",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-slash-command-model-provider-report-no-providers.md",
