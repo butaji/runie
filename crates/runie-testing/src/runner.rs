@@ -54,7 +54,7 @@ impl TestRunner {
         input: &str,
         provider: &DynProvider,
     ) -> anyhow::Result<TestSubmissionId> {
-        let id = format!("sub.{}", nanoid());
+        let id = format!("sub.{}", uuid::Uuid::new_v4());
         let cmd = AgentCommand {
             content: input.to_owned(),
             id: id.clone(),
@@ -113,11 +113,6 @@ impl TestRunner {
     }
 }
 
-fn nanoid() -> String {
-    // Use uuid v4 for unique test identifiers.
-    uuid::Uuid::new_v4().to_string()[..8].to_string()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,7 +120,9 @@ mod tests {
 
     #[test]
     fn runner_id_is_unique() {
-        let ids: Vec<_> = (0..100).map(|_| nanoid()).collect();
+        let ids: Vec<_> = (0..100)
+            .map(|_| uuid::Uuid::new_v4().to_string())
+            .collect();
         let mut sorted = ids.clone();
         sorted.sort();
         sorted.dedup();
