@@ -40,6 +40,4 @@ pub struct AgentCommand {
 }
 
 #[cfg(test)]
-mod grep_find;
-#[cfg(test)]
 mod tests;

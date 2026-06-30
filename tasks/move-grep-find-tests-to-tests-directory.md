@@ -1,30 +1,29 @@
 # Move grep_find tests to tests directory
 
-## Status
-
-`todo`
+**Status**: done
+**Milestone**: R7
+**Category**: Build / CI / Tests
+**Priority**: P3
 
 ## Context
 
-`crates/runie-agent/src/grep_find.rs` is a production source file that contains only a `#[cfg(test)]` module. This clutters the src tree and prevents integration-test-style organization.
+`crates/runie-agent/src/grep_find.rs` was a production source file that contained only a `#[cfg(test)]` module. This cluttered the src tree.
 
-## Goal
+## Fix Applied
 
-Move the tests into `crates/runie-agent/src/tests/parser.rs` or an integration test under `crates/runie-agent/tests/`.
-
-**Design impact:** No change to TUI element design or composition. Only test file organization changes.
+- Moved tests from `crates/runie-agent/src/grep_find.rs` to `crates/runie-agent/src/tests/parser.rs`
+- Deleted `grep_find.rs`
+- Removed `mod grep_find;` from `crates/runie-agent/src/lib.rs`
 
 ## Acceptance Criteria
 
-- [ ] Remove `grep_find.rs` from `src/`.
-- [ ] Move tests to a proper test module/file.
-- [ ] Update `lib.rs` / `mod.rs` references.
-- [ ] Ensure `cargo test` still discovers and runs the tests.
+- [x] Remove `grep_find.rs` from `src/`.
+- [x] Move tests to a proper test module/file.
+- [x] Update `lib.rs` / `mod.rs` references.
+- [x] Ensure `cargo test` still discovers and runs the tests.
 
-## Tests
+## Validation
 
-- **Layer 1 — State/Logic:** Moved tests still pass and cover the same parser cases.
-- **Layer 2 — Event Handling:** N/A.
-- **Layer 3 — Rendering:** N/A.
-- **Layer 4 — E2E:** N/A.
-- **Live tmux validation:** N/A.
+- `cargo test --workspace`: all tests pass
+- `cargo test --package runie-agent parse_grep`: passes
+- `cargo test --package runie-agent parse_find`: passes

@@ -302,8 +302,12 @@ impl UiActor {
             }
         }
         // Clear agent_running when the turn ends normally, with an error, or is aborted.
+        // Then drain any queued follow-up messages so the next turn starts.
         if matches!(&evt, Event::Done { .. } | Event::TurnErrored { .. } | Event::Abort) {
             self.agent_running = false;
+            if let Some(ref turn_handle) = self.turn_handle {
+                self.agent_handle.run_if_queued(turn_handle).await;
+            }
         }
 
         false

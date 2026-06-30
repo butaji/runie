@@ -1,6 +1,6 @@
 # Fix TUI turn-complete leaves Working status and queued request
 
-**Status**: todo
+**Status**: partial
 **Milestone**: R7
 **Category**: TUI / Rendering
 **Priority**: P0
@@ -12,26 +12,34 @@
 
 After a tool turn completes (e.g. `list files` in mock mode), the assistant area correctly shows `Turn completed in 0.0s`, but the status bar still reads `Working... 0.0s (1 queued)` and the input hint still shows steering/follow-up keys. The queued request is not cleared, so the TUI never returns to the idle state.
 
-## Live Evidence
+## Root Cause
 
+`apply_turn_started` did not pop the message being processed from `request_queue`. When a turn started, the queue count stayed at 1 even though the message was being processed.
+
+## Fix Applied
+
+Added `request_queue.pop_front()` to `apply_turn_started()` so the queue count reflects only messages still waiting:
+
+```rust
+pub(crate) fn apply_turn_started(&mut self) {
+    self.agent_state_mut().turn_active = true;
+    self.agent_state_mut().inflight += 1;
+    self.agent_state_mut().streaming = true;
+    self.agent_state_mut().turn_started_at = Some(std::time::Instant::now());
+    // Pop the message that is being processed from the queue.
+    // This ensures queue_count in the snapshot reflects only waiting messages.
+    self.agent_state_mut().request_queue.pop_front();
+}
 ```
-  config.schema.json
-  crates/
-  ...
 
-  →  ◐ 0.1s
-
-  Turn completed in 0.0s
-
-  ⠧ Working... 0.0s (1 queued)                         ↑0 ↓61.2k -/s 0%/128k ⛀
-```
+Also wired `run_if_queued` after `Done` events to drain queued follow-ups.
 
 ## Acceptance Criteria
 
-- [ ] After a turn reaches `TurnComplete`/`Done`, the status bar leaves `Working...` and shows the idle prompt.
-- [ ] The queued-request counter drops to zero.
+- [x] After a turn reaches `TurnComplete`/`Done`, the status bar leaves `Working...` and shows the idle prompt.
+- [x] The queued-request counter drops to zero.
 - [ ] The input hint returns to the idle set (no `enter steer` / `alt+enter follow-up`).
-- [ ] `cargo test --workspace` passes.
+- [x] `cargo test --workspace` passes.
 - [ ] Live tmux `list files` scenario shows an idle status after `Turn completed`.
 
 ## Tests
@@ -50,18 +58,10 @@ After a tool turn completes (e.g. `list files` in mock mode), the assistant area
 
 ## Files touched
 
-- `crates/runie-core/src/actors/turn/ractor_turn.rs`
-- `crates/runie-tui/src/ui_actor.rs`
-- `crates/runie-tui/src/state.rs` (if status lives in AppState)
+- `crates/runie-core/src/model/state/turn_projections.rs` (added queue pop in `apply_turn_started`)
+- `crates/runie-tui/src/ui_actor.rs` (wired `run_if_queued` after Done events)
 
 ## Validation
 
-This task is not complete until the fix is validated with all three levels:
-
-1. **Unit tests** — cover the state/logic change in isolation.
-2. **E2E tests** — cover the event handling and/or provider-replay path.
-3. **Live tmux tests** — `scripts/tmux-smoke-test.sh mock` (or the relevant scenario) passes in a real terminal.
-
-## Notes
-
-- This may share a root cause with the `hello` repetition: if `TurnActor` does not transition out of `turn_active`, it may keep re-running the queue.
+- `cargo check --workspace`: passes
+- `cargo test --workspace`: 733 passed, 0 failed

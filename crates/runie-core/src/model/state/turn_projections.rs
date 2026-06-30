@@ -80,11 +80,16 @@ mod tests {
 
 impl AppState {
     /// Project TurnStarted fact into AppState.
+    /// Pops the message being processed from the request queue so the queue count
+    /// reflects only messages still waiting.
     pub(crate) fn apply_turn_started(&mut self) {
         self.agent_state_mut().turn_active = true;
         self.agent_state_mut().inflight += 1;
         self.agent_state_mut().streaming = true;
         self.agent_state_mut().turn_started_at = Some(std::time::Instant::now());
+        // Pop the message that is being processed from the queue.
+        // This ensures queue_count in the snapshot reflects only waiting messages.
+        self.agent_state_mut().request_queue.pop_front();
     }
 
     /// Project TurnCompleted fact into AppState.
