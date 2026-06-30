@@ -1,66 +1,9 @@
-//! Ractor adapter layer for incremental migration.
+//! Ractor adapter types: handle wrappers, RPC reply channels, and spawn helpers.
 //!
-//! This module provides a thin wrapper around `ractor` that maintains
-//! compatibility with the existing actor interface. It allows gradual
-//! migration of actors from the custom runtime to ractor.
-//!
-//! ## Architecture
-//!
-//! ```text
-//! Current:                      With adapter:
-//! ┌──────────────────┐          ┌──────────────────┐
-//! │  Custom Actor    │          │  Custom Actor     │
-//! │  trait          │          │  trait            │
-//! └────────┬─────────┘          └────────┬─────────┘
-//!          │                             │
-//! ┌────────▼─────────┐          ┌────────▼─────────┐
-//! │  spawn_actor()   │          │  RactorAdapter   │
-//! └──────────────────┘          └────────┬─────────┘
-//!                                         │
-//!                                 ┌────────▼─────────┐
-//!                                 │  ractor::Actor  │
-//!                                 └──────────────────┘
-//! ```
-//!
-//! ## Usage
-//!
-//! For new actors, use `RactorActor` which wraps ractor:
-//!
-//! ```ignore
-//! use crate::actors::ractor_adapter::{RactorActor, RactorHandle};
-//! use ractor::{Actor, ActorRef};
-//!
-//! pub struct MyActor {
-//!     state: usize,
-//! }
-//!
-//! #[ractor::async_trait]
-//! impl Actor for MyActor {
-//!     type Msg = MyMsg;
-//!     type State = ();
-//!     type Arguments = ();
-//!
-//!     async fn pre_start(
-//!         &self,
-//!         myself: ActorRef<Self::Msg>,
-//!         _: (),
-//!     ) -> Result<(), ractor::ActorProcessingErr> {
-//!         Ok(())
-//!     }
-//!
-//!     async fn handle(
-//!         &self,
-//!         _myself: ActorRef<Self::Msg>,
-//!         msg: Self::Msg,
-//!         _state: &mut Self::State,
-//!     ) -> Result<(), ractor::ActorProcessingErr> {
-//!         Ok(())
-//!     }
-//! }
-//! ```
-
-use std::future::Future;
-use std::pin::Pin;
+//! All actors use `ractor` as the runtime. This module provides:
+//! - `RactorHandle<Msg>` — cloneable handle to a ractor actor
+//! - `RpcReply<T>` / `rpc_channel()` — oneshot-based RPC reply channels
+//! - `spawn_ractor()` — ergonomic actor spawn helper
 
 use ractor::concurrency::JoinHandle;
 use ractor::SpawnErr as RactorSpawnErr;
@@ -72,28 +15,6 @@ use crate::bus::EventBus;
 
 // Re-export ractor types for convenience
 pub use ractor::{async_trait, ActorName};
-
-// ── RactorActor wrapper ────────────────────────────────────────────────────────
-
-/// Wrapper around ractor that provides the same spawn interface as the custom runtime.
-///
-/// This allows gradual migration of actors to ractor without changing the spawn API.
-#[allow(dead_code)]
-pub struct RactorActor<A: Actor> {
-    actor: A,
-    _phantom: std::marker::PhantomData<A>,
-}
-
-impl<A: Actor> RactorActor<A> {
-    /// Create a new RactorActor wrapper.
-    #[allow(dead_code)]
-    pub fn new(actor: A) -> Self {
-        Self {
-            actor,
-            _phantom: std::marker::PhantomData,
-        }
-    }
-}
 
 /// Handle to a ractor-based actor.
 #[derive(Clone)]
@@ -169,9 +90,6 @@ where
     ))
 }
 
-/// Future type returned by actor spawn.
-pub type RactorFuture = Pin<Box<dyn Future<Output = ()> + Send>>;
-
 // ── Event bus integration ──────────────────────────────────────────────────────
 
 // Note: EventBus<E> is already Clone, so actors can hold it directly.
@@ -221,55 +139,7 @@ pub use ractor::{ActorErr, ActorProcessingErr, MessagingErr, RactorErr};
 mod tests {
     use super::*;
 
-    /// Test that RactorActor can be spawned and messages sent.
-    #[tokio::test]
-    async fn ractor_actor_spawn_and_send() {
-        struct TestActor;
-
-        #[ractor::async_trait]
-        impl Actor for TestActor {
-            type Msg = String;
-            type State = ();
-            type Arguments = ();
-
-            async fn pre_start(
-                &self,
-                _myself: ActorRef<Self::Msg>,
-                _: (),
-            ) -> Result<Self::State, ractor::ActorProcessingErr> {
-                Ok(())
-            }
-
-            async fn handle(
-                &self,
-                myself: ActorRef<Self::Msg>,
-                msg: Self::Msg,
-                _state: &mut Self::State,
-            ) -> Result<(), ractor::ActorProcessingErr> {
-                // Stop after receiving first message to end the test quickly
-                myself.stop(None);
-                assert_eq!(msg, "hello");
-                Ok(())
-            }
-        }
-
-        let (handle, join, cell) = spawn_ractor(None, TestActor, ()).await.unwrap();
-        handle.send("hello".to_string()).await;
-        drop(handle);
-
-        // Wait for actor to stop
-        tokio::time::timeout(std::time::Duration::from_secs(2), join)
-            .await
-            .ok();
-
-        // Actor should be stopped now
-        assert!(matches!(
-            cell.get_status(),
-            ractor::ActorStatus::Stopped | ractor::ActorStatus::Unstarted
-        ));
-    }
-
-    /// Test that actors can publish events directly via EventBus.
+/// Test that actors can publish events directly via EventBus.
     #[tokio::test]
     async fn event_bus_actors_publish_directly() {
         let bus = EventBus::<String>::new(16);

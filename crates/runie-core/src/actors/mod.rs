@@ -9,9 +9,6 @@ pub use ractor_adapter::{spawn_ractor, RactorHandle, Reply, RpcReply};
 
 pub mod config;
 pub mod fff_indexer;
-pub mod handles;
-#[cfg(test)]
-mod handles_tests;
 pub mod input;
 pub mod io;
 pub mod leader;
@@ -22,8 +19,6 @@ pub mod turn;
 
 mod persistence;
 pub use persistence::PersistenceActor;
-
-pub use handles::ActorHandles; // re-export alias (points to LeaderHandle)
 
 pub use config::{ConfigMsg, RactorConfigActor, RactorConfigHandle};
 pub use fff_indexer::{

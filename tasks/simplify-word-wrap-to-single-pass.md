@@ -1,7 +1,9 @@
 # Simplify `word_wrap` to a single pass
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
+
+**Note**: Verified 2026-06-29 — single-pass logic avoids re-wrapping already-short lines; all word_wrap tests pass.
 **Category**: Core / State
 **Priority**: P2
 

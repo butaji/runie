@@ -1,7 +1,9 @@
 # Unify `PermissionMode` between `permissions` and `subagents`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
+
+**Note**: Verified 2026-06-29 — `PermissionMode` removed from `subagents/mod.rs`, re-exported from `permissions::PermissionMode`; `parse_permission_mode()` helper handles legacy camelCase names.
 **Category**: Core / State
 **Priority**: P2
 

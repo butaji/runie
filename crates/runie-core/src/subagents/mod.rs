@@ -30,7 +30,6 @@ mod manifest;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::str::FromStr;
 
 use crate::resource_loader::{extract_body, extract_frontmatter};
 pub use manifest::Manifest;
@@ -45,41 +44,8 @@ pub enum PromptMode {
     Compact,
 }
 
-/// Permission mode for a subagent — controls which operations require approval.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::EnumString)]
-pub enum PermissionMode {
-    /// Apply rules; ask when no rule matches.  (default)
-    #[default]
-    Default,
-    /// Auto-accept file edits; ask for shell commands.
-    AcceptEdits,
-    /// Auto-approve safe operations; ask for risky ones.
-    Auto,
-    /// Approve unless a deny rule matches.
-    DontAsk,
-    /// Approve everything (dangerous).
-    BypassPermissions,
-    /// Block write tools until a plan is approved.
-    Plan,
-}
-
-impl PermissionMode {
-    fn parse(s: &str) -> Self {
-        // Try EnumString first, then fall back to legacy string mappings.
-        if let Ok(mode) = Self::from_str(s) {
-            return mode;
-        }
-        // Legacy string mappings.
-        match s {
-            "acceptEdits" => Self::AcceptEdits,
-            "auto" => Self::Auto,
-            "dontAsk" => Self::DontAsk,
-            "bypassPermissions" => Self::BypassPermissions,
-            "plan" => Self::Plan,
-            _ => Self::Default,
-        }
-    }
-}
+// Re-export canonical PermissionMode from permissions.
+pub use crate::permissions::PermissionMode;
 
 /// A loaded subagent type definition.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -192,7 +158,7 @@ fn parse_subagent_content(name_hint: &str, content: &str) -> Option<SubagentType
         "compact" => PromptMode::Compact,
         _ => PromptMode::Full,
     };
-    let permission_mode = PermissionMode::parse(&fm_str(&fm, "permission_mode"));
+    let permission_mode = crate::permissions::parse_permission_mode(&fm_str(&fm, "permission_mode"));
     let agents_md = fm_str(&fm, "agents_md").parse::<bool>().unwrap_or(false);
     let model = fm_str(&fm, "model");
     let model = if model.is_empty() {
@@ -411,17 +377,18 @@ Third paragraph.
 
     #[test]
     fn permission_mode_parse_all_variants() {
+        use crate::permissions::parse_permission_mode;
         assert_eq!(
-            PermissionMode::parse("acceptEdits"),
+            parse_permission_mode("acceptEdits"),
             PermissionMode::AcceptEdits
         );
-        assert_eq!(PermissionMode::parse("auto"), PermissionMode::Auto);
-        assert_eq!(PermissionMode::parse("dontAsk"), PermissionMode::DontAsk);
+        assert_eq!(parse_permission_mode("auto"), PermissionMode::Auto);
+        assert_eq!(parse_permission_mode("dontAsk"), PermissionMode::DontAsk);
         assert_eq!(
-            PermissionMode::parse("bypassPermissions"),
+            parse_permission_mode("bypassPermissions"),
             PermissionMode::BypassPermissions
         );
-        assert_eq!(PermissionMode::parse("plan"), PermissionMode::Plan);
-        assert_eq!(PermissionMode::parse("unknown"), PermissionMode::Default);
+        assert_eq!(parse_permission_mode("plan"), PermissionMode::Plan);
+        assert_eq!(parse_permission_mode("unknown"), PermissionMode::Default);
     }
 }

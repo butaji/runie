@@ -82,6 +82,7 @@ impl From<PermissionResult> for PermissionAction {
 /// Global permission mode.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema,
+    strum::EnumString,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum PermissionMode {
@@ -119,6 +120,24 @@ impl PermissionMode {
     /// Returns true if this mode auto-approves safe tools.
     pub fn auto_approves_safe(&self) -> bool {
         matches!(self, PermissionMode::Auto | PermissionMode::AcceptEdits)
+    }
+}
+
+/// Parse a permission mode from a string, supporting both canonical snake_case
+/// names and legacy camelCase names from subagent YAML frontmatter.
+pub fn parse_permission_mode(s: &str) -> PermissionMode {
+    // Try canonical FromStr first (snake_case via strum).
+    if let Ok(mode) = s.parse::<PermissionMode>() {
+        return mode;
+    }
+    // Fall back to legacy camelCase/frontmatter names.
+    match s {
+        "acceptEdits" => PermissionMode::AcceptEdits,
+        "auto" => PermissionMode::Auto,
+        "dontAsk" => PermissionMode::DontAsk,
+        "bypassPermissions" => PermissionMode::BypassPermissions,
+        "plan" => PermissionMode::Plan,
+        _ => PermissionMode::Default,
     }
 }
 

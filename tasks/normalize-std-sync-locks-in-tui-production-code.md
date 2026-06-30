@@ -1,7 +1,9 @@
 # Normalize `std::sync` locks in TUI production code
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
+
+**Note**: Verified 2026-06-29 — `theme/mod.rs` uses `parking_lot::{Mutex, RwLock}` and `terminal/caps/detect.rs` uses `parking_lot::Mutex`. No `std::sync` locks remain in these files.
 **Category**: Reliability
 **Priority**: P1
 

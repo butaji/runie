@@ -1,7 +1,9 @@
 # Convert production `eprintln!` to `tracing`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
+
+**Note**: Verified 2026-06-29 — `keybindings/mod.rs` has no `eprintln!`; `embedded_commands.rs` now uses `tracing::warn!` instead.
 **Category**: Observability
 **Priority**: P2
 

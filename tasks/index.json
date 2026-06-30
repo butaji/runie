@@ -15,19 +15,9 @@
     "status": "done"
   },
   {
-    "file": "adopt-palette-for-theme-color-math.md",
-    "title": "Adopt `palette` for theme color math",
-    "status": "todo"
-  },
-  {
     "file": "centralize-built-in-tool-names.md",
     "title": "Centralize built-in tool names",
     "status": "done"
-  },
-  {
-    "file": "centralize-provider-credential-resolution.md",
-    "title": "Centralize provider credential resolution",
-    "status": "todo"
   },
   {
     "file": "centralize-test-fixtures-and-mocks.md",
@@ -60,14 +50,9 @@
     "status": "done"
   },
   {
-    "file": "convert-agent-and-fff-indexer-to-ractor-state.md",
-    "title": "Convert `AgentActor` and `FffIndexerActor` to idiomatic `ractor` `State`",
-    "status": "todo"
-  },
-  {
     "file": "convert-production-eprintln-to-tracing.md",
     "title": "Convert production `eprintln!` to `tracing`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "dedupe-turn-queue-delivery-logic.md",
@@ -120,11 +105,6 @@
     "status": "done"
   },
   {
-    "file": "drop-once_cell-and-futures-util-workspace-deps.md",
-    "title": "Drop `once_cell` and `futures-util` workspace deps",
-    "status": "todo"
-  },
-  {
     "file": "drop-unused-rand-from-runie-provider.md",
     "title": "Drop unused `rand` from `runie-provider`",
     "status": "done"
@@ -138,11 +118,6 @@
     "file": "expand-leader-start-for-tui-and-cli.md",
     "title": "Expand `Leader::start` for the full TUI and CLI runtime",
     "status": "done"
-  },
-  {
-    "file": "extend-markdown-inline-styles-to-lists-and-blockquotes.md",
-    "title": "Extend markdown inline styles to lists and blockquotes",
-    "status": "todo"
   },
   {
     "file": "extract-shared-streaming-response-parser.md",
@@ -175,11 +150,6 @@
     "status": "done"
   },
   {
-    "file": "fix-fff-search-pre-release-notify.md",
-    "title": "Fix `fff-search` pulling pre-release `notify`",
-    "status": "todo"
-  },
-  {
     "file": "fix-keybindings-dead-code.md",
     "title": "Fix keybindings dead-code warning",
     "status": "done"
@@ -193,11 +163,6 @@
     "file": "fold-runie-protocol-into-core.md",
     "title": "Fold `runie-protocol` crate into `runie-core`",
     "status": "done"
-  },
-  {
-    "file": "harden-actors-against-mutex-poisoning.md",
-    "title": "Harden async actors against mutex poisoning and startup panics",
-    "status": "partial"
   },
   {
     "file": "implement-graceful-leader-shutdown.md",
@@ -257,7 +222,7 @@
   {
     "file": "normalize-std-sync-locks-in-tui-production-code.md",
     "title": "Normalize `std::sync` locks in TUI production code",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "reconnect-tui-agent-actor-channel.md",
@@ -267,7 +232,7 @@
   {
     "file": "remove-dead-migration-scaffolding.md",
     "title": "Remove dead migration scaffolding",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-dead-yaml-line-parsers-from-resource-loader.md",
@@ -277,7 +242,7 @@
   {
     "file": "remove-mutex-eventbus-wrappers-from-actor-state.md",
     "title": "Remove `Mutex<EventBus>` wrappers from actor `State`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-redundant-check-field-access-script.md",
@@ -293,11 +258,6 @@
     "file": "remove-sync-turn-queue-fallback-from-app-state.md",
     "title": "Remove sync `TurnQueue` fallback from `AppState`",
     "status": "done"
-  },
-  {
-    "file": "remove-unsafe-box_to_arc-from-leader-bootstrap.md",
-    "title": "Remove unsafe `box_to_arc` from leader bootstrap",
-    "status": "todo"
   },
   {
     "file": "remove-unused-dependencies-and-normalize-workspace-deps.md",
@@ -318,11 +278,6 @@
     "file": "replace-build-linter-with-clippy-ci.md",
     "title": "Replace custom build.rs linter with Clippy / CI",
     "status": "done"
-  },
-  {
-    "file": "replace-config-validator-with-jsonschema.md",
-    "title": "Replace custom config validator with `jsonschema`",
-    "status": "partial"
   },
   {
     "file": "replace-custom-helpers-with-crates.md",
@@ -358,11 +313,6 @@
     "file": "replace-legacy-tool-parsers-with-thin-shim.md",
     "title": "Finish tool-parser shim: collapse legacy modules and marker stripping",
     "status": "done"
-  },
-  {
-    "file": "replace-normalize-raw-frontmatter-with-standard-splitter.md",
-    "title": "Replace `normalize_raw_frontmatter` with a standard frontmatter splitter",
-    "status": "todo"
   },
   {
     "file": "replace-remaining-custom-parsers-and-macros-with-strum.md",
@@ -422,7 +372,7 @@
   {
     "file": "simplify-word-wrap-to-single-pass.md",
     "title": "Simplify `word_wrap` to a single pass",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "store-provider-api-keys-in-keyring-not-config.md",
@@ -450,16 +400,6 @@
     "status": "done"
   },
   {
-    "file": "unify-headless-runtime-bootstrap.md",
-    "title": "Unify headless runtime bootstrap",
-    "status": "todo"
-  },
-  {
-    "file": "unify-library-error-types-with-thiserror.md",
-    "title": "Unify library error types with `thiserror`",
-    "status": "partial"
-  },
-  {
     "file": "unify-markdown-block-parsing-on-pulldown-cmark-events.md",
     "title": "Unify markdown block parsing and healing on `pulldown-cmark` events",
     "status": "done"
@@ -477,7 +417,7 @@
   {
     "file": "unify-permissionmode-between-permissions-and-subagents.md",
     "title": "Unify `PermissionMode` between `permissions` and `subagents`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-provider-config-persistence.md",
@@ -488,11 +428,6 @@
     "file": "unify-provider-credential-resolution-with-dotenvy.md",
     "title": "Unify provider credential resolution with `dotenvy`",
     "status": "done"
-  },
-  {
-    "file": "unify-provider-reply-and-channel-wrappers.md",
-    "title": "Unify provider reply and channel wrappers",
-    "status": "todo"
   },
   {
     "file": "unify-session-store-and-index.md",
@@ -525,11 +460,6 @@
     "status": "done"
   },
   {
-    "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
-    "title": "Use `pulldown-cmark` event stream for tool-marker stripping",
-    "status": "wontfix"
-  },
-  {
     "file": "use-pulldown-cmark-frontmatter-for-resource-loader.md",
     "title": "Use `pulldown-cmark-frontmatter` for declarative resource loading",
     "status": "done"
@@ -548,5 +478,80 @@
     "file": "wire-or-delete-input-actor.md",
     "title": "Wire or delete `InputActor`",
     "status": "done"
+  },
+  {
+    "file": "harden-actors-against-mutex-poisoning.md",
+    "title": "Harden async actors against mutex poisoning and startup panics",
+    "status": "partial"
+  },
+  {
+    "file": "replace-config-validator-with-jsonschema.md",
+    "title": "Replace custom config validator with `jsonschema`",
+    "status": "partial"
+  },
+  {
+    "file": "unify-library-error-types-with-thiserror.md",
+    "title": "Unify library error types with `thiserror`",
+    "status": "partial"
+  },
+  {
+    "file": "adopt-palette-for-theme-color-math.md",
+    "title": "Adopt `palette` for theme color math",
+    "status": "todo"
+  },
+  {
+    "file": "centralize-provider-credential-resolution.md",
+    "title": "Centralize provider credential resolution",
+    "status": "todo"
+  },
+  {
+    "file": "convert-agent-and-fff-indexer-to-ractor-state.md",
+    "title": "Convert `AgentActor` and `FffIndexerActor` to idiomatic `ractor` `State`",
+    "status": "todo"
+  },
+  {
+    "file": "drop-once_cell-and-futures-util-workspace-deps.md",
+    "title": "Drop `once_cell` and `futures-util` workspace deps",
+    "status": "todo"
+  },
+  {
+    "file": "env-actor-owns-git-cwd.md",
+    "title": "env-actor-owns-git-cwd",
+    "status": "todo"
+  },
+  {
+    "file": "extend-markdown-inline-styles-to-lists-and-blockquotes.md",
+    "title": "Extend markdown inline styles to lists and blockquotes",
+    "status": "todo"
+  },
+  {
+    "file": "fix-fff-search-pre-release-notify.md",
+    "title": "Fix `fff-search` pulling pre-release `notify`",
+    "status": "todo"
+  },
+  {
+    "file": "remove-unsafe-box_to_arc-from-leader-bootstrap.md",
+    "title": "Remove unsafe `box_to_arc` from leader bootstrap",
+    "status": "todo"
+  },
+  {
+    "file": "replace-normalize-raw-frontmatter-with-standard-splitter.md",
+    "title": "Replace `normalize_raw_frontmatter` with a standard frontmatter splitter",
+    "status": "todo"
+  },
+  {
+    "file": "unify-headless-runtime-bootstrap.md",
+    "title": "Unify headless runtime bootstrap",
+    "status": "todo"
+  },
+  {
+    "file": "unify-provider-reply-and-channel-wrappers.md",
+    "title": "Unify provider reply and channel wrappers",
+    "status": "todo"
+  },
+  {
+    "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
+    "title": "Use `pulldown-cmark` event stream for tool-marker stripping",
+    "status": "wontfix"
   }
 ]

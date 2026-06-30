@@ -228,8 +228,8 @@ pub fn word_wrap(text: &str, first_width: u16, rest_width: u16) -> Vec<String> {
     if text.is_empty() {
         return vec![String::new()];
     }
-    let first_w = first_width.max(1) as usize;
-    let rest_w = rest_width.max(1) as usize;
+    let first_w = (first_width.max(1)) as usize;
+    let rest_w = (rest_width.max(1)) as usize;
     let mut result = Vec::new();
 
     for line in text.lines() {
@@ -237,12 +237,22 @@ pub fn word_wrap(text: &str, first_width: u16, rest_width: u16) -> Vec<String> {
             result.push(String::new());
             continue;
         }
-        // Wrap first output line of each input line to first_w,
-        // subsequent output lines to rest_w.
+        // Wrap each input line to first_w (the first column of output).
+        // Then re-wrap only the non-first wrapped segments to rest_w,
+        // avoiding a second wrap pass on already-short lines.
         let wrapped = wrap(line, first_w);
         for (i, wl) in wrapped.into_iter().enumerate() {
-            let target_w = if i == 0 { first_w } else { rest_w };
-            result.extend(wrap(&wl, target_w).into_iter().map(|s| s.into_owned()));
+            if i == 0 {
+                // First segment always fits within first_w by definition.
+                result.push(wl.into_owned());
+            } else {
+                // Subsequent segments may exceed rest_w; re-wrap only if needed.
+                if display_width::width(&wl) as usize > rest_w {
+                    result.extend(wrap(&wl, rest_w).into_iter().map(|s| s.into_owned()));
+                } else {
+                    result.push(wl.into_owned());
+                }
+            }
         }
     }
 
@@ -267,6 +277,24 @@ mod tests {
     fn word_wrap_splits_long_word() {
         let lines = word_wrap("abcdefghij", 3, 3);
         assert_eq!(lines, vec!["abc", "def", "ghi", "j"]);
+    }
+
+    #[test]
+    fn word_wrap_single_pass_uses_rest_width_for_subsequent() {
+        // When first_width > rest_width, lines that fit in first_w but exceed
+        // rest_w should be re-wrapped to rest_w (single-pass logic).
+        let lines = word_wrap("hello world here", 15, 5);
+        // "hello world here" → wrap to 15 → ["hello world", "here"]
+        // "here" (4) fits in rest_w (5), no re-wrap needed.
+        assert_eq!(lines, vec!["hello world", "here"]);
+
+        // A longer subsequent segment that exceeds rest_w should be re-wrapped.
+        let lines2 = word_wrap("ab longwordxyz cd", 15, 5);
+        // "ab longwordxyz cd" → wrap to 15 → ["ab longwordxyz", "cd"]
+        // "ab longwordxyz" (15) > rest_w (5), re-wrap → ["ab lo", "ngwor", "dxyz"]
+        let lines2_str = lines2.join("|");
+        assert!(lines2.iter().all(|l| display_width::width(l) as usize <= 15));
+        assert!(lines2_str.contains("ab lo"), "expected re-wrap: {lines2_str}");
     }
 
     #[test]

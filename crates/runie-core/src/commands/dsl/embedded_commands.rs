@@ -95,7 +95,7 @@ pub fn load_embedded_commands() -> Vec<CommandDef> {
             let yaml: DeclarativeCommandYaml = match serde_yaml::from_str(yaml) {
                 Ok(y) => y,
                 Err(e) => {
-                    eprintln!("Failed to parse {}: {}", name, e);
+                    tracing::warn!("Failed to parse {}: {}", name, e);
                     return None;
                 }
             };
