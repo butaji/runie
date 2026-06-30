@@ -13,8 +13,12 @@ pub mod mcp;
 pub mod migrate;
 pub mod provider_config;
 pub mod schema;
+pub mod scope;
 #[cfg(test)]
 mod tests;
+
+// Re-export ConfigScope for use in McpServer and CLI.
+pub use scope::ConfigScope;
 
 // Extracted Config impl to satisfy 500-line file limit.
 mod config_impl;

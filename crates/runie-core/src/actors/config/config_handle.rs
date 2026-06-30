@@ -12,7 +12,8 @@ use crate::config::{Config, McpServer, TruncationSection};
 use crate::event::Event;
 use crate::model::ThinkingLevel;
 
-use super::messages::{ConfigMsg, ConfigScope};
+use super::messages::ConfigMsg;
+use crate::config::ConfigScope;
 
 /// Ractor-based ConfigActor handle.
 /// API-compatible with `ConfigActorHandle` for drop-in replacement.

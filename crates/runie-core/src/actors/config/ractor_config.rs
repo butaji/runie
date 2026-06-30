@@ -257,18 +257,18 @@ mod tests {
             command: vec!["npx".to_string(), "-y".to_string(), "@server".to_string()],
             url: None,
             headers: std::collections::HashMap::new(),
-            scope: "user".to_string(),
+            scope: crate::config::ConfigScope::Global,
         };
         handle
             .add_mcp_server(
-                crate::actors::config::messages::ConfigScope::Global,
+                crate::config::ConfigScope::Global,
                 "test-server".to_string(),
                 server.clone(),
             )
             .await;
 
         // List MCP servers — add_mcp_server awaits completion
-        let servers = handle.list_mcp_servers(crate::actors::config::messages::ConfigScope::Global).await;
+        let servers = handle.list_mcp_servers(crate::config::ConfigScope::Global).await;
         assert!(
             servers.iter().any(|(name, _)| name == "test-server"),
             "Should have test-server in list: {:?}",
@@ -277,11 +277,11 @@ mod tests {
 
         // Remove the server (await ensures write completes)
         handle
-            .remove_mcp_server(crate::actors::config::messages::ConfigScope::Global, "test-server".to_string())
+            .remove_mcp_server(crate::config::ConfigScope::Global, "test-server".to_string())
             .await;
 
         // Verify it's gone — remove_mcp_server awaits completion
-        let servers = handle.list_mcp_servers(crate::actors::config::messages::ConfigScope::Global).await;
+        let servers = handle.list_mcp_servers(crate::config::ConfigScope::Global).await;
         assert!(
             !servers.iter().any(|(name, _)| name == "test-server"),
             "test-server should be removed: {:?}",

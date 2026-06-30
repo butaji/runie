@@ -15,7 +15,8 @@ use ractor::ActorRef;
 
 use super::config_handle::ConfigActorState;
 use super::file_helpers;
-use super::messages::{ConfigMsg, ConfigScope};
+use super::messages::ConfigMsg;
+use crate::config::ConfigScope;
 
 /// Load layered config asynchronously.
 pub(super) async fn load_layers_async(global: PathBuf, local: Option<PathBuf>) -> Config {

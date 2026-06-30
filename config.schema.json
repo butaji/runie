@@ -108,6 +108,21 @@
     }
   },
   "$defs": {
+    "ConfigScope": {
+      "description": "Config scope for operations that can target global or project config.",
+      "oneOf": [
+        {
+          "description": "Global config (~/.runie/config.toml)",
+          "type": "string",
+          "const": "global"
+        },
+        {
+          "description": "Project config (.runie/config.toml)",
+          "type": "string",
+          "const": "project"
+        }
+      ]
+    },
     "HooksConfig": {
       "description": "Hook configuration.",
       "type": "object",
@@ -158,9 +173,9 @@
           }
         },
         "scope": {
-          "description": "Scope: user or project.",
-          "type": "string",
-          "default": "user"
+          "description": "Scope: global or project.",
+          "$ref": "#/$defs/ConfigScope",
+          "default": "global"
         },
         "transport": {
           "description": "Transport type: stdio, http, or sse.",

@@ -907,7 +907,7 @@
   {
     "file": "use-configscope-enum-for-mcp-server-scope.md",
     "title": "Use ConfigScope enum for McpServer scope",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-ignore-and-globset-for-file-refs.md",

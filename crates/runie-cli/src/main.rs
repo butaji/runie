@@ -14,6 +14,7 @@ mod inspect;
 mod json;
 mod mcp;
 mod print;
+mod scope; // Required for ConfigScope ValueEnum impl
 mod server;
 pub mod transport;
 
@@ -65,9 +66,9 @@ enum McpCommand {
     Add {
         /// Server name (e.g., "filesystem")
         name: String,
-        /// Scope: "global" (default, ~/.runie/config.toml) or "project" (.runie/config.toml)
+        /// Scope: global (default, ~/.runie/config.toml) or project (.runie/config.toml)
         #[arg(long, default_value = "global")]
-        scope: String,
+        scope: scope::ConfigScopeValue,
         /// Command to run (e.g., "npx" "-y" "@modelcontextprotocol/server-filesystem")
         #[arg(trailing_var_arg = true)]
         command: Vec<String>,
@@ -76,9 +77,9 @@ enum McpCommand {
     Remove {
         /// Server name
         name: String,
-        /// Scope: "global" (default) or "project"
+        /// Scope: global (default) or project
         #[arg(long, default_value = "global")]
-        scope: String,
+        scope: scope::ConfigScopeValue,
     },
 }
 
@@ -130,18 +131,10 @@ async fn run_mcp(cmd: McpCommand) -> Result<()> {
     match cmd {
         McpCommand::List => mcp::list().await,
         McpCommand::Add { name, command, scope } => {
-            let cfg_scope = match scope.as_str() {
-                "project" => runie_core::actors::config::messages::ConfigScope::Project,
-                _ => runie_core::actors::config::messages::ConfigScope::Global,
-            };
-            mcp::add(name, command, cfg_scope).await
+            mcp::add(name, command, scope.0).await
         }
         McpCommand::Remove { name, scope } => {
-            let cfg_scope = match scope.as_str() {
-                "project" => runie_core::actors::config::messages::ConfigScope::Project,
-                _ => runie_core::actors::config::messages::ConfigScope::Global,
-            };
-            mcp::remove(name, cfg_scope).await
+            mcp::remove(name, scope.0).await
         }
     }
 }
@@ -207,7 +200,7 @@ mod tests {
             } => {
                 assert_eq!(name, "my-server");
                 assert_eq!(command, vec!["npx", "-y", "@server"]);
-                assert_eq!(scope, "global");
+                assert_eq!(scope.0, runie_core::config::ConfigScope::Global);
             }
             _ => panic!("Expected Mcp::Add"),
         }
@@ -224,7 +217,7 @@ mod tests {
                 command: McpCommand::Add { name, scope, command },
             } => {
                 assert_eq!(name, "my-server");
-                assert_eq!(scope, "project");
+                assert_eq!(scope.0, runie_core::config::ConfigScope::Project);
                 assert_eq!(command, vec!["npx", "@server"]);
             }
             _ => panic!("Expected Mcp::Add"),
@@ -239,7 +232,7 @@ mod tests {
                 command: McpCommand::Remove { name, scope },
             } => {
                 assert_eq!(name, "my-server");
-                assert_eq!(scope, "global");
+                assert_eq!(scope.0, runie_core::config::ConfigScope::Global);
             }
             _ => panic!("Expected Mcp::Remove"),
         }

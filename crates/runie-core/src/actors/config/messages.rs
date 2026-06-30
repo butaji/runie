@@ -4,14 +4,8 @@ use crate::actors::ractor_adapter::Reply;
 use crate::config::{Config, McpServer, TruncationSection};
 use crate::model::ThinkingLevel;
 
-/// Config scope for operations that can target global or project config.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ConfigScope {
-    /// Global config (~/.runie/config.toml)
-    Global,
-    /// Project config (.runie/config.toml)
-    Project,
-}
+// Re-export ConfigScope from config module for backwards compatibility.
+pub use crate::config::ConfigScope;
 
 /// Messages accepted by `ConfigActor`.
 #[derive(Debug, Clone)]

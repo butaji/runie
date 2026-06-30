@@ -8,6 +8,8 @@ use std::collections::HashMap;
 use schemars::JsonSchema;
 use strum::{Display, EnumString};
 
+use super::ConfigScope;
+
 // ============================================================================
 // Transport
 // ============================================================================
@@ -33,10 +35,6 @@ pub enum McpTransport {
 // Server
 // ============================================================================
 
-fn default_scope() -> String {
-    "user".to_string()
-}
-
 /// An MCP server configuration entry.
 #[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct McpServer {
@@ -51,9 +49,9 @@ pub struct McpServer {
     /// HTTP headers for http/sse transports.
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub headers: HashMap<String, String>,
-    /// Scope: user or project.
-    #[serde(default = "default_scope")]
-    pub scope: String,
+    /// Scope: global or project.
+    #[serde(default)]
+    pub scope: ConfigScope,
 }
 
 // ============================================================================
@@ -141,7 +139,7 @@ mod tests {
             ],
             url: None,
             headers: HashMap::new(),
-            scope: "user".to_string(),
+            scope: ConfigScope::Global,
         };
 
         let json = serde_json::to_string_pretty(&server).unwrap();
@@ -150,7 +148,7 @@ mod tests {
 
         let back: McpServer = serde_json::from_str(&json).unwrap();
         assert_eq!(back.command, server.command);
-        assert_eq!(back.scope, "user");
+        assert_eq!(back.scope, ConfigScope::Global);
     }
 
     #[test]
@@ -162,7 +160,7 @@ mod tests {
             headers: [("Authorization".to_string(), "Bearer token".to_string())]
                 .into_iter()
                 .collect(),
-            scope: "project".to_string(),
+            scope: ConfigScope::Project,
         };
 
         let json = serde_json::to_string_pretty(&server).unwrap();
@@ -175,6 +173,7 @@ mod tests {
             back.headers.get("Authorization"),
             Some(&"Bearer token".to_string())
         );
+        assert_eq!(back.scope, ConfigScope::Project);
     }
 
     #[test]
@@ -193,7 +192,7 @@ mod tests {
             command: vec!["npx".to_string()],
             url: None,
             headers: HashMap::new(),
-            scope: "user".to_string(),
+            scope: ConfigScope::Global,
         };
 
         section.insert("test".to_string(), server.clone());

@@ -6,8 +6,7 @@
 use anyhow::Result;
 use std::collections::HashMap;
 
-use runie_core::actors::config::messages::ConfigScope;
-use runie_core::config::{McpServer, McpTransport};
+use runie_core::config::{ConfigScope, McpServer, McpTransport};
 use runie_core::event::Event;
 use runie_core::bus::EventBus;
 
@@ -96,10 +95,7 @@ pub async fn add(
         command,
         url: None,
         headers: HashMap::new(),
-        scope: match scope {
-            ConfigScope::Global => "global",
-            ConfigScope::Project => "project",
-        }.to_string(),
+        scope,
     };
     handle.add_mcp_server(scope, name.clone(), server).await;
     println!("Added MCP server '{name}'.");
@@ -116,8 +112,7 @@ pub async fn remove(name: String, scope: ConfigScope) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use runie_core::actors::config::messages::ConfigScope;
-    use runie_core::config::{McpServer, McpTransport};
+    use runie_core::config::{ConfigScope, McpServer, McpTransport};
     use std::collections::HashMap;
 
     // Layer 1: McpServer construction
@@ -128,7 +123,7 @@ mod tests {
             command: vec!["npx".to_string(), "-y".to_string(), "@server".to_string()],
             url: None,
             headers: HashMap::new(),
-            scope: "user".to_string(),
+            scope: ConfigScope::Global,
         };
         assert!(matches!(server.transport, McpTransport::Stdio));
         assert_eq!(server.command.len(), 3);
