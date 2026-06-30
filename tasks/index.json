@@ -327,7 +327,7 @@
   {
     "file": "replace-config-validator-with-jsonschema.md",
     "title": "Replace custom config validator with `jsonschema`",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "replace-custom-helpers-with-crates.md",

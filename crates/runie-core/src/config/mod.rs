@@ -15,7 +15,6 @@ pub mod provider_config;
 pub mod schema;
 #[cfg(test)]
 mod tests;
-mod validate;
 
 // Extracted Config impl to satisfy 500-line file limit.
 mod config_impl;

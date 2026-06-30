@@ -346,7 +346,7 @@ fn config_validation_rejects_unknown_field() {
         "provider": "openai",
         "unknown_field": "this should trigger validation error"
     });
-    let errors = crate::config::validate::validate(&value);
+    let errors = crate::config::config_impl::validate(&value);
     assert!(
         !errors.is_empty(),
         "unknown field should produce validation errors: {:?}",
