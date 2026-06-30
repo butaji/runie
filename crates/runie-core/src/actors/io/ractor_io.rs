@@ -292,89 +292,44 @@ fn detect_env_sync() -> (Option<GitInfo>, String) {
 }
 
 fn detect_git_info_sync(start: &Path) -> Option<GitInfo> {
-    let mut current = Some(start);
-    while let Some(dir) = current {
-        let git_path = dir.join(".git");
-        if git_path.is_dir() {
-            return read_git_info_sync(&git_path);
-        }
-        if git_path.is_file() {
-            if let Some(info) = read_worktree_git_info_sync(&git_path) {
-                return Some(info);
-            }
-        }
-        current = dir.parent();
-    }
-    None
-}
+    let repo = git2::Repository::discover(start).ok()?;
 
-fn read_git_info_sync(git_dir: &Path) -> Option<GitInfo> {
-    let head_path = git_dir.join("HEAD");
-    let branch = read_branch_sync(&head_path);
-    let config_path = git_dir.join("config");
-    let repo_name = read_origin_repo_name_sync(&config_path);
+    // Current branch name
+    let branch = repo
+        .head()
+        .ok()
+        .and_then(|h| h.shorthand().map(String::from));
+
+    // Origin remote URL → repo name
+    let repo_name = repo
+        .find_remote("origin")
+        .ok()
+        .and_then(|r| r.url().map(String::from))
+        .and_then(|url| {
+            url.rsplit('/')
+                .next()
+                .map(|n| n.trim_end_matches(".git").to_owned())
+        });
+
+    // Worktree detection: is_worktree() is true when inside a worktree
+    let is_worktree = repo.is_worktree();
+
+    // For worktrees, the main repo is the parent of .git (where the worktree was created)
+    let worktree_source = if is_worktree {
+        repo.path()
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.to_string_lossy().to_string())
+    } else {
+        None
+    };
+
     Some(GitInfo {
         repo_name,
         branch,
-        is_worktree: false,
-        worktree_source: None,
-    })
-}
-
-fn read_worktree_git_info_sync(git_file: &Path) -> Option<GitInfo> {
-    let gitdir = std::fs::read_to_string(git_file).ok().and_then(|content| {
-        content
-            .trim()
-            .strip_prefix("gitdir:")
-            .map(|s| PathBuf::from(s.trim()))
-    });
-    let worktree_gitdir = gitdir?;
-    let head_path = worktree_gitdir.join("HEAD");
-    let branch = read_branch_sync(&head_path);
-    let config_path = worktree_gitdir
-        .parent()
-        .and_then(|p| p.parent())
-        .map(|p| p.join("config"));
-    let repo_name = config_path.and_then(|p| read_origin_repo_name_sync(&p));
-    let worktree_source = worktree_gitdir
-        .parent()
-        .and_then(|p| p.parent())
-        .and_then(|p| p.parent())
-        .map(|p| p.to_string_lossy().to_string());
-    Some(GitInfo {
-        repo_name,
-        branch,
-        is_worktree: true,
+        is_worktree,
         worktree_source,
     })
-}
-
-fn read_branch_sync(head_path: &Path) -> Option<String> {
-    std::fs::read_to_string(head_path).ok().and_then(|content| {
-        content
-            .trim()
-            .strip_prefix("ref: refs/heads/")
-            .map(|b| b.to_owned())
-    })
-}
-
-fn read_origin_repo_name_sync(config_path: &Path) -> Option<String> {
-    std::fs::read_to_string(config_path)
-        .ok()
-        .and_then(|config| {
-            config
-                .lines()
-                .skip_while(|line| !line.contains("[remote \"origin\"]"))
-                .skip(1)
-                .find(|line| line.trim().starts_with("url"))
-                .and_then(|url_line| {
-                    let url = url_line.split('=').nth(1)?;
-                    let url = url.trim();
-                    url.rsplit('/')
-                        .next()
-                        .map(|name| name.trim_end_matches(".git").to_owned())
-                })
-        })
 }
 
 use std::process::Stdio;
@@ -458,5 +413,111 @@ mod tests {
             }
         }
         assert!(found, "Expected BashOutput event");
+    }
+
+    // ── Git detection tests ──────────────────────────────────────────────────────
+
+    #[test]
+    fn detect_git_in_real_repo() {
+        // Test against the actual runie-dev repo
+        let start = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let info = detect_git_info_sync(&start);
+        assert!(info.is_some(), "Should detect git in runie-dev repo: {:?}", info);
+        let info = info.unwrap();
+        assert!(
+            info.branch.is_some(),
+            "Should detect branch: {:?}",
+            info.branch
+        );
+        assert!(
+            info.repo_name.is_some(),
+            "Should detect repo name: {:?}",
+            info.repo_name
+        );
+        // is_worktree depends on where the test is run; just verify info is returned
+    }
+
+    #[test]
+    fn detect_git_non_git_dir_returns_none() {
+        // /tmp should not be a git repo (usually)
+        let info = detect_git_info_sync(Path::new("/tmp"));
+        assert!(
+            info.is_none(),
+            "Non-git directory should return None: {:?}",
+            info
+        );
+    }
+
+    #[test]
+    fn detect_git_in_tmp_git_repo() {
+        // Create a temp git repo
+        let tmp = std::env::temp_dir().join("runie_git_test_").join(
+            uuid::Uuid::new_v4().to_string(),
+        );
+        std::fs::create_dir_all(&tmp).unwrap();
+        run_bash_sync(&format!("git init {} --quiet", tmp.display()));
+        run_bash_sync(&format!(
+            "git -C {} config user.email 'test@test.com'",
+            tmp.display()
+        ));
+        run_bash_sync(&format!(
+            "git -C {} config user.name 'Test'",
+            tmp.display()
+        ));
+        run_bash_sync(&format!(
+            "touch {}/.gitkeep && git -C {} add .gitkeep && git -C {} commit -m 'init' --quiet",
+            tmp.display(),
+            tmp.display(),
+            tmp.display()
+        ));
+
+        let info = detect_git_info_sync(&tmp);
+        assert!(info.is_some(), "Should detect git in temp repo: {:?}", info);
+        let info = info.unwrap();
+        assert_eq!(info.branch, Some("main".to_string()), "Should detect 'main' branch");
+        assert!(info.repo_name.is_none(), "No origin → no repo name");
+        assert!(!info.is_worktree, "Not a worktree");
+
+        // Cleanup
+        std::fs::remove_dir_all(tmp.parent().unwrap()).ok();
+    }
+
+    #[test]
+    fn detect_git_detached_head() {
+        let tmp = std::env::temp_dir().join("runie_git_detached_").join(
+            uuid::Uuid::new_v4().to_string(),
+        );
+        std::fs::create_dir_all(&tmp).unwrap();
+        run_bash_sync(&format!("git init {} --quiet", tmp.display()));
+        run_bash_sync(&format!(
+            "git -C {} config user.email 'test@test.com'",
+            tmp.display()
+        ));
+        run_bash_sync(&format!(
+            "git -C {} config user.name 'Test'",
+            tmp.display()
+        ));
+        run_bash_sync(&format!(
+            "touch {}/.gitkeep && git -C {} add .gitkeep && git -C {} commit -m 'init' --quiet",
+            tmp.display(),
+            tmp.display(),
+            tmp.display()
+        ));
+        // Detach HEAD
+        run_bash_sync(&format!("git -C {} checkout --detach HEAD --quiet", tmp.display()));
+
+        let info = detect_git_info_sync(&tmp);
+        assert!(info.is_some(), "Should detect detached HEAD repo");
+        let info = info.unwrap();
+        // git2 returns Some("HEAD") for detached HEAD shorthand
+        assert_eq!(
+            info.branch.as_deref(),
+            Some("HEAD"),
+            "Detached HEAD shorthand: {:?}",
+            info.branch
+        );
+
+        // Cleanup
+        std::fs::remove_dir_all(tmp.parent().unwrap()).ok();
     }
 }

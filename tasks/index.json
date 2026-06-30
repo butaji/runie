@@ -627,7 +627,7 @@
   {
     "file": "replace-custom-git-detection-with-git2.md",
     "title": "Replace custom git detection with git2",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-custom-helpers-with-crates.md",
