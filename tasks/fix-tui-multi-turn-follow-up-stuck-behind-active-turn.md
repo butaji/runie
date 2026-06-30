@@ -1,6 +1,6 @@
 # Fix TUI multi-turn follow-up stuck behind active turn
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: TUI / Rendering
 **Priority**: P1

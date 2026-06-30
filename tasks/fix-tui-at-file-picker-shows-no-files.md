@@ -1,6 +1,6 @@
 # Fix TUI @ file picker shows "No files found"
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Input / Commands
 **Priority**: P2

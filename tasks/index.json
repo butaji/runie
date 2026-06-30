@@ -402,12 +402,12 @@
   {
     "file": "fix-tui-at-file-picker-shows-no-files.md",
     "title": "Fix TUI @ file picker shows \"No files found\"",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-tui-expand-collapse-no-visible-effect.md",
     "title": "Fix TUI Ctrl+o expand/collapse has no visible effect",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-tui-form-submit-key-not-working.md",
@@ -427,7 +427,7 @@
   {
     "file": "fix-tui-multi-turn-follow-up-stuck-behind-active-turn.md",
     "title": "Fix TUI multi-turn follow-up stuck behind active turn",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-tui-new-session-does-not-abort-active-turn.md",

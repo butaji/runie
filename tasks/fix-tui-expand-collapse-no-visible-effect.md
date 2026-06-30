@@ -1,6 +1,6 @@
 # Fix TUI Ctrl+o expand/collapse has no visible effect
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: TUI / Rendering
 **Priority**: P2
