@@ -3,8 +3,13 @@ use crate::tests::ensure_mock_provider;
 use crate::{
     run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages, AgentCommand,
 };
+use anyhow::Result;
+use futures::StreamExt;
 use parking_lot::Mutex;
 use runie_core::harness_skills::{SkillRegistry, ToolCallCtx, ToolCallPhase};
+use runie_core::message::ChatMessage;
+use runie_core::provider::Provider;
+use runie_core::provider_event::ProviderEvent;
 use runie_core::Event;
 use runie_testing::mock_tool_skill;
 use runie_testing::{allow_all_gate, mock_provider, RecordingSkill};
@@ -448,4 +453,145 @@ fn tool_call_hook_receives_input() {
 
     let ctx = ctx_ref.lock().take().unwrap();
     assert_eq!(ctx.tool_input, input);
+}
+
+// ========================================================================
+// Layer 1 — emit-turncomplete tests
+// ========================================================================
+
+/// Layer 1: A text-only turn (no tool calls) emits TurnComplete.
+/// Previously TurnComplete was gated on `has_intermediate_steps`.
+#[tokio::test]
+async fn text_turn_emits_turn_complete() {
+    let _mock_guard = ensure_mock_provider().await;
+    let provider = mock_provider();
+    let cmd = AgentCommand {
+        content: "plain hello".to_string(),
+        id: "req.text".to_string(),
+        provider: "mock".to_string(),
+        model: "echo".to_string(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: false,
+        skills_context: String::new(),
+        system_prompt: String::new(),
+        truncation: crate::truncate::TruncationPolicy::default(),
+    };
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let events_clone = events.clone();
+    run_agent_turn(
+        &provider,
+        &cmd,
+        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
+        5,
+        allow_all_gate(),
+    )
+    .await
+    .unwrap();
+
+    let events = events.lock();
+    let turn_complete_count = events
+        .iter()
+        .filter(|e| matches!(e, Event::TurnComplete { .. }))
+        .count();
+    assert_eq!(turn_complete_count, 1, "text-only turn must emit TurnComplete");
+    let done_count = events
+        .iter()
+        .filter(|e| matches!(e, Event::Done { .. }))
+        .count();
+    assert_eq!(done_count, 1, "turn must emit Done");
+}
+
+/// Layer 1: A tool turn also emits TurnComplete (regression: had to exist before).
+#[tokio::test]
+async fn tool_turn_emits_turn_complete() {
+    let _mock_guard = ensure_mock_provider().await;
+    let provider = mock_provider();
+    let cmd = AgentCommand {
+        content: "list files".to_string(),
+        id: "req.tools".to_string(),
+        provider: "mock".to_string(),
+        model: "echo".to_string(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: false,
+        skills_context: String::new(),
+        system_prompt: String::new(),
+        truncation: crate::truncate::TruncationPolicy::default(),
+    };
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let events_clone = events.clone();
+    run_agent_turn_with_skills(
+        &provider,
+        &cmd,
+        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
+        5,
+        Some(&mock_tool_skill()),
+        allow_all_gate(),
+    )
+    .await
+    .unwrap();
+
+    let events = events.lock();
+    let turn_complete_count = events
+        .iter()
+        .filter(|e| matches!(e, Event::TurnComplete { .. }))
+        .count();
+    assert_eq!(turn_complete_count, 1, "tool turn must emit TurnComplete");
+}
+
+// ========================================================================
+// Layer 1 — emit-thoughtdone-on-stream-error tests
+// ========================================================================
+
+/// Layer 1: A provider stream error emits ThoughtDone before propagating the error.
+struct ErrorProvider;
+
+impl Provider for ErrorProvider {
+    fn generate(
+        &self,
+        _: Vec<ChatMessage>,
+    ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<ProviderEvent>> + Send + '_>> {
+        let stream = futures::stream::iter([Err(anyhow::anyhow!("stream error"))]);
+        Box::pin(stream)
+    }
+}
+
+/// Layer 1: ThoughtDone is emitted even when the stream returns an error.
+#[tokio::test]
+async fn stream_error_emits_thought_done() {
+    let provider = ErrorProvider;
+    let cmd = AgentCommand {
+        content: "error".to_string(),
+        id: "req.err".to_string(),
+        provider: "error".to_string(),
+        model: "error".to_string(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: false,
+        skills_context: String::new(),
+        system_prompt: String::new(),
+        truncation: crate::truncate::TruncationPolicy::default(),
+    };
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let events_clone = events.clone();
+    let result = run_agent_turn(
+        &provider,
+        &cmd,
+        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
+        5,
+        allow_all_gate(),
+    )
+    .await;
+
+    // Turn must return an error (provider failure).
+    assert!(result.is_err(), "stream error should propagate as Err");
+
+    // ThoughtDone must be emitted even on error path.
+    let events = events.lock();
+    let thought_done_count = events
+        .iter()
+        .filter(|e| matches!(e, Event::ThoughtDone { .. }))
+        .count();
+    assert_eq!(
+        thought_done_count, 1,
+        "ThoughtDone must be emitted even on stream error"
+    );
 }

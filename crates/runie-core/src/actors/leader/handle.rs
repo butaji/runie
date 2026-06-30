@@ -1,5 +1,9 @@
 //! LeaderHandle implementation.
 
+/// Number of actors managed by the leader (config, provider, io, session,
+/// permission, turn, input, agent, fff_indexer). Used for status diagnostics.
+const SPAWNED_ACTOR_COUNT: usize = 9;
+
 use tokio::sync::{broadcast, mpsc};
 
 use crate::bus::EventBus;
@@ -133,7 +137,7 @@ impl LeaderHandle {
     pub fn status(&self) -> LeaderStatus {
         LeaderStatus {
             running: true,
-            actor_count: 9,
+            actor_count: SPAWNED_ACTOR_COUNT,
             bus_subscribers: self.event_bus.subscriber_count(),
         }
     }
@@ -176,5 +180,13 @@ mod tests {
                 _field(&handle.snapshot_rx);
             }
         }
+    }
+
+    /// Layer 1: `status.actor_count` matches the expected constant.
+    #[test]
+    fn leader_status_counts_actors() {
+        assert_eq!(SPAWNED_ACTOR_COUNT, 9);
+        // Keep the constant consistent with SpawnedHandles fields:
+        // config, provider, io, session, permission, turn, input, agent, fff_indexer
     }
 }

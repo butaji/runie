@@ -342,3 +342,59 @@ fn palette_model_with_args_switches_model() {
         msgs
     );
 }
+
+// ── UiActor-level Layer 2: palette closes after slash command ─────────────────
+
+/// Layer 2: UiActor::dispatch_submit_content closes the command palette
+/// before executing a slash command, so the result is visible without overlay.
+#[test]
+fn ui_actor_dispatch_submit_closes_palette() {
+    use crate::ui_actor::UiActor;
+    use crate::ui_actor_agent_handles::AgentHandleBox;
+    use std::sync::Arc;
+
+    struct NoopAgent;
+    impl runie_core::actors::leader::LeaderAgentHandle for NoopAgent {
+        fn run(
+            &self,
+            _cmd: runie_core::actors::leader::LeaderAgentCmd,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+            Box::pin(async {})
+        }
+    }
+
+    let agent_handle =
+        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(NoopAgent));
+
+    let state = runie_core::AppState::default();
+    let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());
+    let bus = runie_core::bus::EventBus::<runie_core::Event>::new(16);
+    let (shutdown_tx, _) = tokio::sync::oneshot::channel();
+    let caps = crate::terminal::caps::TermCaps::default();
+
+    let mut ui = UiActor::with_agent_handle(
+        state,
+        AgentHandleBox::Leader(agent_handle),
+        kb_tx,
+        bus,
+        shutdown_tx,
+        caps,
+    );
+
+    // Open the command palette (e.g., user typed '/')
+    ui.state
+        .update(runie_core::Event::ToggleCommandPalette);
+    assert!(
+        ui.state.open_dialog.is_some(),
+        "palette should be open before dispatch"
+    );
+
+    // Dispatch a slash command — this should close the palette.
+    ui.dispatch_submit_content("/session".to_owned());
+
+    assert!(
+        ui.state.open_dialog.is_none(),
+        "command palette must close after slash command, got {:?}",
+        ui.state.open_dialog
+    );
+}

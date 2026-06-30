@@ -51,7 +51,7 @@ pub async fn run_agent_turn_with_skills(
             return result;
         }
     }
-    let has_intermediate_steps = run_iterations(
+    run_iterations(
         provider,
         command,
         &mut messages,
@@ -63,16 +63,7 @@ pub async fn run_agent_turn_with_skills(
     )
     .await?;
 
-    emit_turn_end(
-        &emit,
-        &command.id,
-        skills,
-        &messages,
-        tool_call_count,
-        has_intermediate_steps,
-        turn_start,
-    )
-    .await;
+    emit_turn_end(&emit, &command.id, skills, &messages, tool_call_count, turn_start).await;
     Ok(())
 }
 
@@ -111,7 +102,6 @@ async fn emit_turn_end(
     skills: Option<&SkillRegistry>,
     messages: &[ChatMessage],
     tool_call_count: usize,
-    has_intermediate_steps: bool,
     turn_start: Instant,
 ) {
     if let Some(skills) = skills {
@@ -133,15 +123,13 @@ async fn emit_turn_end(
         }
     }
 
-    if has_intermediate_steps {
-        emit_now(
-            emit,
-            runie_core::Event::TurnComplete {
-                id: id.to_owned(),
-                duration_secs: turn_start.elapsed().as_secs_f64(),
-            },
-        );
-    }
+    emit_now(
+        emit,
+        runie_core::Event::TurnComplete {
+            id: id.to_owned(),
+            duration_secs: turn_start.elapsed().as_secs_f64(),
+        },
+    );
     emit_now(emit, runie_core::Event::Done { id: id.to_owned() });
 }
 
@@ -156,8 +144,7 @@ async fn run_iterations(
     max_iterations: usize,
     tool_call_count: &mut usize,
     gate: PermissionGate,
-) -> Result<bool> {
-    let mut has_intermediate_steps = false;
+) -> Result<()> {
     for _ in 0..max_iterations {
         if !run_agent_iteration(
             provider,
@@ -172,9 +159,8 @@ async fn run_iterations(
         {
             break;
         }
-        has_intermediate_steps = true;
     }
-    Ok(has_intermediate_steps)
+    Ok(())
 }
 
 async fn run_agent_iteration(
@@ -193,7 +179,18 @@ async fn run_agent_iteration(
         },
     );
     let tools = build_tool_registry(command.read_only);
-    let response = stream_response(provider, &command.id, messages, tools, emit.clone()).await?;
+    let response = match stream_response(provider, &command.id, messages, tools, emit.clone()).await {
+        Ok(r) => r,
+        Err(e) => {
+            emit_now(
+                &emit,
+                runie_core::Event::ThoughtDone {
+                    id: command.id.clone(),
+                },
+            );
+            return Err(e);
+        }
+    };
     emit_now(
         &emit,
         runie_core::Event::ThoughtDone {

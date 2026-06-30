@@ -14,7 +14,7 @@
 
 The original cleanup is complete: **108 `done`**, **3 `wontfix`**. Live mock-provider TUI/CLI testing on 2026-06-30, a focused architecture review, and a planned side-by-side comparison with Grok Build revealed regressions, wiring gaps, and feature-parity gaps that must be fixed before real MiniMax testing:
 
-- **54 `todo` tasks** — see `tasks/index.json` for details.
+- **52 `todo` tasks** — see `tasks/index.json` for details.
 - **1 `partial` task** — `live-tui-smoke-test-real-minimax.md` is blocked on a missing `MINIMAX_API_KEY`.
 
 The workspace still passes `cargo check --workspace` and `cargo test --workspace`, but the TUI is not yet usable end-to-end. The highest-priority fixes are:

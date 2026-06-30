@@ -42,14 +42,14 @@ impl LeaderAgentActorHandle {
 
     pub async fn run(&self, command: AgentCommand) {
         let cmd = runie_core::actors::leader::LeaderAgentCmd {
-            content: command.content,
-            id: command.id,
-            provider: command.provider,
-            model: command.model,
+            content: command.content.clone(),
+            id: command.id.clone(),
+            provider: command.provider.clone(),
+            model: command.model.clone(),
             thinking_level: command.thinking_level,
             read_only: command.read_only,
-            skills_context: command.skills_context,
-            system_prompt: command.system_prompt,
+            skills_context: command.skills_context.clone(),
+            system_prompt: command.system_prompt.clone(),
         };
         self.inner.run(cmd).await;
     }

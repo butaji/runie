@@ -427,4 +427,28 @@ mod tests {
         assert!(result.text.contains("answer"));
         assert!(!result.text.contains("reasoning"));
     }
+
+    // ========================================================================
+    // Layer 1 — Stream error propagation
+    // ========================================================================
+
+    /// Layer 1: Provider stream error propagates as Err.
+    #[tokio::test]
+    async fn stream_error_propagates() {
+        struct ErrorProvider;
+        impl Provider for ErrorProvider {
+            fn generate(
+                &self,
+                _: Vec<ChatMessage>,
+            ) -> std::pin::Pin<
+                Box<dyn futures::Stream<Item = Result<ProviderEvent>> + Send + '_>,
+            > {
+                Box::pin(futures::stream::iter([Err(anyhow::anyhow!("provider error"))]))
+            }
+        }
+        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let result = stream_response(&ErrorProvider, "cmd", &[], vec![], emit).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "provider error");
+    }
 }

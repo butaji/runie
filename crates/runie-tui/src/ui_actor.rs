@@ -42,6 +42,9 @@ pub struct UiActor {
     /// Pending submit content captured before sending InputMsg::Submit.
     /// Dispatched after InputChanged is applied so state is clean.
     pending_submit: Option<String>,
+    /// Guards against duplicate agent runs when TurnStarted arrives multiple times.
+    /// Set true when agent_handle.run() is called; cleared when Done is received.
+    pub(crate) agent_running: bool,
 }
 
 impl UiActor {
@@ -95,6 +98,7 @@ impl UiActor {
             prev_input,
             prev_cursor_pos,
             pending_submit: None,
+            agent_running: false,
         }
     }
 
@@ -175,7 +179,11 @@ impl UiActor {
 
     /// Handle a single event without publishing. Returns `true` when the actor
     /// should shut down.
-    async fn handle_event_inner(&mut self, evt: Event, effect_tx: tokio::sync::mpsc::Sender<Event>) -> bool {
+    pub(crate) async fn handle_event_inner(&mut self, evt: Event, effect_tx: tokio::sync::mpsc::Sender<Event>) -> bool {
+        // Priority quit handling — Ctrl+C / Ctrl+Q always exit, even during active turns.
+        if matches!(&evt, Event::Quit { .. } | Event::ForceQuit { .. }) {
+            return true;
+        }
         let was_config_loaded = matches!(&evt, Event::ConfigLoaded { .. });
 
         self.handle_input_event(&evt).await;
@@ -191,20 +199,30 @@ impl UiActor {
             let _ = self.kb_tx.send(self.state.config().keybindings().clone());
         }
         if let Event::TurnStarted { request_id, content, .. } = &evt {
-            let provider = self.state.config().current_provider.clone();
-            let model = self.state.config().current_model.clone();
-            let cmd = AgentCommand {
-                content: content.clone(),
-                id: request_id.clone(),
-                provider,
-                model,
-                thinking_level: self.state.config().thinking_level,
-                read_only: false,
-                skills_context: String::new(),
-                system_prompt: String::new(),
-                truncation: TruncationPolicy::default(),
-            };
-            self.agent_handle.run(cmd).await;
+            // Guard: prevent duplicate agent spawns if TurnStarted arrives multiple times.
+            // The agent runs as a background task; set the flag before spawning so
+            // any subsequent TurnStarted in the same event-loop iteration is also blocked.
+            if !self.agent_running {
+                self.agent_running = true;
+                let provider = self.state.config().current_provider.clone();
+                let model = self.state.config().current_model.clone();
+                let cmd = AgentCommand {
+                    content: content.clone(),
+                    id: request_id.clone(),
+                    provider,
+                    model,
+                    thinking_level: self.state.config().thinking_level,
+                    read_only: false,
+                    skills_context: String::new(),
+                    system_prompt: String::new(),
+                    truncation: TruncationPolicy::default(),
+                };
+                self.agent_handle.run(cmd).await;
+            }
+        }
+        // Clear agent_running when the turn ends normally or with an error.
+        if matches!(&evt, Event::Done { .. } | Event::TurnErrored { .. }) {
+            self.agent_running = false;
         }
 
         false
@@ -458,7 +476,9 @@ impl UiActor {
     }
 
     /// Dispatch submit content (slash command, steering, or user message).
-    fn dispatch_submit_content(&mut self, content: String) {
+    pub(crate) fn dispatch_submit_content(&mut self, content: String) {
+        // Close any open dialog (e.g., command palette) before executing the command.
+        *self.state.open_dialog_mut() = None;
         // Slash command handling.
         if let Some(result) = self.state.handle_slash(&content) {
             self.state.apply_command_result(result);
