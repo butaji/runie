@@ -15,7 +15,7 @@
 All 108 cleanup tasks are `done` as of 2026-06-29. The workspace passes `cargo check --workspace` and `cargo test --workspace` cleanly. Remaining items:
 - **3 `wontfix` tasks**: tool-marker stripping (string-based by design), `fff-search` pre-release `notify` (deferred), `palette` color math adoption (deferred).
 
-See `tasks/index.json` for the full registry and `tasks/` for individual task files with acceptance-criteria evidence.
+See `tasks/index.json` for the full registry and `tasks/` for individual task files with acceptance-criteria evidence. The final closure, including which of the last 24 tasks were completed and which 3 are intentionally `wontfix`, is documented in [`2026-06-28-active-tasks-closure.md`](2026-06-28-active-tasks-closure.md).
   - `tasks/unify-provider-config-persistence.md` — single config persistence helper.
   - `tasks/simplify-slash-command-dsl.md` — collapse `CommandSpec`/`CommandDef`.
   - `tasks/unify-permission-system-rules.md` — merge permission rule engines.
