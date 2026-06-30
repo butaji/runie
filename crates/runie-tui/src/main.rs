@@ -16,7 +16,7 @@ use runie_agent::AgentActorFactoryImpl;
 use runie_core::actors::leader::{Leader, LeaderHandle};
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
-use runie_core::telemetry;
+use runie_core::tracing_init as telemetry;
 use runie_core::{AppState, Snapshot};
 use runie_provider::DynProviderFactory;
 use runie_tui::{

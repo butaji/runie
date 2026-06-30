@@ -52,7 +52,7 @@ enum Command {
 
 fn main() {
     // Initialize tracing subscriber.
-    runie_core::telemetry::init();
+    runie_core::tracing_init::init();
 
     let cli = Cli::parse();
 

@@ -5,7 +5,8 @@
 
 pub use crate::semantic_tokens::SemanticTokens;
 
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::Arc;
+use parking_lot::{Mutex, RwLock};
 
 pub(crate) mod colors;
 pub(crate) mod glyph;
@@ -46,42 +47,31 @@ pub fn set_current_theme(name: &str) {
 /// Set the active theme by name, quantized to the given terminal capabilities.
 /// Quantization happens once at load time; per-frame rendering is unaffected.
 pub fn set_current_theme_with_caps(name: &str, caps: crate::terminal::caps::TermCaps) {
-    let name_same = CURRENT_THEME_NAME
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .as_str()
-        == name;
-    let caps_same = CURRENT_CAPS
-        .read()
-        .unwrap_or_else(|e| e.into_inner())
-        .as_ref()
-        == Some(&caps);
+    let name_same = CURRENT_THEME_NAME.lock().as_str() == name;
+    let caps_same = CURRENT_CAPS.read().as_ref() == Some(&caps);
     if name_same && caps_same {
         return;
     }
 
-    *CURRENT_CAPS.write().unwrap_or_else(|e| e.into_inner()) = Some(caps);
-    *CURRENT_THEME_NAME.lock().unwrap_or_else(|e| e.into_inner()) = name.to_owned();
+    *CURRENT_CAPS.write() = Some(caps);
+    *CURRENT_THEME_NAME.lock() = name.to_owned();
     let theme = loader::load_theme_with_caps(name, caps)
         .unwrap_or_else(|_| loader::minimal_fallback_theme());
-    *CURRENT_THEME.write().unwrap_or_else(|e| e.into_inner()) = Some(Arc::new(theme));
+    *CURRENT_THEME.write() = Some(Arc::new(theme));
 }
 
 /// Get the name of the currently active theme.
 pub fn current_theme_name() -> String {
-    CURRENT_THEME_NAME
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .clone()
+    CURRENT_THEME_NAME.lock().clone()
 }
 
 fn current_caps() -> Option<crate::terminal::caps::TermCaps> {
-    *CURRENT_CAPS.read().unwrap_or_else(|e| e.into_inner())
+    CURRENT_CAPS.read().clone()
 }
 
 /// Get the currently active theme (falls back to default).
 pub fn current_theme() -> Arc<opaline::Theme> {
-    let guard = CURRENT_THEME.read().unwrap_or_else(|e| e.into_inner());
+    let guard = CURRENT_THEME.read();
     guard.clone().unwrap_or_else(|| {
         // Last resort: load embedded default. If that fails, use the minimal
         // hardcoded fallback — this would only happen if the build pipeline

@@ -12,6 +12,7 @@
 //! and spawns all child actors.
 
 use std::pin::Pin;
+use std::sync::Arc;
 
 pub mod actor;
 mod messages;
@@ -58,7 +59,7 @@ pub trait LeaderAgentHandle: Send + Sync {
 /// dependency cycle.
 pub trait AgentActorFactory: Send + Sync {
     /// Future type for spawn operation.
-    type SpawnFuture: std::future::Future<Output = Result<Box<dyn LeaderAgentHandle>, ractor::SpawnErr>>
+    type SpawnFuture: std::future::Future<Output = Result<Arc<dyn LeaderAgentHandle>, ractor::SpawnErr>>
         + Send;
 
     /// Spawn an agent actor connected to the given event bus and handles.
@@ -73,7 +74,7 @@ pub trait AgentActorFactory: Send + Sync {
 /// Type alias for the spawn future return type.
 pub type AgentSpawnFuture = std::pin::Pin<
     Box<
-        dyn std::future::Future<Output = Result<Box<dyn LeaderAgentHandle>, ractor::SpawnErr>>
+        dyn std::future::Future<Output = Result<Arc<dyn LeaderAgentHandle>, ractor::SpawnErr>>
             + Send,
     >,
 >;

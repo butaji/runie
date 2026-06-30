@@ -1,5 +1,6 @@
 //! `ConfigActor` — the single owner of `~/.runie/config.toml`.
 
+pub mod config_handle;
 pub mod file_helpers;
 pub mod messages;
 pub mod ractor_config;
@@ -7,8 +8,9 @@ pub mod ractor_config;
 mod tests;
 
 // Ractor-based ConfigActor.
+pub use config_handle::RactorConfigHandle;
 pub use messages::ConfigMsg;
-pub use ractor_config::{RactorConfigActor, RactorConfigHandle};
+pub use ractor_config::RactorConfigActor;
 
 /// Trait for config actor handles.
 pub trait ConfigHandle: Send + Sync + Clone {

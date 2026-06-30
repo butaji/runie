@@ -47,11 +47,11 @@ pub fn load_keybindings(config: Option<&crate::config::Config>) -> HashMap<Strin
             if json_path.exists() {
                 match fs::read_to_string(&json_path) {
                     Ok(content) => parse_keybindings_json(&content).unwrap_or_else(|e| {
-                        eprintln!("Failed to parse keybindings: {}, using defaults", e);
+                        tracing::warn!("Failed to parse keybindings: {}, using defaults", e);
                         default_keybindings()
                     }),
                     Err(e) => {
-                        eprintln!("Failed to read keybindings file: {}, using defaults", e);
+                        tracing::warn!("Failed to read keybindings file: {}, using defaults", e);
                         default_keybindings()
                     }
                 }

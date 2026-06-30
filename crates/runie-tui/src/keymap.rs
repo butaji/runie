@@ -4,13 +4,13 @@ use crokey::KeyCombinationFormat;
 use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use runie_core::{keybindings, Event as CoreEvent};
 use std::collections::HashMap;
 
 /// Lowercase `+`-separated combo formatter backed by `crokey::KeyCombinationFormat`.
 /// Output matches the legacy format: "ctrl+c", "alt+enter", "shift+tab".
-static COMBO_FORMAT: Lazy<KeyCombinationFormat> = Lazy::new(|| {
+static COMBO_FORMAT: LazyLock<KeyCombinationFormat> = LazyLock::new(|| {
     KeyCombinationFormat::default()
         .with_lowercase_modifiers()
         .with_control("ctrl-")

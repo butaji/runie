@@ -251,3 +251,56 @@ async fn save_provider_event_still_flows() {
     assert_eq!(provider.base_url, "https://api.anthropic.com/v1");
     assert_eq!(provider.models, vec!["claude-sonnet-4-6"]);
 }
+
+#[tokio::test]
+async fn tracing_event_emitted_on_config_load() {
+    // Verify that a ConfigLoaded fact produces a matching tracing::info! event.
+    use std::sync::mpsc;
+    use tracing::Subscriber;
+    use tracing_subscriber::{layer::SubscriberExt, Registry};
+
+    struct CaptureLayer {
+        sender: mpsc::Sender<tracing::Level>,
+    }
+
+    impl<S: Subscriber> tracing_subscriber::layer::Layer<S> for CaptureLayer {
+        fn on_event(
+            &self,
+            event: &tracing::Event<'_>,
+            _ctx: tracing_subscriber::layer::Context<'_, S>,
+        ) {
+            let _ = self.sender.send(*event.metadata().level());
+        }
+    }
+
+    let (tx, rx) = mpsc::channel();
+    let layer = CaptureLayer { sender: tx };
+    let dispatcher = tracing::dispatcher::Dispatch::new(Registry::default().with(layer));
+    let guard = tracing::dispatcher::set_global_default(dispatcher);
+
+    let bus = EventBus::<Event>::new(10);
+    let mut sub = bus.subscribe();
+    let (_handle, _actor) = RactorConfigActor::spawn(bus, None, None).await;
+
+    // Verify ConfigLoaded fact is emitted.
+    let event = tokio::time::timeout(std::time::Duration::from_secs(2), sub.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(matches!(event, Event::ConfigLoaded { .. }));
+
+    // Verify a matching tracing::info event was also emitted.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    let mut found_info = false;
+    while let Ok(level) = rx.recv_timeout(deadline - std::time::Instant::now()) {
+        if level == tracing::Level::INFO {
+            found_info = true;
+            break;
+        }
+    }
+    assert!(found_info, "tracing::info! should be emitted on ConfigLoaded");
+
+    drop(guard);
+}
+
+// CaptureLayer is defined above.

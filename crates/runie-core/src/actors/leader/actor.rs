@@ -139,7 +139,7 @@ impl Leader {
             turn: turn_h,
             turn_join: Some(std::sync::Arc::new(turn_join)),
             input: input_h,
-            agent: box_to_arc(agent_handle),
+            agent: agent_handle,
             fff_indexer: fff_h,
         })
     }
@@ -279,12 +279,7 @@ fn json_to_intent(json: &serde_json::Value) -> Option<CoreEvent> {
     }
 }
 
-/// Convert `Box<dyn Trait>` to `Arc<dyn Trait>` via raw pointer reboxing.
-fn box_to_arc(b: Box<dyn LeaderAgentHandle>) -> std::sync::Arc<dyn LeaderAgentHandle> {
-    // SAFETY: Box<dyn Trait> and Arc<dyn Trait> have identical pointer layout.
-    let raw = Box::into_raw(b);
-    unsafe { std::sync::Arc::from_raw(raw as *const dyn LeaderAgentHandle) }
-}
+
 
 /// Handle to the running leader.
 ///

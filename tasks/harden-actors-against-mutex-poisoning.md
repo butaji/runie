@@ -1,6 +1,6 @@
 # Harden async actors against mutex poisoning and startup panics
 
-**Status**: todo
+**Status**: partial
 **Milestone**: R5
 **Category**: Architecture / Actors
 **Priority**: P1

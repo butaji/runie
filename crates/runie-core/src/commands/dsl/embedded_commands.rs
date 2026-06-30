@@ -119,7 +119,7 @@ pub fn load_embedded_commands() -> Vec<CommandDef> {
             match build_cmd_from_yaml(&decl_def, handler_registry) {
                 Some(cmd) => Some(cmd),
                 None => {
-                    eprintln!(
+                    tracing::warn!(
                         "Failed to build command {}: handler not found or other error",
                         yaml.name
                     );

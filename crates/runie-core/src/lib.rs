@@ -74,8 +74,8 @@ pub mod snapshot;
 // state types moved to model::state
 pub mod streaming_buffer;
 pub mod subagents;
-/// Telemetry initialization using `tracing`.
-pub mod telemetry;
+/// Tracing subscriber initialization.
+pub mod tracing_init;
 
 pub mod theme_tokens;
 

@@ -270,7 +270,7 @@ impl runie_core::actors::leader::AgentActorFactory for AgentActorFactoryImpl {
         Box<
             dyn std::future::Future<
                     Output = Result<
-                        Box<dyn runie_core::actors::leader::LeaderAgentHandle>,
+                        std::sync::Arc<dyn runie_core::actors::leader::LeaderAgentHandle>,
                         ractor::SpawnErr,
                     >,
                 > + Send,
@@ -286,8 +286,8 @@ impl runie_core::actors::leader::AgentActorFactory for AgentActorFactoryImpl {
         Box::pin(async move {
             let (handle, _, _cell) =
                 spawn_ractor_agent(bus, provider_handle, permission_handle).await?;
-            Ok(Box::new(LeaderAgentHandleImpl::new(handle))
-                as Box<dyn runie_core::actors::leader::LeaderAgentHandle>)
+            Ok(std::sync::Arc::new(LeaderAgentHandleImpl::new(handle))
+                as std::sync::Arc<dyn runie_core::actors::leader::LeaderAgentHandle>)
         })
     }
 }

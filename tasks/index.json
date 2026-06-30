@@ -197,7 +197,7 @@
   {
     "file": "harden-actors-against-mutex-poisoning.md",
     "title": "Harden async actors against mutex poisoning and startup panics",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "implement-graceful-leader-shutdown.md",
@@ -457,7 +457,7 @@
   {
     "file": "unify-library-error-types-with-thiserror.md",
     "title": "Unify library error types with `thiserror`",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "unify-markdown-block-parsing-on-pulldown-cmark-events.md",

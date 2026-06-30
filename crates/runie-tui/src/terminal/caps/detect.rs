@@ -1,7 +1,7 @@
 //! Private detection helpers for terminal capabilities.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 use super::{ColorDepth, MouseCapability, MultiplexerType};
 
@@ -38,7 +38,7 @@ pub(super) fn detect_color_depth(
         return ColorDepth::Truecolor;
     }
 
-    let _lock = ENV_MUTEX.lock().unwrap();
+    let _lock = ENV_MUTEX.lock();
     with_env(env, || {
         if let Some(level) = supports_color_forced() {
             if level.has_16m {
@@ -55,7 +55,7 @@ pub(super) fn detect_color_depth(
 
 /// Detect hyperlink support using `supports-hyperlinks`.
 pub(super) fn detect_hyperlinks(env: &HashMap<String, String>) -> bool {
-    let _lock = ENV_MUTEX.lock().unwrap();
+    let _lock = ENV_MUTEX.lock();
     with_env(env, supports_hyperlinks::supports_hyperlinks)
 }
 

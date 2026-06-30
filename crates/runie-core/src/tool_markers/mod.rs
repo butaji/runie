@@ -4,7 +4,9 @@
 //! needs of marker detection, name extraction, and stripping. The full parser
 //! (with structured errors and argument extraction) lives in `tool::parse`.
 
+mod legacy_tools;
 mod strip;
+mod strip_cleanup;
 
 /// Tool call markup delimiters.
 pub const TOOL_CALL_START: &str = "[TOOL_CALL]";

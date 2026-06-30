@@ -17,206 +17,9 @@ use crate::config::{Config, McpServer, TruncationSection};
 use crate::event::Event;
 use crate::model::ThinkingLevel;
 
+use super::config_handle::{ConfigActorState, RactorConfigHandle};
 use super::file_helpers;
 use super::messages::{ConfigMsg, ConfigScope};
-
-/// Ractor-based ConfigActor handle.
-/// API-compatible with `ConfigActorHandle` for drop-in replacement.
-#[derive(Clone, Debug)]
-pub struct RactorConfigHandle {
-    inner: crate::actors::ractor_adapter::RactorHandle<ConfigMsg>,
-}
-
-impl RactorConfigHandle {
-    pub fn new(inner: crate::actors::ractor_adapter::RactorHandle<ConfigMsg>) -> Self {
-        Self { inner }
-    }
-
-    /// Get the underlying ractor handle for low-level access.
-    pub fn tx(&self) -> &crate::actors::ractor_adapter::RactorHandle<ConfigMsg> {
-        &self.inner
-    }
-
-    /// Send a message to the actor (fire-and-forget).
-    pub async fn send(&self, msg: ConfigMsg) {
-        let _ = self.inner.send(msg).await;
-    }
-
-    /// Try to send a message (non-blocking).
-    pub fn try_send(&self, msg: ConfigMsg) -> Result<(), Box<ractor::MessagingErr<ConfigMsg>>> {
-        self.inner.try_send(msg).map_err(Box::new)
-    }
-
-    /// Send a message to the actor (fire-and-forget).
-    pub async fn send_message(&self, msg: ConfigMsg) {
-        let _ = self.inner.send(msg).await;
-    }
-
-    /// Request the current in-memory config.
-    pub async fn get_config(&self) -> Option<Config> {
-        let (tx, rx) = tokio::sync::oneshot::channel();
-        let _ = self.inner.send(ConfigMsg::GetConfig(Reply::new(tx))).await;
-        rx.await.ok()
-    }
-
-    /// Request the list of configured providers.
-    pub async fn get_configured_providers(&self) -> Option<Vec<(String, String, Vec<String>)>> {
-        let (tx, rx) = tokio::sync::oneshot::channel();
-        let _ = self
-            .inner
-            .send(ConfigMsg::GetConfiguredProviders(Reply::new(tx)))
-            .await;
-        rx.await.ok()
-    }
-
-    /// Ask the actor to load config from disk.
-    pub async fn load(&self) {
-        let _ = self.inner.send(ConfigMsg::Load).await;
-    }
-
-    /// Ask the actor to reload config from disk.
-    pub async fn reload(&self) {
-        let _ = self.inner.send(ConfigMsg::Reload).await;
-    }
-
-    /// Save a provider configuration.
-    pub async fn save_provider(
-        &self,
-        name: String,
-        base_url: String,
-        api_key: String,
-        models: Vec<String>,
-    ) {
-        let _ = self
-            .inner
-            .send(ConfigMsg::SaveProvider {
-                name,
-                base_url,
-                api_key,
-                models,
-            })
-            .await;
-    }
-
-    /// Remove a provider configuration.
-    pub async fn remove_provider(&self, name: String) {
-        let _ = self.inner.send(ConfigMsg::RemoveProvider { name }).await;
-    }
-
-    /// Persist the active provider/model as the default.
-    pub async fn set_default_model(&self, provider: String, model: String) {
-        let _ = self
-            .inner
-            .send(ConfigMsg::SetDefaultModel { provider, model })
-            .await;
-    }
-
-    /// Update the saved model list for a provider.
-    pub async fn set_provider_models(&self, name: String, models: Vec<String>) {
-        let _ = self
-            .inner
-            .send(ConfigMsg::SetProviderModels { name, models })
-            .await;
-    }
-
-    /// Set the theme name.
-    pub async fn set_theme(&self, name: String) {
-        let _ = self.inner.send(ConfigMsg::SetTheme { name }).await;
-    }
-
-    /// Set vim mode.
-    pub async fn set_vim_mode(&self, enabled: bool) {
-        let _ = self.inner.send(ConfigMsg::SetVimMode { enabled }).await;
-    }
-
-    /// Set telemetry enabled.
-    pub async fn set_telemetry(&self, enabled: bool) {
-        let _ = self.inner.send(ConfigMsg::SetTelemetry { enabled }).await;
-    }
-
-    /// Set truncation limits.
-    pub async fn set_truncation(&self, limits: TruncationSection) {
-        let _ = self.inner.send(ConfigMsg::SetTruncation { limits }).await;
-    }
-
-    /// Set thinking level.
-    pub async fn set_thinking_level(&self, level: ThinkingLevel) {
-        let _ = self.inner.send(ConfigMsg::SetThinkingLevel { level }).await;
-    }
-
-    /// Load layered config (global + project) and return the effective config.
-    pub async fn load_layers(&self) -> Option<Config> {
-        let (tx, rx) = tokio::sync::oneshot::channel();
-        let _ = self
-            .inner
-            .send(ConfigMsg::LoadLayers(
-                crate::actors::ractor_adapter::Reply::new(tx),
-            ))
-            .await;
-        rx.await.ok()
-    }
-
-    /// Add or update an MCP server in the specified scope.
-    ///
-    /// Waits for the operation to complete before returning.
-    pub async fn add_mcp_server(&self, scope: ConfigScope, name: String, server: McpServer) {
-        let (tx, rx) = tokio::sync::oneshot::channel();
-        let _ = self
-            .inner
-            .send(ConfigMsg::AddMcpServer {
-                scope,
-                name,
-                server,
-                reply: crate::actors::ractor_adapter::Reply::new(tx),
-            })
-            .await;
-        let _ = rx.await;
-    }
-
-    /// Remove an MCP server from the specified scope.
-    ///
-    /// Waits for the operation to complete before returning.
-    pub async fn remove_mcp_server(&self, scope: ConfigScope, name: String) {
-        let (tx, rx) = tokio::sync::oneshot::channel();
-        let _ = self
-            .inner
-            .send(ConfigMsg::RemoveMcpServer {
-                scope,
-                name,
-                reply: crate::actors::ractor_adapter::Reply::new(tx),
-            })
-            .await;
-        let _ = rx.await;
-    }
-
-    /// List MCP servers in the specified scope.
-    pub async fn list_mcp_servers(&self, scope: ConfigScope) -> Vec<(String, McpServer)> {
-        let (tx, rx) = tokio::sync::oneshot::channel();
-        let _ = self
-            .inner
-            .send(ConfigMsg::ListMcpServers {
-                scope,
-                reply: crate::actors::ractor_adapter::Reply::new(tx),
-            })
-            .await;
-        rx.await.unwrap_or_default()
-    }
-}
-
-/// Ractor State for ConfigActor — holds all mutable state.
-/// EventBus is wrapped in Mutex for interior mutability from `&self` context.
-pub struct ConfigActorState {
-    pub config: Mutex<Config>,
-    pub path: PathBuf,
-    pub project_path: Option<PathBuf>,
-    pub bus: Mutex<EventBus<Event>>,
-}
-
-impl ConfigActorState {
-    fn emit(&self, event: Event) {
-        self.bus.lock().publish(event);
-    }
-}
 
 /// Ractor-based ConfigActor.
 pub struct RactorConfigActor;
@@ -261,7 +64,7 @@ impl RactorConfigActor {
             ConfigMsg::SetTruncation { limits } => Self::set_truncation(state, &limits).await,
             ConfigMsg::SetThinkingLevel { level } => Self::set_thinking_level(state, &level).await,
             ConfigMsg::GetConfig(reply) => {
-                let cfg = state.config.lock().clone();
+                let cfg = state.cfg.lock().clone();
                 reply.send(cfg);
             }
             ConfigMsg::GetConfiguredProviders(reply) => {
@@ -304,14 +107,14 @@ impl RactorConfigActor {
                 ),
             });
             // Keep the default config (already in state from pre_start), emit it.
-            let cfg = state.config.lock().clone();
+            let cfg = state.cfg.lock().clone();
             state.emit(Event::ConfigLoaded {
                 config: Box::new(cfg),
             });
             return;
         }
 
-        let mut guard = state.config.lock();
+        let mut guard = state.cfg.lock();
         *guard = effective.clone();
         drop(guard);
         state.emit(Event::ConfigLoaded {
@@ -336,9 +139,9 @@ impl RactorConfigActor {
             return;
         }
 
-        let changed = new_config != *state.config.lock();
+        let changed = new_config != *state.cfg.lock();
         if changed {
-            let mut guard = state.config.lock();
+            let mut guard = state.cfg.lock();
             *guard = new_config.clone();
             drop(guard);
             state.emit(Event::ConfigLoaded {
@@ -468,7 +271,7 @@ impl RactorConfigActor {
     }
 
     fn list_configured_providers(state: &ConfigActorState) -> Vec<(String, String, Vec<String>)> {
-        let guard = state.config.lock();
+        let guard = state.cfg.lock();
         let mut result: Vec<_> = guard
             .model_providers
             .iter()
@@ -628,7 +431,7 @@ impl Actor for RactorConfigActor {
         });
 
         let state = ConfigActorState {
-            config: Mutex::new(config_for_state.clone()),
+            cfg: Mutex::new(config_for_state.clone()),
             path: path.clone(),
             project_path: project_path.clone(),
             bus: Mutex::new(bus.clone()),
@@ -653,7 +456,7 @@ impl Actor for RactorConfigActor {
 impl RactorConfigActor {
     /// Emit the current config as an event.
     fn emit_current_config(state: &ConfigActorState) {
-        let config_to_emit = state.config.lock().clone();
+        let config_to_emit = state.cfg.lock().clone();
         state.emit(Event::ConfigLoaded {
             config: Box::new(config_to_emit),
         });

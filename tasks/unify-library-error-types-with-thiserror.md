@@ -1,6 +1,6 @@
 # Unify library error types with `thiserror`
 
-**Status**: todo
+**Status**: partial
 **Milestone**: R5
 **Category**: Architecture / Error Handling
 **Priority**: P0
