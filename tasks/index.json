@@ -457,7 +457,7 @@
   {
     "file": "unify-headless-runtime-bootstrap.md",
     "title": "Unify headless runtime bootstrap",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-library-error-types-with-thiserror.md",

@@ -1,6 +1,6 @@
 # Unify headless runtime bootstrap
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: CLI / Architecture
 **Priority**: P3
@@ -14,15 +14,15 @@
 
 ## Acceptance Criteria
 
-- [ ] Decide canonical headless runtime (recommend `runie-core::HeadlessRuntime`).
-- [ ] Migrate CLI to use it, or merge the two implementations.
-- [ ] Delete the duplicate path.
-- [ ] `cargo check --workspace` and `cargo test --workspace` pass.
+- [x] Decide canonical headless runtime (recommend `runie-core::HeadlessRuntime`).
+- [x] Migrate CLI to use it, or merge the two implementations.
+- [x] Delete the duplicate path.
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.
 
 ## Tests
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `headless_runtime_turn_completes` — CLI headless mode completes a provider replay turn.
+- [x] `headless_runtime_turn_completes` — CLI headless mode completes a provider replay turn.
 
 ## Files touched
 

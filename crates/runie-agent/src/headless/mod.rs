@@ -13,10 +13,14 @@ use crate::tool_runner::{execute_tool_call, tool_result_message};
 use crate::PermissionGate;
 use anyhow::Result;
 use futures::StreamExt;
+use runie_core::bus::EventBus;
 use runie_core::event::headless::HeadlessEvent;
+use runie_core::event::Event;
+use runie_core::headless_runtime::HeadlessRuntime;
 use runie_core::message::ChatMessage;
 use runie_core::permissions::PermissionManager;
 use runie_core::provider::Provider;
+use runie_provider::DynProviderFactory;
 use runie_core::provider_event::ProviderEvent;
 use runie_core::tool::{
     assign_tool_call_ids, build_assistant_message, parse_tool_calls_fallible,
@@ -37,7 +41,11 @@ pub async fn run_headless_cli(
     sink: Arc<dyn runie_core::permissions::ApprovalSink>,
     options: HeadlessCliOptions,
 ) -> Result<HeadlessResult> {
-    let runtime = runie_provider::spawn_headless_runtime().await?;
+    let runtime = HeadlessRuntime::spawn(
+        EventBus::<Event>::new(10),
+        Arc::new(DynProviderFactory),
+    )
+    .await?;
     let provider = runtime.provider(provider_name, provider_model).await?;
     let opts = build_headless_options(sink, options);
     run_headless_turn(messages, &provider, opts).await
