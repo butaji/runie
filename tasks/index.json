@@ -145,6 +145,11 @@
     "status": "todo"
   },
   {
+    "file": "consolidate-provider-credential-resolver-duplication.md",
+    "title": "Consolidate provider credential resolver duplication",
+    "status": "todo"
+  },
+  {
     "file": "convert-agent-and-fff-indexer-to-ractor-state.md",
     "title": "Convert `AgentActor` and `FffIndexerActor` to idiomatic `ractor` `State`",
     "status": "done"
@@ -213,6 +218,16 @@
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
     "title": "Deserialize declarative command YAML with typed structs",
     "status": "done"
+  },
+  {
+    "file": "drop-custom-markdown-ast-for-pulldown-cmark-and-tui-markdown.md",
+    "title": "Drop custom markdown AST and render through pulldown-cmark/tui-markdown",
+    "status": "todo"
+  },
+  {
+    "file": "drop-legacy-diff-parser-and-rely-on-diffy.md",
+    "title": "Drop legacy diff parser and rely on diffy",
+    "status": "todo"
   },
   {
     "file": "drop-once_cell-and-futures-util-workspace-deps.md",
@@ -385,9 +400,19 @@
     "status": "todo"
   },
   {
+    "file": "fold-lifecycle-state-machine-into-provider-events.md",
+    "title": "Fold lifecycle state machine into provider events",
+    "status": "todo"
+  },
+  {
     "file": "fold-runie-protocol-into-core.md",
     "title": "Fold `runie-protocol` crate into `runie-core`",
     "status": "done"
+  },
+  {
+    "file": "fuzzy-history-search-with-sublime-fuzzy.md",
+    "title": "Fuzzy history search with sublime-fuzzy",
+    "status": "todo"
   },
   {
     "file": "harden-actors-against-mutex-poisoning.md",
@@ -463,6 +488,11 @@
     "file": "narrow-runie-core-public-api.md",
     "title": "Narrow `runie-core` public API",
     "status": "done"
+  },
+  {
+    "file": "normalize-paths-with-path-absolutize-and-dunce.md",
+    "title": "Normalize paths with path-absolutize/dunce",
+    "status": "todo"
   },
   {
     "file": "normalize-remaining-std-mutex-to-parking-lot.md",
@@ -630,6 +660,11 @@
     "status": "done"
   },
   {
+    "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
+    "title": "Replace fff-search indexer with ignore/walkdir",
+    "status": "todo"
+  },
+  {
     "file": "replace-keymap-modifier-tables-with-crokey-map.md",
     "title": "Replace keymap modifier dispatch tables with a crokey HashMap",
     "status": "todo"
@@ -650,6 +685,11 @@
     "status": "done"
   },
   {
+    "file": "replace-location-parser-with-regex.md",
+    "title": "Replace location parser with regex",
+    "status": "todo"
+  },
+  {
     "file": "replace-normalize-raw-frontmatter-with-standard-splitter.md",
     "title": "Replace `normalize_raw_frontmatter` with a standard frontmatter splitter",
     "status": "done"
@@ -663,6 +703,11 @@
     "file": "replace-session-tree-with-arena-crate.md",
     "title": "Replace hand-rolled session tree with an arena tree crate",
     "status": "done"
+  },
+  {
+    "file": "replace-streaming-buffer-classifier-with-pulldown-cmark.md",
+    "title": "Replace streaming-buffer classifier with pulldown-cmark",
+    "status": "todo"
   },
   {
     "file": "replace-think-filter-with-regex.md",
@@ -720,6 +765,11 @@
     "status": "partial"
   },
   {
+    "file": "simplify-core-keybinding-parsing-with-crokey.md",
+    "title": "Simplify core keybinding parsing with crokey",
+    "status": "todo"
+  },
+  {
     "file": "simplify-slash-command-dsl.md",
     "title": "Simplify slash-command DSL",
     "status": "done"
@@ -735,6 +785,11 @@
     "status": "done"
   },
   {
+    "file": "spike-evaluate-async-openai-or-rig-core-for-provider-stack.md",
+    "title": "Spike: evaluate async-openai or rig-core for the provider stack",
+    "status": "todo"
+  },
+  {
     "file": "store-provider-api-keys-in-keyring-not-config.md",
     "title": "Store provider API keys in OS keyring, not plain `config.toml`",
     "status": "done"
@@ -748,6 +803,11 @@
     "file": "type-and-unify-provider-model-layer.md",
     "title": "Type and unify provider/model layer",
     "status": "done"
+  },
+  {
+    "file": "typed-chatmessage-builder-and-shrink-sanitize.md",
+    "title": "Typed ChatMessage builder and shrink sanitize.rs",
+    "status": "todo"
   },
   {
     "file": "unify-cli-json-rpc-transport-and-remove-dead-acp.md",
@@ -815,6 +875,11 @@
     "status": "done"
   },
   {
+    "file": "unify-tool-call-accumulators-into-single-state-machine.md",
+    "title": "Unify tool-call accumulators into a single state machine",
+    "status": "todo"
+  },
+  {
     "file": "unify-tui-message-wrapping-with-textwrap.md",
     "title": "Unify TUI message wrapping with `textwrap`",
     "status": "done"
@@ -823,6 +888,11 @@
     "file": "unify-tui-render-test-helpers.md",
     "title": "Unify TUI render test helpers",
     "status": "done"
+  },
+  {
+    "file": "use-bytesize-humantime-for-tool-formatting.md",
+    "title": "Use bytesize and humantime for tool formatting",
+    "status": "todo"
   },
   {
     "file": "use-channels-for-subagent-result-collection.md",
@@ -837,6 +907,11 @@
   {
     "file": "use-configscope-enum-for-mcp-server-scope.md",
     "title": "Use ConfigScope enum for McpServer scope",
+    "status": "todo"
+  },
+  {
+    "file": "use-ignore-and-globset-for-file-refs.md",
+    "title": "Use ignore and globset for file_refs",
     "status": "todo"
   },
   {
@@ -873,6 +948,11 @@
     "file": "use-tool-call-id-in-tool-events.md",
     "title": "Use tool-call id in ToolStart/ToolEnd events",
     "status": "done"
+  },
+  {
+    "file": "use-which-crate-for-executable-lookup.md",
+    "title": "Use which crate for executable lookup",
+    "status": "todo"
   },
   {
     "file": "wire-or-delete-input-actor.md",
