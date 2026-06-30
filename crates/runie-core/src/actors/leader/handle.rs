@@ -156,7 +156,11 @@ mod tests {
             fn _field<T>(_: &T) {}
             // This test only verifies compile-time field existence.
             // The handle is never used at runtime.
-            #[allow(unreachable_code, unused_variables)]
+            #[allow(
+                unreachable_code,
+                unused_variables,
+                clippy::diverging_sub_expression
+            )]
             {
                 let handle: LeaderHandle = unimplemented!();
                 _field(&handle.config);

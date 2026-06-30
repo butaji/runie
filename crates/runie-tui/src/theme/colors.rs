@@ -136,36 +136,43 @@ fn blend(bg: Color, fg: Color, opacity: f32) -> Color {
 mod tests {
     use super::*;
 
+    fn assert_rgb_or_reset(color: Color) {
+        assert!(
+            matches!(color, Color::Rgb(_, _, _) | Color::Reset),
+            "Expected Rgb or Reset, got {:?}",
+            color
+        );
+    }
+
+    fn assert_rgb(color: Color) {
+        assert!(
+            matches!(color, Color::Rgb(_, _, _)),
+            "Expected Rgb, got {:?}",
+            color
+        );
+    }
+
     #[test]
     fn macro_generates_same_color_values() {
         // Verify macro-generated accessors return valid Color values.
         // These call the actual generated functions to ensure they compile and work.
-        assert!(matches!(color_bg(), Color::Rgb(_, _, _) | Color::Reset));
-        assert!(matches!(
-            color_bg_panel(),
-            Color::Rgb(_, _, _) | Color::Reset
-        ));
-        assert!(matches!(color_fg(), Color::Rgb(_, _, _)));
-        assert!(matches!(color_fg_mid(), Color::Rgb(_, _, _)));
-        assert!(matches!(color_accent(), Color::Rgb(_, _, _)));
-        assert!(matches!(color_success(), Color::Rgb(_, _, _)));
-        assert!(matches!(color_warning(), Color::Rgb(_, _, _)));
-        assert!(matches!(color_error(), Color::Rgb(_, _, _)));
-        assert!(matches!(color_dim(), Color::Rgb(_, _, _)));
-        assert!(matches!(color_border(), Color::Rgb(_, _, _)));
-        assert!(matches!(color_code(), Color::Rgb(_, _, _)));
-        assert!(matches!(
-            color_code_bg(),
-            Color::Rgb(_, _, _) | Color::Reset
-        ));
-        assert!(matches!(color_fg_bright(), Color::Rgb(_, _, _)));
-        assert!(matches!(color_diff_insert_bg(), Color::Rgb(_, _, _)));
-        assert!(matches!(color_diff_remove_bg(), Color::Rgb(_, _, _)));
-        assert!(matches!(
-            color_user_bg(),
-            Color::Rgb(_, _, _) | Color::Reset
-        ));
-        assert!(matches!(color_accent_bg(), Color::Rgb(_, _, _)));
+        assert_rgb_or_reset(color_bg());
+        assert_rgb_or_reset(color_bg_panel());
+        assert_rgb(color_fg());
+        assert_rgb(color_fg_mid());
+        assert_rgb(color_accent());
+        assert_rgb(color_success());
+        assert_rgb(color_warning());
+        assert_rgb(color_error());
+        assert_rgb(color_dim());
+        assert_rgb(color_border());
+        assert_rgb(color_code());
+        assert_rgb_or_reset(color_code_bg());
+        assert_rgb(color_fg_bright());
+        assert_rgb(color_diff_insert_bg());
+        assert_rgb(color_diff_remove_bg());
+        assert_rgb_or_reset(color_user_bg());
+        assert_rgb(color_accent_bg());
     }
 
     #[test]
