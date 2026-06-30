@@ -122,15 +122,10 @@ impl AppState {
         // Route through TurnActor to maintain authoritative queue state
         let handles = self.actor_handles().cloned();
         if let Some(ref h) = handles {
-            if tokio::runtime::Handle::try_current().is_ok() {
-                // Production mode: send to TurnActor
-                let id = format!("req.{}", self.agent_state().next_id);
-                self.agent_state_mut().next_id += 1;
-                let _ = h.turn.try_send(TurnMsg::SubmitUserMessage { content, id });
-            } else {
-                // Test mode: apply synchronously
-                self.apply_user_message_sync(content);
-            }
+            // Production mode: send to TurnActor
+            let id = format!("req.{}", self.agent_state().next_id);
+            self.agent_state_mut().next_id += 1;
+            let _ = h.turn.try_send(TurnMsg::SubmitUserMessage { content, id });
         } else {
             // Test mode without handles: apply synchronously
             self.apply_user_message_sync(content);
@@ -184,11 +179,11 @@ impl AppState {
 
     fn run_bash_command(&mut self, command: &str) {
         let handles = self.actor_handles().cloned();
-        let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
 
-        if can_spawn {
+        if let Some(ref h) = handles {
+            // Production mode: send to IoActor
             let command = command.to_owned();
-            let _ = handles.unwrap().io.try_send(IoMsg::RunBash { command });
+            let _ = h.io.try_send(IoMsg::RunBash { command });
             return;
         }
         // Fallback: no actor handles — run bash synchronously.
