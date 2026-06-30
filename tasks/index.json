@@ -562,7 +562,7 @@
   {
     "file": "remove-configactorstate-unnecessary-mutex.md",
     "title": "Remove unnecessary Mutex from ConfigActorState",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-dead-migration-scaffolding.md",

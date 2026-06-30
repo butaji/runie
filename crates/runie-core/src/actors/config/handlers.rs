@@ -58,7 +58,7 @@ pub(super) async fn handle_msg(state: &mut ConfigActorState, msg: ConfigMsg) {
         ConfigMsg::SetTruncation { limits } => set_truncation(state, &limits).await,
         ConfigMsg::SetThinkingLevel { level } => set_thinking_level(state, &level).await,
         ConfigMsg::GetConfig(reply) => {
-            let cfg = state.cfg.lock().clone();
+            let cfg = state.cfg.clone();
             reply.send(cfg);
         }
         ConfigMsg::GetConfiguredProviders(reply) => {
@@ -101,16 +101,13 @@ pub(super) async fn load_and_emit(state: &mut ConfigActorState) {
             ),
         });
         // Keep the default config (already in state from pre_start), emit it.
-        let cfg = state.cfg.lock().clone();
         state.emit(Event::ConfigLoaded {
-            config: Box::new(cfg),
+            config: Box::new(state.cfg.clone()),
         });
         return;
     }
 
-    let mut guard = state.cfg.lock();
-    *guard = effective.clone();
-    drop(guard);
+    state.cfg = effective.clone();
     state.emit(Event::ConfigLoaded {
         config: Box::new(effective),
     });
@@ -133,11 +130,9 @@ pub(super) async fn reload_and_emit(state: &mut ConfigActorState) {
         return;
     }
 
-    let changed = new_config != *state.cfg.lock();
+    let changed = new_config != state.cfg;
     if changed {
-        let mut guard = state.cfg.lock();
-        *guard = new_config.clone();
-        drop(guard);
+        state.cfg = new_config.clone();
         state.emit(Event::ConfigLoaded {
             config: Box::new(new_config),
         });
@@ -276,8 +271,8 @@ pub(super) async fn handle_write_result(
 pub(super) fn list_configured_providers(
     state: &ConfigActorState,
 ) -> Vec<(String, String, Vec<String>)> {
-    let guard = state.cfg.lock();
-    let mut result: Vec<_> = guard
+    let mut result: Vec<_> = state
+        .cfg
         .model_providers
         .iter()
         .map(|(name, p)| (name.clone(), p.base_url.clone(), p.models.clone()))

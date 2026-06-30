@@ -3,7 +3,6 @@
 //! Migrated from custom Actor trait to ractor for consistency with the rest
 //! of the actor system.
 
-use parking_lot::Mutex;
 use std::path::PathBuf;
 
 use ractor::{Actor, ActorProcessingErr, ActorRef};
@@ -24,9 +23,8 @@ pub struct RactorConfigActor;
 impl RactorConfigActor {
     /// Emit the current config as an event.
     fn emit_current_config(state: &ConfigActorState) {
-        let config_to_emit = state.cfg.lock().clone();
         state.emit(Event::ConfigLoaded {
-            config: Box::new(config_to_emit),
+            config: Box::new(state.cfg.clone()),
         });
         tracing::info!("ConfigLoaded");
     }
@@ -91,7 +89,7 @@ impl Actor for RactorConfigActor {
         handlers::spawn_config_watcher(myself.clone(), path.clone());
 
         let state = ConfigActorState {
-            cfg: Mutex::new(config.clone()),
+            cfg: config.clone(),
             path: path.clone(),
             project_path: project_path.clone(),
             bus: bus.clone(),

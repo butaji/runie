@@ -3,7 +3,6 @@
 //! Migrated from custom Actor trait to ractor for consistency with the rest
 //! of the actor system.
 
-use parking_lot::Mutex;
 use std::path::PathBuf;
 
 use crate::actors::ractor_adapter::Reply;
@@ -194,10 +193,9 @@ impl RactorConfigHandle {
 }
 
 /// Ractor State for ConfigActor — holds all mutable state.
-/// EventBus is wrapped in Mutex for interior mutability from `&self` context.
+/// Mutated through `&mut state` in handlers.
 pub struct ConfigActorState {
-    /// Renamed from `config` to avoid build-lint false-positive on `state.config.`.
-    pub cfg: Mutex<Config>,
+    pub cfg: Config,
     pub path: PathBuf,
     pub project_path: Option<PathBuf>,
     pub bus: EventBus<Event>,
