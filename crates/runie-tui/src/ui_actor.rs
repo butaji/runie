@@ -9,6 +9,8 @@ use std::time::Duration;
 
 use runie_core::bus::{EventBus, Receiver};
 use runie_core::{AppState, Event, Snapshot};
+use runie_agent::AgentCommand;
+use runie_agent::truncate::TruncationPolicy;
 
 use crate::effects::EffectCommand;
 use crate::pace::PacedRenderer;
@@ -108,7 +110,11 @@ impl UiActor {
     }
 
     /// Run the actor until a quit event is processed.
-    pub async fn run(mut self, mut rx: Receiver<Event>) {
+    pub async fn run(
+        mut self,
+        mut rx: Receiver<Event>,
+        mut submit_rx: tokio::sync::mpsc::Receiver<Event>,
+    ) {
         let (effect_tx, effect_rx) = tokio::sync::mpsc::channel::<Event>(16);
         Self::spawn_effect_forwarder(self.bus.clone(), effect_rx);
 
@@ -131,6 +137,12 @@ impl UiActor {
                             self.publish_snapshot();
                             return;
                         }
+                    }
+                    self.publish_snapshot();
+                }
+                Some(evt) = submit_rx.recv() => {
+                    if self.handle_event_inner(evt, effect_tx.clone()).await {
+                        break;
                     }
                     self.publish_snapshot();
                 }
@@ -188,6 +200,22 @@ impl UiActor {
         }
         if was_submit || was_followup || was_agent_done {
             self.agent_handle.run_if_queued(&self.turn_handle).await;
+        }
+        if let Event::TurnStarted { request_id, content, .. } = &evt {
+            let provider = self.state.config().current_provider.clone();
+            let model = self.state.config().current_model.clone();
+            let cmd = AgentCommand {
+                content: content.clone(),
+                id: request_id.clone(),
+                provider,
+                model,
+                thinking_level: self.state.config().thinking_level,
+                read_only: false,
+                skills_context: String::new(),
+                system_prompt: String::new(),
+                truncation: TruncationPolicy::default(),
+            };
+            self.agent_handle.run(cmd).await;
         }
 
         false
@@ -422,7 +450,7 @@ impl UiActor {
         let input = self.state.input();
         let is_empty_or_space =
             input.input.is_empty() || input.input.ends_with(' ') || input.input.ends_with('\n');
-        if !is_empty_or_space
+        if is_empty_or_space
             || self.state.completion().at_suggestions.is_some()
             || input.input.ends_with('@')
         {

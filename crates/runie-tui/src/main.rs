@@ -96,6 +96,7 @@ fn init_terminal_state(state: &mut AppState) {
 async fn input_forwarder_task(
     mut input_rx: mpsc::Receiver<Event>,
     input_handle: runie_core::actors::RactorInputHandle,
+    submit_tx: mpsc::Sender<Event>,
 ) {
     use runie_core::actors::InputMsg;
     while let Some(evt) = input_rx.recv().await {
@@ -154,6 +155,12 @@ async fn input_forwarder_task(
             Event::PasteImage => {
                 input_handle.send(InputMsg::PasteImage).await;
             }
+            Event::Submit => {
+                // Submit must be handled by UiActor so it can capture the input
+                // content before InputActor clears it. Forward it on a dedicated
+                // channel; UiActor will then send InputMsg::Submit itself.
+                let _ = submit_tx.send(evt).await;
+            }
             _ => {}
         }
     }
@@ -168,11 +175,12 @@ async fn spawn_background_tasks(
 ) {
     let bus = leader_handle.event_bus().clone();
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
+    let (submit_tx, submit_rx) = mpsc::channel::<Event>(16);
 
     let agent_handle = LeaderAgentActorHandle::new(leader_handle.agent.clone());
 
     let (kb_tx, kb_rx) = watch::channel(state.config().keybindings().clone());
-    tokio::spawn(input_forwarder_task(input_rx, leader_handle.input.clone()));
+    tokio::spawn(input_forwarder_task(input_rx, leader_handle.input.clone(), submit_tx));
 
     // UiActor creates its own watch channel for snapshots; take the receiver for the render task.
     let mut ui_actor = spawn_ui_actor(
@@ -180,11 +188,15 @@ async fn spawn_background_tasks(
         agent_handle,
         leader_handle.turn.clone(),
         kb_tx,
-        bus,
+        bus.clone(),
         shutdown_tx,
         caps,
     );
     let render_rx = ui_actor.take_render_rx();
+    let ui_bus = bus.clone();
+    tokio::spawn(async move {
+        ui_actor.run(ui_bus.subscribe(), submit_rx).await;
+    });
 
     spawn_agent_tasks(input_tx, kb_rx, terminal, render_rx, caps);
 }

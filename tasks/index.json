@@ -195,6 +195,11 @@
     "status": "done"
   },
   {
+    "file": "fix-tui-mock-simple-text-response-repetition.md",
+    "title": "Fix TUI mock simple-text response repetition",
+    "status": "todo"
+  },
+  {
     "file": "fold-runie-protocol-into-core.md",
     "title": "Fold `runie-protocol` crate into `runie-core`",
     "status": "done"
@@ -223,6 +228,16 @@
     "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
     "title": "Introduce `cargo-deny` and `cargo-machete` CI checks",
     "status": "done"
+  },
+  {
+    "file": "investigate-session-persistence-not-created-in-live-tui.md",
+    "title": "Investigate session persistence not created during live TUI runs",
+    "status": "todo"
+  },
+  {
+    "file": "live-tui-smoke-test-real-minimax.md",
+    "title": "Live TUI smoke test with real MiniMax provider",
+    "status": "todo"
   },
   {
     "file": "migrate-production-actors-to-ractor.md",

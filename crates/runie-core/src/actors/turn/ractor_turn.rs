@@ -107,6 +107,7 @@ impl RactorTurnActor {
             },
         );
         state.turn_state.request_queue.push_back((content, id));
+        Self::handle_run_if_queued(state);
     }
 
     fn handle_queue_steering(state: &mut TurnActorState, content: String) {
