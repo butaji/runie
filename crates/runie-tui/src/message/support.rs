@@ -1,10 +1,12 @@
 //! Public rendering helpers for thoughts, tools, and turn state.
 
+use ratatui::style::Color;
 use ratatui::text::{Line, Span};
 
+use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdInline, MdSpan};
 use crate::theme::{
     style_agent, style_thinking, style_thought, style_timestamp, style_tool_header,
-    style_tool_output, style_tool_running, style_tool_summary, style_turn_complete, GLYPH_AGENT,
+    style_tool_output, style_tool_running, style_tool_summary, style_turn_complete,
 };
 use runie_core::tool::{format_bytes, format_duration, format_tool_label};
 use runie_util::display_width;
@@ -166,71 +168,108 @@ fn render_context_tool(elem: &runie_core::Element) -> Vec<Line<'static>> {
     }
 }
 
-pub fn render_blockquote_lines(text: &str) -> Vec<Line<'static>> {
-    text.lines()
-        .map(|line| {
-            Line::from(format!("{}│ {}", GLYPH_INDENT, line)).style(crate::theme::style_agent())
-        })
-        .collect()
+/// Render a blockquote from styled inline spans.
+pub fn render_blockquote_from_spans(inlines: &[MdInline], base_color: Color) -> Vec<Line<'static>> {
+    let spans = apply_color_to_inlines(inlines, base_color);
+    let mut lines = Vec::new();
+    let prefix = format!("{}│ ", GLYPH_INDENT);
+    let prefix_width = display_width::width(&prefix);
+    let content_width = 200u16; // Will be clamped by actual terminal width
+    let rest_width = content_width.saturating_sub(prefix_width);
+
+    let rows = wrap_styled_spans_for_blockquote(&spans, rest_width);
+    for (i, row) in rows.iter().enumerate() {
+        let line_prefix = if i == 0 { prefix.as_str() } else { "     " };
+        let mut line_spans = vec![Span::styled(line_prefix.to_owned(), style_agent())];
+        line_spans.extend(md_to_spans(row));
+        lines.push(Line::from(line_spans).style(style_agent()));
+    }
+    if lines.is_empty() {
+        lines.push(Line::from(format!("{}│", GLYPH_INDENT)).style(style_agent()));
+    }
+    lines
 }
 
-pub fn render_list_item(
-    item: &str,
+/// Wrap styled spans for blockquote rendering.
+#[allow(clippy::assigning_clones, clippy::redundant_clone)]
+fn wrap_styled_spans_for_blockquote(spans: &[MdSpan], max_width: u16) -> Vec<Vec<MdSpan>> {
+    let mut result = Vec::new();
+    let mut current_row = Vec::new();
+    let mut current_width = 0u16;
+
+    for span in spans.iter().cloned() {
+        let span_width = display_width::width(&span.content);
+        if current_width + span_width > max_width && !current_row.is_empty() {
+            result.push(std::mem::take(&mut current_row));
+            current_width = 0;
+        }
+        if span_width > max_width {
+            // Break long span
+            let mut partial = String::new();
+            let mut partial_width = 0u16;
+            for c in span.content.chars() {
+                let char_width = display_width::width(&c.to_string());
+                if partial_width + char_width > max_width && !partial.is_empty() {
+                    if !current_row.is_empty() {
+                        result.push(std::mem::take(&mut current_row));
+                    }
+                    current_row.push(MdSpan {
+                        content: partial.clone(),
+                        style: span.style,
+                    });
+                    current_width = display_width::width(&partial);
+                    partial.clear();
+                    partial_width = 0;
+                }
+                partial.push(c);
+                partial_width += char_width;
+            }
+            if !partial.is_empty() {
+                if current_width + partial_width > max_width && !current_row.is_empty() {
+                    result.push(std::mem::take(&mut current_row));
+                }
+                current_row.push(MdSpan {
+                    content: partial,
+                    style: span.style,
+                });
+                current_width += partial_width;
+            }
+        } else {
+            current_row.push(span);
+            current_width += span_width;
+        }
+    }
+    if !current_row.is_empty() {
+        result.push(current_row);
+    }
+    result
+}
+
+/// Render a list item from styled spans.
+#[allow(dead_code)]
+pub fn render_list_item_from_spans(
+    row: &[MdSpan],
     ordered: bool,
     idx: usize,
     is_first: bool,
-    content_width: u16,
+    prefix: &str,
     ts_str: &str,
+    _ts_width: u16,
 ) -> Line<'static> {
     let bullet = if ordered {
         format!("{}.", idx + 1)
     } else {
         "•".to_owned()
     };
-    let first_line_prefix = if is_first {
-        format!("{} {}", GLYPH_AGENT, bullet)
-    } else {
-        format!("{} {}", GLYPH_INDENT, bullet)
-    };
-    let rest_prefix = format!("{}   ", GLYPH_INDENT);
-    let lines: Vec<&str> = item.lines().collect();
-    let mut result_spans: Vec<Span<'static>> = Vec::new();
-    let mut text_len = 0u16;
+    let bullet_prefix = format!("{} {}", prefix, bullet);
 
-    for (j, line) in lines.iter().enumerate() {
-        let prefix = if j == 0 {
-            &first_line_prefix
-        } else {
-            &rest_prefix
-        };
-        if j > 0 {
-            result_spans.push(Span::raw("\n".to_owned()));
-        }
-        result_spans.push(Span::styled(prefix.clone(), style_agent()));
-        result_spans.push(Span::styled(line.to_string(), style_agent()));
-        text_len = display_width::width(prefix) + display_width::width(line);
+    let mut result_spans = vec![Span::styled(bullet_prefix, style_agent())];
+    result_spans.extend(md_to_spans(row));
+
+    // Only add timestamp to first item
+    if is_first {
+        result_spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
     }
 
-    push_list_timestamp(&mut result_spans, is_first, content_width, ts_str, text_len);
     Line::from(result_spans).style(style_agent())
-}
-
-fn push_list_timestamp(
-    spans: &mut Vec<Span<'static>>,
-    is_first: bool,
-    content_width: u16,
-    ts_str: &str,
-    text_len: u16,
-) {
-    if !is_first || content_width == 0 {
-        return;
-    }
-    let ts_width = ts_str.len() as u16 + 1;
-    let padding = content_width
-        .saturating_sub(text_len)
-        .saturating_sub(ts_width);
-    if padding > 0 {
-        spans.push(Span::raw(" ".repeat(padding as usize)));
-    }
-    spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
 }

@@ -202,8 +202,8 @@ fn render_agent_block(
         CodeBlock::List { ordered, items } => {
             render_agent_list_block(items, *ordered, ts_str, inner_width, is_first, lines)
         }
-        CodeBlock::Blockquote(text) => {
-            lines.extend(support::render_blockquote_lines(text));
+        CodeBlock::Blockquote(inlines) => {
+            lines.extend(support::render_blockquote_from_spans(inlines, color_fg()));
             false
         }
     }
@@ -290,7 +290,7 @@ fn render_agent_code_block(
 }
 
 fn render_agent_list_block(
-    items: &[String],
+    items: &[Vec<runie_core::markdown::MdInline>],
     ordered: bool,
     ts_str: &str,
     inner_width: u16,
@@ -299,14 +299,32 @@ fn render_agent_list_block(
 ) -> bool {
     let mut first_item = is_first;
     for (i, item) in items.iter().enumerate() {
-        lines.push(support::render_list_item(
-            item,
-            ordered,
-            i,
-            first_item,
-            inner_width,
-            ts_str,
-        ));
+        if item.is_empty() {
+            continue;
+        }
+        let spans = apply_color_to_inlines(item, color_fg());
+        let prefix_width = display_width::width(GLYPH_AGENT);
+        let indent_width = display_width::width(GLYPH_INDENT);
+        let ts_width = display_width::width(ts_str) + 1;
+        let first_w = inner_width
+            .saturating_sub(prefix_width)
+            .saturating_sub(ts_width);
+        let rest_w = inner_width.saturating_sub(indent_width);
+        let rows = wrap_styled_spans(&spans, first_w, rest_w);
+
+        for (j, row) in rows.iter().enumerate() {
+            let with_ts = first_item && j == 0;
+            let prefix = if with_ts { GLYPH_AGENT } else { GLYPH_INDENT };
+            lines.push(support::render_list_item_from_spans(
+                row,
+                ordered,
+                i,
+                with_ts,
+                prefix,
+                ts_str,
+                ts_width,
+            ));
+        }
         first_item = false;
     }
     is_first
