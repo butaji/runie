@@ -115,6 +115,15 @@ impl AppState {
         self.clear_turn_state(&id);
         self.agent_state_mut().last_assistant_index = None;
         self.deliver_queued();
+        // Clear the UiActor's message queue after draining it to TurnActor.
+        // This prevents `SteeringDelivered` (emitted by TurnActor in response to
+        // `DeliverQueued`) from re-triggering `submit_user_message`, which would
+        // send to TurnActor again and emit another `TurnStarted` — creating an
+        // infinite loop of agent spawns.  The guard in `dispatch_submit_content`
+        // (which checks `agent_state.turn_active`) blocks re-queueing when the
+        // turn is still active; clearing here blocks re-queueing after the turn
+        // has ended.
+        self.agent_state_mut().message_queue.clear();
         self.maybe_end_streaming();
         self.reorder_agent_after_tools();
         self.move_turn_complete_to_end(&id);
