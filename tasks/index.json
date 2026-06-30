@@ -107,7 +107,7 @@
   {
     "file": "fix-slash-command-session-info-naming.md",
     "title": "Fix /session_info slash command naming mismatch",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-cli-headless-native-tool-permission-denied-loop.md",

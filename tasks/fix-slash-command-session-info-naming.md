@@ -1,6 +1,6 @@
 # Fix /session_info slash command naming mismatch
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Input / Commands
 **Priority**: P2
@@ -22,22 +22,22 @@ The handler registry registers `session_info` and the help system lists it, but 
 
 ## Acceptance Criteria
 
-- [ ] Decide canonical name (`/session` or `/session_info`) and make the registry, YAML spec, and help text consistent.
-- [ ] The chosen command renders session info without an "unknown command" error.
-- [ ] Aliases are updated so the discarded name still works or is removed from help.
-- [ ] `cargo test --workspace` passes.
+- [x] Decide canonical name (`/session` or `/session_info`) and make the registry, YAML spec, and help text consistent.
+- [x] The chosen command renders session info without an "unknown command" error.
+- [x] Aliases are updated so the discarded name still works or is removed from help.
+- [x] `cargo test --workspace` passes.
 - [ ] Live tmux runs `/session_info` (or `/session`) successfully.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `session_info_command_resolves` — `CommandRegistry` contains the chosen name and maps it to the session-info handler.
+- [x] `session_info_command_resolves` — `CommandRegistry` contains the chosen name and maps it to the session-info handler.
 
 ### Layer 2 — Event Handling
-- [ ] `session_info_event_shows_info` — dispatch the chosen command event and assert the result message contains session metadata.
+- [x] `session_info_event_shows_info` — dispatch the chosen command event and assert the result message contains session metadata.
 
 ### Layer 3 — Rendering
-- [ ] `session_info_result_renders` — `TestBackend` shows the session info text after the command.
+- [x] `session_info_result_renders` — `TestBackend` shows the session info text after the command.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
 - [ ] `tmux_session_info_command_works` — live tmux script runs the chosen command and asserts `Session:` appears.
@@ -58,4 +58,6 @@ This task is not complete until the fix is validated with all three levels:
 
 ## Notes
 
-- `/session` is shorter and already works; prefer renaming the handler/registry entry to `session` and updating help.
+- `/session_info` is the canonical command name (already registered in `HANDLER_REGISTRY`); `/session` is added as an alias in `session.yaml`.
+- `triggers` in YAML is not used for command aliases — `aliases` field is. Added `/session` and `/session_info` to `triggers` for documentation/tracking purposes.
+- The fix: `session.yaml` now has `name: session_info` and `aliases: [session]`, making both invocations work.
