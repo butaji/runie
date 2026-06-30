@@ -12,7 +12,7 @@
 
 ## Status: Active bugs from live TUI/CLI testing, architecture review, and Grok Build comparison
 
-The original cleanup is complete: **119 `done`**, **3 `wontfix`**. Live mock-provider TUI/CLI testing on 2026-06-30, a focused architecture review, and a planned side-by-side comparison with Grok Build revealed regressions, wiring gaps, and feature-parity gaps that must be fixed before real MiniMax testing:
+The original cleanup is complete: **120 `done`**, **3 `wontfix`**. Live mock-provider TUI/CLI testing on 2026-06-30, a focused architecture review, and a planned side-by-side comparison with Grok Build revealed regressions, wiring gaps, and feature-parity gaps that must be fixed before real MiniMax testing:
 
 - **51 `todo` tasks** — see `tasks/index.json` for details.
 - **1 `partial` task** — `live-tui-smoke-test-real-minimax.md` is blocked on a missing `MINIMAX_API_KEY`.

@@ -24,12 +24,14 @@ pub async fn execute_tools(
 
     for tool_call in tools {
         *tool_call_count += 1;
-        let output = execute_single_tool(cmd_id, tool_call, emit.clone(), skills, &ctx, gate).await;
+        let tool_id = tool_call.id.as_deref().unwrap_or(cmd_id);
+        let output =
+            execute_single_tool(tool_id, tool_call, emit.clone(), skills, &ctx, gate).await;
 
         emit_now(
             &emit,
             runie_core::Event::ToolEnd {
-                id: cmd_id.to_owned(),
+                id: tool_id.to_owned(),
                 duration_secs: output.duration.as_secs_f64(),
                 output: output.content.clone(),
             },
@@ -39,14 +41,14 @@ pub async fn execute_tools(
 }
 
 pub async fn execute_single_tool(
-    cmd_id: &str,
+    tool_id: &str,
     tool_call: &ParsedToolCall,
     emit: EmitFn,
     skills: Option<&SkillRegistry>,
     ctx: &ToolContext,
     gate: &PermissionGate,
 ) -> ToolOutput {
-    emit_tool_start(cmd_id, tool_call, &emit);
+    emit_tool_start(tool_id, tool_call, &emit);
 
     if let Some(output) = run_skill_before_hook(skills, tool_call) {
         return output;
@@ -57,11 +59,11 @@ pub async fn execute_single_tool(
     output
 }
 
-fn emit_tool_start(cmd_id: &str, tool_call: &ParsedToolCall, emit: &EmitFn) {
+fn emit_tool_start(tool_id: &str, tool_call: &ParsedToolCall, emit: &EmitFn) {
     emit_now(
         emit,
         runie_core::Event::ToolStart {
-            id: cmd_id.to_owned(),
+            id: tool_id.to_owned(),
             name: tool_call.name.clone(),
             input: tool_call.args.clone(),
         },

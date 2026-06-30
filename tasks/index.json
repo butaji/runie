@@ -242,7 +242,7 @@
   {
     "file": "use-tool-call-id-in-tool-events.md",
     "title": "Use tool-call id in ToolStart/ToolEnd events",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "wire-or-remove-leader-snapshot-rx.md",

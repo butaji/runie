@@ -1,6 +1,6 @@
 # Use tool-call id in ToolStart/ToolEnd events
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Tools
 **Priority**: P1
