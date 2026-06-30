@@ -16,12 +16,25 @@ use std::time::Duration;
 /// Approval sink that delegates to `PermissionActor`.
 pub struct EmitApprovalSink {
     permission_handle: RactorPermissionHandle,
+    /// Timeout for permission requests in seconds. Defaults to 60 seconds.
+    timeout_secs: u64,
 }
 
 impl EmitApprovalSink {
     /// Create a new sink backed by the given permission actor handle.
     pub fn new(permission_handle: RactorPermissionHandle) -> Self {
-        Self { permission_handle }
+        Self {
+            permission_handle,
+            timeout_secs: 60,
+        }
+    }
+
+    /// Create a new sink with a custom timeout.
+    pub fn with_timeout(permission_handle: RactorPermissionHandle, timeout_secs: u64) -> Self {
+        Self {
+            permission_handle,
+            timeout_secs,
+        }
     }
 }
 
@@ -34,7 +47,7 @@ impl ApprovalSink for EmitApprovalSink {
             .ask_permission(request_id.clone(), tool.to_owned(), input.clone())
             .await;
 
-        match tokio::time::timeout(Duration::from_secs(300), rx).await {
+        match tokio::time::timeout(Duration::from_secs(self.timeout_secs), rx).await {
             Ok(Ok(action)) => action,
             _ => PermissionAction::Deny,
         }

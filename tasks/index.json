@@ -232,7 +232,7 @@
   {
     "file": "shorten-approval-sink-timeout-and-wire-cancellation.md",
     "title": "Shorten approval sink timeout and wire cancellation",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "subscribe-tui-to-initial-facts-before-leader-start.md",

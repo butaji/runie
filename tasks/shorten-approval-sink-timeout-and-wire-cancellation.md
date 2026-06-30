@@ -1,6 +1,6 @@
 # Shorten approval sink timeout and wire cancellation
 
-**Status**: todo
+**Status**: partial
 **Milestone**: R7
 **Category**: Architecture / Actors
 **Priority**: P1
