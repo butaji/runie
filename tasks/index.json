@@ -10,6 +10,11 @@
     "status": "done"
   },
   {
+    "file": "add-eventbus-backpressure-or-acknowledgement.md",
+    "title": "Add EventBus backpressure or acknowledgement",
+    "status": "todo"
+  },
+  {
     "file": "add-jsonschema-validation-to-configactor-load.md",
     "title": "Add `jsonschema` validation to `ConfigActor` load path",
     "status": "done"
@@ -18,6 +23,16 @@
     "file": "adopt-palette-for-theme-color-math.md",
     "title": "Adopt `palette` for theme color math",
     "status": "wontfix"
+  },
+  {
+    "file": "avoid-setting-global-theme-every-frame.md",
+    "title": "Avoid setting global theme every frame",
+    "status": "todo"
+  },
+  {
+    "file": "buffer-tcp-lines-in-leader-server.md",
+    "title": "Buffer TCP lines in leader server",
+    "status": "todo"
   },
   {
     "file": "centralize-built-in-tool-names.md",
@@ -38,6 +53,11 @@
     "file": "cleanup-small-duplicates-and-dead-code.md",
     "title": "Clean up small duplicates and dead code",
     "status": "done"
+  },
+  {
+    "file": "cleanup-temporary-eprintln-diagnostics.md",
+    "title": "Clean up temporary eprintln diagnostics",
+    "status": "todo"
   },
   {
     "file": "cleanup-verify-tests-and-just-recipes.md",
@@ -135,6 +155,21 @@
     "status": "done"
   },
   {
+    "file": "emit-thoughtdone-on-stream-error.md",
+    "title": "Emit ThoughtDone on stream error",
+    "status": "todo"
+  },
+  {
+    "file": "emit-turncomplete-for-text-only-turns.md",
+    "title": "Emit TurnComplete for text-only turns",
+    "status": "todo"
+  },
+  {
+    "file": "enforce-advertised-file-function-complexity-limits.md",
+    "title": "Enforce advertised file/function/complexity limits",
+    "status": "todo"
+  },
+  {
     "file": "env-actor-owns-git-cwd.md",
     "title": "env-actor-owns-git-cwd",
     "status": "done"
@@ -193,6 +228,16 @@
     "file": "fix-keybindings-dead-code.md",
     "title": "Fix keybindings dead-code warning",
     "status": "done"
+  },
+  {
+    "file": "fix-leader-shutdown-to-await-all-actors.md",
+    "title": "Fix leader shutdown to await all actors",
+    "status": "todo"
+  },
+  {
+    "file": "fix-leader-status-hardcoded-actor-count.md",
+    "title": "Fix LeaderHandle status hardcoded actor count",
+    "status": "todo"
   },
   {
     "file": "fix-ractor-permission-actor-reply-lifecycle.md",
@@ -320,6 +365,11 @@
     "status": "done"
   },
   {
+    "file": "move-blocking-io-out-of-command-handlers.md",
+    "title": "Move blocking IO out of command/update handlers",
+    "status": "todo"
+  },
+  {
     "file": "move-built-in-slash-commands-to-declarative-yaml.md",
     "title": "Move built-in slash command specs to declarative YAML resources",
     "status": "done"
@@ -345,9 +395,29 @@
     "status": "done"
   },
   {
+    "file": "offload-provider-network-calls-from-actor-handler.md",
+    "title": "Offload provider network calls from actor handler",
+    "status": "todo"
+  },
+  {
+    "file": "propagate-actor-spawn-errors-instead-of-panicking.md",
+    "title": "Propagate actor spawn errors instead of panicking",
+    "status": "todo"
+  },
+  {
     "file": "reconnect-tui-agent-actor-channel.md",
     "title": "Reconnect or remove TUI `AgentActor` channel",
     "status": "done"
+  },
+  {
+    "file": "refine-permission-dialog-key-handling.md",
+    "title": "Refine permission dialog key handling",
+    "status": "todo"
+  },
+  {
+    "file": "remove-agent-handlebox-dead-code-or-wire-queue-drain.md",
+    "title": "Remove AgentHandleBox dead code or wire run_if_queued",
+    "status": "todo"
   },
   {
     "file": "remove-dead-migration-scaffolding.md",
@@ -360,6 +430,16 @@
     "status": "done"
   },
   {
+    "file": "remove-direct-appstate-mutation-from-tui-handlers.md",
+    "title": "Remove direct AppState mutation from TUI handlers",
+    "status": "todo"
+  },
+  {
+    "file": "remove-duplicate-input-mutation-in-uiactor.md",
+    "title": "Remove duplicate input mutation in UiActor",
+    "status": "todo"
+  },
+  {
     "file": "remove-mutex-eventbus-wrappers-from-actor-state.md",
     "title": "Remove `Mutex<EventBus>` wrappers from actor `State`",
     "status": "done"
@@ -368,6 +448,11 @@
     "file": "remove-redundant-check-field-access-script.md",
     "title": "Remove redundant `check-field-access.sh`",
     "status": "done"
+  },
+  {
+    "file": "remove-runtime-presence-branching-in-submit-user-message.md",
+    "title": "Remove runtime presence branching in submit user message",
+    "status": "todo"
   },
   {
     "file": "remove-sleep-from-automatic-tests.md",
@@ -490,9 +575,19 @@
     "status": "done"
   },
   {
+    "file": "route-app-init-loads-through-actors.md",
+    "title": "Route app init loads through actors",
+    "status": "todo"
+  },
+  {
     "file": "route-cli-config-through-configactor.md",
     "title": "Route CLI config operations through `ConfigActor`",
     "status": "done"
+  },
+  {
+    "file": "shorten-approval-sink-timeout-and-wire-cancellation.md",
+    "title": "Shorten approval sink timeout and wire cancellation",
+    "status": "todo"
   },
   {
     "file": "simplify-slash-command-dsl.md",
@@ -513,6 +608,11 @@
     "file": "store-provider-api-keys-in-keyring-not-config.md",
     "title": "Store provider API keys in OS keyring, not plain `config.toml`",
     "status": "done"
+  },
+  {
+    "file": "subscribe-tui-to-initial-facts-before-leader-start.md",
+    "title": "Subscribe TUI to initial facts before leader start",
+    "status": "todo"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",
@@ -630,8 +730,23 @@
     "status": "done"
   },
   {
+    "file": "use-tool-call-id-in-tool-events.md",
+    "title": "Use tool-call id in ToolStart/ToolEnd events",
+    "status": "todo"
+  },
+  {
     "file": "wire-or-delete-input-actor.md",
     "title": "Wire or delete `InputActor`",
     "status": "done"
+  },
+  {
+    "file": "wire-or-remove-leader-snapshot-rx.md",
+    "title": "Wire or remove LeaderHandle snapshot_rx",
+    "status": "todo"
+  },
+  {
+    "file": "wire-user-permission-rules-into-agent-gate.md",
+    "title": "Wire user permission rules into the agent permission gate",
+    "status": "todo"
   }
 ]
