@@ -210,12 +210,12 @@ pub struct ConfigActorState {
     pub cfg: Mutex<Config>,
     pub path: PathBuf,
     pub project_path: Option<PathBuf>,
-    pub bus: Mutex<EventBus<Event>>,
+    pub bus: EventBus<Event>,
 }
 
 impl ConfigActorState {
     pub(crate) fn emit(&self, event: Event) {
-        self.bus.lock().publish(event);
+        self.bus.publish(event);
     }
 }
 

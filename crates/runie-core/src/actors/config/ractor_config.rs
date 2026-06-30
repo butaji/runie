@@ -456,7 +456,7 @@ impl Actor for RactorConfigActor {
             cfg: Mutex::new(config.clone()),
             path: path.clone(),
             project_path: project_path.clone(),
-            bus: Mutex::new(bus.clone()),
+            bus: bus.clone(),
         };
         // Emit the initial config
         Self::emit_current_config(&state);
