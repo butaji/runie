@@ -152,8 +152,11 @@ fn markdown_block_line_count(
             *is_first,
         ),
         CodeBlock::Code { content, .. } => 1 + content.lines().count(),
-        CodeBlock::List { items, .. } => items.len(),
-        CodeBlock::Blockquote(text) => text.lines().count().max(1),
+        CodeBlock::List { items, .. } => items
+            .iter()
+            .map(|item| inlines_to_plain_text(item).lines().count().max(1))
+            .sum(),
+        CodeBlock::Blockquote(inlines) => inlines_to_plain_text(inlines).lines().count().max(1),
     };
     *is_first = false;
     lines

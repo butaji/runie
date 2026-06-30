@@ -114,4 +114,49 @@ mod tests {
             "scrollbar thumb should be visible for tall message"
         );
     }
+
+    /// blockquote_renders_inline_styles — TestBackend buffer shows styled text inside blockquote.
+    #[test]
+    fn blockquote_renders_inline_styles() {
+        let width = 60u16;
+        let height = 6u16;
+        // Blockquote with bold and italic text
+        let element = Element::agent("> **bold** quote
+> and *italic* too").at(0.0);
+        let rendered = to_lines_internal(&element, width);
+
+        // Blockquote should render at least one line with the bar character
+        assert!(!rendered.is_empty(), "blockquote should produce at least one line");
+
+        // Check that blockquote character appears
+        let has_bar = rendered
+            .iter()
+            .any(|line| line.spans.iter().any(|s| s.content.contains('│')));
+        assert!(has_bar, "blockquote should have │ character: {:?}", rendered);
+
+        // Render to terminal and check buffer
+        let snap = Snapshot {
+            elements: Arc::new([element]),
+            line_counts: Arc::new([rendered.len()]),
+            total_lines: rendered.len(),
+            last_visible_height: height,
+            content_width: width,
+            ..Default::default()
+        };
+
+        let backend = TestBackend::new(width, height);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal
+            .draw(|f| render_messages(f, &snap, f.area()))
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content: String = buffer.content().iter().map(|c| c.symbol()).collect();
+        // Blockquote should appear in output
+        assert!(
+            content.contains('│'),
+            "buffer should contain │ for blockquote: {}",
+            content
+        );
+    }
 }

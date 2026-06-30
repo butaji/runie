@@ -82,6 +82,28 @@ fn text_block_content_helper() {
 
 // ── Task-required Layer-1 tests ──────────────────────────────────────────────
 
+/// list_item_with_inline_styles — list items emit styled spans.
+#[test]
+fn list_item_with_inline_styles() {
+    let md = "- plain **bold** and *italic*
+- `code` item";
+    let blocks = parse_markdown(md);
+    assert_eq!(blocks.len(), 1);
+    let CodeBlock::List { items, .. } = &blocks[0] else {
+        panic!("expected List block")
+    };
+    assert_eq!(items.len(), 2);
+
+    // First item: plain text, bold, and italic
+    let first = &items[0];
+    assert!(first.iter().any(|s| matches!(s, MdInline::Bold(_))));
+    assert!(first.iter().any(|s| matches!(s, MdInline::Italic(_))));
+
+    // Second item: code
+    let second = &items[1];
+    assert!(second.iter().any(|s| matches!(s, MdInline::Code(_))));
+}
+
 /// block_parser_round_trip — markdown parses to styled spans and round-trips.
 #[test]
 fn block_parser_round_trip() {

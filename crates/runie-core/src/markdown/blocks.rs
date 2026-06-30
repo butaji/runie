@@ -55,11 +55,11 @@ enum BlockState {
     },
     List {
         ordered: bool,
-        items: Vec<String>,
-        current: String,
+        items: Vec<Vec<super::MdInline>>,
+        current: Vec<super::MdInline>,
     },
     Quote {
-        content: String,
+        inlines: Vec<super::MdInline>,
     },
 }
 
@@ -157,7 +157,7 @@ impl BlockParser {
                 self.state = BlockState::List {
                     ordered: order.is_some(),
                     items: Vec::new(),
-                    current: String::new(),
+                    current: Vec::new(),
                 };
             }
             Tag::Item => {
@@ -169,13 +169,11 @@ impl BlockParser {
             }
             Tag::BlockQuote(_) => {
                 // Flush any pending text before starting the blockquote.
-                // The text has already been accumulated via push_text into
-                // content_buf + inline_buf. This mirrors the Top-state behavior.
                 if matches!(self.state, BlockState::Top) {
                     self.flush_text();
                 }
                 self.state = BlockState::Quote {
-                    content: String::new(),
+                    inlines: Vec::new(),
                 };
             }
             // Style tags: push onto style stack so subsequent text gets the right style.
@@ -187,10 +185,8 @@ impl BlockParser {
     }
 
     /// Route text to the appropriate buffer based on current block state.
-    /// Top state: emit inline spans directly from events (pulldown_cmark gives us the style).
-    /// List/Quote: accumulate plain text; inline parsing happens in flush_text.
+    /// All states emit inline spans directly from events (pulldown_cmark gives us the style).
     fn push_text(&mut self, text: &str) {
-        // Extract current style before taking &mut self.state to avoid borrow conflict.
         let current_style = *self.style_stack.last().unwrap();
         match &mut self.state {
             BlockState::Top => {
@@ -199,14 +195,27 @@ impl BlockParser {
             }
             BlockState::Code { content, .. } => content.push_str(text),
             BlockState::List { current, .. } => {
-                // No inline styles in list items; accumulate plain text.
-                // Don't update content_buf - it's for Text blocks only.
-                current.push_str(text);
+                // Push inline directly to current item buffer (can't call emit_inline due to borrow).
+                if !text.is_empty() {
+                    let inline = match current_style {
+                        Style::Bold => super::MdInline::Bold(text.to_owned()),
+                        Style::Italic => super::MdInline::Italic(text.to_owned()),
+                        Style::Strike => super::MdInline::Strike(text.to_owned()),
+                        Style::None => super::MdInline::Text(text.to_owned()),
+                    };
+                    current.push(inline);
+                }
             }
-            BlockState::Quote { content } => {
-                // No inline styles in blockquotes; accumulate plain text.
-                self.content_buf.push_str(text);
-                content.push_str(text);
+            BlockState::Quote { inlines } => {
+                if !text.is_empty() {
+                    let inline = match current_style {
+                        Style::Bold => super::MdInline::Bold(text.to_owned()),
+                        Style::Italic => super::MdInline::Italic(text.to_owned()),
+                        Style::Strike => super::MdInline::Strike(text.to_owned()),
+                        Style::None => super::MdInline::Text(text.to_owned()),
+                    };
+                    inlines.push(inline);
+                }
             }
         }
     }
@@ -222,19 +231,10 @@ impl BlockParser {
             }
             BlockState::Code { content, .. } => content.push_str(code),
             BlockState::List { current, .. } => {
-                // No inline code in list items; accumulate plain text.
-                current.push('`');
-                current.push_str(code);
-                current.push('`');
+                current.push(super::MdInline::Code(code.to_string()));
             }
-            BlockState::Quote { content } => {
-                // No inline code in blockquotes; accumulate plain text.
-                self.content_buf.push('`');
-                self.content_buf.push_str(code);
-                self.content_buf.push('`');
-                content.push('`');
-                content.push_str(code);
-                content.push('`');
+            BlockState::Quote { inlines } => {
+                inlines.push(super::MdInline::Code(code.to_string()));
             }
         }
     }
@@ -247,13 +247,10 @@ impl BlockParser {
             }
             BlockState::Code { content, .. } => content.push('\n'),
             BlockState::List { current, .. } => {
-                // No SoftBreak inline span in list items.
-                current.push('\n');
+                current.push(super::MdInline::SoftBreak);
             }
-            BlockState::Quote { content } => {
-                // No SoftBreak inline span in blockquotes.
-                self.content_buf.push('\n');
-                content.push('\n');
+            BlockState::Quote { inlines } => {
+                inlines.push(super::MdInline::SoftBreak);
             }
         }
     }
@@ -288,8 +285,8 @@ impl BlockParser {
                 }
             }
             TagEnd::BlockQuote(_) => {
-                if let BlockState::Quote { content } = std::mem::take(&mut self.state) {
-                    self.blocks.push(CodeBlock::Blockquote(content));
+                if let BlockState::Quote { inlines } = std::mem::take(&mut self.state) {
+                    self.blocks.push(CodeBlock::Blockquote(inlines));
                 }
                 // Clear buffers so they don't produce a spurious Text block after the Quote.
                 self.content_buf.clear();

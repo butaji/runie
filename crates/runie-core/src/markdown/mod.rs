@@ -66,9 +66,11 @@ pub enum CodeBlock {
     },
     List {
         ordered: bool,
-        items: Vec<String>,
+        /// Each list item is a list of inline spans.
+        items: Vec<Vec<MdInline>>,
     },
-    Blockquote(String),
+    /// A blockquote with inline spans for styling.
+    Blockquote(Vec<MdInline>),
 }
 
 /// Legacy alias so existing call sites don't break.
