@@ -2,7 +2,9 @@
 
 ## Status
 
-`todo`
+`done`
+
+**Completed:** 2026-06-30
 
 ## Context
 
@@ -14,9 +16,9 @@ Use `include_dir!` over `src/fixtures/minimax/` plus a `LazyLock<HashMap<&str, &
 
 ## Acceptance Criteria
 
-- [ ] Add `include_dir` if not already available, or use `include_str!` + `LazyLock`.
-- [ ] Delete the macro and manual match.
-- [ ] All fixture consumers compile.
+- [x] Add `include_dir` dependency.
+- [x] Use `include_dir!` for directory scanning and `LazyLock` for lazy loading.
+- [x] All fixture consumers compile and tests pass.
 
 ## Design Impact
 

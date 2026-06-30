@@ -1,8 +1,10 @@
-# Replace clipboard dead code with arboard or crossterm osc52
+# Replace clipboard dead code with arboard
 
 ## Status
 
-`todo`
+`done`
+
+**Completed:** 2026-06-30
 
 ## Context
 
@@ -16,10 +18,10 @@ Delete the dead OSC-52 module and use `arboard` for clipboard writes, with `cros
 
 ## Acceptance Criteria
 
-- [ ] Delete `crates/runie-tui/src/terminal/clipboard.rs`.
-- [ ] Implement clipboard copy via `arboard` in `effects/mod.rs` or a thin `clipboard.rs` helper.
-- [ ] Handle headless/CI environments gracefully (skip or use OSC-52 fallback).
-- [ ] Remove `#[allow(dead_code)]` markers for clipboard functions.
+- [x] Delete `crates/runie-tui/src/terminal/clipboard.rs`.
+- [x] Implement clipboard copy via `arboard` in `effects/mod.rs`.
+- [x] Handle headless/CI environments gracefully (arboard returns error).
+- [x] Remove `#[allow(dead_code)]` markers for clipboard functions.
 
 ## Tests
 

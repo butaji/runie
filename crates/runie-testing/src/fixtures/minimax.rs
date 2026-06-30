@@ -1,26 +1,25 @@
 //! MiniMax SSE fixture strings — shared by runie-agent and runie-provider tests.
 //!
-//! All 7 fixtures are byte-identical copies. This module is the single source of
-//! truth; crates that previously duplicated them must load from here instead.
+//! Uses `include_dir!` to scan the fixture directory at compile time.
 
-macro_rules! define_fixtures {
-    ($($name:ident),* $(,)?) => {
-        $(
-            #[doc = concat!("Contents of `minimax/", stringify!($name), ".sse`.")]
-            pub const $name: &str = include_str!(concat!("minimax/", stringify!($name), ".sse"));
-        )*
-    };
-}
+use include_dir::Dir;
+use std::collections::HashMap;
+use std::sync::LazyLock;
 
-define_fixtures! {
-    M3_READ_FILE_FINAL,
-    M3_READ_FILE_CALL,
-    M3_MULTI_TOOL_README,
-    M3_MULTI_TOOL_LIST_DIR,
-    M3_LIST_FILES_FINAL,
-    M3_LIST_FILES_CALL,
-    M27_MULTI_TOOL_README,
-}
+/// The fixture directory.
+static FIXTURE_DIR: Dir<'_> = include_dir::include_dir!("$CARGO_MANIFEST_DIR/src/fixtures/minimax");
+
+/// Lazy-loaded fixture contents.
+static FIXTURES: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
+    FIXTURE_DIR
+        .files()
+        .map(|file| {
+            let name = file.path().file_name().unwrap().to_str().unwrap();
+            let contents = file.contents_utf8().unwrap_or_default();
+            (name, contents)
+        })
+        .collect()
+});
 
 /// All MiniMax fixture names.
 pub const ALL_FIXTURES: &[&str] = &[
@@ -35,14 +34,8 @@ pub const ALL_FIXTURES: &[&str] = &[
 
 /// Load a fixture by name. Panics if the name is unknown.
 pub fn fixture(name: &str) -> String {
-    match name {
-        "m3_list_files_call.sse" => M3_LIST_FILES_CALL.to_string(),
-        "m3_list_files_final.sse" => M3_LIST_FILES_FINAL.to_string(),
-        "m3_read_file_call.sse" => M3_READ_FILE_CALL.to_string(),
-        "m3_read_file_final.sse" => M3_READ_FILE_FINAL.to_string(),
-        "m3_multi_tool_list_dir.sse" => M3_MULTI_TOOL_LIST_DIR.to_string(),
-        "m3_multi_tool_readme.sse" => M3_MULTI_TOOL_README.to_string(),
-        "m27_multi_tool_readme.sse" => M27_MULTI_TOOL_README.to_string(),
-        _ => unreachable!(),
-    }
+    FIXTURES
+        .get(name)
+        .map(|s| (*s).to_string())
+        .unwrap_or_else(|| panic!("unknown fixture: {}", name))
 }

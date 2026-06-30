@@ -1,9 +1,11 @@
 //! Path resolution utilities shared across the workspace.
 //!
 //! Resolves relative paths against a working directory, expands `~` to the home
-//! directory, and normalizes `.` and `..`. Uses `shellexpand` for tilde expansion.
+//! directory, and normalizes `.` and `..`. Uses `shellexpand` for tilde expansion
+//! and `path-absolutize` for cross-platform path normalization.
 
 use std::path::{Path, PathBuf};
+use path_absolutize::Absolutize;
 
 /// Resolve a raw path string to an absolute, normalized path using the current
 /// working directory.
@@ -16,32 +18,15 @@ pub fn resolve_path(raw: &str) -> PathBuf {
 pub fn resolve_path_in(raw: &str, working_dir: &Path) -> PathBuf {
     let expanded = shellexpand::tilde(raw).into_owned();
     let path = Path::new(&expanded);
+    // Use path-absolutize for cross-platform absolute + normalized paths.
+    // This handles `.` and `..` components, as well as Windows paths properly.
     let absolute = if path.is_absolute() {
-        path.to_path_buf()
+        path.absolutize().unwrap_or_else(|_| path.to_path_buf())
     } else {
-        working_dir.join(path)
+        let joined = working_dir.join(path);
+        joined.absolutize().unwrap_or_else(|_| joined)
     };
-    normalize_path(&absolute)
-}
-
-fn normalize_path(path: &Path) -> PathBuf {
-    let mut result = PathBuf::new();
-    for component in path.components() {
-        match component {
-            std::path::Component::Prefix(p) => result.push(p.as_os_str()),
-            std::path::Component::RootDir => result.push("/"),
-            std::path::Component::CurDir => {}
-            std::path::Component::ParentDir => {
-                result.pop();
-            }
-            std::path::Component::Normal(name) => result.push(name),
-        }
-    }
-    if result.as_os_str().is_empty() {
-        path.to_path_buf()
-    } else {
-        result
-    }
+    absolute
 }
 
 #[cfg(test)]

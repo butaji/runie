@@ -63,6 +63,7 @@ secrecy.workspace = true
 dotenvy.workspace = true
 fs2.workspace = true
 indextree.workspace = true
+arboard.workspace = true
 runie-util.workspace = true
 which.workspace = true
 ignore.workspace = true
@@ -70,6 +71,7 @@ globset.workspace = true
 bytesize.workspace = true
 humantime.workspace = true
 crokey.workspace = true
+path-absolutize.workspace = true
 tokio-util.workspace = true
 
 [target.'cfg(unix)'.dependencies]

@@ -152,7 +152,7 @@
   {
     "file": "consolidate-provider-credential-resolver-duplication.md",
     "title": "Consolidate provider credential resolver duplication",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "consolidate-session-metadata-and-delete-sessionindex-read-path.md",
@@ -512,7 +512,7 @@
   {
     "file": "normalize-paths-with-path-absolutize-and-dunce.md",
     "title": "Normalize paths with path-absolutize/dunce",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "normalize-remaining-std-mutex-to-parking-lot.md",
@@ -652,7 +652,7 @@
   {
     "file": "replace-clipboard-dead-code-with-arboard-or-osc52.md",
     "title": "Replace clipboard dead code with arboard or crossterm osc52",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-config-validator-with-jsonschema.md",
@@ -982,7 +982,7 @@
   {
     "file": "use-include-dir-for-minimax-fixtures.md",
     "title": "Use include_dir for MiniMax fixtures",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-mcp-tool-annotations-instead-of-custom-permission-constants.md",

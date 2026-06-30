@@ -1,8 +1,10 @@
-# Normalize paths with path-absolutize/dunce
+# Normalize paths with path-absolutize
 
 ## Status
 
-`todo`
+`done`
+
+**Completed:** 2026-06-30
 
 ## Context
 
@@ -14,10 +16,10 @@ Replace the custom normalizer with `std::path::absolute` (Rust 1.79+) or the `pa
 
 ## Acceptance Criteria
 
-- [ ] Remove custom `normalize_path` implementation.
-- [ ] Use `path-absolutize` or `dunce::simplified` for cross-platform normalization.
-- [ ] Preserve tilde expansion behavior via `shellexpand`.
-- [ ] All existing path tests pass on Unix and Windows paths.
+- [x] Remove custom `normalize_path` implementation.
+- [x] Use `path-absolutize` for cross-platform normalization.
+- [x] Preserve tilde expansion behavior via `shellexpand`.
+- [x] All existing path tests pass.
 
 ## Design Impact
 

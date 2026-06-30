@@ -2,7 +2,9 @@
 
 ## Status
 
-`todo`
+`done`
+
+**Completed:** 2026-06-30
 
 ## Context
 
@@ -14,11 +16,11 @@ Create a single `CredentialResolver` in `runie-core` used by the provider factor
 
 ## Acceptance Criteria
 
-- [ ] One resolver implementation with clear precedence: env → dotenv → keyring → config file.
-- [ ] Remove the `.env` line-by-line re-parser in `credential.rs`.
-- [ ] Remove the extra keyring probe in `provider/config.rs`.
-- [ ] Provider factory and config actor use the same resolver.
-- [ ] All credential tests pass.
+- [x] One resolver implementation with clear precedence: env → dotenv → keyring → config file.
+- [x] Remove the `.env` line-by-line re-parser in `credential.rs`.
+- [x] Remove the extra keyring probe in `provider/config.rs`.
+- [x] Provider factory and config actor use the same resolver.
+- [x] All credential tests pass.
 
 ## Design Impact
 

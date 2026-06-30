@@ -52,35 +52,18 @@ impl CredentialResolver {
     }
 
     /// Load .env file using dotenvy, returning only API-related variables.
+    ///
+    /// Uses dotenvy to load the .env file into the environment, then captures
+    /// relevant variables (API keys and base URLs) from the environment.
     fn load_dotenv() -> HashMap<String, String> {
-        match dotenvy::dotenv() {
-            Ok(path) => {
-                let mut map = HashMap::new();
-                for (key, val) in std::env::vars() {
-                    if key.ends_with("_API_KEY") || key.ends_with("_BASE_URL") {
-                        map.insert(key, val);
-                    }
-                }
-                // Also read from .env file directly for keys that dotenvy loaded
-                if let Ok(content) = std::fs::read_to_string(&path) {
-                    for line in content.lines() {
-                        let line = line.trim();
-                        if line.is_empty() || line.starts_with('#') {
-                            continue;
-                        }
-                        if let Some((key, val)) = line.split_once('=') {
-                            let key = key.trim().to_owned();
-                            if key.ends_with("_API_KEY") || key.ends_with("_BASE_URL") {
-                                map.entry(key)
-                                    .or_insert_with(|| val.trim().trim_matches('"').to_owned());
-                            }
-                        }
-                    }
-                }
-                map
-            }
-            Err(_) => HashMap::new(),
+        // dotenvy::dotenv() loads .env into the environment
+        if dotenvy::dotenv().is_err() {
+            return HashMap::new();
         }
+        // Capture API-related variables from the environment
+        std::env::vars()
+            .filter(|(key, _)| key.ends_with("_API_KEY") || key.ends_with("_BASE_URL"))
+            .collect()
     }
 
     /// Set a config entry for a provider.

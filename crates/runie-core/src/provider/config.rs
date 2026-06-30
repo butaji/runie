@@ -85,10 +85,10 @@ pub fn remove_provider_config(name: &str) -> anyhow::Result<()> {
 pub fn get_provider_config(name: &str) -> Option<(String, String, Vec<String>)> {
     with_read_lock(|config| {
         let p = config.model_providers.get(name)?;
-        // Resolve API key from keyring/env/config (same priority as ProviderConfig)
+        // API key resolution is handled by CredentialResolver via config.resolve_api_key(),
+        // which uses the unified priority: env → dotenv → keyring → config.
         let api_key = config
             .resolve_api_key(name)
-            .or_else(|| crate::auth::AuthStorage::get_keyring_token(name))
             .unwrap_or_else(|| p.api_key.clone());
         Some((p.base_url.clone(), api_key, p.models.clone()))
     })
