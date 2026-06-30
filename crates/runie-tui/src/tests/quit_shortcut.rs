@@ -117,3 +117,45 @@ async fn ctrl_c_normal_idle_quits() {
         .await;
     assert!(quit, "Quit event must return true in idle state too");
 }
+
+/// Layer 2: Ctrl+S (Abort) aborts the active turn and returns to idle.
+#[tokio::test]
+async fn ctrl_s_aborts_during_turn() {
+    let (mut ui, _agent) = make_ui_actor();
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+
+    // Simulate an active turn
+    ui.agent_running = true;
+    ui.state.agent_state_mut().turn_active = true;
+
+    // Ctrl+S should NOT return true (it's an abort, not a quit)
+    let quit = ui
+        .handle_event_inner(Event::Abort, effect_tx.clone())
+        .await;
+    assert!(!quit, "Abort event must NOT return true (it's not a quit)");
+
+    // The turn should be aborted (turn_active cleared)
+    assert!(
+        !ui.state.agent_state().turn_active,
+        "turn_active should be cleared after Abort"
+    );
+
+    // agent_running flag should be cleared
+    assert!(
+        !ui.agent_running(),
+        "agent_running should be cleared after Abort"
+    );
+}
+
+/// Layer 2: Abort during idle state (no active turn) should still work.
+#[tokio::test]
+async fn abort_during_idle() {
+    let (mut ui, _agent) = make_ui_actor();
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+
+    // No active turn — Abort should not quit
+    let quit = ui
+        .handle_event_inner(Event::Abort, effect_tx.clone())
+        .await;
+    assert!(!quit, "Abort event must not return true even in idle state");
+}

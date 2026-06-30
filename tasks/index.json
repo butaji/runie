@@ -372,7 +372,7 @@
   {
     "file": "fix-tui-quit-shortcuts-ignored-during-active-turn.md",
     "title": "Fix TUI quit shortcuts ignored during an active turn",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-tui-slash-command-palette-stays-open-after-execution.md",

@@ -291,8 +291,8 @@ impl UiActor {
                 self.agent_handle.run(cmd).await;
             }
         }
-        // Clear agent_running when the turn ends normally or with an error.
-        if matches!(&evt, Event::Done { .. } | Event::TurnErrored { .. }) {
+        // Clear agent_running when the turn ends normally, with an error, or is aborted.
+        if matches!(&evt, Event::Done { .. } | Event::TurnErrored { .. } | Event::Abort) {
             self.agent_running = false;
         }
 
