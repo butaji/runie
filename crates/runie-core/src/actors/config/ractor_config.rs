@@ -28,6 +28,7 @@ impl RactorConfigActor {
         state.emit(Event::ConfigLoaded {
             config: Box::new(config_to_emit),
         });
+        tracing::info!("ConfigLoaded");
     }
 
     /// Spawn a `RactorConfigActor` on the given event bus.
