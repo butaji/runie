@@ -857,7 +857,7 @@
   {
     "file": "fuzzy-history-search-with-sublime-fuzzy.md",
     "title": "Fuzzy history search with sublime-fuzzy",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "investigate-session-persistence-not-created-in-live-tui.md",
