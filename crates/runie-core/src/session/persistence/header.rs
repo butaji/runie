@@ -1,62 +1,29 @@
 //! Session file header handling.
+//!
+//! The session file header is the first JSON line of each session file.
+//! `SessionHeader` is an alias for `SessionMetadata` — the same type is
+//! used both in the file header and in the session index.
 
-use crate::session::index::SessionMetadata;
-use std::io::{Read, Write};
+use std::io::{BufRead, Write};
 use std::path::Path;
 
-/// Header stored at the start of each session file.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct SessionHeader {
-    pub id: String,
-    pub display_name: String,
-    pub created_at: f64,
-    pub updated_at: f64,
-    pub message_count: usize,
-    pub summary: Option<String>,
-    #[serde(default)]
-    pub is_starred: bool,
-    #[serde(default)]
-    pub is_system: bool,
-}
-
-impl From<&SessionMetadata> for SessionHeader {
-    fn from(meta: &SessionMetadata) -> Self {
-        Self {
-            id: meta.id.clone(),
-            display_name: meta.display_name.clone(),
-            created_at: meta.created_at,
-            updated_at: meta.updated_at,
-            message_count: meta.message_count,
-            summary: meta.summary.clone(),
-            is_starred: meta.is_starred,
-            is_system: meta.is_system,
-        }
-    }
-}
-
-impl From<&SessionHeader> for SessionMetadata {
-    fn from(header: &SessionHeader) -> Self {
-        Self {
-            id: header.id.clone(),
-            display_name: header.display_name.clone(),
-            created_at: header.created_at,
-            updated_at: header.updated_at,
-            message_count: header.message_count,
-            summary: header.summary.clone(),
-            is_starred: header.is_starred,
-            is_system: header.is_system,
-        }
-    }
-}
+pub use crate::session::index::SessionMetadata as SessionHeader;
 
 /// Read the header from a session file.
 pub fn read_header(path: &Path) -> anyhow::Result<Option<SessionHeader>> {
     if !path.exists() {
         return Ok(None);
     }
-    let mut file = std::fs::File::open(path)?;
+    let file = std::fs::File::open(path)?;
+    let mut reader = std::io::BufReader::new(file);
+
     let mut first_line = String::new();
-    file.read_to_string(&mut first_line)?;
+    match reader.read_line(&mut first_line) {
+        Ok(0) => return Ok(None), // Empty file
+        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => return Ok(None),
+        Err(e) => return Err(e.into()),
+        Ok(_) => {}
+    }
 
     let first_line = first_line.trim();
     if first_line.is_empty() {

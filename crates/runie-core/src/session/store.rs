@@ -10,8 +10,8 @@
 use crate::event::durable::DurableCoreEvent;
 use crate::session::index::SessionMetadata;
 use crate::session::persistence::{
-    exclusive_lock, read_header, shared_lock, touch_header, ExclusiveLock, SessionHeader,
-    SharedLock,
+    exclusive_lock, read_header, shared_lock, touch_header, write_header, ExclusiveLock,
+    SessionHeader, SharedLock,
 };
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
@@ -138,7 +138,7 @@ impl SessionStore {
         }
 
         let _lock: SharedLock = shared_lock(&path)?;
-        Ok(read_header(&path)?.map(|h| (&h).into()))
+        Ok(read_header(&path)?)
     }
 
     /// Delete a session's file.
@@ -206,7 +206,7 @@ impl SessionStore {
 
         if !path.exists() {
             self.ensure_parent_dir()?;
-            let header = SessionHeader::from(meta);
+            let header = meta;
             let mut file = File::create(&path)?;
             writeln!(file, "{}", serde_json::to_string(&header)?)?;
             file.sync_all()?;
@@ -214,7 +214,8 @@ impl SessionStore {
         }
 
         let _lock: ExclusiveLock = exclusive_lock(&path)?;
-        touch_header(&path)?;
+        // Write the full metadata (not just touching updated_at)
+        write_header(&path, meta)?;
         Ok(())
     }
 

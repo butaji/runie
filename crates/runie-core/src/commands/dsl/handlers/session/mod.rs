@@ -253,10 +253,7 @@ fn load_session_metadata(
     store: &crate::session::store::SessionStore,
     name: &str,
 ) -> anyhow::Result<crate::session::index::SessionMetadata> {
-    let data_dir = store.dir().parent().unwrap_or(store.dir()).to_path_buf();
-    let index = crate::session::index::SessionIndex::load(&data_dir)?;
-    index
-        .get(name)
-        .cloned()
+    store
+        .load_metadata(name)?
         .ok_or_else(|| anyhow::anyhow!("not found"))
 }

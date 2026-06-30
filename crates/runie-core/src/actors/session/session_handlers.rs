@@ -8,7 +8,7 @@ use crate::bus::EventBus;
 use crate::edit_preview::EditPreview;
 use crate::message::{now, Part};
 use crate::model::{ChatMessage, Role};
-use crate::session::index::{SessionIndex, SessionMetadata};
+use crate::session::index::SessionMetadata;
 use crate::session::replay::session_to_durable_events;
 use crate::session::store::SessionStore;
 use crate::session::tree::SessionTree;
@@ -251,10 +251,7 @@ impl RactorSessionActor {
             if events.is_empty() {
                 return Err(anyhow::anyhow!("not found"));
             }
-            let data_dir = store.dir().parent().unwrap_or(store.dir()).to_path_buf();
-            let metadata = SessionIndex::load(&data_dir)
-                .ok()
-                .and_then(|idx| idx.get(&name_for_task).cloned());
+            let metadata = store.load_metadata(&name_for_task).ok().flatten();
             Ok((events, metadata))
         })
         .await;
