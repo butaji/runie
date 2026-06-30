@@ -197,7 +197,9 @@ fn update_form_panel(
     }
 
     let keep_open = matches!(&action, FormAction::KeepOpen);
-    if keep_open && state.open_dialog().is_none() {
+    // Restore dialog if closed by Back action (handle_back_action closes it).
+    // For other actions (Submit, SubmitCommand), apply_form_action handles closure.
+    if (!keep_open || matches!(&action, FormAction::Back)) && state.open_dialog().is_none() {
         *state.open_dialog_mut() = Some(DialogState::Active {
             kind: DialogKind::Generic,
             panels: stack.clone(),
@@ -496,4 +498,89 @@ fn selected_select_value(stack: &mut PanelStack) -> Option<String> {
 }
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    use super::*;
+    use crate::commands::{DialogKind, DialogState};
+    use crate::dialog::PanelStack;
+
+    // Layer 2: submit_command_closes_dialog_and_dispatches
+    #[test]
+    fn submit_command_closes_dialog_and_dispatches_handler() {
+        let mut state = crate::model::AppState::default();
+        let mut stack = PanelStack::new(
+            Panel::new("save", "Save")
+                .form_field_value("Name", "session", "name", String::from("test1"))
+                .form_submit(),
+        );
+        stack.current_mut().unwrap().cmd_name = Some(String::from("save"));
+        stack.current_mut().unwrap().field_keys = vec![String::from("name")];
+
+        // Open the dialog
+        *state.open_dialog_mut() = Some(DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: stack.clone(),
+        });
+
+        // Submit the form
+        let result = update_form_panel(&mut state, crate::Event::Submit, &mut stack);
+
+        // Dialog should be closed
+        assert!(
+            state.open_dialog().is_none(),
+            "SubmitCommand should close the dialog"
+        );
+        // Should return Closed
+        assert_eq!(result, PanelUpdateResult::Closed);
+    }
+
+    // Layer 2: keep_open_preserves_dialog_state
+    #[test]
+    fn keep_open_preserves_dialog_state() {
+        let mut state = crate::model::AppState::default();
+        let mut stack = PanelStack::new(
+            Panel::new("settings", "Settings")
+                .toggle("Read-Only", false, crate::dialog::ItemAction::Toggle(String::from("read_only"))),
+        );
+
+        // Open the dialog
+        *state.open_dialog_mut() = Some(DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: stack.clone(),
+        });
+
+        // Submit (which toggles the checkbox)
+        let result = update_form_panel(&mut state, crate::Event::Submit, &mut stack);
+
+        // Dialog should remain open
+        assert!(
+            state.open_dialog().is_some(),
+            "KeepOpen should preserve the dialog"
+        );
+        // Should return Consumed
+        assert_eq!(result, PanelUpdateResult::Consumed);
+    }
+
+    // Layer 2: back_action_closes_dialog
+    #[test]
+    fn back_action_closes_dialog() {
+        let mut state = crate::model::AppState::default();
+        let mut stack = PanelStack::new(Panel::new("save", "Save"));
+
+        // Open the dialog
+        *state.open_dialog_mut() = Some(DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: stack.clone(),
+        });
+
+        // Send Back action
+        let result = update_form_panel(&mut state, crate::Event::DialogBack, &mut stack);
+
+        // Dialog should be closed (Back doesn't restore single-panel dialogs)
+        assert!(
+            state.open_dialog().is_none(),
+            "Back on single panel should close dialog"
+        );
+        // Should return Closed
+        assert_eq!(result, PanelUpdateResult::Closed);
+    }
+}

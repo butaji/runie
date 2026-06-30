@@ -357,7 +357,7 @@
   {
     "file": "fix-tui-form-submit-key-not-working.md",
     "title": "Fix TUI form submit key not working for /save and /compact",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-tui-history-shows-no-history-after-message.md",

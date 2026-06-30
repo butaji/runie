@@ -144,3 +144,30 @@ fn submit_on_emit_action_dispatches_event() {
         "Enter on an emit action should submit its event"
     );
 }
+
+// Layer 2: submit_command_form_routes_to_registry
+#[test]
+fn submit_on_form_with_cmd_name_routes_to_registry() {
+    let mut state = AppState::default();
+    // Simulate a form with cmd_name (like /save form)
+    let mut panel = Panel::new("save", "Save Session")
+        .form_field_value("Name", "session-name", "name", String::from("test1"))
+        .form_submit();
+    panel.cmd_name = Some(String::from("save"));
+    panel.field_keys = vec![String::from("name")];
+
+    let action = form_panel_action(&mut state, &mut panel, Event::Submit);
+
+    // Should route to SubmitCommand, not direct event
+    assert!(
+        matches!(
+            &action,
+            FormAction::SubmitCommand {
+                name,
+                keys,
+                values,
+            } if name == "save" && keys == &["name".to_string()] && values.get("name") == Some(&"test1".to_string())
+        ),
+        "Submit on form with cmd_name should route to SubmitCommand with form values"
+    );
+}
