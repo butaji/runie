@@ -1,0 +1,30 @@
+# Use toml_edit + fs2 file locks for config persistence
+
+## Status
+
+`todo`
+
+## Context
+
+`crates/runie-core/src/config/config_impl.rs` and `crates/runie-core/src/provider/config.rs` load the whole TOML file into `toml::Value`, mutate it, and write it back with `toml::to_string_pretty`. This strips user comments and formatting. The in-process `RwLock` in `provider/config.rs` does not protect across separate CLI processes, so `runie login` and `runie mcp add` can race on `config.toml`.
+
+## Goal
+
+Make config edits comment-preserving and cross-process safe by using `toml_edit` for surgical edits and `fs2` advisory file locks.
+
+## Acceptance Criteria
+
+- [ ] Replace load-modify-save via `toml::Value` with `toml_edit::Document` edits for provider, MCP, theme, and auth sections.
+- [ ] Preserve comments and key order in existing `config.toml` files after edits.
+- [ ] Use `fs2::FileExt::lock_exclusive` / `lock_shared` around reads and writes.
+- [ ] Remove the process-level `RwLock<()>` in `provider/config.rs`.
+- [ ] No new `std::fs` writes on the async runtime thread.
+
+## Tests
+
+- **Layer 1 — State/Logic:** Serialize a TOML document with comments, apply an edit, assert comments and formatting survive.
+- **Layer 1:** Simulate concurrent writer processes using `fs2` locks and verify no corruption.
+- **Layer 2 — Event Handling:** Send `ConfigMsg::SetProvider` and assert the emitted `ConfigLoaded` fact contains the edited value.
+- **Layer 3 — Rendering (if TUI-visible):** `TestBackend` snapshot of `/settings` or `/inspect` after a config edit shows the new value.
+- **Layer 4 — Provider Replay / E2E:** Run `runie login mock` and `runie mcp add` in parallel from two processes; both succeed and config remains valid TOML.
+- **Live tmux validation:** Start the TUI, run `/login mock`, `/model mock-model`, and `/mcp add ...`; inspect `~/.runie/config.toml` and confirm comments and formatting are preserved.
