@@ -302,6 +302,56 @@ fn ask_rule(tool: &str) -> PermissionRule {
     PermissionRule::new(PermissionAction::Ask, tool)
 }
 
+/// A [`PermissionPolicy`] that delegates to a [`PermissionSet`].
+///
+/// This is the bridge between the declarative `PermissionSet` rule engine
+/// and the `PermissionPolicy` chain used by [`PermissionGate`](super::gate::PermissionGate).
+///
+/// Evaluation is always `Some` (never `None`) so this policy always wins
+/// when it matches, which means it should be added **last** in the chain.
+#[derive(Debug, Clone)]
+pub struct PermissionSetPolicy {
+    rules: PermissionSet,
+}
+
+impl PermissionSetPolicy {
+    /// Create a new policy wrapping the given rules.
+    pub fn new(rules: PermissionSet) -> Self {
+        Self { rules }
+    }
+
+    /// Replace the wrapped rules.
+    pub fn set_rules(&mut self, rules: PermissionSet) {
+        self.rules = rules;
+    }
+}
+
+#[async_trait::async_trait]
+impl super::PermissionPolicy for PermissionSetPolicy {
+    fn name(&self) -> &str {
+        "permission_set"
+    }
+
+    fn matches(&self, _ctx: &super::PermissionContext<'_>) -> bool {
+        // Always matches — rules contain their own matching logic.
+        true
+    }
+
+    async fn evaluate(&self, ctx: &super::PermissionContext<'_>) -> Option<super::PermissionResult> {
+        // Extract the command string from bash input if present.
+        let cmd = ctx
+            .input
+            .and_then(|v| v.get("command").and_then(|c| c.as_str()));
+        let path_str = ctx.path.map(|p| p.to_string_lossy().into_owned());
+        let action = self.rules.effective_action(ctx.tool, path_str.as_deref(), cmd);
+        Some(match action {
+            crate::permissions::PermissionAction::Allow => crate::permissions::PermissionResult::Allow,
+            crate::permissions::PermissionAction::Deny => crate::permissions::PermissionResult::Deny,
+            crate::permissions::PermissionAction::Ask => crate::permissions::PermissionResult::Ask,
+        })
+    }
+}
+
 /// Match a glob pattern against a string using the `glob` crate.
 fn glob_matches(pattern: &str, name: &str) -> bool {
     Pattern::new(pattern)

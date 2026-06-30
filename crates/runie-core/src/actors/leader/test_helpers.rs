@@ -82,7 +82,7 @@ pub async fn test_leader_handle() -> LeaderHandle {
         .await
         .expect("session spawn");
     let (permission_h, permission_cell, permission_join) =
-        RactorPermissionActor::spawn(bus.clone()).await.unwrap();
+        RactorPermissionActor::spawn(bus.clone(), config_h.clone()).await.unwrap();
     let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
     let (input_h, input_cell, input_join) = InputActor::spawn(bus.clone()).await.unwrap();
     let (fff_h, fff_cell, fff_join) = RactorFffIndexerActor::spawn(

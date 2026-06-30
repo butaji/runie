@@ -80,7 +80,7 @@ use tokio_util::sync::CancellationToken;
 #[tokio::test]
 async fn approval_cancel_token_returns_deny() {
     let bus = EventBus::<Event>::new(16);
-    let (perm_handle, _, _) = RactorPermissionActor::spawn(bus.clone()).await.unwrap();
+    let (perm_handle, _, _) = RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
 
     // Use a short timeout (100ms) to keep the test fast.
     let sink = EmitApprovalSink::with_cancel(
@@ -100,7 +100,7 @@ async fn approval_cancel_token_returns_deny() {
 #[tokio::test]
 async fn approval_timeout_returns_deny() {
     let bus = EventBus::<Event>::new(16);
-    let (perm_handle, _, _) = RactorPermissionActor::spawn(bus.clone()).await.unwrap();
+    let (perm_handle, _, _) = RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
 
     // Use a very short timeout (50ms) so the test completes quickly.
     let sink = EmitApprovalSink::with_cancel(perm_handle, 0, CancellationToken::new());
@@ -119,7 +119,7 @@ async fn approval_timeout_returns_deny() {
 #[tokio::test]
 async fn approval_cancelled_during_ask_returns_deny_quickly() {
     let bus = EventBus::<Event>::new(16);
-    let (perm_handle, _, _) = RactorPermissionActor::spawn(bus.clone()).await.unwrap();
+    let (perm_handle, _, _) = RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
 
     let cancel_token = CancellationToken::new();
 

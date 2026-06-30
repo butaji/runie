@@ -842,7 +842,7 @@
   {
     "file": "subscribe-tui-to-initial-facts-before-leader-start.md",
     "title": "Subscribe TUI to initial facts before leader start",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",
@@ -1047,7 +1047,7 @@
   {
     "file": "wire-user-permission-rules-into-agent-gate.md",
     "title": "Wire user permission rules into the agent permission gate",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "write-runie-vs-grok-build-findings-report.md",

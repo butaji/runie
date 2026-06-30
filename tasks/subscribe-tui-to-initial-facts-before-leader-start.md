@@ -1,6 +1,6 @@
 # Subscribe TUI to initial facts before leader start
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Actors
 **Priority**: P0
@@ -18,17 +18,17 @@ The event bus is a `tokio::sync::broadcast` channel with no replay buffer. Subsc
 
 ## Acceptance Criteria
 
-- [ ] `UiActor` and `InputActor` receive the initial `ConfigLoaded` fact.
-- [ ] `TrustLoaded` and `HistoryLoaded` facts are not lost on TUI startup.
-- [ ] `/model` and `/provider` reflect the configured mock provider immediately after launch.
-- [ ] `/history` shows persisted history immediately after launch when available.
-- [ ] `cargo test --workspace` passes.
+- [x] `UiActor` and `InputActor` receive the initial `ConfigLoaded` fact.
+- [x] `TrustLoaded` and `HistoryLoaded` facts are not lost on TUI startup.
+- [x] `/model` and `/provider` reflect the configured mock provider immediately after launch.
+- [x] `/history` shows persisted history immediately after launch when available.
+- [x] `cargo test --workspace` passes.
 - [ ] Live tmux launch scenario shows correct provider/model in the status bar.
 
 ## Tests
 
 ### Layer 2 — Event Handling
-- [ ] `ui_actor_receives_config_loaded_before_other_events` — subscribe `UiActor` then start the leader and assert `ConfigLoaded` is processed.
+- [x] `ui_actor_receives_config_loaded_before_other_events` — subscribe `UiActor` then start the leader and assert `ConfigLoaded` is processed.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
 - [ ] `tmux_launch_shows_configured_provider` — live tmux script asserts the status bar shows `mock/echo` immediately.

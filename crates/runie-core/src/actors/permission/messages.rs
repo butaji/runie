@@ -1,7 +1,7 @@
 //! Messages for `PermissionActor`.
 
 use crate::actors::ractor_adapter::{Reply, RpcReply};
-use crate::permissions::PermissionAction;
+use crate::permissions::{PermissionAction, PermissionSet};
 
 /// Messages accepted by `PermissionActor`.
 #[derive(Debug)]
@@ -25,6 +25,19 @@ pub enum PermissionMsg {
     DismissRequest,
     /// Query the current pending request ID (returns Option<String>).
     GetCurrentRequest(RpcReply<Option<String>>),
+    /// Load permission rules from the config actor.
+    LoadRules,
+    /// Query the current permission rule set.
+    GetRules(RpcReply<PermissionSet>),
+    /// Mark the current project as trusted.
+    TrustProject,
+    /// Mark the current project as untrusted.
+    UntrustProject,
+    /// Add or update a permission rule.
+    UpsertRule {
+        tool: String,
+        action: PermissionAction,
+    },
 }
 
 impl Clone for PermissionMsg {
@@ -53,6 +66,14 @@ impl Clone for PermissionMsg {
             },
             PermissionMsg::DismissRequest => PermissionMsg::DismissRequest,
             PermissionMsg::GetCurrentRequest(reply) => PermissionMsg::GetCurrentRequest(reply.clone()),
+            PermissionMsg::LoadRules => PermissionMsg::LoadRules,
+            PermissionMsg::GetRules(reply) => PermissionMsg::GetRules(reply.clone()),
+            PermissionMsg::TrustProject => PermissionMsg::TrustProject,
+            PermissionMsg::UntrustProject => PermissionMsg::UntrustProject,
+            PermissionMsg::UpsertRule { tool, action } => PermissionMsg::UpsertRule {
+                tool: tool.clone(),
+                action: *action,
+            },
         }
     }
 }

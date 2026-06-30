@@ -148,7 +148,7 @@ impl Leader {
         let (io_h, io_cell, io_join) = RactorIoActor::spawn(bus.clone()).await?;
         let (session_h, session_cell, session_join) = RactorSessionActor::spawn(bus.clone()).await?;
         let (permission_h, permission_cell, permission_join) =
-            RactorPermissionActor::spawn(bus.clone()).await?;
+            RactorPermissionActor::spawn(bus.clone(), config_h.clone()).await?;
         let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await?;
         let (input_h, input_cell, input_join) = InputActor::spawn(bus.clone()).await?;
         let (fff_h, fff_cell, fff_join) = RactorFffIndexerActor::spawn(

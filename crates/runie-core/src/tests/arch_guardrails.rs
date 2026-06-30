@@ -39,7 +39,7 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     // Trust settings - owned by TrustActor
     "trust.rs",
     // Permissions storage
-    "permissions/",
+    "actors/permission/",
     // Skills loading
     "skills/",
     // Path utilities used by commands

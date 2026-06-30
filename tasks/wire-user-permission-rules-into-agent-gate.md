@@ -1,6 +1,6 @@
 # Wire user permission rules into the agent permission gate
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Security
 **Priority**: P1
@@ -18,19 +18,19 @@ The agent builds its own `PermissionManager` from built-in defaults and does not
 
 ## Acceptance Criteria
 
-- [ ] User `/trust` decisions affect subsequent tool approvals.
-- [ ] Declarative permission rules are loaded and evaluated by the agent.
-- [ ] Denials still fall back to the TUI permission dialog when no rule matches.
-- [ ] `cargo test --workspace` passes.
+- [x] User `/trust` decisions affect subsequent tool approvals.
+- [x] Declarative permission rules are loaded and evaluated by the agent.
+- [x] Denials still fall back to the TUI permission dialog when no rule matches.
+- [x] `cargo test --workspace` passes.
 - [ ] Live tmux `native tool` scenario respects a prior `/trust bash always` decision.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `agent_gate_uses_user_trust_rules` — a configured allow-rule permits a bash call without dialog.
+- [x] `agent_gate_uses_user_trust_rules` — a configured allow-rule permits a bash call without dialog.
 
 ### Layer 2 — Event Handling
-- [ ] `trust_command_updates_permission_actor` — `/trust bash always` emits a `PermissionMsg` that updates the rule set.
+- [x] `trust_command_updates_permission_actor` — `/trust bash always` emits a `PermissionMsg` that updates the rule set.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
 - [ ] `tmux_trust_bash_skips_dialog` — live tmux script trusts bash, runs `native tool`, and asserts no permission dialog appears.

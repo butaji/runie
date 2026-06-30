@@ -18,6 +18,7 @@ use runie_core::event::Event;
 use runie_core::permissions::PermissionGate;
 use runie_core::permissions::{
     DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
+    PermissionSetPolicy,
 };
 
 use crate::emit_approval_sink::EmitApprovalSink;
@@ -119,7 +120,7 @@ impl RactorAgentActor {
         let cancel_token_abort = cancel_token.clone();
 
         let gate =
-            Self::create_permission_gate_with_cancel(permission.clone(), cancel_token_gate);
+            Self::create_permission_gate_with_cancel(permission.clone(), cancel_token_gate).await;
         let gate_for_abort = gate.clone();
 
         // Subscribe to TurnAborted so we can cancel pending permissions.
@@ -158,14 +159,21 @@ impl RactorAgentActor {
         }))
     }
 
-    fn create_permission_gate_with_cancel(
+    async fn create_permission_gate_with_cancel(
         permission_handle: RactorPermissionHandle,
         abort_tx: tokio_util::sync::CancellationToken,
     ) -> PermissionGate {
+        // Load user permission rules from PermissionActor. This includes rules
+        // from [[permissions]] in config.toml and any /trust decisions.
+        let rules = permission_handle.get_rules().await;
+
         let permissions = PermissionManager::default().with_policies(vec![
             Box::new(DefaultToolApprove::new()),
             Box::new(GitTrackedWriteApprove::new()),
             Box::new(FileAccessAsk::new()),
+            // User declarative rules — added last so they take precedence
+            // (PermissionSetPolicy.evaluate always returns Some, winning the chain).
+            Box::new(PermissionSetPolicy::new(rules)),
         ]);
         PermissionGate::new(
             permissions,

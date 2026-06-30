@@ -34,7 +34,7 @@ pub use default_tool_approve::DefaultToolApprove;
 pub use file_access_ask::FileAccessAsk;
 pub use gate::PermissionGate;
 pub use git_tracked_write::GitTrackedWriteApprove;
-pub use rules::{PermissionRule, PermissionScope, PermissionSet};
+pub use rules::{PermissionRule, PermissionScope, PermissionSet, PermissionSetPolicy};
 pub use sink::{ApprovalSink, AutoAllowSink, DenyAllSink, ScriptedSink, TuiApprovalSink};
 
 #[cfg(test)]
