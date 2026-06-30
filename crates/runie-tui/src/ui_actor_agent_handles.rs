@@ -69,7 +69,8 @@ pub enum AgentHandleBox {
 }
 
 impl AgentHandleBox {
-    #[allow(dead_code)]
+    /// Direct agent run (bypasses queue). Kept for future agent-control use.
+    #[allow(dead_code, reason = "kept for future direct agent control")]
     pub async fn run(&self, command: AgentCommand) {
         match self {
             Self::Actor(h) => h.run(command).await,

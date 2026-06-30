@@ -246,7 +246,10 @@ fn wrap_styled_spans_for_blockquote(spans: &[MdSpan], max_width: u16) -> Vec<Vec
 }
 
 /// Render a list item from styled spans.
-#[allow(dead_code)]
+///
+/// Kept for future ordered-list rendering in the markdown pipeline.
+/// Currently unused but exercised by doctests.
+#[allow(dead_code, reason = "kept for future ordered-list rendering")]
 pub fn render_list_item_from_spans(
     row: &[MdSpan],
     ordered: bool,

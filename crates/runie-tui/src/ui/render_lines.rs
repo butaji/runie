@@ -12,7 +12,11 @@ pub fn element_line_count(elem: &Element, content_width: u16) -> usize {
 }
 
 /// Render an element to terminal lines.
-#[allow(dead_code)]
+///
+/// Kept as a public entrypoint for future use (e.g. direct buffer rendering
+/// without going through the message rendering pipeline). Currently unused but
+/// exercised by integration tests.
+#[allow(dead_code, reason = "kept for future direct rendering use")]
 pub fn to_lines_internal(elem: &Element, content_width: u16) -> Vec<Line<'static>> {
     to_lines_and_count(elem, content_width).0
 }

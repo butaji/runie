@@ -1,10 +1,13 @@
+#![allow(dead_code, reason = "standalone module for future clipboard integration")]
+
 //! Terminal clipboard integration via OSC 52.
 //!
 //! OSC 52 (Set clipboard) is supported by most modern terminals:
 //! - iTerm2, WezTerm, Kitty, Alacritty, Windows Terminal, VS Code, etc.
 //! - tmux (with passthrough mode)
-
-#![allow(dead_code)]
+//!
+//! **Status**: Standalone module, not yet wired to TUI input handlers.
+//! Kept for future `/copy` slash command and `copy_to_clipboard` tool integration.
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use std::io::Write;

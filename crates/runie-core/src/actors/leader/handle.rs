@@ -48,7 +48,7 @@ pub struct LeaderHandle {
     /// Snapshot channel receiver placeholder. The TUI manages its own snapshot
     /// channel via UiActor::take_render_rx(); this field exists so that callers
     /// that only hold a LeaderHandle can still verify snapshot-channel delivery.
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "placeholder for snapshot-channel verification")]
     pub snapshot_rx: tokio::sync::watch::Receiver<crate::Snapshot>,
 }
 

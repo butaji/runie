@@ -130,7 +130,7 @@ impl AppState {
         self.create_assistant_message(id, content);
     }
     /// Test-only helper — production uses streaming pipeline.
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "test helper for streaming pipeline")]
     pub(crate) fn append_response_delta(&mut self, id: String, content: String) {
         self.track_response_tokens(&content);
         self.agent_state_mut().streaming_buffer.push_delta(&content);

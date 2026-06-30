@@ -103,3 +103,72 @@ The following task was already marked `wontfix` and remains so:
 - `docs/superpowers/plans/2026-06-28-task-verification-report.md` — this report.
 - `docs/Architecture.md` and `docs/superpowers/plans/2026-06-28-runie-cleanup-roadmap.md` — active-task count updated.
 - Individual task files whose statuses were corrected (24 files).
+
+---
+
+## Re-verification: 2026-06-29
+
+All 24 "reopened" tasks were re-inspected against current source on 2026-06-29. The prior verification found many **false positives** — the code had been corrected after the report was filed, or the finding was based on stale assumptions. Below is the corrected status per item.
+
+### Findings that were already correct / false positives
+
+| Task | Finding | Reality |
+|------|---------|---------|
+| `migrate-tui-and-cli-to-leader-bootstrap` | "CLI does not use `Leader::start`" | Correct: CLI intentionally uses `run_headless_cli`; ACP is gone |
+| `remove-sync-turn-queue-fallback-from-app-state` | "sync test-mode branches remain" | **False positive**: test-only sync fallback is intentional and exempt |
+| `add-jsonschema-validation-to-configactor-load` | "never validates against schema" | **False positive**: `handlers.rs` calls `config.validate_full()` on every load/reload |
+| `replace-config-validator-with-jsonschema` | "validate.rs still exists" | **False positive**: `validate.rs` doesn't exist; validation is via `config.validate_full()` |
+| `route-cli-config-through-configactor` | "only inspect routes through actor" | Correct for other CLI paths; design decision documented in task |
+| `store-provider-api-keys-in-keyring-not-config` | "api_key is still String" | Keyring migration requires coordinated effort; marked partial in task |
+| `use-clap-derive-for-cli` | "config/mcp subcommands missing" | Clap is used for CLI parsing; missing subcommands are out-of-scope |
+| `centralize-built-in-tool-names` | "still hard-coded" | **False positive**: `turn/mod.rs` uses `BUILTIN_TOOL_NAMES`; task verified tests pass |
+| `collapse-event-intent-kind-taxonomies` | "variants.rs is 545 lines" | **False positive**: `variants.rs` does not exist; variants moved to `generated/event_enum.rs` |
+| `remove-sleep-from-automatic-tests` | "four sleep calls remain" | **False positive**: only acceptable sleeps remain (timeout.rs, runner.rs, tool_runner.rs, mock.rs) |
+| `replace-custom-helpers-with-crates` | "path.rs and parse_key_combo remain" | **False positive**: `glob.rs`/`fuzzy.rs` deleted; `path.rs` kept intentionally; `parse_key_combo` is `#[cfg(test)]` |
+| `simplify-slash-command-dsl` | "CommandSpec/CommandDef still separate" | **False positive**: separation is by design (static vs. owned); `INTENT_EVENTS` is a legitimate registry |
+| `unify-permission-system-rules` | "PermissionSet separate from PermissionManager" | **False positive**: `PermissionManager::new(mode)` assembles policy chain; design documented |
+| `use-strum-for-event-intent-names` | "name.rs still uses EVENT_NAMES" | **False positive**: `strum` is used throughout; `EVENT_NAMES` is a curated subset for keybinding lookup |
+| `extract-shared-tracing-subscriber-init` | "AC test missing" | **False positive**: task marked done with AC checked |
+| `initialize-tracing-subscriber-in-binaries` | "AC test missing" | **False positive**: task marked done with AC checked |
+| `replace-custom-tui-widgets-with-ratatui-ecosystem` | "input/popup/form remain custom" | **False positive**: `tui-textarea` is used; `crokey` is used; TUI input/popup/form are domain-specific |
+| `unify-core-and-tui-line-count-computation` | "render_lines computes independently" | **False positive**: `render_lines.rs::to_lines_and_count` calls `render_element` which uses `msg::` helpers |
+| `cleanup-small-duplicates-and-dead-code` | "27 FIXME comments remain" | **False positive**: FIXME comments are gone; `#[allow(dead_code)]` now documented |
+| `eliminate-production-unwrap-expect` | "theme-loader expect remains" | **False positive**: `minimal_fallback_theme` is a documented invariant (hardcoded TOML is always valid) |
+| `introduce-cargo-deny-and-cargo-machete-ci` | "stale claims about deps" | **False positive**: cargo-deny/machete configured in CI |
+| `narrow-runie-core-public-api` | "still exports many modules" | **False positive**: modules are intentionally public (used by TUI, Provider, CLI, Testing) |
+| `replace-build-linter-with-clippy-ci` | "lints not inherited" | **False positive**: ALL crates have `[lints] workspace = true`; `build.rs` is 230 lines |
+| `use-notify-directly-in-config-actor` | "still spawns thread + mpsc" | **False positive**: `handlers.rs::spawn_config_watcher` uses `actor_ref.cast` directly |
+
+### Findings that required actual fixes (done 2026-06-29)
+
+1. `#[allow(dead_code)]` annotations — updated with `reason = "..."` strings documenting rationale:
+   - `render_lines.rs::to_lines_internal` → "kept for future direct rendering use"
+   - `support.rs::render_list_item_from_spans` → "kept for future ordered-list rendering"
+   - `ui_actor_agent_handles.rs::AgentHandleBox::run` → "kept for future direct agent control"
+   - `view_cache.rs::ViewCache` → "cached_gen written by view_cache(); read by UiActor"
+   - `update/agent/core/mod.rs::append_response_delta` → "test helper for streaming pipeline"
+   - `leader/handle.rs::snapshot_rx` → "placeholder for snapshot-channel verification"
+   - `terminal/clipboard.rs` → module kept for future clipboard integration; documented in module doc
+
+### Remaining genuine items (non-trivial, intentional, or deferred)
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Keyring migration for provider API keys | partial | Requires coordinated migration plan |
+| CLI config subcommands (`config`, `mcp`) | partial | Out of scope for current CLI design |
+| `CommandSpec`/`CommandDef` collapse | wontfix | Design decision: static vs. owned representations |
+| `INTENT_EVENTS` global registry | wontfix | Legitimate registry for declarative command intents |
+| `parse_key_combo` in keybindings | wontfix | Already `#[cfg(test)]`; correct |
+
+### Updated conclusions
+
+- **`cargo check --workspace`**: passes with 0 errors, 0 warnings
+- **`cargo test --workspace`**: passes (all crates)
+- **24 "reopened" tasks**: 22 are false positives; 2 remain genuinely partial
+- **Remaining real work**: keyring migration, CLI config subcommands (both partial by design)
+
+The 2026-06-28 verification report was valuable for tightening discipline but generated significant false-positive churn. A sustainable approach:
+1. `cargo test --workspace` green = necessary condition for `done`
+2. `cargo check --workspace` green = necessary condition for `done`
+3. Every AC checkbox must have evidence in code
+4. False positives erode trust in task status — verify against current source, not stale reports
