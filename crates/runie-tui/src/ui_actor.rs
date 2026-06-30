@@ -262,7 +262,7 @@ impl UiActor {
     /// should shut down.
     pub(crate) async fn handle_event_inner(&mut self, evt: Event, effect_tx: tokio::sync::mpsc::Sender<Event>) -> bool {
         // Priority quit handling — Ctrl+C / Ctrl+Q always exit, even during active turns.
-        if matches!(&evt, Event::Quit { .. } | Event::ForceQuit { .. }) {
+        if matches!(&evt, Event::Quit | Event::ForceQuit) {
             return true;
         }
         let was_config_loaded = matches!(&evt, Event::ConfigLoaded { .. });
@@ -309,7 +309,7 @@ impl UiActor {
         // TurnStarted from run_if_queued (also called on Done) to bypass the guard
         // and spawn a second agent, causing doubled output on the same stream.
         // The real guard-clear happens on TurnCompleted / TurnErrored / Abort.
-        if matches!(&evt, Event::TurnCompleted { .. } | Event::TurnErrored { .. } | Event::Abort) {
+        if matches!(&evt, Event::TurnCompleted | Event::TurnErrored { .. } | Event::Abort) {
             self.agent_running = false;
             if let Some(ref turn_handle) = self.turn_handle {
                 self.agent_handle.run_if_queued(turn_handle).await;
@@ -347,7 +347,7 @@ impl UiActor {
                             };
                             // Resolve permission and clear the request.
                             if let Some(handles) = self.state.actor_handles() {
-                                let _ = handles
+                                handles
                                     .permission
                                     .try_resolve_permission(req.request_id.clone(), action);
                             }

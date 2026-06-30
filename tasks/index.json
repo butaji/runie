@@ -47,7 +47,7 @@
   {
     "file": "centralize-env-lock-in-runie-testing.md",
     "title": "Centralize ENV_LOCK in runie-testing",
-    "status": "done"
+    "status": "partial"
   },
   {
     "file": "centralize-provider-credential-resolution.md",

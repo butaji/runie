@@ -1,12 +1,9 @@
 //! Shared test helpers for runie-core tests.
 //!
 //! Canonical source for `fresh_state()`, `type_str()`, and `exec()` within
-//! `runie-core`.  The remaining helpers (`tmp_store`,
+//! `runie-core`.  The remaining helpers (`ENV_LOCK`, `tmp_store`,
 //! `minimal_session`) also live here because they need access to
 //! `runie-core` internals.
-//!
-//! Note: `ENV_LOCK` is now centralized in `runie_testing::ENV_LOCK` and
-//! re-exported here for convenience.
 
 use std::sync::Mutex;
 
@@ -16,8 +13,8 @@ use crate::model::AppState;
 use crate::session::store::SessionStore;
 use crate::session::Session;
 
-// Re-export ENV_LOCK from runie_testing for convenience
-pub use runie_testing::ENV_LOCK;
+/// Global lock to serialize tests that touch environment variables.
+pub static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 /// Seed `state.config.model_providers` with the given provider configurations.
 /// Each entry is `(Name, base_url, api_key, models)`.

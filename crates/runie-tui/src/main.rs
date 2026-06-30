@@ -174,7 +174,7 @@ async fn input_forwarder_task(
             // Quit, ForceQuit, and Abort must reach UiActor even during an active
             // turn. Forward them on the same submit channel; UiActor handles them
             // at top priority before any turn logic.
-            Event::Quit { .. } | Event::ForceQuit { .. } | Event::Abort => {
+            Event::Quit | Event::ForceQuit | Event::Abort => {
                 let _ = submit_tx.send(evt).await;
             }
             _ => {}

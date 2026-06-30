@@ -16,7 +16,7 @@ static MOCK_ENABLED: AtomicBool = AtomicBool::new(false);
 thread_local! {
     /// Per-thread override for `is_mock_enabled` in tests. Allows tests to
     /// set deterministic mock state without interfering with parallel tests.
-    static TEST_MOCK: RefCell<Option<bool>> = RefCell::new(None);
+    static TEST_MOCK: RefCell<Option<bool>> = const { RefCell::new(None) };
 }
 static PROVIDER_CACHE: OnceLock<Vec<ProviderMeta>> = OnceLock::new();
 
