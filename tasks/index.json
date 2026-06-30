@@ -147,7 +147,7 @@
   {
     "file": "extend-markdown-inline-styles-to-lists-and-blockquotes.md",
     "title": "Extend markdown inline styles to lists and blockquotes",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "extract-shared-streaming-response-parser.md",

@@ -1,6 +1,6 @@
 # Extend markdown inline styles to lists and blockquotes
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Core / State
 **Priority**: P2
@@ -14,24 +14,27 @@
 
 ## Acceptance Criteria
 
-- [ ] `List` state preserves inline styles (bold, italic, code, links).
-- [ ] `Blockquote` state preserves inline styles.
-- [ ] `layout.rs` line counts and TUI renderers honor them.
-- [ ] `cargo check --workspace` and `cargo test --workspace` pass.
+- [x] `List` state preserves inline styles (bold, italic, code, links).
+- [x] `Blockquote` state preserves inline styles.
+- [x] `layout.rs` line counts and TUI renderers honor them.
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `list_item_with_inline_styles` — list item emits styled spans.
+- [x] `list_item_with_inline_styles` — list item emits styled spans.
 
 ### Layer 3 — Rendering
-- [ ] `blockquote_renders_inline_styles` — TestBackend buffer shows styled text inside blockquote.
+- [x] `blockquote_renders_inline_styles` — TestBackend buffer shows styled text inside blockquote.
 
 ## Files touched
 
 - `crates/runie-core/src/markdown/blocks.rs`
 - `crates/runie-core/src/layout.rs`
 - `crates/runie-tui/src/message/mod.rs`
+- `crates/runie-tui/src/message/support.rs`
+- `crates/runie-core/src/markdown/tests.rs`
+- `crates/runie-tui/src/ui/messages/mod.rs`
 
 ## Notes
 
