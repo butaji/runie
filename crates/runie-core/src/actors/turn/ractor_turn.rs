@@ -3,8 +3,6 @@
 //! Migrated from custom Actor trait to ractor for consistency with the rest
 //! of the actor system.
 
-use parking_lot::Mutex;
-
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 
 use crate::actors::ractor_adapter::spawn_ractor;
@@ -17,17 +15,17 @@ use super::messages::{NextIdResponse, TurnMsg};
 use super::state::TurnState;
 
 /// Ractor State for TurnActor — holds all mutable state.
-/// EventBus is wrapped in Mutex for interior mutability from `&self` context.
+/// EventBus is Clone and publish takes &self, no Mutex needed.
 pub struct TurnActorState {
     pub turn_state: TurnState,
-    pub bus: Mutex<EventBus<Event>>,
+    pub bus: EventBus<Event>,
 }
 
 impl Default for TurnActorState {
     fn default() -> Self {
         Self {
             turn_state: TurnState::default(),
-            bus: Mutex::new(EventBus::new(16)),
+            bus: EventBus::new(16),
         }
     }
 }
@@ -65,7 +63,7 @@ pub struct RactorTurnActor;
 
 impl RactorTurnActor {
     fn emit(state: &TurnActorState, event: Event) {
-        state.bus.lock().publish(event);
+        state.bus.publish(event);
     }
 
     fn handle_run_if_queued(state: &mut TurnActorState) {
@@ -311,7 +309,7 @@ impl Actor for RactorTurnActor {
     ) -> Result<Self::State, ActorProcessingErr> {
         Ok(TurnActorState {
             turn_state: TurnState::default(),
-            bus: Mutex::new(bus),
+            bus,
         })
     }
 

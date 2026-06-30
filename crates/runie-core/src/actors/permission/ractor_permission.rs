@@ -3,7 +3,6 @@
 //! This module provides a ractor-based implementation of the PermissionActor,
 //! following the same pattern as the InputActor migration.
 
-use parking_lot::Mutex;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 
 use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
@@ -92,7 +91,7 @@ impl RactorPermissionHandle {
 }
 
 /// Ractor State for PermissionActor — holds all mutable state.
-/// EventBus is wrapped in Mutex for interior mutability from `&self` context.
+/// EventBus is Clone and publish takes &self, no Mutex needed.
 /// ApprovalRegistry is kept wrapped in Mutex because it's process-wide.
 pub struct PermissionActorState {
     /// The authoritative approval registry (process-wide).
@@ -100,12 +99,12 @@ pub struct PermissionActorState {
     /// Current permission request state.
     pub current_request: Option<PermissionRequestState>,
     /// Bridge to the event bus for publishing facts.
-    pub bus: Mutex<EventBus<Event>>,
+    pub bus: EventBus<Event>,
 }
 
 impl PermissionActorState {
     fn emit(&self, event: Event) {
-        self.bus.lock().publish(event);
+        self.bus.publish(event);
     }
 }
 
@@ -188,7 +187,7 @@ impl Actor for RactorPermissionActor {
         Ok(PermissionActorState {
             registry: ApprovalRegistry::new(),
             current_request: None,
-            bus: Mutex::new(bus),
+            bus,
         })
     }
 

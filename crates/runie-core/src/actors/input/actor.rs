@@ -2,7 +2,6 @@
 //!
 //! This actor uses the ractor framework for actor supervision and message handling.
 
-use parking_lot::Mutex;
 use ractor::async_trait;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 
@@ -18,21 +17,19 @@ pub type RactorInputHandle = RactorHandle<InputMsg>;
 
 /// InputActor's ractor State — holds the authoritative input state.
 ///
-/// EventBus is wrapped in Mutex to allow publishing from `&self` context
-/// (ractor's handle method receives `&self`, not `&mut self`).
+/// EventBus is Clone and publish takes &self, no Mutex needed.
 pub struct InputActorState {
     /// The authoritative input state.
     input: InputState,
     /// Bridge to the event bus for publishing facts.
-    /// Wrapped in Mutex for interior mutability from `&self`.
-    bus: Mutex<EventBus<Event>>,
+    bus: EventBus<Event>,
 }
 
 impl InputActorState {
     /// Publish an InputChanged event with the current input state.
     fn publish_input_changed(&self) {
         let state = self.input.clone();
-        self.bus.lock().publish(Event::InputChanged {
+        self.bus.publish(Event::InputChanged {
             state: Box::new(state),
         });
     }
@@ -58,7 +55,7 @@ impl Actor for InputActor {
     ) -> Result<Self::State, ActorProcessingErr> {
         Ok(InputActorState {
             input: InputState::default(),
-            bus: Mutex::new(bus),
+            bus,
         })
     }
 

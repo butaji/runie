@@ -1,6 +1,5 @@
 //! Ractor-based SessionActor.
 
-use parking_lot::Mutex;
 use std::path::PathBuf;
 
 use ractor::async_trait;
@@ -23,9 +22,9 @@ use super::messages::SessionMsg;
 use super::ractor_session_handle::RactorSessionHandle;
 
 /// Ractor State for SessionActor — holds all mutable state.
-/// EventBus is wrapped in Mutex for interior mutability from `&self` context.
+/// EventBus is Clone and publish takes &self, no Mutex needed.
 pub struct SessionActorState {
-    pub bus: Mutex<EventBus<Event>>,
+    pub bus: EventBus<Event>,
     pub trust: TrustManager,
     pub store: SessionStore,
     pub session_state: SessionState,
@@ -34,7 +33,7 @@ pub struct SessionActorState {
 
 impl SessionActorState {
     fn emit(&self, event: Event) {
-        self.bus.lock().publish(event);
+        self.bus.publish(event);
     }
 
     fn emit_changed(&self) {
@@ -417,7 +416,7 @@ impl Actor for RactorSessionActor {
             .unwrap_or_else(|| SessionStore::new(std::env::temp_dir().join("runie_sessions")));
 
         let state = SessionActorState {
-            bus: Mutex::new(bus),
+            bus,
             trust: trust.clone(),
             store,
             session_state: SessionState::default(),
