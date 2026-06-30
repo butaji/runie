@@ -233,6 +233,32 @@ impl UiActor {
     async fn handle_input_event(&mut self, evt: &Event) {
         match evt {
             Event::Input(c) => {
+                // Intercept y/n/a keys when a permission dialog is open.
+                // Route to permission actor instead of input box.
+                if let Some(req) = self.state.permission_request_opt() {
+                    match c.to_ascii_lowercase() {
+                        'y' | 'n' | 'a' => {
+                            // y/n/a resolve the permission; input continues to input box.
+                            // Note: 'a' (Always allow) maps to Allow for now.
+                            // Full always-allow behavior requires trust rule updates.
+                            let action = match c.to_ascii_lowercase() {
+                                'y' | 'a' => runie_core::permissions::PermissionAction::Allow,
+                                'n' => runie_core::permissions::PermissionAction::Deny,
+                                _ => return,
+                            };
+                            // Resolve permission and clear the request.
+                            if let Some(handles) = self.state.actor_handles() {
+                                let _ = handles
+                                    .permission
+                                    .try_resolve_permission(req.request_id.clone(), action);
+                            }
+                            *self.state.permission_request_mut() = None;
+                            self.state.view_mut().dirty = true;
+                            return;
+                        }
+                        _ => {}
+                    }
+                }
                 self.apply_event(evt.clone());
                 self.send_input_msg(runie_core::actors::InputMsg::InsertChar(*c))
                     .await;

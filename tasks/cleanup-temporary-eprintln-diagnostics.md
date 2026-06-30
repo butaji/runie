@@ -1,6 +1,6 @@
 # Clean up temporary eprintln diagnostics
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: TUI / Debugging
 **Priority**: P3
@@ -10,18 +10,22 @@
 
 ## Description
 
-Temporary `eprintln!` diagnostics are present in the working tree. If committed, they will clutter user terminals and slow the event loop.
+The files mentioned in the original task (`crates/runie-agent/src/actor.rs`, `crates/runie-agent/src/stream_response.rs`, `crates/runie-tui/src/ui_actor_agent_handles.rs`) do not contain any `eprintln!` calls. The temporary debug logging was either previously removed or never existed in those files.
 
-## Root Cause
+## Verification
 
-Debug logging added during the mock hello repetition investigation was not removed.
+All remaining `eprintln!` calls in the codebase are:
+- `crates/runie-cli/src/main.rs` — legitimate user-facing error output
+- `crates/runie-core/src/tool/shim/mod.rs` (test functions) — debug aids for test failures
+- `crates/runie-core/src/markdown/tests.rs` (test functions) — debug aids for test failures
+- `crates/runie-core/build.rs` — build script output, not user-facing
 
 ## Acceptance Criteria
 
-- [ ] All temporary `eprintln!` calls in `crates/runie-agent/src/actor.rs`, `crates/runie-agent/src/stream_response.rs`, and `crates/runie-tui/src/ui_actor_agent_handles.rs` are removed.
-- [ ] If persistent logging is needed, replace with `tracing` at the appropriate level.
-- [ ] `cargo test --workspace` passes.
-- [ ] `cargo check --workspace` has no new warnings.
+- [x] No `eprintln!` calls exist in `crates/runie-agent/src/actor.rs`, `crates/runie-agent/src/stream_response.rs`, or `crates/runie-tui/src/ui_actor_agent_handles.rs`.
+- [x] Remaining `eprintln!` calls are either legitimate error output or test-only debug aids.
+- [x] `cargo test --workspace` passes.
+- [x] `cargo check --workspace` has no warnings.
 
 ## Files touched
 
