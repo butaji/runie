@@ -22,6 +22,8 @@ mod chat_visibility;
 #[cfg(test)]
 mod command_forms;
 #[cfg(test)]
+mod command_palette_close;
+#[cfg(test)]
 mod compaction;
 #[cfg(test)]
 mod context_grouping;

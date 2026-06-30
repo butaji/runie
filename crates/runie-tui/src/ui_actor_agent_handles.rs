@@ -40,6 +40,13 @@ impl LeaderAgentActorHandle {
         Self { inner }
     }
 
+    /// Create a no-op handle for use before `Leader::start_with_bus()` returns.
+    pub fn new_noop() -> Self {
+        Self {
+            inner: std::sync::Arc::new(NoOpAgentHandle),
+        }
+    }
+
     pub async fn run(&self, command: AgentCommand) {
         let cmd = runie_core::actors::leader::LeaderAgentCmd {
             content: command.content.clone(),
@@ -58,6 +65,20 @@ impl LeaderAgentActorHandle {
         turn_handle
             .send(runie_core::actors::TurnMsg::RunIfQueued)
             .await;
+    }
+}
+
+/// No-op agent handle used during early startup before the real agent is available.
+/// All methods are no-ops; call `LeaderAgentActorHandle::new()` after `Leader::start_with_bus()`.
+#[derive(Clone, Default)]
+pub struct NoOpAgentHandle;
+
+impl runie_core::actors::leader::LeaderAgentHandle for NoOpAgentHandle {
+    fn run(
+        &self,
+        _cmd: runie_core::actors::leader::LeaderAgentCmd,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        Box::pin(async {})
     }
 }
 

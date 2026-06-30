@@ -7,10 +7,10 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use runie_core::bus::{EventBus, Receiver};
-use runie_core::{AppState, Event, Snapshot};
 use runie_agent::AgentCommand;
 use runie_agent::truncate::TruncationPolicy;
+use runie_core::bus::{EventBus, Receiver};
+use runie_core::{AppState, Event, Snapshot};
 
 use crate::effects::EffectCommand;
 use crate::pace::PacedRenderer;
@@ -45,6 +45,9 @@ pub struct UiActor {
     /// Guards against duplicate agent runs when TurnStarted arrives multiple times.
     /// Set true when agent_handle.run() is called; cleared when Done is received.
     pub(crate) agent_running: bool,
+    /// Placeholder receiver stored when UiActor is created with `with_external_bus_rx`.
+    /// Consumed by `run_with_external_rx`.
+    _bus_rx: Option<Receiver<Event>>,
 }
 
 impl UiActor {
@@ -68,6 +71,43 @@ impl UiActor {
             shutdown_tx,
             caps,
         )
+    }
+
+    /// Create a new `UiActor` with a pre-created bus receiver.
+    ///
+    /// Use this when you need UiActor to subscribe to the bus BEFORE actors emit
+    /// initial facts (e.g. `ConfigLoaded`). Create the bus, subscribe, pass the
+    /// receiver here, then call `leader.start_with_bus()`. UiActor will receive
+    /// all initial facts. Call `set_agent_handle()` after `start_with_bus()` returns.
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_external_bus_rx(
+        mut state: AppState,
+        bus_rx: Receiver<Event>,
+        kb_tx: tokio::sync::watch::Sender<HashMap<String, String>>,
+        bus: EventBus<Event>,
+        shutdown_tx: tokio::sync::oneshot::Sender<()>,
+        caps: TermCaps,
+    ) -> Self {
+        let (render_tx, render_rx) = tokio::sync::watch::channel(state.snapshot());
+        let prev_input = state.input().input.clone();
+        let prev_cursor_pos = state.input().cursor_pos;
+        Self {
+            state,
+            render_tx,
+            render_rx: Some(render_rx),
+            agent_handle: AgentHandleBox::Leader(LeaderAgentActorHandle::new_noop()),
+            kb_tx,
+            bus,
+            shutdown_tx: Some(shutdown_tx),
+            caps,
+            paced: PacedRenderer::new(),
+            prev_input,
+            prev_cursor_pos,
+            pending_submit: None,
+            agent_running: false,
+            // Store the pre-created receiver for run_with_external_rx
+            _bus_rx: Some(bus_rx),
+        }
     }
 
     /// Create a new `UiActor` with a generic agent handle.
@@ -99,7 +139,31 @@ impl UiActor {
             prev_cursor_pos,
             pending_submit: None,
             agent_running: false,
+            _bus_rx: None,
         }
+    }
+
+    /// Replace the agent handle after construction.
+    /// Use this when UiActor is created before `Leader::start_with_bus()` returns
+    /// (so the real agent handle is not yet available). Call this after
+    /// `leader.start_with_bus()` to install the real handle.
+    pub fn set_agent_handle(&mut self, handle: AgentHandleBox) {
+        self.agent_handle = handle;
+    }
+
+    /// Run the actor with a pre-created bus receiver.
+    ///
+    /// Use this when you need to subscribe to the bus BEFORE `Leader::start_with_bus()`
+    /// returns (so that UiActor receives initial facts like `ConfigLoaded`).
+    /// Create the bus, subscribe UiActor, call `start_with_bus()`, then call this method.
+    pub async fn run_with_external_rx(
+        mut self,
+        submit_rx: tokio::sync::mpsc::Receiver<Event>,
+    ) {
+        let rx = self._bus_rx.take().expect(
+            "run_with_external_rx requires UiActor created with with_external_bus_rx",
+        );
+        self.run(rx, submit_rx).await;
     }
 
     /// Take the snapshot channel receiver, transferring ownership to the render task.

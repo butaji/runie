@@ -98,12 +98,26 @@ pub fn push_dialog_to_back_stack(state: &mut AppState, dialog: DialogState) {
 }
 
 /// Process the result of executing a command.
+/// Closes the command palette after most command results (except when opening a new dialog).
 pub fn process_command_result(state: &mut AppState, result: CommandResult) {
     use crate::commands::CommandResult as CR;
     match result {
-        CR::Message(msg) => state.add_system_msg(msg),
-        CR::Warning(msg) => state.notify(msg, crate::event::TransientLevel::Warning),
-        CR::Event(evt) => state.update(evt),
+        CR::Message(msg) => {
+            // Close command palette and return to chat input
+            close_command_palette_if_open(state);
+            state.add_system_msg(msg);
+        }
+        CR::Warning(msg) => {
+            // Close command palette and return to chat input
+            close_command_palette_if_open(state);
+            state.notify(msg, crate::event::TransientLevel::Warning);
+        }
+        CR::Event(evt) => {
+            // Close command palette before processing the event
+            // (the event may open a new dialog)
+            close_command_palette_if_open(state);
+            state.update(evt);
+        }
         CR::OpenDialog(d) => {
             if let Some(current) = state.open_dialog_mut().take() {
                 push_dialog_to_back_stack(state, current);
@@ -126,6 +140,21 @@ pub fn process_command_result(state: &mut AppState, result: CommandResult) {
                 panels: *stack,
             });
         }
-        CR::None => {}
+        CR::None => {
+            // No-op, close any open command palette
+            close_command_palette_if_open(state);
+        }
+    }
+}
+
+/// Close the command palette if it is open, returning to chat input.
+fn close_command_palette_if_open(state: &mut AppState) {
+    if let Some(DialogState::Active { kind, .. }) = state.open_dialog() {
+        if *kind == DialogKind::CommandPalette {
+            *state.open_dialog_mut() = None;
+            state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+            state.view_mut().scroll = 0;
+            state.view_mut().dirty = true;
+        }
     }
 }
