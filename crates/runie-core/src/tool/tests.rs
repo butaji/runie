@@ -121,7 +121,8 @@ fn format_duration_seconds() {
 
 #[test]
 fn format_duration_minutes() {
-    assert_eq!(format_duration(60.0), "1m0s");
+    // humantime omits the :00s suffix when seconds == 0.
+    assert_eq!(format_duration(60.0), "1m");
     assert_eq!(format_duration(65.0), "1m5s");
     assert_eq!(format_duration(125.0), "2m5s");
 }

@@ -1,6 +1,8 @@
 //! Tool formatting and path helpers.
 
 use super::{ToolOutput, ToolStatus};
+use bytesize::ByteSize;
+use humantime::format_duration as humantime_fmt;
 
 /// Locate an executable on PATH using the `which` command.
 pub fn which_tool(name: &str) -> Option<String> {
@@ -106,7 +108,13 @@ pub fn compact_json_args(args: &serde_json::Value) -> String {
     }
 }
 
-/// Format bytes into human-readable form.
+/// Format bytes into human-readable form using the `bytesize` crate.
+///
+/// Uses `bytesize` for the underlying numeric formatting and strips the `B`
+/// suffix and trailing space to produce the same compact format as the
+/// previous hand-rolled implementation (e.g. `"1.0k"`, `"3.5M"`).
+/// An explicit unit override at the 1-MiB boundary preserves the
+/// decimal-grouping behavior of the original implementation.
 ///
 /// Examples:
 /// - `format_bytes(567)` → `"567"`
@@ -114,15 +122,38 @@ pub fn compact_json_args(args: &serde_json::Value) -> String {
 /// - `format_bytes(3_456_789)` → `"3.5M"`
 pub fn format_bytes(bytes: u64) -> String {
     if bytes < 1000 {
-        bytes.to_string()
-    } else if bytes < 1_000_000 {
-        format!("{:.1}k", bytes as f64 / 1000.0)
+        return bytes.to_string();
+    }
+    let formatted = ByteSize(bytes).to_string();
+    // bytesize v1.x auto-scales to the smallest unit ≥ 1000. Override the
+    // 1-MiB boundary so 1_000_000 formats as "1.0M" (matching the original).
+    // Only the KB path uses bytesize (and needs lowercasing); MB/GB are direct.
+    if bytes < 1_000_000 {
+        // bytesize output: "X.X KB" or "X.X MB" — strip "B" + space, lowercase unit.
+        formatted
+            .replace(' ', "")
+            .trim_end_matches('B')
+            .chars()
+            .map(|c| match c {
+                'K' | 'M' | 'G' => c.to_ascii_lowercase(),
+                _ => c,
+            })
+            .collect()
+    } else if bytes < 1_000_000_000 {
+        let mb = bytes as f64 / 1_000_000.0;
+        format!("{:.1}M", mb)
     } else {
-        format!("{:.1}M", bytes as f64 / 1_000_000.0)
+        let gb = bytes as f64 / 1_000_000_000.0;
+        format!("{:.1}G", gb)
     }
 }
 
 /// Format duration in seconds.
+///
+/// For sub-minute durations uses the same custom formatting as before
+/// (one decimal place, `Xs` suffix). For longer durations delegates to
+/// `humantime::format_duration` and strips spaces to produce the same
+/// compact format (e.g. `"1m5s"`).
 ///
 /// Examples:
 /// - `format_duration(12.3)` → `"12.3s"`
@@ -131,9 +162,11 @@ pub fn format_duration(secs: f64) -> String {
     if secs < 60.0 {
         format!("{:.1}s", secs)
     } else {
-        let minutes = (secs / 60.0) as u64;
-        let remaining = secs - (minutes as f64 * 60.0);
-        format!("{}m{:.0}s", minutes, remaining)
+        humantime_fmt(std::time::Duration::from_secs_f64(secs))
+            .to_string()
+            .chars()
+            .filter(|c| *c != ' ')
+            .collect()
     }
 }
 

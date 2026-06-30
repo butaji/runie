@@ -892,7 +892,7 @@
   {
     "file": "use-bytesize-humantime-for-tool-formatting.md",
     "title": "Use bytesize and humantime for tool formatting",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-channels-for-subagent-result-collection.md",
