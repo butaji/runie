@@ -1,6 +1,6 @@
 # Buffer TCP lines in leader server
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / IPC
 **Priority**: P3

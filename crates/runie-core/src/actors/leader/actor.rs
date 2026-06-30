@@ -201,6 +201,7 @@ impl Leader {
         let bus2 = bus.clone();
         let (mut rd, mut wr) = tokio::io::split(stream);
         let mut buf = vec![0u8; 1024].into_boxed_slice();
+        let mut line_buf = String::new();
 
         let wr_handle = tokio::spawn(async move {
             let mut sub = bus2.subscribe();
@@ -217,10 +218,20 @@ impl Leader {
 
         loop {
             match rd.read(&mut buf).await {
-                Ok(0) => break,
+                Ok(0) => {
+                    if !line_buf.is_empty() {
+                        process_client_line(&line_buf, &bus);
+                    }
+                    break;
+                }
                 Ok(n) => {
-                    if let Ok(line) = std::str::from_utf8(&buf[..n]) {
-                        process_client_line(line, &bus);
+                    if let Ok(s) = std::str::from_utf8(&buf[..n]) {
+                        line_buf.push_str(s);
+                        while let Some(pos) = line_buf.find('\n') {
+                            let line = line_buf[..=pos].to_string();
+                            line_buf.drain(..=pos);
+                            process_client_line(&line, &bus);
+                        }
                     }
                 }
                 Err(_) => break,
@@ -309,6 +320,10 @@ fn json_to_intent(json: &serde_json::Value) -> Option<CoreEvent> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use crate::bus::EventBus;
+
     use super::*;
 
     /// Layer 2: Verify `Leader::new()` defaults to embedded mode (no TCP).
@@ -337,5 +352,32 @@ mod tests {
     fn leader_config_with_tcp_addr() {
         let config = LeaderConfig::default().with_tcp_addr("127.0.0.1:8080");
         assert_eq!(config.tcp_addr.as_deref(), Some("127.0.0.1:8080"));
+    }
+
+    /// Layer 1: `process_client_line` parses a valid intent line.
+    #[tokio::test]
+    async fn tcp_line_parsed_to_intent() {
+        let bus = Arc::new(EventBus::<CoreEvent>::new(16));
+        let mut sub = bus.subscribe();
+
+        process_client_line(r#"{"type": "interrupt"}"#, &bus);
+
+        let event = sub.recv().await.unwrap();
+        assert!(matches!(event, CoreEvent::Abort));
+    }
+
+    /// Layer 1: `process_client_line` ignores empty and non-intent lines.
+    #[tokio::test]
+    async fn tcp_line_ignores_empty_and_unknown() {
+        let bus = Arc::new(EventBus::<CoreEvent>::new(16));
+        let mut sub = bus.subscribe();
+
+        process_client_line("", &bus);
+        process_client_line("   ", &bus);
+        process_client_line(r#"{"type": "unknown"}"#, &bus);
+
+        // No events should be published
+        let timeout = tokio::time::timeout(std::time::Duration::from_millis(50), sub.recv());
+        assert!(timeout.await.is_err(), "Expected no events for empty/unknown lines");
     }
 }

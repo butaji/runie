@@ -12,7 +12,7 @@
   {
     "file": "buffer-tcp-lines-in-leader-server.md",
     "title": "Buffer TCP lines in leader server",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "build-runie-vs-grok-build-comparison-harness.md",
