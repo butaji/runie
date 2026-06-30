@@ -439,4 +439,72 @@ mod tests {
         }
         assert!(found);
     }
+
+    /// Regression test: queue_follow_up then Done should leave message in queue.
+    /// When Done is processed, run_if_queued should start the next turn.
+    ///
+    /// Flow: SubmitUserMessage → RunIfQueued → TurnStarted
+    ///       QueueFollowUp (queues message)
+    ///       Done → TurnCompleted (turn_active becomes false)
+    ///       RunIfQueued → TurnStarted (pops queued message, starts second turn)
+    #[tokio::test]
+    async fn queue_follow_up_after_done_starts_queued_turn() {
+        let bus = EventBus::<Event>::new(16);
+        let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
+        let mut sub = bus.subscribe();
+
+        // First turn starts
+        handle
+            .send(TurnMsg::SubmitUserMessage {
+                content: "first".into(),
+                id: "req.0".into(),
+            })
+            .await;
+        handle.send(TurnMsg::RunIfQueued).await;
+
+        // Wait for TurnStarted
+        let mut found_first_turn = false;
+        while let Ok(evt) = sub.recv().await {
+            if matches!(evt, Event::TurnStarted { id, .. } if id == "req.0") {
+                found_first_turn = true;
+                break;
+            }
+        }
+        assert!(found_first_turn, "First turn should start");
+
+        // Queue a follow-up while first turn is active
+        handle
+            .send(TurnMsg::QueueFollowUp {
+                content: "second".into(),
+            })
+            .await;
+
+        // First turn completes - Done message results in TurnCompleted event
+        handle
+            .send(TurnMsg::Done { id: "req.0".into() })
+            .await;
+
+        // Wait for TurnCompleted
+        let mut found_completed = false;
+        while let Ok(evt) = sub.recv().await {
+            if matches!(evt, Event::TurnCompleted) {
+                found_completed = true;
+                break;
+            }
+        }
+        assert!(found_completed, "First turn should complete");
+
+        // After TurnCompleted, run_if_queued should start the queued turn
+        handle.send(TurnMsg::RunIfQueued).await;
+
+        // After RunIfQueued, second turn should start
+        let mut found_second_turn = false;
+        while let Ok(evt) = sub.recv().await {
+            if matches!(evt, Event::TurnStarted { id, .. } if id == "req.1") {
+                found_second_turn = true;
+                break;
+            }
+        }
+        assert!(found_second_turn, "Second turn should start after Done + RunIfQueued");
+    }
 }

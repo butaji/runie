@@ -197,7 +197,7 @@
   {
     "file": "delete-dead-runie-core-testing-module.md",
     "title": "Delete dead runie-core testing module",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-dead-runie-macros-crate.md",
