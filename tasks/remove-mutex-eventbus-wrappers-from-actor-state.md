@@ -1,6 +1,6 @@
 # Remove `Mutex<EventBus>` wrappers from actor `State`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Actors
 **Priority**: P2
@@ -10,13 +10,13 @@
 
 ## Description
 
-Several actors hold `EventBus<Event>` inside `parking_lot::Mutex` in their ractor `State`. `EventBus` is `Clone` and `publish` takes `&self`, so the `Mutex` is pure overhead. Hold the bus directly and change `emit` helpers to `&mut self`.
+Several actors held `EventBus<Event>` inside `parking_lot::Mutex` in their ractor `State`. `EventBus` is `Clone` and `publish` takes `&self`, so the `Mutex` was pure overhead. Now all actors hold the bus directly.
 
 ## Acceptance Criteria
 
-- [ ] Remove `Mutex<EventBus>` from `RactorTurnActor`, `RactorSessionActor`, `InputActor`, `RactorConfigActor`, `RactorPermissionActor` state.
-- [ ] Update `emit` helpers to take `&mut self`.
-- [ ] `cargo check --workspace` and `cargo test --workspace` pass.
+- [x] Remove `Mutex<EventBus>` from `RactorTurnActor`, `RactorSessionActor`, `InputActor`, `RactorConfigActor`, `RactorPermissionActor` state.
+- [x] Update `emit` helpers to take `&self` (no longer needed since publish is already &self).
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.
 
 ## Tests
 
@@ -31,7 +31,7 @@ Several actors hold `EventBus<Event>` inside `parking_lot::Mutex` in their racto
 - `crates/runie-core/src/actors/turn/ractor_turn.rs`
 - `crates/runie-core/src/actors/session/ractor_session_actor.rs`
 - `crates/runie-core/src/actors/input/actor.rs`
-- `crates/runie-core/src/actors/config/ractor_config.rs`
+- `crates/runie-core/src/actors/config/config_handle.rs`
 - `crates/runie-core/src/actors/permission/ractor_permission.rs`
 
 ## Notes
