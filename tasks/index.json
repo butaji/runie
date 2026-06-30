@@ -397,7 +397,7 @@
   {
     "file": "fix-tui-turn-complete-leaves-working-status-and-queued.md",
     "title": "Fix TUI turn-complete leaves Working status and queued request",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "fold-lifecycle-state-machine-into-provider-events.md",
@@ -482,7 +482,7 @@
   {
     "file": "move-grep-find-tests-to-tests-directory.md",
     "title": "Move grep_find tests to tests directory",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "narrow-runie-core-public-api.md",
@@ -537,7 +537,7 @@
   {
     "file": "remove-agent-handlebox-dead-code-or-wire-queue-drain.md",
     "title": "Remove AgentHandleBox dead code or wire run_if_queued",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-dead-migration-scaffolding.md",
@@ -577,7 +577,7 @@
   {
     "file": "remove-runtime-presence-branching-in-submit-user-message.md",
     "title": "Remove runtime presence branching in submit user message",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-sleep-from-automatic-tests.md",
