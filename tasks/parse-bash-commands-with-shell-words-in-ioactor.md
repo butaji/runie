@@ -12,6 +12,8 @@
 
 Use `shell_words::split` to parse commands into argv, then execute with `tokio::process::Command` directly inside the async `IoActor` handler. Keep `sh -c` only when explicitly requested (e.g., via a `shell: true` flag).
 
+**Design impact:** No change to TUI element design or composition. Only bash-tool execution behavior changes.
+
 ## Acceptance Criteria
 
 - [ ] Parse bash tool arguments with `shell_words::split`.

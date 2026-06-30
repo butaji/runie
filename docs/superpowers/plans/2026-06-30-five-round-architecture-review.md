@@ -3,6 +3,8 @@
 **Date:** 2026-06-30  
 **Goal:** less code, Pareto (80/20) choices, unification and simplification. Replace custom code with crates/libraries/OS features where it clearly reduces maintenance.
 
+**TUI design freeze:** TUI *behavior* may change (what keys do, how fast/redraws work, how errors surface), but TUI *element design and composition* (layout, widgets, colors, spacing, status bar shape, message list look, permission popup layout, theme palette, etc.) stays frozen unless a task explicitly scopes a visual redesign. Crate replacements behind the TUI must reproduce the existing visual output.
+
 Five read-only review agents covered the workspace, plus `ctx7` lookups and a read-only survey of `~/Code/agents/{kimi-code,goose,codex}` for cross-pollination. No code was executed or modified.
 
 ---
@@ -14,10 +16,10 @@ Five read-only review agents covered the workspace, plus `ctx7` lookups and a re
 1. `UiActor` still mutates `AppState` directly (input, dialogs, submit, autocomplete). Route through `InputActor`/`TurnActor`/`DialogMsg`.
 2. TUI subscribes to the event bus after `Leader::start`, dropping `ConfigLoaded`/`TrustLoaded`/`HistoryLoaded`.
 3. Permission dialog keys are routed to the input box; arrows/Esc accidentally deny.
-4. Custom input box while `tui-textarea`/`tui-input` are already in `Cargo.toml`.
-5. Custom list/popup rendering instead of `ratatui::widgets::List`.
+4. Custom input box while `tui-textarea`/`tui-input` are already in `Cargo.toml` — *implementation-only swap, visual behavior frozen*.
+5. Custom list/popup rendering instead of `ratatui::widgets::List` — *implementation-only swap, visual behavior frozen*.
 6. `app_init::bootstrap` blocks on skill/auth loading and writes directly to `AppState`.
-7. Theme is set via global mutable state on every frame.
+7. Theme is set via global mutable state on every frame — *keep the same theme values and rendering; change only when/where the cache is updated*.
 8. `terminal/clipboard.rs` is dead code; clipboard effects go through `IoActor`.
 
 ### Round 2 — Actors / event bus / state / commands / dialogs
@@ -104,6 +106,9 @@ Five read-only review agents covered the workspace, plus `ctx7` lookups and a re
 | P2 | Git detection custom parser | `git2` | **new** `replace-custom-git-detection-with-git2.md` |
 | P2 | Custom ANSI quantization tables | `ansi_colours` | `adopt-palette-for-theme-color-math.md` |
 | P2 | Permission dialog raw JSON render | Pre-format in `Snapshot` | `refine-permission-dialog-key-handling.md` |
+
+> **TUI design freeze applies to all rows above that touch rendering/widgets:** the visible output (colors, layout, selection highlights, message wrapping, popup shape) must remain unchanged; only the implementation behind it changes.
+
 | P3 | `CommandCategory` hand-written `FromStr` | `strum::EnumString` | `replace-remaining-custom-parsers-and-macros-with-strum.md` |
 | P3 | `McpServer.scope` String | `ConfigScope` + `clap::ValueEnum` | **new** `use-configscope-enum-for-mcp-server-scope.md` |
 | P3 | `RactorHandle::send`/`send_message` alias | Delete alias | **new** `remove-ractor-send-message-alias.md` |

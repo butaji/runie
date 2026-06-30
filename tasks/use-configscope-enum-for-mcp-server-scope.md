@@ -12,6 +12,8 @@
 
 Use the existing `ConfigScope` enum in `McpServer` and derive `clap::ValueEnum` for the CLI flag. Delete manual string conversions.
 
+**Design impact:** No change to TUI element design or composition. Only the type safety of MCP scope handling changes.
+
 ## Acceptance Criteria
 
 - [ ] Change `McpServer.scope` from `String` to `ConfigScope`.

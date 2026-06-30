@@ -12,6 +12,8 @@
 
 Make config edits comment-preserving and cross-process safe by using `toml_edit` for surgical edits and `fs2` advisory file locks.
 
+**Design impact:** No change to TUI element design or composition. Only internal config persistence behavior changes.
+
 ## Acceptance Criteria
 
 - [ ] Replace load-modify-save via `toml::Value` with `toml_edit::Document` edits for provider, MCP, theme, and auth sections.

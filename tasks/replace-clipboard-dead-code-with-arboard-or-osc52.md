@@ -12,6 +12,8 @@
 
 Delete the dead OSC-52 module and use `arboard` for clipboard writes, with `crossterm`'s `osc52` feature as a fallback if `arboard` proves problematic in CI/headless.
 
+**Design impact:** No change to TUI element design or composition. Only the clipboard-copy mechanism changes; any transient status message must reuse the existing status style.
+
 ## Acceptance Criteria
 
 - [ ] Delete `crates/runie-tui/src/terminal/clipboard.rs`.

@@ -12,6 +12,8 @@
 
 Adopt the `figment` crate for layered config: defaults → global TOML → project TOML → environment. Delete the custom merge code.
 
+**Design impact:** No change to TUI element design or composition. Only config resolution behavior changes.
+
 ## Acceptance Criteria
 
 - [ ] Add `figment` to workspace dependencies.

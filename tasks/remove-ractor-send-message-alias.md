@@ -12,6 +12,8 @@
 
 Pick one name (`send`) and delete `send_message` everywhere. Update call sites.
 
+**Design impact:** No change to TUI element design or composition. Only the internal actor-handle API changes.
+
 ## Acceptance Criteria
 
 - [ ] Remove the `send_message` method from `RactorHandle` and any actor-specific handle wrappers.

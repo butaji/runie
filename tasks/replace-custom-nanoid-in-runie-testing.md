@@ -12,6 +12,8 @@
 
 Replace the custom function with `uuid::Uuid::new_v4()` at the call site, or add the `nanoid` crate if nanoid-format IDs are genuinely required.
 
+**Design impact:** No change to TUI element design or composition. Only internal test ID generation changes.
+
 ## Acceptance Criteria
 
 - [ ] Delete the custom `nanoid()` helper.

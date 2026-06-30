@@ -12,6 +12,8 @@
 
 Move the tests into `crates/runie-agent/src/tests/parser.rs` or an integration test under `crates/runie-agent/tests/`.
 
+**Design impact:** No change to TUI element design or composition. Only test file organization changes.
+
 ## Acceptance Criteria
 
 - [ ] Remove `grep_find.rs` from `src/`.

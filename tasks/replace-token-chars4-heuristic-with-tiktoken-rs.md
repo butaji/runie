@@ -12,6 +12,8 @@
 
 Adopt `tiktoken-rs` for OpenAI-compatible token counts, or `tokenizers` for model-specific counts. Keep the old heuristic only as a documented fallback for quick UI estimates if exact tokenization is unavailable.
 
+**Design impact:** No change to TUI element design or composition. Only the numeric token count rendered in the status bar may become more accurate; the visual style remains the same.
+
 ## Acceptance Criteria
 
 - [ ] Add `tiktoken-rs` (or `tokenizers`) to workspace dependencies.

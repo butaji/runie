@@ -10,7 +10,9 @@
 
 ## Goal
 
-Replace the custom parser with `git2::Repository::discover`, `repo.head()`, and `repo.find_remote("origin")`.
+Replace the custom parser with `git2::Repository::discover`, `repo.head()`, and `repo.find_remote("origin").
+
+**Design impact:** No change to TUI element design or composition. Only the accuracy of branch/origin metadata shown in the status bar changes.
 
 ## Acceptance Criteria
 

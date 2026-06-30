@@ -12,6 +12,8 @@
 
 Use `secrecy::SecretString` directly, or alias `Token` to `SecretString`, and delete the custom wrapper code.
 
+**Design impact:** No change to TUI element design or composition. Only internal credential-handling behavior changes.
+
 ## Acceptance Criteria
 
 - [ ] Remove the `Token` struct and its impls from `storage.rs`.

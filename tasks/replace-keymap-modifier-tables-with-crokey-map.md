@@ -12,6 +12,8 @@
 
 Build a single `HashMap<crokey::KeyCombination, CoreEvent>` from the default binding strings and dispatch through it. Delete the per-modifier match tables.
 
+**Design impact:** No change to TUI element design or composition. Only the internal key-event dispatch behavior changes; every shortcut must produce the same visible result as before.
+
 ## Acceptance Criteria
 
 - [ ] Parse default keybinding strings into `crokey::KeyCombination` keys.

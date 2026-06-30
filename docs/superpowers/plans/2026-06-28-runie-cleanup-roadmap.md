@@ -8,6 +8,8 @@
 
 **Tech Stack:** Rust, Tokio, Ratatui, ractor, reqwest, pulldown-cmark, strum, glob/globset, nucleo-matcher/sublime-fuzzy, shellexpand, etcetera, ignore, walkdir, tracing, backon, keyring, jsonschema, clap, dotenvy, shell-words, tui-textarea, tui-input, ansi_colours, notify.
 
+**TUI design freeze:** TUI *behavior* may change (key handling, event ordering, redraw pacing, error surfacing), but TUI *element design and composition* (layouts, widgets, colors, spacing, status bar shape, message list look, popup layout, theme palette) stays frozen unless a task explicitly scopes a visual redesign. Any crate/widget replacement must reproduce the existing visual output.
+
 ---
 
 ## Status: Active bugs from live TUI/CLI testing, architecture review, and Grok Build comparison

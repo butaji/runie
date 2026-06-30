@@ -12,6 +12,8 @@
 
 Make `TurnActor` the single source of truth for turn lifecycle state. The UI projection should keep only derived read-only fields needed for rendering, received via facts (`TurnStarted`, `TokenStatsUpdated`, `TurnComplete`).
 
+**Design impact:** No change to TUI element design or composition. Only the internal state-ownership and event-delivery behavior changes.
+
 ## Acceptance Criteria
 
 - [ ] Extract one shared `SpeedWindow` type and delete the duplicate.
