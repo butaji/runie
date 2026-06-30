@@ -167,7 +167,7 @@ fn route_intent(handles: &Option<crate::actors::LeaderHandle>, intent: &Intent) 
             let io = h.io.clone();
             let command = command.clone();
             tokio::spawn(async move {
-                io.send(IoMsg::RunBash { command }).await;
+                io.send(IoMsg::RunBash { command, shell: true }).await;
             });
         }
         Intent::WriteFiles { edits } => {

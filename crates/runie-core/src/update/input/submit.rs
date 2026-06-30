@@ -182,12 +182,13 @@ impl AppState {
 
         if let Some(ref h) = handles {
             // Production mode: send to IoActor
+            // Use shell mode for tool commands to support metacharacters like pipes
             let command = command.to_owned();
-            let _ = h.io.try_send(IoMsg::RunBash { command });
+            let _ = h.io.try_send(IoMsg::RunBash { command, shell: true });
             return;
         }
         // Fallback: no actor handles — run bash synchronously.
-        let result = crate::update::tools::execute_bash_sync(command);
+        let result = crate::update::tools::execute_bash_sync(command, true);
         let output_msg = format!("$ {}\n{}", command, result);
         self.add_system_msg(output_msg);
         self.view_mut().scroll = 0;

@@ -4,17 +4,47 @@
 use crate::actors::IoMsg;
 use std::process::{Command as SyncCommand, Stdio};
 
+use shell_words;
+
 /// Execute a bash command and return output string (sync fallback).
 ///
 /// Used by the non-actor fallback path in test mode.
-pub fn execute_bash_sync(command: &str) -> String {
-    let output = match SyncCommand::new("sh")
-        .arg("-c")
-        .arg(command)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-    {
+///
+/// If `shell` is true, the command is passed to `sh -c` to support shell
+/// metacharacters (pipes, redirects, command substitution, etc.).
+///
+/// If `shell` is false, the command is parsed with `shell_words::split`
+/// and executed directly.
+pub fn execute_bash_sync(command: &str, shell: bool) -> String {
+    let output = if shell {
+        // Shell mode: use sh -c to support metacharacters
+        SyncCommand::new("sh")
+            .arg("-c")
+            .arg(command)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+    } else {
+        // Direct mode: parse with shell_words and execute directly
+        match shell_words::split(command) {
+            Ok(args) => {
+                if args.is_empty() {
+                    return String::new();
+                }
+                let (program, args) = (&args[0], &args[1..]);
+                let mut cmd = SyncCommand::new(program);
+                cmd.args(args);
+                cmd.stdout(Stdio::piped());
+                cmd.stderr(Stdio::piped());
+                cmd.output()
+            }
+            Err(_) => {
+                return format!("Error parsing command: {}", command);
+            }
+        }
+    };
+
+    let output = match output {
         Ok(out) => out,
         Err(e) => return format!("Error running command: {}", e),
     };

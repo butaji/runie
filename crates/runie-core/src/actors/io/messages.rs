@@ -8,7 +8,14 @@ use crate::ChatMessage;
 #[derive(Debug, Clone)]
 pub enum IoMsg {
     /// Run a bash command and publish the output.
-    RunBash { command: String },
+    ///
+    /// If `shell` is false (default), the command is parsed with `shell_words::split`
+    /// and executed directly without a shell wrapper. This avoids shell indirection
+    /// overhead and security risks for simple commands.
+    ///
+    /// If `shell` is true, the command is passed to `sh -c` to support shell
+    /// metacharacters (pipes, redirects, command substitution, etc.).
+    RunBash { command: String, shell: bool },
     /// Write multiple files and publish the result.
     WriteFiles { edits: Vec<(PathBuf, String)> },
     /// Detect environment info (cwd name, git info) asynchronously.

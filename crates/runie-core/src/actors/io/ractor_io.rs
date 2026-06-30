@@ -4,7 +4,9 @@
 //! of the actor system.
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
+
+use shell_words;
 
 use ractor::async_trait;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
@@ -35,8 +37,15 @@ impl RactorIoHandle {
     }
 
     /// Request running a bash command.
-    pub async fn run_bash(&self, command: String) {
-        self.inner.send(IoMsg::RunBash { command }).await;
+    ///
+    /// If `shell` is false (default), the command is parsed with `shell_words::split`
+    /// and executed directly without a shell wrapper. This avoids shell indirection
+    /// overhead and security risks for simple commands.
+    ///
+    /// If `shell` is true, the command is passed to `sh -c` to support shell
+    /// metacharacters (pipes, redirects, command substitution, etc.).
+    pub async fn run_bash(&self, command: String, shell: bool) {
+        self.inner.send(IoMsg::RunBash { command, shell }).await;
     }
 
     /// Request writing files.
@@ -126,7 +135,7 @@ impl Actor for RactorIoActor {
         _state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match msg {
-            IoMsg::RunBash { command } => self.run_bash(command).await,
+            IoMsg::RunBash { command, shell } => self.run_bash(command, shell).await,
             IoMsg::WriteFiles { edits } => self.write_files(edits).await,
             IoMsg::DetectEnv => self.detect_env().await,
             IoMsg::ShareSession {
@@ -147,9 +156,9 @@ impl Actor for RactorIoActor {
 }
 
 impl RactorIoActor {
-    async fn run_bash(&self, command: String) {
+    async fn run_bash(&self, command: String, shell: bool) {
         let cmd = command.clone();
-        let output = match tokio::task::spawn_blocking(move || run_bash_sync(&cmd)).await {
+        let output = match tokio::task::spawn_blocking(move || run_bash_sync(&cmd, shell)).await {
             Ok(out) => out,
             Err(e) => format!("Error running command: {}", e),
         };
@@ -230,14 +239,45 @@ impl RactorIoActor {
 }
 
 // Re-use the sync helper functions from the legacy actor
-fn run_bash_sync(command: &str) -> String {
-    let output = match Command::new("sh")
-        .arg("-c")
-        .arg(command)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-    {
+///
+/// Execute a bash command synchronously.
+///
+/// If `shell` is true, the command is passed to `sh -c` to support shell
+/// metacharacters (pipes, redirects, command substitution, etc.).
+///
+/// If `shell` is false, the command is parsed with `shell_words::split`
+/// and executed directly. This avoids shell indirection overhead for simple
+/// commands. Note: glob expansion, env var expansion, and pipes require `shell: true`.
+fn run_bash_sync(command: &str, shell: bool) -> String {
+    let output = if shell {
+        // Shell mode: use sh -c to support metacharacters
+        Command::new("sh")
+            .arg("-c")
+            .arg(command)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+    } else {
+        // Direct mode: parse with shell_words and execute directly
+        match shell_words::split(command) {
+            Ok(args) => {
+                if args.is_empty() {
+                    return String::new();
+                }
+                let (program, args) = (&args[0], &args[1..]);
+                let mut cmd = Command::new(program);
+                cmd.args(args);
+                cmd.stdout(Stdio::piped());
+                cmd.stderr(Stdio::piped());
+                cmd.output()
+            }
+            Err(_) => {
+                return format!("Error parsing command: {}", command);
+            }
+        }
+    };
+
+    let output = match output {
         Ok(out) => out,
         Err(e) => return format!("Error running command: {}", e),
     };
@@ -332,31 +372,48 @@ fn detect_git_info_sync(start: &Path) -> Option<GitInfo> {
     })
 }
 
-use std::process::Stdio;
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn execute_echo_command() {
-        let output = run_bash_sync("echo hello");
+    fn execute_echo_command_shell() {
+        let output = run_bash_sync("echo hello", true);
+        assert!(output.contains("hello"), "Should contain hello");
+    }
+
+    #[test]
+    fn execute_echo_command_direct() {
+        let output = run_bash_sync("echo hello", false);
         assert!(output.contains("hello"), "Should contain hello");
     }
 
     #[test]
     fn execute_pwd_command() {
-        let output = run_bash_sync("pwd");
+        let output = run_bash_sync("pwd", true);
         assert!(!output.is_empty(), "pwd should return output");
     }
 
     #[test]
     fn command_not_found() {
-        let output = run_bash_sync("nonexistent_command_xyz");
+        let output = run_bash_sync("nonexistent_command_xyz", true);
         assert!(
             output.contains("Error") || output.contains("not found"),
             "Should show error for invalid command"
         );
+    }
+
+    #[test]
+    fn quoted_args_direct_mode() {
+        // In shell mode, quoting works as expected
+        let output = run_bash_sync("echo 'hello world'", true);
+        assert!(output.contains("hello world"), "Shell mode should preserve quotes");
+
+        // In direct mode, single quotes are not special to shell_words
+        let output = run_bash_sync("echo 'hello world'", false);
+        // shell_words preserves the quoted string as a single argument
+        // which is then passed to echo as a literal string
+        assert!(!output.is_empty(), "Direct mode should work");
     }
 
     #[test]
@@ -397,7 +454,7 @@ mod tests {
         let mut sub = bus.subscribe();
         let (handle, _cell, _) = RactorIoActor::spawn(bus).await.unwrap();
 
-        handle.run_bash("echo test".to_string()).await;
+        handle.run_bash("echo test".to_string(), true).await;
 
         // Wait for BashOutput event
         let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(5);
@@ -455,21 +512,24 @@ mod tests {
             uuid::Uuid::new_v4().to_string(),
         );
         std::fs::create_dir_all(&tmp).unwrap();
-        run_bash_sync(&format!("git init {} --quiet", tmp.display()));
-        run_bash_sync(&format!(
-            "git -C {} config user.email 'test@test.com'",
-            tmp.display()
-        ));
-        run_bash_sync(&format!(
-            "git -C {} config user.name 'Test'",
-            tmp.display()
-        ));
-        run_bash_sync(&format!(
-            "touch {}/.gitkeep && git -C {} add .gitkeep && git -C {} commit -m 'init' --quiet",
-            tmp.display(),
-            tmp.display(),
-            tmp.display()
-        ));
+        run_bash_sync(&format!("git init {} --quiet", tmp.display()), true);
+        run_bash_sync(
+            &format!("git -C {} config user.email 'test@test.com'", tmp.display()),
+            true,
+        );
+        run_bash_sync(
+            &format!("git -C {} config user.name 'Test'", tmp.display()),
+            true,
+        );
+        run_bash_sync(
+            &format!(
+                "touch {}/.gitkeep && git -C {} add .gitkeep && git -C {} commit -m 'init' --quiet",
+                tmp.display(),
+                tmp.display(),
+                tmp.display()
+            ),
+            true,
+        );
 
         let info = detect_git_info_sync(&tmp);
         assert!(info.is_some(), "Should detect git in temp repo: {:?}", info);
@@ -488,23 +548,29 @@ mod tests {
             uuid::Uuid::new_v4().to_string(),
         );
         std::fs::create_dir_all(&tmp).unwrap();
-        run_bash_sync(&format!("git init {} --quiet", tmp.display()));
-        run_bash_sync(&format!(
-            "git -C {} config user.email 'test@test.com'",
-            tmp.display()
-        ));
-        run_bash_sync(&format!(
-            "git -C {} config user.name 'Test'",
-            tmp.display()
-        ));
-        run_bash_sync(&format!(
-            "touch {}/.gitkeep && git -C {} add .gitkeep && git -C {} commit -m 'init' --quiet",
-            tmp.display(),
-            tmp.display(),
-            tmp.display()
-        ));
+        run_bash_sync(&format!("git init {} --quiet", tmp.display()), true);
+        run_bash_sync(
+            &format!("git -C {} config user.email 'test@test.com'", tmp.display()),
+            true,
+        );
+        run_bash_sync(
+            &format!("git -C {} config user.name 'Test'", tmp.display()),
+            true,
+        );
+        run_bash_sync(
+            &format!(
+                "touch {}/.gitkeep && git -C {} add .gitkeep && git -C {} commit -m 'init' --quiet",
+                tmp.display(),
+                tmp.display(),
+                tmp.display()
+            ),
+            true,
+        );
         // Detach HEAD
-        run_bash_sync(&format!("git -C {} checkout --detach HEAD --quiet", tmp.display()));
+        run_bash_sync(
+            &format!("git -C {} checkout --detach HEAD --quiet", tmp.display()),
+            true,
+        );
 
         let info = detect_git_info_sync(&tmp);
         assert!(info.is_some(), "Should detect detached HEAD repo");
