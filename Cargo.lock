@@ -3860,6 +3860,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
+ "tokio-util",
  "uuid",
 ]
 
@@ -3889,6 +3890,8 @@ dependencies = [
  "supports-hyperlinks",
  "syntect",
  "tokio",
+ "tokio-util",
+ "tracing",
  "tracing-subscriber",
  "tui-markdown",
  "tui-textarea",

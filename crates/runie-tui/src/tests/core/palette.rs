@@ -347,8 +347,8 @@ fn palette_model_with_args_switches_model() {
 
 /// Layer 2: UiActor::dispatch_submit_content closes the command palette
 /// before executing a slash command, so the result is visible without overlay.
-#[test]
-fn ui_actor_dispatch_submit_closes_palette() {
+#[tokio::test]
+async fn ui_actor_dispatch_submit_closes_palette() {
     use crate::ui_actor::UiActor;
     use crate::ui_actor_agent_handles::AgentHandleBox;
     use std::sync::Arc;
@@ -391,7 +391,7 @@ fn ui_actor_dispatch_submit_closes_palette() {
     );
 
     // Dispatch a slash command — this should close the palette.
-    ui.dispatch_submit_content("/session".to_owned());
+    ui.dispatch_submit_content("/session".to_owned()).await;
 
     assert!(
         ui.state.open_dialog.is_none(),

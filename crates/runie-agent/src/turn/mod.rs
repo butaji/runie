@@ -180,7 +180,8 @@ async fn run_agent_iteration(
         },
     );
     let tools = build_tool_registry(command.read_only);
-    let response = match stream_response(provider, &command.id, messages, tools, emit.clone()).await {
+    let cancel_token = command.cancellation_token.clone();
+    let response = match stream_response(provider, &command.id, messages, tools, emit.clone(), cancel_token).await {
         Ok(r) => r,
         Err(e) => {
             emit_now(

@@ -312,6 +312,7 @@ impl UiActor {
                     skills_context: String::new(),
                     system_prompt: String::new(),
                     truncation: TruncationPolicy::default(),
+                    cancellation_token: tokio_util::sync::CancellationToken::new(),
                 };
                 self.agent_handle.run(cmd).await;
             }
@@ -329,24 +330,12 @@ impl UiActor {
         // and spawn a second agent, causing doubled output on the same stream.
         // The real guard-clear happens on TurnCompleted / TurnErrored / Abort.
         //
-        // BUG FIX: call DeliverQueued BEFORE run_if_queued so that queued messages
-        // are moved from AppState.message_queue to TurnActor.request_queue BEFORE
-        // the queue is drained. Without this, queued follow-ups never start.
+        // FIX: /new aborts the turn and clears the queue. This is called from both
+        // handle_event_inner (for Abort from event bus) and dispatch_submit_content
+        // (for Abort from CommandResult::Events from /new handler).
         if matches!(&evt, Event::TurnCompleted | Event::TurnErrored { .. } | Event::Abort) {
-            self.agent_running = false;
-            // If the turn ended without starting a queued follow-up, clear the flag.
-            self.pending_queued_turn = false;
-            if let Some(ref turn_handle) = self.turn_handle {
-                // Move queued messages into the request queue first.
-                let steering_mode = self.state.config().steering_mode;
-                let follow_up_mode = self.state.config().follow_up_mode;
-                turn_handle.send(runie_core::actors::TurnMsg::DeliverQueued {
-                    steering_mode,
-                    follow_up_mode,
-                }).await;
-                // Then drain the request queue and start the next turn.
-                self.agent_handle.run_if_queued(turn_handle).await;
-            }
+            let is_abort = matches!(&evt, Event::Abort);
+            self.clear_turn_state(is_abort).await;
         }
 
         false
@@ -467,7 +456,7 @@ impl UiActor {
                 self.handle_submit_event().await;
             }
             Event::InputChanged { state } => {
-                self.handle_input_changed(state);
+                self.handle_input_changed(state).await;
             }
             _ => {
                 self.apply_event(evt.clone());
@@ -488,7 +477,7 @@ impl UiActor {
     }
 
     /// Handle InputChanged: apply authoritative state and trigger side effects.
-    fn handle_input_changed(&mut self, state: &runie_core::InputState) {
+    async fn handle_input_changed(&mut self, state: &runie_core::InputState) {
         let prev_input = self.prev_input.clone();
         let prev_cursor_pos = self.prev_cursor_pos;
         let new_input = state.input().to_owned();
@@ -499,7 +488,7 @@ impl UiActor {
         self.detect_autocomplete_trigger(&prev_input, prev_cursor_pos, &new_input, new_cursor_pos);
 
         if let Some(content) = self.pending_submit.take() {
-            self.dispatch_submit_content(content);
+            self.dispatch_submit_content(content).await;
         }
 
         self.state.view_mut().dirty = true;
@@ -633,13 +622,75 @@ impl UiActor {
         }
     }
 
+    /// Clear agent-running flag and queue.
+    ///
+    /// Used for both `Event::Abort` (from /new or event bus) and
+    /// `Event::TurnCompleted`/`TurnErrored` (from turn lifecycle).
+    ///
+    /// For Abort: clears the queue so a new session starts clean.
+    /// For TurnCompleted: delivers queued messages and starts the next turn.
+    async fn clear_turn_state(&mut self, is_abort: bool) {
+        self.agent_running = false;
+        self.pending_queued_turn = false;
+        if let Some(ref turn_handle) = self.turn_handle {
+            if is_abort {
+                // Abort: clear the queue so a new session starts clean.
+                turn_handle.send(runie_core::actors::TurnMsg::ClearQueues).await;
+            } else {
+                // TurnCompleted: deliver queued messages and start the next turn.
+                let steering_mode = self.state.config().steering_mode;
+                let follow_up_mode = self.state.config().follow_up_mode;
+                turn_handle.send(runie_core::actors::TurnMsg::DeliverQueued {
+                    steering_mode,
+                    follow_up_mode,
+                }).await;
+                // Wait briefly for FollowUpDelivered before draining the queue.
+                // TurnErrored does NOT emit FollowUpDelivered, so skip the wait.
+                let bus = self.bus.clone();
+                let delivered = tokio::time::timeout(
+                    std::time::Duration::from_millis(100),
+                    async move {
+                        let mut sub = bus.subscribe();
+                        loop {
+                            match sub.recv().await {
+                                Ok(evt) if matches!(
+                                    &evt,
+                                    Event::FollowUpDelivered { .. }
+                                        | Event::SteeringDelivered { .. }
+                                ) => {
+                                    break;
+                                }
+                                _ => {
+                                    // Drain other events; re-processed by UiActor::run().
+                                }
+                            }
+                        }
+                    },
+                )
+                .await;
+                if delivered.is_err() {
+                    tracing::debug!(
+                        "FollowUpDelivered timeout, proceeding with run_if_queued"
+                    );
+                }
+                self.agent_handle.run_if_queued(turn_handle).await;
+            }
+        }
+    }
+
     /// Dispatch submit content (slash command, steering, or user message).
-    pub(crate) fn dispatch_submit_content(&mut self, content: String) {
+    pub(crate) async fn dispatch_submit_content(&mut self, content: String) {
         // Close any open dialog (e.g., command palette) before executing the command.
         *self.state.open_dialog_mut() = None;
         // Slash command handling.
         if let Some(result) = self.state.handle_slash(&content) {
+            // Extract Abort/ClearQueues from CommandResult::Events before applying,
+            // so UiActor flags are cleared even though handle_event_inner is bypassed.
+            let has_abort = matches!(&result, runie_core::commands::CommandResult::Events(evts) if evts.iter().any(|e| matches!(e, Event::Abort)));
             self.state.apply_command_result(result);
+            if has_abort {
+                self.clear_turn_state(true).await;
+            }
             self.state.view_mut().scroll = 0;
             self.state.view_mut().dirty = true;
             return;

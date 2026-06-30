@@ -114,22 +114,43 @@ pub fn handle_reset(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 pub fn handle_history(state: &mut AppState, _: &str) -> CommandResult {
-    if state.input().input_history.is_empty() {
+    let messages = state.session().messages();
+    if messages.is_empty() {
         return CommandResult::Message("No history.".into());
     }
-    let count = state.input().input_history.len();
-    let entries: Vec<_> = state
-        .input
-        .input_history
+
+    let role_label = |role: &crate::message::Role| match role {
+        crate::message::Role::User => "You",
+        crate::message::Role::Assistant => "Assistant",
+        crate::message::Role::Tool => "Tool",
+        crate::message::Role::System => "System",
+        crate::message::Role::Thought => "Thought",
+        crate::message::Role::TurnComplete => "TurnComplete",
+    };
+
+    let total = messages.len();
+    let entries: Vec<_> = messages
         .iter()
         .rev()
         .take(10)
         .enumerate()
-        .map(|(i, e)| format!("{}: {}", i + 1, e))
+        .map(|(i, msg)| {
+            let label = role_label(&msg.role);
+            let content = msg.content();
+            let preview = if content.len() > 80 {
+                format!("{}...", &content[..80])
+            } else {
+                content
+            };
+            let content_lines: Vec<&str> = preview.lines().take(3).collect();
+            let content_str = content_lines.join(" ");
+            format!("{}: [{}] {}", i + 1, label, content_str)
+        })
         .collect();
+
     CommandResult::Message(format!(
-        "History ({} total):\n{}",
-        count,
+        "Conversation history ({} messages):\n{}",
+        total,
         entries.join("\n")
     ))
 }

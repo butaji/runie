@@ -38,6 +38,26 @@ pub struct AgentCommand {
     pub system_prompt: String,
     /// Truncation policy for tool output. Defaults to 2000 lines / 50KB.
     pub truncation: crate::truncate::TruncationPolicy,
+    /// Cancellation token for aborting the provider stream mid-flight.
+    /// When cancelled (e.g. via `/new` or `AbortTurn`), the stream stops yielding.
+    pub cancellation_token: tokio_util::sync::CancellationToken,
+}
+
+impl Default for AgentCommand {
+    fn default() -> Self {
+        Self {
+            content: String::new(),
+            id: String::new(),
+            provider: String::new(),
+            model: String::new(),
+            thinking_level: runie_core::model::ThinkingLevel::Off,
+            read_only: false,
+            skills_context: String::new(),
+            system_prompt: String::new(),
+            truncation: crate::truncate::TruncationPolicy::default(),
+            cancellation_token: tokio_util::sync::CancellationToken::new(),
+        }
+    }
 }
 
 #[cfg(test)]

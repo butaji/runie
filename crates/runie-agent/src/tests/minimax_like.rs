@@ -68,6 +68,7 @@ async fn minimax_inline_think_renders_visible_response() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();

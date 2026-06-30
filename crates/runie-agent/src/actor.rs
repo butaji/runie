@@ -82,10 +82,10 @@ impl Actor for RactorAgentActor {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match msg {
-            AgentMsg::Run { command } => self.run_turn(state, &command).await,
+            AgentMsg::Run { command } => self.run_turn(state, command).await,
             AgentMsg::RunLeader { command } => {
                 let cmd: AgentCommand = command.into();
-                self.run_turn(state, &cmd).await;
+                self.run_turn(state, cmd).await;
             }
         }
         Ok(())
@@ -93,7 +93,7 @@ impl Actor for RactorAgentActor {
 }
 
 impl RactorAgentActor {
-    async fn run_turn(&self, state: &mut AgentActorState, command: &AgentCommand) {
+    async fn run_turn(&self, state: &mut AgentActorState, mut command: AgentCommand) {
         let provider = state.provider_handle.clone();
         let permission = state.permission_handle.clone();
         let bus = state.bus.clone();
@@ -114,10 +114,11 @@ impl RactorAgentActor {
 
         let emit = Self::create_emit_closure(state);
 
-        // Shared cancellation token: cancelling it aborts all pending approval requests.
+        // Single cancellation token: cancelling it aborts both the provider stream
+        // (via command.cancellation_token) and pending permission requests.
         let cancel_token = CancellationToken::new();
+        command.cancellation_token = cancel_token.clone();
         let cancel_token_gate = cancel_token.clone();
-        let cancel_token_abort = cancel_token.clone();
 
         let gate =
             Self::create_permission_gate_with_cancel(permission.clone(), cancel_token_gate).await;
@@ -126,7 +127,7 @@ impl RactorAgentActor {
         // Subscribe to TurnAborted so we can cancel pending permissions.
         let mut sub = bus.subscribe();
 
-        let turn = run_agent_turn(&built, command, emit, 5, gate.clone());
+        let turn = run_agent_turn(&built, &command, emit, 5, gate.clone());
         tokio::pin!(turn);
 
         tokio::select! {
@@ -144,7 +145,7 @@ impl RactorAgentActor {
                 }
             } => {
                 // Cancel pending permission request via the cancellation token.
-                cancel_token_abort.cancel();
+                cancel_token.cancel();
                 gate_for_abort.cancel_pending();
             }
         }
@@ -247,6 +248,7 @@ impl From<runie_core::actors::leader::LeaderAgentCmd> for AgentCommand {
             skills_context: cmd.skills_context,
             system_prompt: cmd.system_prompt,
             truncation: crate::truncate::TruncationPolicy::default(),
+            cancellation_token: CancellationToken::new(),
         }
     }
 }

@@ -134,6 +134,7 @@ fn build_type_command(
         skills_context: skills_context.to_owned(),
         system_prompt: system_prompt.to_owned(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     }
 }
 
@@ -175,6 +176,7 @@ fn build_subagent_command(
         skills_context: skills_context.to_owned(),
         system_prompt: system_prompt.to_owned(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     }
 }
 

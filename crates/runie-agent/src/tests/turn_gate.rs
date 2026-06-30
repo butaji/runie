@@ -26,6 +26,7 @@ async fn test_agent_loop_with_tui_gate_allows_read_only_tool() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
 
     let events = Arc::new(Mutex::new(Vec::new()));

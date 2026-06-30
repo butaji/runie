@@ -22,6 +22,7 @@ async fn agent_turn_state_no_raw_tool_markers() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();

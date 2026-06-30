@@ -417,7 +417,7 @@
   {
     "file": "fix-tui-history-shows-no-history-after-message.md",
     "title": "Fix TUI /history shows \"No history\" after a message is sent",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-tui-mock-simple-text-response-repetition.md",

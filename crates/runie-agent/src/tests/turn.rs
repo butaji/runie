@@ -4,7 +4,6 @@ use crate::{
     run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages, AgentCommand,
 };
 use anyhow::Result;
-use futures::StreamExt;
 use parking_lot::Mutex;
 use runie_core::harness_skills::{SkillRegistry, ToolCallCtx, ToolCallPhase};
 use runie_core::message::ChatMessage;
@@ -35,6 +34,7 @@ async fn test_agent_loop_single_word_echo_completes_once() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
@@ -86,6 +86,7 @@ async fn test_agent_loop_simple_response() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
@@ -138,6 +139,7 @@ async fn test_agent_loop_with_tool_call() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
@@ -185,6 +187,7 @@ async fn test_agent_loop_with_native_tool_call_events() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
@@ -232,6 +235,7 @@ async fn test_agent_loop_respects_max_iterations() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
@@ -261,6 +265,7 @@ async fn test_agent_loop_events_have_correct_id() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
@@ -301,6 +306,7 @@ fn read_only_excludes_write_tools() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let msgs = build_initial_messages(&cmd);
     let system = match &msgs[0].role {
@@ -334,6 +340,7 @@ fn read_write_includes_all_tools() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let msgs = build_initial_messages(&cmd);
     let system = match &msgs[0].role {
@@ -365,6 +372,7 @@ async fn agent_tool_event_carries_mock_output() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
@@ -405,6 +413,7 @@ async fn tool_call_event_matches_mock_output() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
@@ -475,6 +484,7 @@ async fn text_turn_emits_turn_complete() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
@@ -516,6 +526,7 @@ async fn tool_turn_emits_turn_complete() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
@@ -569,6 +580,7 @@ async fn stream_error_emits_thought_done() {
         skills_context: String::new(),
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
+        cancellation_token: tokio_util::sync::CancellationToken::new(),
     };
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();

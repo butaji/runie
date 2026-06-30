@@ -65,6 +65,7 @@ impl TestRunner {
             skills_context: String::new(),
             system_prompt: String::new(),
             truncation: runie_agent::truncate::TruncationPolicy::default(),
+            cancellation_token: tokio_util::sync::CancellationToken::new(),
         };
 
         let events = self.events.clone();

@@ -13,6 +13,7 @@ runie-agent.workspace = true
 runie-provider.workspace = true
 anyhow.workspace = true
 tokio.workspace = true
+tokio-util.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
 async-trait.workspace = true

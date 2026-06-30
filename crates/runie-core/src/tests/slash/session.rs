@@ -195,8 +195,18 @@ fn history_lists_recent_inputs() {
         last.content()
     );
     assert!(
-        last.content().contains("total"),
-        "shows count: {}",
+        last.content().contains("Conversation history"),
+        "shows new format: {}",
+        last.content()
+    );
+    assert!(
+        last.content().contains("messages"),
+        "shows messages count: {}",
+        last.content()
+    );
+    assert!(
+        last.content().contains("[You]"),
+        "shows role labels: {}",
         last.content()
     );
 }

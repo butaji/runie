@@ -47,9 +47,8 @@ After sending a user message in the TUI, `/history` reports `No history.` even t
 
 ## Files touched
 
-- `crates/runie-core/src/commands/dsl/handlers/session/mod.rs`
-- `crates/runie-core/src/model/app_state.rs`
-- `crates/runie-core/src/actors/session/ractor_session.rs`
+- `crates/runie-core/src/commands/dsl/handlers/session/mod.rs` — ✅ fixed `handle_history` to read from session messages
+- `crates/runie-core/src/tests/slash/session.rs` — ✅ updated `history_lists_recent_inputs` test
 
 ## Validation
 
@@ -61,5 +60,6 @@ This task is not complete until the fix is validated with all three levels:
 
 ## Notes
 
-- This may be caused by the session state not being updated from `TurnActor` events, or by `/history` reading from a different source than the chat log.
-- Fix after the hello repetition / turn-completion bugs, since those prevent a clean completed turn.
+- **Root cause**: `/history` read from `state.input().input_history` (command palette history) instead of `state.session().messages` (conversation history).
+- **Fix**: Changed `handle_history` to read from `state.session().messages()` and format with role labels.
+- Layer 3 (Rendering) and Layer 4 (live tmux) tests deferred — depend on `fix-tui-mock-simple-text-response-repetition` and `fix-tui-turn-complete-leaves-working-status-and-queued` being fixed first.
