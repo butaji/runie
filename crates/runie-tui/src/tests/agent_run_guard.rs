@@ -131,13 +131,13 @@ async fn second_turn_started_blocked_by_guard() {
     );
 }
 
-/// Layer 2: Done clears the guard and allows the next TurnStarted to run.
+/// Layer 2: Done does NOT clear the guard (only TurnCompleted does).
+/// This prevents a queued TurnStarted from bypassing the guard after Done.
 #[tokio::test]
-async fn done_clears_guard_allows_next_turn() {
+async fn done_does_not_clear_guard() {
     let (mut ui, agent) = make_ui_with_test_agent();
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
-    // First TurnStarted
     ui.handle_event(
         Event::TurnStarted {
             request_id: "req.0".into(),
@@ -147,23 +147,24 @@ async fn done_clears_guard_allows_next_turn() {
         effect_tx.clone(),
     )
     .await;
+    assert_eq!(agent.run_count.load(std::sync::atomic::Ordering::SeqCst), 1);
 
-    assert_eq!(
-        agent.run_count.load(std::sync::atomic::Ordering::SeqCst),
-        1,
-        "first TurnStarted should spawn agent"
-    );
-
-    // Done: clears guard
+    // Done: does NOT clear guard — guard stays true
     ui.handle_event(Event::Done { id: "req.0".into() }, effect_tx.clone())
         .await;
-
     assert!(
-        !ui.agent_running(),
-        "agent_running should be false after Done"
+        ui.agent_running(),
+        "agent_running stays true after Done — guard not cleared"
     );
 
-    // Next TurnStarted: agent should run again
+    // TurnCompleted: finally clears guard
+    ui.handle_event(Event::TurnCompleted, effect_tx.clone()).await;
+    assert!(
+        !ui.agent_running(),
+        "agent_running should be false after TurnCompleted"
+    );
+
+    // Next TurnStarted: agent runs again
     ui.handle_event(
         Event::TurnStarted {
             request_id: "req.1".into(),
@@ -174,11 +175,84 @@ async fn done_clears_guard_allows_next_turn() {
     )
     .await;
 
-    // Agent was called twice (once per turn)
     assert_eq!(
         agent.run_count.load(std::sync::atomic::Ordering::SeqCst),
         2,
-        "agent should run again after Done clears guard"
+        "agent should run again after guard is cleared by TurnCompleted"
+    );
+}
+
+/// Layer 2: The exact bug scenario — Done + queued TurnStarted must not spawn
+/// a second agent. After TurnStarted and Done, agent_running stays true so that
+/// a TurnStarted from run_if_queued is blocked by the guard.
+/// Only TurnCompleted clears the guard and allows the next real turn.
+#[tokio::test]
+async fn done_then_queued_turn_started_blocked_by_guard() {
+    let (mut ui, agent) = make_ui_with_test_agent();
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+
+    // TurnStarted for "hello" — agent spawned
+    ui.handle_event(
+        Event::TurnStarted {
+            request_id: "req.0".into(),
+            content: "hello".into(),
+            id: "req.0".into(),
+        },
+        effect_tx.clone(),
+    )
+    .await;
+    assert_eq!(agent.run_count.load(std::sync::atomic::Ordering::SeqCst), 1);
+    assert!(ui.agent_running(), "guard active after TurnStarted");
+
+    // Done arrives (as it does after the mock provider finishes)
+    ui.handle_event(Event::Done { id: "req.0".into() }, effect_tx.clone())
+        .await;
+    // Guard must stay true — this is the fix! Done no longer clears it.
+    assert!(
+        ui.agent_running(),
+        "guard stays true after Done to block queued TurnStarted"
+    );
+
+    // run_if_queued would emit TurnStarted(req.1, ...) here.
+    // UiActor processes it — guard blocks the spawn.
+    ui.handle_event(
+        Event::TurnStarted {
+            request_id: "req.1".into(),
+            content: "hello".into(),
+            id: "req.1".into(),
+        },
+        effect_tx.clone(),
+    )
+    .await;
+
+    // Still exactly one agent invocation — the queued TurnStarted was blocked
+    assert_eq!(
+        agent.run_count.load(std::sync::atomic::Ordering::SeqCst),
+        1,
+        "queued TurnStarted must be blocked by guard after Done"
+    );
+
+    // TurnCompleted clears the guard
+    ui.handle_event(Event::TurnCompleted, effect_tx.clone()).await;
+    assert!(
+        !ui.agent_running(),
+        "guard cleared after TurnCompleted"
+    );
+
+    // Next real user message: agent runs again
+    ui.handle_event(
+        Event::TurnStarted {
+            request_id: "req.2".into(),
+            content: "world".into(),
+            id: "req.2".into(),
+        },
+        effect_tx.clone(),
+    )
+    .await;
+    assert_eq!(
+        agent.run_count.load(std::sync::atomic::Ordering::SeqCst),
+        2,
+        "next TurnStarted must spawn agent after guard cleared"
     );
 }
 
@@ -274,9 +348,10 @@ async fn turn_actor_turn_started_reaches_uiactor_via_shared_bus() {
     );
 }
 
-/// Layer 2: Done from the shared bus clears the agent_running guard.
+/// Layer 2: Done from the shared bus does NOT clear agent_running.
+/// Only TurnCompleted clears the guard.
 #[tokio::test]
-async fn done_from_shared_bus_clears_guard() {
+async fn done_from_shared_bus_does_not_clear_guard() {
     use runie_core::bus::EventBus;
 
     let bus = EventBus::<Event>::new(16);
@@ -314,13 +389,20 @@ async fn done_from_shared_bus_clears_guard() {
         "guard must be active after TurnStarted"
     );
 
-    // Simulate Done arriving via shared bus (as it would from AgentActor)
+    // Simulate Done arriving via shared bus — guard stays true
     ui.handle_event(Event::Done { id: "req.0".into() }, effect_tx.clone())
         .await;
 
     assert!(
+        ui.agent_running(),
+        "guard must stay true after Done — only TurnCompleted clears it"
+    );
+
+    // TurnCompleted: clears guard
+    ui.handle_event(Event::TurnCompleted, effect_tx.clone()).await;
+    assert!(
         !ui.agent_running(),
-        "guard must be cleared after Done from shared bus"
+        "guard must be cleared after TurnCompleted"
     );
 }
 

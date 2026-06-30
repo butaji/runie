@@ -301,9 +301,15 @@ impl UiActor {
                 self.agent_handle.run(cmd).await;
             }
         }
-        // Clear agent_running when the turn ends normally, with an error, or is aborted.
-        // Then drain any queued follow-up messages so the next turn starts.
-        if matches!(&evt, Event::Done { .. } | Event::TurnErrored { .. } | Event::Abort) {
+        // Clear agent_running and drain the queue when the turn fully completes
+        // (TurnCompleted), errors (TurnErrored), or is explicitly aborted (Abort).
+        //
+        // We do NOT clear agent_running on Done — Done is emitted by the agent actor
+        // before the turn state is fully finalized. Clearing here would allow a
+        // TurnStarted from run_if_queued (also called on Done) to bypass the guard
+        // and spawn a second agent, causing doubled output on the same stream.
+        // The real guard-clear happens on TurnCompleted / TurnErrored / Abort.
+        if matches!(&evt, Event::TurnCompleted { .. } | Event::TurnErrored { .. } | Event::Abort) {
             self.agent_running = false;
             if let Some(ref turn_handle) = self.turn_handle {
                 self.agent_handle.run_if_queued(turn_handle).await;

@@ -1,88 +1,8 @@
 [
   {
-    "file": "actually-collapse-actor-handles-to-typed-map.md",
-    "title": "Actually collapse `ActorHandles` to a typed map",
-    "status": "done"
-  },
-  {
-    "file": "actually-replace-runie-provider-backoff-with-backon.md",
-    "title": "Actually replace `runie-provider` custom backoff with `backon`",
-    "status": "done"
-  },
-  {
-    "file": "add-eventbus-backpressure-or-acknowledgement.md",
-    "title": "Add EventBus backpressure or acknowledgement",
-    "status": "done"
-  },
-  {
-    "file": "add-jsonschema-validation-to-configactor-load.md",
-    "title": "Add `jsonschema` validation to `ConfigActor` load path",
-    "status": "done"
-  },
-  {
-    "file": "adopt-palette-for-theme-color-math.md",
-    "title": "Adopt `palette` for theme color math",
-    "status": "wontfix"
-  },
-  {
-    "file": "avoid-setting-global-theme-every-frame.md",
-    "title": "Avoid setting global theme every frame",
-    "status": "done"
-  },
-  {
-    "file": "buffer-tcp-lines-in-leader-server.md",
-    "title": "Buffer TCP lines in leader server",
-    "status": "done"
-  },
-  {
     "file": "build-runie-vs-grok-build-comparison-harness.md",
     "title": "Build Runie vs Grok Build comparison harness",
     "status": "todo"
-  },
-  {
-    "file": "centralize-built-in-tool-names.md",
-    "title": "Centralize built-in tool names",
-    "status": "done"
-  },
-  {
-    "file": "centralize-provider-credential-resolution.md",
-    "title": "Centralize provider credential resolution",
-    "status": "done"
-  },
-  {
-    "file": "centralize-test-fixtures-and-mocks.md",
-    "title": "Centralize test fixtures and mocks in `runie-testing`",
-    "status": "done"
-  },
-  {
-    "file": "cleanup-small-duplicates-and-dead-code.md",
-    "title": "Clean up small duplicates and dead code",
-    "status": "done"
-  },
-  {
-    "file": "cleanup-temporary-eprintln-diagnostics.md",
-    "title": "Clean up temporary eprintln diagnostics",
-    "status": "done"
-  },
-  {
-    "file": "cleanup-verify-tests-and-just-recipes.md",
-    "title": "Clean up `verify-tests.sh` and `just lint-fix`",
-    "status": "done"
-  },
-  {
-    "file": "collapse-actor-handles-to-typed-map.md",
-    "title": "Collapse `ActorHandles` to a typed `ractor::ActorRef` map",
-    "status": "done"
-  },
-  {
-    "file": "collapse-dialogstate-variants.md",
-    "title": "Collapse `DialogState` variants",
-    "status": "done"
-  },
-  {
-    "file": "collapse-event-intent-kind-taxonomies.md",
-    "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
-    "status": "done"
   },
   {
     "file": "compare-auth-config-setup-and-fix-gaps.md",
@@ -150,6 +70,291 @@
     "status": "todo"
   },
   {
+    "file": "create-grok-build-fixture-recorder-and-record-fixtures.md",
+    "title": "Create Grok Build fixture recorder and record fixtures",
+    "status": "todo"
+  },
+  {
+    "file": "deduplicate-turn-state-between-turnactor-and-appstate.md",
+    "title": "Deduplicate turn state between TurnActor and AppState",
+    "status": "todo"
+  },
+  {
+    "file": "drop-custom-markdown-ast-for-pulldown-cmark-and-tui-markdown.md",
+    "title": "Drop custom markdown AST and render through pulldown-cmark/tui-markdown",
+    "status": "todo"
+  },
+  {
+    "file": "drop-legacy-diff-parser-and-rely-on-diffy.md",
+    "title": "Drop legacy diff parser and rely on diffy",
+    "status": "todo"
+  },
+  {
+    "file": "fix-cli-headless-native-tool-permission-denied-loop.md",
+    "title": "Fix CLI headless native tool loops after permission denied",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-at-file-picker-shows-no-files.md",
+    "title": "Fix TUI @ file picker shows \"No files found\"",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-expand-collapse-no-visible-effect.md",
+    "title": "Fix TUI Ctrl+o expand/collapse has no visible effect",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-history-shows-no-history-after-message.md",
+    "title": "Fix TUI /history shows \"No history\" after a message is sent",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-multi-turn-follow-up-stuck-behind-active-turn.md",
+    "title": "Fix TUI multi-turn follow-up stuck behind active turn",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-new-session-does-not-abort-active-turn.md",
+    "title": "Fix TUI /new session does not abort an active turn",
+    "status": "todo"
+  },
+  {
+    "file": "fold-lifecycle-state-machine-into-provider-events.md",
+    "title": "Fold lifecycle state machine into provider events",
+    "status": "todo"
+  },
+  {
+    "file": "fuzzy-history-search-with-sublime-fuzzy.md",
+    "title": "Fuzzy history search with sublime-fuzzy",
+    "status": "todo"
+  },
+  {
+    "file": "investigate-session-persistence-not-created-in-live-tui.md",
+    "title": "Investigate session persistence not created during live TUI runs",
+    "status": "todo"
+  },
+  {
+    "file": "live-tui-smoke-test-real-minimax.md",
+    "title": "Live TUI smoke test with real MiniMax provider",
+    "status": "partial"
+  },
+  {
+    "file": "move-blocking-io-out-of-command-handlers.md",
+    "title": "Move blocking IO out of command/update handlers",
+    "status": "todo"
+  },
+  {
+    "file": "normalize-paths-with-path-absolutize-and-dunce.md",
+    "title": "Normalize paths with path-absolutize/dunce",
+    "status": "todo"
+  },
+  {
+    "file": "offload-provider-network-calls-from-actor-handler.md",
+    "title": "Offload provider network calls from actor handler",
+    "status": "todo"
+  },
+  {
+    "file": "parse-bash-commands-with-shell-words-in-ioactor.md",
+    "title": "Parse bash commands with shell-words in IoActor",
+    "status": "todo"
+  },
+  {
+    "file": "prepare-grok-build-reference-for-comparison.md",
+    "title": "Prepare Grok Build reference for comparison",
+    "status": "todo"
+  },
+  {
+    "file": "propagate-actor-spawn-errors-instead-of-panicking.md",
+    "title": "Propagate actor spawn errors instead of panicking",
+    "status": "todo"
+  },
+  {
+    "file": "remove-direct-appstate-mutation-from-tui-handlers.md",
+    "title": "Remove direct AppState mutation from TUI handlers",
+    "status": "todo"
+  },
+  {
+    "file": "remove-duplicate-input-mutation-in-uiactor.md",
+    "title": "Remove duplicate input mutation in UiActor",
+    "status": "todo"
+  },
+  {
+    "file": "replace-clipboard-dead-code-with-arboard-or-osc52.md",
+    "title": "Replace clipboard dead code with arboard or crossterm osc52",
+    "status": "todo"
+  },
+  {
+    "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
+    "title": "Replace fff-search indexer with ignore/walkdir",
+    "status": "todo"
+  },
+  {
+    "file": "replace-keymap-modifier-tables-with-crokey-map.md",
+    "title": "Replace keymap modifier dispatch tables with a crokey HashMap",
+    "status": "todo"
+  },
+  {
+    "file": "replace-layered-config-merge-with-figment.md",
+    "title": "Replace custom layered config merge with Figment",
+    "status": "todo"
+  },
+  {
+    "file": "replace-location-parser-with-regex.md",
+    "title": "Replace location parser with regex",
+    "status": "todo"
+  },
+  {
+    "file": "replace-streaming-buffer-classifier-with-pulldown-cmark.md",
+    "title": "Replace streaming-buffer classifier with pulldown-cmark",
+    "status": "todo"
+  },
+  {
+    "file": "replace-token-chars4-heuristic-with-tiktoken-rs.md",
+    "title": "Replace token chars/4 heuristic with tiktoken-rs",
+    "status": "todo"
+  },
+  {
+    "file": "replace-token-wrapper-with-secrecy-secretstring.md",
+    "title": "Replace Token wrapper with secrecy::SecretString",
+    "status": "todo"
+  },
+  {
+    "file": "route-app-init-loads-through-actors.md",
+    "title": "Route app init loads through actors",
+    "status": "todo"
+  },
+  {
+    "file": "shorten-approval-sink-timeout-and-wire-cancellation.md",
+    "title": "Shorten approval sink timeout and wire cancellation",
+    "status": "partial"
+  },
+  {
+    "file": "spike-evaluate-async-openai-or-rig-core-for-provider-stack.md",
+    "title": "Spike: evaluate async-openai or rig-core for the provider stack",
+    "status": "todo"
+  },
+  {
+    "file": "subscribe-tui-to-initial-facts-before-leader-start.md",
+    "title": "Subscribe TUI to initial facts before leader start",
+    "status": "todo"
+  },
+  {
+    "file": "typed-chatmessage-builder-and-shrink-sanitize.md",
+    "title": "Typed ChatMessage builder and shrink sanitize.rs",
+    "status": "todo"
+  },
+  {
+    "file": "unify-tool-call-accumulators-into-single-state-machine.md",
+    "title": "Unify tool-call accumulators into a single state machine",
+    "status": "todo"
+  },
+  {
+    "file": "use-ignore-and-globset-for-file-refs.md",
+    "title": "Use ignore and globset for file_refs",
+    "status": "todo"
+  },
+  {
+    "file": "use-toml-edit-and-file-locks-for-config.md",
+    "title": "Use toml_edit + fs2 file locks for config persistence",
+    "status": "todo"
+  },
+  {
+    "file": "use-which-crate-for-executable-lookup.md",
+    "title": "Use which crate for executable lookup",
+    "status": "todo"
+  },
+  {
+    "file": "wire-user-permission-rules-into-agent-gate.md",
+    "title": "Wire user permission rules into the agent permission gate",
+    "status": "todo"
+  },
+  {
+    "file": "write-runie-vs-grok-build-findings-report.md",
+    "title": "Write Runie vs Grok Build findings report",
+    "status": "todo"
+  },
+  {
+    "file": "actually-collapse-actor-handles-to-typed-map.md",
+    "title": "Actually collapse `ActorHandles` to a typed map",
+    "status": "done"
+  },
+  {
+    "file": "actually-replace-runie-provider-backoff-with-backon.md",
+    "title": "Actually replace `runie-provider` custom backoff with `backon`",
+    "status": "done"
+  },
+  {
+    "file": "add-eventbus-backpressure-or-acknowledgement.md",
+    "title": "Add EventBus backpressure or acknowledgement",
+    "status": "done"
+  },
+  {
+    "file": "add-jsonschema-validation-to-configactor-load.md",
+    "title": "Add `jsonschema` validation to `ConfigActor` load path",
+    "status": "done"
+  },
+  {
+    "file": "adopt-palette-for-theme-color-math.md",
+    "title": "Adopt `palette` for theme color math",
+    "status": "wontfix"
+  },
+  {
+    "file": "avoid-setting-global-theme-every-frame.md",
+    "title": "Avoid setting global theme every frame",
+    "status": "done"
+  },
+  {
+    "file": "buffer-tcp-lines-in-leader-server.md",
+    "title": "Buffer TCP lines in leader server",
+    "status": "done"
+  },
+  {
+    "file": "centralize-built-in-tool-names.md",
+    "title": "Centralize built-in tool names",
+    "status": "done"
+  },
+  {
+    "file": "centralize-provider-credential-resolution.md",
+    "title": "Centralize provider credential resolution",
+    "status": "done"
+  },
+  {
+    "file": "centralize-test-fixtures-and-mocks.md",
+    "title": "Centralize test fixtures and mocks in `runie-testing`",
+    "status": "done"
+  },
+  {
+    "file": "cleanup-small-duplicates-and-dead-code.md",
+    "title": "Clean up small duplicates and dead code",
+    "status": "done"
+  },
+  {
+    "file": "cleanup-temporary-eprintln-diagnostics.md",
+    "title": "Clean up temporary eprintln diagnostics",
+    "status": "done"
+  },
+  {
+    "file": "cleanup-verify-tests-and-just-recipes.md",
+    "title": "Clean up `verify-tests.sh` and `just lint-fix`",
+    "status": "done"
+  },
+  {
+    "file": "collapse-actor-handles-to-typed-map.md",
+    "title": "Collapse `ActorHandles` to a typed `ractor::ActorRef` map",
+    "status": "done"
+  },
+  {
+    "file": "collapse-dialogstate-variants.md",
+    "title": "Collapse `DialogState` variants",
+    "status": "done"
+  },
+  {
+    "file": "collapse-event-intent-kind-taxonomies.md",
+    "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
+    "status": "done"
+  },
+  {
     "file": "convert-agent-and-fff-indexer-to-ractor-state.md",
     "title": "Convert `AgentActor` and `FffIndexerActor` to idiomatic `ractor` `State`",
     "status": "done"
@@ -160,19 +365,9 @@
     "status": "done"
   },
   {
-    "file": "create-grok-build-fixture-recorder-and-record-fixtures.md",
-    "title": "Create Grok Build fixture recorder and record fixtures",
-    "status": "todo"
-  },
-  {
     "file": "dedupe-turn-queue-delivery-logic.md",
     "title": "Dedupe turn-queue delivery logic",
     "status": "done"
-  },
-  {
-    "file": "deduplicate-turn-state-between-turnactor-and-appstate.md",
-    "title": "Deduplicate turn state between TurnActor and AppState",
-    "status": "todo"
   },
   {
     "file": "delete-dead-actor-handle-wrappers.md",
@@ -218,16 +413,6 @@
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
     "title": "Deserialize declarative command YAML with typed structs",
     "status": "done"
-  },
-  {
-    "file": "drop-custom-markdown-ast-for-pulldown-cmark-and-tui-markdown.md",
-    "title": "Drop custom markdown AST and render through pulldown-cmark/tui-markdown",
-    "status": "todo"
-  },
-  {
-    "file": "drop-legacy-diff-parser-and-rely-on-diffy.md",
-    "title": "Drop legacy diff parser and rely on diffy",
-    "status": "todo"
   },
   {
     "file": "drop-once_cell-and-futures-util-workspace-deps.md",
@@ -295,11 +480,6 @@
     "status": "done"
   },
   {
-    "file": "fix-cli-headless-native-tool-permission-denied-loop.md",
-    "title": "Fix CLI headless native tool loops after permission denied",
-    "status": "todo"
-  },
-  {
     "file": "fix-dev-automation-recipes.md",
     "title": "Fix dev automation recipes",
     "status": "done"
@@ -345,39 +525,14 @@
     "status": "done"
   },
   {
-    "file": "fix-tui-at-file-picker-shows-no-files.md",
-    "title": "Fix TUI @ file picker shows \"No files found\"",
-    "status": "todo"
-  },
-  {
-    "file": "fix-tui-expand-collapse-no-visible-effect.md",
-    "title": "Fix TUI Ctrl+o expand/collapse has no visible effect",
-    "status": "todo"
-  },
-  {
     "file": "fix-tui-form-submit-key-not-working.md",
     "title": "Fix TUI form submit key not working for /save and /compact",
     "status": "done"
   },
   {
-    "file": "fix-tui-history-shows-no-history-after-message.md",
-    "title": "Fix TUI /history shows \"No history\" after a message is sent",
-    "status": "todo"
-  },
-  {
     "file": "fix-tui-mock-simple-text-response-repetition.md",
     "title": "Fix TUI mock simple-text response repetition",
-    "status": "todo"
-  },
-  {
-    "file": "fix-tui-multi-turn-follow-up-stuck-behind-active-turn.md",
-    "title": "Fix TUI multi-turn follow-up stuck behind active turn",
-    "status": "todo"
-  },
-  {
-    "file": "fix-tui-new-session-does-not-abort-active-turn.md",
-    "title": "Fix TUI /new session does not abort an active turn",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-tui-permission-dialog-key-input-routed-to-input.md",
@@ -397,22 +552,12 @@
   {
     "file": "fix-tui-turn-complete-leaves-working-status-and-queued.md",
     "title": "Fix TUI turn-complete leaves Working status and queued request",
-    "status": "partial"
-  },
-  {
-    "file": "fold-lifecycle-state-machine-into-provider-events.md",
-    "title": "Fold lifecycle state machine into provider events",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fold-runie-protocol-into-core.md",
     "title": "Fold `runie-protocol` crate into `runie-core`",
     "status": "done"
-  },
-  {
-    "file": "fuzzy-history-search-with-sublime-fuzzy.md",
-    "title": "Fuzzy history search with sublime-fuzzy",
-    "status": "todo"
   },
   {
     "file": "harden-actors-against-mutex-poisoning.md",
@@ -440,16 +585,6 @@
     "status": "done"
   },
   {
-    "file": "investigate-session-persistence-not-created-in-live-tui.md",
-    "title": "Investigate session persistence not created during live TUI runs",
-    "status": "todo"
-  },
-  {
-    "file": "live-tui-smoke-test-real-minimax.md",
-    "title": "Live TUI smoke test with real MiniMax provider",
-    "status": "partial"
-  },
-  {
     "file": "migrate-production-actors-to-ractor.md",
     "title": "Migrate production actors to `ractor`",
     "status": "done"
@@ -463,11 +598,6 @@
     "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
     "title": "Migrate TUI and CLI to `Leader::start`",
     "status": "done"
-  },
-  {
-    "file": "move-blocking-io-out-of-command-handlers.md",
-    "title": "Move blocking IO out of command/update handlers",
-    "status": "todo"
   },
   {
     "file": "move-built-in-slash-commands-to-declarative-yaml.md",
@@ -490,11 +620,6 @@
     "status": "done"
   },
   {
-    "file": "normalize-paths-with-path-absolutize-and-dunce.md",
-    "title": "Normalize paths with path-absolutize/dunce",
-    "status": "todo"
-  },
-  {
     "file": "normalize-remaining-std-mutex-to-parking-lot.md",
     "title": "Normalize remaining `std::sync::Mutex`/`RwLock` to `parking_lot`",
     "status": "done"
@@ -503,26 +628,6 @@
     "file": "normalize-std-sync-locks-in-tui-production-code.md",
     "title": "Normalize `std::sync` locks in TUI production code",
     "status": "done"
-  },
-  {
-    "file": "offload-provider-network-calls-from-actor-handler.md",
-    "title": "Offload provider network calls from actor handler",
-    "status": "todo"
-  },
-  {
-    "file": "parse-bash-commands-with-shell-words-in-ioactor.md",
-    "title": "Parse bash commands with shell-words in IoActor",
-    "status": "todo"
-  },
-  {
-    "file": "prepare-grok-build-reference-for-comparison.md",
-    "title": "Prepare Grok Build reference for comparison",
-    "status": "todo"
-  },
-  {
-    "file": "propagate-actor-spawn-errors-instead-of-panicking.md",
-    "title": "Propagate actor spawn errors instead of panicking",
-    "status": "todo"
   },
   {
     "file": "reconnect-tui-agent-actor-channel.md",
@@ -548,16 +653,6 @@
     "file": "remove-dead-yaml-line-parsers-from-resource-loader.md",
     "title": "Remove dead YAML line parsers from `resource_loader`",
     "status": "done"
-  },
-  {
-    "file": "remove-direct-appstate-mutation-from-tui-handlers.md",
-    "title": "Remove direct AppState mutation from TUI handlers",
-    "status": "todo"
-  },
-  {
-    "file": "remove-duplicate-input-mutation-in-uiactor.md",
-    "title": "Remove duplicate input mutation in UiActor",
-    "status": "todo"
   },
   {
     "file": "remove-mutex-eventbus-wrappers-from-actor-state.md",
@@ -615,11 +710,6 @@
     "status": "done"
   },
   {
-    "file": "replace-clipboard-dead-code-with-arboard-or-osc52.md",
-    "title": "Replace clipboard dead code with arboard or crossterm osc52",
-    "status": "todo"
-  },
-  {
     "file": "replace-config-validator-with-jsonschema.md",
     "title": "Replace custom config validator with `jsonschema`",
     "status": "done"
@@ -660,21 +750,6 @@
     "status": "done"
   },
   {
-    "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
-    "title": "Replace fff-search indexer with ignore/walkdir",
-    "status": "todo"
-  },
-  {
-    "file": "replace-keymap-modifier-tables-with-crokey-map.md",
-    "title": "Replace keymap modifier dispatch tables with a crokey HashMap",
-    "status": "todo"
-  },
-  {
-    "file": "replace-layered-config-merge-with-figment.md",
-    "title": "Replace custom layered config merge with Figment",
-    "status": "todo"
-  },
-  {
     "file": "replace-leftover-macros-with-functions.md",
     "title": "Replace leftover macros with functions",
     "status": "done"
@@ -683,11 +758,6 @@
     "file": "replace-legacy-tool-parsers-with-thin-shim.md",
     "title": "Finish tool-parser shim: collapse legacy modules and marker stripping",
     "status": "done"
-  },
-  {
-    "file": "replace-location-parser-with-regex.md",
-    "title": "Replace location parser with regex",
-    "status": "todo"
   },
   {
     "file": "replace-normalize-raw-frontmatter-with-standard-splitter.md",
@@ -705,11 +775,6 @@
     "status": "done"
   },
   {
-    "file": "replace-streaming-buffer-classifier-with-pulldown-cmark.md",
-    "title": "Replace streaming-buffer classifier with pulldown-cmark",
-    "status": "todo"
-  },
-  {
     "file": "replace-think-filter-with-regex.md",
     "title": "Replace think-block filter with regex",
     "status": "done"
@@ -718,16 +783,6 @@
     "file": "replace-tmux-test-with-ratatui-tests.md",
     "title": "Replace `scripts/tmux-test.sh` with Ratatui `TestBackend` tests",
     "status": "done"
-  },
-  {
-    "file": "replace-token-chars4-heuristic-with-tiktoken-rs.md",
-    "title": "Replace token chars/4 heuristic with tiktoken-rs",
-    "status": "todo"
-  },
-  {
-    "file": "replace-token-wrapper-with-secrecy-secretstring.md",
-    "title": "Replace Token wrapper with secrecy::SecretString",
-    "status": "todo"
   },
   {
     "file": "replace-tui-keymap-combo-stringification-with-crokey.md",
@@ -750,19 +805,9 @@
     "status": "done"
   },
   {
-    "file": "route-app-init-loads-through-actors.md",
-    "title": "Route app init loads through actors",
-    "status": "todo"
-  },
-  {
     "file": "route-cli-config-through-configactor.md",
     "title": "Route CLI config operations through `ConfigActor`",
     "status": "done"
-  },
-  {
-    "file": "shorten-approval-sink-timeout-and-wire-cancellation.md",
-    "title": "Shorten approval sink timeout and wire cancellation",
-    "status": "partial"
   },
   {
     "file": "simplify-core-keybinding-parsing-with-crokey.md",
@@ -785,29 +830,14 @@
     "status": "done"
   },
   {
-    "file": "spike-evaluate-async-openai-or-rig-core-for-provider-stack.md",
-    "title": "Spike: evaluate async-openai or rig-core for the provider stack",
-    "status": "todo"
-  },
-  {
     "file": "store-provider-api-keys-in-keyring-not-config.md",
     "title": "Store provider API keys in OS keyring, not plain `config.toml`",
     "status": "done"
   },
   {
-    "file": "subscribe-tui-to-initial-facts-before-leader-start.md",
-    "title": "Subscribe TUI to initial facts before leader start",
-    "status": "todo"
-  },
-  {
     "file": "type-and-unify-provider-model-layer.md",
     "title": "Type and unify provider/model layer",
     "status": "done"
-  },
-  {
-    "file": "typed-chatmessage-builder-and-shrink-sanitize.md",
-    "title": "Typed ChatMessage builder and shrink sanitize.rs",
-    "status": "todo"
   },
   {
     "file": "unify-cli-json-rpc-transport-and-remove-dead-acp.md",
@@ -875,11 +905,6 @@
     "status": "done"
   },
   {
-    "file": "unify-tool-call-accumulators-into-single-state-machine.md",
-    "title": "Unify tool-call accumulators into a single state machine",
-    "status": "todo"
-  },
-  {
     "file": "unify-tui-message-wrapping-with-textwrap.md",
     "title": "Unify TUI message wrapping with `textwrap`",
     "status": "done"
@@ -910,11 +935,6 @@
     "status": "done"
   },
   {
-    "file": "use-ignore-and-globset-for-file-refs.md",
-    "title": "Use ignore and globset for file_refs",
-    "status": "todo"
-  },
-  {
     "file": "use-notify-directly-in-config-actor.md",
     "title": "Use `notify` directly in `RactorConfigActor`",
     "status": "done"
@@ -940,19 +960,9 @@
     "status": "done"
   },
   {
-    "file": "use-toml-edit-and-file-locks-for-config.md",
-    "title": "Use toml_edit + fs2 file locks for config persistence",
-    "status": "todo"
-  },
-  {
     "file": "use-tool-call-id-in-tool-events.md",
     "title": "Use tool-call id in ToolStart/ToolEnd events",
     "status": "done"
-  },
-  {
-    "file": "use-which-crate-for-executable-lookup.md",
-    "title": "Use which crate for executable lookup",
-    "status": "todo"
   },
   {
     "file": "wire-or-delete-input-actor.md",
@@ -963,15 +973,5 @@
     "file": "wire-or-remove-leader-snapshot-rx.md",
     "title": "Wire or remove LeaderHandle snapshot_rx",
     "status": "done"
-  },
-  {
-    "file": "wire-user-permission-rules-into-agent-gate.md",
-    "title": "Wire user permission rules into the agent permission gate",
-    "status": "todo"
-  },
-  {
-    "file": "write-runie-vs-grok-build-findings-report.md",
-    "title": "Write Runie vs Grok Build findings report",
-    "status": "todo"
   }
 ]

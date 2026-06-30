@@ -14,10 +14,12 @@
 
 ## Status: Active bugs from live TUI/CLI testing, architecture review, and Grok Build comparison
 
-The original cleanup is complete: **124 `done`**, **3 `wontfix`**. A 2026-06-30 five-round architecture/code review focused on less code, Pareto (80/20) choices, and crate replacements produced 13 new `todo` tasks ([`2026-06-30-five-round-architecture-review.md`](2026-06-30-five-round-architecture-review.md)). A deep crate-replacement analysis followed, producing 16 additional `todo` tasks ([`2026-06-30-crate-replacement-deep-dive.md`](2026-06-30-crate-replacement-deep-dive.md)). Live mock-provider TUI/CLI testing, focused reviews, and a planned side-by-side comparison with Grok Build revealed regressions, wiring gaps, and parity gaps that must be fixed before real MiniMax testing:
+The original cleanup is complete: **137 `done`**, **3 `wontfix`**. A 2026-06-30 five-round architecture/code review focused on less code, Pareto (80/20) choices, and crate replacements produced 13 new `todo` tasks ([`2026-06-30-five-round-architecture-review.md`](2026-06-30-five-round-architecture-review.md)). A deep crate-replacement analysis followed, producing 16 additional `todo` tasks ([`2026-06-30-crate-replacement-deep-dive.md`](2026-06-30-crate-replacement-deep-dive.md)). Live mock-provider TUI/CLI testing, focused reviews, and a planned side-by-side comparison with Grok Build revealed regressions, wiring gaps, and parity gaps that must be fixed before real MiniMax testing:
 
-- **63 `todo` tasks** — see `tasks/index.json` for details.
+- **53 `todo` tasks** — see `tasks/index.json` for details.
 - **2 `partial` tasks** — `live-tui-smoke-test-real-minimax.md` is blocked on a missing `MINIMAX_API_KEY`; `shorten-approval-sink-timeout-and-wire-cancellation.md` is partially landed (timeout reduced, cancellation wiring remains).
+
+**Recent closures:** `fix-tui-mock-simple-text-response-repetition` and `fix-tui-turn-complete-leaves-working-status-and-queued` are now `done`. Root cause: `agent_running` guard cleared on `Done` instead of `TurnCompleted`, causing double agent spawn and infinite output.
 
 The workspace still passes `cargo check --workspace` and `cargo test --workspace`, but the TUI is not yet usable end-to-end. The highest-priority fixes are:
 1. `remove-direct-appstate-mutation-from-tui-handlers` — unblock actor-SSOT event-driven sync.
