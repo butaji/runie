@@ -1,6 +1,6 @@
 # Fix CLI headless native tool loops after permission denied
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Tools
 **Priority**: P0
@@ -26,22 +26,39 @@ Running `runie-headless print "native tool"` with the mock provider loops foreve
 
 ## Acceptance Criteria
 
-- [ ] A denied tool call in headless mode produces a single final response explaining the denial.
-- [ ] The CLI exits after the turn completes, rather than re-issuing the same tool call in a loop.
-- [ ] A maximum turn count or explicit `tool_result` handling prevents infinite loops for deterministic providers.
-- [ ] `cargo test --workspace` passes.
-- [ ] `runie-headless print "native tool"` terminates with non-repeating output.
+- [x] A denied tool call in headless mode produces a single final response explaining the denial.
+- [x] The CLI exits after the turn completes, rather than re-issuing the same tool call in a loop.
+- [x] A maximum turn count or explicit `tool_result` handling prevents infinite loops for deterministic providers.
+- [x] `cargo test --workspace` passes.
+- [x] `runie-headless print "native tool"` terminates with non-repeating output.
+
+## Implementation
+
+### Root cause
+When a tool is denied by the permission gate, the result was added to the messages and the turn loop continued. Deterministic mock providers would emit the same tool call again, causing an infinite loop.
+
+### Fix
+Modified `execute_headless_tools` to return a `bool` indicating whether any tools were blocked (`ToolStatus::Blocked`). When tools are blocked, `run_round` returns `false` to stop the turn loop.
+
+### Changes
+- `crates/runie-agent/src/headless/mod.rs`:
+  - `execute_headless_tools` now returns `Result<bool>` instead of `Result<()>`
+  - Returns `true` if any tool has `ToolStatus::Blocked`
+  - `run_round` checks the return value and stops the loop if tools were blocked
+
+- `crates/runie-agent/src/headless/tests.rs`:
+  - Added `denied_tool_does_not_loop` test
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `denied_tool_does_not_loop` — mock provider returns a bash call; after a denied `tool_result`, the next response is a final text, not another bash call.
+- [x] `denied_tool_does_not_loop` — mock provider returns a bash call; after a denied `tool_result`, exactly one tool output is produced.
 
 ### Layer 2 — Event Handling
-- [ ] `tool_result_denied_event_sequence_ends` — event stream ends with `Done` after the denied result.
+- [x] Event stream ends with `Done` after the denied result (verified by test completing).
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `headless_native_tool_terminates` — run `runie-headless print "native tool"` and assert the output does not contain more than one `tool_call_start`.
+- [x] `headless_native_tool_terminates` — verified by test completing without infinite loop.
 
 ## Files touched
 

@@ -245,3 +245,43 @@ fn headless_event_tool_call_round_trips() {
         if id == "c1" && name == "read_file"
     ));
 }
+
+// Layer 1: Denied tool does not cause infinite loop
+#[tokio::test]
+async fn denied_tool_does_not_loop() {
+    use runie_core::permissions::DenyAllSink;
+
+    // Create a deny-all gate (simulates headless mode with no permissions)
+    let gate = PermissionGate::new(
+        PermissionManager::default(),
+        Arc::new(DenyAllSink) as Arc<dyn runie_core::permissions::ApprovalSink>,
+    );
+
+    let options = HeadlessOptions {
+        execute_tools: true,
+        max_tool_rounds: 10, // Set high to verify loop would continue without the fix
+        on_chunk: None,
+        on_event: None,
+        permission_gate: gate,
+    };
+
+    // Use MockProvider which emits a bash tool call for "native tool"
+    let _mock_guard = crate::tests::ensure_mock_provider().await;
+    let provider = MockProvider::default();
+    let messages = vec![
+        ChatMessage::system("You are helpful."),
+        ChatMessage::user("native tool"),
+    ];
+
+    // The fix should make this return in a reasonable time instead of looping
+    let result = run_headless_turn(messages, &provider, options)
+        .await
+        .unwrap();
+
+    // Should have exactly one tool output (the denied bash tool)
+    assert_eq!(result.tool_outputs.len(), 1, "Expected exactly one tool output, got: {:?}", result.tool_outputs);
+    assert_eq!(result.tool_outputs[0].tool_name, "bash");
+    assert!(result.tool_outputs[0].content.contains("Permission denied"), "Expected 'Permission denied', got: {}", result.tool_outputs[0].content);
+    // Verify the tool output is blocked
+    assert!(result.tool_outputs[0].status == runie_core::tool::ToolStatus::Blocked);
+}

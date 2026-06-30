@@ -205,6 +205,11 @@
     "status": "done"
   },
   {
+    "file": "fix-cli-headless-native-tool-permission-denied-loop.md",
+    "title": "Fix CLI headless native tool loops after permission denied",
+    "status": "done"
+  },
+  {
     "file": "fix-leader-status-hardcoded-actor-count.md",
     "title": "Fix LeaderHandle status hardcoded actor count",
     "status": "done"
@@ -817,11 +822,6 @@
   {
     "file": "drop-legacy-diff-parser-and-rely-on-diffy.md",
     "title": "Drop legacy diff parser and rely on diffy",
-    "status": "todo"
-  },
-  {
-    "file": "fix-cli-headless-native-tool-permission-denied-loop.md",
-    "title": "Fix CLI headless native tool loops after permission denied",
     "status": "todo"
   },
   {

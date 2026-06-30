@@ -164,7 +164,7 @@ impl HeadlessTurnState {
             return Ok(false);
         }
 
-        execute_headless_tools(
+        let any_blocked = execute_headless_tools(
             &tool_calls,
             &mut self.messages,
             &mut self.tool_outputs,
@@ -172,6 +172,13 @@ impl HeadlessTurnState {
             self.options.on_event.as_mut(),
         )
         .await?;
+
+        // Stop the loop if any tools were blocked (denied by permission policy).
+        // The agent should not re-issue the same tool call after a denial.
+        if any_blocked {
+            return Ok(false);
+        }
+
         Ok(true)
     }
 
@@ -348,11 +355,18 @@ async fn execute_headless_tools(
     tool_outputs: &mut Vec<ToolOutput>,
     gate: &PermissionGate,
     mut on_event: Option<&mut Box<dyn FnMut(HeadlessEvent) + Send>>,
-) -> Result<()> {
+) -> Result<bool> {
     let ctx = ToolContext::default();
+    let mut any_blocked = false;
 
     for tool_call in tools {
         let output = execute_tool_call(tool_call, &ctx, gate).await;
+
+        // Track if any tool was blocked (denied by permission policy)
+        if output.status == runie_core::tool::ToolStatus::Blocked {
+            any_blocked = true;
+        }
+
         tool_outputs.push(output.clone());
         messages.push(tool_result_message(tool_call, &output));
         if let Some(cb) = on_event.as_mut() {
@@ -362,7 +376,7 @@ async fn execute_headless_tools(
             });
         }
     }
-    Ok(())
+    Ok(any_blocked)
 }
 
 #[cfg(test)]
