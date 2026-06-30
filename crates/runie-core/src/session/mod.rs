@@ -6,6 +6,8 @@ pub mod index;
 pub mod persistence;
 pub mod replay;
 pub mod store;
+#[cfg(test)]
+pub mod tree_tests;
 pub mod tree;
 pub mod turn_queue;
 
