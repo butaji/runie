@@ -35,6 +35,11 @@
     "status": "todo"
   },
   {
+    "file": "build-runie-vs-grok-build-comparison-harness.md",
+    "title": "Build Runie vs Grok Build comparison harness",
+    "status": "todo"
+  },
+  {
     "file": "centralize-built-in-tool-names.md",
     "title": "Centralize built-in tool names",
     "status": "done"
@@ -78,6 +83,66 @@
     "file": "collapse-event-intent-kind-taxonomies.md",
     "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
     "status": "done"
+  },
+  {
+    "file": "compare-auth-config-setup-and-fix-gaps.md",
+    "title": "Compare auth/config setup and fix gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-diff-edit-output-and-fix-gaps.md",
+    "title": "Compare diff and edit output and fix gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-file-context-picker-and-fix-gaps.md",
+    "title": "Compare file context picker and fix gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-headless-one-shot-scenarios-and-fix-gaps.md",
+    "title": "Compare headless one-shot scenarios and fix gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-interactive-tui-launch-scenarios-and-fix-gaps.md",
+    "title": "Compare interactive TUI launch scenarios and fix gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-model-provider-switching-and-fix-gaps.md",
+    "title": "Compare model/provider switching and fix gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-multi-turn-conversation-and-fix-gaps.md",
+    "title": "Compare multi-turn conversation and fix gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-plan-mode-and-context-workflows-and-fix-gaps.md",
+    "title": "Compare plan mode and context workflows and fix gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-quit-abort-error-recovery-and-fix-gaps.md",
+    "title": "Compare quit, abort, and error recovery and fix gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-session-persistence-resumption-and-fix-gaps.md",
+    "title": "Compare session persistence and resumption and fix gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-subagent-mcp-support-and-fix-gaps.md",
+    "title": "Compare subagent and MCP support and fix gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-tool-execution-permission-flows-and-fix-gaps.md",
+    "title": "Compare tool execution and permission flows and fix gaps",
+    "status": "todo"
   },
   {
     "file": "convert-agent-and-fff-indexer-to-ractor-state.md",
@@ -397,6 +462,11 @@
   {
     "file": "offload-provider-network-calls-from-actor-handler.md",
     "title": "Offload provider network calls from actor handler",
+    "status": "todo"
+  },
+  {
+    "file": "prepare-grok-build-reference-for-comparison.md",
+    "title": "Prepare Grok Build reference for comparison",
     "status": "todo"
   },
   {
@@ -747,6 +817,11 @@
   {
     "file": "wire-user-permission-rules-into-agent-gate.md",
     "title": "Wire user permission rules into the agent permission gate",
+    "status": "todo"
+  },
+  {
+    "file": "write-runie-vs-grok-build-findings-report.md",
+    "title": "Write Runie vs Grok Build findings report",
     "status": "todo"
   }
 ]
