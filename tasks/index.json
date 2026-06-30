@@ -157,7 +157,7 @@
   {
     "file": "fix-500-line-file-limit-violations.md",
     "title": "Fix 500-line file-limit violations",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
@@ -307,7 +307,7 @@
   {
     "file": "rename-telemetry-rs-to-tracing-init.md",
     "title": "Rename `telemetry.rs` to `tracing_init.rs`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-bash-safety-with-shell-words.md",

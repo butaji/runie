@@ -1,6 +1,6 @@
 # Rename `telemetry.rs` to `tracing_init.rs`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Observability
 **Priority**: P3
