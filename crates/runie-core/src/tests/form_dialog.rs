@@ -99,7 +99,6 @@ fn form_save_accepts_input() {
 fn form_submit_executes_command() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let store = tmp_store();
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
     let mut state = fresh_state();
     palette_select(&mut state, "save");
@@ -136,7 +135,6 @@ fn form_submit_executes_command() {
     let jsonl_path =
         crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("myses");
     assert!(jsonl_path.exists(), "session should be saved");
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }
 

@@ -317,7 +317,6 @@ fn save_nonblocking_writes_file() {
     let _guard = HOME_LOCK.lock().unwrap();
     let dir = tempfile::tempdir().unwrap();
     let original = std::env::var("HOME").ok();
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::set_var("HOME", dir.path()) };
 
     let mut config = Config::default();
@@ -330,10 +329,8 @@ fn save_nonblocking_writes_file() {
     assert_eq!(loaded.provider.as_deref(), Some("anthropic"));
 
     if let Some(home) = original {
-        // FIXME: Audit that the environment access only happens in single-threaded code.
         unsafe { std::env::set_var("HOME", home) };
     } else {
-        // FIXME: Audit that the environment access only happens in single-threaded code.
         unsafe { std::env::remove_var("HOME") };
     }
 }

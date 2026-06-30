@@ -195,7 +195,6 @@ fn save_creates_session_file() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
 
     let mut state = fresh_state();
@@ -217,7 +216,6 @@ fn save_creates_session_file() {
     let last = sys_msgs.last().expect("system msg");
     assert!(last.content().contains("saved"), "confirmation shown");
 
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }
 
@@ -226,7 +224,6 @@ fn save_preserves_messages_provider_model() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
 
     let mut state = fresh_state();
@@ -247,7 +244,6 @@ fn save_preserves_messages_provider_model() {
     assert_eq!(loaded.session.messages[0].content(), "test message");
     assert_eq!(loaded.session.messages[0].role, Role::User);
 
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }
 

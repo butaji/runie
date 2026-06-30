@@ -28,8 +28,9 @@ const MINIMAL_FALLBACK_TOML: &str = concat!(
 /// and embedded default) fail — which would indicate build-pipeline corruption.
 /// This constant TOML is designed to be trivially parseable and never fails.
 pub(crate) fn minimal_fallback_theme() -> opaline::Theme {
-    opaline::load_from_str(MINIMAL_FALLBACK_TOML, None)
-        .expect("MINIMAL_FALLBACK_TOML is valid TOML — update if opaline API changes")
+    // This is a hardcoded TOML constant designed to be trivially parseable.
+    // Panic only if the opaline API has changed incompatibly.
+    opaline::load_from_str(MINIMAL_FALLBACK_TOML, None).unwrap()
 }
 
 // Canonical source for built-in theme names; also used by runie-core for the CLI.
@@ -80,7 +81,7 @@ pub(crate) fn load_theme_with_caps(
     if caps.truecolor {
         return Ok(base); // No quantization needed
     }
-    Ok(quantize_theme(base, caps, name))
+    quantize_theme(base, caps, name)
 }
 
 /// Quantize all palette and token colors in a theme to the terminal's color depth.
@@ -88,7 +89,7 @@ fn quantize_theme(
     theme: opaline::Theme,
     caps: crate::terminal::caps::TermCaps,
     name: &str,
-) -> opaline::Theme {
+) -> Result<opaline::Theme, opaline::OpalineError> {
     use opaline::OpalineColor;
 
     // Determine target depth: ANSI16 if mouse is None (very limited terminal),
@@ -112,12 +113,11 @@ fn quantize_theme(
     }
 
     // Reconstruct: load fresh theme and register quantized tokens on top.
-    let mut result = load_theme_raw(name)
-        .expect("load_theme_raw must succeed in quantize_theme (fallback should have resolved)");
+    let mut result = load_theme_raw(name)?;
     for (k, v) in &quantized {
         result.register_token(k, *v);
     }
-    crate::theme::styles::register_runie_styles(result)
+    Ok(crate::theme::styles::register_runie_styles(result))
 }
 
 /// Quantize an opaline color to the given depth, returning the nearest ANSI color.

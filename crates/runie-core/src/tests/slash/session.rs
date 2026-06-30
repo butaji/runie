@@ -78,7 +78,6 @@ fn save_trims_whitespace() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
 
     let mut state = fresh_state();
@@ -90,7 +89,6 @@ fn save_trims_whitespace() {
         crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("trimmed");
     assert!(jsonl_path.exists(), "whitespace should be trimmed");
 
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }
 
@@ -208,7 +206,6 @@ fn resume_loads_most_recent_session() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let store = tmp_store();
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
 
     // Save an older session
@@ -266,6 +263,5 @@ fn resume_loads_most_recent_session() {
         "older message not loaded"
     );
 
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }

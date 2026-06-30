@@ -236,7 +236,6 @@ fn test_save_and_load_session() {
 
     let tmp = std::env::temp_dir().join("runie_session_cmd_test");
     let _ = std::fs::remove_dir_all(&tmp);
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", &tmp) };
 
     let mut state = fresh_state();
@@ -265,6 +264,5 @@ fn test_save_and_load_session() {
         .iter()
         .any(|m| m.role == Role::User && m.content() == "hi"));
 
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }

@@ -167,7 +167,6 @@ fn roundtrip_save_load_preserves_display_name() {
     let _ = std::fs::remove_dir_all(&dir);
     // Create the directory before using it (SessionStore doesn't auto-create)
     std::fs::create_dir_all(&dir).unwrap();
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", &dir) };
 
     let session = crate::session::Session {
@@ -191,7 +190,6 @@ fn roundtrip_save_load_preserves_display_name() {
         state.session.session_display_name,
         Some("Display Name".to_string())
     );
-    // FIXME: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
     let _ = std::fs::remove_dir_all(&dir);
 }
