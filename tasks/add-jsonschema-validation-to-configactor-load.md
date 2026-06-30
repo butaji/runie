@@ -4,7 +4,7 @@
 **Milestone**: R6
 **Category**: Configuration
 **Priority**: P2
-**Note**: RactorConfigActor::pre_start emits ConfigLoaded without validating the config; validation only in load_and_emit.
+**Note**: Validation now happens in both pre_start and reload paths via validate_full().
 
 **Depends on**: replace-config-validator-with-jsonschema
 **Blocks**: route-cli-config-through-configactor
@@ -36,7 +36,7 @@ After the hand-written validator is replaced by `jsonschema`, wire validation in
 
 ## Files touched
 
-- `crates/runie-core/src/actors/config/ractor_config.rs` — added `validate_full()` call in `load_and_emit` and `reload_and_emit` with error emission; kept previous valid config on failure
+- `crates/runie-core/src/actors/config/ractor_config.rs` — added `validate_full()` call in `pre_start`, `load_and_emit` and `reload_and_emit` with error emission; kept previous valid config on failure
 - `crates/runie-core/src/actors/config/tests.rs` — fixed tests to use known providers (`openai`, `anthropic`) so validation passes
 - `crates/runie-core/src/config/tests/validate_tests.rs` — layer 1 validation tests (pre-existing)
 
