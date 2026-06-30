@@ -4,25 +4,23 @@ use super::{ToolOutput, ToolStatus};
 use bytesize::ByteSize;
 use humantime::format_duration as humantime_fmt;
 
-/// Locate an executable on PATH using the `which` command.
+/// Locate an executable on PATH using the `which` crate.
 pub fn which_tool(name: &str) -> Option<String> {
-    std::process::Command::new("which")
-        .arg(name)
-        .output()
+    which::which(name)
         .ok()
-        .filter(|o| o.status.success())
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+        .map(|p| p.to_string_lossy().into_owned())
 }
 
 /// Async version of [`which_tool`].
+///
+/// Note: `which::which` is sync but fast; we wrap it in blocking to avoid
+/// blocking the async executor.
 pub async fn which_tool_async(name: &str) -> Option<String> {
-    tokio::process::Command::new("which")
-        .arg(name)
-        .output()
+    let name = name.to_owned();
+    tokio::task::spawn_blocking(move || which_tool(&name))
         .await
         .ok()
-        .filter(|o| o.status.success())
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+        .flatten()
 }
 
 /// Build a standard error (or warning) [`ToolOutput`].

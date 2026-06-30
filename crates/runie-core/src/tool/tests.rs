@@ -246,3 +246,56 @@ fn tool_def_constants_are_accessible() {
     assert!(!TestTool::READ_ONLY);
     assert!(ReadOnlyTestTool::READ_ONLY);
 }
+
+// ── which_tool tests ───────────────────────────────────────────────────────
+
+use crate::tool::format::{which_tool, which_tool_async};
+
+#[test]
+fn which_tool_finds_known_executable() {
+    // `echo` should be available on all Unix systems
+    let result = which_tool("echo");
+    assert!(
+        result.is_some(),
+        "should find 'echo' on PATH: {:?}",
+        result
+    );
+    let path = result.unwrap();
+    assert!(!path.is_empty(), "path should not be empty");
+    // Path should end with "echo"
+    assert!(
+        path.ends_with("echo") || path.contains("echo"),
+        "path should contain 'echo': {}",
+        path
+    );
+}
+
+#[test]
+fn which_tool_returns_none_for_missing_executable() {
+    let result = which_tool("this-executable-does-not-exist-12345");
+    assert!(
+        result.is_none(),
+        "should not find non-existent executable: {:?}",
+        result
+    );
+}
+
+#[tokio::test]
+async fn which_tool_async_finds_known_executable() {
+    let result = which_tool_async("echo").await;
+    assert!(
+        result.is_some(),
+        "async which should find 'echo' on PATH: {:?}",
+        result
+    );
+}
+
+#[tokio::test]
+async fn which_tool_async_returns_none_for_missing_executable() {
+    let result = which_tool_async("this-executable-does-not-exist-12345").await;
+    assert!(
+        result.is_none(),
+        "async which should not find non-existent executable: {:?}",
+        result
+    );
+}

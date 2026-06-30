@@ -952,7 +952,7 @@
   {
     "file": "use-which-crate-for-executable-lookup.md",
     "title": "Use which crate for executable lookup",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "wire-or-delete-input-actor.md",
