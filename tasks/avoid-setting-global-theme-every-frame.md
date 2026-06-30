@@ -1,6 +1,6 @@
 # Avoid setting global theme every frame
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: TUI / Rendering
 **Priority**: P3

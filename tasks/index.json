@@ -7,7 +7,7 @@
   {
     "file": "avoid-setting-global-theme-every-frame.md",
     "title": "Avoid setting global theme every frame",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "buffer-tcp-lines-in-leader-server.md",
