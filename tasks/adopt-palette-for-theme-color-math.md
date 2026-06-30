@@ -1,6 +1,6 @@
 # Adopt `palette` for theme color math
 
-**Status**: todo
+**Status**: wontfix
 **Milestone**: R7
 **Category**: TUI / Rendering
 **Priority**: P2
@@ -30,4 +30,11 @@
 
 ## Notes
 
-- `opaline` is already used in `styles.rs`; evaluate whether `palette` is a better single dependency.
+**Won't fix**: The hand-rolled `darken` and `blend` functions are simple, correct, and well-tested. They implement standard sRGB linear interpolation which is appropriate for TUI contexts. The current implementation:
+
+1. **Is correct**: Uses proper linear interpolation over sRGB components
+2. **Is simple**: ~50 lines of straightforward Rust code
+3. **Is tested**: Multiple unit tests verify correctness
+4. **Has no dependencies**: Doesn't require adding `palette` crate
+
+`palette` would be valuable for more advanced color space conversions (LAB, LCH, etc.) or perceptual color math, but the current use case is simple sRGB blending. Adding `palette` would increase compile times and binary size without clear benefit.

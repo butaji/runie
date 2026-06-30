@@ -17,7 +17,7 @@
   {
     "file": "adopt-palette-for-theme-color-math.md",
     "title": "Adopt `palette` for theme color math",
-    "status": "todo"
+    "status": "wontfix"
   },
   {
     "file": "centralize-built-in-tool-names.md",
