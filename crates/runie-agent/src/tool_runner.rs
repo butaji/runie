@@ -3,10 +3,7 @@
 //! Tools are executed via the MCP `ToolDef` trait. Each tool is called directly
 //! with typed input parsed from the `ParsedToolCall`.
 
-use crate::tool::{
-    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool, ListDirTool,
-    ReadFileTool, SearchTool, WriteFileTool,
-};
+use crate::tool_registry::dispatch as dispatch_tool_by_name;
 use crate::PermissionGate;
 use runie_core::harness_skills::{SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult};
 #[cfg(test)]
@@ -15,7 +12,7 @@ use runie_core::message::{ChatMessage, Part};
 use runie_core::permissions::{PermissionAction, PermissionContext};
 use runie_core::tool::ParsedToolCall;
 use runie_core::tool::{
-    is_builtin_tool, parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus,
+    is_builtin_tool, ToolContext, ToolOutput, ToolStatus,
 };
 use std::time::Duration;
 use tokio::time::timeout;
@@ -45,20 +42,12 @@ pub async fn execute_tool_call(
     }
 }
 
-/// Dispatch a tool call by name using static dispatch.
+/// Dispatch a tool call by name using the centralized registry.
 async fn dispatch_tool(name: &str, args: &serde_json::Value, ctx: &ToolContext) -> ToolOutput {
-    match name {
-        "bash" => run_tool::<BashTool>(args, ctx).await,
-        "read_file" => run_tool::<ReadFileTool>(args, ctx).await,
-        "write_file" => run_tool::<WriteFileTool>(args, ctx).await,
-        "edit_file" => run_tool::<EditFileTool>(args, ctx).await,
-        "list_dir" => run_tool::<ListDirTool>(args, ctx).await,
-        "grep" => run_tool::<GrepTool>(args, ctx).await,
-        "find" => run_tool::<FindTool>(args, ctx).await,
-        "fetch_docs" => run_tool::<FetchDocsTool>(args, ctx).await,
-        "search" => run_tool::<SearchTool>(args, ctx).await,
-        "find_definitions" => run_tool::<FindDefinitionsTool>(args, ctx).await,
-        _ => unknown_tool_output(name, args.clone()),
+    if is_builtin_tool(name) {
+        dispatch_tool_by_name(name, args, ctx)
+    } else {
+        unknown_tool_output(name, args.clone())
     }
 }
 
@@ -96,24 +85,6 @@ pub fn build_permission_context<'a>(
         input: Some(input),
         cwd: Some(cwd),
     }
-}
-
-async fn run_tool<T: ToolDef>(args: &serde_json::Value, ctx: &ToolContext) -> ToolOutput {
-    // Parse the input into the tool's typed input
-    let input = match parse_input::<T::Input>(args) {
-        Ok(i) => i,
-        Err(e) => {
-            return ToolOutput {
-                tool_name: T::NAME.to_string(),
-                tool_args: args.clone(),
-                content: format!("Failed to parse tool input: {}", e),
-                bytes_transferred: None,
-                duration: Duration::from_millis(0),
-                status: ToolStatus::Error,
-            };
-        }
-    };
-    T::execute(input, ctx).await
 }
 
 fn blocked_output(tool_name: &str, args: serde_json::Value) -> ToolOutput {

@@ -46,6 +46,10 @@ pub struct UiActor {
     /// Guards against duplicate agent runs when TurnStarted arrives multiple times.
     /// Set true when agent_handle.run() is called; cleared when Done is received.
     pub(crate) agent_running: bool,
+    /// True when the pending turn was started from a delivered (queued) message,
+    /// not a fresh user submit. When true, UiActor skips calling submit_user_message
+    /// for TurnStarted because the content was already delivered via FollowUpDelivered.
+    pending_queued_turn: bool,
     /// Turn actor handle for draining the queue after a turn completes.
     /// Stored here so UiActor can call run_if_queued after Done is processed.
     turn_handle: Option<RactorTurnHandle>,
@@ -112,6 +116,7 @@ impl UiActor {
             prev_cursor_pos,
             pending_submit: None,
             agent_running: false,
+            pending_queued_turn: false,
             turn_handle: Some(turn_handle),
             // Store the pre-created receiver for run_with_external_rx
             _bus_rx: Some(bus_rx),
@@ -148,6 +153,7 @@ impl UiActor {
             prev_cursor_pos,
             pending_submit: None,
             agent_running: false,
+            pending_queued_turn: false,
             turn_handle,
             _bus_rx: None,
         }
@@ -279,6 +285,15 @@ impl UiActor {
         if was_config_loaded {
             let _ = self.kb_tx.send(self.state.config().keybindings().clone());
         }
+
+        // Track pending queued turn: set when FollowUpDelivered is applied.
+        // The content was already delivered to the session via FollowUpDelivered;
+        // UiActor should NOT call submit_user_message again (which would emit
+        // a duplicate UserMessageSubmitted).
+        if matches!(&evt, Event::FollowUpDelivered { .. } | Event::SteeringDelivered { .. }) {
+            self.pending_queued_turn = true;
+        }
+
         if let Event::TurnStarted { request_id, content, .. } = &evt {
             // Guard: prevent duplicate agent spawns if TurnStarted arrives multiple times.
             // The agent runs as a background task; set the flag before spawning so
@@ -300,7 +315,11 @@ impl UiActor {
                 };
                 self.agent_handle.run(cmd).await;
             }
+            // Clear the queued-turn flag now that the turn has started.
+            // (submit_user_message was already called for queued turns by TurnActor.)
+            self.pending_queued_turn = false;
         }
+
         // Clear agent_running and drain the queue when the turn fully completes
         // (TurnCompleted), errors (TurnErrored), or is explicitly aborted (Abort).
         //
@@ -309,9 +328,23 @@ impl UiActor {
         // TurnStarted from run_if_queued (also called on Done) to bypass the guard
         // and spawn a second agent, causing doubled output on the same stream.
         // The real guard-clear happens on TurnCompleted / TurnErrored / Abort.
+        //
+        // BUG FIX: call DeliverQueued BEFORE run_if_queued so that queued messages
+        // are moved from AppState.message_queue to TurnActor.request_queue BEFORE
+        // the queue is drained. Without this, queued follow-ups never start.
         if matches!(&evt, Event::TurnCompleted | Event::TurnErrored { .. } | Event::Abort) {
             self.agent_running = false;
+            // If the turn ended without starting a queued follow-up, clear the flag.
+            self.pending_queued_turn = false;
             if let Some(ref turn_handle) = self.turn_handle {
+                // Move queued messages into the request queue first.
+                let steering_mode = self.state.config().steering_mode;
+                let follow_up_mode = self.state.config().follow_up_mode;
+                turn_handle.send(runie_core::actors::TurnMsg::DeliverQueued {
+                    steering_mode,
+                    follow_up_mode,
+                }).await;
+                // Then drain the request queue and start the next turn.
                 self.agent_handle.run_if_queued(turn_handle).await;
             }
         }
@@ -611,21 +644,16 @@ impl UiActor {
             self.state.view_mut().dirty = true;
             return;
         }
-        // Steering (follow-up during active turn).
+        // Steering (follow-up during active turn): route through TurnActor to
+        // maintain authoritative queue state. When the turn completes,
+        // UiActor::handle_event_inner calls DeliverQueued + RunIfQueued to start
+        // the queued turn.
         if self.state.agent_state().turn_active {
-            self.state
-                .agent_state_mut()
-                .message_queue
-                .push(runie_core::model::QueuedMessage {
-                    content,
-                    kind: runie_core::model::QueuedMessageKind::Steering,
-                });
-            self.state.view_mut().scroll = 0;
-            self.state.view_mut().dirty = true;
+            self.state.queue_steering_and_update_history(content);
             return;
         }
         // Normal user message submission.
-        self.state.submit_user_message(content);
+        self.state.submit_user_message_and_update_history(content);
     }
 
     fn publish_snapshot(&mut self) {

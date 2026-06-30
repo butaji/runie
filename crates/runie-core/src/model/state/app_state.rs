@@ -85,4 +85,34 @@ impl AppState {
         std::mem::swap(self, &mut prev);
         prev
     }
+
+    /// Queue a steering (follow-up) message and update input history.
+    /// Used by UiActor::dispatch_submit_content to keep AppState's input_history
+    /// in sync with the session history sent to SessionActor.
+    pub fn queue_steering_and_update_history(&mut self, content: String) {
+        use crate::actors::TurnMsg;
+        let handles = self.actor_handles().cloned();
+        if let Some(ref h) = handles {
+            let _ = h.turn.try_send(TurnMsg::QueueFollowUp { content: content.clone() });
+        } else {
+            self.agent_state_mut()
+                .message_queue
+                .push(crate::model::QueuedMessage {
+                    content: content.clone(),
+                    kind: crate::model::QueuedMessageKind::Steering,
+                });
+        }
+        self.view_mut().scroll = 0;
+        self.view_mut().dirty = true;
+        self.push_to_input_history(&content);
+    }
+
+    /// Submit a user message and update input history.
+    /// Used by UiActor::dispatch_submit_content to keep AppState's input_history
+    /// in sync with the session history sent to SessionActor.
+    pub fn submit_user_message_and_update_history(&mut self, content: String) {
+        let history_content = content.clone();
+        self.submit_user_message(content);
+        self.push_to_input_history(&history_content);
+    }
 }

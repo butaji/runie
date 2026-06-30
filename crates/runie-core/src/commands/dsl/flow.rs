@@ -62,6 +62,8 @@ pub enum CommandResult {
     Message(String),
     Warning(String),
     Event(Event),
+    /// Multiple events to emit sequentially.
+    Events(Vec<Event>),
     OpenDialog(DialogType),
     OpenPanelStack(Box<PanelStack>),
     None,

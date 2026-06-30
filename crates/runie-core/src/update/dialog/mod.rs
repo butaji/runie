@@ -26,4 +26,5 @@ pub use toggles::dialog_toggle_event;
 pub use form::{form_panel_action, FormAction};
 
 // File picker helpers used by `open` and `panel` submodules.
-pub(crate) use file_pickers::{build_file_picker_panel, rebuild_file_picker};
+pub(crate) use file_pickers::build_file_picker_panel;
+pub(crate) use file_pickers::rebuild_file_picker;

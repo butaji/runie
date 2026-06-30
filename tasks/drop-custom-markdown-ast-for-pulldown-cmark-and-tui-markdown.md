@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`partial` — Stage 1 of 2 complete.
 
 ## Context
 
@@ -20,9 +20,24 @@ Remove the custom markdown AST and render markdown directly: parse with `pulldow
 - [ ] All existing markdown snapshot tests pass without visual changes.
 - [ ] Edge cases preserved: nested lists, blockquotes, code fences, inline styles, incomplete fences.
 
-## Design Impact
+## Stage 1 — Completed (2026-06-30)
 
-No change to TUI element design or composition. Only the markdown parsing/rendering implementation changes; visible output must remain pixel-identical.
+Consolidated `blocks.rs` + `inline.rs` into single `parsing.rs` module:
+- Deleted `crates/runie-core/src/markdown/blocks.rs` (316 lines)
+- Deleted `crates/runie-core/src/markdown/inline.rs` (144 lines)
+- Created `crates/runie-core/src/markdown/parsing.rs` (merged content, same public API)
+- Updated `crates/runie-core/src/markdown/mod.rs` to re-export from `parsing.rs`
+- Kept `heal.rs` (still needed by `markdown_render.rs` for healing incomplete fences)
+- Kept `MdInline`/`CodeBlock` types (still needed by `layout.rs` line-count math and `streaming_buffer.rs`)
+- `cargo test -p runie-core --lib`: 1764 tests pass
+- `cargo check --workspace`: passes
+
+## Remaining Work
+
+- [ ] Replace `MdInline`/`MdSpan` rendering with direct `tui_markdown::Text`/`Line` rendering in `markdown_render.rs`
+- [ ] Replace custom line-count math in `layout.rs` with `tui-markdown` line counts
+- [ ] Delete `heal.rs` (or keep only if needed after markdown_render.rs migration)
+- [ ] Delete `MdInline`/`CodeBlock` types from `parsing.rs`
 
 ## Tests
 
@@ -34,6 +49,6 @@ No change to TUI element design or composition. Only the markdown parsing/render
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

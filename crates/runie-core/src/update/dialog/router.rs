@@ -118,6 +118,12 @@ pub fn process_command_result(state: &mut AppState, result: CommandResult) {
             close_command_palette_if_open(state);
             state.update(evt);
         }
+        CR::Events(evts) => {
+            close_command_palette_if_open(state);
+            for evt in evts {
+                state.update(evt);
+            }
+        }
         CR::OpenDialog(d) => {
             if let Some(current) = state.open_dialog_mut().take() {
                 push_dialog_to_back_stack(state, current);

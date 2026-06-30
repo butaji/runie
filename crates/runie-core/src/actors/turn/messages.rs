@@ -7,13 +7,28 @@ use serde::{Deserialize, Serialize};
 
 /// Messages accepted by TurnActor.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Whether a submitted message came from a fresh user submit or a queued/delivered source.
+#[derive(Copy, PartialEq, Eq, Default)]
+pub enum MessageSource {
+    /// Fresh user submit — emit UserMessageSubmitted.
+    #[default]
+    Fresh,
+    /// Queued/delivered content — content already in session via FollowUpDelivered;
+    /// do NOT emit UserMessageSubmitted again.
+    Queued,
+}
+
+/// Messages accepted by TurnActor.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TurnMsg {
     /// Check queue and start a turn if something is queued.
     RunIfQueued,
     /// Abort the current turn and stop the queue.
     AbortTurn,
     /// Submit a user message to the queue.
-    SubmitUserMessage { content: String, id: String },
+    /// `source` indicates whether this is a fresh submit (should emit UserMessageSubmitted)
+    /// or a queued/delivered message (content already in session via FollowUpDelivered).
+    SubmitUserMessage { content: String, id: String, source: MessageSource },
     /// Queue a steering message.
     QueueSteering { content: String },
     /// Queue a follow-up message.

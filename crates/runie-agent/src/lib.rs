@@ -9,6 +9,7 @@ pub mod stream_response;
 pub mod subagent;
 pub mod think_filter;
 pub mod tool;
+pub mod tool_registry;
 pub mod tool_runner;
 pub mod truncate;
 pub mod turn;

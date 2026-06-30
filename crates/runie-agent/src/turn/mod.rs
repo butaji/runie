@@ -13,7 +13,8 @@ use runie_core::sanitize::sanitize_messages;
 use runie_core::tool::{
     assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
 };
-use runie_core::tool::{to_openai_function, BUILTIN_TOOL_NAMES};
+use crate::tool_registry::build_schemas as build_tool_registry;
+use runie_core::tool::BUILTIN_TOOL_NAMES;
 use std::time::Instant;
 
 // Helper modules
@@ -232,33 +233,8 @@ fn collect_parsed_tool_calls(
     tools
 }
 
-fn build_tool_registry(read_only: bool) -> Vec<serde_json::Value> {
-    use crate::tool::{
-        BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool,
-        ListDirTool, ReadFileTool, SearchTool, WriteFileTool,
-    };
-
-    let mut tools = vec![
-        to_openai_function::<ReadFileTool>(),
-        to_openai_function::<ListDirTool>(),
-        to_openai_function::<GrepTool>(),
-        to_openai_function::<FindTool>(),
-        to_openai_function::<SearchTool>(),
-        to_openai_function::<FetchDocsTool>(),
-        to_openai_function::<FindDefinitionsTool>(),
-    ];
-
-    if !read_only {
-        tools.push(to_openai_function::<WriteFileTool>());
-        tools.push(to_openai_function::<EditFileTool>());
-        tools.push(to_openai_function::<BashTool>());
-    }
-
-    tools
-}
-
 /// Tools that require write permissions (filtered in read-only mode).
-const WRITE_TOOLS: &[&str] = &["bash", "write_file", "edit_file"];
+const WRITE_TOOLS: &[&str] = crate::tool_registry::WRITE_TOOL_NAMES;
 
 /// Build the comma-separated tools-list string from BUILTIN_TOOL_NAMES.
 /// Read-only tools are filtered out when `read_only` is true.

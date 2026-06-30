@@ -312,7 +312,7 @@ async fn stream_headless_response(
     content: &mut String,
     options: &mut HeadlessOptions,
 ) -> Result<HeadlessStreamedResponse> {
-    let tools = build_tool_registry();
+    let tools = crate::tool_registry::build_all_schemas();
     let mut state = HeadlessStreamState::new(content, options);
     let mut stream = provider.generate_with_tools(messages.to_vec(), tools);
 
@@ -329,25 +329,6 @@ async fn stream_headless_response(
     Ok(state.into_response())
 }
 
-fn build_tool_registry() -> Vec<serde_json::Value> {
-    use crate::tool::{
-        BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool,
-        ListDirTool, ReadFileTool, SearchTool, WriteFileTool,
-    };
-    use runie_core::tool::to_openai_function;
-    vec![
-        to_openai_function::<BashTool>(),
-        to_openai_function::<ReadFileTool>(),
-        to_openai_function::<WriteFileTool>(),
-        to_openai_function::<EditFileTool>(),
-        to_openai_function::<ListDirTool>(),
-        to_openai_function::<GrepTool>(),
-        to_openai_function::<FindTool>(),
-        to_openai_function::<FetchDocsTool>(),
-        to_openai_function::<SearchTool>(),
-        to_openai_function::<FindDefinitionsTool>(),
-    ]
-}
 
 async fn execute_headless_tools(
     tools: &[ParsedToolCall],

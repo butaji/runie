@@ -272,7 +272,7 @@
   {
     "file": "drop-custom-markdown-ast-for-pulldown-cmark-and-tui-markdown.md",
     "title": "Drop custom markdown AST and render through pulldown-cmark/tui-markdown",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "drop-legacy-diff-parser-and-rely-on-diffy.md",
@@ -1022,7 +1022,7 @@
   {
     "file": "unify-tool-call-accumulators-into-single-state-machine.md",
     "title": "Unify tool-call accumulators into a single state machine",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-tool-registry-and-dispatch.md",

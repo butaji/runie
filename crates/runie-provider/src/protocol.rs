@@ -5,7 +5,6 @@
 //! to get transport and framing for free.
 
 use runie_core::provider_event::ProviderEvent;
-use std::collections::HashMap;
 
 /// Trait for provider-specific streaming protocol handling.
 ///
@@ -64,58 +63,6 @@ impl Request {
     }
 }
 
-/// A helper for tracking accumulated tool call state.
-#[derive(Debug, Default, Clone)]
-pub struct ToolAccumulator {
-    pub id: String,
-    pub name: String,
-    pub arguments: String,
-}
-
-/// Manages multiple in-flight tool calls by index.
-#[derive(Debug, Default)]
-pub struct ToolRegistry<T = ToolAccumulator> {
-    pub tools: HashMap<usize, T>,
-    pub started: HashMap<String, ()>,
-    pub ended: HashMap<String, ()>,
-}
-
-impl ToolRegistry {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn is_started(&self, id: &str) -> bool {
-        self.started.contains_key(id)
-    }
-
-    pub fn mark_started(&mut self, id: String) {
-        self.started.insert(id, ());
-    }
-
-    pub fn mark_ended(&mut self, id: String) {
-        self.ended.insert(id, ());
-    }
-
-    pub fn is_ended(&self, id: &str) -> bool {
-        self.ended.contains_key(id)
-    }
-
-    pub fn reset(&mut self) {
-        *self = Self::new();
-    }
-}
-
-impl ToolAccumulator {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn is_complete(&self) -> bool {
-        !self.id.is_empty() && !self.name.is_empty()
-    }
-}
-
 /// Marker trait for frame types that indicate end of stream.
 pub trait TerminalFrame {
     fn is_terminal(&self) -> bool;
@@ -153,27 +100,6 @@ impl<F> TerminalFrame for TerminalWrapper<F> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn tool_registry_tracks_started_ended() {
-        let mut reg = ToolRegistry::new();
-        assert!(!reg.is_started("call_1"));
-        reg.mark_started("call_1".to_string());
-        assert!(reg.is_started("call_1"));
-        assert!(!reg.is_ended("call_1"));
-        reg.mark_ended("call_1".to_string());
-        assert!(reg.is_ended("call_1"));
-    }
-
-    #[test]
-    fn tool_accumulator_is_complete() {
-        let mut acc = ToolAccumulator::new();
-        assert!(!acc.is_complete());
-        acc.id = "call_1".to_string();
-        assert!(!acc.is_complete());
-        acc.name = "read_file".to_string();
-        assert!(acc.is_complete());
-    }
 
     #[test]
     fn request_builder() {

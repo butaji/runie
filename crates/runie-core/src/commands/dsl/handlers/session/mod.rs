@@ -94,6 +94,8 @@ pub fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     *state.login_flow_mut() = None;
     if let Some(handles) = state.actor_handles() {
         let _ = handles.permission.try_send(PermissionMsg::DismissRequest);
+        // Abort any in-flight turn so the agent stops streaming and agent_running is cleared.
+        let _ = handles.turn.try_send(crate::actors::TurnMsg::AbortTurn);
     } else {
         *state.permission_request_mut() = None;
     }
@@ -102,7 +104,8 @@ pub fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     state.session_mut().session_updated_at = now;
     state.messages_changed();
     state.add_system_msg("New session started".into());
-    CommandResult::Event(crate::Event::ClearQueues)
+    // Emit Abort so UiActor clears agent_running; ClearQueues clears the queue.
+    CommandResult::Events(vec![crate::Event::Abort, crate::Event::ClearQueues])
 }
 
 pub fn handle_reset(state: &mut AppState, _: &str) -> CommandResult {

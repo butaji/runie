@@ -295,11 +295,13 @@ async fn turn_actor_turn_started_reaches_uiactor_via_shared_bus() {
     // Send SubmitUserMessage to TurnActor via its handle
     // (TurnActor publishes TurnStarted to the shared bus)
     use runie_core::actors::TurnMsg;
+    use runie_core::actors::turn::messages::MessageSource;
     let turn_handle = _turn_handle;
     turn_handle
         .send(TurnMsg::SubmitUserMessage {
             content: "hello".into(),
             id: "req.0".into(),
+            source: MessageSource::Fresh,
         })
         .await;
     turn_handle.send(TurnMsg::RunIfQueued).await;

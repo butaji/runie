@@ -6,6 +6,7 @@
 //! `Event::InputChanged`.
 
 use crate::actors::{IoMsg, SessionMsg, TurnMsg};
+use crate::actors::turn::messages::MessageSource;
 use crate::message::{now, ChatMessage, Role};
 use crate::model::AppState;
 
@@ -60,8 +61,10 @@ impl AppState {
         Some(content)
     }
 
-    /// Push content to input history (for synchronous tests where SessionActor is not spawned).
-    fn push_to_input_history(&mut self, content: &str) {
+    /// Push content to input history. Called by both `submit()` (test path) and
+    /// `UiActor::dispatch_submit_content` (production path) to keep AppState's
+    /// `input_history` in sync with the session history sent to SessionActor.
+    pub(crate) fn push_to_input_history(&mut self, content: &str) {
         let history = &mut self.input_mut().input_history;
         if history.is_empty() || history.last() != Some(&content.to_string()) {
             history.push(content.to_string());
@@ -132,7 +135,11 @@ impl AppState {
             // Production mode: send to TurnActor
             let id = format!("req.{}", self.agent_state().next_id);
             self.agent_state_mut().next_id += 1;
-            let _ = h.turn.try_send(TurnMsg::SubmitUserMessage { content, id });
+            let _ = h.turn.try_send(TurnMsg::SubmitUserMessage {
+                content,
+                id,
+                source: MessageSource::Fresh,
+            });
         } else {
             // Test mode without handles: apply synchronously
             self.apply_user_message_sync(content);
@@ -166,6 +173,11 @@ impl AppState {
                 self.notify(msg, crate::event::TransientLevel::Warning)
             }
             crate::commands::CommandResult::Event(evt) => self.update(evt),
+            crate::commands::CommandResult::Events(evts) => {
+                for evt in evts {
+                    self.update(evt);
+                }
+            }
             crate::commands::CommandResult::OpenDialog(d) => match d {
                 DialogType::CommandPalette => crate::update::dialog::open_command_palette(self),
                 DialogType::ModelSelector => crate::update::dialog::open_model_selector(self),

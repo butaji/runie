@@ -4,16 +4,13 @@
 //! Single parsing pass produces both block structure and inline spans,
 //! so line counts in core stay in sync with rendered output in the TUI.
 
-mod blocks;
 mod heal;
-mod inline;
 #[cfg(test)]
 mod tests;
+pub(crate) mod parsing;
 
-pub use blocks::extract_blocks;
 pub use heal::heal_markdown;
-pub(crate) use inline::md_options;
-pub use inline::{inlines_to_text, parse_inline_spans};
+pub use parsing::{extract_blocks, inlines_to_text, parse_inline_spans};
 
 // ── Inline spans ─────────────────────────────────────────────────────────────
 
@@ -79,14 +76,11 @@ pub use CodeBlock as Block;
 /// Parse markdown into a list of blocks with inline spans extracted.
 /// Single pass — both block structure and inline styling are computed together.
 pub fn parse_markdown(text: &str) -> Vec<CodeBlock> {
-    let (parse_text, trailing) = blocks::split_unclosed_fence(text);
-    let mut blocks = extract_blocks(parse_text);
+    let (parse_text, trailing) = parsing::split_unclosed_fence(text);
+    let mut blocks = parsing::extract_blocks(parse_text);
     if let Some(t) = trailing {
-        let inlines = parse_inline_spans(t);
-        blocks.push(CodeBlock::Text {
-            content: t.to_owned(),
-            inlines,
-        });
+        let inlines = parsing::parse_inline_spans(t);
+        blocks.push(CodeBlock::Text { content: t.to_owned(), inlines });
     }
     blocks
 }

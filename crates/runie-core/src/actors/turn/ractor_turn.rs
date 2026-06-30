@@ -94,18 +94,31 @@ impl RactorTurnActor {
         Self::emit(state, Event::TurnAborted);
     }
 
-    fn handle_submit_user_message(state: &mut TurnActorState, content: String, id: String) {
-        Self::emit(
-            state,
-            Event::UserMessageSubmitted {
-                id: id.clone(),
-                content: content.clone(),
-            },
-        );
+    fn handle_submit_user_message(
+        state: &mut TurnActorState,
+        content: String,
+        id: String,
+        source: super::messages::MessageSource,
+    ) {
+        // Only emit UserMessageSubmitted for fresh submits.
+        // For queued/delivered messages, the content is already in the session
+        // via FollowUpDelivered -> deliver_queued -> UserMessageSubmitted.
+        if source == super::messages::MessageSource::Fresh {
+            Self::emit(
+                state,
+                Event::UserMessageSubmitted {
+                    id: id.clone(),
+                    content: content.clone(),
+                },
+            );
+        }
         state.turn_state.request_queue.push_back((content, id));
-        // Increment next_id so auto-generated IDs don't collide with caller-provided ones
         state.turn_state.next_id += 1;
-        Self::handle_run_if_queued(state);
+        // Only auto-start for fresh submits; queued messages are started via
+        // RunIfQueued after TurnCompleted/DeliverQueued.
+        if source == super::messages::MessageSource::Fresh {
+            Self::handle_run_if_queued(state);
+        }
     }
 
     fn handle_queue_steering(state: &mut TurnActorState, content: String) {
@@ -318,9 +331,11 @@ impl Actor for RactorTurnActor {
         match msg {
             TurnMsg::RunIfQueued => Self::handle_run_if_queued(state),
             TurnMsg::AbortTurn => Self::handle_abort_turn(state),
-            TurnMsg::SubmitUserMessage { content, id } => {
-                Self::handle_submit_user_message(state, content, id)
-            }
+            TurnMsg::SubmitUserMessage {
+                content,
+                id,
+                source,
+            } => Self::handle_submit_user_message(state, content, id, source),
             TurnMsg::QueueSteering { content } => Self::handle_queue_steering(state, content),
             TurnMsg::QueueFollowUp { content } => Self::handle_queue_follow_up(state, content),
             TurnMsg::AbortQueue => Self::handle_abort_queue(state),
@@ -375,6 +390,7 @@ impl RactorTurnActor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::actors::turn::messages::MessageSource;
 
     #[tokio::test]
     async fn run_if_queued_starts_turn() {
@@ -385,6 +401,7 @@ mod tests {
             .send(TurnMsg::SubmitUserMessage {
                 content: "hello".into(),
                 id: "req.0".into(),
+                source: MessageSource::Fresh,
             })
             .await;
         handle.send(TurnMsg::RunIfQueued).await;
@@ -407,6 +424,7 @@ mod tests {
             .send(TurnMsg::SubmitUserMessage {
                 content: "hello".into(),
                 id: "req.0".into(),
+                source: MessageSource::Fresh,
             })
             .await;
         handle.send(TurnMsg::RunIfQueued).await;
@@ -456,11 +474,12 @@ mod tests {
         let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
         let mut sub = bus.subscribe();
 
-        // First turn starts
+        // First turn starts (fresh submit)
         handle
             .send(TurnMsg::SubmitUserMessage {
                 content: "first".into(),
                 id: "req.0".into(),
+                source: MessageSource::Fresh,
             })
             .await;
         handle.send(TurnMsg::RunIfQueued).await;
