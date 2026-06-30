@@ -11,14 +11,14 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 #[cfg(test)]
 use crate::actors::config::RactorConfigActor;
 use crate::actors::config::RactorConfigHandle;
-use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
+use crate::actors::ractor_adapter::{rpc_channel, spawn_ractor, RactorHandle};
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::event::Event;
 use crate::provider::ProviderError;
 
 use super::factory::{BuiltProvider, ProviderFactory};
-use super::messages::{make_reply, take_reply, ProviderMsg};
+use super::messages::ProviderMsg;
 
 /// Ractor-based `ProviderActor` handle with ergonomic helper methods.
 #[derive(Clone, Debug)]
@@ -43,15 +43,14 @@ impl RactorProviderHandle {
         provider: String,
         model: String,
     ) -> Result<BuiltProvider, ProviderError> {
-        let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+        let (reply, rx) = rpc_channel();
         let msg = ProviderMsg::Build {
             provider,
             model,
-            reply: make_reply(reply_tx),
+            reply,
         };
         let _ = self.inner.send(msg).await;
-        reply_rx
-            .await
+        rx.await
             .unwrap_or_else(|_| Err(anyhow::anyhow!("provider actor dropped").into()))
     }
 
@@ -61,35 +60,27 @@ impl RactorProviderHandle {
         provider: String,
         api_key: String,
     ) -> anyhow::Result<Vec<String>> {
-        let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+        let (reply, rx) = rpc_channel();
         let msg = ProviderMsg::ValidateKey {
             provider,
             api_key,
-            reply: make_reply(reply_tx),
+            reply,
         };
         let _ = self.inner.send(msg).await;
-        reply_rx
-            .await
+        rx.await
             .unwrap_or_else(|_| Err(anyhow::anyhow!("provider actor dropped")))
     }
 
     /// List models for a configured provider.
     pub async fn list_models(&self, provider: String) -> anyhow::Result<Vec<String>> {
-        let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+        let (reply, rx) = rpc_channel();
         let msg = ProviderMsg::ListModels {
             provider,
-            reply: make_reply(reply_tx),
+            reply,
         };
         let _ = self.inner.send(msg).await;
-        reply_rx
-            .await
+        rx.await
             .unwrap_or_else(|_| Err(anyhow::anyhow!("provider actor dropped")))
-    }
-}
-
-impl From<RactorProviderHandle> for crate::actors::ProviderActorHandle {
-    fn from(h: RactorProviderHandle) -> Self {
-        crate::actors::ProviderActorHandle::from_actor_ref(h.inner.actor_ref().clone())
     }
 }
 
@@ -245,9 +236,7 @@ impl Actor for RactorProviderActor {
                 reply,
             } => {
                 let result = self.build_provider(&provider, &model).await;
-                if let Some(tx) = take_reply(&reply) {
-                    let _ = tx.send(result);
-                }
+                reply.send(result);
             }
             ProviderMsg::ValidateKey {
                 provider,
@@ -255,15 +244,11 @@ impl Actor for RactorProviderActor {
                 reply,
             } => {
                 let result = self.validate_key(&provider, &api_key).await;
-                if let Some(tx) = take_reply(&reply) {
-                    let _ = tx.send(result);
-                }
+                reply.send(result);
             }
             ProviderMsg::ListModels { provider, reply } => {
                 let result = self.list_models(&provider).await;
-                if let Some(tx) = take_reply(&reply) {
-                    let _ = tx.send(result);
-                }
+                reply.send(result);
             }
         }
         Ok(())

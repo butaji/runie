@@ -30,8 +30,7 @@ pub use io::{IoMsg, RactorIoActor, RactorIoHandle};
 pub use leader::{Leader, LeaderCommand, LeaderHandle, LeaderStatus};
 pub use permission::{PermissionMsg, RactorPermissionActor, RactorPermissionHandle};
 pub use provider::{
-    BuiltProvider, ProviderActorHandle, ProviderFactory, ProviderMsg, RactorProviderActor,
-    RactorProviderHandle,
+    BuiltProvider, ProviderFactory, ProviderMsg, RactorProviderActor, RactorProviderHandle,
 };
 pub use session::{RactorSessionActor, RactorSessionHandle, SessionMsg};
 pub use turn::{RactorTurnActor, RactorTurnHandle, TurnMsg};
