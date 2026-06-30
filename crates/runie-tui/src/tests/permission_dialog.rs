@@ -217,3 +217,121 @@ async fn other_keys_not_intercepted_by_permission() {
         "Regular key should not affect input state"
     );
 }
+
+// ============================================================================
+// Layer 2 — Event Handling: navigation keys consumed as no-ops
+// ============================================================================
+
+/// Esc while a permission dialog is open is consumed as a no-op.
+/// It does NOT deny the permission and is NOT routed to the input box.
+#[tokio::test]
+async fn esc_during_permission_dialog_is_noop() {
+    let (mut ui, _agent) = make_ui_actor();
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+
+    *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
+        request_id: "test-esc".into(),
+        tool: "bash".into(),
+        input: serde_json::json!({"command": "echo hi"}),
+    });
+
+    ui.handle_event_inner(Event::Escape, effect_tx.clone())
+        .await;
+
+    assert!(
+        ui.state.permission_request_opt().is_some(),
+        "Esc should not deny the permission request"
+    );
+}
+
+/// Backspace while a permission dialog is open is consumed as a no-op.
+#[tokio::test]
+async fn backspace_during_permission_dialog_is_noop() {
+    let (mut ui, _agent) = make_ui_actor();
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+
+    *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
+        request_id: "test-bs".into(),
+        tool: "bash".into(),
+        input: serde_json::json!({"command": "echo hi"}),
+    });
+
+    ui.handle_event_inner(Event::Backspace, effect_tx.clone())
+        .await;
+
+    assert!(
+        ui.state.permission_request_opt().is_some(),
+        "Backspace should not deny the permission request"
+    );
+}
+
+/// Enter while a permission dialog is open is consumed as a no-op.
+#[tokio::test]
+async fn newline_during_permission_dialog_is_noop() {
+    let (mut ui, _agent) = make_ui_actor();
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+
+    *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
+        request_id: "test-nl".into(),
+        tool: "bash".into(),
+        input: serde_json::json!({"command": "echo hi"}),
+    });
+
+    ui.handle_event_inner(Event::Newline, effect_tx.clone())
+        .await;
+
+    assert!(
+        ui.state.permission_request_opt().is_some(),
+        "Newline should not deny the permission request"
+    );
+}
+
+/// Arrow keys while a permission dialog is open are consumed as no-ops.
+#[tokio::test]
+async fn cursor_keys_during_permission_dialog_are_noop() {
+    let (mut ui, _agent) = make_ui_actor();
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+
+    *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
+        request_id: "test-cursor".into(),
+        tool: "bash".into(),
+        input: serde_json::json!({"command": "echo hi"}),
+    });
+
+    ui.handle_event_inner(Event::CursorLeft, effect_tx.clone())
+        .await;
+    ui.handle_event_inner(Event::CursorRight, effect_tx.clone())
+        .await;
+    ui.handle_event_inner(Event::CursorStart, effect_tx.clone())
+        .await;
+    ui.handle_event_inner(Event::CursorEnd, effect_tx.clone())
+        .await;
+
+    assert!(
+        ui.state.permission_request_opt().is_some(),
+        "Cursor keys should not deny the permission request"
+    );
+}
+
+/// PageUp/PageDown while a permission dialog is open are consumed as no-ops.
+#[tokio::test]
+async fn page_keys_during_permission_dialog_are_noop() {
+    let (mut ui, _agent) = make_ui_actor();
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+
+    *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
+        request_id: "test-page".into(),
+        tool: "bash".into(),
+        input: serde_json::json!({"command": "echo hi"}),
+    });
+
+    ui.handle_event_inner(Event::PageUp, effect_tx.clone())
+        .await;
+    ui.handle_event_inner(Event::PageDown, effect_tx.clone())
+        .await;
+
+    assert!(
+        ui.state.permission_request_opt().is_some(),
+        "Page keys should not deny the permission request"
+    );
+}

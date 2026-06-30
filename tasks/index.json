@@ -532,7 +532,7 @@
   {
     "file": "refine-permission-dialog-key-handling.md",
     "title": "Refine permission dialog key handling",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-agent-handlebox-dead-code-or-wire-queue-drain.md",

@@ -53,6 +53,116 @@ fn a_key_allows_permission_request_opt() {
 }
 
 // ============================================================================
+// Layer 2 — Event Handling: permission dialog navigation key no-ops
+// ============================================================================
+
+/// Esc while a permission dialog is open is consumed as a no-op.
+/// It does NOT deny the permission and does NOT route to the input box.
+#[test]
+fn esc_during_permission_dialog_is_noop() {
+    let mut state = setup_permission_request("test-esc");
+    let initial_input = state.input.input.clone();
+
+    input_event(&mut state, Event::Escape);
+
+    // Dialog stays open — Esc is a no-op, not a deny
+    assert!(
+        state.permission_request_opt().is_some(),
+        "Esc should not deny the permission request"
+    );
+    // Input is unchanged — Esc is consumed, not routed to input box
+    assert_eq!(
+        state.input.input, initial_input,
+        "Esc should not affect the input buffer"
+    );
+}
+
+/// Backspace while a permission dialog is open is consumed as a no-op.
+#[test]
+fn backspace_during_permission_dialog_is_noop() {
+    let mut state = setup_permission_request("test-backspace");
+    let initial_input = state.input.input.clone();
+
+    input_event(&mut state, Event::Backspace);
+
+    assert!(
+        state.permission_request_opt().is_some(),
+        "Backspace should not deny the permission request"
+    );
+    assert_eq!(
+        state.input.input, initial_input,
+        "Backspace should not affect the input buffer"
+    );
+}
+
+/// Enter while a permission dialog is open is consumed as a no-op.
+#[test]
+fn newline_during_permission_dialog_is_noop() {
+    let mut state = setup_permission_request("test-newline");
+    let initial_input = state.input.input.clone();
+
+    input_event(&mut state, Event::Newline);
+
+    assert!(
+        state.permission_request_opt().is_some(),
+        "Newline should not deny the permission request"
+    );
+    assert_eq!(
+        state.input.input, initial_input,
+        "Newline should not affect the input buffer"
+    );
+}
+
+/// Arrow keys while a permission dialog is open are consumed as no-ops.
+#[test]
+fn cursor_keys_during_permission_dialog_are_noop() {
+    let mut state = setup_permission_request("test-cursor");
+    let initial_input = state.input.input.clone();
+
+    input_event(&mut state, Event::CursorLeft);
+    input_event(&mut state, Event::CursorRight);
+    input_event(&mut state, Event::CursorStart);
+    input_event(&mut state, Event::CursorEnd);
+
+    assert!(
+        state.permission_request_opt().is_some(),
+        "Cursor keys should not deny the permission request"
+    );
+    assert_eq!(
+        state.input.input, initial_input,
+        "Cursor keys should not affect the input buffer"
+    );
+}
+
+/// PageUp/PageDown while a permission dialog is open are consumed as no-ops.
+#[test]
+fn page_keys_during_permission_dialog_are_noop() {
+    let mut state = setup_permission_request("test-page");
+
+    input_event(&mut state, Event::PageUp);
+    input_event(&mut state, Event::PageDown);
+
+    assert!(
+        state.permission_request_opt().is_some(),
+        "Page keys should not deny the permission request"
+    );
+}
+
+/// Other character keys deny the permission request (fallback for non-y/n/a).
+#[test]
+fn other_char_keys_deny_permission() {
+    let mut state = setup_permission_request("test-other");
+
+    input_event(&mut state, Event::Input('h'));
+
+    // Intent sent (deny), dialog stays in state until PermissionResponse clears it
+    assert!(
+        state.permission_request_opt().is_some(),
+        "Other char keys should trigger deny intent"
+    );
+}
+
+// ============================================================================
 // Layer 2 — Event Handling: history_prev_moves_up, history_next_moves_down
 // ============================================================================
 

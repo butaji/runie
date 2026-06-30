@@ -32,10 +32,6 @@ pub fn config_path() -> PathBuf {
     })
 }
 
-fn load_config() -> crate::config::Config {
-    crate::config::Config::load(Some(&config_path()))
-}
-
 /// Read the config file with a shared (read) file lock.
 pub fn with_read_lock<F, T>(f: F) -> T
 where

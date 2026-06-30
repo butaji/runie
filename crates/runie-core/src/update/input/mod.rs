@@ -89,17 +89,63 @@ fn handle_paste_image(state: &mut AppState) {
     state.input_mut().input_flash = 3;
 }
 
+/// Handle input events while a permission dialog is open.
+///
+/// - `y`/`Y` allows once
+/// - `a`/`A` allows always
+/// - `n`/`N` explicitly denies
+/// - Esc, Back, Enter, arrows, PageUp/Down, mouse, and resize events are
+///   consumed silently (no-ops) so they do not accidentally deny the request.
+/// - All other keys deny.
 fn permission_input_event(state: &mut AppState, event: crate::Event) {
     use crate::permissions::PermissionAction;
 
     let Some(req) = state.permission_request_opt().cloned() else {
         return;
     };
+
+    // Events that are consumed silently (no-ops) while the dialog is open.
+    // They do NOT deny the request and are NOT routed to the input box.
+    let consumed = matches!(
+        event,
+        // Navigation / editing keys — consumed silently
+        crate::Event::Escape
+            | crate::Event::Backspace
+        | crate::Event::Newline
+        | crate::Event::DeleteWord
+        | crate::Event::DeleteToEnd
+        | crate::Event::DeleteToStart
+        | crate::Event::KillChar
+        | crate::Event::Undo
+        | crate::Event::Redo
+        | crate::Event::CursorLeft
+        | crate::Event::CursorRight
+        | crate::Event::CursorStart
+        | crate::Event::CursorEnd
+        | crate::Event::CursorWordLeft
+        | crate::Event::CursorWordRight
+        | crate::Event::HistoryPrev
+        | crate::Event::HistoryNext
+        | crate::Event::PageUp
+        | crate::Event::PageDown
+        | crate::Event::GoToTop
+        | crate::Event::GoToBottom
+        | crate::Event::MouseScrollUp
+        | crate::Event::MouseScrollDown
+        | crate::Event::MouseClick { .. }
+        | crate::Event::MouseMove { .. }
+        | crate::Event::TerminalSize { .. }
+    );
+    if consumed {
+        return;
+    }
+
     let action = match event {
         crate::Event::Input('y')
         | crate::Event::Input('Y')
         | crate::Event::Input('a')
         | crate::Event::Input('A') => PermissionAction::Allow,
+        // n/N explicitly deny; everything else also denies
         _ => PermissionAction::Deny,
     };
     // Emit intent to PermissionActor instead of direct registry mutation

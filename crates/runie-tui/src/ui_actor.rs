@@ -312,6 +312,14 @@ impl UiActor {
     /// Route input events through InputActor instead of applying directly.
     /// InputChanged events are the single source of truth for input state.
     async fn handle_input_event(&mut self, evt: &Event) {
+        // If a permission dialog is open, consume navigation/editing keys silently.
+        // They must NOT deny the request and must NOT be routed to the input box.
+        // y/n/a character keys are handled separately below.
+        if self.state.permission_request_opt().is_some()
+            && is_navigation_or_editing_event(evt)
+        {
+            return;
+        }
         match evt {
             Event::Input(c) => {
                 // Intercept y/n/a keys when a permission dialog is open.
@@ -614,4 +622,44 @@ impl UiActor {
         let snap = self.build_paced_snapshot();
         let _ = self.render_tx.send(snap);
     }
+}
+
+/// Returns `true` for events that should be silently consumed (no-op) while
+/// a permission dialog is open. These keys must NOT deny the request and must
+/// NOT be routed to the input box.
+///
+/// This intentionally does NOT include `Event::Input` — those are handled
+/// separately in `handle_input_event` to resolve the permission.
+fn is_navigation_or_editing_event(evt: &Event) -> bool {
+    matches!(
+        evt,
+        Event::Escape
+            | Event::Backspace
+            | Event::Newline
+            | Event::DeleteWord
+            | Event::DeleteToEnd
+            | Event::DeleteToStart
+            | Event::KillChar
+            | Event::Undo
+            | Event::Redo
+            | Event::Paste(_)
+            | Event::CursorLeft
+            | Event::CursorRight
+            | Event::CursorStart
+            | Event::CursorEnd
+            | Event::CursorWordLeft
+            | Event::CursorWordRight
+            | Event::HistoryPrev
+            | Event::HistoryNext
+            | Event::PageUp
+            | Event::PageDown
+            | Event::GoToTop
+            | Event::GoToBottom
+            | Event::Submit
+            | Event::MouseScrollUp
+            | Event::MouseScrollDown
+            | Event::MouseClick { .. }
+            | Event::MouseMove { .. }
+            | Event::TerminalSize { .. }
+    )
 }
