@@ -3,18 +3,19 @@
 //! Tools are executed via the MCP `ToolDef` trait. Each tool is called directly
 //! with typed input parsed from the `ParsedToolCall`.
 
-use crate::tool_registry::dispatch as dispatch_tool_by_name;
+
+use std::time::Duration;
+
 use crate::PermissionGate;
 use runie_core::harness_skills::{SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult};
 #[cfg(test)]
 use runie_core::message::Role;
 use runie_core::message::{ChatMessage, Part};
 use runie_core::permissions::{PermissionAction, PermissionContext};
-use runie_core::tool::ParsedToolCall;
 use runie_core::tool::{
-    is_builtin_tool, ToolContext, ToolOutput, ToolStatus,
+    is_builtin_tool, parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus,
 };
-use std::time::Duration;
+use runie_core::tool::ParsedToolCall;
 use tokio::time::timeout;
 
 /// Default timeout for tool execution (30 seconds).
@@ -42,12 +43,40 @@ pub async fn execute_tool_call(
     }
 }
 
-/// Dispatch a tool call by name using the centralized registry.
+/// Dispatch a tool call by name — calls ToolDef::execute directly.
+/// Permission evaluation is handled by the caller (`execute_tool_call`).
 async fn dispatch_tool(name: &str, args: &serde_json::Value, ctx: &ToolContext) -> ToolOutput {
-    if is_builtin_tool(name) {
-        dispatch_tool_by_name(name, args, ctx)
-    } else {
-        unknown_tool_output(name, args.clone())
+    match name {
+        "bash" => run_tool::<crate::tool::BashTool>(name, args, ctx).await,
+        "read_file" => run_tool::<crate::tool::ReadFileTool>(name, args, ctx).await,
+        "write_file" => run_tool::<crate::tool::WriteFileTool>(name, args, ctx).await,
+        "edit_file" => run_tool::<crate::tool::EditFileTool>(name, args, ctx).await,
+        "list_dir" => run_tool::<crate::tool::ListDirTool>(name, args, ctx).await,
+        "grep" => run_tool::<crate::tool::GrepTool>(name, args, ctx).await,
+        "find" => run_tool::<crate::tool::FindTool>(name, args, ctx).await,
+        "fetch_docs" => run_tool::<crate::tool::FetchDocsTool>(name, args, ctx).await,
+        "search" => run_tool::<crate::tool::SearchTool>(name, args, ctx).await,
+        "find_definitions" => run_tool::<crate::tool::FindDefinitionsTool>(name, args, ctx).await,
+        _ => unknown_tool_output(name, args.clone()),
+    }
+}
+
+/// Parse JSON args into typed input and call ToolDef::execute.
+async fn run_tool<T: ToolDef>(
+    name: &str,
+    args: &serde_json::Value,
+    ctx: &ToolContext,
+) -> ToolOutput {
+    match parse_input::<T::Input>(args) {
+        Ok(i) => T::execute(i, ctx).await,
+        Err(e) => ToolOutput {
+            tool_name: name.to_string(),
+            tool_args: args.clone(),
+            content: format!("Failed to parse tool input: {e}"),
+            bytes_transferred: None,
+            duration: Duration::from_millis(0),
+            status: ToolStatus::Error,
+        },
     }
 }
 
