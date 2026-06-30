@@ -87,12 +87,12 @@
   {
     "file": "emit-thoughtdone-on-stream-error.md",
     "title": "Emit ThoughtDone on stream error",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "emit-turncomplete-for-text-only-turns.md",
     "title": "Emit TurnComplete for text-only turns",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "enforce-advertised-file-function-complexity-limits.md",
