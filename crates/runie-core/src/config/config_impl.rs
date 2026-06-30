@@ -84,15 +84,15 @@ pub fn validate_registry(config: &crate::config::Config) -> Vec<String> {
         }
         if let Some(p) = find_provider(name) {
             for model_name in &provider_config.models {
-                if !p.models.iter().any(|m| &m.name == model_name) {
-                    if model_name.contains('/') {
-                        if let Some(actual_provider) = model_name.split('/').next() {
-                            if actual_provider != name {
-                                errors.push(format!(
-                                    "[model_providers.{}].models: model '{}' has wrong provider prefix (expected '{}'/...)",
-                                    name, model_name, name
-                                ));
-                            }
+                if !p.models.iter().any(|m| &m.name == model_name)
+                    && model_name.contains('/')
+                {
+                    if let Some(actual_provider) = model_name.split('/').next() {
+                        if actual_provider != name {
+                            errors.push(format!(
+                                "[model_providers.{}].models: model '{}' has wrong provider prefix (expected '{}'/...)",
+                                name, model_name, name
+                            ));
                         }
                     }
                 }

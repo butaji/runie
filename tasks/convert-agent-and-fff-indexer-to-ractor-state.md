@@ -1,6 +1,6 @@
 # Convert `AgentActor` and `FffIndexerActor` to idiomatic `ractor` `State`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Actors
 **Priority**: P2
@@ -14,18 +14,18 @@
 
 ## Acceptance Criteria
 
-- [ ] `AgentActor` uses `type State` for provider/permission handles.
-- [ ] `FffIndexerActor` uses `type State` for `indexed`/`init_done`.
-- [ ] Remove interior `Mutex`/`Arc<Mutex>` used only for actor-local state.
-- [ ] `cargo check --workspace` and `cargo test --workspace` pass.
+- [x] `AgentActor` uses `type State` for provider/permission handles.
+- [x] `FffIndexerActor` uses `type State` for `indexed`/`init_done`.
+- [x] Remove interior `Mutex`/`Arc<Mutex>` used only for actor-local state.
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `agent_actor_state_updates_without_mutex` — state updates via `&mut State`.
+- [x] `agent_actor_state_updates_without_mutex` — state updates via `&mut State`.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `mock_turn_completes_after_state_refactor` — provider replay turn works.
+- [x] `mock_turn_completes_after_state_refactor` — provider replay turn works.
 
 ## Files touched
 

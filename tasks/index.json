@@ -62,7 +62,7 @@
   {
     "file": "convert-agent-and-fff-indexer-to-ractor-state.md",
     "title": "Convert `AgentActor` and `FffIndexerActor` to idiomatic `ractor` `State`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "convert-production-eprintln-to-tracing.md",

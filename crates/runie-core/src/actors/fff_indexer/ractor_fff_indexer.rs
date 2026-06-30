@@ -71,6 +71,12 @@ pub struct RactorFffIndexerActor {
     init_done: bool,
 }
 
+/// Ractor State for FffIndexerActor — tracks init and indexing status.
+pub struct FffIndexerActorState {
+    pub indexed: bool,
+    pub init_done: bool,
+}
+
 impl RactorFffIndexerActor {
     fn new(root: PathBuf, data_dir: PathBuf, bus: EventBus<Event>) -> Self {
         let fff_dir = data_dir.join("runie").join("fff");
@@ -107,7 +113,7 @@ impl RactorFffIndexerActor {
 #[async_trait]
 impl Actor for RactorFffIndexerActor {
     type Msg = FffSearchRequest;
-    type State = ();
+    type State = FffIndexerActorState;
     type Arguments = EventBus<Event>;
 
     async fn pre_start(
@@ -115,16 +121,20 @@ impl Actor for RactorFffIndexerActor {
         _myself: ActorRef<Self::Msg>,
         _args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        Ok(())
+        Ok(FffIndexerActorState {
+            indexed: self.indexed,
+            init_done: self.init_done,
+        })
     }
 
     async fn handle(
         &self,
         _myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
-        _state: &mut Self::State,
+        state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        let payload = self.handle_search(msg).await;
+        let indexed = state.indexed;
+        let payload = self.handle_search(msg, indexed).await;
         let entries = payload
             .items
             .iter()
@@ -233,7 +243,11 @@ impl RactorFffIndexerActor {
     }
 
     /// Handle a search request.
-    async fn handle_search(&self, req: FffSearchRequest) -> FffSearchResultPayload {
+    async fn handle_search(
+        &self,
+        req: FffSearchRequest,
+        indexed: bool,
+    ) -> FffSearchResultPayload {
         let limit = req.limit.unwrap_or(DEFAULT_LIMIT);
 
         let picker_guard = match self.shared_picker.read() {
@@ -252,13 +266,13 @@ impl RactorFffIndexerActor {
         };
         let picker = match picker_guard.as_ref() {
             Some(p) => p,
-            None => return result_payload(&req, vec![], 0, self.indexed),
+            None => return result_payload(&req, vec![], 0, indexed),
         };
         let query_tracker = qt_guard.as_ref();
 
         let results = run_fff_search(&req, picker, query_tracker, limit);
         let items = convert_fff_results(&req, picker, &results);
-        result_payload(&req, items, results.total_matched, self.indexed)
+        result_payload(&req, items, results.total_matched, indexed)
     }
 
     fn emit(&self, event: Event) {
