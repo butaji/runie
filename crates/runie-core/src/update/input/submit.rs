@@ -97,12 +97,19 @@ impl AppState {
     }
 
     fn queue_steering_message(&mut self, content: String) {
-        self.agent_state_mut()
-            .message_queue
-            .push(crate::model::QueuedMessage {
-                content,
-                kind: crate::model::QueuedMessageKind::Steering,
-            });
+        let handles = self.actor_handles().cloned();
+        if let Some(ref h) = handles {
+            // Production mode: send to TurnActor (authoritative queue owner)
+            let _ = h.turn.try_send(TurnMsg::QueueFollowUp { content });
+        } else {
+            // Test mode without handles: apply synchronously to AppState projection
+            self.agent_state_mut()
+                .message_queue
+                .push(crate::model::QueuedMessage {
+                    content,
+                    kind: crate::model::QueuedMessageKind::Steering,
+                });
+        }
         self.view_mut().scroll = 0;
         self.view_mut().dirty = true;
     }
