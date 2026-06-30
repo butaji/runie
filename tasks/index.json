@@ -182,7 +182,7 @@
   {
     "file": "fix-fff-search-pre-release-notify.md",
     "title": "Fix `fff-search` pulling pre-release `notify`",
-    "status": "todo"
+    "status": "wontfix"
   },
   {
     "file": "fix-keybindings-dead-code.md",
