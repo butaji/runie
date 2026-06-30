@@ -1,6 +1,6 @@
 # Drop `once_cell` and `futures-util` workspace deps
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Dependencies
 **Priority**: P2
@@ -10,26 +10,25 @@
 
 ## Description
 
-`once_cell` is only used in `runie-tui/src/keymap.rs` and can be replaced with `std::sync::LazyLock`. `futures-util` is declared in workspace deps but all call sites use `futures::`. Remove both.
+`once_cell` was already replaced with `std::sync::LazyLock` in `keymap.rs`. `futures-util` is not declared as a direct dependency in any crate or workspace Cargo.toml — all `futures` usage comes transitively from other deps. No changes were needed.
 
 ## Acceptance Criteria
 
-- [ ] Replace `once_cell::sync::Lazy` in `keymap.rs` with `std::sync::LazyLock`.
-- [ ] Remove `once_cell` from `crates/runie-tui/Cargo.toml`.
-- [ ] Remove `futures-util` from workspace `Cargo.toml`.
-- [ ] `cargo check --workspace` and `cargo test --workspace` pass.
+- [x] Replace `once_cell::sync::Lazy` in `keymap.rs` with `std::sync::LazyLock`. (Already done.)
+- [x] Remove `once_cell` from `crates/runie-tui/Cargo.toml`. (Not declared.)
+- [x] Remove `futures-util` from workspace `Cargo.toml`. (Not declared.)
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `keymap_lazy_static_uses_std` — keymap formatter uses `LazyLock`.
+- [x] `keymap_lazy_static_uses_std` — verified: `keymap.rs` uses `std::sync::LazyLock`.
 
 ## Files touched
 
-- `Cargo.toml`
-- `crates/runie-tui/Cargo.toml`
-- `crates/runie-tui/src/keymap.rs`
+None — task was already satisfied by earlier refactors.
 
 ## Notes
 
-- MSRV must be ≥1.80 for `LazyLock`.
+- `keymap.rs` line 7: `use std::sync::LazyLock;` — already using the std version.
+- `futures-util` was never a direct workspace dependency; `futures` itself is used via the `futures` crate.

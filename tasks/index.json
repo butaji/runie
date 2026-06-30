@@ -122,7 +122,7 @@
   {
     "file": "drop-once_cell-and-futures-util-workspace-deps.md",
     "title": "Drop `once_cell` and `futures-util` workspace deps",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "drop-unused-rand-from-runie-provider.md",
@@ -367,7 +367,7 @@
   {
     "file": "replace-normalize-raw-frontmatter-with-standard-splitter.md",
     "title": "Replace `normalize_raw_frontmatter` with a standard frontmatter splitter",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-remaining-custom-parsers-and-macros-with-strum.md",
