@@ -1,6 +1,6 @@
 # Fix LeaderHandle status hardcoded actor count
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Actors
 **Priority**: P3

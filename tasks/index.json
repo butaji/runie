@@ -117,7 +117,7 @@
   {
     "file": "fix-leader-status-hardcoded-actor-count.md",
     "title": "Fix LeaderHandle status hardcoded actor count",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-tui-history-shows-no-history-after-message.md",
