@@ -41,6 +41,10 @@ Compare how Grok Build and Runie present file edits and diffs. Grok Build shows 
 - `crates/runie-core/src/diff/mod.rs`
 - `crates/runie-core/src/tools/edit.rs`
 
+## Fixture / Replay Strategy
+
+Use recorded Grok Build fixtures for edit prompts, diff output, and approve/reject flows. Runie tests validate against the recorded diff format; do not invoke live Grok Build from `cargo test` or CI.
+
 ## Validation
 
 This task is not complete until the fix is validated with all three levels:

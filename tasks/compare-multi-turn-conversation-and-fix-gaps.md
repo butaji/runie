@@ -45,6 +45,10 @@ Compare multi-turn conversation behavior in Grok Build and Runie: follow-up mess
 - `crates/runie-tui/src/ui_actor.rs`
 - `crates/runie-core/src/model/app_state.rs`
 
+## Fixture / Replay Strategy
+
+Use recorded Grok Build headless and TUI fixtures for multi-turn conversations. Convert Grok's event stream into Runie provider-replay fixtures and expected `TestBackend` buffers. Do not invoke live Grok Build from `cargo test` or CI.
+
 ## Validation
 
 This task is not complete until the fix is validated with all three levels:

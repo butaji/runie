@@ -44,6 +44,10 @@ Compare how Grok Build and Runie handle quitting, aborting an active turn, and r
 - `crates/runie-tui/src/keymap.rs`
 - `crates/runie-core/src/actors/turn/ractor_turn.rs`
 
+## Fixture / Replay Strategy
+
+Use recorded Grok Build TUI pane fixtures for quit/abort/error scenarios. Derive Runie `TestBackend` expected buffers from the pane dumps. Do not invoke live Grok Build from `cargo test` or CI.
+
 ## Validation
 
 This task is not complete until the fix is validated with all three levels:

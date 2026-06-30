@@ -42,6 +42,10 @@ Grok Build has a `/plan` mode that blocks write tools until the user approves a 
 
 - Determined by scope; possibly new plan-mode actor/state in `crates/runie-core/src/actors/`.
 
+## Fixture / Replay Strategy
+
+Use recorded Grok Build fixtures for `/plan`, `/compact`, `/context`, and `/rewind` outputs. Runie tests use these as the reference; do not invoke live Grok Build from `cargo test` or CI.
+
 ## Validation
 
 This task is not complete until the fix is validated with all three levels:

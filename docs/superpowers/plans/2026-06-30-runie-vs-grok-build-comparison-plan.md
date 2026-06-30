@@ -25,6 +25,17 @@ Run **Grok Build** (xAI terminal coding agent CLI, installed via Homebrew Cask `
 2. **Authentication** — Grok Build requires a SuperGrok / X Premium Plus / `XAI_API_KEY`. If no credentials are available, the comparison is blocked and must be documented.
 3. **Working-directory safety** — Grok Build may write/edit files. All scenarios must run in a **temporary copy** of the target repo, never in `/Users/admin/Code/GitHub/runie-dev`.
 
+## Fixture / Replay Strategy
+
+To avoid running the paid, rate-limited Grok Build CLI on every test run, we record its outputs once and replay them in Runie's fast, deterministic tests. See `docs/superpowers/plans/2026-06-30-grok-build-fixture-strategy.md` for the full strategy.
+
+High-level rules:
+- **Never call Grok Build from `cargo test` or CI.**
+- Record fixtures with `scripts/record-grok-build-fixtures.sh`.
+- Convert Grok headless output into Runie provider-replay fixtures.
+- Convert Grok TUI pane dumps into Runie `TestBackend` expected buffers.
+- Re-record only when the scenario set changes or Grok Build behavior materially changes.
+
 ## Preparation Checklist
 
 - [ ] Remove quarantine from `/opt/homebrew/Caskroom/grok-build/0.2.72/grok-0.2.72-macos-aarch64`.

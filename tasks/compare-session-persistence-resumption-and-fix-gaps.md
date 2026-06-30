@@ -44,6 +44,10 @@ Compare Grok Build session commands (`/sessions`, `/save`, `/load`, `/resume`, `
 - `crates/runie-core/src/update/dialog/router.rs`
 - `crates/runie-core/src/session/replay.rs`
 
+## Fixture / Replay Strategy
+
+Use recorded Grok Build fixtures for `/save`, `/load`, `/sessions`, and `-c` resume output. Runie tests validate against the recorded behavior; do not invoke live Grok Build from `cargo test` or CI.
+
 ## Validation
 
 This task is not complete until the fix is validated with all three levels:

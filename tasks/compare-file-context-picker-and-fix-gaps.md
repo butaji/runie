@@ -44,6 +44,10 @@ Compare Grok Build's file context attachment (e.g. `@src/lib.rs`) with Runie's `
 - `crates/runie-core/src/update/dialog.rs`
 - `crates/runie-tui/src/ui_actor.rs`
 
+## Fixture / Replay Strategy
+
+Use recorded Grok Build TUI pane fixtures for `@` picker behavior. Derive Runie `TestBackend` expected buffers from the pane dumps. Do not invoke live Grok Build from `cargo test` or CI.
+
 ## Validation
 
 This task is not complete until the fix is validated with all three levels:

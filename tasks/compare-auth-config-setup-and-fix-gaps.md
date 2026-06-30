@@ -42,6 +42,10 @@ Compare Grok Build's `grok login`, `grok inspect`, and `XAI_API_KEY` flow with R
 - `crates/runie-core/src/actors/config/ractor_config.rs`
 - `crates/runie-core/src/config.rs`
 
+## Fixture / Replay Strategy
+
+Use recorded Grok Build fixtures for `grok login`, `grok inspect`, and missing-auth error output. Runie tests compare diagnostics against these fixtures; do not invoke live Grok Build from `cargo test` or CI.
+
 ## Validation
 
 This task is not complete until the fix is validated with all three levels:

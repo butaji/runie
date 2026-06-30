@@ -18,23 +18,23 @@ The emission logic in `crates/runie-agent/src/turn/mod.rs` gates `TurnComplete` 
 
 ## Acceptance Criteria
 
-- [ ] `TurnComplete` is emitted unconditionally at the end of every turn.
-- [ ] `has_intermediate_steps` is used only for tool-specific side effects (e.g. showing tool summaries), not for deciding whether to emit `TurnComplete`.
-- [ ] The TUI status returns to idle for both text-only and tool turns.
-- [ ] `cargo test --workspace` passes.
-- [ ] Live tmux `hello` scenario reaches idle.
+- [x] `TurnComplete` is emitted unconditionally at the end of every turn.
+- [x] `has_intermediate_steps` is used only for tool-specific side effects (e.g. showing tool summaries), not for deciding whether to emit `TurnComplete`.
+- [x] The TUI status returns to idle for both text-only and tool turns.
+- [x] `cargo test --workspace` passes.
+- [x] Live tmux `hello` scenario reaches idle.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `text_turn_emits_turn_complete` — a mock text response produces `TurnComplete`.
-- [ ] `tool_turn_emits_turn_complete` — a mock tool turn also produces `TurnComplete`.
+- [x] `text_turn_emits_turn_complete` — a mock text response produces `TurnComplete`.
+- [x] `tool_turn_emits_turn_complete` — a mock tool turn also produces `TurnComplete`.
 
 ### Layer 2 — Event Handling
-- [ ] `ui_actor_turn_complete_clears_status` — `Event::TurnComplete` transitions the status to idle.
+- [x] `ui_actor_turn_complete_clears_status` — `Event::TurnComplete` transitions the status to idle.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `tmux_hello_reaches_idle` — live tmux script asserts idle status after `hello`.
+- [x] `tmux_hello_reaches_idle` — live tmux script asserts idle status after `hello`.
 
 ## Files touched
 

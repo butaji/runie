@@ -42,6 +42,10 @@ Run Grok Build TUI and Runie TUI in tmux for launch, welcome, simple chat, and s
 - `crates/runie-tui/src/ui.rs`
 - `crates/runie-tui/src/popups/welcome.rs`
 
+## Fixture / Replay Strategy
+
+This task must use recorded Grok Build TUI pane fixtures (`crates/runie-testing/fixtures/grok-build/tui/`) produced by `scripts/record-grok-build-fixtures.sh`. Derive `TestBackend` expected buffers from the pane dumps. Do not invoke live Grok Build from `cargo test` or CI.
+
 ## Validation
 
 This task is not complete until the fix is validated with all three levels:

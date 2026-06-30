@@ -45,6 +45,10 @@ Run prompts that invoke bash/file tools in both Grok Build and Runie. Compare pe
 - `crates/runie-tui/src/ui_actor.rs`
 - `crates/runie-agent/src/actor.rs`
 
+## Fixture / Replay Strategy
+
+Use recorded Grok Build fixtures for tool/permission scenarios. The recorder should capture both headless (`--always-approve` vs default) and TUI permission dialog panes. Runie tests replay these fixtures; do not invoke live Grok Build from `cargo test` or CI.
+
 ## Validation
 
 This task is not complete until the fix is validated with all three levels:

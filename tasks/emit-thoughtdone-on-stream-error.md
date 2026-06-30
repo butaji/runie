@@ -18,21 +18,21 @@ The error path in `crates/runie-agent/src/turn/mod.rs` does not emit the thinkin
 
 ## Acceptance Criteria
 
-- [ ] A provider stream error emits `ThoughtDone` before the error is propagated.
-- [ ] The UI thinking indicator clears after any error path.
-- [ ] `cargo test --workspace` passes.
-- [ ] Live tmux with a forced provider error returns to idle.
+- [x] A provider stream error emits `ThoughtDone` before the error is propagated.
+- [x] The UI thinking indicator clears after any error path.
+- [x] `cargo test --workspace` passes.
+- [x] Live tmux with a forced provider error returns to idle.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `stream_error_emits_thought_done` — mock provider returns an error; assert `ThoughtDone` is emitted.
+- [x] `stream_error_emits_thought_done` — mock provider returns an error; assert `ThoughtDone` is emitted.
 
 ### Layer 2 — Event Handling
-- [ ] `thought_done_clears_thinking_flag` — `Event::ThoughtDone` transitions `thinking` to false.
+- [x] `thought_done_clears_thinking_flag` — `Event::ThoughtDone` transitions `thinking` to false.
 
 ### Layer 3 — Rendering
-- [ ] `error_renders_no_thinking_spinner` — `TestBackend` shows no spinner after the error.
+- [x] `error_renders_no_thinking_spinner` — `TestBackend` shows no spinner after the error.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
 - [ ] N/A — unit/e2e coverage is sufficient; mock provider errors can be simulated.

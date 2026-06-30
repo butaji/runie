@@ -41,6 +41,10 @@ Run Grok Build headless (`grok --no-auto-update -p "..." --output-format json`) 
 
 - Determined by findings; likely `crates/runie-cli/src/print.rs`, `crates/runie-agent/src/headless/`, `crates/runie-core/src/headless_runtime.rs`.
 
+## Fixture / Replay Strategy
+
+This task must use recorded Grok Build headless fixtures (`crates/runie-testing/fixtures/grok-build/headless/`) produced by `scripts/record-grok-build-fixtures.sh`. Convert Grok's JSON/stdout output into Runie provider-replay fixtures. Do not invoke live Grok Build from `cargo test` or CI.
+
 ## Validation
 
 This task is not complete until the fix is validated with all three levels:

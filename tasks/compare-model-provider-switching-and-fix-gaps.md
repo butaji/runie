@@ -45,6 +45,10 @@ Compare Grok Build's `/model` and provider configuration with Runie's `/model`, 
 - `crates/runie-core/src/commands/dsl/handlers/model.rs`
 - `crates/runie-core/src/commands/dsl/handlers/system.rs`
 
+## Fixture / Replay Strategy
+
+Use recorded Grok Build fixtures for `/model`, `/provider`, and `grok inspect` output. Runie tests compare against the recorded reference; do not invoke live Grok Build from `cargo test` or CI.
+
 ## Validation
 
 This task is not complete until the fix is validated with all three levels:

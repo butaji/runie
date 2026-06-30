@@ -10,7 +10,7 @@
 
 ## Description
 
-After the comparison scenarios run, produce a consolidated markdown report at `docs/superpowers/plans/2026-06-30-runie-vs-grok-build-findings.md`. The report must list every discrepancy with classification, reproduction steps, and the linked `tasks/` item.
+After the comparison scenarios run, produce a consolidated markdown report at `docs/superpowers/plans/2026-06-30-runie-vs-grok-build-findings.md`. The report must list every discrepancy with classification, reproduction steps, and the linked `tasks/` item. The report is based on recorded Grok Build fixtures, not live invocations.
 
 ## Acceptance Criteria
 

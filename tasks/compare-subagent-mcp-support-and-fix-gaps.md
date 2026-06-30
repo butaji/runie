@@ -41,6 +41,10 @@ Grok Build advertises parallel subagents and MCP server support. Runie has subag
 - `crates/runie-core/src/mcp/`
 - `crates/runie-core/src/proto/`
 
+## Fixture / Replay Strategy
+
+Use recorded Grok Build headless/TUI fixtures for subagent and MCP behavior (or published documentation where live recording is impractical). Runie tests validate architectural decisions against these fixtures; do not invoke live Grok Build from `cargo test` or CI.
+
 ## Validation
 
 This task is not complete until the fix is validated with all three levels:

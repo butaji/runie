@@ -32,6 +32,12 @@ Create a reusable script `scripts/compare-with-grok-build.sh` that runs the same
 - `scripts/compare-with-grok-build.sh` (new)
 - `docs/superpowers/plans/2026-06-30-runie-vs-grok-build-findings.md` (new)
 
+## Fixture / Replay Strategy
+
+The harness must compare Runie against recorded Grok Build fixtures (`crates/runie-testing/fixtures/grok-build/`) produced by `scripts/record-grok-build-fixtures.sh`. It must not invoke live Grok Build during normal test runs or CI. Add a `--live` flag for on-demand re-recording only.
+
+See `docs/superpowers/plans/2026-06-30-grok-build-fixture-strategy.md`.
+
 ## Validation
 
 This task is not complete until the fix is validated with all three levels:

@@ -18,14 +18,14 @@
 
 ## Acceptance Criteria
 
-- [ ] `actor_count` is computed from the actual spawned handles/cells.
-- [ ] The status struct stays correct after actor additions/removals.
-- [ ] `cargo test --workspace` passes.
+- [x] `actor_count` is computed from the actual spawned handles/cells.
+- [x] The status struct stays correct after actor additions/removals.
+- [x] `cargo test --workspace` passes.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `leader_status_counts_actors` — spawn a leader and assert `status.actor_count` matches the number of spawned actors.
+- [x] `leader_status_counts_actors` — spawn a leader and assert `status.actor_count` matches the number of spawned actors.
 
 ## Files touched
 
