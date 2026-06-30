@@ -396,7 +396,17 @@ impl Actor for RactorConfigActor {
         // Load layered config
         let config = Self::load_layers_async(path.clone(), project_path.clone()).await;
 
-        let config_for_state = config.clone();
+        // Validate loaded config against schema and emit error if invalid
+        if let Err(errors) = config.validate_full() {
+            tracing::warn!("initial config validation failed: {:?}", errors);
+            bus.publish(Event::Error {
+                id: "config".to_owned(),
+                message: format!(
+                    "Config validation failed: {}. Using defaults.",
+                    errors.join("; ")
+                ),
+            });
+        }
 
         // Spawn the file watcher in a std thread. It watches the config directory
         // and sends ConfigMsg::Reload to the actor on changes.
@@ -430,8 +440,20 @@ impl Actor for RactorConfigActor {
             }
         });
 
+        // Validate loaded config against schema and emit error if invalid
+        if let Err(errors) = config.validate_full() {
+            tracing::warn!("initial config validation failed: {:?}", errors);
+            bus.publish(Event::Error {
+                id: "config".to_owned(),
+                message: format!(
+                    "Config validation failed: {}. Using defaults.",
+                    errors.join("; ")
+                ),
+            });
+        }
+
         let state = ConfigActorState {
-            cfg: Mutex::new(config_for_state.clone()),
+            cfg: Mutex::new(config.clone()),
             path: path.clone(),
             project_path: project_path.clone(),
             bus: Mutex::new(bus.clone()),
