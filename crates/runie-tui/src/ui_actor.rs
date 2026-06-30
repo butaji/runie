@@ -158,6 +158,7 @@ impl UiActor {
 
     /// Handle a single event and publish a fresh snapshot.
     /// Returns `true` when the actor should shut down.
+    #[allow(dead_code)]
     #[cfg(test)]
     async fn handle_event(&mut self, evt: Event, effect_tx: tokio::sync::mpsc::Sender<Event>) -> bool {
         let quit = self.handle_event_inner(evt, effect_tx).await;

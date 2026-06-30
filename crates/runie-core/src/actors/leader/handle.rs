@@ -154,18 +154,23 @@ mod tests {
     fn leader_handle_exposes_all_actor_refs() {
         fn _check_types() {
             fn _field<T>(_: &T) {}
-            let handle: LeaderHandle = unimplemented!();
-            _field(&handle.config);
-            _field(&handle.provider);
-            _field(&handle.io);
-            _field(&handle.session);
-            _field(&handle.permission);
-            _field(&handle.turn);
-            _field(&handle.input);
-            _field(&handle.agent);
-            _field(&handle.fff_indexer);
-            // snapshot_rx is also exposed for render-path tests.
-            _field(&handle.snapshot_rx);
+            // This test only verifies compile-time field existence.
+            // The handle is never used at runtime.
+            #[allow(unreachable_code, unused_variables)]
+            {
+                let handle: LeaderHandle = unimplemented!();
+                _field(&handle.config);
+                _field(&handle.provider);
+                _field(&handle.io);
+                _field(&handle.session);
+                _field(&handle.permission);
+                _field(&handle.turn);
+                _field(&handle.input);
+                _field(&handle.agent);
+                _field(&handle.fff_indexer);
+                // snapshot_rx is also exposed for render-path tests.
+                _field(&handle.snapshot_rx);
+            }
         }
     }
 }
