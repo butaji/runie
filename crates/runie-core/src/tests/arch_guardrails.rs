@@ -27,7 +27,7 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     // Model config - uses current_dir for path resolution
     "update/agent/model_config.rs",
     // Auth storage - owned by AuthActor but currently in domain
-    "auth.rs",
+    "auth/",
     // Session persistence - owned by SessionActor but reads use domain paths
     "session/store.rs",
     "session/index.rs",

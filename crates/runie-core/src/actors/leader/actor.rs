@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::mpsc;
 
 use crate::actors::leader::{AgentSpawnFuture, SpawnedAgent};
 use crate::actors::turn::RactorTurnActor;
@@ -20,8 +20,13 @@ use crate::actors::{
 use crate::bus::EventBus;
 use crate::Event as CoreEvent;
 
-use super::messages::{LeaderCommand, LeaderStatus};
+use super::handle::LeaderHandle;
+use super::messages::LeaderCommand;
 use super::{AgentActorFactory, LeaderAgentHandle};
+
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
 
 /// Configuration for the leader bootstrap.
 #[derive(Clone, Debug)]
@@ -51,6 +56,10 @@ impl LeaderConfig {
         self
     }
 }
+
+// ---------------------------------------------------------------------------
+// Leader
+// ---------------------------------------------------------------------------
 
 /// Leader coordinates all actors in the Runie runtime.
 #[derive(Clone)]
@@ -110,7 +119,7 @@ impl Leader {
         config: &LeaderConfig,
         provider_factory: std::sync::Arc<dyn crate::actors::provider::ProviderFactory>,
         agent_factory: std::sync::Arc<dyn AgentActorFactory<SpawnFuture = AgentSpawnFuture>>,
-    ) -> anyhow::Result<SpawnedHandles> {
+    ) -> anyhow::Result<super::SpawnedHandles> {
         let (config_h, config_cell) = RactorConfigActor::spawn_default(bus.clone()).await;
         let (provider_h, provider_cell) =
             RactorProviderActor::spawn(bus.clone(), config_h.clone(), provider_factory).await?;
@@ -130,7 +139,7 @@ impl Leader {
             .spawn_with_join(bus.clone(), provider_h.clone(), permission_h.clone())
             .await?;
 
-        Ok(SpawnedHandles {
+        Ok(super::SpawnedHandles {
             config: config_h,
             config_cell,
             provider: provider_h,
@@ -240,26 +249,26 @@ impl Default for Leader {
 }
 
 /// All handles, cells, and join handles produced by actor spawning.
-struct SpawnedHandles {
-    config: RactorConfigHandle,
-    config_cell: ractor::ActorCell,
-    provider: RactorProviderHandle,
-    provider_cell: ractor::ActorCell,
-    io: RactorIoHandle,
-    io_cell: ractor::ActorCell,
-    session: RactorSessionHandle,
-    session_cell: ractor::ActorCell,
-    permission: RactorPermissionHandle,
-    permission_cell: ractor::ActorCell,
-    turn: crate::actors::turn::RactorTurnHandle,
-    turn_cell: ractor::ActorCell,
-    turn_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
-    input: RactorInputHandle,
-    input_cell: ractor::ActorCell,
-    agent: std::sync::Arc<dyn LeaderAgentHandle>,
-    agent_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
-    fff_indexer: RactorFffIndexerHandle,
-    fff_cell: ractor::ActorCell,
+pub struct SpawnedHandles {
+    pub config: RactorConfigHandle,
+    pub config_cell: ractor::ActorCell,
+    pub provider: RactorProviderHandle,
+    pub provider_cell: ractor::ActorCell,
+    pub io: RactorIoHandle,
+    pub io_cell: ractor::ActorCell,
+    pub session: RactorSessionHandle,
+    pub session_cell: ractor::ActorCell,
+    pub permission: RactorPermissionHandle,
+    pub permission_cell: ractor::ActorCell,
+    pub turn: crate::actors::turn::RactorTurnHandle,
+    pub turn_cell: ractor::ActorCell,
+    pub turn_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
+    pub input: RactorInputHandle,
+    pub input_cell: ractor::ActorCell,
+    pub agent: std::sync::Arc<dyn LeaderAgentHandle>,
+    pub agent_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
+    pub fff_indexer: RactorFffIndexerHandle,
+    pub fff_cell: ractor::ActorCell,
 }
 
 /// Process a line from a client.
@@ -298,260 +307,35 @@ fn json_to_intent(json: &serde_json::Value) -> Option<CoreEvent> {
     }
 }
 
-
-
-/// Handle to the running leader.
-///
-/// Cloneable so it can be shared across tasks. All actor refs are also cloneable.
-#[derive(Clone)]
-pub struct LeaderHandle {
-    cmd_tx: mpsc::Sender<LeaderCommand>,
-    event_bus: EventBus<CoreEvent>,
-    tcp_addr: Option<String>,
-    /// Config actor handle.
-    pub config: RactorConfigHandle,
-    /// Provider actor handle.
-    pub provider: RactorProviderHandle,
-    /// IO actor handle.
-    pub io: RactorIoHandle,
-    /// Session actor handle.
-    pub session: RactorSessionHandle,
-    /// Permission actor handle.
-    pub permission: RactorPermissionHandle,
-    /// Turn actor handle.
-    pub turn: crate::actors::turn::RactorTurnHandle,
-    /// Input actor handle.
-    pub input: RactorInputHandle,
-    /// Agent actor handle.
-    pub agent: std::sync::Arc<dyn LeaderAgentHandle>,
-    /// FFF indexer handle.
-    pub fff_indexer: RactorFffIndexerHandle,
-    // ── Shutdown state ────────────────────────────────────────────────────────
-    config_cell: ractor::ActorCell,
-    provider_cell: ractor::ActorCell,
-    io_cell: ractor::ActorCell,
-    session_cell: ractor::ActorCell,
-    permission_cell: ractor::ActorCell,
-    turn_cell: ractor::ActorCell,
-    turn_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
-    input_cell: ractor::ActorCell,
-    agent_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
-    fff_cell: ractor::ActorCell,
-    /// Snapshot channel receiver placeholder. The TUI manages its own snapshot
-    /// channel via UiActor::take_render_rx(); this field exists so that callers
-    /// that only hold a LeaderHandle can still verify snapshot-channel delivery.
-    #[allow(dead_code)]
-    pub snapshot_rx: tokio::sync::watch::Receiver<crate::Snapshot>,
-}
-
-impl LeaderHandle {
-    fn new(
-        cmd_tx: mpsc::Sender<LeaderCommand>,
-        event_bus: EventBus<CoreEvent>,
-        handles: SpawnedHandles,
-    ) -> Self {
-        Self {
-            cmd_tx,
-            event_bus,
-            tcp_addr: None,
-            config: handles.config,
-            provider: handles.provider,
-            io: handles.io,
-            session: handles.session,
-            permission: handles.permission,
-            turn: handles.turn,
-            input: handles.input,
-            agent: handles.agent,
-            fff_indexer: handles.fff_indexer,
-            config_cell: handles.config_cell,
-            provider_cell: handles.provider_cell,
-            io_cell: handles.io_cell,
-            session_cell: handles.session_cell,
-            permission_cell: handles.permission_cell,
-            turn_cell: handles.turn_cell,
-            turn_join: handles.turn_join,
-            input_cell: handles.input_cell,
-            agent_join: handles.agent_join,
-            fff_cell: handles.fff_cell,
-            snapshot_rx: tokio::sync::watch::channel(crate::Snapshot::default()).1,
-        }
-    }
-
-    /// Subscribe to facts published on the event bus.
-    pub fn subscribe(&self) -> broadcast::Receiver<CoreEvent> {
-        self.event_bus.subscribe()
-    }
-
-    /// Get the underlying event bus.
-    pub fn event_bus(&self) -> &EventBus<CoreEvent> {
-        &self.event_bus
-    }
-
-    /// Get TCP address (if server mode).
-    pub fn tcp_addr(&self) -> Option<&str> {
-        self.tcp_addr.as_deref()
-    }
-
-    /// Stop all child actors gracefully and await their completion.
-    ///
-    /// 1. Publishes `Quit` to signal all actors.
-    /// 2. Stops all actor cells to ensure termination.
-    /// 3. Awaits the turn and agent join handles.
-    pub async fn shutdown(self) {
-        let _ = self.cmd_tx.send(LeaderCommand::Shutdown).await;
-        self.event_bus.publish(CoreEvent::Quit);
-
-        // Stop all actors (reverse spawn order: least dependent first).
-        self.input_cell.stop(None);
-        self.session_cell.stop(None);
-        self.turn_cell.stop(None);
-        self.fff_cell.stop(None);
-        self.permission_cell.stop(None);
-        self.config_cell.stop(None);
-        self.provider_cell.stop(None);
-        self.io_cell.stop(None);
-
-        // Await turn and agent join handles.
-        let turn_join = std::sync::Arc::try_unwrap(self.turn_join)
-            .expect("turn join handle should have single ref on shutdown");
-        let _ = turn_join.await;
-        let agent_join = std::sync::Arc::try_unwrap(self.agent_join)
-            .expect("agent join handle should have single ref on shutdown");
-        let _ = agent_join.await;
-    }
-
-    /// Get runtime status.
-    pub fn status(&self) -> LeaderStatus {
-        LeaderStatus {
-            running: true,
-            actor_count: 9,
-            bus_subscribers: self.event_bus.subscriber_count(),
-        }
-    }
-}
-
-impl AsRef<EventBus<CoreEvent>> for LeaderHandle {
-    fn as_ref(&self) -> &EventBus<CoreEvent> {
-        &self.event_bus
-    }
-}
-
-/// Test helpers for constructing a `LeaderHandle` with all actors spawned.
-pub mod test_helpers {
+#[cfg(test)]
+mod tests {
     use super::*;
-    use crate::actors::leader::LeaderAgentCmd;
 
-    /// Construct a minimal `LeaderHandle` for unit tests.
-    ///
-    /// Spawns all production actors with a shared event bus and returns
-    /// a `LeaderHandle` with default bus/command channels.
-    /// The caller takes ownership and must eventually call `shutdown()`.
-    pub async fn test_leader_handle() -> LeaderHandle {
-        use crate::actors::provider::{BuiltProvider, ProviderFactory};
-        use crate::provider::{Provider, ProviderError};
-        use crate::provider_event::ProviderEvent;
-        use std::future::Future;
-        use std::pin::Pin;
-        use std::sync::Arc;
+    /// Layer 2: Verify `Leader::new()` defaults to embedded mode (no TCP).
+    #[test]
+    fn leader_default_embedded_no_tcp() {
+        let leader = Leader::new();
+        assert!(
+            leader.config.tcp_addr.is_none(),
+            "Leader::new() must default to embedded mode"
+        );
+        assert!(
+            !leader.config.project_root.as_os_str().is_empty(),
+            "project_root should be set from current directory"
+        );
+    }
 
-        struct NoOpAgentHandle;
-        impl LeaderAgentHandle for NoOpAgentHandle {
-            fn run(&self, _cmd: LeaderAgentCmd) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-                Box::pin(std::future::pending())
-            }
-        }
+    /// Layer 2: `Leader::new()` returns a config with correct defaults.
+    #[test]
+    fn leader_config_defaults() {
+        let config = LeaderConfig::default();
+        assert!(config.tcp_addr.is_none());
+    }
 
-        struct NoOpProvider;
-        impl Provider for NoOpProvider {
-            fn generate(
-                &self,
-                _: Vec<crate::message::ChatMessage>,
-            ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
-            {
-                Box::pin(futures::stream::empty())
-            }
-        }
-
-        struct TestProviderFactory;
-        impl ProviderFactory for TestProviderFactory {
-            fn build(
-                &self,
-                provider: &str,
-                model: &str,
-                _config: &crate::Config,
-            ) -> Result<BuiltProvider, ProviderError> {
-                Ok(BuiltProvider::new(
-                    Box::new(NoOpProvider),
-                    provider.into(),
-                    model.into(),
-                ))
-            }
-            fn validate_key(
-                &self,
-                _: &str,
-                _: &str,
-            ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<String>>> + Send + '_>>
-            {
-                Box::pin(async { Ok(vec![]) })
-            }
-            fn resolve_credentials(&self, _: &str, _: &crate::Config) -> (String, String) {
-                ("http://localhost".into(), "sk-test".into())
-            }
-        }
-
-        let bus = EventBus::<CoreEvent>::new(16);
-        let (config_h, config_cell) = RactorConfigActor::spawn_default(bus.clone()).await;
-        let factory: Arc<dyn ProviderFactory> = Arc::new(TestProviderFactory);
-        let (provider_h, provider_cell) =
-            RactorProviderActor::spawn(bus.clone(), config_h.clone(), factory)
-                .await
-                .expect("provider spawn");
-        let (io_h, io_cell) = RactorIoActor::spawn(bus.clone()).await.expect("io spawn");
-        let (session_h, session_cell) = RactorSessionActor::spawn(bus.clone())
-            .await
-            .expect("session spawn");
-        let (permission_h, permission_cell) = RactorPermissionActor::spawn(bus.clone()).await;
-        let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
-        let (input_h, input_cell) = InputActor::spawn(bus.clone()).await;
-        let (fff_h, fff_cell) = RactorFffIndexerActor::spawn(
-            std::env::current_dir().unwrap_or_default(),
-            std::env::temp_dir(),
-            bus.clone(),
-        )
-        .await
-        .expect("fff indexer spawn");
-
-        let (cmd_tx, _cmd_rx) = mpsc::channel(4);
-        let agent: Arc<dyn LeaderAgentHandle> = Arc::new(NoOpAgentHandle);
-        // Spawn a dummy task as the agent join handle (agent is not a real ractor actor
-        // in tests; the NoOpAgentHandle::run returns pending which never completes).
-        let agent_join: tokio::task::JoinHandle<()> =
-            tokio::spawn(std::future::pending::<()>());
-
-        LeaderHandle {
-            cmd_tx,
-            event_bus: bus,
-            tcp_addr: None,
-            config: config_h,
-            provider: provider_h,
-            io: io_h,
-            session: session_h,
-            permission: permission_h,
-            turn: turn_h,
-            input: input_h,
-            agent,
-            fff_indexer: fff_h,
-            config_cell,
-            provider_cell,
-            io_cell,
-            session_cell,
-            permission_cell,
-            turn_cell,
-            turn_join: std::sync::Arc::new(turn_join),
-            input_cell,
-            agent_join: std::sync::Arc::new(agent_join),
-            fff_cell,
-            snapshot_rx: tokio::sync::watch::channel(crate::Snapshot::default()).1,
-        }
+    /// Layer 2: `LeaderConfig::with_tcp_addr()` sets the address.
+    #[test]
+    fn leader_config_with_tcp_addr() {
+        let config = LeaderConfig::default().with_tcp_addr("127.0.0.1:8080");
+        assert_eq!(config.tcp_addr.as_deref(), Some("127.0.0.1:8080"));
     }
 }

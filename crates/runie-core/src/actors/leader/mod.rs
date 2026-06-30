@@ -16,10 +16,13 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 pub mod actor;
-mod messages;
+pub mod handle;
+pub mod messages;
+pub mod test_helpers;
 
-pub use actor::test_helpers::test_leader_handle;
-pub use actor::{Leader, LeaderConfig, LeaderHandle};
+pub use actor::{Leader, LeaderConfig, SpawnedHandles};
+pub use handle::LeaderHandle;
+pub use test_helpers::test_leader_handle;
 pub use messages::{LeaderCommand, LeaderStatus};
 
 use crate::actors::permission::RactorPermissionHandle;

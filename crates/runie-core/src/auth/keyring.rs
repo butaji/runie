@@ -1,0 +1,134 @@
+//! Keyring operations for auth storage.
+//!
+//! Provides low-level keyring CRUD operations using the OS keychain.
+
+use std::collections::HashMap;
+
+use crate::auth::AuthToken;
+
+const SERVICE: &str = "runie";
+
+fn account_name(provider: &str) -> String {
+    format!("provider:{}", provider)
+}
+
+/// Set a provider token directly in the keyring (no instance state needed).
+/// This is used by the config migration to move plaintext keys to keyring.
+pub fn set_keyring_value(provider: &str, token: &str) -> anyhow::Result<()> {
+    set_keyring(provider, token)
+}
+
+/// Set a provider token in the keyring and verify it can be retrieved.
+///
+/// Returns `Ok(())` only if both `set_password` and `get_password` succeed
+/// and the retrieved value matches the input. This guards against keyring
+/// backends that silently fail retrieval (e.g., macOS Keychain access issues).
+pub fn set_and_verify_keyring(provider: &str, token: &str) -> anyhow::Result<()> {
+    let account = account_name(provider);
+    let entry = keyring::Entry::new(SERVICE, &account)?;
+    entry.set_password(token)?;
+    match entry.get_password() {
+        Ok(stored) if stored == token => Ok(()),
+        Ok(stored) => Err(anyhow::anyhow!(
+            "keyring returned different token (len={}): {:?}",
+            stored.len(),
+            &stored[..stored.len().min(8)]
+        )),
+        Err(e) => Err(anyhow::anyhow!("keyring retrieval failed: {e}")),
+    }
+}
+
+/// Delete a provider token from the keyring.
+pub fn delete_keyring_entry(provider: &str) -> anyhow::Result<()> {
+    delete_keyring(provider)
+}
+
+pub fn set_keyring(provider: &str, token: &str) -> anyhow::Result<()> {
+    let account = account_name(provider);
+    let entry = keyring::Entry::new(SERVICE, &account)?;
+    entry.set_password(token)?;
+    Ok(())
+}
+
+pub fn get_keyring(provider: &str) -> anyhow::Result<String> {
+    let account = account_name(provider);
+    let entry = keyring::Entry::new(SERVICE, &account)?;
+    entry
+        .get_password()
+        .map_err(|e| anyhow::anyhow!("keyring error: {}", e))
+}
+
+pub fn delete_keyring(provider: &str) -> anyhow::Result<()> {
+    let entry = keyring::Entry::new(SERVICE, &account_name(provider))?;
+    entry
+        .delete_credential()
+        .map_err(|e| anyhow::anyhow!("keyring error: {}", e))
+}
+
+pub fn load_all_from_keyring() -> anyhow::Result<HashMap<String, AuthToken>> {
+    // For simplicity, we store tokens individually. There's no enumerate API in keyring.
+    // We track which providers we've seen by checking for known patterns.
+    // In practice, callers set providers explicitly, so we can probe for common ones.
+    let mut tokens = HashMap::new();
+
+    // Try common provider names
+    let common_providers = ["openai", "anthropic", "google", "groq", "mistral", "cohere", "xai"];
+    for provider in common_providers {
+        if let Ok(token) = get_keyring(provider) {
+            tokens.insert(
+                provider.to_owned(),
+                AuthToken {
+                    provider: provider.to_owned(),
+                    token,
+                    expires_at: None,
+                },
+            );
+        }
+    }
+
+    Ok(tokens)
+}
+
+// ---------------------------------------------------------------------------
+// Migration from legacy XOR-encoded file
+// ---------------------------------------------------------------------------
+
+fn default_auth_path() -> Option<std::path::PathBuf> {
+    dirs::data_dir().map(|d| d.join("runie").join("auth.json"))
+}
+
+/// Migrate legacy `~/.runie/auth.json` to keyring.
+/// This is a no-op if keyring is unavailable.
+pub fn migrate_legacy_auth() -> anyhow::Result<()> {
+    let Some(path) = default_auth_path() else {
+        return Ok(());
+    };
+
+    if !path.exists() {
+        return Ok(());
+    }
+
+    let json = std::fs::read_to_string(&path)?;
+    let raw: serde_json::Value = serde_json::from_str(&json).unwrap_or(serde_json::json!({}));
+
+    if let Some(obj) = raw.as_object() {
+        for (provider, val) in obj {
+            if let Some(token_str) = val.get("token").and_then(|v| v.as_str()) {
+                // Don't migrate empty strings
+                if !token_str.is_empty() {
+                    if let Err(e) = set_keyring(provider, token_str) {
+                        tracing::warn!("failed to migrate token for {}: {}", provider, e);
+                    }
+                }
+            }
+        }
+    }
+
+    // Optionally rename the old file so we don't migrate again
+    let backup = path.with_extension("json.bak");
+    if let Err(e) = std::fs::rename(&path, &backup) {
+        tracing::debug!("could not rename legacy auth file: {}", e);
+    }
+
+    Ok(())
+}
