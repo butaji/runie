@@ -49,11 +49,6 @@ pub struct LeaderHandle {
     input_cell: ractor::ActorCell,
     agent_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
     fff_cell: ractor::ActorCell,
-    /// Snapshot channel receiver placeholder. The TUI manages its own snapshot
-    /// channel via UiActor::take_render_rx(); this field exists so that callers
-    /// that only hold a LeaderHandle can still verify snapshot-channel delivery.
-    #[allow(dead_code, reason = "placeholder for snapshot-channel verification")]
-    pub snapshot_rx: tokio::sync::watch::Receiver<crate::Snapshot>,
 }
 
 impl LeaderHandle {
@@ -85,7 +80,6 @@ impl LeaderHandle {
             input_cell: handles.input_cell,
             agent_join: handles.agent_join,
             fff_cell: handles.fff_cell,
-            snapshot_rx: tokio::sync::watch::channel(crate::Snapshot::default()).1,
         }
     }
 
@@ -176,8 +170,6 @@ mod tests {
                 _field(&handle.input);
                 _field(&handle.agent);
                 _field(&handle.fff_indexer);
-                // snapshot_rx is also exposed for render-path tests.
-                _field(&handle.snapshot_rx);
             }
         }
     }

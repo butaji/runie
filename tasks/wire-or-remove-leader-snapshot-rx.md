@@ -1,6 +1,6 @@
 # Wire or remove LeaderHandle snapshot_rx
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Actors
 **Priority**: P2

@@ -247,7 +247,7 @@
   {
     "file": "wire-or-remove-leader-snapshot-rx.md",
     "title": "Wire or remove LeaderHandle snapshot_rx",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "wire-user-permission-rules-into-agent-gate.md",
