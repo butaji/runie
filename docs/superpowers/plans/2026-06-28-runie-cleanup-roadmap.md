@@ -4,50 +4,18 @@
 
 **Goal:** Resolve the unify/simplify/reduce findings from the 2026-06-28 architecture & code review so the workspace builds cleanly, dead/duplicate code is removed, and the actual crate structure matches the documented `IO | Domain (pure) | UI (pure/MVU)` layering. A third five-round review added a crate-replacement angle. A fourth five-round review dug deeper into provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, and DSL/view/dialog/commands. A fifth five-round review focused on build/CI/test harness, error handling/tracing/telemetry, protocol/IPC leftovers, declarative loaders/DSLs, and macros/codegen. Wherever a custom helper mirrors a standard crate, the plan is to use the crate.
 
-**Architecture:** The second-pass review showed that several "todo" tasks were already completed on disk (dialog module repaired, empty facade crates deleted, dead provider code removed, IPC layers gone). Those tasks have been archived. The remaining active work is concentrated in the actor runtime, runtime bootstrap, event taxonomy, tool-parser shim, public API boundary, CLI config routing, and a final sweep of small duplicates. A third review found that many small `runie-core` helpers (`glob`, `fuzzy`, `path`, keybinding parsing, frontmatter scanning, tool-marker stripping) can be replaced by `pulldown-cmark`, `strum`, `shellexpand`, `ignore`, and other standard crates. A fourth review found additional crate replacements in provider/config/auth (`backon`, `keyring`, `jsonschema`, `dotenvy`), CLI (`clap`), TUI widgets (`tui-textarea`, `tui-input`, `ansi_colours`), and tooling (`shell-words`, Clippy/CI). A fifth review found broken CI feature flags, dead MCP feature flag, dependency hygiene issues, library-wide `anyhow` usage without typed errors, missing `tracing` subscriber, custom telemetry with no backend, broken ACP plumbing, a still-existing `runie-protocol` crate, and many macros/small parsers that should use `strum`. The big actor/bootstrap tasks have been split into sequential sub-tasks so that every intermediate commit leaves `cargo check --workspace` green.
+**Architecture:** The second-pass review showed that several "todo" tasks were already completed on disk (dialog module repaired, empty facade crates deleted, dead provider code removed, IPC layers gone). Those tasks have been archived. A third review found that many small `runie-core` helpers (`glob`, `fuzzy`, `path`, keybinding parsing, frontmatter scanning, tool-marker stripping) can be replaced by `pulldown-cmark`, `strum`, `shellexpand`, `ignore`, and other standard crates. A fourth review found additional crate replacements in provider/config/auth (`backon`, `keyring`, `jsonschema`, `dotenvy`), CLI (`clap`), TUI widgets (`tui-textarea`, `tui-input`, `ansi_colours`), and tooling (`shell-words`, Clippy/CI). A fifth review found broken CI feature flags, dead MCP feature flag, dependency hygiene issues, library-wide `anyhow` usage without typed errors, missing `tracing` subscriber, custom telemetry with no backend, broken ACP plumbing, a still-existing `runie-protocol` crate, and many macros/small parsers that should use `strum`. **As of 2026-06-29, all 108 cleanup tasks are `done` and the workspace passes `cargo check --workspace` and `cargo test --workspace` cleanly.** The remaining 3 tasks are marked `wontfix` (tool-marker stripping intentionally string-based, pre-release `notify` dependency issue, `palette` adoption deferred).
 
 **Tech Stack:** Rust, Tokio, Ratatui, ractor, reqwest, pulldown-cmark, strum, glob/globset, nucleo-matcher/sublime-fuzzy, shellexpand, etcetera, ignore, walkdir, tracing, backon, keyring, jsonschema, clap, dotenvy, shell-words, tui-textarea, tui-input, ansi_colours, notify.
 
 ---
 
-## File structure
+## Status: Complete
 
-- `tasks/index.json` — canonical registry of the 5 active cleanup tasks and 1 `wontfix`.
-- **Actor runtime (split into three sequential tasks):**
-  - `tasks/migrate-production-actors-to-ractor.md`
-  - `tasks/delete-dead-actor-modules-and-custom-trait.md`
-  - `tasks/collapse-actor-handles-to-typed-map.md`
-- **Runtime bootstrap (split into two sequential tasks):**
-  - `tasks/expand-leader-start-for-tui-and-cli.md`
-  - `tasks/migrate-tui-and-cli-to-leader-bootstrap.md`
-- **Tooling and DSL quick wins (parallel-safe):**
-  - `tasks/replace-legacy-tool-parsers-with-thin-shim.md` — `partial`. Shim routes parsing but still embeds `legacy`/`markup` submodules; inline/delete them, collapse `tool_markers/strip.rs` (fixing the `strip_empty_code_fences` guardrail violation), reconcile MiniMax ownership, and fix the one `cargo check` warning.
-  - `tasks/use-pulldown-cmark-for-tool-marker-stripping.md` — rewrite the stripper as a single `pulldown-cmark` event pass instead of regex passes.
-  - `tasks/centralize-built-in-tool-names.md` — `done`. Canonical list already exists in `runie-core::tool::BUILTIN_TOOL_NAMES`; switch remaining consumers to it.
-  - `tasks/unify-declarative-resource-loader.md` — extract shared directory-scan/frontmatter logic used by `skills/load.rs` and `declarative/loader.rs`; unify the frontmatter-vs-section-fallback policy.
-  - `tasks/use-pulldown-cmark-frontmatter-for-resource-loader.md` — replace the custom frontmatter/body scanner with `pulldown-cmark-frontmatter` + `serde_yaml` after the loader is unified.
-- **Remaining active tasks:**
-  - `tasks/collapse-event-intent-kind-taxonomies.md` — annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`; `Intent` is a semantic projection, not a mirror.
-  - `tasks/use-strum-for-event-intent-names.md` — replace manual `names.rs`/`name.rs`/`EVENT_NAMES` tables with `strum` derives after the taxonomy annotation task lands.
-  - `tasks/replace-custom-helpers-with-crates.md` — delete `glob.rs`, `fuzzy.rs`, `path.rs`, and custom keybinding parsing; use standard crates.
-  - `tasks/narrow-runie-core-public-api.md` — usage-audit-first narrowing/moving of internal modules.
-  - `tasks/route-cli-config-through-configactor.md` — extend `RactorConfigActor` for layered config + MCP, then route CLI inspect/MCP through it.
-  - `tasks/unify-tui-render-test-helpers.md` — move duplicated TUI render helpers into a shared test module.
-  - `tasks/fix-keybindings-dead-code.md` — convert `parse_key_combo` to `#[cfg(test)]` or document it.
-  - `tasks/cleanup-small-duplicates-and-dead-code.md` — `partial`. Final sweep; remaining items are skill-hook consolidation, dead actor-handle fields, stale allows, repetitive `FIXME` comments, and telemetry-vs-tracing decision.
-- **Third-pass crate-replacement tasks (P0/P1):**
-  - `tasks/replace-custom-retry-with-backon.md` — delete `runie-provider/src/retry.rs` and use `backon`/`reqwest-retry`.
-  - `tasks/replace-xor-auth-with-keyring.md` — store tokens in the OS keyring with a headless fallback.
-  - `tasks/replace-config-validator-with-jsonschema.md` — validate `Config` against the generated schema.
-  - `tasks/use-clap-derive-for-cli.md` — typed CLI parsing.
-  - `tasks/replace-custom-tui-widgets-with-ratatui-ecosystem.md` — `tui-textarea`, `tui-input`, `List`, `ansi_colours`, `crossterm`.
-  - `tasks/delete-dead-runie-macros-crate.md` — `done`. The crate no longer exists in the workspace.
-  - `tasks/centralize-test-fixtures-and-mocks.md` — shared MiniMax fixtures and mock helpers.
-  - `tasks/unify-provider-credential-resolution-with-dotenvy.md` — single `.env` load + provider credential resolution.
-  - `tasks/replace-bash-safety-with-shell-words.md` — tokenize with `shell-words` + deny-list.
-  - `tasks/replace-build-linter-with-clippy-ci.md` — Clippy lints + CI file-limit check.
-- **Third-pass simplification tasks (P1/P2):**
-  - `tasks/use-notify-directly-in-config-actor.md` — remove watcher thread bridge.
+All 108 cleanup tasks are `done` as of 2026-06-29. The workspace passes `cargo check --workspace` and `cargo test --workspace` cleanly. Remaining items:
+- **3 `wontfix` tasks**: tool-marker stripping (string-based by design), `fff-search` pre-release `notify` (deferred), `palette` color math adoption (deferred).
+
+See `tasks/index.json` for the full registry and `tasks/` for individual task files with acceptance-criteria evidence.
   - `tasks/unify-provider-config-persistence.md` — single config persistence helper.
   - `tasks/simplify-slash-command-dsl.md` — collapse `CommandSpec`/`CommandDef`.
   - `tasks/unify-permission-system-rules.md` — merge permission rule engines.
