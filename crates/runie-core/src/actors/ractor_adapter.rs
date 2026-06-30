@@ -49,11 +49,6 @@ impl<Msg: ractor::Message> RactorHandle<Msg> {
         self.actor_ref
     }
 
-    /// Send a message to the actor (fire-and-forget).
-    /// Alias for `send()` for ergonomic compatibility.
-    pub async fn send_message(&self, msg: Msg) {
-        self.send(msg).await;
-    }
 }
 
 /// Construct a `RactorHandle` from an owned `ActorRef`.

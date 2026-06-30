@@ -29,6 +29,11 @@ impl RactorIoHandle {
         Self { inner }
     }
 
+    /// Send a message to the actor (fire-and-forget).
+    pub async fn send(&self, msg: IoMsg) {
+        let _ = self.inner.send(msg).await;
+    }
+
     /// Request running a bash command.
     pub async fn run_bash(&self, command: String) {
         self.inner.send(IoMsg::RunBash { command }).await;
@@ -72,11 +77,6 @@ impl RactorIoHandle {
     /// Request process suspend.
     pub async fn suspend_process(&self) {
         self.inner.send(IoMsg::SuspendProcess).await;
-    }
-
-    /// Send a message to the actor (fire-and-forget).
-    pub async fn send_message(&self, msg: IoMsg) {
-        let _ = self.inner.send(msg).await;
     }
 
     /// Try to send a message (non-blocking).

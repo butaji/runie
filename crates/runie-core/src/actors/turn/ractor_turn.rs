@@ -21,11 +21,11 @@ pub struct TurnActorState {
     pub bus: EventBus<Event>,
 }
 
-impl Default for TurnActorState {
-    fn default() -> Self {
+impl TurnActorState {
+    fn new(bus: EventBus<Event>) -> Self {
         Self {
             turn_state: TurnState::default(),
-            bus: EventBus::new(16),
+            bus,
         }
     }
 }
@@ -52,10 +52,6 @@ impl RactorTurnHandle {
         self.inner.try_send(msg)
     }
 
-    /// Send a message to the actor (fire-and-forget).
-    pub async fn send_message(&self, msg: TurnMsg) {
-        let _ = self.inner.send(msg).await;
-    }
 }
 
 /// TurnActor using ractor State pattern.
@@ -308,10 +304,7 @@ impl Actor for RactorTurnActor {
         _myself: ActorRef<Self::Msg>,
         bus: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        Ok(TurnActorState {
-            turn_state: TurnState::default(),
-            bus,
-        })
+        Ok(TurnActorState::new(bus))
     }
 
     async fn handle(

@@ -145,11 +145,6 @@ impl RactorSessionHandle {
         self.inner.send(SessionMsg::Export { path, session }).await;
     }
 
-    /// Send a message to the actor (fire-and-forget).
-    pub async fn send_message(&self, msg: SessionMsg) {
-        self.inner.send(msg).await;
-    }
-
     /// Try to send a message (non-blocking).
     pub fn try_send(&self, msg: SessionMsg) -> Result<(), Box<ractor::MessagingErr<SessionMsg>>> {
         self.inner.try_send(msg).map_err(Box::new)

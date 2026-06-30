@@ -41,11 +41,6 @@ impl RactorConfigHandle {
         self.inner.try_send(msg).map_err(Box::new)
     }
 
-    /// Send a message to the actor (fire-and-forget).
-    pub async fn send_message(&self, msg: ConfigMsg) {
-        let _ = self.inner.send(msg).await;
-    }
-
     /// Request the current in-memory config.
     pub async fn get_config(&self) -> Option<Config> {
         let (tx, rx) = tokio::sync::oneshot::channel();

@@ -79,11 +79,6 @@ impl RactorPermissionHandle {
         let _ = self.inner.try_send(msg);
     }
 
-    /// Send a message to the actor (fire-and-forget).
-    pub async fn send_message(&self, msg: PermissionMsg) {
-        let _ = self.inner.send(msg).await;
-    }
-
     /// Try to send a message (non-blocking).
     pub fn try_send(&self, msg: PermissionMsg) -> Result<(), ractor::MessagingErr<PermissionMsg>> {
         self.inner.try_send(msg)

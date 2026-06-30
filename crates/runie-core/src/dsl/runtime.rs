@@ -146,36 +146,35 @@ fn route_intent(handles: &Option<crate::actors::LeaderHandle>, intent: &Intent) 
     match intent {
         Intent::SetTheme { .. } | Intent::ReloadConfig => {
             let c = h.config.clone();
-            tokio::spawn(async move { c.send_message(ConfigMsg::Reload).await });
+            tokio::spawn(async move { c.send(ConfigMsg::Reload).await });
         }
         Intent::SetTrust { path, decision } => {
             let s = h.session.clone();
             let path = path.clone();
             let decision = *decision;
             tokio::spawn(async move {
-                s.send_message(SessionMsg::SetTrust { path, decision })
-                    .await;
+                s.send(SessionMsg::SetTrust { path, decision }).await;
             });
         }
         Intent::AppendHistory { entry } => {
             let s = h.session.clone();
             let entry = entry.clone();
             tokio::spawn(async move {
-                s.send_message(SessionMsg::AppendHistory { entry }).await;
+                s.send(SessionMsg::AppendHistory { entry }).await;
             });
         }
         Intent::RunBash { command } => {
             let io = h.io.clone();
             let command = command.clone();
             tokio::spawn(async move {
-                io.send_message(IoMsg::RunBash { command }).await;
+                io.send(IoMsg::RunBash { command }).await;
             });
         }
         Intent::WriteFiles { edits } => {
             let io = h.io.clone();
             let edits = edits.clone();
             tokio::spawn(async move {
-                io.send_message(IoMsg::WriteFiles { edits }).await;
+                io.send(IoMsg::WriteFiles { edits }).await;
             });
         }
         // TODO(r5): map remaining Intent variants to their owning actors

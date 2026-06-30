@@ -44,11 +44,6 @@ impl RactorFffIndexerHandle {
         let _ = self.inner.try_send(request);
     }
 
-    /// Send a message to the actor (fire-and-forget).
-    pub async fn send_message(&self, msg: FffSearchRequest) {
-        self.inner.send(msg).await;
-    }
-
     /// Try to send a message (non-blocking).
     pub fn try_send(
         &self,

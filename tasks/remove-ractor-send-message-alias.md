@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -16,9 +16,9 @@ Pick one name (`send`) and delete `send_message` everywhere. Update call sites.
 
 ## Acceptance Criteria
 
-- [ ] Remove the `send_message` method from `RactorHandle` and any actor-specific handle wrappers.
-- [ ] Update all call sites to use `send`.
-- [ ] Ensure no `#[allow(dead_code)]` remains for the removed alias.
+- [x] Remove the `send_message` method from `RactorHandle` and any actor-specific handle wrappers.
+- [x] Update all call sites to use `send`.
+- [x] Ensure no `#[allow(dead_code)]` remains for the removed alias.
 
 ## Tests
 

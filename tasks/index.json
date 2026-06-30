@@ -537,7 +537,7 @@
   {
     "file": "remove-ractor-send-message-alias.md",
     "title": "Remove ractor send/send_message alias",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-redundant-check-field-access-script.md",
