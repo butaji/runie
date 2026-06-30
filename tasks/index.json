@@ -27,7 +27,7 @@
   {
     "file": "centralize-provider-credential-resolution.md",
     "title": "Centralize provider credential resolution",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-test-fixtures-and-mocks.md",

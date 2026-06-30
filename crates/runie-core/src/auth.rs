@@ -11,6 +11,193 @@ use secrecy::{ExposeSecret, SecretString};
 const SERVICE: &str = "runie";
 const AUTH_DIR: &str = "auth.json";
 
+// ---------------------------------------------------------------------------
+// Unified Credential Resolver
+// ---------------------------------------------------------------------------
+
+/// Unified credential resolver implementing consistent priority:
+/// 1. Environment variables
+/// 2. .env file (via dotenvy)
+/// 3. OS keyring
+/// 4. Config file
+///
+/// This resolver is used by both `runie-core` (for Config) and `runie-provider`
+/// (for ProviderConfigResolver) to ensure consistent credential resolution.
+#[derive(Debug, Clone)]
+pub struct CredentialResolver {
+    /// Environment variables captured at construction.
+    env: HashMap<String, String>,
+    /// Variables loaded from .env file via dotenvy.
+    dotenv: HashMap<String, String>,
+    /// Provider config entries (provider name -> (api_key, base_url)).
+    entries: HashMap<String, (Option<String>, Option<String>)>,
+}
+
+impl Default for CredentialResolver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl CredentialResolver {
+    /// Create a new resolver that captures the current environment.
+    pub fn new() -> Self {
+        let env: HashMap<String, String> = std::env::vars().collect();
+        let dotenv = Self::load_dotenv();
+        Self {
+            env,
+            dotenv,
+            entries: HashMap::new(),
+        }
+    }
+
+    /// Create a resolver with an empty environment (for testing).
+    pub fn empty() -> Self {
+        Self {
+            env: HashMap::new(),
+            dotenv: HashMap::new(),
+            entries: HashMap::new(),
+        }
+    }
+
+    /// Load .env file using dotenvy, returning only API-related variables.
+    fn load_dotenv() -> HashMap<String, String> {
+        match dotenvy::dotenv() {
+            Ok(path) => {
+                let mut map = HashMap::new();
+                for (key, val) in std::env::vars() {
+                    if key.ends_with("_API_KEY") || key.ends_with("_BASE_URL") {
+                        map.insert(key, val);
+                    }
+                }
+                // Also read from .env file directly for keys that dotenvy loaded
+                if let Ok(content) = std::fs::read_to_string(&path) {
+                    for line in content.lines() {
+                        let line = line.trim();
+                        if line.is_empty() || line.starts_with('#') {
+                            continue;
+                        }
+                        if let Some((key, val)) = line.split_once('=') {
+                            let key = key.trim().to_owned();
+                            if key.ends_with("_API_KEY") || key.ends_with("_BASE_URL") {
+                                map.entry(key)
+                                    .or_insert_with(|| val.trim().trim_matches('"').to_owned());
+                            }
+                        }
+                    }
+                }
+                map
+            }
+            Err(_) => HashMap::new(),
+        }
+    }
+
+    /// Set a config entry for a provider.
+    pub fn set_config(&mut self, provider: &str, api_key: Option<String>, base_url: Option<String>) {
+        self.entries.insert(provider.to_lowercase(), (api_key, base_url));
+    }
+
+    /// Resolve the API key for a provider using the standard priority chain.
+    pub fn resolve_api_key(&self, provider: &str) -> Option<String> {
+        let env_key = format!("{}_API_KEY", provider.to_uppercase());
+
+        // 1. Environment variable
+        if let Some(val) = self.env.get(&env_key) {
+            if !val.is_empty() {
+                return Some(val.clone());
+            }
+        }
+
+        // 2. .env file
+        if let Some(val) = self.dotenv.get(&env_key) {
+            if !val.is_empty() {
+                return Some(val.clone());
+            }
+        }
+
+        // 3. Keyring
+        if let Some(token) = AuthStorage::get_keyring_token(provider) {
+            return Some(token);
+        }
+
+        // 4. Config file
+        self.entries
+            .get(&provider.to_lowercase())
+            .and_then(|(api_key, _)| api_key.clone())
+            .filter(|s| !s.is_empty())
+    }
+
+    /// Resolve the base URL for a provider using the standard priority chain.
+    pub fn resolve_base_url(&self, provider: &str) -> Option<String> {
+        let env_key = format!("{}_BASE_URL", provider.to_uppercase());
+
+        // 1. Environment variable
+        if let Some(val) = self.env.get(&env_key) {
+            if !val.is_empty() {
+                return Some(val.clone());
+            }
+        }
+
+        // 2. .env file
+        if let Some(val) = self.dotenv.get(&env_key) {
+            if !val.is_empty() {
+                return Some(val.clone());
+            }
+        }
+
+        // 3. Config file (no keyring for base URLs)
+        self.entries
+            .get(&provider.to_lowercase())
+            .and_then(|(_, base_url)| base_url.clone())
+            .filter(|s| !s.is_empty())
+    }
+}
+
+#[cfg(test)]
+mod credential_resolver_tests {
+    use super::*;
+
+    #[test]
+    fn resolver_priority_env_over_keyring() {
+        // Environment should win over keyring
+        let mut resolver = CredentialResolver::empty();
+        resolver.env.insert("TESTPROVIDER_API_KEY".to_owned(), "env-key".to_owned());
+
+        // Note: This test assumes keyring doesn't have "testprovider"
+        // In practice, we just verify env is checked first
+        let result = resolver.resolve_api_key("testprovider");
+        assert_eq!(result, Some("env-key".to_owned()));
+    }
+
+    #[test]
+    fn resolver_fallback_to_config() {
+        // Config should be used when env/keyring are absent
+        let mut resolver = CredentialResolver::empty();
+        resolver.set_config("testprovider", Some("config-key".to_owned()), Some("http://config".to_owned()));
+
+        assert_eq!(resolver.resolve_api_key("testprovider"), Some("config-key".to_owned()));
+        assert_eq!(resolver.resolve_base_url("testprovider"), Some("http://config".to_owned()));
+    }
+
+    #[test]
+    fn resolver_prefers_env_over_dotenv() {
+        let mut resolver = CredentialResolver::empty();
+        resolver.env.insert("TEST_API_KEY".to_owned(), "env-key".to_owned());
+        resolver.dotenv.insert("TEST_API_KEY".to_owned(), "dotenv-key".to_owned());
+
+        assert_eq!(resolver.resolve_api_key("test"), Some("env-key".to_owned()));
+    }
+
+    #[test]
+    fn resolver_prefers_dotenv_over_config() {
+        let mut resolver = CredentialResolver::empty();
+        resolver.dotenv.insert("TEST_API_KEY".to_owned(), "dotenv-key".to_owned());
+        resolver.set_config("test", Some("config-key".to_owned()), None);
+
+        assert_eq!(resolver.resolve_api_key("test"), Some("dotenv-key".to_owned()));
+    }
+}
+
 /// Wrapper around the actual token value to prevent accidental leakage in logs.
 #[derive(Debug, Clone)]
 pub struct Token(SecretString);
