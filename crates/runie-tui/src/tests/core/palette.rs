@@ -375,6 +375,7 @@ fn ui_actor_dispatch_submit_closes_palette() {
     let mut ui = UiActor::with_agent_handle(
         state,
         AgentHandleBox::Leader(agent_handle),
+        None,
         kb_tx,
         bus,
         shutdown_tx,

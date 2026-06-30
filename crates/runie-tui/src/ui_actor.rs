@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use runie_agent::AgentCommand;
 use runie_agent::truncate::TruncationPolicy;
+use runie_core::actors::turn::RactorTurnHandle;
 use runie_core::bus::{EventBus, Receiver};
 use runie_core::{AppState, Event, Snapshot};
 
@@ -45,6 +46,9 @@ pub struct UiActor {
     /// Guards against duplicate agent runs when TurnStarted arrives multiple times.
     /// Set true when agent_handle.run() is called; cleared when Done is received.
     pub(crate) agent_running: bool,
+    /// Turn actor handle for draining the queue after a turn completes.
+    /// Stored here so UiActor can call run_if_queued after Done is processed.
+    turn_handle: Option<RactorTurnHandle>,
     /// Placeholder receiver stored when UiActor is created with `with_external_bus_rx`.
     /// Consumed by `run_with_external_rx`.
     _bus_rx: Option<Receiver<Event>>,
@@ -58,6 +62,7 @@ impl UiActor {
     pub fn new(
         state: AppState,
         agent_handle: AgentActorHandle,
+        turn_handle: RactorTurnHandle,
         kb_tx: tokio::sync::watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
         shutdown_tx: tokio::sync::oneshot::Sender<()>,
@@ -66,6 +71,7 @@ impl UiActor {
         Self::with_agent_handle(
             state,
             AgentHandleBox::Actor(agent_handle),
+            Some(turn_handle),
             kb_tx,
             bus,
             shutdown_tx,
@@ -83,6 +89,7 @@ impl UiActor {
     pub fn with_external_bus_rx(
         mut state: AppState,
         bus_rx: Receiver<Event>,
+        turn_handle: RactorTurnHandle,
         kb_tx: tokio::sync::watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
         shutdown_tx: tokio::sync::oneshot::Sender<()>,
@@ -105,6 +112,7 @@ impl UiActor {
             prev_cursor_pos,
             pending_submit: None,
             agent_running: false,
+            turn_handle: Some(turn_handle),
             // Store the pre-created receiver for run_with_external_rx
             _bus_rx: Some(bus_rx),
         }
@@ -117,6 +125,7 @@ impl UiActor {
     pub fn with_agent_handle(
         mut state: AppState,
         agent_handle: AgentHandleBox,
+        turn_handle: Option<RactorTurnHandle>,
         kb_tx: tokio::sync::watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
         shutdown_tx: tokio::sync::oneshot::Sender<()>,
@@ -139,6 +148,7 @@ impl UiActor {
             prev_cursor_pos,
             pending_submit: None,
             agent_running: false,
+            turn_handle,
             _bus_rx: None,
         }
     }

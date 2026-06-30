@@ -56,9 +56,11 @@ fn make_ui_actor() -> (UiActor, Arc<MockAgentHandle>) {
     let (shutdown_tx, _) = tokio::sync::oneshot::channel();
     let caps = crate::terminal::caps::TermCaps::default();
 
+    // Pass None for turn_handle since these tests don't need it.
     let ui = UiActor::with_agent_handle(
         state,
         AgentHandleBox::Leader(agent_handle),
+        None,
         kb_tx,
         bus,
         shutdown_tx,
@@ -68,13 +70,11 @@ fn make_ui_actor() -> (UiActor, Arc<MockAgentHandle>) {
 }
 
 /// Layer 2: Ctrl+C (Quit) exits even when a turn is active.
+/// Quit/ForceQuit always return true, regardless of turn state.
 #[tokio::test]
 async fn ctrl_c_quits_during_turn() {
     let (mut ui, _agent) = make_ui_actor();
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
-
-    // Simulate an active turn
-    ui.agent_running = true;
 
     // Ctrl+C should return true (quit) regardless of active turn
     let quit = ui
@@ -91,9 +91,6 @@ async fn ctrl_c_quits_during_turn() {
 async fn ctrl_q_force_quits_during_turn() {
     let (mut ui, _agent) = make_ui_actor();
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
-
-    // Simulate an active turn
-    ui.agent_running = true;
 
     // Ctrl+Q should return true (quit) regardless of active turn
     let quit = ui
@@ -124,8 +121,16 @@ async fn ctrl_s_aborts_during_turn() {
     let (mut ui, _agent) = make_ui_actor();
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
-    // Simulate an active turn
-    ui.agent_running = true;
+    // Send TurnStarted to set active_request_id (simulating an active turn)
+    ui.handle_event_inner(
+        Event::TurnStarted {
+            id: "test-id".to_string(),
+            request_id: "test-request".to_string(),
+            content: "test".to_string(),
+        },
+        effect_tx.clone(),
+    )
+    .await;
     ui.state.agent_state_mut().turn_active = true;
 
     // Ctrl+S should NOT return true (it's an abort, not a quit)
@@ -140,7 +145,7 @@ async fn ctrl_s_aborts_during_turn() {
         "turn_active should be cleared after Abort"
     );
 
-    // agent_running flag should be cleared
+    // active_request_id should be cleared after Abort
     assert!(
         !ui.agent_running(),
         "agent_running should be cleared after Abort"

@@ -58,6 +58,7 @@ fn make_ui_actor() -> (UiActor, Arc<MockAgentHandle>) {
     let ui = UiActor::with_agent_handle(
         state,
         AgentHandleBox::Leader(agent_handle),
+        None,
         kb_tx,
         bus,
         shutdown_tx,

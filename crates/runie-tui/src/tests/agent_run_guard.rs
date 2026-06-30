@@ -61,6 +61,7 @@ fn make_ui_with_test_agent() -> (crate::ui_actor::UiActor, TestAgentHandle) {
     let ui = UiActor::with_agent_handle(
         state,
         AgentHandleBox::Leader(handle),
+        None,
         kb_tx,
         bus,
         shutdown_tx,
@@ -202,6 +203,7 @@ async fn turn_actor_turn_started_reaches_uiactor_via_shared_bus() {
     let mut ui = crate::ui_actor::UiActor::with_agent_handle(
         state,
         crate::ui_actor_agent_handles::AgentHandleBox::Leader(handle),
+        None,
         kb_tx,
         bus.clone(),
         shutdown_tx,
@@ -288,6 +290,7 @@ async fn done_from_shared_bus_clears_guard() {
     let mut ui = crate::ui_actor::UiActor::with_agent_handle(
         state,
         crate::ui_actor_agent_handles::AgentHandleBox::Leader(handle),
+        None,
         kb_tx,
         bus,
         shutdown_tx,

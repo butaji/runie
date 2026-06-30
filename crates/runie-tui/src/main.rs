@@ -14,6 +14,7 @@
 use futures::StreamExt;
 use runie_agent::AgentActorFactoryImpl;
 use runie_core::actors::leader::{Leader, LeaderHandle};
+use runie_core::actors::RactorTurnHandle;
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::tracing_init as telemetry;
@@ -201,6 +202,7 @@ async fn spawn_background_tasks(
     let mut ui_actor = spawn_ui_actor_with_external_rx(
         state,
         bus_rx,
+        leader_handle.turn.clone(),
         kb_tx,
         bus.clone(),
         shutdown_tx,
@@ -276,25 +278,6 @@ fn render_loop(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-fn spawn_ui_actor(
-    state: AppState,
-    agent_handle: LeaderAgentActorHandle,
-    kb_tx: watch::Sender<HashMap<String, String>>,
-    bus: EventBus<Event>,
-    shutdown_tx: oneshot::Sender<()>,
-    caps: terminal::caps::TermCaps,
-) -> UiActor {
-    UiActor::with_agent_handle(
-        state,
-        AgentHandleBox::Leader(agent_handle),
-        kb_tx,
-        bus,
-        shutdown_tx,
-        caps,
-    )
-}
-
 /// Create a UiActor with a pre-subscribed bus receiver.
 /// Use this when the bus receiver was created before `Leader::start_with_bus()` returns,
 /// so that UiActor receives initial facts like `ConfigLoaded`.
@@ -303,12 +286,13 @@ fn spawn_ui_actor(
 fn spawn_ui_actor_with_external_rx(
     state: AppState,
     bus_rx: runie_core::bus::Receiver<Event>,
+    turn_handle: RactorTurnHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: oneshot::Sender<()>,
     caps: terminal::caps::TermCaps,
 ) -> UiActor {
-    UiActor::with_external_bus_rx(state, bus_rx, kb_tx, bus, shutdown_tx, caps)
+    UiActor::with_external_bus_rx(state, bus_rx, turn_handle, kb_tx, bus, shutdown_tx, caps)
 }
 
 async fn input_reader(
