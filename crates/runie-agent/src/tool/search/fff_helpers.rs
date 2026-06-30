@@ -1,55 +1,40 @@
-//! Shared FFF-state accessors and error builders for search and find_definitions.
+//! Shared search-state accessors and error builders for search and find_definitions.
 //!
-//! Both tools wait on `FffSearchState::picker.read()` and produce `ToolOutput`
-//! with lock-poisoning and not-initialized errors. The lock-guard pattern and
-//! error JSON shapes are shared; tool-specific formatting lives in the callers.
+//! Both tools access `FffSearchState::index` and produce `ToolOutput`
+//! with not-initialized errors. The error JSON shapes are shared; tool-specific
+//! formatting lives in the callers.
 
 use crate::tool::{ToolOutput, ToolStatus};
 use anyhow::Result;
-use fff_search::FilePicker;
 use runie_core::actors::FffSearchState;
 use serde_json::json;
 use std::time::{Duration, Instant};
 
-/// Callback that formats a lock-poisoning error for a specific tool.
-pub type LockErrorBuilder = fn(String, Duration) -> ToolOutput;
-
 /// Callback that formats a "picker not initialized" error for a specific tool.
 pub type NotInitializedBuilder = fn(String, Duration) -> ToolOutput;
 
-/// Acquire the FFF picker from global state with proper lock handling.
+/// Acquire the search index from global state.
 ///
-/// - Returns `Err` (via `lock_err`) if the read lock is poisoned.
-/// - Returns `Err` (via `not_init`) if the picker is `None`.
-/// - Calls `f(picker)` on success.
-pub fn with_picker<F>(
+/// - Returns `Err` if the indexer has not been spawned.
+/// - Calls `f(index)` on success.
+pub fn with_search_index<F>(
     state: &FffSearchState,
     query: String,
     start: Instant,
-    lock_err: LockErrorBuilder,
     not_init: NotInitializedBuilder,
     f: F,
 ) -> Result<ToolOutput>
 where
-    F: FnOnce(&FilePicker) -> Result<ToolOutput>,
+    F: FnOnce(&runie_core::actors::fff_indexer::SearchIndex) -> Result<ToolOutput>,
 {
     let duration = start.elapsed();
-    let guard = match state.picker.read() {
-        Ok(g) => g,
-        Err(e) => {
-            return Ok(lock_err(
-                format!("Error acquiring picker lock: {}", e),
-                duration,
-            ))
-        }
-    };
-    match guard.as_ref() {
-        Some(p) => f(p),
-        None => Ok(not_init(query, duration)),
+    if !state.indexed {
+        return Ok(not_init(query, duration));
     }
+    f(&state.index)
 }
 
-/// Build a JSON error output for FFF-related errors.
+/// Build a JSON error output for search-related errors.
 ///
 /// The `result_key` determines the field name: `"items"` for search or `"results"` for definitions.
 pub fn build_error_json(

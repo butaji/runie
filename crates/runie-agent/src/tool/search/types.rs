@@ -51,7 +51,9 @@ impl SearchMode {
 
 /// Build a file search item with formatted git status.
 pub fn build_search_item(path: String, git_status: Option<GitStatus>, score: f64) -> SearchItem {
-    let git_status = git_status.map(format_git_status).filter(|s| !s.is_empty());
+    let git_status = git_status
+        .map(format_git_status)
+        .filter(|s| !s.is_empty() && s != "clean");
     SearchItem {
         path,
         line: None,
@@ -63,7 +65,7 @@ pub fn build_search_item(path: String, git_status: Option<GitStatus>, score: f64
 }
 
 /// Map a git status to a short label.
-pub fn format_git_status(status: GitStatus) -> String {
+fn format_git_status(status: GitStatus) -> String {
     if status.contains(GitStatus::WT_NEW) || status.contains(GitStatus::INDEX_NEW) {
         return "untracked".to_owned();
     }

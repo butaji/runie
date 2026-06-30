@@ -697,7 +697,7 @@
   {
     "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
     "title": "Replace fff-search indexer with ignore/walkdir",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-keymap-modifier-tables-with-crokey-map.md",

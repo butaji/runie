@@ -1,14 +1,11 @@
-//! Search tool — unified FFF-backed search for files and content.
+//! Search tool — unified file/content search using the runie search index.
 
-use crate::tool::search::fff_helpers::with_picker;
-use crate::tool::search::fff_helpers::{build_error_json, build_error_json_with_instant};
+use crate::tool::search::fff_helpers::{build_error_json, build_error_json_with_instant, with_search_index};
 use crate::tool::search::modes::{search_content, search_files, search_glob};
 use crate::tool::search::types::{SearchMode, DEFAULT_LIMIT};
-use crate::tool::{ToolContext, ToolOutput, ToolStatus};
-use fff_search::{FilePicker, QueryTracker};
+use crate::tool::{ToolContext, ToolOutput, ToolDef, ToolStatus};
 use runie_core::actors::FffSearchState;
 use runie_core::path::resolve_path_in;
-use runie_core::tool::ToolDef;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
@@ -33,14 +30,14 @@ pub struct SearchInput {
     pub limit: Option<usize>,
 }
 
-/// Search tool — queries the global FFF index.
+/// Search tool — queries the global search index.
 pub struct SearchTool;
 
 impl ToolDef for SearchTool {
     type Input = SearchInput;
 
     const NAME: &'static str = "search";
-    const DESCRIPTION: &'static str = "Unified search for files and content using FFF. Supports fuzzy file search, content search (grep), glob patterns (*.rs, **/*.ts), git-status filters (git:modified, git:untracked), and location hints (file:42:5).";
+    const DESCRIPTION: &'static str = "Unified search for files and content. Supports fuzzy file search, content search (grep), glob patterns (*.rs, **/*.ts), git-status filters (git:modified, git:untracked), and location hints (file:42:5).";
     const READ_ONLY: bool = true;
     const REQUIRES_APPROVAL: bool = false;
 
@@ -80,92 +77,51 @@ pub(crate) fn search_impl(
         Some(s) => s,
         None => return search_not_initialized_error(query, start),
     };
-    execute_search_with_picker(&state, query, mode, limit, start)
+    execute_search_with_index(&state, query, mode, limit, start)
 }
 
 fn search_not_initialized_error(query: &str, start: Instant) -> ToolOutput {
     build_error_json_with_instant(
         "search",
         serde_json::json!({ "query": query }),
-        "FFF indexer not initialized",
+        "Search indexer not initialized",
         "items",
         false,
         start,
     )
-    .unwrap_or_else(|_| search_error(query, start, "FFF indexer not initialized".to_owned()))
+    .unwrap_or_else(|_| search_error(query, start, "Search indexer not initialized".to_owned()))
 }
 
-fn execute_search_with_picker(
+fn execute_search_with_index(
     state: &FffSearchState,
     query: &str,
     mode: SearchMode,
     limit: usize,
     start: Instant,
 ) -> ToolOutput {
-    with_picker(
+    with_search_index(
         state,
         query.to_owned(),
         start,
-        build_search_lock_error,
         build_search_not_initialized,
-        |picker| {
-            Ok::<ToolOutput, anyhow::Error>(with_query_tracker(
-                state,
-                query.to_owned(),
-                start,
-                |qt| dispatch_search(picker, qt, query, mode, limit, start),
-            ))
-        },
+        |index| Ok::<ToolOutput, anyhow::Error>(dispatch_search(index, query, mode, limit, start)),
     )
     .unwrap_or_else(|e| search_error(query, start, format!("search error: {}", e)))
-}
-
-fn build_search_lock_error(msg: String, duration: std::time::Duration) -> ToolOutput {
-    build_error_json(
-        "search",
-        serde_json::json!({ "query": msg }),
-        &msg,
-        "items",
-        false,
-        duration,
-    )
 }
 
 fn build_search_not_initialized(query: String, duration: std::time::Duration) -> ToolOutput {
     build_error_json(
         "search",
         serde_json::json!({ "query": query }),
-        "FFF picker not initialized",
+        "Search indexer not initialized",
         "items",
         false,
         duration,
     )
 }
 
-fn with_query_tracker<F>(state: &FffSearchState, query: String, start: Instant, f: F) -> ToolOutput
-where
-    F: FnOnce(Option<&QueryTracker>) -> ToolOutput,
-{
-    let duration = start.elapsed();
-    let guard = match state.query_tracker.read() {
-        Ok(g) => g,
-        Err(e) => {
-            return ToolOutput {
-                tool_name: "search".to_owned(),
-                tool_args: serde_json::json!({ "query": query }),
-                content: format!("Error acquiring query_tracker lock: {}", e),
-                bytes_transferred: None,
-                duration,
-                status: ToolStatus::Error,
-            };
-        }
-    };
-    f(guard.as_ref())
-}
-
 fn dispatch_search(
-    picker: &FilePicker,
-    query_tracker: Option<&QueryTracker>,
+    index: &runie_core::actors::fff_indexer::SearchIndex,
     query: &str,
     mode: SearchMode,
     limit: usize,
@@ -173,10 +129,10 @@ fn dispatch_search(
 ) -> ToolOutput {
     let indexed = FffSearchState::is_indexed();
     match mode {
-        SearchMode::Content => search_content(picker, query, limit, indexed, start),
-        SearchMode::Glob => search_glob(picker, query, limit, indexed, start),
+        SearchMode::Content => search_content(index, query, limit, indexed, start),
+        SearchMode::Glob => search_glob(index, query, limit, indexed, start),
         SearchMode::Files | SearchMode::Mixed => {
-            search_files(picker, query_tracker, query, limit, indexed, start)
+            search_files(index, query, limit, indexed, start)
         }
     }
 }

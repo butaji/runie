@@ -1,33 +1,13 @@
-#![allow(clippy::all)]
+//! Tests for the search indexer actor.
+
 use super::*;
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::FffFileEntry;
 
 // Serialize FFF indexer tests to prevent cross-test state interference.
-// The FFF library uses OS threads and LMDB handles that can conflict when
-// multiple tests run concurrently. Each test acquires this lock and holds it
-// until completion.
+// Each test acquires this lock and holds it until completion.
 static TEST_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-/// Wait for the FFF indexer to finish its initial scan.
-/// Uses a spawned blocking task with spin-loop to poll the indexed state.
-async fn wait_for_indexed(max_wait_ms: u64) -> bool {
-    let max_wait = max_wait_ms;
-    let handle = tokio::task::spawn_blocking(move || {
-        let start = std::time::Instant::now();
-        let max_duration = std::time::Duration::from_millis(max_wait);
-        while start.elapsed() <= max_duration {
-            if FffSearchState::is_indexed() {
-                return true;
-            }
-            // Spin loop - the RwLock read is fast and allows CPU to schedule threads
-            std::hint::spin_loop();
-        }
-        FffSearchState::is_indexed()
-    });
-    handle.await.unwrap_or(false)
-}
 
 #[tokio::test(flavor = "current_thread")]
 async fn indexer_initializes_in_temp_dir() {
@@ -44,22 +24,18 @@ async fn indexer_initializes_in_temp_dir() {
     std::fs::write(root.join("src/main.rs"), "// main").ok();
     std::fs::write(root.join("tests/example.rs"), "// test").ok();
 
-    // Ensure LMDB dirs exist
-    std::fs::create_dir_all(data_dir.join("runie").join("fff").join("frecency")).ok();
-    std::fs::create_dir_all(data_dir.join("runie").join("fff").join("queries")).ok();
-
     let bus = EventBus::new(16);
 
     // Subscribe BEFORE spawning so we don't miss any events
     let mut sub = bus.subscribe();
 
-    // Spawn the indexer using ractor version
-    let ( handle , _cell, _join ) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
+    // Spawn the indexer — index is built synchronously before actor starts.
+    let (handle, _cell, _join) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
         .await
         .expect("spawn succeeds");
 
-    // Wait for the actor to finish initialization
-    wait_for_indexed(500).await;
+    // Index should be ready immediately after spawn returns.
+    assert!(FffSearchState::is_indexed(), "index should be ready after spawn");
 
     // Send a search request
     let request_id = 1;
@@ -89,7 +65,7 @@ async fn indexer_initializes_in_temp_dir() {
         tokio::task::yield_now().await;
     }
 
-    // Send should succeed
+    // Should have received a search result
     assert!(
         result_entries.is_some(),
         "should have received search result"
@@ -112,15 +88,15 @@ async fn indexer_answers_file_search() {
 
     let bus = EventBus::new(16);
 
-    // Subscribe BEFORE spawning so we don't miss any events
+    // Subscribe BEFORE spawning
     let mut sub = bus.subscribe();
 
-    let ( handle , _cell, _join ) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
+    let (handle, _cell, _join) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
         .await
         .expect("spawn succeeds");
 
-    // Wait for the actor to finish initialization
-    wait_for_indexed(500).await;
+    // Index should be ready
+    assert!(FffSearchState::is_indexed());
 
     // Search for "cli"
     let request_id = 2;
@@ -173,15 +149,12 @@ async fn search_request_event_returns_results() {
 
     let bus = EventBus::new(16);
 
-    // Subscribe BEFORE spawning so we don't miss any events
+    // Subscribe BEFORE spawning
     let mut sub = bus.subscribe();
 
-    let ( handle , _cell, _join ) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
+    let (handle, _cell, _join) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
         .await
         .expect("spawn succeeds");
-
-    // Wait for the actor to finish initialization
-    wait_for_indexed(500).await;
 
     let request_id = 3;
     handle
@@ -224,8 +197,6 @@ use git2::Status as G;
 /// L1: `format_git_status` maps tracked file statuses to expected labels.
 #[test]
 fn format_git_status_covers_tracked_statuses() {
-    use super::format_git_status;
-
     // WT_NEW / INDEX_NEW → "untracked"
     assert_eq!(format_git_status(G::WT_NEW), "untracked");
     assert_eq!(format_git_status(G::INDEX_NEW), "untracked");
@@ -246,7 +217,6 @@ fn format_git_status_covers_tracked_statuses() {
 /// L1: `format_git_status` returns "clean" when no tracked flags are set.
 #[test]
 fn format_git_status_returns_clean_for_empty_status() {
-    use super::format_git_status;
     // Status::empty() means no tracked changes
     assert_eq!(format_git_status(G::empty()), "clean");
 }
@@ -254,19 +224,9 @@ fn format_git_status_returns_clean_for_empty_status() {
 /// L1: `format_git_status` handles combined flags (e.g., staged + unstaged).
 #[test]
 fn format_git_status_handles_combined_flags() {
-    use super::format_git_status;
     // File with both staged and unstaged changes
     let combined = G::INDEX_MODIFIED | G::WT_MODIFIED;
     // Should return "modified" (the first match in our lookup order)
     let result = format_git_status(combined);
     assert!(!result.is_empty(), "combined flags should return a label");
-}
-
-/// L1: `format_git_status_str` (the wrapper) returns owned String.
-#[test]
-fn format_git_status_str_returns_owned_string() {
-    use super::format_git_status;
-    let result = format_git_status(G::WT_MODIFIED);
-    // The wrapper should return "modified"
-    assert_eq!(result, "modified");
 }

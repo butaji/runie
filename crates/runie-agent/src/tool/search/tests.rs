@@ -1,10 +1,11 @@
-#![allow(clippy::all)]
+//! Tests for the search tool.
+
 use super::types::*;
 use super::*;
 use crate::tool::search::core::SearchInput;
 use crate::tool::{ToolContext, ToolDef, ToolStatus};
-use fff_search::{Constraint, Location, QueryParser};
 use git2::Status as GitStatus;
+use runie_core::location::{parse_search_query, Location};
 
 #[test]
 fn search_mode_from_str() {
@@ -31,18 +32,6 @@ fn search_tool_no_approval_required() {
 }
 
 #[test]
-fn format_git_status_modified() {
-    let status = GitStatus::from_bits_truncate(1 << 1);
-    assert_eq!(format_git_status(status), "modified");
-}
-
-#[test]
-fn format_git_status_untracked() {
-    let status = GitStatus::from_bits_truncate(1 << 7);
-    assert_eq!(format_git_status(status), "untracked");
-}
-
-#[test]
 fn search_item_has_git_status_field() {
     let item = SearchItem {
         path: "src/lib.rs".to_string(),
@@ -61,14 +50,22 @@ fn search_item_has_git_status_field() {
 
 #[test]
 fn build_search_item_creates_valid_item() {
-    let status = GitStatus::from_bits_truncate(1 << 1); // WT_MODIFIED
-    let item = build_search_item("src/lib.rs".to_string(), Some(status), 0.95);
+    let modified_status = GitStatus::WT_MODIFIED;
+    let item =
+        build_search_item("src/lib.rs".to_string(), Some(modified_status), 0.95);
     assert_eq!(item.path, "src/lib.rs");
     assert_eq!(item.score, 0.95);
     assert_eq!(item.git_status, Some("modified".to_string()));
     assert!(item.line.is_none());
     assert!(item.col.is_none());
     assert!(item.content.is_none());
+}
+
+#[test]
+fn build_search_item_skips_clean_git_status() {
+    let clean_status = GitStatus::empty();
+    let item = build_search_item("src/main.rs".to_string(), Some(clean_status), 0.8);
+    assert_eq!(item.git_status, None);
 }
 
 #[test]
@@ -97,92 +94,53 @@ fn search_result_serialization() {
     assert!(json.contains("modified"));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Query parser tests (replaces fff_search::QueryParser tests)
+// ─────────────────────────────────────────────────────────────────────────────
+
 #[test]
 fn query_parser_applies_glob_constraint() {
-    let parsed = QueryParser::default().parse("*.rs");
-    let has_glob = parsed
-        .constraints
-        .iter()
-        .any(|c| matches!(c, Constraint::Glob(_) | Constraint::Extension(_)));
-    assert!(
-        has_glob,
-        "Expected glob constraint, got: {:?}",
-        parsed.constraints
-    );
+    let parsed = parse_search_query("*.rs");
+    let has_glob = parsed.globs().eq(["*.rs"]);
+    assert!(has_glob, "Expected glob constraint, got: {:?}", parsed.constraints);
 }
 
 #[test]
 fn query_parser_applies_negation() {
-    let parsed = QueryParser::default().parse("config !test/ !vendor/");
-    let has_negation = parsed
-        .constraints
-        .iter()
-        .any(|c| matches!(c, Constraint::Not(_)));
-    assert!(
-        has_negation,
-        "Expected Not constraint, got: {:?}",
-        parsed.constraints
-    );
+    let parsed = parse_search_query("config !test/ !vendor/");
+    assert_eq!(parsed.text, "config");
+    assert!(parsed.negations().eq(["test/", "vendor/"]));
 }
 
 #[test]
 fn query_parser_handles_git_status_filter() {
-    let parsed = QueryParser::default().parse("git:modified");
-    let has_git = parsed
-        .constraints
-        .iter()
-        .any(|c| matches!(c, Constraint::GitStatus(_)));
-    assert!(
-        has_git,
-        "Expected git status constraint, got: {:?}",
-        parsed.constraints
-    );
+    let parsed = parse_search_query("git:modified");
+    assert!(parsed.git_status_filters().eq(["modified"]));
 }
 
 #[test]
 fn query_parser_handles_location_hint() {
-    let parsed = QueryParser::default().parse("lib.rs:42");
-    assert!(
-        parsed.location.is_some(),
-        "Expected location, got: {:?}",
-        parsed.location
-    );
-    assert!(matches!(
-        parsed.location.unwrap(),
-        Location::Line(n) if n == 42
-    ));
+    let parsed = parse_search_query("lib.rs:42");
+    assert_eq!(parsed.text, "lib.rs");
+    assert!(matches!(parsed.location, Some(Location::Line(n)) if n == 42));
 }
 
 #[test]
 fn query_parser_handles_location_with_column() {
-    let parsed = QueryParser::default().parse("lib.rs:42:5");
-    assert!(parsed.location.is_some(), "Expected location");
+    let parsed = parse_search_query("lib.rs:42:5");
     assert!(matches!(
-        parsed.location.unwrap(),
-        Location::Position { line: 42, col: 5 }
+        parsed.location,
+        Some(Location::Position { line: 42, col: 5 })
     ));
 }
 
 #[test]
 fn query_parser_handles_mixed_query() {
-    let parsed = QueryParser::default().parse("config yaml !test/ git:modified *.rs");
-    let has_glob = parsed
-        .constraints
-        .iter()
-        .any(|c| matches!(c, Constraint::Glob(_) | Constraint::Extension(_)));
-    let has_negation = parsed
-        .constraints
-        .iter()
-        .any(|c| matches!(c, Constraint::Not(_)));
-    let has_git = parsed
-        .constraints
-        .iter()
-        .any(|c| matches!(c, Constraint::GitStatus(_)));
-    assert!(
-        has_glob && has_negation && has_git,
-        "Expected glob+negation+git, got: {:?}",
-        parsed.constraints
-    );
+    let parsed = parse_search_query("config yaml !test/ git:modified *.rs");
+    assert_eq!(parsed.text, "config yaml");
+    assert!(parsed.globs().eq(["*.rs"]));
+    assert!(parsed.negations().eq(["test/"]));
+    assert!(parsed.git_status_filters().eq(["modified"]));
 }
 
 #[tokio::test]

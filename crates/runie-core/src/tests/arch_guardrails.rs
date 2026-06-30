@@ -75,6 +75,8 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     "commands/dsl/handlers/session/",
     // Leader - coordination layer that manages actor lifecycle
     "actors/leader/",
+    // FFF indexer — IO actor owning file search with intentional sync file reads
+    "actors/fff_indexer/",
 ];
 
 /// Patterns that indicate sync IO in production domain code.

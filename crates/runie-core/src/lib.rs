@@ -16,7 +16,6 @@ pub use actors::{
     FffFileItem, FffSearchRequest, FffSearchResult, FffSearchResultPayload, FffSearchState,
     PersistenceActor,
 };
-pub use fff_search::{SharedFilePicker, SharedFrecency, SharedQueryTracker};
 // Inner state structs are pub(crate) — accessible within runie-core but not exported externally.
 // AppState itself remains pub so it can be used in public DSL signatures.
 pub use message::{ChatMessage, Role};

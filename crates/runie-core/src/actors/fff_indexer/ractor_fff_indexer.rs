@@ -1,16 +1,10 @@
-//! Ractor-based `FffIndexerActor` implementation.
+//! Ractor-based `FffIndexerActor` implementation using `ignore` + `sublime_fuzzy`.
 //!
-//! Migrated from custom Actor trait to ractor for consistency with the rest
-//! of the actor system.
+//! Migrated from `fff-search` to `ignore::WalkBuilder` + `sublime_fuzzy` + `notify` 7.0.
 
 use std::path::PathBuf;
 
-use fff_search::{
-    ContentCacheBudget, FFFMode, FilePickerOptions, FrecencyTracker, FuzzySearchOptions,
-    PaginationArgs, QueryParser, QueryTracker, SearchResult as FffRawSearchResult,
-};
 use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
-use std::time::Duration;
 
 use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
 use crate::bus::EventBus;
@@ -18,8 +12,9 @@ use crate::event::Event;
 use crate::model::FffFileEntry;
 
 use super::{
-    FffFileItem, FffSearchRequest, FffSearchResultPayload, FffSearchState, FffSearchStateInner,
-    DEFAULT_LIMIT, SCAN_TIMEOUT_SECS,
+    FileSearchResult, FffFileItem, FffSearchRequest,
+    FffSearchResultPayload, FffSearchState, MAX_FILE_SIZE, SearchIndex, SearchIndexStateInner,
+    DEFAULT_LIMIT,
 };
 
 /// Ractor-based FffIndexerActor handle.
@@ -56,12 +51,8 @@ impl RactorFffIndexerHandle {
 /// Ractor-based FffIndexerActor.
 pub struct RactorFffIndexerActor {
     root: PathBuf,
-    frecency_path: PathBuf,
-    query_path: PathBuf,
     bus: EventBus<Event>,
-    shared_picker: fff_search::SharedFilePicker,
-    shared_frecency: fff_search::SharedFrecency,
-    shared_query_tracker: fff_search::SharedQueryTracker,
+    index: SearchIndex,
     indexed: bool,
     init_done: bool,
 }
@@ -73,33 +64,51 @@ pub struct FffIndexerActorState {
 }
 
 impl RactorFffIndexerActor {
-    fn new(root: PathBuf, data_dir: PathBuf, bus: EventBus<Event>) -> Self {
-        let fff_dir = data_dir.join("runie").join("fff");
+    fn new(root: PathBuf, _data_dir: PathBuf, bus: EventBus<Event>) -> Self {
         Self {
             root,
-            frecency_path: fff_dir.join("frecency"),
-            query_path: fff_dir.join("queries"),
             bus,
-            shared_picker: fff_search::SharedFilePicker::default(),
-            shared_frecency: fff_search::SharedFrecency::default(),
-            shared_query_tracker: fff_search::SharedQueryTracker::default(),
+            index: SearchIndex::new(),
             indexed: false,
             init_done: false,
         }
     }
 
     /// Spawn a `RactorFffIndexerActor` and return a handle + cell + join.
-    /// Initializes the FFF stores and waits for initial scan before returning.
+    /// Initializes the index and waits for initial scan before returning.
     pub async fn spawn(
         root: PathBuf,
         data_dir: PathBuf,
         bus: EventBus<Event>,
     ) -> Result<(RactorFffIndexerHandle, ractor::ActorCell, tokio::task::JoinHandle<()>), ractor::SpawnErr> {
         let mut actor = Self::new(root, data_dir, bus.clone());
-        // Initialize FFF stores synchronously before spawning
-        if let Err(e) = actor.init_fff().await {
-            tracing::error!("fff indexer init failed: {e}");
-        }
+        // Initialize the search index on a blocking thread before spawning.
+        let index = actor.index.clone();
+        let scan_root = actor.root.clone();
+        tokio::task::spawn_blocking(move || {
+            index.build(&scan_root);
+        })
+        .await
+        .map_err(|e| {
+            let msg = format!("scan task failed: {}", e);
+            ractor::SpawnErr::StartupPanic(msg.into())
+        })?;
+
+        actor.indexed = true;
+        actor.init_done = true;
+
+        // Register the index globally.
+        let global_state = FffSearchState {
+            project_path: actor.root.clone(),
+            index: actor.index.clone(),
+            indexed: true,
+        };
+        *super::search_index_state().write() = Some(SearchIndexStateInner {
+            state: global_state,
+        });
+
+        tracing::debug!("search indexer: initial scan complete ({} files)", actor.index.file_count());
+
         let (handle, join, cell) = spawn_ractor(None, actor, bus).await?;
         Ok((RactorFffIndexerHandle::new(handle), cell, join))
     }
@@ -155,88 +164,6 @@ impl Actor for RactorFffIndexerActor {
 }
 
 impl RactorFffIndexerActor {
-    /// Initialize FFF: open LMDB stores, start the picker, and register globally.
-    async fn init_fff(&mut self) -> anyhow::Result<()> {
-        self.open_fff_stores()?;
-        self.create_fff_picker()?;
-        self.register_fff_state();
-        self.wait_for_fff_scan().await;
-        self.init_done = true;
-        Ok(())
-    }
-
-    fn open_fff_stores(&mut self) -> anyhow::Result<()> {
-        let frecency = FrecencyTracker::open(&self.frecency_path)
-            .map_err(|e| anyhow::anyhow!("frecency open: {e}"))?;
-        self.shared_frecency
-            .init(frecency)
-            .map_err(|e| anyhow::anyhow!("frecency init: {e}"))?;
-
-        let query_tracker = QueryTracker::open(&self.query_path)
-            .map_err(|e| anyhow::anyhow!("query tracker open: {e}"))?;
-        self.shared_query_tracker
-            .init(query_tracker)
-            .map_err(|e| anyhow::anyhow!("query tracker init: {e}"))?;
-        Ok(())
-    }
-
-    fn create_fff_picker(&self) -> anyhow::Result<()> {
-        let root_str = self.root.to_string_lossy().into_owned();
-        fff_search::FilePicker::new_with_shared_state(
-            self.shared_picker.clone(),
-            self.shared_frecency.clone(),
-            FilePickerOptions {
-                base_path: root_str,
-                mode: FFFMode::Ai,
-                watch: true,
-                enable_mmap_cache: false,
-                enable_content_indexing: false,
-                enable_fs_root_scanning: true,
-                enable_home_dir_scanning: false,
-                follow_symlinks: true,
-                cache_budget: Some(ContentCacheBudget::zero()),
-            },
-        )
-        .map_err(|e| anyhow::anyhow!("picker init: {e}"))?;
-        Ok(())
-    }
-
-    fn register_fff_state(&self) {
-        let global_state = FffSearchState {
-            project_path: self.root.clone(),
-            picker: self.shared_picker.clone(),
-            frecency: self.shared_frecency.clone(),
-            query_tracker: self.shared_query_tracker.clone(),
-        };
-        *super::fff_state().write() = Some(FffSearchStateInner {
-            state: global_state,
-            indexed: false,
-        });
-    }
-
-    async fn wait_for_fff_scan(&mut self) {
-        let timeout = Duration::from_secs(SCAN_TIMEOUT_SECS);
-        let picker = self.shared_picker.clone();
-        let completed =
-            match tokio::task::spawn_blocking(move || picker.wait_for_scan(timeout)).await {
-                Ok(v) => v,
-                Err(e) => {
-                    tracing::error!("fff indexer: scan task failed: {e}");
-                    return;
-                }
-            };
-        if !completed {
-            tracing::warn!("fff indexer: scan timed out after {SCAN_TIMEOUT_SECS}s");
-            return;
-        }
-        tracing::debug!("fff indexer: initial scan complete");
-        self.indexed = true;
-        let mut guard = super::fff_state().write();
-        if let Some(inner) = guard.as_mut() {
-            inner.indexed = true;
-        }
-    }
-
     /// Handle a search request.
     async fn handle_search(
         &self,
@@ -245,29 +172,42 @@ impl RactorFffIndexerActor {
     ) -> FffSearchResultPayload {
         let limit = req.limit.unwrap_or(DEFAULT_LIMIT);
 
-        let picker_guard = match self.shared_picker.read() {
-            Ok(g) => g,
-            Err(e) => {
-                tracing::error!("fff picker read lock poisoned: {e}");
-                return result_payload(&req, vec![], 0, false);
-            }
-        };
-        let qt_guard = match self.shared_query_tracker.read() {
-            Ok(g) => g,
-            Err(e) => {
-                tracing::error!("fff query tracker lock poisoned: {e}");
-                return result_payload(&req, vec![], 0, false);
-            }
-        };
-        let picker = match picker_guard.as_ref() {
-            Some(p) => p,
-            None => return result_payload(&req, vec![], 0, indexed),
-        };
-        let query_tracker = qt_guard.as_ref();
+        // Parse the query to determine the search type.
+        let parsed = crate::location::parse_search_query(&req.query);
 
-        let results = run_fff_search(&req, picker, query_tracker, limit);
-        let items = convert_fff_results(&req, picker, &results);
-        result_payload(&req, items, results.total_matched, indexed)
+        let items: Vec<FffFileItem>;
+        let total_matched: usize;
+
+        if parsed.location.is_some() && !parsed.text.is_empty() {
+            // Content search for location queries.
+            let matches = self.index.grep(&req.query, MAX_FILE_SIZE, 10, limit);
+            total_matched = matches.len();
+            items = Vec::new(); // Location results use a different format.
+        } else if parsed.globs().next().is_some() {
+            // Glob search.
+            let results = self.index.glob_search(&req.query, limit);
+            total_matched = results.len();
+            items = results
+                .into_iter()
+                .map(|r| convert_file_result(&req, r))
+                .collect();
+        } else {
+            // Fuzzy file search.
+            let results = self.index.fuzzy_search(&req.query, limit);
+            total_matched = results.len();
+            items = results
+                .into_iter()
+                .map(|r| convert_file_result(&req, r))
+                .collect();
+        }
+
+        FffSearchResultPayload {
+            request_id: req.request_id,
+            query: req.query.clone(),
+            items,
+            total_matched,
+            indexed,
+        }
     }
 
     fn emit(&self, event: Event) {
@@ -275,96 +215,20 @@ impl RactorFffIndexerActor {
     }
 }
 
-/// Build a result payload.
-fn run_fff_search<'a>(
-    req: &'a FffSearchRequest,
-    picker: &'a fff_search::FilePicker,
-    query_tracker: Option<&'a QueryTracker>,
-    limit: usize,
-) -> FffRawSearchResult<'a> {
-    let parsed = QueryParser::default().parse(&req.query);
-    picker.fuzzy_search(
-        &parsed,
-        query_tracker,
-        FuzzySearchOptions {
-            max_threads: 0,
-            current_file: None,
-            project_path: Some(&req.project_path),
-            pagination: PaginationArgs { offset: 0, limit },
-            combo_boost_score_multiplier: 100,
-            min_combo_count: 2,
-        },
-    )
-}
-
-fn convert_fff_results(
-    req: &FffSearchRequest,
-    picker: &fff_search::FilePicker,
-    results: &FffRawSearchResult,
-) -> Vec<FffFileItem> {
-    results
-        .items
-        .iter()
-        .zip(results.scores.iter())
-        .map(|(item, score)| {
-            let git_status = item.git_status;
-            let git_tracked = git_status.is_some();
-            FffFileItem {
-                relative_path: item.relative_path(picker),
-                absolute_path: item
-                    .absolute_path(picker, &req.project_path)
-                    .to_string_lossy()
-                    .into_owned(),
-                score: score.total as f64,
-                git_tracked,
-                git_status: git_status.map(format_git_status_str),
-            }
-        })
-        .collect()
-}
-
-fn result_payload(
-    req: &FffSearchRequest,
-    items: Vec<FffFileItem>,
-    total_matched: usize,
-    indexed: bool,
-) -> FffSearchResultPayload {
-    FffSearchResultPayload {
-        request_id: req.request_id,
-        query: req.query.clone(),
-        items,
-        total_matched,
-        indexed,
+/// Convert a file search result to an `FffFileItem`.
+fn convert_file_result(_req: &FffSearchRequest, result: FileSearchResult) -> FffFileItem {
+    let git_status = result.git_status;
+    let git_tracked = git_status.is_some();
+    FffFileItem {
+        relative_path: result.relative_path.clone(),
+        absolute_path: result.absolute_path.to_string_lossy().into_owned(),
+        score: result.score,
+        git_tracked,
+        git_status: git_status.map(|s| super::format_git_status(s).to_owned()),
     }
-}
-
-/// Map a git2 Status to a human-readable label.
-///
-/// Returns `"clean"` if no tracked status flags are set.
-pub fn format_git_status(status: git2::Status) -> &'static str {
-    use git2::Status as G;
-    const STATUS_LABELS: &[(git2::Status, &str)] = &[
-        (G::WT_NEW, "untracked"),
-        (G::INDEX_NEW, "untracked"),
-        (G::WT_MODIFIED, "modified"),
-        (G::INDEX_MODIFIED, "modified"),
-        (G::WT_DELETED, "deleted"),
-        (G::INDEX_DELETED, "deleted"),
-        (G::WT_RENAMED, "renamed"),
-        (G::INDEX_RENAMED, "renamed"),
-    ];
-    for (flag, label) in STATUS_LABELS {
-        if status.contains(*flag) {
-            return label;
-        }
-    }
-    "clean"
 }
 
 /// Format a git2 Status as a human-readable string (returns `"clean"` for clean state).
-fn format_git_status_str(status: git2::Status) -> String {
-    format_git_status(status).to_owned()
-}
 
 #[cfg(test)]
 mod tests {

@@ -1,146 +1,94 @@
-//! Search mode implementations backed by the FFF picker.
+//! Search mode implementations backed by the runie search index.
 
 use crate::tool::search::types::{
     build_search_item, SearchItem, SearchResult, DEFAULT_MAX_MATCHES,
 };
 use crate::tool::{ToolOutput, ToolStatus};
-use fff_search::{
-    FilePicker, FuzzySearchOptions, GrepMatch, GrepMode, GrepResult, GrepSearchOptions,
-    PaginationArgs, QueryParser, QueryTracker,
-};
+use runie_core::actors::fff_indexer::SearchIndex;
+use runie_core::location::parse_search_query;
 use runie_core::tool::truncate_output;
 use std::time::Instant;
 
+/// Max file size for content indexing (matches MAX_FILE_SIZE in the indexer).
+const MAX_FILE_SIZE: usize = 2 * 1024 * 1024; // 2 MiB
+
 pub(crate) fn search_files(
-    picker: &FilePicker,
-    query_tracker: Option<&QueryTracker>,
+    index: &SearchIndex,
     query: &str,
     limit: usize,
     indexed: bool,
     start: Instant,
 ) -> ToolOutput {
-    let parsed = QueryParser::default().parse(query);
-    let results = picker.fuzzy_search(
-        &parsed,
-        query_tracker,
-        FuzzySearchOptions {
-            max_threads: 0,
-            current_file: None,
-            project_path: None,
-            pagination: PaginationArgs { offset: 0, limit },
-            combo_boost_score_multiplier: 100,
-            min_combo_count: 2,
-        },
-    );
+    // Parse query to detect glob patterns.
+    let parsed = parse_search_query(query);
+
+    let results = if parsed.globs().next().is_some() {
+        // Glob search.
+        index.glob_search(query, limit)
+    } else {
+        // Fuzzy file search.
+        index.fuzzy_search(query, limit)
+    };
+
     let items: Vec<SearchItem> = results
-        .items
-        .iter()
-        .zip(results.scores.iter())
-        .map(|(item, score)| {
+        .into_iter()
+        .map(|r| {
             build_search_item(
-                item.relative_path(picker),
-                item.git_status,
-                score.total as f64,
+                r.relative_path.clone(),
+                r.git_status,
+                r.score,
             )
         })
         .collect();
-    build_search_output(query, None, results.total_matched, items, indexed, start)
+
+    build_search_output(query, None, items.len(), items, indexed, start)
 }
 
 pub(crate) fn search_content(
-    picker: &FilePicker,
+    index: &SearchIndex,
     query: &str,
     limit: usize,
     indexed: bool,
     start: Instant,
 ) -> ToolOutput {
-    let parsed = QueryParser::default().parse(query);
-    let results = picker.grep(
-        &parsed,
-        &GrepSearchOptions {
-            max_file_size: fff_search::MAX_FFFILE_SIZE,
-            max_matches_per_file: DEFAULT_MAX_MATCHES,
-            smart_case: true,
-            file_offset: 0,
-            page_limit: limit,
-            mode: GrepMode::Regex,
-            time_budget_ms: 5000,
-            before_context: 0,
-            after_context: 0,
-            classify_definitions: false,
-            trim_whitespace: true,
-            abort_signal: None,
-        },
-    );
-    let items: Vec<SearchItem> = results
-        .matches
-        .iter()
-        .map(|m| map_content_match(picker, &results, m))
+    let matches = index.grep(query, MAX_FILE_SIZE, DEFAULT_MAX_MATCHES, limit);
+
+    let items: Vec<SearchItem> = matches
+        .into_iter()
+        .map(|m| SearchItem {
+            path: m.path,
+            line: Some(m.line_number),
+            col: Some(m.col),
+            content: Some(truncate_output(&m.line_content, 200, 1)),
+            score: m.fuzzy_score.unwrap_or(0) as f64,
+            git_status: None,
+        })
         .collect();
-    build_search_output(
-        query,
-        None,
-        results.files_with_matches,
-        items,
-        indexed,
-        start,
-    )
+
+    build_search_output(query, Some("content"), items.len(), items, indexed, start)
 }
 
 pub(crate) fn search_glob(
-    picker: &FilePicker,
+    index: &SearchIndex,
     pattern: &str,
     limit: usize,
     indexed: bool,
     start: Instant,
 ) -> ToolOutput {
-    let results = picker.glob(
-        pattern,
-        FuzzySearchOptions {
-            max_threads: 0,
-            current_file: None,
-            project_path: None,
-            pagination: PaginationArgs { offset: 0, limit },
-            combo_boost_score_multiplier: 100,
-            min_combo_count: 2,
-        },
-    );
+    let results = index.glob_search(pattern, limit);
+
     let items: Vec<SearchItem> = results
-        .items
-        .iter()
-        .zip(results.scores.iter())
-        .map(|(item, score)| {
+        .into_iter()
+        .map(|r| {
             build_search_item(
-                item.relative_path(picker),
-                item.git_status,
-                score.total as f64,
+                r.relative_path.clone(),
+                r.git_status,
+                r.score,
             )
         })
         .collect();
-    build_search_output(
-        pattern,
-        Some("glob"),
-        results.total_matched,
-        items,
-        indexed,
-        start,
-    )
-}
 
-fn map_content_match(picker: &FilePicker, results: &GrepResult<'_>, m: &GrepMatch) -> SearchItem {
-    let path = results
-        .files
-        .get(m.file_index)
-        .map(|f| f.relative_path(picker))
-        .unwrap_or_else(|| format!("<file {}>", m.file_index));
-    SearchItem {
-        path,
-        line: Some(m.line_number),
-        col: Some(m.col),
-        content: Some(truncate_output(&m.line_content, 200, 1)),
-        score: m.fuzzy_score.unwrap_or(0) as f64,
-        git_status: None,
-    }
+    build_search_output(pattern, Some("glob"), items.len(), items, indexed, start)
 }
 
 fn build_search_output(

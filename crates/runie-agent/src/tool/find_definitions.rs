@@ -1,16 +1,14 @@
-#![allow(clippy::all)]
-//! `find_definitions` tool — locate symbol definitions using FFF's classifier.
+//! `find_definitions` tool — locate symbol definitions using content search.
 
 use crate::tool::search::fff_helpers::{
-    build_error_json, build_error_json_with_instant, with_picker,
+    build_error_json, build_error_json_with_instant, with_search_index,
 };
 use crate::tool::{ToolContext, ToolOutput, ToolStatus};
-use fff_search::{FilePicker, GrepMatch, GrepMode, GrepResult, GrepSearchOptions, QueryParser};
+use runie_core::actors::fff_indexer::SearchIndex;
 use runie_core::actors::FffSearchState;
 use runie_core::tool::ToolDef;
 use schemars::JsonSchema;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
 /// Input parameters for find_definitions tool.
@@ -31,6 +29,9 @@ pub struct FindDefinitionsInput {
 
 /// Default max results.
 const DEFAULT_LIMIT: usize = 30;
+
+/// Max file size for content indexing (2 MiB).
+const MAX_FILE_SIZE: usize = 2 * 1024 * 1024;
 
 type Detector = (&'static str, fn(&str) -> bool);
 
@@ -130,7 +131,7 @@ impl ToolDef for FindDefinitionsTool {
     type Input = FindDefinitionsInput;
 
     const NAME: &'static str = "find_definitions";
-    const DESCRIPTION: &'static str = "Find symbol definitions (struct, fn, class, def, impl, enum, trait, etc.) in the codebase using FFF's definition classifier.";
+    const DESCRIPTION: &'static str = "Find symbol definitions (struct, fn, class, def, impl, enum, trait, etc.) in the codebase.";
     const READ_ONLY: bool = true;
     const REQUIRES_APPROVAL: bool = false;
 
@@ -142,7 +143,7 @@ impl ToolDef for FindDefinitionsTool {
                 return build_error_json_with_instant(
                     "find_definitions",
                     serde_json::json!({ "symbol": input.symbol }),
-                    "FFF indexer not initialized",
+                    "Search indexer not initialized",
                     "results",
                     false,
                     start,
@@ -150,22 +151,21 @@ impl ToolDef for FindDefinitionsTool {
                 .unwrap_or_else(|_| ToolOutput {
                     tool_name: "find_definitions".to_owned(),
                     tool_args: serde_json::json!({ "symbol": input.symbol }),
-                    content: "FFF indexer not initialized".to_owned(),
+                    content: "Search indexer not initialized".to_owned(),
                     bytes_transferred: None,
                     duration: start.elapsed(),
                     status: ToolStatus::Error,
                 })
             }
         };
-        with_picker(
+        with_search_index(
             &state,
             input.symbol.clone(),
             start,
-            build_find_def_lock_error,
             build_find_def_not_initialized,
-            |picker| {
+            |index| {
                 Ok(search_definitions(
-                    picker,
+                    index,
                     &input.symbol,
                     &input.glob,
                     input.limit.unwrap_or(DEFAULT_LIMIT),
@@ -184,22 +184,11 @@ impl ToolDef for FindDefinitionsTool {
     }
 }
 
-fn build_find_def_lock_error(msg: String, duration: std::time::Duration) -> ToolOutput {
-    build_error_json(
-        "find_definitions",
-        serde_json::json!({ "symbol": msg }),
-        &msg,
-        "results",
-        false,
-        duration,
-    )
-}
-
 fn build_find_def_not_initialized(symbol: String, duration: std::time::Duration) -> ToolOutput {
     build_error_json(
         "find_definitions",
         serde_json::json!({ "symbol": symbol }),
-        "FFF picker not initialized",
+        "Search indexer not initialized",
         "results",
         false,
         duration,
@@ -207,32 +196,29 @@ fn build_find_def_not_initialized(symbol: String, duration: std::time::Duration)
 }
 
 fn search_definitions(
-    picker: &FilePicker,
+    index: &SearchIndex,
     symbol: &str,
     glob: &Option<String>,
     limit: usize,
     start: Instant,
 ) -> ToolOutput {
     let query_str = build_query(symbol, glob);
-    let parsed = QueryParser::default().parse(&query_str);
-    let results = picker.grep(
-        &parsed,
-        &GrepSearchOptions {
-            max_file_size: fff_search::MAX_FFFILE_SIZE,
-            max_matches_per_file: 5,
-            smart_case: true,
-            file_offset: 0,
-            page_limit: limit,
-            mode: GrepMode::Regex,
-            time_budget_ms: 5000,
-            before_context: 0,
-            after_context: 0,
-            classify_definitions: true,
-            trim_whitespace: true,
-            abort_signal: None,
-        },
-    );
-    let defs = map_definition_results(picker, &results, limit);
+    let matches = index.grep(&query_str, MAX_FILE_SIZE, 5, limit);
+
+    // Filter matches that look like definitions based on content analysis.
+    let defs: Vec<DefResult> = matches
+        .into_iter()
+        .filter(|m| is_definition_line(&m.line_content))
+        .map(|m| DefResult {
+            path: m.path,
+            line: m.line_number,
+            col: m.col,
+            kind: detect_kind(&m.line_content).to_owned(),
+            content: m.line_content,
+        })
+        .take(limit)
+        .collect();
+
     let indexed = FffSearchState::is_indexed();
     build_definitions_output(symbol, defs, indexed, start)
 }
@@ -244,34 +230,19 @@ fn build_query(symbol: &str, glob: &Option<String>) -> String {
     }
 }
 
-fn map_definition_results(
-    picker: &FilePicker,
-    results: &GrepResult<'_>,
-    limit: usize,
-) -> Vec<DefResult> {
-    results
-        .matches
-        .iter()
-        .filter(|m| m.is_definition)
-        .take(limit)
-        .map(|m| build_def_result(picker, results, m))
-        .collect()
-}
-
-fn build_def_result(picker: &FilePicker, results: &GrepResult<'_>, m: &GrepMatch) -> DefResult {
-    let path = results
-        .files
-        .get(m.file_index)
-        .map(|f| f.relative_path(picker))
-        .unwrap_or_else(|| format!("<file {}>", m.file_index));
-    let kind = detect_kind(&m.line_content);
-    DefResult {
-        path,
-        line: m.line_number,
-        col: m.col,
-        kind: kind.to_owned(),
-        content: m.line_content.clone(),
-    }
+/// Check if a line looks like a definition.
+fn is_definition_line(line: &str) -> bool {
+    let t = line.trim();
+    detect_struct(t).then_some("struct")
+        .or_else(|| detect_fn(t).then_some("fn"))
+        .or_else(|| detect_enum(t).then_some("enum"))
+        .or_else(|| detect_trait(t).then_some("trait"))
+        .or_else(|| detect_impl(t).then_some("impl"))
+        .or_else(|| detect_class(t).then_some("class"))
+        .or_else(|| detect_def(t).then_some("def"))
+        .or_else(|| detect_func(t).then_some("func"))
+        .or_else(|| detect_type(t).then_some("type"))
+        .is_some()
 }
 
 fn build_definitions_output(
@@ -351,6 +322,20 @@ mod tests {
     }
 
     #[test]
+    fn is_definition_line_fn() {
+        assert!(is_definition_line("fn foo() {}"));
+        assert!(is_definition_line("pub async fn bar() {}"));
+        assert!(!is_definition_line("foo();"));
+        assert!(!is_definition_line("// fn bar() {}"));
+    }
+
+    #[test]
+    fn is_definition_line_struct() {
+        assert!(is_definition_line("pub struct MyStruct {"));
+        assert!(!is_definition_line("let s = MyStruct {};"));
+    }
+
+    #[test]
     fn find_definitions_tool_name() {
         assert_eq!(FindDefinitionsTool::NAME, "find_definitions");
     }
@@ -377,15 +362,6 @@ mod tests {
         assert!(props.contains_key("limit"));
     }
 
-    #[test]
-    fn find_definitions_tool_description_mentions_classifier() {
-        assert!(
-            FindDefinitionsTool::DESCRIPTION.contains("definition classifier"),
-            "description: {}",
-            FindDefinitionsTool::DESCRIPTION
-        );
-    }
-
     #[tokio::test]
     async fn find_definitions_uninitialized_returns_error() {
         let input = FindDefinitionsInput {
@@ -399,7 +375,7 @@ mod tests {
         assert!(
             output.status == ToolStatus::Error
                 || output.content.contains("not initialized")
-                // Parallel tests may initialize the global FFF state; an empty
+                // Parallel tests may initialize the global indexer state; an empty
                 // result for a non-existent symbol is still graceful behavior.
                 || output.content.contains("\"total\": 0"),
             "Got: {}",
