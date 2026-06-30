@@ -133,8 +133,8 @@ impl UiActor {
                     // snapshot for the whole burst instead of one per token.
                     while let Ok(evt) = rx.try_recv() {
                         if self.handle_event_inner(evt, effect_tx.clone()).await {
-                            self.publish_snapshot();
-                            return;
+                            // Quit: break out of while loop to publish final snapshot.
+                            break;
                         }
                     }
                     self.publish_snapshot();
@@ -169,12 +169,19 @@ impl UiActor {
 
     /// Handle a single event and publish a fresh snapshot.
     /// Returns `true` when the actor should shut down.
-    #[allow(dead_code)]
     #[cfg(test)]
-    async fn handle_event(&mut self, evt: Event, effect_tx: tokio::sync::mpsc::Sender<Event>) -> bool {
+    pub(crate) async fn handle_event(&mut self, evt: Event, effect_tx: tokio::sync::mpsc::Sender<Event>) -> bool {
         let quit = self.handle_event_inner(evt, effect_tx).await;
         self.publish_snapshot();
         quit
+    }
+
+    /// Handle a single event without publishing. Returns `true` when the actor
+    /// should shut down.
+    /// Returns whether the agent is currently running.
+    #[cfg(test)]
+    pub(crate) fn agent_running(&self) -> bool {
+        self.agent_running
     }
 
     /// Handle a single event without publishing. Returns `true` when the actor

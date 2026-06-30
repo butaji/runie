@@ -53,6 +53,8 @@ mod providers_e2e;
 #[cfg(test)]
 mod permission_dialog;
 #[cfg(test)]
+mod agent_run_guard;
+#[cfg(test)]
 mod quit_shortcut;
 #[cfg(test)]
 mod toggle_e2e;
