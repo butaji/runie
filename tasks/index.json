@@ -727,7 +727,7 @@
   {
     "file": "replace-token-wrapper-with-secrecy-secretstring.md",
     "title": "Replace Token wrapper with secrecy::SecretString",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-tui-keymap-combo-stringification-with-crokey.md",

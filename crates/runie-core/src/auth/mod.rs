@@ -11,6 +11,6 @@ pub use keyring::{
     delete_keyring_entry, get_keyring, load_all_from_keyring, migrate_legacy_auth,
     set_and_verify_keyring, set_keyring, set_keyring_value,
 };
-pub use storage::{AuthStorage, AuthToken, Token};
+pub use storage::{AuthStorage, AuthToken};
 
 mod credential;

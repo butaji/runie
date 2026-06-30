@@ -1,45 +1,7 @@
-//! Token and AuthStorage types.
+//! AuthStorage types.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-
-use secrecy::{ExposeSecret, SecretString};
-
-/// Wrapper around the actual token value to prevent accidental leakage in logs.
-#[derive(Debug, Clone)]
-pub struct Token(SecretString);
-
-impl Token {
-    pub fn new(value: String) -> Self {
-        Self(SecretString::from(value))
-    }
-
-    pub fn expose(&self) -> &str {
-        self.0.expose_secret()
-    }
-
-    pub fn as_secret(&self) -> &SecretString {
-        &self.0
-    }
-}
-
-impl PartialEq for Token {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.expose_secret() == other.0.expose_secret()
-    }
-}
-
-impl From<String> for Token {
-    fn from(s: String) -> Self {
-        Self::new(s)
-    }
-}
-
-impl From<&str> for Token {
-    fn from(s: &str) -> Self {
-        Self::new(s.to_owned())
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct AuthToken {
@@ -200,10 +162,6 @@ impl AuthStorage {
         self.tokens.get(provider)
     }
 
-    pub fn get_token(&self, provider: &str) -> Option<Token> {
-        self.tokens.get(provider).map(|t| Token::new(t.token.clone()))
-    }
-
     /// Get a keyring token directly by provider name.
     /// Returns the token string if found in keyring, None otherwise.
     pub fn get_keyring_token(provider: &str) -> Option<String> {
@@ -315,20 +273,6 @@ mod tests {
         store.set("openai", "sk-test", None);
         store.remove("openai");
         assert!(store.refresh_needed("openai"));
-    }
-
-    #[test]
-    fn get_token_returns_secret() {
-        let mut store = tmp_storage();
-        store.set("openai", "sk-secret", None);
-        let token = store.get_token("openai").unwrap();
-        assert_eq!(token.expose(), "sk-secret");
-    }
-
-    #[test]
-    fn token_from_string() {
-        let t: Token = "hello".into();
-        assert_eq!(t.expose(), "hello");
     }
 
     #[test]
