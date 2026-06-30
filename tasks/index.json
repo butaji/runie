@@ -10,6 +10,11 @@
     "status": "done"
   },
   {
+    "file": "actually-use-pulldown-cmark-frontmatter-in-resource-loader.md",
+    "title": "Actually use pulldown-cmark-frontmatter in resource loader",
+    "status": "todo"
+  },
+  {
     "file": "add-eventbus-backpressure-or-acknowledgement.md",
     "title": "Add EventBus backpressure or acknowledgement",
     "status": "done"
@@ -18,6 +23,11 @@
     "file": "add-jsonschema-validation-to-configactor-load.md",
     "title": "Add `jsonschema` validation to `ConfigActor` load path",
     "status": "done"
+  },
+  {
+    "file": "adopt-metrics-facade-for-telemetry.md",
+    "title": "Adopt metrics facade for telemetry",
+    "status": "todo"
   },
   {
     "file": "adopt-palette-for-theme-color-math.md",
@@ -80,6 +90,11 @@
     "status": "done"
   },
   {
+    "file": "collapse-command-types-to-single-command-action-enum.md",
+    "title": "Collapse command types to a single Command/Action enum",
+    "status": "todo"
+  },
+  {
     "file": "collapse-dialogstate-variants.md",
     "title": "Collapse `DialogState` variants",
     "status": "done"
@@ -88,6 +103,11 @@
     "file": "collapse-event-intent-kind-taxonomies.md",
     "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
     "status": "done"
+  },
+  {
+    "file": "collapse-remaining-actor-handle-wrappers-to-actorref.md",
+    "title": "Collapse remaining actor handle wrappers to ractor::ActorRef",
+    "status": "todo"
   },
   {
     "file": "compare-auth-config-setup-and-fix-gaps.md",
@@ -185,6 +205,11 @@
     "status": "todo"
   },
   {
+    "file": "delete-broken-dsl-flow-combinators-and-thread-local-runtime.md",
+    "title": "Delete broken DSL flow combinators and thread-local runtime",
+    "status": "todo"
+  },
+  {
     "file": "delete-dead-actor-handle-wrappers.md",
     "title": "Delete dead actor handle wrappers",
     "status": "done"
@@ -195,9 +220,14 @@
     "status": "done"
   },
   {
+    "file": "delete-dead-declarative-command-registration.md",
+    "title": "Delete dead declarative command registration",
+    "status": "todo"
+  },
+  {
     "file": "delete-dead-runie-core-testing-module.md",
     "title": "Delete dead runie-core testing module",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "delete-dead-runie-macros-crate.md",
@@ -228,6 +258,11 @@
     "file": "delete-unused-glyph-constants.md",
     "title": "Delete unused glyph constants from `runie-tui`",
     "status": "done"
+  },
+  {
+    "file": "derive-durable-and-headless-events-from-canonical-event.md",
+    "title": "Derive durable and headless events from canonical Event",
+    "status": "todo"
   },
   {
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
@@ -343,6 +378,11 @@
     "file": "fix-leader-status-hardcoded-actor-count.md",
     "title": "Fix LeaderHandle status hardcoded actor count",
     "status": "done"
+  },
+  {
+    "file": "fix-leader-tcp-utf8-split-with-linescodec.md",
+    "title": "Fix leader TCP UTF-8 split with LinesCodec",
+    "status": "todo"
   },
   {
     "file": "fix-ractor-permission-actor-reply-lifecycle.md",
@@ -470,6 +510,11 @@
     "status": "todo"
   },
   {
+    "file": "merge-agentstate-into-turnstate-projection.md",
+    "title": "Merge AgentState into a TurnState projection",
+    "status": "todo"
+  },
+  {
     "file": "migrate-production-actors-to-ractor.md",
     "title": "Migrate production actors to `ractor`",
     "status": "done"
@@ -483,6 +528,11 @@
     "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
     "title": "Migrate TUI and CLI to `Leader::start`",
     "status": "done"
+  },
+  {
+    "file": "move-approval-registry-into-permission-actor-state.md",
+    "title": "Move ApprovalRegistry into PermissionActor state",
+    "status": "todo"
   },
   {
     "file": "move-blocking-io-out-of-command-handlers.md",
@@ -511,7 +561,7 @@
   },
   {
     "file": "normalize-paths-with-path-absolutize-and-dunce.md",
-    "title": "Normalize paths with path-absolutize/dunce",
+    "title": "Normalize paths with path-absolutize",
     "status": "done"
   },
   {
@@ -523,6 +573,11 @@
     "file": "normalize-std-sync-locks-in-tui-production-code.md",
     "title": "Normalize `std::sync` locks in TUI production code",
     "status": "done"
+  },
+  {
+    "file": "offload-agent-turn-from-actor-handler-to-tokio-task.md",
+    "title": "Offload agent turn from actor handler to a tokio task",
+    "status": "todo"
   },
   {
     "file": "offload-provider-network-calls-from-actor-handler.md",
@@ -562,7 +617,7 @@
   {
     "file": "remove-configactorstate-unnecessary-mutex.md",
     "title": "Remove unnecessary Mutex from ConfigActorState",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "remove-dead-migration-scaffolding.md",
@@ -651,7 +706,7 @@
   },
   {
     "file": "replace-clipboard-dead-code-with-arboard-or-osc52.md",
-    "title": "Replace clipboard dead code with arboard or crossterm osc52",
+    "title": "Replace clipboard dead code with arboard",
     "status": "done"
   },
   {
@@ -697,7 +752,7 @@
   {
     "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
     "title": "Replace fff-search indexer with ignore/walkdir",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-keymap-modifier-tables-with-crokey-map.md",
@@ -738,6 +793,11 @@
     "file": "replace-remaining-custom-parsers-and-macros-with-strum.md",
     "title": "Replace remaining custom parsers and macros with `strum`",
     "status": "done"
+  },
+  {
+    "file": "replace-rpcreply-with-ractor-rpcreplyport.md",
+    "title": "Replace RpcReply with ractor::RpcReplyPort",
+    "status": "todo"
   },
   {
     "file": "replace-session-tree-with-arena-crate.md",
@@ -795,6 +855,11 @@
     "status": "done"
   },
   {
+    "file": "route-agent-abort-through-actor-message-not-event-bus.md",
+    "title": "Route agent abort through actor message, not event bus",
+    "status": "todo"
+  },
+  {
     "file": "route-app-init-loads-through-actors.md",
     "title": "Route app init loads through actors",
     "status": "todo"
@@ -832,6 +897,11 @@
   {
     "file": "spike-evaluate-async-openai-or-rig-core-for-provider-stack.md",
     "title": "Spike: evaluate async-openai or rig-core for the provider stack",
+    "status": "todo"
+  },
+  {
+    "file": "standardize-error-types-on-thiserror-with-source-chains.md",
+    "title": "Standardize error types on thiserror with source chains",
     "status": "todo"
   },
   {
@@ -877,6 +947,16 @@
   {
     "file": "unify-edit-file-and-hashline-edit-on-patch-based-edits.md",
     "title": "Unify edit_file and hashline_edit on patch-based edits",
+    "status": "todo"
+  },
+  {
+    "file": "unify-form-submit-paths-through-command-registry.md",
+    "title": "Unify form submit paths through command registry",
+    "status": "todo"
+  },
+  {
+    "file": "unify-headless-and-tui-streaming-response-parser.md",
+    "title": "Unify headless and TUI streaming response parser",
     "status": "todo"
   },
   {
@@ -930,6 +1010,11 @@
     "status": "done"
   },
   {
+    "file": "unify-provider-retry-on-backon-including-streams.md",
+    "title": "Unify provider retry on backon including streams",
+    "status": "todo"
+  },
+  {
     "file": "unify-session-store-and-index.md",
     "title": "Unify session store and index into a single persistence backend",
     "status": "done"
@@ -968,6 +1053,11 @@
     "file": "use-clap-derive-for-cli.md",
     "title": "Use `clap` derive macros for CLI argument parsing",
     "status": "done"
+  },
+  {
+    "file": "use-color-eyre-and-human-panic-for-cli-errors.md",
+    "title": "Use color-eyre and human-panic for CLI errors",
+    "status": "todo"
   },
   {
     "file": "use-configscope-enum-for-mcp-server-scope.md",
@@ -1010,6 +1100,11 @@
     "status": "done"
   },
   {
+    "file": "use-shell-words-for-slash-command-parsing.md",
+    "title": "Use shell-words for slash command parsing",
+    "status": "todo"
+  },
+  {
     "file": "use-shell-words-in-harness-skills.md",
     "title": "Use shell-words in harness skills",
     "status": "done"
@@ -1018,6 +1113,11 @@
     "file": "use-strum-for-event-intent-names.md",
     "title": "Use `strum` to derive `Event`/`Intent`/`EventKind` names",
     "status": "done"
+  },
+  {
+    "file": "use-tagged-enum-for-declarative-command-kind.md",
+    "title": "Use tagged enum for declarative command kind",
+    "status": "todo"
   },
   {
     "file": "use-toml-edit-and-file-locks-for-config.md",
