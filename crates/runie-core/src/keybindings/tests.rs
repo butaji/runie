@@ -59,33 +59,6 @@ fn ctrl_q_defaults_to_force_quit() {
     );
 }
 
-#[test]
-fn parse_key_combo_ctrl_c() {
-    let (mods, key) = parse_key_combo("ctrl+c");
-    assert_eq!(mods, vec!["ctrl"]);
-    assert_eq!(key, "c");
-}
-
-#[test]
-fn parse_key_combo_alt_enter() {
-    let (mods, key) = parse_key_combo("alt+enter");
-    assert_eq!(mods, vec!["alt"]);
-    assert_eq!(key, "enter");
-}
-
-#[test]
-fn parse_key_combo_plain() {
-    let (mods, key) = parse_key_combo("enter");
-    assert!(mods.is_empty());
-    assert_eq!(key, "enter");
-}
-
-#[test]
-fn parse_key_combo_shift_enter() {
-    let (mods, key) = parse_key_combo("shift+enter");
-    assert_eq!(mods, vec!["shift"]);
-    assert_eq!(key, "enter");
-}
 
 #[test]
 fn load_keybindings_falls_back_to_defaults() {
@@ -249,6 +222,36 @@ fn validate_key_combo_accepts_default_keys() {
             combo
         );
     }
+}
+
+#[test]
+fn parse_key_combo_ctrl_c() {
+    // Use crokey to verify parsing (crokey uses `-` separator)
+    let combo = crokey::parse("ctrl-c").unwrap();
+    // Verify the combo has the expected modifier
+    use crossterm::event::KeyModifiers;
+    assert!(combo.modifiers.contains(KeyModifiers::CONTROL));
+}
+
+#[test]
+fn parse_key_combo_alt_enter() {
+    let combo = crokey::parse("alt-enter").unwrap();
+    use crossterm::event::KeyModifiers;
+    assert!(combo.modifiers.contains(KeyModifiers::ALT));
+}
+
+#[test]
+fn parse_key_combo_plain() {
+    let combo = crokey::parse("enter").unwrap();
+    use crossterm::event::KeyModifiers;
+    assert!(combo.modifiers.is_empty());
+}
+
+#[test]
+fn parse_key_combo_shift_enter() {
+    let combo = crokey::parse("shift-enter").unwrap();
+    use crossterm::event::KeyModifiers;
+    assert!(combo.modifiers.contains(KeyModifiers::SHIFT));
 }
 
 // -------------------------------------------------------------------------

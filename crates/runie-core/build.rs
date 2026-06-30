@@ -126,6 +126,7 @@ fn needs_appstate_lint(rel_path: &str) -> bool {
         "actors/ui_control/actor.rs",
         "actors/handles.rs",
         "actors/leader/actor.rs",
+        "actors/leader/handle.rs",
         "update/input/text.rs",
         "update/input/submit.rs",
         "retry.rs",

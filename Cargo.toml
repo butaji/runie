@@ -76,6 +76,7 @@ dotenvy = "0.15"
 fs2 = "0.4"
 ansi_colours = "1.2"
 tui-textarea = "0.7"
+crokey = "1.4"
 
 async-trait = "0.1"
 ractor = "0.9"

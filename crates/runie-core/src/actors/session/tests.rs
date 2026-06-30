@@ -36,7 +36,7 @@ async fn session_actor_spawns_and_emits_events() {
     let _tmp = make_test_store();
     let bus = EventBus::<Event>::new(4);
     let mut sub = bus.subscribe();
-    let (handle, _cell) = RactorSessionActor::spawn(bus.clone()).await.unwrap();
+    let (handle, _cell, _join) = RactorSessionActor::spawn(bus.clone()).await.unwrap();
 
     // Should emit initial events (trust and history)
     let saw_trust = wait_for_event(&mut sub, |e| matches!(e, Event::TrustLoaded { .. })).await;
@@ -56,7 +56,7 @@ async fn session_actor_spawns_and_emits_events() {
 #[tokio::test]
 async fn session_actor_add_user_message_via_handle() {
     let bus = EventBus::<Event>::new(4);
-    let (handle, _cell) = RactorSessionActor::spawn(bus.clone()).await.unwrap();
+    let (handle, _cell, _join) = RactorSessionActor::spawn(bus.clone()).await.unwrap();
 
     // Drain initial events
     let mut sub = bus.subscribe();
@@ -77,7 +77,7 @@ async fn session_actor_add_user_message_via_handle() {
 #[tokio::test]
 async fn session_actor_reset_via_handle() {
     let bus = EventBus::<Event>::new(4);
-    let (handle, _cell) = RactorSessionActor::spawn(bus.clone()).await.unwrap();
+    let (handle, _cell, _join) = RactorSessionActor::spawn(bus.clone()).await.unwrap();
 
     // Drain initial events
     let mut sub = bus.subscribe();

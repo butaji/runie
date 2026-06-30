@@ -107,17 +107,17 @@ impl RactorProviderActor {
         bus: EventBus<Event>,
         config_handle: RactorConfigHandle,
         factory: Arc<dyn ProviderFactory>,
-    ) -> Result<(RactorProviderHandle, ractor::ActorCell), ractor::SpawnErr> {
+    ) -> Result<(RactorProviderHandle, ractor::ActorCell, tokio::task::JoinHandle<()>), ractor::SpawnErr> {
         let actor = Self::new(bus, config_handle, factory);
-        let (handle, _join, cell) = spawn_ractor(None, actor, ()).await?;
-        Ok((RactorProviderHandle::new(handle), cell))
+        let (handle, join, cell) = spawn_ractor(None, actor, ()).await?;
+        Ok((RactorProviderHandle::new(handle), cell, join))
     }
 
     /// Spawn a minimal provider actor for testing (no real config/factory needed).
     #[cfg(test)]
     pub async fn minimal_spawn_for_test(
         bus: EventBus<Event>,
-    ) -> (RactorProviderHandle, ractor::ActorCell) {
+    ) -> (RactorProviderHandle, ractor::ActorCell, tokio::task::JoinHandle<()>) {
         use crate::provider::Provider;
         use anyhow::Result;
         use std::pin::Pin;
@@ -165,7 +165,7 @@ impl RactorProviderActor {
             }
         }
 
-        let (config_h, _) = RactorConfigActor::spawn_default(bus.clone()).await;
+        let (config_h, _, _) = RactorConfigActor::spawn_default(bus.clone()).await;
         Self::spawn(bus, config_h, Arc::new(TestFactory))
             .await
             .unwrap()
@@ -308,9 +308,9 @@ mod tests {
     #[tokio::test]
     async fn ractor_provider_actor_spawns() {
         let bus = EventBus::<Event>::new(16);
-        let (config_handle, _cell) = RactorConfigActor::spawn_default(bus.clone()).await;
+        let ( config_handle , _cell, _join ) = RactorConfigActor::spawn_default(bus.clone()).await;
         let factory = Arc::new(MockFactory);
-        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
+        let (handle, _cell, _) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
             .await
             .unwrap();
         let _ = handle;
@@ -319,10 +319,10 @@ mod tests {
     #[tokio::test]
     async fn ractor_provider_handle_build() {
         let bus = EventBus::<Event>::new(16);
-        let (config_handle, _cell) = RactorConfigActor::spawn_default(bus.clone()).await;
+        let ( config_handle , _cell, _join ) = RactorConfigActor::spawn_default(bus.clone()).await;
         let factory = Arc::new(MockFactory);
 
-        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
+        let (handle, _cell, _) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
             .await
             .unwrap();
         let result = handle.build("mock".into(), "echo".into()).await;
@@ -335,10 +335,10 @@ mod tests {
     #[tokio::test]
     async fn ractor_provider_handle_validate_key() {
         let bus = EventBus::<Event>::new(16);
-        let (config_handle, _cell) = RactorConfigActor::spawn_default(bus.clone()).await;
+        let ( config_handle , _cell, _join ) = RactorConfigActor::spawn_default(bus.clone()).await;
         let factory = Arc::new(MockFactory);
 
-        let (handle, _cell) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
+        let (handle, _cell, _) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
             .await
             .unwrap();
         let result = handle.validate_key("mock".into(), "sk-test".into()).await;

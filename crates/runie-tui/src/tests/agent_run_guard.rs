@@ -181,6 +181,146 @@ async fn done_clears_guard_allows_next_turn() {
     );
 }
 
+/// Integration test (Layer 2+4): TurnActor publishes TurnStarted to the shared
+/// Leader bus, and UiActor receives it and spawns the agent exactly once.
+#[tokio::test]
+async fn turn_actor_turn_started_reaches_uiactor_via_shared_bus() {
+    use runie_core::bus::EventBus;
+    use runie_core::actors::turn::RactorTurnActor;
+
+    // Shared bus = Leader's event bus
+    let bus = EventBus::<Event>::new(16);
+
+    // Spawn UiActor with the shared bus
+    let agent = TestAgentHandle::new();
+    let handle =
+        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(agent.clone()));
+    let state = runie_core::AppState::default();
+    let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());
+    let (shutdown_tx, _) = tokio::sync::oneshot::channel();
+    let caps = crate::terminal::caps::TermCaps::default();
+    let mut ui = crate::ui_actor::UiActor::with_agent_handle(
+        state,
+        crate::ui_actor_agent_handles::AgentHandleBox::Leader(handle),
+        kb_tx,
+        bus.clone(),
+        shutdown_tx,
+        caps,
+    );
+
+    // Spawn TurnActor using the SAME shared bus
+    let (_turn_handle, _turn_cell, _turn_join) =
+        RactorTurnActor::spawn(bus.clone()).await;
+
+    // Subscribe UiActor to the shared bus
+    let mut bus_rx = bus.subscribe();
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+
+    // Send SubmitUserMessage to TurnActor via its handle
+    // (TurnActor publishes TurnStarted to the shared bus)
+    use runie_core::actors::TurnMsg;
+    let turn_handle = _turn_handle;
+    turn_handle
+        .send(TurnMsg::SubmitUserMessage {
+            content: "hello".into(),
+            id: "req.0".into(),
+        })
+        .await;
+    turn_handle.send(TurnMsg::RunIfQueued).await;
+
+    // Give the actor time to process and publish TurnStarted
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+    // Drain the bus until we see TurnStarted or timeout
+    let mut found_turn_started = false;
+    let deadline = tokio::time::sleep(std::time::Duration::from_millis(500));
+    tokio::pin!(deadline);
+    loop {
+        tokio::select! {
+            result = bus_rx.recv() => {
+                if matches!(result, Ok(Event::TurnStarted { .. })) {
+                    found_turn_started = true;
+                }
+                // Keep draining until we find TurnStarted or timeout
+                if found_turn_started {
+                    break;
+                }
+            }
+            _ = &mut deadline => {
+                break;
+            }
+        }
+    }
+    assert!(
+        found_turn_started,
+        "TurnActor must publish TurnStarted to the shared bus"
+    );
+
+    // Now process the TurnStarted event through UiActor
+    let evt = Event::TurnStarted {
+        request_id: "req.0".into(),
+        content: "hello".into(),
+        id: "req.0".into(),
+    };
+    ui.handle_event(evt, effect_tx.clone()).await;
+
+    // Agent was spawned exactly once
+    assert_eq!(
+        agent.run_count.load(std::sync::atomic::Ordering::SeqCst),
+        1,
+        "UiActor must spawn agent once when TurnStarted arrives via shared bus"
+    );
+}
+
+/// Layer 2: Done from the shared bus clears the agent_running guard.
+#[tokio::test]
+async fn done_from_shared_bus_clears_guard() {
+    use runie_core::bus::EventBus;
+
+    let bus = EventBus::<Event>::new(16);
+    let agent = TestAgentHandle::new();
+    let handle =
+        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(agent.clone()));
+    let state = runie_core::AppState::default();
+    let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());
+    let (shutdown_tx, _) = tokio::sync::oneshot::channel();
+    let caps = crate::terminal::caps::TermCaps::default();
+    let mut ui = crate::ui_actor::UiActor::with_agent_handle(
+        state,
+        crate::ui_actor_agent_handles::AgentHandleBox::Leader(handle),
+        kb_tx,
+        bus,
+        shutdown_tx,
+        caps,
+    );
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+
+    // Simulate TurnStarted arriving via shared bus
+    ui.handle_event(
+        Event::TurnStarted {
+            request_id: "req.0".into(),
+            content: "hello".into(),
+            id: "req.0".into(),
+        },
+        effect_tx.clone(),
+    )
+    .await;
+
+    assert!(
+        ui.agent_running(),
+        "guard must be active after TurnStarted"
+    );
+
+    // Simulate Done arriving via shared bus (as it would from AgentActor)
+    ui.handle_event(Event::Done { id: "req.0".into() }, effect_tx.clone())
+        .await;
+
+    assert!(
+        !ui.agent_running(),
+        "guard must be cleared after Done from shared bus"
+    );
+}
+
 /// Layer 2: TurnErrored clears the guard.
 #[tokio::test]
 async fn turn_errored_clears_guard() {

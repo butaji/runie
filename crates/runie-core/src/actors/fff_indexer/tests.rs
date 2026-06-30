@@ -54,7 +54,7 @@ async fn indexer_initializes_in_temp_dir() {
     let mut sub = bus.subscribe();
 
     // Spawn the indexer using ractor version
-    let (handle, _cell) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
+    let ( handle , _cell, _join ) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
         .await
         .expect("spawn succeeds");
 
@@ -115,7 +115,7 @@ async fn indexer_answers_file_search() {
     // Subscribe BEFORE spawning so we don't miss any events
     let mut sub = bus.subscribe();
 
-    let (handle, _cell) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
+    let ( handle , _cell, _join ) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
         .await
         .expect("spawn succeeds");
 
@@ -176,7 +176,7 @@ async fn search_request_event_returns_results() {
     // Subscribe BEFORE spawning so we don't miss any events
     let mut sub = bus.subscribe();
 
-    let (handle, _cell) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
+    let ( handle , _cell, _join ) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
         .await
         .expect("spawn succeeds");
 

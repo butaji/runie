@@ -88,20 +88,20 @@ impl RactorFffIndexerActor {
         }
     }
 
-    /// Spawn a `RactorFffIndexerActor` and return a handle + cell.
+    /// Spawn a `RactorFffIndexerActor` and return a handle + cell + join.
     /// Initializes the FFF stores and waits for initial scan before returning.
     pub async fn spawn(
         root: PathBuf,
         data_dir: PathBuf,
         bus: EventBus<Event>,
-    ) -> Result<(RactorFffIndexerHandle, ractor::ActorCell), ractor::SpawnErr> {
+    ) -> Result<(RactorFffIndexerHandle, ractor::ActorCell, tokio::task::JoinHandle<()>), ractor::SpawnErr> {
         let mut actor = Self::new(root, data_dir, bus.clone());
         // Initialize FFF stores synchronously before spawning
         if let Err(e) = actor.init_fff().await {
             tracing::error!("fff indexer init failed: {e}");
         }
-        let (handle, _join, cell) = spawn_ractor(None, actor, bus).await?;
-        Ok((RactorFffIndexerHandle::new(handle), cell))
+        let (handle, join, cell) = spawn_ractor(None, actor, bus).await?;
+        Ok((RactorFffIndexerHandle::new(handle), cell, join))
     }
 }
 

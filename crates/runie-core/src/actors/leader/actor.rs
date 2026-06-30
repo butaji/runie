@@ -98,6 +98,27 @@ impl Leader {
         agent_factory: std::sync::Arc<dyn AgentActorFactory<SpawnFuture = AgentSpawnFuture>>,
     ) -> anyhow::Result<LeaderHandle> {
         let bus = EventBus::<CoreEvent>::new(1000);
+        self.start_with_bus(provider_factory, agent_factory, bus).await
+    }
+
+    /// Start with a pre-created event bus.
+    ///
+    /// Use this when you need to subscribe to the bus before actors emit initial facts
+    /// (e.g. `ConfigLoaded`, `TrustLoaded`). Subscribe first, then call this method:
+    ///
+    /// ```ignore
+    /// let bus = EventBus::<Event>::new(1000);
+    /// let ui_rx = bus.subscribe();
+    /// // Create UiActor with ui_rx before start() returns
+    /// leader.start_with_bus(factory, agent_factory, bus).await?;
+    /// // UiActor has already received ConfigLoaded etc.
+    /// ```
+    pub async fn start_with_bus(
+        &self,
+        provider_factory: std::sync::Arc<dyn crate::actors::provider::ProviderFactory>,
+        agent_factory: std::sync::Arc<dyn AgentActorFactory<SpawnFuture = AgentSpawnFuture>>,
+        bus: EventBus<CoreEvent>,
+    ) -> anyhow::Result<LeaderHandle> {
         let (cmd_tx, cmd_rx) = mpsc::channel(32);
 
         let handles =
@@ -120,15 +141,17 @@ impl Leader {
         provider_factory: std::sync::Arc<dyn crate::actors::provider::ProviderFactory>,
         agent_factory: std::sync::Arc<dyn AgentActorFactory<SpawnFuture = AgentSpawnFuture>>,
     ) -> anyhow::Result<super::SpawnedHandles> {
-        let (config_h, config_cell) = RactorConfigActor::spawn_default(bus.clone()).await;
-        let (provider_h, provider_cell) =
+        let (config_h, config_cell, config_join) =
+            RactorConfigActor::spawn_default(bus.clone()).await;
+        let (provider_h, provider_cell, provider_join) =
             RactorProviderActor::spawn(bus.clone(), config_h.clone(), provider_factory).await?;
-        let (io_h, io_cell) = RactorIoActor::spawn(bus.clone()).await?;
-        let (session_h, session_cell) = RactorSessionActor::spawn(bus.clone()).await?;
-        let (permission_h, permission_cell) = RactorPermissionActor::spawn(bus.clone()).await;
+        let (io_h, io_cell, io_join) = RactorIoActor::spawn(bus.clone()).await?;
+        let (session_h, session_cell, session_join) = RactorSessionActor::spawn(bus.clone()).await?;
+        let (permission_h, permission_cell, permission_join) =
+            RactorPermissionActor::spawn(bus.clone()).await;
         let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
-        let (input_h, input_cell) = InputActor::spawn(bus.clone()).await;
-        let (fff_h, fff_cell) = RactorFffIndexerActor::spawn(
+        let (input_h, input_cell, input_join) = InputActor::spawn(bus.clone()).await;
+        let (fff_h, fff_cell, fff_join) = RactorFffIndexerActor::spawn(
             config.project_root.clone(),
             config.data_dir.clone(),
             bus.clone(),
@@ -138,6 +161,17 @@ impl Leader {
         let SpawnedAgent { handle: agent_handle, join: agent_join } = agent_factory
             .spawn_with_join(bus.clone(), provider_h.clone(), permission_h.clone())
             .await?;
+        let all_joins = vec![
+            config_join,
+            provider_join,
+            io_join,
+            session_join,
+            permission_join,
+            turn_join,
+            input_join,
+            fff_join,
+            agent_join,
+        ];
 
         Ok(super::SpawnedHandles {
             config: config_h,
@@ -152,13 +186,12 @@ impl Leader {
             permission_cell,
             turn: turn_h,
             turn_cell,
-            turn_join: std::sync::Arc::new(turn_join),
             input: input_h,
             input_cell,
             agent: agent_handle,
-            agent_join: std::sync::Arc::new(agent_join),
             fff_indexer: fff_h,
             fff_cell,
+            all_joins,
         })
     }
 
@@ -260,6 +293,7 @@ impl Default for Leader {
 }
 
 /// All handles, cells, and join handles produced by actor spawning.
+/// All handles, cells, and join handles produced by actor spawning.
 pub struct SpawnedHandles {
     pub config: RactorConfigHandle,
     pub config_cell: ractor::ActorCell,
@@ -273,13 +307,13 @@ pub struct SpawnedHandles {
     pub permission_cell: ractor::ActorCell,
     pub turn: crate::actors::turn::RactorTurnHandle,
     pub turn_cell: ractor::ActorCell,
-    pub turn_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
     pub input: RactorInputHandle,
     pub input_cell: ractor::ActorCell,
     pub agent: std::sync::Arc<dyn LeaderAgentHandle>,
-    pub agent_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
     pub fff_indexer: RactorFffIndexerHandle,
     pub fff_cell: ractor::ActorCell,
+    /// All actor join handles, collected for batch await during shutdown.
+    pub all_joins: Vec<tokio::task::JoinHandle<()>>,
 }
 
 /// Process a line from a client.

@@ -38,8 +38,9 @@ impl HeadlessRuntime {
         factory: Arc<dyn ProviderFactory>,
     ) -> anyhow::Result<Self> {
         let mut sub = bus.subscribe();
-        let (config_handle, config_actor) = RactorConfigActor::spawn_default(bus.clone()).await;
-        let (provider_handle, provider_actor) =
+        let (config_handle, config_actor, _config_join) =
+            RactorConfigActor::spawn_default(bus.clone()).await;
+        let (provider_handle, provider_actor, _provider_join) =
             RactorProviderActor::spawn(bus.clone(), config_handle.clone(), factory).await?;
 
         // Wait until the config actor has loaded (or failed to load) so callers

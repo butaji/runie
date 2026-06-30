@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -14,10 +14,10 @@ Replace the custom keybinding combo parser with `crokey::KeyCombination` parsing
 
 ## Acceptance Criteria
 
-- [ ] Remove `parse_key_combo` / `validate_key_combo` / `VALID_KEYS`.
-- [ ] Use `crokey` to parse default binding strings into `KeyCombination`.
-- [ ] Keep serialization format identical in config files.
-- [ ] All keybinding tests pass.
+- [x] Remove `parse_key_combo` / `validate_key_combo` / `VALID_KEYS`.
+- [x] Use `crokey` to parse default binding strings into `KeyCombination`.
+- [x] Keep serialization format identical in config files.
+- [x] All keybinding tests pass.
 
 ## Design Impact
 

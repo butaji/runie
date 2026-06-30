@@ -20,7 +20,7 @@ type McpHandle = runie_core::actors::RactorConfigHandle;
 /// Spawn ConfigActor and return the handle after ConfigLoaded.
 async fn spawn_config_actor() -> Result<McpHandle> {
     let bus = EventBus::<Event>::new(16);
-    let (handle, _cell) = runie_core::actors::RactorConfigActor::spawn_default(bus.clone()).await;
+    let (handle, _cell, _join) = runie_core::actors::RactorConfigActor::spawn_default(bus.clone()).await;
 
     // Wait for ConfigLoaded
     let mut sub = bus.subscribe();

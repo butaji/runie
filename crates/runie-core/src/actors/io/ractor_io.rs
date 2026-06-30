@@ -98,10 +98,10 @@ impl RactorIoActor {
     /// Spawn a `RactorIoActor` on the given event bus.
     pub async fn spawn(
         bus: EventBus<Event>,
-    ) -> Result<(RactorIoHandle, ractor::ActorCell), ractor::SpawnErr> {
+    ) -> Result<(RactorIoHandle, ractor::ActorCell, tokio::task::JoinHandle<()>), ractor::SpawnErr> {
         let actor = Self::new(bus.clone());
-        let (handle, _join, cell) = spawn_ractor(None, actor, bus).await?;
-        Ok((RactorIoHandle::new(handle), cell))
+        let (handle, join, cell) = spawn_ractor(None, actor, bus).await?;
+        Ok((RactorIoHandle::new(handle), cell, join))
     }
 }
 
@@ -440,7 +440,7 @@ mod tests {
     async fn ractor_io_receives_messages() {
         let bus = EventBus::<Event>::new(16);
         let mut sub = bus.subscribe();
-        let (handle, _cell) = RactorIoActor::spawn(bus).await.unwrap();
+        let (handle, _cell, _) = RactorIoActor::spawn(bus).await.unwrap();
 
         handle.run_bash("echo test".to_string()).await;
 

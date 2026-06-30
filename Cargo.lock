@@ -3837,6 +3837,7 @@ dependencies = [
  "async-trait",
  "base64",
  "criterion",
+ "crokey",
  "crossterm 0.29.0",
  "diffy",
  "dirs 5.0.1",

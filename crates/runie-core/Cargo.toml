@@ -64,6 +64,7 @@ dotenvy.workspace = true
 fs2.workspace = true
 indextree.workspace = true
 runie-util.workspace = true
+crokey.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 crossterm.workspace = true

@@ -70,20 +70,22 @@ pub async fn test_leader_handle() -> LeaderHandle {
     }
 
     let bus = EventBus::<CoreEvent>::new(16);
-    let (config_h, config_cell) = RactorConfigActor::spawn_default(bus.clone()).await;
+    let (config_h, config_cell, config_join) =
+        RactorConfigActor::spawn_default(bus.clone()).await;
     let factory: Arc<dyn ProviderFactory> = Arc::new(TestProviderFactory);
-    let (provider_h, provider_cell) =
+    let (provider_h, provider_cell, provider_join) =
         RactorProviderActor::spawn(bus.clone(), config_h.clone(), factory)
             .await
             .expect("provider spawn");
-    let (io_h, io_cell) = RactorIoActor::spawn(bus.clone()).await.expect("io spawn");
-    let (session_h, session_cell) = RactorSessionActor::spawn(bus.clone())
+    let (io_h, io_cell, io_join) = RactorIoActor::spawn(bus.clone()).await.expect("io spawn");
+    let (session_h, session_cell, session_join) = RactorSessionActor::spawn(bus.clone())
         .await
         .expect("session spawn");
-    let (permission_h, permission_cell) = RactorPermissionActor::spawn(bus.clone()).await;
+    let (permission_h, permission_cell, permission_join) =
+        RactorPermissionActor::spawn(bus.clone()).await;
     let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
-    let (input_h, input_cell) = InputActor::spawn(bus.clone()).await;
-    let (fff_h, fff_cell) = RactorFffIndexerActor::spawn(
+    let (input_h, input_cell, input_join) = InputActor::spawn(bus.clone()).await;
+    let (fff_h, fff_cell, fff_join) = RactorFffIndexerActor::spawn(
         std::env::current_dir().unwrap_or_default(),
         std::env::temp_dir(),
         bus.clone(),
@@ -97,6 +99,17 @@ pub async fn test_leader_handle() -> LeaderHandle {
     // in tests; the NoOpAgentHandle::run returns pending which never completes).
     let agent_join: tokio::task::JoinHandle<()> =
         tokio::spawn(std::future::pending::<()>());
+    let all_joins = vec![
+        config_join,
+        provider_join,
+        io_join,
+        session_join,
+        permission_join,
+        turn_join,
+        input_join,
+        agent_join,
+        fff_join,
+    ];
 
     LeaderHandle::new(
         cmd_tx,
@@ -117,10 +130,9 @@ pub async fn test_leader_handle() -> LeaderHandle {
             session_cell,
             permission_cell,
             turn_cell,
-            turn_join: std::sync::Arc::new(turn_join),
             input_cell,
-            agent_join: std::sync::Arc::new(agent_join),
             fff_cell,
+            all_joins,
         },
     )
 }

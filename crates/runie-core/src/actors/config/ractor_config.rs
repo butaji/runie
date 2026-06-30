@@ -40,18 +40,20 @@ impl RactorConfigActor {
         bus: EventBus<Event>,
         global_path: Option<PathBuf>,
         project_path: Option<PathBuf>,
-    ) -> (RactorConfigHandle, ractor::ActorCell) {
+    ) -> (RactorConfigHandle, ractor::ActorCell, tokio::task::JoinHandle<()>) {
         let path = global_path.unwrap_or_else(crate::config::config_path);
         let actor = Self;
-        let (handle, _join, cell) =
+        let (handle, join, cell) =
             spawn_ractor(None, actor, (bus, path.clone(), project_path.clone()))
                 .await
                 .unwrap();
-        (RactorConfigHandle::new(handle), cell)
+        (RactorConfigHandle::new(handle), cell, join)
     }
 
     /// Spawn with default paths (global ~/.runie/config.toml, project ./.runie/config.toml).
-    pub async fn spawn_default(bus: EventBus<Event>) -> (RactorConfigHandle, ractor::ActorCell) {
+    pub async fn spawn_default(
+        bus: EventBus<Event>,
+    ) -> (RactorConfigHandle, ractor::ActorCell, tokio::task::JoinHandle<()>) {
         Self::spawn(bus, None, None).await
     }
 }
@@ -122,7 +124,7 @@ mod tests {
         let temp_path = std::env::temp_dir().join("runie_test_config.toml");
         // Subscribe BEFORE spawning so we don't miss pre_start's ConfigLoaded
         let mut sub = bus.subscribe();
-        let (_handle, _cell) =
+        let (_handle, _cell, _) =
             RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
 
         // Wait for ConfigLoaded with timeout to prevent hanging forever
@@ -147,7 +149,7 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let temp_path = std::env::temp_dir().join("runie_test_config2.toml");
         let mut sub = bus.subscribe();
-        let (handle, _cell) =
+        let (handle, _cell, _) =
             RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
 
         // Wait for ConfigLoaded to ensure actor is ready
@@ -192,7 +194,7 @@ mod tests {
 
         // Subscribe BEFORE spawning so we don't miss pre_start's ConfigLoaded
         let mut sub = bus.subscribe();
-        let (handle, _cell) = RactorConfigActor::spawn(
+        let (handle, _cell, _join) = RactorConfigActor::spawn(
             bus.clone(),
             Some(global_path.clone()),
             Some(project_path.clone()),
@@ -231,7 +233,7 @@ mod tests {
 
         // Subscribe BEFORE spawning so we don't miss pre_start's ConfigLoaded
         let mut sub = bus.subscribe();
-        let (handle, _cell) =
+        let (handle, _cell, _) =
             RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
 
         // Wait for ConfigLoaded to confirm actor is ready
@@ -303,7 +305,7 @@ mod tests {
         }
 
         let mut sub = bus.subscribe();
-        let (_handle, _cell) =
+        let (_handle, _cell, _) =
             RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
 
         // Collect events for up to 3 seconds
@@ -351,7 +353,7 @@ mod tests {
         }
 
         let mut sub = bus.subscribe();
-        let (_handle, _cell) =
+        let (_handle, _cell, _) =
             RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
 
         // Collect events for up to 2 seconds

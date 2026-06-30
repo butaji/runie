@@ -16,24 +16,7 @@ mod defaults;
 #[cfg(test)]
 mod tests;
 
-pub use defaults::{default_keybindings, VALID_KEYS};
-
-/// Parse a key combination string to components
-/// Examples: "ctrl+c", "alt+enter", "shift+up"
-#[cfg(test)]
-fn parse_key_combo(combo: &str) -> (Vec<String>, String) {
-    let lower = combo.to_lowercase();
-    let parts: Vec<&str> = lower.split('+').collect();
-    if parts.is_empty() {
-        return (vec![], String::new());
-    }
-    let key = parts[parts.len() - 1].to_owned();
-    let modifiers: Vec<String> = parts[..parts.len() - 1]
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
-    (modifiers, key)
-}
+pub use defaults::default_keybindings;
 
 /// Load keybindings from an optional config, falling back to defaults.
 /// User entries in `config.keybindings` override defaults; all other defaults remain.
@@ -103,12 +86,13 @@ pub fn default_keybindings_path() -> Option<PathBuf> {
     dirs::config_dir().map(|d| d.join("runie").join("keybindings.json"))
 }
 
-/// Validate that a key combo string is well-formed
+/// Validate that a key combo string is well-formed using crokey.
+/// Accepts both `+` and `-` separators (crokey uses `-` internally).
+/// Also normalizes some key names (e.g., "escape" → "esc").
 pub fn validate_key_combo(combo: &str) -> bool {
-    let parts: Vec<&str> = combo.split('+').collect();
-    if parts.is_empty() || parts.len() > 3 {
-        return false;
-    }
-    let key = parts[parts.len() - 1];
-    VALID_KEYS.contains(&key)
+    // crokey uses `-` as separator, but configs use `+`
+    let normalized = combo.replace('+', "-");
+    // crokey uses "esc" not "escape"
+    let normalized = normalized.replace("escape", "esc");
+    crokey::parse(&normalized).is_ok()
 }

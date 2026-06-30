@@ -52,11 +52,19 @@ async fn main() -> io::Result<()> {
 
     let _cleanup = Cleanup;
 
+    // Create the event bus upfront so that UiActor can subscribe before actors emit
+    // initial facts (ConfigLoaded, TrustLoaded, HistoryLoaded).
+    let bus = runie_core::bus::EventBus::<Event>::new(1000);
+
+    // Subscribe UiActor to the bus BEFORE starting the leader so it receives
+    // ConfigLoaded and other initial facts that are emitted during actor spawn.
+    let bus_rx = bus.subscribe();
+
     let leader = Leader::new();
     let agent_factory = std::sync::Arc::new(AgentActorFactoryImpl);
     let provider_factory = std::sync::Arc::new(DynProviderFactory);
     let leader_handle = leader
-        .start(provider_factory, agent_factory)
+        .start_with_bus(provider_factory, agent_factory, bus.clone())
         .await
         .map_err(|e| io::Error::other(format!("leader bootstrap failed: {}", e)))?;
 
@@ -73,6 +81,7 @@ async fn main() -> io::Result<()> {
         state,
         terminal_caps,
         leader_handle.clone(),
+        bus_rx,
         shutdown_tx,
     )
     .await;
@@ -177,30 +186,32 @@ async fn spawn_background_tasks(
     state: AppState,
     caps: terminal::caps::TermCaps,
     leader_handle: LeaderHandle,
+    bus_rx: runie_core::bus::Receiver<Event>,
     shutdown_tx: oneshot::Sender<()>,
 ) {
     let bus = leader_handle.event_bus().clone();
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
     let (submit_tx, submit_rx) = mpsc::channel::<Event>(16);
 
-    let agent_handle = LeaderAgentActorHandle::new(leader_handle.agent.clone());
-
     let (kb_tx, kb_rx) = watch::channel(state.config().keybindings().clone());
     tokio::spawn(input_forwarder_task(input_rx, leader_handle.input.clone(), submit_tx));
 
-    // UiActor creates its own watch channel for snapshots; take the receiver for the render task.
-    let mut ui_actor = spawn_ui_actor(
+    // UiActor was created before start_with_bus() with a NoOp agent handle and
+    // the pre-subscribed bus_rx. Install the real agent handle and run it.
+    let mut ui_actor = spawn_ui_actor_with_external_rx(
         state,
-        agent_handle,
+        bus_rx,
         kb_tx,
         bus.clone(),
         shutdown_tx,
         caps,
     );
+    ui_actor.set_agent_handle(AgentHandleBox::Leader(LeaderAgentActorHandle::new(
+        leader_handle.agent.clone(),
+    )));
     let render_rx = ui_actor.take_render_rx();
-    let ui_bus = bus.clone();
     tokio::spawn(async move {
-        ui_actor.run(ui_bus.subscribe(), submit_rx).await;
+        ui_actor.run_with_external_rx(submit_rx).await;
     });
 
     spawn_agent_tasks(input_tx, kb_rx, terminal, render_rx, caps);
@@ -282,6 +293,22 @@ fn spawn_ui_actor(
         shutdown_tx,
         caps,
     )
+}
+
+/// Create a UiActor with a pre-subscribed bus receiver.
+/// Use this when the bus receiver was created before `Leader::start_with_bus()` returns,
+/// so that UiActor receives initial facts like `ConfigLoaded`.
+/// Call `UiActor::set_agent_handle()` after `Leader::start_with_bus()` returns.
+#[allow(clippy::too_many_arguments)]
+fn spawn_ui_actor_with_external_rx(
+    state: AppState,
+    bus_rx: runie_core::bus::Receiver<Event>,
+    kb_tx: watch::Sender<HashMap<String, String>>,
+    bus: EventBus<Event>,
+    shutdown_tx: oneshot::Sender<()>,
+    caps: terminal::caps::TermCaps,
+) -> UiActor {
+    UiActor::with_external_bus_rx(state, bus_rx, kb_tx, bus, shutdown_tx, caps)
 }
 
 async fn input_reader(

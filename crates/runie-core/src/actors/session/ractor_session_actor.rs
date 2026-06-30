@@ -18,9 +18,9 @@ impl RactorSessionActor {
     /// Spawn a `RactorSessionActor` on the given event bus.
     pub async fn spawn(
         bus: EventBus<Event>,
-    ) -> Result<(RactorSessionHandle, ractor::ActorCell), ractor::SpawnErr> {
-        let (handle, _join, cell) = spawn_ractor(None, Self, bus).await?;
-        Ok((RactorSessionHandle::new(handle), cell))
+    ) -> Result<(RactorSessionHandle, ractor::ActorCell, tokio::task::JoinHandle<()>), ractor::SpawnErr> {
+        let (handle, join, cell) = spawn_ractor(None, Self, bus).await?;
+        Ok((RactorSessionHandle::new(handle), cell, join))
     }
 }
 
@@ -108,7 +108,7 @@ mod tests {
     async fn ractor_session_handles_trust_loaded() {
         let bus = EventBus::<Event>::new(16);
         let mut sub = bus.subscribe();
-        let (_handle, _cell) = RactorSessionActor::spawn(bus).await.unwrap();
+        let (_handle, _cell, _join) = RactorSessionActor::spawn(bus).await.unwrap();
 
         let found = wait_for_event(&mut sub, |e| matches!(e, Event::TrustLoaded { .. })).await;
         assert!(found, "Expected TrustLoaded event");
@@ -118,7 +118,7 @@ mod tests {
     async fn ractor_session_adds_user_message() {
         let bus = EventBus::<Event>::new(16);
         let mut sub = bus.subscribe();
-        let (handle, _cell) = RactorSessionActor::spawn(bus).await.unwrap();
+        let (handle, _cell, _join) = RactorSessionActor::spawn(bus).await.unwrap();
 
         handle.try_add_user_message("hello".to_string(), vec![]);
 

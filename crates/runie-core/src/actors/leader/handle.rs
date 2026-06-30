@@ -15,7 +15,8 @@ use super::{LeaderAgentHandle, SpawnedHandles};
 /// Handle to the running leader.
 ///
 /// Cloneable so it can be shared across tasks. All actor refs are also cloneable.
-#[derive(Clone)]
+/// Note: `Clone` does not clone the join handles; only the first clone to call
+/// `shutdown()` will await the handles.
 pub struct LeaderHandle {
     cmd_tx: mpsc::Sender<super::messages::LeaderCommand>,
     event_bus: EventBus<CoreEvent>,
@@ -39,16 +40,18 @@ pub struct LeaderHandle {
     /// FFF indexer handle.
     pub fff_indexer: crate::actors::RactorFffIndexerHandle,
     // ── Shutdown state ────────────────────────────────────────────────────────
+    /// Actor cells (for stop signals).
     config_cell: ractor::ActorCell,
     provider_cell: ractor::ActorCell,
     io_cell: ractor::ActorCell,
     session_cell: ractor::ActorCell,
     permission_cell: ractor::ActorCell,
     turn_cell: ractor::ActorCell,
-    turn_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
     input_cell: ractor::ActorCell,
-    agent_join: std::sync::Arc<tokio::task::JoinHandle<()>>,
     fff_cell: ractor::ActorCell,
+    /// All actor join handles wrapped in Option so LeaderHandle can be Clone.
+    /// Taken at shutdown time via mem::take.
+    joins: Option<Vec<tokio::task::JoinHandle<()>>>,
 }
 
 impl LeaderHandle {
@@ -76,10 +79,9 @@ impl LeaderHandle {
             session_cell: handles.session_cell,
             permission_cell: handles.permission_cell,
             turn_cell: handles.turn_cell,
-            turn_join: handles.turn_join,
             input_cell: handles.input_cell,
-            agent_join: handles.agent_join,
             fff_cell: handles.fff_cell,
+            joins: Some(handles.all_joins),
         }
     }
 
@@ -100,10 +102,13 @@ impl LeaderHandle {
 
     /// Stop all child actors gracefully and await their completion.
     ///
-    /// 1. Publishes `Quit` to signal all actors.
-    /// 2. Stops all actor cells to ensure termination.
-    /// 3. Awaits the turn and agent join handles.
-    pub async fn shutdown(self) {
+    /// 1. Sends `Shutdown` to the coordinator and publishes `Quit` on the event bus.
+    /// 2. Stops all actor cells in reverse spawn order.
+    /// 3. Awaits all actor join handles (including turn, agent, and all others).
+    ///
+    /// This method never panics, even if the `LeaderHandle` was cloned.
+    /// Subsequent clones will have `None` for the joins field after the first shutdown.
+    pub async fn shutdown(mut self) {
         use super::messages::LeaderCommand;
         let _ = self.cmd_tx.send(LeaderCommand::Shutdown).await;
         self.event_bus.publish(CoreEvent::Quit);
@@ -118,13 +123,13 @@ impl LeaderHandle {
         self.provider_cell.stop(None);
         self.io_cell.stop(None);
 
-        // Await turn and agent join handles.
-        let turn_join = std::sync::Arc::try_unwrap(self.turn_join)
-            .expect("turn join handle should have single ref on shutdown");
-        let _ = turn_join.await;
-        let agent_join = std::sync::Arc::try_unwrap(self.agent_join)
-            .expect("agent join handle should have single ref on shutdown");
-        let _ = agent_join.await;
+        // Await all join handles. If this is not the first clone to call shutdown,
+        // the joins field may be None (taken by a previous clone).
+        if let Some(joins) = self.joins.take() {
+            for join in joins {
+                let _ = join.await;
+            }
+        }
     }
 
     /// Get runtime status.
@@ -133,6 +138,37 @@ impl LeaderHandle {
             running: true,
             actor_count: SPAWNED_ACTOR_COUNT,
             bus_subscribers: self.event_bus.subscriber_count(),
+        }
+    }
+}
+
+impl Clone for LeaderHandle {
+    /// Clone the handle. Note: the joins field is set to None in the clone since
+    /// join handles cannot be cloned. Only the original handle (or first clone)
+    /// will await the handles on shutdown.
+    fn clone(&self) -> Self {
+        Self {
+            cmd_tx: self.cmd_tx.clone(),
+            event_bus: self.event_bus.clone(),
+            tcp_addr: self.tcp_addr.clone(),
+            config: self.config.clone(),
+            provider: self.provider.clone(),
+            io: self.io.clone(),
+            session: self.session.clone(),
+            permission: self.permission.clone(),
+            turn: self.turn.clone(),
+            input: self.input.clone(),
+            agent: self.agent.clone(),
+            fff_indexer: self.fff_indexer.clone(),
+            config_cell: self.config_cell.clone(),
+            provider_cell: self.provider_cell.clone(),
+            io_cell: self.io_cell.clone(),
+            session_cell: self.session_cell.clone(),
+            permission_cell: self.permission_cell.clone(),
+            turn_cell: self.turn_cell.clone(),
+            input_cell: self.input_cell.clone(),
+            fff_cell: self.fff_cell.clone(),
+            joins: None,
         }
     }
 }
