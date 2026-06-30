@@ -1,9 +1,8 @@
 use crate::config::{Config, ModelProvider};
 use crate::ProviderError;
+use runie_testing::ENV_LOCK;
 use std::collections::HashMap;
 use std::sync::Mutex;
-
-static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]
 fn config_defaults_empty() {

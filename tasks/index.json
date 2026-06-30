@@ -47,7 +47,7 @@
   {
     "file": "centralize-env-lock-in-runie-testing.md",
     "title": "Centralize ENV_LOCK in runie-testing",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-provider-credential-resolution.md",
@@ -1012,7 +1012,7 @@
   {
     "file": "use-shell-words-in-harness-skills.md",
     "title": "Use shell-words in harness skills",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-strum-for-event-intent-names.md",

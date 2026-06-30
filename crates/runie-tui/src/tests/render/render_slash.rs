@@ -1,7 +1,6 @@
 use super::super::*;
+use runie_testing::ENV_LOCK;
 use std::sync::Mutex;
-
-static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 fn render_slash(input: &str) -> String {
     let mut state = AppState::default();

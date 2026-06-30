@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use shell_words;
 
 use super::{HarnessSkill, TurnStartCtx, TurnStartResult};
 
@@ -45,11 +46,14 @@ impl StartupContextSkill {
     }
 
     fn run_cmd(cmd: &str) -> String {
-        let parts: Vec<&str> = cmd.split_whitespace().collect();
+        let parts = match shell_words::split(cmd) {
+            Ok(p) => p,
+            Err(_) => return String::new(),
+        };
         if parts.is_empty() {
             return String::new();
         }
-        match std::process::Command::new(parts[0])
+        match std::process::Command::new(&parts[0])
             .args(&parts[1..])
             .output()
         {
@@ -117,5 +121,47 @@ impl HarnessSkill for StartupContextSkill {
             return TurnStartResult::Continue;
         }
         TurnStartResult::SkipWithMessage(format!("{}\n\n{}", ctx_str, ctx.message))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn run_cmd_simple() {
+        let result = StartupContextSkill::run_cmd("echo hello");
+        assert_eq!(result, "hello");
+    }
+
+    #[test]
+    fn run_cmd_quoted_args() {
+        // Test that shell_words handles quoted arguments with spaces
+        let result = StartupContextSkill::run_cmd("echo 'hello world'");
+        assert_eq!(result, "hello world");
+    }
+
+    #[test]
+    fn run_cmd_double_quoted_args() {
+        let result = StartupContextSkill::run_cmd(r#"echo "hello world""#);
+        assert_eq!(result, "hello world");
+    }
+
+    #[test]
+    fn run_cmd_empty() {
+        let result = StartupContextSkill::run_cmd("");
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn run_cmd_complex_args() {
+        let result = StartupContextSkill::run_cmd("printf '%s %s' hello 'world test'");
+        assert_eq!(result, "hello world test");
+    }
+
+    #[test]
+    fn run_cmd_with_escaped_chars() {
+        let result = StartupContextSkill::run_cmd(r"echo hello\nworld");
+        assert!(result.contains("hello"));
     }
 }

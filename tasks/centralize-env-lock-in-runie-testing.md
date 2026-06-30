@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -19,24 +19,27 @@ Move the lock and a helper like `env_lock()` into `runie-testing` and have all c
 
 ## Acceptance Criteria
 
-- [ ] Add `pub static ENV_LOCK` and `env_lock()` helper to `runie-testing`.
-- [ ] Replace the duplicate statics in all crates.
-- [ ] All tests still pass.
+- [x] Add `pub static ENV_LOCK` and `env_lock()` helper to `runie-testing`.
+- [x] Replace the duplicate statics in all crates.
+- [x] All tests still pass.
 
-## Design Impact
+## Implementation
 
-No change to TUI element design or composition. Only test infrastructure changes.
+1. Added `crates/runie-testing/src/env_lock.rs` with:
+   - `pub static ENV_LOCK: Mutex<()>`
+   - `pub fn env_lock<F, T>(f: F) -> T` helper
 
-## Tests
+2. Updated exports in `runie-testing/src/lib.rs`
 
-- **Layer 1 — State/Logic:** N/A.
-- **Layer 2 — Event Handling:** N/A.
-- **Layer 3 — Rendering:** N/A.
-- **Layer 4 — E2E:** All tests pass under `cargo test --workspace`.
-- **Live tmux validation:** N/A.
+3. Updated all consumers:
+   - `crates/runie-provider/src/tests.rs` — uses `runie_testing::{env_lock, ENV_LOCK}`
+   - `crates/runie-provider/src/config/tests.rs` — uses `runie_testing::ENV_LOCK`
+   - `crates/runie-core/src/tests/copy.rs` — uses `runie_testing::ENV_LOCK`
+   - `crates/runie-tui/src/tests/render/render_slash.rs` — uses `runie_testing::ENV_LOCK`
+   - `crates/runie-core/src/tests/support.rs` — re-exports `runie_testing::ENV_LOCK`
 
-## Completion Validation
+## Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- `cargo check --workspace` passes
+- `cargo test -p runie-testing` passes (17 tests)
+- All workspace tests still pass

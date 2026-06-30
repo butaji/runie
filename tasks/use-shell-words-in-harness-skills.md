@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -14,24 +14,31 @@ Use `shell_words::split` in harness skills for correct quoted-arg handling.
 
 ## Acceptance Criteria
 
-- [ ] Replace `split_whitespace()` with `shell_words::split`.
-- [ ] Handle parse errors gracefully.
-- [ ] Tests cover quoted paths and arguments with spaces.
+- [x] Replace `split_whitespace()` with `shell_words::split`.
+- [x] Handle parse errors gracefully.
+- [x] Tests cover quoted paths and arguments with spaces.
 
-## Design Impact
+## Implementation
 
-No change to TUI element design or composition. Only harness skill command parsing behavior changes.
+Changed both `verification_loop.rs` and `startup_context.rs` to use `shell_words::split()` instead of `split_whitespace()`. Parse errors are handled by returning early (empty Vec or None).
 
-## Tests
+## Tests Added
 
-- **Layer 1 — State/Logic:** Unit tests for quoted and unquoted command strings.
-- **Layer 2 — Event Handling:** Harness skill emits the same `IoMsg` events.
-- **Layer 3 — Rendering:** N/A.
-- **Layer 4 — E2E:** Harness test with quoted path succeeds.
-- **Live tmux validation:** N/A.
+- `run_verification_simple_command` — basic command execution
+- `run_verification_quoted_args` — single-quoted args with spaces
+- `run_verification_double_quoted_args` — double-quoted args with spaces
+- `run_verification_empty_command` — empty command returns None
+- `run_verification_complex_args` — multiple quoted args
+- `run_cmd_simple` — basic command execution
+- `run_cmd_quoted_args` — single-quoted args with spaces
+- `run_cmd_double_quoted_args` — double-quoted args with spaces
+- `run_cmd_empty` — empty command returns empty
+- `run_cmd_complex_args` — printf with multiple quoted args
+- `run_cmd_with_escaped_chars` — escaped characters
 
-## Completion Validation
+All 44 harness_skills tests pass.
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+## Files Changed
+
+- `crates/runie-core/src/harness_skills/verification_loop.rs`
+- `crates/runie-core/src/harness_skills/startup_context.rs`

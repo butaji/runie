@@ -13,11 +13,9 @@ use runie_core::config::Config;
 use runie_core::event::Event;
 use runie_core::message::ChatMessage;
 use runie_core::provider_event::ProviderEvent;
+use runie_testing::{env_lock, ENV_LOCK};
 use std::io::{Read, Write};
 use std::sync::Mutex;
-
-/// Guards environment variable mutations during parallel test execution.
-static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 /// Helper to run a test closure with the env lock held.
 fn with_env_lock<F, T>(var: &str, value: &str, f: F) -> T

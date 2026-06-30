@@ -6,10 +6,8 @@
 
 use crate::model::{AppState, ChatMessage};
 use crate::tests::fresh_state;
+use runie_testing::ENV_LOCK;
 use std::sync::Mutex;
-
-/// Serializes tests that touch shared env/state.
-static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]
 fn copy_with_no_assistant_message_shows_error() {
