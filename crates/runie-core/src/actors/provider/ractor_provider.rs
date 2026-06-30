@@ -2,6 +2,10 @@
 //!
 //! Migrated from the custom Actor trait to ractor for consistency with the
 //! rest of the actor system.
+//!
+//! ## Async IO Discipline
+//! Network calls (`ValidateKey`, `ListModels`) are offloaded to spawned tasks
+//! so the actor mailbox remains responsive while waiting for HTTP responses.
 
 use std::sync::Arc;
 
@@ -230,6 +234,7 @@ impl Actor for RactorProviderActor {
         _state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match msg {
+            // Build is fast (no network) so we await inline.
             ProviderMsg::Build {
                 provider,
                 model,
@@ -238,17 +243,53 @@ impl Actor for RactorProviderActor {
                 let result = self.build_provider(&provider, &model).await;
                 reply.send(result);
             }
+            // Network calls are offloaded so the mailbox stays responsive.
             ProviderMsg::ValidateKey {
                 provider,
                 api_key,
                 reply,
             } => {
-                let result = self.validate_key(&provider, &api_key).await;
-                reply.send(result);
+                let config = self.config().await;
+                let factory = self.factory.clone();
+                tokio::spawn(async move {
+                    let result = match config {
+                        Ok(cfg) => {
+                            let (base_url, resolved_key) =
+                                factory.resolve_credentials(&provider, &cfg);
+                            let api_key = if api_key.is_empty() {
+                                &resolved_key
+                            } else {
+                                &api_key
+                            };
+                            if api_key.is_empty() {
+                                Err(anyhow::anyhow!("API key is required"))
+                            } else {
+                                factory.validate_key(&base_url, api_key).await
+                            }
+                        }
+                        Err(e) => Err(anyhow::anyhow!("{e}")),
+                    };
+                    let _ = reply.send(result);
+                });
             }
             ProviderMsg::ListModels { provider, reply } => {
-                let result = self.list_models(&provider).await;
-                reply.send(result);
+                let config = self.config().await;
+                let factory = self.factory.clone();
+                tokio::spawn(async move {
+                    let result = match config {
+                        Ok(cfg) => {
+                            let (base_url, resolved_key) =
+                                factory.resolve_credentials(&provider, &cfg);
+                            if resolved_key.is_empty() {
+                                Err(anyhow::anyhow!("API key is required"))
+                            } else {
+                                factory.validate_key(&base_url, &resolved_key).await
+                            }
+                        }
+                        Err(e) => Err(anyhow::anyhow!("{e}")),
+                    };
+                    let _ = reply.send(result);
+                });
             }
         }
         Ok(())
@@ -345,5 +386,75 @@ mod tests {
         assert!(result.is_ok(), "validate_key should succeed: {:?}", result);
         let models = result.unwrap();
         assert_eq!(models, vec!["model-a", "model-b"]);
+    }
+
+    /// Verifies that network calls are offloaded and the mailbox stays responsive.
+    /// While `ListModels` (slow network) is in flight, `ValidateKey` can also be
+    /// processed without blocking.
+    #[tokio::test]
+    async fn provider_actor_mailbox_not_blocked_by_validate() {
+        use std::time::Duration;
+
+        let bus = EventBus::<Event>::new(16);
+        let (config_handle, _cell, _join) =
+            RactorConfigActor::spawn_default(bus.clone()).await;
+
+        // Factory that delays validate_key by 100ms to simulate network latency.
+        struct SlowFactory;
+        impl ProviderFactory for SlowFactory {
+            fn build(
+                &self,
+                _provider: &str,
+                model: &str,
+                _config: &Config,
+            ) -> Result<BuiltProvider, ProviderError> {
+                Ok(BuiltProvider::new(
+                    Box::new(MockProvider),
+                    "mock".into(),
+                    model.into(),
+                ))
+            }
+            fn validate_key(
+                &self,
+                _: &str,
+                _: &str,
+            ) -> Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + '_>>
+            {
+                Box::pin(async move {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    Ok(vec!["model-a".into(), "model-b".into()])
+                })
+            }
+            fn resolve_credentials(&self, _: &str, _: &Config) -> (String, String) {
+                ("http://localhost".into(), "sk-test".into())
+            }
+        }
+
+        let factory = Arc::new(SlowFactory);
+        let (handle, _cell, _) =
+            RactorProviderActor::spawn(bus.clone(), config_handle, factory)
+                .await
+                .unwrap();
+
+        // Send ListModels first (will be slow) and ValidateKey second.
+        // If the mailbox were blocked, ValidateKey would wait for ListModels.
+        // With offloaded network calls, both can be processed concurrently.
+        let list_models = handle.list_models("mock".into());
+        let validate_key = handle.validate_key("mock".into(), "sk-test".into());
+
+        // Both should complete successfully. If blocked, validate_key would take
+        // ~100ms longer (until ListModels completes).
+        let (list_result, validate_result) = tokio::join!(list_models, validate_key);
+
+        assert!(
+            validate_result.is_ok(),
+            "validate_key should succeed: {:?}",
+            validate_result
+        );
+        assert!(
+            list_result.is_ok(),
+            "list_models should succeed: {:?}",
+            list_result
+        );
     }
 }

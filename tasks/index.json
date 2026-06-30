@@ -507,7 +507,7 @@
   {
     "file": "offload-provider-network-calls-from-actor-handler.md",
     "title": "Offload provider network calls from actor handler",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "parse-bash-commands-with-shell-words-in-ioactor.md",

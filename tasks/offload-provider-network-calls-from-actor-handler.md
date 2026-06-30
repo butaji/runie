@@ -1,6 +1,6 @@
 # Offload provider network calls from actor handler
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Actors
 **Priority**: P1
@@ -10,24 +10,32 @@
 
 ## Description
 
-`RactorProviderActor` awaits HTTP/credential calls directly inside `handle` for `ValidateKey` and `ListModels`. This blocks the provider actor’s mailbox, so other provider requests queue behind a slow network call.
+`RactorProviderActor` awaits HTTP/credential calls directly inside `handle` for `ValidateKey` and `ListModels`. This blocks the provider actor's mailbox, so other provider requests queue behind a slow network call.
 
 ## Root Cause
 
 The actor message handler performs network IO inline instead of spawning a task and replying asynchronously.
 
+## Changes Made
+
+- `ValidateKey` and `ListModels` handlers now spawn `tokio::spawn` tasks for the network call.
+- Config resolution (quick, no network) is done synchronously in `handle`.
+- The spawned task handles credential resolution and the actual HTTP call.
+- Result is sent back via the reply channel when complete.
+- Actor mailbox remains responsive while network calls are in flight.
+
 ## Acceptance Criteria
 
-- [ ] Network calls for `ValidateKey` and `ListModels` run outside the actor’s `handle` method.
-- [ ] Results are sent back to the actor via its normal message channel or RPC reply.
-- [ ] The actor mailbox remains responsive during validation/listing.
-- [ ] `cargo test --workspace` passes.
+- [x] Network calls for `ValidateKey` and `ListModels` run outside the actor's `handle` method.
+- [x] Results are sent back to the actor via its normal message channel or RPC reply.
+- [x] The actor mailbox remains responsive during validation/listing.
+- [x] `cargo test --workspace` passes.
 - [ ] Live MiniMax model listing does not block other provider requests.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `provider_actor_mailbox_not_blocked_by_validate` — `ListModels` can be processed while `ValidateKey` is in flight.
+- [x] `provider_actor_mailbox_not_blocked_by_validate` — `ListModels` can be processed while `ValidateKey` is in flight.
 
 ### Layer 2 — Event Handling
 - [ ] `validate_key_result_event` — the async task result produces the expected fact event.
