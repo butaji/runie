@@ -1,45 +1,59 @@
 use ratatui::style::Color;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Macro-based color accessors
+// Color accessor functions
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Generates a simple color accessor from a theme key.
-/// Example: `theme_color!(color_fg, "text.primary");`
-macro_rules! theme_color {
-    ($fn_name:ident, $key:literal) => {
-        pub fn $fn_name() -> Color {
-            Color::from(crate::theme::current_theme().color($key))
-        }
-    };
+/// Simple color accessor for a required theme key.
+fn theme_color(key: &str) -> Color {
+    Color::from(crate::theme::current_theme().color(key))
 }
 
-/// Generates a color accessor with a fallback value when the key is not found.
-/// Example: `theme_color_try!(color_bg, "bg.base", Color::Reset);`
-macro_rules! theme_color_try {
-    ($fn_name:ident, $key:literal, $fallback:expr) => {
-        pub fn $fn_name() -> Color {
-            crate::theme::current_theme()
-                .try_color($key)
-                .map(Color::from)
-                .unwrap_or($fallback)
-        }
-    };
+/// Color accessor with a fallback when the key is not found.
+fn theme_color_fallback(key: &str, fallback: Color) -> Color {
+    crate::theme::current_theme()
+        .try_color(key)
+        .map(Color::from)
+        .unwrap_or(fallback)
 }
 
 // Generated color accessors
-theme_color_try!(color_bg, "bg.base", Color::Reset);
-theme_color_try!(color_bg_panel, "bg.panel", Color::Reset);
-theme_color!(color_fg, "text.primary");
-theme_color!(color_fg_mid, "text.secondary");
-theme_color!(color_accent, "accent.primary");
-theme_color!(color_success, "success");
-theme_color!(color_warning, "warning");
-theme_color!(color_error, "error");
-theme_color!(color_dim, "text.dim");
-theme_color!(color_border, "border.unfocused");
-theme_color!(color_code, "code.function");
-theme_color_try!(color_code_bg, "bg.code", Color::Reset);
+pub fn color_bg() -> Color {
+    theme_color_fallback("bg.base", Color::Reset)
+}
+pub fn color_bg_panel() -> Color {
+    theme_color_fallback("bg.panel", Color::Reset)
+}
+pub fn color_fg() -> Color {
+    theme_color("text.primary")
+}
+pub fn color_fg_mid() -> Color {
+    theme_color("text.secondary")
+}
+pub fn color_accent() -> Color {
+    theme_color("accent.primary")
+}
+pub fn color_success() -> Color {
+    theme_color("success")
+}
+pub fn color_warning() -> Color {
+    theme_color("warning")
+}
+pub fn color_error() -> Color {
+    theme_color("error")
+}
+pub fn color_dim() -> Color {
+    theme_color("text.dim")
+}
+pub fn color_border() -> Color {
+    theme_color("border.unfocused")
+}
+pub fn color_code() -> Color {
+    theme_color("code.function")
+}
+pub fn color_code_bg() -> Color {
+    theme_color_fallback("bg.code", Color::Reset)
+}
 
 /// Bright foreground: primary text lightened by 0.3.
 pub fn color_fg_bright() -> Color {

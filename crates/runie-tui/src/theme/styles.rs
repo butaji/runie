@@ -147,45 +147,107 @@ fn register_runie_popup_styles(theme: &mut opaline::Theme) {
     );
 }
 
-macro_rules! style_fn {
-    ($name:ident, $token:literal) => {
-        pub fn $name() -> Style {
-            Style::from(crate::theme::current_theme().style($token))
-        }
-    };
+// ─────────────────────────────────────────────────────────────────────────────
+// Style accessor functions
+// ─────────────────────────────────────────────────────────────────────────────
+
+fn style_fn(token: &str) -> Style {
+    Style::from(crate::theme::current_theme().style(token))
 }
 
-style_fn!(style_user, "runie.user");
-style_fn!(style_agent, "runie.agent");
-style_fn!(style_thought, "runie.thought");
-style_fn!(style_thinking, "runie.thinking");
-style_fn!(style_tool_running, "runie.tool.running");
-style_fn!(style_tool_header, "runie.tool.header");
-style_fn!(style_tool_output, "runie.tool.output");
-style_fn!(style_tool_summary, "runie.tool.summary");
-style_fn!(style_turn_complete, "runie.turn.complete");
-style_fn!(style_empty_state, "runie.empty");
-style_fn!(style_timestamp, "runie.timestamp");
-style_fn!(style_status_idle, "runie.status.idle");
-style_fn!(style_status_active, "runie.status.active");
-style_fn!(style_border, "runie.border");
-style_fn!(style_border_flash, "runie.border.flash");
-style_fn!(style_code_block, "runie.code.block");
-style_fn!(style_code_header, "runie.code.header");
-style_fn!(style_input_cursor, "runie.input.cursor");
-style_fn!(style_input_cursor_disabled, "runie.input.cursor.disabled");
-style_fn!(style_placeholder, "runie.placeholder");
-style_fn!(style_hint, "runie.hint");
-style_fn!(style_hint_key, "runie.hint.key");
-style_fn!(style_popup_selected, "runie.popup.selected");
-style_fn!(style_popup_unselected, "runie.popup.unselected");
-style_fn!(style_popup_border, "runie.popup.border");
-style_fn!(style_thought_summary, "runie.thought.summary");
-style_fn!(style_diff_insert, "runie.diff.insert");
-style_fn!(style_diff_remove, "runie.diff.remove");
-style_fn!(style_diff_hunk, "runie.diff.hunk");
-style_fn!(style_diff_file_header, "runie.diff.file_header");
-style_fn!(style_diff_context, "runie.diff.context");
+pub fn style_user() -> Style {
+    style_fn("runie.user")
+}
+pub fn style_agent() -> Style {
+    style_fn("runie.agent")
+}
+pub fn style_thought() -> Style {
+    style_fn("runie.thought")
+}
+pub fn style_thinking() -> Style {
+    style_fn("runie.thinking")
+}
+pub fn style_tool_running() -> Style {
+    style_fn("runie.tool.running")
+}
+pub fn style_tool_header() -> Style {
+    style_fn("runie.tool.header")
+}
+pub fn style_tool_output() -> Style {
+    style_fn("runie.tool.output")
+}
+pub fn style_tool_summary() -> Style {
+    style_fn("runie.tool.summary")
+}
+pub fn style_turn_complete() -> Style {
+    style_fn("runie.turn.complete")
+}
+pub fn style_empty_state() -> Style {
+    style_fn("runie.empty")
+}
+pub fn style_timestamp() -> Style {
+    style_fn("runie.timestamp")
+}
+pub fn style_status_idle() -> Style {
+    style_fn("runie.status.idle")
+}
+pub fn style_status_active() -> Style {
+    style_fn("runie.status.active")
+}
+pub fn style_border() -> Style {
+    style_fn("runie.border")
+}
+pub fn style_border_flash() -> Style {
+    style_fn("runie.border.flash")
+}
+pub fn style_code_block() -> Style {
+    style_fn("runie.code.block")
+}
+pub fn style_code_header() -> Style {
+    style_fn("runie.code.header")
+}
+pub fn style_input_cursor() -> Style {
+    style_fn("runie.input.cursor")
+}
+pub fn style_input_cursor_disabled() -> Style {
+    style_fn("runie.input.cursor.disabled")
+}
+pub fn style_placeholder() -> Style {
+    style_fn("runie.placeholder")
+}
+pub fn style_hint() -> Style {
+    style_fn("runie.hint")
+}
+pub fn style_hint_key() -> Style {
+    style_fn("runie.hint.key")
+}
+pub fn style_popup_selected() -> Style {
+    style_fn("runie.popup.selected")
+}
+pub fn style_popup_unselected() -> Style {
+    style_fn("runie.popup.unselected")
+}
+pub fn style_popup_border() -> Style {
+    style_fn("runie.popup.border")
+}
+pub fn style_thought_summary() -> Style {
+    style_fn("runie.thought.summary")
+}
+pub fn style_diff_insert() -> Style {
+    style_fn("runie.diff.insert")
+}
+pub fn style_diff_remove() -> Style {
+    style_fn("runie.diff.remove")
+}
+pub fn style_diff_hunk() -> Style {
+    style_fn("runie.diff.hunk")
+}
+pub fn style_diff_file_header() -> Style {
+    style_fn("runie.diff.file_header")
+}
+pub fn style_diff_context() -> Style {
+    style_fn("runie.diff.context")
+}
 
 /// Scrollbar style: visible but subtle — dimmed text color on app bg.
 /// Shows a clear thumb without being distracting.

@@ -1,24 +1,24 @@
 //! System commands.
 
+use crate::commands::dsl::handlers::NamedHandler;
 use crate::commands::{CommandResult, DialogType};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
 
 /// Register all system handlers with the handler registry (for YAML-based commands).
 pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
-    use crate::register_handler;
-    register_handler!(registry, "settings", Handler(handle_settings));
-    register_handler!(registry, "copy", Handler(handle_copy));
-    register_handler!(registry, "reload", Handler(handle_reload));
-    register_handler!(registry, "diagnostics", Handler(handle_diagnostics));
-    register_handler!(registry, "skills", Handler(handle_skills));
-    register_handler!(registry, "skill", Handler(handle_skill));
-    register_handler!(registry, "prompt", Handler(handle_prompt));
-    register_handler!(registry, "hotkeys", Handler(handle_hotkeys));
-    register_handler!(registry, "theme", Handler(handle_theme));
-    register_handler!(registry, "approve", Handler(handle_approve));
-    register_handler!(registry, "reject", Handler(handle_reject));
-    register_handler!(registry, "provider", Handler(handle_providers));
+    registry.register("settings", NamedHandler::Handler(handle_settings));
+    registry.register("copy", NamedHandler::Handler(handle_copy));
+    registry.register("reload", NamedHandler::Handler(handle_reload));
+    registry.register("diagnostics", NamedHandler::Handler(handle_diagnostics));
+    registry.register("skills", NamedHandler::Handler(handle_skills));
+    registry.register("skill", NamedHandler::Handler(handle_skill));
+    registry.register("prompt", NamedHandler::Handler(handle_prompt));
+    registry.register("hotkeys", NamedHandler::Handler(handle_hotkeys));
+    registry.register("theme", NamedHandler::Handler(handle_theme));
+    registry.register("approve", NamedHandler::Handler(handle_approve));
+    registry.register("reject", NamedHandler::Handler(handle_reject));
+    registry.register("provider", NamedHandler::Handler(handle_providers));
 }
 
 pub fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {

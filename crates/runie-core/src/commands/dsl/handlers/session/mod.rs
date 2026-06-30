@@ -6,96 +6,64 @@ pub use run::{run_compact, run_fork, run_name};
 
 use crate::actors::{PermissionMsg, SessionMsg};
 use crate::commands::CommandResult;
+use crate::commands::dsl::handlers::NamedHandler;
 use crate::model::AppState;
 
 /// Register all session handlers with the handler registry (for YAML-based commands).
 pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
-    use crate::register_handler;
     // Form handlers
-    register_handler!(
-        registry,
-        "save",
-        FormWithHandler(
-            "Save Session",
-            &[("Name", "session-name", "name")],
-            run::run_save
-        )
-    );
-    register_handler!(
-        registry,
-        "load",
-        FormWithHandler(
-            "Load Session",
-            &[("Name", "session-name", "name")],
-            run::run_load
-        )
-    );
-    register_handler!(
-        registry,
-        "delete",
-        FormWithHandler(
-            "Delete Session",
-            &[("Name", "session-name", "name")],
-            run::run_delete
-        )
-    );
-    register_handler!(
-        registry,
-        "export",
-        FormWithHandler(
-            "Export Session",
-            &[("Path", "session.json", "path")],
-            run::run_export
-        )
-    );
-    register_handler!(
-        registry,
-        "import",
-        FormWithHandler(
-            "Import Session",
-            &[("Path", "session.json", "path")],
-            run::run_import
-        )
-    );
-    register_handler!(
-        registry,
-        "compact",
-        FormWithHandler(
-            "Compact Context",
-            &[
-                ("Keep tokens", "2000", "keep"),
-                ("Focus", "optional focus keyword", "focus")
-            ],
-            run::run_compact
-        )
-    );
-    register_handler!(
-        registry,
-        "fork",
-        FormWithHandler(
-            "Fork Session",
-            &[("Message index", "0", "index")],
-            run::run_fork
-        )
-    );
-    register_handler!(
-        registry,
-        "name",
-        FormWithHandler(
-            "Set Session Name",
-            &[("Name", "session-name", "name")],
-            run::run_name
-        )
-    );
+    registry.register("save", NamedHandler::FormWithHandler {
+        title: "Save Session",
+        fields: &[("Name", "session-name", "name")],
+        handler: run::run_save,
+    });
+    registry.register("load", NamedHandler::FormWithHandler {
+        title: "Load Session",
+        fields: &[("Name", "session-name", "name")],
+        handler: run::run_load,
+    });
+    registry.register("delete", NamedHandler::FormWithHandler {
+        title: "Delete Session",
+        fields: &[("Name", "session-name", "name")],
+        handler: run::run_delete,
+    });
+    registry.register("export", NamedHandler::FormWithHandler {
+        title: "Export Session",
+        fields: &[("Path", "session.json", "path")],
+        handler: run::run_export,
+    });
+    registry.register("import", NamedHandler::FormWithHandler {
+        title: "Import Session",
+        fields: &[("Path", "session.json", "path")],
+        handler: run::run_import,
+    });
+    registry.register("compact", NamedHandler::FormWithHandler {
+        title: "Compact Context",
+        fields: &[
+            ("Keep tokens", "2000", "keep"),
+            ("Focus", "optional focus keyword", "focus"),
+        ],
+        handler: run::run_compact,
+    });
+    registry.register("fork", NamedHandler::FormWithHandler {
+        title: "Fork Session",
+        fields: &[("Message index", "0", "index")],
+        handler: run::run_fork,
+    });
+    registry.register("name", NamedHandler::FormWithHandler {
+        title: "Set Session Name",
+        fields: &[("Name", "session-name", "name")],
+        handler: run::run_name,
+    });
     // Simple handlers
-    register_handler!(registry, "sessions", Handler(handle_sessions));
-    register_handler!(registry, "new", Handler(handle_new));
-    register_handler!(registry, "reset", Handler(handle_reset));
-    register_handler!(registry, "history", Handler(handle_history));
-    register_handler!(registry, "session_info", Handler(handle_session));
-    register_handler!(registry, "tree", Handler(handle_tree));
-    register_handler!(registry, "share", Handler(handle_share));
-    register_handler!(registry, "resume", Handler(handle_resume));
+    registry.register("sessions", NamedHandler::Handler(handle_sessions));
+    registry.register("new", NamedHandler::Handler(handle_new));
+    registry.register("reset", NamedHandler::Handler(handle_reset));
+    registry.register("history", NamedHandler::Handler(handle_history));
+    registry.register("session_info", NamedHandler::Handler(handle_session));
+    registry.register("tree", NamedHandler::Handler(handle_tree));
+    registry.register("share", NamedHandler::Handler(handle_share));
+    registry.register("resume", NamedHandler::Handler(handle_resume));
 }
 
 pub fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {

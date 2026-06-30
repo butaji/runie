@@ -43,35 +43,3 @@ pub fn register_all(_registry: &mut CommandRegistry) {
     // All commands are now loaded from YAML resources/commands/*.yaml
     // via CommandRegistry::with_commands() — static tables have been removed.
 }
-
-/// Register a handler with the registry.
-/// Usage: `register_handler!(registry, "command-name", Handler(my_handler_func));`
-#[macro_export]
-macro_rules! register_handler {
-    ($registry:expr, $name:literal, Handler($func:expr)) => {
-        $registry.register(
-            $name,
-            $crate::commands::dsl::handlers::NamedHandler::Handler($func),
-        );
-    };
-    ($registry:expr, $name:literal, Form($title:literal, $fields:expr, $submit:expr)) => {
-        $registry.register(
-            $name,
-            $crate::commands::dsl::handlers::NamedHandler::Form {
-                title: $title,
-                fields: $fields,
-                submit: $submit,
-            },
-        );
-    };
-    ($registry:expr, $name:literal, FormWithHandler($title:literal, $fields:expr, $handler:expr)) => {
-        $registry.register(
-            $name,
-            $crate::commands::dsl::handlers::NamedHandler::FormWithHandler {
-                title: $title,
-                fields: $fields,
-                handler: $handler,
-            },
-        );
-    };
-}

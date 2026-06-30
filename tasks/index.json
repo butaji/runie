@@ -732,7 +732,7 @@
   {
     "file": "replace-register-handler-and-theme-macros-with-functions.md",
     "title": "Replace register_handler and theme macros with functions",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-remaining-custom-parsers-and-macros-with-strum.md",

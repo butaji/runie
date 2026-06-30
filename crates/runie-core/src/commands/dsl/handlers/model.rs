@@ -1,5 +1,6 @@
 //! Model commands.
 
+use crate::commands::dsl::handlers::NamedHandler;
 use crate::commands::{CommandResult, DialogType};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::{AppState, ThinkingLevel};
@@ -13,10 +14,9 @@ fn has_any_available_provider(state: &AppState) -> bool {
 
 /// Register all model handlers with the handler registry (for YAML-based commands).
 pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
-    use crate::register_handler;
-    register_handler!(registry, "model", Handler(handle_model));
-    register_handler!(registry, "thinking", Handler(handle_thinking));
-    register_handler!(registry, "scoped-models", Handler(handle_scoped_models));
+    registry.register("model", NamedHandler::Handler(handle_model));
+    registry.register("thinking", NamedHandler::Handler(handle_thinking));
+    registry.register("scoped-models", NamedHandler::Handler(handle_scoped_models));
 }
 
 pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {

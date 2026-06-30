@@ -1,15 +1,15 @@
 //! Help commands.
 
 use crate::commands::dsl::handlers::registry::HandlerRegistry;
+use crate::commands::dsl::handlers::NamedHandler;
 use crate::commands::CommandResult;
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
-use crate::register_handler;
 
 /// Register all help handlers with the handler registry.
 pub fn register_handlers(registry: &mut HandlerRegistry) {
-    register_handler!(registry, "help", Handler(handle_help));
-    register_handler!(registry, "quit", Handler(quit));
+    registry.register("help", NamedHandler::Handler(handle_help));
+    registry.register("quit", NamedHandler::Handler(quit));
 }
 
 pub fn handle_help(state: &mut AppState, _: &str) -> CommandResult {

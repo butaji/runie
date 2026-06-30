@@ -1,24 +1,27 @@
 //! Safety and permission commands.
 
 use crate::commands::CommandResult;
+use crate::commands::dsl::handlers::NamedHandler;
 use crate::model::AppState;
 
 /// Register all tool handlers with the handler registry (for YAML-based commands).
 pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
-    use crate::register_handler;
-    register_handler!(
-        registry,
+    registry.register(
         "readonly",
-        Handler(|_: &mut AppState, _: &str| { CommandResult::Event(crate::Event::ToggleReadOnly) })
+        NamedHandler::Handler(|_: &mut AppState, _: &str| {
+            CommandResult::Event(crate::Event::ToggleReadOnly)
+        }),
     );
-    register_handler!(
-        registry,
+    registry.register(
         "trust",
-        Handler(|_: &mut AppState, _: &str| { CommandResult::Event(crate::Event::TrustProject) })
+        NamedHandler::Handler(|_: &mut AppState, _: &str| {
+            CommandResult::Event(crate::Event::TrustProject)
+        }),
     );
-    register_handler!(
-        registry,
+    registry.register(
         "untrust",
-        Handler(|_: &mut AppState, _: &str| { CommandResult::Event(crate::Event::UntrustProject) })
+        NamedHandler::Handler(|_: &mut AppState, _: &str| {
+            CommandResult::Event(crate::Event::UntrustProject)
+        }),
     );
 }
