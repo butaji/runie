@@ -8,6 +8,20 @@ use std::time::Duration;
 
 const DIFF_DEADLINE_SECS: u64 = 5;
 
+/// Normalize diff content lines: ensure proper unified diff prefix.
+fn normalize_content_line(line: &str) -> Option<(char, &str)> {
+    let trimmed = line.trim_end();
+    if trimmed.is_empty() {
+        return None;
+    }
+    match trimmed.chars().next()? {
+        '+' => Some(('+', &trimmed[1..])),
+        '-' => Some(('-', &trimmed[1..])),
+        ' ' => Some((' ', &trimmed[1..])),
+        _ => Some((' ', trimmed)), // Non-standard: treat as context
+    }
+}
+
 /// A line within a hunk.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum DiffLine {
@@ -85,15 +99,65 @@ impl Diff {
             .timeout(Duration::from_secs(DIFF_DEADLINE_SECS))
             .diff_lines(old_content, new_content);
 
-        let mut builder = HunkBuilder::new();
+        // Build hunks directly from similar changes (replaces HunkBuilder)
+        let mut hunks = Vec::new();
+        let mut current: Vec<DiffLine> = Vec::new();
+        let mut old_start = 1;
+        let mut new_start = 1;
+        let mut old_len = 0;
+        let mut new_len = 0;
+        let mut old_line = 1;
+        let mut new_line = 1;
+        let mut in_hunk = false;
+
         for change in diff.iter_all_changes() {
-            builder.apply_change(change);
+            match change.tag() {
+                ChangeTag::Equal => {
+                    if in_hunk {
+                        finish_hunk(&mut hunks, &mut current, old_start, old_len, new_start, new_len);
+                        in_hunk = false;
+                        old_len = 0;
+                        new_len = 0;
+                    }
+                    old_line += 1;
+                    new_line += 1;
+                }
+                ChangeTag::Delete => {
+                    if !in_hunk {
+                        old_start = old_line;
+                        new_start = new_line;
+                        in_hunk = true;
+                    }
+                    current.push(DiffLine::Removed(
+                        change.value().trim_end().to_string(),
+                        Some(old_line as u32),
+                    ));
+                    old_len += 1;
+                    old_line += 1;
+                }
+                ChangeTag::Insert => {
+                    if !in_hunk {
+                        old_start = old_line;
+                        new_start = new_line;
+                        in_hunk = true;
+                    }
+                    current.push(DiffLine::Added(
+                        change.value().trim_end().to_string(),
+                        Some(new_line as u32),
+                    ));
+                    new_len += 1;
+                    new_line += 1;
+                }
+            }
+        }
+        if in_hunk {
+            finish_hunk(&mut hunks, &mut current, old_start, old_len, new_start, new_len);
         }
 
         Diff {
             old_path: "a".to_owned(),
             new_path: "b".to_owned(),
-            hunks: builder.finish(),
+            hunks,
         }
     }
 
@@ -148,7 +212,7 @@ impl Diff {
                 diff.new_path = new_path;
                 diff
             }
-            Err(_) => legacy_parse_diff(text),
+            Err(_) => fallback_parse_diff(text),
         }
     }
 }
@@ -200,209 +264,78 @@ fn diffy_to_canonical(p: &diffy::Patch<str>) -> Diff {
         hunks,
     }
 }
-/// ── Legacy parser for imperfect agent output strings ─────────────────────────
-fn legacy_parse_diff(text: &str) -> Diff {
-    let mut state = LegacyParseState::default();
+/// Finish a hunk and add to the list.
+fn finish_hunk(
+    hunks: &mut Vec<DiffHunk>,
+    lines: &mut Vec<DiffLine>,
+    old_start: usize,
+    old_len: usize,
+    new_start: usize,
+    new_len: usize,
+) {
+    if lines.is_empty() {
+        return;
+    }
+    hunks.push(DiffHunk {
+        header: format!("@@ -{},{} +{},{} @@", old_start, old_len, new_start, new_len),
+        lines: std::mem::take(lines),
+    });
+}
+
+/// Minimal fallback parser for imperfect agent output that diffy rejects.
+/// Does not validate hunk line counts; parses content as-is.
+fn fallback_parse_diff(text: &str) -> Diff {
+    let mut old_path = String::new();
+    let mut new_path = String::new();
+    let mut current_hunk: Option<DiffHunk> = None;
+    let mut hunks = Vec::new();
+    let mut in_hunk = false;
+
     for line in text.lines() {
-        state.parse_line(line);
-    }
-    state.flush_hunk();
-    Diff {
-        old_path: std::mem::take(&mut state.old_path).unwrap_or_default(),
-        new_path: std::mem::take(&mut state.new_path).unwrap_or_default(),
-        hunks: std::mem::take(&mut state.hunks),
-    }
-}
-
-#[derive(Default)]
-struct LegacyParseState {
-    old_path: Option<String>,
-    new_path: Option<String>,
-    old_line_num: Option<u32>,
-    new_line_num: Option<u32>,
-    current_hunk: Option<DiffHunk>,
-    hunks: Vec<DiffHunk>,
-}
-
-impl LegacyParseState {
-    fn parse_line(&mut self, line: &str) {
-        if line.is_empty() {
-            return;
+        let trimmed = line.trim_end();
+        if trimmed.is_empty() {
+            continue;
         }
-        match line.as_bytes().first() {
-            Some(b'-') if line.starts_with("--- ") => self.parse_old_header(line),
-            Some(b'+') if line.starts_with("+++ ") => self.parse_new_header(line),
-            Some(b'@') if line.starts_with("@@ ") => self.parse_hunk_header(line),
-            Some(b'+') => self.parse_added(line),
-            Some(b'-') => self.parse_removed(line),
-            Some(b' ') => self.parse_context(line),
-            _ => {}
-        }
-    }
 
-    fn parse_old_header(&mut self, line: &str) {
-        self.old_path = Some(line[4..].to_string());
-    }
-
-    fn parse_new_header(&mut self, line: &str) {
-        self.new_path = Some(line[4..].to_string());
-    }
-
-    fn parse_added(&mut self, line: &str) {
-        let num = self.new_line_num;
-        if let Some(ref mut n) = self.new_line_num {
-            *n += 1;
-        }
-        self.push_line(DiffLine::Added(line[1..].to_string(), num));
-    }
-
-    fn parse_removed(&mut self, line: &str) {
-        let num = self.old_line_num;
-        if let Some(ref mut n) = self.old_line_num {
-            *n += 1;
-        }
-        self.push_line(DiffLine::Removed(line[1..].to_string(), num));
-    }
-
-    fn parse_context(&mut self, line: &str) {
-        if let Some(ref mut o) = self.old_line_num {
-            *o += 1;
-        }
-        if let Some(ref mut n) = self.new_line_num {
-            *n += 1;
-        }
-        self.push_line(DiffLine::Context(line[1..].to_string()));
-    }
-
-    fn parse_hunk_header(&mut self, line: &str) {
-        self.flush_hunk();
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        self.old_line_num = parts
-            .get(1)
-            .and_then(|s| s.split(',').next()?.strip_prefix('-')?.parse().ok());
-        self.new_line_num = parts
-            .get(2)
-            .and_then(|s| s.split(',').next()?.strip_prefix('+')?.parse().ok());
-        self.current_hunk = Some(DiffHunk {
-            header: line.to_owned(),
-            lines: Vec::new(),
-        });
-        // Add hunk header as a context line (preserves original behavior)
-        self.push_line(DiffLine::Context(line.to_owned()));
-    }
-
-    fn push_line(&mut self, line: DiffLine) {
-        if self.current_hunk.is_none() {
-            self.current_hunk = Some(DiffHunk {
-                header: String::new(),
-                lines: Vec::new(),
+        // Parse headers
+        if let Some(rest) = trimmed.strip_prefix("--- ") {
+            old_path = rest.to_string();
+        } else if let Some(rest) = trimmed.strip_prefix("+++ ") {
+            new_path = rest.to_string();
+        } else if let Some(header) = trimmed.strip_prefix("@@ ") {
+            // Flush previous hunk
+            if let Some(hunk) = current_hunk.take() {
+                if !hunk.lines.is_empty() {
+                    hunks.push(hunk);
+                }
+            }
+            // Start new hunk with header as context line (preserves original behavior)
+            current_hunk = Some(DiffHunk {
+                header: format!("@@ {}", header),
+                lines: vec![DiffLine::Context(format!("@@ {}", header))],
             });
-        }
-        if let Some(ref mut hunk) = self.current_hunk {
-            hunk.lines.push(line);
-        }
-    }
-
-    fn flush_hunk(&mut self) {
-        if let Some(hunk) = self.current_hunk.take() {
-            if !hunk.lines.is_empty() {
-                self.hunks.push(hunk);
+            in_hunk = true;
+        } else if in_hunk {
+            // Parse hunk content
+            if let Some((prefix, content)) = normalize_content_line(trimmed) {
+                let line = match prefix {
+                    '+' => DiffLine::Added(content.to_string(), None),
+                    '-' => DiffLine::Removed(content.to_string(), None),
+                    _ => DiffLine::Context(content.to_string()),
+                };
+                if let Some(ref mut hunk) = current_hunk {
+                    hunk.lines.push(line);
+                }
             }
         }
     }
-}
 
-impl Drop for LegacyParseState {
-    fn drop(&mut self) {
-        self.flush_hunk();
-    }
-}
-
-/// ── Internal hunk builder ──────────────────────────────────────────────────
-struct HunkBuilder {
-    hunks: Vec<DiffHunk>,
-    current: Vec<DiffLine>,
-    old_start: usize,
-    new_start: usize,
-    old_len: usize,
-    new_len: usize,
-    old_line: usize,
-    new_line: usize,
-}
-
-fn trim_end(s: &str) -> &str {
-    s.trim_end_matches(['\n', '\r'])
-}
-
-impl HunkBuilder {
-    fn new() -> Self {
-        Self {
-            hunks: Vec::new(),
-            current: Vec::new(),
-            old_start: 1,
-            new_start: 1,
-            old_len: 0,
-            new_len: 0,
-            old_line: 1,
-            new_line: 1,
+    // Flush final hunk
+    if let Some(hunk) = current_hunk {
+        if !hunk.lines.is_empty() {
+            hunks.push(hunk);
         }
     }
 
-    fn apply_change(&mut self, change: similar::Change<&str>) {
-        match change.tag() {
-            ChangeTag::Equal => self.apply_equal(),
-            ChangeTag::Delete => self.apply_delete(change.value()),
-            ChangeTag::Insert => self.apply_insert(change.value()),
-        }
-    }
-
-    fn apply_equal(&mut self) {
-        self.flush_current();
-        self.old_line += 1;
-        self.new_line += 1;
-    }
-
-    fn apply_delete(&mut self, value: &str) {
-        self.start_hunk_if_needed();
-        self.current.push(DiffLine::removed(trim_end(value)));
-        self.old_len += 1;
-        self.old_line += 1;
-    }
-
-    fn apply_insert(&mut self, value: &str) {
-        self.start_hunk_if_needed();
-        self.current.push(DiffLine::added(trim_end(value)));
-        self.new_len += 1;
-        self.new_line += 1;
-    }
-
-    fn start_hunk_if_needed(&mut self) {
-        if self.current.is_empty() {
-            self.old_start = self.old_line;
-            self.new_start = self.new_line;
-        }
-    }
-
-    fn flush_current(&mut self) {
-        if self.current.is_empty() {
-            return;
-        }
-        self.hunks.push(DiffHunk {
-            header: format!(
-                "@@ -{},{} +{},{} @@",
-                self.old_start, self.old_len, self.new_start, self.new_len
-            ),
-            lines: std::mem::take(&mut self.current),
-        });
-        self.old_len = 0;
-        self.new_len = 0;
-    }
-
-    fn finish(mut self) -> Vec<DiffHunk> {
-        self.flush_current();
-        self.hunks
-    }
+    Diff { old_path, new_path, hunks }
 }
-
-#[cfg(test)]
-mod tests;

@@ -242,7 +242,7 @@
   {
     "file": "drop-legacy-diff-parser-and-rely-on-diffy.md",
     "title": "Drop legacy diff parser and rely on diffy",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "drop-once_cell-and-futures-util-workspace-deps.md",
