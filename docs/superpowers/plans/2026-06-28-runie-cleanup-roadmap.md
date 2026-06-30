@@ -12,7 +12,7 @@
 
 ## File structure
 
-- `tasks/index.json` — canonical registry of the 22 active cleanup tasks and 1 `wontfix`.
+- `tasks/index.json` — canonical registry of the 17 active cleanup tasks, 3 partial tasks, and 1 `wontfix`.
 - **Actor runtime (split into three sequential tasks):**
   - `tasks/migrate-production-actors-to-ractor.md`
   - `tasks/delete-dead-actor-modules-and-custom-trait.md`

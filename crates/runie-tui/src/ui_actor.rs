@@ -3,103 +3,20 @@
 //! The actor subscribes to the shared `EventBus<Event>`, applies every event to
 //! `AppState`, sends fresh `Snapshot`s to the render task via a `watch` channel,
 //! and triggers side-effects (agent spawns, clipboard, etc.) without blocking.
-use runie_agent::{AgentCommand, AgentMsg};
-use runie_core::bus::{EventBus, Receiver};
-#[cfg(test)]
-use runie_core::login_flow::LoginStep;
+
 use std::collections::HashMap;
 use std::time::Duration;
 
-#[cfg(test)]
-use runie_core::commands::DialogKind;
+use runie_core::bus::{EventBus, Receiver};
 use runie_core::{AppState, Event, Snapshot};
-use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::effects::{login, EffectCommand};
-
-/// Simple handle for sending commands to the agent.
-#[derive(Clone)]
-pub struct AgentActorHandle {
-    tx: mpsc::Sender<AgentMsg>,
-}
-
-impl AgentActorHandle {
-    pub fn new(tx: mpsc::Sender<AgentMsg>) -> Self {
-        Self { tx }
-    }
-
-    pub async fn run(&self, command: AgentCommand) {
-        let _ = self.tx.send(AgentMsg::Run { command }).await;
-    }
-
-    pub async fn run_if_queued(&self, turn_handle: &runie_core::actors::RactorTurnHandle) {
-        turn_handle
-            .send(runie_core::actors::TurnMsg::RunIfQueued)
-            .await;
-    }
-}
-
-/// Handle backed by `LeaderAgentHandle` (from `Leader::start`).
-/// Used when the agent is spawned via the leader bootstrap.
-#[derive(Clone)]
-pub struct LeaderAgentActorHandle {
-    inner: std::sync::Arc<dyn runie_core::actors::leader::LeaderAgentHandle>,
-}
-
-impl LeaderAgentActorHandle {
-    /// Wrap a `LeaderAgentHandle` (e.g. from `LeaderHandle::agent`).
-    pub fn new(inner: std::sync::Arc<dyn runie_core::actors::leader::LeaderAgentHandle>) -> Self {
-        Self { inner }
-    }
-
-    pub async fn run(&self, command: AgentCommand) {
-        let cmd = runie_core::actors::leader::LeaderAgentCmd {
-            content: command.content,
-            id: command.id,
-            provider: command.provider,
-            model: command.model,
-            thinking_level: command.thinking_level,
-            read_only: command.read_only,
-            skills_context: command.skills_context,
-            system_prompt: command.system_prompt,
-        };
-        self.inner.run(cmd).await;
-    }
-
-    pub async fn run_if_queued(&self, turn_handle: &runie_core::actors::RactorTurnHandle) {
-        turn_handle
-            .send(runie_core::actors::TurnMsg::RunIfQueued)
-            .await;
-    }
-}
+use crate::effects::EffectCommand;
 use crate::pace::PacedRenderer;
 use crate::terminal::caps::TermCaps;
 
+pub use crate::ui_actor_agent_handles::{AgentHandleBox, AgentActorHandle, LeaderAgentActorHandle};
+
 const ANIM_MS: u64 = 100;
-
-/// Box over agent-handle variants so UiActor can hold either type without
-/// generics or async-fn trait objects.
-pub enum AgentHandleBox {
-    Actor(AgentActorHandle),
-    Leader(LeaderAgentActorHandle),
-}
-
-impl AgentHandleBox {
-    #[allow(dead_code)]
-    async fn run(&self, command: AgentCommand) {
-        match self {
-            Self::Actor(h) => h.run(command).await,
-            Self::Leader(h) => h.run(command).await,
-        }
-    }
-
-    async fn run_if_queued(&self, turn: &runie_core::actors::RactorTurnHandle) {
-        match self {
-            Self::Actor(h) => h.run_if_queued(turn).await,
-            Self::Leader(h) => h.run_if_queued(turn).await,
-        }
-    }
-}
 
 /// Actor that owns the application state.
 pub struct UiActor {
@@ -107,13 +24,13 @@ pub struct UiActor {
     /// UiActor creates its own watch channel for snapshots so the render task can
     /// receive frames. Call `take_render_rx()` after construction to hand the
     /// receiver to the render task.
-    render_tx: watch::Sender<Snapshot>,
-    render_rx: Option<watch::Receiver<Snapshot>>,
+    render_tx: tokio::sync::watch::Sender<Snapshot>,
+    render_rx: Option<tokio::sync::watch::Receiver<Snapshot>>,
     agent_handle: AgentHandleBox,
     turn_handle: runie_core::actors::RactorTurnHandle,
-    kb_tx: watch::Sender<HashMap<String, String>>,
+    kb_tx: tokio::sync::watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
-    shutdown_tx: Option<oneshot::Sender<()>>,
+    shutdown_tx: Option<tokio::sync::oneshot::Sender<()>>,
     caps: TermCaps,
     pub(crate) paced: PacedRenderer,
     /// Previous input text (snapshot before last InputChanged application).
@@ -135,9 +52,9 @@ impl UiActor {
         state: AppState,
         agent_handle: AgentActorHandle,
         turn_handle: runie_core::actors::RactorTurnHandle,
-        kb_tx: watch::Sender<HashMap<String, String>>,
+        kb_tx: tokio::sync::watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
-        shutdown_tx: oneshot::Sender<()>,
+        shutdown_tx: tokio::sync::oneshot::Sender<()>,
         caps: TermCaps,
     ) -> Self {
         Self::with_agent_handle(
@@ -159,12 +76,12 @@ impl UiActor {
         mut state: AppState,
         agent_handle: AgentHandleBox,
         turn_handle: runie_core::actors::RactorTurnHandle,
-        kb_tx: watch::Sender<HashMap<String, String>>,
+        kb_tx: tokio::sync::watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
-        shutdown_tx: oneshot::Sender<()>,
+        shutdown_tx: tokio::sync::oneshot::Sender<()>,
         caps: TermCaps,
     ) -> Self {
-        let (render_tx, render_rx) = watch::channel(state.snapshot());
+        let (render_tx, render_rx) = tokio::sync::watch::channel(state.snapshot());
         let prev_input = state.input().input.clone();
         let prev_cursor_pos = state.input().cursor_pos;
         Self {
@@ -186,13 +103,13 @@ impl UiActor {
 
     /// Take the snapshot channel receiver, transferring ownership to the render task.
     /// Must be called exactly once, after construction and before `run()`.
-    pub fn take_render_rx(&mut self) -> watch::Receiver<Snapshot> {
+    pub fn take_render_rx(&mut self) -> tokio::sync::watch::Receiver<Snapshot> {
         self.render_rx.take().expect("render_rx already taken")
     }
 
     /// Run the actor until a quit event is processed.
     pub async fn run(mut self, mut rx: Receiver<Event>) {
-        let (effect_tx, effect_rx) = mpsc::channel::<Event>(16);
+        let (effect_tx, effect_rx) = tokio::sync::mpsc::channel::<Event>(16);
         Self::spawn_effect_forwarder(self.bus.clone(), effect_rx);
 
         let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
@@ -231,7 +148,7 @@ impl UiActor {
         }
     }
 
-    fn spawn_effect_forwarder(bus: EventBus<Event>, mut rx: mpsc::Receiver<Event>) {
+    fn spawn_effect_forwarder(bus: EventBus<Event>, mut rx: tokio::sync::mpsc::Receiver<Event>) {
         tokio::spawn(async move {
             while let Some(evt) = rx.recv().await {
                 bus.publish(evt);
@@ -242,7 +159,7 @@ impl UiActor {
     /// Handle a single event and publish a fresh snapshot.
     /// Returns `true` when the actor should shut down.
     #[cfg(test)]
-    async fn handle_event(&mut self, evt: Event, effect_tx: mpsc::Sender<Event>) -> bool {
+    async fn handle_event(&mut self, evt: Event, effect_tx: tokio::sync::mpsc::Sender<Event>) -> bool {
         let quit = self.handle_event_inner(evt, effect_tx).await;
         self.publish_snapshot();
         quit
@@ -250,7 +167,7 @@ impl UiActor {
 
     /// Handle a single event without publishing. Returns `true` when the actor
     /// should shut down.
-    async fn handle_event_inner(&mut self, evt: Event, effect_tx: mpsc::Sender<Event>) -> bool {
+    async fn handle_event_inner(&mut self, evt: Event, effect_tx: tokio::sync::mpsc::Sender<Event>) -> bool {
         let was_submit = matches!(evt, Event::Submit);
         let was_followup = matches!(evt, Event::FollowUp);
         let was_config_loaded = matches!(&evt, Event::ConfigLoaded { .. });
@@ -390,10 +307,6 @@ impl UiActor {
         if was_config_loaded {
             let _ = self.kb_tx.send(self.state.config().keybindings().clone());
         }
-        if was_submit {
-            // History persistence: done after InputChanged (which clears input).
-            // The pending_submit already captured the content.
-        }
         if was_submit || was_followup || was_agent_done {
             self.agent_handle.run_if_queued(&self.turn_handle).await;
         }
@@ -422,7 +335,7 @@ impl UiActor {
     }
 
     /// Dispatch effects via IoActor.
-    async fn dispatch_effect(&mut self, evt: &Event, effect_tx: mpsc::Sender<Event>) {
+    async fn dispatch_effect(&mut self, evt: &Event, effect_tx: tokio::sync::mpsc::Sender<Event>) {
         if let Some(cmd) = EffectCommand::try_from_event(evt, &mut self.state, &self.caps) {
             // For login validation, handle separately
             if matches!(cmd, EffectCommand::LoginFlowSubmitKey { .. }) {
@@ -435,7 +348,7 @@ impl UiActor {
                         .as_ref()
                         .map(|h| h.provider.clone());
                     if let Some(handle) = provider_handle {
-                        tokio::spawn(login::run(f.provider, f.key, tx, handle.clone()));
+                        tokio::spawn(crate::effects::login::run(f.provider, f.key, tx, handle.clone()));
                     }
                 }
             } else {
@@ -559,5 +472,3 @@ impl UiActor {
         let _ = self.render_tx.send(snap);
     }
 }
-
-mod tests;

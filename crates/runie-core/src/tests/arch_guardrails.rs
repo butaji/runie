@@ -70,6 +70,7 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     "actors/completion/",
     "actors/session/actor.rs",
     "actors/session/ractor_session_actor.rs",
+    "actors/session/session_handlers.rs",
     // Command handlers with file/dir access
     "commands/dsl/handlers/session/",
     // Leader - coordination layer that manages actor lifecycle

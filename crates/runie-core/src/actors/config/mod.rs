@@ -2,6 +2,7 @@
 
 pub mod config_handle;
 pub mod file_helpers;
+mod handlers;
 pub mod messages;
 pub mod ractor_config;
 #[cfg(test)]

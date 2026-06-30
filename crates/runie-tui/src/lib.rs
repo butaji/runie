@@ -26,6 +26,7 @@ pub mod keymap;
 pub mod terminal;
 pub mod terminal_setup;
 pub mod ui_actor;
+pub mod ui_actor_agent_handles;
 
 #[cfg(test)]
 mod tests;

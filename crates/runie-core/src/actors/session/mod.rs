@@ -7,7 +7,8 @@ mod tests;
 // Ractor-based implementation.
 mod ractor_session_actor;
 mod ractor_session_handle;
+mod session_handlers;
 
+pub use session_handlers::RactorSessionActor;
 pub use messages::SessionMsg;
-pub use ractor_session_actor::RactorSessionActor;
 pub use ractor_session_handle::RactorSessionHandle;

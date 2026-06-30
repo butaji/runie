@@ -4,20 +4,14 @@
 //! of the actor system.
 
 use parking_lot::Mutex;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use notify::RecursiveMode;
-use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
-use ractor::{Actor, ActorProcessingErr, ActorRef};
-
-use crate::actors::ractor_adapter::spawn_ractor;
 use crate::actors::ractor_adapter::Reply;
 use crate::bus::EventBus;
 use crate::config::{Config, McpServer, TruncationSection};
 use crate::event::Event;
 use crate::model::ThinkingLevel;
 
-use super::file_helpers;
 use super::messages::{ConfigMsg, ConfigScope};
 
 /// Ractor-based ConfigActor handle.
