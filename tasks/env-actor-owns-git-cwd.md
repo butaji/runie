@@ -1,6 +1,10 @@
 # env-actor-owns-git-cwd
 
-## Status: DONE
+**Status**: done
+**Milestone**: R6
+**Category**: Architecture / Actors
+**Priority**: P1
+**Note**: References to `event/variants.rs` and `event/intent_impl.rs` are stale — these files were split into `event/generated/` during the taxonomy task. The implementation is correct.
 
 ## Changes Made
 
