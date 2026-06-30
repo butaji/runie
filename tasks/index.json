@@ -307,7 +307,7 @@
   {
     "file": "fix-leader-shutdown-to-await-all-actors.md",
     "title": "Fix leader shutdown to await all actors",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-leader-status-hardcoded-actor-count.md",
