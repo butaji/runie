@@ -97,7 +97,7 @@ impl Leader {
         provider_factory: std::sync::Arc<dyn crate::actors::provider::ProviderFactory>,
         agent_factory: std::sync::Arc<dyn AgentActorFactory<SpawnFuture = AgentSpawnFuture>>,
     ) -> anyhow::Result<LeaderHandle> {
-        let bus = EventBus::<CoreEvent>::new(100);
+        let bus = EventBus::<CoreEvent>::new(1000);
         let (cmd_tx, cmd_rx) = mpsc::channel(32);
 
         let handles =

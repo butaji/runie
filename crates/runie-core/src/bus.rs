@@ -37,8 +37,12 @@ pub struct EventBus<E: Send + Clone + 'static> {
 /// SessionActor disk-replay at startup.
 pub type Receiver<E> = broadcast::Receiver<E>;
 
-impl<E: Send + Clone + 'static> EventBus<E> {
+impl<E: Send + Clone + 'static + std::fmt::Debug> EventBus<E> {
     /// Create a new EventBus with the specified channel capacity.
+    ///
+    /// The internal broadcast channel is created with 2x the requested capacity
+    /// to accommodate burst traffic. For the leader bus, use a capacity of at
+    /// least 1000 to handle streaming deltas without dropping critical events.
     pub fn new(capacity: usize) -> Self {
         let (sender, _) = broadcast::channel(capacity.max(1) * 2);
         Self { sender }
@@ -47,8 +51,19 @@ impl<E: Send + Clone + 'static> EventBus<E> {
     /// Publish an event to all subscribers.
     ///
     /// Returns the number of subscribers that received the event.
+    /// Logs a warning if there are no subscribers to catch the event.
     pub fn publish(&self, event: E) -> usize {
-        self.sender.send(event).unwrap_or(0)
+        let count = self.sender.receiver_count();
+        if count == 0 {
+            tracing::warn!("publishing event with zero subscribers: {:?}", event);
+        }
+        match self.sender.send(event) {
+            Ok(n) => n,
+            Err(e) => {
+                tracing::warn!("broadcast send failed: {:?}", e);
+                0
+            }
+        }
     }
 
     /// Subscribe to events.
@@ -67,6 +82,7 @@ impl<E: Send + Clone + 'static> EventBus<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
 
     #[derive(Debug, Clone, PartialEq)]
     enum TestEvent {
@@ -144,5 +160,33 @@ mod tests {
         });
         let event = sub.recv().await.unwrap();
         assert_eq!(event, TestEvent::Data(99));
+    }
+
+    /// Layer 2: Verify `publish` returns zero and does not panic when no subscribers.
+    #[test]
+    fn publish_with_no_subscribers_returns_zero() {
+        let bus = Arc::new(EventBus::<TestEvent>::new(10));
+        let count = bus.publish(TestEvent::Data(42));
+        assert_eq!(count, 0, "publish to zero subscribers should return 0");
+    }
+
+    /// Layer 2: Verify `subscriber_count` is zero when no subscribers exist.
+    #[test]
+    fn subscriber_count_zero_when_no_subscriptions() {
+        let bus = EventBus::<TestEvent>::new(10);
+        assert_eq!(bus.subscriber_count(), 0);
+    }
+
+    /// Layer 2: Verify `subscriber_count` reflects active subscriptions.
+    #[test]
+    fn subscriber_count_reflects_subscriptions() {
+        let bus = EventBus::<TestEvent>::new(10);
+        assert_eq!(bus.subscriber_count(), 0);
+
+        let _sub1 = bus.subscribe();
+        assert_eq!(bus.subscriber_count(), 1);
+
+        let _sub2 = bus.subscribe();
+        assert_eq!(bus.subscriber_count(), 2);
     }
 }

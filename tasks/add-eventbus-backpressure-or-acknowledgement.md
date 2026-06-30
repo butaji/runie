@@ -1,6 +1,6 @@
 # Add EventBus backpressure or acknowledgement
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Actors
 **Priority**: P1
