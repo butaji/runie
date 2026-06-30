@@ -1,4 +1,6 @@
 use base64::Engine;
+use globset::{Glob, GlobSet, GlobSetBuilder};
+use ignore::{DirEntry, WalkBuilder};
 use std::ops::RangeInclusive;
 use std::path::Path;
 
@@ -141,67 +143,86 @@ pub fn find_files_shallow(pattern: &str, base: &str, limit: usize) -> Vec<String
 }
 
 pub fn find_files_deep(pattern: &str, base: &str, limit: usize) -> Vec<String> {
-    let mut results = Vec::new();
     if pattern.is_empty() || pattern == "*" {
-        if let Ok(entries) = std::fs::read_dir(base) {
-            for entry in entries.flatten().take(limit) {
-                let name = entry.file_name().to_string_lossy().to_string();
-                results.push(name);
-            }
-        }
-        return results;
+        return flat_files(base, limit);
     }
+
     let is_glob = pattern.contains('*') || pattern.contains('?');
     if is_glob {
-        collect_deep(base, &mut results, limit, &|name, path| {
-            glob_matches(name, pattern) || glob_matches(path, pattern)
-        });
+        // Build a GlobSet from the pattern (case-insensitive).
+        let pattern_lower = pattern.to_lowercase();
+        let glob = match Glob::new(&pattern_lower) {
+            Ok(g) => g,
+            Err(_) => return Vec::new(),
+        };
+        let globset = GlobSetBuilder::new()
+            .add(glob)
+            .build()
+            .unwrap_or_else(|_| GlobSet::empty());
+        walk_ignore(base, limit, move |entry: &DirEntry| {
+            let name = entry.file_name().to_string_lossy();
+            let path = entry.path().to_string_lossy();
+            let name_str = name.to_lowercase();
+            let path_str = path.to_lowercase();
+            glob_matches_globset(&globset, &name_str, &path_str)
+        })
     } else {
+        // Case-insensitive substring search.
         let pat_lower = pattern.to_lowercase();
-        collect_deep(base, &mut results, limit, &|name, path| {
-            name.to_lowercase().contains(&pat_lower) || path.to_lowercase().contains(&pat_lower)
-        });
+        walk_ignore(base, limit, move |entry: &DirEntry| {
+            let name = entry.file_name().to_string_lossy();
+            let path = entry.path().to_string_lossy();
+            let name_str = name.to_lowercase();
+            let path_str = path.to_lowercase();
+            name_str.contains(&pat_lower) || path_str.contains(&pat_lower)
+        })
+    }
+}
+
+/// Collect files from base directory (non-recursive) matching limit.
+fn flat_files(base: &str, limit: usize) -> Vec<String> {
+    let mut results = Vec::new();
+    let Ok(entries) = std::fs::read_dir(base) else {
+        return results;
+    };
+    for entry in entries.flatten().take(limit) {
+        let name = entry.file_name().to_string_lossy().to_string();
+        results.push(name);
+    }
+    results.sort_by(|a, b| a.cmp(b));
+    results
+}
+
+/// Walk directory tree using `ignore::WalkBuilder`, respecting .gitignore,
+/// skipping hidden files and target/ directories.
+fn walk_ignore<F>(base: &str, limit: usize, matches: F) -> Vec<String>
+where
+    F: Fn(&DirEntry) -> bool + Send + Sync,
+{
+    let mut results = Vec::new();
+    let walker = WalkBuilder::new(base)
+        .hidden(true) // skip hidden files
+        .filter_entry(move |entry| {
+            let name = entry.file_name().to_string_lossy();
+            // Skip target/ directories
+            name != "target"
+        })
+        .build();
+
+    for entry in walker.flatten() {
+        if results.len() >= limit {
+            break;
+        }
+        if matches(&entry) {
+            results.push(entry.path().to_string_lossy().to_string());
+        }
     }
     results
 }
 
-fn collect_deep<F>(dir: &str, out: &mut Vec<String>, limit: usize, matches: &F)
-where
-    F: Fn(&str, &str) -> bool,
-{
-    if out.len() >= limit {
-        return;
-    }
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        if out.len() >= limit {
-            break;
-        }
-        let name = entry.file_name().to_string_lossy().to_string();
-        let path = entry.path().to_string_lossy().to_string();
-        let meta = entry.metadata();
-        let is_dir = meta.as_ref().map(|m| m.is_dir()).unwrap_or(false);
-        if matches(&name, &path) {
-            out.push(path.clone());
-        }
-        if is_dir && !name.starts_with('.') && name != "target" {
-            collect_deep(&path, out, limit, matches);
-        }
-    }
-}
-
-fn glob_matches(name: &str, pattern: &str) -> bool {
-    let name_lower = name.to_lowercase();
-    let pat_lower = pattern.to_lowercase();
-    if let Some(ext) = pat_lower.strip_prefix("*.") {
-        name_lower.ends_with(&format!(".{}", ext))
-    } else if pat_lower.contains('*') || pat_lower.contains('?') {
-        name_lower.contains(&pat_lower.replace("*", "").replace("?", ""))
-    } else {
-        name_lower.contains(&pat_lower)
-    }
+/// Check if a path matches a GlobSet.
+fn glob_matches_globset(globset: &GlobSet, name_lower: &str, path_lower: &str) -> bool {
+    globset.is_match(name_lower) || globset.is_match(path_lower)
 }
 
 pub fn is_image_file(path: &str) -> bool {

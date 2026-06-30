@@ -977,7 +977,7 @@
   {
     "file": "use-ignore-and-globset-for-file-refs.md",
     "title": "Use ignore and globset for file_refs",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-include-dir-for-minimax-fixtures.md",
