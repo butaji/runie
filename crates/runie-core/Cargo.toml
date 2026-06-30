@@ -67,6 +67,7 @@ runie-util.workspace = true
 bytesize.workspace = true
 humantime.workspace = true
 crokey.workspace = true
+tokio-util.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 crossterm.workspace = true

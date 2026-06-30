@@ -25,6 +25,14 @@ impl RactorPermissionHandle {
         Self { inner }
     }
 
+    /// Query the current pending request ID, if any.
+    pub async fn current_request_id(&self) -> Option<String> {
+        let (reply, rx) = crate::actors::ractor_adapter::rpc_channel();
+        let msg = PermissionMsg::GetCurrentRequest(reply);
+        let _ = self.inner.send(msg).await;
+        rx.await.ok().flatten()
+    }
+
     /// Request permission for a tool call. Returns a receiver for the response.
     pub async fn ask_permission(
         &self,
@@ -110,6 +118,13 @@ impl PermissionActorState {
 pub struct RactorPermissionActor;
 
 impl RactorPermissionActor {
+    fn handle_get_current_request(
+        state: &PermissionActorState,
+        reply: crate::actors::RpcReply<Option<String>>,
+    ) {
+        reply.send(state.current_request.as_ref().map(|r| r.request_id.clone()));
+    }
+
     fn handle_ask_permission(
         state: &mut PermissionActorState,
         request_id: String,
@@ -209,6 +224,9 @@ impl Actor for RactorPermissionActor {
             }
             PermissionMsg::DismissRequest => {
                 Self::handle_dismiss(state);
+            }
+            PermissionMsg::GetCurrentRequest(reply) => {
+                Self::handle_get_current_request(state, reply);
             }
         }
         Ok(())

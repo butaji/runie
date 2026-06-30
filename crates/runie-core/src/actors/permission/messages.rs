@@ -1,6 +1,6 @@
 //! Messages for `PermissionActor`.
 
-use crate::actors::ractor_adapter::Reply;
+use crate::actors::ractor_adapter::{Reply, RpcReply};
 use crate::permissions::PermissionAction;
 
 /// Messages accepted by `PermissionActor`.
@@ -23,6 +23,8 @@ pub enum PermissionMsg {
     CancelPermission { request_id: String },
     /// Dismiss the permission request UI without resolving.
     DismissRequest,
+    /// Query the current pending request ID (returns Option<String>).
+    GetCurrentRequest(RpcReply<Option<String>>),
 }
 
 impl Clone for PermissionMsg {
@@ -50,6 +52,7 @@ impl Clone for PermissionMsg {
                 request_id: request_id.clone(),
             },
             PermissionMsg::DismissRequest => PermissionMsg::DismissRequest,
+            PermissionMsg::GetCurrentRequest(reply) => PermissionMsg::GetCurrentRequest(reply.clone()),
         }
     }
 }

@@ -63,3 +63,82 @@ fn assert_non_sensitive_paths_follow_rules(rules: &PermissionSet) {
         PermissionAction::Allow
     );
 }
+
+// ============================================================================
+// Layer 1: Approval timeout and cancellation tests
+// ============================================================================
+
+use crate::emit_approval_sink::EmitApprovalSink;
+use runie_core::actors::permission::RactorPermissionActor;
+use runie_core::bus::EventBus;
+use runie_core::event::Event;
+use runie_core::permissions::ApprovalSink;
+use std::time::Duration;
+use tokio_util::sync::CancellationToken;
+
+/// Layer 1: CancellationToken cancels pending approval and returns Deny.
+#[tokio::test]
+async fn approval_cancel_token_returns_deny() {
+    let bus = EventBus::<Event>::new(16);
+    let (perm_handle, _, _) = RactorPermissionActor::spawn(bus.clone()).await;
+
+    // Use a short timeout (100ms) to keep the test fast.
+    let sink = EmitApprovalSink::with_cancel(
+        perm_handle,
+        60, // timeout (not relevant when cancelled)
+        CancellationToken::new(),
+    );
+
+    // Cancel the token before calling ask().
+    sink.cancel_pending();
+
+    let result = sink.ask("bash", &serde_json::json!({})).await;
+    assert_eq!(result, PermissionAction::Deny, "Cancelled approval should return Deny");
+}
+
+/// Layer 1: Timeout returns Deny even without explicit cancellation.
+#[tokio::test]
+async fn approval_timeout_returns_deny() {
+    let bus = EventBus::<Event>::new(16);
+    let (perm_handle, _, _) = RactorPermissionActor::spawn(bus.clone()).await;
+
+    // Use a very short timeout (50ms) so the test completes quickly.
+    let sink = EmitApprovalSink::with_cancel(perm_handle, 0, CancellationToken::new());
+
+    let start = std::time::Instant::now();
+    let result = sink.ask("bash", &serde_json::json!({})).await;
+    let elapsed = start.elapsed();
+
+    assert_eq!(result, PermissionAction::Deny, "Timed-out approval should return Deny");
+    // Should have waited approximately 0ms (timeout = 0).
+    assert!(elapsed < Duration::from_millis(500),
+        "Should not wait for real permission: elapsed={elapsed:?}");
+}
+
+/// Layer 1: Cancelling the token mid-ask returns Deny quickly.
+#[tokio::test]
+async fn approval_cancelled_during_ask_returns_deny_quickly() {
+    let bus = EventBus::<Event>::new(16);
+    let (perm_handle, _, _) = RactorPermissionActor::spawn(bus.clone()).await;
+
+    let cancel_token = CancellationToken::new();
+
+    // Spawn ask in background.
+    let handle = tokio::spawn({
+        let perm = perm_handle.clone();
+        let cancel = cancel_token.clone();
+        async move {
+            let sink = EmitApprovalSink::with_cancel(perm, 60, cancel);
+            sink.ask("bash", &serde_json::json!({})).await
+        }
+    });
+
+    // Give the ask() call time to start and register the request.
+    tokio::time::sleep(Duration::from_millis(10)).await;
+
+    // Cancel while ask() is waiting.
+    cancel_token.cancel();
+
+    let result = handle.await.expect("task should complete");
+    assert_eq!(result, PermissionAction::Deny, "Cancelled mid-ask should return Deny");
+}

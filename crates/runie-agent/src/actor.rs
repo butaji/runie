@@ -8,6 +8,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use ractor::async_trait;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
+use tokio_util::sync::CancellationToken;
 
 use runie_core::actors::permission::RactorPermissionHandle;
 use runie_core::actors::provider::RactorProviderHandle;
@@ -94,6 +95,7 @@ impl RactorAgentActor {
     async fn run_turn(&self, state: &mut AgentActorState, command: &AgentCommand) {
         let provider = state.provider_handle.clone();
         let permission = state.permission_handle.clone();
+        let bus = state.bus.clone();
 
         let (provider_key, model) = if runie_core::provider::is_mock_enabled() {
             ("mock".to_owned(), "echo".to_owned())
@@ -110,10 +112,40 @@ impl RactorAgentActor {
         };
 
         let emit = Self::create_emit_closure(state);
-        let gate = Self::create_permission_gate(permission);
 
-        if let Err(e) = run_agent_turn(&built, command, emit, 5, gate).await {
-            Self::emit_error_and_done(state, &command.id, format!("Agent error: {e}"));
+        // Shared cancellation token: cancelling it aborts all pending approval requests.
+        let cancel_token = CancellationToken::new();
+        let cancel_token_gate = cancel_token.clone();
+        let cancel_token_abort = cancel_token.clone();
+
+        let gate =
+            Self::create_permission_gate_with_cancel(permission.clone(), cancel_token_gate);
+        let gate_for_abort = gate.clone();
+
+        // Subscribe to TurnAborted so we can cancel pending permissions.
+        let mut sub = bus.subscribe();
+
+        let turn = run_agent_turn(&built, command, emit, 5, gate.clone());
+        tokio::pin!(turn);
+
+        tokio::select! {
+            result = &mut turn => {
+                if let Err(e) = result {
+                    Self::emit_error_and_done(state, &command.id, format!("Agent error: {e}"));
+                }
+            }
+            // AbortTurn was received — cancel pending permissions and stop.
+            _ = async {
+                while let Ok(evt) = sub.recv().await {
+                    if matches!(evt, Event::TurnAborted) {
+                        break;
+                    }
+                }
+            } => {
+                // Cancel pending permission request via the cancellation token.
+                cancel_token_abort.cancel();
+                gate_for_abort.cancel_pending();
+            }
         }
     }
 
@@ -126,7 +158,10 @@ impl RactorAgentActor {
         }))
     }
 
-    fn create_permission_gate(permission_handle: RactorPermissionHandle) -> PermissionGate {
+    fn create_permission_gate_with_cancel(
+        permission_handle: RactorPermissionHandle,
+        abort_tx: tokio_util::sync::CancellationToken,
+    ) -> PermissionGate {
         let permissions = PermissionManager::default().with_policies(vec![
             Box::new(DefaultToolApprove::new()),
             Box::new(GitTrackedWriteApprove::new()),
@@ -134,7 +169,11 @@ impl RactorAgentActor {
         ]);
         PermissionGate::new(
             permissions,
-            Arc::new(EmitApprovalSink::new(permission_handle)),
+            Arc::new(EmitApprovalSink::with_cancel(
+                permission_handle,
+                60,
+                abort_tx,
+            )),
         )
     }
 
