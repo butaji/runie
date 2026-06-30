@@ -12,78 +12,8 @@ use std::collections::VecDeque;
 use crate::model::QueuedMessage;
 use crate::streaming_buffer::StreamingBuffer;
 
-/// Rolling window for speed calculation.
-#[derive(Clone)]
-pub struct SpeedWindow {
-    events: VecDeque<(std::time::Instant, usize)>,
-    window_tokens: usize,
-}
+pub use super::speed_window::SpeedWindow;
 
-impl Default for SpeedWindow {
-    fn default() -> Self {
-        Self::new(1000)
-    }
-}
-
-impl SpeedWindow {
-    pub fn new(window_tokens: usize) -> Self {
-        Self {
-            events: VecDeque::new(),
-            window_tokens,
-        }
-    }
-
-    pub fn record(&mut self, token_count: usize) {
-        let now = std::time::Instant::now();
-        self.events.push_back((now, token_count));
-        self.evict_old();
-    }
-
-    fn evict_old(&mut self) {
-        if self.events.len() <= 1 {
-            return;
-        }
-        let Some((_, latest)) = self.events.back() else {
-            return;
-        };
-        let cutoff = latest.saturating_sub(self.window_tokens);
-        while self.events.len() > 1 {
-            if let Some((_, count)) = self.events.front() {
-                if *count < cutoff {
-                    self.events.pop_front();
-                } else {
-                    break;
-                }
-            } else {
-                break;
-            }
-        }
-    }
-
-    pub fn speed(&self) -> f64 {
-        if self.events.len() < 2 {
-            return 0.0;
-        }
-        let (start, start_tok) = self.events.front().unwrap();
-        let (end, end_tok) = self.events.back().unwrap();
-        if start_tok == end_tok {
-            return 0.0;
-        }
-        let elapsed = end.duration_since(*start).as_secs_f64();
-        if elapsed < 0.001 {
-            return 0.0;
-        }
-        (end_tok - start_tok) as f64 / elapsed
-    }
-
-    pub fn clear(&mut self) {
-        self.events.clear();
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.events.is_empty()
-    }
-}
 
 /// Authoritative turn state owned by TurnActor.
 #[derive(Clone, Default)]

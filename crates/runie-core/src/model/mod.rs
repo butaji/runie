@@ -6,7 +6,8 @@ pub use crate::message::{now, ChatMessage, Role};
 pub use crate::model::state::types::ThinkingLevel;
 pub use crate::model::state::AppState;
 // Re-export state types as pub for external crates.
-pub use crate::model::state::agent::{AgentState, SpeedWindow};
+pub use crate::actors::turn::SpeedWindow;
+pub use crate::model::state::agent::AgentState;
 pub use crate::model::state::input::InputState;
 pub use crate::model::state::session::{CompletionState, ConfigState, SessionState};
 pub use crate::model::state::types::DeliveryMode;
