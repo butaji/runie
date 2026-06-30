@@ -169,7 +169,7 @@ impl RactorProviderActor {
             }
         }
 
-        let (config_h, _, _) = RactorConfigActor::spawn_default(bus.clone()).await;
+        let (config_h, _, _) = RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
         Self::spawn(bus, config_h, Arc::new(TestFactory))
             .await
             .unwrap()
@@ -349,7 +349,7 @@ mod tests {
     #[tokio::test]
     async fn ractor_provider_actor_spawns() {
         let bus = EventBus::<Event>::new(16);
-        let ( config_handle , _cell, _join ) = RactorConfigActor::spawn_default(bus.clone()).await;
+        let ( config_handle , _cell, _join ) = RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
         let factory = Arc::new(MockFactory);
         let (handle, _cell, _) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
             .await
@@ -360,7 +360,7 @@ mod tests {
     #[tokio::test]
     async fn ractor_provider_handle_build() {
         let bus = EventBus::<Event>::new(16);
-        let ( config_handle , _cell, _join ) = RactorConfigActor::spawn_default(bus.clone()).await;
+        let ( config_handle , _cell, _join ) = RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
         let factory = Arc::new(MockFactory);
 
         let (handle, _cell, _) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
@@ -376,7 +376,7 @@ mod tests {
     #[tokio::test]
     async fn ractor_provider_handle_validate_key() {
         let bus = EventBus::<Event>::new(16);
-        let ( config_handle , _cell, _join ) = RactorConfigActor::spawn_default(bus.clone()).await;
+        let ( config_handle , _cell, _join ) = RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
         let factory = Arc::new(MockFactory);
 
         let (handle, _cell, _) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
@@ -397,7 +397,7 @@ mod tests {
 
         let bus = EventBus::<Event>::new(16);
         let (config_handle, _cell, _join) =
-            RactorConfigActor::spawn_default(bus.clone()).await;
+            RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
 
         // Factory that delays validate_key by 100ms to simulate network latency.
         struct SlowFactory;

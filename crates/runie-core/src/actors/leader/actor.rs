@@ -142,15 +142,15 @@ impl Leader {
         agent_factory: std::sync::Arc<dyn AgentActorFactory<SpawnFuture = AgentSpawnFuture>>,
     ) -> anyhow::Result<super::SpawnedHandles> {
         let (config_h, config_cell, config_join) =
-            RactorConfigActor::spawn_default(bus.clone()).await;
+            RactorConfigActor::spawn_default(bus.clone()).await?;
         let (provider_h, provider_cell, provider_join) =
             RactorProviderActor::spawn(bus.clone(), config_h.clone(), provider_factory).await?;
         let (io_h, io_cell, io_join) = RactorIoActor::spawn(bus.clone()).await?;
         let (session_h, session_cell, session_join) = RactorSessionActor::spawn(bus.clone()).await?;
         let (permission_h, permission_cell, permission_join) =
-            RactorPermissionActor::spawn(bus.clone()).await;
-        let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
-        let (input_h, input_cell, input_join) = InputActor::spawn(bus.clone()).await;
+            RactorPermissionActor::spawn(bus.clone()).await?;
+        let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await?;
+        let (input_h, input_cell, input_join) = InputActor::spawn(bus.clone()).await?;
         let (fff_h, fff_cell, fff_join) = RactorFffIndexerActor::spawn(
             config.project_root.clone(),
             config.data_dir.clone(),

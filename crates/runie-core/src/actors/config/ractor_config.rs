@@ -36,24 +36,26 @@ impl RactorConfigActor {
     /// The actor loads layered config (global + project) on startup.
     /// - `global_path`: Global config path (~/.runie/config.toml)
     /// - `project_path`: Optional project config path (.runie/config.toml)
+    ///
+    /// Returns a `Result` to allow callers to handle spawn failures gracefully.
     pub async fn spawn(
         bus: EventBus<Event>,
         global_path: Option<PathBuf>,
         project_path: Option<PathBuf>,
-    ) -> (RactorConfigHandle, ractor::ActorCell, tokio::task::JoinHandle<()>) {
+    ) -> anyhow::Result<(RactorConfigHandle, ractor::ActorCell, tokio::task::JoinHandle<()>)> {
         let path = global_path.unwrap_or_else(crate::config::config_path);
         let actor = Self;
         let (handle, join, cell) =
             spawn_ractor(None, actor, (bus, path.clone(), project_path.clone()))
                 .await
-                .unwrap();
-        (RactorConfigHandle::new(handle), cell, join)
+                .map_err(|e| anyhow::anyhow!("RactorConfigActor spawn failed: {}", e))?;
+        Ok((RactorConfigHandle::new(handle), cell, join))
     }
 
     /// Spawn with default paths (global ~/.runie/config.toml, project ./.runie/config.toml).
     pub async fn spawn_default(
         bus: EventBus<Event>,
-    ) -> (RactorConfigHandle, ractor::ActorCell, tokio::task::JoinHandle<()>) {
+    ) -> anyhow::Result<(RactorConfigHandle, ractor::ActorCell, tokio::task::JoinHandle<()>)> {
         Self::spawn(bus, None, None).await
     }
 }
@@ -125,7 +127,7 @@ mod tests {
         // Subscribe BEFORE spawning so we don't miss pre_start's ConfigLoaded
         let mut sub = bus.subscribe();
         let (_handle, _cell, _) =
-            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
+            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await.unwrap();
 
         // Wait for ConfigLoaded with timeout to prevent hanging forever
         let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
@@ -150,7 +152,7 @@ mod tests {
         let temp_path = std::env::temp_dir().join("runie_test_config2.toml");
         let mut sub = bus.subscribe();
         let (handle, _cell, _) =
-            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
+            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await.unwrap();
 
         // Wait for ConfigLoaded to ensure actor is ready
         let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
@@ -199,7 +201,8 @@ mod tests {
             Some(global_path.clone()),
             Some(project_path.clone()),
         )
-        .await;
+        .await
+        .unwrap();
 
         // Wait for ConfigLoaded to confirm actor has loaded the layered config
         let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
@@ -234,7 +237,7 @@ mod tests {
         // Subscribe BEFORE spawning so we don't miss pre_start's ConfigLoaded
         let mut sub = bus.subscribe();
         let (handle, _cell, _) =
-            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
+            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await.unwrap();
 
         // Wait for ConfigLoaded to confirm actor is ready
         let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
@@ -306,7 +309,7 @@ mod tests {
 
         let mut sub = bus.subscribe();
         let (_handle, _cell, _) =
-            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
+            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await.unwrap();
 
         // Collect events for up to 3 seconds
         let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(3);
@@ -354,7 +357,7 @@ mod tests {
 
         let mut sub = bus.subscribe();
         let (_handle, _cell, _) =
-            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await;
+            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None).await.unwrap();
 
         // Collect events for up to 2 seconds
         let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);

@@ -353,15 +353,20 @@ impl Actor for RactorTurnActor {
 
 impl RactorTurnActor {
     /// Spawn a `RactorTurnActor` on the given event bus.
+    ///
+    /// Returns a `Result` to allow callers to handle spawn failures gracefully.
     pub async fn spawn(
         bus: EventBus<Event>,
-    ) -> (
+    ) -> anyhow::Result<(
         RactorTurnHandle,
         ractor::ActorCell,
         tokio::task::JoinHandle<()>,
-    ) {
-        let (handle, join, cell) = spawn_ractor(None, Self, bus).await.unwrap();
-        (RactorTurnHandle::new(handle), cell, join)
+    )> {
+        let (handle, join, cell) =
+            spawn_ractor(None, Self, bus)
+                .await
+                .map_err(|e| anyhow::anyhow!("RactorTurnActor spawn failed: {}", e))?;
+        Ok((RactorTurnHandle::new(handle), cell, join))
     }
 }
 
@@ -372,7 +377,7 @@ mod tests {
     #[tokio::test]
     async fn run_if_queued_starts_turn() {
         let bus = EventBus::<Event>::new(16);
-        let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await;
+        let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
         let mut sub = bus.subscribe();
         handle
             .send(TurnMsg::SubmitUserMessage {
@@ -394,7 +399,7 @@ mod tests {
     #[tokio::test]
     async fn abort_turn_clears_state() {
         let bus = EventBus::<Event>::new(16);
-        let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await;
+        let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
         let mut sub = bus.subscribe();
         handle
             .send(TurnMsg::SubmitUserMessage {
@@ -417,7 +422,7 @@ mod tests {
     #[tokio::test]
     async fn error_emits_turned_errored() {
         let bus = EventBus::<Event>::new(16);
-        let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await;
+        let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
         let mut sub = bus.subscribe();
         handle
             .send(TurnMsg::Error {

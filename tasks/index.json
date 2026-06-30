@@ -522,7 +522,7 @@
   {
     "file": "propagate-actor-spawn-errors-instead-of-panicking.md",
     "title": "Propagate actor spawn errors instead of panicking",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "reconnect-tui-agent-actor-channel.md",

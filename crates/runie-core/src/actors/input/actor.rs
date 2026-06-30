@@ -76,12 +76,17 @@ impl Actor for InputActor {
 
 impl InputActor {
     /// Spawn an `InputActor` on the given event bus using ractor.
+    ///
+    /// Returns a `Result` to allow callers to handle spawn failures gracefully.
     pub async fn spawn(
         bus: EventBus<Event>,
-    ) -> (RactorInputHandle, ractor::ActorCell, tokio::task::JoinHandle<()>) {
+    ) -> anyhow::Result<(RactorInputHandle, ractor::ActorCell, tokio::task::JoinHandle<()>)> {
         let actor = Self;
-        let (handle, join, cell) = spawn_ractor(None, actor, bus).await.unwrap();
-        (handle, cell, join)
+        let (handle, join, cell) =
+            spawn_ractor(None, actor, bus)
+                .await
+                .map_err(|e| anyhow::anyhow!("InputActor spawn failed: {}", e))?;
+        Ok((handle, cell, join))
     }
 }
 
@@ -115,7 +120,7 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let mut sub = bus.subscribe();
 
-        let (handle, _cell, _) = InputActor::spawn(bus.clone()).await;
+        let (handle, _cell, _) = InputActor::spawn(bus.clone()).await.unwrap();
         handle.send(InputMsg::InsertChar('h')).await;
 
         // Wait for first InputChanged event
@@ -142,7 +147,7 @@ mod tests {
     #[tokio::test]
     async fn history_prev_cycles() {
         let bus = EventBus::<Event>::new(16);
-        let (handle, _cell, _) = InputActor::spawn(bus).await;
+        let (handle, _cell, _) = InputActor::spawn(bus).await.unwrap();
 
         handle
             .send(InputMsg::HistoryLoaded {
@@ -156,7 +161,7 @@ mod tests {
     #[tokio::test]
     async fn clear_resets_everything() {
         let bus = EventBus::<Event>::new(16);
-        let (handle, _cell, _) = InputActor::spawn(bus).await;
+        let (handle, _cell, _) = InputActor::spawn(bus).await.unwrap();
 
         handle.send(InputMsg::InsertChar('t')).await;
         handle.send(InputMsg::InsertChar('e')).await;

@@ -235,11 +235,16 @@ impl Actor for RactorPermissionActor {
 
 impl RactorPermissionActor {
     /// Spawn a `RactorPermissionActor` on the given event bus.
+    ///
+    /// Returns a `Result` to allow callers to handle spawn failures gracefully.
     pub async fn spawn(
         bus: EventBus<Event>,
-    ) -> (RactorPermissionHandle, ractor::ActorCell, tokio::task::JoinHandle<()>) {
-        let (handle, join, cell) = spawn_ractor(None, Self, bus).await.unwrap();
-        (RactorPermissionHandle::new(handle), cell, join)
+    ) -> anyhow::Result<(RactorPermissionHandle, ractor::ActorCell, tokio::task::JoinHandle<()>)> {
+        let (handle, join, cell) =
+            spawn_ractor(None, Self, bus)
+                .await
+                .map_err(|e| anyhow::anyhow!("RactorPermissionActor spawn failed: {}", e))?;
+        Ok((RactorPermissionHandle::new(handle), cell, join))
     }
 }
 
@@ -275,7 +280,7 @@ mod tests {
         // Verify that AskPermission does NOT immediately resolve.
         // The receiver should still be pending until ResolvePermission is called.
         let bus = EventBus::<Event>::new(16);
-        let ( handle , _cell, _join ) = RactorPermissionActor::spawn(bus.clone()).await;
+        let ( handle , _cell, _join ) = RactorPermissionActor::spawn(bus.clone()).await.unwrap();
 
         let mut rx = handle
             .ask_permission("req-await-1".into(), "bash".into(), serde_json::json!({}))
@@ -295,7 +300,7 @@ mod tests {
     #[tokio::test]
     async fn permission_actor_resolves_with_allow() {
         let bus = EventBus::<Event>::new(16);
-        let ( handle , _cell, _join ) = RactorPermissionActor::spawn(bus.clone()).await;
+        let ( handle , _cell, _join ) = RactorPermissionActor::spawn(bus.clone()).await.unwrap();
 
         let rx = handle
             .ask_permission("req-allow-1".into(), "bash".into(), serde_json::json!({}))
@@ -315,7 +320,7 @@ mod tests {
     #[tokio::test]
     async fn permission_actor_resolves_with_deny() {
         let bus = EventBus::<Event>::new(16);
-        let ( handle , _cell, _join ) = RactorPermissionActor::spawn(bus.clone()).await;
+        let ( handle , _cell, _join ) = RactorPermissionActor::spawn(bus.clone()).await.unwrap();
 
         let rx = handle
             .ask_permission("req-deny-1".into(), "bash".into(), serde_json::json!({}))
@@ -337,7 +342,7 @@ mod tests {
         // Layer 2: Event Handling - verify events flow correctly
         let bus = EventBus::<Event>::new(16);
         let mut sub = bus.subscribe();
-        let ( handle , _cell, _join ) = RactorPermissionActor::spawn(bus.clone()).await;
+        let ( handle , _cell, _join ) = RactorPermissionActor::spawn(bus.clone()).await.unwrap();
 
         // Ask permission
         let _rx = handle
@@ -368,7 +373,7 @@ mod tests {
     async fn ask_permission_stores_request() {
         // Same as permission_actor_awaits_resolution
         let bus = EventBus::<Event>::new(16);
-        let ( handle , _cell, _join ) = RactorPermissionActor::spawn(bus.clone()).await;
+        let ( handle , _cell, _join ) = RactorPermissionActor::spawn(bus.clone()).await.unwrap();
         let mut rx = handle
             .ask_permission("req-legacy-1".into(), "bash".into(), serde_json::json!({}))
             .await;
@@ -384,7 +389,7 @@ mod tests {
     async fn resolve_permission_clears_request() {
         // Same as permission_actor_resolves_with_allow
         let bus = EventBus::<Event>::new(16);
-        let ( handle , _cell, _join ) = RactorPermissionActor::spawn(bus.clone()).await;
+        let ( handle , _cell, _join ) = RactorPermissionActor::spawn(bus.clone()).await.unwrap();
         let rx = handle
             .ask_permission("req-legacy-2".into(), "bash".into(), serde_json::json!({}))
             .await;

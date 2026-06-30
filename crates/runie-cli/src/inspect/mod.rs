@@ -461,7 +461,8 @@ pub fn run(json: bool) -> anyhow::Result<()> {
         let (config_handle, _cell, _join) = runie_core::actors::RactorConfigActor::spawn_default(
             runie_core::bus::EventBus::new(16),
         )
-        .await;
+        .await
+        .unwrap();
 
         let report = InspectReport::build_with_config_actor(&config_handle).await;
         if json {

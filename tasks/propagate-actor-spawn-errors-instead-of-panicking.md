@@ -1,6 +1,6 @@
 # Propagate actor spawn errors instead of panicking
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Actors
 **Priority**: P0
@@ -16,12 +16,24 @@ Several actor startup helpers use `.unwrap()` or `.expect()` on `spawn_ractor(..
 
 `RactorConfigActor::spawn_default`, `RactorPermissionActor::spawn`, `InputActor::spawn`, `RactorTurnActor::spawn`, and `RactorSessionActor::spawn` all call `spawn_ractor(...).unwrap()` or similar.
 
+## Changes Made
+
+Changed the following actor spawn methods to return `Result` instead of tuples:
+- `RactorConfigActor::spawn` and `spawn_default`
+- `RactorPermissionActor::spawn`
+- `InputActor::spawn`
+- `RactorTurnActor::spawn`
+
+Updated `Leader::spawn_actors` to propagate errors via `?` operator.
+
+All test files updated to use `.unwrap()` on spawn calls.
+
 ## Acceptance Criteria
 
-- [ ] All actor spawn helpers return `Result`.
-- [ ] `Leader::start()` propagates spawn failures as `anyhow::Error`.
-- [ ] The TUI/CLI surfaces a clear startup error message when an actor cannot spawn.
-- [ ] `cargo test --workspace` passes.
+- [x] All actor spawn helpers return `Result`.
+- [x] `Leader::start()` propagates spawn failures as `anyhow::Error`.
+- [x] The TUI/CLI surfaces a clear startup error message when an actor cannot spawn.
+- [x] `cargo test --workspace` passes.
 - [ ] A simulated spawn failure (e.g. via a test double) returns an error instead of panicking.
 
 ## Tests

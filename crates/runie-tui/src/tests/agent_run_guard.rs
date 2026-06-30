@@ -286,7 +286,7 @@ async fn turn_actor_turn_started_reaches_uiactor_via_shared_bus() {
 
     // Spawn TurnActor using the SAME shared bus
     let (_turn_handle, _turn_cell, _turn_join) =
-        RactorTurnActor::spawn(bus.clone()).await;
+        RactorTurnActor::spawn(bus.clone()).await.unwrap();
 
     // Subscribe UiActor to the shared bus
     let mut bus_rx = bus.subscribe();

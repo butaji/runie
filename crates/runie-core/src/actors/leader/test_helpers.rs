@@ -71,7 +71,7 @@ pub async fn test_leader_handle() -> LeaderHandle {
 
     let bus = EventBus::<CoreEvent>::new(16);
     let (config_h, config_cell, config_join) =
-        RactorConfigActor::spawn_default(bus.clone()).await;
+        RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
     let factory: Arc<dyn ProviderFactory> = Arc::new(TestProviderFactory);
     let (provider_h, provider_cell, provider_join) =
         RactorProviderActor::spawn(bus.clone(), config_h.clone(), factory)
@@ -82,9 +82,9 @@ pub async fn test_leader_handle() -> LeaderHandle {
         .await
         .expect("session spawn");
     let (permission_h, permission_cell, permission_join) =
-        RactorPermissionActor::spawn(bus.clone()).await;
-    let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await;
-    let (input_h, input_cell, input_join) = InputActor::spawn(bus.clone()).await;
+        RactorPermissionActor::spawn(bus.clone()).await.unwrap();
+    let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
+    let (input_h, input_cell, input_join) = InputActor::spawn(bus.clone()).await.unwrap();
     let (fff_h, fff_cell, fff_join) = RactorFffIndexerActor::spawn(
         std::env::current_dir().unwrap_or_default(),
         std::env::temp_dir(),
