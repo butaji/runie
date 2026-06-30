@@ -186,7 +186,6 @@ async fn spawn_background_tasks(
     let mut ui_actor = spawn_ui_actor(
         state,
         agent_handle,
-        leader_handle.turn.clone(),
         kb_tx,
         bus.clone(),
         shutdown_tx,
@@ -264,7 +263,6 @@ fn render_loop(
 fn spawn_ui_actor(
     state: AppState,
     agent_handle: LeaderAgentActorHandle,
-    turn_handle: runie_core::actors::RactorTurnHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: oneshot::Sender<()>,
@@ -273,7 +271,6 @@ fn spawn_ui_actor(
     UiActor::with_agent_handle(
         state,
         AgentHandleBox::Leader(agent_handle),
-        turn_handle,
         kb_tx,
         bus,
         shutdown_tx,

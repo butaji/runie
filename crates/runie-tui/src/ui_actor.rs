@@ -29,7 +29,6 @@ pub struct UiActor {
     render_tx: tokio::sync::watch::Sender<Snapshot>,
     render_rx: Option<tokio::sync::watch::Receiver<Snapshot>>,
     agent_handle: AgentHandleBox,
-    turn_handle: runie_core::actors::RactorTurnHandle,
     kb_tx: tokio::sync::watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: Option<tokio::sync::oneshot::Sender<()>>,
@@ -53,7 +52,6 @@ impl UiActor {
     pub fn new(
         state: AppState,
         agent_handle: AgentActorHandle,
-        turn_handle: runie_core::actors::RactorTurnHandle,
         kb_tx: tokio::sync::watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
         shutdown_tx: tokio::sync::oneshot::Sender<()>,
@@ -62,7 +60,6 @@ impl UiActor {
         Self::with_agent_handle(
             state,
             AgentHandleBox::Actor(agent_handle),
-            turn_handle,
             kb_tx,
             bus,
             shutdown_tx,
@@ -77,7 +74,6 @@ impl UiActor {
     pub fn with_agent_handle(
         mut state: AppState,
         agent_handle: AgentHandleBox,
-        turn_handle: runie_core::actors::RactorTurnHandle,
         kb_tx: tokio::sync::watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
         shutdown_tx: tokio::sync::oneshot::Sender<()>,
@@ -91,7 +87,6 @@ impl UiActor {
             render_tx,
             render_rx: Some(render_rx),
             agent_handle,
-            turn_handle,
             kb_tx,
             bus,
             shutdown_tx: Some(shutdown_tx),
@@ -181,10 +176,7 @@ impl UiActor {
     /// Handle a single event without publishing. Returns `true` when the actor
     /// should shut down.
     async fn handle_event_inner(&mut self, evt: Event, effect_tx: tokio::sync::mpsc::Sender<Event>) -> bool {
-        let was_submit = matches!(evt, Event::Submit);
-        let was_followup = matches!(evt, Event::FollowUp);
         let was_config_loaded = matches!(&evt, Event::ConfigLoaded { .. });
-        let was_agent_done = matches!(&evt, Event::Done { .. } | Event::Error { .. });
 
         self.handle_input_event(&evt).await;
 
@@ -197,9 +189,6 @@ impl UiActor {
         }
         if was_config_loaded {
             let _ = self.kb_tx.send(self.state.config().keybindings().clone());
-        }
-        if was_submit || was_followup || was_agent_done {
-            self.agent_handle.run_if_queued(&self.turn_handle).await;
         }
         if let Event::TurnStarted { request_id, content, .. } = &evt {
             let provider = self.state.config().current_provider.clone();

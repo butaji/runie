@@ -170,6 +170,11 @@
     "status": "done"
   },
   {
+    "file": "fix-cli-headless-native-tool-permission-denied-loop.md",
+    "title": "Fix CLI headless native tool loops after permission denied",
+    "status": "todo"
+  },
+  {
     "file": "fix-dev-automation-recipes.md",
     "title": "Fix dev automation recipes",
     "status": "done"
@@ -195,8 +200,68 @@
     "status": "done"
   },
   {
+    "file": "fix-slash-command-model-provider-report-no-providers.md",
+    "title": "Fix /model and /provider slash commands report no providers configured",
+    "status": "todo"
+  },
+  {
+    "file": "fix-slash-command-session-info-naming.md",
+    "title": "Fix /session_info slash command naming mismatch",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-at-file-picker-shows-no-files.md",
+    "title": "Fix TUI @ file picker shows \"No files found\"",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-expand-collapse-no-visible-effect.md",
+    "title": "Fix TUI Ctrl+o expand/collapse has no visible effect",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-form-submit-key-not-working.md",
+    "title": "Fix TUI form submit key not working for /save and /compact",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-history-shows-no-history-after-message.md",
+    "title": "Fix TUI /history shows \"No history\" after a message is sent",
+    "status": "todo"
+  },
+  {
     "file": "fix-tui-mock-simple-text-response-repetition.md",
     "title": "Fix TUI mock simple-text response repetition",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-multi-turn-follow-up-stuck-behind-active-turn.md",
+    "title": "Fix TUI multi-turn follow-up stuck behind active turn",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-new-session-does-not-abort-active-turn.md",
+    "title": "Fix TUI /new session does not abort an active turn",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-permission-dialog-key-input-routed-to-input.md",
+    "title": "Fix TUI permission dialog keys routed to input box",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-quit-shortcuts-ignored-during-active-turn.md",
+    "title": "Fix TUI quit shortcuts ignored during an active turn",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-slash-command-palette-stays-open-after-execution.md",
+    "title": "Fix TUI slash command palette stays open after execution",
+    "status": "todo"
+  },
+  {
+    "file": "fix-tui-turn-complete-leaves-working-status-and-queued.md",
+    "title": "Fix TUI turn-complete leaves Working status and queued request",
     "status": "todo"
   },
   {
@@ -237,7 +302,7 @@
   {
     "file": "live-tui-smoke-test-real-minimax.md",
     "title": "Live TUI smoke test with real MiniMax provider",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "migrate-production-actors-to-ractor.md",

@@ -4,15 +4,27 @@
 
 **Goal:** Resolve the unify/simplify/reduce findings from the 2026-06-28 architecture & code review so the workspace builds cleanly, dead/duplicate code is removed, and the actual crate structure matches the documented `IO | Domain (pure) | UI (pure/MVU)` layering. A third five-round review added a crate-replacement angle. A fourth five-round review dug deeper into provider/model/catalog/cache, session/store/index/replay, agent turn/subagent/tool search, TUI capabilities/diff/message/markdown, and DSL/view/dialog/commands. A fifth five-round review focused on build/CI/test harness, error handling/tracing/telemetry, protocol/IPC leftovers, declarative loaders/DSLs, and macros/codegen. Wherever a custom helper mirrors a standard crate, the plan is to use the crate.
 
-**Architecture:** The second-pass review showed that several "todo" tasks were already completed on disk (dialog module repaired, empty facade crates deleted, dead provider code removed, IPC layers gone). Those tasks have been archived. A third review found that many small `runie-core` helpers (`glob`, `fuzzy`, `path`, keybinding parsing, frontmatter scanning, tool-marker stripping) can be replaced by `pulldown-cmark`, `strum`, `shellexpand`, `ignore`, and other standard crates. A fourth review found additional crate replacements in provider/config/auth (`backon`, `keyring`, `jsonschema`, `dotenvy`), CLI (`clap`), TUI widgets (`tui-textarea`, `tui-input`, `ansi_colours`), and tooling (`shell-words`, Clippy/CI). A fifth review found broken CI feature flags, dead MCP feature flag, dependency hygiene issues, library-wide `anyhow` usage without typed errors, missing `tracing` subscriber, custom telemetry with no backend, broken ACP plumbing, a still-existing `runie-protocol` crate, and many macros/small parsers that should use `strum`. **As of 2026-06-29, all 108 cleanup tasks are `done` and the workspace passes `cargo check --workspace` and `cargo test --workspace` cleanly.** The remaining 3 tasks are marked `wontfix` (tool-marker stripping intentionally string-based, pre-release `notify` dependency issue, `palette` adoption deferred).
+**Architecture:** The second-pass review showed that several "todo" tasks were already completed on disk (dialog module repaired, empty facade crates deleted, dead provider code removed, IPC layers gone). Those tasks have been archived. A third review found that many small `runie-core` helpers (`glob`, `fuzzy`, `path`, keybinding parsing, frontmatter scanning, tool-marker stripping) can be replaced by `pulldown-cmark`, `strum`, `shellexpand`, `ignore`, and other standard crates. A fourth review found additional crate replacements in provider/config/auth (`backon`, `keyring`, `jsonschema`, `dotenvy`), CLI (`clap`), TUI widgets (`tui-textarea`, `tui-input`, `ansi_colours`), and tooling (`shell-words`, Clippy/CI). A fifth review found broken CI feature flags, dead MCP feature flag, dependency hygiene issues, library-wide `anyhow` usage without typed errors, missing `tracing` subscriber, custom telemetry with no backend, broken ACP plumbing, a still-existing `runie-protocol` crate, and many macros/small parsers that should use `strum`. **As of 2026-06-29, all 108 cleanup tasks from the original architecture review are `done` and the workspace passes `cargo check --workspace` and `cargo test --workspace` cleanly.** The remaining 3 tasks are marked `wontfix` (tool-marker stripping intentionally string-based, pre-release `notify` dependency issue, `palette` adoption deferred). Live mock/MiniMax TUI testing on 2026-06-30 uncovered new bugs; those are tracked as 15 active `todo` tasks plus 1 `partial` task in `tasks/index.json`.
 
 **Tech Stack:** Rust, Tokio, Ratatui, ractor, reqwest, pulldown-cmark, strum, glob/globset, nucleo-matcher/sublime-fuzzy, shellexpand, etcetera, ignore, walkdir, tracing, backon, keyring, jsonschema, clap, dotenvy, shell-words, tui-textarea, tui-input, ansi_colours, notify.
 
 ---
 
-## Status: Complete
+## Status: Active bugs from live TUI/CLI testing
 
-All 108 cleanup tasks are `done` as of 2026-06-29. The workspace passes `cargo check --workspace` and `cargo test --workspace` cleanly. Remaining items:
+The original cleanup is complete: **108 `done`**, **3 `wontfix`**. Live mock-provider TUI/CLI testing on 2026-06-30 revealed regressions and wiring gaps that must be fixed before real MiniMax testing:
+
+- **15 `todo` tasks** — see `tasks/index.json` for details.
+- **1 `partial` task** — `live-tui-smoke-test-real-minimax.md` is blocked on a missing `MINIMAX_API_KEY`.
+
+The workspace still passes `cargo check --workspace` and `cargo test --workspace`, but the TUI is not yet usable end-to-end. The highest-priority fixes are:
+1. `fix-tui-mock-simple-text-response-repetition` — infinite `hello` echo loop.
+2. `fix-tui-turn-complete-leaves-working-status-and-queued` — turn completes but status stays `Working...`.
+3. `fix-cli-headless-native-tool-permission-denied-loop` — headless loops on denied tools.
+4. `fix-tui-permission-dialog-key-input-routed-to-input` — cannot answer permission dialogs.
+5. `fix-tui-form-submit-key-not-working` — `/save` form cannot be submitted.
+
+Remaining items:
 - **3 `wontfix` tasks**: tool-marker stripping (string-based by design), `fff-search` pre-release `notify` (deferred), `palette` color math adoption (deferred).
 
 See `tasks/index.json` for the full registry and `tasks/` for individual task files with acceptance-criteria evidence. The final closure, including which of the last 24 tasks were completed and which 3 are intentionally `wontfix`, is documented in [`2026-06-28-active-tasks-closure.md`](2026-06-28-active-tasks-closure.md).

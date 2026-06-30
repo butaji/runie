@@ -10,6 +10,63 @@ use runie_testing::mock_tool_skill;
 use runie_testing::{allow_all_gate, mock_provider, RecordingSkill};
 use std::sync::Arc;
 
+/// Layer 2: Verify a single-word "hello" produces exactly one ResponseDelta
+/// and the turn completes without repetition.
+///
+/// Regression test for the TUI mock echo-loop bug: UiActor was calling
+/// `run_if_queued` redundantly from the Done handler, causing the agent to be
+/// started twice per turn.
+#[tokio::test]
+async fn test_agent_loop_single_word_echo_completes_once() {
+    let _mock_guard = ensure_mock_provider().await;
+    let provider = mock_provider();
+    let cmd = AgentCommand {
+        content: "hello".to_string(),
+        id: "req.0".to_string(),
+        provider: "mock".to_string(),
+        model: "echo".to_string(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: false,
+        skills_context: String::new(),
+        system_prompt: String::new(),
+        truncation: crate::truncate::TruncationPolicy::default(),
+    };
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let events_clone = events.clone();
+    run_agent_turn(
+        &provider,
+        &cmd,
+        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
+        5,
+        allow_all_gate(),
+    )
+    .await
+    .unwrap();
+
+    let events = events.lock();
+    let deltas: Vec<_> = events
+        .iter()
+        .filter_map(|e| match e {
+            Event::ResponseDelta { content, .. } => Some(content.clone()),
+            _ => None,
+        })
+        .collect();
+    let done_count = events
+        .iter()
+        .filter(|e| matches!(e, Event::Done { .. }))
+        .count();
+
+    // Mock provider: "hello" splits to ["hello "] → exactly 1 delta.
+    assert_eq!(
+        deltas.len(),
+        1,
+        "single-word 'hello' should produce exactly 1 ResponseDelta, got {deltas:?}"
+    );
+    assert_eq!(deltas[0].as_str(), "hello ");
+    // Turn must complete exactly once.
+    assert_eq!(done_count, 1, "exactly one Done event expected");
+}
+
 #[tokio::test]
 async fn test_agent_loop_simple_response() {
     let _mock_guard = ensure_mock_provider().await;

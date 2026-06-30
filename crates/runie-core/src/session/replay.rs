@@ -349,4 +349,51 @@ mod tests {
         assert_eq!(loaded.session.messages.len(), 2);
         assert_eq!(loaded.config.current_provider, "anthropic");
     }
+
+    /// Layer 4: Verify that after a completed mock turn (simulating a real turn
+    /// that produced user + assistant messages), calling `/save` creates a session
+    /// JSONL file.
+    ///
+    /// Note: session persistence is triggered by `/save` (explicit command), NOT
+    /// by `TurnComplete`. Sessions are maintained in memory by `SessionActor` and
+    /// only written to disk via `/save` or `/export`. This is the correct design —
+    /// auto-saving on every turn would cause excessive disk writes.
+    #[test]
+    fn save_after_completed_turn_creates_session_file() {
+        let store = test_store();
+
+        // Simulate a completed mock turn: user message + assistant response
+        let mut state = AppState::default();
+        state.apply_user_message_submitted("req.0".into(), "hello".into());
+        state.set_thinking("req.0".into());
+        state.add_thought("req.0".into());
+        state.append_response("req.0".into(), "hello ".into());
+        state.complete_turn("req.0".into(), 0.5);
+
+        // Verify session has the expected messages
+        assert_eq!(state.session.messages.len(), 4); // user, thought, assistant, turn_complete
+
+        // Simulate `/save`: convert state to durable events and persist
+        let events = state_to_durable_events(&state);
+        store.append_batch("mock_turn_test", &events).expect("save should succeed");
+
+        // Verify session file was created
+        assert!(
+            store.exists("mock_turn_test"),
+            "session file should exist after save"
+        );
+
+        // Verify the session can be loaded back
+        let loaded_events = store
+            .load_events("mock_turn_test")
+            .expect("should load events");
+        assert!(!loaded_events.is_empty(), "loaded events should not be empty");
+
+        // Verify user message was persisted
+        assert!(loaded_events.iter().any(|e| matches!(
+            e,
+            DurableCoreEvent::MessageSent { role, content, .. }
+                if role == "user" && content == "hello"
+        )));
+    }
 }
