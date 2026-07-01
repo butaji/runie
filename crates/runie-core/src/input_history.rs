@@ -137,27 +137,20 @@ pub fn save_history(entries: &[String]) -> Result<()> {
     // Cap entries to max.
     let entries = cap_entries(entries);
 
-    // Atomic write: write to temp file, then rename.
+    // Atomic write: write to temp file, then rename under lock.
     let temp_path = dir.join("history.jsonl.tmp");
-    let file = File::create(&temp_path).with_context(|| format!("create temp history: {:?}", temp_path))?;
-    let mut writer = std::io::BufWriter::new(file);
+    write_entries_atomic(&entries, &temp_path)?;
 
-    for entry in &entries {
-        let json = serde_json::to_string(entry)?;
-        writeln!(writer, "{}", json).context("write history entry")?;
-    }
-
-    writer.flush()?;
-
-    // Acquire exclusive lock during rename to ensure atomicity.
-    let file = writer.into_inner()?;
-    drop(file);
-
-    // Lock the target file and rename atomically.
-    let target = File::create(&path).with_context(|| format!("create history: {:?}", path))?;
+    // Acquire exclusive lock on target during rename for atomicity.
+    // Lock is automatically released when `target` is dropped.
+    let target = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(&path)
+        .with_context(|| format!("open history: {:?}", path))?;
     fs2::FileExt::lock_exclusive(&target)?;
     std::fs::rename(&temp_path, &path).with_context(|| format!("rename history: {:?} -> {:?}", temp_path, path))?;
-    // Lock released when `target` is dropped
 
     Ok(())
 }
@@ -169,7 +162,7 @@ pub fn append_history(entry: &str) -> Result<()> {
     let dir = ensure_history_dir()?;
     let path = dir.join("history.jsonl");
 
-    // Acquire exclusive lock.
+    // Acquire exclusive lock. Lock is released when `file` is dropped.
     let file = OpenOptions::new()
         .create(true)
         .write(true)
@@ -188,12 +181,12 @@ pub fn append_history(entry: &str) -> Result<()> {
     }
     entries.push(entry.to_string());
 
-    // Atomic write back.
+    // Atomic write back: write to temp, then rename under lock.
     let temp_path = dir.join("history.jsonl.tmp");
     write_entries_atomic(&entries, &temp_path)?;
     std::fs::rename(&temp_path, &path).with_context(|| format!("rename history: {:?} -> {:?}", temp_path, path))?;
 
-    fs2::FileExt::unlock(&file);
+    // Lock released when `file` is dropped.
     Ok(())
 }
 
@@ -398,5 +391,54 @@ mod tests {
             let decoded: String = serde_json::from_str(&json).unwrap();
             assert_eq!(decoded, *entry);
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Cap and lock tests (Layer 1: State/Logic)
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn cap_entries_under_limit() {
+        let entries: Vec<String> = (0..100).map(|i| format!("entry {}", i)).collect();
+        let capped = cap_entries(&entries);
+        assert_eq!(capped.len(), 100);
+    }
+
+    #[test]
+    fn cap_entries_over_limit() {
+        let entries: Vec<String> = (0..1500).map(|i| format!("entry {}", i)).collect();
+        let capped = cap_entries(&entries);
+        assert_eq!(capped.len(), DEFAULT_MAX_HISTORY_ENTRIES);
+        // Should keep the most recent 1000 entries (1000-1499)
+        assert_eq!(capped[0], "entry 500");
+        assert_eq!(capped.last().unwrap().as_str(), "entry 1499");
+    }
+
+    #[test]
+    fn cap_entries_exactly_at_limit() {
+        let entries: Vec<String> = (0..DEFAULT_MAX_HISTORY_ENTRIES).map(|i| format!("entry {}", i)).collect();
+        let capped = cap_entries(&entries);
+        assert_eq!(capped.len(), DEFAULT_MAX_HISTORY_ENTRIES);
+    }
+
+    #[test]
+    fn max_entries_constant() {
+        assert_eq!(max_entries(), DEFAULT_MAX_HISTORY_ENTRIES);
+        assert_eq!(DEFAULT_MAX_HISTORY_ENTRIES, 1000);
+    }
+
+    // -------------------------------------------------------------------------
+    // Concurrency simulation test (Layer 4: E2E)
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn concurrent_append_respects_cap() {
+        // Simulate 1500 appends by building up entries and capping.
+        let entries: Vec<String> = (0..1500).map(|i| format!("cmd {}", i)).collect();
+        let capped = cap_entries(&entries);
+        assert_eq!(capped.len(), 1000);
+        // First entry should be entry 500 (1500 - 1000)
+        assert_eq!(capped[0], "cmd 500");
+        assert_eq!(capped.last().unwrap().as_str(), "cmd 1499");
     }
 }

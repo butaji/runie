@@ -82,7 +82,7 @@
   {
     "file": "cap-and-lock-input-history.md",
     "title": "Cap and lock input history",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-built-in-tool-names.md",
