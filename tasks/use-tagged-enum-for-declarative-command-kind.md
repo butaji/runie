@@ -14,10 +14,10 @@ Replace with `#[serde(tag = "type")]` enum `CommandKind { Handler { handler: Str
 
 ## Acceptance Criteria
 
-- [ ] Define tagged enum for command kind.
-- [ ] Preserve YAML format with aliases if needed.
-- [ ] Remove string dispatch and `Option` fields.
-- [ ] Tests pass.
+- [x] Define tagged enum for command kind.
+- [x] Preserve YAML format with aliases if needed.
+- [x] Remove string dispatch and `Option` fields.
+- [x] Tests pass.
 
 ## Design Impact
 

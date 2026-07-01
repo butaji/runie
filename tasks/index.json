@@ -1252,7 +1252,7 @@
   {
     "file": "unify-tool-call-accumulators-into-single-state-machine.md",
     "title": "Unify tool-call accumulators into single state machine",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-configscope-enum-for-mcp-server-scope.md",
@@ -1347,7 +1347,7 @@
   {
     "file": "use-tagged-enum-for-declarative-command-kind.md",
     "title": "Use tagged enum for declarative command kind",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-toml-edit-and-file-locks-for-config.md",
