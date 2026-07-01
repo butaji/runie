@@ -9,7 +9,7 @@
 use crate::commands::dsl::handlers::HANDLER_REGISTRY;
 use crate::commands::dsl::spec::build_cmd_from_yaml;
 use crate::commands::dsl::spec::CommandDef;
-use crate::declarative::types::{CommandDef as DeclDef, DeclarativeCommandYaml};
+use crate::declarative::types::{CommandDef as DeclDef, CommandKindDef, DeclarativeCommandYaml};
 
 pub const SETTINGS: &str = include_str!("../../../resources/commands/settings.yaml");
 pub const HELP: &str = include_str!("../../../resources/commands/help.yaml");
@@ -99,10 +99,11 @@ pub fn load_embedded_commands() -> Vec<CommandDef> {
                     return None;
                 }
             };
-            let (handler_name, message) = match yaml.kind_type.as_str() {
-                "handler" | "form" | "form_with_handler" => (yaml.handler.clone(), None),
-                "msg" => (None, yaml.message.clone()),
-                _ => (None, None),
+            let (handler_name, message) = match yaml.to_kind() {
+                CommandKindDef::Handler { name } => (Some(name), None),
+                CommandKindDef::FormWithHandler { handler, .. } => (Some(handler), None),
+                CommandKindDef::Form { .. } => (None, None),
+                CommandKindDef::Msg { message } => (None, Some(message)),
             };
             let decl_def = DeclDef {
                 name: yaml.name.clone(),
@@ -136,16 +137,12 @@ mod tests {
 
     #[test]
     fn quit_command_has_handler_flow() {
-        use crate::declarative::types::DeclarativeCommandYaml;
+        use crate::declarative::types::{CommandKindDef, DeclarativeCommandYaml};
         let yaml: DeclarativeCommandYaml = serde_yaml::from_str(QUIT).unwrap();
-        assert_eq!(
-            yaml.kind_type, "handler",
-            "quit yaml should have kind_type handler"
-        );
-        assert_eq!(
-            yaml.handler.as_deref(),
-            Some("quit"),
-            "quit handler should be 'quit'"
+        let kind = yaml.to_kind();
+        assert!(
+            matches!(kind, CommandKindDef::Handler { name } if name == "quit"),
+            "quit yaml should deserialize to Handler(\"quit\")"
         );
     }
 

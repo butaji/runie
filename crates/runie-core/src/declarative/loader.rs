@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use crate::resource_loader::{derive_name_from_path, is_user_invocable, load_resources_from_dir};
 
-use super::types::{CommandDef, DeclarativeCommandYaml, SkillDef, Trigger};
+use super::types::{CommandDef, CommandKindDef, DeclarativeCommandYaml, SkillDef, Trigger};
 
 /// Generic loader for declarative configuration.
 pub struct DeclarativeLoader {
@@ -123,10 +123,11 @@ pub fn load_commands_from_dir(dir: &Path) -> Vec<CommandDef> {
 pub(crate) fn parse_command_yaml(path: &Path) -> Option<CommandDef> {
     let yaml: DeclarativeCommandYaml =
         serde_yaml::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
-    let (handler_name, message) = match yaml.kind_type.as_str() {
-        "handler" | "form" | "form_with_handler" => (yaml.handler.clone(), None),
-        "msg" => (None, yaml.message.clone()),
-        _ => (None, None),
+    let (handler_name, message) = match yaml.to_kind() {
+        CommandKindDef::Handler { name } => (Some(name), None),
+        CommandKindDef::FormWithHandler { handler, .. } => (Some(handler), None),
+        CommandKindDef::Form { .. } => (None, None),
+        CommandKindDef::Msg { message } => (None, Some(message)),
     };
     Some(CommandDef {
         name: yaml.name,

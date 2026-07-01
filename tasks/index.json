@@ -1227,7 +1227,7 @@
   {
     "file": "use-tagged-enum-for-declarative-command-kind.md",
     "title": "Use tagged enum for declarative command kind",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-toml-edit-and-file-locks-for-config.md",

@@ -8,6 +8,62 @@ use serde::{Deserialize, Deserializer};
 
 use crate::commands::CommandCategory;
 
+/// Tagged enum for deserializing the `type` field from YAML.
+///
+/// Uses `#[serde(tag = "type")]` so that the `type` field discriminates
+/// between variants. This replaces the old pattern of `kind_type: String`
+/// plus many `Option` fields with `unwrap_or_default()`.
+///
+/// Example YAML:
+/// ```yaml
+/// type: form_with_handler
+/// handler: save
+/// title: "Save Session"
+/// fields:
+///   - label: Name
+///     placeholder: session-name
+///     key: name
+/// ```
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "type")]
+pub enum CommandKind {
+    #[serde(alias = "handler")]
+    Handler { handler: String },
+    Msg { message: String },
+    Form {
+        title: String,
+        fields: Vec<FormFieldDef>,
+        #[serde(default)]
+        submit_event: String,
+    },
+    #[serde(rename = "form_with_handler")]
+    FormWithHandler {
+        title: String,
+        fields: Vec<FormFieldDef>,
+        handler: String,
+    },
+}
+
+impl CommandKind {
+    /// Convert from the deserialized enum to the internal `CommandKindDef`.
+    pub fn to_kind_def(&self) -> CommandKindDef {
+        match self {
+            CommandKind::Handler { handler } => CommandKindDef::Handler { name: handler.clone() },
+            CommandKind::Msg { message } => CommandKindDef::Msg { message: message.clone() },
+            CommandKind::Form { title, fields, submit_event } => CommandKindDef::Form {
+                title: title.clone(),
+                fields: fields.clone(),
+                submit_event: submit_event.clone(),
+            },
+            CommandKind::FormWithHandler { title, fields, handler } => CommandKindDef::FormWithHandler {
+                title: title.clone(),
+                fields: fields.clone(),
+                handler: handler.clone(),
+            },
+        }
+    }
+}
+
 /// What kind of command this is — determines how it executes.
 #[derive(Debug, Clone)]
 pub enum CommandKindDef {
@@ -56,53 +112,15 @@ pub struct DeclarativeCommandYaml {
     pub sub: bool,
     #[serde(default, deserialize_with = "deserialize_triggers")]
     pub triggers: Vec<Trigger>,
-    /// The command kind type: "handler", "msg", "form", "form_with_handler"
-    #[serde(alias = "type", default)]
-    pub kind_type: String,
-    /// Handler name (for handler type)
-    #[serde(default)]
-    pub handler: Option<String>,
-    /// Static message (for msg type)
-    #[serde(default)]
-    pub message: Option<String>,
-    /// Form title (for form types)
-    #[serde(default)]
-    pub title: Option<String>,
-    /// Form fields (for form types)
-    #[serde(default)]
-    pub fields: Vec<FormFieldDef>,
-    /// Form submit event (for form type)
-    #[serde(default)]
-    pub submit_event: Option<String>,
-    /// Form handler name (for form_with_handler type)
-    #[serde(default)]
-    pub form_handler: Option<String>,
+    /// The command kind discriminated by the `type` field.
+    #[serde(flatten)]
+    pub kind: CommandKind,
 }
 
 impl DeclarativeCommandYaml {
-    /// Convert to `CommandKindDef` based on the `kind_type` field.
+    /// Convert to `CommandKindDef`.
     pub fn to_kind(&self) -> CommandKindDef {
-        match self.kind_type.as_str() {
-            "handler" => CommandKindDef::Handler {
-                name: self.handler.clone().unwrap_or_default(),
-            },
-            "msg" => CommandKindDef::Msg {
-                message: self.message.clone().unwrap_or_default(),
-            },
-            "form" => CommandKindDef::Form {
-                title: self.title.clone().unwrap_or_default(),
-                fields: self.fields.clone(),
-                submit_event: self.submit_event.clone().unwrap_or_default(),
-            },
-            "form_with_handler" => CommandKindDef::FormWithHandler {
-                title: self.title.clone().unwrap_or_default(),
-                fields: self.fields.clone(),
-                handler: self.form_handler.clone().unwrap_or_default(),
-            },
-            _ => CommandKindDef::Msg {
-                message: format!("Unknown command type: {}", self.kind_type),
-            },
-        }
+        self.kind.to_kind_def()
     }
 }
 

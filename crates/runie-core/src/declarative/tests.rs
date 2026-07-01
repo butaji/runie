@@ -280,6 +280,8 @@ description: Bookmark the current message
 category: Session
 intent: BookmarkMessage
 shortcut: Ctrl+b
+type: handler
+handler: bookmark
 "#,
         )
         .unwrap();
@@ -310,6 +312,8 @@ category: Model
 intent: SetModel
 shortcut: Ctrl+m
 sub: false
+type: handler
+handler: test
 "#;
         let cmd: DeclarativeCommandYaml = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(cmd.name, "test-cmd");
@@ -322,7 +326,8 @@ sub: false
 
     #[test]
     fn declarative_command_yaml_defaults_missing_fields() {
-        let yaml = "name: minimal\n";
+        // Note: type field is now required; other fields have defaults
+        let yaml = "name: minimal\ntype: handler\nhandler: minimal\n";
         let cmd: DeclarativeCommandYaml = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(cmd.name, "minimal");
         assert_eq!(cmd.description, "");
@@ -340,6 +345,8 @@ name: trig-cmd
 triggers:
   - /help
   - Ctrl+h
+type: handler
+handler: trig
 "#;
         let cmd: DeclarativeCommandYaml = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(cmd.triggers.len(), 2);
