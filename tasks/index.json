@@ -12,12 +12,12 @@
   {
     "file": "actually-use-pulldown-cmark-frontmatter-in-resource-loader.md",
     "title": "Actually use pulldown-cmark-frontmatter in resource loader",
-    "status": "wontfix"
+    "status": "todo"
   },
   {
     "file": "add-agent-command-test-builder.md",
     "title": "Add AgentCommand test builder",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "add-eventbus-backpressure-or-acknowledgement.md",
@@ -27,7 +27,7 @@
   {
     "file": "add-openai-provider-fixtures.md",
     "title": "Add OpenAI provider fixtures",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "add-jsonschema-validation-to-configactor-load.md",
@@ -37,7 +37,7 @@
   {
     "file": "add-event-assertion-helpers-to-runie-testing.md",
     "title": "Add event assertion helpers to runie-testing",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "add-project-level-config-layer-and-keyring-secrets.md",
@@ -52,17 +52,17 @@
   {
     "file": "adopt-metrics-facade-for-telemetry.md",
     "title": "Adopt metrics facade for telemetry",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "adopt-testing-helpers-across-all-tests.md",
     "title": "Adopt testing helpers across all tests",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "adopt-wiremock-for-provider-api-tests.md",
     "title": "Adopt wiremock for provider API tests",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "collapse-event-intent-kind-taxonomies.md",
@@ -92,7 +92,7 @@
   {
     "file": "centralize-env-lock-in-runie-testing.md",
     "title": "Centralize ENV_LOCK in runie-testing",
-    "status": "partial"
+    "status": "todo"
   },
   {
     "file": "centralize-built-in-tool-names.md",
@@ -127,7 +127,7 @@
   {
     "file": "cleanup-runie-testing-dead-modules.md",
     "title": "Cleanup runie-testing dead modules",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "collapse-actor-handles-to-typed-map.md",
@@ -147,7 +147,7 @@
   {
     "file": "collapse-remaining-actor-handle-wrappers-to-actorref.md",
     "title": "Collapse remaining actor handle wrappers to ractor::ActorRef",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "compare-auth-config-setup-and-fix-gaps.md",
@@ -212,12 +212,12 @@
   {
     "file": "consolidate-provider-credential-resolver-duplication.md",
     "title": "Consolidate provider credential resolver duplication",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "consolidate-session-metadata-and-delete-sessionindex-read-path.md",
     "title": "Consolidate session metadata and delete SessionIndex read path",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "convert-agent-and-fff-indexer-to-ractor-state.md",
@@ -242,7 +242,7 @@
   {
     "file": "deduplicate-cargo-lock-versions-and-deny.md",
     "title": "Deduplicate Cargo.lock versions and deny multiples",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "deduplicate-turn-state-between-turnactor-and-appstate.md",
@@ -262,7 +262,7 @@
   {
     "file": "delete-broken-dsl-flow-combinators-and-thread-local-runtime.md",
     "title": "Delete broken DSL flow combinators and thread-local runtime",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "delete-dead-actor-handle-wrappers.md",
@@ -277,12 +277,12 @@
   {
     "file": "delete-dead-declarative-command-registration.md",
     "title": "Delete dead declarative command registration",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "delete-dead-runie-core-testing-module.md",
     "title": "Delete dead runie-core testing module",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "delete-leftover-telemetry-stub.md",
@@ -322,7 +322,7 @@
   {
     "file": "disable-arboard-image-features-for-text-only-clipboard.md",
     "title": "Disable arboard image features for text-only clipboard",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "drop-once_cell-and-futures-util-workspace-deps.md",
@@ -332,7 +332,7 @@
   {
     "file": "drop-custom-markdown-ast-for-pulldown-cmark-and-tui-markdown.md",
     "title": "Drop custom markdown AST and render through pulldown-cmark/tui-markdown",
-    "status": "partial"
+    "status": "todo"
   },
   {
     "file": "drop-legacy-diff-parser-and-rely-on-diffy.md",
@@ -382,7 +382,7 @@
   {
     "file": "extend-mock-tool-skill-with-errors-and-sequencing.md",
     "title": "Extend MockToolSkill with errors and sequencing",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "extend-markdown-inline-styles-to-lists-and-blockquotes.md",
@@ -397,7 +397,7 @@
   {
     "file": "externalize-default-theme-toml-to-resources.md",
     "title": "Externalize default theme TOML to resources",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "extract-runie-test-utils-crate.md",
@@ -537,7 +537,7 @@
   {
     "file": "fix-leader-tcp-utf8-split-with-linescodec.md",
     "title": "Fix leader TCP UTF-8 split with LinesCodec",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "fix-leader-shutdown-to-await-all-actors.md",
@@ -547,17 +547,17 @@
   {
     "file": "fix-or-delete-runie-testing-testrunner.md",
     "title": "Fix or delete runie-testing TestRunner",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "fix-turn-projection-retain-bug-and-delete-mirrored-queue.md",
     "title": "Fix turn projection retain bug and delete mirrored queue",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "fix-view-cache-double-rebuild-and-use-cached-gen.md",
     "title": "Fix view cache double rebuild and use cached_gen",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "fold-runie-protocol-into-core.md",
@@ -572,12 +572,12 @@
   {
     "file": "format-permission-request-for-human-readable-display.md",
     "title": "Format permission request for human-readable display",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "fuzzy-history-search-with-sublime-fuzzy.md",
     "title": "Fuzzy history search with sublime-fuzzy",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "generate-event-taxonomy-or-delete-generated-files.md",
@@ -707,7 +707,7 @@
   {
     "file": "normalize-paths-with-path-absolutize-and-dunce.md",
     "title": "Normalize paths with path-absolutize",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "normalize-remaining-std-mutex-to-parking-lot.md",
@@ -727,7 +727,7 @@
   {
     "file": "parse-bash-commands-with-shell-words-in-ioactor.md",
     "title": "Parse bash commands with shell-words in IoActor",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "persist-session-tree-and-branch-state.md",
@@ -797,7 +797,7 @@
   {
     "file": "remove-dead-redb-optional-dependency.md",
     "title": "Remove dead redb optional dependency",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "remove-direct-appstate-mutation-from-tui-handlers.md",
@@ -812,7 +812,7 @@
   {
     "file": "remove-ractor-send-message-alias.md",
     "title": "Remove ractor send/send_message alias",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "remove-redundant-check-field-access-script.md",
@@ -832,7 +832,7 @@
   {
     "file": "remove-configactorstate-unnecessary-mutex.md",
     "title": "Remove unnecessary Mutex from ConfigActorState",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "remove-unsafe-box_to_arc-from-leader-bootstrap.md",
@@ -872,7 +872,7 @@
   {
     "file": "replace-token-wrapper-with-secrecy-secretstring.md",
     "title": "Replace Token wrapper with secrecy::SecretString",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-xor-auth-with-keyring.md",
@@ -902,7 +902,7 @@
   {
     "file": "replace-clipboard-dead-code-with-arboard-or-osc52.md",
     "title": "Replace clipboard dead code with arboard",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-custom-tui-widgets-with-ratatui-ecosystem.md",
@@ -927,7 +927,7 @@
   {
     "file": "replace-custom-git-detection-with-git2.md",
     "title": "Replace custom git detection with git2",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-layered-config-merge-with-figment.md",
@@ -937,7 +937,7 @@
   {
     "file": "replace-custom-nanoid-in-runie-testing.md",
     "title": "Replace custom nanoid in runie-testing",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-custom-nanoid-in-test-runner.md",
@@ -962,7 +962,7 @@
   {
     "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
     "title": "Replace fff-search indexer with ignore/walkdir",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-tui-markdown-block-layout-with-tui-markdown.md",
@@ -997,7 +997,7 @@
   {
     "file": "replace-register-handler-and-theme-macros-with-functions.md",
     "title": "Replace register_handler and theme macros with functions",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-remaining-custom-parsers-and-macros-with-strum.md",
@@ -1032,7 +1032,7 @@
   {
     "file": "resolve-runie-util-micro-crate-vs-core-re-exports.md",
     "title": "Resolve runie-util micro-crate vs core re-exports",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "route-cli-config-through-configactor.md",
@@ -1067,7 +1067,7 @@
   {
     "file": "simplify-core-keybinding-parsing-with-crokey.md",
     "title": "Simplify core keybinding parsing with crokey",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "simplify-slash-command-dsl.md",
@@ -1108,6 +1108,11 @@
     "file": "subscribe-tui-to-initial-facts-before-leader-start.md",
     "title": "Subscribe TUI to initial facts before leader start",
     "status": "done"
+  },
+  {
+    "file": "TEMPLATE.md",
+    "title": "Task Title",
+    "status": "todo"
   },
   {
     "file": "type-openai-chunk-and-error-parsing.md",
@@ -1162,7 +1167,7 @@
   {
     "file": "unify-diff-generation-and-parsing-on-one-crate.md",
     "title": "Unify diff generation and parsing on one crate",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "unify-edit-file-and-hashline-edit-on-patch-based-edits.md",
@@ -1247,7 +1252,7 @@
   {
     "file": "unify-tool-call-accumulators-into-single-state-machine.md",
     "title": "Unify tool-call accumulators into single state machine",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-configscope-enum-for-mcp-server-scope.md",
@@ -1292,7 +1297,7 @@
   {
     "file": "use-bytesize-humantime-for-tool-formatting.md",
     "title": "Use bytesize and humantime for tool formatting",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-channels-for-subagent-result-collection.md",
@@ -1302,7 +1307,7 @@
   {
     "file": "use-color-eyre-and-human-panic-for-cli-errors.md",
     "title": "Use color-eyre and human-panic for CLI errors",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-fuzzy-matcher-for-model-catalog.md",
@@ -1312,37 +1317,37 @@
   {
     "file": "use-ignore-and-globset-for-file-refs.md",
     "title": "Use ignore and globset for file_refs",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-include-dir-for-minimax-fixtures.md",
     "title": "Use include_dir for MiniMax fixtures",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-include-dir-for-provider-registry-yaml.md",
     "title": "Use include_dir for provider registry YAML",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-secrecy-secretstring-in-authtoken.md",
     "title": "Use secrecy::SecretString in AuthToken",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-shell-words-for-slash-command-parsing.md",
     "title": "Use shell-words for slash command parsing",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-shell-words-in-harness-skills.md",
     "title": "Use shell-words in harness skills",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-tagged-enum-for-declarative-command-kind.md",
     "title": "Use tagged enum for declarative command kind",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-toml-edit-and-file-locks-for-config.md",
@@ -1357,7 +1362,7 @@
   {
     "file": "use-which-crate-for-executable-lookup.md",
     "title": "Use which crate for executable lookup",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "wire-or-delete-input-actor.md",
