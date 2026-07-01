@@ -36,6 +36,8 @@ pub enum AgentMsg {
     RunLeader {
         command: runie_core::actors::leader::LeaderAgentCmd,
     },
+    /// Abort the currently running turn, if any.
+    Abort,
 }
 
 // ── Ractor-based AgentActor ───────────────────────────────────────────────────
@@ -45,6 +47,11 @@ struct AgentActorState {
     provider_handle: RactorProviderHandle,
     permission_handle: RactorPermissionHandle,
     bus: EventBus<Event>,
+    /// Cancellation token for the currently running turn, if any.
+    /// Stored in Arc so it can be taken on Abort.
+    current_turn_token: Option<Arc<CancellationToken>>,
+    /// Permission gate for the currently running turn, if any.
+    current_gate: Option<PermissionGate>,
 }
 
 /// Unit struct for RactorAgentActor — state lives in `type State`.
@@ -72,6 +79,8 @@ impl Actor for RactorAgentActor {
             provider_handle: args.provider_handle,
             permission_handle: args.permission_handle,
             bus: args.bus,
+            current_turn_token: None,
+            current_gate: None,
         })
     }
 
@@ -86,6 +95,15 @@ impl Actor for RactorAgentActor {
             AgentMsg::RunLeader { command } => {
                 let cmd: AgentCommand = command.into();
                 self.run_turn(state, cmd).await;
+            }
+            AgentMsg::Abort => {
+                // Take and cancel the current turn token and gate.
+                if let Some(token) = state.current_turn_token.take() {
+                    token.cancel();
+                }
+                if let Some(gate) = state.current_gate.take() {
+                    gate.cancel_pending();
+                }
             }
         }
         Ok(())
@@ -122,33 +140,35 @@ impl RactorAgentActor {
 
         let gate =
             Self::create_permission_gate_with_cancel(permission.clone(), cancel_token_gate).await;
-        let gate_for_abort = gate.clone();
 
-        // Subscribe to TurnAborted so we can cancel pending permissions.
-        let mut sub = bus.subscribe();
+        // Store token and gate in state so Abort handler can cancel them.
+        // Wrap in Arc so we can take() it from state without Clone.
+        state.current_turn_token = Some(Arc::new(cancel_token));
+        state.current_gate = Some(gate.clone());
 
-        let turn = run_agent_turn(&built, &command, emit, 5, gate.clone());
-        tokio::pin!(turn);
+        // Spawn the turn as a tokio task so the actor handler returns immediately.
+        // This keeps the actor mailbox responsive for Abort messages.
+        let emit_for_task = emit.clone();
+        let command_id = command.id.clone();
+        tokio::spawn(async move {
+            let turn = run_agent_turn(&built, &command, emit_for_task, 5, gate.clone());
+            tokio::pin!(turn);
 
-        tokio::select! {
-            result = &mut turn => {
-                if let Err(e) = result {
-                    Self::emit_error_and_done(state, &command.id, format!("Agent error: {e}"));
-                }
+            if let Err(e) = turn.await {
+                // Emit error through the event bus.
+                // (emit_error_and_done takes &mut state, so we publish directly)
+                let _ = Self::publish_error_and_done(&bus, &command_id, format!("Agent error: {e}"));
             }
-            // AbortTurn was received — cancel pending permissions and stop.
-            _ = async {
-                while let Ok(evt) = sub.recv().await {
-                    if matches!(evt, Event::TurnAborted) {
-                        break;
-                    }
-                }
-            } => {
-                // Cancel pending permission request via the cancellation token.
-                cancel_token.cancel();
-                gate_for_abort.cancel_pending();
-            }
-        }
+        });
+        // Handler returns immediately after spawning.
+    }
+
+    fn publish_error_and_done(bus: &EventBus<Event>, id: &str, message: String) {
+        bus.publish(runie_core::Event::Error {
+            id: id.to_owned(),
+            message,
+        });
+        bus.publish(runie_core::Event::Done { id: id.to_owned() });
     }
 
     fn create_emit_closure(
