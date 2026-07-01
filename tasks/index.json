@@ -762,7 +762,7 @@
   {
     "file": "make-trust-and-auth-file-persistence-atomic-and-restricted.md",
     "title": "Make Trust And Auth File Persistence Atomic And Restricted",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "make-tui-render-loop-async-with-watch-channel.md",

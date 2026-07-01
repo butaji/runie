@@ -44,6 +44,8 @@ pub mod file_refs;
 pub mod headless_runtime;
 pub mod hooks;
 pub mod input_history;
+/// I/O utilities (atomic writes, file locking).
+pub mod io;
 pub mod keybindings;
 /// Static labels and text constants.
 pub mod labels;

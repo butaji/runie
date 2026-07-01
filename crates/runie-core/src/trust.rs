@@ -34,14 +34,11 @@ impl TrustManager {
         }
     }
 
-    /// Save trust decisions to disk.
+    /// Save trust decisions to disk atomically with restricted permissions.
     pub fn save(&self) -> anyhow::Result<()> {
         let path = Self::load_path().ok_or_else(|| anyhow::anyhow!("No config directory"))?;
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
         let json = serde_json::to_string_pretty(self)?;
-        std::fs::write(path, json)?;
+        crate::io::atomic_write::atomic_write(&path, &json)?;
         Ok(())
     }
 

@@ -121,9 +121,6 @@ impl AuthStorage {
     }
 
     fn save_to_file(&self) -> anyhow::Result<()> {
-        if let Some(parent) = self.fallback_path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
         let mut obj = serde_json::Map::new();
         for (provider, tok) in &self.tokens {
             let mut entry = serde_json::Map::new();
@@ -135,7 +132,7 @@ impl AuthStorage {
             obj.insert(provider.clone(), entry.into());
         }
         let json = serde_json::to_string_pretty(&obj)?;
-        std::fs::write(&self.fallback_path, json)?;
+        crate::io::atomic_write::atomic_write(&self.fallback_path, &json)?;
         Ok(())
     }
 
