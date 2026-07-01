@@ -1,109 +1,7 @@
 #![allow(clippy::items_after_test_module)]
-//! Bash command execution for ! prefix (merged from bash.rs).
-
-use crate::actors::IoMsg;
-use std::process::{Command as SyncCommand, Stdio};
-
-use shell_words;
-
-/// Execute a bash command and return output string (sync fallback).
-///
-/// Used by the non-actor fallback path in test mode.
-///
-/// If `shell` is true, the command is passed to `sh -c` to support shell
-/// metacharacters (pipes, redirects, command substitution, etc.).
-///
-/// If `shell` is false, the command is parsed with `shell_words::split`
-/// and executed directly.
-pub fn execute_bash_sync(command: &str, shell: bool) -> String {
-    let output = if shell {
-        // Shell mode: use sh -c to support metacharacters
-        SyncCommand::new("sh")
-            .arg("-c")
-            .arg(command)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-    } else {
-        // Direct mode: parse with shell_words and execute directly
-        match shell_words::split(command) {
-            Ok(args) => {
-                if args.is_empty() {
-                    return String::new();
-                }
-                let (program, args) = (&args[0], &args[1..]);
-                let mut cmd = SyncCommand::new(program);
-                cmd.args(args);
-                cmd.stdout(Stdio::piped());
-                cmd.stderr(Stdio::piped());
-                cmd.output()
-            }
-            Err(_) => {
-                return format!("Error parsing command: {}", command);
-            }
-        }
-    };
-
-    let output = match output {
-        Ok(out) => out,
-        Err(e) => return format!("Error running command: {}", e),
-    };
-
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    let exit_code = output.status.code().unwrap_or(-1);
-
-    format_command_output(&stdout, &stderr, exit_code)
-}
-
-/// Format command output for display
-pub fn format_command_output(stdout: &str, stderr: &str, exit_code: i32) -> String {
-    let mut result = String::new();
-    if !stdout.is_empty() {
-        result.push_str(stdout);
-    }
-    if !stderr.is_empty() {
-        if !result.is_empty() {
-            result.push('\n');
-        }
-        result.push_str("stderr: ");
-        result.push_str(stderr);
-    }
-    if result.is_empty() {
-        result = format!("(exit code: {})", exit_code);
-    }
-    result
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn format_empty_output() {
-        let result = format_command_output("", "", 0);
-        assert_eq!(result, "(exit code: 0)");
-    }
-
-    #[test]
-    fn format_stdout_only() {
-        let result = format_command_output("hello\nworld", "", 0);
-        assert_eq!(result, "hello\nworld");
-    }
-
-    #[test]
-    fn format_stderr_included() {
-        let result = format_command_output("", "error message", 1);
-        assert!(result.contains("stderr: error message"));
-    }
-
-    #[test]
-    fn format_combined_output() {
-        let result = format_command_output("stdout\noutput", "stderr msg", 0);
-        assert!(result.contains("stdout"));
-        assert!(result.contains("stderr"));
-    }
-}
+//! Bash command execution for ! prefix.
+//!
+//! All bash execution now lives in `runie_core::shell`.
 
 // ── Form-submit and edit-event handling (merged from edit.rs) ─────────────────
 
@@ -151,7 +49,7 @@ impl AppState {
                 .map(|p| (p.path, p.proposed))
                 .collect();
             let handles = handles.unwrap();
-            let _ = handles.io.try_send(IoMsg::WriteFiles { edits });
+            let _ = handles.io.try_send(crate::actors::IoMsg::WriteFiles { edits });
             return true;
         }
         false

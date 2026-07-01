@@ -604,6 +604,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "command-group"
+version = "5.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a68fa787550392a9d58f44c21a3022cfb3ea3e2458b7f85d3b399d0ceeccf409"
+dependencies = [
+ "async-trait",
+ "nix 0.27.1",
+ "tokio",
+ "winapi",
+]
+
+[[package]]
 name = "compact_str"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2565,6 +2577,17 @@ dependencies = [
 
 [[package]]
 name = "nix"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eb04e9c688eff1c89d72b407f168cf79bb9e867a9d3323ed6c01519eb9cc053"
+dependencies = [
+ "bitflags 2.13.0",
+ "cfg-if",
+ "libc",
+]
+
+[[package]]
+name = "nix"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71e2746dc3a24dd78b3cfcb7be93368c6de9963d30f43a6a73998a9cf4b17b46"
@@ -3941,6 +3964,7 @@ dependencies = [
  "async-trait",
  "base64",
  "bytesize",
+ "command-group",
  "criterion",
  "crokey",
  "crossterm",
@@ -3954,6 +3978,7 @@ dependencies = [
  "git2",
  "glob",
  "globset",
+ "hex",
  "humantime",
  "ignore",
  "include_dir",
@@ -3979,6 +4004,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "serde_yaml",
+ "sha2",
  "shell-words",
  "shellexpand",
  "strum 0.26.3",
@@ -3997,6 +4023,7 @@ dependencies = [
  "unicode-width 0.2.2",
  "uuid",
  "which",
+ "winnow 1.0.3",
 ]
 
 [[package]]

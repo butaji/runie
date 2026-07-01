@@ -65,6 +65,10 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     "update/system.rs",
     "update/dialog/file_pickers.rs",
     "update/dialog/open.rs",
+    // Shell module — owns bash execution; sync variant for IO actor
+    "shell.rs",
+    // Input submit — fallback bash execution when no actor handles available
+    "update/input/submit.rs",
     // Login flow handlers with file IO
     "login_flow/handlers_tests.rs",
     // Actor modules with env/path access
@@ -78,6 +82,11 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     "actors/leader/",
     // FFF indexer — IO actor owning file search with intentional sync file reads
     "actors/fff_indexer/",
+    // MCP cache - owns schema cache with disk persistence
+    "mcp/",
+    // Session persistence with SQLite
+    "session/sqlite_store.rs",
+    "session/db.rs",
 ];
 
 /// Patterns that indicate sync IO in production domain code.

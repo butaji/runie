@@ -1427,7 +1427,7 @@
   {
     "file": "unify-bash-execution-into-single-shell-module-with-command-group.md",
     "title": "Unify bash execution into a single shell module with command-group",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-cli-json-rpc-transport-and-remove-dead-acp.md",

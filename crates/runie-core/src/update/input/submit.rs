@@ -207,7 +207,9 @@ impl AppState {
             return;
         }
         // Fallback: no actor handles — run bash synchronously.
-        let result = crate::update::tools::execute_bash_sync(command, true);
+        use crate::shell::run_bash_sync;
+        let cwd = std::env::current_dir().unwrap_or_default();
+        let result = run_bash_sync(command, &cwd, &std::collections::HashMap::new(), true).output;
         let output_msg = format!("$ {}\n{}", command, result);
         self.add_system_msg(output_msg);
         self.view_mut().scroll = 0;

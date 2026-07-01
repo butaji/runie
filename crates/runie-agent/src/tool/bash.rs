@@ -2,6 +2,7 @@
 
 use crate::tool::{ToolContext, ToolOutput, ToolStatus};
 use runie_core::bash_safety::check_bash_safety;
+use runie_core::shell::{run_bash, ShellStatus};
 use runie_core::tool::ToolDef;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -42,7 +43,20 @@ impl ToolDef for BashTool {
         let timeout_secs = input.timeout_seconds.unwrap_or(DEFAULT_TIMEOUT_SECS);
         let timeout = Duration::from_secs(timeout_secs);
 
-        let result = run_bash_inner(&input.command, &ctx.working_dir, &ctx.env, timeout).await;
+        let result = run_bash(
+            &input.command,
+            &ctx.working_dir,
+            &ctx.env,
+            timeout,
+            true, // shell mode for bash tool
+        )
+        .await;
+
+        let status = match result.status {
+            ShellStatus::Success => ToolStatus::Success,
+            ShellStatus::Error => ToolStatus::Error,
+            ShellStatus::TimedOut => ToolStatus::TimedOut,
+        };
 
         ToolOutput {
             tool_name: "bash".to_owned(),
@@ -50,126 +64,14 @@ impl ToolDef for BashTool {
             content: result.output,
             bytes_transferred: result.bytes_transferred,
             duration: start.elapsed(),
-            status: result.status,
+            status,
         }
     }
-}
-
-struct BashResult {
-    output: String,
-    bytes_transferred: Option<u64>,
-    status: ToolStatus,
-}
-
-async fn run_bash_inner(
-    command: &str,
-    working_dir: &std::path::Path,
-    env: &std::collections::HashMap<String, String>,
-    timeout: Duration,
-) -> BashResult {
-    let mut cmd = tokio::process::Command::new("bash");
-    cmd.arg("-c")
-        .arg(command)
-        .current_dir(working_dir)
-        .envs(env)
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped());
-
-    let mut child = match cmd.spawn() {
-        Ok(c) => c,
-        Err(e) => return bash_error(&format!("Failed to spawn command: {}", e)),
-    };
-
-    match tokio::time::timeout(timeout, child.wait()).await {
-        Ok(Ok(status)) => {
-            let stdout = child.stdout.take();
-            let stderr = child.stderr.take();
-            collect_output(status, stdout, stderr).await
-        }
-        Ok(Err(e)) => bash_error(&format!("Error waiting for command: {}", e)),
-        Err(_) => {
-            let _ = child.kill().await;
-            let _ = child.wait().await;
-            bash_timeout(timeout)
-        }
-    }
-}
-
-async fn collect_output(
-    status: std::process::ExitStatus,
-    stdout: Option<tokio::process::ChildStdout>,
-    stderr: Option<tokio::process::ChildStderr>,
-) -> BashResult {
-    use tokio::io::AsyncReadExt;
-
-    let mut stdout_buf = String::new();
-    let mut stderr_buf = String::new();
-
-    if let Some(mut s) = stdout {
-        let _ = s.read_to_string(&mut stdout_buf).await;
-    }
-    if let Some(mut s) = stderr {
-        let _ = s.read_to_string(&mut stderr_buf).await;
-    }
-
-    let combined = combine_output(&stdout_buf, &stderr_buf);
-    let bytes = stdout_buf.len() as u64 + stderr_buf.len() as u64;
-    let tool_status = if status.success() {
-        ToolStatus::Success
-    } else {
-        ToolStatus::Error
-    };
-
-    BashResult {
-        output: combined,
-        bytes_transferred: Some(bytes),
-        status: tool_status,
-    }
-}
-
-fn bash_error(msg: &str) -> BashResult {
-    BashResult {
-        output: msg.to_owned(),
-        bytes_transferred: None,
-        status: ToolStatus::Error,
-    }
-}
-
-fn bash_timeout(timeout: Duration) -> BashResult {
-    BashResult {
-        output: format!(
-            "Command timed out after {:.0} seconds",
-            timeout.as_secs_f64()
-        ),
-        bytes_transferred: None,
-        status: ToolStatus::TimedOut,
-    }
-}
-
-fn combine_output(stdout: &str, stderr: &str) -> String {
-    if stdout.is_empty() && stderr.is_empty() {
-        return String::new();
-    }
-    if stdout.is_empty() {
-        return stderr.trim_end().to_owned();
-    }
-    if stderr.is_empty() {
-        return stdout.trim_end().to_owned();
-    }
-    format!("{}\n{}", stdout.trim_end(), stderr.trim_end())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn combine_output_prefers_nonempty_streams() {
-        assert!(combine_output("", "").is_empty());
-        assert_eq!(combine_output("out", ""), "out");
-        assert_eq!(combine_output("", "err"), "err");
-        assert_eq!(combine_output("out", "err"), "out\nerr");
-    }
 
     #[tokio::test]
     async fn bash_timeout_kills_child() {

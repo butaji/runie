@@ -47,6 +47,8 @@ pub mod input_history;
 /// I/O utilities (atomic writes, file locking).
 pub mod io;
 pub mod keybindings;
+/// MCP tool schema cache and connection manager.
+pub mod mcp;
 /// Static labels and text constants.
 pub mod labels;
 pub mod layout;
@@ -71,6 +73,7 @@ pub mod sanitize;
 pub mod scoped_model;
 pub mod session;
 pub mod settings;
+pub mod shell;
 pub mod skills;
 pub mod snapshot;
 // state types moved to model::state

@@ -4,9 +4,6 @@
 //! of the actor system.
 
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-
-use shell_words;
 
 use ractor::async_trait;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
@@ -156,7 +153,12 @@ impl Actor for RactorIoActor {
 impl RactorIoActor {
     async fn run_bash(&self, command: String, shell: bool) {
         let cmd = command.clone();
-        let output = match tokio::task::spawn_blocking(move || run_bash_sync(&cmd, shell)).await {
+        let output = match tokio::task::spawn_blocking(move || {
+            use runie_core::shell::run_bash_sync;
+            let cwd = std::env::current_dir().unwrap_or_default();
+            let env = std::collections::HashMap::new();
+            run_bash_sync(&cmd, &cwd, &env, shell).output
+        }).await {
             Ok(out) => out,
             Err(e) => format!("Error running command: {}", e),
         };
@@ -236,75 +238,6 @@ impl RactorIoActor {
     }
 }
 
-// Re-use the sync helper functions from the legacy actor
-///
-/// Execute a bash command synchronously.
-///
-/// If `shell` is true, the command is passed to `sh -c` to support shell
-/// metacharacters (pipes, redirects, command substitution, etc.).
-///
-/// If `shell` is false, the command is parsed with `shell_words::split`
-/// and executed directly. This avoids shell indirection overhead for simple
-/// commands. Note: glob expansion, env var expansion, and pipes require `shell: true`.
-fn run_bash_sync(command: &str, shell: bool) -> String {
-    let output = if shell {
-        // Shell mode: use sh -c to support metacharacters
-        Command::new("sh")
-            .arg("-c")
-            .arg(command)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-    } else {
-        // Direct mode: parse with shell_words and execute directly
-        match shell_words::split(command) {
-            Ok(args) => {
-                if args.is_empty() {
-                    return String::new();
-                }
-                let (program, args) = (&args[0], &args[1..]);
-                let mut cmd = Command::new(program);
-                cmd.args(args);
-                cmd.stdout(Stdio::piped());
-                cmd.stderr(Stdio::piped());
-                cmd.output()
-            }
-            Err(_) => {
-                return format!("Error parsing command: {}", command);
-            }
-        }
-    };
-
-    let output = match output {
-        Ok(out) => out,
-        Err(e) => return format!("Error running command: {}", e),
-    };
-
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    let exit_code = output.status.code().unwrap_or(-1);
-
-    format_command_output(&stdout, &stderr, exit_code)
-}
-
-fn format_command_output(stdout: &str, stderr: &str, exit_code: i32) -> String {
-    let mut result = String::new();
-    if !stdout.is_empty() {
-        result.push_str(stdout);
-    }
-    if !stderr.is_empty() {
-        if !result.is_empty() {
-            result.push('\n');
-        }
-        result.push_str("stderr: ");
-        result.push_str(stderr);
-    }
-    if result.is_empty() {
-        result = format!("(exit code: {})", exit_code);
-    }
-    result
-}
-
 fn write_files_sync(edits: &[(PathBuf, String)]) -> (usize, Vec<String>) {
     let mut count = 0;
     let mut errors = Vec::new();
@@ -373,28 +306,31 @@ fn detect_git_info_sync(start: &Path) -> Option<GitInfo> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use runie_core::shell::{format_command_output, run_bash_sync};
+    use std::collections::HashMap;
+    use std::path::Path;
 
     #[test]
     fn execute_echo_command_shell() {
-        let output = run_bash_sync("echo hello", true);
+        let output = run_bash_sync("echo hello", Path::new("."), &HashMap::new(), true).output;
         assert!(output.contains("hello"), "Should contain hello");
     }
 
     #[test]
     fn execute_echo_command_direct() {
-        let output = run_bash_sync("echo hello", false);
+        let output = run_bash_sync("echo hello", Path::new("."), &HashMap::new(), false).output;
         assert!(output.contains("hello"), "Should contain hello");
     }
 
     #[test]
     fn execute_pwd_command() {
-        let output = run_bash_sync("pwd", true);
+        let output = run_bash_sync("pwd", Path::new("."), &HashMap::new(), true).output;
         assert!(!output.is_empty(), "pwd should return output");
     }
 
     #[test]
     fn command_not_found() {
-        let output = run_bash_sync("nonexistent_command_xyz", true);
+        let output = run_bash_sync("nonexistent_command_xyz", Path::new("."), &HashMap::new(), true).output;
         assert!(
             output.contains("Error") || output.contains("not found"),
             "Should show error for invalid command"
@@ -404,11 +340,11 @@ mod tests {
     #[test]
     fn quoted_args_direct_mode() {
         // In shell mode, quoting works as expected
-        let output = run_bash_sync("echo 'hello world'", true);
+        let output = run_bash_sync("echo 'hello world'", Path::new("."), &HashMap::new(), true).output;
         assert!(output.contains("hello world"), "Shell mode should preserve quotes");
 
         // In direct mode, single quotes are not special to shell_words
-        let output = run_bash_sync("echo 'hello world'", false);
+        let output = run_bash_sync("echo 'hello world'", Path::new("."), &HashMap::new(), false).output;
         // shell_words preserves the quoted string as a single argument
         // which is then passed to echo as a literal string
         assert!(!output.is_empty(), "Direct mode should work");
@@ -510,13 +446,22 @@ mod tests {
             uuid::Uuid::new_v4().to_string(),
         );
         std::fs::create_dir_all(&tmp).unwrap();
-        run_bash_sync(&format!("git init {} --quiet", tmp.display()), true);
+        run_bash_sync(
+            &format!("git init {} --quiet", tmp.display()),
+            Path::new("."),
+            &HashMap::new(),
+            true,
+        );
         run_bash_sync(
             &format!("git -C {} config user.email 'test@test.com'", tmp.display()),
+            Path::new("."),
+            &HashMap::new(),
             true,
         );
         run_bash_sync(
             &format!("git -C {} config user.name 'Test'", tmp.display()),
+            Path::new("."),
+            &HashMap::new(),
             true,
         );
         run_bash_sync(
@@ -526,6 +471,8 @@ mod tests {
                 tmp.display(),
                 tmp.display()
             ),
+            Path::new("."),
+            &HashMap::new(),
             true,
         );
 
@@ -546,13 +493,22 @@ mod tests {
             uuid::Uuid::new_v4().to_string(),
         );
         std::fs::create_dir_all(&tmp).unwrap();
-        run_bash_sync(&format!("git init {} --quiet", tmp.display()), true);
+        run_bash_sync(
+            &format!("git init {} --quiet", tmp.display()),
+            Path::new("."),
+            &HashMap::new(),
+            true,
+        );
         run_bash_sync(
             &format!("git -C {} config user.email 'test@test.com'", tmp.display()),
+            Path::new("."),
+            &HashMap::new(),
             true,
         );
         run_bash_sync(
             &format!("git -C {} config user.name 'Test'", tmp.display()),
+            Path::new("."),
+            &HashMap::new(),
             true,
         );
         run_bash_sync(
@@ -562,11 +518,15 @@ mod tests {
                 tmp.display(),
                 tmp.display()
             ),
+            Path::new("."),
+            &HashMap::new(),
             true,
         );
         // Detach HEAD
         run_bash_sync(
             &format!("git -C {} checkout --detach HEAD --quiet", tmp.display()),
+            Path::new("."),
+            &HashMap::new(),
             true,
         );
 
