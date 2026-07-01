@@ -87,7 +87,7 @@
   {
     "file": "cap-and-lock-input-history.md",
     "title": "Cap and lock input history",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-env-lock-in-runie-testing.md",
@@ -252,7 +252,7 @@
   {
     "file": "delete-dynprovider-and-providerconfigbox-wrappers.md",
     "title": "Delete DynProvider and ProviderConfigBox wrappers",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-eventbusbridge-wrapper.md",
@@ -707,7 +707,7 @@
   {
     "file": "normalize-paths-with-path-absolutize-and-dunce.md",
     "title": "Normalize paths with path-absolutize",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "normalize-remaining-std-mutex-to-parking-lot.md",
@@ -797,7 +797,7 @@
   {
     "file": "remove-dead-redb-optional-dependency.md",
     "title": "Remove dead redb optional dependency",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-direct-appstate-mutation-from-tui-handlers.md",
@@ -832,7 +832,7 @@
   {
     "file": "remove-configactorstate-unnecessary-mutex.md",
     "title": "Remove unnecessary Mutex from ConfigActorState",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-unsafe-box_to_arc-from-leader-bootstrap.md",
@@ -1097,7 +1097,7 @@
   {
     "file": "stop-dotenvy-from-mutating-process-environment.md",
     "title": "Stop dotenvy from mutating process environment",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "store-provider-api-keys-in-keyring-not-config.md",
@@ -1327,7 +1327,7 @@
   {
     "file": "use-include-dir-for-provider-registry-yaml.md",
     "title": "Use include_dir for provider registry YAML",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-secrecy-secretstring-in-authtoken.md",
