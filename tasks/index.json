@@ -1002,7 +1002,7 @@
   {
     "file": "replace-token-chars4-heuristic-with-tiktoken-rs.md",
     "title": "Replace token chars/4 heuristic with tiktoken-rs",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-token-wrapper-with-secrecy-secretstring.md",
