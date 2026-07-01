@@ -342,7 +342,7 @@
   {
     "file": "drop-terminal-brand-and-multiplexer-tables.md",
     "title": "Drop terminal brand and multiplexer tables",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "drop-unused-rand-from-runie-provider.md",
@@ -572,7 +572,7 @@
   {
     "file": "format-permission-request-for-human-readable-display.md",
     "title": "Format permission request for human-readable display",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fuzzy-history-search-with-sublime-fuzzy.md",

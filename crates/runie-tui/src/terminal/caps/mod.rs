@@ -1,9 +1,8 @@
 //! Terminal capability detection.
 //!
 //! Uses `supports-color` for color level detection and `supports-hyperlinks`
-//! for hyperlink support. Brand, multiplexer, mouse, clipboard, focus
-//! tracking, and unicode detection remain custom heuristics over an
-//! environment snapshot so they can be unit-tested without touching `std::env`.
+//! for hyperlink support. No brand/multiplexer lookup tables are maintained.
+//! Mouse, clipboard, and focus tracking are detected via environment probes.
 
 use std::collections::HashMap;
 
@@ -36,8 +35,6 @@ pub struct TermCaps {
     pub clipboard: bool,
     pub focus_tracking: bool,
     pub unicode: bool,
-    pub brand: TerminalBrand,
-    pub multiplexer: MultiplexerType,
 }
 
 impl Default for TermCaps {
@@ -50,8 +47,6 @@ impl Default for TermCaps {
             clipboard: false,
             focus_tracking: false,
             unicode: true,
-            brand: TerminalBrand::Unknown,
-            multiplexer: MultiplexerType::None,
         }
     }
 }
@@ -73,29 +68,7 @@ pub enum MouseCapability {
     SgrExtended,
 }
 
-/// Recognized terminal emulator families.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TerminalBrand {
-    Unknown,
-    ITerm2,
-    VSCode,
-    WezTerm,
-    Alacritty,
-    Kitty,
-    TerminalApp, // macOS Terminal.app
-    WindowsTerminal,
-    Warp,
-    Ghostty,
-}
 
-/// Recognized terminal multiplexer families.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MultiplexerType {
-    None,
-    Tmux,
-    Screen,
-    Zellij,
-}
 
 /// Detect capabilities from the current process environment.
 pub fn detect_capabilities_from_env() -> TermCaps {
@@ -105,9 +78,7 @@ pub fn detect_capabilities_from_env() -> TermCaps {
 
 /// Detect capabilities from an explicit environment snapshot.
 pub fn detect_capabilities(env: &HashMap<String, String>) -> TermCaps {
-    let brand = detect_brand(env);
-    let multiplexer = detect_multiplexer(env);
-    let color_depth = detect_color_depth(env, brand, multiplexer);
+    let color_depth = detect_color_depth(env);
     let hyperlinks = detect_hyperlinks(env);
 
     let truecolor = matches!(color_depth, ColorDepth::Truecolor);
@@ -116,12 +87,10 @@ pub fn detect_capabilities(env: &HashMap<String, String>) -> TermCaps {
         color_depth,
         truecolor,
         hyperlinks,
-        mouse: detect_mouse(brand, multiplexer),
-        clipboard: detect_clipboard(brand, multiplexer),
-        focus_tracking: detect_focus_tracking(brand, multiplexer),
+        mouse: detect_mouse(env),
+        clipboard: detect_clipboard(env),
+        focus_tracking: detect_focus_tracking(env),
         unicode: detect_unicode(env),
-        brand,
-        multiplexer,
     }
 }
 
