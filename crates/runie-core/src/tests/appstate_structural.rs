@@ -134,21 +134,30 @@ fn inner_structs_are_default() {
     assert_input_defaults(&state.input);
 }
 
+/// Test AgentState field access via TurnState projection.
+/// AgentState is a read-only projection of TurnState, so we set up TurnState
+/// and sync to AgentState to verify the projection relationship.
 fn agent_access_patterns(state: &mut AppState) {
-    state.agent.streaming = true;
-    assert!(state.agent.streaming);
+    // AgentState is a projection of TurnState - set TurnState fields and sync.
+    state.turn_state_mut().streaming = true;
+    *state.agent_state_mut() = AgentState::from(&state.turn_state);
+    assert!(state.agent_state().streaming);
 
-    state.agent.next_id = 42;
-    assert_eq!(state.agent.next_id, 42);
+    state.turn_state_mut().next_id = 42;
+    *state.agent_state_mut() = AgentState::from(&state.turn_state);
+    assert_eq!(state.agent_state().next_id, 42);
 
-    state.agent.intermediate_step_count = 5;
-    assert_eq!(state.agent.intermediate_step_count, 5);
+    state.turn_state_mut().intermediate_step_count = 5;
+    *state.agent_state_mut() = AgentState::from(&state.turn_state);
+    assert_eq!(state.agent_state().intermediate_step_count, 5);
 
-    state.agent.current_action = Some("Thinking".to_string());
-    assert!(state.agent.current_action.is_some());
+    state.turn_state_mut().current_action = Some("Thinking".to_string());
+    *state.agent_state_mut() = AgentState::from(&state.turn_state);
+    assert!(state.agent_state().current_action.is_some());
 
-    state.agent.thinking_started_at = Some(std::time::Instant::now());
-    assert!(state.agent.thinking_started_at.is_some());
+    state.turn_state_mut().thinking_started_at = Some(std::time::Instant::now());
+    *state.agent_state_mut() = AgentState::from(&state.turn_state);
+    assert!(state.agent_state().thinking_started_at.is_some());
 }
 
 fn view_access_patterns(state: &mut AppState) {

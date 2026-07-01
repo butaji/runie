@@ -22,13 +22,15 @@ mod tests {
     #[test]
     fn apply_turn_completed_clears_flags() {
         let mut state = AppState::default();
-        state.agent_state_mut().turn_active = true;
-        state.agent_state_mut().inflight = 1;
-        state.agent_state_mut().streaming = true;
-        state.agent_state_mut().current_tool_name = Some("bash".to_owned());
+        // Set up TurnState (the authoritative source) directly instead of AgentState.
+        state.turn_state_mut().turn_active = true;
+        state.turn_state_mut().inflight = 1;
+        state.turn_state_mut().streaming = true;
+        state.turn_state_mut().current_tool_name = Some("bash".to_owned());
 
         state.apply_turn_completed();
 
+        // Verify projection via agent_state.
         assert!(!state.agent_state().turn_active);
         assert!(!state.agent_state().streaming);
         assert_eq!(state.agent_state().inflight, 0);
@@ -38,11 +40,14 @@ mod tests {
     #[test]
     fn apply_turn_errored_resets_inflight() {
         let mut state = AppState::default();
-        state.agent_state_mut().turn_active = true;
-        state.agent_state_mut().inflight = 2;
+        // Set up TurnState (the authoritative source) directly instead of AgentState.
+        state.turn_state_mut().turn_active = true;
+        state.turn_state_mut().inflight = 2;
+        state.turn_state_mut().streaming = true;
 
         state.apply_turn_errored();
 
+        // Verify projection via agent_state.
         assert!(!state.agent_state().turn_active);
         assert!(!state.agent_state().streaming);
         assert_eq!(state.agent_state().inflight, 0);
@@ -79,19 +84,25 @@ mod tests {
 
     // ── Steering/FollowUp projection tests ───────────────────────────────────
 
+    /// Push a steering message to turn_state.message_queue (authoritative source).
+    /// The projection to agent_state.message_queue happens via the apply methods.
     fn push_steering(state: &mut AppState, content: &str) {
         state.turn_state_mut().message_queue.push(crate::model::QueuedMessage {
             content: content.into(),
             kind: Steering,
         });
+        // Sync to agent_state via the projection pattern.
         *state.agent_state_mut() = crate::model::AgentState::from(&state.turn_state);
     }
 
+    /// Push a follow-up message to turn_state.message_queue (authoritative source).
+    /// The projection to agent_state.message_queue happens via the apply methods.
     fn push_follow_up(state: &mut AppState, content: &str) {
         state.turn_state_mut().message_queue.push(crate::model::QueuedMessage {
             content: content.into(),
             kind: FollowUp,
         });
+        // Sync to agent_state via the projection pattern.
         *state.agent_state_mut() = crate::model::AgentState::from(&state.turn_state);
     }
 

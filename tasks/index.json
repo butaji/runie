@@ -217,7 +217,7 @@
   {
     "file": "clear-inflight-turn-state-on-success.md",
     "title": "Clear in-flight turn state on success",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "collapse-actor-handles-to-typed-map.md",
@@ -452,7 +452,7 @@
   {
     "file": "drop-custom-markdown-ast-for-pulldown-cmark-and-tui-markdown.md",
     "title": "Drop custom markdown AST and render through pulldown-cmark/tui-markdown",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "drop-legacy-diff-parser-and-rely-on-diffy.md",
@@ -952,7 +952,7 @@
   {
     "file": "regenerate-index-and-mark-typed-chatmessage-builder-done.md",
     "title": "Regenerate index and mark typed ChatMessage builder done",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-agent-handlebox-dead-code-or-wire-queue-drain.md",
@@ -972,7 +972,7 @@
   {
     "file": "remove-configactorstate-unnecessary-mutex.md",
     "title": "Remove unnecessary Mutex from ConfigActorState",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-dead-migration-scaffolding.md",
@@ -1297,12 +1297,12 @@
   {
     "file": "rewrite-appstate-structural-tests-to-not-mutate-agentstate.md",
     "title": "Rewrite AppState structural tests to not mutate AgentState",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "rewrite-turn-projections-tests-to-not-mutate-agentstate.md",
     "title": "Rewrite turn projections tests to not mutate AgentState",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "round-trip-session-tree-snapshot-through-durable-events.md",
