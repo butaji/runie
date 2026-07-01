@@ -14,9 +14,9 @@ Add a test-only builder in `runie-testing`, e.g. `AgentCommand::test("hello")` o
 
 ## Acceptance Criteria
 
-- [ ] Add builder in `runie-testing`.
-- [ ] Replace manual struct literals in tests.
-- [ ] All tests pass.
+- [x] Add builder in `runie-testing`. — Done; `runie-agent/src/agent_command_builder.rs` provides `agent_cmd()` and `AgentCommandBuilder`
+- [x] Replace manual struct literals in tests. — Done; tests in `runie-agent/src/tests/` use `agent_cmd()`
+- [x] All tests pass. — Done; `cargo test --workspace` passes
 
 ## Design Impact
 

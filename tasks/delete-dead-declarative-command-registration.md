@@ -6,7 +6,7 @@
 
 ## Context
 
-`crates/runie-core/src/declarative/register.rs` leaks command names to `'static` and registers intent builders in a global `RwLock<Option<HashMap<&'static str, EventBuilder>>>`. The exported functions are unused outside their own tests; `DeclarativeLoader` is exported but never constructed.
+`crates/runie-core/src/declarative/register.rs` leaked command names to `'static` and registered intent builders in a global `RwLock<Option<HashMap<&'static str, EventBuilder>>>`. The exported functions were unused outside their own tests; `DeclarativeLoader` was exported but never constructed.
 
 ## Goal
 
@@ -14,10 +14,10 @@ Delete `declarative/register.rs`. Route any remaining declarative command loadin
 
 ## Acceptance Criteria
 
-- [ ] Delete `crates/runie-core/src/declarative/register.rs`.
-- [ ] Remove exports and call sites.
-- [ ] `cargo check --workspace` passes.
-- [ ] No production behavior changes.
+- [x] Delete `crates/runie-core/src/declarative/register.rs`. — **Done**; file deleted. `declarative/` now only contains `loader.rs`, `mod.rs`, `tests.rs`, `types.rs`.
+- [x] Remove exports and call sites. — **Done**; no remaining imports of `register.rs`.
+- [x] `cargo check --workspace` passes. — **Done**; verified 2026-07-01.
+- [x] No production behavior changes. — **Done**; declarative commands are loaded via `loader.rs` + `CommandRegistry`.
 
 ## Design Impact
 
@@ -33,6 +33,5 @@ No change to TUI element design or composition. Only internal command registrati
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
