@@ -1067,7 +1067,7 @@
   {
     "file": "simplify-core-keybinding-parsing-with-crokey.md",
     "title": "Simplify core keybinding parsing with crokey",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "simplify-slash-command-dsl.md",
