@@ -847,7 +847,7 @@
   {
     "file": "remove-unused-direct-deps-from-runie-tui.md",
     "title": "Remove unused direct deps from runie-tui",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "rename-telemetry-rs-to-tracing-init.md",
