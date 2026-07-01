@@ -937,7 +937,7 @@
   {
     "file": "replace-layered-config-merge-with-figment.md",
     "title": "Replace custom layered config merge with Figment",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-leftover-macros-with-functions.md",
