@@ -597,7 +597,7 @@
   {
     "file": "hoist-runie-tui-inline-deps-to-workspace.md",
     "title": "Hoist runie-tui inline deps to workspace",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "implement-or-remove-mcp-runtime-scaffolding.md",
@@ -977,7 +977,7 @@
   {
     "file": "replace-keymap-modifier-tables-with-crokey-map.md",
     "title": "Replace keymap modifier dispatch tables with a crokey HashMap",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-leftover-macros-with-functions.md",

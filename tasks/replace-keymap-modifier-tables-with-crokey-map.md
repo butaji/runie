@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -16,10 +16,10 @@ Build a single `HashMap<crokey::KeyCombination, CoreEvent>` from the default bin
 
 ## Acceptance Criteria
 
-- [ ] Parse default keybinding strings into `crokey::KeyCombination` keys.
-- [ ] Build the map once at startup.
-- [ ] Replace the modifier match tables with a single lookup.
-- [ ] Keep custom user overrides working by layering them on top of the default map.
+- [x] Parse default keybinding strings into `crokey::KeyCombination` keys.
+- [x] Build the map once at startup.
+- [x] Replace the modifier match tables with a single lookup.
+- [x] Keep custom user overrides working by layering them on top of the default map.
 
 ## Tests
 
@@ -29,3 +29,12 @@ Build a single `HashMap<crokey::KeyCombination, CoreEvent>` from the default bin
 - **Layer 3 — Rendering:** `TestBackend` snapshot after a key combo shows the expected UI change.
 - **Layer 4 — E2E:** Headless CLI does not depend on keymap; N/A unless tested via CLI transport.
 - **Live tmux validation:** Launch the TUI and press all documented shortcuts (`q`, `Ctrl+c`, `/`, `@`, `Enter`, etc.); each behaves as documented.
+
+## Implementation Notes
+
+The keymap now uses:
+- `DEFAULT_MAP`: `LazyLock<HashMap<String, CoreEvent>>` built from `keybindings::default_keybindings()` once at startup
+- `map_key_event()`: Single lookup function with priority: 1) user bindings override, 2) default map, 3) plain key fallback
+- `map_plain_key()`: Minimal fallback for unhandled keys (Esc, Tab, chars, navigation)
+
+The old per-modifier tables (`map_by_modifier`, `map_ctrl_key`, etc.) have been deleted.
