@@ -3,14 +3,17 @@
 //! These are blocking operations that run on a separate thread via `spawn_blocking`.
 //! Each function wraps load-modify-write under a single exclusive lock to prevent
 //! concurrent saves from overwriting each other.
+//!
+//! Uses `toml_edit` for comment-preserving serialization and `fs2` for cross-process
+//! file locking.
 
 use std::fs;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
 
+use anyhow::Context;
 use fs2::FileExt;
 
-use anyhow::Context;
 use crate::config::{McpServer, ModelProvider};
 use crate::model::ThinkingLevel;
 
@@ -18,6 +21,7 @@ use crate::model::ThinkingLevel;
 
 /// Execute a read-modify-write on a config file under an exclusive lock.
 /// The lock is acquired BEFORE reading to prevent truncation races.
+/// Uses `toml_edit` for comment-preserving serialization.
 fn with_exclusive_lock<F>(path: &Path, mut f: F) -> anyhow::Result<()>
 where
     F: FnMut(&mut crate::config::Config),
@@ -48,8 +52,9 @@ where
     // Apply modification
     f(&mut config);
 
-    // Serialize
-    let toml_string = toml::to_string_pretty(&config)?;
+    // Serialize using toml_edit to preserve comments
+    let mut doc: toml_edit::DocumentMut = toml_edit::DocumentMut::from(&config);
+    let toml_string = doc.to_string();
 
     // Truncate and write (lock still held)
     file.seek(SeekFrom::Start(0))?;

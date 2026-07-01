@@ -592,7 +592,7 @@
   {
     "file": "hoist-runie-provider-inline-deps-to-workspace.md",
     "title": "Hoist runie-provider inline deps to workspace",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "hoist-runie-tui-inline-deps-to-workspace.md",
