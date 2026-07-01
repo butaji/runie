@@ -235,6 +235,13 @@ fn resume_loads_most_recent_session() {
 
     // Save a newer session
     let mut newer = fresh_state();
+    // Verify fresh_state gives ConfigDefault
+    assert_eq!(
+        newer.config.model_source,
+        crate::model::ModelSource::ConfigDefault,
+        "fresh_state should give ConfigDefault, got {:?}",
+        newer.config.model_source
+    );
     newer.config.current_provider = "openai".into();
     newer.config.current_model = "gpt-4o".into();
     newer.session.messages.push(crate::model::ChatMessage {

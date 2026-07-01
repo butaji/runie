@@ -19,6 +19,9 @@ fn handle_main_events(state: &mut AppState, event: &crate::Event) -> bool {
             model,
             explicit,
         } => {
+            // Always switch during session replay (when restoring a session's model).
+            // Skip only when non-explicit switch would override a user's explicit choice.
+            // During replay, the session's model should always be restored.
             if *explicit || state.config().model_source != crate::model::ModelSource::UserOverride {
                 state.switch_model(provider.clone(), model.clone(), *explicit);
             }

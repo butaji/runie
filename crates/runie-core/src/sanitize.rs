@@ -63,7 +63,7 @@ mod tests {
     /// Orphan tool result (no matching tool call) is detected.
     #[test]
     fn validate_detects_orphan_tool_result() {
-        let mut msgs = vec![user("hi"), tool("orphan result", "orphan")];
+        let msgs = vec![user("hi"), tool("orphan result", "orphan")];
         let errs = validate_messages(&msgs);
         assert!(!errs.is_empty());
         assert!(errs.iter().any(|e| matches!(e, SanitizeError::OrphanToolResult { .. })));

@@ -414,7 +414,7 @@ mod tests {
     /// UTF-8 characters within a single line read.
     #[tokio::test]
     async fn bufreader_preserves_split_utf8() {
-        use tokio::io::AsyncReadExt;
+        
 
         // "hello \xe4\xb8\x96\xe7\x95\x8c\n" = "hello 世界\n"
         // "世" = [0xE4, 0xB8, 0x96] (3 bytes), "界" = [0xE7, 0x95, 0x8C] (3 bytes)

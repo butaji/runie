@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -13,9 +13,9 @@
 Use `tempfile::NamedTempFile::new_in(parent)` for atomic writes.
 
 ## Acceptance Criteria
-- [ ] Replace custom temp-name logic.
-- [ ] Preserve `fs2` lock and `0o600` permissions.
-- [ ] Cross-platform behavior unchanged.
+- [x] Replace custom temp-name logic.
+- [x] Preserve `fs2` lock and `0o600` permissions.
+- [x] Cross-platform behavior unchanged.
 
 ## Design Impact
 

@@ -992,7 +992,7 @@
   {
     "file": "remove-unused-direct-deps-from-runie-tui.md",
     "title": "Remove Unused Direct Deps From Runie Tui",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "rename-telemetry-rs-to-tracing-init.md",
@@ -1017,7 +1017,7 @@
   {
     "file": "replace-atomic-write-tempname-with-tempfile.md",
     "title": "Replace Atomic Write Tempname With Tempfile",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-bash-safety-heuristic-with-os-sandboxing.md",
@@ -1147,7 +1147,7 @@
   {
     "file": "replace-remaining-std-sync-locks-with-parking_lot.md",
     "title": "Replace Remaining Std Sync Locks With Parking_Lot",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-rpcreply-with-ractor-rpcreplyport.md",

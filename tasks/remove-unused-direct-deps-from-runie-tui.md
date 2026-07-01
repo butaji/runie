@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -13,9 +13,9 @@
 Delete the three unused direct dependencies from `runie-tui/Cargo.toml`.
 
 ## Acceptance Criteria
-- [ ] Delete `tui-textarea`, `ractor`, and `tracing-subscriber` lines.
-- [ ] `cargo check -p runie-tui` passes.
-- [ ] No source references remain.
+- [x] Delete `tui-textarea`, `ractor`, and `tracing-subscriber` lines.
+- [x] `cargo check -p runie-tui` passes.
+- [x] No source references remain.
 
 ## Design Impact
 

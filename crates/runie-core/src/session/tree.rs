@@ -6,7 +6,7 @@ use crate::message::{ChatMessage, Role};
 use indextree::{Arena, NodeId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 /// A node in the session tree — holds the data, not the tree structure.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -472,7 +472,7 @@ impl SessionTree {
     /// Collect visible nodes given a filter, with caching.
     pub fn filtered_walk(&self, filter: SessionTreeFilter) -> Vec<(usize, NodeId)> {
         // Try cache first
-        if let Ok(cache) = self.cached_filter.try_lock() {
+        if let Some(cache) = self.cached_filter.try_lock() {
             if let Some((cached_filter, cached_nodes)) = cache.as_ref() {
                 if *cached_filter == filter {
                     return cached_nodes.clone();
@@ -492,7 +492,7 @@ impl SessionTree {
             .collect();
 
         // Store in cache
-        if let Ok(mut cache) = self.cached_filter.try_lock() {
+        if let Some(mut cache) = self.cached_filter.try_lock() {
             *cache = Some((filter, result.clone()));
         }
 
@@ -501,7 +501,7 @@ impl SessionTree {
 
     /// Invalidate the filter cache after tree mutation.
     fn invalidate_cache(&mut self) {
-        if let Ok(mut cache) = self.cached_filter.try_lock() {
+        if let Some(mut cache) = self.cached_filter.try_lock() {
             *cache = None;
         }
     }

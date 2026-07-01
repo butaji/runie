@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -13,9 +13,9 @@ Production code still uses `std::sync::Mutex`/`RwLock` in `actors/provider/facto
 Replace with `parking_lot` equivalents and remove poison-unwrap risks.
 
 ## Acceptance Criteria
-- [ ] Replace `std::sync::Mutex`/`RwLock` with `parking_lot`.
-- [ ] Remove `.lock().unwrap()` patterns.
-- [ ] Document any intentional std-lock exceptions.
+- [x] Replace `std::sync::Mutex`/`RwLock` with `parking_lot`.
+- [x] Remove `.lock().unwrap()` patterns.
+- [x] Document any intentional std-lock exceptions.
 
 ## Design Impact
 
