@@ -26,13 +26,10 @@
 //! - `SubagentRegistry::load_user_overrides()` extends the registry with types
 //!   from `~/.runie/agents/`.  User types override built-ins of the same name.
 
-mod manifest;
-
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::resource_loader::{extract_body, extract_frontmatter};
-pub use manifest::Manifest;
 
 /// Prompt mode for a subagent — controls how much context is included.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::EnumString)]

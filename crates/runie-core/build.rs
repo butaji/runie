@@ -1,9 +1,8 @@
 //! Build script for runie-core.
 //!
-//! This script performs two checks:
-//! 1. **AppState field access guardrail**: ensures internal AppState fields are accessed
-//!    through accessors, not directly.
-//! 2. **Agent manifest validation**: verifies bundled subagent type checksums match.
+//! This script performs one check:
+//! **AppState field access guardrail**: ensures internal AppState fields are accessed
+//! through accessors, not directly.
 //!
 //! Note: Event taxonomy files (`src/event/generated/`) are committed to the repository.
 //! If you modify `src/event/taxonomy.json`, regenerate the files by running the script
@@ -172,12 +171,6 @@ fn main() {
     let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default());
     let workspace_root = manifest_dir.parent().unwrap().parent().unwrap();
 
-    // Validate bundled subagent type checksums.
-    if let Err(msg) = validate_agent_manifest(manifest_dir.join("resources").join("agents")) {
-        eprintln!("\n=== AGENT MANIFEST VALIDATION FAILED ===\n  {}\n\n", msg);
-        process::exit(1);
-    }
-
     // Check AppState field access patterns.
     let mut errors = Vec::new();
     let crates_path = workspace_root.join("crates");
@@ -196,36 +189,4 @@ fn main() {
         eprintln!("\n{} violations found\n", errors.len());
         process::exit(1);
     }
-}
-
-/// Validate that all files in `resources/agents/manifest.json` match their
-/// stored SHA-256 checksums.
-fn validate_agent_manifest(agents_dir: PathBuf) -> Result<(), String> {
-    let manifest_path = agents_dir.join("manifest.json");
-    let manifest_json = fs::read_to_string(&manifest_path)
-        .map_err(|e| format!("failed to read manifest.json: {}", e))?;
-
-    #[derive(serde::Deserialize)]
-    struct Manifest {
-        files: std::collections::HashMap<String, String>,
-    }
-    let manifest: Manifest = serde_json::from_str(&manifest_json)
-        .map_err(|e| format!("failed to parse manifest.json: {}", e))?;
-
-    use sha2::{Digest, Sha256};
-    for (filename, expected_hash) in &manifest.files {
-        let file_path = agents_dir.join(filename);
-        let content =
-            fs::read(&file_path).map_err(|e| format!("failed to read {}: {}", filename, e))?;
-        let mut hasher = Sha256::new();
-        hasher.update(&content);
-        let actual = hex::encode(hasher.finalize());
-        if &actual != expected_hash {
-            return Err(format!(
-                "checksum mismatch for {}: expected {}, got {}",
-                filename, expected_hash, actual
-            ));
-        }
-    }
-    Ok(())
 }

@@ -1007,7 +1007,7 @@
   {
     "file": "replace-agent-manifest-sha-with-include-dir-fingerprint.md",
     "title": "Replace agent manifest SHA with include_dir fingerprint",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-ansi256-lookup-table-with-ansi-colours.md",
