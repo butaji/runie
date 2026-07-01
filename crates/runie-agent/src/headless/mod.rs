@@ -20,7 +20,7 @@ use runie_core::headless_runtime::HeadlessRuntime;
 use runie_core::message::ChatMessage;
 use runie_core::permissions::PermissionManager;
 use runie_core::provider::Provider;
-use runie_provider::DynProviderFactory;
+use runie_provider::BuiltProviderFactory;
 use runie_core::provider_event::ProviderEvent;
 use runie_core::tool::{
     assign_tool_call_ids, build_assistant_message, parse_tool_calls_fallible,
@@ -43,7 +43,7 @@ pub async fn run_headless_cli(
 ) -> Result<HeadlessResult> {
     let runtime = HeadlessRuntime::spawn(
         EventBus::<Event>::new(10),
-        Arc::new(DynProviderFactory),
+        Arc::new(BuiltProviderFactory),
     )
     .await?;
     let provider = runtime.provider(provider_name, provider_model).await?;

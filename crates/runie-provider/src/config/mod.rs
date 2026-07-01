@@ -76,9 +76,6 @@ impl ProviderConfigResolver {
     }
 }
 
-// Re-export Config from runie-core for backward compatibility
-pub use runie_core::config::{Config, ModelProvider, ModelsSection};
-
 #[cfg(test)]
 mod tests {
     use super::*;

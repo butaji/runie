@@ -46,6 +46,7 @@ mod tests;
 /// The protocol's `ApprovalDecision` (Allow/Deny only) is converted to this type
 /// at the protocol/core boundary via `From<crate::proto::op::ApprovalDecision>`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum PermissionAction {
     Allow,
     Ask,

@@ -2,7 +2,7 @@
 //! Tests for runie-provider
 
 use crate::{
-    build_provider_from_boxed, build_provider_with_config, DynProviderFactory, MockProvider,
+    build_provider_from_boxed, build_provider_with_config, BuiltProviderFactory, MockProvider,
     MockStreamingProvider, Provider, ProviderError, BuiltProvider,
 };
 use futures::StreamExt;
@@ -393,7 +393,7 @@ async fn test_mock_streaming_provider_accumulates_content() {
 }
 
 // ============================================================================
-// ProviderActor integration tests using the real DynProviderFactory
+// ProviderActor integration tests using the real BuiltProviderFactory
 // ============================================================================
 
 #[tokio::test]
@@ -403,7 +403,7 @@ async fn provider_actor_builds_mock_provider_with_runie_mock() {
 
     let bus = EventBus::<Event>::new(1);
     let (config_handle, _config_actor, _join) = ConfigActor::spawn_default(bus.clone()).await.unwrap();
-    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory))
+    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(BuiltProviderFactory))
             .await
             .unwrap();
 
@@ -422,7 +422,7 @@ async fn provider_actor_builds_mock_provider_with_runie_mock() {
 async fn provider_actor_rejects_unknown_provider_real_factory() {
     let bus = EventBus::<Event>::new(1);
     let (config_handle, _config_actor, _join) = ConfigActor::spawn_default(bus.clone()).await.unwrap();
-    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory))
+    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(BuiltProviderFactory))
             .await
             .unwrap();
 
@@ -469,7 +469,7 @@ api_key = "sk-test"
     let bus = EventBus::<Event>::new(1);
     let (config_handle, _config_actor, _) =
         ConfigActor::spawn(bus.clone(), Some(config_path), None).await.unwrap();
-    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(DynProviderFactory))
+    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(BuiltProviderFactory))
             .await
             .unwrap();
 

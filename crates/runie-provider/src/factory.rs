@@ -14,9 +14,9 @@ use runie_core::proto::ProviderConfig;
 ///
 /// This is the only production implementation of [`ProviderFactory`] and the
 /// only production code path that constructs providers.
-pub struct DynProviderFactory;
+pub struct BuiltProviderFactory;
 
-impl ProviderFactory for DynProviderFactory {
+impl ProviderFactory for BuiltProviderFactory {
     fn build(
         &self,
         provider: &str,

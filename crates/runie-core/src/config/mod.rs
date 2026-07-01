@@ -222,7 +222,7 @@ pub struct Config {
 }
 
 #[cfg(test)]
-mod telemetry_tests {
+mod tracing_tests {
     use super::TelemetrySection;
 
     #[test]

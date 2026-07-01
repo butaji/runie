@@ -28,12 +28,12 @@ pub use runie_core::provider::{Provider, ProviderMetadata, RetryConfig, Response
 pub use runie_core::model_catalog::configured::configured_models_catalog;
 pub use runie_core::model_catalog::{filter_models, model_catalog, ModelCapabilities, ModelInfo};
 
-pub use config::Config;
-pub use factory::DynProviderFactory;
+pub use runie_core::config::Config;
+pub use factory::BuiltProviderFactory;
 pub use mock::{MockProvider, MockStreamingProvider};
 pub use model_client::{ModelClient, TurnSession};
 pub use openai::OpenAiProvider;
-pub use runie_core::proto::{ProviderConfig, ProviderConfigBox};
+pub use runie_core::proto::ProviderConfig;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -239,7 +239,7 @@ pub async fn spawn_headless_runtime(
 
     runie_core::headless_runtime::HeadlessRuntime::spawn(
         EventBus::<Event>::new(10),
-        Arc::new(DynProviderFactory),
+        Arc::new(BuiltProviderFactory),
     )
     .await
 }

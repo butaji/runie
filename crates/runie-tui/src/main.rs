@@ -17,9 +17,9 @@ use runie_core::actors::leader::{Leader, LeaderHandle};
 use runie_core::actors::RactorTurnHandle;
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
-use runie_core::tracing_init as telemetry;
+use runie_core::tracing_init;
 use runie_core::{AppState, Snapshot};
-use runie_provider::DynProviderFactory;
+use runie_provider::BuiltProviderFactory;
 use runie_tui::{
     app_init, keymap, terminal, terminal_setup, theme, ui,
     ui_actor::{AgentHandleBox, LeaderAgentActorHandle, UiActor},
@@ -46,7 +46,7 @@ async fn main() -> io::Result<()> {
     // Install human-panic hook for crash reports.
     human_panic::setup_panic!();
 
-    telemetry::init();
+    tracing_init::init();
 
     let args: Vec<String> = std::env::args().collect();
     if let Some(report) = runie_tui::dry_run_cmd::run_from_args(&args) {
@@ -66,7 +66,7 @@ async fn main() -> io::Result<()> {
 
     let leader = Leader::new();
     let agent_factory = std::sync::Arc::new(AgentActorFactoryImpl);
-    let provider_factory = std::sync::Arc::new(DynProviderFactory);
+    let provider_factory = std::sync::Arc::new(BuiltProviderFactory);
     let leader_handle = leader
         .start_with_bus(provider_factory, agent_factory, bus.clone())
         .await

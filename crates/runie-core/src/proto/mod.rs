@@ -21,7 +21,7 @@ pub use op::{
     ApprovalDecision, ApprovalId, Op, PromptOrigin, SessionConfig, Submission, SubmissionId,
     W3cTraceContext,
 };
-pub use provider::{ProviderConfig, ProviderConfigBox};
+pub use provider::ProviderConfig;
 pub use request::Request;
 pub use response::Response;
 pub use version::{Version, PROTOCOL_VERSION};

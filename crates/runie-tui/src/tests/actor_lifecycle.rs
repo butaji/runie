@@ -8,7 +8,7 @@
 //! a LeaderHandle with all actors spawned.
 
 use runie_core::actors::leader::Leader;
-use runie_provider::DynProviderFactory;
+use runie_provider::BuiltProviderFactory;
 use runie_agent::AgentActorFactoryImpl;
 
 /// Verifies the leader bootstrap spawns all actors and produces a valid LeaderHandle.
@@ -16,7 +16,7 @@ use runie_agent::AgentActorFactoryImpl;
 async fn bootstrap_spawns_all_actors() {
     let leader = Leader::new();
     let agent_factory = std::sync::Arc::new(AgentActorFactoryImpl);
-    let provider_factory = std::sync::Arc::new(DynProviderFactory);
+    let provider_factory = std::sync::Arc::new(BuiltProviderFactory);
     let handle = leader
         .start(provider_factory, agent_factory)
         .await

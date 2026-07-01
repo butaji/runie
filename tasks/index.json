@@ -107,7 +107,7 @@
   {
     "file": "audit-and-update-architecture-and-execute-docs.md",
     "title": "Audit and update Architecture and EXECUTE docs",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "avoid-setting-global-theme-every-frame.md",
@@ -257,7 +257,7 @@
   {
     "file": "consolidate-duplicate-credential-resolution-task-files.md",
     "title": "Consolidate duplicate credential resolution task files",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "consolidate-provider-credential-resolver-duplication.md",
@@ -362,7 +362,7 @@
   {
     "file": "delete-providerconfigbox-alias-and-rename-dynproviderfactory.md",
     "title": "Delete ProviderConfigBox alias and rename DynProviderFactory",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-unused-glyph-constants.md",
@@ -497,7 +497,7 @@
   {
     "file": "fix-agentsmd-layer4-example-and-stale-provider-reexports.md",
     "title": "Fix AGENTS.md Layer-4 example and stale provider re-exports",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
@@ -552,7 +552,7 @@
   {
     "file": "fix-permissionaction-serde-case-and-docs.md",
     "title": "Fix PermissionAction serde case and docs",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-ractor-permission-actor-reply-lifecycle.md",
@@ -932,7 +932,7 @@
   {
     "file": "rename-telemetry-tests-and-import-alias.md",
     "title": "Rename telemetry tests and import alias",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-agent-manifest-sha-with-include-dir-fingerprint.md",

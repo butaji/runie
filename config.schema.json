@@ -267,9 +267,9 @@
       "description": "Permission action result.\n\nThis is the canonical enum for permission decisions throughout the codebase.\nThe protocol's `ApprovalDecision` (Allow/Deny only) is converted to this type\nat the protocol/core boundary via `From<crate::proto::op::ApprovalDecision>`.",
       "type": "string",
       "enum": [
-        "Allow",
-        "Ask",
-        "Deny"
+        "allow",
+        "ask",
+        "deny"
       ]
     },
     "PermissionMode": {

@@ -41,11 +41,9 @@ Rules:
 | `runie-core` | Events, `AppState`, sessions, config, commands, dialog DSL, harness skills |
 | `runie-agent` | Agent turn loop, tool-call parsing, truncation, subagent runner, built-in tools |
 | `runie-provider` | LLM provider clients and model catalog (OpenAI-compatible, Anthropic, MiniMax, …) |
-| `runie-tui` | CLI entry, Ratatui rendering, panels/forms, theme, terminal setup |
-| `runie-server` | RPC / server mode binary |
-| `runie-protocol` | Folded into `runie-core` (`crates/runie-core/src/proto/`) |
+| `runie-tui` | TUI entry, Ratatui rendering, panels/forms, theme, terminal setup |
+| `runie-cli` | CLI entry, headless/print/server modes |
 | `runie-testing` | Test fixtures, mock providers, and harness helpers |
-| `runie-macros` | Deleted; no longer a workspace member |
 
 ## Runtime
 
@@ -429,7 +427,7 @@ The 2026-06-28 architecture and code review found that the implementation had dr
 #### Phase 7 — Public API boundary and helper crates (P2)
 
 14. **Replace custom path/glob/fuzzy/keybinding helpers with crates** (`tasks/replace-custom-helpers-with-crates.md`) — delete `glob.rs`, `fuzzy.rs`, `path.rs`, and custom keybinding parsing; use `glob`/`globset`, `nucleo-matcher`/`sublime-fuzzy`, `shellexpand`, `crossterm`, and `tracing`.
-15. **Narrow the `runie-core` public API** (`tasks/narrow-runie-core-public-api.md`) — usage-audit first; move shared helpers (`display_width`, `labels`, `sanitize`) to a new `runie-util` crate, delete `path`/`fuzzy`/`glob` if the helper-crate task lands first, and narrow the rest.
+15. **Narrow the `runie-core` public API** (`tasks/narrow-runie-core-public-api.md`) — usage-audit first; resolved to keep helpers in `runie-core` (see `resolve-runie-util-micro-crate-vs-core-re-exports.md`), delete `path`/`fuzzy`/`glob` if the helper-crate task lands first, and narrow the rest.
 
 #### Phase 8 — Small safe cleanups (P3)
 

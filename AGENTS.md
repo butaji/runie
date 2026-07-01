@@ -62,8 +62,10 @@ Run the agent turn end-to-end with captured provider SSE fixtures and fake tool 
 ```rust
 #[tokio::test]
 async fn minimax_m3_multi_tool_turn() {
-    let provider = DynProvider::from_provider(
-        Box::new(replay_minimax_m3_fixture()) as Box<dyn Provider>
+    let provider = BuiltProvider::from_provider(
+        Box::new(replay_minimax_m3_fixture()) as Box<dyn Provider>,
+        "minimax",
+        "MiniMax-M3"
     );
     let skills: Vec<Box<dyn HarnessSkill>> = vec![
         Box::new(MockToolSkill::new(hashmap! {
