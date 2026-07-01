@@ -2,6 +2,7 @@
 
 use crate::actors::ConfigMsg;
 use crate::event::TransientLevel;
+use crate::metrics;
 use crate::model::{AppState, ModelSource};
 
 impl AppState {
@@ -30,7 +31,7 @@ impl AppState {
         self.configure_token_tracker();
         self.record_model_usage(&provider, &model);
         if self.config().telemetry_enabled() {
-            tracing::info!(provider = %provider, model = %model, "model_switch");
+            metrics::record_model_switch(&provider, &model);
         }
     }
 

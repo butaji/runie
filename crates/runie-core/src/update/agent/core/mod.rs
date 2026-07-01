@@ -1,5 +1,6 @@
 use crate::labels::{tool_done, tool_running};
 use crate::message::{now, Part};
+use crate::metrics;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::update::agent::thought::{plan_thought, ThoughtPlan};
 
@@ -87,7 +88,7 @@ impl AppState {
             ..Default::default()
         });
         if self.config().telemetry_enabled() {
-            tracing::info!(tool = %name, "tool_usage");
+            metrics::record_tool_usage(&name);
         }
         self.messages_changed();
     }

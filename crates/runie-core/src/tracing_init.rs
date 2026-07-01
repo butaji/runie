@@ -1,8 +1,11 @@
-//! Telemetry initialization using `tracing`.
+//! Telemetry initialization using `tracing` and `metrics`.
 //!
 //! This module provides a shared `init()` helper that sets up the tracing
 //! subscriber with sensible defaults: an `EnvFilter` from `RUST_LOG` (defaults
 //! to "info") and a formatted layer with target and thread IDs.
+//!
+//! Metrics are initialized with a no-op recorder by default. Replace with
+//! a real exporter (e.g., `metrics_exporter_prometheus`) when observability is needed.
 
 use std::sync::OnceLock;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
@@ -26,6 +29,9 @@ pub fn init() {
         .with(fmt::layer().with_target(true).with_thread_ids(true))
         .with(filter)
         .init();
+
+    // Also initialize metrics with no-op recorder.
+    crate::metrics::init();
 
     // Mark as initialized.
     let _ = INITIALIZED.set(());

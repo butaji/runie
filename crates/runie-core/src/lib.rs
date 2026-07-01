@@ -76,6 +76,8 @@ pub mod streaming_buffer;
 pub mod subagents;
 /// Tracing subscriber initialization.
 pub mod tracing_init;
+/// Metrics facade for telemetry (counters, histograms, gauges).
+pub mod metrics;
 
 pub mod theme_tokens;
 

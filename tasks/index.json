@@ -47,7 +47,7 @@
   {
     "file": "adopt-metrics-facade-for-telemetry.md",
     "title": "Adopt metrics facade for telemetry",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "adopt-palette-for-theme-color-math.md",

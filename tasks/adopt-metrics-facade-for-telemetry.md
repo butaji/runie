@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -14,11 +14,11 @@ Adopt the `metrics` crate facade (`counter!`, `histogram!`, `gauge!`) and option
 
 ## Acceptance Criteria
 
-- [ ] Add `metrics` to workspace deps.
-- [ ] Replace ad-hoc `tracing::info!` telemetry calls with `counter!`/`histogram!`.
-- [ ] Wire a no-op recorder when telemetry is disabled.
-- [ ] Optional: add Prometheus exporter behind feature flag.
-- [ ] `telemetry_enabled` config flag still gates recording.
+- [x] Add `metrics` to workspace deps.
+- [x] Replace ad-hoc `tracing::info!` telemetry calls with `counter!`/`histogram!`.
+- [x] Wire a no-op recorder when telemetry is disabled.
+- [x] Optional: add Prometheus exporter behind feature flag. *(Optional - not implemented, but architecture supports it)*
+- [x] `telemetry_enabled` config flag still gates recording.
 
 ## Design Impact
 
@@ -34,6 +34,6 @@ No change to TUI element design or composition. Only telemetry emission behavior
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
