@@ -10,7 +10,7 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 use tokio_util::sync::CancellationToken;
 
 use runie_core::actors::permission::RactorPermissionHandle;
-use runie_core::actors::provider::RactorProviderHandle;
+use runie_core::actors::provider::{BuiltProvider, RactorProviderHandle};
 use runie_core::actors::ractor_adapter::spawn_ractor;
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
@@ -72,7 +72,7 @@ pub struct RactorAgentArgs {
 
 /// Bundles everything needed to spawn the turn task.
 struct TurnSetupInfo {
-    built: Arc<dyn runie_core::provider::Provider>,
+    built: BuiltProvider,
     emit: EmitFn,
     gate: PermissionGate,
     bus: EventBus<Event>,
@@ -141,7 +141,7 @@ impl Actor for RactorAgentActor {
 impl RactorAgentActor {
     async fn run_turn(
         &self,
-        myself: ActorRef<Self::Msg>,
+        myself: ActorRef<<RactorAgentActor as ractor::Actor>::Msg>,
         state: &mut AgentActorState,
         mut command: AgentCommand,
     ) {
@@ -163,10 +163,10 @@ impl RactorAgentActor {
         if state.current_turn_token.is_some() || state.current_turn_handle.is_some() {
             let id = command.id.clone();
             state.bus.publish(runie_core::Event::Error {
-                id,
+                id: id.clone(),
                 message: "Turn already in flight, rejected new Run".into(),
             });
-            state.bus.publish(runie_core::Event::Done { id: command.id });
+            state.bus.publish(runie_core::Event::Done { id });
             return true;
         }
         false
@@ -213,7 +213,7 @@ impl RactorAgentActor {
 
     /// Spawns the turn as a background task; sends TurnComplete to the actor on finish.
     fn spawn_turn_task(
-        myself: ActorRef<Self::Msg>,
+        myself: ActorRef<<RactorAgentActor as ractor::Actor>::Msg>,
         info: TurnSetupInfo,
         command: AgentCommand,
     ) -> tokio::task::JoinHandle<()> {
@@ -420,12 +420,12 @@ mod tests {
     use super::*;
     use futures::Stream;
     use runie_core::actors::permission::RactorPermissionActor;
-    use runie_core::actors::provider::ProviderFactory;
+    use runie_core::actors::provider::{BuiltProvider, ProviderFactory};
     use runie_core::config::Config;
     use runie_core::event::Event;
     use runie_core::message::ChatMessage;
-    use runie_core::provider::{BuiltProvider, Provider, ProviderError};
-    use runie_core::provider_event::{ProviderEvent, StopReason};
+    use runie_core::provider::{Provider, ProviderError};
+    use runie_core::provider_event::ProviderEvent;
     use std::pin::Pin;
     use std::sync::Arc;
     use std::time::Duration;
@@ -442,7 +442,7 @@ mod tests {
             let stream = futures::stream::iter([
                 Ok(ProviderEvent::TextDelta("hello".into())),
                 Ok(ProviderEvent::Usage { input_tokens: 1, output_tokens: 1 }),
-                Ok(ProviderEvent::Finish(StopReason::EndTurn)),
+                Ok(ProviderEvent::Finish { reason: runie_core::provider_event::StopReason::Stop }),
             ]);
             Box::pin(stream)
         }
@@ -456,23 +456,24 @@ mod tests {
             _provider: &str,
             _model: &str,
             _config: &Config,
-        ) -> Pin<Box<dyn futures::Future<Output = Result<BuiltProvider, ProviderError>> + Send + '_>> {
-            Box::pin(async move {
-                Ok(BuiltProvider::new(
-                    Box::new(SimpleTextProvider),
-                    "test".into(),
-                    "test-model".into(),
-                ))
-            })
+        ) -> Result<BuiltProvider, ProviderError> {
+            Ok(BuiltProvider::new(
+                Box::new(SimpleTextProvider),
+                "test".into(),
+                "test-model".into(),
+            ))
         }
 
-        fn validate_credentials(
+        fn validate_key(
             &self,
-            _provider: &str,
-            _model: &str,
-            _config: &Config,
-        ) -> Pin<Box<dyn futures::Future<Output = Result<Vec<String>, String>> + Send + '_>> {
-            Box::pin(async move { Ok(vec!["test-model".into()]) })
+            _: &str,
+            _: &str,
+        ) -> Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + '_>> {
+            Box::pin(async { Ok(vec!["test-model".into()]) })
+        }
+
+        fn resolve_credentials(&self, _: &str, _: &Config) -> (String, String) {
+            ("http://localhost".into(), "sk-test".into())
         }
     }
 
@@ -480,10 +481,14 @@ mod tests {
     async fn agent_actor_accepts_second_turn_after_first_completes() {
         let bus = EventBus::<Event>::new(10);
 
+        let (config_handle, _, _) =
+            runie_core::actors::RactorConfigActor::spawn_default(bus.clone())
+                .await
+                .unwrap();
         let (provider_handle, _, _) =
             runie_core::actors::provider::RactorProviderActor::spawn(
                 bus.clone(),
-                runie_core::actors::RactorConfigHandle::default(),
+                config_handle,
                 Arc::new(TestFactory),
             )
             .await
@@ -501,14 +506,14 @@ mod tests {
 
         // --- First turn ---
         let cmd1 = AgentCommand {
-            content: vec![ChatMessage::user("hello")],
+            content: "hello".into(),
             id: "turn-1".into(),
             provider: "test".into(),
             model: "test-model".into(),
-            thinking_level: runie_core::model::ThinkingLevel::Default,
+            thinking_level: runie_core::model::ThinkingLevel::Off,
             read_only: false,
-            skills_context: None,
-            system_prompt: None,
+            skills_context: String::new(),
+            system_prompt: String::new(),
             truncation: crate::truncate::TruncationPolicy::default(),
             cancellation_token: CancellationToken::new(),
         };
@@ -530,14 +535,14 @@ mod tests {
 
         // --- Second turn ---
         let cmd2 = AgentCommand {
-            content: vec![ChatMessage::user("hello again")],
+            content: "hello again".into(),
             id: "turn-2".into(),
             provider: "test".into(),
             model: "test-model".into(),
-            thinking_level: runie_core::model::ThinkingLevel::Default,
+            thinking_level: runie_core::model::ThinkingLevel::Off,
             read_only: false,
-            skills_context: None,
-            system_prompt: None,
+            skills_context: String::new(),
+            system_prompt: String::new(),
             truncation: crate::truncate::TruncationPolicy::default(),
             cancellation_token: CancellationToken::new(),
         };
@@ -548,11 +553,11 @@ mod tests {
         let mut turn2_error = false;
         timeout(Duration::from_secs(5), async {
             while let Ok(evt) = sub.recv().await {
-                if matches!(evt, Event::Done { id } if id == "turn-2") {
+                if matches!(&evt, Event::Done { id } if id == "turn-2") {
                     turn2_done = true;
                     break;
                 }
-                if matches!(evt, Event::Error { id, .. } if id == "turn-2") {
+                if matches!(&evt, Event::Error { id, .. } if id == "turn-2") {
                     turn2_error = true;
                     break;
                 }

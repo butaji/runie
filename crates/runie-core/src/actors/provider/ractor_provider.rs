@@ -261,48 +261,65 @@ impl Actor for RactorProviderActor {
             } => {
                 let config = self.config().await;
                 let factory = self.factory.clone();
-                tokio::spawn(async move {
-                    let result = match config {
-                        Ok(cfg) => {
-                            let (base_url, resolved_key) =
-                                factory.resolve_credentials(&provider, &cfg);
-                            let api_key = if api_key.is_empty() {
-                                &resolved_key
-                            } else {
-                                &api_key
-                            };
-                            if api_key.is_empty() {
-                                Err(anyhow::anyhow!("API key is required"))
-                            } else {
-                                factory.validate_key(&base_url, api_key).await
-                            }
-                        }
-                        Err(e) => Err(anyhow::anyhow!("{e}")),
-                    };
-                    let _ = reply.send(result);
-                });
+                tokio::spawn(Self::spawn_validate_key(
+                    provider,
+                    api_key,
+                    reply,
+                    config,
+                    factory,
+                ));
             }
             ProviderMsg::ListModels { provider, reply } => {
                 let config = self.config().await;
                 let factory = self.factory.clone();
-                tokio::spawn(async move {
-                    let result = match config {
-                        Ok(cfg) => {
-                            let (base_url, resolved_key) =
-                                factory.resolve_credentials(&provider, &cfg);
-                            if resolved_key.is_empty() {
-                                Err(anyhow::anyhow!("API key is required"))
-                            } else {
-                                factory.validate_key(&base_url, &resolved_key).await
-                            }
-                        }
-                        Err(e) => Err(anyhow::anyhow!("{e}")),
-                    };
-                    let _ = reply.send(result);
-                });
+                tokio::spawn(Self::spawn_list_models(provider, reply, config, factory));
             }
         }
         Ok(())
+    }
+}
+
+impl RactorProviderActor {
+    async fn spawn_validate_key(
+        provider: String,
+        api_key: String,
+        reply: ractor::RpcReplyPort<anyhow::Result<Vec<String>>>,
+        config: Result<Config, ProviderError>,
+        factory: Arc<dyn ProviderFactory>,
+    ) {
+        let result = match config {
+            Ok(cfg) => {
+                let (base_url, resolved_key) = factory.resolve_credentials(&provider, &cfg);
+                let api_key = if api_key.is_empty() { &resolved_key } else { &api_key };
+                if api_key.is_empty() {
+                    Err(anyhow::anyhow!("API key is required"))
+                } else {
+                    factory.validate_key(&base_url, api_key).await
+                }
+            }
+            Err(e) => Err(anyhow::anyhow!("{e}")),
+        };
+        let _ = reply.send(result);
+    }
+
+    async fn spawn_list_models(
+        provider: String,
+        reply: ractor::RpcReplyPort<anyhow::Result<Vec<String>>>,
+        config: Result<Config, ProviderError>,
+        factory: Arc<dyn ProviderFactory>,
+    ) {
+        let result = match config {
+            Ok(cfg) => {
+                let (base_url, resolved_key) = factory.resolve_credentials(&provider, &cfg);
+                if resolved_key.is_empty() {
+                    Err(anyhow::anyhow!("API key is required"))
+                } else {
+                    factory.validate_key(&base_url, &resolved_key).await
+                }
+            }
+            Err(e) => Err(anyhow::anyhow!("{e}")),
+        };
+        let _ = reply.send(result);
     }
 }
 

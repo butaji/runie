@@ -11,7 +11,14 @@ use crate::model::AppState;
 
 /// Register all session handlers with the handler registry (for YAML-based commands).
 pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
-    // Form handlers
+    register_session_form_handlers(registry);
+    register_session_simple_handlers(registry);
+}
+
+/// Register form-based session commands.
+fn register_session_form_handlers(
+    registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry,
+) {
     registry.register("save", NamedHandler::FormWithHandler {
         title: "Save Session",
         fields: &[("Name", "session-name", "name")],
@@ -55,7 +62,12 @@ pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry
         fields: &[("Name", "session-name", "name")],
         handler: run::run_name,
     });
-    // Simple handlers
+}
+
+/// Register simple session commands.
+fn register_session_simple_handlers(
+    registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry,
+) {
     registry.register("sessions", NamedHandler::Handler(handle_sessions));
     registry.register("new", NamedHandler::Handler(handle_new));
     registry.register("reset", NamedHandler::Handler(handle_reset));

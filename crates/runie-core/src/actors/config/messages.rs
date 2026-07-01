@@ -100,35 +100,28 @@ impl Clone for ConfigMsg {
                 limits: limits.clone(),
             },
             ConfigMsg::SetThinkingLevel { level } => ConfigMsg::SetThinkingLevel { level: *level },
-            // RpcReplyPort is not Clone; cloned messages don't need a reply port
-            // since the original message retains it for the actual RPC response.
             ConfigMsg::GetConfig(_) => ConfigMsg::Load,
             ConfigMsg::GetConfiguredProviders(_) => ConfigMsg::Reload,
             ConfigMsg::LoadLayers(_) => ConfigMsg::Load,
-            ConfigMsg::AddMcpServer {
-                scope,
-                name,
-                server,
-                reply: _,
-            } => ConfigMsg::AddMcpServer {
+            // SAFETY: RpcReplyPort is Send+Sync with no Drop; zeroing is safe
+            // because cloned messages are used for internal routing only.
+            ConfigMsg::AddMcpServer { scope, name, server, .. } => {
+                ConfigMsg::AddMcpServer {
+                    scope: *scope,
+                    name: name.clone(),
+                    server: server.clone(),
+                    reply: unsafe { std::mem::zeroed() },
+                }
+            }
+            ConfigMsg::RemoveMcpServer { scope, name, .. } => {
+                ConfigMsg::RemoveMcpServer {
+                    scope: *scope,
+                    name: name.clone(),
+                    reply: unsafe { std::mem::zeroed() },
+                }
+            }
+            ConfigMsg::ListMcpServers { scope, .. } => ConfigMsg::ListMcpServers {
                 scope: *scope,
-                name: name.clone(),
-                server: server.clone(),
-                reply: unsafe { std::mem::zeroed() },
-            },
-            ConfigMsg::RemoveMcpServer {
-                scope,
-                name,
-                reply: _,
-            } => ConfigMsg::RemoveMcpServer {
-                scope: *scope,
-                name: name.clone(),
-                reply: unsafe { std::mem::zeroed() },
-            },
-            ConfigMsg::ListMcpServers { scope, reply: _ } => ConfigMsg::ListMcpServers {
-                scope: *scope,
-                // SAFETY: RpcReplyPort is Send+Sync with no Drop; zeroing is safe
-                // because cloned messages are used for internal routing only.
                 reply: unsafe { std::mem::zeroed() },
             },
         }

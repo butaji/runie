@@ -20,64 +20,67 @@ static COMMANDS_DIR: Dir<'static> =
 /// Load all embedded commands as `spec::CommandDef`.
 pub fn load_embedded_commands() -> Vec<CommandDef> {
     let handler_registry = &*HANDLER_REGISTRY;
-
     COMMANDS_DIR
         .files()
-        .filter_map(|f| {
-            let path = f.path();
-            // Skip non-YAML files
-            let extension = path.extension()?.to_str()?;
-            if extension != "yaml" && extension != "yml" {
-                return None;
-            }
-
-            // Safe: YAML files in resources/commands/ are always UTF-8.
-            let yaml_contents = std::str::from_utf8(f.contents()).ok()?;
-
-            let yaml: DeclarativeCommandYaml = match serde_yaml::from_str(yaml_contents) {
-                Ok(y) => y,
-                Err(e) => {
-                    tracing::warn!(
-                        "Failed to parse {:?}: {}",
-                        path.file_name().and_then(|n| n.to_str()),
-                        e
-                    );
-                    return None;
-                }
-            };
-
-            let (handler_name, message) = match yaml.to_kind() {
-                CommandKindDef::Handler { name } => (Some(name), None),
-                CommandKindDef::FormWithHandler { handler, .. } => (Some(handler), None),
-                CommandKindDef::Form { .. } => (None, None),
-                CommandKindDef::Msg { message } => (None, Some(message)),
-            };
-
-            let decl_def = DeclDef {
-                name: yaml.name.clone(),
-                description: yaml.description,
-                category: yaml.category,
-                intent: yaml.intent,
-                shortcut: yaml.shortcut,
-                aliases: yaml.aliases,
-                has_subcommands: yaml.sub,
-                file_path: std::path::PathBuf::new(),
-                handler_name,
-                message,
-            };
-
-            match build_cmd_from_yaml(&decl_def, handler_registry) {
-                Some(cmd) => Some(cmd),
-                None => {
-                    tracing::warn!(
-                        "Failed to build command {}: handler not found or other error",
-                        yaml.name
-                    );
-                    None
-                }
-            }
-        })
+        .filter_map(|f| load_single_command_file(f, handler_registry))
         .collect()
+}
+
+/// Process a single command file from the embedded directory.
+fn load_single_command_file(
+    f: &include_dir::File<'_>,
+    handler_registry: &crate::commands::dsl::handlers::HandlerRegistry,
+) -> Option<CommandDef> {
+    let path = f.path();
+    let extension = path.extension()?.to_str()?;
+    if extension != "yaml" && extension != "yml" {
+        return None;
+    }
+
+    // Safe: YAML files in resources/commands/ are always UTF-8.
+    let yaml_contents = std::str::from_utf8(f.contents()).ok()?;
+    let yaml: DeclarativeCommandYaml = match serde_yaml::from_str(yaml_contents) {
+        Ok(y) => y,
+        Err(e) => {
+            tracing::warn!(
+                "Failed to parse {:?}: {}",
+                path.file_name().and_then(|n| n.to_str()),
+                e
+            );
+            return None;
+        }
+    };
+
+    let (handler_name, message) = match yaml.to_kind() {
+        CommandKindDef::Handler { name } => (Some(name), None),
+        CommandKindDef::FormWithHandler { handler, .. } => (Some(handler), None),
+        CommandKindDef::Form { .. } => (None, None),
+        CommandKindDef::Msg { message } => (None, Some(message)),
+    };
+
+    let decl_def = DeclDef {
+        name: yaml.name.clone(),
+        description: yaml.description,
+        category: yaml.category,
+        intent: yaml.intent,
+        shortcut: yaml.shortcut,
+        aliases: yaml.aliases,
+        has_subcommands: yaml.sub,
+        file_path: std::path::PathBuf::new(),
+        handler_name,
+        message,
+    };
+
+    match build_cmd_from_yaml(&decl_def, handler_registry) {
+        Some(cmd) => Some(cmd),
+        None => {
+            tracing::warn!(
+                "Failed to build command {}: handler not found or other error",
+                yaml.name
+            );
+            None
+        }
+    }
 }
 
 #[cfg(test)]

@@ -21,21 +21,13 @@ impl AppState {
     /// Compact messages, keeping approximately `keep_recent_tokens` worth of recent content.
     /// Pinned messages are preserved at the beginning. Returns a summary of what was compacted.
     pub fn compact(&mut self, keep_recent_tokens: usize) -> String {
-        // Count only non-pinned messages for total
         let non_pinned: Vec<_> = self
             .session
             .messages
             .iter()
             .filter(|m| !m.metadata.pinned)
             .collect();
-        let non_pinned_tokens: usize = non_pinned
-            .iter()
-            .map(|m| {
-                self.agent_state()
-                    .token_tracker
-                    .estimate_input(&m.content())
-            })
-            .sum();
+        let non_pinned_tokens = self.sum_tokens(&non_pinned);
 
         if non_pinned_tokens <= keep_recent_tokens {
             return format!(
@@ -44,7 +36,6 @@ impl AppState {
             );
         }
 
-        // Collect pinned messages to preserve
         let pinned: Vec<ChatMessage> = self
             .session
             .messages
@@ -53,7 +44,41 @@ impl AppState {
             .cloned()
             .collect();
 
-        // Find how many non-pinned messages to remove
+        let remove_count = self.count_messages_to_remove(&non_pinned, keep_recent_tokens);
+        let non_pinned_to_keep = non_pinned.len().saturating_sub(remove_count);
+        let kept_non_pinned: Vec<_> = non_pinned
+            .into_iter()
+            .take(non_pinned_to_keep)
+            .cloned()
+            .collect();
+
+        let summary = format!(
+            "[Compacted: {} earlier messages removed, keeping ~{} tokens]",
+            remove_count, keep_recent_tokens
+        );
+
+        let new_messages =
+            Self::build_compacted_messages(pinned, kept_non_pinned, summary.clone());
+
+        self.session_mut().messages = new_messages;
+        self.messages_changed();
+        summary
+    }
+
+    /// Sum tokens for a slice of messages.
+    fn sum_tokens(&self, messages: &[&crate::message::ChatMessage]) -> usize {
+        messages
+            .iter()
+            .map(|m| self.agent_state().token_tracker.estimate_input(&m.content()))
+            .sum()
+    }
+
+    /// Count how many non-pinned messages to remove to fit within token limit.
+    fn count_messages_to_remove(
+        &self,
+        non_pinned: &[&crate::message::ChatMessage],
+        keep_recent_tokens: usize,
+    ) -> usize {
         let mut accumulated = 0usize;
         let mut remove_count = 0usize;
         for msg in non_pinned.iter().rev() {
@@ -66,19 +91,15 @@ impl AppState {
                 break;
             }
         }
+        remove_count
+    }
 
-        // Keep pinned messages + remaining non-pinned + summary
-        let total_non_pinned = non_pinned.len();
-        let non_pinned_to_keep = total_non_pinned - remove_count;
-
-        // Build new message list: pinned + kept non-pinned + summary
-        let kept_non_pinned: Vec<_> = non_pinned.into_iter().take(non_pinned_to_keep).cloned().collect();
-
-        let summary = format!(
-            "[Compacted: {} earlier messages removed, keeping ~{} tokens]",
-            remove_count, keep_recent_tokens
-        );
-
+    /// Build the final message list: pinned + summary + kept non-pinned.
+    fn build_compacted_messages(
+        pinned: Vec<ChatMessage>,
+        kept_non_pinned: Vec<ChatMessage>,
+        summary: String,
+    ) -> Vec<ChatMessage> {
         let mut new_messages = pinned;
         new_messages.push(ChatMessage {
             role: Role::System,
@@ -88,15 +109,10 @@ impl AppState {
                 compacted: true,
                 ..Default::default()
             },
-            parts: vec![runie_core::message::Part::Text {
-                content: summary.clone(),
-            }],
+            parts: vec![runie_core::message::Part::Text { content: summary }],
             ..Default::default()
         });
         new_messages.extend(kept_non_pinned);
-
-        self.session_mut().messages = new_messages;
-        self.messages_changed();
-        summary
+        new_messages
     }
 }
