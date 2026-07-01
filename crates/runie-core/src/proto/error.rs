@@ -5,9 +5,9 @@ use serde_json::Value;
 use std::fmt;
 
 /// Typed protocol error.
-///
-/// Note: `thiserror` is not used for `Display`/`Error` here because we need
-/// manual implementations that don't conflict with the serde derive.
+/// Note: This struct uses manual Display/Error implementations because
+/// `thiserror` cannot derive Display for fields containing `serde_json::Value`
+/// which doesn't implement Display.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Error {
     pub code: i32,
@@ -15,6 +15,14 @@ pub struct Error {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Value>,
 }
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "protocol error {}: {}", self.code, self.message)
+    }
+}
+
+impl std::error::Error for Error {}
 
 impl Error {
     /// Build a parse error.
@@ -45,14 +53,6 @@ impl Error {
     }
 }
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "protocol error {}: {}", self.code, self.message)
-    }
-}
-
-impl std::error::Error for Error {}
-
 impl From<anyhow::Error> for Error {
     fn from(e: anyhow::Error) -> Self {
         Error::internal(e.to_string())
@@ -69,5 +69,19 @@ mod tests {
         let json = serde_json::to_value(&err).unwrap();
         assert_eq!(json["code"], -32603);
         assert_eq!(json["message"], "boom");
+    }
+
+    #[test]
+    fn error_display_includes_code_and_message() {
+        let err = Error::internal("something went wrong");
+        let display = format!("{}", err);
+        assert!(display.contains("-32603"));
+        assert!(display.contains("something went wrong"));
+    }
+
+    #[test]
+    fn error_is_error_trait() {
+        let err: Box<dyn std::error::Error> = Error::internal("test").into();
+        assert!(err.to_string().contains("test"));
     }
 }

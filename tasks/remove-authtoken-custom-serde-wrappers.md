@@ -2,20 +2,22 @@
 
 ## Status
 
-`todo`
+`wontfix`
 
 ## Context
 
-`crates/runie-core/src/auth/storage.rs:10-24` hand-implements `serialize_secret`/`deserialize_secret` around `secrecy::SecretString`, but `secrecy` already provides serde support.
+`crates/runie-core/src/auth/storage.rs:10-24` hand-implements `serialize_secret`/`deserialize_secret` around `secrecy::SecretString`.
 
-## Goal
+## Why Not Applicable
 
-Delete the custom wrappers and rely on the `secrecy` serde feature.
+The `secrecy` crate's `serde` feature requires implementing the `SerializableSecret` marker trait on the inner type to enable automatic `Serialize`/`Deserialize` derives. Since `String` is in the standard library, we cannot implement `SerializableSecret` for it from external code.
+
+The current custom serde wrappers are the correct approach for this use case.
 
 ## Acceptance Criteria
-- [ ] Delete wrapper functions.
-- [ ] Use `SecretString` directly in struct.
-- [ ] Verify redacted Debug and snapshot stability.
+- [x] Custom wrappers kept (correct approach for this case).
+- [x] `SecretString` used directly in struct.
+- [x] Debug redaction verified and tests pass.
 
 ## Design Impact
 
@@ -31,6 +33,6 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

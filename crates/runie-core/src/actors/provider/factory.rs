@@ -42,7 +42,6 @@ fn get_cached_http_client(provider_key: &str, base_url: &str) -> Arc<reqwest::Cl
 ///
 /// This type implements `Provider` directly, so it can be used anywhere a
 /// `Box<dyn Provider>` is expected without an extra layer of indirection.
-/// The `DynProvider` type in `runie-provider` is a thin wrapper around this.
 ///
 /// Internally, HTTP clients are cached per provider+URL pair so that TCP
 /// connections are reused across turns.
