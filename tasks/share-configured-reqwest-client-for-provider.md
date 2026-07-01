@@ -2,7 +2,9 @@
 
 ## Status
 
-`todo`
+`done`
+
+**Completed:** 2026-07-01
 
 ## Context
 

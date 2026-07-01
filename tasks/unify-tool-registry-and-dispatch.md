@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -19,11 +19,11 @@ Create a single `ToolRegistry: Vec<Box<dyn ToolDef>>` populated once and used fo
 
 ## Acceptance Criteria
 
-- [ ] Define an object-safe `ToolDef` trait or a tool enum that supports name lookup and execution.
-- [ ] Populate the registry once at startup.
-- [ ] `tool_runner`, `turn`, and `headless` dispatch through the registry.
-- [ ] OpenAI/MCP schema generation iterates the registry.
-- [ ] All existing tool tests pass.
+- [x] Define an object-safe `ToolDef` trait or a tool enum that supports name lookup and execution.
+- [x] Populate the registry once at startup.
+- [x] `tool_runner`, `turn`, and `headless` dispatch through the registry.
+- [x] OpenAI/MCP schema generation iterates the registry.
+- [x] All existing tool tests pass.
 
 ## Design Impact
 
@@ -39,6 +39,6 @@ No change to TUI element design or composition. Only internal tool dispatch beha
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

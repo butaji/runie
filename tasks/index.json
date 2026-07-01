@@ -1147,7 +1147,7 @@
   {
     "file": "share-configured-reqwest-client-for-provider.md",
     "title": "Share configured reqwest client for provider",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "shorten-approval-sink-timeout-and-wire-cancellation.md",
@@ -1287,7 +1287,7 @@
   {
     "file": "unify-permission-engines-into-ruleset.md",
     "title": "Unify permission engines into a single ruleset",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-permission-system-rules.md",
@@ -1332,7 +1332,7 @@
   {
     "file": "unify-tool-registry-and-dispatch.md",
     "title": "Unify tool registry and dispatch",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-tui-message-wrapping-with-textwrap.md",
