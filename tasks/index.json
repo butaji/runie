@@ -1212,7 +1212,7 @@
   {
     "file": "type-openai-chunk-and-error-parsing.md",
     "title": "Type OpenAI chunk and error parsing",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "typed-chatmessage-builder-and-shrink-sanitize.md",

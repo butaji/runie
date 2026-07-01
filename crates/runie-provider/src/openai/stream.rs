@@ -4,6 +4,7 @@
 
 use super::protocol::{OpenAiFrame, OpenAiProtocol, OpenAiState};
 use super::request::build_request_body;
+use super::types::ErrorBodyJson;
 use super::OpenAiProvider;
 use crate::protocol::ProviderProtocol;
 use backon::{ExponentialBuilder, Retryable};
@@ -224,40 +225,34 @@ pub fn replay_sse(text: &str) -> Vec<ProviderEvent> {
 /// Parse an SSE error line value into a ModelError.
 fn parse_error_value(val: &serde_json::Value) -> runie_core::provider_event::ModelError {
     use runie_core::provider_event::ModelError;
-    let msg = val
-        .get("message")
-        .and_then(|v| v.as_str())
-        .unwrap_or("unknown error");
-    let code = val
-        .get("code")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    if code.contains("rate_limit") || val
-        .get("type")
-        .and_then(|v| v.as_str())
-        .map(|t| t.contains("rate_limit"))
-        .unwrap_or(false)
-    {
-        let retry_after = val
-            .get("retry_after")
-            .and_then(|v| v.as_u64())
-            .map(|v| v as u32);
-        return ModelError::RateLimit { retry_after_secs: retry_after };
+    let err: ErrorBodyJson = match serde_json::from_value(val.clone()) {
+        Ok(e) => e,
+        Err(_) => {
+            // Fallback: try to extract a message manually
+            let msg = val
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown error");
+            return ModelError::Other(anyhow::anyhow!("{msg}"));
+        }
+    };
+
+    let msg = err.message();
+    let code = err.code();
+    let type_ = err.type_();
+
+    if code.contains("rate_limit") || type_.contains("rate_limit") {
+        return ModelError::RateLimit {
+            retry_after_secs: err.retry_after_secs(),
+        };
     }
     if code.contains("context_length") || code.contains("token_limit") {
-        let limit = val
-            .get("limit")
-            .and_then(|v| v.as_u64())
-            .map(|v| v as usize)
-            .unwrap_or(0);
-        let used = val
-            .get("used")
-            .and_then(|v| v.as_u64())
-            .map(|v| v as usize)
-            .unwrap_or(0);
-        return ModelError::ContextLength { limit, used };
+        return ModelError::ContextLength {
+            limit: 0,
+            used: 0,
+        };
     }
-    if code.contains("content_filter") || code.contains("refusal") {
+    if code.contains("content_filter") || code.contains("refusal") || type_.contains("content_filter") {
         return ModelError::Refusal(msg.to_string());
     }
     ModelError::Other(anyhow::anyhow!("{msg}"))

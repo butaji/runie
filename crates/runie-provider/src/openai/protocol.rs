@@ -3,6 +3,7 @@
 //! Transforms OpenAI SSE frames (`OpenAiFrame`) into `ProviderEvent`s.
 
 use super::stream::{Chunk, Delta, ToolCallDelta};
+use super::types::{ChunkJson, ToolCallJson};
 use crate::protocol::ProviderProtocol;
 use runie_core::lifecycle::LifecycleState;
 use runie_core::provider_event::{ProviderEvent, StopReason};
@@ -107,64 +108,38 @@ impl ProviderProtocol for OpenAiProtocol {
 }
 
 fn parse_chunk(json: &serde_json::Value) -> Option<Chunk> {
-    let choice = json.get("choices")?.get(0)?;
-    let delta = choice.get("delta")?;
+    let json_chunk: ChunkJson = serde_json::from_value(json.clone()).ok()?;
+    let choice = json_chunk.choices.into_iter().next()?;
+    let tool_calls = choice
+        .delta
+        .tool_calls
+        .into_iter()
+        .map(tool_call_json_to_delta)
+        .collect();
 
     Some(Chunk {
         delta: Delta {
-            content: delta
-                .get("content")
-                .and_then(|v| v.as_str())
-                .map(String::from),
-            reasoning: extract_reasoning(delta),
-            tool_calls: parse_tool_call_deltas(delta),
+            content: choice.delta.content,
+            reasoning: choice.delta.reasoning_content,
+            tool_calls,
         },
-        finish_reason: choice
-            .get("finish_reason")
-            .and_then(|v| v.as_str())
-            .map(String::from),
-        usage: json.get("usage").and_then(parse_usage),
+        finish_reason: choice.finish_reason,
+        usage: json_chunk.usage.and_then(|u| {
+            Some((
+                u.prompt_tokens? as usize,
+                u.completion_tokens? as usize,
+            ))
+        }),
     })
 }
 
-fn parse_usage(value: &serde_json::Value) -> Option<(usize, usize)> {
-    Some((
-        value.get("prompt_tokens").and_then(|v| v.as_u64())? as usize,
-        value.get("completion_tokens").and_then(|v| v.as_u64())? as usize,
-    ))
-}
-
-fn extract_reasoning(delta: &serde_json::Value) -> Option<String> {
-    delta
-        .get("reasoning_content")
-        .or_else(|| delta.get("reasoning"))
-        .and_then(|v| v.as_str())
-        .map(String::from)
-}
-
-fn parse_tool_call_deltas(delta: &serde_json::Value) -> Vec<ToolCallDelta> {
-    delta
-        .get("tool_calls")
-        .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(parse_tool_call_delta).collect())
-        .unwrap_or_default()
-}
-
-fn parse_tool_call_delta(value: &serde_json::Value) -> Option<ToolCallDelta> {
-    let index = value.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
-    let function = value.get("function").unwrap_or(value);
-    Some(ToolCallDelta {
-        index,
-        id: value.get("id").and_then(|v| v.as_str()).map(String::from),
-        name: function
-            .get("name")
-            .and_then(|v| v.as_str())
-            .map(String::from),
-        arguments: function
-            .get("arguments")
-            .and_then(|v| v.as_str())
-            .map(String::from),
-    })
+fn tool_call_json_to_delta(tc: ToolCallJson) -> ToolCallDelta {
+    ToolCallDelta {
+        index: tc.index,
+        id: tc.id,
+        name: tc.function.name,
+        arguments: tc.function.arguments,
+    }
 }
 
 fn process_openai_chunk(chunk: Chunk, state: &mut OpenAiState) -> Vec<ProviderEvent> {

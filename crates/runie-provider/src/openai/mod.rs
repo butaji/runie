@@ -1,9 +1,10 @@
 //! OpenAI-compatible chat-completions provider.
 
 mod normalize;
-mod protocol;
+pub mod protocol;
 mod request;
 pub mod stream;
+pub mod types;
 
 #[derive(Clone)]
 pub struct OpenAiProvider {
