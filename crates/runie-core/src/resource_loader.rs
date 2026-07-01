@@ -3,10 +3,12 @@
 //! Provides directory scanning, YAML frontmatter extraction, and name resolution
 //! for skills and other markdown-based resources.
 
-use serde_yaml::Value;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use pulldown_cmark_frontmatter::FrontmatterExtractor;
+use serde::Deserialize;
 
 /// A generic resource record parsed from a markdown file.
 #[derive(Debug, Clone)]
@@ -99,20 +101,63 @@ pub fn parse_resource_md(path: &Path) -> Option<ResourceRecord> {
     })
 }
 
+/// Typed frontmatter for resources.
+/// Uses `#[serde(flatten)] HashMap` to capture all YAML fields as strings,
+/// including `context`, `short-description`, and arbitrary extra fields.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct TypedFrontmatter {
+    #[serde(flatten, default)]
+    pub fields: HashMap<String, serde_yaml::Value>,
+}
+
+impl TypedFrontmatter {
+    /// Convert all YAML fields to a flat `HashMap<String, String>`.
+    /// Null values are emitted as empty strings to match historical behavior.
+    pub fn to_hashmap(&self) -> HashMap<String, String> {
+        self.fields
+            .iter()
+            .map(|(k, v)| {
+                let s = match v {
+                    serde_yaml::Value::String(s) => s.clone(),
+                    serde_yaml::Value::Bool(b) => b.to_string(),
+                    serde_yaml::Value::Number(n) => n.to_string(),
+                    serde_yaml::Value::Null => "Null".to_owned(),
+                    // Sequences and mappings are rare in frontmatter; emit debug repr.
+                    _ => format!("{:?}", v),
+                };
+                (k.clone(), s)
+            })
+            .collect()
+    }
+}
+
 /// Extract YAML frontmatter from markdown content if present.
-/// Handles standard `---\n...\n---\n` delimiters directly using serde_yaml.
+///
+/// Uses `pulldown_cmark_frontmatter` first (for fenced code-block frontmatter
+/// e.g.  ```yaml ... ```), then falls back to manual `---\n...\n---\n`
+/// delimiter scanning for standard YAML frontmatter.
 /// Returns empty map if no frontmatter is present.
 pub fn extract_frontmatter(content: &str) -> HashMap<String, String> {
-    // Fast path: must start with "---\n"
+    // Fast path: try pulldown_cmark_frontmatter for fenced code-block frontmatter.
+    let fm = FrontmatterExtractor::from_markdown(content).extract();
+    if let Some(f) = fm {
+        if let Some(code_block) = f.code_block {
+            return yaml_text_to_hashmap(code_block.source.as_ref());
+        }
+    }
+    // Fall back: manual `---\n` delimiter scanning for standard YAML frontmatter.
+    extract_yaml_delimited_frontmatter(content)
+}
+
+/// Extract `---\n...\n---\n` YAML frontmatter using manual delimiter scanning.
+fn extract_yaml_delimited_frontmatter(content: &str) -> HashMap<String, String> {
     if !content.starts_with("---\n") {
         return HashMap::new();
     }
-    // Strip opening "---\n"
     let after_opening = match content.strip_prefix("---\n") {
         Some(s) => s,
         None => return HashMap::new(),
     };
-    // Find closing "\n---" (or just "---" at start of line)
     let end_pos = after_opening
         .find("\n---")
         .or_else(|| after_opening.find("---"));
@@ -120,34 +165,16 @@ pub fn extract_frontmatter(content: &str) -> HashMap<String, String> {
         Some(pos) => &after_opening[..pos],
         None => return HashMap::new(),
     };
-    yaml_frontmatter_to_hashmap(yaml_text)
+    yaml_text_to_hashmap(yaml_text)
 }
 
-/// Parse YAML frontmatter text into a HashMap.
-fn yaml_frontmatter_to_hashmap(source: &str) -> HashMap<String, String> {
-    match serde_yaml::from_str::<Value>(source) {
-        Ok(value) => yaml_value_to_hashmap(&value),
+/// Parse YAML frontmatter text into a HashMap using typed deserialization.
+fn yaml_text_to_hashmap(source: &str) -> HashMap<String, String> {
+    match serde_yaml::from_str::<TypedFrontmatter>(source) {
+        Ok(fm) => fm.to_hashmap(),
+        // Malformed YAML produces an empty map (backward-compatible).
         Err(_) => HashMap::new(),
     }
-}
-
-/// Convert serde_yaml::Value to HashMap<String, String>.
-/// Handles simple string values and converts other types to their debug representation.
-fn yaml_value_to_hashmap(value: &Value) -> HashMap<String, String> {
-    let mut result = HashMap::new();
-    if let Some(map) = value.as_mapping() {
-        for (k, v) in map {
-            let key = k.as_str().unwrap_or_default().to_string();
-            let val = match v {
-                Value::String(s) => s.clone(),
-                Value::Bool(b) => b.to_string(),
-                Value::Number(n) => n.to_string(),
-                _ => format!("{:?}", v),
-            };
-            result.insert(key, val);
-        }
-    }
-    result
 }
 
 /// Resolve resource name from path and frontmatter.

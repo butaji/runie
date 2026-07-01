@@ -17,7 +17,7 @@
   {
     "file": "actually-use-pulldown-cmark-frontmatter-in-resource-loader.md",
     "title": "Actually use pulldown-cmark-frontmatter in resource loader",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-agent-command-test-builder.md",
