@@ -242,7 +242,7 @@
   {
     "file": "deduplicate-cargo-lock-versions-and-deny.md",
     "title": "Deduplicate Cargo.lock versions and deny multiples",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "deduplicate-turn-state-between-turnactor-and-appstate.md",

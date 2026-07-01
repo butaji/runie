@@ -25,26 +25,126 @@ allow = [
     "ISC",
     "MPL-2.0",
     "BSL-1.0",
+    "LGPL-3.0-or-later",
+    "CDLA-Permissive-2.0",
 ]
 confidence-threshold = 0.8
-# Crates without license fields (use MIT as default)
-exceptions = [
-    { crate = "sublime_fuzzy@0.7.0", allow = ["MIT"] },
-]
 
 [bans]
-# Only warn about multiple versions
-multiple-versions = "warn"
+# Deny multiple versions of the same crate
+multiple-versions = "deny"
 wildcards = "allow"
 highlight = "all"
 workspace-default-features = "allow"
 external-default-features = "allow"
-# Allow all crates in the dependency tree for now
-allow = []
+# Allow known duplicates that cannot be resolved due to transitive dependency constraints.
+# These skips document the root causes and can be revisited when upstream deps update.
+skip = [
+    # pulldown-cmark-frontmatter 0.4.0 requires pulldown-cmark 0.12.x
+    { crate = "pulldown-cmark@0.12", reason = "pulldown-cmark-frontmatter 0.4 requires 0.12.x" },
+
+    # structopt 0.3 (required by jsonschema 0.7) uses clap 2.x
+    { crate = "clap@2", reason = "structopt from jsonschema 0.7 requires clap 2.x" },
+
+    # dashmap 5.5.3 (from ractor 0.9) requires hashbrown 0.14.x
+    { crate = "hashbrown@0.14", reason = "dashmap from ractor 0.9 requires 0.14.x" },
+    { crate = "hashbrown@0.16", reason = "transitive dependency conflict between different dep versions" },
+
+    # ractor 0.9 depends on dashmap which depends on older hashbrown/ahash
+    { crate = "ahash@0.7", reason = "dashmap from ractor 0.9 requires ahash 0.7.x" },
+
+    # syn 2.x vs 1.x from different transitive deps
+    { crate = "syn@1", reason = "transitive dependency conflict between serde and proc-macro2" },
+
+    # thiserror 1.x vs 2.x from different transitive deps
+    { crate = "thiserror@1", reason = "transitive dependency conflict, minor version difference" },
+    { crate = "thiserror-impl@1", reason = "transitive dependency conflict, minor version difference" },
+
+    # toml 0.8.x vs 1.x from different transitive deps
+    { crate = "toml@0.8", reason = "transitive dependency conflict, minor version difference" },
+    { crate = "toml_datetime@0.6", reason = "transitive dependency conflict, minor version difference" },
+    { crate = "toml_edit@0.22", reason = "transitive dependency conflict, minor version difference" },
+
+    # textwrap 0.16 vs 0.18 from different transitive deps
+    { crate = "textwrap@0.16", reason = "transitive dependency conflict, minor version difference" },
+
+    # quick-xml 0.37.x vs 0.39.x from different transitive deps
+    { crate = "quick-xml@0.37", reason = "transitive dependency conflict, minor version difference" },
+
+    # itertools 0.14 from different transitive deps
+    { crate = "itertools@0.14", reason = "transitive dependency conflict, minor version difference" },
+
+    # strum has multiple minor versions due to transitive dependencies
+    { crate = "strum@0.26", reason = "transitive dependency conflict, minor version difference" },
+    { crate = "strum@0.27", reason = "transitive dependency conflict, minor version difference" },
+    { crate = "strum_macros@0.26", reason = "transitive dependency conflict, minor version difference" },
+    { crate = "strum_macros@0.27", reason = "transitive dependency conflict, minor version difference" },
+
+    # r-efi has multiple minor versions
+    { crate = "r-efi@5", reason = "transitive dependency conflict, minor version difference" },
+
+    # strsim has multiple minor versions
+    { crate = "strsim@0.8", reason = "transitive dependency conflict, minor version difference" },
+
+    # getrandom has multiple major versions due to different platform requirements
+    { crate = "getrandom@0.2", reason = "getrandom 0.2 required by older transitive deps" },
+    { crate = "getrandom@0.4", reason = "getrandom 0.4 required by hashbrown/metrics" },
+
+    # bitflags 1.x vs 2.x from different transitive deps
+    { crate = "bitflags@1", reason = "clap 2.x from structopt requires bitflags 1.x" },
+
+    # heck 0.3 vs 0.5 from different transitive deps
+    { crate = "heck@0.3", reason = "transitive dependency conflict, minor version difference" },
+
+    # dirs has two major versions due to different transitive deps
+    { crate = "dirs@5", reason = "dirs 5 required by older transitive deps" },
+    { crate = "dirs@6", reason = "dirs 6 required by shellexpand" },
+
+    # dirs-sys has two versions
+    { crate = "dirs-sys@0.4", reason = "transitive dependency conflict" },
+
+    # redox_users has two versions
+    { crate = "redox_users@0.5", reason = "transitive dependency conflict" },
+
+    # reqwest has two versions due to transitive deps
+    { crate = "reqwest@0.12", reason = "reqwest 0.12 required by wiremock" },
+    { crate = "reqwest@0.13", reason = "reqwest 0.13 required by newer transitive deps" },
+
+    # winnow 0.7 vs 1.0 from different transitive deps
+    { crate = "winnow@0.7", reason = "toml_edit 0.22 requires winnow 0.7.x" },
+
+    # Windows-specific crates have multiple versions for different API levels
+    { crate = "windows-sys@0.48", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows-sys@0.52", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows-sys@0.59", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows-targets@0.48", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows-targets@0.52", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows_aarch64_gnullvm@0.48", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows_aarch64_gnullvm@0.52", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows_aarch64_msvc@0.48", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows_aarch64_msvc@0.52", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows_i686_gnu@0.48", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows_i686_gnu@0.52", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows_i686_msvc@0.48", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows_i686_msvc@0.52", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows_x86_64_gnu@0.48", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows_x86_64_gnu@0.52", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows_x86_64_gnullvm@0.48", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows_x86_64_gnullvm@0.52", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows_x86_64_msvc@0.48", reason = "different Windows API levels required by transitive deps" },
+    { crate = "windows_x86_64_msvc@0.52", reason = "different Windows API levels required by transitive deps" },
+
+    # Platform-specific crates
+    { crate = "core-foundation@0.9", reason = "different macOS API levels required by transitive deps" },
+    { crate = "nom@7", reason = "transitive dependency conflict, minor version difference" },
+    { crate = "openssl-probe@0.1", reason = "transitive dependency conflict, minor version difference" },
+    { crate = "serde_spanned@0.6", reason = "transitive dependency conflict, minor version difference" },
+    { crate = "unicode-width@0.1", reason = "transitive dependency conflict, minor version difference" },
+]
 
 # Skip the entire dependency tree for crates we don't control
 skip-tree = [
-    { crate = "fff-search", reason = "external dependency with its own tree" },
+    # fff-search is an optional dependency - not currently in the lock file
 ]
 
 [sources]

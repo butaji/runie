@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -13,9 +13,9 @@
 Run `cargo update` and pin workspace deps to unify versions, then switch `deny.toml` to `deny` with justified skips.
 
 ## Acceptance Criteria
-- [ ] Reduce duplicate versions of `pulldown-cmark`, `ratatui`, `reqwest`, `clap`, `quick-xml`, `nix`, `dirs`, `hashbrown`, `getrandom`.
-- [ ] Update `deny.toml` `[bans]` to `multiple-versions = "deny"`.
-- [ ] `cargo deny check bans` passes.
+- [x] Reduce duplicate versions of `pulldown-cmark`, `ratatui`, `reqwest`, `clap`, `quick-xml`, `nix`, `dirs`, `hashbrown`, `getrandom`.
+- [x] Update `deny.toml` `[bans]` to `multiple-versions = "deny"`.
+- [x] `cargo deny check bans` passes.
 
 ## Design Impact
 
