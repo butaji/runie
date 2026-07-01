@@ -111,10 +111,10 @@ Inspect. Edit. Approve. Route. Save.
 cargo build --release
 
 # Interactive TUI
-./target/release/runie
+./target/release/runie-tui
 
 # No API key? Use the mock provider
-RUNIE_MOCK=1 ./target/release/runie
+RUNIE_MOCK=1 ./target/release/runie-tui
 
 # One-shot CLI
 ./target/release/runie print "find unused imports" < src/main.rs
@@ -134,7 +134,7 @@ If you have credits there, Runie helps you use them.
 
 | Mode | Command |
 |---|---|
-| TUI | `./target/release/runie` |
+| TUI | `./target/release/runie-tui` |
 | Print | `./target/release/runie print "..."` |
 | JSON | `./target/release/runie json "..."` |
 | Server | `./target/release/runie server` |

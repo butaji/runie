@@ -11,6 +11,7 @@
 //!   - EventBus<Event> for cross-component communication
 //!   - SessionActor subscribes to bus, persists durable events to JSONL
 
+use clap::Parser;
 use futures::StreamExt;
 use runie_agent::AgentActorFactoryImpl;
 use runie_core::actors::leader::{Leader, LeaderHandle};
@@ -26,6 +27,18 @@ use runie_tui::{
 };
 use std::{collections::HashMap, io, time::Duration};
 use tokio::sync::{mpsc, oneshot, watch};
+
+/// Runie TUI CLI arguments.
+#[derive(Parser, Debug)]
+#[command(name = "runie", version)]
+struct Cli {
+    /// Show dry-run preview without starting the TUI.
+    #[arg(long)]
+    dry_run: bool,
+    /// Alias for --dry-run (preview mode).
+    #[arg(long, hide = true)]
+    preview: bool,
+}
 
 struct Cleanup;
 
@@ -48,8 +61,9 @@ async fn main() -> io::Result<()> {
 
     tracing_init::init();
 
-    let args: Vec<String> = std::env::args().collect();
-    if let Some(report) = runie_tui::dry_run_cmd::run_from_args(&args) {
+    let cli = Cli::parse();
+    if cli.dry_run || cli.preview {
+        let report = runie_core::run_dry_run(&runie_core::Config::load(None));
         println!("{report}");
         return Ok(());
     }

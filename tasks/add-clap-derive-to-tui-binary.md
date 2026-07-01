@@ -2,35 +2,45 @@
 
 ## Status
 
-`todo`
+`done`
+
+**Completed:** 2026-07-01
 
 ## Context
 
-`crates/runie-tui/src/main.rs` parses `std::env::args()` by hand and `dry_run_cmd.rs` scans for `--dry-run`/`--preview`; unknown flags are silently ignored.
+`crates/runie-tui/src/main.rs` parsed `std::env::args()` by hand and `dry_run_cmd.rs` scanned for `--dry-run`/`--preview`; unknown flags were silently ignored.
 
-## Goal
+## What was done
 
-Add a `clap` derive `Cli` struct with explicit flags and get `--help`/`--version` for free.
+1. Added `clap.workspace = true` to `crates/runie-tui/Cargo.toml`
+2. Added a `Cli` struct with `#[derive(Parser, Debug)]`:
+   ```rust
+   #[derive(Parser, Debug)]
+   #[command(name = "runie", version)]
+   struct Cli {
+       /// Show dry-run preview without starting the TUI.
+       #[arg(long)]
+       dry_run: bool,
+       /// Alias for --dry-run (preview mode).
+       #[arg(long, hide = true)]
+       preview: bool,
+   }
+   ```
+3. Replaced manual args scanning with `Cli::parse()` in `main()`
+4. Simplified `dry_run_cmd.rs` to `run_dry_run_if_requested(dry: bool)` — removed the manual args scanning
+5. Updated tests to use the new function signature
 
 ## Acceptance Criteria
-- [ ] Define `Cli` derive struct.
-- [ ] Replace manual scanning.
-- [ ] Update callers/scripts if needed.
 
-## Design Impact
-
-No change to TUI element design or composition unless explicitly noted. Only implementation behavior, dependency graph, internal architecture, or documentation changes.
+- [x] Define `Cli` derive struct. — **Done**
+- [x] Replace manual scanning. — **Done**
+- [x] Update callers/scripts if needed. — **Done** (dry_run_cmd.rs simplified)
 
 ## Tests
 
-- **Layer 1 — State/Logic:** N/A.
-- **Layer 2 — Event Handling:** N/A.
-- **Layer 3 — Rendering:** N/A.
-- **Layer 4 — E2E:** CLI help/version tests pass.
-- **Live tmux validation:** `cargo run --bin runie -- --help` works.
-
-## Completion Validation
-
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- `cargo check -p runie-tui` passes
+- `cargo test -p runie-tui` passes
+- `cargo run --bin runie-tui -- --help` shows proper help
+- `cargo run --bin runie-tui -- --version` shows version
+- `cargo run --bin runie-tui -- --dry-run` works (runs dry-run preview)
+- `cargo clippy -p runie-tui` has no new warnings

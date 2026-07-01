@@ -3936,6 +3936,7 @@ version = "0.2.16"
 dependencies = [
  "ansi_colours",
  "base64",
+ "clap 4.6.1",
  "crokey",
  "crossterm",
  "dirs 5.0.1",

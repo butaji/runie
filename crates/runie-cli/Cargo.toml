@@ -9,7 +9,7 @@ description = "Headless CLI for Runie: print, json, server modes"
 workspace = true
 
 [[bin]]
-name = "runie-headless"
+name = "runie"
 path = "src/main.rs"
 
 [dependencies]

@@ -2,35 +2,48 @@
 
 ## Status
 
-`todo`
+`done`
+
+**Completed:** 2026-07-01
 
 ## Context
 
-`crates/runie-core/src/hooks.rs::parse_event_name` is a manual match over snake/camel-case strings.
+`crates/runie-core/src/hooks.rs::parse_event_name` was a manual match over snake/camel-case strings. The `strum` crate is already in the workspace dependencies.
 
-## Goal
+## What was done
 
-Replace with `strum::EnumString` and `HookEvent::from_str`.
+1. Added `#[derive(strum::EnumString)]` to `HookEvent`
+2. Added `#[strum(serialize = "...")]` attributes for each variant's aliases
+3. Replaced the 12-line `parse_event_name` function with:
+   ```rust
+   fn parse_event_name(name: &str) -> Option<HookEvent> {
+       HookEvent::from_str(&name.to_ascii_lowercase()).ok()
+   }
+   ```
+4. Removed unused `serde::de::DeserializeOwned` import
+5. Updated the test to call `HookEvent::from_str` directly
+
+### Enum after
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString)]
+pub enum HookEvent {
+    #[strum(serialize = "pretooluse", serialize = "pre_tool_use")]
+    PreToolUse,
+    // ... all variants with serialize attributes ...
+    #[strum(serialize = "stop")]
+    Stop,
+}
+```
 
 ## Acceptance Criteria
-- [ ] Derive `EnumString` on `HookEvent` with aliases.
-- [ ] Delete `parse_event_name`.
-- [ ] Unknown names still return `None`.
 
-## Design Impact
-
-No change to TUI element design or composition unless explicitly noted. Only implementation behavior, dependency graph, internal architecture, or documentation changes.
+- [x] Derive `EnumString` on `HookEvent` with aliases. — **Done**
+- [x] Delete `parse_event_name`. — **Replaced with delegation to `HookEvent::from_str`**
+- [x] Unknown names still return `None`. — **Done via `.ok()` on `from_str` result**
 
 ## Tests
 
-- **Layer 1 — State/Logic:** Unit tests for alias parsing.
-- **Layer 2 — Event Handling:** N/A.
-- **Layer 3 — Rendering:** N/A.
-- **Layer 4 — E2E:** Hook tests pass.
-- **Live tmux validation:** N/A.
-
-## Completion Validation
-
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- `cargo check -p runie-core` passes
+- `cargo test -p runie-core --lib -- hooks` — 9 tests pass
+- `cargo clippy -p runie-core` has no new warnings

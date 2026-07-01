@@ -22,7 +22,7 @@
   {
     "file": "add-clap-derive-to-tui-binary.md",
     "title": "Add clap derive to TUI binary",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-event-assertion-helpers-to-runie-testing.md",
@@ -102,7 +102,7 @@
   {
     "file": "align-cli-binary-name-with-docs.md",
     "title": "Align CLI binary name with docs",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "audit-and-update-architecture-and-execute-docs.md",
@@ -922,7 +922,7 @@
   {
     "file": "remove-unused-direct-deps-from-runie-tui.md",
     "title": "Remove unused direct deps from runie-tui",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "rename-telemetry-rs-to-tracing-init.md",
@@ -1347,7 +1347,7 @@
   {
     "file": "use-ansicolours-for-theme-ansi256-mapping.md",
     "title": "Use ansi_colours for theme ANSI256 mapping",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-bytesize-humantime-for-tool-formatting.md",
@@ -1442,7 +1442,7 @@
   {
     "file": "use-strum-for-hook-event-parsing.md",
     "title": "Use strum for hook event parsing",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-tagged-enum-for-declarative-command-kind.md",

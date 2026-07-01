@@ -1,5 +1,5 @@
 [alias]
-run-tui = ["run", "-p", "runie-tui", "--bin", "runie"]
+run-tui = ["run", "-p", "runie-tui", "--bin", "runie-tui"]
 
 [build]
 # rustflags = ["-Zcodegen-backend=cranelift"]

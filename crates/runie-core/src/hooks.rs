@@ -6,19 +6,31 @@
 
 use serde_json::Value;
 use std::collections::HashMap;
+use std::str::FromStr;
+use strum::EnumString;
 
 /// Lifecycle events that can be hooked.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString)]
 pub enum HookEvent {
+    #[strum(serialize = "pretooluse", serialize = "pre_tool_use")]
     PreToolUse,
+    #[strum(serialize = "posttooluse", serialize = "post_tool_use")]
     PostToolUse,
+    #[strum(serialize = "permissionrequest", serialize = "permission_request")]
     PermissionRequest,
+    #[strum(serialize = "precompact", serialize = "pre_compact")]
     PreCompact,
+    #[strum(serialize = "postcompact", serialize = "post_compact")]
     PostCompact,
+    #[strum(serialize = "sessionstart", serialize = "session_start")]
     SessionStart,
+    #[strum(serialize = "userpromptsubmit", serialize = "user_prompt_submit")]
     UserPromptSubmit,
+    #[strum(serialize = "subagentstart", serialize = "subagent_start")]
     SubagentStart,
+    #[strum(serialize = "subagentstop", serialize = "subagent_stop")]
     SubagentStop,
+    #[strum(serialize = "stop")]
     Stop,
 }
 
@@ -114,20 +126,9 @@ impl HookRegistry {
     }
 }
 
+/// Parse a hook event name (case-insensitive) into a `HookEvent`.
 fn parse_event_name(name: &str) -> Option<HookEvent> {
-    match name.to_ascii_lowercase().as_str() {
-        "pretooluse" | "pre_tool_use" => Some(HookEvent::PreToolUse),
-        "posttooluse" | "post_tool_use" => Some(HookEvent::PostToolUse),
-        "permissionrequest" | "permission_request" => Some(HookEvent::PermissionRequest),
-        "precompact" | "pre_compact" => Some(HookEvent::PreCompact),
-        "postcompact" | "post_compact" => Some(HookEvent::PostCompact),
-        "sessionstart" | "session_start" => Some(HookEvent::SessionStart),
-        "userpromptsubmit" | "user_prompt_submit" => Some(HookEvent::UserPromptSubmit),
-        "subagentstart" | "subagent_start" => Some(HookEvent::SubagentStart),
-        "subagentstop" | "subagent_stop" => Some(HookEvent::SubagentStop),
-        "stop" => Some(HookEvent::Stop),
-        _ => None,
-    }
+    HookEvent::from_str(&name.to_ascii_lowercase()).ok()
 }
 
 /// Hook handler that runs an external command.
@@ -339,10 +340,13 @@ mod tests {
     #[test]
     fn parse_event_name_handles_snake_case() {
         assert_eq!(
-            parse_event_name("pre_tool_use"),
+            HookEvent::from_str(&"pre_tool_use".to_lowercase()).ok(),
             Some(HookEvent::PreToolUse)
         );
-        assert_eq!(parse_event_name("stop"), Some(HookEvent::Stop));
-        assert_eq!(parse_event_name("unknown"), None);
+        assert_eq!(
+            HookEvent::from_str(&"stop".to_lowercase()).ok(),
+            Some(HookEvent::Stop)
+        );
+        assert_eq!(HookEvent::from_str("unknown").ok(), None);
     }
 }
