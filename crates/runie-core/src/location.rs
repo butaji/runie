@@ -3,7 +3,26 @@
 //! Defines the [`Location`] enum and [`SearchQuery`] parser for the search index.
 //! Replaces `fff_search::Location` with a local implementation.
 
+use std::sync::LazyLock;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+
+/// Compiled regex for location suffix extraction.
+///
+/// Matches the following patterns at the end of a string:
+/// - `N`           → `Location::Line(N)`
+/// - `N:M`         → `Location::Position { line: N, col: M }`
+/// - `N-M`         → `Location::Range { start: (N, 0), end: (M, 0) }`
+/// - `N:M-P`       → `Location::Range { start: (N, M), end: (N, P) }` (column range)
+/// - `N:M-P:Q`     → `Location::Range { start: (N, M), end: (P, Q) }` (full range)
+///
+/// The regex uses greedy matching to correctly handle paths containing colons.
+static LOCATION_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(?<path>[^:]+):(?<a>\d+)(?::(?<b>\d+))?(?:-(?:(?<c>\d+)(?::(?<d>\d+))?))?$",
+    )
+    .expect("location regex is valid")
+});
 
 /// Location within a file (line, column, or range).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -123,102 +142,55 @@ pub fn parse_search_query(input: &str) -> SearchQuery {
     }
 }
 
-/// Extract a location suffix from a query string.
+/// Extract a location suffix from a query string using a compiled regex.
+///
+/// Tries to match a location pattern at the end of the string. For the prefix
+/// to be treated as a valid path (and not fuzzy text), it must contain a path
+/// separator or look like a filename (contain a dot).
 fn extract_location(input: &str) -> (&str, Option<Location>) {
-    // Look for `:line`, `:line:col`, `:start-end` at the end.
-    // Try candidate colons from left to right; the first one that produces a valid
-    // location suffix wins. This correctly handles cases like `lib.rs:42:5` where
-    // the first `:` separates the filename from the location, and `src/lib.rs:10:5`
-    // where the first `:` separates the path from the position.
-    let bytes = input.as_bytes();
+    // Try to match the compiled location regex at the end of the string.
+    if let Some(caps) = LOCATION_RE.captures(input) {
+        let path = caps.name("path").map(|m| m.as_str()).unwrap_or("");
 
-    // Collect all colon positions.
-    let colon_positions: Vec<usize> = bytes
-        .iter()
-        .enumerate()
-        .filter(|(_, &b)| b == b':')
-        .map(|(i, _)| i)
-        .filter(|&i| i > 0)
-        .collect();
-
-    // Try from leftmost colon to rightmost.
-    for colon_idx in colon_positions {
-        let before = &input[..colon_idx];
-        let has_path_sep = before.contains('/') || before.contains('\\');
-        let looks_like_filename = before.contains('.') && !before.ends_with('.');
-        if !has_path_sep && !looks_like_filename {
-            continue;
+        // Only accept as a path if it looks like a filename or contains a path separator.
+        let looks_like_path =
+            path.contains('/') || path.contains('\\') || (path.contains('.') && !path.ends_with('.'));
+        if !looks_like_path {
+            return (input, None);
         }
 
-        let location_part = &input[colon_idx + 1..];
-        if let Some(loc) = parse_location_suffix(location_part) {
-            let clean_before = before.trim_end_matches(|c| c == '/' || c == '\\');
-            return (clean_before, Some(loc));
+        let a = caps["a"].parse::<i32>().ok();
+        let b = caps.name("b").and_then(|m| m.as_str().parse::<i32>().ok());
+        let c = caps.name("c").and_then(|m| m.as_str().parse::<i32>().ok());
+        let d = caps.name("d").and_then(|m| m.as_str().parse::<i32>().ok());
+
+        let loc = match (a, b, c, d) {
+            // `N` → Line
+            (Some(line), None, None, None) => Some(Location::Line(line)),
+            // `N:M` → Position
+            (Some(line), Some(col), None, None) => Some(Location::Position { line, col }),
+            // `N:M-P` → Range (column range: start line/col, same line, end col)
+            (Some(line), Some(col_s), Some(end_col), None) => {
+                Some(Location::Range { start: (line, col_s), end: (line, end_col) })
+            }
+            // `N:M-P:Q` → Range (full range)
+            (Some(line), Some(col_s), Some(end_line), Some(end_col)) => {
+                Some(Location::Range { start: (line, col_s), end: (end_line, end_col) })
+            }
+            // `N-P` → Range (line range: end_col=0)
+            (Some(start_line), None, Some(end_line), None) => {
+                Some(Location::Range { start: (start_line, 0), end: (end_line, 0) })
+            }
+            _ => None,
+        };
+
+        if let Some(loc) = loc {
+            let clean_path = path.trim_end_matches(|c| c == '/' || c == '\\');
+            return (clean_path, Some(loc));
         }
     }
 
     (input, None)
-}
-
-/// Try to parse a location suffix (the part after the last `:`).
-fn parse_location_suffix(part: &str) -> Option<Location> {
-    // Try `line-col` or `line:col-col` range
-    if part.contains('-') {
-        return parse_range(part);
-    }
-
-    // Try `line:col` position
-    if part.matches(':').count() == 1 {
-        let (line_str, col_str) = part.split_once(':')?;
-        let line = line_str.parse::<i32>().ok();
-        let col = col_str.parse::<i32>().ok();
-        if let Some(line) = line {
-            return Some(Location::Position { line, col: col.unwrap_or(0) });
-        }
-    }
-
-    // Try bare `line`
-    part.parse::<i32>()
-        .ok()
-        .map(Location::Line)
-}
-
-/// Parse a range like `10-20` or `10:5-20:3`.
-fn parse_range(part: &str) -> Option<Location> {
-    let (start_str, end_str) = part.split_once('-')?;
-
-    let start_has_colon = start_str.contains(':');
-    let start_linecol = if start_has_colon {
-        let (l, c) = start_str.split_once(':')?;
-        let line = l.parse::<i32>().ok()?;
-        let col = c.parse::<i32>().ok()?;
-        (line, col)
-    } else {
-        let line = start_str.parse::<i32>().ok()?;
-        (line, 0)
-    };
-
-    let end_has_colon = end_str.contains(':');
-    let end_linecol = if end_has_colon {
-        let (l, c) = end_str.split_once(':')?;
-        let line = l.parse::<i32>().ok()?;
-        let col = c.parse::<i32>().ok()?;
-        (line, col)
-    } else {
-        // No colon: if start had no colon → line range (end_line=end, end_col=0).
-        // If start had a colon → column range on same line (end_col=end, end_line=start_line).
-        let n = end_str.parse::<i32>().ok()?;
-        if start_has_colon {
-            (start_linecol.0, n)
-        } else {
-            (n, 0)
-        }
-    };
-
-    Some(Location::Range {
-        start: start_linecol,
-        end: end_linecol,
-    })
 }
 
 /// Parse a `file:line:col` pattern into a path and optional location.

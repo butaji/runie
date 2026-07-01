@@ -2,7 +2,9 @@
 
 ## Status
 
-`todo`
+`wontfix`
+
+**Reason**: `pulldown-cmark-frontmatter` only supports fenced code-block frontmatter (` ```yaml ... ``` `), not standard YAML frontmatter (`---\n...\n---\n`). The crate cannot replace the manual scanning for standard YAML frontmatter. The current implementation correctly uses `pulldown-cmark-frontmatter` for fenced code blocks and falls back to manual scanning for standard YAML, which is the right architecture given the crate's capabilities.
 
 ## Context
 
