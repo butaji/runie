@@ -123,15 +123,19 @@ impl Leader {
 
         let handles =
             Self::spawn_actors(&bus, &self.config, provider_factory, agent_factory).await?;
-        tokio::spawn(Self::coordinator(cmd_rx, bus.clone()));
 
-        if let Some(ref addr) = self.config.tcp_addr {
+        // Capture join handles for graceful shutdown.
+        let coordinator_join = tokio::spawn(Self::coordinator(cmd_rx, bus.clone()));
+
+        let tcp_join = if let Some(ref addr) = self.config.tcp_addr {
             let bus_clone = bus.clone();
             let addr = addr.clone();
-            tokio::spawn(async move { Self::listen_tcp(&addr, bus_clone).await });
-        }
+            Some(tokio::spawn(async move { Self::listen_tcp(&addr, bus_clone).await }))
+        } else {
+            None
+        };
 
-        Ok(LeaderHandle::new(cmd_tx, bus, handles))
+        Ok(LeaderHandle::new(cmd_tx, bus, handles, Some(coordinator_join), tcp_join))
     }
 
     /// Spawn all child actors and capture all cells and join handles for graceful shutdown.
@@ -280,7 +284,6 @@ impl Default for Leader {
     }
 }
 
-/// All handles, cells, and join handles produced by actor spawning.
 /// All handles, cells, and join handles produced by actor spawning.
 pub struct SpawnedHandles {
     pub config: RactorConfigHandle,

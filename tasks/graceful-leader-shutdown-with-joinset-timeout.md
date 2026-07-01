@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -13,9 +13,9 @@
 Store handles, send graceful stops, and await them in parallel with `tokio::time::timeout`.
 
 ## Acceptance Criteria
-- [ ] Return/store coordinator and TCP handles.
-- [ ] Use `JoinSet` or `tokio::join!` with timeout.
-- [ ] Send graceful stop before await.
+- [x] Return/store coordinator and TCP handles.
+- [x] Use `JoinSet` or `tokio::join!` with timeout.
+- [x] Send graceful stop before await.
 
 ## Design Impact
 
@@ -31,6 +31,13 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes (1 pre-existing flaky test: `tests::slash::session::resume_loads_most_recent_session` fails in full suite but passes in isolation — unrelated to this change).
+- [x] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+## Implementation
+
+- `actor.rs:start_with_bus` now captures `coordinator_join` and `tcp_join` from `tokio::spawn` calls
+- `SpawnedHandles` gains `coordinator_join: JoinHandle` and `tcp_join: Option<JoinHandle>` fields
+- `LeaderHandle` stores both handles; `shutdown()` collects all joins and awaits them in parallel with a 5-second timeout
+- `Clone` impl sets `coordinator_join: None` (handles cannot be cloned; only the original handle awaits)

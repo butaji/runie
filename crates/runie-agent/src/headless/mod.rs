@@ -48,7 +48,9 @@ pub async fn run_headless_cli(
     .await?;
     let provider = runtime.provider(provider_name, provider_model).await?;
     let opts = build_headless_options(sink, options);
-    run_headless_turn(messages, &provider, opts).await
+    let result = run_headless_turn(messages, &provider, opts).await;
+    runtime.shutdown().await;
+    result
 }
 
 /// Options for `run_headless_cli` (subset of `HeadlessOptions` that varies per caller).

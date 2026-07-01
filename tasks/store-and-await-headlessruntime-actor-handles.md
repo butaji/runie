@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -13,9 +13,9 @@
 Store handles in `HeadlessRuntime` and expose an async `shutdown()` method.
 
 ## Acceptance Criteria
-- [ ] Store actor join handles.
-- [ ] Add `shutdown()` awaiting them.
-- [ ] Update CLI/server callers.
+- [x] Store actor join handles.
+- [x] Add `shutdown()` awaiting them.
+- [x] Update CLI/server callers.
 
 ## Design Impact
 
@@ -31,6 +31,13 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes (1 pre-existing flaky test: `tests::slash::session::resume_loads_most_recent_session` fails in full suite but passes in isolation — unrelated to this change).
+- [x] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+## Implementation
+
+- `HeadlessRuntime` struct gains `config_join: JoinHandle<()>` and `provider_join: JoinHandle<()>` fields
+- `spawn()` now stores the join handles (removed `_` prefix)
+- `shutdown()` method stops both actors via `cell.stop(None)` then awaits both joins with a 5-second timeout
+- `run_headless_cli` in `runie-agent/src/headless/mod.rs` now calls `runtime.shutdown().await` after `run_headless_turn`

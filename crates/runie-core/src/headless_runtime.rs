@@ -27,8 +27,10 @@ use crate::provider::ProviderError;
 pub struct HeadlessRuntime {
     config_handle: RactorConfigHandle,
     provider_handle: RactorProviderHandle,
-    _config_actor: ractor::ActorCell,
-    _provider_actor: ractor::ActorCell,
+    config_actor: ractor::ActorCell,
+    provider_actor: ractor::ActorCell,
+    config_join: tokio::task::JoinHandle<()>,
+    provider_join: tokio::task::JoinHandle<()>,
 }
 
 impl HeadlessRuntime {
@@ -38,9 +40,9 @@ impl HeadlessRuntime {
         factory: Arc<dyn ProviderFactory>,
     ) -> anyhow::Result<Self> {
         let mut sub = bus.subscribe();
-        let (config_handle, config_actor, _config_join) =
+        let (config_handle, config_actor, config_join) =
             RactorConfigActor::spawn_default(bus.clone()).await?;
-        let (provider_handle, provider_actor, _provider_join) =
+        let (provider_handle, provider_actor, provider_join) =
             RactorProviderActor::spawn(bus.clone(), config_handle.clone(), factory).await?;
 
         // Wait until the config actor has loaded (or failed to load) so callers
@@ -63,9 +65,25 @@ impl HeadlessRuntime {
         Ok(Self {
             config_handle,
             provider_handle,
-            _config_actor: config_actor,
-            _provider_actor: provider_actor,
+            config_actor,
+            provider_actor,
+            config_join,
+            provider_join,
         })
+    }
+
+    /// Gracefully shutdown all actors with a timeout.
+    pub async fn shutdown(self) {
+        self.config_actor.stop(None);
+        self.provider_actor.stop(None);
+        let _ = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            async {
+                let _ = self.config_join.await;
+                let _ = self.provider_join.await;
+            },
+        )
+        .await;
     }
 
     /// Current config, if loaded.

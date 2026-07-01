@@ -111,6 +111,9 @@ pub async fn test_leader_handle() -> LeaderHandle {
         fff_join,
     ];
 
+    // Dummy coordinator join for tests.
+    let coordinator_join = tokio::spawn(std::future::pending::<()>());
+
     LeaderHandle::new(
         cmd_tx,
         bus,
@@ -134,5 +137,7 @@ pub async fn test_leader_handle() -> LeaderHandle {
             fff_cell,
             all_joins,
         },
+        Some(coordinator_join),
+        None,
     )
 }
