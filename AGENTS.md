@@ -62,19 +62,36 @@ Run the agent turn end-to-end with captured provider SSE fixtures and fake tool 
 ```rust
 #[tokio::test]
 async fn minimax_m3_multi_tool_turn() {
-    let provider = BuiltProvider::from_provider(
-        Box::new(replay_minimax_m3_fixture()) as Box<dyn Provider>,
-        "minimax",
-        "MiniMax-M3"
-    );
-    let skills: Vec<Box<dyn HarnessSkill>> = vec![
-        Box::new(MockToolSkill::new(hashmap! {
-            "list_dir" => "README.md\nCargo.toml\nsrc/",
-            "read_file" => "# Runie\nTerminal coding agent harness.",
-        })),
+    use runie_agent::headless::{run_headless_turn, HeadlessOptions};
+    use runie_core::event::Event;
+    use runie_core::message::{ChatMessage, Role};
+    use runie_testing::capture_events;
+    use runie_testing::allow_all_gate;
+
+    let fixtures = vec![
+        include_str!("fixtures/minimax/m3_multi_tool_list_dir.sse").to_string(),
+        include_str!("fixtures/minimax/m3_read_file_call.sse").to_string(),
+        include_str!("fixtures/minimax/m3_read_file_final.sse").to_string(),
     ];
-    let events = run_agent_turn_with_skills(provider, "list files and read README", skills).await;
-    assert!(events.iter().any(|e| matches!(e, AgentEvent::TurnComplete)));
+    let provider = runie_testing::dyn_replay_provider_with(&fixtures, "minimax", "MiniMax-M3");
+
+    let (events, emit) = capture_events();
+    let messages = vec![
+        ChatMessage::system("You are helpful."),
+        ChatMessage::user("list files and read README"),
+    ];
+    let options = HeadlessOptions {
+        execute_tools: false,
+        max_tool_rounds: 5,
+        on_chunk: None,
+        on_event: None,
+        permission_gate: allow_all_gate(),
+    };
+
+    run_headless_turn(messages, &provider, options).await.unwrap();
+
+    let events = events.lock();
+    assert!(events.iter().any(|e| matches!(e, Event::TurnComplete { .. })));
 }
 ```
 
