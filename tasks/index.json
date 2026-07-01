@@ -1177,7 +1177,7 @@
   {
     "file": "unify-file-picker-and-panel-list-widget.md",
     "title": "Unify file picker and panel list widget",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-form-submit-paths-through-command-registry.md",
