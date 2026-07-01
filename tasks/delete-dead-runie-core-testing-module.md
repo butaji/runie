@@ -2,7 +2,9 @@
 
 ## Status
 
-`todo`
+`done`
+
+Note: Module doesn't exist - was either never created or already deleted.
 
 ## Context
 

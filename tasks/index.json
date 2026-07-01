@@ -1207,7 +1207,7 @@
   {
     "file": "use-shell-words-for-slash-command-parsing.md",
     "title": "Use shell-words for slash command parsing",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-shell-words-in-harness-skills.md",

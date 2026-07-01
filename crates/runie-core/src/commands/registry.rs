@@ -267,13 +267,24 @@ impl AppState {
         }
 
         let input = content.trim_start_matches('/');
-        let (name, args) = input.split_once(' ').unwrap_or((input, ""));
+        // Use shell-words to properly parse quoted args and flags
+        let tokens: Vec<String> = match shell_words::split(input) {
+            Ok(tokens) => tokens,
+            Err(e) => {
+                return Some(CommandResult::Message(format!(
+                    "Invalid command syntax: {e}. Try /help."
+                )));
+            }
+        };
+
+        let name = tokens.first().map(|s| s.as_str()).unwrap_or(input);
+        let args = tokens.get(1..).map(|t| t.join(" ")).unwrap_or_default();
 
         match self.registry().get(name) {
             Some(spec) => {
                 let (cmd_name, flow) = (spec.name.clone(), spec.flow.clone());
                 self.record_command_usage(&cmd_name);
-                let result = flow.exec(self, &cmd_name, args);
+                let result = flow.exec(self, &cmd_name, &args);
                 if matches!(result, CommandResult::None) {
                     None
                 } else {
@@ -284,5 +295,51 @@ impl AppState {
                 "Unknown command: /{name}. Try /help."
             ))),
         }
+    }
+}
+
+// ============================================================================
+// Shell-words parsing tests
+// ============================================================================
+
+#[cfg(test)]
+mod slash_parsing_tests {
+    use super::*;
+
+    #[test]
+    fn simple_command_with_single_arg() {
+        // /save my-session
+        let input = "save my-session";
+        let tokens: Vec<String> = shell_words::split(input).unwrap();
+        assert_eq!(tokens, vec!["save", "my-session"]);
+    }
+
+    #[test]
+    fn quoted_arg_preserves_spaces() {
+        // "/save my session" should parse as save + "my session"
+        let input = "save \"my session\"";
+        let tokens: Vec<String> = shell_words::split(input).unwrap();
+        assert_eq!(tokens, vec!["save", "my session"]);
+    }
+
+    #[test]
+    fn multiple_args() {
+        let input = "save session1 keep 1000";
+        let tokens: Vec<String> = shell_words::split(input).unwrap();
+        assert_eq!(tokens, vec!["save", "session1", "keep", "1000"]);
+    }
+
+    #[test]
+    fn empty_args() {
+        let input = "save";
+        let tokens: Vec<String> = shell_words::split(input).unwrap();
+        assert_eq!(tokens, vec!["save"]);
+    }
+
+    #[test]
+    fn single_quoted_arg() {
+        let input = "save 'my session'";
+        let tokens: Vec<String> = shell_words::split(input).unwrap();
+        assert_eq!(tokens, vec!["save", "my session"]);
     }
 }
