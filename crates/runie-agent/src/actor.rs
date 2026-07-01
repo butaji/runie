@@ -52,6 +52,9 @@ struct AgentActorState {
     current_turn_token: Option<Arc<CancellationToken>>,
     /// Permission gate for the currently running turn, if any.
     current_gate: Option<PermissionGate>,
+    /// JoinHandle for the currently running turn task, if any.
+    /// Used to await completion and capture errors.
+    current_turn_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
 /// Unit struct for RactorAgentActor — state lives in `type State`.
@@ -81,6 +84,7 @@ impl Actor for RactorAgentActor {
             bus: args.bus,
             current_turn_token: None,
             current_gate: None,
+            current_turn_handle: None,
         })
     }
 
@@ -104,6 +108,11 @@ impl Actor for RactorAgentActor {
                 if let Some(gate) = state.current_gate.take() {
                     gate.cancel_pending();
                 }
+                // Abort and await the old turn handle.
+                if let Some(handle) = state.current_turn_handle.take() {
+                    handle.abort();
+                    let _ = handle.await;
+                }
             }
         }
         Ok(())
@@ -112,6 +121,17 @@ impl Actor for RactorAgentActor {
 
 impl RactorAgentActor {
     async fn run_turn(&self, state: &mut AgentActorState, mut command: AgentCommand) {
+        // Reject overlapping runs: if a turn is already in flight, emit an error.
+        if state.current_turn_token.is_some() || state.current_turn_handle.is_some() {
+            let id = command.id.clone();
+            state.bus.publish(runie_core::Event::Error {
+                id,
+                message: "Turn already in flight, rejected new Run".into(),
+            });
+            state.bus.publish(runie_core::Event::Done { id: command.id });
+            return;
+        }
+
         let provider = state.provider_handle.clone();
         let permission = state.permission_handle.clone();
         let bus = state.bus.clone();
@@ -150,16 +170,19 @@ impl RactorAgentActor {
         // This keeps the actor mailbox responsive for Abort messages.
         let emit_for_task = emit.clone();
         let command_id = command.id.clone();
-        tokio::spawn(async move {
+        let bus_for_task = bus.clone();
+        let handle = tokio::spawn(async move {
             let turn = run_agent_turn(&built, &command, emit_for_task, 5, gate.clone());
             tokio::pin!(turn);
 
             if let Err(e) = turn.await {
                 // Emit error through the event bus.
-                // (emit_error_and_done takes &mut state, so we publish directly)
-                let _ = Self::publish_error_and_done(&bus, &command_id, format!("Agent error: {e}"));
+                let _ = Self::publish_error_and_done(&bus_for_task, &command_id, format!("Agent error: {e}"));
             }
         });
+
+        // Store the handle so Abort can cancel it.
+        state.current_turn_handle = Some(handle);
         // Handler returns immediately after spawning.
     }
 
