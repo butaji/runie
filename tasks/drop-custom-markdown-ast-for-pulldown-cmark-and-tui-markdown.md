@@ -32,7 +32,7 @@ Consolidated `blocks.rs` + `inline.rs` into single `parsing.rs` module:
 - `cargo test -p runie-core --lib`: 1764 tests pass
 - `cargo check --workspace`: passes
 
-## Remaining Work
+## Remaining Work (Stage 2)
 
 - [ ] Replace `MdInline`/`MdSpan` rendering with direct `tui_markdown::Text`/`Line` rendering in `markdown_render.rs`
 - [ ] Replace custom line-count math in `layout.rs` with `tui-markdown` line counts

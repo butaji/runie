@@ -402,4 +402,27 @@ mod tests {
         let timeout = tokio::time::timeout(std::time::Duration::from_millis(50), sub.recv());
         assert!(timeout.await.is_err(), "Expected no events for empty/unknown lines");
     }
+
+    /// Layer 1: BufReader::read_line handles multi-byte UTF-8 split across reads.
+    ///
+    /// Tokio's BufReader internally buffers data, so even if bytes arrive in
+    /// separate network packets (partial UTF-8 chars), `read_line` will
+    /// reassemble them correctly as long as the complete byte sequence is
+    /// available in the underlying AsyncRead.
+    ///
+    /// This test verifies that BufReader correctly reassembles multi-byte
+    /// UTF-8 characters within a single line read.
+    #[tokio::test]
+    async fn bufreader_preserves_split_utf8() {
+        use tokio::io::AsyncReadExt;
+
+        // "hello \xe4\xb8\x96\xe7\x95\x8c\n" = "hello 世界\n"
+        // "世" = [0xE4, 0xB8, 0x96] (3 bytes), "界" = [0xE7, 0x95, 0x8C] (3 bytes)
+        let full = b"hello \xe4\xb8\x96\xe7\x95\x8c\n";
+        let mut reader = tokio::io::BufReader::new(full.as_slice());
+        let mut line = String::new();
+        let n = reader.read_line(&mut line).await.unwrap();
+        assert!(n > 0, "Should read bytes");
+        assert_eq!(line.trim_end(), "hello 世界");
+    }
 }

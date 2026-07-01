@@ -8,11 +8,14 @@
 
 `DynProvider` wraps `BuiltProvider` solely for backward compatibility; `ProviderConfigBox` is a cloneable wrapper around `Arc<dyn ProviderConfig>`.
 
+**Note:** `DynProvider` is now a type alias (`pub type DynProvider = BuiltProvider;` in `runie-provider/src/lib.rs`). `ProviderConfigBox` still exists in `runie-core/src/proto/provider.rs` and is used extensively in `runie-provider` (`config/mod.rs`, `factory.rs`).
+
 ## Goal
 
 Delete both wrappers and migrate callers to the underlying types.
 
 ## Acceptance Criteria
+
 - [ ] Remove `DynProvider` and `ProviderConfigBox` definitions.
 - [ ] Update all call sites and tests.
 - [ ] `cargo check --workspace` passes.

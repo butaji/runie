@@ -8,6 +8,8 @@
 
 `event/durable.rs` (`DurableCoreEvent`), `event/headless.rs` (`HeadlessEvent`), and `provider_event.rs` (`ProviderEvent`) represent the same lifecycle with parallel enums and hand-written conversion tables. Data is lost in conversions.
 
+**Note:** All three files still exist in the codebase.
+
 ## Goal
 
 Make `Event` the single canonical enum. Derive `DurableCoreEvent` and `HeadlessEvent` as serde views (tagged/flattened subsets) or via a small proc-macro, instead of maintaining parallel enums.
