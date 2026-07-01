@@ -432,7 +432,7 @@
   {
     "file": "fix-or-delete-runie-testing-testrunner.md",
     "title": "Fix or delete runie-testing TestRunner",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-ractor-permission-actor-reply-lifecycle.md",
