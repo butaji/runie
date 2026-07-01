@@ -1032,7 +1032,7 @@
   {
     "file": "resolve-runie-util-micro-crate-vs-core-re-exports.md",
     "title": "Resolve runie-util micro-crate vs core re-exports",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "route-cli-config-through-configactor.md",
@@ -1312,7 +1312,7 @@
   {
     "file": "use-fuzzy-matcher-for-model-catalog.md",
     "title": "Use fuzzy matcher for model catalog",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-ignore-and-globset-for-file-refs.md",
